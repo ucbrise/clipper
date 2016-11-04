@@ -37,16 +37,22 @@ class QueryProcessor {
   boost::future<FeedbackAck> update(FeedbackQuery feedback);
 
  private:
-  // map to keep around an instance of each policy type. This is a hack
-  // to get around the fact that we want polymorphic selection policies
-  // (i.e. multiple policies that implement the same interface) but
-  // can't have virtual static methods.
-  std::unordered_map<std::string, std::shared_ptr<SelectionPolicy>>
-      instantiated_policies_;
-  // std::queue query_queue_;
   std::atomic<long> query_counter_{0};
   StateDB state_db_{StateDB()};
 };
+
+template <typename Policy>
+std::vector<PredictTask> select_tasks(Query query, long query_id,
+                                      const StateDB& state_db) {
+  auto hashkey = Policy::hash_models(query.candidate_models_);
+  if (auto state_opt =
+          state_db.get(StateKey{query.label_, query.user_id_, hashkey})) {
+    auto serialized_state = *state_opt;
+    state = Policy::deserialize_state(serialized_state);
+  } else {
+    state = policy->initialize(query.candidate_models_);
+  }
+}
 
 }  // namespace clipper
 

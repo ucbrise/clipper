@@ -9,20 +9,23 @@
 
 namespace clipper {
 
-/// Note that all selection policy methods are const because
-/// any "instance" state is captured in the `SelectionState` instead
-/// of as instance member variables of the `SelectionPolicy`. There
-/// is no guarantee about which instance of a SelectionPolicy
-/// will be used (e.g. it would be perfectly valid, albeit
-/// inefficient, to construct a new SelectionPolicy instance on every
-/// new method call).
+template <typename Derived, typename State>
 class SelectionPolicy {
  public:
-  virtual std::unique_ptr<SelectionState> initialize(
-      const std::vector<VersionedModelId>& candidate_models) const = 0;
-  virtual std::unique_ptr<SelectionState> add_models(
-      std::unique_ptr<SelectionState> state,
-      std::vector<VersionedModelId> new_models) const = 0;
+  // don't let this class be instantiated
+  SelectionPolicy() = delete;
+  ~SelectionPolicy() = delete;
+  static State initialize(
+      const std::vector<VersionedModelId>& candidate_models) {
+    return Derived::initialize(candidate_models);
+  }
+  // virtual std::unique_ptr<SelectionState> initialize(
+  //     const std::vector<VersionedModelId>& candidate_models) const = 0;
+
+  static State add_models(State state,
+                          const std::vector<VersionedModelId>& new_models) {
+    return Derived::add_models(std::forward(state), new_models);
+  }
 
   // Used to identify a unique selection policy instance. For example,
   // if using a bandit-algorithm that does not tolerate variable-armed
@@ -30,107 +33,89 @@ class SelectionPolicy {
   // which policy instance corresponds to this exact set of arms.
   // Similarly, it provides flexibility in how to deal with different
   // versions of the same arm (different versions of same model).
-  virtual long hash_models(
-      const std::vector<VersionedModelId>& candidate_models) const = 0;
+  static long hash_models(
+      const std::vector<VersionedModelId>& candidate_models) {
+    return Derived::hash_models(candidate_models);
+  }
 
   // On the prediction path
-  virtual std::vector<PredictTask> select_predict_tasks(
-      std::unique_ptr<SelectionState> state, Query query,
-      long query_id) const = 0;
+  static std::vector<PredictTask> select_predict_tasks(State state, Query query,
+                                                       long query_id) {
+    return Derived::select_predict_tasks(state, query, query_id);
+  }
 
   // TODO: change this method name
   // TODO: I think it may make sense to decouple combine_predictions()
   // from select_predict_tasks in some cases
-  virtual std::unique_ptr<Output> combine_predictions(
-      std::unique_ptr<SelectionState> state, Query query,
-      std::vector<std::shared_ptr<Output>> predictions) const = 0;
+  static std::shared_ptr<Output> combine_predictions(
+      State state, Query query,
+      std::vector<std::shared_ptr<Output>> predictions) {
+    return Derived::combine_predictions(std::forward(state), query,
+                                        predictions);
+  }
 
   /// When feedback is received, the selection policy can choose
   /// to schedule both feedback and prediction tasks. Prediction tasks
   /// can be used to get y_hat for e.g. updating a bandit algorithm,
   /// while feedback tasks can be used to optionally propogate feedback
   /// into the model containers.
-  virtual std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-  select_feedback_tasks(std::unique_ptr<SelectionState> state,
-                        Query query) const = 0;
+  static std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
+  select_feedback_tasks(State state, Query query) {
+    return Derived::select_feedback_tasks(std::forward(state), query);
+  }
 
   /// This method will be called if at least one PredictTask
   /// was scheduled for this piece of feedback. This method
   /// is guaranteed to be called sometime after all the predict
   /// tasks scheduled by `select_feedback_tasks` complete.
-  virtual std::unique_ptr<SelectionState> process_feedback(
-      std::unique_ptr<SelectionState> state, Feedback feedback,
-      std::vector<std::shared_ptr<Output>> predictions) const = 0;
+  static State process_feedback(
+      State state, Feedback feedback,
+      std::vector<std::shared_ptr<Output>> predictions) {
+    return Derived::process_feedback(std::forward(state), feedback,
+                                     predictions);
+  }
 
-  virtual ByteBuffer serialize_state(
-      std::unique_ptr<SelectionState> state) const = 0;
-  virtual std::unique_ptr<SelectionState> deserialize_state(
-      const ByteBuffer& bytes) const = 0;
+  static ByteBuffer serialize_state(State state) {
+    return Derived::serialize_state(std::forward(state));
+  }
+
+  static State deserialize_state(const ByteBuffer& bytes) {
+    return Derived::deserialize_state(bytes);
+  }
 };
 
-class SelectionPolicyFactory {
+class NewestModelSelectionPolicy
+    : public SelectionPolicy<NewestModelSelectionPolicy, VersionedModelId> {
  public:
-  static std::shared_ptr<SelectionPolicy> create(
-      const std::string& policy_name);
-};
+  NewestModelSelectionPolicy() = delete;
+  ~NewestModelSelectionPolicy() = delete;
+  static VersionedModelId initialize(
+      const std::vector<VersionedModelId>& candidate_models);
 
-//////////////////////////////////////////////
+  static VersionedModelId add_models(VersionedModelId state,
+                                     std::vector<VersionedModelId> new_models);
 
-class NewestModelSelectionState : public SelectionState {
- public:
-  explicit NewestModelSelectionState(VersionedModelId model);
-  ByteBuffer serialize() const;
-  static std::unique_ptr<NewestModelSelectionState> deserialize(
-      const ByteBuffer& buffer);
+  static long hash_models(
+      const std::vector<VersionedModelId>& candidate_models);
 
- private:
-  VersionedModelId model_id_;
-};
+  static std::vector<PredictTask> select_predict_tasks(VersionedModelId state,
+                                                       Query query,
+                                                       long query_id);
 
-class NewestModelSelectionPolicy : public SelectionPolicy {
-  virtual std::unique_ptr<SelectionState> initialize(
-      const std::vector<VersionedModelId>& candidate_models) const;
+  static std::shared_ptr<Output> combine_predictions(
+      VersionedModelId state, Query query,
+      std::vector<std::shared_ptr<Output>> predictions);
 
-  virtual std::unique_ptr<SelectionState> add_models(
-      std::unique_ptr<SelectionState> state,
-      std::vector<VersionedModelId> new_models) const;
+  static std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
+  select_feedback_tasks(VersionedModelId state, Query query);
 
-  virtual long hash_models(
-      const std::vector<VersionedModelId>& candidate_models) const;
+  static VersionedModelId process_feedback(
+      VersionedModelId state, Feedback feedback,
+      std::vector<std::shared_ptr<Output>> predictions);
 
-  // On the prediction path
-  virtual std::vector<PredictTask> select_predict_tasks(
-      std::unique_ptr<SelectionState> state, Query query, long query_id) const;
+  static ByteBuffer serialize_state(VersionedModelId state);
 
-  // TODO: change this method name
-  // TODO: I think it may make sense to decouple combine_predictions()
-  // from select_predict_tasks in some cases
-  virtual std::unique_ptr<Output> combine_predictions(
-      std::unique_ptr<SelectionState> state, Query query,
-      std::vector<std::shared_ptr<Output>> predictions) const;
-
-  /// When feedback is received, the selection policy can choose
-  /// to schedule both feedback and prediction tasks. Prediction tasks
-  /// can be used to get y_hat for e.g. updating a bandit algorithm,
-  /// while feedback tasks can be used to optionally propogate feedback
-  /// into the model containers.
-  virtual std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-  select_feedback_tasks(std::unique_ptr<SelectionState> state,
-                        Query query) const;
-
-  /// This method will be called if at least one PredictTask
-  /// was scheduled for this piece of feedback. This method
-  /// is guaranteed to be called sometime after all the predict
-  /// tasks scheduled by `select_feedback_tasks` complete.
-  virtual std::unique_ptr<SelectionState> process_feedback(
-      std::unique_ptr<SelectionState> state, Feedback feedback,
-      std::vector<std::shared_ptr<Output>> predictions) const;
-
-  virtual ByteBuffer serialize_state(
-      std::unique_ptr<SelectionState> state) const;
-
-  virtual std::unique_ptr<SelectionState> deserialize_state(
-      const ByteBuffer& bytes) const;
+  static VersionedModelId deserialize_state(const ByteBuffer& bytes);
 };
 }
 

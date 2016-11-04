@@ -10,100 +10,59 @@
 
 namespace clipper {
 
-std::shared_ptr<SelectionPolicy> SelectionPolicyFactory::create(
-    const std::string& policy_name) {
-  if (policy_name.compare("most_recent")) {
-    return std::make_shared<NewestModelSelectionPolicy>();
-  } else {
-    return std::shared_ptr<SelectionPolicy>(nullptr);
-  }
-}
-
-NewestModelSelectionState::NewestModelSelectionState(VersionedModelId model)
-    : model_id_(std::move(model)) {}
-
-ByteBuffer NewestModelSelectionState::serialize() const {
+VersionedModelId NewestModelSelectionPolicy::initialize(
+    const std::vector<VersionedModelId>& candidate_models) {
   // TODO: IMPLEMENT
-  std::vector<uint8_t> v;
-  return v;
+  return std::make_pair("m", 1);
 }
 
-std::unique_ptr<NewestModelSelectionState>
-NewestModelSelectionState::deserialize(const ByteBuffer& buffer) {
-  auto vm = std::make_pair("m", 1);
-  return std::unique_ptr<NewestModelSelectionState>(
-      new NewestModelSelectionState(vm));
-}
-
-std::unique_ptr<SelectionState> NewestModelSelectionPolicy::initialize(
-    const std::vector<VersionedModelId>& candidate_models) const {
-  // TODO: IMPLEMENT
-  auto vm = std::make_pair("m", 1);
-  return std::unique_ptr<SelectionState>(new NewestModelSelectionState(vm));
-}
-
-std::unique_ptr<SelectionState> NewestModelSelectionPolicy::add_models(
-    std::unique_ptr<SelectionState> state,
-    std::vector<VersionedModelId> new_models) const {
+VersionedModelId NewestModelSelectionPolicy::add_models(
+    VersionedModelId state, std::vector<VersionedModelId> new_models) {
   return state;
 }
 
 long NewestModelSelectionPolicy::hash_models(
-    const std::vector<VersionedModelId>& candidate_models) const {
+    const std::vector<VersionedModelId>& candidate_models) {
   return 0;
 }
 
 std::vector<PredictTask> NewestModelSelectionPolicy::select_predict_tasks(
-    std::unique_ptr<SelectionState> state, Query query, long query_id) const {
-  std::vector<PredictTask> task_vec{1};
-  auto cast_state =
-      dynamic_unique_ptr_cast<NewestModelSelectionState,
-                              decltype(state.get_deleter())>(std::move(state));
-
+    VersionedModelId state, Query query, long query_id) {
+  std::vector<PredictTask> task_vec;
   // construct the task and put in the vector
-  task_vec.emplace_back(query.input_, cast_state->model_id_, 1.0, query_id_,
+  task_vec.emplace_back(query.input_, state, 1.0, query_id,
                         query.latency_micros_);
   return task_vec;
 }
 
-std::unique_ptr<Output> NewestModelSelectionPolicy::combine_predictions(
-    std::unique_ptr<SelectionState> state, Query query,
-    std::vector<std::shared_ptr<Output>> predictions) const {
+std::shared_ptr<Output> NewestModelSelectionPolicy::combine_predictions(
+    VersionedModelId state, Query query,
+    std::vector<std::shared_ptr<Output>> predictions) {
   // just return the first prediction
   return predictions.front();
 }
 
-/// When feedback is received, the selection policy can choose
-/// to schedule both feedback and prediction tasks. Prediction tasks
-/// can be used to get y_hat for e.g. updating a bandit algorithm,
-/// while feedback tasks can be used to optionally propogate feedback
-/// into the model containers.
 std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-NewestModelSelectionPolicy::select_feedback_tasks(
-    std::unique_ptr<SelectionState> state, Query query) const {
-  return std::pair(std::vector::empty(), std::vector::empty());
+NewestModelSelectionPolicy::select_feedback_tasks(VersionedModelId state,
+                                                  Query query) {
+  return std::make_pair(std::vector<PredictTask>(),
+                        std::vector<FeedbackTask>());
 }
 
-/// This method will be called if at least one PredictTask
-/// was scheduled for this piece of feedback. This method
-/// is guaranteed to be called sometime after all the predict
-/// tasks scheduled by `select_feedback_tasks` complete.
-std::unique_ptr<SelectionState> NewestModelSelectionPolicy::process_feedback(
-    std::unique_ptr<SelectionState> state, Feedback feedback,
-    std::vector<std::shared_ptr<Output>> predictions) const {
+VersionedModelId NewestModelSelectionPolicy::process_feedback(
+    VersionedModelId state, Feedback feedback,
+    std::vector<std::shared_ptr<Output>> predictions) {
   return state;
 }
 
-ByteBuffer NewestModelSelectionPolicy::serialize_state(
-    std::unique_ptr<SelectionState> state) const {
-  return (static_cast<std::unique_ptr<NewestModelSelectionState>> state)
-      ->serialize();
+ByteBuffer NewestModelSelectionPolicy::serialize_state(VersionedModelId state) {
+  std::vector<uint8_t> v;
+  return v;
 }
 
-std::unique_ptr<SelectionState> NewestModelSelectionPolicy::deserialize_state(
-    const ByteBuffer& bytes) const {
-  return static_cast<std::unique_ptr<SelectionState>>
-      NewestModelSelectionState::deserialize_state(bytes);
+VersionedModelId NewestModelSelectionPolicy::deserialize_state(
+    const ByteBuffer& bytes) {
+  return std::make_pair("m", 1);
 }
 
 }  // namespace clipper
