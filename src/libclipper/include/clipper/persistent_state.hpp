@@ -2,24 +2,36 @@
 #define CLIPPER_LIB_PERSISTENT_STATE_H
 
 #include <boost/optional.hpp>
+#include <functional>
 #include <tuple>
+#include <unordered_map>
 
-#include <clipper/datatypes.hpp>
+#include "datatypes.hpp"
 
 namespace clipper {
 
 // The entries in the key are query_label, user_id, model_hash
 using StateKey = std::tuple<std::string, long, long>;
 
+size_t state_key_hash(const StateKey& key) {
+  return std::hash<std::string>()(std::get<0>(key)) ^
+         std::hash<long>()(std::get<1>(key)) ^
+         std::hash<long>()(std::get<2>(key));
+}
+
+using StateMap =
+    std::unordered_map<StateKey, ByteBuffer, decltype(&state_key_hash)>;
+
 class StateDB {
  public:
+  boost::optional<ByteBuffer> get(const StateKey& key) const;
 
-  boost::optional<ByteBuffer> get(Statekey key) const;
+  StateDB() = default;
 
-  void put(Statekey key, ByteBuffer value);
+  void put(StateKey key, ByteBuffer value);
 
  private:
-  std::unordered_map<StateKey, ByteBuffer> state_table_;
+  StateMap state_table_{StateMap(5, state_key_hash)};
 };
 
 }  // namespace clipper

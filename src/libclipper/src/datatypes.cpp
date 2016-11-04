@@ -1,4 +1,5 @@
 
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -21,5 +22,43 @@ ByteBuffer DoubleVector::serialize() const {
   }
   return bytes;
 }
+
+Query::Query(std::string label, long user_id, std::shared_ptr<Input> input,
+             long latency_micros, std::string selection_policy,
+             std::vector<VersionedModelId> candidate_models)
+    : label_(label),
+      user_id_(user_id),
+      input_(input),
+      latency_micros_(latency_micros),
+      selection_policy_(selection_policy),
+      candidate_models_(candidate_models) {}
+
+Response::Response(Query query, QueryId query_id, long duration_micros,
+                   std::unique_ptr<Output> output,
+                   std::vector<VersionedModelId> models_used)
+    : query_(std::move(query)),
+      query_id_(query_id),
+      duration_micros_(duration_micros),
+      output_(std::move(output)),
+      models_used_(models_used) {}
+
+std::string Response::debug_string() const noexcept {
+  std::string debug;
+  debug.append("Query id: ");
+  debug.append(std::to_string(query_id_));
+  debug.append(" Output: ");
+  debug.append(std::to_string(output_->y_hat_));
+  return debug;
+}
+
+FeedbackQuery::FeedbackQuery(std::string label, long user_id,
+                             std::vector<Feedback> feedback,
+                             std::string selection_policy,
+                             std::vector<VersionedModelId> candidate_models)
+    : label_(label),
+      user_id_(user_id),
+      feedback_(feedback),
+      selection_policy_(selection_policy),
+      candidate_models_(candidate_models) {}
 
 }  // namespace clipper
