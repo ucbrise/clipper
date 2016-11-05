@@ -15,9 +15,9 @@ class Output {
  public:
   ~Output() = default;
 
-  Output(double y_hat, std::string versioned_model);
+  Output(double y_hat, std::vector<VersionedModelId> model_id_);
   double y_hat_;
-  std::string versioned_model_;
+  std::vector<VersionedModelId> model_id_;
 };
 
 // using Output = std::pair<double;
@@ -123,7 +123,18 @@ class Response {
   std::vector<VersionedModelId> models_used_;
 };
 
-using Feedback = std::pair<std::shared_ptr<Input>, std::shared_ptr<Output>>;
+// using Feedback = std::pair<std::shared_ptr<Input>, std::shared_ptr<Output>>;
+
+class Feedback {
+public:
+  ~Feedback() = default;
+  Feedback(std::shared_ptr<Input> input, std::shared_ptr<Output> output, VersionedModelId model_id);
+
+  double y_;
+  std::shared_ptr<Input> input_;
+  VersionedModelId model_id_;
+};
+
 
 class FeedbackQuery {
  public:
@@ -143,7 +154,7 @@ class FeedbackQuery {
   // REST endpoints.
   std::string label_;
   long user_id_;
-  std::vector<Feedback> feedback_;
+  Feedback feedback_;
   std::string selection_policy_;
   std::vector<VersionedModelId> candidate_models_;
 };
