@@ -45,7 +45,7 @@ class FeedbackTask {
   Feedback feedback_;
   VersionedModelId model_;
   QueryId query_id_;
-  long latency_slo_micros;
+  long latency_slo_micros_;
 };
 
 // class TaskExecutor {

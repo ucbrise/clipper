@@ -6,8 +6,9 @@ project(libclipper VERSION 0.1.0 LANGUAGES CXX)
 add_library(clipper
     src/query_processor.cpp
     src/datatypes.cpp
-    # src/selection_policies.cpp
-    src/persistent_state.cpp)
+    src/selection_policies.cpp
+    src/persistent_state.cpp
+    src/task_executor.cpp)
 
 
 # Define headers for this library. PUBLIC headers are used for
