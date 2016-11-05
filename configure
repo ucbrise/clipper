@@ -44,7 +44,7 @@ function run_cleanup {
   read yesorno;
   if [ "$yesorno" == "yes" ]; then
     echo "Removing release and debug folders";
-    rm -rf release debug deps
+    rm -rf release debug deps config.log
   else
     echo "Doing nothing!";
   fi
