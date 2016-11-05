@@ -13,11 +13,7 @@ namespace clipper {
 // The entries in the key are query_label, user_id, model_hash
 using StateKey = std::tuple<std::string, long, long>;
 
-size_t state_key_hash(const StateKey& key) {
-  return std::hash<std::string>()(std::get<0>(key)) ^
-         std::hash<long>()(std::get<1>(key)) ^
-         std::hash<long>()(std::get<2>(key));
-}
+size_t state_key_hash(const StateKey& key);
 
 using StateMap =
     std::unordered_map<StateKey, ByteBuffer, decltype(&state_key_hash)>;

@@ -25,18 +25,19 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   // return future
 
   long query_id = query_counter_.fetch_add(1);
-  std::vector<PredictTask> tasks;
-  if (query.selection_policy_ == "newest_model") {
-    tasks =
-        select_tasks<NewestModelSelectionPolicy>(query, query_id, state_db_);
-  } else {
-    std::cout << query.selection_policy_ << " is invalid selection policy"
-              << std::endl;
-    return boost::make_ready_future<Response>(Response{
-        query, query_id, 20000, std::unique_ptr<Output>(new Output{1.0, "m1"}),
-        std::vector<VersionedModelId>()});
-  }
-
+  // std::vector<PredictTask> tasks;
+  // if (query.selection_policy_ == "newest_model") {
+  //   tasks =
+  //       select_tasks<NewestModelSelectionPolicy>(query, query_id, state_db_);
+  // } else {
+  //   std::cout << query.selection_policy_ << " is invalid selection policy"
+  //             << std::endl;
+  //   return boost::make_ready_future<Response>(Response{
+  //       query, query_id, 20000, std::unique_ptr<Output>(new Output{1.0,
+  //       "m1"}),
+  //       std::vector<VersionedModelId>()});
+  // }
+  //////////////////////////////////////////////
   // use selection policy
   // auto found_policy = instantiated_policies_.find(query.selection_policy_);
   // std::shared_ptr<SelectionPolicy> policy;
@@ -72,9 +73,9 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   //
   // // ignore tasks
   //
-  // return boost::make_ready_future<Response>(Response{
-  //     query, query_id, 20000, std::unique_ptr<Output>(new Output{1.0, "m1"}),
-  //     std::vector<VersionedModelId>()});
+  return boost::make_ready_future<Response>(Response{
+      query, query_id, 20000, std::unique_ptr<Output>(new Output{1.0, "m1"}),
+      std::vector<VersionedModelId>()});
 }
 
 boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
