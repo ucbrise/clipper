@@ -1,1 +1,5 @@
 *.swp
+
+# build directories
+release/
+debug/

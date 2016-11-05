@@ -1,0 +1,352 @@
+#!/usr/bin/env bash
+
+###########################################
+# Lightly adapted from PowerGraph's configure script:
+# https://github.com/jegonzal/PowerGraph/blob/a038f975cf2a976abbf4da97eb866b5cad55110c/configure
+###########################################
+
+
+##=============================================================================
+## Support code
+function download_file {
+  # detect wget
+  echo "Downloading $2 from $1 ..."
+  if [ -z `which wget` ] ; then
+    if [ -z `which curl` ] ; then
+      echo "Unable to find either curl or wget! Cannot proceed with
+            automatic install."
+      exit 1
+    fi
+    curl $1 -o $2
+  else
+    wget $1 -O $2
+  fi
+} # end of download file
+function print_help {
+  echo "Usage: ./configure [--prefix=PREFIX]"
+  echo
+  echo "  --cleanup           remove all build directories"
+  echo
+  echo "  --prefix=[PREFIX]   Clipper Installation target directory. Defaults to /usr/local"
+  echo
+  echo "  --ide=[Xcode]       Specify the ide to use when building Clipper"
+  echo
+  echo "  --no_tcmalloc       Disable using tcmalloc instead of malloc."
+  echo
+  echo "  -D var=value        Specify definitions to be passed on to cmake."
+
+  exit 1
+} # end of print help
+function run_cleanup {
+  #!/bin/bash
+  echo "This script completely erases all build folders including dependencies!!!"
+  echo "Are you sure you want to continue? (yes or no)"
+  read yesorno;
+  if [ "$yesorno" == "yes" ]; then
+    echo "Removing release and debug folders";
+    rm -rf release debug deps
+  else
+    echo "Doing nothing!";
+  fi
+  exit 1
+} # end of run cleanup
+function unknown_option {
+  echo "Unrecognized option: $1"
+  echo "To get help, run ./configure --help"
+  exit 1
+} # end of unknown option
+
+## Obtained from forum:
+# http://stackoverflow.com/questions/4023830/bash-how-compare-two-strings-in-version-format
+# Return  0 if version are equal
+# Returns 1 if version 1 is larger
+# Returns 2 if version 2 is larger
+function check_version {
+  if [[ $1 == $2 ]]
+  then
+      return 0
+  fi
+  local IFS=.
+  local i ver1=($1) ver2=($2)
+  # fill empty fields in ver1 with zeros
+  for ((i=${#ver1[@]}; i<${#ver2[@]}; i++))
+  do
+      ver1[i]=0
+  done
+  for ((i=0; i<${#ver1[@]}; i++))
+  do
+      if [[ -z ${ver2[i]} ]]
+      then
+          # fill empty fields in ver2 with zeros
+          ver2[i]=0
+      fi
+      if ((10#${ver1[i]} > 10#${ver2[i]}))
+      then
+          return 1
+      fi
+      if ((10#${ver1[i]} < 10#${ver2[i]}))
+      then
+          return 2
+      fi
+  done
+  return 0
+}
+
+
+
+RELEASE_DIR=release
+DEBUG_DIR=debug
+CLIPPER_HOME=$PWD
+DEPS_PREFIX=$PWD/deps/local
+
+
+# ## The defaults can be overwritten be editing the configure.deps file
+# if [ -f configure.deps ]; then
+# #  source configure.deps
+#   # We delete the configure deps and then recreate it each time using
+#   # the original values along with any modifications made by the
+#   # configure logic.
+#   rm configure.deps
+# fi
+
+# Parse command line configure flags ------------------------------------------
+while [ $# -gt 0 ]
+  do case $1 in
+    --help)                 print_help=1 ;;
+    --cleanup)              run_cleanup=1 ;;
+    --no_tcmalloc)          no_tcmalloc=1 ;;
+    --prefix=*)             prefix=${1##--prefix=} ;;
+    --ide=*)                ide=${1##--ide=} ;;
+    -D)                     CFLAGS="$CFLAGS -D $2"; shift ;;
+    *) unknown_option $1 ;;
+  esac
+  shift
+done
+
+if [ $print_help ]; then
+  print_help;
+fi
+
+
+if [ $run_cleanup ]; then
+  run_cleanup
+fi
+
+# Extra generator setting (passed in as an argument)
+if [[ -n $ide ]]; then
+  GENERATOR="-G $ide"
+fi
+if [ $no_tcmalloc ]; then
+  NO_TCMALLOC=true
+fi
+
+if [[ -n $prefix ]]; then
+  INSTALL_DIR=$prefix
+fi
+
+# If not specified we assume gcc and g++ are the default c and c++
+# compilers
+if [[ -z $CC ]]; then
+  CC=gcc
+fi
+if [[ -z $CXX ]]; then
+  CXX=g++
+fi
+
+## Begin logging in config.log
+LOG_FILE=config.log
+date | tee $LOG_FILE
+
+## ===================================================================
+## Setup CMake
+# Automatically detect and install a sufficiently new version of
+# cmake
+
+## Install cmake
+if [ `which cmake` ]; then
+  #test cmake version
+  echo "Testing existing cmake version..."
+  currentversion=`cmake --version | awk -F "patch" '{print $1;}' | tr -dc '[0-9].'`
+  echo "Detected $currentversion . Required 3.2.3"
+  check_version $currentversion "3.2.3"
+  if [ $? -ne 2 ]; then
+    echo "CMake version is good"
+    CMAKE="cmake"
+  fi
+fi
+
+# CMake not found and there is a cmake in the deps directory!
+if [ -z $CMAKE ] && [ -f $DEPS_PREFIX/bin/cmake ]; then
+  #test cmake version
+  echo "Testing existing cmake version..."
+  currentversion=`$DEPS_PREFIX/bin/cmake --version | awk -F "patch" '{print $1;}' | tr -dc '[0-9].'`
+  echo "Detected ${currentversion}. Required 3.2.3"
+  check_version $currentversion "3.2.3"
+  if [ $? -ne 2 ]; then
+    echo "CMake version is good"
+    CMAKE=$DEPS_PREFIX/bin/cmake
+  fi
+fi
+
+
+if [ -z $CMAKE ]; then
+  echo "This script will now proceed to download CMake and set it up in"
+  echo "the local graphlab/deps directory. The GraphLab compilation "
+  echo "process will be directed to use graphlab/deps/cmake."
+  pushd .
+  mkdir deps
+  cd deps
+
+  # get the cmake software page
+  rm -f software.html
+  download_file "http://www.cmake.org/cmake/resources/software.html" software.html
+  # look for the first tar.gz I can download
+  cmakedownload=`grep -m 1 -o -e "href=\"http://www\\.cmake\\.3\\.[2-9]\\.[0-9]\\.tar\\.gz\"" software.html | grep -o -e "http.*\\.tar\\.gz"`
+  if [ -z "$cmakedownload" ] ; then
+    echo "Unable to locate CMake package. You will have to install it yourself."
+    exit 1
+  fi
+  rm -f cmake.tar.gz
+  set -e
+  download_file $cmakedownload cmake.tar.gz
+  tar -xzvf cmake.tar.gz
+  # cd into the extracted directory and install
+  cd cmake-*
+  ./configure --prefix=$DEPS_PREFIX
+  make -j2
+  make install
+  set +e
+  popd
+  CMAKE=$DEPS_PREFIX/bin/cmake
+  # echo "CMAKE=$CMAKE" >> configure.deps
+fi
+
+# ## ============================================================================
+# # Regenerate the configure.deps
+# echo -e "# Release build directory:" >> configure.deps
+# echo -e "\t RELEASE_DIR=$RELEASE_DIR" >> configure.deps
+#
+# echo -e "# Debug build directory (optimization disabled):" >> configure.deps
+# echo -e "\t DEBUG_DIR=$DEBUG_DIR" >> configure.deps
+#
+# echo -e "# Directory in which clipper is installed (prefix):" >> configure.deps
+# echo -e "\t INSTALL_DIR=$INSTALL_DIR" >> configure.deps
+#
+# # echo -e "# Is experimental (research) code enabled:" >> configure.deps
+# # echo -e "\t EXPERIMENTAL=$EXPERIMENTAL" >> configure.deps
+#
+# echo -e "# The clipper home directory: " >> configure.deps
+# echo -e "\t CLIPPER_HOME=$CLIPPER_HOME" >> configure.deps
+#
+# echo -e "# The directory in which clipper installs external dependencies:" >> configure.deps
+# echo -e "\t DEPS_PREFIX=$DEPS_PREFIX" >> configure.deps
+#
+# # echo -e "# Use OpenMP?  This can accelerate some graph building code: " >> configure.deps
+# # echo -e "\t NO_OPENMP=$NO_OPENMP" >> configure.deps
+# #
+# # echo -e "# Use MPI?  Without MPI GraphLab cannot run distributed: " >> configure.deps
+# # echo -e "\t NO_MPI=$NO_MPI" >> configure.deps
+#
+# echo -e "# Use tcmalloc?  Thread-Caching Malloc improves memory allocation: " >> configure.deps
+# echo -e "\t NO_TCMALLOC=$NO_TCMALLOC" >> configure.deps
+#
+# echo -e "# The c compiler to use: " >> configure.deps
+# echo -e "\t CC=$CC" >> configure.deps
+#
+# echo -e "# The c++ compiler to use: " >> configure.deps
+# echo -e "\t CXX=$CXX" >> configure.deps
+#
+# echo -e "# Any addition user defined CFLAGS: " >> configure.deps
+# echo -e "\t CFLAGS=$CFLAGS" >> configure.deps
+#
+#
+# echo -e "# The cmake binary used to generate the project:" >> configure.deps
+# echo -e "\t CMAKE=$CMAKE" >> configure.deps
+
+
+
+mkdir -p deps/local/lib
+
+echo "======================= BUILD CONFIGURATION ========================"
+echo "System Information: " | tee -a $LOG_FILE
+uname -v | tee -a $LOG_FILE
+echo "Compiler Information: " | tee -a $LOG_FILE
+$CC --version      | tee -a $LOG_FILE
+$CXX --version     | tee -a $LOG_FILE
+$CMAKE --version   | tee -a $LOG_FILE
+
+echo "======================= Config File ================================"
+
+# cat configure.deps | tee -a $LOG_FILE
+
+### Add addition config flags =================================================
+CFLAGS="$CFLAGS -D NO_TCMALLOC:BOOL=$NO_TCMALLOC"
+CFLAGS="$CFLAGS -D CMAKE_INSTALL_PREFIX:STRING=$INSTALL_DIR"
+# CFLAGS="$CFLAGS -D CPP11:BOOL=$CPP11"
+
+## ============================================================================
+# Run Cmake
+
+
+set -e
+# set -u
+set -o pipefail
+
+
+
+echo -e "\n\n\n======================= Release ========================" \
+    | tee -a $LOG_FILE
+
+if [ ! -d $RELEASE_DIR ]; then
+    mkdir $RELEASE_DIR
+fi
+cd $RELEASE_DIR
+rm -f CMakeCache.txt
+build_cmd="$CMAKE \
+    $GENERATOR \
+    -D CMAKE_BUILD_TYPE=Release \
+    $CFLAGS \
+    ../src"
+echo $build_cmd | tee -a "../$LOG_FILE"
+eval $build_cmd | tee -a "../$LOG_FILE"
+cd $CLIPPER_HOME
+
+
+echo -e "\n\n\n======================= Debug =========================" \
+    | tee -a $LOG_FILE
+
+if [ ! -d $DEBUG_DIR ]; then
+    mkdir $DEBUG_DIR
+fi
+cd $DEBUG_DIR
+rm -f CMakeCache.txt
+build_cmd="$CMAKE \
+    $GENERATOR \
+    -D CMAKE_BUILD_TYPE=Debug \
+    $CFLAGS \
+    ../src"
+echo $build_cmd | tee -a ../$LOG_FILE
+eval $build_cmd | tee -a ../$LOG_FILE
+cd $CLIPPER_HOME
+
+# echo "*****************************************************"
+# echo "*                 Important Note                    *"
+# echo "*                 --------------                    *"
+# echo "*       You do not have to build everything!        *"
+# echo "*                                                   *"
+# echo "* Everything takes a very long time, and a ton of   *"
+# echo "* of memory to build. You can just cd into toolkit  *"
+# echo "* directory you want, and just build that. For      *"
+# echo "* instance, if I just want the release build of     *"
+# echo "* PageRank, I could:                                *"
+# echo "*                                                   *"
+# echo "*       cd release/toolkits/graph_analytics         *"
+# echo "*       make -j2                                    *"
+# echo "*                                                   *"
+# echo "* Use at most [RAM in GB] parallel builds. The      *"
+# echo "* compilation consumes a lot of RAM. i.e. if you    *"
+# echo "* have 4 GB of RAM, do not do more than make -j4.   *"
+# echo "*****************************************************"
+
+# vim:filetype=sh
+
