@@ -4,7 +4,6 @@
 #include <memory>
 
 #include "datatypes.hpp"
-// #include "query_processor.hpp"
 #include "task_executor.hpp"
 
 namespace clipper {
@@ -17,14 +16,17 @@ class SelectionPolicy {
   ~SelectionPolicy() = delete;
   static State initialize(
       const std::vector<VersionedModelId>& candidate_models) {
-    return Derived::initialize(candidate_models);
+    return State::State(candidate_models);
   }
   // virtual std::unique_ptr<SelectionState> initialize(
   //     const std::vector<VersionedModelId>& candidate_models) const = 0;
 
   static State add_models(State state,
                           const std::vector<VersionedModelId>& new_models) {
-    return Derived::add_models(std::forward(state), new_models);
+                                         new_models) {
+    old_models = state.models;
+    all_models = new_models + old_models;
+    return State::State(all_models);
   }
 
   // Used to identify a unique selection policy instance. For example,
@@ -33,10 +35,10 @@ class SelectionPolicy {
   // which policy instance corresponds to this exact set of arms.
   // Similarly, it provides flexibility in how to deal with different
   // versions of the same arm (different versions of same model).
-  static long hash_models(
-      const std::vector<VersionedModelId>& candidate_models) {
-    return Derived::hash_models(candidate_models);
-  }
+  // static long hash_models(
+  //     const std::vector<VersionedModelId>& candidate_models) {
+  //   return Derived::hash_models(candidate_models);
+  // }
 
   // On the prediction path
   static std::vector<PredictTask> select_predict_tasks(State state, Query query,
@@ -76,89 +78,42 @@ class SelectionPolicy {
   }
 
   static ByteBuffer serialize_state(State state) {
-    return Derived::serialize_state(std::forward(state));
+      std::vector<uint8_t> v;
+      return v;
   }
 
   static State deserialize_state(const ByteBuffer& bytes) {
-    return Derived::deserialize_state(bytes);
+      return State::State();
   }
 };
 
-// class EpsilonGreedyPolicy: public SelectionPolicy<EpsilonGreedyPolicy,
-// EpsilonGreedyState> {
-//
-//   static double epsilon 0.5;
-//    typedef EpsilonGreedyState state_type;
-//   EpsilonGreedyPolicy() = delete;
-//   ~EpsilonGreedyPolicy() = delete;
-//
-//   static EpsilonGreedyState initialize(
-//       const std::vector<VersionedModelId>& candidate_models);
-//
-//   static EpsilonGreedyState add_models(EpsilonGreedyState state,
-//                                      std::vector<VersionedModelId>
-//                                      new_models);
-//
-//   static long hash_models(
-//       const std::vector<VersionedModelId>& candidate_models);
-//
-//   static std::vector<PredictTask> select_predict_tasks(EpsilonGreedyState
-//   state,
-//                                                        Query query,
-//                                                        long query_id);
-//
-//   static std::shared_ptr<Output> combine_predictions(
-//       EpsilonGreedyState state, Query query,
-//       std::vector<std::shared_ptr<Output>> predictions);
-//
-//   static std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-//   select_feedback_tasks(EpsilonGreedyState state, Query query);
-//
-//   static EpsilonGreedyState process_feedback(
-//       EpsilonGreedyState state, Feedback feedback,
-//       std::vector<std::shared_ptr<Output>> predictions);
-//
-//   static ByteBuffer serialize_state(EpsilonGreedyState state);
-//
-//   static EpsilonGreedyState deserialize_state(const ByteBuffer& bytes);
-//
-// };
 
-class NewestModelSelectionPolicy
-    : public SelectionPolicy<NewestModelSelectionPolicy, VersionedModelId> {
- public:
-  typedef VersionedModelId state_type;
+// Epsilon Greedy
+class EpsilonGreedyPolicy: public SelectionPolicy<EpsilonGreedyPolicy, EpsilonGreedyState> {
 
-  NewestModelSelectionPolicy() = delete;
-  ~NewestModelSelectionPolicy() = delete;
-  static VersionedModelId initialize(
-      const std::vector<VersionedModelId>& candidate_models);
+public:
+  static double epsilon 0.5;
+   typedef EpsilonGreedyState state_type;
+  EpsilonGreedyPolicy() = delete;
+  ~EpsilonGreedyPolicy() = delete;
 
-  static VersionedModelId add_models(VersionedModelId state,
-                                     std::vector<VersionedModelId> new_models);
-
-  static long hash_models(
-      const std::vector<VersionedModelId>& candidate_models);
-
-  static std::vector<PredictTask> select_predict_tasks(VersionedModelId state,
+  static std::vector<PredictTask> select_predict_tasks(EpsilonGreedyState state,
                                                        Query query,
                                                        long query_id);
 
   static std::shared_ptr<Output> combine_predictions(
-      VersionedModelId state, Query query,
+      EpsilonGreedyState state, Query query,
       std::vector<std::shared_ptr<Output>> predictions);
 
   static std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-  select_feedback_tasks(VersionedModelId state, Query query);
+  select_feedback_tasks(EpsilonGreedyState state, Query query);
 
-  static VersionedModelId process_feedback(
-      VersionedModelId state, Feedback feedback,
+  static EpsilonGreedyState process_feedback(
+      EpsilonGreedyState state, Feedback feedback,
       std::vector<std::shared_ptr<Output>> predictions);
 
-  static ByteBuffer serialize_state(VersionedModelId state);
+}；
 
-  static VersionedModelId deserialize_state(const ByteBuffer& bytes);
-};
-}
+}；
 
 #endif  // CLIPPER_LIB_SELECTION_POLICY_H
