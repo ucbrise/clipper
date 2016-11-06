@@ -9,3 +9,10 @@ add_executable(bench src/bench.cpp)
 target_link_libraries(bench clipper boost)
 
 ##################################
+# REST HTTP Server executable
+
+add_executable(rest src/rest.cpp)
+
+target_link_libraries(rest clipper boost)
+
+##################################
