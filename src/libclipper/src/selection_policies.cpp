@@ -9,24 +9,20 @@
 #include <clipper/util.hpp>
 
 // hack to get around unused argument compiler errors
-#define UNUSED(expr) \
-  do {               \
-    (void)(expr);    \
-  } while (0)
 
 namespace clipper {
 
 VersionedModelId NewestModelSelectionPolicy::initialize(
     const std::vector<VersionedModelId>& candidate_models) {
   // TODO: IMPLEMENT
-  UNUSED(candidate_models);
-  return std::make_pair("m", 1);
+    assert(candidate_models.size() > 0);
+    return candidate_models.front();
 }
 
 VersionedModelId NewestModelSelectionPolicy::add_models(
     VersionedModelId state, std::vector<VersionedModelId> new_models) {
-  UNUSED(new_models);
-  return state;
+  UNUSED(state);
+  return new_models.front();
 }
 
 long NewestModelSelectionPolicy::hash_models(
@@ -44,13 +40,16 @@ std::vector<PredictTask> NewestModelSelectionPolicy::select_predict_tasks(
   return task_vec;
 }
 
-std::shared_ptr<Output> NewestModelSelectionPolicy::combine_predictions(
-    VersionedModelId state, Query query,
-    std::vector<std::shared_ptr<Output>> predictions) {
+Output NewestModelSelectionPolicy::combine_predictions(
+    VersionedModelId state, Query query, std::vector<Output> predictions) {
   UNUSED(state);
   UNUSED(query);
   // just return the first prediction
-  return predictions.front();
+    if (predictions.empty()) {
+        return Output{0.0, std::make_pair("none", 0)};
+    } else {
+        return predictions.front();
+    }
 }
 
 std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>

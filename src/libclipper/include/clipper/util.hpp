@@ -10,6 +10,11 @@
 
 #include "boost/optional.hpp"
 
+#define UNUSED(expr) \
+  do {               \
+    (void)(expr);    \
+  } while (0)
+
 namespace clipper {
 
 // Queue implementation borrowed from LatticeFlow
@@ -32,10 +37,12 @@ class Queue {
     data_available_.notify_one();
   }
 
-   int size() {
-     std::unique_lock<std::mutex> l(m_);
-     return xs_.size();
-   }
+  int size() {
+    // TODO: This should really be a shared lock
+    // std::unique_lock<std::mutex> l(m_);
+    std::unique_lock<std::mutex> l(m_);
+    return xs_.size();
+  }
 
   /// Block until the queue contains at least one element, then return the
   /// first element in the queue.
@@ -66,8 +73,8 @@ class Queue {
   // std::vector<T> try_pop_batch(int batch_size) {
   //   std::unique_lock<std::mutex> l(m_);
   //   if (xs_.size() >= batch_size) {
-  //     const std::vector<T> batch(xs_.begin(), xs.begin() + batch_size);
-  //     xs_.erase(xs_.begin(), xs.begin() + batch_size);
+  //     const std::vector<T> batch(xs_.begin(), xs_.begin() + batch_size);
+  //     xs_.erase(xs_.begin(), xs_.begin() + batch_size);
   //     return batch;
   //   } else if (xs_.size() > 0) {
   //     std::vector<T> batch;

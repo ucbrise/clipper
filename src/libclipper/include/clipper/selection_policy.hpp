@@ -47,9 +47,9 @@ class SelectionPolicy {
   // TODO: change this method name
   // TODO: I think it may make sense to decouple combine_predictions()
   // from select_predict_tasks in some cases
-  static std::shared_ptr<Output> combine_predictions(
+  static Output combine_predictions(
       State state, Query query,
-      std::vector<std::shared_ptr<Output>> predictions) {
+      std::vector<Output> predictions) {
     return Derived::combine_predictions(std::forward(state), query,
                                         predictions);
   }
@@ -144,9 +144,9 @@ class NewestModelSelectionPolicy
                                                        Query query,
                                                        long query_id);
 
-  static std::shared_ptr<Output> combine_predictions(
+  static Output combine_predictions(
       VersionedModelId state, Query query,
-      std::vector<std::shared_ptr<Output>> predictions);
+      std::vector<Output> predictions);
 
   static std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
   select_feedback_tasks(VersionedModelId state, Query query);

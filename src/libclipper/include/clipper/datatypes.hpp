@@ -11,13 +11,20 @@ using VersionedModelId = std::pair<std::string, int>;
 using QueryId = long;
 using FeedbackAck = bool;
 
+size_t versioned_model_hash(const VersionedModelId& key);
+
 class Output {
  public:
   ~Output() = default;
+  explicit Output() = default;
+  Output(const Output&) = default;
+  Output& operator=(const Output&) = default;
 
-  Output(double y_hat, std::string versioned_model);
+  Output(Output&&) = default;
+  Output& operator=(Output&&) = default;
+  Output(double y_hat, VersionedModelId versioned_model);
   double y_hat_;
-  std::string versioned_model_;
+  VersionedModelId versioned_model_;
 };
 
 // using Output = std::pair<double;
@@ -27,45 +34,26 @@ class Input {
   // TODO: pure virtual or default?
   // virtual ~Input() = default;
 
-  // TODO special member functions:
-  //    + explicit?
-  //    + virtual?
-
   // used by RPC system
   virtual ByteBuffer serialize() const = 0;
+  virtual size_t hash() const = 0;
 };
-
-// class IntVector : Input {
-//   public:
-//     IntVector(std::vector<int> data);
-//
-//     // move constructors
-//     IntVector(IntVector&& other) = default;
-//     IntVector& operator=(IntVector&& other) = default;
-//
-//     // copy constructors
-//     IntVector(IntVector& other) = default;
-//     IntVector& operator=(IntVector& other) = default;
-//
-//     ByteBuffer serialize() const;
-//
-//   private:
-//     std::vector<int> data_;
-// };
 
 class DoubleVector : public Input {
  public:
   explicit DoubleVector(std::vector<double> data);
 
+  // Disallow copy
+  DoubleVector(DoubleVector& other) = delete;
+  DoubleVector& operator=(DoubleVector& other) = delete;
+
   // move constructors
   DoubleVector(DoubleVector&& other) = default;
   DoubleVector& operator=(DoubleVector&& other) = default;
 
-  // copy constructors
-  DoubleVector(DoubleVector& other) = default;
-  DoubleVector& operator=(DoubleVector& other) = default;
-
   ByteBuffer serialize() const;
+
+  size_t hash() const;
 
  private:
   std::vector<double> data_;
@@ -79,6 +67,8 @@ class Query {
         long latency_micros, std::string selection_policy,
         std::vector<VersionedModelId> candidate_models);
 
+  // Note that it should be relatively cheap to copy queries because
+  // the actual input won't be copied
   // copy constructors
   Query(const Query&) = default;
   Query& operator=(const Query&) = default;
@@ -102,8 +92,7 @@ class Response {
  public:
   ~Response() = default;
 
-  Response(Query query, QueryId query_id, long duration_micros,
-           std::unique_ptr<Output> output,
+  Response(Query query, QueryId query_id, long duration_micros, Output output,
            std::vector<VersionedModelId> models_used);
 
   // default copy constructors
@@ -119,7 +108,7 @@ class Response {
   Query query_;
   QueryId query_id_;
   long duration_micros_;
-  std::unique_ptr<Output> output_;
+  Output output_;
   std::vector<VersionedModelId> models_used_;
 };
 
