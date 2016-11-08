@@ -13,6 +13,22 @@
 
 namespace clipper {
 
+template <typename Policy>
+std::vector<PredictTask> select_tasks(Query query, long query_id,
+                                      const StateDB& state_db) {
+  auto hashkey = Policy::hash_models(query.candidate_models_);
+  typename Policy::state_type state;
+  if (auto state_opt =
+          state_db.get(StateKey{query.label_, query.user_id_, hashkey})) {
+    const auto serialized_state = *state_opt;
+    // if auto doesn't work: Policy::state_type
+    state = Policy::deserialize_state(serialized_state);
+  } else {
+    state = Policy::initialize(query.candidate_models_);
+  }
+  return Policy::select_predict_tasks(state, query, query_id);
+}
+
 // TODO: This is a dummy implementation to get the API working
 boost::future<Response> QueryProcessor::predict(Query query) {
   // get instance of selection policy
