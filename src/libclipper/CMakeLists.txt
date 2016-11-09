@@ -8,7 +8,7 @@ add_library(clipper
     src/datatypes.cpp
     src/selection_policies.cpp
     src/persistent_state.cpp
-    src/task_executor.cpp)
+    src/task_executor.cpp src/rpc_service.hpp)
 
 
 # Define headers for this library. PUBLIC headers are used for
@@ -20,7 +20,7 @@ target_include_directories(clipper PUBLIC
     PRIVATE src)
 
 
-target_link_libraries(clipper boost)
+target_link_libraries(clipper boost zmqcpp)
 
 # This makes the project importable from the build directory
 export(TARGETS clipper FILE ClipperConfig.cmake)

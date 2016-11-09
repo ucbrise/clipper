@@ -1,0 +1,6 @@
+#ifndef CLIPPER_RPC_SERVICE_HPP
+#define CLIPPER_RPC_SERVICE_HPP
+
+#include <zmq.hpp>
+
+#endif //CLIPPER_RPC_SERVICE_HPP
