@@ -14,8 +14,8 @@
 namespace clipper {
 
 template <typename Policy>
-std::vector<PredictTask> select_tasks(Query query, long query_id,
-                                      const StateDB& state_db) {
+std::vector<PredictTask> select_predict_tasks(Query query, long query_id,
+                                              const StateDB& state_db) {
   auto hashkey = Policy::hash_models(query.candidate_models_);
   typename Policy::state_type state;
   if (auto state_opt =
@@ -43,8 +43,8 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   long query_id = query_counter_.fetch_add(1);
   std::vector<PredictTask> tasks;
   if (query.selection_policy_ == "newest_model") {
-    tasks =
-        select_tasks<NewestModelSelectionPolicy>(query, query_id, state_db_);
+    tasks = select_predict_tasks<NewestModelSelectionPolicy>(query, query_id,
+                                                             state_db_);
     std::cout << "Used NewestModelSelectionPolicy to select tasks" << std::endl;
   } else {
     std::cout << query.selection_policy_ << " is invalid selection policy"
