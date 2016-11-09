@@ -8,7 +8,7 @@ add_library(clipper
     src/datatypes.cpp
     src/selection_policies.cpp
     src/persistent_state.cpp
-    src/task_executor.cpp src/rpc_service.hpp)
+    src/task_executor.cpp src/rpc_service.hpp src/rpc_service.cpp)
 
 
 # Define headers for this library. PUBLIC headers are used for
