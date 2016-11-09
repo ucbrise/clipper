@@ -60,24 +60,24 @@ class Queue {
     }
   }
 
-  /// pops up to batch_size elements from the front of the queue.
-  /// If the batch size is larger than the size of the queue,
-  /// all elements will be removed from the queue. This method never blocks.
-  std::vector<T> try_pop_batch(int batch_size) {
-    std::unique_lock<std::mutex> l(m_);
-    if (xs_.size() >= batch_size) {
-      const std::vector<T> batch(xs_.begin(), xs.begin() + batch_size);
-      xs_.erase(xs_.begin(), xs.begin() + batch_size);
-      return batch;
-    } else if (xs_.size() > 0) {
-      std::vector<T> batch;
-      batch.swap(xs_);
-      assert(xs_.size() == 0);
-      return batch;
-    } else {
-      return {};
-    }
-  }
+  // /// pops up to batch_size elements from the front of the queue.
+  // /// If the batch size is larger than the size of the queue,
+  // /// all elements will be removed from the queue. This method never blocks.
+  // std::vector<T> try_pop_batch(int batch_size) {
+  //   std::unique_lock<std::mutex> l(m_);
+  //   if (xs_.size() >= batch_size) {
+  //     const std::vector<T> batch(xs_.begin(), xs.begin() + batch_size);
+  //     xs_.erase(xs_.begin(), xs.begin() + batch_size);
+  //     return batch;
+  //   } else if (xs_.size() > 0) {
+  //     std::vector<T> batch;
+  //     batch.swap(xs_);
+  //     assert(xs_.size() == 0);
+  //     return batch;
+  //   } else {
+  //     return {};
+  //   }
+  // }
 
   void clear() {
     std::unique_lock<std::mutex> l(m_);
