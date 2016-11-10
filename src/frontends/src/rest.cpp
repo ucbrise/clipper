@@ -13,7 +13,7 @@
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
 
-#include "server_http.hpp"
+#include <server_http.hpp>
 
 using namespace boost::property_tree; 
 using clipper::DoubleVector;

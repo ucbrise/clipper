@@ -44,6 +44,7 @@ set(CMAKE_CXX_EXTENSIONS off)
 enable_testing()
 add_subdirectory(libclipper)
 add_subdirectory(frontends)
+add_subdirectory(libs)
 
 
 

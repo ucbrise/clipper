@@ -13,6 +13,6 @@ target_link_libraries(bench clipper boost)
 
 add_executable(rest src/rest.cpp)
 
-target_link_libraries(rest clipper boost)
+target_link_libraries(rest clipper boost httpserver)
 
 ##################################
