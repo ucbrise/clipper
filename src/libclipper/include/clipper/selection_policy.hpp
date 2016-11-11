@@ -11,7 +11,7 @@ namespace clipper {
 template <typename Derived, typename State>
 class SelectionPolicy {
  public:
-  // don't let this class be instantiated
+  // Don't let this class be instantiated
   SelectionPolicy() = delete;
   ~SelectionPolicy() = delete;
 
@@ -37,8 +37,6 @@ class SelectionPolicy {
     return Derived::select_predict_tasks(state, query, query_id);
   }
 
-  // TODO: change this method name
-  // TODO: I think it may make sense to decouple combine_predictions()
   // from select_predict_tasks in some cases
   static std::shared_ptr<Output> combine_predictions(
       State state, Query query,
@@ -90,8 +88,8 @@ public:
 
   static Exp3State initialize(const std::vector<VersionedModelId>& candidate_models);
 
-  static Exp3State add_models(State state,
-                          const std::vector<VersionedModelId>& new_models);
+  static Exp3State add_models(Exp3State state,
+                              const std::vector<VersionedModelId>& new_models);
 
   static std::vector<PredictTask> select_predict_tasks(Exp3State state,
                                                        Query query,
@@ -106,9 +104,9 @@ public:
                         FeedbackQuery feedback,
                         long query_id);
 
-  static Exp3State process_feedback(
-      Exp3State state, Feedback feedback,
-      std::vector<std::shared_ptr<Output>> predictions);
+  static Exp3State process_feedback(Exp3State state, 
+                                    Feedback feedback,
+                                    std::vector<std::shared_ptr<Output>> predictions);
 
   static ByteBuffer serialize_state(Exp3State state);
 
@@ -123,8 +121,8 @@ private:
 
 class Exp4Policy: public SelectionPolicy<Exp4Policy, Exp4State> {
   // Exp4
-  // Select: weighted sampling
-  // Update: update weights based on Loss and respond rate
+  // Select: all models
+  // Update: update individual model weights (same as Exp3)
   using Exp4State = std::pair<double, std::unordered_map<VersionedModelId, double>>;
 
 public:
@@ -134,7 +132,7 @@ public:
   static Exp4State initialize(const std::vector<VersionedModelId>& candidate_models);
 
   static Exp4State add_models(Exp4State state,
-                          const std::vector<VersionedModelId>& new_models);
+                              const std::vector<VersionedModelId>& new_models);
 
   static std::vector<PredictTask> select_predict_tasks(Exp4State state,
                                                        Query query,
@@ -149,9 +147,9 @@ public:
                         FeedbackQuery feedback,
                         long query_id);
 
-  static Exp4State process_feedback(
-      Exp3State state, Feedback feedback,
-      std::vector<std::shared_ptr<Output>> predictions);
+  static Exp4State process_feedback(Exp4State state, 
+                                    Feedback feedback,
+                                    std::vector<std::shared_ptr<Output>> predictions);
 
   static ByteBuffer serialize_state(Exp4State state);
 
