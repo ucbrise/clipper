@@ -40,10 +40,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED on)
 # disallow non-standard extensions
 set(CMAKE_CXX_EXTENSIONS off)
 
+# add shared C++ definitions
+add_definitions( -DBOOST_THREAD_VERSION=4)
+
 # Targets that we develop
 enable_testing()
 add_subdirectory(libclipper)
 add_subdirectory(frontends)
+add_subdirectory(libs)
 
 
 
