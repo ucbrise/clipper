@@ -3,9 +3,7 @@
 #include <utility>
 #include <tuple>
 
-#define BOOST_THREAD_VERSION 4
 #include <boost/thread.hpp>
-#include <boost/thread/future.hpp>
 
 #include <clipper/task_scheduler.hpp>
 #include <clipper/datatypes.hpp>

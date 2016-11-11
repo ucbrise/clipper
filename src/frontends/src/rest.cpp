@@ -4,7 +4,6 @@
 #include <utility>
 #include <vector>
 
-#define BOOST_THREAD_VERSION 4
 #include <boost/thread.hpp>
 #define BOOST_SPIRIT_THREADSAFE
 #include <boost/property_tree/ptree.hpp>

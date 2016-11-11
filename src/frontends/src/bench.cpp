@@ -4,9 +4,7 @@
 #include <utility>
 #include <vector>
 
-#define BOOST_THREAD_VERSION 4
 #include <boost/thread.hpp>
-#include <boost/thread/future.hpp>
 
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
