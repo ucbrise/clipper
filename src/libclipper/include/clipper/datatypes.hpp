@@ -14,10 +14,10 @@ using FeedbackAck = bool;
 class Output {
  public:
   ~Output() = default;
-
-  Output(double y_hat, std::string versioned_model);
+  Output() = default;
+  Output(double y_hat, VersionedModelId versioned_model);
   double y_hat_;
-  std::string versioned_model_;
+  VersionedModelId versioned_model_;
 };
 
 // using Output = std::pair<double;
@@ -103,7 +103,7 @@ class Response {
   ~Response() = default;
 
   Response(Query query, QueryId query_id, long duration_micros,
-           std::unique_ptr<Output> output,
+           Output output,
            std::vector<VersionedModelId> models_used);
 
   // default copy constructors

@@ -44,9 +44,9 @@ std::vector<PredictTask> NewestModelSelectionPolicy::select_predict_tasks(
   return task_vec;
 }
 
-std::shared_ptr<Output> NewestModelSelectionPolicy::combine_predictions(
+Output NewestModelSelectionPolicy::combine_predictions(
     VersionedModelId state, Query query,
-    std::vector<std::shared_ptr<Output>> predictions) {
+    std::vector<Output> predictions) {
   UNUSED(state);
   UNUSED(query);
   // just return the first prediction

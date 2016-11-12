@@ -11,6 +11,7 @@
 #include "datatypes.hpp"
 #include "persistent_state.hpp"
 #include "selection_policy.hpp"
+#include "timers.hpp"
 
 namespace clipper {
 
@@ -33,7 +34,9 @@ class QueryProcessor {
 
  private:
   std::atomic<long> query_counter_{0};
-  StateDB state_db_{StateDB()};
+  StateDB state_db_;
+  TaskExecutor<PowerTwoChoicesScheduler> task_executor_;
+  TimerSystem timer_system_;
 };
 
 }  // namespace clipper

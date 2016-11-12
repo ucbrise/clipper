@@ -2,6 +2,8 @@
 #define CLIPPER_LIB_TASK_EXECUTOR_H
 
 #include <memory>
+#include <mutex>
+#include <unordered_map>
 
 #define BOOST_THREAD_VERSION 3
 #include <boost/thread.hpp>
@@ -18,11 +20,13 @@ class PredictTask {
   PredictTask(std::shared_ptr<Input> input, VersionedModelId model,
               float utility, QueryId query_id, long latency_slo_micros);
 
-  PredictTask(const PredictTask& other) = default;
-  PredictTask& operator=(const PredictTask& other) = default;
+  PredictTask(const PredictTask &other) = default;
 
-  PredictTask(PredictTask&& other) = default;
-  PredictTask& operator=(PredictTask&& other) = default;
+  PredictTask &operator=(const PredictTask &other) = default;
+
+  PredictTask(PredictTask &&other) = default;
+
+  PredictTask &operator=(PredictTask &&other) = default;
 
   std::shared_ptr<Input> input_;
   VersionedModelId model_;
@@ -40,11 +44,13 @@ class FeedbackTask {
   FeedbackTask(Feedback feedback, VersionedModelId model, QueryId query_id,
                long latency_slo_micros);
 
-  FeedbackTask(const FeedbackTask& other) = default;
-  FeedbackTask& operator=(const FeedbackTask& other) = default;
+  FeedbackTask(const FeedbackTask &other) = default;
 
-  FeedbackTask(FeedbackTask&& other) = default;
-  FeedbackTask& operator=(FeedbackTask&& other) = default;
+  FeedbackTask &operator=(const FeedbackTask &other) = default;
+
+  FeedbackTask(FeedbackTask &&other) = default;
+
+  FeedbackTask &operator=(FeedbackTask &&other) = default;
 
   Feedback feedback_;
   VersionedModelId model_;
@@ -52,40 +58,97 @@ class FeedbackTask {
   long latency_slo_micros_;
 };
 
-class TaskExecutor {
- public:
-  std::vector<boost::future<Output>> schedule_predictions(
-      const std::vector<PredictTask>& tasks);
-  std::vector<boost::future<FeedbackAck>> schedule_feedback(
-      const std::vector<FeedbackTask> tasks);
-
-  //  private:
-  // ResourceState resource_state_;
-};
+// class TaskExecutor {
+// public:
+//  std::vector<boost::future<Output>> schedule_predictions(
+//      const std::vector<PredictTask> &tasks);
+//
+//  std::vector<boost::future<FeedbackAck>> schedule_feedback(
+//      const std::vector<FeedbackTask> tasks);
+//
+//  //  private:
+//  // ResourceState resource_state_;
+//};
 
 class ModelContainer {
+ public:
+  ~ModelContainer() = default;
+  ModelContainer(VersionedModelId model, std::string address);
+  // disallow copy
+  ModelContainer ModelContainer(const ModelContainer&) = delete;
+  ModelContainer& operator=(const ModelContainer&) = delete;
+
+  ModelContainer ModelContainer(ModelContainer&&) = default;
+  ModelContainer& operator=(ModelContainer&&) = default;
+
+
   VersionedModelId model_;
   int get_queue_size() const;
+  void send_prediction(PredictTask task);
+  void send_feedback(PredictTask task);
 
  private:
-  std::string address;
-
+  std::string address_;
   bool connected_{true};
-  Queue<PredictTask> request_queue_{};
-  Queue<FeedbackTask> feedback_queue_{};
+  Queue<PredictTask> request_queue_;
+  Queue<FeedbackTask> feedback_queue_;
+};
+
+class CacheEntry {
+ public:
+  CacheEntry();
+  ~CacheEntry() = default;
+
+  bool completed_ = false;
+  boost::promise<Output> value_promise_;
+  boost::shared_future<Output> value_;
+};
+
+class PredictionCache {
+ public:
+  boost::shared_future<Output> fetch(const VersionedModelId &model,
+                                     const Input &input);
+  void put(const VersionedModelId &model, const Input &input,
+                            const Output &output);
+
+ private:
+  const long hash(const Input &input);
+  std::mutex m_;
+  // TODO cache needs a promise as well?
+  std::unordered_map<long, CacheEntry> cache_;
 };
 
 template <typename Scheduler>
-class BatchingTaskExecutor {
+class TaskExecutor {
  public:
   std::vector<boost::future<Output>> schedule_predictions(
-      const std::vector<PredictTask>& tasks) {}
-  virtual std::vector<boost::future<FeedbackAck>> schedule_feedback(
-      const std::vector<FeedbackTask> tasks);
+      std::vector<PredictTask> tasks) {
+    // TODO this needs to be a shared lock, nearly all
+    // accesses on this mutex won't modify the set of active
+    // containers
+    std::unique_lock<std::mutex> l(active_containers_mutex_);
+    std::vector<boost::future<Output>> output_futures(tasks.size());
+    while (tasks.size() > 0) {
+      auto t = tasks.front();
+      tasks.erase(tasks.begin());
+      // assign tasks to containers independently
+      auto container = scheduler_.assign_container(t, active_containers_);
+      container.send_prediction(t);
+      output_futures.push_back(cache_.fetch(task.model_, &task.input_));
+    }
+    return output_futures;
+  }
 
-  void add_model(VersionedModelId model);
+  std::vector<boost::future<FeedbackAck>> schedule_feedback(
+      const std::vector<FeedbackTask> tasks) {
+    // TODO Implement
+    return {};
+  }
 
-  void remove_model(VersionedModelId model);
+  // void add_model(VersionedModelId model);
+  // void add_container(VersionedModelId model);
+  //
+  // void remove_model(VersionedModelId model);
 
  private:
   // Protects the map of task queues. Must acquire an exclusive
@@ -98,12 +161,13 @@ class BatchingTaskExecutor {
       active_containers_;
 
   Scheduler scheduler_;
+  PredictionCache cache_;
 };
 
 class PowerTwoChoicesScheduler {
  public:
-  const ModelContainer& assign_container(
-      const PredictTask& task, const std::vector<ModelContainer>& containers);
+  const ModelContainer &assign_container(
+      const PredictTask &task, const std::vector<ModelContainer> &containers);
 };
 
 // class PowerTwoChoicesScheduler {

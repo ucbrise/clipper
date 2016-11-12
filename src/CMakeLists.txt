@@ -9,7 +9,7 @@ project("Clipper" VERSION 0.1.0 LANGUAGES CXX)
 # Include Boost as an imported target
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost 1.62.0 REQUIRED COMPONENTS thread system)
+find_package(Boost 1.62.0 REQUIRED COMPONENTS thread system date_time chrono)
 # message(STATUS "Boost_INCLUDE_DIR: " ${Boost_INCLUDE_DIRS})
 # message(STATUS "Boost_LINK_DIR: " ${Boost_LIBRARY_DIRS})
 # INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})

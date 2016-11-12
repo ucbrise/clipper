@@ -1,7 +1,14 @@
 #include <memory>
 #include <random>
+// uncomment to disable assert()
+// #define NDEBUG
+#include <cassert>
 
 #include <clipper/task_executor.hpp>
+#include <clipper/util.hpp>
+
+#define BOOST_THREAD_VERSION 3
+#include <boost/thread.hpp>
 
 namespace clipper {
 
@@ -21,16 +28,44 @@ FeedbackTask::FeedbackTask(Feedback feedback, VersionedModelId model,
       query_id_(query_id),
       latency_slo_micros_(latency_slo_micros) {}
 
-std::vector<boost::future<Output>> BatchingTaskExecutor::schedule_predictions(
-    const std::vector<PredictTask>& tasks) {}
+CacheEntry::CacheEntry() { value_ = value_promise_.get_future(); }
 
-std::vector<boost::future<FeedbackAck>> BatchingTaskExecutor::schedule_feedback(
-    const std::vector<FeedbackTask> tasks) {}
+boost::shared_future<Output> PredictionCache::fetch(
+    const VersionedModelId &model, const Input &input) {
+  std::unique_lock<std::mutex> l(m_);
+  auto key = hash(input);
+  auto entry = cache_[key];
+  return shared_future<Output>(entry.value_);
+}
+
+void PredictionCache::put(const VersionedModelId &model, const Input &input,
+                          const Output &output) {
+  std::unique_lock<std::mutex> l(m_);
+  auto key = hash(input);
+  auto entry = cache_[key];
+  if (!entry.completed_) {
+    entry.value_promise_.set_value(output);
+    entry.completed_ = true;
+    cache_[key] = entry;
+  }
+}
+
+// std::vector<boost::future<Output>>
+// BatchingTaskExecutor::schedule_predictions(
+//     const std::vector<PredictTask>& tasks) {}
+//
+// std::vector<boost::future<FeedbackAck>>
+// BatchingTaskExecutor::schedule_feedback(
+//     const std::vector<FeedbackTask> tasks) {}
+
+ModelContainer::ModelContainer(VersionedModelId id, std::string address) : model_(id), address_(address) {}
+
 
 int ModelContainer::get_queue_size() const { return request_queue_.size(); }
 
-ModelContainer& assign_container(
-    const PredictTask& task, std::vector<ModelContainer>& containers) const {
+ModelContainer &assign_container(
+    const PredictTask &task, std::vector<ModelContainer> &containers) const {
+  assert(containers.size() >= 1);
   if (containers.size() > 1) {
     std::random_device rd;
     std::mt19937 generator(rd());
@@ -40,11 +75,14 @@ ModelContainer& assign_container(
     while (second_choice == first_choice) {
       second_choice = dist(generator);
     }
-    if (containers[first_choice].size() > containers[second_choice].size()) {
-      return &containers[second_choice];
+    if (containers[first_choice].get_queue_size() >
+        containers[second_choice].get_queue_size()) {
+      return containers[second_choice];
     } else {
-      return &containers[first_choice];
+      return containers[first_choice];
     }
+  } else {
+    return containers[0];
   }
 }
 
