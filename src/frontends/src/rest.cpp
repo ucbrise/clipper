@@ -31,38 +31,39 @@ std::vector<T> as_vector(ptree const& pt, ptree::key_type const& key) {
 }
 
 class RequestHandler {
- public:
-  RequestHandler(QueryProcessor& q, int portno, int num_threads)
-      : server(portno, num_threads), qp(q) {}
+    public:
+        RequestHandler(QueryProcessor& q, int portno, int num_threads) : server(portno, num_threads), qp(q) {}
+        RequestHandler(QueryProcessor& q, std::string address, int portno, int num_threads) : server(address, portno, num_threads), qp(q) {}
 
-  void add_endpoint(
-      std::string endpoint,
-      std::function<void(std::shared_ptr<HttpServer::Response>,
-                         std::shared_ptr<HttpServer::Request>, QueryProcessor&)>
-          endpoint_fn) {
-    QueryProcessor& q = qp;
-    server.resource[endpoint]["POST"] = [&q, endpoint_fn](
-        std::shared_ptr<HttpServer::Response> response,
-        std::shared_ptr<HttpServer::Request> request) {
-      endpoint_fn(response, request, q);
-    };
-  }
+        void add_endpoint(std::string endpoint, std::string request_method,
+                          std::function<void(std::shared_ptr<HttpServer::Response>,
+                                        std::shared_ptr<HttpServer::Request>,
+                                        QueryProcessor&)> endpoint_fn) {
+            QueryProcessor& q = qp;
+            server.resource[endpoint][request_method]=[&q,endpoint_fn](std::shared_ptr<HttpServer::Response> response,
+                                                                       std::shared_ptr<HttpServer::Request> request) {
+                endpoint_fn(response, request, q);
+            };
+            std::cout << "added " + endpoint + "\n";
+            server.add_endpoint(endpoint, request_method, server.resource[endpoint][request_method]);
+        }
 
-  void start_listening() {
-    HttpServer& s = server;
-    std::thread server_thread([&s]() { s.start(); });
+        void start_listening() {
+            HttpServer& s = server;
+            std::thread server_thread([&s](){
+                s.start();
+            });
 
-    server_thread.join();
-  }
-
- private:
-  HttpServer server;
-  QueryProcessor& qp;
+            server_thread.join();
+        }
+    private:
+        HttpServer server;
+        QueryProcessor& qp;
 };
 
 int main() {
   QueryProcessor qp;
-  RequestHandler rh(qp, 1337, 8);
+  RequestHandler rh(qp, "127.0.0.1", 1337, 8);
   /* Define predict/update functions, which may be added after initialization */
   auto predict_fn = [](std::shared_ptr<HttpServer::Response> response,
                        std::shared_ptr<HttpServer::Request> request,
@@ -138,7 +139,12 @@ int main() {
                 << e.what();
     }
   };
-  rh.add_endpoint("^/predict$", predict_fn);
-  rh.add_endpoint("^/update$", update_fn);
+  rh.add_endpoint("^/predict$", "POST", predict_fn);
+  // rh.add_endpoint("^/update$", update_fn);
+  std::thread server_thread([&rh, &update_fn]() {
+      // Sleep for 30 seconds then add update (after starting RequestHandler)
+      std::this_thread::sleep_for(std::chrono::seconds(30));
+      rh.add_endpoint("^/update$", "POST", update_fn);
+  });
   rh.start_listening();
 }
