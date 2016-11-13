@@ -1,4 +1,6 @@
 
+#include <iostream>
+
 // #include <clipper/datatypes.hpp>
 #include <clipper/persistent_state.hpp>
 
@@ -9,6 +11,8 @@ size_t state_key_hash(const StateKey& key) {
          std::hash<long>()(std::get<1>(key)) ^
          std::hash<long>()(std::get<2>(key));
 }
+
+StateDB::StateDB() { std::cout << "Persistent state DB created" << std::endl; }
 
 boost::optional<ByteBuffer> StateDB::get(const StateKey& key) const {
   auto loc = state_table_.find(key);

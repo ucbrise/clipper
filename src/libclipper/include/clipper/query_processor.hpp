@@ -20,7 +20,7 @@ class QueryProcessor {
  public:
   ~QueryProcessor() = default;
 
-  QueryProcessor() = default;
+  QueryProcessor();
 
   // Disallow copies
   QueryProcessor(const QueryProcessor& other) = delete;

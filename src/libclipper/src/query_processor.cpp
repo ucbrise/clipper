@@ -53,6 +53,10 @@ Output combine_predictions(Query query, std::vector<Output> predictions,
   return Policy::combine_predictions(state, query, predictions);
 }
 
+QueryProcessor::QueryProcessor() {
+  std::cout << "Query processor constructed" << std::endl;
+}
+
 future<Response> QueryProcessor::predict(Query query) {
   // get instance of selection policy
   // fetch policy state from stateDB

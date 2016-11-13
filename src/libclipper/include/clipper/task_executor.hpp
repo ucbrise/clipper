@@ -127,6 +127,17 @@ class PredictionCache {
 template <typename Scheduler>
 class TaskExecutor {
  public:
+  ~TaskExecutor() = default;
+    TaskExecutor(): active_containers_(std::unordered_map<VersionedModelId, std::vector<ModelContainer>,
+                                       decltype(&versioned_model_hash)>(100, &versioned_model_hash) )
+    { std::cout << "TaskExecutor started" << std::endl; }
+
+  TaskExecutor(const TaskExecutor &other) = delete;
+  TaskExecutor &operator=(const TaskExecutor &other) = delete;
+
+  TaskExecutor(TaskExecutor &&other) = default;
+  TaskExecutor &operator=(TaskExecutor &&other) = default;
+
   std::vector<boost::shared_future<Output>> schedule_predictions(
       std::vector<PredictTask> tasks) {
     // TODO this needs to be a shared lock, nearly all
@@ -135,9 +146,9 @@ class TaskExecutor {
     std::unique_lock<std::mutex> l(active_containers_mutex_);
     std::vector<boost::shared_future<Output>> output_futures(tasks.size());
     while (tasks.size() > 0) {
-      auto t = tasks.front();
-      tasks.erase(tasks.begin());
+      PredictTask t = tasks.front();
       // assign tasks to containers independently
+        std::cout << "Model: " << &t.model_ << std::endl;
       auto task_model_replicas = active_containers_.find(t.model_);
       if (task_model_replicas != active_containers_.end()) {
         ModelContainer &container =
@@ -145,6 +156,8 @@ class TaskExecutor {
         container.send_prediction(t);
         output_futures.push_back(std::move(cache_.fetch(t.model_, t.input_)));
       }
+    tasks.erase(tasks.begin());
+
     }
     return output_futures;
   }

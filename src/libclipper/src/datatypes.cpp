@@ -10,6 +10,21 @@ namespace clipper {
 size_t versioned_model_hash(const VersionedModelId& key) {
   return std::hash<std::string>()(key.first) ^ std::hash<int>()(key.second);
 }
+//
+//    struct VersionedModelHash {
+//        std::size_t operator()(const VersionedModelId& k) const
+//        {
+//            return std::hash<std::string>()(k.first) ^
+//            (std::hash<std::string>()(k.second) << 1);
+//        }
+//    };
+//    
+//    struct VersionedModelEqual {
+//        bool operator()(const Key& lhs, const Key& rhs) const
+//        {
+//            return lhs.first == rhs.first && lhs.second == rhs.second;
+//        }
+//    };
 
 Output::Output(double y_hat, VersionedModelId versioned_model)
     : y_hat_(y_hat), versioned_model_(versioned_model) {}

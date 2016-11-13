@@ -17,11 +17,13 @@ namespace clipper {
 
 void manage_timers(TimerPQueue &timers, std::mutex &queue_mutex,
                    const bool &shutdown) {
+  std::cout << "In timer event loop" << std::endl;
   while (!shutdown) {
     // wait for next timer to expire
     auto cur_time = high_resolution_clock::now();
     std::unique_lock<std::mutex> l(queue_mutex);
     if (timers.size() > 0) {
+      std::cout << "Found " << timers.size() << "timers" << std::endl;
       auto earliest_timer = timers.top();
       auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
           earliest_timer->deadline_ - cur_time);
@@ -47,11 +49,18 @@ void Timer::expire() {
   completion_promise_.set_value();
 }
 
-TimerSystem::TimerSystem() : queue_(TimerPQueue{}) { start(); }
+TimerSystem::TimerSystem() : queue_(TimerPQueue{}) {
+  std::cout << "starting timer thread" << std::endl;
+
+  start();
+  std::cout << "timer thread started" << std::endl;
+}
 
 void TimerSystem::start() {
+  // TODO: probably don't want to just detach thread here
   boost::thread(&manage_timers, boost::ref(queue_), boost::ref(queue_mutex_),
-                boost::ref(shutdown_));
+                boost::ref(shutdown_))
+      .detach();
   initialized_ = true;
 }
 
