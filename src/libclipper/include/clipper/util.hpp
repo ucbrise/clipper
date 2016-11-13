@@ -10,6 +10,11 @@
 
 #include "boost/optional.hpp"
 
+#define UNUSED(expr) \
+  do {               \
+    (void)(expr);    \
+  } while (0)
+
 namespace clipper {
 
 // Queue implementation borrowed from LatticeFlow
@@ -32,8 +37,9 @@ class Queue {
     data_available_.notify_one();
   }
 
-  int size() const {
+  int size() {
     // TODO: This should really be a shared lock
+    // std::unique_lock<std::mutex> l(m_);
     std::unique_lock<std::mutex> l(m_);
     return xs_.size();
   }

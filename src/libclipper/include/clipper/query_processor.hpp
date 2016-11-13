@@ -11,6 +11,7 @@
 #include "datatypes.hpp"
 #include "persistent_state.hpp"
 #include "selection_policy.hpp"
+#include "task_executor.hpp"
 #include "timers.hpp"
 
 namespace clipper {

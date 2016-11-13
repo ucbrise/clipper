@@ -20,12 +20,12 @@ class Timer {
         boost::promise<void> completion_promise);
   ~Timer() = default;
 
-  Timer(const Timer &) = default;
-  Timer &operator=(const Timer &) = default;
+  Timer(const Timer &) = delete;
+  Timer &operator=(const Timer &) = delete;
   Timer(Timer &&) = default;
   Timer &operator=(Timer &&) = default;
 
-  const bool operator<(const Timer &rhs) const;
+  bool operator<(const Timer &rhs) const;
 
   void expire();
 
@@ -33,8 +33,19 @@ class Timer {
 
  private:
   boost::promise<void> completion_promise_;
-
 };
+
+struct TimerCompare {
+  bool operator()(const std::shared_ptr<Timer> &lhs,
+                  const std::shared_ptr<Timer> &rhs) const {
+    return *lhs < *rhs;
+  }
+};
+
+// need to use pointers here to get reference semantics
+using TimerPQueue =
+    std::priority_queue<std::shared_ptr<Timer>,
+                        std::vector<std::shared_ptr<Timer>>, TimerCompare>;
 
 class TimerSystem {
  public:
@@ -52,7 +63,7 @@ class TimerSystem {
   bool shutdown_ = false;
   bool initialized_ = false;
   std::mutex queue_mutex_;
-  std::priority_queue<Timer> queue_;
+  TimerPQueue queue_;
 };
 
 }  // namespace clipper

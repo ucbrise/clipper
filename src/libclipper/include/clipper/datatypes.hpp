@@ -11,10 +11,12 @@ using VersionedModelId = std::pair<std::string, int>;
 using QueryId = long;
 using FeedbackAck = bool;
 
+size_t versioned_model_hash(const VersionedModelId& key);
+
 class Output {
  public:
   ~Output() = default;
-  Output() = default;
+  explicit Output() = default;
   Output(double y_hat, VersionedModelId versioned_model);
   double y_hat_;
   VersionedModelId versioned_model_;
@@ -33,6 +35,7 @@ class Input {
 
   // used by RPC system
   virtual ByteBuffer serialize() const = 0;
+  virtual size_t hash() const = 0;
 };
 
 // class IntVector : Input {
@@ -66,6 +69,8 @@ class DoubleVector : public Input {
   DoubleVector& operator=(DoubleVector& other) = default;
 
   ByteBuffer serialize() const;
+
+  size_t hash() const;
 
  private:
   std::vector<double> data_;
@@ -102,8 +107,7 @@ class Response {
  public:
   ~Response() = default;
 
-  Response(Query query, QueryId query_id, long duration_micros,
-           Output output,
+  Response(Query query, QueryId query_id, long duration_micros, Output output,
            std::vector<VersionedModelId> models_used);
 
   // default copy constructors
@@ -119,7 +123,7 @@ class Response {
   Query query_;
   QueryId query_id_;
   long duration_micros_;
-  std::unique_ptr<Output> output_;
+  Output output_;
   std::vector<VersionedModelId> models_used_;
 };
 

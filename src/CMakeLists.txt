@@ -34,7 +34,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 # Require C++11
 # http://bit.ly/2eNjvLs (StackOverflow post)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED on)
 
 # disallow non-standard extensions

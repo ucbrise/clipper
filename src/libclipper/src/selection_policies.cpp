@@ -9,10 +9,6 @@
 #include <clipper/util.hpp>
 
 // hack to get around unused argument compiler errors
-#define UNUSED(expr) \
-  do {               \
-    (void)(expr);    \
-  } while (0)
 
 namespace clipper {
 
@@ -45,8 +41,7 @@ std::vector<PredictTask> NewestModelSelectionPolicy::select_predict_tasks(
 }
 
 Output NewestModelSelectionPolicy::combine_predictions(
-    VersionedModelId state, Query query,
-    std::vector<Output> predictions) {
+    VersionedModelId state, Query query, std::vector<Output> predictions) {
   UNUSED(state);
   UNUSED(query);
   // just return the first prediction

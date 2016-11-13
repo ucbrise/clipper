@@ -75,15 +75,14 @@ class ModelContainer {
   ~ModelContainer() = default;
   ModelContainer(VersionedModelId model, std::string address);
   // disallow copy
-  ModelContainer ModelContainer(const ModelContainer&) = delete;
-  ModelContainer& operator=(const ModelContainer&) = delete;
+  ModelContainer(const ModelContainer &) = delete;
+  ModelContainer &operator=(const ModelContainer &) = delete;
 
-  ModelContainer ModelContainer(ModelContainer&&) = default;
-  ModelContainer& operator=(ModelContainer&&) = default;
-
+  ModelContainer(ModelContainer &&) = default;
+  ModelContainer &operator=(ModelContainer &&) = default;
 
   VersionedModelId model_;
-  int get_queue_size() const;
+  int get_queue_size();
   void send_prediction(PredictTask task);
   void send_feedback(PredictTask task);
 
@@ -99,6 +98,12 @@ class CacheEntry {
   CacheEntry();
   ~CacheEntry() = default;
 
+  CacheEntry(const CacheEntry &) = delete;
+  CacheEntry &operator=(const CacheEntry &) = delete;
+
+  CacheEntry(CacheEntry &&) = default;
+  CacheEntry &operator=(CacheEntry &&) = default;
+
   bool completed_ = false;
   boost::promise<Output> value_promise_;
   boost::shared_future<Output> value_;
@@ -107,13 +112,14 @@ class CacheEntry {
 class PredictionCache {
  public:
   boost::shared_future<Output> fetch(const VersionedModelId &model,
-                                     const Input &input);
-  void put(const VersionedModelId &model, const Input &input,
-                            const Output &output);
+                                     const std::shared_ptr<Input> &input);
+
+  void put(const VersionedModelId &model, const std::shared_ptr<Input> &input,
+           const Output &output);
 
  private:
-  const long hash(const Input &input);
   std::mutex m_;
+  size_t hash(const VersionedModelId &model, size_t input_hash) const;
   // TODO cache needs a promise as well?
   std::unordered_map<long, CacheEntry> cache_;
 };
@@ -121,26 +127,31 @@ class PredictionCache {
 template <typename Scheduler>
 class TaskExecutor {
  public:
-  std::vector<boost::future<Output>> schedule_predictions(
+  std::vector<boost::shared_future<Output>> schedule_predictions(
       std::vector<PredictTask> tasks) {
     // TODO this needs to be a shared lock, nearly all
     // accesses on this mutex won't modify the set of active
     // containers
     std::unique_lock<std::mutex> l(active_containers_mutex_);
-    std::vector<boost::future<Output>> output_futures(tasks.size());
+    std::vector<boost::shared_future<Output>> output_futures(tasks.size());
     while (tasks.size() > 0) {
       auto t = tasks.front();
       tasks.erase(tasks.begin());
       // assign tasks to containers independently
-      auto container = scheduler_.assign_container(t, active_containers_);
-      container.send_prediction(t);
-      output_futures.push_back(cache_.fetch(task.model_, &task.input_));
+      auto task_model_replicas = active_containers_.find(t.model_);
+      if (task_model_replicas != active_containers_.end()) {
+        ModelContainer &container =
+            scheduler_.assign_container(t, task_model_replicas->second);
+        container.send_prediction(t);
+        output_futures.push_back(std::move(cache_.fetch(t.model_, t.input_)));
+      }
     }
     return output_futures;
   }
 
   std::vector<boost::future<FeedbackAck>> schedule_feedback(
       const std::vector<FeedbackTask> tasks) {
+    UNUSED(tasks);
     // TODO Implement
     return {};
   }
@@ -157,7 +168,8 @@ class TaskExecutor {
   std::mutex active_containers_mutex_;
 
   // Each queue corresponds to a single model container.
-  std::unordered_map<VersionedModelId, std::vector<ModelContainer>>
+  std::unordered_map<VersionedModelId, std::vector<ModelContainer>,
+                     decltype(&versioned_model_hash)>
       active_containers_;
 
   Scheduler scheduler_;
@@ -166,8 +178,8 @@ class TaskExecutor {
 
 class PowerTwoChoicesScheduler {
  public:
-  const ModelContainer &assign_container(
-      const PredictTask &task, const std::vector<ModelContainer> &containers);
+  ModelContainer &assign_container(
+      const PredictTask &task, std::vector<ModelContainer> &containers) const;
 };
 
 // class PowerTwoChoicesScheduler {

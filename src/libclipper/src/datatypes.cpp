@@ -7,7 +7,11 @@
 
 namespace clipper {
 
-Output::Output(double y_hat, std::string versioned_model)
+size_t versioned_model_hash(const VersionedModelId& key) {
+  return std::hash<std::string>()(key.first) ^ std::hash<int>()(key.second);
+}
+
+Output::Output(double y_hat, VersionedModelId versioned_model)
     : y_hat_(y_hat), versioned_model_(versioned_model) {}
 
 DoubleVector::DoubleVector(std::vector<double> data) : data_(std::move(data)) {}
@@ -23,6 +27,14 @@ ByteBuffer DoubleVector::serialize() const {
   return bytes;
 }
 
+size_t DoubleVector::hash() const {
+  size_t cur_hash = 0;
+  for (const auto d : data_) {
+    cur_hash ^= std::hash<double>()(d);
+  }
+  return cur_hash;
+}
+
 Query::Query(std::string label, long user_id, std::shared_ptr<Input> input,
              long latency_micros, std::string selection_policy,
              std::vector<VersionedModelId> candidate_models)
@@ -34,8 +46,7 @@ Query::Query(std::string label, long user_id, std::shared_ptr<Input> input,
       candidate_models_(candidate_models) {}
 
 Response::Response(Query query, QueryId query_id, long duration_micros,
-                   std::unique_ptr<Output> output,
-                   std::vector<VersionedModelId> models_used)
+                   Output output, std::vector<VersionedModelId> models_used)
     : query_(std::move(query)),
       query_id_(query_id),
       duration_micros_(duration_micros),
@@ -47,7 +58,7 @@ std::string Response::debug_string() const noexcept {
   debug.append("Query id: ");
   debug.append(std::to_string(query_id_));
   debug.append(" Output: ");
-  debug.append(std::to_string(output_->y_hat_));
+  debug.append(std::to_string(output_.y_hat_));
   return debug;
 }
 

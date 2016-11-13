@@ -31,23 +31,42 @@ FeedbackTask::FeedbackTask(Feedback feedback, VersionedModelId model,
 CacheEntry::CacheEntry() { value_ = value_promise_.get_future(); }
 
 boost::shared_future<Output> PredictionCache::fetch(
-    const VersionedModelId &model, const Input &input) {
+    const VersionedModelId &model, const std::shared_ptr<Input> &input) {
   std::unique_lock<std::mutex> l(m_);
-  auto key = hash(input);
-  auto entry = cache_[key];
-  return shared_future<Output>(entry.value_);
+  auto key = hash(model, input->hash());
+  auto search = cache_.find(key);
+  if (search != cache_.end()) {
+    return search->second.value_;
+  } else {
+    CacheEntry new_entry;
+    auto f = new_entry.value_;
+    cache_.insert(std::make_pair(key, std::move(new_entry)));
+    return f;
+  }
 }
 
-void PredictionCache::put(const VersionedModelId &model, const Input &input,
+void PredictionCache::put(const VersionedModelId &model,
+                          const std::shared_ptr<Input> &input,
                           const Output &output) {
   std::unique_lock<std::mutex> l(m_);
-  auto key = hash(input);
-  auto entry = cache_[key];
-  if (!entry.completed_) {
-    entry.value_promise_.set_value(output);
-    entry.completed_ = true;
-    cache_[key] = entry;
+  auto key = hash(model, input->hash());
+  auto search = cache_.find(key);
+  if (search != cache_.end()) {
+    if (!search->second.completed_) {
+      search->second.value_promise_.set_value(output);
+      search->second.completed_ = true;
+    }
+  } else {
+    CacheEntry new_entry;
+    new_entry.value_promise_.set_value(output);
+    new_entry.completed_ = true;
+    cache_.insert(std::make_pair(key, std::move(new_entry)));
   }
+}
+
+size_t PredictionCache::hash(const VersionedModelId &model,
+                             size_t input_hash) const {
+  return versioned_model_hash(model) ^ input_hash;
 }
 
 // std::vector<boost::future<Output>>
@@ -58,13 +77,18 @@ void PredictionCache::put(const VersionedModelId &model, const Input &input,
 // BatchingTaskExecutor::schedule_feedback(
 //     const std::vector<FeedbackTask> tasks) {}
 
-ModelContainer::ModelContainer(VersionedModelId id, std::string address) : model_(id), address_(address) {}
+ModelContainer::ModelContainer(VersionedModelId id, std::string address)
+    : model_(id), address_(address) {}
 
+int ModelContainer::get_queue_size() { return request_queue_.size(); }
 
-int ModelContainer::get_queue_size() const { return request_queue_.size(); }
+void ModelContainer::send_prediction(PredictTask task) {
+  request_queue_.push(task);
+}
 
-ModelContainer &assign_container(
+ModelContainer &PowerTwoChoicesScheduler::assign_container(
     const PredictTask &task, std::vector<ModelContainer> &containers) const {
+  UNUSED(task);
   assert(containers.size() >= 1);
   if (containers.size() > 1) {
     std::random_device rd;
