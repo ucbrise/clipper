@@ -11,7 +11,7 @@ target_link_libraries(bench clipper boost)
 ##################################
 # REST HTTP Server executable
 
-add_executable(rest src/rest.cpp)
+add_executable(rest src/rest.cpp README.md)
 
 target_link_libraries(rest clipper boost httpserver)
 

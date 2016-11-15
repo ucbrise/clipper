@@ -11,6 +11,8 @@
 #include "datatypes.hpp"
 #include "persistent_state.hpp"
 #include "selection_policy.hpp"
+#include "task_executor.hpp"
+#include "timers.hpp"
 
 namespace clipper {
 
@@ -18,7 +20,7 @@ class QueryProcessor {
  public:
   ~QueryProcessor() = default;
 
-  QueryProcessor() = default;
+  QueryProcessor();
 
   // Disallow copies
   QueryProcessor(const QueryProcessor& other) = delete;
@@ -33,24 +35,10 @@ class QueryProcessor {
 
  private:
   std::atomic<long> query_counter_{0};
-  StateDB state_db_{StateDB()};
+  StateDB state_db_;
+  TaskExecutor<PowerTwoChoicesScheduler> task_executor_;
+  TimerSystem timer_system_;
 };
-
-template <typename Policy>
-std::vector<PredictTask> select_tasks(Query query, long query_id,
-                                      const StateDB& state_db) {
-  auto hashkey = Policy::hash_models(query.candidate_models_);
-  typename Policy::state_type state;
-  if (auto state_opt =
-          state_db.get(StateKey{query.label_, query.user_id_, hashkey})) {
-    const auto serialized_state = *state_opt;
-    // if auto doesn't work: Policy::state_type
-    state = Policy::deserialize_state(serialized_state);
-  } else {
-    state = Policy::initialize(query.candidate_models_);
-  }
-  return Policy::select_predict_tasks(state, query, query_id);
-}
 
 }  // namespace clipper
 

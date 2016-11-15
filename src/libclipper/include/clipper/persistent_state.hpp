@@ -22,7 +22,7 @@ class StateDB {
  public:
   boost::optional<ByteBuffer> get(const StateKey& key) const;
 
-  StateDB() = default;
+  StateDB();
 
   void put(StateKey key, ByteBuffer value);
 

@@ -9,7 +9,7 @@ project("Clipper" VERSION 0.1.0 LANGUAGES CXX)
 # Include Boost as an imported target
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost 1.62.0 REQUIRED COMPONENTS thread system)
+find_package(Boost 1.62.0 REQUIRED COMPONENTS thread system date_time chrono)
 # message(STATUS "Boost_INCLUDE_DIR: " ${Boost_INCLUDE_DIRS})
 # message(STATUS "Boost_LINK_DIR: " ${Boost_LIBRARY_DIRS})
 # INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
@@ -21,7 +21,7 @@ set_property(TARGET boost PROPERTY
 set_property(TARGET boost PROPERTY
     INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra -Werror")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra -Werror -Wno-deprecated-declarations")
 
 # add_subdirectory(libs/extlib EXCLUDE_FROM_ALL)
 
@@ -34,7 +34,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 # Require C++11
 # http://bit.ly/2eNjvLs (StackOverflow post)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED on)
 
 # disallow non-standard extensions

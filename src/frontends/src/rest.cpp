@@ -80,7 +80,7 @@ int main() {
            prediction.then([response](boost::future<Response> f){
                Response r = f.get();
                std::stringstream ss;
-               ss << "qid:" << r.query_id_ << " predict:" << r.output_->y_hat_;
+               ss << "qid:" << r.query_id_ << " predict:" << r.output_.y_hat_;
                std::string content = ss.str();
                *response << "HTTP/1.1 200 OK\r\nContent-Length: " << content.length() << "\r\n\r\n" << content;
            });
@@ -102,7 +102,7 @@ int main() {
           std::shared_ptr<Input> input =
               std::make_shared<DoubleVector>(inputs);
           std::shared_ptr<Output> output =
-              std::make_shared<Output>(Output(10.0, "model"));
+          std::make_shared<Output>(Output(10.0, std::make_pair("model", 1)));
           auto update = q.update(
               {"label", uid, {std::make_pair(input, output)}, "newest_model", {std::make_pair("m", 1)}});
           update.then([response](boost::future<FeedbackAck> f){
