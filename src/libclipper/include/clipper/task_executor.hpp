@@ -168,22 +168,9 @@ class TaskExecutor {
               scheduler_.assign_container(t, task_model_replicas->second);
               container->send_prediction(t);
               output_futures.push_back(std::move(cache_.fetch(t.model_, t.input_)));
+//              output_futures.push_back(boost::make_ready_future(Output{3.3, std::make_pair("rando_fake_model", 7)}));
           }
       }
-//    while (tasks.size() > 0) {
-//      PredictTask t = tasks.front();
-//      tasks.erase(tasks.begin());
-//
-//      // assign tasks to containers independently
-//      std::cout << "Model: " << &t.model_ << std::endl;
-//      auto task_model_replicas = active_containers_.find(t.model_);
-//      if (task_model_replicas != active_containers_.end()) {
-//        std::shared_ptr<ModelContainer> container =
-//            scheduler_.assign_container(t, task_model_replicas->second);
-//        container->send_prediction(t);
-//        output_futures.push_back(std::move(cache_.fetch(t.model_, t.input_)));
-//      }
-//    }
     return output_futures;
   }
 

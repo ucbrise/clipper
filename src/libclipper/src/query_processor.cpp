@@ -1,5 +1,6 @@
 
 #include <iostream>
+#include <iomanip>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -92,44 +93,41 @@ future<Response> QueryProcessor::predict(Query query) {
 
   vector<shared_future<Output>> task_completion_futures =
       task_executor_.schedule_predictions(tasks);
+    auto task_completion_copies = task_completion_futures;
   std::cout << "Found " << task_completion_futures.size()
             << " task completion futures" << std::endl;
   future<void> timer_future = timer_system_.set_timer(query.latency_micros_);
 
-  auto all_tasks_completed = boost::when_all(task_completion_futures.begin(),
-                                             task_completion_futures.end());
-  //  auto make_response_future =
-  //      boost::when_any(std::move(all_tasks_completed),
-  //      std::move(timer_future));
+  auto all_tasks_completed = boost::when_all(task_completion_copies.begin(),
+                                             task_completion_copies.end());
+    auto make_response_future =
+        boost::when_any(std::move(all_tasks_completed),
+        std::move(timer_future));
 
-  //  boost::promise<Response> promise;
   boost::promise<Response> promise;
   auto f = promise.get_future();
 
-  //  make_response_future.then([
-    // boost::launch::async,
-  timer_future.then([
+    make_response_future.then([
     query, query_id, p = std::move(promise), s = std::move(serialized_state),
-    task_futures = std::move(all_tasks_completed)
-  ](auto f) mutable {
+    task_futures = std::move(task_completion_futures)
+  ](auto result_future) mutable {
     std::cout << "ENTERED CONTINUATION LAMBDA" << std::endl;
-    //  ](auto result_future) mutable {
 
-    //    auto result = result_future.get();
-    std::cout << f.is_ready() << std::endl;
+        auto result = result_future.get();
+        std::cout << std::boolalpha;
+        std::cout << "All tasks finished: " << std::get<0>(result).is_ready()
+            << ", Timer fired: " << std::get<1>(result).is_ready() << std::endl;
     vector<Output> outputs;
     vector<VersionedModelId> used_models;
     //    vector<shared_future<Output>> completed_tasks =
     //    std::get<0>(result).get();
 
-    if (task_futures.is_ready()) {
-      vector<boost::shared_future<Output>> completed_tasks = task_futures.get();
-      for (auto r = completed_tasks.begin(); r != completed_tasks.end(); ++r) {
+//      vector<boost::shared_future<Output>> completed_tasks = task_futures.get();
+      for (auto r = task_futures.begin(); r != task_futures.end(); ++r) {
         if ((*r).is_ready()) {
           outputs.push_back((*r).get());
         }
       }
-    }
     std::cout << "Found " << outputs.size() << " completed tasks" << std::endl;
 
     Output final_output;
