@@ -5,7 +5,6 @@
 #include <thread>
 #include <utility>
 
-#define BOOST_THREAD_VERSION 4
 #include <boost/thread.hpp>
 #include <clipper/timers.hpp>
 #include <clipper/util.hpp>

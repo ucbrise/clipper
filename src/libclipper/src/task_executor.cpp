@@ -7,7 +7,6 @@
 #include <clipper/task_executor.hpp>
 #include <clipper/util.hpp>
 
-#define BOOST_THREAD_VERSION 4
 #include <boost/thread.hpp>
 
 namespace clipper {

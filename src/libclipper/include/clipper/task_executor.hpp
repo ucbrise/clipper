@@ -3,9 +3,9 @@
 
 #include <memory>
 #include <mutex>
+#include <shared_mutex>
 #include <unordered_map>
 
-#define BOOST_THREAD_VERSION 4
 #include <boost/thread.hpp>
 
 #include "datatypes.hpp"
@@ -157,7 +157,7 @@ class TaskExecutor {
     // TODO this needs to be a shared lock, nearly all
     // accesses on this mutex won't modify the set of active
     // containers
-      std::unique_lock<std::mutex> l{active_containers_mutex_};
+      std::shared_lock<std::shared_timed_mutex> l{active_containers_mutex_};
       std::vector<boost::shared_future<Output>> output_futures;
       for (auto t: tasks) {
           // assign tasks to containers independently
@@ -190,7 +190,7 @@ class TaskExecutor {
   // Protects the map of task queues. Must acquire an exclusive
   // lock to modify request_queues_ and a shared_lock when accessing
   // the queues. The queues are independently threadsafe.
-  std::mutex active_containers_mutex_;
+  std::shared_timed_mutex active_containers_mutex_;
 
   // Each queue corresponds to a single model container.
   std::unordered_map<VersionedModelId,

@@ -8,7 +8,6 @@
 #include <chrono>
 #include <queue>
 
-#define BOOST_THREAD_VERSION 4
 #include <boost/thread.hpp>
 
 namespace clipper {
@@ -20,8 +19,11 @@ class Timer {
         boost::promise<void> completion_promise);
   ~Timer() = default;
 
+  // Disallow copy
   Timer(const Timer &) = delete;
   Timer &operator=(const Timer &) = delete;
+    
+  // Move constructors
   Timer(Timer &&) = default;
   Timer &operator=(Timer &&) = default;
 

@@ -17,6 +17,11 @@ class Output {
  public:
   ~Output() = default;
   explicit Output() = default;
+  Output(const Output&) = default;
+  Output& operator=(const Output&) = default;
+
+  Output(Output&&) = default;
+  Output& operator=(Output&&) = default;
   Output(double y_hat, VersionedModelId versioned_model);
   double y_hat_;
   VersionedModelId versioned_model_;
@@ -29,44 +34,22 @@ class Input {
   // TODO: pure virtual or default?
   // virtual ~Input() = default;
 
-  // TODO special member functions:
-  //    + explicit?
-  //    + virtual?
-
   // used by RPC system
   virtual ByteBuffer serialize() const = 0;
   virtual size_t hash() const = 0;
 };
 
-// class IntVector : Input {
-//   public:
-//     IntVector(std::vector<int> data);
-//
-//     // move constructors
-//     IntVector(IntVector&& other) = default;
-//     IntVector& operator=(IntVector&& other) = default;
-//
-//     // copy constructors
-//     IntVector(IntVector& other) = default;
-//     IntVector& operator=(IntVector& other) = default;
-//
-//     ByteBuffer serialize() const;
-//
-//   private:
-//     std::vector<int> data_;
-// };
-
 class DoubleVector : public Input {
  public:
   explicit DoubleVector(std::vector<double> data);
 
+  // Disallow copy
+  DoubleVector(DoubleVector& other) = delete;
+  DoubleVector& operator=(DoubleVector& other) = delete;
+
   // move constructors
   DoubleVector(DoubleVector&& other) = default;
   DoubleVector& operator=(DoubleVector&& other) = default;
-
-  // copy constructors
-  DoubleVector(DoubleVector& other) = default;
-  DoubleVector& operator=(DoubleVector& other) = default;
 
   ByteBuffer serialize() const;
 
@@ -84,6 +67,8 @@ class Query {
         long latency_micros, std::string selection_policy,
         std::vector<VersionedModelId> candidate_models);
 
+  // Note that it should be relatively cheap to copy queries because
+  // the actual input won't be copied
   // copy constructors
   Query(const Query&) = default;
   Query& operator=(const Query&) = default;

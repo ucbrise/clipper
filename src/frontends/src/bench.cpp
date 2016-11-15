@@ -12,9 +12,7 @@
 using namespace clipper;
 
 int main() {
-  std::cout << "AAAA" << std::endl;
   QueryProcessor qp;
-  std::cout << "BBBB" << std::endl;
   std::shared_ptr<Input> input =
       std::make_shared<DoubleVector>(std::vector<double>{1.1, 2.2, 3.3, 4.4});
   boost::future<Response> prediction = qp.predict(
