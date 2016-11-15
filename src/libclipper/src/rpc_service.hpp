@@ -3,33 +3,59 @@
 
 #include <string>
 #include <vector>
+#include <list>
+#include <clipper/util.hpp>
+#include <zmq.hpp>
+#include <boost/bimap.hpp>
+#include <queue>
+
+using zmq::socket_t;
+using std::string;
+using std::shared_ptr;
+using std::vector;
+using std::list;
 
 namespace clipper {
 
-using RPCResponse = std::pair<int, std::vector<uint8_t>>;
-// Tuple of container_id, pointer to data, data length
-using RPCRequest = std::tuple<int, uint8_t *, size_t>;
+using RPCResponse = std::pair<const int, vector<uint8_t>>;
+// Tuple of container_id, message_id, pointer to data, data length
+using RPCRequest = std::tuple<const int, const int, const uint8_t *, size_t>;
 
 class RPCService {
  public:
-  explicit RPCService(shared_ptr <Queue<RPCResponse>> response_queue);
+  explicit RPCService(shared_ptr<std::queue<RPCResponse>> response_queue, shared_ptr<std::mutex> response_lock);
   ~RPCService();
   RPCService(const RPCService &) = delete;
   RPCService &operator=(const RPCService &) = delete;
-  void start(const std::string ip, const int port);
+  void start(const string ip, const int port);
   void stop();
-  const int send_message(const std::vector<uint8_t> &msg, const int container_id);
+  int send_message(const vector<uint8_t> &msg, const int container_id);
 
  private:
-  void manage_service(const std::string address,
-                      shared_ptr <Queue<RPCRequest>> send_queue,
-                      shared_ptr <Queue<RPCResponse>> response_queue,
+  void manage_service(const string address,
+                      shared_ptr<std::queue<RPCRequest>> request_queue,
+                      shared_ptr<std::queue<RPCResponse>> response_queue,
+                      shared_ptr<std::mutex> request_lock,
+                      shared_ptr<std::mutex> response_lock,
                       const bool &shutdown);
-  shared_ptr <Queue<RPCRequest>> send_queue_;
-  shared_ptr <Queue<RPCResponse>> response_queue_;
+  void send_messages(socket_t &socket,
+                     shared_ptr<std::queue<RPCRequest>> request_queue,
+                     shared_ptr<std::mutex> request_lock,
+                     boost::bimap<int, vector<uint8_t>> &connections);
+  void receive_message(socket_t &socket,
+                       shared_ptr<std::queue<RPCResponse>> response_queue,
+                       shared_ptr<std::mutex> response_lock,
+                       boost::bimap<int, vector<uint8_t>> &connections,
+                       int &container_id);
+  void shutdown_service(const string address, socket_t &socket);
+  shared_ptr<std::queue<RPCRequest>> request_queue_;
+  shared_ptr<std::queue<RPCResponse>> response_queue_;
+  shared_ptr<std::mutex> request_lock_;
+  shared_ptr<std::mutex> response_lock_;
   // Flag indicating whether rpc service has been shutdown
   bool shutdown_ = false;
-
+  // The next available message id
+  int message_id_ = 0;
 };
 
 }// namespace clipper
