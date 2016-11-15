@@ -307,7 +307,7 @@ build_cmd="$CMAKE \
     $GENERATOR \
     -D CMAKE_BUILD_TYPE=Release \
     $CFLAGS \
-    ../src"
+    ../"
 echo $build_cmd | tee -a "../$LOG_FILE"
 eval $build_cmd | tee -a "../$LOG_FILE"
 cd $CLIPPER_HOME
@@ -325,7 +325,7 @@ build_cmd="$CMAKE \
     $GENERATOR \
     -D CMAKE_BUILD_TYPE=Debug \
     $CFLAGS \
-    ../src"
+    ../"
 echo $build_cmd | tee -a ../$LOG_FILE
 eval $build_cmd | tee -a ../$LOG_FILE
 cd $CLIPPER_HOME

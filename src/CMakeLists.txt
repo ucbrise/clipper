@@ -21,7 +21,7 @@ set_property(TARGET boost PROPERTY
 set_property(TARGET boost PROPERTY
     INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra -Werror")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra -Werror -Wno-deprecated-declarations")
 
 # add_subdirectory(libs/extlib EXCLUDE_FROM_ALL)
 
