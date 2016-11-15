@@ -7,7 +7,7 @@
 #include <clipper/task_executor.hpp>
 #include <clipper/util.hpp>
 
-#define BOOST_THREAD_VERSION 3
+#define BOOST_THREAD_VERSION 4
 #include <boost/thread.hpp>
 
 namespace clipper {
@@ -86,8 +86,8 @@ void ModelContainer::send_prediction(PredictTask task) {
   request_queue_.push(task);
 }
 
-ModelContainer &PowerTwoChoicesScheduler::assign_container(
-    const PredictTask &task, std::vector<ModelContainer> &containers) const {
+std::shared_ptr<ModelContainer> PowerTwoChoicesScheduler::assign_container(
+    const PredictTask &task, std::vector<std::shared_ptr<ModelContainer>> &containers) const {
   UNUSED(task);
   assert(containers.size() >= 1);
   if (containers.size() > 1) {
@@ -99,8 +99,8 @@ ModelContainer &PowerTwoChoicesScheduler::assign_container(
     while (second_choice == first_choice) {
       second_choice = dist(generator);
     }
-    if (containers[first_choice].get_queue_size() >
-        containers[second_choice].get_queue_size()) {
+    if (containers[first_choice]->get_queue_size() >
+        containers[second_choice]->get_queue_size()) {
       return containers[second_choice];
     } else {
       return containers[first_choice];

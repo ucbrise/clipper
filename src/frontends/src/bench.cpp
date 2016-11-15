@@ -17,7 +17,7 @@ int main() {
   std::cout << "BBBB" << std::endl;
   std::shared_ptr<Input> input =
       std::make_shared<DoubleVector>(std::vector<double>{1.1, 2.2, 3.3, 4.4});
-  auto prediction = qp.predict(
+  boost::future<Response> prediction = qp.predict(
       {"test", 3, input, 20000, "newest_model", {std::make_pair("m", 1)}});
   std::cout << prediction.get().debug_string() << std::endl;
 }

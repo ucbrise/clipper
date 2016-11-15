@@ -5,7 +5,7 @@
 #include <thread>
 #include <utility>
 
-#define BOOST_THREAD_VERSION 3
+#define BOOST_THREAD_VERSION 4
 #include <boost/thread.hpp>
 #include <clipper/timers.hpp>
 #include <clipper/util.hpp>
@@ -23,7 +23,7 @@ void manage_timers(TimerPQueue &timers, std::mutex &queue_mutex,
     auto cur_time = high_resolution_clock::now();
     std::unique_lock<std::mutex> l(queue_mutex);
     if (timers.size() > 0) {
-      std::cout << "Found " << timers.size() << "timers" << std::endl;
+//      std::cout << "Found " << timers.size() << " timers" << std::endl;
       auto earliest_timer = timers.top();
       auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
           earliest_timer->deadline_ - cur_time);
@@ -45,7 +45,8 @@ bool Timer::operator<(const Timer &rhs) const {
 }
 
 void Timer::expire() {
-  std::cout << "TIMER THREAD: " << std::this_thread::get_id() << std::endl;
+    
+  std::cout << "TIMER EXPIRED IN TIMER THREAD: " << std::this_thread::get_id() << std::endl;
   completion_promise_.set_value();
 }
 

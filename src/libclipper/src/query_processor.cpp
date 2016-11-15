@@ -4,10 +4,12 @@
 #include <thread>
 #include <unordered_map>
 
-#define BOOST_THREAD_VERSION 3
+#define BOOST_THREAD_VERSION 4
 #define BOOST_THREAD_PROVIDES_FUTURE_CONTINUATION
 #define BOOST_THREAD_PROVIDES_FUTURE_WHEN_ALL_WHEN_ANY
+#define PROVIDES_EXECUTORS
 #include <boost/thread.hpp>
+#include <boost/thread/executors/basic_thread_pool.hpp>
 
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
@@ -86,40 +88,49 @@ future<Response> QueryProcessor::predict(Query query) {
         Response{query, query_id, 20000, Output{1.0, std::make_pair("m1", 1)},
                  std::vector<VersionedModelId>()});
   }
+  std::cout << "Found " << tasks.size() << " tasks" << std::endl;
 
   vector<shared_future<Output>> task_completion_futures =
       task_executor_.schedule_predictions(tasks);
+  std::cout << "Found " << task_completion_futures.size()
+            << " task completion futures" << std::endl;
   future<void> timer_future = timer_system_.set_timer(query.latency_micros_);
+
   auto all_tasks_completed = boost::when_all(task_completion_futures.begin(),
                                              task_completion_futures.end());
-  //  auto result = all_tasks_completed.get();
-  //  for (auto r = std::get<0>(result); r != std::get<1>(result); ++r) {
-  //    const auto output = (*r).get();
-  //    output;
-  //  }
-  auto make_response_future =
-      boost::when_any(std::move(all_tasks_completed), std::move(timer_future));
-  //         int result = make_response_future.get();
-  // using ComposedFuture =
-  //     tuple<boost::future<tuple<vector<future<Output>>::iterator,
-  //                               vector<future<Output>>::iterator>>,
-  //           future<void>>;
+  //  auto make_response_future =
+  //      boost::when_any(std::move(all_tasks_completed),
+  //      std::move(timer_future));
 
+  //  boost::promise<Response> promise;
   boost::promise<Response> promise;
+  auto f = promise.get_future();
 
-  make_response_future.then([
-    query, query_id, p = std::move(promise), s = std::move(serialized_state)
-  ](auto result_future) mutable {
+  //  make_response_future.then([
+    // boost::launch::async,
+  timer_future.then([
+    query, query_id, p = std::move(promise), s = std::move(serialized_state),
+    task_futures = std::move(all_tasks_completed)
+  ](auto f) mutable {
+    std::cout << "ENTERED CONTINUATION LAMBDA" << std::endl;
+    //  ](auto result_future) mutable {
 
-    auto result = result_future.get();
+    //    auto result = result_future.get();
+    std::cout << f.is_ready() << std::endl;
     vector<Output> outputs;
     vector<VersionedModelId> used_models;
-    vector<shared_future<Output>> completed_tasks = std::get<0>(result).get();
-    for (auto r = completed_tasks.begin(); r != completed_tasks.end(); ++r) {
-      if ((*r).is_ready()) {
-        outputs.push_back((*r).get());
+    //    vector<shared_future<Output>> completed_tasks =
+    //    std::get<0>(result).get();
+
+    if (task_futures.is_ready()) {
+      vector<boost::shared_future<Output>> completed_tasks = task_futures.get();
+      for (auto r = completed_tasks.begin(); r != completed_tasks.end(); ++r) {
+        if ((*r).is_ready()) {
+          outputs.push_back((*r).get());
+        }
       }
     }
+    std::cout << "Found " << outputs.size() << " completed tasks" << std::endl;
 
     Output final_output;
     if (query.selection_policy_ == "newest_model") {
@@ -135,8 +146,7 @@ future<Response> QueryProcessor::predict(Query query) {
     p.set_value(response);
 
   });
-
-  return promise.get_future();
+  return f;
 }
 
 // ignore tasks

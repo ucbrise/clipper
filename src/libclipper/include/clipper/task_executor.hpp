@@ -5,7 +5,7 @@
 #include <mutex>
 #include <unordered_map>
 
-#define BOOST_THREAD_VERSION 3
+#define BOOST_THREAD_VERSION 4
 #include <boost/thread.hpp>
 
 #include "datatypes.hpp"
@@ -128,9 +128,23 @@ template <typename Scheduler>
 class TaskExecutor {
  public:
   ~TaskExecutor() = default;
-    TaskExecutor(): active_containers_(std::unordered_map<VersionedModelId, std::vector<ModelContainer>,
-                                       decltype(&versioned_model_hash)>(100, &versioned_model_hash) )
-    { std::cout << "TaskExecutor started" << std::endl; }
+  TaskExecutor()
+      : active_containers_(
+            std::unordered_map<VersionedModelId,
+                               std::vector<std::shared_ptr<ModelContainer>>,
+                               decltype(&versioned_model_hash)>(
+                100, &versioned_model_hash)) {
+    std::cout << "TaskExecutor started" << std::endl;
+    // TODO: Remove hardcoded active model container here
+    VersionedModelId mid = std::make_pair("m", 1);
+    //        ModelContainer mc {mid, "127.0.0.1:6001"};
+    //        auto entry = std::make_pair(mid, ModelContainer{mid,
+    //        "127.0.0.1:6001"});
+
+    active_containers_.emplace(
+        mid, std::vector<std::shared_ptr<ModelContainer>>{
+                 std::make_shared<ModelContainer>(mid, "127.0.0.1:6001")});
+  }
 
   TaskExecutor(const TaskExecutor &other) = delete;
   TaskExecutor &operator=(const TaskExecutor &other) = delete;
@@ -143,22 +157,33 @@ class TaskExecutor {
     // TODO this needs to be a shared lock, nearly all
     // accesses on this mutex won't modify the set of active
     // containers
-    std::unique_lock<std::mutex> l(active_containers_mutex_);
-    std::vector<boost::shared_future<Output>> output_futures(tasks.size());
-    while (tasks.size() > 0) {
-      PredictTask t = tasks.front();
-      // assign tasks to containers independently
-        std::cout << "Model: " << &t.model_ << std::endl;
-      auto task_model_replicas = active_containers_.find(t.model_);
-      if (task_model_replicas != active_containers_.end()) {
-        ModelContainer &container =
-            scheduler_.assign_container(t, task_model_replicas->second);
-        container.send_prediction(t);
-        output_futures.push_back(std::move(cache_.fetch(t.model_, t.input_)));
+      std::unique_lock<std::mutex> l{active_containers_mutex_};
+      std::vector<boost::shared_future<Output>> output_futures;
+      for (auto t: tasks) {
+          // assign tasks to containers independently
+          std::cout << "Model: " << &t.model_ << std::endl;
+          auto task_model_replicas = active_containers_.find(t.model_);
+          if (task_model_replicas != active_containers_.end()) {
+              std::shared_ptr<ModelContainer> container =
+              scheduler_.assign_container(t, task_model_replicas->second);
+              container->send_prediction(t);
+              output_futures.push_back(std::move(cache_.fetch(t.model_, t.input_)));
+          }
       }
-    tasks.erase(tasks.begin());
-
-    }
+//    while (tasks.size() > 0) {
+//      PredictTask t = tasks.front();
+//      tasks.erase(tasks.begin());
+//
+//      // assign tasks to containers independently
+//      std::cout << "Model: " << &t.model_ << std::endl;
+//      auto task_model_replicas = active_containers_.find(t.model_);
+//      if (task_model_replicas != active_containers_.end()) {
+//        std::shared_ptr<ModelContainer> container =
+//            scheduler_.assign_container(t, task_model_replicas->second);
+//        container->send_prediction(t);
+//        output_futures.push_back(std::move(cache_.fetch(t.model_, t.input_)));
+//      }
+//    }
     return output_futures;
   }
 
@@ -181,7 +206,8 @@ class TaskExecutor {
   std::mutex active_containers_mutex_;
 
   // Each queue corresponds to a single model container.
-  std::unordered_map<VersionedModelId, std::vector<ModelContainer>,
+  std::unordered_map<VersionedModelId,
+                     std::vector<std::shared_ptr<ModelContainer>>,
                      decltype(&versioned_model_hash)>
       active_containers_;
 
@@ -191,8 +217,9 @@ class TaskExecutor {
 
 class PowerTwoChoicesScheduler {
  public:
-  ModelContainer &assign_container(
-      const PredictTask &task, std::vector<ModelContainer> &containers) const;
+  std::shared_ptr<ModelContainer> assign_container(
+      const PredictTask &task,
+      std::vector<std::shared_ptr<ModelContainer>> &containers) const;
 };
 
 // class PowerTwoChoicesScheduler {

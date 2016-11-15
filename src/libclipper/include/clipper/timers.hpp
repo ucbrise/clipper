@@ -8,7 +8,7 @@
 #include <chrono>
 #include <queue>
 
-#define BOOST_THREAD_VERSION 3
+#define BOOST_THREAD_VERSION 4
 #include <boost/thread.hpp>
 
 namespace clipper {
