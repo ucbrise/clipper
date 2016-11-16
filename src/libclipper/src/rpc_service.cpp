@@ -1,4 +1,5 @@
 #include <iostream>
+#include <clipper/util.hpp>
 #include <rpc_service.hpp>
 #include <boost/thread.hpp>
 #include <boost/bimap.hpp>
@@ -12,11 +13,11 @@ using std::vector;
 
 namespace clipper {
 
-RPCService::RPCService(shared_ptr<std::queue<RPCResponse>> response_queue, shared_ptr<std::mutex> response_lock) :
-    request_queue_(std::make_shared<std::queue<RPCRequest>>()),
-    response_queue_(response_queue),
+RPCService::RPCService() :
+    request_queue_(std::make_shared<Queue<RPCRequest>>()),
+    response_queue_(std::make_shared<Queue<RPCResponse>>()),
     request_lock_(std::make_shared<std::mutex>()),
-    response_lock_(response_lock) {
+    response_lock_(std::make_shared<std::mutex>()) {
 }
 
 RPCService::~RPCService() {
@@ -50,9 +51,17 @@ int RPCService::send_message(const std::vector<uint8_t> &msg, const int containe
   return id;
 }
 
+vector<RPCResponse> RPCService::try_get_responses(const int max_num_responses) {
+  std::unique_ptr<std::mutex> l(*response_lock_);
+
+  response_lock_->unlock();
+  return vector<RPCResponse>();
+
+}
+
 void RPCService::manage_service(const string address,
-                                shared_ptr<std::queue<RPCRequest>> request_queue,
-                                shared_ptr<std::queue<RPCResponse>> response_queue,
+                                shared_ptr<Queue<RPCRequest>> request_queue,
+                                shared_ptr<Queue<RPCResponse>> response_queue,
                                 shared_ptr<std::mutex> request_lock,
                                 shared_ptr<std::mutex> response_lock,
                                 const bool &shutdown) {
@@ -88,13 +97,12 @@ void RPCService::shutdown_service(const string address, socket_t &socket) {
 }
 
 void RPCService::send_messages(socket_t &socket,
-                               shared_ptr<std::queue<RPCRequest>> request_queue,
+                               shared_ptr<Queue<RPCRequest>> request_queue,
                                shared_ptr<std::mutex> request_lock,
                                boost::bimap<int, vector<uint8_t>> &connections) {
   request_lock->lock();
-  while (!request_queue->empty()) {
-    RPCRequest request = request_queue->front();
-    request_queue->pop();
+  while (request_queue->size() > 0) {
+    RPCRequest request = request_queue->pop();
     boost::bimap<int, vector<uint8_t>>::left_const_iterator connection = connections.left.find(std::get<0>(request));
     if (connection == connections.left.end()) {
       // Error handling
@@ -113,7 +121,7 @@ void RPCService::send_messages(socket_t &socket,
 }
 
 void RPCService::receive_message(socket_t &socket,
-                                 shared_ptr<std::queue<RPCResponse>> response_queue,
+                                 shared_ptr<Queue<RPCResponse>> response_queue,
                                  shared_ptr<std::mutex> response_lock,
                                  boost::bimap<int, vector<uint8_t>> &connections,
                                  int &container_id) {

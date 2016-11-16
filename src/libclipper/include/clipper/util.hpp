@@ -32,10 +32,10 @@ class Queue {
     data_available_.notify_one();
   }
 
-  // int size() const {
-  //   std::shared_lock<std::mutex> l(m_);
-  //   return xs_.size();
-  // }
+   int size() {
+     std::unique_lock<std::mutex> l(m_);
+     return xs_.size();
+   }
 
   /// Block until the queue contains at least one element, then return the
   /// first element in the queue.

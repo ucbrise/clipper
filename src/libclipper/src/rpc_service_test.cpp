@@ -49,6 +49,7 @@ void benchmark() {
     free(data);
   }
   shutdown = true;
+  rpc_service.stop();
   printf("%f\n", ((double) total)/300);
 }
 
@@ -67,7 +68,7 @@ void simple_test() {
 }
 
 int main() {
-  //benchmark();
-  simple_test();
+  benchmark();
+  //simple_test();
   return 0;
 }
