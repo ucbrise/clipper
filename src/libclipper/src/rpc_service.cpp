@@ -1,6 +1,6 @@
 #include <iostream>
 #include <clipper/util.hpp>
-#include <rpc_service.hpp>
+#include <clipper/rpc_service.hpp>
 #include <boost/thread.hpp>
 #include <boost/bimap.hpp>
 
@@ -24,6 +24,7 @@ RPCService::~RPCService() {
 
 void RPCService::start(const string ip, const int port) {
   const string address = "tcp://" + ip + ":" + std::to_string(port);
+  active_ = true;
   // TODO: Propagate errors from new child thread for handling
   // TODO: Explore bind vs static method call for thread creation
   boost::thread(boost::bind(&RPCService::manage_service,
@@ -31,14 +32,17 @@ void RPCService::start(const string ip, const int port) {
                             address,
                             request_queue_,
                             response_queue_,
-                            boost::ref(shutdown_))).detach();
+                            boost::ref(active_))).detach();
 }
 
 void RPCService::stop() {
-  shutdown_ = true;
+  active_ = false;
 }
 
 int RPCService::send_message(const std::vector<uint8_t> &msg, const int container_id) {
+  if(!active_) {
+    return -1;
+  }
   int id = message_id_++;
   RPCRequest request(container_id, id, msg.data(), msg.size());
   request_queue_->push(request);
@@ -61,19 +65,20 @@ vector<RPCResponse> RPCService::try_get_responses(const int max_num_responses) {
 void RPCService::manage_service(const string address,
                                 shared_ptr<Queue<RPCRequest>> request_queue,
                                 shared_ptr<Queue<RPCResponse>> response_queue,
-                                const bool &shutdown) {
+                                const bool &active) {
   // Map from container id to unique routing id for zeromq
   // Note that zeromq socket id is a byte vector
   boost::bimap<int, vector<uint8_t>> connections;
   context_t context = context_t(1);
   socket_t socket = socket_t(context, ZMQ_ROUTER);
   socket.bind(address);
+  // Indicate that we will poll our zmq service socket for new inbound messages
   zmq::pollitem_t items[] = {
       {socket, 0, ZMQ_POLLIN, 0}
   };
   int container_id = 0;
   while (true) {
-    if (shutdown) {
+    if (active) {
       shutdown_service(address, socket);
       return;
     }
@@ -133,6 +138,7 @@ void RPCService::receive_message(socket_t &socket,
     // We have a new connection, process it accordingly
     connections.insert(boost::bimap<int, vector<uint8_t>>::value_type(container_id, connection_id));
     container_id++;
+
   } else {
     int id = ((int *) msg_id.data())[0];
     vector<uint8_t> content((uint8_t *) msg_content.data(), (uint8_t *) msg_content.data() + msg_content.size());

@@ -1,6 +1,6 @@
 #include <unordered_map>
 #include <thread>
-#include "rpc_service.hpp"
+#include "clipper/rpc_service.hpp"
 
 void benchmark() {
   clipper::RPCService rpc_service;

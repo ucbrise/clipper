@@ -28,7 +28,14 @@ class RPCService {
   RPCService(const RPCService &) = delete;
   RPCService &operator=(const RPCService &) = delete;
   vector<RPCResponse> try_get_responses(const int max_num_responses);
+  /**
+   * Starts the RPC Service. This must be called explicitly, as it is not
+   * invoked during construction.
+   */
   void start(const string ip, const int port);
+  /**
+   * Stops the RPC Service. This is called implicitly within the RPCService destructor.
+   */
   void stop();
   int send_message(const vector<uint8_t> &msg, const int container_id);
 
@@ -36,7 +43,11 @@ class RPCService {
   void manage_service(const string address,
                       shared_ptr<Queue<RPCRequest>> request_queue,
                       shared_ptr<Queue<RPCResponse>> response_queue,
-                      const bool &shutdown);
+                      const bool &active);
+  /**
+   * @return The id of the sent message, used for match the correct response
+   * If the service is active, this id is non-negative. Otherwise, it is -1.
+   */
   void send_messages(socket_t &socket,
                      shared_ptr<Queue<RPCRequest>> request_queue,
                      boost::bimap<int, vector<uint8_t>> &connections);
@@ -47,8 +58,8 @@ class RPCService {
   void shutdown_service(const string address, socket_t &socket);
   shared_ptr<Queue<RPCRequest>> request_queue_;
   shared_ptr<Queue<RPCResponse>> response_queue_;
-  // Flag indicating whether rpc service has been shutdown
-  bool shutdown_ = false;
+  // Flag indicating whether rpc service is active
+  bool active_ = false;
   // The next available message id
   int message_id_ = 0;
 };

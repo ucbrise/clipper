@@ -16,3 +16,10 @@ add_executable(rest src/rest.cpp)
 target_link_libraries(rest clipper boost httpserver)
 
 ##################################
+# RPC Layer Testing executable
+
+add_executable(rpctest src/rpc_service_test.cpp)
+
+target_link_libraries(rpctest clipper)
+
+##################################
