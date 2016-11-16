@@ -25,7 +25,9 @@ target_link_libraries(clipper boost zmqcpp)
 # This makes the project importable from the build directory
 export(TARGETS clipper FILE ClipperConfig.cmake)
 
+add_executable(rpctest src/rpc_service_test.cpp)
 
+target_link_libraries(rpctest clipper)
 
 # TODO Look at googletest to see how to include tests
 # Every library has unit tests, of course
