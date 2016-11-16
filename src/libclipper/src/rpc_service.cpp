@@ -1,3 +1,4 @@
+#include <iostream>
 #include <rpc_service.hpp>
 #include <boost/thread.hpp>
 #include <boost/bimap.hpp>
@@ -25,6 +26,7 @@ RPCService::~RPCService() {
 void RPCService::start(const string ip, const int port) {
   const string address = "tcp://" + ip + ":" + std::to_string(port);
   // TODO: Propagate errors from new child thread for handling
+  // TODO: Explore bind vs static method call for thread creation
   boost::thread(boost::bind(&RPCService::manage_service,
                             this,
                             address,
@@ -54,6 +56,8 @@ void RPCService::manage_service(const string address,
                                 shared_ptr<std::mutex> request_lock,
                                 shared_ptr<std::mutex> response_lock,
                                 const bool &shutdown) {
+  // Map from container id to unique routing id for zeromq
+  // Note that zeromq socket id is a byte vector
   boost::bimap<int, vector<uint8_t>> connections;
   context_t context = context_t(1);
   socket_t socket = socket_t(context, ZMQ_ROUTER);
@@ -69,8 +73,11 @@ void RPCService::manage_service(const string address,
     }
     zmq_poll(items, 1, 0);
     if (items[0].revents & ZMQ_POLLIN) {
+      // TODO: Balance message sending and receiving fairly
+      // Note: We only receive one message per event loop iteration
       receive_message(socket, response_queue, response_lock, connections, container_id);
     }
+    // Note: We send all queued messages per event loop iteration
     send_messages(socket, request_queue, request_lock, connections);
   }
 }
@@ -87,19 +94,20 @@ void RPCService::send_messages(socket_t &socket,
   request_lock->lock();
   while (!request_queue->empty()) {
     RPCRequest request = request_queue->front();
+    request_queue->pop();
     boost::bimap<int, vector<uint8_t>>::left_const_iterator connection = connections.left.find(std::get<0>(request));
     if (connection == connections.left.end()) {
       // Error handling
+      std::cout << "Attempted to send message to unknown container " << std::get<0>(request) << std::endl;
       continue;
     }
     message_t id_message(sizeof(int));
     memcpy(id_message.data(), &std::get<1>(request), sizeof(int));
-    socket.send(connection->second.data(), connection->second.size(), ZMQ_SNDMORE);
+    vector<uint8_t> routing_identity = connection->second;
+    socket.send(routing_identity.data(), routing_identity.size(), ZMQ_SNDMORE);
     socket.send("", 0, ZMQ_SNDMORE);
     socket.send(id_message, ZMQ_SNDMORE);
     socket.send((uint8_t *) std::get<2>(request), std::get<3>(request), 0);
-    request_queue->pop();
-    // Send message to destination with the same socket (container) identity
   }
   request_lock->unlock();
 }
