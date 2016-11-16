@@ -7,6 +7,10 @@
 
 namespace clipper {
 
+size_t versioned_model_hash(const VersionedModelId& key) {
+  return std::hash<std::string>()(key.first) ^ std::hash<int>()(key.second);
+}
+  
 Output::Output(double y_hat, std::vector<VersionedModelId> model_id)
     : y_hat_(y_hat), model_id_(model_id) {}
 
@@ -54,7 +58,7 @@ std::string Response::debug_string() const noexcept {
 Feedback::Feedback(std::shared_ptr<Input> input, 
                    std::shared_ptr<Output> output, 
                    VersionedModelId model_id)
-    : y_(output.y_hat_),
+    : y_(output->y_hat_),
       input_(input),
       model_id_(model_id) {}
 

@@ -10,18 +10,20 @@
 #include <clipper/selection_policy.hpp>
 #include <clipper/util.hpp>
 
+using std::pair;
 
+#define UNUSED(expr) \
+do {               \
+(void)(expr);    \
+} while (0)
 
 namespace clipper {
-  using Map = std::unordered_map<VersionedModelId, double>;
-  using Exp3State = std::pair<double, Map>;
-  using Exp4State = std::pair<double, Map>;
 
 Exp3State Exp3Policy::initialize(
           const std::vector<VersionedModelId>& candidate_models_) {
   // Construct State
-  Map map;
-  double sum;
+  Map map(candidate_models_.size(), &versioned_model_hash);
+  double sum = 0.0;
   for (VersionedModelId id: candidate_models_) {
     map.insert({id, 1.0});
     sum += 1.0;
@@ -48,7 +50,7 @@ VersionedModelId Exp3Policy::select(Exp3State state,
   VersionedModelId selected_model;
   auto it = models.begin();
   while (rand_num >= 0) {
-    rand_num -= state.second[it] / sum;
+    rand_num -= state.second[*it] / sum;
     selected_model = *it;
     it++;
   }
@@ -72,6 +74,8 @@ std::shared_ptr<Output> Exp3Policy::combine_predictions(
                         Query query,
                         std::vector<std::shared_ptr<Output>> predictions) {
   // Don't need to do anything
+  UNUSED(state);
+  UNUSED(query);
   return predictions.front();
 }
 
@@ -110,12 +114,14 @@ Exp3State Exp3Policy::process_feedback(Exp3State state,
 
 ByteBuffer Exp3Policy::serialize_state(Exp3State state) {
   //TODO
+  UNUSED(state);
   std::vector<uint8_t> v;
   return v;
 }
 
 Exp3State Exp3Policy::deserialize_state(const ByteBuffer& bytes) {
   //TODO
+  UNUSED(bytes);
   Map map;
   return std::make_pair(0, map);
 }
@@ -126,7 +132,7 @@ Exp4State Exp4Policy::initialize(
           const std::vector<VersionedModelId>& candidate_models_) {
   // Construct State
   Map map;
-  double sum;
+  double sum = 0.0;
   for (VersionedModelId id: candidate_models_) {
     map.insert({id, 1.0});
     sum += 1.0;
@@ -149,6 +155,8 @@ std::vector<PredictTask> Exp4Policy::select_predict_tasks(
                          Query query, 
                          long query_id) {
   // Pass along all models selected
+  UNUSED(state);
+  UNUSED(query);
   std::vector<PredictTask> tasks;
   for (VersionedModelId id: query.candidate_models_) {
       auto task = PredictTask(query.input_, id, 1.0, query_id, query.latency_micros_);
@@ -161,13 +169,16 @@ std::shared_ptr<Output> Exp4Policy::combine_predictions(Exp4State state,
                                                         Query query,
                                                         std::vector<std::shared_ptr<Output>> predictions) {
   // Weighted Combination of All predictions
+  UNUSED(state);
+  UNUSED(query);
   auto y_hat = 0;
   std::vector<VersionedModelId> models;
-  for (auto id_it = state.second.begin(), output_it = predictions.begin(); 
-        (id_it != state.second.end()) && (output_it != predictions.end()); 
-          ++id_it, output_it) {
-    y_hat += (id_it.second / state.first) * (*output_it)->y_hat_;
-    models.push_back(id_it.first);
+  
+  // Iterate through all shared pointers that contain outputs in prediction vector
+  for (auto id_it = predictions.begin(); id_it != predictions.end(); ++id_it) {
+    auto model_id = ((*id_it)->model_id_).front();
+    y_hat += (state.second[model_id] / state.first) * (*id_it)->y_hat_;
+    models.push_back(model_id);
   }
   auto result = std::make_shared<Output>(Output(y_hat, models));
   return result;
@@ -177,7 +188,7 @@ std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
 Exp4Policy::select_feedback_tasks(Exp4State state, 
                                   FeedbackQuery feedback,
                                   long query_id) {
-  
+  UNUSED(state);
   // Predict Task
   std::vector<PredictTask> predict_task;
   for (VersionedModelId id: feedback.candidate_models_) {
@@ -200,25 +211,27 @@ Exp4State Exp4Policy::process_feedback(Exp4State state,
   // Update individual model distribution
   auto y = feedback.y_;
   auto eta = 0.01;
-  for (auto id_it = state.second.begin(), output_it = predictions.begin(); 
-        (id_it != state.second.end()) && (output_it != predictions.end()); 
-          ++id_it, ++output_it) {
-    // FIXME
+  for (auto id_it = predictions.begin(); id_it != predictions.end(); ++id_it) {
     auto loss = 1;
-    if (y != (*output_it)->y_hat_) loss = 0;
-    id_it.second = id_it.second * exp (-eta * loss / (id_it.second / state.first));
+    if (y != (*id_it)->y_hat_)
+      loss = 0;
+    auto model_id = ((*id_it)->model_id_).front();
+    auto model_weight = state.second[model_id];
+    state.second[model_id] = model_weight * exp (-eta * loss / (model_weight / state.first));
   }
   return state;
 }
 
 ByteBuffer Exp4Policy::serialize_state(Exp4State state) {
   //TODO
+  UNUSED(state);
   std::vector<uint8_t> v;
   return v;
 }
 
 Exp4State Exp4Policy::deserialize_state(const ByteBuffer& bytes) {
   //TODO
+  UNUSED(bytes);
   Map map;
   return std::make_pair(0, map);
 }

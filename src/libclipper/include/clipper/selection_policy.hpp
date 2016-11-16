@@ -5,12 +5,13 @@
 #include <unordered_map>
 #include <stdlib.h>
 
-#include <datatypes.hpp>
-#include <task_executor.hpp>
+#include "datatypes.hpp"
+#include "task_executor.hpp"
 
 namespace clipper {
-using Exp3State = std::pair<double, std::unordered_map<VersionedModelId, double>>;
-using Exp4State = std::pair<double, std::unordered_map<VersionedModelId, double>>;
+  using Map = std::unordered_map<VersionedModelId, double, std::function<size_t(const VersionedModelId&)>>;
+  using Exp3State = std::pair<double, Map>;
+  using Exp4State = std::pair<double, Map>;
 
 template <typename Derived, typename State>
 class SelectionPolicy {

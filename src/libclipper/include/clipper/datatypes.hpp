@@ -11,6 +11,9 @@ using VersionedModelId = std::pair<std::string, int>;
 using QueryId = long;
 using FeedbackAck = bool;
 
+  size_t versioned_model_hash(const VersionedModelId& key);
+
+  
 class Output {
  public:
   ~Output() = default;
@@ -125,10 +128,13 @@ class Response {
 
 // using Feedback = std::pair<std::shared_ptr<Input>, std::shared_ptr<Output>>;
 
+  
 class Feedback {
 public:
   ~Feedback() = default;
-  Feedback(std::shared_ptr<Input> input, std::shared_ptr<Output> output, VersionedModelId model_id);
+  Feedback(std::shared_ptr<Input> input,
+           std::shared_ptr<Output> output,
+           VersionedModelId model_id);
 
   double y_;
   std::shared_ptr<Input> input_;
@@ -139,7 +145,7 @@ public:
 class FeedbackQuery {
  public:
   ~FeedbackQuery() = default;
-  FeedbackQuery(std::string label, long user_id, std::vector<Feedback> feedback,
+  FeedbackQuery(std::string label, long user_id, Feedback feedback,
                 std::string selection_policy,
                 std::vector<VersionedModelId> candidate_models);
 
