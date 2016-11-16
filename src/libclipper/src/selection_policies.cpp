@@ -54,16 +54,17 @@ Output NewestModelSelectionPolicy::combine_predictions(
 
 std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
 NewestModelSelectionPolicy::select_feedback_tasks(VersionedModelId state,
-                                                  Query query) {
+                                                  FeedbackQuery query, long query_id) {
   UNUSED(state);
   UNUSED(query);
+  UNUSED(query_id);
   return std::make_pair(std::vector<PredictTask>(),
                         std::vector<FeedbackTask>());
 }
 
 VersionedModelId NewestModelSelectionPolicy::process_feedback(
     VersionedModelId state, Feedback feedback,
-    std::vector<std::shared_ptr<Output>> predictions) {
+    std::vector<Output> predictions) {
   UNUSED(feedback);
   UNUSED(predictions);
   return state;

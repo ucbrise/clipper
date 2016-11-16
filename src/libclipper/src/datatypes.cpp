@@ -78,7 +78,7 @@ std::string Response::debug_string() const noexcept {
 }
 
 FeedbackQuery::FeedbackQuery(std::string label, long user_id,
-                             std::vector<Feedback> feedback,
+                             Feedback feedback,
                              std::string selection_policy,
                              std::vector<VersionedModelId> candidate_models)
     : label_(label),

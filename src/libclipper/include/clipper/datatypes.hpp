@@ -112,12 +112,12 @@ class Response {
   std::vector<VersionedModelId> models_used_;
 };
 
-using Feedback = std::pair<std::shared_ptr<Input>, std::shared_ptr<Output>>;
+using Feedback = std::pair<std::shared_ptr<Input>, Output>;
 
 class FeedbackQuery {
  public:
   ~FeedbackQuery() = default;
-  FeedbackQuery(std::string label, long user_id, std::vector<Feedback> feedback,
+  FeedbackQuery(std::string label, long user_id, Feedback feedback,
                 std::string selection_policy,
                 std::vector<VersionedModelId> candidate_models);
 
@@ -132,7 +132,7 @@ class FeedbackQuery {
   // REST endpoints.
   std::string label_;
   long user_id_;
-  std::vector<Feedback> feedback_;
+  Feedback feedback_;
   std::string selection_policy_;
   std::vector<VersionedModelId> candidate_models_;
 };

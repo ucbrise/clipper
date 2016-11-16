@@ -60,8 +60,8 @@ class SelectionPolicy {
   /// while feedback tasks can be used to optionally propogate feedback
   /// into the model containers.
   static std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-  select_feedback_tasks(State state, Query query) {
-    return Derived::select_feedback_tasks(std::forward(state), query);
+  select_feedback_tasks(State state, FeedbackQuery query, long query_id) {
+    return Derived::select_feedback_tasks(std::forward(state), query, query_id);
   }
 
   /// This method will be called if at least one PredictTask
@@ -70,7 +70,7 @@ class SelectionPolicy {
   /// tasks scheduled by `select_feedback_tasks` complete.
   static State process_feedback(
       State state, Feedback feedback,
-      std::vector<std::shared_ptr<Output>> predictions) {
+      std::vector<Output> predictions) {
     return Derived::process_feedback(std::forward(state), feedback,
                                      predictions);
   }
@@ -149,11 +149,11 @@ class NewestModelSelectionPolicy
       std::vector<Output> predictions);
 
   static std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-  select_feedback_tasks(VersionedModelId state, Query query);
+  select_feedback_tasks(VersionedModelId state, FeedbackQuery query, long query_id);
 
   static VersionedModelId process_feedback(
       VersionedModelId state, Feedback feedback,
-      std::vector<std::shared_ptr<Output>> predictions);
+      std::vector<Output> predictions);
 
   static ByteBuffer serialize_state(VersionedModelId state);
 

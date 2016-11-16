@@ -98,11 +98,16 @@ int main() {
 
           long uid = pt.get<long>("uid");
           std::vector<double> inputs = as_vector<double>(pt, "input");
+          float y = pt.get<long>("y");
+          ptree vm = pt.get_child("model");
+        
+//          std::string model = pt.get<std::string>("model");
+//          int version = pt.get<int>("version");
+          
 
           std::shared_ptr<Input> input =
               std::make_shared<DoubleVector>(inputs);
-          std::shared_ptr<Output> output =
-          std::make_shared<Output>(Output(10.0, std::make_pair("model", 1)));
+          Output output{y, std::make_pair(vm.get<std::string>("name"),vm.get<int>("version"))};
           auto update = q.update(
               {"label", uid, {std::make_pair(input, output)}, "newest_model", {std::make_pair("m", 1)}});
           update.then([response](boost::future<FeedbackAck> f){
