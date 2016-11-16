@@ -15,3 +15,10 @@ target_include_directories(zmqcpp INTERFACE
         $<INSTALL_INTERFACE:zmq>)
 target_link_libraries(zmqcpp INTERFACE zeromq)
 export(TARGETS zmqcpp FILE ZeroMQConfig.cmake)
+
+# Include httpserver library
+add_library(httpserver INTERFACE)
+target_include_directories(httpserver INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/httpserver>
+    $<INSTALL_INTERFACE:httpserver>)
+export(TARGETS httpserver FILE HttpServerConfig.cmake)
