@@ -15,9 +15,9 @@ class Output {
  public:
   ~Output() = default;
 
-  Output(double y_hat, std::string versioned_model);
+  Output(double y_hat, std::vector<VersionedModelId> model_id_);
   double y_hat_;
-  std::string versioned_model_;
+  std::vector<VersionedModelId> model_id_;
 };
 
 // using Output = std::pair<double;

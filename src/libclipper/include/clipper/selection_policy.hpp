@@ -2,11 +2,15 @@
 #define CLIPPER_LIB_SELECTION_POLICY_H
 
 #include <memory>
+#include <unordered_map>
+#include <stdlib.h>
 
-#include "datatypes.hpp"
-#include "task_executor.hpp"
+#include <clipper/datatypes.hpp>
+#include <clipper/task_executor.hpp>
 
 namespace clipper {
+using Exp3State = std::pair<double, std::unordered_map<VersionedModelId, double>>;
+using Exp4State = std::pair<double, std::unordered_map<VersionedModelId, double>>;
 
 template <typename Derived, typename State>
 class SelectionPolicy {
@@ -69,7 +73,7 @@ class SelectionPolicy {
   };
 
   static State deserialize_state(const ByteBuffer& bytes) {
-    return Derived::deserialize_state(state);
+    return Derived::deserialize_state(bytes);
   };
 
 };
@@ -80,7 +84,7 @@ class Exp3Policy: public SelectionPolicy<Exp3Policy, Exp3State> {
   // Exp3
   // Select: weighted sampling
   // Update: update weights based on Loss and respond rate
-  using Exp3State = std::pair<double, std::unordered_map<VersionedModelId, double>>;
+  
 
 public:
   Exp3Policy() = delete;
@@ -113,9 +117,9 @@ public:
   static Exp3State deserialize_state(const ByteBuffer& bytes);
 
 private:
-  static VersionedModelId select(Exp3State& state, 
+  static VersionedModelId select(Exp3State state, 
                                  std::vector<VersionedModelId>& models);
-}；
+};
 
 
 
@@ -123,7 +127,6 @@ class Exp4Policy: public SelectionPolicy<Exp4Policy, Exp4State> {
   // Exp4
   // Select: all models
   // Update: update individual model weights (same as Exp3)
-  using Exp4State = std::pair<double, std::unordered_map<VersionedModelId, double>>;
 
 public:
   Exp4Policy() = delete;
@@ -155,8 +158,8 @@ public:
 
   static Exp4State deserialize_state(const ByteBuffer& bytes);
 
-}；
+};
 
-}；
+}
 
 #endif  // CLIPPER_LIB_SELECTION_POLICY_H
