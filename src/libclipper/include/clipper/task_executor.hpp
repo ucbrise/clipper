@@ -10,6 +10,8 @@
 
 #include "datatypes.hpp"
 #include "util.hpp"
+#include "rpc_service.hpp"
+
 
 namespace clipper {
 
@@ -91,6 +93,7 @@ class ModelContainer {
   bool connected_{true};
   Queue<PredictTask> request_queue_;
   Queue<FeedbackTask> feedback_queue_;
+  
 };
 
 class CacheEntry {
@@ -133,7 +136,8 @@ class TaskExecutor {
             std::unordered_map<VersionedModelId,
                                std::vector<std::shared_ptr<ModelContainer>>,
                                decltype(&versioned_model_hash)>(
-                100, &versioned_model_hash)) {
+                100, &versioned_model_hash)),
+                rpc_(std::make_unique<RPCService>()) {
     std::cout << "TaskExecutor started" << std::endl;
     // TODO: Remove hardcoded active model container here
     VersionedModelId mid = std::make_pair("m", 1);
@@ -141,6 +145,8 @@ class TaskExecutor {
     //        auto entry = std::make_pair(mid, ModelContainer{mid,
     //        "127.0.0.1:6001"});
 
+
+    rpc_->start("0.0.0.0", 7000);
     active_containers_.emplace(
         mid, std::vector<std::shared_ptr<ModelContainer>>{
                  std::make_shared<ModelContainer>(mid, "127.0.0.1:6001")});
@@ -198,6 +204,7 @@ class TaskExecutor {
                      decltype(&versioned_model_hash)>
       active_containers_;
 
+  std::unique_ptr<RPCService> rpc_;
   Scheduler scheduler_;
   PredictionCache cache_;
 };

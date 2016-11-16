@@ -13,6 +13,7 @@
 #include "selection_policy.hpp"
 #include "task_executor.hpp"
 #include "timers.hpp"
+#include "rpc_service.hpp"
 
 namespace clipper {
 

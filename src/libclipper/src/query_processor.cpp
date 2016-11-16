@@ -25,6 +25,7 @@ using std::tuple;
 namespace clipper {
 
 QueryProcessor::QueryProcessor(): state_db_(std::make_shared<StateDB>()) {
+
   std::cout << "Query processor constructed" << std::endl;
 }
 

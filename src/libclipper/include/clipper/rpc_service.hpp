@@ -25,6 +25,7 @@ class RPCService {
  public:
   explicit RPCService();
   ~RPCService();
+  // Disallow copy
   RPCService(const RPCService &) = delete;
   RPCService &operator=(const RPCService &) = delete;
   vector<RPCResponse> try_get_responses(const int max_num_responses);
