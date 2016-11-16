@@ -15,9 +15,7 @@ namespace clipper {
 
 RPCService::RPCService() :
     request_queue_(std::make_shared<Queue<RPCRequest>>()),
-    response_queue_(std::make_shared<Queue<RPCResponse>>()),
-    request_lock_(std::make_shared<std::mutex>()),
-    response_lock_(std::make_shared<std::mutex>()) {
+    response_queue_(std::make_shared<Queue<RPCResponse>>()) {
 }
 
 RPCService::~RPCService() {
@@ -33,8 +31,6 @@ void RPCService::start(const string ip, const int port) {
                             address,
                             request_queue_,
                             response_queue_,
-                            request_lock_,
-                            response_lock_,
                             boost::ref(shutdown_))).detach();
 }
 
@@ -43,27 +39,28 @@ void RPCService::stop() {
 }
 
 int RPCService::send_message(const std::vector<uint8_t> &msg, const int container_id) {
-  request_lock_->lock();
   int id = message_id_++;
   RPCRequest request(container_id, id, msg.data(), msg.size());
   request_queue_->push(request);
-  request_lock_->unlock();
   return id;
 }
 
 vector<RPCResponse> RPCService::try_get_responses(const int max_num_responses) {
-  std::unique_ptr<std::mutex> l(*response_lock_);
-
-  response_lock_->unlock();
-  return vector<RPCResponse>();
+  vector<RPCResponse> responses;
+  for(int i = 0; i < max_num_responses; i++) {
+    if(auto response = response_queue_->try_pop()) {
+      responses.push_back(*response);
+    } else {
+      break;
+    }
+  }
+  return responses;
 
 }
 
 void RPCService::manage_service(const string address,
                                 shared_ptr<Queue<RPCRequest>> request_queue,
                                 shared_ptr<Queue<RPCResponse>> response_queue,
-                                shared_ptr<std::mutex> request_lock,
-                                shared_ptr<std::mutex> response_lock,
                                 const bool &shutdown) {
   // Map from container id to unique routing id for zeromq
   // Note that zeromq socket id is a byte vector
@@ -84,10 +81,10 @@ void RPCService::manage_service(const string address,
     if (items[0].revents & ZMQ_POLLIN) {
       // TODO: Balance message sending and receiving fairly
       // Note: We only receive one message per event loop iteration
-      receive_message(socket, response_queue, response_lock, connections, container_id);
+      receive_message(socket, response_queue, connections, container_id);
     }
     // Note: We send all queued messages per event loop iteration
-    send_messages(socket, request_queue, request_lock, connections);
+    send_messages(socket, request_queue, connections);
   }
 }
 
@@ -98,9 +95,7 @@ void RPCService::shutdown_service(const string address, socket_t &socket) {
 
 void RPCService::send_messages(socket_t &socket,
                                shared_ptr<Queue<RPCRequest>> request_queue,
-                               shared_ptr<std::mutex> request_lock,
                                boost::bimap<int, vector<uint8_t>> &connections) {
-  request_lock->lock();
   while (request_queue->size() > 0) {
     RPCRequest request = request_queue->pop();
     boost::bimap<int, vector<uint8_t>>::left_const_iterator connection = connections.left.find(std::get<0>(request));
@@ -117,12 +112,10 @@ void RPCService::send_messages(socket_t &socket,
     socket.send(id_message, ZMQ_SNDMORE);
     socket.send((uint8_t *) std::get<2>(request), std::get<3>(request), 0);
   }
-  request_lock->unlock();
 }
 
 void RPCService::receive_message(socket_t &socket,
                                  shared_ptr<Queue<RPCResponse>> response_queue,
-                                 shared_ptr<std::mutex> response_lock,
                                  boost::bimap<int, vector<uint8_t>> &connections,
                                  int &container_id) {
   message_t msg_identity;
@@ -141,12 +134,10 @@ void RPCService::receive_message(socket_t &socket,
     connections.insert(boost::bimap<int, vector<uint8_t>>::value_type(container_id, connection_id));
     container_id++;
   } else {
-    response_lock->lock();
     int id = ((int *) msg_id.data())[0];
     vector<uint8_t> content((uint8_t *) msg_content.data(), (uint8_t *) msg_content.data() + msg_content.size());
     RPCResponse response(id, content);
     response_queue->push(response);
-    response_lock->unlock();
   }
 }
 

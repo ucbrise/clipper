@@ -3,7 +3,7 @@
 
 #include <condition_variable>
 #include <mutex>
-#include <vector>
+#include <queue>
 // uncomment to disable assert()
 // #define NDEBUG
 #include <cassert>
@@ -28,7 +28,7 @@ class Queue {
 
   void push(const T& x) {
     std::unique_lock<std::mutex> l(m_);
-    xs_.push_back(x);
+    xs_.push(x);
     data_available_.notify_one();
   }
 
@@ -45,7 +45,7 @@ class Queue {
       data_available_.wait(l);
     }
     const T x = xs_.front();
-    xs_.erase(std::begin(xs_));
+    xs_.pop();
     return x;
   }
 
@@ -53,7 +53,7 @@ class Queue {
     std::unique_lock<std::mutex> l(m_);
     if (xs_.size() > 0) {
       const T x = xs_.front();
-      xs_.erase(std::begin(xs_));
+      xs_.pop();
       return x;
     } else {
       return {};
@@ -87,7 +87,7 @@ class Queue {
  private:
   std::mutex m_;
   std::condition_variable data_available_;
-  std::vector<T> xs_;
+  std::queue<T> xs_;
 };
 
 }  // namespace clipper

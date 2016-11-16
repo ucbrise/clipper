@@ -36,23 +36,17 @@ class RPCService {
   void manage_service(const string address,
                       shared_ptr<Queue<RPCRequest>> request_queue,
                       shared_ptr<Queue<RPCResponse>> response_queue,
-                      shared_ptr<std::mutex> request_lock,
-                      shared_ptr<std::mutex> response_lock,
                       const bool &shutdown);
   void send_messages(socket_t &socket,
                      shared_ptr<Queue<RPCRequest>> request_queue,
-                     shared_ptr<std::mutex> request_lock,
                      boost::bimap<int, vector<uint8_t>> &connections);
   void receive_message(socket_t &socket,
                        shared_ptr<Queue<RPCResponse>> response_queue,
-                       shared_ptr<std::mutex> response_lock,
                        boost::bimap<int, vector<uint8_t>> &connections,
                        int &container_id);
   void shutdown_service(const string address, socket_t &socket);
   shared_ptr<Queue<RPCRequest>> request_queue_;
   shared_ptr<Queue<RPCResponse>> response_queue_;
-  shared_ptr<std::mutex> request_lock_;
-  shared_ptr<std::mutex> response_lock_;
   // Flag indicating whether rpc service has been shutdown
   bool shutdown_ = false;
   // The next available message id
