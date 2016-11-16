@@ -30,5 +30,9 @@ $ ./bench
 
 + Boost >= 1.62
 + cmake >= 3.2
++ zeromq >= 4.1.6
 
-On a Mac you can install these with `brew install cmake boost`.
+On a Mac you can install these with 
+```
+brew install cmake boost --c++11 zeromq
+```
