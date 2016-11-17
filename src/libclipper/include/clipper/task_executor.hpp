@@ -56,7 +56,7 @@ class TaskExecutor {
       : active_containers_(std::make_shared<ActiveContainers>()),
         rpc_(std::make_unique<RPCService>()) {
     std::cout << "TaskExecutor started" << std::endl;
-    rpc_->start("0.0.0.0", 7000, active_containers_);
+    rpc_->start("*", 7000, active_containers_);
     active_ = true;
     boost::thread(&TaskExecutor::send_messages, this).detach();
     boost::thread(&TaskExecutor::recv_messages, this).detach();
@@ -81,7 +81,7 @@ class TaskExecutor {
         container->send_prediction(t);
         output_futures.push_back(std::move(cache_.fetch(t.model_, t.input_)));
       } else {
-        std::cout << "No active containers found for model" << t.model_.first
+        std::cout << "No active containers found for model " << t.model_.first
                   << ":" << t.model_.second << std::endl;
       }
     }

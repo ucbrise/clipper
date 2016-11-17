@@ -52,7 +52,8 @@ int RPCService::send_message(const vector<const vector<uint8_t>> msg, const int 
               << std::endl;
     return -1;
   }
-  int id = message_id_++;
+  int id = message_id_;
+  message_id_ += 1;
   RPCRequest request(container_id, id, std::move(msg));
   request_queue_->push(request);
   return id;
@@ -77,6 +78,7 @@ void RPCService::manage_service(const string address,
                                 const bool &active) {
   // Map from container id to unique routing id for zeromq
   // Note that zeromq socket id is a byte vector
+  std::cout << "RPC thread started on address: " << address << std::endl;
   boost::bimap<int, vector<uint8_t>> connections;
   context_t context = context_t(1);
   socket_t socket = socket_t(context, ZMQ_ROUTER);
@@ -87,7 +89,7 @@ void RPCService::manage_service(const string address,
   };
   int container_id = 0;
   while (true) {
-    if (active) {
+    if (!active) {
       shutdown_service(address, socket);
       return;
     }
@@ -95,6 +97,8 @@ void RPCService::manage_service(const string address,
     if (items[0].revents & ZMQ_POLLIN) {
       // TODO: Balance message sending and receiving fairly
       // Note: We only receive one message per event loop iteration
+      std::cout << "Found message to receive" << std::endl;
+      
       receive_message(socket, response_queue, connections, container_id, containers);
     }
     // Note: We send all queued messages per event loop iteration
@@ -112,6 +116,7 @@ void RPCService::send_messages(socket_t &socket,
                                boost::bimap<int, vector<uint8_t>> &connections) {
   while (request_queue->size() > 0) {
     RPCRequest request = request_queue->pop();
+//    std::cout << "Sending request of batch size " << std::get<2>(request).size() << std::endl;
     boost::bimap<int, vector<uint8_t>>::left_const_iterator connection = connections.left.find(std::get<0>(request));
     if (connection == connections.left.end()) {
       // Error handling
@@ -128,13 +133,12 @@ void RPCService::send_messages(socket_t &socket,
     int total_messages = std::get<2>(request).size();
     for (auto m : std::get<2>(request)) {
       // send the sndmore flag unless we are on the last message part
-      if (num_sent < total_messages - 1) {
+      if (num_sent < total_messages - 2) {
         socket.send((uint8_t *) m.data(), m.size(), ZMQ_SNDMORE);
-        num_sent += 1;
       } else {
         socket.send((uint8_t *) m.data(), m.size(), 0);
-        num_sent += 1;
       }
+      num_sent += 1;
     }
   }
 }
@@ -154,7 +158,7 @@ void RPCService::receive_message(socket_t &socket,
   if (connection == connections.right.end()) {
     // We have a new connection, process it accordingly
     connections.insert(boost::bimap<int, vector<uint8_t>>::value_type(container_id, connection_id));
-    
+      std::cout << "New container connected" << std::endl;
     message_t model_name;
     message_t model_version;
     socket.recv(&model_name, 0);
@@ -163,6 +167,7 @@ void RPCService::receive_message(socket_t &socket,
     std::string version_str(reinterpret_cast<char*>(model_version.data()));
     int version = std::stoi(version_str);
     VersionedModelId model = std::make_pair(name, version);
+    std::cout << "Container added" << std::endl;
     
     // TODO: Once we have a ConfigDB, we need to insert the new container ID into the table.
     // For now, create a new container object directly.
@@ -173,6 +178,7 @@ void RPCService::receive_message(socket_t &socket,
     message_t msg_content;
     socket.recv(&msg_id, 0);
     socket.recv(&msg_content, 0);
+    // TODO: get rid of c-style casts
     int id = ((int *) msg_id.data())[0];
     vector<uint8_t> content((uint8_t *) msg_content.data(), (uint8_t *) msg_content.data() + msg_content.size());
     RPCResponse response(id, content);

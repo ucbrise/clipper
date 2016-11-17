@@ -22,7 +22,7 @@ using std::list;
 namespace clipper {
 
 using RPCResponse = std::pair<const int, vector<uint8_t>>;
-// Tuple of container_id, message_id, pointer to data, data length
+// Tuple of container_id, message_id, message
 using RPCRequest = std::tuple<const int, const int,
                               const std::vector<const std::vector<uint8_t>>>;
 
