@@ -8,10 +8,8 @@
 #define BOOST_SPIRIT_THREADSAFE
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
-
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
-
 #include <server_http.hpp>
 
 using namespace boost::property_tree; 

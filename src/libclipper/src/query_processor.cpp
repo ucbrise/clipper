@@ -32,6 +32,9 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   } else if (query.selection_policy_ == "Exp4") {
     tasks = select_tasks<Exp4Policy, Exp4State>(query, query_id, state_db_);
     std::cout << "Used Exp4 to select tasks" << std::endl;
+  } else if (query.selection_policy_ == "EpsilonGreedy") {
+    tasks = select_tasks<EpsilonGreedyPolicy, EpsilonGreedyState>(query, query_id, state_db_);
+    std::cout << "Used Epsilon Greedy to select tasks" << std::endl;
   } else {
     std::cout << query.selection_policy_ << " is invalid selection policy"
               << std::endl;

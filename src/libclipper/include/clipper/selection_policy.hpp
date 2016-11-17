@@ -9,9 +9,11 @@
 #include "task_executor.hpp"
 
 namespace clipper {
-  using Map = std::unordered_map<VersionedModelId, double, std::function<size_t(const VersionedModelId&)>>;
+  using Map = std::unordered_map<VersionedModelId, double,
+                              std::function<size_t(const VersionedModelId&)>>;
   using Exp3State = std::pair<double, Map>;
   using Exp4State = std::pair<double, Map>;
+  using EpsilonGreedyState = std::pair<VersionedModelId, Map>;
 
 template <typename Derived, typename State>
 class SelectionPolicy {
@@ -23,7 +25,7 @@ class SelectionPolicy {
   static State initialize(const std::vector<VersionedModelId>& candidate_models);
 
   static State add_models(State state,
-                          const std::vector<VersionedModelId>& new_models);
+                         const std::vector<VersionedModelId>& new_models);
 
   // Used to identify a unique selection policy instance. For example,
   // if using a bandit-algorithm that does not tolerate variable-armed
@@ -37,8 +39,9 @@ class SelectionPolicy {
   // }
 
   // Query Pre-processing: select models and generate tasks
-  static std::vector<PredictTask> select_predict_tasks(State state, Query query,
-                                                       long query_id) {
+  static std::vector<PredictTask> select_predict_tasks(State state,
+                                                   Query query,
+                                                   long query_id) {
     return Derived::select_predict_tasks(state, query, query_id);
   }
 
@@ -90,6 +93,8 @@ class Exp3Policy: public SelectionPolicy<Exp3Policy, Exp3State> {
 public:
   Exp3Policy() = delete;
   ~Exp3Policy() = delete;
+  
+  constexpr static double eta = 0.01; // How fast clipper respond to feedback
 
   static Exp3State initialize(const std::vector<VersionedModelId>& candidate_models);
 
@@ -100,9 +105,10 @@ public:
                                                        Query query,
                                                        long query_id);
 
-  static std::shared_ptr<Output> combine_predictions(Exp3State state, 
-                                                     Query query,
-                                                     std::vector<std::shared_ptr<Output>> predictions);
+  static std::shared_ptr<Output> combine_predictions(
+                                Exp3State state,
+                                Query query,
+                                std::vector<std::shared_ptr<Output>> predictions);
 
   static std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
   select_feedback_tasks(Exp3State state, 
@@ -119,7 +125,7 @@ public:
 
 private:
   static VersionedModelId select(Exp3State state, 
-                                 std::vector<VersionedModelId>& models);
+                              std::vector<VersionedModelId>& models);
 };
 
 
@@ -132,6 +138,8 @@ class Exp4Policy: public SelectionPolicy<Exp4Policy, Exp4State> {
 public:
   Exp4Policy() = delete;
   ~Exp4Policy() = delete;
+  
+  constexpr static double eta = 0.01;
 
   static Exp4State initialize(const std::vector<VersionedModelId>& candidate_models);
 
@@ -142,9 +150,10 @@ public:
                                                        Query query,
                                                        long query_id);
 
-  static std::shared_ptr<Output> combine_predictions(Exp4State state, 
-                                                     Query query,
-                                                     std::vector<std::shared_ptr<Output>> predictions);
+  static std::shared_ptr<Output> combine_predictions(
+                                Exp4State state,
+                                Query query,
+                                std::vector<std::shared_ptr<Output>> predictions);
 
   static std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
   select_feedback_tasks(Exp3State state, 
@@ -152,13 +161,60 @@ public:
                         long query_id);
 
   static Exp4State process_feedback(Exp4State state, 
-                                    Feedback feedback,
-                                    std::vector<std::shared_ptr<Output>> predictions);
+                                  Feedback feedback,
+                                  std::vector<std::shared_ptr<Output>> predictions);
 
   static ByteBuffer serialize_state(Exp4State state);
 
   static Exp4State deserialize_state(const ByteBuffer& bytes);
 
+};
+
+class EpsilonGreedyPolicy: public SelectionPolicy<Exp4Policy, Exp4State> {
+  // Epsilon Greedy
+  // Select: epsilon chance randomly select,
+  //         (1-epsilon) change select model with the highest expected reward
+  // Update: update individual model expected reward
+  
+public:
+  EpsilonGreedyPolicy() = delete;
+  ~EpsilonGreedyPolicy() = delete;
+  
+  constexpr static double epsilon = 0.1; // Random Selection Chance
+  
+  static EpsilonGreedyState initialize(
+                        const std::vector<VersionedModelId>& candidate_models);
+  
+  static EpsilonGreedyState add_models(
+                          EpsilonGreedyState state,
+                          const std::vector<VersionedModelId>& new_models);
+  
+  static std::vector<PredictTask> select_predict_tasks(EpsilonGreedyState state,
+                                                   Query query,
+                                                   long query_id);
+  
+  static std::shared_ptr<Output> combine_predictions(
+                                  EpsilonGreedyState state,
+                                  Query query,
+                                  std::vector<std::shared_ptr<Output>> predictions);
+  
+  static std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
+  select_feedback_tasks(EpsilonGreedyState state,
+                        FeedbackQuery feedback,
+                        long query_id);
+  
+  static EpsilonGreedyState process_feedback(
+                           EpsilonGreedyState state,
+                           Feedback feedback,
+                           std::vector<std::shared_ptr<Output>> predictions);
+  
+  static ByteBuffer serialize_state(EpsilonGreedyState state);
+  
+  static EpsilonGreedyState deserialize_state(const ByteBuffer& bytes);
+
+private:
+  static VersionedModelId select(EpsilonGreedyState state,
+                              std::vector<VersionedModelId>& models);
 };
 
 }
