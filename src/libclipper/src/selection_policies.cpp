@@ -106,7 +106,7 @@ Exp3Policy::select_feedback_tasks(
 }
 
 
-Exp3State Exp3Policy::process_feedback(
+Exp3State Exp3Policy::process_feedback( // FIXME: Update function
                            Exp3State state,
                            Feedback feedback,
                            std::vector<std::shared_ptr<Output>> predictions) {
@@ -216,7 +216,7 @@ Exp4Policy::select_feedback_tasks(Exp4State state,
 }
 
 
-Exp4State Exp4Policy::process_feedback(
+Exp4State Exp4Policy::process_feedback( // FIXME: Update function
                             Exp4State state,
                             Feedback feedback,
                             std::vector<std::shared_ptr<Output>> predictions) {
@@ -341,7 +341,7 @@ Exp4State Exp4Policy::deserialize_state(const ByteBuffer& bytes) {
   }
   
   
-  EpsilonGreedyState EpsilonGreedyPolicy::process_feedback(
+  EpsilonGreedyState EpsilonGreedyPolicy::process_feedback( // FIXME: Update function
                             EpsilonGreedyState state,
                             Feedback feedback,
                             std::vector<std::shared_ptr<Output>> predictions) {
@@ -371,5 +371,121 @@ Exp4State Exp4Policy::deserialize_state(const ByteBuffer& bytes) {
     Map map;
     return std::make_pair(model, map);
   }
+
+  
+//// UCB
+UCBState UCBPolicy::initialize(
+                        const std::vector<VersionedModelId>& candidate_models_) {
+  // Initiate all models' expected reward as 0.0
+  Map map(candidate_models_.size(), &versioned_model_hash);
+  for (VersionedModelId id: candidate_models_) {
+    map.insert({id, 0.0});
+  }
+  return std::make_pair(candidate_models_.front(), map);
+}
+
+UCBState UCBPolicy::add_models(
+                         EpsilonGreedyState state,
+                         const std::vector<VersionedModelId>& new_models) {
+  // Calculate average expected reward from old models
+  auto sum = 0.0;
+  for (auto it = state.second.begin(); it != state.second.end(); ++it) {
+    sum += it->second;
+  }
+  auto avg = sum / state.second.size();
+  // Add new model with average reward
+  for (VersionedModelId id: new_models) {
+    state.second.insert({id, avg});
+  }
+  return state;
+}
+
+VersionedModelId UCBPolicy::select(
+                         UCBState state,
+                         std::vector<VersionedModelId>& models) {
+  UNUSED(models);
+  // Helper function for selecting an arm
+  VersionedModelId selected_model;
+  auto max_CI_bound = -DBL_MAX;
+  for (auto id = state.second.begin(); id != state.second.end(); ++id) {
+    if (id->second > max_CI_bound)
+      max_CI_bound = id->second;
+      selected_model = id->first;
+  }
+  return selected_model;
+  
+}
+
+std::vector<PredictTask> UCBPolicy::select_predict_tasks(
+                                   UCBState state,
+                                   Query query,
+                                   long query_id) {
+  std::vector<PredictTask> result;
+  state.first = select(state, query.candidate_models_);
+  auto task = PredictTask(query.input_, state.first, 1.0,
+                          query_id, query.latency_micros_);
+  result.push_back(task);
+  return result;
+}
+
+std::shared_ptr<Output> UCBPolicy::combine_predictions(
+                               UCBState state,
+                               Query query,
+                               std::vector<std::shared_ptr<Output>> predictions) {
+  // Don't need to do anything
+  UNUSED(state);
+  UNUSED(query);
+  return predictions.front();
+}
+
+std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
+UCBPolicy::select_feedback_tasks(
+             UCBState state,
+             FeedbackQuery feedback,
+             long query_id) {
+  
+  // Predict Task
+  std::vector<PredictTask> predict_task;
+  state.first = select(state, feedback.candidate_models_);
+  auto task1 = PredictTask(feedback.feedback_.input_,
+                           state.first, -1, query_id, -1);
+  predict_task.push_back(task1);
+  // Feedback Task
+  std::vector<FeedbackTask> feedback_task;
+  auto task2 = FeedbackTask(feedback.feedback_, state.first, query_id, -1);
+  feedback_task.push_back(task2);
+  
+  return std::make_pair(predict_task, feedback_task);
+}
+
+
+UCBState UCBPolicy::process_feedback( // FIXME: Update function
+                   UCBState state,
+                   Feedback feedback,
+                   std::vector<std::shared_ptr<Output>> predictions) {
+  // Update the expected reward of selected model
+  auto model = (predictions.front()->model_id_).front();
+  auto new_reward = 0.0;
+  if (feedback.y_ == predictions.front()->y_hat_)
+    new_reward = 1.0;
+  state.second[feedback.model_id_] += new_reward;
+  
+  return state;
+}
+
+ByteBuffer UCBPolicy::serialize_state(UCBState state) {
+  //TODO
+  UNUSED(state);
+  std::vector<uint8_t> v;
+  return v;
+}
+
+UCBState UCBPolicy::deserialize_state(const ByteBuffer& bytes) {
+  //TODO
+  UNUSED(bytes);
+  VersionedModelId model;
+  Map map;
+  return std::make_pair(model, map);
+}
 
 }  // namespace clipper

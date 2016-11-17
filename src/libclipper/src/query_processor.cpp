@@ -35,6 +35,9 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   } else if (query.selection_policy_ == "EpsilonGreedy") {
     tasks = select_tasks<EpsilonGreedyPolicy, EpsilonGreedyState>(query, query_id, state_db_);
     std::cout << "Used Epsilon Greedy to select tasks" << std::endl;
+  } else if (query.selection_policy_ == "UCB") {
+    tasks = select_tasks<UCBPolicy, UCBState>(query, query_id, state_db_);
+    std::cout << "Used UCB to select tasks" << std::endl;
   } else {
     std::cout << query.selection_policy_ << " is invalid selection policy"
               << std::endl;

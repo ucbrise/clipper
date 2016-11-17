@@ -14,6 +14,7 @@ namespace clipper {
   using Exp3State = std::pair<double, Map>;
   using Exp4State = std::pair<double, Map>;
   using EpsilonGreedyState = std::pair<VersionedModelId, Map>;
+  using UCBState = std::pair<VersionedModelId, Map>;
 
 template <typename Derived, typename State>
 class SelectionPolicy {
@@ -214,6 +215,49 @@ public:
 
 private:
   static VersionedModelId select(EpsilonGreedyState state,
+                              std::vector<VersionedModelId>& models);
+};
+
+
+class UCBPolicy: public SelectionPolicy<UCBPolicy, UCBState> {
+  // Upper Confidence Bound (UCB1)
+  // Select: highest expected reward upper confidence bound
+  // Update: update individual model expected reward upper confidence bound
+  
+public:
+  UCBPolicy() = delete;
+  ~UCBPolicy() = delete;
+  
+  static UCBState initialize(const std::vector<VersionedModelId>& candidate_models);
+  
+  static UCBState add_models(UCBState state,
+                           const std::vector<VersionedModelId>& new_models);
+  
+  static std::vector<PredictTask> select_predict_tasks(UCBState state,
+                                                   Query query,
+                                                   long query_id);
+  
+  static std::shared_ptr<Output> combine_predictions(
+                               UCBState state,
+                               Query query,
+                               std::vector<std::shared_ptr<Output>> predictions);
+  
+  static std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
+  select_feedback_tasks(UCBState state,
+                        FeedbackQuery feedback,
+                        long query_id);
+  
+  static UCBState process_feedback(
+                               UCBState state,
+                               Feedback feedback,
+                               std::vector<std::shared_ptr<Output>> predictions);
+  
+  static ByteBuffer serialize_state(UCBState state);
+  
+  static UCBState deserialize_state(const ByteBuffer& bytes);
+  
+private:
+  static VersionedModelId select(UCBState state,
                               std::vector<VersionedModelId>& models);
 };
 
