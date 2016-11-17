@@ -37,6 +37,8 @@ void ActiveContainers::add_container(VersionedModelId model, int id) {
   auto new_container = std::make_shared<ModelContainer>(model, id);
   auto entry = containers_[new_container->model_];
   entry.push_back(new_container);
+  containers_[new_container->model_] = entry;
+  assert(containers_[new_container->model_].size() > 0);
 }
 
 std::vector<std::shared_ptr<ModelContainer>>

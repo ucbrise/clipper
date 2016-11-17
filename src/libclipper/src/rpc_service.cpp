@@ -163,7 +163,7 @@ void RPCService::receive_message(socket_t &socket,
     message_t model_version;
     socket.recv(&model_name, 0);
     socket.recv(&model_version, 0);
-    std::string name(reinterpret_cast<char*>(model_name.data()));
+    std::string name(reinterpret_cast<char*>(model_name.data()), model_name.size());
     std::string version_str(reinterpret_cast<char*>(model_version.data()));
     int version = std::stoi(version_str);
     VersionedModelId model = std::make_pair(name, version);
