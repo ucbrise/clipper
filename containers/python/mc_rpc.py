@@ -1,11 +1,11 @@
 from __future__ import print_function
 import zmq
-import time
 import sys
 import threading
 import numpy as np
 import array
 import struct
+from datetime import datetime
 
 class Server(threading.Thread):
 
@@ -37,17 +37,23 @@ class Server(threading.Thread):
 		while True:
 			# Receive delimiter between identity and content
 			self.socket.recv()
+			t1 = datetime.now()
 			msg_id_bytes = self.socket.recv()
 			msg_id = struct.unpack("<I", msg_id_bytes)
 			print("Got start of message %d " % msg_id)
 			# list of bytes
 			raw_content = self.socket.recv_multipart()
+			t2 = datetime.now()
 			# parse raw bytes into arrays of doubles
+			# TODO: this parsing is really slow
 			inputs = [np.array(array.array('d', bytes(data))) for data in raw_content]
+			t3 = datetime.now()
 			# print("received %d inputs" % len(raw_content))
 			received_msg = Message(msg_id_bytes, inputs)
 			response = self.handle_message(received_msg)
+			t4 = datetime.now()
 			response.send(self.socket)
+			print("recv: %f us, parse: %f us, handle: %f" % ((t2 - t1).microseconds, (t3 - t2).microseconds, (t4-t3).microseconds))
 
 class Message:
 

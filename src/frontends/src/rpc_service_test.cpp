@@ -36,6 +36,7 @@ void benchmark() {
     }
   }).detach();
   
+    // broken up messages
   std::vector<const std::vector<uint8_t>> data;
   for (int num_inputs = 0; num_inputs < 500; ++num_inputs) {
     std::vector<double> cur_data;
@@ -45,6 +46,18 @@ void benchmark() {
     clipper::DoubleVector d(cur_data);
     data.push_back(d.serialize());
   }
+  
+  // one giant message, batch=1
+  // no difference in time
+//  std::vector<const std::vector<uint8_t>> data;
+//  std::vector<double> cur_data;
+//  for (int num_inputs = 0; num_inputs < 500; ++num_inputs) {
+//    for (int j = 0; j < 784; ++j) {
+//      cur_data.push_back(j);
+//    }
+//  }
+//  clipper::DoubleVector d(cur_data);
+//  data.push_back(d.serialize());
 
   int num_total_messages = 300;
   for (int i = 0; i < num_total_messages; i++) {
