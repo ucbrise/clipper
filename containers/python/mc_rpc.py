@@ -25,8 +25,8 @@ class Server(threading.Thread):
 	def run(self):
 		self.socket.connect("tcp://{0}:{1}".format(self.clipper_ip, self.clipper_port))
 		self.socket.send("", zmq.SNDMORE);
-		self.socket.send(bytes([-1]), zmq.SNDMORE);
-		self.socket.send("CONNECT");
+		self.socket.send(self.model_name, zmq.SNDMORE);
+		self.socket.send(str(self.model_version), zmq.SNDMORE);
 		print("Serving...")
 		while True:
 			# Receive delimiter between identity and content
@@ -56,6 +56,10 @@ class Message:
 
 
 if __name__ == "__main__":
+	model_name = "m"
+	version = 1
 	context = zmq.Context();
 	server = Server(context, sys.argv[1], sys.argv[2])
+	server.model_name = model_name
+	server.model_version = version
 	server.run()

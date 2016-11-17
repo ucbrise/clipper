@@ -35,7 +35,7 @@ class Input {
   // virtual ~Input() = default;
 
   // used by RPC system
-  virtual ByteBuffer serialize() const = 0;
+  virtual const ByteBuffer serialize() const = 0;
   virtual size_t hash() const = 0;
 };
 
@@ -51,7 +51,7 @@ class DoubleVector : public Input {
   DoubleVector(DoubleVector&& other) = default;
   DoubleVector& operator=(DoubleVector&& other) = default;
 
-  ByteBuffer serialize() const;
+  const ByteBuffer serialize() const;
 
   size_t hash() const;
 
@@ -135,6 +135,51 @@ class FeedbackQuery {
   Feedback feedback_;
   std::string selection_policy_;
   std::vector<VersionedModelId> candidate_models_;
+};
+
+class PredictTask {
+ public:
+  ~PredictTask() = default;
+
+  PredictTask(std::shared_ptr<Input> input, VersionedModelId model,
+              float utility, QueryId query_id, long latency_slo_micros);
+
+  PredictTask(const PredictTask& other) = default;
+
+  PredictTask& operator=(const PredictTask& other) = default;
+
+  PredictTask(PredictTask&& other) = default;
+
+  PredictTask& operator=(PredictTask&& other) = default;
+
+  std::shared_ptr<Input> input_;
+  VersionedModelId model_;
+  float utility_;
+  QueryId query_id_;
+  long latency_slo_micros_;
+};
+
+/// NOTE: If a feedback task is scheduled, the task scheduler
+/// must send it to ALL replicas of the VersionedModelId.
+class FeedbackTask {
+ public:
+  ~FeedbackTask() = default;
+
+  FeedbackTask(Feedback feedback, VersionedModelId model, QueryId query_id,
+               long latency_slo_micros);
+
+  FeedbackTask(const FeedbackTask& other) = default;
+
+  FeedbackTask& operator=(const FeedbackTask& other) = default;
+
+  FeedbackTask(FeedbackTask&& other) = default;
+
+  FeedbackTask& operator=(FeedbackTask&& other) = default;
+
+  Feedback feedback_;
+  VersionedModelId model_;
+  QueryId query_id_;
+  long latency_slo_micros_;
 };
 
 }  // namespace clipper

@@ -1,13 +1,17 @@
 #ifndef CLIPPER_RPC_SERVICE_HPP
 #define CLIPPER_RPC_SERVICE_HPP
 
+#include <list>
+#include <queue>
 #include <string>
 #include <vector>
-#include <list>
-#include <clipper/util.hpp>
-#include <zmq.hpp>
+
 #include <boost/bimap.hpp>
-#include <queue>
+#include <zmq.hpp>
+
+#include <clipper/containers.hpp>
+//#include <clipper/task_executor.hpp>
+#include <clipper/util.hpp>
 
 using zmq::socket_t;
 using std::string;
@@ -19,7 +23,8 @@ namespace clipper {
 
 using RPCResponse = std::pair<const int, vector<uint8_t>>;
 // Tuple of container_id, message_id, pointer to data, data length
-using RPCRequest = std::tuple<const int, const int, const uint8_t *, size_t>;
+using RPCRequest = std::tuple<const int, const int,
+                              const std::vector<const std::vector<uint8_t>>>;
 
 class RPCService {
  public:
@@ -33,17 +38,25 @@ class RPCService {
    * Starts the RPC Service. This must be called explicitly, as it is not
    * invoked during construction.
    */
-  void start(const string ip, const int port);
+  void start(const string ip, const int port,
+             std::shared_ptr<ActiveContainers> containers);
   /**
-   * Stops the RPC Service. This is called implicitly within the RPCService destructor.
+   * Stops the RPC Service. This is called implicitly within the RPCService
+   * destructor.
    */
   void stop();
-  int send_message(const vector<uint8_t> &msg, const int container_id);
+
+  /// Send message takes ownership of the msg data because the caller cannot
+  /// know when the message
+  /// will actually be sent.
+  int send_message(const std::vector<const std::vector<uint8_t>> msg,
+                   const int container_id);
 
  private:
   void manage_service(const string address,
                       shared_ptr<Queue<RPCRequest>> request_queue,
                       shared_ptr<Queue<RPCResponse>> response_queue,
+                      shared_ptr<ActiveContainers> containers,
                       const bool &active);
   /**
    * @return The id of the sent message, used for match the correct response
@@ -55,7 +68,8 @@ class RPCService {
   void receive_message(socket_t &socket,
                        shared_ptr<Queue<RPCResponse>> response_queue,
                        boost::bimap<int, vector<uint8_t>> &connections,
-                       int &container_id);
+                       int &container_id,
+                       std::shared_ptr<ActiveContainers> containers);
   void shutdown_service(const string address, socket_t &socket);
   shared_ptr<Queue<RPCRequest>> request_queue_;
   shared_ptr<Queue<RPCResponse>> response_queue_;
@@ -65,6 +79,6 @@ class RPCService {
   int message_id_ = 0;
 };
 
-}// namespace clipper
+}  // namespace clipper
 
-#endif //CLIPPER_RPC_SERVICE_HPP
+#endif  // CLIPPER_RPC_SERVICE_HPP

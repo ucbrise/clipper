@@ -12,6 +12,7 @@
 #include <boost/thread/executors/basic_thread_pool.hpp>
 
 #include <clipper/datatypes.hpp>
+#include <clipper/containers.hpp>
 #include <clipper/query_processor.hpp>
 #include <clipper/task_executor.hpp>
 
@@ -25,7 +26,6 @@ using std::tuple;
 namespace clipper {
 
 QueryProcessor::QueryProcessor(): state_db_(std::make_shared<StateDB>()) {
-
   std::cout << "Query processor constructed" << std::endl;
 }
 
