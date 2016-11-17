@@ -90,15 +90,22 @@ class NoopContainer(ModelContainerBase):
 	pass
 
     def predict_floats(self, inputs):
-        return np.ones(len(inputs), dtype='float32')
+	return np.array([np.sum(x) for x in inputs], dtype='float32')
+        # return np.ones(len(inputs), dtype='float32')
 
 
 
 if __name__ == "__main__":
-	model_name = "m"
-	version = 1
+	
+    if len(sys.argv) < 4:
+	print("Invalid arguments")
+	print("Usage:")
+	print("\tpython rpc.py URL PORT MODEL_NAME MODEL_VERSION")
+    else:
 	context = zmq.Context();
 	server = Server(context, sys.argv[1], sys.argv[2])
+	model_name = sys.argv[3]
+	version = int(sys.argv[4])
 	server.model_name = model_name
 	server.model_version = version
 	server.model = NoopContainer()

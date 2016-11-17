@@ -76,7 +76,7 @@ int main() {
            std::shared_ptr<Input> input =
                std::make_shared<DoubleVector>(inputs);
            auto prediction = q.predict(
-               {"test", uid, input, 20000, "newest_model", {std::make_pair("m", 1)}});
+               {"test", uid, input, 20000, "simple_policy", {std::make_pair("m", 1), std::make_pair("j", 1)}});
            prediction.then([response](boost::future<Response> f){
                Response r = f.get();
                std::stringstream ss;
@@ -98,7 +98,7 @@ int main() {
 
           long uid = pt.get<long>("uid");
           std::vector<double> inputs = as_vector<double>(pt, "input");
-          float y = pt.get<long>("y");
+          float y = pt.get<float>("y");
           ptree vm = pt.get_child("model");
         
 //          std::string model = pt.get<std::string>("model");
@@ -109,10 +109,12 @@ int main() {
               std::make_shared<DoubleVector>(inputs);
           Output output{y, std::make_pair(vm.get<std::string>("name"),vm.get<int>("version"))};
           auto update = q.update(
-              {"label", uid, {std::make_pair(input, output)}, "newest_model", {std::make_pair("m", 1)}});
+              {"label", uid, {std::make_pair(input, output)},
+              "simple_policy", {std::make_pair("m", 1), std::make_pair("j", 1)}});
           update.then([response](boost::future<FeedbackAck> f){
               FeedbackAck ack = f.get();
               std::stringstream ss;
+              ss << std::boolalpha;
               ss << "Feedback received? " << ack;
               std::string content = ss.str();
               *response << "HTTP/1.1 200 OK\r\nContent-Length: " << content.length() << "\r\n\r\n" << content;

@@ -46,6 +46,12 @@ future<Response> QueryProcessor::predict(Query query) {
     serialized_state = tasks_and_state.second;
 
     std::cout << "Used NewestModelSelectionPolicy to select tasks" << std::endl;
+  } else if (query.selection_policy_ == "simple_policy") {
+    auto tasks_and_state = select_predict_tasks<SimplePolicy>(
+        query, query_id, get_state_table());
+    tasks = tasks_and_state.first;
+    serialized_state = tasks_and_state.second;
+    std::cout << "Used SimplePolicy to select tasks" << std::endl;
   } else {
     std::cout << query.selection_policy_ << " is invalid selection policy"
               << std::endl;
@@ -100,6 +106,9 @@ future<Response> QueryProcessor::predict(Query query) {
     if (query.selection_policy_ == "newest_model") {
       final_output =
           combine_predictions<NewestModelSelectionPolicy>(query, outputs, s);
+    } else if (query.selection_policy_ == "simple_policy") {
+      final_output =
+          combine_predictions<SimplePolicy>(query, outputs, s);
     } else {
       UNREACHABLE();
     }
@@ -130,7 +139,15 @@ boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
     predict_tasks = tasks_and_state.first.first;
     feedback_tasks = tasks_and_state.first.second;
     serialized_state = tasks_and_state.second;
-    std::cout << "Used NewestModelSelectionPolicy to select tasks" << std::endl;
+    std::cout << "Used NewestModelSelectionPolicy to select tasks during feedback" << std::endl;
+  } else if (feedback.selection_policy_ == "simple_policy") {
+    auto tasks_and_state = select_feedback_tasks<SimplePolicy>(
+        feedback, query_id, get_state_table());
+    // TODO: clean this up
+    predict_tasks = tasks_and_state.first.first;
+    feedback_tasks = tasks_and_state.first.second;
+    serialized_state = tasks_and_state.second;
+    std::cout << "Used SimplePolicy to select tasks during feedback" << std::endl;
   } else {
     std::cout << feedback.selection_policy_ << " is invalid selection policy"
               << std::endl;
@@ -178,8 +195,12 @@ boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
   }
     if (feedback.selection_policy_ == "newest_model") {
         // update the selection policy state using the
-        // appropriate selection policu
+        // appropriate selection policy
         process_feedback<NewestModelSelectionPolicy>(feedback, preds, s, state_table);
+    } else if (feedback.selection_policy_ == "simple_policy") {
+        // update the selection policy state using the
+        // appropriate selection policy
+        process_feedback<SimplePolicy>(feedback, preds, s, state_table);
     } else {
       UNREACHABLE();
     }

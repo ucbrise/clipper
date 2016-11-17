@@ -84,46 +84,6 @@ class SelectionPolicy {
   }
 };
 
-// class EpsilonGreedyPolicy: public SelectionPolicy<EpsilonGreedyPolicy,
-// EpsilonGreedyState> {
-//
-//   static double epsilon 0.5;
-//    typedef EpsilonGreedyState state_type;
-//   EpsilonGreedyPolicy() = delete;
-//   ~EpsilonGreedyPolicy() = delete;
-//
-//   static EpsilonGreedyState initialize(
-//       const std::vector<VersionedModelId>& candidate_models);
-//
-//   static EpsilonGreedyState add_models(EpsilonGreedyState state,
-//                                      std::vector<VersionedModelId>
-//                                      new_models);
-//
-//   static long hash_models(
-//       const std::vector<VersionedModelId>& candidate_models);
-//
-//   static std::vector<PredictTask> select_predict_tasks(EpsilonGreedyState
-//   state,
-//                                                        Query query,
-//                                                        long query_id);
-//
-//   static std::shared_ptr<Output> combine_predictions(
-//       EpsilonGreedyState state, Query query,
-//       std::vector<std::shared_ptr<Output>> predictions);
-//
-//   static std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-//   select_feedback_tasks(EpsilonGreedyState state, Query query);
-//
-//   static EpsilonGreedyState process_feedback(
-//       EpsilonGreedyState state, Feedback feedback,
-//       std::vector<std::shared_ptr<Output>> predictions);
-//
-//   static ByteBuffer serialize_state(EpsilonGreedyState state);
-//
-//   static EpsilonGreedyState deserialize_state(const ByteBuffer& bytes);
-//
-// };
-
 class NewestModelSelectionPolicy
     : public SelectionPolicy<NewestModelSelectionPolicy, VersionedModelId> {
  public:
@@ -158,6 +118,44 @@ class NewestModelSelectionPolicy
   static ByteBuffer serialize_state(VersionedModelId state);
 
   static VersionedModelId deserialize_state(const ByteBuffer& bytes);
+};
+
+using SimpleState = std::vector<VersionedModelId>;
+
+class SimplePolicy
+    : public SelectionPolicy<SimplePolicy, SimpleState> {
+ public:
+  typedef SimpleState state_type;
+
+  SimplePolicy() = delete;
+  ~SimplePolicy() = delete;
+  static SimpleState initialize(
+      const std::vector<VersionedModelId>& candidate_models);
+
+  static SimpleState add_models(SimpleState state,
+                                     std::vector<VersionedModelId> new_models);
+
+  static long hash_models(
+      const std::vector<VersionedModelId>& candidate_models);
+
+  static std::vector<PredictTask> select_predict_tasks(SimpleState state,
+                                                       Query query,
+                                                       long query_id);
+
+  static Output combine_predictions(
+      SimpleState state, Query query,
+      std::vector<Output> predictions);
+
+  static std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
+  select_feedback_tasks(SimpleState state, FeedbackQuery query, long query_id);
+
+  static SimpleState process_feedback(
+      SimpleState state, Feedback feedback,
+      std::vector<Output> predictions);
+
+  static ByteBuffer serialize_state(SimpleState state);
+
+  static SimpleState deserialize_state(const ByteBuffer& bytes);
 };
 }
 
