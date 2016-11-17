@@ -192,7 +192,6 @@ class PowerTwoChoicesScheduler {
       std::vector<std::shared_ptr<ModelContainer>> &containers) const;
 };
 
-//
 // class FakeTaskExecutor : TaskExecutor {
 //  public:
 //   virtual std::vector<boost::future<Output>> schedule_prediction(

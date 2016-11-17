@@ -1,3 +1,4 @@
+from __future__ import print_function
 import zmq
 import time
 import sys
@@ -18,8 +19,13 @@ class Server(threading.Thread):
 
 	def handle_message(self, msg):
 		# Do work
-		print 'Received Message'
-		msg.set_content("Acknowledged!")
+		print('Received Message')
+		# serialize floats
+		# TODO: 
+		# msg.set_content("Acknowledged!")
+		preds = np.arange(len(msg.content), dtype='float32')
+                assert preds.dtype == np.dtype("float32")
+		msg.set_content(preds.tobytes())
 		return msg
 
 	def run(self):
@@ -32,8 +38,13 @@ class Server(threading.Thread):
 			# Receive delimiter between identity and content
 			self.socket.recv()
 			msg_id = self.socket.recv()
-			content = self.socket.recv()
-			received_msg = Message(msg_id, content)
+			# list of bytes
+			raw_content = self.socket.recv_multipart()
+			# parse raw bytes into arrays of doubles
+			inputs = [np.array(array.array('d', bytes(data))) for data in raw_content]
+			print("received %d inputs" % len(content))
+			print(inputs)
+			received_msg = Message(msg_id, inputs)
 			response = self.handle_message(received_msg)
 			response.send(self.socket)
 
@@ -53,6 +64,19 @@ class Message:
 		socket.send("", flags=zmq.SNDMORE)
 		socket.send(self.msg_id, flags=zmq.SNDMORE)
 		socket.send(self.content)
+
+class ModelWrapperBase(object):
+    def predict_ints(self, inputs):
+        pass
+
+    def predict_floats(self, inputs):
+        pass
+
+    def predict_bytes(self, inputs):
+        pass
+
+    def predict_strings(self, inputs):
+        pass
 
 
 if __name__ == "__main__":
