@@ -43,7 +43,7 @@ class FeedbackTask {
   FeedbackTask& operator=(FeedbackTask&& other) = default;
 
   Feedback feedback_;
-  VersionedModelId model_;
+  VersionedModelId model_; // This is the model user used
   QueryId query_id_;
   long latency_slo_micros_;
 };

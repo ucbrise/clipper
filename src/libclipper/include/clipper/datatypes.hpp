@@ -138,7 +138,7 @@ public:
 
   double y_;
   std::shared_ptr<Input> input_;
-  VersionedModelId model_id_;
+  VersionedModelId model_id_; // This is the model user used, we shouldn't need to access it besides in FeedbackTask
 };
 
 
