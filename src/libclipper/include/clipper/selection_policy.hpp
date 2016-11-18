@@ -11,16 +11,17 @@
 
 namespace clipper {
   //// State Data Structure
-  using ModelInfo = std::pair<double, std::vector<double>>;
-  using Map = std::unordered_map<VersionedModelId, ModelInfo,
+  using ModelInfo = std::unordered_map<std::string, double>;
+  using Map = std::unordered_map<VersionedModelId,
+                          ModelInfo,
                           std::function<size_t(const VersionedModelId&)>>;
-  // Exp3: sum of weights; each model has a pair {weight, list of loss}
+  // Exp3: sum of weights; each model has "weight", "max loss"
   using Exp3State = std::pair<double, Map>;
-  // Exp4: sum of weights; each model has a pair {expected loss, list of loss}
+  // Exp4: sum of weights; each model has "weight", "max loss"
   using Exp4State = std::pair<double, Map>;
-  // Epsilon Greedy: unordered_map: each model has a pair {expected loss, list of loss}
+  // Epsilon Greedy: each model has "expected loss", "times selected"
   using EpsilonGreedyState = Map;
-  // UCB: unordered_map: each model has a pair {expected loss, list of loss}
+  // UCB: unordered_map: each model has "expected_loss", "times selected"
   using UCBState = Map;
 
 template <typename Derived, typename State>

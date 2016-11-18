@@ -22,13 +22,14 @@ namespace clipper {
 // ************************
 // ********* EXP3 *********
 // ************************
+// Descripton: Single Model Selection Policy, iteratively update weights
 Exp3State Exp3Policy::initialize(
                                  const std::vector<VersionedModelId>& candidate_models_) {
-  // Exp3 State: Pair (sum of weights, unordered_map (model_id, Pair (weight, list of loss)))
+  // Exp3: sum of weights; each model has "weight", "max loss"
   Map map(candidate_models_.size(), &versioned_model_hash);
   for (VersionedModelId id: candidate_models_) {
-    std::vector<double> rewards;
-    map.insert({id, make_pair(1.0, rewards)});
+    ModelInfo info = {{"weight", 1.0}, {"max loss", 0.0}};
+    map.insert({id, info});
   }
   return make_pair(map.size() * 1.0, map);
 }
@@ -39,8 +40,8 @@ Exp3State Exp3Policy::add_models(
   // Give new models average weight from old models
   auto avg = state.first / state.second.size();
   for (VersionedModelId id: new_models) {
-    std::vector<double> rewards;
-    state.second.insert({id, make_pair(avg, rewards)});
+    ModelInfo info = {{"weight", avg}, {"max loss", 0.0}};
+    state.second.insert({id, info});
     state.first += avg;
   }
   return state;
@@ -54,7 +55,7 @@ VersionedModelId Exp3Policy::select(
   VersionedModelId selected_model;
   auto it = models.begin();
   while (rand_num >= 0) {
-    rand_num -= (1-eta) * (state.second[*it].first / state.first) + eta / state.second.size();
+    rand_num -= (1-eta) * (state.second[*it]["weight"] / state.first) + eta / state.second.size();
     selected_model = *it;
     it++;
   }
@@ -106,18 +107,16 @@ Exp3State Exp3Policy::process_feedback(
                            Feedback feedback,
                            std::vector<std::shared_ptr<Output>> predictions) {
   
-  // Compute loss and update that model
+  // Compute loss and find which model to update
   auto loss = std::abs(predictions.front()->y_hat_ - feedback.y_);
   auto model_id = predictions.front()->model_id_.front();
-  auto losses = state.second[model_id].second;
-  losses.push_back(loss);
-  state.second[model_id].second.push_back(loss);
-  // Normalize loss
-  auto max_loss = max_element(std::begin(losses), std::end(losses));
-  loss /= *max_loss;
+  // Update max loss and Normalize loss
+  if (state.second[model_id]["max loss"] < loss)
+    state.second[model_id]["max loss"] = loss;
+  loss /= state.second[model_id]["max loss"];
   // Update arm with normalized loss
-  auto s_i = state.second[model_id].first;
-  state.second[model_id].first
+  auto s_i = state.second[model_id]["weight"];
+  state.second[model_id]["weight"]
               += exp (-eta * loss / (s_i / state.first));
   return state;
 }
@@ -138,30 +137,20 @@ Exp3State Exp3Policy::deserialize_state(const ByteBuffer& bytes) {
 
 
 // ************************
-// ********* EXP3 *********
+// ********* EXP4 *********
 // ************************
+// Descripton: Ensemble Model Selection Policy, combined version of EXP3
 Exp4State Exp4Policy::initialize(
                             const std::vector<VersionedModelId>& candidate_models_) {
-  // Exp4 State: Pair (sum of weights, unordered_map (model_id, Pair (weight, list of loss)))
-  Map map(candidate_models_.size(), &versioned_model_hash);
-  for (VersionedModelId id: candidate_models_) {
-    std::vector<double> rewards;
-    map.insert({id, make_pair(1.0, rewards)});
-  }
-  return make_pair(map.size() * 1.0, map);
+  // Same as Exp3
+  return Exp3Policy::initialize(candidate_models_);
 }
 
 Exp4State Exp4Policy::add_models(
                             Exp4State state,
                             const std::vector<VersionedModelId>& new_models) {
-  // Give new models average weight from old models
-  auto avg = state.first / state.second.size();
-  for (VersionedModelId id: new_models) {
-    std::vector<double> rewards;
-    state.second.insert({id, make_pair(avg, rewards)});
-    state.first += avg;
-  }
-  return state;
+  // Same as Exp3
+  return Exp3Policy::add_models(state, new_models);
 }
 
 std::vector<PredictTask> Exp4Policy::select_predict_tasks(
@@ -189,7 +178,7 @@ std::shared_ptr<Output> Exp4Policy::combine_predictions(
 
   for (auto it = predictions.begin(); it != predictions.end(); ++it) {
     auto model_id = ((*it)->model_id_).front();
-    y_hat += (state.second[model_id].first / state.first) * (*it)->y_hat_;
+    y_hat += (state.second[model_id]["weight"] / state.first) * (*it)->y_hat_;
     models.push_back(model_id);
   }
   auto output = std::make_shared<Output>(Output(y_hat, models));
@@ -219,48 +208,43 @@ Exp4State Exp4Policy::process_feedback(
                             std::vector<std::shared_ptr<Output>> predictions) {
   // Update every individual model's distribution
   for (auto it = predictions.begin(); it != predictions.end(); ++it) {
-    // Find that arm's id and loss
-    auto model_id = (*it)->model_id_.front();
+    // Compute loss and find which model to update
     auto loss = std::abs(feedback.y_ - (*it)->y_hat_);
-    auto losses = state.second[model_id].second;
-    losses.push_back(loss);
-    state.second[model_id].second.push_back(loss);
-    // Normalize loss
-    auto max_loss = max_element(std::begin(losses), std::end(losses));
-    loss /= *max_loss;
+    auto model_id = (*it)->model_id_.front();
+    // Update max loss and Normalize loss
+    if (state.second[model_id]["max loss"] < loss)
+      state.second[model_id]["max loss"] = loss;
+    loss /= state.second[model_id]["max loss"];
     // Update arm with normalized loss
-    auto s_i = state.second[model_id].first;
-    state.second[model_id].first
-            += exp (-eta * loss / (s_i / state.first));
+    auto s_i = state.second[model_id]["weight"];
+    state.second[model_id]["weight"]
+    += exp (-eta * loss / (s_i / state.first));
   }
   return state;
 }
 
 ByteBuffer Exp4Policy::serialize_state(Exp4State state) {
-  //TODO
-  UNUSED(state);
-  std::vector<uint8_t> v;
-  return v;
+  // Same as Exp3
+  return Exp3Policy::serialize_state(state);
 }
 
 Exp4State Exp4Policy::deserialize_state(const ByteBuffer& bytes) {
-  //TODO
-  UNUSED(bytes);
-  Map map;
-  return make_pair(0, map);
+  // Same as Exp3
+  return Exp3Policy::deserialize_state(bytes);
 }
   
 
 // ************************
 // **** Epsilon Greedy ****
 // ************************
+// Descripton: Single Model Selection Policy, select lowest expected loss
 EpsilonGreedyState EpsilonGreedyPolicy::initialize(
                           const std::vector<VersionedModelId>& candidate_models_) {
   // Epsilon Greedy State: unordered_map (model_id, Pair (expected loss, Vector(loss)))
   Map map(candidate_models_.size(), &versioned_model_hash);
   for (VersionedModelId id: candidate_models_) {
-    std::vector<double> losses;
-    map.insert({id, make_pair(0.0, losses)});
+    ModelInfo info = {{"expected loss", 0.0}, {"times selected", 0.0}};
+    map.insert({id, info});
   }
   return map;
 }
@@ -268,16 +252,16 @@ EpsilonGreedyState EpsilonGreedyPolicy::initialize(
 EpsilonGreedyState EpsilonGreedyPolicy::add_models(
                  EpsilonGreedyState state,
                  const std::vector<VersionedModelId>& new_models) {
-  // Calculate average loss from old models
+  // Calculate expected loss from old models
   auto sum = 0.0;
   for (auto it = state.begin(); it != state.end(); ++it) {
-    sum += it->second.first;
+    sum += it->second.at("expected loss");
   }
   auto avg = sum / state.size();
   // Add new model with average reward
   for (VersionedModelId id: new_models) {
-    std::vector<double> losses;
-    state.insert({id, make_pair(avg, losses)});
+    ModelInfo info = {{"expected loss", avg}, {"times selected", 0.0}};
+    state.insert({id, info});
   }
   return state;
 }
@@ -292,7 +276,7 @@ VersionedModelId EpsilonGreedyPolicy::select(
   if (rand_num >= epsilon) { // Select best model
     auto min_loss = DBL_MAX;
     for (auto id = state.begin(); id != state.end(); ++id) {
-      auto model_loss = id->second.first;
+      auto model_loss = id->second["expected loss"];
       if (model_loss < min_loss)
         min_loss = model_loss;
         selected_model = id->first;
@@ -350,11 +334,13 @@ EpsilonGreedyState EpsilonGreedyPolicy::process_feedback(
                           EpsilonGreedyState state,
                           Feedback feedback,
                           std::vector<std::shared_ptr<Output>> predictions) {
-  // Update the expected loss of one selected model
   auto model_id = predictions.front()->model_id_.front();
   auto new_loss = std::abs(feedback.y_ - predictions.front()->y_hat_);
-  state[model_id].second.push_back(new_loss);
-  state[model_id].first += (new_loss - state[model_id].first) / (state[model_id].second.size());
+  // Update times selected
+  state[model_id]["times selected"] += 1;
+  // Update expected loss
+  state[model_id]["expected loss"]
+      += (new_loss - state[model_id]["expected loss"]) / state[model_id]["times selected"];
   
   return state;
 }
@@ -380,47 +366,33 @@ EpsilonGreedyState EpsilonGreedyPolicy::deserialize_state(
 // ************************
 // ********* UCB1 *********
 // ************************
+// Descripton: Single Model Selection Policy, similar to E-greedy besides select method
 UCBState UCBPolicy::initialize(
                         const std::vector<VersionedModelId>& candidate_models_) {
-  // UCB State: unordered_map (model_id, Pair (expected loss, Vector(loss)))
-  Map map(candidate_models_.size(), &versioned_model_hash);
-  for (VersionedModelId id: candidate_models_) {
-    std::vector<double> losses;
-    map.insert({id, make_pair(0.0, losses)});
-  }
-  return map;
+  // Same as Epsilon Greedy
+  return EpsilonGreedyPolicy::initialize(candidate_models_);
 }
 
 UCBState UCBPolicy::add_models(
                          EpsilonGreedyState state,
                          const std::vector<VersionedModelId>& new_models) {
-  // Calculate average loss from old models
-  auto sum = 0.0;
-  for (auto it = state.begin(); it != state.end(); ++it) {
-    sum += it->second.first;
-  }
-  auto avg = sum / state.size();
-  // Add new model with average reward
-  for (VersionedModelId id: new_models) {
-    std::vector<double> losses;
-    state.insert({id, make_pair(avg, losses)});
-  }
-  return state;
+  // Same as Epsilon Greedy
+  return EpsilonGreedyPolicy::add_models(state, new_models);
 }
 
 VersionedModelId UCBPolicy::select(
                          UCBState state,
                          std::vector<VersionedModelId>& models) {
+  UNUSED(models);
   // Helper function for selecting an arm based on lowest upper confidence bound
   VersionedModelId selected_model;
-  
   auto min_upper_bound = DBL_MAX;
   for (auto id = state.begin(); id != state.end(); ++id) {
-    auto model_loss = id->second.first;
-    auto bound = sqrt(2 * log(models.size()) / id->second.second.size());
+    auto model_loss = id->second["expected loss"];
+    auto bound = sqrt(2 * log(state.size()) / id->second["times selected"]);
     if (model_loss + bound < min_upper_bound)
       min_upper_bound = model_loss + bound;
-    selected_model = id->first;
+      selected_model = id->first;
   }
   
   return selected_model;
@@ -430,21 +402,16 @@ std::vector<PredictTask> UCBPolicy::select_predict_tasks(
                                    UCBState state,
                                    Query query,
                                    long query_id) {
-  auto selected_model = select(state, query.candidate_models_);
-  auto task = PredictTask(query.input_, selected_model, 1.0,
-                          query_id, query.latency_micros_);
-  std::vector<PredictTask> tasks {task};
-  return tasks;
+  // Same as Epsilon Greedy
+  return EpsilonGreedyPolicy::select_predict_tasks(state, query, query_id);
 }
 
 std::shared_ptr<Output> UCBPolicy::combine_predictions(
                                UCBState state,
                                Query query,
                                std::vector<std::shared_ptr<Output>> predictions) {
-  // Don't need to do anything
-  UNUSED(state);
-  UNUSED(query);
-  return predictions.front();
+  // Same as Epsilon Greedy
+  return EpsilonGreedyPolicy::combine_predictions(state, query, predictions);
 }
 
 std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
@@ -452,16 +419,8 @@ UCBPolicy::select_feedback_tasks(
              UCBState state,
              FeedbackQuery feedback,
              long query_id) {
-  // Predict Task
-  auto selected_model = select(state, feedback.candidate_models_);
-  auto task1 = PredictTask(feedback.feedback_.input_,
-                           selected_model, -1, query_id, -1);
-  std::vector<PredictTask> predict_tasks {task1};
-  // Feedback Task
-  auto task2 = FeedbackTask(feedback.feedback_, selected_model, query_id, -1);
-  std::vector<FeedbackTask> feedback_tasks {task2};
-  
-  return make_pair(predict_tasks, feedback_tasks);
+  // Same as Epsilon Greedy
+  return EpsilonGreedyPolicy::select_feedback_tasks(state, feedback, query_id);
 }
 
 
@@ -469,27 +428,18 @@ UCBState UCBPolicy::process_feedback(
                    UCBState state,
                    Feedback feedback,
                    std::vector<std::shared_ptr<Output>> predictions) {
-  // Update the expected loss of one selected model
-  auto model_id = predictions.front()->model_id_.front();
-  auto new_loss = std::abs(feedback.y_ - predictions.front()->y_hat_);
-  state[model_id].second.push_back(new_loss);
-  state[model_id].first += (new_loss - state[model_id].first) / (state[model_id].second.size());
-  
-  return state;
+  // Same as Epsilon Greedy
+  return EpsilonGreedyPolicy::process_feedback(state, feedback, predictions);
 }
 
 ByteBuffer UCBPolicy::serialize_state(UCBState state) {
-  //TODO
-  UNUSED(state);
-  std::vector<uint8_t> v;
-  return v;
+  // Same as Epsilon Greedy
+  return EpsilonGreedyPolicy::serialize_state(state);
 }
 
 UCBState UCBPolicy::deserialize_state(const ByteBuffer& bytes) {
-  //TODO
-  UNUSED(bytes);
-  Map map;
-  return map;
+  // Same as Epsilon Greedy
+  return EpsilonGreedyPolicy::deserialize_state(bytes);
 }
 
 }  // namespace clipper
