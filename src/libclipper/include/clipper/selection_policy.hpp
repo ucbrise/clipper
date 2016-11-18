@@ -17,12 +17,12 @@ namespace clipper {
                           std::function<size_t(const VersionedModelId&)>>;
   // Exp3: sum of weights; each model has a pair {weight, list of loss}
   using Exp3State = std::pair<double, Map>;
-  // Exp4: sum of weights; each model has a pair {weight, list of loss}
+  // Exp4: sum of weights; each model has a pair {expected loss, list of loss}
   using Exp4State = std::pair<double, Map>;
-  // Epsilon Greedy: unordered_map: key - model_id, value - pair of expected loss + list of losses
+  // Epsilon Greedy: unordered_map: each model has a pair {expected loss, list of loss}
   using EpsilonGreedyState = Map;
-  // UCB: sum of weights; each model has ordered list of loss
-  using UCBState = std::map<VersionedModelId, std::vector<double>>;
+  // UCB: unordered_map: each model has a pair {expected loss, list of loss}
+  using UCBState = Map;
 
 template <typename Derived, typename State>
 class SelectionPolicy {
