@@ -54,9 +54,9 @@ class TaskExecutor {
   ~TaskExecutor() { active_ = false; };
   explicit TaskExecutor()
       : active_containers_(std::make_shared<ActiveContainers>()),
-        rpc_(std::make_unique<RPCService>()) {
+        rpc_(std::make_unique<RPCService>(active_containers_)) {
     std::cout << "TaskExecutor started" << std::endl;
-    rpc_->start("*", 7000, active_containers_);
+    rpc_->start("*", 7000);
     active_ = true;
     boost::thread(&TaskExecutor::send_messages, this).detach();
     boost::thread(&TaskExecutor::recv_messages, this).detach();
