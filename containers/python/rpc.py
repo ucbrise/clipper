@@ -41,7 +41,7 @@ class Server(threading.Thread):
 			msg_id_bytes = self.socket.recv()
 			msg_id = struct.unpack("<I", msg_id_bytes)
 			print("Got start of message %d " % msg_id)
-			# list of bytes
+			# list of byte arrays
 			raw_content = self.socket.recv_multipart()
 			t2 = datetime.now()
 			# parse raw bytes into arrays of doubles

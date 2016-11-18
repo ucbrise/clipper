@@ -14,18 +14,6 @@
 
 namespace clipper {
 
-// class TaskExecutor {
-// public:
-//  std::vector<boost::future<Output>> schedule_predictions(
-//      const std::vector<PredictTask> &tasks);
-//
-//  std::vector<boost::future<FeedbackAck>> schedule_feedback(
-//      const std::vector<FeedbackTask> tasks);
-//
-//  //  private:
-//  // ResourceState resource_state_;
-//};
-
 class ModelContainer {
  public:
   ~ModelContainer() = default;
