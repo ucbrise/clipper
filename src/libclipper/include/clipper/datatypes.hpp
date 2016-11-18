@@ -134,7 +134,7 @@ public:
   ~Feedback() = default;
   Feedback(std::shared_ptr<Input> input,
            std::shared_ptr<Output> output,
-           VersionedModelId model_id);
+           VersionedModelId model_id); // FIXME: don't need this
 
   double y_;
   std::shared_ptr<Input> input_;

@@ -3,18 +3,26 @@
 
 #include <memory>
 #include <unordered_map>
+#include <map>
 #include <stdlib.h>
 
 #include "datatypes.hpp"
 #include "task_executor.hpp"
 
 namespace clipper {
-  using Map = std::unordered_map<VersionedModelId, double,
-                              std::function<size_t(const VersionedModelId&)>>;
+  using namespace std;
+  //// State Data Structure
+  using ModelInfo = std::pair<double, std::vector<double>>;
+  using Map = std::unordered_map<VersionedModelId, ModelInfo,
+                          std::function<size_t(const VersionedModelId&)>>;
+  // Exp3: sum of weights; each model has a pair {weight, list of loss}
   using Exp3State = std::pair<double, Map>;
+  // Exp4: sum of weights; each model has a pair {weight, list of loss}
   using Exp4State = std::pair<double, Map>;
-  using EpsilonGreedyState = std::pair<VersionedModelId, Map>;
-  using UCBState = std::pair<VersionedModelId, Map>;
+  // Epsilon Greedy: unordered_map: key - model_id, value - pair of expected loss + list of losses
+  using EpsilonGreedyState = Map;
+  // UCB: sum of weights; each model has ordered list of loss
+  using UCBState = std::map<VersionedModelId, std::vector<double>>;
 
 template <typename Derived, typename State>
 class SelectionPolicy {
@@ -27,17 +35,6 @@ class SelectionPolicy {
 
   static State add_models(State state,
                          const std::vector<VersionedModelId>& new_models);
-
-  // Used to identify a unique selection policy instance. For example,
-  // if using a bandit-algorithm that does not tolerate variable-armed
-  // bandits, one could hash the candidate models to identify
-  // which policy instance corresponds to this exact set of arms.
-  // Similarly, it provides flexibility in how to deal with different
-  // versions of the same arm (different versions of same model).
-  // static long hash_models(
-  //     const std::vector<VersionedModelId>& candidate_models) {
-  //   return Derived::hash_models(candidate_models);
-  // }
 
   // Query Pre-processing: select models and generate tasks
   static std::vector<PredictTask> select_predict_tasks(State state,
