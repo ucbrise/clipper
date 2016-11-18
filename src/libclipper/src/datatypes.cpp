@@ -66,11 +66,9 @@ std::string Response::debug_string() const noexcept {
 
   
 Feedback::Feedback(std::shared_ptr<Input> input, 
-                  std::shared_ptr<Output> output,
-                  VersionedModelId model_id)
+                  std::shared_ptr<Output> output)
     : y_(output->y_hat_),
-      input_(input),
-      model_id_(model_id) {}
+      input_(input) {}
 
   
 FeedbackQuery::FeedbackQuery(std::string label, long user_id,

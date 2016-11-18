@@ -23,11 +23,11 @@ namespace clipper {
 // ********* EXP3 *********
 // ************************
 Exp3State Exp3Policy::initialize(
-                          const vector<VersionedModelId>& candidate_models_) {
+                                 const std::vector<VersionedModelId>& candidate_models_) {
   // Exp3 State: Pair (sum of weights, unordered_map (model_id, Pair (weight, list of loss)))
   Map map(candidate_models_.size(), &versioned_model_hash);
   for (VersionedModelId id: candidate_models_) {
-    vector<double> rewards;
+    std::vector<double> rewards;
     map.insert({id, make_pair(1.0, rewards)});
   }
   return make_pair(map.size() * 1.0, map);
@@ -35,11 +35,11 @@ Exp3State Exp3Policy::initialize(
 
 Exp3State Exp3Policy::add_models(
                           Exp3State state,
-                          const vector<VersionedModelId>& new_models) {
+                          const std::vector<VersionedModelId>& new_models) {
   // Give new models average weight from old models
   auto avg = state.first / state.second.size();
   for (VersionedModelId id: new_models) {
-    vector<double> rewards;
+    std::vector<double> rewards;
     state.second.insert({id, make_pair(avg, rewards)});
     state.first += avg;
   }
@@ -48,7 +48,7 @@ Exp3State Exp3Policy::add_models(
 
 VersionedModelId Exp3Policy::select(
                           Exp3State state,
-                          vector<VersionedModelId>& models) {
+                          std::vector<VersionedModelId>& models) {
   // Helper function for randomly drawing an arm based on its normalized weight
   auto rand_num = rand()%1;
   VersionedModelId selected_model;
@@ -62,28 +62,28 @@ VersionedModelId Exp3Policy::select(
 
 }
 
-vector<PredictTask> Exp3Policy::select_predict_tasks(
+std::vector<PredictTask> Exp3Policy::select_predict_tasks(
                           Exp3State state,
                           Query query,
                           long query_id) {
   auto selected_model = select(state, query.candidate_models_);
   auto task = PredictTask(query.input_, selected_model, 1.0,
                           query_id, query.latency_micros_);
-  vector<PredictTask> tasks {task};
+  std::vector<PredictTask> tasks {task};
   return tasks;
 }
 
-shared_ptr<Output> Exp3Policy::combine_predictions(
+std::shared_ptr<Output> Exp3Policy::combine_predictions(
                           Exp3State state,
                           Query query,
-                          vector<std::shared_ptr<Output>> predictions) {
+                          std::vector<std::shared_ptr<Output>> predictions) {
   // Don't need to do anything
   UNUSED(state);
   UNUSED(query);
   return predictions.front();
 }
 
-pair<vector<PredictTask>, vector<FeedbackTask>>
+std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
 Exp3Policy::select_feedback_tasks(
                           Exp3State state,
                           FeedbackQuery feedback,
@@ -92,10 +92,10 @@ Exp3Policy::select_feedback_tasks(
   auto selected_model = select(state, feedback.candidate_models_);
   auto task1 = PredictTask(feedback.feedback_.input_,
                            selected_model, -1, query_id, -1);
-  vector<PredictTask> predict_tasks {task1};
+  std::vector<PredictTask> predict_tasks {task1};
   // Feedback Task
-  auto task2 = FeedbackTask(feedback.feedback_, feedback.feedback_.model_id_, query_id, -1);
-  vector<FeedbackTask> feedback_tasks {task2};
+  auto task2 = FeedbackTask(feedback.feedback_, selected_model, query_id, -1);
+  std::vector<FeedbackTask> feedback_tasks {task2};
 
   return make_pair(predict_tasks, feedback_tasks);
 }
@@ -104,10 +104,10 @@ Exp3Policy::select_feedback_tasks(
 Exp3State Exp3Policy::process_feedback(
                            Exp3State state,
                            Feedback feedback,
-                           vector<std::shared_ptr<Output>> predictions) {
+                           std::vector<std::shared_ptr<Output>> predictions) {
   
   // Compute loss and update that model
-  auto loss = abs(predictions.front()->y_hat_ - feedback.y_);
+  auto loss = std::abs(predictions.front()->y_hat_ - feedback.y_);
   auto model_id = predictions.front()->model_id_.front();
   auto losses = state.second[model_id].second;
   losses.push_back(loss);
@@ -141,11 +141,11 @@ Exp3State Exp3Policy::deserialize_state(const ByteBuffer& bytes) {
 // ********* EXP3 *********
 // ************************
 Exp4State Exp4Policy::initialize(
-                            const vector<VersionedModelId>& candidate_models_) {
+                            const std::vector<VersionedModelId>& candidate_models_) {
   // Exp4 State: Pair (sum of weights, unordered_map (model_id, Pair (weight, list of loss)))
   Map map(candidate_models_.size(), &versioned_model_hash);
   for (VersionedModelId id: candidate_models_) {
-    vector<double> rewards;
+    std::vector<double> rewards;
     map.insert({id, make_pair(1.0, rewards)});
   }
   return make_pair(map.size() * 1.0, map);
@@ -153,18 +153,18 @@ Exp4State Exp4Policy::initialize(
 
 Exp4State Exp4Policy::add_models(
                             Exp4State state,
-                            const vector<VersionedModelId>& new_models) {
+                            const std::vector<VersionedModelId>& new_models) {
   // Give new models average weight from old models
   auto avg = state.first / state.second.size();
   for (VersionedModelId id: new_models) {
-    vector<double> rewards;
+    std::vector<double> rewards;
     state.second.insert({id, make_pair(avg, rewards)});
     state.first += avg;
   }
   return state;
 }
 
-vector<PredictTask> Exp4Policy::select_predict_tasks(
+std::vector<PredictTask> Exp4Policy::select_predict_tasks(
                             Exp4State state,
                             Query query,
                             long query_id) {
@@ -178,39 +178,37 @@ vector<PredictTask> Exp4Policy::select_predict_tasks(
   return tasks;
 }
 
-shared_ptr<Output> Exp4Policy::combine_predictions(
+std::shared_ptr<Output> Exp4Policy::combine_predictions(
                             Exp4State state,
                             Query query,
-                            vector<std::shared_ptr<Output>> predictions) {
+                            std::vector<std::shared_ptr<Output>> predictions) {
   // Weighted Combination of All predictions
   UNUSED(query);
   auto y_hat = 0;
-  vector<VersionedModelId> models;
+  std::vector<VersionedModelId> models;
 
   for (auto it = predictions.begin(); it != predictions.end(); ++it) {
     auto model_id = ((*it)->model_id_).front();
     y_hat += (state.second[model_id].first / state.first) * (*it)->y_hat_;
     models.push_back(model_id);
   }
-  auto output = make_shared<Output>(Output(y_hat, models));
+  auto output = std::make_shared<Output>(Output(y_hat, models));
   return output;
 }
 
-pair<vector<PredictTask>, vector<FeedbackTask>>
+std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
 Exp4Policy::select_feedback_tasks(Exp4State state, 
                                 FeedbackQuery feedback,
                                 long query_id) {
   UNUSED(state);
-  // Predict Task
-  vector<PredictTask> predict_tasks;
+  std::vector<PredictTask> predict_tasks;
+  std::vector<FeedbackTask> feedback_tasks;
   for (VersionedModelId id: feedback.candidate_models_) {
-      auto task = PredictTask(feedback.feedback_.input_, id, -1, query_id, -1);
-      predict_tasks.push_back(task);
+    auto task1 = PredictTask(feedback.feedback_.input_, id, -1, query_id, -1);
+    auto task2 = FeedbackTask(feedback.feedback_, id, query_id, -1);
+    predict_tasks.push_back(task1);
+    feedback_tasks.push_back(task2);
   }
-  // Feedback Task
-  auto task2 = FeedbackTask(feedback.feedback_, feedback.feedback_.model_id_, query_id, -1);
-  vector<FeedbackTask> feedback_tasks {task2};
-  
   return std::make_pair(predict_tasks, feedback_tasks);
 }
 
@@ -223,7 +221,7 @@ Exp4State Exp4Policy::process_feedback(
   for (auto it = predictions.begin(); it != predictions.end(); ++it) {
     // Find that arm's id and loss
     auto model_id = (*it)->model_id_.front();
-    auto loss = abs(feedback.y_ - (*it)->y_hat_);
+    auto loss = std::abs(feedback.y_ - (*it)->y_hat_);
     auto losses = state.second[model_id].second;
     losses.push_back(loss);
     state.second[model_id].second.push_back(loss);
@@ -241,7 +239,7 @@ Exp4State Exp4Policy::process_feedback(
 ByteBuffer Exp4Policy::serialize_state(Exp4State state) {
   //TODO
   UNUSED(state);
-  vector<uint8_t> v;
+  std::vector<uint8_t> v;
   return v;
 }
 
@@ -257,11 +255,11 @@ Exp4State Exp4Policy::deserialize_state(const ByteBuffer& bytes) {
 // **** Epsilon Greedy ****
 // ************************
 EpsilonGreedyState EpsilonGreedyPolicy::initialize(
-                          const vector<VersionedModelId>& candidate_models_) {
+                          const std::vector<VersionedModelId>& candidate_models_) {
   // Epsilon Greedy State: unordered_map (model_id, Pair (expected loss, Vector(loss)))
   Map map(candidate_models_.size(), &versioned_model_hash);
   for (VersionedModelId id: candidate_models_) {
-    vector<double> losses;
+    std::vector<double> losses;
     map.insert({id, make_pair(0.0, losses)});
   }
   return map;
@@ -269,7 +267,7 @@ EpsilonGreedyState EpsilonGreedyPolicy::initialize(
 
 EpsilonGreedyState EpsilonGreedyPolicy::add_models(
                  EpsilonGreedyState state,
-                 const vector<VersionedModelId>& new_models) {
+                 const std::vector<VersionedModelId>& new_models) {
   // Calculate average loss from old models
   auto sum = 0.0;
   for (auto it = state.begin(); it != state.end(); ++it) {
@@ -278,7 +276,7 @@ EpsilonGreedyState EpsilonGreedyPolicy::add_models(
   auto avg = sum / state.size();
   // Add new model with average reward
   for (VersionedModelId id: new_models) {
-    vector<double> losses;
+    std::vector<double> losses;
     state.insert({id, make_pair(avg, losses)});
   }
   return state;
@@ -286,7 +284,7 @@ EpsilonGreedyState EpsilonGreedyPolicy::add_models(
 
 VersionedModelId EpsilonGreedyPolicy::select(
                           EpsilonGreedyState state,
-                          vector<VersionedModelId>& models) {
+                          std::vector<VersionedModelId>& models) {
   // Helper function for selecting an arm based on lowest expected loss
   auto rand_num = rand()%1;
   VersionedModelId selected_model;
@@ -308,28 +306,28 @@ VersionedModelId EpsilonGreedyPolicy::select(
   
 }
 
-vector<PredictTask> EpsilonGreedyPolicy::select_predict_tasks(
+std::vector<PredictTask> EpsilonGreedyPolicy::select_predict_tasks(
                           EpsilonGreedyState state,
                           Query query,
                           long query_id) {
   auto selected_model = select(state, query.candidate_models_);
   auto task = PredictTask(query.input_, selected_model, 1.0,
                           query_id, query.latency_micros_);
-  vector<PredictTask> tasks {task};
+  std::vector<PredictTask> tasks {task};
   return tasks;
 }
 
-shared_ptr<Output> EpsilonGreedyPolicy::combine_predictions(
+std::shared_ptr<Output> EpsilonGreedyPolicy::combine_predictions(
                           EpsilonGreedyState state,
                           Query query,
-                          vector<shared_ptr<Output>> predictions) {
+                          std::vector<std::shared_ptr<Output>> predictions) {
   // Don't need to do anything
   UNUSED(state);
   UNUSED(query);
   return predictions.front();
 }
 
-pair<vector<PredictTask>, vector<FeedbackTask>>
+std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
 EpsilonGreedyPolicy::select_feedback_tasks(
                           EpsilonGreedyState state,
                           FeedbackQuery feedback,
@@ -339,10 +337,10 @@ EpsilonGreedyPolicy::select_feedback_tasks(
   auto selected_model = select(state, feedback.candidate_models_);
   auto task1 = PredictTask(feedback.feedback_.input_,
                            selected_model, -1, query_id, -1);
-  vector<PredictTask> predict_tasks {task1};
+  std::vector<PredictTask> predict_tasks {task1};
   // Feedback Task
-  auto task2 = FeedbackTask(feedback.feedback_, feedback.feedback_.model_id_, query_id, -1);
-  vector<FeedbackTask> feedback_tasks {task2};
+  auto task2 = FeedbackTask(feedback.feedback_, selected_model, query_id, -1);
+  std::vector<FeedbackTask> feedback_tasks {task2};
   
   return make_pair(predict_tasks, feedback_tasks);
 }
@@ -351,10 +349,10 @@ EpsilonGreedyPolicy::select_feedback_tasks(
 EpsilonGreedyState EpsilonGreedyPolicy::process_feedback(
                           EpsilonGreedyState state,
                           Feedback feedback,
-                          vector<shared_ptr<Output>> predictions) {
+                          std::vector<std::shared_ptr<Output>> predictions) {
   // Update the expected loss of one selected model
   auto model_id = predictions.front()->model_id_.front();
-  auto new_loss = abs(feedback.y_ - predictions.front()->y_hat_);
+  auto new_loss = std::abs(feedback.y_ - predictions.front()->y_hat_);
   state[model_id].second.push_back(new_loss);
   state[model_id].first += (new_loss - state[model_id].first) / (state[model_id].second.size());
   
@@ -383,11 +381,11 @@ EpsilonGreedyState EpsilonGreedyPolicy::deserialize_state(
 // ********* UCB1 *********
 // ************************
 UCBState UCBPolicy::initialize(
-                        const vector<VersionedModelId>& candidate_models_) {
+                        const std::vector<VersionedModelId>& candidate_models_) {
   // UCB State: unordered_map (model_id, Pair (expected loss, Vector(loss)))
   Map map(candidate_models_.size(), &versioned_model_hash);
   for (VersionedModelId id: candidate_models_) {
-    vector<double> losses;
+    std::vector<double> losses;
     map.insert({id, make_pair(0.0, losses)});
   }
   return map;
@@ -395,7 +393,7 @@ UCBState UCBPolicy::initialize(
 
 UCBState UCBPolicy::add_models(
                          EpsilonGreedyState state,
-                         const vector<VersionedModelId>& new_models) {
+                         const std::vector<VersionedModelId>& new_models) {
   // Calculate average loss from old models
   auto sum = 0.0;
   for (auto it = state.begin(); it != state.end(); ++it) {
@@ -404,7 +402,7 @@ UCBState UCBPolicy::add_models(
   auto avg = sum / state.size();
   // Add new model with average reward
   for (VersionedModelId id: new_models) {
-    vector<double> losses;
+    std::vector<double> losses;
     state.insert({id, make_pair(avg, losses)});
   }
   return state;
@@ -428,28 +426,28 @@ VersionedModelId UCBPolicy::select(
   return selected_model;
 }
 
-vector<PredictTask> UCBPolicy::select_predict_tasks(
+std::vector<PredictTask> UCBPolicy::select_predict_tasks(
                                    UCBState state,
                                    Query query,
                                    long query_id) {
   auto selected_model = select(state, query.candidate_models_);
   auto task = PredictTask(query.input_, selected_model, 1.0,
                           query_id, query.latency_micros_);
-  vector<PredictTask> tasks {task};
+  std::vector<PredictTask> tasks {task};
   return tasks;
 }
 
-shared_ptr<Output> UCBPolicy::combine_predictions(
+std::shared_ptr<Output> UCBPolicy::combine_predictions(
                                UCBState state,
                                Query query,
-                               vector<shared_ptr<Output>> predictions) {
+                               std::vector<std::shared_ptr<Output>> predictions) {
   // Don't need to do anything
   UNUSED(state);
   UNUSED(query);
   return predictions.front();
 }
 
-pair<std::vector<PredictTask>, vector<FeedbackTask>>
+std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
 UCBPolicy::select_feedback_tasks(
              UCBState state,
              FeedbackQuery feedback,
@@ -458,22 +456,22 @@ UCBPolicy::select_feedback_tasks(
   auto selected_model = select(state, feedback.candidate_models_);
   auto task1 = PredictTask(feedback.feedback_.input_,
                            selected_model, -1, query_id, -1);
-  vector<PredictTask> predict_tasks {task1};
+  std::vector<PredictTask> predict_tasks {task1};
   // Feedback Task
-  auto task2 = FeedbackTask(feedback.feedback_, feedback.feedback_.model_id_, query_id, -1);
-  vector<FeedbackTask> feedback_tasks {task2};
+  auto task2 = FeedbackTask(feedback.feedback_, selected_model, query_id, -1);
+  std::vector<FeedbackTask> feedback_tasks {task2};
   
   return make_pair(predict_tasks, feedback_tasks);
 }
 
 
-UCBState UCBPolicy::process_feedback( // FIXME: Update function
+UCBState UCBPolicy::process_feedback(
                    UCBState state,
                    Feedback feedback,
-                   vector<shared_ptr<Output>> predictions) {
+                   std::vector<std::shared_ptr<Output>> predictions) {
   // Update the expected loss of one selected model
   auto model_id = predictions.front()->model_id_.front();
-  auto new_loss = abs(feedback.y_ - predictions.front()->y_hat_);
+  auto new_loss = std::abs(feedback.y_ - predictions.front()->y_hat_);
   state[model_id].second.push_back(new_loss);
   state[model_id].first += (new_loss - state[model_id].first) / (state[model_id].second.size());
   

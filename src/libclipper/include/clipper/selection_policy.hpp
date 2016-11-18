@@ -10,7 +10,6 @@
 #include "task_executor.hpp"
 
 namespace clipper {
-  using namespace std;
   //// State Data Structure
   using ModelInfo = std::pair<double, std::vector<double>>;
   using Map = std::unordered_map<VersionedModelId, ModelInfo,

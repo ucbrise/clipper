@@ -104,7 +104,7 @@ int main() {
               std::make_shared<DoubleVector>(inputs);
           std::vector<VersionedModelId> model;
           std::shared_ptr<Output> output = std::make_shared<Output>(Output(10.0, model));
-          Feedback feedback ({input, output, model.front()});
+          Feedback feedback ({input, output});
         
           auto update = q.update(
               {"label", uid, feedback, "Exp3", model});
