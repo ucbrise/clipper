@@ -36,18 +36,19 @@ class QueryProcessor {
   StateDB state_db_{StateDB()};
 };
 
-template <typename Policy>
+template <typename Policy, typename State>
 std::vector<PredictTask> select_tasks(Query query, long query_id,
                                       const StateDB& state_db) {
-  auto hashkey = Policy::hash_models(query.candidate_models_);
-  typename Policy::state_type state;
+//  auto hashkey = Policy::hash_models(query.candidate_models_);
+//  typename Policy::state_type state;
+  State state;
   if (auto state_opt =
-          state_db.get(StateKey{query.label_, query.user_id_, hashkey})) {
+          state_db.get(StateKey{query.label_, query.user_id_, 0})) {//FIXME: hashkey = 0
     const auto serialized_state = *state_opt;
     // if auto doesn't work: Policy::state_type
     state = Policy::deserialize_state(serialized_state);
   } else {
-    state = Policy::initialize(query.candidate_models_);
+    auto state = Policy::initialize(query.candidate_models_);
   }
   return Policy::select_predict_tasks(state, query, query_id);
 }

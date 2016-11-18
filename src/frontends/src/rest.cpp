@@ -8,10 +8,8 @@
 #define BOOST_SPIRIT_THREADSAFE
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
-
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
-
 #include <server_http.hpp>
 
 using namespace boost::property_tree; 
@@ -19,6 +17,9 @@ using clipper::DoubleVector;
 using clipper::FeedbackAck;
 using clipper::Input;
 using clipper::Output;
+using clipper::VersionedModelId;
+using clipper::Feedback;
+using clipper::FeedbackQuery;
 using clipper::QueryProcessor;
 using clipper::Response;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
@@ -101,10 +102,12 @@ int main() {
 
           std::shared_ptr<Input> input =
               std::make_shared<DoubleVector>(inputs);
-          std::shared_ptr<Output> output =
-              std::make_shared<Output>(Output(10.0, "model"));
+          std::vector<VersionedModelId> model;
+          std::shared_ptr<Output> output = std::make_shared<Output>(Output(10.0, model));
+          Feedback feedback ({input, output});
+        
           auto update = q.update(
-              {"label", uid, {std::make_pair(input, output)}, "newest_model", {std::make_pair("m", 1)}});
+              {"label", uid, feedback, "Exp3", model});
           update.then([response](boost::future<FeedbackAck> f){
               FeedbackAck ack = f.get();
               std::stringstream ss;
