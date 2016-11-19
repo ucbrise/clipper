@@ -191,17 +191,12 @@ fi
 
 if [ -z $CMAKE ]; then
   echo "This script will now proceed to download CMake and set it up in"
-  echo "the local graphlab/deps directory. The GraphLab compilation "
+  echo "the local clipper/deps directory. The Clipper compilation "
   echo "process will be directed to use graphlab/deps/cmake."
   pushd .
   mkdir deps
   cd deps
-
-  # get the cmake software page
-  rm -f software.html
-  download_file "http://www.cmake.org/cmake/resources/software.html" software.html
-  # look for the first tar.gz I can download
-  cmakedownload=`grep -m 1 -o -e "href=\"http://www\\.cmake\\.3\\.[2-9]\\.[0-9]\\.tar\\.gz\"" software.html | grep -o -e "http.*\\.tar\\.gz"`
+  cmakedownload="https://cmake.org/files/v3.6/cmake-3.6.3.tar.gz"
   if [ -z "$cmakedownload" ] ; then
     echo "Unable to locate CMake package. You will have to install it yourself."
     exit 1
@@ -212,58 +207,14 @@ if [ -z $CMAKE ]; then
   tar -xzvf cmake.tar.gz
   # cd into the extracted directory and install
   cd cmake-*
+  exit 0
   ./configure --prefix=$DEPS_PREFIX
   make -j2
   make install
   set +e
   popd
   CMAKE=$DEPS_PREFIX/bin/cmake
-  # echo "CMAKE=$CMAKE" >> configure.deps
 fi
-
-# ## ============================================================================
-# # Regenerate the configure.deps
-# echo -e "# Release build directory:" >> configure.deps
-# echo -e "\t RELEASE_DIR=$RELEASE_DIR" >> configure.deps
-#
-# echo -e "# Debug build directory (optimization disabled):" >> configure.deps
-# echo -e "\t DEBUG_DIR=$DEBUG_DIR" >> configure.deps
-#
-# echo -e "# Directory in which clipper is installed (prefix):" >> configure.deps
-# echo -e "\t INSTALL_DIR=$INSTALL_DIR" >> configure.deps
-#
-# # echo -e "# Is experimental (research) code enabled:" >> configure.deps
-# # echo -e "\t EXPERIMENTAL=$EXPERIMENTAL" >> configure.deps
-#
-# echo -e "# The clipper home directory: " >> configure.deps
-# echo -e "\t CLIPPER_HOME=$CLIPPER_HOME" >> configure.deps
-#
-# echo -e "# The directory in which clipper installs external dependencies:" >> configure.deps
-# echo -e "\t DEPS_PREFIX=$DEPS_PREFIX" >> configure.deps
-#
-# # echo -e "# Use OpenMP?  This can accelerate some graph building code: " >> configure.deps
-# # echo -e "\t NO_OPENMP=$NO_OPENMP" >> configure.deps
-# #
-# # echo -e "# Use MPI?  Without MPI GraphLab cannot run distributed: " >> configure.deps
-# # echo -e "\t NO_MPI=$NO_MPI" >> configure.deps
-#
-# echo -e "# Use tcmalloc?  Thread-Caching Malloc improves memory allocation: " >> configure.deps
-# echo -e "\t NO_TCMALLOC=$NO_TCMALLOC" >> configure.deps
-#
-# echo -e "# The c compiler to use: " >> configure.deps
-# echo -e "\t CC=$CC" >> configure.deps
-#
-# echo -e "# The c++ compiler to use: " >> configure.deps
-# echo -e "\t CXX=$CXX" >> configure.deps
-#
-# echo -e "# Any addition user defined CFLAGS: " >> configure.deps
-# echo -e "\t CFLAGS=$CFLAGS" >> configure.deps
-#
-#
-# echo -e "# The cmake binary used to generate the project:" >> configure.deps
-# echo -e "\t CMAKE=$CMAKE" >> configure.deps
-
-
 
 mkdir -p deps/local/lib
 
@@ -280,10 +231,8 @@ echo "======================= Config File ================================"
 # cat configure.deps | tee -a $LOG_FILE
 
 ### Add addition config flags =================================================
-CFLAGS="$CFLAGS -D NO_TCMALLOC:BOOL=$NO_TCMALLOC"
-CFLAGS="$CFLAGS -D CMAKE_INSTALL_PREFIX:STRING=$INSTALL_DIR"
-# CFLAGS="$CFLAGS -D CPP11:BOOL=$CPP11"
-
+# CFLAGS="$CFLAGS -D NO_TCMALLOC:BOOL=$NO_TCMALLOC"
+# CFLAGS="$CFLAGS -D CMAKE_INSTALL_PREFIX:STRING=$INSTALL_DIR"
 ## ============================================================================
 # Run Cmake
 

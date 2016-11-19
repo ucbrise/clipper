@@ -3,12 +3,18 @@
 
 #include <condition_variable>
 #include <mutex>
+#include <shared_mutex>
 #include <queue>
 // uncomment to disable assert()
 // #define NDEBUG
 #include <cassert>
 
 #include "boost/optional.hpp"
+
+#define UNUSED(expr) \
+  do {               \
+    (void)(expr);    \
+  } while (0)
 
 namespace clipper {
 
@@ -27,20 +33,22 @@ class Queue {
   Queue& operator=(Queue&&) = delete;
 
   void push(const T& x) {
-    std::unique_lock<std::mutex> l(m_);
+    std::unique_lock<std::shared_timed_mutex> l(m_);
     xs_.push(x);
     data_available_.notify_one();
   }
 
-   int size() {
-     std::unique_lock<std::mutex> l(m_);
-     return xs_.size();
-   }
+  int size() {
+    // TODO: This should really be a shared lock
+    // std::unique_lock<std::mutex> l(m_);
+    std::shared_lock<std::shared_timed_mutex> l(m_);
+    return xs_.size();
+  }
 
   /// Block until the queue contains at least one element, then return the
   /// first element in the queue.
   T pop() {
-    std::unique_lock<std::mutex> l(m_);
+    std::unique_lock<std::shared_timed_mutex> l(m_);
     while (xs_.size() == 0) {
       data_available_.wait(l);
     }
@@ -50,7 +58,7 @@ class Queue {
   }
 
   boost::optional<T> try_pop() {
-    std::unique_lock<std::mutex> l(m_);
+    std::unique_lock<std::shared_timed_mutex> l(m_);
     if (xs_.size() > 0) {
       const T x = xs_.front();
       xs_.pop();
@@ -59,34 +67,25 @@ class Queue {
       return {};
     }
   }
-
-  // /// pops up to batch_size elements from the front of the queue.
-  // /// If the batch size is larger than the size of the queue,
-  // /// all elements will be removed from the queue. This method never blocks.
-  // std::vector<T> try_pop_batch(int batch_size) {
-  //   std::unique_lock<std::mutex> l(m_);
-  //   if (xs_.size() >= batch_size) {
-  //     const std::vector<T> batch(xs_.begin(), xs.begin() + batch_size);
-  //     xs_.erase(xs_.begin(), xs.begin() + batch_size);
-  //     return batch;
-  //   } else if (xs_.size() > 0) {
-  //     std::vector<T> batch;
-  //     batch.swap(xs_);
-  //     assert(xs_.size() == 0);
-  //     return batch;
-  //   } else {
-  //     return {};
-  //   }
-  // }
+  
+  std::vector<T> try_pop_batch(size_t batch_size) {
+    std::unique_lock<std::shared_timed_mutex> l(m_);
+    std::vector<T> batch;
+    while (xs_.size() > 0 && batch.size() < batch_size) {
+      batch.push_back(xs_.front());
+      xs_.pop();
+    }
+    return batch;
+  }
 
   void clear() {
-    std::unique_lock<std::mutex> l(m_);
+    std::unique_lock<std::shared_timed_mutex> l(m_);
     xs_.clear();
   }
 
  private:
-  std::mutex m_;
-  std::condition_variable data_available_;
+  std::shared_timed_mutex m_;
+  std::condition_variable_any data_available_;
   std::queue<T> xs_;
 };
 

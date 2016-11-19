@@ -23,7 +23,7 @@ set_property(TARGET boost PROPERTY
 set_property(TARGET boost PROPERTY
     INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra -Werror")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra -Werror -Wno-deprecated-declarations")
 
 # add_subdirectory(libs/extlib EXCLUDE_FROM_ALL)
 
@@ -36,7 +36,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 # Require C++11
 # http://bit.ly/2eNjvLs (StackOverflow post)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED on)
 
 # disallow non-standard extensions
@@ -50,36 +50,3 @@ enable_testing()
 add_subdirectory(libclipper)
 add_subdirectory(frontends)
 add_subdirectory(libs)
-
-
-
-#
-#
-# # 
-# set(CMAKE_CXX_FLAGS_COMMON
-#     "-std=c++11 \
-#     -stdlib=libc++ \
-#     -Wall \
-#     -Wextra \
-#     -Werror")
-#
-# set(CMAKE_CXX_FLAGS_DEBUG
-#     "${CMAKE_CXX_FLAGS_DEBUG} \
-#     ${CMAKE_CXX_FLAGS_COMMON}")
-# set(CMAKE_CXX_FLAGS_RELEASE
-#     "${CMAKE_CXX_FLAGS_RELEASE} \
-#     ${CMAKE_CXX_FLAGS_COMMON}
-#     -O3")
-#
-#
-# add_subdirectory(third_party/boost)
-#
-# include_directories(${CMAKE_CURRENT_BINARY_DIR})
-# include_directories(.)
-# include_directories(${BOOST_INCLUDE_DIRS})
-#
-# link_directories(${BOOST_LINK_DIRS})
-#
-# enable_testing()
-# add_subdirectory(lib)
-# add_subdirectory(src)
