@@ -231,6 +231,7 @@ namespace SimpleWeb {
         void add_endpoint(std::string res_name, std::string res_method,
                           std::function<void(std::shared_ptr<typename ServerBase<socket_type>::Response>,
                                              std::shared_ptr<typename ServerBase<socket_type>::Request>)> res_fn) {
+            mu.lock();
             auto it=opt_resource.end();
             for(auto opt_it=opt_resource.begin();opt_it!=opt_resource.end();opt_it++) {
                 if(res_method==opt_it->first) {
@@ -244,10 +245,12 @@ namespace SimpleWeb {
                 it->first=res_method;
             }
             it->second.emplace_back(REGEX_NS::regex(res_name), res_fn);
+            mu.unlock();
         }
     protected:
         std::unique_ptr<boost::asio::ip::tcp::acceptor> acceptor;
         std::vector<std::thread> threads;
+        std::mutex mu;
         
         long timeout_request;
         long timeout_content;
