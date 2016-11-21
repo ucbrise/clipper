@@ -26,8 +26,8 @@ size_t versioned_model_hash(const VersionedModelId& key) {
 //        }
 //    };
 
-Output::Output(double y_hat, VersionedModelId versioned_model)
-    : y_hat_(y_hat), versioned_model_(versioned_model) {}
+Output::Output(double y_hat, std::vector<VersionedModelId> model_id)
+    : y_hat_(y_hat), model_id_(model_id) {}
 
 DoubleVector::DoubleVector(std::vector<double> data) : data_(std::move(data)) {}
 
@@ -77,7 +77,15 @@ std::string Response::debug_string() const noexcept {
   return debug;
 }
 
-FeedbackQuery::FeedbackQuery(std::string label, long user_id, Feedback feedback,
+Feedback::Feedback(std::shared_ptr<Input> input, 
+                   std::shared_ptr<Output> output, 
+                   VersionedModelId model_id)
+    : y_(output.y_hat_),
+      input_(input),
+      model_id_(model_id) {}
+
+FeedbackQuery::FeedbackQuery(std::string label, long user_id,
+                             Feedback feedback,
                              std::string selection_policy,
                              std::vector<VersionedModelId> candidate_models)
     : label_(label),

@@ -16,15 +16,11 @@ size_t versioned_model_hash(const VersionedModelId& key);
 class Output {
  public:
   ~Output() = default;
-  explicit Output() = default;
-  Output(const Output&) = default;
-  Output& operator=(const Output&) = default;
-
   Output(Output&&) = default;
   Output& operator=(Output&&) = default;
-  Output(double y_hat, VersionedModelId versioned_model);
+  Output(double y_hat, std::vector<VersionedModelId> versioned_model);
   double y_hat_;
-  VersionedModelId versioned_model_;
+  std::vector<VersionedModelId> versioned_model_;
 };
 
 // using Output = std::pair<double;
@@ -112,7 +108,22 @@ class Response {
   std::vector<VersionedModelId> models_used_;
 };
 
+<<<<<<< HEAD
 using Feedback = std::pair<std::shared_ptr<Input>, Output>;
+=======
+// using Feedback = std::pair<std::shared_ptr<Input>, std::shared_ptr<Output>>;
+
+class Feedback {
+public:
+  ~Feedback() = default;
+  Feedback(std::shared_ptr<Input> input, std::shared_ptr<Output> output, VersionedModelId model_id);
+
+  double y_;
+  std::shared_ptr<Input> input_;
+  VersionedModelId model_id_;
+};
+
+>>>>>>> 5f1098d... implementation of exp3 and exp4 selection policies
 
 class FeedbackQuery {
  public:

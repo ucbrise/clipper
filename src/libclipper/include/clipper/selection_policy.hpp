@@ -2,30 +2,27 @@
 #define CLIPPER_LIB_SELECTION_POLICY_H
 
 #include <memory>
+#include <unordered_map>
+#include <stdlib.h>
 
-#include "datatypes.hpp"
-// #include "query_processor.hpp"
-#include "task_executor.hpp"
+#include <datatypes.hpp>
+#include <task_executor.hpp>
 
 namespace clipper {
+using Exp3State = std::pair<double, std::unordered_map<VersionedModelId, double>>;
+using Exp4State = std::pair<double, std::unordered_map<VersionedModelId, double>>;
 
 template <typename Derived, typename State>
 class SelectionPolicy {
  public:
-  // don't let this class be instantiated
+  // Don't let this class be instantiated
   SelectionPolicy() = delete;
   ~SelectionPolicy() = delete;
-  static State initialize(
-      const std::vector<VersionedModelId>& candidate_models) {
-    return Derived::initialize(candidate_models);
-  }
-  // virtual std::unique_ptr<SelectionState> initialize(
-  //     const std::vector<VersionedModelId>& candidate_models) const = 0;
+
+  static State initialize(const std::vector<VersionedModelId>& candidate_models);
 
   static State add_models(State state,
-                          const std::vector<VersionedModelId>& new_models) {
-    return Derived::add_models(std::forward(state), new_models);
-  }
+                          const std::vector<VersionedModelId>& new_models);
 
   // Used to identify a unique selection policy instance. For example,
   // if using a bandit-algorithm that does not tolerate variable-armed
@@ -33,19 +30,17 @@ class SelectionPolicy {
   // which policy instance corresponds to this exact set of arms.
   // Similarly, it provides flexibility in how to deal with different
   // versions of the same arm (different versions of same model).
-  static long hash_models(
-      const std::vector<VersionedModelId>& candidate_models) {
-    return Derived::hash_models(candidate_models);
-  }
+  // static long hash_models(
+  //     const std::vector<VersionedModelId>& candidate_models) {
+  //   return Derived::hash_models(candidate_models);
+  // }
 
-  // On the prediction path
+  // Query Pre-processing: select models and generate tasks
   static std::vector<PredictTask> select_predict_tasks(State state, Query query,
                                                        long query_id) {
     return Derived::select_predict_tasks(state, query, query_id);
   }
 
-  // TODO: change this method name
-  // TODO: I think it may make sense to decouple combine_predictions()
   // from select_predict_tasks in some cases
   static Output combine_predictions(
       State state, Query query,
@@ -76,34 +71,36 @@ class SelectionPolicy {
   }
 
   static ByteBuffer serialize_state(State state) {
-    return Derived::serialize_state(std::forward(state));
-  }
+    return Derived::serialize_state(state);
+  };
 
   static State deserialize_state(const ByteBuffer& bytes) {
     return Derived::deserialize_state(bytes);
-  }
+  };
+
 };
 
-class NewestModelSelectionPolicy
-    : public SelectionPolicy<NewestModelSelectionPolicy, VersionedModelId> {
- public:
-  typedef VersionedModelId state_type;
 
-  NewestModelSelectionPolicy() = delete;
-  ~NewestModelSelectionPolicy() = delete;
-  static VersionedModelId initialize(
-      const std::vector<VersionedModelId>& candidate_models);
+class Exp3Policy: public SelectionPolicy<Exp3Policy, Exp3State> {
+  // Exp3
+  // Select: weighted sampling
+  // Update: update weights based on Loss and respond rate
+  
 
-  static VersionedModelId add_models(VersionedModelId state,
-                                     std::vector<VersionedModelId> new_models);
+public:
+  Exp3Policy() = delete;
+  ~Exp3Policy() = delete;
 
-  static long hash_models(
-      const std::vector<VersionedModelId>& candidate_models);
+  static Exp3State initialize(const std::vector<VersionedModelId>& candidate_models);
 
-  static std::vector<PredictTask> select_predict_tasks(VersionedModelId state,
+  static Exp3State add_models(Exp3State state,
+                              const std::vector<VersionedModelId>& new_models);
+
+  static std::vector<PredictTask> select_predict_tasks(Exp3State state,
                                                        Query query,
                                                        long query_id);
 
+<<<<<<< HEAD
   static Output combine_predictions(
       VersionedModelId state, Query query,
       std::vector<Output> predictions);
@@ -115,48 +112,54 @@ class NewestModelSelectionPolicy
       VersionedModelId state, Feedback feedback,
       std::vector<Output> predictions);
 
-  static ByteBuffer serialize_state(VersionedModelId state);
+  static ByteBuffer serialize_state(Exp3State state);
 
-  static VersionedModelId deserialize_state(const ByteBuffer& bytes);
+  static Exp3State deserialize_state(const ByteBuffer& bytes);
+
+private:
+  static VersionedModelId select(Exp3State state, 
+                                 std::vector<VersionedModelId>& models);
 };
 
-using SimpleState = std::vector<VersionedModelId>;
 
-class SimplePolicy
-    : public SelectionPolicy<SimplePolicy, SimpleState> {
- public:
-  typedef SimpleState state_type;
 
-  SimplePolicy() = delete;
-  ~SimplePolicy() = delete;
-  static SimpleState initialize(
-      const std::vector<VersionedModelId>& candidate_models);
+class Exp4Policy: public SelectionPolicy<Exp4Policy, Exp4State> {
+  // Exp4
+  // Select: all models
+  // Update: update individual model weights (same as Exp3)
 
-  static SimpleState add_models(SimpleState state,
-                                     std::vector<VersionedModelId> new_models);
+public:
+  Exp4Policy() = delete;
+  ~Exp4Policy() = delete;
 
-  static long hash_models(
-      const std::vector<VersionedModelId>& candidate_models);
+  static Exp4State initialize(const std::vector<VersionedModelId>& candidate_models);
 
-  static std::vector<PredictTask> select_predict_tasks(SimpleState state,
+  static Exp4State add_models(Exp4State state,
+                              const std::vector<VersionedModelId>& new_models);
+
+  static std::vector<PredictTask> select_predict_tasks(Exp4State state,
                                                        Query query,
                                                        long query_id);
 
-  static Output combine_predictions(
-      SimpleState state, Query query,
-      std::vector<Output> predictions);
+  static std::shared_ptr<Output> combine_predictions(Exp4State state, 
+                                                     Query query,
+                                                     std::vector<std::shared_ptr<Output>> predictions);
 
   static std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-  select_feedback_tasks(SimpleState state, FeedbackQuery query, long query_id);
+  select_feedback_tasks(Exp3State state, 
+                        FeedbackQuery feedback,
+                        long query_id);
 
-  static SimpleState process_feedback(
-      SimpleState state, Feedback feedback,
-      std::vector<Output> predictions);
+  static Exp4State process_feedback(Exp4State state, 
+                                    Feedback feedback,
+                                    std::vector<std::shared_ptr<Output>> predictions);
 
-  static ByteBuffer serialize_state(SimpleState state);
+  static ByteBuffer serialize_state(Exp4State state);
 
-  static SimpleState deserialize_state(const ByteBuffer& bytes);
+  static Exp4State deserialize_state(const ByteBuffer& bytes);
+
 };
+
 }
 
 #endif  // CLIPPER_LIB_SELECTION_POLICY_H

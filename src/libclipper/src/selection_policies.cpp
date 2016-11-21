@@ -1,172 +1,226 @@
 
-#include <memory>
-#include <string>
+#include <iostream>
+#include <functional>
 #include <utility>
+#include <string>
 #include <vector>
+#include <math.h> 
 
 #include <clipper/datatypes.hpp>
 #include <clipper/selection_policy.hpp>
 #include <clipper/util.hpp>
 
-// hack to get around unused argument compiler errors
 
 namespace clipper {
+  using Map = std::unordered_map<VersionedModelId, double>;
+  using Exp3State = std::pair<double, Map>;
+  using Exp4State = std::pair<double, Map>;
 
-VersionedModelId NewestModelSelectionPolicy::initialize(
-    const std::vector<VersionedModelId>& candidate_models) {
-  // TODO: IMPLEMENT
-    assert(candidate_models.size() > 0);
-    return candidate_models.front();
+Exp3State Exp3Policy::initialize(
+          const std::vector<VersionedModelId>& candidate_models_) {
+  // Construct State
+  Map map;
+  double sum;
+  for (VersionedModelId id: candidate_models_) {
+    map.insert({id, 1.0});
+    sum += 1.0;
+  }
+  return std::make_pair(sum, map);
 }
 
-VersionedModelId NewestModelSelectionPolicy::add_models(
-    VersionedModelId state, std::vector<VersionedModelId> new_models) {
-  UNUSED(state);
-  return new_models.front();
+Exp3State Exp3Policy::add_models(
+          Exp3State state,
+          const std::vector<VersionedModelId>& new_models) {
+  // Give new models average weight from old models
+  auto avg = state.first / state.second.size();
+  for (VersionedModelId id: new_models) {
+    state.second.insert({id, avg});
+  }
+  return state;
 }
 
-long NewestModelSelectionPolicy::hash_models(
-    const std::vector<VersionedModelId>& candidate_models) {
-  UNUSED(candidate_models);
-  return 0;
+VersionedModelId Exp3Policy::select(Exp3State state, 
+                                    std::vector<VersionedModelId>& models) {
+  // Helper function for selecting an arm
+  auto sum = state.first;
+  auto rand_num = rand()%1;
+  VersionedModelId selected_model;
+  auto it = models.begin();
+  while (rand_num >= 0) {
+    rand_num -= state.second[it] / sum;
+    selected_model = *it;
+    it++;
+  }
+  return selected_model;
+
 }
 
-std::vector<PredictTask> NewestModelSelectionPolicy::select_predict_tasks(
-    VersionedModelId state, Query query, long query_id) {
-  std::vector<PredictTask> task_vec;
-  // construct the task and put in the vector
-  task_vec.emplace_back(query.input_, state, 1.0, query_id,
-                        query.latency_micros_);
-  return task_vec;
+std::vector<PredictTask> Exp3Policy::select_predict_tasks(
+                         Exp3State state, 
+                         Query query, 
+                         long query_id) {
+  std::vector<PredictTask> result;
+  auto selected_model = select(state, query.candidate_models_);
+  auto task = PredictTask(query.input_, selected_model, 1.0, query_id, query.latency_micros_);
+  result.push_back(task);
+  return result;
 }
 
-Output NewestModelSelectionPolicy::combine_predictions(
-    VersionedModelId state, Query query, std::vector<Output> predictions) {
-  UNUSED(state);
-  UNUSED(query);
-  // just return the first prediction
-    if (predictions.empty()) {
-        return Output{0.0, std::make_pair("none", 0)};
-    } else {
-        return predictions.front();
-    }
+std::shared_ptr<Output> Exp3Policy::combine_predictions(
+                        Exp3State state, 
+                        Query query,
+                        std::vector<std::shared_ptr<Output>> predictions) {
+  // Don't need to do anything
+  return predictions.front();
 }
 
 std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-NewestModelSelectionPolicy::select_feedback_tasks(VersionedModelId state,
-                                                  FeedbackQuery query, long query_id) {
-  UNUSED(state);
-  UNUSED(query);
-  UNUSED(query_id);
-  return std::make_pair(std::vector<PredictTask>(),
-                        std::vector<FeedbackTask>());
+Exp3Policy::select_feedback_tasks(Exp3State state, 
+                                  FeedbackQuery feedback,
+                                  long query_id) {
+  
+  // Predict Task
+  std::vector<PredictTask> predict_task;
+  auto selected_model = select(state, feedback.candidate_models_);
+  auto task1 = PredictTask(feedback.feedback_.input_, selected_model, -1, query_id, -1);
+  predict_task.push_back(task1);
+  // Feedback Task
+  std::vector<FeedbackTask> feedback_task;
+  auto task2 = FeedbackTask(feedback.feedback_, selected_model, query_id, -1);
+  feedback_task.push_back(task2);
+
+  return std::make_pair(predict_task, feedback_task);
 }
 
-VersionedModelId NewestModelSelectionPolicy::process_feedback(
-    VersionedModelId state, Feedback feedback,
-    std::vector<Output> predictions) {
-  UNUSED(feedback);
-  UNUSED(predictions);
+
+Exp3State Exp3Policy::process_feedback(Exp3State state, 
+                                       Feedback feedback,
+                                       std::vector<std::shared_ptr<Output>> predictions) {
+  
+  auto eta = 0.01;
+  auto y_hat = predictions.front()->y_hat_;
+  auto y = feedback.y_;
+  auto s_i = state.second[feedback.model_id_];
+  auto loss = 1;
+  if (y != y_hat) loss = 0;
+  state.second[feedback.model_id_] = s_i * exp (-eta * loss / (s_i / state.first)); //FIXME
   return state;
 }
 
-ByteBuffer NewestModelSelectionPolicy::serialize_state(VersionedModelId state) {
+ByteBuffer Exp3Policy::serialize_state(Exp3State state) {
+  //TODO
   std::vector<uint8_t> v;
-  UNUSED(state);
   return v;
 }
 
-VersionedModelId NewestModelSelectionPolicy::deserialize_state(
-    const ByteBuffer& bytes) {
-  UNUSED(bytes);
-  return std::make_pair("m", 1);
+Exp3State Exp3Policy::deserialize_state(const ByteBuffer& bytes) {
+  //TODO
+  Map map;
+  return std::make_pair(0, map);
 }
 
-///////////////////////////////////////////////////////////
 
-SimpleState SimplePolicy::initialize(
-    const std::vector<VersionedModelId>& candidate_models) {
-  // TODO: IMPLEMENT
-    assert(candidate_models.size() > 0);
-    return SimpleState(candidate_models);
+// Exp4
+Exp4State Exp4Policy::initialize(
+          const std::vector<VersionedModelId>& candidate_models_) {
+  // Construct State
+  Map map;
+  double sum;
+  for (VersionedModelId id: candidate_models_) {
+    map.insert({id, 1.0});
+    sum += 1.0;
+  }
+  return std::make_pair(sum, map);
 }
 
-SimpleState SimplePolicy::add_models(
-    SimpleState state, std::vector<VersionedModelId> new_models) {
-  state.insert(state.end(), new_models.begin(), new_models.end());
+Exp4State Exp4Policy::add_models(Exp4State state,
+                                 const std::vector<VersionedModelId>& new_models) {
+  // Give new models average weight from old models
+  auto avg = state.first / state.second.size();
+  for (VersionedModelId id: new_models) {
+    state.second.insert({id, avg});
+  }
   return state;
 }
 
-long SimplePolicy::hash_models(
-    const std::vector<VersionedModelId>& candidate_models) {
-  UNUSED(candidate_models);
-  return 0;
-}
-
-std::vector<PredictTask> SimplePolicy::select_predict_tasks(
-    SimpleState state, Query query, long query_id) {
-  std::vector<PredictTask> task_vec;
-  
-  // construct the task and put in the vector
-  for (auto v: state) {
-    task_vec.emplace_back(query.input_, v, 1.0 / (float) state.size(), query_id,
-                          query.latency_micros_);
+std::vector<PredictTask> Exp4Policy::select_predict_tasks(
+                         Exp4State state, 
+                         Query query, 
+                         long query_id) {
+  // Pass along all models selected
+  std::vector<PredictTask> tasks;
+  for (VersionedModelId id: query.candidate_models_) {
+      auto task = PredictTask(query.input_, id, 1.0, query_id, query.latency_micros_);
+      tasks.push_back(task);
   }
-  return task_vec;
+  return tasks;
 }
 
-Output SimplePolicy::combine_predictions(
-    SimpleState state, Query query, std::vector<Output> predictions) {
-  UNUSED(state);
-  UNUSED(query);
-  // just return the first prediction
-    if (predictions.empty()) {
-        return Output{0.0, std::make_pair("none", 0)};
-    } else {
-      float sum = 0;
-      for (auto o: predictions) {
-        sum += o.y_hat_;
-      }
-      return Output{sum, std::make_pair("all", 0)};
-    }
+std::shared_ptr<Output> Exp4Policy::combine_predictions(Exp4State state, 
+                                                        Query query,
+                                                        std::vector<std::shared_ptr<Output>> predictions) {
+  // Weighted Combination of All predictions
+  auto y_hat = 0;
+  std::vector<VersionedModelId> models;
+  for (auto id_it = state.second.begin(), output_it = predictions.begin(); 
+        (id_it != state.second.end()) && (output_it != predictions.end()); 
+          ++id_it, output_it) {
+    y_hat += (id_it.second / state.first) * (*output_it)->y_hat_;
+    models.push_back(id_it.first);
+  }
+  auto result = std::make_shared<Output>(Output(y_hat, models));
+  return result;
 }
 
 std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-SimplePolicy::select_feedback_tasks(SimpleState state,
-                                    FeedbackQuery query, long query_id) {
-  UNUSED(state);
-  UNUSED(query);
-  UNUSED(query_id);
-  std::vector<PredictTask> pred_tasks_vec;
+Exp4Policy::select_feedback_tasks(Exp4State state, 
+                                  FeedbackQuery feedback,
+                                  long query_id) {
   
-  // construct the task and put in the vector
-  for (auto v: state) {
-    pred_tasks_vec.emplace_back(query.feedback_.first, v, 1.0, query_id, 10000);
+  // Predict Task
+  std::vector<PredictTask> predict_task;
+  for (VersionedModelId id: feedback.candidate_models_) {
+      auto task = PredictTask(feedback.feedback_.input_, id, -1, query_id, -1);
+      predict_task.push_back(task);
   }
-  return std::make_pair(pred_tasks_vec,
-                        std::vector<FeedbackTask>());
+  // Feedback Task
+  std::vector<FeedbackTask> feedback_task;
+  for (VersionedModelId id: feedback.candidate_models_) {
+      auto task = FeedbackTask(feedback.feedback_, id, query_id, -1);
+      feedback_task.push_back(task);
+  }
+  return std::make_pair(predict_task, feedback_task);
 }
 
-SimpleState SimplePolicy::process_feedback(
-    SimpleState state, Feedback feedback,
-    std::vector<Output> predictions) {
-  UNUSED(feedback);
-  UNUSED(predictions);
+
+Exp4State Exp4Policy::process_feedback(Exp4State state, 
+                                       Feedback feedback,
+                                       std::vector<std::shared_ptr<Output>> predictions) {
+  // Update individual model distribution
+  auto y = feedback.y_;
+  auto eta = 0.01;
+  for (auto id_it = state.second.begin(), output_it = predictions.begin(); 
+        (id_it != state.second.end()) && (output_it != predictions.end()); 
+          ++id_it, ++output_it) {
+    // FIXME
+    auto loss = 1;
+    if (y != (*output_it)->y_hat_) loss = 0;
+    id_it.second = id_it.second * exp (-eta * loss / (id_it.second / state.first));
+  }
   return state;
 }
 
-ByteBuffer SimplePolicy::serialize_state(SimpleState state) {
+ByteBuffer Exp4Policy::serialize_state(Exp4State state) {
+  //TODO
   std::vector<uint8_t> v;
-  UNUSED(state);
   return v;
 }
 
-SimpleState SimplePolicy::deserialize_state(
-    const ByteBuffer& bytes) {
-  UNUSED(bytes);
-  return {std::make_pair("m", 1), std::make_pair("j", 1)};
+Exp4State Exp4Policy::deserialize_state(const ByteBuffer& bytes) {
+  //TODO
+  Map map;
+  return std::make_pair(0, map);
 }
-
 
 
 }  // namespace clipper
