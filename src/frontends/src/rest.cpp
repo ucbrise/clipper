@@ -108,19 +108,10 @@ int main() {
 
           std::shared_ptr<Input> input =
               std::make_shared<DoubleVector>(inputs);
-<<<<<<< HEAD
           Output output{y, std::make_pair(vm.get<std::string>("name"),vm.get<int>("version"))};
           auto update = q.update(
               {"label", uid, {std::make_pair(input, output)},
-              "simple_policy", {std::make_pair("m", 1), std::make_pair("j", 1)}});
-=======
-          std::vector<VersionedModelId> model;
-          std::shared_ptr<Output> output = std::make_shared<Output>(Output(10.0, model));
-          Feedback feedback ({input, output});
-        
-          auto update = q.update(
-              {"label", uid, feedback, "Exp3", model});
->>>>>>> 7042b99... compilable exp3 exp4
+              "EXP3", {std::make_pair("m", 1), std::make_pair("j", 1)}});
           update.then([response](boost::future<FeedbackAck> f){
               FeedbackAck ack = f.get();
               std::stringstream ss;
