@@ -42,8 +42,6 @@ class QueryProcessor {
   TaskExecutor<PowerTwoChoicesScheduler> task_executor_;
   TimerSystem timer_system_;
 };
-    
-  
 
 }  // namespace clipper
 

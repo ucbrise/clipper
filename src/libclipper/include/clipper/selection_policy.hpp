@@ -3,14 +3,26 @@
 
 #include <memory>
 #include <unordered_map>
+#include <map>
 #include <stdlib.h>
 
-#include <datatypes.hpp>
-#include <task_executor.hpp>
+#include "datatypes.hpp"
+#include "task_executor.hpp"
 
 namespace clipper {
-using Exp3State = std::pair<double, std::unordered_map<VersionedModelId, double>>;
-using Exp4State = std::pair<double, std::unordered_map<VersionedModelId, double>>;
+  //// State Data Structure
+  using ModelInfo = std::unordered_map<std::string, double>;
+  using Map = std::unordered_map<VersionedModelId,
+                          ModelInfo,
+                          std::function<size_t(const VersionedModelId&)>>;
+  // Exp3: sum of weights; each model has "weight", "max loss"
+  using Exp3State = std::pair<double, Map>;
+  // Exp4: sum of weights; each model has "weight", "max loss"
+  using Exp4State = std::pair<double, Map>;
+  // Epsilon Greedy: each model has "expected loss", "times selected"
+  using EpsilonGreedyState = Map;
+  // UCB: unordered_map: each model has "expected_loss", "times selected"
+  using UCBState = Map;
 
 template <typename Derived, typename State>
 class SelectionPolicy {
@@ -18,26 +30,27 @@ class SelectionPolicy {
   // Don't let this class be instantiated
   SelectionPolicy() = delete;
   ~SelectionPolicy() = delete;
-
+  typedef Map state_type;
+  
   static State initialize(const std::vector<VersionedModelId>& candidate_models);
 
   static State add_models(State state,
-                          const std::vector<VersionedModelId>& new_models);
-
+                         const std::vector<VersionedModelId>& new_models);
+  
   // Used to identify a unique selection policy instance. For example,
   // if using a bandit-algorithm that does not tolerate variable-armed
   // bandits, one could hash the candidate models to identify
   // which policy instance corresponds to this exact set of arms.
   // Similarly, it provides flexibility in how to deal with different
   // versions of the same arm (different versions of same model).
-  // static long hash_models(
-  //     const std::vector<VersionedModelId>& candidate_models) {
-  //   return Derived::hash_models(candidate_models);
-  // }
-
+  static long hash_models(const std::vector<VersionedModelId>& candidate_models) {
+    return Derived::hash_models(candidate_models);
+  }
+  
   // Query Pre-processing: select models and generate tasks
-  static std::vector<PredictTask> select_predict_tasks(State state, Query query,
-                                                       long query_id) {
+  static std::vector<PredictTask> select_predict_tasks(State state,
+                                                   Query query,
+                                                   long query_id) {
     return Derived::select_predict_tasks(state, query, query_id);
   }
 
@@ -90,26 +103,31 @@ class Exp3Policy: public SelectionPolicy<Exp3Policy, Exp3State> {
 public:
   Exp3Policy() = delete;
   ~Exp3Policy() = delete;
+  typedef Exp3State state_type;
+  
+  constexpr static double eta = 0.01; // How fast clipper respond to feedback
 
   static Exp3State initialize(const std::vector<VersionedModelId>& candidate_models);
 
   static Exp3State add_models(Exp3State state,
                               const std::vector<VersionedModelId>& new_models);
-
+  
+  static long hash_models(const std::vector<VersionedModelId>& candidate_models);
+  
   static std::vector<PredictTask> select_predict_tasks(Exp3State state,
                                                        Query query,
                                                        long query_id);
 
-<<<<<<< HEAD
+
   static Output combine_predictions(
-      VersionedModelId state, Query query,
+      Exp3State state, Query query,
       std::vector<Output> predictions);
 
   static std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-  select_feedback_tasks(VersionedModelId state, FeedbackQuery query, long query_id);
+  select_feedback_tasks(Exp3State state, FeedbackQuery query, long query_id);
 
-  static VersionedModelId process_feedback(
-      VersionedModelId state, Feedback feedback,
+  static Exp3State process_feedback(
+      Exp3State state, Feedback feedback,
       std::vector<Output> predictions);
 
   static ByteBuffer serialize_state(Exp3State state);
@@ -118,7 +136,7 @@ public:
 
 private:
   static VersionedModelId select(Exp3State state, 
-                                 std::vector<VersionedModelId>& models);
+                              std::vector<VersionedModelId>& models);
 };
 
 
@@ -131,19 +149,25 @@ class Exp4Policy: public SelectionPolicy<Exp4Policy, Exp4State> {
 public:
   Exp4Policy() = delete;
   ~Exp4Policy() = delete;
+  typedef Exp4State state_type;
+  
+  constexpr static double eta = 0.01;
 
   static Exp4State initialize(const std::vector<VersionedModelId>& candidate_models);
 
   static Exp4State add_models(Exp4State state,
                               const std::vector<VersionedModelId>& new_models);
-
+  
+  static long hash_models(const std::vector<VersionedModelId>& candidate_models);
+  
   static std::vector<PredictTask> select_predict_tasks(Exp4State state,
                                                        Query query,
                                                        long query_id);
 
-  static std::shared_ptr<Output> combine_predictions(Exp4State state, 
-                                                     Query query,
-                                                     std::vector<std::shared_ptr<Output>> predictions);
+  static Output combine_predictions(
+                                Exp4State state,
+                                Query query,
+                                std::vector<Output> predictions);
 
   static std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
   select_feedback_tasks(Exp3State state, 
@@ -151,13 +175,109 @@ public:
                         long query_id);
 
   static Exp4State process_feedback(Exp4State state, 
-                                    Feedback feedback,
-                                    std::vector<std::shared_ptr<Output>> predictions);
+                                  Feedback feedback,
+                                  std::vector<Output> predictions);
 
   static ByteBuffer serialize_state(Exp4State state);
 
   static Exp4State deserialize_state(const ByteBuffer& bytes);
 
+};
+
+class EpsilonGreedyPolicy: public SelectionPolicy<Exp4Policy, Exp4State> {
+  // Epsilon Greedy
+  // Select: epsilon chance randomly select,
+  //         (1-epsilon) change select model with the highest expected reward
+  // Update: update individual model expected reward
+  
+public:
+  EpsilonGreedyPolicy() = delete;
+  ~EpsilonGreedyPolicy() = delete;
+  typedef EpsilonGreedyState state_type;
+  
+  constexpr static double epsilon = 0.1; // Random Selection Chance
+  
+  static EpsilonGreedyState initialize(
+                        const std::vector<VersionedModelId>& candidate_models);
+  
+  static EpsilonGreedyState add_models(
+                          EpsilonGreedyState state,
+                          const std::vector<VersionedModelId>& new_models);
+  
+  static long hash_models(const std::vector<VersionedModelId>& candidate_models);
+  
+  static std::vector<PredictTask> select_predict_tasks(EpsilonGreedyState state,
+                                                   Query query,
+                                                   long query_id);
+  
+  static Output combine_predictions(
+                                  EpsilonGreedyState state,
+                                  Query query,
+                                  std::vector<Output> predictions);
+  
+  static std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
+  select_feedback_tasks(EpsilonGreedyState state,
+                        FeedbackQuery feedback,
+                        long query_id);
+  
+  static EpsilonGreedyState process_feedback(
+                           EpsilonGreedyState state,
+                           Feedback feedback,
+                           std::vector<Output> predictions);
+  
+  static ByteBuffer serialize_state(EpsilonGreedyState state);
+  
+  static EpsilonGreedyState deserialize_state(const ByteBuffer& bytes);
+
+private:
+  static VersionedModelId select(EpsilonGreedyState state,
+                              std::vector<VersionedModelId>& models);
+};
+
+
+class UCBPolicy: public SelectionPolicy<UCBPolicy, UCBState> {
+  // Upper Confidence Bound (UCB1)
+  // Select: highest expected reward upper confidence bound
+  // Update: update individual model expected reward upper confidence bound
+  
+public:
+  UCBPolicy() = delete;
+  ~UCBPolicy() = delete;
+  typedef UCBState state_type;
+  
+  static UCBState initialize(const std::vector<VersionedModelId>& candidate_models);
+  
+  static UCBState add_models(UCBState state,
+                           const std::vector<VersionedModelId>& new_models);
+  
+  static long hash_models(const std::vector<VersionedModelId>& candidate_models);
+  
+  static std::vector<PredictTask> select_predict_tasks(UCBState state,
+                                                   Query query,
+                                                   long query_id);
+  
+  static Output combine_predictions(
+                               UCBState state,
+                               Query query,
+                               std::vector<Output> predictions);
+  
+  static std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
+  select_feedback_tasks(UCBState state,
+                        FeedbackQuery feedback,
+                        long query_id);
+  
+  static UCBState process_feedback(
+                               UCBState state,
+                               Feedback feedback,
+                               std::vector<Output> predictions);
+  
+  static ByteBuffer serialize_state(UCBState state);
+  
+  static UCBState deserialize_state(const ByteBuffer& bytes);
+  
+private:
+  static VersionedModelId select(UCBState state,
+                              std::vector<VersionedModelId>& models);
 };
 
 }
