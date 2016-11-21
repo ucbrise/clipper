@@ -19,6 +19,7 @@
 #include <boost/serialization/unordered_map.hpp>
 #include <boost/serialization/string.hpp>
 #include <ostream>
+#include <sstream>
 
 #define UNUSED(expr) \
 do {               \
@@ -27,9 +28,9 @@ do {               \
 
 namespace clipper {
 
-// ************************
-// ********* EXP3 *********
-// ************************
+// ********
+// * EXP3 *
+// ********
 // Descripton: Single Model Selection Policy, iteratively update weights
 Exp3State Exp3Policy::initialize(
                                  const std::vector<VersionedModelId>& candidate_models_) {
@@ -155,8 +156,11 @@ ByteBuffer Exp3Policy::serialize_state(Exp3State state) {
 }
 
 Exp3State Exp3Policy::deserialize_state(const ByteBuffer& bytes) {
-  char *dst = reinterpret_cast<char*>(bytes);
-  boost::iostreams::stream<boost::iostreams::array_source> is(dst);
+//  char *dst = reinterpret_cast<char*>(bytes);
+  std::stringstream ss;
+  for (uint8_t b : bytes)
+    ss << (char) b;
+  boost::iostreams::stream<boost::iostreams::array_source> is(ss);
   boost::archive::binary_iarchive in_archive(is);
   double num;
   Map map;
@@ -166,9 +170,9 @@ Exp3State Exp3Policy::deserialize_state(const ByteBuffer& bytes) {
 }
 
 
-// ************************
-// ********* EXP4 *********
-// ************************
+// ********
+// * EXP4 *
+// ********
 // Descripton: Ensemble Model Selection Policy, combined version of EXP3
 Exp4State Exp4Policy::initialize(
                             const std::vector<VersionedModelId>& candidate_models_) {
@@ -264,9 +268,9 @@ Exp4State Exp4Policy::deserialize_state(const ByteBuffer& bytes) {
 }
   
 
-// ************************
-// **** Epsilon Greedy ****
-// ************************
+// ******************
+// * Epsilon Greedy *
+// ******************
 // Descripton: Single Model Selection Policy, select lowest expected loss
 EpsilonGreedyState EpsilonGreedyPolicy::initialize(
                           const std::vector<VersionedModelId>& candidate_models_) {
@@ -402,8 +406,8 @@ ByteBuffer EpsilonGreedyPolicy::serialize_state(
 
 EpsilonGreedyState EpsilonGreedyPolicy::deserialize_state(
                           const ByteBuffer& bytes) {
-  char *dst = reinterpret_cast<char*>(bytes);
-  boost::iostreams::stream<boost::iostreams::array_source> is(dst);
+//  auto dst = reinterpret_cast<int*>(bytes);
+  boost::iostreams::stream<boost::iostreams::array_source> is(bytes);
   boost::archive::binary_iarchive in_archive(is);
   EpsilonGreedyState state;
   in_archive >> state;
@@ -411,9 +415,9 @@ EpsilonGreedyState EpsilonGreedyPolicy::deserialize_state(
 }
 
   
-// ************************
-// ********* UCB1 *********
-// ************************
+// ********
+// * UCB1 *
+// ********
 // Descripton: Single Model Selection Policy, similar to E-greedy besides select method
 UCBState UCBPolicy::initialize(
                         const std::vector<VersionedModelId>& candidate_models_) {
