@@ -12,6 +12,14 @@
 #include <clipper/selection_policy.hpp>
 #include <clipper/util.hpp>
 
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/iostreams/device/array.hpp>
+#include <boost/iostreams/stream.hpp>
+#include <boost/serialization/unordered_map.hpp>
+#include <boost/serialization/string.hpp>
+#include <ostream>
+
 #define UNUSED(expr) \
 do {               \
 (void)(expr);    \
@@ -122,17 +130,39 @@ Exp3State Exp3Policy::process_feedback(
 }
 
 ByteBuffer Exp3Policy::serialize_state(Exp3State state) {
-  //TODO
-  UNUSED(state);
-  std::vector<uint8_t> v;
-  return v;
+  // Serialize
+  char* buffer;
+  size_t bufSize = 1 + state.second.size();
+  boost::iostreams::stream<boost::iostreams::array_sink> stream(buffer, bufSize);
+  boost::archive::binary_oarchive out_archive(stream);
+  out_archive << state.first;
+  out_archive << state.second;
+  // Turn char buffer into uint_8 buffer
+  std::string s = buffer;
+  if (s.size() % 2 != 0) {
+    throw std::runtime_error("Bad size argument");
+  }
+  std::vector<uint8_t> result;
+  result.reserve(s.size() / 2);
+  for (std::size_t i = 0, size = s.size(); i != size; i += 2) {
+    std::size_t pos = 0;
+    result.push_back(std::stoi(s.substr(i, 2), &pos, 16));
+    if (pos != 2) {
+      throw std::runtime_error("bad character in argument");
+    }
+  }
+  return result;
 }
 
 Exp3State Exp3Policy::deserialize_state(const ByteBuffer& bytes) {
-  //TODO
-  UNUSED(bytes);
+  char *dst = reinterpret_cast<char*>(bytes);
+  boost::iostreams::stream<boost::iostreams::array_source> is(dst);
+  boost::archive::binary_iarchive in_archive(is);
+  double num;
   Map map;
-  return std::make_pair(0, map);
+  in_archive >> num;
+  in_archive >> map;
+  return std::make_pair(num, map);
 }
 
 
@@ -347,19 +377,37 @@ EpsilonGreedyState EpsilonGreedyPolicy::process_feedback(
 
 ByteBuffer EpsilonGreedyPolicy::serialize_state(
                           EpsilonGreedyState state) {
-  //TODO
-  UNUSED(state);
-  std::vector<uint8_t> v;
-  return v;
+  // Serialize
+  char* buffer;
+  size_t bufSize = state.size();
+  boost::iostreams::stream<boost::iostreams::array_sink> stream(buffer, bufSize);
+  boost::archive::binary_oarchive out_archive(stream);
+  out_archive << state;
+  // Turn char buffer into uint_8 buffer
+  std::string s = buffer;
+  if (s.size() % 2 != 0) {
+    throw std::runtime_error("Bad size argument");
+  }
+  std::vector<uint8_t> result;
+  result.reserve(s.size() / 2);
+  for (std::size_t i = 0, size = s.size(); i != size; i += 2) {
+    std::size_t pos = 0;
+    result.push_back(std::stoi(s.substr(i, 2), &pos, 16));
+    if (pos != 2) {
+      throw std::runtime_error("bad character in argument");
+    }
+  }
+  return result;
 }
 
 EpsilonGreedyState EpsilonGreedyPolicy::deserialize_state(
                           const ByteBuffer& bytes) {
-  //TODO
-  UNUSED(bytes);
-  VersionedModelId model;
-  Map map;
-  return map;
+  char *dst = reinterpret_cast<char*>(bytes);
+  boost::iostreams::stream<boost::iostreams::array_source> is(dst);
+  boost::archive::binary_iarchive in_archive(is);
+  EpsilonGreedyState state;
+  in_archive >> state;
+  return state;
 }
 
   
