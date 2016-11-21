@@ -132,14 +132,13 @@ Exp3State Exp3Policy::process_feedback(
 
 ByteBuffer Exp3Policy::serialize_state(Exp3State state) {
   // Serialize
-  char* buffer;
-  size_t bufSize = 1 + state.second.size();
-  boost::iostreams::stream<boost::iostreams::array_sink> stream(buffer, bufSize);
-  boost::archive::binary_oarchive out_archive(stream);
+  std::stringstream ss;
+  boost::archive::binary_oarchive out_archive(ss);
   out_archive << state.first;
   out_archive << state.second;
+  
   // Turn char buffer into uint_8 buffer
-  std::string s = buffer;
+  const string& s = ss.str();
   if (s.size() % 2 != 0) {
     throw std::runtime_error("Bad size argument");
   }
@@ -156,7 +155,7 @@ ByteBuffer Exp3Policy::serialize_state(Exp3State state) {
 }
 
 Exp3State Exp3Policy::deserialize_state(const ByteBuffer& bytes) {
-//  char *dst = reinterpret_cast<char*>(bytes);
+
   std::stringstream ss;
   for (uint8_t b : bytes)
     ss << (char) b;
@@ -382,13 +381,12 @@ EpsilonGreedyState EpsilonGreedyPolicy::process_feedback(
 ByteBuffer EpsilonGreedyPolicy::serialize_state(
                           EpsilonGreedyState state) {
   // Serialize
-  char* buffer;
-  size_t bufSize = state.size();
-  boost::iostreams::stream<boost::iostreams::array_sink> stream(buffer, bufSize);
-  boost::archive::binary_oarchive out_archive(stream);
+  std::stringstream ss;
+  boost::archive::binary_oarchive out_archive(ss);
   out_archive << state;
+  
   // Turn char buffer into uint_8 buffer
-  std::string s = buffer;
+  const string& s = ss.str();
   if (s.size() % 2 != 0) {
     throw std::runtime_error("Bad size argument");
   }
@@ -406,11 +404,11 @@ ByteBuffer EpsilonGreedyPolicy::serialize_state(
 
 EpsilonGreedyState EpsilonGreedyPolicy::deserialize_state(
                           const ByteBuffer& bytes) {
-//  auto dst = reinterpret_cast<int*>(bytes);
+
   std::stringstream ss;
   for (uint8_t b : bytes)
     ss << (char) b;
-  boost::iostreams::stream<boost::iostreams::array_source> is(bytes);
+  boost::iostreams::stream<boost::iostreams::array_source> is(ss);
   boost::archive::binary_iarchive in_archive(is);
   EpsilonGreedyState state;
   in_archive >> state;
