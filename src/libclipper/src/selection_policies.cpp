@@ -407,6 +407,9 @@ ByteBuffer EpsilonGreedyPolicy::serialize_state(
 EpsilonGreedyState EpsilonGreedyPolicy::deserialize_state(
                           const ByteBuffer& bytes) {
 //  auto dst = reinterpret_cast<int*>(bytes);
+  std::stringstream ss;
+  for (uint8_t b : bytes)
+    ss << (char) b;
   boost::iostreams::stream<boost::iostreams::array_source> is(bytes);
   boost::archive::binary_iarchive in_archive(is);
   EpsilonGreedyState state;
