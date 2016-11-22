@@ -5,8 +5,11 @@
 
 cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
 project("Clipper" VERSION 0.1.0 LANGUAGES CXX)
-include(cmake/FindZeroMQ.cmake)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+# include(cmake/FindZeroMQ.cmake)
+include(FindZeroMQ)
+
+# include(CTest)
 
 # Include Boost as an imported target
 set(Boost_USE_MULTITHREADED ON)
@@ -45,8 +48,31 @@ set(CMAKE_CXX_EXTENSIONS off)
 # add shared C++ definitions
 add_definitions( -DBOOST_THREAD_VERSION=4)
 
-# Targets that we develop
+
+# include_directories(${GTEST_INCLUDE_DIRS})
+# link_directories(${BOOST_LINK_DIRS})
+
+
+### Google Test
+# Reference: https://crascit.com/2015/07/25/cmake-gtest/
 enable_testing()
+include(DownloadProject)
+download_project(PROJ                googletest
+                 GIT_REPOSITORY      https://github.com/google/googletest.git
+                 GIT_TAG             master
+                 UPDATE_DISCONNECTED 1
+                 QUIET
+)
+
+# Prevent GoogleTest from overriding our compiler/linker options
+# when building with Visual Studio
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+
+add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR})
+
+
+
+# Targets that we develop
 add_subdirectory(libclipper)
 add_subdirectory(frontends)
 add_subdirectory(libs)

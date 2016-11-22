@@ -28,31 +28,26 @@ target_include_directories(httpserver INTERFACE
     $<INSTALL_INTERFACE:httpserver>)
 export(TARGETS httpserver FILE HttpServerConfig.cmake)
 
-##########################################
-### GoogleTest
-##########################################
+# ##########################################
+# ### GoogleTest
+# ##########################################
 
-include(ExternalProject)
-
-ExternalProject_Add(googletest
-    GIT_REPOSITORY "https://github.com/google/googletest"
-    GIT_TAG "release-1.8.0"
-    DOWNLOAD_DIR ${CMAKE_CURRENT_BINARY_DIR}
-    PREFIX ${CMAKE_CURRENT_BINARY_DIR}
-    # DOWNLOAD_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest
-    # PREFIX ${CMAKE_CURRENT_BINARY_DIR}/googletest
-    INSTALL_COMMAND ""
-)
-
-ExternalProject_Get_Property(googletest SOURCE_DIR)
-set(GTEST_INCLUDE_DIRS ${SOURCE_DIR}/googletest/include PARENT_SCOPE)
-
-ExternalProject_Get_Property(googletest BINARY_DIR)
-set(GTEST_LIBS_DIR ${BINARY_DIR}/googlemock/gtest PARENT_SCOPE)
-
-add_library(gtest INTERFACE IMPORTED)
-set_property(TARGET googletest PROPERTY
-    INTERFACE_INCLUDE_DIRECTORIES ${GTEST_INCLUDE_DIRS})
-set_property(TARGET googletest PROPERTY
-    INTERFACE_LINK_LIBRARIES ${GTEST_LIBS_DIR})
+# include(ExternalProject)
+#
+# ExternalProject_Add(googletest
+#     GIT_REPOSITORY "https://github.com/google/googletest"
+#     GIT_TAG "release-1.8.0"
+#     DOWNLOAD_DIR ${CMAKE_CURRENT_BINARY_DIR}
+#     PREFIX ${CMAKE_CURRENT_BINARY_DIR}
+#     # DOWNLOAD_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest
+#     # PREFIX ${CMAKE_CURRENT_BINARY_DIR}/googletest
+#     INSTALL_COMMAND ""
+# )
+#
+# ExternalProject_Get_Property(googletest SOURCE_DIR)
+# set(GTEST_INCLUDE_DIRS ${SOURCE_DIR}/googletest/include PARENT_SCOPE)
+#
+# ExternalProject_Get_Property(googletest BINARY_DIR)
+# set(GTEST_LIBS_DIR ${BINARY_DIR}/googlemock/gtest PARENT_SCOPE)
+#
 
