@@ -9,7 +9,7 @@
 #include <float.h>
 
 #include <clipper/datatypes.hpp>
-#include <clipper/selection_policy.hpp>
+#include <clipper/selection_policies.hpp>
 #include <clipper/util.hpp>
 
 #include <boost/archive/binary_oarchive.hpp>
