@@ -178,7 +178,6 @@ class TaskExecutor {
         assert(deserialized_outputs.size() == keys.size());
         int batch_size = keys.size();
         for (int batch_num = 0; batch_num < batch_size; ++batch_num) {
-
           cache_.put(keys[batch_num].first, keys[batch_num].second,
                      Output{deserialized_outputs[batch_num], {keys[batch_num].first}});
         }

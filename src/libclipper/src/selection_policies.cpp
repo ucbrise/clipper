@@ -16,6 +16,7 @@
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/iostreams/device/array.hpp>
 #include <boost/iostreams/stream.hpp>
+#include <boost/iostreams/device/back_inserter.hpp>
 #include <boost/serialization/unordered_map.hpp>
 #include <boost/serialization/string.hpp>
 #include <ostream>
@@ -118,7 +119,7 @@ Exp3State Exp3Policy::process_feedback(
   
   // Compute loss and find which model to update
   auto loss = std::abs(predictions.front().y_hat_ - feedback.y_);
-  auto model_id = predictions.front().versioned_model_.front();
+  auto model_id = predictions.front().models_used_.front();
   // Update max loss and Normalize loss
   if (state.second[model_id]["max loss"] < loss)
     state.second[model_id]["max loss"] = loss;
@@ -132,13 +133,14 @@ Exp3State Exp3Policy::process_feedback(
 
 ByteBuffer Exp3Policy::serialize_state(Exp3State state) {
   // Serialize
-  std::stringstream ss;
+  std::string s;
+  boost::iostreams::back_insert_device<std::string> inserter(s);
+  boost::iostreams::stream<boost::iostreams::back_insert_device<std::string>> ss(inserter);
   boost::archive::binary_oarchive out_archive(ss);
   out_archive << state.first;
   out_archive << state.second;
   
   // Turn char buffer into uint_8 buffer
-  const string& s = ss.str();
   if (s.size() % 2 != 0) {
     throw std::runtime_error("Bad size argument");
   }
@@ -156,11 +158,12 @@ ByteBuffer Exp3Policy::serialize_state(Exp3State state) {
 
 Exp3State Exp3Policy::deserialize_state(const ByteBuffer& bytes) {
 
-  std::stringstream ss;
+  char buffer[256];
+  boost::iostreams::array_source source(buffer);
+  boost::iostreams::stream<boost::iostreams::array_source> ss(source);
   for (uint8_t b : bytes)
-    ss << (char) b;
-  boost::iostreams::stream<boost::iostreams::array_source> is(ss);
-  boost::archive::binary_iarchive in_archive(is);
+    ss.putback((char) b);
+  boost::archive::binary_iarchive in_archive(ss);
   double num;
   Map map;
   in_archive >> num;
@@ -191,7 +194,7 @@ std::vector<PredictTask> Exp4Policy::select_predict_tasks(
                             Query query,
                             long query_id) {
   // Pass along all models selected
-  UNUSED(state);
+  UNUSED(state); 
   std::vector<PredictTask> tasks;
   for (VersionedModelId id: query.candidate_models_) {
       auto task = PredictTask(query.input_, id, 1.0, query_id, query.latency_micros_);
@@ -209,9 +212,9 @@ Output Exp4Policy::combine_predictions(
   auto y_hat = 0;
   std::vector<VersionedModelId> models;
 
-  for (auto it = predictions.begin(); it != predictions.end(); ++it) {
-    auto model_id = (it->versioned_model_).front();
-    y_hat += (state.second[model_id]["weight"] / state.first) * it->y_hat_;
+  for (auto p : predictions) {
+    auto model_id = (p.models_used_ ).front();
+    y_hat += (state.second[model_id]["weight"] / state.first) * p.y_hat_;
     models.push_back(model_id);
   }
   auto output = Output(y_hat, models);
@@ -240,13 +243,14 @@ Exp4State Exp4Policy::process_feedback(
                             Feedback feedback,
                             std::vector<Output> predictions) {
   // Update every individual model's distribution
-  for (auto it = predictions.begin(); it != predictions.end(); ++it) {
+  for (auto p : predictions) {
     // Compute loss and find which model to update
-    auto loss = std::abs(feedback.y_ - it->y_hat_);
-    auto model_id = it->versioned_model_.front();
+    auto loss = std::abs(feedback.y_ - p.y_hat_);
+    auto model_id = p.models_used_.front();
     // Update max loss and Normalize loss
-    if (state.second[model_id]["max loss"] < loss)
+    if (state.second[model_id]["max loss"] < loss) {
       state.second[model_id]["max loss"] = loss;
+    }
     loss /= state.second[model_id]["max loss"];
     // Update arm with normalized loss
     auto s_i = state.second[model_id]["weight"];
@@ -287,12 +291,12 @@ EpsilonGreedyState EpsilonGreedyPolicy::add_models(
                  const std::vector<VersionedModelId>& new_models) {
   // Calculate expected loss from old models
   auto sum = 0.0;
-  for (auto it = state.begin(); it != state.end(); ++it) {
-    sum += it->second.at("expected loss");
+  for (auto model: state) {
+    sum += model.second.at("expected loss");
   }
   auto avg = sum / state.size();
   // Add new model with average reward
-  for (VersionedModelId id: new_models) {
+  for (auto id: new_models) {
     ModelInfo info = {{"expected loss", avg}, {"times selected", 0.0}};
     state.insert({id, info});
   }
@@ -367,7 +371,7 @@ EpsilonGreedyState EpsilonGreedyPolicy::process_feedback(
                           EpsilonGreedyState state,
                           Feedback feedback,
                           std::vector<Output> predictions) {
-  auto model_id = predictions.front().versioned_model_.front();
+  auto model_id = predictions.front().models_used_.front();
   auto new_loss = std::abs(feedback.y_ - predictions.front().y_hat_);
   // Update times selected
   state[model_id]["times selected"] += 1;
@@ -381,12 +385,13 @@ EpsilonGreedyState EpsilonGreedyPolicy::process_feedback(
 ByteBuffer EpsilonGreedyPolicy::serialize_state(
                           EpsilonGreedyState state) {
   // Serialize
-  std::stringstream ss;
+  std::string s;
+  boost::iostreams::back_insert_device<std::string> inserter(s);
+  boost::iostreams::stream<boost::iostreams::back_insert_device<std::string>> ss(inserter);
   boost::archive::binary_oarchive out_archive(ss);
   out_archive << state;
   
   // Turn char buffer into uint_8 buffer
-  const string& s = ss.str();
   if (s.size() % 2 != 0) {
     throw std::runtime_error("Bad size argument");
   }
@@ -405,11 +410,12 @@ ByteBuffer EpsilonGreedyPolicy::serialize_state(
 EpsilonGreedyState EpsilonGreedyPolicy::deserialize_state(
                           const ByteBuffer& bytes) {
 
-  std::stringstream ss;
+  char buffer[256];
+  boost::iostreams::array_source source(buffer);
+  boost::iostreams::stream<boost::iostreams::array_source> ss(source);
   for (uint8_t b : bytes)
-    ss << (char) b;
-  boost::iostreams::stream<boost::iostreams::array_source> is(ss);
-  boost::archive::binary_iarchive in_archive(is);
+    ss.putback((char) b);
+  boost::archive::binary_iarchive in_archive(ss);
   EpsilonGreedyState state;
   in_archive >> state;
   return state;

@@ -4,7 +4,6 @@
 #include <memory>
 #include <unordered_map>
 #include <map>
-#include <stdlib.h>
 
 #include "datatypes.hpp"
 #include "task_executor.hpp"
@@ -32,10 +31,14 @@ class SelectionPolicy {
   ~SelectionPolicy() = delete;
   typedef Map state_type;
   
-  static State initialize(const std::vector<VersionedModelId>& candidate_models);
+  static State initialize(const std::vector<VersionedModelId>& candidate_models) {
+    return Derived::initialize(candidate_models);
+  };
 
   static State add_models(State state,
-                         const std::vector<VersionedModelId>& new_models);
+                          const std::vector<VersionedModelId>& new_models) {
+    return Derived::add_models(state, new_models);
+  };
   
   // Used to identify a unique selection policy instance. For example,
   // if using a bandit-algorithm that does not tolerate variable-armed
@@ -53,7 +56,9 @@ class SelectionPolicy {
                                                    long query_id) {
     return Derived::select_predict_tasks(state, query, query_id);
   }
-
+  
+  // TODO: change this method name
+  // TODO: I think it may make sense to decouple combine_predictions()
   // from select_predict_tasks in some cases
   static Output combine_predictions(
       State state, Query query,
@@ -85,11 +90,11 @@ class SelectionPolicy {
 
   static ByteBuffer serialize_state(State state) {
     return Derived::serialize_state(state);
-  };
+  }
 
   static State deserialize_state(const ByteBuffer& bytes) {
     return Derived::deserialize_state(bytes);
-  };
+  }
 
 };
 

@@ -24,7 +24,7 @@ class Output {
   Output& operator=(Output&&) = default;
   Output(double y_hat, std::vector<VersionedModelId> versioned_model);
   double y_hat_;
-  std::vector<VersionedModelId> versioned_model_;
+  std::vector<VersionedModelId> models_used_;
 };
 
 // using Output = std::pair<double;
@@ -118,7 +118,7 @@ class Response {
 class Feedback {
 public:
   ~Feedback() = default;
-  Feedback(std::shared_ptr<Input> input,
+  explicit Feedback(std::shared_ptr<Input> input,
            std::shared_ptr<Output> output);
 
   double y_;

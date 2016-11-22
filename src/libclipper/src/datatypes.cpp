@@ -26,8 +26,8 @@ size_t versioned_model_hash(const VersionedModelId& key) {
 //        }
 //    };
 
-Output::Output(double y_hat, std::vector<VersionedModelId> model_id)
-    : y_hat_(y_hat), versioned_model_(model_id) {}
+Output::Output(double y_hat, std::vector<VersionedModelId> models)
+    : y_hat_(y_hat), models_used_(models) {}
 
   
 DoubleVector::DoubleVector(std::vector<double> data)
