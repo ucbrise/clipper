@@ -9,10 +9,9 @@
 #include <clipper/util.hpp>
 
 using std::pair;
-//using std::chrono::high_resolution_clock;
+// using std::chrono::high_resolution_clock;
 
 namespace clipper {
-
 
 Timer::Timer(
     std::chrono::time_point<std::chrono::high_resolution_clock> deadline,
@@ -23,14 +22,22 @@ bool Timer::operator<(const Timer &rhs) const {
   return deadline_ < rhs.deadline_;
 }
 
+bool Timer::operator>(const Timer &rhs) const {
+  return deadline_ > rhs.deadline_;
+}
+
+bool Timer::operator<=(const Timer &rhs) const {
+  return deadline_ <= rhs.deadline_;
+}
+
+bool Timer::operator>=(const Timer &rhs) const {
+  return deadline_ >= rhs.deadline_;
+}
+
 void Timer::expire() {
   std::cout << "TIMER EXPIRED IN TIMER THREAD: " << std::this_thread::get_id()
             << std::endl;
   completion_promise_.set_value();
 }
-
-
-
-
 
 }  // namespace clipper

@@ -61,6 +61,9 @@ class Timer {
   Timer &operator=(Timer &&) = default;
 
   bool operator<(const Timer &rhs) const;
+  bool operator>(const Timer &rhs) const;
+  bool operator<=(const Timer &rhs) const;
+  bool operator>=(const Timer &rhs) const;
 
   void expire();
 
@@ -73,7 +76,8 @@ class Timer {
 struct TimerCompare {
   bool operator()(const std::shared_ptr<Timer> &lhs,
                   const std::shared_ptr<Timer> &rhs) const {
-    return *lhs < *rhs;
+    return *lhs > *rhs;
+    // return *rhs < *lhs;
   }
 };
 
@@ -81,30 +85,6 @@ struct TimerCompare {
 using TimerPQueue =
     std::priority_queue<std::shared_ptr<Timer>,
                         std::vector<std::shared_ptr<Timer>>, TimerCompare>;
-
-// template <typename Clock>
-// void manage_timers(TimerPQueue &timers, std::mutex &queue_mutex,
-//                   const bool &shutdown, const Clock& c) {
-//  std::cout << "In timer event loop" << std::endl;
-//  while (!shutdown) {
-//    // wait for next timer to expire
-//    //    auto cur_time = high_resolution_clock::now();
-//    auto cur_time = c.now();
-//    std::unique_lock<std::mutex> l(queue_mutex);
-//    if (timers.size() > 0) {
-//      //      std::cout << "Found " << timers.size() << " timers" <<
-//      std::endl;
-//      auto earliest_timer = timers.top();
-//      auto duration_ms =
-//      std::chrono::duration_cast<std::chrono::milliseconds>(
-//          earliest_timer->deadline_ - cur_time);
-//      if (duration_ms.count() <= 0) {
-//        earliest_timer->expire();
-//        timers.pop();
-//      }
-//    }
-//  }
-//}
 
 template <typename Clock>
 class TimerSystem {
