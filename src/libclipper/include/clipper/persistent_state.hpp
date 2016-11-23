@@ -17,7 +17,7 @@ using StateKey = std::tuple<std::string, long, long>;
 size_t state_key_hash(const StateKey& key);
 
 using StateMap =
-    std::unordered_map<StateKey, ByteBuffer, decltype(&state_key_hash)>;
+    std::unordered_map<StateKey, std::string, decltype(&state_key_hash)>;
 
 // Threadsafe, non-copyable state storage
 class StateDB {
@@ -35,9 +35,9 @@ class StateDB {
   StateDB& operator=(StateDB&&) = default;
   
   // Non-const because we need to lock a mutex
-  boost::optional<ByteBuffer> get(const StateKey& key);
+  boost::optional<std::string> get(const StateKey& key);
 
-  void put(StateKey key, ByteBuffer value);
+  void put(StateKey key, std::string value);
 
  private:
   std::shared_timed_mutex m_;

@@ -8,17 +8,19 @@
 #define BOOST_SPIRIT_THREADSAFE
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
-
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
-
 #include <server_http.hpp>
 
 using namespace boost::property_tree; 
 using clipper::DoubleVector;
 using clipper::FeedbackAck;
+using clipper::Feedback;
 using clipper::Input;
 using clipper::Output;
+using clipper::VersionedModelId;
+using clipper::Feedback;
+using clipper::FeedbackQuery;
 using clipper::QueryProcessor;
 using clipper::Response;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
@@ -107,10 +109,11 @@ int main() {
 
           std::shared_ptr<Input> input =
               std::make_shared<DoubleVector>(inputs);
-          Output output{y, std::make_pair(vm.get<std::string>("name"),vm.get<int>("version"))};
+        Output output{y, {std::make_pair(vm.get<std::string>("name"),vm.get<int>("version"))}};
+        Feedback feedback{input, 0.0};
           auto update = q.update(
-              {"label", uid, {std::make_pair(input, output)},
-              "simple_policy", {std::make_pair("m", 1), std::make_pair("j", 1)}});
+              {"label", uid, feedback,
+              "EXP3", {std::make_pair("m", 1), std::make_pair("j", 1)}});
           update.then([response](boost::future<FeedbackAck> f){
               FeedbackAck ack = f.get();
               std::stringstream ss;
