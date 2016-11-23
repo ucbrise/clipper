@@ -8,6 +8,11 @@
 #include "datatypes.hpp"
 #include "task_executor.hpp"
 
+#define UNUSED(expr) \
+do {               \
+(void)(expr);    \
+} while (0)
+
 namespace clipper {
   //// State Data Structure
   using ModelInfo = std::unordered_map<std::string, double>;
@@ -88,11 +93,11 @@ class SelectionPolicy {
                                      predictions);
   }
 
-  static ByteBuffer serialize_state(State state) {
+  static std::string serialize_state(State state) {
     return Derived::serialize_state(state);
   }
 
-  static State deserialize_state(const ByteBuffer& bytes) {
+  static State deserialize_state(const std::string& bytes) {
     return Derived::deserialize_state(bytes);
   }
 
@@ -117,7 +122,10 @@ public:
   static Exp3State add_models(Exp3State state,
                               const std::vector<VersionedModelId>& new_models);
   
-  static long hash_models(const std::vector<VersionedModelId>& candidate_models);
+  static long hash_models(const std::vector<VersionedModelId>& candidate_models) {
+    UNUSED(candidate_models);
+    return 0;
+  };
   
   static std::vector<PredictTask> select_predict_tasks(Exp3State state,
                                                        Query query,
@@ -135,9 +143,9 @@ public:
       Exp3State state, Feedback feedback,
       std::vector<Output> predictions);
 
-  static ByteBuffer serialize_state(Exp3State state);
+  static std::string serialize_state(Exp3State state);
 
-  static Exp3State deserialize_state(const ByteBuffer& bytes);
+  static Exp3State deserialize_state(const std::string& bytes);
 
 private:
   static VersionedModelId select(Exp3State state, 
@@ -163,7 +171,10 @@ public:
   static Exp4State add_models(Exp4State state,
                               const std::vector<VersionedModelId>& new_models);
   
-  static long hash_models(const std::vector<VersionedModelId>& candidate_models);
+  static long hash_models(const std::vector<VersionedModelId>& candidate_models) {
+    UNUSED(candidate_models);
+    return 0;
+  };
   
   static std::vector<PredictTask> select_predict_tasks(Exp4State state,
                                                        Query query,
@@ -183,9 +194,9 @@ public:
                                   Feedback feedback,
                                   std::vector<Output> predictions);
 
-  static ByteBuffer serialize_state(Exp4State state);
+  static std::string serialize_state(Exp4State state);
 
-  static Exp4State deserialize_state(const ByteBuffer& bytes);
+  static Exp4State deserialize_state(const std::string& bytes);
 
 };
 
@@ -209,7 +220,10 @@ public:
                           EpsilonGreedyState state,
                           const std::vector<VersionedModelId>& new_models);
   
-  static long hash_models(const std::vector<VersionedModelId>& candidate_models);
+  static long hash_models(const std::vector<VersionedModelId>& candidate_models) {
+    UNUSED(candidate_models);
+    return 0;
+  };
   
   static std::vector<PredictTask> select_predict_tasks(EpsilonGreedyState state,
                                                    Query query,
@@ -230,9 +244,9 @@ public:
                            Feedback feedback,
                            std::vector<Output> predictions);
   
-  static ByteBuffer serialize_state(EpsilonGreedyState state);
+  static std::string serialize_state(EpsilonGreedyState state);
   
-  static EpsilonGreedyState deserialize_state(const ByteBuffer& bytes);
+  static EpsilonGreedyState deserialize_state(const std::string& bytes);
 
 private:
   static VersionedModelId select(EpsilonGreedyState state,
@@ -255,7 +269,10 @@ public:
   static UCBState add_models(UCBState state,
                            const std::vector<VersionedModelId>& new_models);
   
-  static long hash_models(const std::vector<VersionedModelId>& candidate_models);
+  static long hash_models(const std::vector<VersionedModelId>& candidate_models) {
+    UNUSED(candidate_models);
+    return 0;
+  };
   
   static std::vector<PredictTask> select_predict_tasks(UCBState state,
                                                    Query query,
@@ -276,9 +293,9 @@ public:
                                Feedback feedback,
                                std::vector<Output> predictions);
   
-  static ByteBuffer serialize_state(UCBState state);
+  static std::string serialize_state(UCBState state);
   
-  static UCBState deserialize_state(const ByteBuffer& bytes);
+  static UCBState deserialize_state(const std::string& bytes);
   
 private:
   static VersionedModelId select(UCBState state,

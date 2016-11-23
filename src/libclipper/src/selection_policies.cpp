@@ -22,11 +22,6 @@
 #include <ostream>
 #include <sstream>
 
-#define UNUSED(expr) \
-do {               \
-(void)(expr);    \
-} while (0)
-
 namespace clipper {
 
 // ********
@@ -131,44 +126,21 @@ Exp3State Exp3Policy::process_feedback(
   return state;
 }
 
-ByteBuffer Exp3Policy::serialize_state(Exp3State state) {
-  // Serialize
-  std::string s;
-  boost::iostreams::back_insert_device<std::string> inserter(s);
-  boost::iostreams::stream<boost::iostreams::back_insert_device<std::string>> ss(inserter);
-  boost::archive::binary_oarchive out_archive(ss);
-  out_archive << state.first;
-  out_archive << state.second;
-  
-  // Turn char buffer into uint_8 buffer
-  if (s.size() % 2 != 0) {
-    throw std::runtime_error("Bad size argument");
-  }
-  std::vector<uint8_t> result;
-  result.reserve(s.size() / 2);
-  for (std::size_t i = 0, size = s.size(); i != size; i += 2) {
-    std::size_t pos = 0;
-    result.push_back(std::stoi(s.substr(i, 2), &pos, 16));
-    if (pos != 2) {
-      throw std::runtime_error("bad character in argument");
-    }
-  }
-  return result;
+  std::string Exp3Policy::serialize_state(Exp3State state) {
+  std::stringstream ss;
+  boost::archive::binary_oarchive oa(ss);
+  oa << state;
+  return ss.str();
 }
 
-Exp3State Exp3Policy::deserialize_state(const ByteBuffer& bytes) {
+  Exp3State Exp3Policy::deserialize_state(const std::string& bytes) {
 
-  char buffer[256];
-  boost::iostreams::array_source source(buffer);
-  boost::iostreams::stream<boost::iostreams::array_source> ss(source);
-  for (uint8_t b : bytes)
-    ss.putback((char) b);
-  boost::archive::binary_iarchive in_archive(ss);
-  double num;
-  Map map;
-  in_archive >> num;
-  in_archive >> map;
-  return std::make_pair(num, map);
+  std::stringstream ss;
+  ss << bytes;
+  boost::archive::binary_iarchive ia(ss);
+  Exp3State state;
+  ia >> state;
+  return state;
 }
 
 
@@ -260,12 +232,12 @@ Exp4State Exp4Policy::process_feedback(
   return state;
 }
 
-ByteBuffer Exp4Policy::serialize_state(Exp4State state) {
+std::string Exp4Policy::serialize_state(Exp4State state) {
   // Same as Exp3
   return Exp3Policy::serialize_state(state);
 }
 
-Exp4State Exp4Policy::deserialize_state(const ByteBuffer& bytes) {
+Exp4State Exp4Policy::deserialize_state(const std::string& bytes) {
   // Same as Exp3
   return Exp3Policy::deserialize_state(bytes);
 }
@@ -382,42 +354,21 @@ EpsilonGreedyState EpsilonGreedyPolicy::process_feedback(
   return state;
 }
 
-ByteBuffer EpsilonGreedyPolicy::serialize_state(
+std::string EpsilonGreedyPolicy::serialize_state(
                           EpsilonGreedyState state) {
-  // Serialize
-  std::string s;
-  boost::iostreams::back_insert_device<std::string> inserter(s);
-  boost::iostreams::stream<boost::iostreams::back_insert_device<std::string>> ss(inserter);
-  boost::archive::binary_oarchive out_archive(ss);
-  out_archive << state;
-  
-  // Turn char buffer into uint_8 buffer
-  if (s.size() % 2 != 0) {
-    throw std::runtime_error("Bad size argument");
-  }
-  std::vector<uint8_t> result;
-  result.reserve(s.size() / 2);
-  for (std::size_t i = 0, size = s.size(); i != size; i += 2) {
-    std::size_t pos = 0;
-    result.push_back(std::stoi(s.substr(i, 2), &pos, 16));
-    if (pos != 2) {
-      throw std::runtime_error("bad character in argument");
-    }
-  }
-  return result;
+  std::stringstream ss;
+  boost::archive::binary_oarchive oa(ss);
+  oa << state;
+  return ss.str();
 }
 
 EpsilonGreedyState EpsilonGreedyPolicy::deserialize_state(
-                          const ByteBuffer& bytes) {
-
-  char buffer[256];
-  boost::iostreams::array_source source(buffer);
-  boost::iostreams::stream<boost::iostreams::array_source> ss(source);
-  for (uint8_t b : bytes)
-    ss.putback((char) b);
-  boost::archive::binary_iarchive in_archive(ss);
+                          const std::string& bytes) {
+  std::stringstream ss;
+  ss << bytes;
+  boost::archive::binary_iarchive ia(ss);
   EpsilonGreedyState state;
-  in_archive >> state;
+  ia >> state;
   return state;
 }
   
@@ -490,12 +441,12 @@ UCBState UCBPolicy::process_feedback(
   return EpsilonGreedyPolicy::process_feedback(state, feedback, predictions);
 }
 
-ByteBuffer UCBPolicy::serialize_state(UCBState state) {
+std::string UCBPolicy::serialize_state(UCBState state) {
   // Same as Epsilon Greedy
   return EpsilonGreedyPolicy::serialize_state(state);
 }
 
-UCBState UCBPolicy::deserialize_state(const ByteBuffer& bytes) {
+UCBState UCBPolicy::deserialize_state(const std::string& bytes) {
   // Same as Epsilon Greedy
   return EpsilonGreedyPolicy::deserialize_state(bytes);
 }

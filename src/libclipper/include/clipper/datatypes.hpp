@@ -6,7 +6,8 @@
 
 namespace clipper {
 
-using ByteBuffer = std::vector<uint8_t>;
+//using ByteBuffer = std::vector<uint8_t>;
+  using ByteBuffer = std::vector<uint8_t>;
 using VersionedModelId = std::pair<std::string, int>;
 using QueryId = long;
 using FeedbackAck = bool;
@@ -118,8 +119,13 @@ class Response {
 class Feedback {
 public:
   ~Feedback() = default;
-  explicit Feedback(std::shared_ptr<Input> input,
-           std::shared_ptr<Output> output);
+  Feedback(std::shared_ptr<Input> input, double y);
+  
+  Feedback(const Feedback&) = default;
+  Feedback& operator=(const Feedback&) = default;
+  
+  Feedback(Feedback&&) = default;
+  Feedback& operator=(Feedback&&) = default;
 
   double y_;
   std::shared_ptr<Input> input_;

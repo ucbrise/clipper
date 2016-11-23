@@ -82,9 +82,8 @@ std::string Response::debug_string() const noexcept {
 }
 
   
-Feedback::Feedback(std::shared_ptr<Input> input, 
-                  std::shared_ptr<Output> output)
-    : y_(output->y_hat_),
+Feedback::Feedback(std::shared_ptr<Input> input, double y)
+    : y_(y),
       input_(input) {}
 
 

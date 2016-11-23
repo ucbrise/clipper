@@ -14,7 +14,7 @@ size_t state_key_hash(const StateKey& key) {
 
 StateDB::StateDB() { std::cout << "Persistent state DB created" << std::endl; }
 
-boost::optional<ByteBuffer> StateDB::get(const StateKey& key) {
+boost::optional<std::string> StateDB::get(const StateKey& key) {
   std::shared_lock<std::shared_timed_mutex> m_;
   auto loc = state_table_.find(key);
   if (loc == state_table_.end()) {
@@ -24,7 +24,7 @@ boost::optional<ByteBuffer> StateDB::get(const StateKey& key) {
   }
 }
 
-void StateDB::put(StateKey key, ByteBuffer value) {
+void StateDB::put(StateKey key, std::string value) {
   std::unique_lock<std::shared_timed_mutex> m_;
   state_table_[key] = value;
 }

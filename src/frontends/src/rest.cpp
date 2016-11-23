@@ -15,6 +15,7 @@
 using namespace boost::property_tree; 
 using clipper::DoubleVector;
 using clipper::FeedbackAck;
+using clipper::Feedback;
 using clipper::Input;
 using clipper::Output;
 using clipper::VersionedModelId;
@@ -108,9 +109,10 @@ int main() {
 
           std::shared_ptr<Input> input =
               std::make_shared<DoubleVector>(inputs);
-          Output output{y, std::make_pair(vm.get<std::string>("name"),vm.get<int>("version"))};
+        Output output{y, {std::make_pair(vm.get<std::string>("name"),vm.get<int>("version"))}};
+        Feedback feedback{input, 0.0};
           auto update = q.update(
-              {"label", uid, {std::make_pair(input, output)},
+              {"label", uid, feedback,
               "EXP3", {std::make_pair("m", 1), std::make_pair("j", 1)}});
           update.then([response](boost::future<FeedbackAck> f){
               FeedbackAck ack = f.get();

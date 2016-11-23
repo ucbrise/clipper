@@ -27,11 +27,11 @@ namespace clipper {
   // TODO: replace these template methods with a better way to do
   // polymorphic dispatch
   template <typename Policy>
-  std::pair<std::vector<PredictTask>, ByteBuffer> select_predict_tasks(
+  std::pair<std::vector<PredictTask>, std::string> select_predict_tasks(
                                                                        Query query, long query_id, std::shared_ptr<StateDB> state_db) {
     auto hashkey = Policy::hash_models(query.candidate_models_);
     typename Policy::state_type state;
-    ByteBuffer serialized_state;
+    std::string serialized_state;
     if (auto state_opt =
         state_db->get(StateKey{query.label_, query.user_id_, hashkey})) {
       serialized_state = *state_opt;
@@ -48,19 +48,19 @@ namespace clipper {
   
   template <typename Policy>
   Output combine_predictions(Query query, std::vector<Output> predictions,
-                             const ByteBuffer& serialized_state) {
+                             const std::string& serialized_state) {
     // typename Policy::state_type state;
     const auto state = Policy::deserialize_state(serialized_state);
     return Policy::combine_predictions(state, query, predictions);
   }
   
   template <typename Policy>
-  std::pair<std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>, ByteBuffer>
+  std::pair<std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>, std::string>
   select_feedback_tasks(
                         FeedbackQuery query, long query_id, std::shared_ptr<StateDB> state_db) {
     auto hashkey = Policy::hash_models(query.candidate_models_);
     typename Policy::state_type state;
-    ByteBuffer serialized_state;
+    std::string serialized_state;
     if (auto state_opt =
         state_db->get(StateKey{query.label_, query.user_id_, hashkey})) {
       serialized_state = *state_opt;
@@ -77,7 +77,7 @@ namespace clipper {
   template <typename Policy>
   void process_feedback(FeedbackQuery feedback,
                         std::vector<Output> predictions,
-                        const ByteBuffer& serialized_state,
+                        const std::string& serialized_state,
                         std::shared_ptr<StateDB> state_db) {
     // typename Policy::state_type state;
     const auto state = Policy::deserialize_state(serialized_state);
@@ -99,7 +99,7 @@ namespace clipper {
   future<Response> QueryProcessor::predict(Query query) {
     long query_id = query_counter_.fetch_add(1);
     std::vector<PredictTask> tasks;
-    ByteBuffer serialized_state;
+    std::string serialized_state;
     
     // select tasks
     if (query.selection_policy_ == "EXP3") {
@@ -190,7 +190,7 @@ namespace clipper {
     long query_id = query_counter_.fetch_add(1);
     std::vector<PredictTask> predict_tasks;
     std::vector<FeedbackTask> feedback_tasks;
-    ByteBuffer serialized_state;
+    std::string serialized_state;
     
     // select tasks
     if (feedback.selection_policy_ == "EXP3") {
