@@ -13,6 +13,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(FindZeroMQ)
 
 include(CTest)
+add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND})
 
 # Include Boost as an imported target
 set(Boost_USE_MULTITHREADED ON)

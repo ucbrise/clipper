@@ -31,12 +31,14 @@ export(TARGETS clipper FILE ClipperConfig.cmake)
 
 
 
-add_executable(rpc_service_test test/rpc_service_test.cpp)
+add_executable(rpc_service_test EXCLUDE_FROM_ALL test/rpc_service_test.cpp)
 target_link_libraries(rpc_service_test clipper gtest gmock_main)
 add_test(NAME rpc_service_test COMMAND rpc_service_test)
+add_dependencies(check rpc_service_test)
 
-add_executable(timers_test test/timers_test.cpp)
+add_executable(timers_test EXCLUDE_FROM_ALL test/timers_test.cpp)
 target_link_libraries(timers_test clipper gtest gmock_main)
 add_test(NAME timers_test COMMAND timers_test)
+add_dependencies(check timers_test)
 
 
