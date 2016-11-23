@@ -6,10 +6,10 @@
 #include <clipper/datatypes.hpp>
 
 void benchmark() {
-  clipper::RPCService rpc_service;
-  
   auto containers = std::make_shared<clipper::ActiveContainers>();
-  rpc_service.start("127.0.0.1", 8000, containers);
+  clipper::RPCService rpc_service(containers);
+  
+  rpc_service.start("127.0.0.1", 8000);
   usleep(5000000);
 
   std::unordered_map<int, long> times_map;
