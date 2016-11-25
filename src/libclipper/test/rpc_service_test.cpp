@@ -2,8 +2,8 @@
 
 #include <gtest/gtest.h>
 
-#include <clipper/rpc_service.hpp>
 #include <clipper/containers.hpp>
+#include <clipper/rpc_service.hpp>
 
 using namespace clipper;
 using std::vector;
@@ -11,27 +11,23 @@ using std::vector;
 // Tests:
 // + start (sending to non-started service)
 // + stop (shuts down when shutdown signal given)
-// + try_get_response() (never get more than max, get max if available, get all if less available)
+// + try_get_response() (never get more than max, get max if available, get all
+// if less available)
 // + manage service??
-
 
 namespace {
 
-class MockZmqSocket {
-
-};
+class MockZmqSocket {};
 
 TEST(RPCServiceTests, SendBeforeStart) {
   RPCService rpc{std::shared_ptr<ActiveContainers>()};
   EXPECT_EQ(-1, rpc.send_message(vector<const vector<uint8_t>>(), 7));
 }
 
-} // namespace
+}  // namespace
 
-int main(int argc, char**argv) {
-
-  ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}
-
-
+// int main(int argc, char**argv) {
+//
+//   ::testing::InitGoogleTest(&argc, argv);
+//     return RUN_ALL_TESTS();
+// }

@@ -31,14 +31,20 @@ export(TARGETS clipper FILE ClipperConfig.cmake)
 
 
 
-add_executable(rpc_service_test EXCLUDE_FROM_ALL test/rpc_service_test.cpp)
-target_link_libraries(rpc_service_test clipper gtest gmock_main)
-add_test(NAME rpc_service_test COMMAND rpc_service_test)
-add_dependencies(check rpc_service_test)
+set(GTEST_COMMAND "${CMAKE_CURRENT_BINARY_DIR}/libclippertests")
+add_custom_target(unittests COMMAND ${GTEST_COMMAND})
+add_executable(libclippertests EXCLUDE_FROM_ALL
+    test/test_main.cpp
+    test/rpc_service_test.cpp
+    test/timers_test.cpp
+    )
+target_link_libraries(libclippertests clipper gtest gmock_main)
+# add_test(NAME rpc_service_test COMMAND rpc_service_test)
+add_dependencies(unittests libclippertests)
 
-add_executable(timers_test EXCLUDE_FROM_ALL test/timers_test.cpp)
-target_link_libraries(timers_test clipper gtest gmock_main)
-add_test(NAME timers_test COMMAND timers_test)
-add_dependencies(check timers_test)
+# add_executable(timers_test EXCLUDE_FROM_ALL test/timers_test.cpp)
+# target_link_libraries(timers_test clipper gtest gmock_main)
+# add_test(NAME timers_test COMMAND timers_test)
+# add_dependencies(check timers_test)
 
 

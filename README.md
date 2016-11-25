@@ -5,9 +5,10 @@
 
 ## Build Instructions
 
-First generate the cmake files with `./configure`. This generates two out-of-source build directories, `release` and `debug`.
-Go into one of these directories (you probably want to be in `debug` for day-to-day development) and then run `make` to actually
+First generate the cmake files with `./configure`. This generates an out-of-source build directory called `debug`.
+Go into one of this directory and then run `make` to actually
 compile the code. You should only need to re-configure if you change one of the `CMakeLists.txt` files.
+To build for release, run `./configure --release` which generates the `release` build directory instead of debug.
 If you want to clean everything up, you can run `./configure --cleanup`.
 
 For example:
@@ -21,9 +22,11 @@ $ make
 # write some code
 $ make
 
-# run the bench binary
-$ cd frontends
-$ ./bench
+# build and run unit tests with googletest
+$ make unittests
+
+# start the REST interface
+$ ./frontends/rest
 ```
 
 ### Dependencies
@@ -36,3 +39,4 @@ On a Mac you can install these with
 ```
 brew install cmake boost --c++11 zeromq
 ```
+

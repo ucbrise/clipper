@@ -7,6 +7,8 @@
 using namespace clipper;
 using namespace std::chrono_literals;
 
+namespace {
+
 class TimerSystemTests : public ::testing::Test {
  public:
   TimerSystem<ManualClock> ts_{ManualClock()};
@@ -71,7 +73,9 @@ TEST_F(TimerSystemTests, OutOfOrderTimerExpire) {
   ASSERT_EQ(ts_.num_outstanding_timers(), (size_t)0);
 }
 
-int main(int argc, char** argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
+}  // namespace
+
+// int main(int argc, char** argv) {
+//   ::testing::InitGoogleTest(&argc, argv);
+//   return RUN_ALL_TESTS();
+// }
