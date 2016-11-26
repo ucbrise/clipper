@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include <boost/thread.hpp>
+#include <redox.hpp>
 
 #include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
@@ -53,7 +54,7 @@ class TaskExecutor {
   ~TaskExecutor() { active_ = false; };
   explicit TaskExecutor()
       : active_containers_(std::make_shared<ActiveContainers>()),
-        rpc_(std::make_unique<rpc::RPCService>(active_containers_)) {
+        rpc_(std::make_unique<RPCService>()) {
     std::cout << "TaskExecutor started" << std::endl;
     rpc_->start("*", 7000);
     active_ = true;
@@ -107,6 +108,8 @@ class TaskExecutor {
   std::unique_ptr<rpc::RPCService> rpc_;
   Scheduler scheduler_;
   PredictionCache cache_;
+  redox::Subscriber redis_subscriber_;
+  redox::Redox redis_connection_;
   bool active_ = false;
   std::mutex inflight_messages_mutex_;
   std::unordered_map<
@@ -155,8 +158,8 @@ class TaskExecutor {
               prediction_request.add_input(b.input_);
               cur_batch.emplace_back(b.model_, b.input_);
             }
-            int message_id =
-                rpc_->send_message(prediction_request.serialize(), c->container_id_);
+            int message_id = rpc_->send_message(prediction_request.serialize(),
+                                                c->container_id_);
             inflight_messages_.emplace(message_id, std::move(cur_batch));
           }
         }

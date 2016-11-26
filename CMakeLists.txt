@@ -52,6 +52,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED on)
 # disallow non-standard extensions
 set(CMAKE_CXX_EXTENSIONS off)
 
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD_REQUIRED on)
+
 # add shared C++ definitions
 add_definitions( -DBOOST_THREAD_VERSION=4)
 

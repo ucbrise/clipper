@@ -1,5 +1,5 @@
-#ifndef CLIPPER_LIB_PERSISTENT_STATE_H
-#define CLIPPER_LIB_PERSISTENT_STATE_H
+#ifndef CLIPPER_LIB_PERSISTENT_STATE_HPP
+#define CLIPPER_LIB_PERSISTENT_STATE_HPP
 
 #include <atomic>
 #include <functional>
@@ -74,4 +74,4 @@ class StateDB {
 
 }  // namespace clipper
 
-#endif  // CLIPPER_LIB_PERSISTENT_STATE_H
+#endif  // CLIPPER_LIB_PERSISTENT_STATE_HPP

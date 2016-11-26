@@ -12,6 +12,7 @@ add_library(clipper
     src/rpc_service.cpp
     src/timers.cpp
     src/containers.cpp
+    src/redis.cpp
     )
 
 
@@ -39,6 +40,7 @@ add_executable(libclippertests EXCLUDE_FROM_ALL
     test/timers_test.cpp
     test/serialization_test.cpp
     test/persistent_state_test.cpp
+    test/redis_test.cpp
     )
 target_link_libraries(libclippertests clipper gtest gmock_main)
 # add_test(NAME rpc_service_test COMMAND rpc_service_test)
