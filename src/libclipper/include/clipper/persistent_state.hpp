@@ -1,12 +1,14 @@
 #ifndef CLIPPER_LIB_PERSISTENT_STATE_H
 #define CLIPPER_LIB_PERSISTENT_STATE_H
 
+#include <atomic>
 #include <functional>
+#include <shared_mutex>
 #include <tuple>
 #include <unordered_map>
 
 #include <boost/optional.hpp>
-#include <boost/thread.hpp>
+#include <redox.hpp>
 
 #include "datatypes.hpp"
 
@@ -17,14 +19,14 @@ using StateKey = std::tuple<std::string, long, long>;
 
 size_t state_key_hash(const StateKey& key);
 
-using StateMap =
-    std::unordered_map<StateKey, ByteBuffer, decltype(&state_key_hash)>;
+// using StateMap =
+//     std::unordered_map<StateKey, ByteBuffer, decltype(&state_key_hash)>;
 
 // Threadsafe, non-copyable state storage
 class StateDB {
  public:
   StateDB();
-  ~StateDB() = default;
+  ~StateDB();
 
   // Disallow copies because of the mutex
   StateDB(const StateDB&) = delete;
@@ -34,14 +36,19 @@ class StateDB {
 
   StateDB& operator=(StateDB&&) = default;
 
-  // Non-const because we need to lock a mutex
-  boost::optional<ByteBuffer> get(const StateKey& key);
+  bool init();
 
-  void put(StateKey key, ByteBuffer value);
+  // Non-const because we need to lock a mutex
+  boost::optional<std::string> get(const StateKey& key);
+
+  bool put(StateKey key, std::string value);
+
+  bool delete_key(StateKey key);
 
  private:
-  boost::shared_mutex m_;
-  StateMap state_table_{5, state_key_hash};
+  std::atomic<bool> initialized_;
+  // StateMap state_table_{5, state_key_hash};
+  redox::Redox redis_connection_;
 };
 
 }  // namespace clipper
