@@ -36,12 +36,12 @@ std::vector<T> as_vector(ptree const& pt, ptree::key_type const& key) {
 
 std::vector<VersionedModelId> parse_model_json(ptree const& pt, ptree::key_type const& key) {
     std::vector<VersionedModelId> r;
-    for (auto& model_pair : pt.get_child(key)) {
-        // for (auto& item: model_pair.second()) {
+    for (auto& entry: pt.get_child(key)) {
+        for (auto& model_pair: entry.second) {
             std::string model_name = model_pair.first;
             int model_version = model_pair.second.get_value<int>();
             r.push_back(std::make_pair(model_name, model_version));
-        // }
+        }
     }
     return r;
 }
