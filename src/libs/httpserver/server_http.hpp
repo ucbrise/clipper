@@ -232,6 +232,7 @@ namespace SimpleWeb {
                           std::function<void(std::shared_ptr<typename ServerBase<socket_type>::Response>,
                                              std::shared_ptr<typename ServerBase<socket_type>::Request>)> res_fn) {
             mu.lock();
+            resource[res_name][res_method] = res_fn;
             auto it=opt_resource.end();
             for(auto opt_it=opt_resource.begin();opt_it!=opt_resource.end();opt_it++) {
                 if(res_method==opt_it->first) {
