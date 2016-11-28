@@ -27,6 +27,8 @@ function print_help {
   echo
   echo "  --cleanup           remove all build directories"
   echo
+  echo "  --release           build for release (should be used for all performance testing)"
+  echo
   echo "  --prefix=[PREFIX]   Clipper Installation target directory. Defaults to /usr/local"
   echo
   echo "  --ide=[Xcode]       Specify the ide to use when building Clipper"
@@ -115,6 +117,7 @@ while [ $# -gt 0 ]
     --help)                 print_help=1 ;;
     --cleanup)              run_cleanup=1 ;;
     --no_tcmalloc)          no_tcmalloc=1 ;;
+    --release)              release=1 ;;
     --prefix=*)             prefix=${1##--prefix=} ;;
     --ide=*)                ide=${1##--ide=} ;;
     -D)                     CFLAGS="$CFLAGS -D $2"; shift ;;
@@ -243,6 +246,9 @@ set -o pipefail
 
 
 
+if [ $run_cleanup ];
+then
+
 echo -e "\n\n\n======================= Release ========================" \
     | tee -a $LOG_FILE
 
@@ -260,6 +266,7 @@ echo $build_cmd | tee -a "../$LOG_FILE"
 eval $build_cmd | tee -a "../$LOG_FILE"
 cd $CLIPPER_HOME
 
+else
 
 echo -e "\n\n\n======================= Debug =========================" \
     | tee -a $LOG_FILE
@@ -277,6 +284,8 @@ build_cmd="$CMAKE \
 echo $build_cmd | tee -a ../$LOG_FILE
 eval $build_cmd | tee -a ../$LOG_FILE
 cd $CLIPPER_HOME
+
+fi
 
 # echo "*****************************************************"
 # echo "*                 Important Note                    *"

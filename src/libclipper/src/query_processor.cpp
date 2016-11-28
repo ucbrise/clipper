@@ -15,6 +15,7 @@
 #include <clipper/containers.hpp>
 #include <clipper/query_processor.hpp>
 #include <clipper/task_executor.hpp>
+#include <clipper/timers.hpp>
 
 #define UNREACHABLE() assert(false)
 
@@ -88,8 +89,8 @@ std::vector<Output> predictions,
   state_db->put(StateKey{feedback.label_, feedback.user_id_, hashkey}, serialized_new_state);
 }
 
-
-QueryProcessor::QueryProcessor(): state_db_(std::make_shared<StateDB>()) {
+QueryProcessor::QueryProcessor():
+  state_db_(std::make_shared<StateDB>()) {
   std::cout << "Query processor constructed" << std::endl;
 }
 
