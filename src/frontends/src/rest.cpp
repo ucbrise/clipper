@@ -34,6 +34,7 @@ std::vector<T> as_vector(ptree const& pt, ptree::key_type const& key) {
   return r;
 }
 
+/*
 std::vector<VersionedModelId> parse_model_json(ptree const& pt, ptree::key_type const& key) {
     std::vector<VersionedModelId> r;
     for (auto& entry: pt.get_child(key)) {
@@ -44,7 +45,7 @@ std::vector<VersionedModelId> parse_model_json(ptree const& pt, ptree::key_type 
         }
     }
     return r;
-}
+} */
 
 std::shared_ptr<Input> decode_input(InputType input_type, ptree& parsed_json) {
     std::shared_ptr<Input> result;
@@ -161,6 +162,7 @@ class RequestHandler {
  *  "input_type": <input type string>, "output_type": <output type string>,
  *  "policy": <policy name>, "latency": <latency SLO>}
  */
+/*
 void application_endpoint(std::shared_ptr<HttpServer::Response> response,
                           std::shared_ptr<HttpServer::Request> request,
                           RequestHandler& rh) {
@@ -196,17 +198,17 @@ void application_endpoint(std::shared_ptr<HttpServer::Response> response,
     } catch (const std::invalid_argument &e) {
         *response << "HTTP/1.1 200 OK\r\nContent-Length: " << std::strlen(e.what()) << "\r\n\r\n" << e.what() << "\n";
     }
-}
+} */
 
 int main() {
   QueryProcessor qp;
   RequestHandler rh(qp, "0.0.0.0", 1337, 1);
 
   /* Add function for admin */
-  auto application_fn = [&rh](std::shared_ptr<HttpServer::Response> response,
-                              std::shared_ptr<HttpServer::Request> request) {
-    application_endpoint(response, request, rh);
-  };
-  rh.add_endpoint("^/admin$", "POST", application_fn);
+  // auto application_fn = [&rh](std::shared_ptr<HttpServer::Response> response,
+  //                             std::shared_ptr<HttpServer::Request> request) {
+  //   application_endpoint(response, request, rh);
+  // };
+  // rh.add_endpoint("^/admin$", "POST", application_fn);
   rh.start_listening();
 }
