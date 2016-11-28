@@ -26,11 +26,20 @@ class HighPrecisionClock {
   }
 };
 
+/// Used for unit testing
 class ManualClock {
  public:
   ManualClock()
       : now_{std::chrono::time_point<
             std::chrono::high_resolution_clock>::min()} {}
+
+  ManualClock(const ManualClock &other) = default;
+  ManualClock &operator=(const ManualClock &other) = default;
+
+  ManualClock(ManualClock &&other) = default;
+  ManualClock &operator=(ManualClock &&other) = default;
+
+  ~ManualClock() = default;
 
   void increment(int increment_micros) {
     assert(increment_micros >= 0);
