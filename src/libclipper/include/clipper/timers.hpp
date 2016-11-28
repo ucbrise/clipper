@@ -15,6 +15,7 @@ namespace clipper {
 class HighPrecisionClock {
  public:
   HighPrecisionClock() = default;
+  ~HighPrecisionClock() = default;
   HighPrecisionClock(const HighPrecisionClock &) = default;
   HighPrecisionClock &operator=(const HighPrecisionClock &) = default;
 
