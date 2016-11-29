@@ -2,6 +2,8 @@
 cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
 project(libclipper VERSION 0.1.0 LANGUAGES CXX)
 
+link_directories(../protos)
+
 add_library(clipper
     src/query_processor.cpp
     src/datatypes.cpp
@@ -23,7 +25,7 @@ target_include_directories(clipper PUBLIC
     PRIVATE src)
 
 include_directories(${ProtobufIncludePath})
-link_directories(../protos)
+include_directories(../flatbuffers) # NOT CORRECT FOR AUTOMATIC COMPILATION
 
 target_link_libraries(clipper boost zmqcpp protos)
 

@@ -4,7 +4,7 @@
 #include <vector>
 
 #include <clipper/datatypes.hpp>
-#include "rpc.pb.h"
+#include "rpc_generated.h"
 
 namespace clipper {
 
@@ -60,26 +60,39 @@ void PredictionRequest::add_input(ByteBuffer serialized_input) {
 }
 
 const ByteBuffer PredictionRequest::serialize() const {
-  Request request;
-  for(auto input : serialized_inputs_) {
-    RequestData *requestData = request.add_request_data();
-    requestData->set_data(input.data(), input.size());
-  }
-  switch(input_type_) {
-    case InputType::Doubles:
-      request.set_data_type(clipper::DataType::DOUBLES);
-      break;
-    case InputType::Strings:
-      request.set_data_type(clipper::DataType::STRINGS);
-      break;
-  }
-  request.set_request_type(clipper::RequestType::PREDICT);
-  int size = request.ByteSize();
-  void *data = malloc(size);
-  request.SerializeToArray(data, size);
-  ByteBuffer serialize((uint8_t *) data, (uint8_t *) data + size);
-  free(data);
-  return serialize;
+  flatbuffers::FlatBufferBuilder fbb;
+  auto request = CreateRequest(fbb);
+  CreateRequest()
+  request.
+
+      CreateRequest(flatbuffers::FlatBufferBuilder &_fbb,
+                    RequestType request_type = RequestType_Predict,
+      DataType data_type = DataType_Ints,
+      flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<RequestData>>> request_data = 0)
+
+  RequestType requestType = RequestType_Predict;
+  DataType dataType = DataType_Doubles;
+
+//  Request request;
+//  for(auto input : serialized_inputs_) {
+//    RequestData *requestData = request.add_request_data();
+//    requestData->set_data(input.data(), input.size());
+//  }
+//  switch(input_type_) {
+//    case InputType::Doubles:
+//      request.set_data_type(clipper::DataType::DOUBLES);
+//      break;
+//    case InputType::Strings:
+//      request.set_data_type(clipper::DataType::STRINGS);
+//      break;
+//  }
+//  request.set_request_type(clipper::RequestType::PREDICT);
+//  int size = request.ByteSize();
+//  void *data = malloc(size);
+//  request.SerializeToArray(data, size);
+//  ByteBuffer serialize((uint8_t *) data, (uint8_t *) data + size);
+//  free(data);
+//  return serialize;
 }
 
 Query::Query(std::string label, long user_id, std::shared_ptr<Input> input,
