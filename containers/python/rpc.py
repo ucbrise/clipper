@@ -32,14 +32,17 @@ class Server(threading.Thread):
 		after = datetime.now()
 		print("proto parsing: %f" % ((after - before).microseconds))
 
+		if request.data_type != 1:
+			print("Invalid data type! Currently only supporting doubles!")
+			raise
+
 		# parse raw bytes into arrays of doubles
 		# TODO: this parsing is really slow
 		inputs = [np.array(array.array('d', bytes(data_item.data))) for data_item in request.request_data]
 
-		# preds = self.model.predict_floats(inputs)
-  # 		assert preds.dtype == np.dtype("float32")
-		# msg.set_content(preds.tobytes())
-		msg.set_content("ACK")
+		preds = self.model.predict_floats(inputs)
+  		assert preds.dtype == np.dtype("float32")
+		msg.set_content(preds.tobytes())
 		return msg
 
 	def run(self):

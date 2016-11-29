@@ -149,7 +149,7 @@ class TaskExecutor {
                 cur_batch;
 
             PredictionRequest request;
-            request.set_input_type(InputType::Doubles);
+            request.set_input_type(InputType::Doubles); //Needs to check type from input
             for (auto b : batch) {
               request.add_input(b.input_->serialize());
               cur_batch.emplace_back(b.model_, b.input_);
