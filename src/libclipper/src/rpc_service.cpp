@@ -7,6 +7,8 @@
 #include <clipper/rpc_service.hpp>
 #include <clipper/task_executor.hpp>
 
+#include "rpc.pb.h"
+
 using zmq::socket_t;
 using zmq::message_t;
 using zmq::context_t;
@@ -37,7 +39,7 @@ void RPCService::start(const string ip, const int port) {
 
 void RPCService::stop() { active_ = false; }
 
-int RPCService::send_message(const vector<const vector<uint8_t>> msg,
+int RPCService::send_message(const vector<uint8_t> msg,
                              const int container_id) {
   if (!active_) {
     std::cout << "Cannot send message to inactive RPCService instance. "
@@ -124,18 +126,22 @@ void RPCService::send_messages(
     socket.send(routing_identity.data(), routing_identity.size(), ZMQ_SNDMORE);
     socket.send("", 0, ZMQ_SNDMORE);
     socket.send(id_message, ZMQ_SNDMORE);
-    int cur_msg_num = 0;
-    // subtract 1 because we start counting at 0
-    int last_msg_num = std::get<2>(request).size() - 1;
-    for (const std::vector<uint8_t> &m : std::get<2>(request)) {
-      // send the sndmore flag unless we are on the last message part
-      if (cur_msg_num < last_msg_num) {
-        socket.send((uint8_t *)m.data(), m.size(), ZMQ_SNDMORE);
-      } else {
-        socket.send((uint8_t *)m.data(), m.size(), 0);
-      }
-      cur_msg_num += 1;
-    }
+    vector<uint8_t> content = std::get<2>(request);
+    socket.send(content.data(), content.size(), 0);
+//
+//
+//    int cur_msg_num = 0;
+//    // subtract 1 because we start counting at 0
+//    int last_msg_num = std::get<2>(request).size() - 1;
+//    for (const std::vector<uint8_t> &m : std::get<2>(request)) {
+//      // send the sndmore flag unless we are on the last message part
+//      if (cur_msg_num < last_msg_num) {
+//        socket.send((uint8_t *)m.data(), m.size(), ZMQ_SNDMORE);
+//      } else {
+//        socket.send((uint8_t *)m.data(), m.size(), 0);
+//      }
+//      cur_msg_num += 1;
+//    }
   }
 }
 

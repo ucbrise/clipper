@@ -5,6 +5,7 @@ import threading
 import numpy as np
 import array
 import struct
+import rpc_pb2
 from datetime import datetime
 
 class Server(threading.Thread):
@@ -23,9 +24,22 @@ class Server(threading.Thread):
 	def handle_message(self, msg):
 		# msg.set_content("Acknowledged!")
 		# preds = np.arange(len(msg.content), dtype='float32')
-		preds = self.model.predict_floats(msg.content)
-                assert preds.dtype == np.dtype("float32")
-		msg.set_content(preds.tobytes())
+
+		# DO PROTO PARSING HERE, TIME IT!
+		before = datetime.now()
+		request = rpc_pb2.Request()
+		request.ParseFromString(msg.content[0])
+		after = datetime.now()
+		print("proto parsing: %f" % ((after - before).microseconds))
+
+		# parse raw bytes into arrays of doubles
+		# TODO: this parsing is really slow
+		inputs = [np.array(array.array('d', bytes(data_item.data))) for data_item in request.request_data]
+
+		# preds = self.model.predict_floats(inputs)
+  # 		assert preds.dtype == np.dtype("float32")
+		# msg.set_content(preds.tobytes())
+		msg.set_content("ACK")
 		return msg
 
 	def run(self):
@@ -44,12 +58,9 @@ class Server(threading.Thread):
 			# list of byte arrays
 			raw_content = self.socket.recv_multipart()
 			t2 = datetime.now()
-			# parse raw bytes into arrays of doubles
-			# TODO: this parsing is really slow
-			inputs = [np.array(array.array('d', bytes(data))) for data in raw_content]
+			received_msg = Message(msg_id_bytes, raw_content)
 			t3 = datetime.now()
 			# print("received %d inputs" % len(raw_content))
-			received_msg = Message(msg_id_bytes, inputs)
 			response = self.handle_message(received_msg)
 			t4 = datetime.now()
 			response.send(self.socket)

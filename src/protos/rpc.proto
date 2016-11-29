@@ -1,0 +1,23 @@
+syntax = "proto2";
+
+package clipper;
+
+enum RequestType {
+	PREDICT = 0;
+}
+
+enum DataType {
+    INTS = 0;
+	DOUBLES = 1;
+	STRINGS = 2;
+}
+
+message RequestData {
+    optional bytes data = 1;
+}
+
+message Request {
+	optional RequestType request_type = 1;
+	optional DataType data_type = 2;
+	repeated RequestData request_data = 3;
+}

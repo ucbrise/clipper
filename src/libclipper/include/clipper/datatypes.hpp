@@ -11,17 +11,17 @@ using VersionedModelId = std::pair<std::string, int>;
 using QueryId = long;
 using FeedbackAck = bool;
 
-size_t versioned_model_hash(const VersionedModelId& key);
+size_t versioned_model_hash(const VersionedModelId &key);
 
 class Output {
  public:
   ~Output() = default;
   explicit Output() = default;
-  Output(const Output&) = default;
-  Output& operator=(const Output&) = default;
+  Output(const Output &) = default;
+  Output &operator=(const Output &) = default;
 
-  Output(Output&&) = default;
-  Output& operator=(Output&&) = default;
+  Output(Output &&) = default;
+  Output &operator=(Output &&) = default;
   Output(double y_hat, VersionedModelId versioned_model);
   double y_hat_;
   VersionedModelId versioned_model_;
@@ -44,12 +44,12 @@ class DoubleVector : public Input {
   explicit DoubleVector(std::vector<double> data);
 
   // Disallow copy
-  DoubleVector(DoubleVector& other) = delete;
-  DoubleVector& operator=(DoubleVector& other) = delete;
+  DoubleVector(DoubleVector &other) = delete;
+  DoubleVector &operator=(DoubleVector &other) = delete;
 
   // move constructors
-  DoubleVector(DoubleVector&& other) = default;
-  DoubleVector& operator=(DoubleVector&& other) = default;
+  DoubleVector(DoubleVector &&other) = default;
+  DoubleVector &operator=(DoubleVector &&other) = default;
 
   const ByteBuffer serialize() const;
 
@@ -57,6 +57,34 @@ class DoubleVector : public Input {
 
  private:
   std::vector<double> data_;
+};
+
+enum class InputType {
+  Doubles,
+  Strings
+};
+
+class PredictionRequest {
+ public:
+  PredictionRequest() {};
+  explicit PredictionRequest(InputType input_type, std::vector<ByteBuffer> serialized_inputs)
+      : input_type_(input_type), serialized_inputs_(serialized_inputs) {};
+
+  // Disallow copy
+  PredictionRequest(PredictionRequest &other) = delete;
+  PredictionRequest &operator=(PredictionRequest &other) = delete;
+
+  // move constructors
+  PredictionRequest(PredictionRequest &&other) = default;
+  PredictionRequest &operator=(PredictionRequest &&other) = default;
+
+  const ByteBuffer serialize() const;
+  void set_input_type(const InputType data_type);
+  void add_input(const ByteBuffer serialized_input);
+
+ protected:
+  InputType input_type_;
+  std::vector<ByteBuffer> serialized_inputs_;
 };
 
 class Query {
@@ -70,12 +98,12 @@ class Query {
   // Note that it should be relatively cheap to copy queries because
   // the actual input won't be copied
   // copy constructors
-  Query(const Query&) = default;
-  Query& operator=(const Query&) = default;
+  Query(const Query &) = default;
+  Query &operator=(const Query &) = default;
 
   // move constructors
-  Query(Query&&) = default;
-  Query& operator=(Query&&) = default;
+  Query(Query &&) = default;
+  Query &operator=(Query &&) = default;
 
   // Used to provide a namespace for queries. The expected
   // use is to distinguish queries coming from different
@@ -96,12 +124,12 @@ class Response {
            std::vector<VersionedModelId> models_used);
 
   // default copy constructors
-  Response(const Response&) = default;
-  Response& operator=(const Response&) = default;
+  Response(const Response &) = default;
+  Response &operator=(const Response &) = default;
 
   // default move constructors
-  Response(Response&&) = default;
-  Response& operator=(Response&&) = default;
+  Response(Response &&) = default;
+  Response &operator=(Response &&) = default;
 
   std::string debug_string() const noexcept;
 
@@ -121,11 +149,11 @@ class FeedbackQuery {
                 std::string selection_policy,
                 std::vector<VersionedModelId> candidate_models);
 
-  FeedbackQuery(const FeedbackQuery&) = default;
-  FeedbackQuery& operator=(const FeedbackQuery&) = default;
+  FeedbackQuery(const FeedbackQuery &) = default;
+  FeedbackQuery &operator=(const FeedbackQuery &) = default;
 
-  FeedbackQuery(FeedbackQuery&&) = default;
-  FeedbackQuery& operator=(FeedbackQuery&&) = default;
+  FeedbackQuery(FeedbackQuery &&) = default;
+  FeedbackQuery &operator=(FeedbackQuery &&) = default;
 
   // Used to provide a namespace for queries. The expected
   // use is to distinguish queries coming from different
@@ -144,13 +172,13 @@ class PredictTask {
   PredictTask(std::shared_ptr<Input> input, VersionedModelId model,
               float utility, QueryId query_id, long latency_slo_micros);
 
-  PredictTask(const PredictTask& other) = default;
+  PredictTask(const PredictTask &other) = default;
 
-  PredictTask& operator=(const PredictTask& other) = default;
+  PredictTask &operator=(const PredictTask &other) = default;
 
-  PredictTask(PredictTask&& other) = default;
+  PredictTask(PredictTask &&other) = default;
 
-  PredictTask& operator=(PredictTask&& other) = default;
+  PredictTask &operator=(PredictTask &&other) = default;
 
   std::shared_ptr<Input> input_;
   VersionedModelId model_;
@@ -168,13 +196,13 @@ class FeedbackTask {
   FeedbackTask(Feedback feedback, VersionedModelId model, QueryId query_id,
                long latency_slo_micros);
 
-  FeedbackTask(const FeedbackTask& other) = default;
+  FeedbackTask(const FeedbackTask &other) = default;
 
-  FeedbackTask& operator=(const FeedbackTask& other) = default;
+  FeedbackTask &operator=(const FeedbackTask &other) = default;
 
-  FeedbackTask(FeedbackTask&& other) = default;
+  FeedbackTask(FeedbackTask &&other) = default;
 
-  FeedbackTask& operator=(FeedbackTask&& other) = default;
+  FeedbackTask &operator=(FeedbackTask &&other) = default;
 
   Feedback feedback_;
   VersionedModelId model_;

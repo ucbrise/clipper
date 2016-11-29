@@ -23,8 +23,7 @@ namespace clipper {
 
 using RPCResponse = std::pair<const int, vector<uint8_t>>;
 /// Tuple of container_id, message_id, vector of messages
-using RPCRequest = std::tuple<const int, const int,
-                              const std::vector<const std::vector<uint8_t>>>;
+using RPCRequest = std::tuple<const int, const int, const std::vector<uint8_t>>;
 
 class RPCService {
  public:
@@ -50,7 +49,7 @@ class RPCService {
   /// @param msg A vector of individual messages to send to this container.
   /// The messages will be sent as a single, multi-part ZeroMQ message so
   /// it is very efficient.
-  int send_message(const std::vector<const std::vector<uint8_t>> msg,
+  int send_message(const std::vector<uint8_t> msg,
                    const int container_id);
 
  private:

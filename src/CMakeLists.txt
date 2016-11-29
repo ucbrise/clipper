@@ -47,6 +47,7 @@ add_definitions( -DBOOST_THREAD_VERSION=4)
 
 # Targets that we develop
 enable_testing()
+add_subdirectory(protos)
 add_subdirectory(libclipper)
 add_subdirectory(frontends)
 add_subdirectory(libs)

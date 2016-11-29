@@ -6,10 +6,9 @@
 #include <clipper/datatypes.hpp>
 
 void benchmark() {
-  clipper::RPCService rpc_service;
-  
   auto containers = std::make_shared<clipper::ActiveContainers>();
-  rpc_service.start("127.0.0.1", 8000, containers);
+  clipper::RPCService rpc_service(containers);
+  rpc_service.start("127.0.0.1", 8000);
   usleep(5000000);
 
   std::unordered_map<int, long> times_map;
@@ -35,16 +34,17 @@ void benchmark() {
       }
     }
   }).detach();
-  
-    // broken up messages
-  std::vector<const std::vector<uint8_t>> data;
+
+  clipper::PredictionRequest request;
+  request.set_input_type(clipper::InputType::Doubles);
+
   for (int num_inputs = 0; num_inputs < 500; ++num_inputs) {
     std::vector<double> cur_data;
     for (int j = 0; j < 784; ++j) {
       cur_data.push_back(j);
     }
     clipper::DoubleVector d(cur_data);
-    data.push_back(d.serialize());
+    request.add_input(d.serialize());
   }
   
   // one giant message, batch=1
@@ -66,7 +66,7 @@ void benchmark() {
     long start = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();
 //    int container_id = containers->get_model_replicas_snapshot(containers->get_known_models()[0])[0]->container_id_;
-    int id = rpc_service.send_message(data, 0);
+    int id = rpc_service.send_message(request.serialize(), 0);
 //    std::cout << "send message " << id << std::endl;
     times_map.emplace(id, start);
     usleep(50000);

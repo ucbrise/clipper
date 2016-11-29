@@ -2,7 +2,6 @@
 cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
 project(libclipper VERSION 0.1.0 LANGUAGES CXX)
 
-
 add_library(clipper
     src/query_processor.cpp
     src/datatypes.cpp
@@ -23,8 +22,10 @@ target_include_directories(clipper PUBLIC
     $<INSTALL_INTERFACE:include>
     PRIVATE src)
 
+include_directories(${ProtobufIncludePath})
+link_directories(../protos)
 
-target_link_libraries(clipper boost zmqcpp)
+target_link_libraries(clipper boost zmqcpp protos)
 
 # This makes the project importable from the build directory
 export(TARGETS clipper FILE ClipperConfig.cmake)
