@@ -1,0 +1,68 @@
+Tue Nov 22 17:30:05 PST 2016
+System Information: 
+Darwin Kernel Version 16.1.0: Thu Oct 13 21:26:57 PDT 2016; root:xnu-3789.21.3~60/RELEASE_X86_64
+Compiler Information: 
+Apple LLVM version 8.0.0 (clang-800.0.42.1)
+Target: x86_64-apple-darwin16.1.0
+Thread model: posix
+InstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin
+Apple LLVM version 8.0.0 (clang-800.0.42.1)
+Target: x86_64-apple-darwin16.1.0
+Thread model: posix
+InstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin
+cmake version 3.7.0
+
+CMake suite maintained and supported by Kitware (kitware.com/cmake).
+
+
+
+======================= Release ========================
+cmake -G Xcode -D CMAKE_BUILD_TYPE=Release ../
+-- Found ZeroMQ: /usr/local/lib/libzmq.dylib (found version "4.2.0") 
+-- Looking for C++ include pthread.h
+-- Looking for C++ include pthread.h - found
+-- Looking for pthread_create
+-- Looking for pthread_create - found
+-- Found Threads: TRUE  
+-- Boost version: 1.60.0
+-- Found the following Boost libraries:
+--   thread
+--   system
+--   chrono
+--   date_time
+--   atomic
+--   serialization
+-- Found ZeroMQ: /usr/local/lib/libzmq.dylib (found suitable version "4.2.0", minimum required is "4.1.6") 
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /Users/yikaluo/Research/Clipper/clipper/release
+
+
+
+======================= Debug =========================
+cmake -G Xcode -D CMAKE_BUILD_TYPE=Debug ../
+-- The CXX compiler identification is AppleClang 8.0.0.8000042
+-- Check for working CXX compiler: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++
+-- Check for working CXX compiler: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++ -- works
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found ZeroMQ: /usr/local/lib/libzmq.dylib (found version "4.2.0") 
+-- Looking for C++ include pthread.h
+-- Looking for C++ include pthread.h - found
+-- Looking for pthread_create
+-- Looking for pthread_create - found
+-- Found Threads: TRUE  
+-- Boost version: 1.60.0
+-- Found the following Boost libraries:
+--   thread
+--   system
+--   chrono
+--   date_time
+--   atomic
+--   serialization
+-- Found ZeroMQ: /usr/local/lib/libzmq.dylib (found suitable version "4.2.0", minimum required is "4.1.6") 
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /Users/yikaluo/Research/Clipper/clipper/debug

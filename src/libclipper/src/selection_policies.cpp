@@ -129,7 +129,8 @@ Exp3State Exp3Policy::process_feedback(
   std::string Exp3Policy::serialize_state(Exp3State state) {
   std::stringstream ss;
   boost::archive::binary_oarchive oa(ss);
-  oa << state;
+  oa << state.first;
+  oa << state.second;
   return ss.str();
 }
 
@@ -138,9 +139,11 @@ Exp3State Exp3Policy::process_feedback(
   std::stringstream ss;
   ss << bytes;
   boost::archive::binary_iarchive ia(ss);
-  Exp3State state;
-  ia >> state;
-  return state;
+  double num;
+  Map map;
+  ia >> num;
+  ia >> map;
+  return std::make_pair(num, map);
 }
 
 
