@@ -40,7 +40,7 @@ class QueryProcessor {
   std::atomic<long> query_counter_{0};
   std::shared_ptr<StateDB> state_db_;
   TaskExecutor<PowerTwoChoicesScheduler> task_executor_;
-  TimerSystem timer_system_;
+  TimerSystem<HighPrecisionClock> timer_system_{HighPrecisionClock()};
 };
 
 }  // namespace clipper

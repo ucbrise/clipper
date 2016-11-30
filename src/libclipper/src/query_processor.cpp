@@ -14,6 +14,7 @@
 #include <clipper/containers.hpp>
 #include <clipper/query_processor.hpp>
 #include <clipper/task_executor.hpp>
+#include <clipper/timers.hpp>
 
 #define UNREACHABLE() assert(false)
 
