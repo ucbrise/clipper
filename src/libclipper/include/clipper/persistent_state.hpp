@@ -1,12 +1,12 @@
 #ifndef CLIPPER_LIB_PERSISTENT_STATE_H
 #define CLIPPER_LIB_PERSISTENT_STATE_H
 
-#include <boost/optional.hpp>
 #include <functional>
 #include <tuple>
 #include <unordered_map>
-// #include <shared_mutex>
-#include <mutex>
+
+#include <boost/optional.hpp>
+#include <boost/thread.hpp>
 
 #include "datatypes.hpp"
 
@@ -40,9 +40,7 @@ class StateDB {
   void put(StateKey key, ByteBuffer value);
 
  private:
-  // TODO(shared_mutex): replace m_ with a shared_mutex
-  // std::shared_timed_mutex m_;
-  std::mutex m_;
+  boost::shared_mutex m_;
   StateMap state_table_{5, state_key_hash};
 };
 
