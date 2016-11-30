@@ -4,7 +4,7 @@
 
 #include <memory>
 #include <mutex>
-#include <shared_mutex>
+// #include <shared_mutex>
 #include <unordered_map>
 
 #include <boost/thread.hpp>
@@ -72,10 +72,11 @@ class ActiveContainers {
   std::vector<VersionedModelId> get_known_models();
 
  private:
+  // TODO(shared_mutex): replace m_ with a shared_mutex
   // Protects the map of task queues. Must acquire an exclusive
   // lock to modify request_queues_ and a shared_lock when accessing
   // the queues. The queues are independently threadsafe.
-  std::shared_timed_mutex m_;
+  std::mutex m_;
 
   // Each queue corresponds to a single model container.
   std::unordered_map<VersionedModelId,

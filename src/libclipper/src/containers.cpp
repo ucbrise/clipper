@@ -1,7 +1,7 @@
 
+#include <iostream>
 #include <memory>
 #include <random>
-#include <iostream>
 // uncomment to disable assert()
 // #define NDEBUG
 #include <cassert>
@@ -33,7 +33,8 @@ void ActiveContainers::add_container(VersionedModelId model, int id) {
   std::cout << "Adding new container: "
             << "model: " << model.first << ", version: " << model.second
             << ", ID: " << id << std::endl;
-  std::unique_lock<std::shared_timed_mutex> l{m_};
+  // std::unique_lock<std::shared_timed_mutex> l{m_};
+  std::unique_lock<std::mutex> l{m_};
   auto new_container = std::make_shared<ModelContainer>(model, id);
   auto entry = containers_[new_container->model_];
   entry.push_back(new_container);
@@ -43,7 +44,8 @@ void ActiveContainers::add_container(VersionedModelId model, int id) {
 
 std::vector<std::shared_ptr<ModelContainer>>
 ActiveContainers::get_model_replicas_snapshot(const VersionedModelId &model) {
-  std::shared_lock<std::shared_timed_mutex> l{m_};
+  // std::shared_lock<std::shared_timed_mutex> l{m_};
+  std::unique_lock<std::mutex> l{m_};
   auto replicas = containers_.find(model);
   if (replicas != containers_.end()) {
     return replicas->second;
@@ -53,7 +55,8 @@ ActiveContainers::get_model_replicas_snapshot(const VersionedModelId &model) {
 }
 
 std::vector<VersionedModelId> ActiveContainers::get_known_models() {
-  std::shared_lock<std::shared_timed_mutex> l{m_};
+  // std::shared_lock<std::shared_timed_mutex> l{m_};
+  std::unique_lock<std::mutex> l{m_};
   std::vector<VersionedModelId> keys;
   for (auto m : containers_) {
     keys.push_back(m.first);
