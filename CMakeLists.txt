@@ -19,7 +19,7 @@ include(FindZeroMQ)
 # Include Boost as an imported target
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost 1.62.0 REQUIRED COMPONENTS thread system chrono date_time atomic)
+find_package(Boost 1.60.0 REQUIRED COMPONENTS thread system chrono date_time atomic serialization)
 # message(STATUS "Boost_INCLUDE_DIR: " ${Boost_INCLUDE_DIRS})
 # message(STATUS "Boost_LINK_DIR: " ${Boost_LIBRARY_DIRS})
 # INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})

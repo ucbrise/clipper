@@ -115,12 +115,12 @@ int main() {
       //          int version = pt.get<int>("version");
 
       std::shared_ptr<Input> input = std::make_shared<DoubleVector>(inputs);
-      Output output{y, std::make_pair(vm.get<std::string>("name"),
-                                      vm.get<int>("version"))};
+      // Output output{y, {std::make_pair(vm.get<std::string>("name"),
+      //                                 vm.get<int>("version"))}};
       auto update =
           q.update({"label",
                     uid,
-                    {std::make_pair(input, output)},
+                    Feedback(input, y),
                     "simple_policy",
                     {std::make_pair("m", 1), std::make_pair("j", 1)}});
       update.then([response](boost::future<FeedbackAck> f) {
