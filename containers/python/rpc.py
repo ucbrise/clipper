@@ -6,6 +6,10 @@ import numpy as np
 import array
 import struct
 import rpc_pb2
+import flatbuffers
+import clipper_fbs.Request as FbsRequest
+import clipper_fbs.PredictRequest
+import clipper_fbs.ByteVec
 from datetime import datetime
 
 class Server(threading.Thread):
@@ -25,19 +29,32 @@ class Server(threading.Thread):
 		# msg.set_content("Acknowledged!")
 		# preds = np.arange(len(msg.content), dtype='float32')
 
+		request = FbsRequest.Request.GetRootAsRequest(msg.content[0], 0)
+		request_type = request.RequestType()
+		# If we have a prediction request, process it
+		if request_type == 0:
+			prediction_request = request.PredictionRequest()
+			data_type = prediction_request.DataType()
+			
+			if data_type == 4:
+				print("Found byte data!")
+				first_bytes = prediction_request.ByteData(0)
+				print(first_bytes.DataLength())
+				print(first_bytes.Data(1))
+
 		# DO PROTO PARSING HERE, TIME IT!
-		before = datetime.now()
-		request = rpc_pb2.Request()
-		request.ParseFromString(msg.content[0])
-		after = datetime.now()
-		print("proto parsing: %f" % ((after - before).microseconds))
+		# before = datetime.now()
+		# request = rpc_pb2.Request()
+		# request.ParseFromString(msg.content[0])
+		# after = datetime.now()
+		# print("proto parsing: %f" % ((after - before).microseconds))
 
-		# parse raw bytes into arrays of doubles
-		# TODO: this parsing is really slow
-		inputs = [np.array(array.array('d', bytes(data_item.data))) for data_item in request.request_data]
+		# # parse raw bytes into arrays of doubles
+		# # TODO: this parsing is really slow
+		# inputs = [np.array(array.array('d', bytes(data_item.data))) for data_item in request.request_data]
 
-		# preds = self.model.predict_floats(inputs)
-  # 		assert preds.dtype == np.dtype("float32")
+		# # preds = self.model.predict_floats(inputs)
+  # # 		assert preds.dtype == np.dtype("float32")
 		# msg.set_content(preds.tobytes())
 		msg.set_content("ACK")
 		return msg

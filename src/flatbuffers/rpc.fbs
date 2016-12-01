@@ -1,0 +1,51 @@
+namespace clipper;
+
+enum RequestType : byte { Predict }
+enum DataType : byte {
+    Ints,
+    Floats,
+    Doubles,
+    Strings,
+    Bytes,
+}
+
+table IntVec {
+    data:[int];
+}
+
+table FloatVec {
+    data:[float];
+}
+
+table DoubleVec {
+    data:[double];
+}
+
+table StringVec {
+    data:[string];
+}
+
+table ByteVec {
+    data:[ubyte];
+}
+
+table Request {
+    request_type:RequestType;
+    prediction_request:PredictRequest;
+    feedback_request:FeedbackRequest;
+}
+
+table PredictRequest {
+    data_type:DataType;
+    integer_data:[IntVec];
+    float_data:[FloatVec];
+    double_data:[DoubleVec];
+    string_data:[StringVec];
+    byte_data:[ByteVec];
+}
+
+table FeedbackRequest {
+
+}
+
+root_type Request;

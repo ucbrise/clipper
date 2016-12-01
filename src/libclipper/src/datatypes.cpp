@@ -61,38 +61,34 @@ void PredictionRequest::add_input(ByteBuffer serialized_input) {
 
 const ByteBuffer PredictionRequest::serialize() const {
   flatbuffers::FlatBufferBuilder fbb;
-  auto request = CreateRequest(fbb);
-  CreateRequest()
-  request.
 
-      CreateRequest(flatbuffers::FlatBufferBuilder &_fbb,
-                    RequestType request_type = RequestType_Predict,
-      DataType data_type = DataType_Ints,
-      flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<RequestData>>> request_data = 0)
+  std::vector<flatbuffers::Offset<ByteVec>> request_data;
+  for(auto input : serialized_inputs_) {
+    auto input_bytes = CreateByteVecDirect(fbb, &input);
+    request_data.push_back(input_bytes);
+  }
+  auto table_vector = fbb.CreateVector(request_data);
 
-  RequestType requestType = RequestType_Predict;
-  DataType dataType = DataType_Doubles;
+  PredictRequestBuilder prediction_builder(fbb);
+  switch(input_type_) {
+    case InputType::Doubles:
+      prediction_builder.add_data_type(DataType_Bytes);
+      break;
+    case InputType::Strings:
+      prediction_builder.add_data_type(DataType_Strings);
+      break;
+  }
+  prediction_builder.add_byte_data(table_vector);
+  auto prediction_request = prediction_builder.Finish();
 
-//  Request request;
-//  for(auto input : serialized_inputs_) {
-//    RequestData *requestData = request.add_request_data();
-//    requestData->set_data(input.data(), input.size());
-//  }
-//  switch(input_type_) {
-//    case InputType::Doubles:
-//      request.set_data_type(clipper::DataType::DOUBLES);
-//      break;
-//    case InputType::Strings:
-//      request.set_data_type(clipper::DataType::STRINGS);
-//      break;
-//  }
-//  request.set_request_type(clipper::RequestType::PREDICT);
-//  int size = request.ByteSize();
-//  void *data = malloc(size);
-//  request.SerializeToArray(data, size);
-//  ByteBuffer serialize((uint8_t *) data, (uint8_t *) data + size);
-//  free(data);
-//  return serialize;
+  RequestBuilder request_builder(fbb);
+  request_builder.add_request_type(RequestType_Predict);
+  request_builder.add_prediction_request(prediction_request);
+  auto request = request_builder.Finish();
+
+  FinishRequestBuffer(fbb, request);
+
+  return std::vector<uint8_t>(fbb.GetBufferPointer(), fbb.GetCurrentBufferPointer() + fbb.GetSize());
 }
 
 Query::Query(std::string label, long user_id, std::shared_ptr<Input> input,
