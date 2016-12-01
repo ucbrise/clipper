@@ -1,6 +1,7 @@
 #ifndef CLIPPER_LIB_DATATYPES_H
 #define CLIPPER_LIB_DATATYPES_H
 
+#include <memory>
 #include <string>
 #include <vector>
 

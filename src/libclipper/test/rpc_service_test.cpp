@@ -21,7 +21,7 @@ class MockZmqSocket {};
 
 TEST(RPCServiceTests, SendBeforeStart) {
   RPCService rpc{std::shared_ptr<ActiveContainers>()};
-  EXPECT_EQ(-1, rpc.send_message(vector<const vector<uint8_t>>(), 7));
+  EXPECT_EQ(-1, rpc.send_message(vector<vector<uint8_t>>(), 7));
 }
 
 }  // namespace
