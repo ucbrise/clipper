@@ -3,7 +3,6 @@
 
 #include <memory>
 #include <mutex>
-#include <shared_mutex>
 #include <unordered_map>
 
 #include <boost/thread.hpp>
@@ -130,10 +129,11 @@ class TaskExecutor {
   void send_messages() {
     int max_batch_size = 5;
     while (active_) {
-//      std::vector<std::pair<
-//          int,
-//          std::vector<std::pair<VersionedModelId, std::shared_ptr<Input>>>>>
-//          new_messages;
+      //      std::vector<std::pair<
+      //          int,
+      //          std::vector<std::pair<VersionedModelId,
+      //          std::shared_ptr<Input>>>>>
+      //          new_messages;
       auto current_active_models = active_containers_->get_known_models();
       for (auto model : current_active_models) {
         auto containers =
@@ -141,8 +141,10 @@ class TaskExecutor {
         for (auto c : containers) {
           auto batch = c->dequeue_predictions(max_batch_size);
           if (batch.size() > 0) {
-            // move the lock up here, so that nothing can pull from the inflight_messages_
-            // map between the time a message is sent and when it gets inserted into the map
+            // move the lock up here, so that nothing can pull from the
+            // inflight_messages_
+            // map between the time a message is sent and when it gets inserted
+            // into the map
             std::unique_lock<std::mutex> l(inflight_messages_mutex_);
             std::vector<const std::vector<uint8_t>> serialized_inputs;
             std::vector<std::pair<VersionedModelId, std::shared_ptr<Input>>>
@@ -172,20 +174,20 @@ class TaskExecutor {
       std::unique_lock<std::mutex> l(inflight_messages_mutex_);
       for (auto r : responses) {
         auto keys = inflight_messages_[r.first];
-        
+
         inflight_messages_.erase(r.first);
         std::vector<float> deserialized_outputs = deserialize_outputs(r.second);
         assert(deserialized_outputs.size() == keys.size());
         int batch_size = keys.size();
         for (int batch_num = 0; batch_num < batch_size; ++batch_num) {
-          cache_.put(keys[batch_num].first, keys[batch_num].second,
-                    Output{deserialized_outputs[batch_num], keys[batch_num].first});
+          cache_.put(
+              keys[batch_num].first, keys[batch_num].second,
+              Output{deserialized_outputs[batch_num], keys[batch_num].first});
         }
       }
     }
   }
 };
-
 
 class PowerTwoChoicesScheduler {
  public:
