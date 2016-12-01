@@ -1,11 +1,12 @@
 #ifndef CLIPPER_LIB_PERSISTENT_STATE_H
 #define CLIPPER_LIB_PERSISTENT_STATE_H
 
-#include <boost/optional.hpp>
 #include <functional>
 #include <tuple>
 #include <unordered_map>
-#include <shared_mutex>
+
+#include <boost/optional.hpp>
+#include <boost/thread.hpp>
 
 #include "datatypes.hpp"
 
@@ -22,27 +23,25 @@ using StateMap =
 // Threadsafe, non-copyable state storage
 class StateDB {
  public:
- 
   StateDB();
   ~StateDB() = default;
-  
+
   // Disallow copies because of the mutex
   StateDB(const StateDB&) = delete;
   StateDB& operator=(const StateDB&) = delete;
-  
+
   StateDB(StateDB&&) = default;
-  
+
   StateDB& operator=(StateDB&&) = default;
-  
+
   // Non-const because we need to lock a mutex
   boost::optional<ByteBuffer> get(const StateKey& key);
 
   void put(StateKey key, ByteBuffer value);
 
  private:
-  std::shared_timed_mutex m_;
+  boost::shared_mutex m_;
   StateMap state_table_{5, state_key_hash};
-  
 };
 
 }  // namespace clipper
