@@ -146,7 +146,8 @@ class TaskExecutor {
             // map between the time a message is sent and when it gets inserted
             // into the map
             std::unique_lock<std::mutex> l(inflight_messages_mutex_);
-            std::vector<const std::vector<uint8_t>> serialized_inputs;
+            // std::vector<const std::vector<uint8_t>> serialized_inputs;
+            std::vector<std::vector<uint8_t>> serialized_inputs;
             std::vector<std::pair<VersionedModelId, std::shared_ptr<Input>>>
                 cur_batch;
             for (auto b : batch) {

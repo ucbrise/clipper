@@ -1,11 +1,11 @@
-#include <iostream>
-#include <boost/thread.hpp>
 #include <boost/bimap.hpp>
+#include <boost/thread.hpp>
+#include <iostream>
 
-#include <clipper/util.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/rpc_service.hpp>
 #include <clipper/task_executor.hpp>
+#include <clipper/util.hpp>
 
 using zmq::socket_t;
 using zmq::message_t;
@@ -19,8 +19,7 @@ namespace clipper {
 RPCService::RPCService(std::shared_ptr<ActiveContainers> containers)
     : request_queue_(std::make_shared<Queue<RPCRequest>>()),
       response_queue_(std::make_shared<Queue<RPCResponse>>()),
-      active_containers_(std::move(containers))
-       {}
+      active_containers_(std::move(containers)) {}
 
 RPCService::~RPCService() { stop(); }
 
@@ -37,7 +36,7 @@ void RPCService::start(const string ip, const int port) {
 
 void RPCService::stop() { active_ = false; }
 
-int RPCService::send_message(const vector<const vector<uint8_t>> msg,
+int RPCService::send_message(const vector<vector<uint8_t>> msg,
                              const int container_id) {
   if (!active_) {
     std::cout << "Cannot send message to inactive RPCService instance. "
