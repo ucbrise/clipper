@@ -37,6 +37,7 @@ class Input {
   // used by RPC system
   virtual const ByteBuffer serialize() const = 0;
   virtual size_t hash() const = 0;
+
 };
 
 class DoubleVector : public Input {

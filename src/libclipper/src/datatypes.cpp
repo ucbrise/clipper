@@ -8,7 +8,7 @@
 
 namespace clipper {
 
-size_t versioned_model_hash(const VersionedModelId& key) {
+size_t versioned_model_hash(const VersionedModelId &key) {
   return std::hash<std::string>()(key.first) ^ std::hash<int>()(key.second);
 }
 //
@@ -34,8 +34,8 @@ DoubleVector::DoubleVector(std::vector<double> data) : data_(std::move(data)) {}
 
 const ByteBuffer DoubleVector::serialize() const {
   std::vector<uint8_t> bytes;
-  for (auto&& i : data_) {
-    auto cur_bytes = reinterpret_cast<const uint8_t*>(&i);
+  for (auto &&i : data_) {
+    auto cur_bytes = reinterpret_cast<const uint8_t *>(&i);
     for (unsigned long j = 0; j < sizeof(double); ++j) {
       bytes.push_back(cur_bytes[j]);
     }
@@ -63,21 +63,34 @@ const ByteBuffer PredictionRequest::serialize() const {
   flatbuffers::FlatBufferBuilder fbb;
 
   std::vector<flatbuffers::Offset<ByteVec>> request_data;
-  for(auto input : serialized_inputs_) {
-    auto input_bytes = CreateByteVecDirect(fbb, &input);
-    request_data.push_back(input_bytes);
+  uint8_t *buffer = (uint8_t *) malloc(6272);
+
+  long start = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::system_clock::now().time_since_epoch()).count();
+
+  for(int i = 0; i < 500; i++) {
+    auto vec = fbb.CreateUninitializedVector(6272, &buffer);;
+    memcpy(buffer, serialized_inputs_[i].data(), serialized_inputs_[i].size());
+
+    auto byte_vec = CreateByteVec(fbb, vec);
+    request_data.push_back(byte_vec);
   }
+
+  long stop = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::system_clock::now().time_since_epoch()).count();
+
+  std::cout << stop - start << std::endl;
+
   auto table_vector = fbb.CreateVector(request_data);
 
   PredictRequestBuilder prediction_builder(fbb);
-  switch(input_type_) {
-    case InputType::Doubles:
-      prediction_builder.add_data_type(DataType_Bytes);
+  switch (input_type_) {
+    case InputType::Doubles:prediction_builder.add_data_type(DataType_Bytes);
       break;
-    case InputType::Strings:
-      prediction_builder.add_data_type(DataType_Strings);
+    case InputType::Strings:prediction_builder.add_data_type(DataType_Strings);
       break;
   }
+
   prediction_builder.add_byte_data(table_vector);
   auto prediction_request = prediction_builder.Finish();
 
