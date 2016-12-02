@@ -40,3 +40,14 @@ On a Mac you can install these with
 brew install cmake boost --c++11 zeromq
 ```
 
+## For Developers
+
+Before submitting a pull request, run use Clang-Format to format it with the
+Google style guide. Many editors have clang-format integrations so that it
+will run automatically when you save a file, or you can run it from the command
+line with `clang-format -style=Google -i my_edited_header.hpp my_edited_file.cpp
+my_other_edited_file.cpp`. Alternatively, to run it on the entire source directory:
+```
+$ find src/ -name '*.cpp' -o -name '*.hpp' | xargs clang-format -style=Google -i
+```
+
