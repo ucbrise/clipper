@@ -38,6 +38,7 @@ add_executable(libclippertests EXCLUDE_FROM_ALL
     test/rpc_service_test.cpp
     test/timers_test.cpp
     )
+add_sanitizers(libclippertests)
 target_link_libraries(libclippertests clipper gtest gmock_main)
 # add_test(NAME rpc_service_test COMMAND rpc_service_test)
 add_dependencies(unittests libclippertests)
