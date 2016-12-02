@@ -79,7 +79,7 @@ std::shared_ptr<ModelContainer> PowerTwoChoicesScheduler::assign_container(
 
 std::vector<float> deserialize_outputs(std::vector<uint8_t> bytes) {
   assert(bytes.size() % sizeof(float) == 0);
-//  uint8_t *bytes_ptr = bytes.data();  // point to beginning of memory
+  //  uint8_t *bytes_ptr = bytes.data();  // point to beginning of memory
   float *float_array = reinterpret_cast<float *>(bytes.data());
   std::vector<float> outputs(float_array,
                              float_array + bytes.size() / sizeof(float));
