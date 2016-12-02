@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
 ### ZeroMQ
 ##########################################
 # Find and link zeromq installed library
-find_package(ZeroMQ 4.1.6 REQUIRED)
+find_package(ZeroMQ 4.1 REQUIRED)
 add_library(zeromq INTERFACE IMPORTED)
 set_property(TARGET zeromq PROPERTY
         INTERFACE_INCLUDE_DIRECTORIES ${ZeroMQ_INCLUDE_DIRS})
