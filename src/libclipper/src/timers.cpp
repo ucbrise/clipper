@@ -35,8 +35,9 @@ bool Timer::operator>=(const Timer &rhs) const {
 }
 
 void Timer::expire() {
-  std::cout << "TIMER EXPIRED IN TIMER THREAD: " << std::this_thread::get_id()
-            << std::endl;
+  // std::cout << "TIMER EXPIRED IN TIMER THREAD: " <<
+  // std::this_thread::get_id()
+  //           << std::endl;
   completion_promise_.set_value();
 }
 
