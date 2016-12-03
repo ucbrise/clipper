@@ -10,10 +10,10 @@
 
 #include "datatypes.hpp"
 #include "persistent_state.hpp"
+#include "rpc_service.hpp"
 #include "selection_policy.hpp"
 #include "task_executor.hpp"
 #include "timers.hpp"
-#include "rpc_service.hpp"
 
 namespace clipper {
 
@@ -33,7 +33,7 @@ class QueryProcessor {
 
   boost::future<Response> predict(Query query);
   boost::future<FeedbackAck> update(FeedbackQuery feedback);
-  
+
   std::shared_ptr<StateDB> get_state_table() const;
 
  private:
@@ -42,8 +42,6 @@ class QueryProcessor {
   TaskExecutor<PowerTwoChoicesScheduler> task_executor_;
   TimerSystem<HighPrecisionClock> timer_system_{HighPrecisionClock()};
 };
-    
-  
 
 }  // namespace clipper
 
