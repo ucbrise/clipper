@@ -1,14 +1,14 @@
-#include <unordered_map>
 #include <thread>
+#include <unordered_map>
 
-#include <clipper/rpc_service.hpp>
 #include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/rpc_service.hpp>
 
 void benchmark() {
   auto containers = std::make_shared<clipper::ActiveContainers>();
   clipper::RPCService rpc_service(containers);
-  
+
   rpc_service.start("127.0.0.1", 8000);
   usleep(5000000);
 
@@ -22,22 +22,24 @@ void benchmark() {
         return;
       }
       long end = std::chrono::duration_cast<std::chrono::milliseconds>(
-          std::chrono::system_clock::now().time_since_epoch()).count();
+                     std::chrono::system_clock::now().time_since_epoch())
+                     .count();
       vector<clipper::RPCResponse> responses = rpc_service.try_get_responses(1);
-      if(responses.empty()) {
+      if (responses.empty()) {
         continue;
       }
-      std::unordered_map<int, long>::const_iterator start_time = times_map.find(responses.front().first);
+      std::unordered_map<int, long>::const_iterator start_time =
+          times_map.find(responses.front().first);
       if (start_time != times_map.end()) {
         long elapsed = end - start_time->second;
         total += elapsed;
-        printf("%d ms\n", (int) elapsed);
+        printf("%d ms\n", (int)elapsed);
       }
     }
   }).detach();
-  
-    // broken up messages
-  std::vector<const std::vector<uint8_t>> data;
+
+  // broken up messages
+  std::vector<std::vector<uint8_t>> data;
   for (int num_inputs = 0; num_inputs < 500; ++num_inputs) {
     std::vector<double> cur_data;
     for (int j = 0; j < 784; ++j) {
@@ -46,43 +48,47 @@ void benchmark() {
     clipper::DoubleVector d(cur_data);
     data.push_back(d.serialize());
   }
-  
+
   // one giant message, batch=1
   // no difference in time
-//  std::vector<const std::vector<uint8_t>> data;
-//  std::vector<double> cur_data;
-//  for (int num_inputs = 0; num_inputs < 500; ++num_inputs) {
-//    for (int j = 0; j < 784; ++j) {
-//      cur_data.push_back(j);
-//    }
-//  }
-//  clipper::DoubleVector d(cur_data);
-//  data.push_back(d.serialize());
+  //  std::vector<const std::vector<uint8_t>> data;
+  //  std::vector<double> cur_data;
+  //  for (int num_inputs = 0; num_inputs < 500; ++num_inputs) {
+  //    for (int j = 0; j < 784; ++j) {
+  //      cur_data.push_back(j);
+  //    }
+  //  }
+  //  clipper::DoubleVector d(cur_data);
+  //  data.push_back(d.serialize());
 
   int num_total_messages = 300;
   for (int i = 0; i < num_total_messages; i++) {
-//    uint8_t *data = (uint8_t *) malloc(8 * 784 * 500);
-//    std::vector<uint8_t> msg = std::vector<uint8_t>(data, data + (8 * 784 * 500));
+    //    uint8_t *data = (uint8_t *) malloc(8 * 784 * 500);
+    //    std::vector<uint8_t> msg = std::vector<uint8_t>(data, data + (8 * 784
+    //    * 500));
     long start = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::system_clock::now().time_since_epoch()).count();
-//    int container_id = containers->get_model_replicas_snapshot(containers->get_known_models()[0])[0]->container_id_;
+                     std::chrono::system_clock::now().time_since_epoch())
+                     .count();
+    //    int container_id =
+    //    containers->get_model_replicas_snapshot(containers->get_known_models()[0])[0]->container_id_;
     int id = rpc_service.send_message(data, 0);
-//    std::cout << "send message " << id << std::endl;
+    //    std::cout << "send message " << id << std::endl;
     times_map.emplace(id, start);
     usleep(50000);
   }
-//    usleep(10000000);
+  //    usleep(10000000);
   shutdown = true;
   rpc_service.stop();
-  printf("%f ms\n", ((double) total) / num_total_messages);
+  printf("%f ms\n", ((double)total) / num_total_messages);
 }
 
-//void simple_test() {
+// void simple_test() {
 //  clipper::RPCService rpc_service;
 //  rpc_service.start("127.0.0.1", 7000);
 //  usleep(5000000);
 //  const char *msg = std::string("cat").c_str();
-//  rpc_service.send_message(vector<uint8_t>((uint8_t *) msg, (uint8_t *) msg + 3), 0);
+//  rpc_service.send_message(vector<uint8_t>((uint8_t *) msg, (uint8_t *) msg +
+//  3), 0);
 //
 //  vector<clipper::RPCResponse> responses;
 //  while(true) {
@@ -99,6 +105,6 @@ void benchmark() {
 
 int main() {
   benchmark();
-  //simple_test();
+  // simple_test();
   return 0;
 }

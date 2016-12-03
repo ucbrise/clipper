@@ -24,7 +24,7 @@ target_include_directories(clipper PUBLIC
     PRIVATE src)
 
 
-target_link_libraries(clipper boost zmqcpp)
+target_link_libraries(clipper boost zmqcpp pthread)
 
 # This makes the project importable from the build directory
 export(TARGETS clipper FILE ClipperConfig.cmake)
@@ -38,6 +38,7 @@ add_executable(libclippertests EXCLUDE_FROM_ALL
     test/rpc_service_test.cpp
     test/timers_test.cpp
     )
+add_sanitizers(libclippertests)
 target_link_libraries(libclippertests clipper gtest gmock_main)
 # add_test(NAME rpc_service_test COMMAND rpc_service_test)
 add_dependencies(unittests libclippertests)
