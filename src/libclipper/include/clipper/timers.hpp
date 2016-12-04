@@ -1,6 +1,7 @@
 #ifndef CLIPPER_LIB_TIMERS_H
 #define CLIPPER_LIB_TIMERS_H
 
+#include <atomic>
 #include <chrono>
 #include <mutex>
 #include <queue>
