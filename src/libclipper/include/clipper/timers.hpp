@@ -1,13 +1,11 @@
 #ifndef CLIPPER_LIB_TIMERS_H
 #define CLIPPER_LIB_TIMERS_H
 
-// #include <atomic>
-// #include <string>
-// #include <tuple>
-// #include <utility>
+#include <atomic>
 #include <chrono>
 #include <mutex>
 #include <queue>
+#include <thread>
 
 #include <boost/thread.hpp>
 
@@ -115,8 +113,7 @@ class TimerSystem {
   TimerSystem &operator=(TimerSystem &&) = default;
 
   void start() {
-    // TODO: probably don't want to just detach thread here
-    boost::thread(&TimerSystem::manage_timers, this).detach();
+    manager_thread_ = boost::thread(&TimerSystem::manage_timers, this);
     initialized_ = true;
   }
 
@@ -128,8 +125,6 @@ class TimerSystem {
       auto cur_time = clock_.now();
       std::unique_lock<std::mutex> l(queue_mutex_);
       if (queue_.size() > 0) {
-        //      std::cout << "Found " << timers.size() << " timers" <<
-        //      std::endl;
         auto earliest_timer = queue_.top();
         auto duration_ms =
             std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -142,7 +137,12 @@ class TimerSystem {
     }
   }
 
-  void shutdown() { shutdown_ = true; }
+  void shutdown() {
+    // signal management thread to shutdown
+    shutdown_ = true;
+    // wait for it to finish
+    manager_thread_.join();
+  }
 
   boost::future<void> set_timer(long duration_micros) {
     assert(initialized_);
@@ -163,8 +163,10 @@ class TimerSystem {
   Clock clock_;
 
  private:
-  bool shutdown_ = false;
-  bool initialized_ = false;
+  std::atomic<bool> shutdown_{false};
+  std::atomic<bool> initialized_{false};
+  boost::thread manager_thread_;
+
   std::mutex queue_mutex_;
   TimerPQueue queue_;
 };
