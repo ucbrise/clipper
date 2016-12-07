@@ -30,3 +30,12 @@ add_executable(admin_rest src/admin_rest.cpp)
 target_link_libraries(admin_rest clipper boost httpserver)
 
 ##################################
+# Tests for frontends
+
+set(GTEST_COMMAND "${CMAKE_CURRENT_BINARY_DIR}/frontendstests")
+add_executable(frontendstests EXCLUDE_FROM_ALL
+    test/test_main.cpp
+    test/rest_api_test.cpp
+    )
+target_link_libraries(frontendstests clipper gtest gmock_main httpserver)
+add_dependencies(unittests frontendstests)
