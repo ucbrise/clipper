@@ -35,8 +35,7 @@ void benchmark() {
     }
   }).detach();
 
-  clipper::PredictionRequest request;
-  request.set_input_type(clipper::InputType::Doubles);
+  clipper::BatchPredictionRequest request;
 
   for (int num_inputs = 0; num_inputs < 500; ++num_inputs) {
     std::vector<double> cur_data;
@@ -44,7 +43,7 @@ void benchmark() {
       cur_data.push_back(j);
     }
     clipper::DoubleVector d(cur_data);
-    request.add_input(d.serialize());
+    request.add_input(std::make_shared<clipper::DoubleVector>(std::move(d)));
   }
   
   // one giant message, batch=1
@@ -66,7 +65,12 @@ void benchmark() {
     long start = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();
 //    int container_id = containers->get_model_replicas_snapshot(containers->get_known_models()[0])[0]->container_id_;
+//    long start9 = std::chrono::duration_cast<std::chrono::milliseconds>(
+//        std::chrono::system_clock::now().time_since_epoch()).count();
     int id = rpc_service.send_message(request.serialize(), 0);
+//    long end9 = std::chrono::duration_cast<std::chrono::milliseconds>(
+//        std::chrono::system_clock::now().time_since_epoch()).count();
+//    std::cout << end9 - start9 << std::endl;
 //    std::cout << "send message " << id << std::endl;
     times_map.emplace(id, start);
     usleep(50000);

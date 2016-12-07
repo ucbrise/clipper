@@ -7,8 +7,6 @@
 #include <clipper/rpc_service.hpp>
 #include <clipper/task_executor.hpp>
 
-#include "rpc.pb.h"
-
 using zmq::socket_t;
 using zmq::message_t;
 using zmq::context_t;

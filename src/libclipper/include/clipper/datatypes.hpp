@@ -4,12 +4,15 @@
 #include <string>
 #include <vector>
 
+#include "rpc_generated.h"
+
 namespace clipper {
 
 using ByteBuffer = std::vector<uint8_t>;
 using VersionedModelId = std::pair<std::string, int>;
 using QueryId = long;
 using FeedbackAck = bool;
+template <class T> using SerializableVector = flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<T>>>;
 
 size_t versioned_model_hash(const VersionedModelId &key);
 
@@ -29,14 +32,23 @@ class Output {
 
 // using Output = std::pair<double;
 
+enum class InputType {
+  Ints,
+  Floats,
+  Doubles,
+  Strings,
+  Bytes
+};
+
 class Input {
  public:
   // TODO: pure virtual or default?
   // virtual ~Input() = default;
 
   // used by RPC system
-  virtual const ByteBuffer serialize() const = 0;
   virtual size_t hash() const = 0;
+  virtual size_t size() const = 0;
+  virtual InputType type() const = 0;
 
 };
 
@@ -52,40 +64,67 @@ class DoubleVector : public Input {
   DoubleVector(DoubleVector &&other) = default;
   DoubleVector &operator=(DoubleVector &&other) = default;
 
-  const ByteBuffer serialize() const;
-
   size_t hash() const;
+  size_t size() const;
+  InputType type() const;
+
+  const double *get_serializable_data() const;
 
  private:
   std::vector<double> data_;
 };
 
-enum class InputType {
-  Doubles,
-  Strings
+class ByteVector : public Input {
+ public:
+  explicit ByteVector(std::vector<uint8_t> data);
+
+  //Disallow copy
+  ByteVector(ByteVector &other) = delete;
+  ByteVector &operator=(ByteVector &other) = delete;
+
+  //move constructors
+  ByteVector(ByteVector &&other) = default;
+  ByteVector &operator=(ByteVector &&other) = default;
+
+  size_t hash() const;
+  size_t size() const;
+  InputType type() const;
+
+  const uint8_t *get_serializable_data() const;
+
+ private:
+  std::vector<uint8_t> data_;
+
 };
 
-class PredictionRequest {
+class BatchPredictionRequest {
  public:
-  PredictionRequest() {};
-  explicit PredictionRequest(InputType input_type, std::vector<ByteBuffer> serialized_inputs)
-      : input_type_(input_type), serialized_inputs_(serialized_inputs) {};
+  BatchPredictionRequest() {};
+  explicit BatchPredictionRequest(std::vector<std::shared_ptr<const Input>> inputs);
 
   // Disallow copy
-  PredictionRequest(PredictionRequest &other) = delete;
-  PredictionRequest &operator=(PredictionRequest &other) = delete;
+  BatchPredictionRequest(BatchPredictionRequest &other) = delete;
+  BatchPredictionRequest &operator=(BatchPredictionRequest &other) = delete;
 
   // move constructors
-  PredictionRequest(PredictionRequest &&other) = default;
-  PredictionRequest &operator=(PredictionRequest &&other) = default;
+  BatchPredictionRequest(BatchPredictionRequest &&other) = default;
+  BatchPredictionRequest &operator=(BatchPredictionRequest &&other) = default;
 
   const ByteBuffer serialize() const;
-  void set_input_type(const InputType data_type);
-  void add_input(const ByteBuffer serialized_input);
+  void add_input(std::shared_ptr<const Input> input);
 
- protected:
-  InputType input_type_;
-  std::vector<ByteBuffer> serialized_inputs_;
+ private:
+  std::vector<std::shared_ptr<const Input>> int_inputs_;
+  std::vector<std::shared_ptr<const Input>> float_inputs_;
+  std::vector<std::shared_ptr<const Input>> double_inputs_;
+  std::vector<std::shared_ptr<const Input>> byte_inputs_;
+  std::vector<std::shared_ptr<const Input>> string_inputs_;
+
+  const SerializableVector<IntVec> get_serializable_ints(flatbuffers::FlatBufferBuilder &fbb) const;
+  const SerializableVector<FloatVec> get_serializable_floats(flatbuffers::FlatBufferBuilder &fbb) const;
+  const SerializableVector<DoubleVec> get_serializable_doubles(flatbuffers::FlatBufferBuilder &fbb) const;
+  const SerializableVector<ByteVec> get_serializable_bytes(flatbuffers::FlatBufferBuilder &fbb) const;
+  const SerializableVector<StringVec> get_serializable_strings(flatbuffers::FlatBufferBuilder &fbb) const;
 };
 
 class Query {
@@ -171,7 +210,8 @@ class PredictTask {
   ~PredictTask() = default;
 
   PredictTask(std::shared_ptr<Input> input, VersionedModelId model,
-              float utility, QueryId query_id, long latency_slo_micros);
+              float utility, QueryId query_id,
+              long latency_slo_micros);
 
   PredictTask(const PredictTask &other) = default;
 

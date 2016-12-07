@@ -24,6 +24,8 @@ target_include_directories(clipper PUBLIC
     $<INSTALL_INTERFACE:include>
     PRIVATE src)
 
+target_include_directories(clipper PUBLIC ../flatbuffers)
+
 include_directories(${ProtobufIncludePath})
 include_directories(../flatbuffers) # NOT CORRECT FOR AUTOMATIC COMPILATION
 

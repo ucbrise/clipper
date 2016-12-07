@@ -19,15 +19,8 @@ class PredictRequest(object):
         self._tab = flatbuffers.table.Table(buf, pos)
 
     # PredictRequest
-    def DataType(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
-        if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
-        return 0
-
-    # PredictRequest
     def IntegerData(self, j):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
@@ -40,14 +33,14 @@ class PredictRequest(object):
 
     # PredictRequest
     def IntegerDataLength(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             return self._tab.VectorLen(o)
         return 0
 
     # PredictRequest
     def FloatData(self, j):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
@@ -60,14 +53,14 @@ class PredictRequest(object):
 
     # PredictRequest
     def FloatDataLength(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             return self._tab.VectorLen(o)
         return 0
 
     # PredictRequest
     def DoubleData(self, j):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
@@ -80,14 +73,14 @@ class PredictRequest(object):
 
     # PredictRequest
     def DoubleDataLength(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             return self._tab.VectorLen(o)
         return 0
 
     # PredictRequest
     def StringData(self, j):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(12))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
@@ -100,14 +93,14 @@ class PredictRequest(object):
 
     # PredictRequest
     def StringDataLength(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(12))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
             return self._tab.VectorLen(o)
         return 0
 
     # PredictRequest
     def ByteData(self, j):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(12))
         if o != 0:
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
@@ -120,21 +113,20 @@ class PredictRequest(object):
 
     # PredictRequest
     def ByteDataLength(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(12))
         if o != 0:
             return self._tab.VectorLen(o)
         return 0
 
-def PredictRequestStart(builder): builder.StartObject(6)
-def PredictRequestAddDataType(builder, dataType): builder.PrependInt8Slot(0, dataType, 0)
-def PredictRequestAddIntegerData(builder, integerData): builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(integerData), 0)
+def PredictRequestStart(builder): builder.StartObject(5)
+def PredictRequestAddIntegerData(builder, integerData): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(integerData), 0)
 def PredictRequestStartIntegerDataVector(builder, numElems): return builder.StartVector(4, numElems, 4)
-def PredictRequestAddFloatData(builder, floatData): builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(floatData), 0)
+def PredictRequestAddFloatData(builder, floatData): builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(floatData), 0)
 def PredictRequestStartFloatDataVector(builder, numElems): return builder.StartVector(4, numElems, 4)
-def PredictRequestAddDoubleData(builder, doubleData): builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(doubleData), 0)
+def PredictRequestAddDoubleData(builder, doubleData): builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(doubleData), 0)
 def PredictRequestStartDoubleDataVector(builder, numElems): return builder.StartVector(4, numElems, 4)
-def PredictRequestAddStringData(builder, stringData): builder.PrependUOffsetTRelativeSlot(4, flatbuffers.number_types.UOffsetTFlags.py_type(stringData), 0)
+def PredictRequestAddStringData(builder, stringData): builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(stringData), 0)
 def PredictRequestStartStringDataVector(builder, numElems): return builder.StartVector(4, numElems, 4)
-def PredictRequestAddByteData(builder, byteData): builder.PrependUOffsetTRelativeSlot(5, flatbuffers.number_types.UOffsetTFlags.py_type(byteData), 0)
+def PredictRequestAddByteData(builder, byteData): builder.PrependUOffsetTRelativeSlot(4, flatbuffers.number_types.UOffsetTFlags.py_type(byteData), 0)
 def PredictRequestStartByteDataVector(builder, numElems): return builder.StartVector(4, numElems, 4)
 def PredictRequestEnd(builder): return builder.EndObject()

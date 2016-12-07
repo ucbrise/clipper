@@ -10,6 +10,10 @@ import flatbuffers
 import clipper_fbs.Request as FbsRequest
 import clipper_fbs.PredictRequest
 import clipper_fbs.ByteVec
+import clipper_fbs.DoubleVec
+import clipper_fbs.IntVec
+import clipper_fbs.StringVec
+import clipper_fbs.FloatVec
 from datetime import datetime
 
 class Server(threading.Thread):
@@ -23,35 +27,59 @@ class Server(threading.Thread):
 	def respond(self, msg):
 		self.socket.send(msg.identity, flags=zmq.SNDMORE)
 		self.socket.send("", flags=zmq.SNDMORE)
-		self.socket.send(msg.content);
+		self.socket.send(msg.content)
+
+	def parse_data(self, data_vec, dtype):
+		o = flatbuffers.number_types.UOffsetTFlags.py_type(data_vec._tab.Offset(4))
+		if o != 0:
+			length = data_vec._tab.VectorLen(o)
+			a = data_vec._tab.Vector(o)
+			offset = a + flatbuffers.number_types.UOffsetTFlags.py_type(0)
+			parsed_data = np.frombuffer(data_vec._tab.Bytes, dtype=dtype, count=length, offset=offset)
+			return parsed_data
+		else:
+			print("Failed to deserialize data!")
+			raise 
+
+	def parse_doubles(self, double_vec):
+		return self.parse_data(double_vec, np.float64)
+
+	def parse_floats(self, float_vec):
+		return self.parse_data(float_vec, np.float32)
+
+	def parse_ints(self, int_vec):
+		return self.parse_data(int_vec, np.int32)
+
+	def parse_bytes(self, byte_vec):
+		return self.parse_data(byte_vec, np.uint8)
+
+	def parse_strings(self, string_vec):
+		# TODO...
+		return np.zeros(string_vec.DataLength())
 
 	def handle_message(self, msg):
-		# msg.set_content("Acknowledged!")
-		# preds = np.arange(len(msg.content), dtype='float32')
-
 		request = FbsRequest.Request.GetRootAsRequest(msg.content[0], 0)
 		request_type = request.RequestType()
+
 		# If we have a prediction request, process it
 		if request_type == 0:
 			prediction_request = request.PredictionRequest()
-			data_type = prediction_request.DataType()
-			
-			if data_type == 4:
-				print("Found byte data!")
-				first_bytes = prediction_request.ByteData(0)
-				print(first_bytes.DataLength())
-				print(first_bytes.Data(1))
 
-		# DO PROTO PARSING HERE, TIME IT!
-		# before = datetime.now()
-		# request = rpc_pb2.Request()
-		# request.ParseFromString(msg.content[0])
-		# after = datetime.now()
-		# print("proto parsing: %f" % ((after - before).microseconds))
+			for i in range(0, prediction_request.DoubleDataLength()):
+				self.parse_doubles(prediction_request.DoubleData(i))
 
-		# # parse raw bytes into arrays of doubles
-		# # TODO: this parsing is really slow
-		# inputs = [np.array(array.array('d', bytes(data_item.data))) for data_item in request.request_data]
+			for i in range(0, prediction_request.FloatDataLength()):
+				self.parse_floats(prediction_request.FloatData(i))
+
+			for i in range(0, prediction_request.IntegerDataLength()):
+				self.parse_ints(prediction_request.IntegerData(i))
+
+			for i in range(0, prediction_request.ByteDataLength()):
+				self.parse_bytes(prediction_request.ByteData(i))
+
+			for i in range(0, prediction_request.StringDataLength()):
+				self.parse_strings(prediction_request.StringData(i))
+
 
 		# # preds = self.model.predict_floats(inputs)
   # # 		assert preds.dtype == np.dtype("float32")

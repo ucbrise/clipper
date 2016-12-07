@@ -4,4 +4,5 @@
 
 class RequestType(object):
     Predict = 0
+    Feedback = 1
 

@@ -4,7 +4,6 @@
 #include <vector>
 
 #include <clipper/datatypes.hpp>
-#include "rpc_generated.h"
 
 namespace clipper {
 
@@ -32,15 +31,9 @@ Output::Output(double y_hat, VersionedModelId versioned_model)
 
 DoubleVector::DoubleVector(std::vector<double> data) : data_(std::move(data)) {}
 
-const ByteBuffer DoubleVector::serialize() const {
-  std::vector<uint8_t> bytes;
-  for (auto &&i : data_) {
-    auto cur_bytes = reinterpret_cast<const uint8_t *>(&i);
-    for (unsigned long j = 0; j < sizeof(double); ++j) {
-      bytes.push_back(cur_bytes[j]);
-    }
-  }
-  return bytes;
+const double *DoubleVector::get_serializable_data() const {
+  // Revise this to be ownership safe
+  return data_.data();
 }
 
 size_t DoubleVector::hash() const {
@@ -51,57 +44,152 @@ size_t DoubleVector::hash() const {
   return cur_hash;
 }
 
-void PredictionRequest::set_input_type(InputType input_type) {
-  input_type_ = input_type;
+size_t DoubleVector::size() const {
+  return data_.size();
 }
 
-void PredictionRequest::add_input(ByteBuffer serialized_input) {
-  serialized_inputs_.push_back(std::move(serialized_input));
+InputType DoubleVector::type() const {
+  return InputType::Doubles;
 }
 
-const ByteBuffer PredictionRequest::serialize() const {
+ByteVector::ByteVector(std::vector<uint8_t> data) : data_(std::move(data)) {}
+
+const uint8_t *ByteVector::get_serializable_data() const {
+  // Revise this to be ownership safe
+  return data_.data();
+}
+
+size_t ByteVector::hash() const {
+  size_t cur_hash = 0;
+  for (const auto d : data_) {
+    cur_hash ^= std::hash<uint8_t>()(d);
+  }
+  return cur_hash;
+}
+
+size_t ByteVector::size() const {
+  return data_.size();
+}
+
+InputType ByteVector::type() const {
+  return InputType::Bytes;
+}
+
+BatchPredictionRequest::BatchPredictionRequest(std::vector<std::shared_ptr<const Input>> inputs) {
+  for(auto input : inputs) {
+    add_input(input);
+  }
+}
+
+void BatchPredictionRequest::add_input(std::shared_ptr<const Input> input) {
+  switch(input->type()) {
+    case InputType::Ints:
+      int_inputs_.push_back(input);
+      break;
+    case InputType::Floats:
+      float_inputs_.push_back(input);
+      break;
+    case InputType::Doubles:
+      double_inputs_.push_back(input);
+      break;
+    case InputType::Bytes:
+      byte_inputs_.push_back(input);
+      break;
+    case InputType::Strings:
+      string_inputs_.push_back(input);
+      break;
+  }
+}
+
+const ByteBuffer BatchPredictionRequest::serialize() const {
   flatbuffers::FlatBufferBuilder fbb;
 
-  std::vector<flatbuffers::Offset<ByteVec>> request_data;
-  uint8_t *buffer = (uint8_t *) malloc(6272);
+  SerializableVector<IntVec> serializable_ints = get_serializable_ints(fbb);
+  SerializableVector<FloatVec> serializable_floats = get_serializable_floats(fbb);
+  SerializableVector<DoubleVec> serializable_doubles = get_serializable_doubles(fbb);
+  SerializableVector<ByteVec> serializable_bytes = get_serializable_bytes(fbb);
+  SerializableVector<StringVec> serializable_strings = get_serializable_strings(fbb);
 
-  long start = std::chrono::duration_cast<std::chrono::milliseconds>(
-      std::chrono::system_clock::now().time_since_epoch()).count();
-
-  for(int i = 0; i < 500; i++) {
-    auto vec = fbb.CreateUninitializedVector(6272, &buffer);;
-    memcpy(buffer, serialized_inputs_[i].data(), serialized_inputs_[i].size());
-
-    auto byte_vec = CreateByteVec(fbb, vec);
-    request_data.push_back(byte_vec);
-  }
-
-  long stop = std::chrono::duration_cast<std::chrono::milliseconds>(
-      std::chrono::system_clock::now().time_since_epoch()).count();
-
-  std::cout << stop - start << std::endl;
-
-  auto table_vector = fbb.CreateVector(request_data);
-
-  PredictRequestBuilder prediction_builder(fbb);
-  switch (input_type_) {
-    case InputType::Doubles:prediction_builder.add_data_type(DataType_Bytes);
-      break;
-    case InputType::Strings:prediction_builder.add_data_type(DataType_Strings);
-      break;
-  }
-
-  prediction_builder.add_byte_data(table_vector);
-  auto prediction_request = prediction_builder.Finish();
+  PredictRequestBuilder predict_request_builder(fbb);
+  predict_request_builder.add_integer_data(serializable_ints);
+  predict_request_builder.add_float_data(serializable_floats);
+  predict_request_builder.add_double_data(serializable_doubles);
+  predict_request_builder.add_byte_data(serializable_bytes);
+  predict_request_builder.add_string_data(serializable_strings);
+  flatbuffers::Offset<PredictRequest> predict_request = predict_request_builder.Finish();
 
   RequestBuilder request_builder(fbb);
-  request_builder.add_request_type(RequestType_Predict);
-  request_builder.add_prediction_request(prediction_request);
-  auto request = request_builder.Finish();
+  request_builder.add_request_type(RequestType::RequestType_Predict);
+  request_builder.add_prediction_request(predict_request);
+  flatbuffers::Offset<Request> request = request_builder.Finish();
 
   FinishRequestBuffer(fbb, request);
+  return std::vector<uint8_t>(fbb.GetBufferPointer(), fbb.GetBufferPointer() + fbb.GetSize());
+}
 
-  return std::vector<uint8_t>(fbb.GetBufferPointer(), fbb.GetCurrentBufferPointer() + fbb.GetSize());
+const SerializableVector<IntVec> BatchPredictionRequest::get_serializable_ints(
+    flatbuffers::FlatBufferBuilder &fbb) const {
+  std::vector<flatbuffers::Offset<IntVec>> vec;
+  SerializableVector<IntVec> temp = fbb.CreateVector(vec);
+  return temp;
+}
+
+const SerializableVector<FloatVec> BatchPredictionRequest::get_serializable_floats(
+    flatbuffers::FlatBufferBuilder &fbb) const {
+  std::vector<flatbuffers::Offset<FloatVec>> vec;
+  SerializableVector<FloatVec> temp = fbb.CreateVector(vec);
+  return temp;
+}
+
+const SerializableVector<DoubleVec> BatchPredictionRequest::get_serializable_doubles(
+    flatbuffers::FlatBufferBuilder &fbb) const {
+  std::vector<flatbuffers::Offset<DoubleVec>> raw_request_data;
+  std::vector<double> buffer;
+
+  for (int i = 0; i < (int) double_inputs_.size(); i++) {
+    const DoubleVector *double_input = dynamic_cast<const DoubleVector *>(double_inputs_[i].get());
+    size_t input_size = double_input->size();
+    if (input_size > buffer.size()) {
+      buffer.resize(input_size);
+    }
+    double *raw_buffer = buffer.data();
+    auto raw_vec = fbb.CreateUninitializedVector(input_size, &raw_buffer);
+    memcpy(raw_buffer, double_input->get_serializable_data(), input_size * sizeof(double));
+    flatbuffers::Offset<DoubleVec> double_vec = CreateDoubleVec(fbb, raw_vec);
+    raw_request_data.push_back(double_vec); //Copying an offset should be fine - check performance!!!
+  }
+
+  SerializableVector<DoubleVec> request_data = fbb.CreateVector(raw_request_data);
+  return request_data;
+}
+
+const SerializableVector<ByteVec> BatchPredictionRequest::get_serializable_bytes(
+    flatbuffers::FlatBufferBuilder &fbb) const {
+  std::vector<flatbuffers::Offset<ByteVec>> raw_request_data;
+  std::vector<uint8_t> buffer;
+
+  for (int i = 0; i < (int) byte_inputs_.size(); i++) {
+    const ByteVector *byte_input = dynamic_cast<const ByteVector *>(byte_inputs_[i].get());
+    size_t input_size = byte_input->size();
+    if (input_size > buffer.size()) {
+      buffer.resize(input_size);
+    }
+    uint8_t *raw_buffer = buffer.data();
+    auto raw_vec = fbb.CreateUninitializedVector(input_size, &raw_buffer);
+    memcpy(raw_buffer, byte_input->get_serializable_data(), input_size * sizeof(uint8_t));
+    flatbuffers::Offset<ByteVec> byte_vec = CreateByteVec(fbb, raw_vec);
+    raw_request_data.push_back(byte_vec); //Copying an offset should be fine - check performance!!!
+  }
+
+  SerializableVector<ByteVec> request_data = fbb.CreateVector(raw_request_data);
+  return request_data;
+}
+
+const SerializableVector<StringVec> BatchPredictionRequest::get_serializable_strings(
+    flatbuffers::FlatBufferBuilder &fbb) const {
+  std::vector<flatbuffers::Offset<StringVec>> vec;
+  SerializableVector<StringVec> temp = fbb.CreateVector(vec);
+  return temp;
 }
 
 Query::Query(std::string label, long user_id, std::shared_ptr<Input> input,

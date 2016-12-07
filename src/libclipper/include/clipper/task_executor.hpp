@@ -139,7 +139,7 @@ class TaskExecutor {
         auto containers =
             active_containers_->get_model_replicas_snapshot(model);
         for (auto c : containers) {
-          auto batch = c->dequeue_predictions(max_batch_size);
+          std::vector<PredictTask> batch = c->dequeue_predictions(max_batch_size);
           if (batch.size() > 0) {
             // move the lock up here, so that nothing can pull from the inflight_messages_
             // map between the time a message is sent and when it gets inserted into the map
@@ -148,10 +148,9 @@ class TaskExecutor {
             std::vector<std::pair<VersionedModelId, std::shared_ptr<Input>>>
                 cur_batch;
 
-            PredictionRequest request;
-            request.set_input_type(InputType::Doubles);
-            for (auto b : batch) {
-              request.add_input(b.input_->serialize());
+            BatchPredictionRequest request;
+            for (PredictTask b : batch) {
+              request.add_input(b.input_);
               cur_batch.emplace_back(b.model_, b.input_);
             }
             int message_id =

@@ -25,33 +25,17 @@ struct FeedbackRequest;
 
 enum RequestType {
   RequestType_Predict = 0,
+  RequestType_Feedback = 1,
   RequestType_MIN = RequestType_Predict,
-  RequestType_MAX = RequestType_Predict
+  RequestType_MAX = RequestType_Feedback
 };
 
 inline const char **EnumNamesRequestType() {
-  static const char *names[] = { "Predict", nullptr };
+  static const char *names[] = { "Predict", "Feedback", nullptr };
   return names;
 }
 
 inline const char *EnumNameRequestType(RequestType e) { return EnumNamesRequestType()[static_cast<int>(e)]; }
-
-enum DataType {
-  DataType_Ints = 0,
-  DataType_Floats = 1,
-  DataType_Doubles = 2,
-  DataType_Strings = 3,
-  DataType_Bytes = 4,
-  DataType_MIN = DataType_Ints,
-  DataType_MAX = DataType_Bytes
-};
-
-inline const char **EnumNamesDataType() {
-  static const char *names[] = { "Ints", "Floats", "Doubles", "Strings", "Bytes", nullptr };
-  return names;
-}
-
-inline const char *EnumNameDataType(DataType e) { return EnumNamesDataType()[static_cast<int>(e)]; }
 
 struct IntVec FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum {
@@ -286,14 +270,12 @@ inline flatbuffers::Offset<Request> CreateRequest(flatbuffers::FlatBufferBuilder
 
 struct PredictRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum {
-    VT_DATA_TYPE = 4,
-    VT_INTEGER_DATA = 6,
-    VT_FLOAT_DATA = 8,
-    VT_DOUBLE_DATA = 10,
-    VT_STRING_DATA = 12,
-    VT_BYTE_DATA = 14
+    VT_INTEGER_DATA = 4,
+    VT_FLOAT_DATA = 6,
+    VT_DOUBLE_DATA = 8,
+    VT_STRING_DATA = 10,
+    VT_BYTE_DATA = 12
   };
-  DataType data_type() const { return static_cast<DataType>(GetField<int8_t>(VT_DATA_TYPE, 0)); }
   const flatbuffers::Vector<flatbuffers::Offset<IntVec>> *integer_data() const { return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<IntVec>> *>(VT_INTEGER_DATA); }
   const flatbuffers::Vector<flatbuffers::Offset<FloatVec>> *float_data() const { return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<FloatVec>> *>(VT_FLOAT_DATA); }
   const flatbuffers::Vector<flatbuffers::Offset<DoubleVec>> *double_data() const { return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<DoubleVec>> *>(VT_DOUBLE_DATA); }
@@ -301,7 +283,6 @@ struct PredictRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   const flatbuffers::Vector<flatbuffers::Offset<ByteVec>> *byte_data() const { return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<ByteVec>> *>(VT_BYTE_DATA); }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<int8_t>(verifier, VT_DATA_TYPE) &&
            VerifyField<flatbuffers::uoffset_t>(verifier, VT_INTEGER_DATA) &&
            verifier.Verify(integer_data()) &&
            verifier.VerifyVectorOfTables(integer_data()) &&
@@ -324,7 +305,6 @@ struct PredictRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 struct PredictRequestBuilder {
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
-  void add_data_type(DataType data_type) { fbb_.AddElement<int8_t>(PredictRequest::VT_DATA_TYPE, static_cast<int8_t>(data_type), 0); }
   void add_integer_data(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<IntVec>>> integer_data) { fbb_.AddOffset(PredictRequest::VT_INTEGER_DATA, integer_data); }
   void add_float_data(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<FloatVec>>> float_data) { fbb_.AddOffset(PredictRequest::VT_FLOAT_DATA, float_data); }
   void add_double_data(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<DoubleVec>>> double_data) { fbb_.AddOffset(PredictRequest::VT_DOUBLE_DATA, double_data); }
@@ -333,13 +313,12 @@ struct PredictRequestBuilder {
   PredictRequestBuilder(flatbuffers::FlatBufferBuilder &_fbb) : fbb_(_fbb) { start_ = fbb_.StartTable(); }
   PredictRequestBuilder &operator=(const PredictRequestBuilder &);
   flatbuffers::Offset<PredictRequest> Finish() {
-    auto o = flatbuffers::Offset<PredictRequest>(fbb_.EndTable(start_, 6));
+    auto o = flatbuffers::Offset<PredictRequest>(fbb_.EndTable(start_, 5));
     return o;
   }
 };
 
 inline flatbuffers::Offset<PredictRequest> CreatePredictRequest(flatbuffers::FlatBufferBuilder &_fbb,
-    DataType data_type = DataType_Ints,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<IntVec>>> integer_data = 0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<FloatVec>>> float_data = 0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<DoubleVec>>> double_data = 0,
@@ -351,18 +330,16 @@ inline flatbuffers::Offset<PredictRequest> CreatePredictRequest(flatbuffers::Fla
   builder_.add_double_data(double_data);
   builder_.add_float_data(float_data);
   builder_.add_integer_data(integer_data);
-  builder_.add_data_type(data_type);
   return builder_.Finish();
 }
 
 inline flatbuffers::Offset<PredictRequest> CreatePredictRequestDirect(flatbuffers::FlatBufferBuilder &_fbb,
-    DataType data_type = DataType_Ints,
     const std::vector<flatbuffers::Offset<IntVec>> *integer_data = nullptr,
     const std::vector<flatbuffers::Offset<FloatVec>> *float_data = nullptr,
     const std::vector<flatbuffers::Offset<DoubleVec>> *double_data = nullptr,
     const std::vector<flatbuffers::Offset<StringVec>> *string_data = nullptr,
     const std::vector<flatbuffers::Offset<ByteVec>> *byte_data = nullptr) {
-  return CreatePredictRequest(_fbb, data_type, integer_data ? _fbb.CreateVector<flatbuffers::Offset<IntVec>>(*integer_data) : 0, float_data ? _fbb.CreateVector<flatbuffers::Offset<FloatVec>>(*float_data) : 0, double_data ? _fbb.CreateVector<flatbuffers::Offset<DoubleVec>>(*double_data) : 0, string_data ? _fbb.CreateVector<flatbuffers::Offset<StringVec>>(*string_data) : 0, byte_data ? _fbb.CreateVector<flatbuffers::Offset<ByteVec>>(*byte_data) : 0);
+  return CreatePredictRequest(_fbb, integer_data ? _fbb.CreateVector<flatbuffers::Offset<IntVec>>(*integer_data) : 0, float_data ? _fbb.CreateVector<flatbuffers::Offset<FloatVec>>(*float_data) : 0, double_data ? _fbb.CreateVector<flatbuffers::Offset<DoubleVec>>(*double_data) : 0, string_data ? _fbb.CreateVector<flatbuffers::Offset<StringVec>>(*string_data) : 0, byte_data ? _fbb.CreateVector<flatbuffers::Offset<ByteVec>>(*byte_data) : 0);
 }
 
 struct FeedbackRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {

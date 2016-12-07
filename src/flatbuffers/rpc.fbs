@@ -1,13 +1,6 @@
 namespace clipper;
 
-enum RequestType : byte { Predict }
-enum DataType : byte {
-    Ints,
-    Floats,
-    Doubles,
-    Strings,
-    Bytes,
-}
+enum RequestType : byte { Predict, Feedback }
 
 table IntVec {
     data:[int];
@@ -36,7 +29,6 @@ table Request {
 }
 
 table PredictRequest {
-    data_type:DataType;
     integer_data:[IntVec];
     float_data:[FloatVec];
     double_data:[DoubleVec];
