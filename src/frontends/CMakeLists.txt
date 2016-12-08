@@ -23,13 +23,6 @@ add_executable(rpctest src/rpc_service_bench.cpp)
 target_link_libraries(rpctest clipper)
 
 ##################################
-# Management REST HTTP Server executable
-
-add_executable(admin_rest src/admin_rest.cpp)
-
-target_link_libraries(admin_rest clipper boost httpserver)
-
-##################################
 # Create library for frontends
 
 add_library(frontends
