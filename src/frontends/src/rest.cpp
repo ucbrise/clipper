@@ -58,9 +58,11 @@ Output decode_output(OutputType output_type, ptree parsed_json) {
   }
 }
 
-void RequestHandler::add_application(std::string name, std::vector<VersionedModelId> models,
-                       InputType input_type, OutputType output_type,
-                       std::string policy, long latency) {
+void RequestHandler::add_application(std::string name,
+                                     std::vector<VersionedModelId> models,
+                                     InputType input_type,
+                                     OutputType output_type, std::string policy,
+                                     long latency) {
   QueryProcessor& q = qp;
   auto predict_fn = [&q, name, input_type, policy, latency, models](
       std::shared_ptr<HttpServer::Response> response,
@@ -71,8 +73,7 @@ void RequestHandler::add_application(std::string name, std::vector<VersionedMode
 
       long uid = pt.get<long>("uid");
       std::shared_ptr<Input> input = decode_input(input_type, pt);
-      auto prediction =
-          q.predict({name, uid, input, latency, policy, models});
+      auto prediction = q.predict({name, uid, input, latency, policy, models});
       prediction.then([response](boost::future<Response> f) {
         Response r = f.get();
         std::stringstream ss;
@@ -96,9 +97,9 @@ void RequestHandler::add_application(std::string name, std::vector<VersionedMode
   server.add_endpoint(predict_endpoint, "POST", predict_fn);
   std::cout << "added endpoint " + predict_endpoint + " for " + name + "\n";
 
-  auto update_fn = [&q, name, input_type, output_type, policy, latency,
-                    models](std::shared_ptr<HttpServer::Response> response,
-                            std::shared_ptr<HttpServer::Request> request) {
+  auto update_fn = [&q, name, input_type, output_type, policy, latency, models](
+      std::shared_ptr<HttpServer::Response> response,
+      std::shared_ptr<HttpServer::Request> request) {
     try {
       ptree pt;
       read_json(request->content, pt);
@@ -132,10 +133,11 @@ void RequestHandler::add_application(std::string name, std::vector<VersionedMode
   std::cout << "added endpoint " + update_endpoint + " for " + name + "\n";
 }
 
-void RequestHandler::add_endpoint(std::string endpoint, std::string request_method,
-                  std::function<void(std::shared_ptr<HttpServer::Response>,
-                                     std::shared_ptr<HttpServer::Request>)>
-                      endpoint_fn) {
+void RequestHandler::add_endpoint(
+    std::string endpoint, std::string request_method,
+    std::function<void(std::shared_ptr<HttpServer::Response>,
+                       std::shared_ptr<HttpServer::Request>)>
+        endpoint_fn) {
   server.resource[endpoint][request_method] = endpoint_fn;
   std::cout << "added " + endpoint + "\n";
 }
