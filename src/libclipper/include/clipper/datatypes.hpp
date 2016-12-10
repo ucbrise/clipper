@@ -97,6 +97,75 @@ class ByteVector : public Input {
 
 };
 
+class IntVector : public Input {
+ public:
+  explicit IntVector(std::vector<int> data);
+
+  //Disallow copy
+  IntVector(IntVector &other) = delete;
+  IntVector &operator=(IntVector &other) = delete;
+
+  //move constructors
+  IntVector(IntVector &&other) = default;
+  IntVector &operator=(IntVector &&other) = default;
+
+  size_t hash() const;
+  size_t size() const;
+  InputType type() const;
+
+  const int *get_serializable_data() const;
+
+ private:
+  std::vector<int> data_;
+
+};
+
+class FloatVector : public Input {
+ public:
+  explicit FloatVector(std::vector<float> data);
+
+  //Disallow copy
+  FloatVector(FloatVector &other) = delete;
+  FloatVector &operator=(FloatVector &other) = delete;
+
+  //move constructors
+  FloatVector(FloatVector &&other) = default;
+  FloatVector &operator=(FloatVector &&other) = default;
+
+  size_t hash() const;
+  size_t size() const;
+  InputType type() const;
+
+  const float *get_serializable_data() const;
+
+ private:
+  std::vector<float> data_;
+
+};
+
+class StringVector : public Input {
+ public:
+  explicit StringVector(std::vector<std::string> data);
+
+  //Disallow copy
+  StringVector(StringVector &other) = delete;
+  StringVector &operator=(StringVector &other) = delete;
+
+  //move constructors
+  StringVector(StringVector &&other) = default;
+  StringVector &operator=(StringVector &&other) = default;
+
+  size_t hash() const;
+  size_t size() const;
+  InputType type() const;
+
+  const std::string *get_serializable_data() const;
+
+ private:
+  std::vector<std::string> data_;
+
+};
+
 class BatchPredictionRequest {
  public:
   BatchPredictionRequest() {};

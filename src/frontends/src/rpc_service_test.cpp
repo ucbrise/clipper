@@ -65,13 +65,7 @@ void benchmark() {
     long start = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();
 //    int container_id = containers->get_model_replicas_snapshot(containers->get_known_models()[0])[0]->container_id_;
-//    long start9 = std::chrono::duration_cast<std::chrono::milliseconds>(
-//        std::chrono::system_clock::now().time_since_epoch()).count();
     int id = rpc_service.send_message(request.serialize(), 0);
-//    long end9 = std::chrono::duration_cast<std::chrono::milliseconds>(
-//        std::chrono::system_clock::now().time_since_epoch()).count();
-//    std::cout << end9 - start9 << std::endl;
-//    std::cout << "send message " << id << std::endl;
     times_map.emplace(id, start);
     usleep(50000);
   }

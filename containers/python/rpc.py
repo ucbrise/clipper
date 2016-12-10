@@ -29,7 +29,7 @@ class Server(threading.Thread):
 		self.socket.send("", flags=zmq.SNDMORE)
 		self.socket.send(msg.content)
 
-	def parse_data(self, data_vec, dtype):
+	def parse_data_vector(self, data_vec, dtype):
 		o = flatbuffers.number_types.UOffsetTFlags.py_type(data_vec._tab.Offset(4))
 		if o != 0:
 			length = data_vec._tab.VectorLen(o)
@@ -39,23 +39,74 @@ class Server(threading.Thread):
 			return parsed_data
 		else:
 			print("Failed to deserialize data!")
-			raise 
+			raise
 
-	def parse_doubles(self, double_vec):
-		return self.parse_data(double_vec, np.float64)
+	def parse_int_data(self, pred_request):
+		o = flatbuffers.number_types.UOffsetTFlags.py_type(pred_request._tab.Offset(4))
+		parsed_int_vecs = []
+		if o != 0:
+			length = pred_request._tab.VectorLen(o)
+			x = pred_request._tab.Vector(o)
+			for j in range(0, length):
+				obj = clipper_fbs.IntVec.IntVec()
+				indirection_index = flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
+				obj.Init(pred_request._tab.Bytes, pred_request._tab.Indirect(x + indirection_index))
+				parsed_int_vecs.append(self.parse_data_vector(obj, np.int32))
+		return np.array(parsed_int_vecs)
 
-	def parse_floats(self, float_vec):
-		return self.parse_data(float_vec, np.float32)
+	def parse_float_data(self, pred_request):
+		o = flatbuffers.number_types.UOffsetTFlags.py_type(pred_request._tab.Offset(6))
+		parsed_float_vecs = []
+		if o != 0:
+			length = pred_request._tab.VectorLen(o)
+			x = pred_request._tab.Vector(o)
+			for j in range(0, length):
+				obj = clipper_fbs.FloatVec.FloatVec()
+				indirection_index = flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
+				obj.Init(pred_request._tab.Bytes, pred_request._tab.Indirect(x + indirection_index))
+				parsed_float_vecs.append(self.parse_data_vector(obj, np.float32))
+		return np.array(parsed_float_vecs)
 
-	def parse_ints(self, int_vec):
-		return self.parse_data(int_vec, np.int32)
+	def parse_double_data(self, pred_request):
+		o = flatbuffers.number_types.UOffsetTFlags.py_type(pred_request._tab.Offset(8))
+		parsed_double_vecs = []
+		if o != 0:
+			length = pred_request._tab.VectorLen(o)
+			x = pred_request._tab.Vector(o)
+			for j in range(0, length):
+				obj = clipper_fbs.DoubleVec.DoubleVec()
+				indirection_index = flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
+				obj.Init(pred_request._tab.Bytes, pred_request._tab.Indirect(x + indirection_index))
+				parsed_double_vecs.append(self.parse_data_vector(obj, np.float64))
+		return np.array(parsed_double_vecs)
 
-	def parse_bytes(self, byte_vec):
-		return self.parse_data(byte_vec, np.uint8)
+	def parse_string_data(self, pred_request):
+		o = flatbuffers.number_types.UOffsetTFlags.py_type(pred_request._tab.Offset(10))
+		parsed_string_vecs = []
+		if o != 0:
+			length = pred_request._tab.VectorLen(o)
+			x = pred_request._tab.Vector(o)
+			for j in range(0, length):
+				obj = clipper_fbs.StringVec.StringVec()
+				indirection_index = flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
+				obj.Init(pred_request._tab.Bytes, pred_request._tab.Indirect(x + indirection_index))
 
-	def parse_strings(self, string_vec):
-		# TODO...
-		return np.zeros(string_vec.DataLength())
+				# TODO: Parse the individual strings
+				parsed_string_vecs.append(np.zeros(obj.DataLength()))
+		return parsed_string_vecs
+
+	def parse_byte_data(self, pred_request):
+		o = flatbuffers.number_types.UOffsetTFlags.py_type(pred_request._tab.Offset(12))
+		parsed_byte_vecs = []
+		if o != 0:
+			length = pred_request._tab.VectorLen(o)
+			x = pred_request._tab.Vector(o)
+			for j in range(0, length):
+				obj = clipper_fbs.ByteVec.ByteVec()
+				indirection_index = flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
+				obj.Init(pred_request._tab.Bytes, pred_request._tab.Indirect(x + indirection_index))
+				parsed_byte_vecs.append(self.parse_data_vector(obj, np.uint8))
+		return np.array(parsed_byte_vecs)
 
 	def handle_message(self, msg):
 		request = FbsRequest.Request.GetRootAsRequest(msg.content[0], 0)
@@ -65,20 +116,14 @@ class Server(threading.Thread):
 		if request_type == 0:
 			prediction_request = request.PredictionRequest()
 
-			for i in range(0, prediction_request.DoubleDataLength()):
-				self.parse_doubles(prediction_request.DoubleData(i))
+			parsed_doubles = self.parse_double_data(prediction_request)
+			parsed_floats = self.parse_float_data(prediction_request)
+			parsed_ints = self.parse_int_data(prediction_request)
+			parsed_bytes = self.parse_byte_data(prediction_request)
+			parsed_strings = self.parse_string_data(prediction_request)
 
-			for i in range(0, prediction_request.FloatDataLength()):
-				self.parse_floats(prediction_request.FloatData(i))
-
-			for i in range(0, prediction_request.IntegerDataLength()):
-				self.parse_ints(prediction_request.IntegerData(i))
-
-			for i in range(0, prediction_request.ByteDataLength()):
-				self.parse_bytes(prediction_request.ByteData(i))
-
-			for i in range(0, prediction_request.StringDataLength()):
-				self.parse_strings(prediction_request.StringData(i))
+			print(parsed_ints)
+			print(parsed_doubles)
 
 
 		# # preds = self.model.predict_floats(inputs)

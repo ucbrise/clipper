@@ -72,6 +72,21 @@ class PredictRequest(object):
         return None
 
     # PredictRequest
+    def AllDoubleData(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
+        double_vecs = []
+        if o != 0:
+            length = self._tab.VectorLen(o)
+            x = self._tab.Vector(o)
+            from .DoubleVec import DoubleVec
+            for j in range(0, length):
+                obj = DoubleVec()
+                indirection_index = flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
+                obj.Init(self._tab.Bytes, self._tab.Indirect(x + indirection_index))
+                double_vecs.append(obj)
+        return double_vecs
+
+    # PredictRequest
     def DoubleDataLength(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
