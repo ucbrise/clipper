@@ -2,10 +2,10 @@
 #include <boost/thread.hpp>
 #include <iostream>
 
+#include <clipper/concurrency.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/rpc_service.hpp>
 #include <clipper/task_executor.hpp>
-#include <clipper/util.hpp>
 
 using zmq::socket_t;
 using zmq::message_t;
@@ -23,7 +23,14 @@ RPCService::RPCService(std::shared_ptr<ActiveContainers> containers)
 
 RPCService::~RPCService() { stop(); }
 
-void RPCService::start(const string ip, const int port) {
+void RPCService::start(
+    const string ip, const int port,
+    std::function<void(int)>&& container_ready_callback,
+    std::function<void(int)>&& new_container_callback,
+    std::function<void(RPCResponse)>&& process_response_callback) {
+  container_ready_callback_ = container_ready_callback;
+  new_container_callback_ = new_container_callback;
+  process_response_callback_ = process_response_callback;
   const string address = "tcp://" + ip + ":" + std::to_string(port);
   active_ = true;
   // TODO: Propagate errors from new child thread for handling
@@ -67,7 +74,7 @@ void RPCService::manage_service(const string address,
                                 shared_ptr<Queue<RPCRequest>> request_queue,
                                 shared_ptr<Queue<RPCResponse>> response_queue,
                                 shared_ptr<ActiveContainers> containers,
-                                const bool &active) {
+                                const bool& active) {
   // Map from container id to unique routing id for zeromq
   // Note that zeromq socket id is a byte vector
   std::cout << "RPC thread started on address: " << address << std::endl;
@@ -97,14 +104,14 @@ void RPCService::manage_service(const string address,
   }
 }
 
-void RPCService::shutdown_service(const string address, socket_t &socket) {
+void RPCService::shutdown_service(const string address, socket_t& socket) {
   socket.disconnect(address);
   socket.close();
 }
 
 void RPCService::send_messages(
-    socket_t &socket, shared_ptr<Queue<RPCRequest>> request_queue,
-    boost::bimap<int, vector<uint8_t>> &connections) {
+    socket_t& socket, shared_ptr<Queue<RPCRequest>> request_queue,
+    boost::bimap<int, vector<uint8_t>>& connections) {
   while (request_queue->size() > 0) {
     RPCRequest request = request_queue->pop();
     //    std::cout << "Sending request of batch size " <<
@@ -126,12 +133,12 @@ void RPCService::send_messages(
     int cur_msg_num = 0;
     // subtract 1 because we start counting at 0
     int last_msg_num = std::get<2>(request).size() - 1;
-    for (const std::vector<uint8_t> &m : std::get<2>(request)) {
+    for (const std::vector<uint8_t>& m : std::get<2>(request)) {
       // send the sndmore flag unless we are on the last message part
       if (cur_msg_num < last_msg_num) {
-        socket.send((uint8_t *)m.data(), m.size(), ZMQ_SNDMORE);
+        socket.send((uint8_t*)m.data(), m.size(), ZMQ_SNDMORE);
       } else {
-        socket.send((uint8_t *)m.data(), m.size(), 0);
+        socket.send((uint8_t*)m.data(), m.size(), 0);
       }
       cur_msg_num += 1;
     }
@@ -139,8 +146,8 @@ void RPCService::send_messages(
 }
 
 void RPCService::receive_message(
-    socket_t &socket, shared_ptr<Queue<RPCResponse>> response_queue,
-    boost::bimap<int, vector<uint8_t>> &connections, int &container_id,
+    socket_t& socket, shared_ptr<Queue<RPCResponse>> response_queue,
+    boost::bimap<int, vector<uint8_t>>& connections, int& container_id,
     std::shared_ptr<ActiveContainers> containers) {
   message_t msg_identity;
   message_t msg_delimiter;
@@ -148,8 +155,8 @@ void RPCService::receive_message(
   socket.recv(&msg_delimiter, 0);
 
   vector<uint8_t> connection_id(
-      (uint8_t *)msg_identity.data(),
-      (uint8_t *)msg_identity.data() + msg_identity.size());
+      (uint8_t*)msg_identity.data(),
+      (uint8_t*)msg_identity.data() + msg_identity.size());
   boost::bimap<int, vector<uint8_t>>::right_const_iterator connection =
       connections.right.find(connection_id);
   if (connection == connections.right.end()) {
@@ -161,8 +168,8 @@ void RPCService::receive_message(
     message_t model_version;
     socket.recv(&model_name, 0);
     socket.recv(&model_version, 0);
-    std::string name(static_cast<char *>(model_name.data()), model_name.size());
-    std::string version_str(static_cast<char *>(model_version.data()));
+    std::string name(static_cast<char*>(model_name.data()), model_name.size());
+    std::string version_str(static_cast<char*>(model_version.data()));
     int version = std::stoi(version_str);
     VersionedModelId model = std::make_pair(name, version);
     std::cout << "Container added" << std::endl;
@@ -171,18 +178,31 @@ void RPCService::receive_message(
     // into the table.
     // For now, create a new container object directly.
     containers->add_container(model, container_id);
+    auto nc_callback = this->new_container_callback_;
+    auto cr_callback = this->container_ready_callback_;
+    // we group these together with the lambda to ensure that the
+    // new container callback is called before the container
+    // ready callback.
+    DefaultThreadPool::submit_job([=] {
+      nc_callback(container_id);
+      cr_callback(container_id);
+    });
     container_id += 1;
+
   } else {
     message_t msg_id;
     message_t msg_content;
     socket.recv(&msg_id, 0);
     socket.recv(&msg_content, 0);
     // TODO: get rid of c-style casts
-    int id = ((int *)msg_id.data())[0];
-    vector<uint8_t> content((uint8_t *)msg_content.data(),
-                            (uint8_t *)msg_content.data() + msg_content.size());
+    int id = ((int*)msg_id.data())[0];
+    vector<uint8_t> content((uint8_t*)msg_content.data(),
+                            (uint8_t*)msg_content.data() + msg_content.size());
     RPCResponse response(id, content);
-    response_queue->push(response);
+    // response_queue->push(response);
+    DefaultThreadPool::submit_job(process_response_callback_,
+                                  std::move(response));
+    DefaultThreadPool::submit_job(container_ready_callback_, container_id);
   }
 }
 

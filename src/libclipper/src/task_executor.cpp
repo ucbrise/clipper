@@ -4,17 +4,17 @@
 // #define NDEBUG
 #include <cassert>
 
-#include <clipper/task_executor.hpp>
-#include <clipper/util.hpp>
-
 #include <boost/thread.hpp>
+
+#include <clipper/concurrency.hpp>
+#include <clipper/task_executor.hpp>
 
 namespace clipper {
 
 CacheEntry::CacheEntry() { value_ = value_promise_.get_future(); }
 
 boost::shared_future<Output> PredictionCache::fetch(
-    const VersionedModelId &model, const std::shared_ptr<Input> &input) {
+    const VersionedModelId& model, const std::shared_ptr<Input>& input) {
   std::unique_lock<std::mutex> l(m_);
   auto key = hash(model, input->hash());
   auto search = cache_.find(key);
@@ -28,9 +28,9 @@ boost::shared_future<Output> PredictionCache::fetch(
   }
 }
 
-void PredictionCache::put(const VersionedModelId &model,
-                          const std::shared_ptr<Input> &input,
-                          const Output &output) {
+void PredictionCache::put(const VersionedModelId& model,
+                          const std::shared_ptr<Input>& input,
+                          const Output& output) {
   std::unique_lock<std::mutex> l(m_);
   auto key = hash(model, input->hash());
   auto search = cache_.find(key);
@@ -47,14 +47,14 @@ void PredictionCache::put(const VersionedModelId &model,
   }
 }
 
-size_t PredictionCache::hash(const VersionedModelId &model,
+size_t PredictionCache::hash(const VersionedModelId& model,
                              size_t input_hash) const {
   return versioned_model_hash(model) ^ input_hash;
 }
 
 std::shared_ptr<ModelContainer> PowerTwoChoicesScheduler::assign_container(
-    const PredictTask &task,
-    std::vector<std::shared_ptr<ModelContainer>> &containers) const {
+    const PredictTask& task,
+    std::vector<std::shared_ptr<ModelContainer>>& containers) const {
   UNUSED(task);
   assert(containers.size() >= 1);
   if (containers.size() > 1) {
@@ -79,8 +79,8 @@ std::shared_ptr<ModelContainer> PowerTwoChoicesScheduler::assign_container(
 
 std::vector<float> deserialize_outputs(std::vector<uint8_t> bytes) {
   assert(bytes.size() % sizeof(float) == 0);
-//  uint8_t *bytes_ptr = bytes.data();  // point to beginning of memory
-  float *float_array = reinterpret_cast<float *>(bytes.data());
+  //  uint8_t *bytes_ptr = bytes.data();  // point to beginning of memory
+  float* float_array = reinterpret_cast<float*>(bytes.data());
   std::vector<float> outputs(float_array,
                              float_array + bytes.size() / sizeof(float));
   return outputs;

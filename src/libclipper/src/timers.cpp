@@ -5,8 +5,8 @@
 #include <utility>
 
 #include <boost/thread.hpp>
+#include <clipper/concurrency.hpp>
 #include <clipper/timers.hpp>
-#include <clipper/util.hpp>
 
 using std::pair;
 // using std::chrono::high_resolution_clock;
@@ -18,24 +18,22 @@ Timer::Timer(
     boost::promise<void> completion_promise)
     : deadline_(deadline), completion_promise_(std::move(completion_promise)) {}
 
-bool Timer::operator<(const Timer &rhs) const {
+bool Timer::operator<(const Timer& rhs) const {
   return deadline_ < rhs.deadline_;
 }
 
-bool Timer::operator>(const Timer &rhs) const {
+bool Timer::operator>(const Timer& rhs) const {
   return deadline_ > rhs.deadline_;
 }
 
-bool Timer::operator<=(const Timer &rhs) const {
+bool Timer::operator<=(const Timer& rhs) const {
   return deadline_ <= rhs.deadline_;
 }
 
-bool Timer::operator>=(const Timer &rhs) const {
+bool Timer::operator>=(const Timer& rhs) const {
   return deadline_ >= rhs.deadline_;
 }
 
-void Timer::expire() {
-  completion_promise_.set_value();
-}
+void Timer::expire() { completion_promise_.set_value(); }
 
 }  // namespace clipper

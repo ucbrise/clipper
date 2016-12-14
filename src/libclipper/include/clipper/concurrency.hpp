@@ -1,0 +1,282 @@
+#ifndef CLIPPER_LIB_CONCURRENCY_HPP
+#define CLIPPER_LIB_CONCURRENCY_HPP
+
+#include <algorithm>
+#include <atomic>
+#include <condition_variable>
+#include <cstdint>
+#include <functional>
+// #include <future>
+#include <memory>
+#include <queue>
+#include <thread>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
+// uncomment to disable assert()
+// #define NDEBUG
+#include <cassert>
+
+#include "boost/optional.hpp"
+#include "boost/thread.hpp"
+
+#define UNUSED(expr) \
+  do {               \
+    (void)(expr);    \
+  } while (0)
+
+namespace clipper {
+
+// Queue implementation borrowed from LatticeFlow
+// https://github.com/ucbrise/LatticeFlow/blob/3d9e2fa9d84d8a5f578c0039f9ee6f3307cf8b1b/src/concurrency/queue.h
+template <typename T>
+class Queue {
+ public:
+  Queue() = default;
+  explicit Queue(std::vector<T> xs) : xs_(std::move(xs)) {}
+  Queue(const Queue&) = delete;
+  Queue& operator=(const Queue&) = delete;
+
+  // TODO should we allow move constructors?
+  Queue(Queue&&) = delete;
+  Queue& operator=(Queue&&) = delete;
+
+  void push(const T& x) {
+    boost::unique_lock<boost::shared_mutex> l(m_);
+    xs_.push(x);
+    data_available_.notify_one();
+  }
+
+  int size() {
+    boost::shared_lock<boost::shared_mutex> l(m_);
+    return xs_.size();
+  }
+
+  /// Block until the queue contains at least one element, then return the
+  /// first element in the queue.
+  T pop() {
+    boost::unique_lock<boost::shared_mutex> l(m_);
+    while (xs_.size() == 0) {
+      data_available_.wait(l);
+    }
+    const T x = xs_.front();
+    xs_.pop();
+    return x;
+  }
+
+  boost::optional<T> try_pop() {
+    boost::unique_lock<boost::shared_mutex> l(m_);
+    if (xs_.size() > 0) {
+      const T x = xs_.front();
+      xs_.pop();
+      return x;
+    } else {
+      return {};
+    }
+  }
+
+  std::vector<T> try_pop_batch(size_t batch_size) {
+    boost::unique_lock<boost::shared_mutex> l(m_);
+    std::vector<T> batch;
+    while (xs_.size() > 0 && batch.size() < batch_size) {
+      batch.push_back(xs_.front());
+      xs_.pop();
+    }
+    return batch;
+  }
+
+  void clear() {
+    boost::unique_lock<boost::shared_mutex> l(m_);
+    xs_.clear();
+  }
+
+ private:
+  boost::shared_mutex m_;
+  std::condition_variable_any data_available_;
+  std::queue<T> xs_;
+};
+
+/// Implementation adapted from
+/// https://goo.gl/Iav87R
+
+class ThreadPool {
+ private:
+  class IThreadTask {
+   public:
+    IThreadTask(void) = default;
+    virtual ~IThreadTask(void) = default;
+    IThreadTask(const IThreadTask& rhs) = delete;
+    IThreadTask& operator=(const IThreadTask& rhs) = delete;
+    IThreadTask(IThreadTask&& other) = default;
+    IThreadTask& operator=(IThreadTask&& other) = default;
+
+    /**
+     * Run the task.
+     */
+    virtual void execute() = 0;
+  };
+
+  template <typename Func>
+  class ThreadTask : public IThreadTask {
+   public:
+    ThreadTask(Func&& func) : m_func{std::move(func)} {}
+
+    ~ThreadTask(void) override = default;
+    ThreadTask(const ThreadTask& rhs) = delete;
+    ThreadTask& operator=(const ThreadTask& rhs) = delete;
+    ThreadTask(ThreadTask&& other) = default;
+    ThreadTask& operator=(ThreadTask&& other) = default;
+
+    /**
+     * Run the task.
+     */
+    void execute() override { m_func(); }
+
+   private:
+    Func m_func;
+  };
+
+ public:
+  /**
+   * A wrapper around a std::future that adds the behavior of futures returned
+   * from std::async.
+   * Specifically, this object will block and wait for execution to finish
+   * before going out of scope.
+   */
+  template <typename T>
+  class TaskFuture {
+   public:
+    TaskFuture(boost::future<T>&& future) : m_future{std::move(future)} {}
+
+    TaskFuture(const TaskFuture& rhs) = delete;
+    TaskFuture& operator=(const TaskFuture& rhs) = delete;
+    TaskFuture(TaskFuture&& other) = default;
+    TaskFuture& operator=(TaskFuture&& other) = default;
+    ~TaskFuture(void) {
+      if (m_future.valid()) {
+        m_future.get();
+      }
+    }
+
+    auto get(void) { return m_future.get(); }
+
+   private:
+    boost::future<T> m_future;
+  };
+
+ public:
+  /**
+   * Constructor.
+   */
+  ThreadPool(void)
+      : ThreadPool{std::max(std::thread::hardware_concurrency(), 2u) - 1u} {
+    /*
+     * Always create at least one thread.  If hardware_concurrency() returns 0,
+     * subtracting one would turn it to UINT_MAX, so get the maximum of
+     * hardware_concurrency() and 2 before subtracting 1.
+     */
+  }
+
+  /**
+   * Constructor.
+   */
+  explicit ThreadPool(const std::uint32_t numThreads)
+      : m_done{false}, m_workQueue{}, m_threads{} {
+    try {
+      for (std::uint32_t i = 0u; i < numThreads; ++i) {
+        m_threads.emplace_back(&ThreadPool::worker, this);
+      }
+    } catch (...) {
+      destroy();
+      throw;
+    }
+  }
+
+  /**
+   * Non-copyable.
+   */
+  ThreadPool(const ThreadPool& rhs) = delete;
+
+  /**
+   * Non-assignable.
+   */
+  ThreadPool& operator=(const ThreadPool& rhs) = delete;
+
+  /**
+   * Destructor.
+   */
+  ~ThreadPool(void) { destroy(); }
+
+  /**
+   * Submit a job to be run by the thread pool.
+   */
+  template <typename Func, typename... Args>
+  auto submit(Func&& func, Args&&... args) {
+    auto boundTask =
+        std::bind(std::forward<Func>(func), std::forward<Args>(args)...);
+    using ResultType = std::result_of_t<decltype(boundTask)()>;
+    using PackagedTask = std::packaged_task<ResultType()>;
+    using TaskType = ThreadTask<PackagedTask>;
+
+    PackagedTask task{std::move(boundTask)};
+    TaskFuture<ResultType> result{task.get_future()};
+    m_workQueue.push(std::make_unique<TaskType>(std::move(task)));
+    return result;
+  }
+
+ private:
+  /**
+   * Constantly running function each thread uses to acquire work items from the
+   * queue.
+   */
+  void worker(void) {
+    while (!m_done) {
+      std::unique_ptr<IThreadTask> pTask{nullptr};
+      if (m_workQueue.pop(pTask)) {
+        pTask->execute();
+      }
+    }
+  }
+
+  /**
+   * Invalidates the queue and joins all running threads.
+   */
+  void destroy(void) {
+    m_done = true;
+    m_workQueue.invalidate();
+    for (auto& thread : m_threads) {
+      if (thread.joinable()) {
+        thread.join();
+      }
+    }
+  }
+
+ private:
+  std::atomic_bool m_done;
+  Queue<std::unique_ptr<IThreadTask>> m_workQueue;
+  std::vector<std::thread> m_threads;
+};
+
+namespace DefaultThreadPool {
+/**
+ * Submit a job to the default thread pool.
+ */
+template <typename Func, typename... Args>
+inline auto submit_job(Func&& func, Args&&... args) {
+  return get_thread_pool().submit(std::forward<Func>(func),
+                                  std::forward<Args>(args)...);
+}
+
+/**
+ * Get the default thread pool for the application.
+ * This pool is created with 4 threads.
+ */
+inline ThreadPool& get_thread_pool(void) {
+  static ThreadPool defaultPool(4);
+  return defaultPool;
+}
+}
+
+}  // namespace clipper
+#endif

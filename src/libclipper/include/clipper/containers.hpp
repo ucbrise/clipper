@@ -2,42 +2,48 @@
 #ifndef CLIPPER_LIB_CONTAINERS_H
 #define CLIPPER_LIB_CONTAINERS_H
 
+#include <chrono>
 #include <memory>
 #include <unordered_map>
 
 #include <boost/thread.hpp>
 
+#include <clipper/concurrency.hpp>
 #include <clipper/datatypes.hpp>
-#include <clipper/util.hpp>
 
 namespace clipper {
 
+using Deadline = std::chrono::time_point<std::chrono::high_resolution_clock>;
+
+template <typename Clock>
 class ModelContainer {
  public:
   ~ModelContainer() = default;
-  ModelContainer(VersionedModelId model, int id);
+  ModelContainer(Clock c, VersionedModelId model, int id)
+      : c_(std::move(c)), model_(model), container_id_(container_id) {}
   // disallow copy
-  ModelContainer(const ModelContainer &) = delete;
-  ModelContainer &operator=(const ModelContainer &) = delete;
+  ModelContainer(const ModelContainer&) = delete;
+  ModelContainer& operator=(const ModelContainer&) = delete;
 
-  ModelContainer(ModelContainer &&) = default;
-  ModelContainer &operator=(ModelContainer &&) = default;
+  ModelContainer(ModelContainer&&) = default;
+  ModelContainer& operator=(ModelContainer&&) = default;
 
-  std::vector<PredictTask> dequeue_predictions(int batch_size) {
-    return request_queue_.try_pop_batch(batch_size);
-  }
+  void update_latency_estimator(int batch_size, int latency) {}
 
-  int get_queue_size();
-  void send_prediction(PredictTask task);
-  void send_feedback(PredictTask task);
+  // TODO TODO TODO: implement
+  int get_batch_size(Deadline deadline) { return 5; }
+
+  // TODO: implement
+  // std::chrono::duration estimate_latency(int batch_size) {}
 
   VersionedModelId model_;
   int container_id_;
 
  private:
   bool connected_{true};
-  Queue<PredictTask> request_queue_;
-  Queue<FeedbackTask> feedback_queue_;
+  Clock c_;
+  // Queue<PredictTask> request_queue_;
+  // Queue<FeedbackTask> feedback_queue_;
 };
 
 /// This is a lightweight wrapper around the map of active containers
@@ -48,11 +54,11 @@ class ActiveContainers {
   explicit ActiveContainers();
 
   // Disallow copy
-  ActiveContainers(const ActiveContainers &) = delete;
-  ActiveContainers &operator=(const ActiveContainers &) = delete;
+  ActiveContainers(const ActiveContainers&) = delete;
+  ActiveContainers& operator=(const ActiveContainers&) = delete;
 
-  ActiveContainers(ActiveContainers &&) = default;
-  ActiveContainers &operator=(ActiveContainers &&) = default;
+  ActiveContainers(ActiveContainers&&) = default;
+  ActiveContainers& operator=(ActiveContainers&&) = default;
 
   void add_container(VersionedModelId model, int id);
 
@@ -64,7 +70,9 @@ class ActiveContainers {
   /// active containers, the object itself won't get destroyed until
   /// the last shared_ptr copy goes out of scope.
   std::vector<std::shared_ptr<ModelContainer>> get_model_replicas_snapshot(
-      const VersionedModelId &model);
+      const VersionedModelId& model);
+
+  std::shared_ptr<ModelContainer> get_container_by_id(int id);
 
   /// Get list of all models that have at least one active replica.
   std::vector<VersionedModelId> get_known_models();
@@ -80,6 +88,7 @@ class ActiveContainers {
                      std::vector<std::shared_ptr<ModelContainer>>,
                      decltype(&versioned_model_hash)>
       containers_;
+  std::unordered_map<int, std::shared_ptr<ModelContainer>> id_map_;
 };
 }
 
