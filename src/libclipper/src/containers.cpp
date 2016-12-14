@@ -25,27 +25,26 @@ namespace clipper {
 
 ActiveContainers::ActiveContainers()
     : containers_(
-          std::unordered_map<
-              VersionedModelId,
-              std::vector<std::shared_ptr<ModelContainer<HighPrecisionClock>>>,
-              decltype(&versioned_model_hash)>(100, &versioned_model_hash)) {}
+          std::unordered_map<VersionedModelId,
+                             std::vector<std::shared_ptr<ModelContainer>>,
+                             decltype(&versioned_model_hash)>(
+              100, &versioned_model_hash)) {}
 
 void ActiveContainers::add_container(VersionedModelId model, int id) {
   std::cout << "Adding new container: "
             << "model: " << model.first << ", version: " << model.second
             << ", ID: " << id << std::endl;
   boost::unique_lock<boost::shared_mutex> l{m_};
-  auto new_container = std::make_shared < ModelContainer<HighPrecisionClock>(
-                                              HighPrecisionClock{}, model, id);
+  auto new_container = std::make_shared<ModelContainer>(model, id);
   auto entry = containers_[new_container->model_];
   entry.push_back(new_container);
   containers_[new_container->model_] = entry;
   assert(containers_[new_container->model_].size() > 0);
-  id_map_.insert(id, new_container);
+  id_map_[id] = new_container;
 }
 
-boost::optional<std::shared_ptr<ModelContainer<HighPrecisionClock>>>
-get_container_by_id(int id) {
+boost::optional<std::shared_ptr<ModelContainer>>
+ActiveContainers::get_container_by_id(int id) {
   auto container = id_map_.find(id);
   if (container != id_map_.end()) {
     return container->second;

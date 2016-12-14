@@ -6,8 +6,8 @@
 #include <condition_variable>
 #include <cstdint>
 #include <functional>
-// #include <future>
 #include <memory>
+#include <mutex>
 #include <queue>
 #include <thread>
 #include <type_traits>
@@ -99,6 +99,109 @@ class Queue {
 
 /// Implementation adapted from
 /// https://goo.gl/Iav87R
+
+template <typename T>
+class ThreadSafeQueue {
+ public:
+  /**
+   * Destructor.
+   */
+  ~ThreadSafeQueue(void) { invalidate(); }
+
+  /**
+   * Attempt to get the first value in the queue.
+   * Returns true if a value was successfully written to the out parameter,
+   * false otherwise.
+   */
+  bool tryPop(T& out) {
+    std::lock_guard<std::mutex> lock{m_mutex};
+    if (m_queue.empty() || !m_valid) {
+      return false;
+    }
+    out = std::move(m_queue.front());
+    m_queue.pop();
+    return true;
+  }
+
+  /**
+   * Get the first value in the queue.
+   * Will block until a value is available unless clear is called or the
+   * instance is destructed.
+   * Returns true if a value was successfully written to the out parameter,
+   * false otherwise.
+   */
+  bool waitPop(T& out) {
+    std::unique_lock<std::mutex> lock{m_mutex};
+    m_condition.wait(lock, [this]() { return !m_queue.empty() || !m_valid; });
+    /*
+     * Using the condition in the predicate ensures that spurious wakeups with a
+     * valid
+     * but empty queue will not proceed, so only need to check for validity
+     * before proceeding.
+     */
+    if (!m_valid) {
+      return false;
+    }
+    out = std::move(m_queue.front());
+    m_queue.pop();
+    return true;
+  }
+
+  /**
+   * Push a new value onto the queue.
+   */
+  void push(T value) {
+    std::lock_guard<std::mutex> lock{m_mutex};
+    m_queue.push(std::move(value));
+    m_condition.notify_one();
+  }
+
+  /**
+   * Check whether or not the queue is empty.
+   */
+  bool empty(void) const {
+    std::lock_guard<std::mutex> lock{m_mutex};
+    return m_queue.empty();
+  }
+
+  /**
+   * Clear all items from the queue.
+   */
+  void clear(void) {
+    std::lock_guard<std::mutex> lock{m_mutex};
+    while (!m_queue.empty()) {
+      m_queue.pop();
+    }
+    m_condition.notify_all();
+  }
+
+  /**
+   * Invalidate the queue.
+   * Used to ensure no conditions are being waited on in waitPop when
+   * a thread or the application is trying to exit.
+   * The queue is invalid after calling this method and it is an error
+   * to continue using a queue after this method has been called.
+   */
+  void invalidate(void) {
+    std::lock_guard<std::mutex> lock{m_mutex};
+    m_valid = false;
+    m_condition.notify_all();
+  }
+
+  /**
+   * Returns whether or not this queue is valid.
+   */
+  bool isValid(void) const {
+    std::lock_guard<std::mutex> lock{m_mutex};
+    return m_valid;
+  }
+
+ private:
+  std::atomic_bool m_valid{true};
+  mutable std::mutex m_mutex;
+  std::queue<T> m_queue;
+  std::condition_variable m_condition;
+};
 
 class ThreadPool {
  private:
@@ -216,7 +319,7 @@ class ThreadPool {
     auto boundTask =
         std::bind(std::forward<Func>(func), std::forward<Args>(args)...);
     using ResultType = std::result_of_t<decltype(boundTask)()>;
-    using PackagedTask = std::packaged_task<ResultType()>;
+    using PackagedTask = boost::packaged_task<ResultType()>;
     using TaskType = ThreadTask<PackagedTask>;
 
     PackagedTask task{std::move(boundTask)};
@@ -233,7 +336,7 @@ class ThreadPool {
   void worker(void) {
     while (!m_done) {
       std::unique_ptr<IThreadTask> pTask{nullptr};
-      if (m_workQueue.pop(pTask)) {
+      if (m_workQueue.waitPop(pTask)) {
         pTask->execute();
       }
     }
@@ -254,19 +357,11 @@ class ThreadPool {
 
  private:
   std::atomic_bool m_done;
-  Queue<std::unique_ptr<IThreadTask>> m_workQueue;
+  ThreadSafeQueue<std::unique_ptr<IThreadTask>> m_workQueue;
   std::vector<std::thread> m_threads;
 };
 
 namespace DefaultThreadPool {
-/**
- * Submit a job to the default thread pool.
- */
-template <typename Func, typename... Args>
-inline auto submit_job(Func&& func, Args&&... args) {
-  return get_thread_pool().submit(std::forward<Func>(func),
-                                  std::forward<Args>(args)...);
-}
 
 /**
  * Get the default thread pool for the application.
@@ -275,6 +370,15 @@ inline auto submit_job(Func&& func, Args&&... args) {
 inline ThreadPool& get_thread_pool(void) {
   static ThreadPool defaultPool(4);
   return defaultPool;
+}
+
+/**
+ * Submit a job to the default thread pool.
+ */
+template <typename Func, typename... Args>
+inline auto submit_job(Func&& func, Args&&... args) {
+  return get_thread_pool().submit(std::forward<Func>(func),
+                                  std::forward<Args>(args)...);
 }
 }
 

@@ -10,17 +10,17 @@
 
 #include <clipper/concurrency.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/timers.hpp>
 
 namespace clipper {
 
 using Deadline = std::chrono::time_point<std::chrono::high_resolution_clock>;
 
-template <typename Clock>
 class ModelContainer {
  public:
   ~ModelContainer() = default;
-  ModelContainer(Clock c, VersionedModelId model, int id)
-      : c_(std::move(c)), model_(model), container_id_(container_id) {}
+  ModelContainer(VersionedModelId model, int id)
+      : model_(model), container_id_(id) {}
   // disallow copy
   ModelContainer(const ModelContainer&) = delete;
   ModelContainer& operator=(const ModelContainer&) = delete;
@@ -28,10 +28,10 @@ class ModelContainer {
   ModelContainer(ModelContainer&&) = default;
   ModelContainer& operator=(ModelContainer&&) = default;
 
-  void update_latency_estimator(int batch_size, int latency) {}
+  void update_latency_estimator(int /*batch_size*/, int /*latency*/) {}
 
   // TODO TODO TODO: implement
-  int get_batch_size(Deadline deadline) { return 5; }
+  int get_batch_size(Deadline /*deadline*/) { return 5; }
 
   // TODO: implement
   // std::chrono::duration estimate_latency(int batch_size) {}
@@ -40,8 +40,8 @@ class ModelContainer {
   int container_id_;
 
  private:
-  bool connected_{true};
-  Clock c_;
+  // bool connected_{true};
+  // Clock c_;
   // Queue<PredictTask> request_queue_;
   // Queue<FeedbackTask> feedback_queue_;
 };
@@ -72,7 +72,7 @@ class ActiveContainers {
   std::vector<std::shared_ptr<ModelContainer>> get_model_replicas_snapshot(
       const VersionedModelId& model);
 
-  std::shared_ptr<ModelContainer> get_container_by_id(int id);
+  boost::optional<std::shared_ptr<ModelContainer>> get_container_by_id(int id);
 
   /// Get list of all models that have at least one active replica.
   std::vector<VersionedModelId> get_known_models();

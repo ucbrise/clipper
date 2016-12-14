@@ -1,6 +1,7 @@
 #ifndef CLIPPER_LIB_TASK_EXECUTOR_H
 #define CLIPPER_LIB_TASK_EXECUTOR_H
 
+#include <iostream>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
@@ -47,7 +48,82 @@ class PredictionCache {
   std::unordered_map<long, CacheEntry> cache_;
 };
 
-template <typename Scheduler>
+struct DeadlineCompare {
+  bool operator()(const std::pair<Deadline, PredictTask>& lhs,
+                  const std::pair<Deadline, PredictTask>& rhs) {
+    return lhs.first > rhs.first;
+  }
+};
+
+// thread safe model queue
+class ModelQueue {
+ public:
+  ModelQueue() : queue_(ModelPQueue{}) {}
+
+  // Disallow copy and assign
+  ModelQueue(const ModelQueue&) = delete;
+  ModelQueue& operator=(const ModelQueue&) = delete;
+
+  ModelQueue(ModelQueue&&) = default;
+  ModelQueue& operator=(ModelQueue&&) = default;
+
+  ~ModelQueue() = default;
+
+  void add_task(PredictTask task) {
+    std::unique_lock<std::mutex> l(queue_mutex_);
+    Deadline deadline = std::chrono::high_resolution_clock::now() +
+                        std::chrono::microseconds(task.latency_slo_micros_);
+    queue_.emplace(deadline, std::move(task));
+    queue_not_empty_.notify_one();
+  }
+
+  int get_size() {
+    std::unique_lock<std::mutex> l(queue_mutex_);
+    return queue_.size();
+  }
+
+  // TODO: If we implement the scheduler so that it calls
+  // get_earliest_deadline(), then uses that to compute the batch size,
+  // then calls dequeue with that batch size, it's possible for a new
+  // task with an earlier deadline to be submitted. I'm not sure what the
+  // correct behavior here should be.
+  Deadline get_earliest_deadline() {
+    std::unique_lock<std::mutex> l(queue_mutex_);
+    if (queue_.size() == 0) {
+      queue_not_empty_.wait(l, [this] { return queue_.size() > 0; });
+    }
+    return queue_.top().first;
+  }
+
+  // Dequeues up to max_batch_size tasks from the queue without blocking
+  std::vector<PredictTask> get_batch(int max_batch_size) {
+    // NOTE: Because the queue lock is released and reacquired between a
+    // call to get_earliest_deadline() (which blocks until the queue is
+    // not empty) and the call to this method, it's possible for the queue
+    // to be empty, in which case the returned vector will have size 0.
+
+    std::unique_lock<std::mutex> l(queue_mutex_);
+    std::vector<PredictTask> batch;
+    while (batch.size() < (size_t)max_batch_size && queue_.size() > 0) {
+      batch.push_back(queue_.top().second);
+      queue_.pop();
+    }
+    return batch;
+  }
+
+ private:
+  // Min PriorityQueue so that the task with the earliest
+  // deadline is at the front of the queue
+  using ModelPQueue =
+      std::priority_queue<std::pair<Deadline, PredictTask>,
+                          std::vector<std::pair<Deadline, PredictTask>>,
+                          DeadlineCompare>;
+  ModelPQueue queue_;
+  std::mutex queue_mutex_;
+  std::condition_variable_any queue_not_empty_;
+};
+
+// template <typename Scheduler>
 class TaskExecutor {
  public:
   ~TaskExecutor() { active_ = false; };
@@ -81,11 +157,11 @@ class TaskExecutor {
     for (auto t : tasks) {
       auto queue = model_queues_.find(t.model_);
       if (queue != model_queues_.end()) {
-        queue.add_task(t);
-        output_futures.push_back(std::move(cache_.fetch(t.model_, t.input_)));
+        queue->second.add_task(t);
+        output_futures.push_back(cache_.fetch(t.model_, t.input_));
       } else {
-        std::cerr << "Received task for unknown model: {" < < < <
-            t.model_.first << ", " << t.model_.second << "}" << std::endl;
+        std::cerr << "Received task for unknown model: {" << t.model_.first
+                  << ", " << t.model_.second << "}" << std::endl;
       }
     }
     return output_futures;
@@ -103,14 +179,17 @@ class TaskExecutor {
     // look up container
     // see if container represents new model
     // if it does, create new model queue
-    auto c = active_containers_.get_container_by_id();
+    auto c = active_containers_->get_container_by_id(container_id);
     if (c) {
-      std::shared_ptr<ModelContainer<HighPrecisionClock>> container = *c;
+      std::shared_ptr<ModelContainer> container = *c;
       auto model_id = container->model_;
       // NOTE: emplace only inserts if the key doesn't exist.
-      model_queues_.emplace(std::make_pair(model_id, ModelQueue{}));
+      model_queues_.emplace(std::piecewise_construct,
+                            std::forward_as_tuple(model_id),
+                            std::forward_as_tuple());
+
     } else {
-      std::cerr << "Container with unknown ID: " << id
+      std::cerr << "Container with unknown ID: " << container_id
                 << " signalled newly active." << std::endl;
     }
   }
@@ -118,9 +197,9 @@ class TaskExecutor {
   // These should be executed by a threadpool
   void container_ready(int container_id) {
     // look up container
-    auto c = active_containers_.get_container_by_id();
+    auto c = active_containers_->get_container_by_id(container_id);
     if (c) {
-      std::shared_ptr<ModelContainer<HighPrecisionClock>> container = *c;
+      std::shared_ptr<ModelContainer> container = *c;
       // get associated model queue
       auto model_id = container->model_;
       auto queue = model_queues_.find(model_id);
@@ -134,9 +213,9 @@ class TaskExecutor {
       // to get work from the queue until we are successful.
       while (batch.size() == 0) {
         // This blocks to ensure that queue has something in it
-        auto earliest_deadline = queue.get_earliest_deadline();
+        auto earliest_deadline = queue->second.get_earliest_deadline();
         int max_batch_size = container->get_batch_size(earliest_deadline);
-        batch = queue.get_batch(max_batch_size);
+        batch = queue->second.get_batch(max_batch_size);
       }
       std::unique_lock<std::mutex> l(inflight_messages_mutex_);
       std::vector<std::vector<uint8_t>> serialized_inputs;
@@ -146,10 +225,11 @@ class TaskExecutor {
         serialized_inputs.push_back(b.input_->serialize());
         cur_batch.emplace_back(b.model_, b.input_);
       }
-      int message_id = rpc_->send_message(serialized_inputs, c->container_id_);
+      int message_id =
+          rpc_->send_message(serialized_inputs, container->container_id_);
       inflight_messages_.emplace(message_id, std::move(cur_batch));
     } else {
-      std::cerr << "Container with unknown ID: " << id
+      std::cerr << "Container with unknown ID: " << container_id
                 << " signalled ready for processing" << std::endl;
     }
   }
@@ -187,12 +267,12 @@ class TaskExecutor {
       inflight_messages_;
 };
 
-class PowerTwoChoicesScheduler {
- public:
-  std::shared_ptr<ModelContainer> assign_container(
-      const PredictTask& task,
-      std::vector<std::shared_ptr<ModelContainer>>& containers) const;
-};
+// class PowerTwoChoicesScheduler {
+//  public:
+//   std::shared_ptr<ModelContainer> assign_container(
+//       const PredictTask& task,
+//       std::vector<std::shared_ptr<ModelContainer>>& containers) const;
+// };
 
 // class ModelQueueEDFScheduler {
 //  public:
@@ -202,86 +282,6 @@ class PowerTwoChoicesScheduler {
 //
 //   ~ModelQueueEDFScheduler();
 // };
-
-struct DeadlineCompare {
-  bool operator()(const std::pair<Deadline, PredictTask>& lhs,
-                  const std::pair<Deadline, PredictTask>& rhs) {
-    return lhs.first > rhs.first;
-  }
-};
-
-// thread safe model queue
-class ModelQueue {
- public:
-  ModelQueue() : queue_(ModelPQueue{});
-
-  // Disallow copy and assign
-  ModelQueue(const ModelQueue&) = delete;
-  ModelQueue& operator=(const ModelQueue&) = delete;
-
-  ModelQueue(ModelQueue&&) = default;
-  ModelQueue& operator=(ModelQueue&&) = default;
-
-  ~ModelQueue() = default;
-
-  void add_task(PredictTask task) {
-    std::unique_lock<std::mutex> l(queue_mutex_);
-    Deadline deadline = std::chrono::high_resolution_clock::now() +
-                        std::chrono::microseconds(task.latency_slo_micros_);
-    queue_.emplace(deadline, std::move(task));
-    queue_not_empty_.notify_one();
-  }
-
-  int get_size() {
-    std::unique_lock<std::mutex> l(queue_mutex_);
-    return queue_.size();
-  }
-
-  // TODO: If we implement the scheduler so that it calls
-  // get_earliest_deadline(), then uses that to compute the batch size,
-  // then calls dequeue with that batch size, it's possible for a new
-  // task with an earlier deadline to be submitted. I'm not sure what the
-  // correct behavior here should be.
-  Deadline get_earliest_deadline() {
-    std::unique_lock<std::mutex> l(queue_mutex_);
-    if (queue_.size() == 0) {
-      queue_not_empty_.wait(l, [] { return queue_.size() > 0; });
-    }
-    return queue_.top()->second;
-  }
-
-  // Dequeues up to max_batch_size tasks from the queue without blocking
-  std::vector<PredictTask> get_batch(int max_batch_size) {
-    // TODO TODO: what happens if queue is empty?
-    // Could happen with following interleaving of events between
-    // threads A and B
-    // A: get_earliest_deadline() ---> returns d
-    // B: get_earliest_deadline() ---> returns d (nothing has modified queue
-    // yet)
-    // A: get_batch(m) ---> empties queue because m > queue_.size()
-    // B: get_batch(n) ---> EMPTY QUEUE
-    //
-    // ANSWER: calling function calls get_earliest_deadline() again which will
-    // block until there's something in the queue. Do this in a loop.
-
-    std::unique_lock<std::mutex> l(queue_mutex_);
-    std::vector<PredictTask> batch;
-    while (batch.size() < max_batch_size && queue_.size() > 0) {
-      batch.push_back(queue_.top()->second);
-      queue.pop();
-    }
-    return batch;
-  }
-
- private:
-  // Min PriorityQueue so that the task with the earliest
-  // deadline is at the front of the queue
-  using ModelPQueue = std::priority_queue<std::pair<Deadline, PredictTask>>,
-        std::vector<std::pair<Deadline, PredictTask>, DeadlineCompare>;
-  ModelPQueue queue_;
-  std::mutex queue_mutex_;
-  std::condition_variable_any queue_not_empty_;
-};
 
 }  // namespace clipper
 
