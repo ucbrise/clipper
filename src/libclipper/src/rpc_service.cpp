@@ -18,7 +18,7 @@ namespace clipper {
 
 RPCService::RPCService(std::shared_ptr<ActiveContainers> containers)
     : request_queue_(std::make_shared<Queue<RPCRequest>>()),
-      response_queue_(std::make_shared<Queue<RPCResponse>>()),
+      // response_queue_(std::make_shared<Queue<RPCResponse>>()),
       active_containers_(std::move(containers)) {}
 
 RPCService::~RPCService() { stop(); }
@@ -35,13 +35,20 @@ void RPCService::start(
   active_ = true;
   // TODO: Propagate errors from new child thread for handling
   // TODO: Explore bind vs static method call for thread creation
-  boost::thread(boost::bind(&RPCService::manage_service, this, address,
-                            request_queue_, response_queue_, active_containers_,
-                            boost::ref(active_)))
-      .detach();
+  manager_thread_ = boost::thread(&RPCService::manage_service, this, address);
+
+  // boost::bind(&RPCService::manage_service, this, address,
+  //                       request_queue_, response_queue_, active_containers_,
+  //                       boost::ref(active_)))
+  // .detach();
 }
 
-void RPCService::stop() { active_ = false; }
+void RPCService::stop() {
+  active_ = false;
+  if (manager_thread_.joinable()) {
+    manager_thread_.join();
+  }
+}
 
 int RPCService::send_message(const vector<vector<uint8_t>> msg,
                              const int container_id) {
@@ -58,23 +65,20 @@ int RPCService::send_message(const vector<vector<uint8_t>> msg,
   return id;
 }
 
-vector<RPCResponse> RPCService::try_get_responses(const int max_num_responses) {
-  vector<RPCResponse> responses;
-  for (int i = 0; i < max_num_responses; i++) {
-    if (auto response = response_queue_->try_pop()) {
-      responses.push_back(*response);
-    } else {
-      break;
-    }
-  }
-  return responses;
-}
+// vector<RPCResponse> RPCService::try_get_responses(const int
+// max_num_responses) {
+//   vector<RPCResponse> responses;
+//   for (int i = 0; i < max_num_responses; i++) {
+//     if (auto response = response_queue_->try_pop()) {
+//       responses.push_back(*response);
+//     } else {
+//       break;
+//     }
+//   }
+//   return responses;
+// }
 
-void RPCService::manage_service(const string address,
-                                shared_ptr<Queue<RPCRequest>> request_queue,
-                                shared_ptr<Queue<RPCResponse>> response_queue,
-                                shared_ptr<ActiveContainers> containers,
-                                const bool& active) {
+void RPCService::manage_service(const string address) {
   // Map from container id to unique routing id for zeromq
   // Note that zeromq socket id is a byte vector
   std::cout << "RPC thread started on address: " << address << std::endl;
@@ -86,7 +90,7 @@ void RPCService::manage_service(const string address,
   zmq::pollitem_t items[] = {{socket, 0, ZMQ_POLLIN, 0}};
   int container_id = 0;
   while (true) {
-    if (!active) {
+    if (!active_) {
       shutdown_service(address, socket);
       return;
     }
@@ -96,11 +100,10 @@ void RPCService::manage_service(const string address,
       // Note: We only receive one message per event loop iteration
       std::cout << "Found message to receive" << std::endl;
 
-      receive_message(socket, response_queue, connections, container_id,
-                      containers);
+      receive_message(socket, connections, container_id);
     }
     // Note: We send all queued messages per event loop iteration
-    send_messages(socket, request_queue, connections);
+    send_messages(socket, connections);
   }
 }
 
@@ -110,10 +113,9 @@ void RPCService::shutdown_service(const string address, socket_t& socket) {
 }
 
 void RPCService::send_messages(
-    socket_t& socket, shared_ptr<Queue<RPCRequest>> request_queue,
-    boost::bimap<int, vector<uint8_t>>& connections) {
-  while (request_queue->size() > 0) {
-    RPCRequest request = request_queue->pop();
+    socket_t& socket, boost::bimap<int, vector<uint8_t>>& connections) {
+  while (request_queue_->size() > 0) {
+    RPCRequest request = request_queue_->pop();
     //    std::cout << "Sending request of batch size " <<
     //    std::get<2>(request).size() << std::endl;
     boost::bimap<int, vector<uint8_t>>::left_const_iterator connection =
@@ -146,9 +148,8 @@ void RPCService::send_messages(
 }
 
 void RPCService::receive_message(
-    socket_t& socket, shared_ptr<Queue<RPCResponse>> response_queue,
-    boost::bimap<int, vector<uint8_t>>& connections, int& container_id,
-    std::shared_ptr<ActiveContainers> containers) {
+    socket_t& socket, boost::bimap<int, vector<uint8_t>>& connections,
+    int& container_id) {
   message_t msg_identity;
   message_t msg_delimiter;
   socket.recv(&msg_identity, 0);
@@ -177,7 +178,7 @@ void RPCService::receive_message(
     // TODO: Once we have a ConfigDB, we need to insert the new container ID
     // into the table.
     // For now, create a new container object directly.
-    containers->add_container(model, container_id);
+    active_containers_->add_container(model, container_id);
     auto nc_callback = this->new_container_callback_;
     auto cr_callback = this->container_ready_callback_;
     // we group these together with the lambda to ensure that the

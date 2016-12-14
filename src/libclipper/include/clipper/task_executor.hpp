@@ -58,8 +58,11 @@ class TaskExecutor {
                                          decltype(&versioned_model_hash)>(
             100, &versioned_model_hash)) {
     std::cout << "TaskExecutor started" << std::endl;
-    // TODO TODO TODO
-    rpc_->start("*", 7000);
+    rpc_->start(
+        "*", 7000,
+        [this](int container_id) { this->container_ready(container_id); },
+        [this](int container_id) { this->new_container(container_id); },
+        [this](RPCResponse response) { this->process_response(response); });
     active_ = true;
     // boost::thread(&TaskExecutor::send_messages, this).detach();
     // boost::thread(&TaskExecutor::recv_messages, this).detach();
