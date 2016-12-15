@@ -160,8 +160,11 @@ class TaskExecutor {
     for (auto t : tasks) {
       auto queue = model_queues_.find(t.model_);
       if (queue != model_queues_.end()) {
-        queue->second.add_task(t);
         output_futures.push_back(cache_.fetch(t.model_, t.input_));
+        // only send to scheduler if the value is not in the cache yet
+        if (!output_futures.back().is_ready()) {
+          queue->second.add_task(t);
+        }
       } else {
         std::cerr << "Received task for unknown model: {" << t.model_.first
                   << ", " << t.model_.second << "}" << std::endl;
