@@ -13,6 +13,7 @@
 
 #include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/metrics.hpp>
 #include <clipper/query_processor.hpp>
 #include <clipper/task_executor.hpp>
 #include <clipper/timers.hpp>
@@ -159,7 +160,6 @@ future<Response> QueryProcessor::predict(Query query) {
         outputs.push_back((*r).get());
       }
     }
-    std::cout << "Found " << outputs.size() << " completed tasks" << std::endl;
 
     Output final_output;
     if (query.selection_policy_ == "newest_model") {
@@ -172,7 +172,9 @@ future<Response> QueryProcessor::predict(Query query) {
     }
     // std::cout << "RESPONSE FUTURE THREAD: " << std::this_thread::get_id()
     //           << std::endl;
-    Response response{query, query_id, 20000, final_output,
+    long duration_micros = metrics::get_duration_micros(
+        std::chrono::high_resolution_clock::now(), query.create_time_);
+    Response response{query, query_id, duration_micros, final_output,
                       query.candidate_models_};
     p.set_value(response);
 

@@ -12,6 +12,7 @@ add_library(clipper
     src/rpc_service.cpp
     src/timers.cpp
     src/containers.cpp
+    src/metrics.cpp
     )
 
 

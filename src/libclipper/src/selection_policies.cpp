@@ -125,11 +125,11 @@ Output SimplePolicy::combine_predictions(SimpleState state, Query query,
   if (predictions.empty()) {
     return Output{0.0, std::make_pair("none", 0)};
   } else {
-    float sum = 0;
-    for (auto o : predictions) {
-      sum += o.y_hat_;
-    }
-    return Output{sum, std::make_pair("all", 0)};
+    // float sum = 0;
+    // for (auto o : predictions) {
+    //   sum += o.y_hat_;
+    // }
+    return Output{(double)predictions.size(), std::make_pair("all", 0)};
   }
 }
 

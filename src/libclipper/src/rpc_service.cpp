@@ -115,8 +115,6 @@ void RPCService::send_messages(
     socket_t& socket, boost::bimap<int, vector<uint8_t>>& connections) {
   while (request_queue_->size() > 0) {
     RPCRequest request = request_queue_->pop();
-    //    std::cout << "Sending request of batch size " <<
-    //    std::get<2>(request).size() << std::endl;
     boost::bimap<int, vector<uint8_t>>::left_const_iterator connection =
         connections.left.find(std::get<0>(request));
     if (connection == connections.left.end()) {
@@ -195,8 +193,6 @@ void RPCService::receive_message(
     socket.recv(&msg_content, 0);
     // TODO: get rid of c-style casts
     int msg_id = ((int*)msg_id_msg.data())[0];
-    std::cout << "Received message from container: " << current_container_id
-              << std::endl;
     vector<uint8_t> content((uint8_t*)msg_content.data(),
                             (uint8_t*)msg_content.data() + msg_content.size());
     RPCResponse response(msg_id, content);
