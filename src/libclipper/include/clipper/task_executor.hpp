@@ -181,12 +181,18 @@ class TaskExecutor {
     // if it does, create new model queue
     auto c = active_containers_->get_container_by_id(container_id);
     if (c) {
+      std::cout << "Found new container with id: " << container_id << std::endl;
       std::shared_ptr<ModelContainer> container = *c;
       auto model_id = container->model_;
+
       // NOTE: emplace only inserts if the key doesn't exist.
-      model_queues_.emplace(std::piecewise_construct,
-                            std::forward_as_tuple(model_id),
-                            std::forward_as_tuple());
+      auto queued_added = model_queues_.emplace(std::piecewise_construct,
+                                                std::forward_as_tuple(model_id),
+                                                std::forward_as_tuple());
+      if (queued_added.second) {
+        std::cout << "Container belonged to new model: " << model_id.first
+                  << ":" << model_id.second << std::endl;
+      }
 
     } else {
       std::cerr << "Container with unknown ID: " << container_id
@@ -196,6 +202,9 @@ class TaskExecutor {
 
   // These should be executed by a threadpool
   void container_ready(int container_id) {
+    std::cout << "Countainer " << container_id << " ready for processing"
+              << std::endl;
+
     // look up container
     auto c = active_containers_->get_container_by_id(container_id);
     if (c) {
@@ -272,15 +281,6 @@ class TaskExecutor {
 //   std::shared_ptr<ModelContainer> assign_container(
 //       const PredictTask& task,
 //       std::vector<std::shared_ptr<ModelContainer>>& containers) const;
-// };
-
-// class ModelQueueEDFScheduler {
-//  public:
-//   ModelQueueEDFScheduler() = default;
-//
-//   ModelQueueEDFScheduler(const ModelQueueEDFScheduler&) = delete;
-//
-//   ~ModelQueueEDFScheduler();
 // };
 
 }  // namespace clipper
