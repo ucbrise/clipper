@@ -88,7 +88,7 @@ void RPCService::manage_service(const string address) {
   socket.bind(address);
   // Indicate that we will poll our zmq service socket for new inbound messages
   zmq::pollitem_t items[] = {{socket, 0, ZMQ_POLLIN, 0}};
-  int container_id = 0;
+  int next_container_id = 0;
   while (true) {
     if (!active_) {
       shutdown_service(address, socket);
@@ -98,9 +98,8 @@ void RPCService::manage_service(const string address) {
     if (items[0].revents & ZMQ_POLLIN) {
       // TODO: Balance message sending and receiving fairly
       // Note: We only receive one message per event loop iteration
-      std::cout << "Found message to receive" << std::endl;
 
-      receive_message(socket, connections, container_id);
+      receive_message(socket, connections, next_container_id);
     }
     // Note: We send all queued messages per event loop iteration
     send_messages(socket, connections);
@@ -122,7 +121,7 @@ void RPCService::send_messages(
         connections.left.find(std::get<0>(request));
     if (connection == connections.left.end()) {
       // Error handling
-      std::cout << "Attempted to send message to unknown container "
+      std::cerr << "Attempted to send message to unknown container "
                 << std::get<0>(request) << std::endl;
       continue;
     }
@@ -149,7 +148,7 @@ void RPCService::send_messages(
 
 void RPCService::receive_message(
     socket_t& socket, boost::bimap<int, vector<uint8_t>>& connections,
-    int& container_id) {
+    int& next_container_id) {
   message_t msg_identity;
   message_t msg_delimiter;
   socket.recv(&msg_identity, 0);
@@ -161,10 +160,11 @@ void RPCService::receive_message(
   boost::bimap<int, vector<uint8_t>>::right_const_iterator connection =
       connections.right.find(connection_id);
   if (connection == connections.right.end()) {
+    int current_container_id = next_container_id;
+    next_container_id += 1;
     // We have a new connection, process it accordingly
     connections.insert(boost::bimap<int, vector<uint8_t>>::value_type(
-        container_id, connection_id));
-    std::cout << "New container connected" << std::endl;
+        current_container_id, connection_id));
     message_t model_name;
     message_t model_version;
     socket.recv(&model_name, 0);
@@ -173,37 +173,38 @@ void RPCService::receive_message(
     std::string version_str(static_cast<char*>(model_version.data()));
     int version = std::stoi(version_str);
     VersionedModelId model = std::make_pair(name, version);
-    std::cout << "Container added" << std::endl;
 
     // TODO: Once we have a ConfigDB, we need to insert the new container ID
     // into the table.
     // For now, create a new container object directly.
-    active_containers_->add_container(model, container_id);
+    active_containers_->add_container(model, current_container_id);
     auto nc_callback = this->new_container_callback_;
     auto cr_callback = this->container_ready_callback_;
     // we group these together with the lambda to ensure that the
     // new container callback is called before the container
     // ready callback.
     DefaultThreadPool::submit_job([=] {
-      nc_callback(container_id);
-      cr_callback(container_id);
+      nc_callback(current_container_id);
+      cr_callback(current_container_id);
     });
-    container_id += 1;
-
   } else {
-    message_t msg_id;
+    int current_container_id = connection->second;
+    message_t msg_id_msg;
     message_t msg_content;
-    socket.recv(&msg_id, 0);
+    socket.recv(&msg_id_msg, 0);
     socket.recv(&msg_content, 0);
     // TODO: get rid of c-style casts
-    int id = ((int*)msg_id.data())[0];
+    int msg_id = ((int*)msg_id_msg.data())[0];
+    std::cout << "Received message from container: " << current_container_id
+              << std::endl;
     vector<uint8_t> content((uint8_t*)msg_content.data(),
                             (uint8_t*)msg_content.data() + msg_content.size());
-    RPCResponse response(id, content);
+    RPCResponse response(msg_id, content);
     // response_queue->push(response);
     DefaultThreadPool::submit_job(process_response_callback_,
                                   std::move(response));
-    DefaultThreadPool::submit_job(container_ready_callback_, container_id);
+    DefaultThreadPool::submit_job(container_ready_callback_,
+                                  current_container_id);
   }
 }
 

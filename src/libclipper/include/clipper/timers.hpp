@@ -98,11 +98,7 @@ using TimerPQueue =
 template <typename Clock>
 class TimerSystem {
  public:
-  explicit TimerSystem(Clock c) : clock_(c), queue_(TimerPQueue{}) {
-    std::cout << "starting timer thread" << std::endl;
-    start();
-    std::cout << "timer thread started" << std::endl;
-  }
+  explicit TimerSystem(Clock c) : clock_(c), queue_(TimerPQueue{}) { start(); }
 
   ~TimerSystem() { shutdown(); }
 
@@ -118,7 +114,6 @@ class TimerSystem {
   }
 
   void manage_timers() {
-    std::cout << "In timer event loop" << std::endl;
     while (!shutdown_) {
       // wait for next timer to expire
       //    auto cur_time = high_resolution_clock::now();

@@ -69,6 +69,6 @@ if __name__=='__main__':
         example_num = np.random.randint(0,len(x))
         # mnist_update(uid, x[example_num], float(y[example_num]))
         mnist_prediction("localhost", uid, x[example_num])
-        time.sleep(0.2)
+        # time.sleep(0.2)
 
 

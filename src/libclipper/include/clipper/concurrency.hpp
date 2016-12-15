@@ -241,33 +241,34 @@ class ThreadPool {
   };
 
  public:
-  /**
-   * A wrapper around a std::future that adds the behavior of futures returned
-   * from std::async.
-   * Specifically, this object will block and wait for execution to finish
-   * before going out of scope.
-   */
-  template <typename T>
-  class TaskFuture {
-   public:
-    TaskFuture(boost::future<T>&& future) : m_future{std::move(future)} {}
-
-    TaskFuture(const TaskFuture& rhs) = delete;
-    TaskFuture& operator=(const TaskFuture& rhs) = delete;
-    TaskFuture(TaskFuture&& other) = default;
-    TaskFuture& operator=(TaskFuture&& other) = default;
-    ~TaskFuture(void) {
-      if (m_future.valid()) {
-        m_future.get();
-      }
-    }
-
-    auto get(void) { return m_future.get(); }
-
-   private:
-    boost::future<T> m_future;
-  };
-
+  // #<{(|*
+  //  * A wrapper around a std::future that adds the behavior of futures
+  //  returned
+  //  * from std::async.
+  //  * Specifically, this object will block and wait for execution to finish
+  //  * before going out of scope.
+  //  |)}>#
+  // template <typename T>
+  // class TaskFuture {
+  //  public:
+  //   TaskFuture(boost::future<T>&& future) : m_future{std::move(future)} {}
+  //
+  //   TaskFuture(const TaskFuture& rhs) = delete;
+  //   TaskFuture& operator=(const TaskFuture& rhs) = delete;
+  //   TaskFuture(TaskFuture&& other) = default;
+  //   TaskFuture& operator=(TaskFuture&& other) = default;
+  //   ~TaskFuture(void) {
+  //     if (m_future.valid()) {
+  //       m_future.get();
+  //     }
+  //   }
+  //
+  //   auto get(void) { return m_future.get(); }
+  //
+  //  private:
+  //   boost::future<T> m_future;
+  // };
+  //
  public:
   /**
    * Constructor.
@@ -321,11 +322,11 @@ class ThreadPool {
     using ResultType = std::result_of_t<decltype(boundTask)()>;
     using PackagedTask = boost::packaged_task<ResultType()>;
     using TaskType = ThreadTask<PackagedTask>;
-
     PackagedTask task{std::move(boundTask)};
-    TaskFuture<ResultType> result{task.get_future()};
+    auto result_future = task.get_future();
+
     m_workQueue.push(std::make_unique<TaskType>(std::move(task)));
-    return result;
+    return result_future;
   }
 
  private:

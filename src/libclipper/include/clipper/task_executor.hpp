@@ -74,7 +74,8 @@ class ModelQueue {
     Deadline deadline = std::chrono::high_resolution_clock::now() +
                         std::chrono::microseconds(task.latency_slo_micros_);
     queue_.emplace(deadline, std::move(task));
-    queue_not_empty_.notify_one();
+    std::cout << "Adding new task" << std::endl;
+    queue_not_empty_.notify_all();
   }
 
   int get_size() {
@@ -90,7 +91,9 @@ class ModelQueue {
   Deadline get_earliest_deadline() {
     std::unique_lock<std::mutex> l(queue_mutex_);
     if (queue_.size() == 0) {
+      std::cout << "waiting for queue to be non empty" << std::endl;
       queue_not_empty_.wait(l, [this] { return queue_.size() > 0; });
+      std::cout << "Found non-empty queue" << std::endl;
     }
     return queue_.top().first;
   }
@@ -202,9 +205,6 @@ class TaskExecutor {
 
   // These should be executed by a threadpool
   void container_ready(int container_id) {
-    std::cout << "Countainer " << container_id << " ready for processing"
-              << std::endl;
-
     // look up container
     auto c = active_containers_->get_container_by_id(container_id);
     if (c) {
@@ -225,6 +225,7 @@ class TaskExecutor {
         auto earliest_deadline = queue->second.get_earliest_deadline();
         int max_batch_size = container->get_batch_size(earliest_deadline);
         batch = queue->second.get_batch(max_batch_size);
+        std::cout << "Found batch of size " << batch.size() << std::endl;
       }
       std::unique_lock<std::mutex> l(inflight_messages_mutex_);
       std::vector<std::vector<uint8_t>> serialized_inputs;
