@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include <thread>
+#include <tuple>
 #include <unordered_map>
 
 #define BOOST_THREAD_PROVIDES_FUTURE_CONTINUATION
@@ -11,6 +12,7 @@
 #include <boost/thread.hpp>
 #include <boost/thread/executors/basic_thread_pool.hpp>
 
+#include <clipper/concurrency.hpp>
 #include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/metrics.hpp>
@@ -21,7 +23,6 @@
 #define UNREACHABLE() assert(false)
 
 using boost::future;
-using boost::shared_future;
 using std::vector;
 using std::tuple;
 
@@ -125,13 +126,23 @@ future<Response> QueryProcessor::predict(Query query) {
                  std::vector<VersionedModelId>()});
   }
 
-  vector<shared_future<Output>> task_completion_futures =
+  std::cout << "Address of tasks in QueryProcessor::predict(): " << &tasks
+            << std::endl;
+
+  for (const PredictTask& t : tasks) {
+    std::cout << "Found task for model: {" << t.model_.first << ", "
+              << t.model_.second << "}" << std::endl;
+  }
+
+  vector<future<Output>> task_completion_futures =
       task_executor_.schedule_predictions(tasks);
-  auto task_completion_copies = task_completion_futures;
   future<void> timer_future = timer_system_.set_timer(query.latency_micros_);
 
-  auto all_tasks_completed = boost::when_all(task_completion_copies.begin(),
-                                             task_completion_copies.end());
+  boost::future<void> all_tasks_completed;
+  std::tie(all_tasks_completed, task_completion_futures) =
+      future_composition::when_all(std::move(task_completion_futures));
+  // auto all_tasks_completed = boost::when_all(task_completion_futures.begin(),
+  //                                            task_completion_futures.end());
   auto make_response_future =
       boost::when_any(std::move(all_tasks_completed), std::move(timer_future));
 
@@ -144,17 +155,8 @@ future<Response> QueryProcessor::predict(Query query) {
   ](auto result_future) mutable {
 
     auto result = result_future.get();
-    // std::cout << std::boolalpha;
-    // std::cout << "All tasks finished: " << std::get<0>(result).is_ready()
-    //           << ", Timer fired: " << std::get<1>(result).is_ready()
-    //           << std::endl;
     vector<Output> outputs;
     vector<VersionedModelId> used_models;
-    //    vector<shared_future<Output>> completed_tasks =
-    //    std::get<0>(result).get();
-
-    //      vector<boost::shared_future<Output>> completed_tasks =
-    //      task_futures.get();
     for (auto r = task_futures.begin(); r != task_futures.end(); ++r) {
       if ((*r).is_ready()) {
         outputs.push_back((*r).get());
@@ -226,7 +228,7 @@ boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
   // 4) Wait for all feedback_tasks to complete (feedback_processed future)
 
   // copy the vector
-  vector<shared_future<Output>> predict_task_completion_futures =
+  vector<future<Output>> predict_task_completion_futures =
       task_executor_.schedule_predictions({predict_tasks});
 
   vector<boost::future<FeedbackAck>> feedback_task_completion_futures =

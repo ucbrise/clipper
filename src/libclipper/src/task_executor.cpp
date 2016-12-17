@@ -11,18 +11,28 @@
 
 namespace clipper {
 
-CacheEntry::CacheEntry() { value_ = value_promise_.get_future(); }
+CacheEntry::CacheEntry() {}
 
-boost::shared_future<Output> PredictionCache::fetch(
+boost::future<Output> PredictionCache::fetch(
     const VersionedModelId& model, const std::shared_ptr<Input>& input) {
   std::unique_lock<std::mutex> l(m_);
   auto key = hash(model, input->hash());
   auto search = cache_.find(key);
   if (search != cache_.end()) {
-    return search->second.value_;
+    // If there is already a value in the cache, we can
+    // complete the future immediately
+    if (search->second.completed_) {
+      return boost::make_ready_future<Output>(search->second.value_);
+    } else {
+      // If no value yet, create a promise and store it
+      // in the cache entry, then return the associated future.
+      search->second.value_promises_.emplace_back();
+      return search->second.value_promises_.back().get_future();
+    }
   } else {
     CacheEntry new_entry;
-    auto f = new_entry.value_;
+    new_entry.value_promises_.emplace_back();
+    boost::future<Output> f = new_entry.value_promises_.back().get_future();
     cache_.insert(std::make_pair(key, std::move(new_entry)));
     return f;
   }
@@ -36,12 +46,18 @@ void PredictionCache::put(const VersionedModelId& model,
   auto search = cache_.find(key);
   if (search != cache_.end()) {
     if (!search->second.completed_) {
-      search->second.value_promise_.set_value(output);
+      // complete all the stored promises
+      for (auto p = search->second.value_promises_.begin();
+           p != search->second.value_promises_.end(); ++p) {
+        p->set_value(output);
+      }
+      // search->second.value_promise_.set_value(output);
+      search->second.value_ = output;
       search->second.completed_ = true;
     }
   } else {
     CacheEntry new_entry;
-    new_entry.value_promise_.set_value(output);
+    new_entry.value_ = output;
     new_entry.completed_ = true;
     cache_.insert(std::make_pair(key, std::move(new_entry)));
   }

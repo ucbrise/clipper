@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cassert>
 #include <condition_variable>
 #include <cstdint>
 #include <functional>
@@ -381,7 +382,63 @@ inline auto submit_job(Func&& func, Args&&... args) {
   return get_thread_pool().submit(std::forward<Func>(func),
                                   std::forward<Args>(args)...);
 }
+}  // namespace DefaultThreadPool
+
+namespace future_composition {
+
+/// The first element in the pair is a future that will complete when
+/// all the futures provided have completed. The value of the future
+/// will always be true (there were some issues with a future<void>).
+/// The second element is a vector
+/// of futures that have the same values and will complete at the same time
+/// as the futures passed in as argument.
+template <class T>
+std::pair<boost::future<void>, std::vector<boost::future<T>>> when_all(
+    std::vector<boost::future<T>> futures) {
+  if (futures.size() == 0) {
+    return std::make_pair(boost::make_ready_future(), std::move(futures));
+  }
+  std::atomic<int> num_completed(0);
+  // std::shared_ptr<boost::promise<std::vector<T>>> completion_promise =
+  // std::make_shared;
+  int num_futures = futures.size();
+  auto completion_promise = std::make_shared<boost::promise<void>>();
+  std::vector<boost::future<T>> wrapped_futures;
+  for (auto f = futures.begin(); f != futures.end(); ++f) {
+    wrapped_futures.push_back(f->then(
+        [num_futures, completion_promise, &num_completed](auto result) mutable {
+          if (num_completed + 1 == num_futures) {
+            completion_promise->set_value();
+            //
+          } else {
+            num_completed += 1;
+          }
+          return result.get();
+        }));
+  }
+
+  return std::make_pair<boost::future<void>, std::vector<boost::future<T>>>(
+      completion_promise->get_future(), std::move(wrapped_futures));
+
+  // auto completion_future = completion_promise->get_future();
+  // // boost::promise<std::vector<T>> when_all_promise;
+  // // auto when_all_future = when_all_promise.get_future();
+  // completion_future.then([
+  //   wf = std::move(wrapped_futures), p = std::move(when_all_promise)
+  // ](auto rrr) mutable {
+  //   if (!rrr.get()) {
+  //     std::cout << "Uh oh" << std::endl;
+  //   }
+  //   std::vector<T> collected_results;
+  //   for (auto f = wf.begin(); f != wf.end(); ++f) {
+  //     collected_results.push_back(f->get());
+  //   }
+  //   p.set_value(std::move(collected_results));
+  // });
+  // return when_all_future;
 }
 
+}  // namespace future_composition
 }  // namespace clipper
+
 #endif

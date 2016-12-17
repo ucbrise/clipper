@@ -29,14 +29,14 @@ class CacheEntry {
   CacheEntry& operator=(CacheEntry&&) = default;
 
   bool completed_ = false;
-  boost::promise<Output> value_promise_;
-  boost::shared_future<Output> value_;
+  Output value_;
+  std::vector<boost::promise<Output>> value_promises_;
 };
 
 class PredictionCache {
  public:
-  boost::shared_future<Output> fetch(const VersionedModelId& model,
-                                     const std::shared_ptr<Input>& input);
+  boost::future<Output> fetch(const VersionedModelId& model,
+                              const std::shared_ptr<Input>& input);
 
   void put(const VersionedModelId& model, const std::shared_ptr<Input>& input,
            const Output& output);
@@ -151,10 +151,13 @@ class TaskExecutor {
   TaskExecutor(TaskExecutor&& other) = default;
   TaskExecutor& operator=(TaskExecutor&& other) = default;
 
-  std::vector<boost::shared_future<Output>> schedule_predictions(
+  std::vector<boost::future<Output>> schedule_predictions(
       std::vector<PredictTask> tasks) {
-    std::vector<boost::shared_future<Output>> output_futures;
-    for (auto t : tasks) {
+    std::cout << "Address of tasks in TaskExecutor::schedule_predictions(): "
+              << &tasks << std::endl;
+
+    std::vector<boost::future<Output>> output_futures;
+    for (const PredictTask& t : tasks) {
       auto queue = model_queues_.find(t.model_);
       if (queue != model_queues_.end()) {
         output_futures.push_back(cache_.fetch(t.model_, t.input_));

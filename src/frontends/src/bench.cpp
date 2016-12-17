@@ -1,4 +1,3 @@
-
 #include <algorithm>
 #include <ctime>
 #include <iostream>
@@ -10,8 +9,13 @@
 
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_real_distribution.hpp>
+#define BOOST_THREAD_PROVIDES_FUTURE_CONTINUATION
+#define BOOST_THREAD_PROVIDES_FUTURE_WHEN_ALL_WHEN_ANY
+#define PROVIDES_EXECUTORS
 #include <boost/thread.hpp>
+#include <boost/thread/executors/basic_thread_pool.hpp>
 
+#include <clipper/concurrency.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/metrics.hpp>
 #include <clipper/query_processor.hpp>
@@ -75,7 +79,7 @@ void run_benchmark(QueryProcessor& qp, int num_requests) {
             << completed_tasks_sum / (double)num_requests << std::endl;
 }
 
-int main() {
+void drive_benchmark() {
   QueryProcessor qp;
   std::this_thread::sleep_for(std::chrono::seconds(3));
   std::string line;
@@ -90,5 +94,57 @@ int main() {
     }
     std::cout << "Please enter number of requests to make:" << std::endl;
   }
+}
+
+// std::vector<boost::future<Output>> schedule_predictions(
+//     std::vector<PredictTask> tasks) {
+//   std::vector<boost::future<Output>> output_futures;
+//   for (const PredictTask& t : tasks) {
+//     std::cout << "BBBBBBBBB: {" << t.model_.first << ", " << t.model_.second
+//               << "}" << std::endl;
+//     boost::promise<Output> p;
+//     p.set_value(Output{1.0, t.model_});
+//     output_futures.push_back(p.get_future());
+//   }
+//   return output_futures;
+// }
+//
+// void debug_future_comp() {
+//   boost::random::mt19937 gen(std::time(0));
+//   for (int qid = 0; qid < 10000; ++qid) {
+//     Query q = generate_query(1000, gen);
+//     std::cout << "Query number: " << qid << std::endl;
+//
+//     std::vector<PredictTask> tasks;
+//     // construct the task and put in the vector
+//     for (auto v : q.candidate_models_) {
+//       tasks.emplace_back(q.input_, v, 0.5, qid, q.latency_micros_);
+//     }
+//     for (const PredictTask& t : tasks) {
+//       std::cout << "AAAAAAAAAAA: {" << t.model_.first << ", " <<
+//       t.model_.second
+//                 << "}" << std::endl;
+//     }
+//     auto task_futures = schedule_predictions(tasks);
+//     for (const PredictTask& t : tasks) {
+//       std::cout << "CCCCCCCCCCC: {" << t.model_.first << ", " <<
+//       t.model_.second
+//                 << "}" << std::endl;
+//     }
+//
+//     // auto all_tasks_completed =
+//     //     boost::when_all(task_futures.begin(), task_futures.end());
+//     auto all_tasks_completed =
+//         future_composition::when_all(std::move(task_futures));
+//     all_tasks_completed.then([q, qid](auto result) {
+//       result.get();
+//       std::cout << "All tasks completed" << std::endl;
+//     });
+//   }
+// }
+
+int main() {
+  drive_benchmark();
+  // debug_future_comp();
   return 0;
 }
