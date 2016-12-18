@@ -12,7 +12,7 @@ using ByteBuffer = std::vector<uint8_t>;
 using VersionedModelId = std::pair<std::string, int>;
 using QueryId = long;
 using FeedbackAck = bool;
-template <class T> using SerializableVector = flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<T>>>;
+template<class T> using SerializableVector = flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<T>>>;
 
 size_t versioned_model_hash(const VersionedModelId &key);
 
@@ -68,6 +68,9 @@ class DoubleVector : public Input {
   size_t size() const;
   InputType type() const;
 
+  /**
+   * This object retains ownership of the returned pointer
+   */
   const double *get_serializable_data() const;
 
  private:
@@ -90,6 +93,9 @@ class ByteVector : public Input {
   size_t size() const;
   InputType type() const;
 
+  /**
+   * This object retains ownership of the returned pointer
+   */
   const uint8_t *get_serializable_data() const;
 
  private:
@@ -113,6 +119,9 @@ class IntVector : public Input {
   size_t size() const;
   InputType type() const;
 
+  /**
+   * This object retains ownership of the returned pointer
+   */
   const int *get_serializable_data() const;
 
  private:
@@ -136,6 +145,9 @@ class FloatVector : public Input {
   size_t size() const;
   InputType type() const;
 
+  /**
+   * This object retains ownership of the returned pointer
+   */
   const float *get_serializable_data() const;
 
  private:
@@ -159,6 +171,9 @@ class StringVector : public Input {
   size_t size() const;
   InputType type() const;
 
+  /**
+   * This object retains ownership of the returned pointer
+   */
   const std::string *get_serializable_data() const;
 
  private:

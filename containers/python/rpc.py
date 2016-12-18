@@ -15,6 +15,7 @@ import clipper_fbs.IntVec
 import clipper_fbs.StringVec
 import clipper_fbs.FloatVec
 from datetime import datetime
+from collections import deque
 
 class Server(threading.Thread):
 
@@ -35,8 +36,11 @@ class Server(threading.Thread):
 			length = data_vec._tab.VectorLen(o)
 			a = data_vec._tab.Vector(o)
 			offset = a + flatbuffers.number_types.UOffsetTFlags.py_type(0)
+			print(offset)
+			t1 = datetime.now()
 			parsed_data = np.frombuffer(data_vec._tab.Bytes, dtype=dtype, count=length, offset=offset)
-			return parsed_data
+			t2 = datetime.now()
+			return parsed_data, (t2 - t1)
 		else:
 			print("Failed to deserialize data!")
 			raise
@@ -69,15 +73,21 @@ class Server(threading.Thread):
 
 	def parse_double_data(self, pred_request):
 		o = flatbuffers.number_types.UOffsetTFlags.py_type(pred_request._tab.Offset(8))
-		parsed_double_vecs = []
+		parsed_double_vecs = deque()
+		total_time = 0
 		if o != 0:
 			length = pred_request._tab.VectorLen(o)
 			x = pred_request._tab.Vector(o)
 			for j in range(0, length):
+				t1 = datetime.now()
 				obj = clipper_fbs.DoubleVec.DoubleVec()
 				indirection_index = flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
 				obj.Init(pred_request._tab.Bytes, pred_request._tab.Indirect(x + indirection_index))
-				parsed_double_vecs.append(self.parse_data_vector(obj, np.float64))
+				parsed, time = self.parse_data_vector(obj, np.float64)
+				parsed_double_vecs.append(parsed)
+				t2 = datetime.now()
+				total_time += (t2 - t1).microseconds
+		print(total_time)
 		return np.array(parsed_double_vecs)
 
 	def parse_string_data(self, pred_request):
@@ -116,15 +126,13 @@ class Server(threading.Thread):
 		if request_type == 0:
 			prediction_request = request.PredictionRequest()
 
+			t1 = datetime.now()
 			parsed_doubles = self.parse_double_data(prediction_request)
+			t2 = datetime.now()
 			parsed_floats = self.parse_float_data(prediction_request)
 			parsed_ints = self.parse_int_data(prediction_request)
 			parsed_bytes = self.parse_byte_data(prediction_request)
 			parsed_strings = self.parse_string_data(prediction_request)
-
-			print(parsed_ints)
-			print(parsed_doubles)
-
 
 		# # preds = self.model.predict_floats(inputs)
   # # 		assert preds.dtype == np.dtype("float32")
