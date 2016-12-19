@@ -142,7 +142,7 @@ class TimerSystem {
   }
 
   boost::future<void> set_timer(long duration_micros) {
-    assert(initialized_);
+    assert(initialized_ && !shutdown_);
     boost::promise<void> promise;
     auto f = promise.get_future();
     auto tp = clock_.now() + std::chrono::microseconds(duration_micros);
