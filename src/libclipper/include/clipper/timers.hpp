@@ -148,7 +148,8 @@ class TimerSystem {
     auto tp = clock_.now() + std::chrono::microseconds(duration_micros);
     //  Timer timer{tp, promise};
     std::unique_lock<std::mutex> l(queue_mutex_);
-    queue_.emplace(std::make_shared<Timer>(tp, std::move(promise)));
+    auto timer_tmp = std::make_shared<Timer>(tp, std::move(promise));
+    queue_.emplace(timer_tmp);
     return f;
   }
 

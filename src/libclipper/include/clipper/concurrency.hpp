@@ -394,17 +394,18 @@ namespace future_composition {
 /// as the futures passed in as argument.
 template <class T>
 std::pair<boost::future<void>, std::vector<boost::future<T>>> when_all(
-    std::vector<boost::future<T>> futures) {
+    std::vector<boost::future<T>> futures, std::atomic<int>& num_completed) {
   if (futures.size() == 0) {
     return std::make_pair(boost::make_ready_future(), std::move(futures));
   }
-  std::atomic<int> num_completed(0);
   // std::shared_ptr<boost::promise<std::vector<T>>> completion_promise =
   // std::make_shared;
   int num_futures = futures.size();
   auto completion_promise = std::make_shared<boost::promise<void>>();
   std::vector<boost::future<T>> wrapped_futures;
   for (auto f = futures.begin(); f != futures.end(); ++f) {
+    // PROBLEM: Passing a reference to an atomic (num_completed) but the atomic
+    // can go out of scope and be destructed
     wrapped_futures.push_back(f->then(
         [num_futures, completion_promise, &num_completed](auto result) mutable {
           if (num_completed + 1 == num_futures) {

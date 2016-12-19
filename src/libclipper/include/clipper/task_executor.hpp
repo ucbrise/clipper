@@ -153,8 +153,8 @@ class TaskExecutor {
 
   std::vector<boost::future<Output>> schedule_predictions(
       std::vector<PredictTask> tasks) {
-    std::cout << "Address of tasks in TaskExecutor::schedule_predictions(): "
-              << &tasks << std::endl;
+//    std::cout << "Address of tasks in TaskExecutor::schedule_predictions(): "
+//              << &tasks << std::endl;
 
     std::vector<boost::future<Output>> output_futures;
     for (const PredictTask& t : tasks) {

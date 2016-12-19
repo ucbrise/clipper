@@ -126,21 +126,23 @@ future<Response> QueryProcessor::predict(Query query) {
                  std::vector<VersionedModelId>()});
   }
 
-  std::cout << "Address of tasks in QueryProcessor::predict(): " << &tasks
-            << std::endl;
-
-  for (const PredictTask& t : tasks) {
-    std::cout << "Found task for model: {" << t.model_.first << ", "
-              << t.model_.second << "}" << std::endl;
-  }
+  //  std::cout << "Address of tasks in QueryProcessor::predict(): " << &tasks
+  //            << std::endl;
+  //
+  //  for (const PredictTask& t : tasks) {
+  //    std::cout << "Found task for model: {" << t.model_.first << ", "
+  //              << t.model_.second << "}" << std::endl;
+  //  }
 
   vector<future<Output>> task_completion_futures =
       task_executor_.schedule_predictions(tasks);
   future<void> timer_future = timer_system_.set_timer(query.latency_micros_);
 
   boost::future<void> all_tasks_completed;
+  std::atomic<int> num_completed(0);
   std::tie(all_tasks_completed, task_completion_futures) =
-      future_composition::when_all(std::move(task_completion_futures));
+      future_composition::when_all(std::move(task_completion_futures),
+                                   num_completed);
   // auto all_tasks_completed = boost::when_all(task_completion_futures.begin(),
   //                                            task_completion_futures.end());
   auto make_response_future =
