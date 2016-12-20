@@ -39,14 +39,35 @@ void benchmark() {
   }).detach();
 
   // broken up messages
-  std::vector<std::vector<uint8_t>> data;
+
+//  clipper::PredictionRequest request(clipper::InputType::Strings);
+//  for (int num_inputs = 0; num_inputs < 500; ++num_inputs) {
+//    std::vector<std::string> cur_data;
+//    if((num_inputs % 3) == 0) {
+//      cur_data.push_back(std::string("CAT"));
+//      cur_data.push_back(std::string("HORSE"));
+//    } else if((num_inputs % 3) == 1) {
+//      cur_data.push_back(std::string("DOG"));
+//    } else {
+//      cur_data.push_back(std::string("COW"));
+//      cur_data.push_back(std::string("FOX"));
+//      cur_data.push_back(std::string("AARDVARK"));
+//      cur_data.push_back(std::string("RABBIT"));
+//      cur_data.push_back(std::string("FROG"));
+//    }
+//    std::shared_ptr<clipper::StringVector> input = std::make_shared<clipper::StringVector>(cur_data);
+//    request.add_input(input);
+//  }
+
+  clipper::PredictionRequest request(clipper::InputType::Doubles);
+
   for (int num_inputs = 0; num_inputs < 500; ++num_inputs) {
     std::vector<double> cur_data;
     for (int j = 0; j < 784; ++j) {
       cur_data.push_back(j);
     }
-    clipper::DoubleVector d(cur_data);
-    data.push_back(d.serialize());
+    std::shared_ptr<clipper::DoubleVector> input = std::make_shared<clipper::DoubleVector>(cur_data);
+    request.add_input(input);
   }
 
   // one giant message, batch=1
@@ -71,7 +92,7 @@ void benchmark() {
                      .count();
     //    int container_id =
     //    containers->get_model_replicas_snapshot(containers->get_known_models()[0])[0]->container_id_;
-    int id = rpc_service.send_message(data, 0);
+    int id = rpc_service.send_message(request.serialize(), 0);
     //    std::cout << "send message " << id << std::endl;
     times_map.emplace(id, start);
     usleep(50000);

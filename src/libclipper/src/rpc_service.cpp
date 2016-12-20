@@ -129,6 +129,9 @@ void RPCService::send_messages(
     for (const std::vector<uint8_t> &m : std::get<2>(request)) {
       // send the sndmore flag unless we are on the last message part
       if (cur_msg_num < last_msg_num) {
+        if (m.size() < 2) {
+          std::cout << "SIZE: " << m.data() << std::endl;
+        }
         socket.send((uint8_t *)m.data(), m.size(), ZMQ_SNDMORE);
       } else {
         socket.send((uint8_t *)m.data(), m.size(), 0);
@@ -159,10 +162,15 @@ void RPCService::receive_message(
     std::cout << "New container connected" << std::endl;
     message_t model_name;
     message_t model_version;
+    message_t model_input_type;
     socket.recv(&model_name, 0);
     socket.recv(&model_version, 0);
+    socket.recv(&model_input_type, 0);
     std::string name(static_cast<char *>(model_name.data()), model_name.size());
-    std::string version_str(static_cast<char *>(model_version.data()));
+    std::string version_str(static_cast<char *>(model_version.data()), model_version.size());
+    std::string input_type_str(static_cast<char *>(model_input_type.data()), model_input_type.size());
+
+    int input_type = std::stoi(input_type_str);
     int version = std::stoi(version_str);
     VersionedModelId model = std::make_pair(name, version);
     std::cout << "Container added" << std::endl;
@@ -170,7 +178,7 @@ void RPCService::receive_message(
     // TODO: Once we have a ConfigDB, we need to insert the new container ID
     // into the table.
     // For now, create a new container object directly.
-    containers->add_container(model, container_id);
+    containers->add_container(model, container_id, InputType(input_type));
     container_id += 1;
   } else {
     message_t msg_id;
