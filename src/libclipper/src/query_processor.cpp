@@ -126,14 +126,6 @@ future<Response> QueryProcessor::predict(Query query) {
                  std::vector<VersionedModelId>()});
   }
 
-  //  std::cout << "Address of tasks in QueryProcessor::predict(): " << &tasks
-  //            << std::endl;
-  //
-  //  for (const PredictTask& t : tasks) {
-  //    std::cout << "Found task for model: {" << t.model_.first << ", "
-  //              << t.model_.second << "}" << std::endl;
-  //  }
-
   vector<future<Output>> task_completion_futures =
       task_executor_.schedule_predictions(tasks);
   future<void> timer_future = timer_system_.set_timer(query.latency_micros_);
