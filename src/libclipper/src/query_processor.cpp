@@ -139,24 +139,38 @@ future<Response> QueryProcessor::predict(Query query) {
   future<void> timer_future = timer_system_.set_timer(query.latency_micros_);
 
   boost::future<void> all_tasks_completed;
-  std::atomic<int> num_completed(0);
+  //  std::atomic<int> num_completed(0);
+  auto num_completed = std::make_shared<std::atomic<int>>(0);
   std::tie(all_tasks_completed, task_completion_futures) =
       future_composition::when_all(std::move(task_completion_futures),
                                    num_completed);
   // auto all_tasks_completed = boost::when_all(task_completion_futures.begin(),
-  //                                            task_completion_futures.end());
-  auto make_response_future =
-      boost::when_any(std::move(all_tasks_completed), std::move(timer_future));
+
+  //   auto make_response_future =
+  //       boost::when_any(std::move(all_tasks_completed),
+  //       std::move(timer_future));
+
+  auto completion_flag = std::make_shared<std::atomic<int>>(0);
+  boost::future<void> response_ready_future;
+  boost::future<void> all_tasks_completed_wrapped;
+  boost::future<void> timer_future_wrapped;
+
+  std::tie(response_ready_future, all_tasks_completed_wrapped,
+           timer_future_wrapped) =
+      future_composition::when_any(std::move(all_tasks_completed),
+                                   std::move(timer_future), completion_flag);
 
   boost::promise<Response> promise;
   auto f = promise.get_future();
 
-  make_response_future.then([
+  response_ready_future.then([
+    //    make_response_future.then([
     query, query_id, p = std::move(promise), s = std::move(serialized_state),
-    task_futures = std::move(task_completion_futures)
-  ](auto result_future) mutable {
+    task_futures = std::move(task_completion_futures), num_completed,
+    completion_flag
+  ](auto) mutable {
 
-    auto result = result_future.get();
+    // auto result = result_future.get();
     vector<Output> outputs;
     vector<VersionedModelId> used_models;
     for (auto r = task_futures.begin(); r != task_futures.end(); ++r) {
@@ -164,6 +178,8 @@ future<Response> QueryProcessor::predict(Query query) {
         outputs.push_back((*r).get());
       }
     }
+    // auto xx = num_completed;
+    // completion_flag;
 
     Output final_output;
     if (query.selection_policy_ == "newest_model") {
