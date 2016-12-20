@@ -129,9 +129,6 @@ void RPCService::send_messages(
     for (const std::vector<uint8_t> &m : std::get<2>(request)) {
       // send the sndmore flag unless we are on the last message part
       if (cur_msg_num < last_msg_num) {
-        if (m.size() < 2) {
-          std::cout << "SIZE: " << m.data() << std::endl;
-        }
         socket.send((uint8_t *)m.data(), m.size(), ZMQ_SNDMORE);
       } else {
         socket.send((uint8_t *)m.data(), m.size(), 0);
