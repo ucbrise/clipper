@@ -90,7 +90,7 @@ class Server(threading.Thread):
 					# If we're processing string inputs, we delimit them using
 					# the null terminator included in their serialized representation,
 					# ignoring the extraneous final null terminator by using a -1 slice
-					inputs = np.split(np.array(raw_content.split('\0')[:-1], dtype=self.get_parse_type(input_type)), splits)
+					inputs = np.array(raw_content.split('\0')[:-1], dtype=self.get_parse_type(input_type))
 				else:
 					inputs = np.split(np.frombuffer(raw_content, dtype=self.get_parse_type(input_type)), splits)
 

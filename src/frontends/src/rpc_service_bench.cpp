@@ -7,7 +7,7 @@
 
 void benchmark() {
   auto containers = std::make_shared<clipper::ActiveContainers>();
-  clipper::RPCService rpc_service(containers);
+  clipper::rpc::RPCService rpc_service(containers);
 
   rpc_service.start("127.0.0.1", 8000);
   usleep(5000000);
@@ -24,7 +24,7 @@ void benchmark() {
       long end = std::chrono::duration_cast<std::chrono::milliseconds>(
                      std::chrono::system_clock::now().time_since_epoch())
                      .count();
-      vector<clipper::RPCResponse> responses = rpc_service.try_get_responses(1);
+      vector<clipper::rpc::RPCResponse> responses = rpc_service.try_get_responses(1);
       if (responses.empty()) {
         continue;
       }
@@ -42,24 +42,19 @@ void benchmark() {
 
 //  clipper::PredictionRequest request(clipper::InputType::Strings);
 //  for (int num_inputs = 0; num_inputs < 500; ++num_inputs) {
-//    std::vector<std::string> cur_data;
+//    std::string str;
 //    if((num_inputs % 3) == 0) {
-//      cur_data.push_back(std::string("CAT"));
-//      cur_data.push_back(std::string("HORSE"));
+//      str = std::string("CAT");
 //    } else if((num_inputs % 3) == 1) {
-//      cur_data.push_back(std::string("DOG"));
+//      str = std::string("DOG");
 //    } else {
-//      cur_data.push_back(std::string("COW"));
-//      cur_data.push_back(std::string("FOX"));
-//      cur_data.push_back(std::string("AARDVARK"));
-//      cur_data.push_back(std::string("RABBIT"));
-//      cur_data.push_back(std::string("FROG"));
+//      str = std::string("COW");
 //    }
-//    std::shared_ptr<clipper::StringVector> input = std::make_shared<clipper::StringVector>(cur_data);
+//    std::shared_ptr<clipper::SerializableString> input = std::make_shared<clipper::SerializableString>(str);
 //    request.add_input(input);
 //  }
 
-  clipper::PredictionRequest request(clipper::InputType::Doubles);
+  clipper::rpc::PredictionRequest request(clipper::InputType::Doubles);
 
   for (int num_inputs = 0; num_inputs < 500; ++num_inputs) {
     std::vector<double> cur_data;
@@ -69,18 +64,6 @@ void benchmark() {
     std::shared_ptr<clipper::DoubleVector> input = std::make_shared<clipper::DoubleVector>(cur_data);
     request.add_input(input);
   }
-
-  // one giant message, batch=1
-  // no difference in time
-  //  std::vector<const std::vector<uint8_t>> data;
-  //  std::vector<double> cur_data;
-  //  for (int num_inputs = 0; num_inputs < 500; ++num_inputs) {
-  //    for (int j = 0; j < 784; ++j) {
-  //      cur_data.push_back(j);
-  //    }
-  //  }
-  //  clipper::DoubleVector d(cur_data);
-  //  data.push_back(d.serialize());
 
   int num_total_messages = 300;
   for (int i = 0; i < num_total_messages; i++) {

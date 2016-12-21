@@ -16,6 +16,8 @@ using std::vector;
 
 namespace clipper {
 
+namespace rpc {
+
 RPCService::RPCService(std::shared_ptr<ActiveContainers> containers)
     : request_queue_(std::make_shared<Queue<RPCRequest>>()),
       response_queue_(std::make_shared<Queue<RPCResponse>>()),
@@ -40,7 +42,7 @@ int RPCService::send_message(const vector<vector<uint8_t>> msg,
                              const int container_id) {
   if (!active_) {
     std::cout << "Cannot send message to inactive RPCService instance. "
-                 "Dropping message"
+        "Dropping message"
               << std::endl;
     return -1;
   }
@@ -129,9 +131,9 @@ void RPCService::send_messages(
     for (const std::vector<uint8_t> &m : std::get<2>(request)) {
       // send the sndmore flag unless we are on the last message part
       if (cur_msg_num < last_msg_num) {
-        socket.send((uint8_t *)m.data(), m.size(), ZMQ_SNDMORE);
+        socket.send((uint8_t *) m.data(), m.size(), ZMQ_SNDMORE);
       } else {
-        socket.send((uint8_t *)m.data(), m.size(), 0);
+        socket.send((uint8_t *) m.data(), m.size(), 0);
       }
       cur_msg_num += 1;
     }
@@ -148,8 +150,8 @@ void RPCService::receive_message(
   socket.recv(&msg_delimiter, 0);
 
   vector<uint8_t> connection_id(
-      (uint8_t *)msg_identity.data(),
-      (uint8_t *)msg_identity.data() + msg_identity.size());
+      (uint8_t *) msg_identity.data(),
+      (uint8_t *) msg_identity.data() + msg_identity.size());
   boost::bimap<int, vector<uint8_t>>::right_const_iterator connection =
       connections.right.find(connection_id);
   if (connection == connections.right.end()) {
@@ -183,12 +185,14 @@ void RPCService::receive_message(
     socket.recv(&msg_id, 0);
     socket.recv(&msg_content, 0);
     // TODO: get rid of c-style casts
-    int id = ((int *)msg_id.data())[0];
-    vector<uint8_t> content((uint8_t *)msg_content.data(),
-                            (uint8_t *)msg_content.data() + msg_content.size());
+    int id = ((int *) msg_id.data())[0];
+    vector<uint8_t> content((uint8_t *) msg_content.data(),
+                            (uint8_t *) msg_content.data() + msg_content.size());
     RPCResponse response(id, content);
     response_queue->push(response);
   }
 }
+
+} // namespace rpc
 
 }  // namespace clipper

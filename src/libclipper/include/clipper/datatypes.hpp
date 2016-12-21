@@ -30,7 +30,7 @@ class Output {
 
 // using Output = std::pair<double;
 
-enum InputType {
+enum class InputType {
   Bytes = 0,
   Ints = 1,
   Floats = 2,
@@ -38,7 +38,7 @@ enum InputType {
   Strings = 4,
 };
 
-enum RequestType {
+enum class RequestType {
   PredictRequest = 0,
   FeedbackRequest = 1,
 };
@@ -47,6 +47,8 @@ class Input {
  public:
   // TODO: pure virtual or default?
   // virtual ~Input() = default;
+
+  virtual InputType type() const = 0;
 
   // used by RPC system
   /**
@@ -77,10 +79,11 @@ class ByteVector : public Input {
   ByteVector(ByteVector &&other) = default;
   ByteVector &operator=(ByteVector &&other) = default;
 
-  size_t serialize(uint8_t* buf) const;
-  size_t hash() const;
-  size_t size() const;
-  size_t byte_size() const;
+  InputType type() const override;
+  size_t serialize(uint8_t* buf) const override;
+  size_t hash() const override;
+  size_t size() const override;
+  size_t byte_size() const override;
 
  private:
   std::vector<uint8_t> data_;
@@ -98,10 +101,11 @@ class IntVector : public Input {
   IntVector(IntVector &&other) = default;
   IntVector &operator=(IntVector &&other) = default;
 
-  size_t serialize(uint8_t* buf) const;
-  size_t hash() const;
-  size_t size() const;
-  size_t byte_size() const;
+  InputType type() const override;
+  size_t serialize(uint8_t* buf) const override;
+  size_t hash() const override;
+  size_t size() const override;
+  size_t byte_size() const override;
 
  private:
   std::vector<int> data_;
@@ -119,10 +123,11 @@ class FloatVector : public Input {
   FloatVector(FloatVector &&other) = default;
   FloatVector &operator=(FloatVector &&other) = default;
 
-  size_t serialize(uint8_t* buf) const;
-  size_t hash() const;
-  size_t size() const;
-  size_t byte_size() const;
+  InputType type() const override;
+  size_t serialize(uint8_t* buf) const override;
+  size_t hash() const override;
+  size_t size() const override;
+  size_t byte_size() const override;
 
  private:
   std::vector<float> data_;
@@ -140,59 +145,64 @@ class DoubleVector : public Input {
   DoubleVector(DoubleVector &&other) = default;
   DoubleVector &operator=(DoubleVector &&other) = default;
 
-  size_t serialize(uint8_t* buf) const;
-  size_t hash() const;
-  size_t size() const;
-  size_t byte_size() const;
+  InputType type() const override;
+  size_t serialize(uint8_t* buf) const override;
+  size_t hash() const override;
+  size_t size() const override;
+  size_t byte_size() const override;
 
  private:
   std::vector<double> data_;
 };
 
-class StringVector : public Input {
+class SerializableString : public Input {
  public:
-  explicit StringVector(std::vector<std::string> data);
+  explicit SerializableString(std::string data);
 
   // Disallow copy
-  StringVector(StringVector &other) = delete;
-  StringVector &operator=(StringVector &other) = delete;
+  SerializableString(SerializableString &other) = delete;
+  SerializableString &operator=(SerializableString &other) = delete;
 
   // move constructors
-  StringVector(StringVector &&other) = default;
-  StringVector &operator=(StringVector &&other) = default;
+  SerializableString(SerializableString &&other) = default;
+  SerializableString &operator=(SerializableString &&other) = default;
 
-  size_t serialize(uint8_t* buf) const;
-  size_t hash() const;
-  size_t size() const;
-  size_t byte_size() const;
-
- private:
-  std::vector<std::string> data_;
-};
-
-
-class PredictionRequest {
- public:
-  explicit PredictionRequest(InputType input_type);
-  explicit PredictionRequest(std::vector<std::shared_ptr<Input>> inputs, InputType input_type);
-
-  // Disallow copy
-  PredictionRequest(PredictionRequest &other) = delete;
-  PredictionRequest &operator=(PredictionRequest &other) = delete;
-
-  // move constructors
-  PredictionRequest(PredictionRequest &&other) = default;
-  PredictionRequest &operator=(PredictionRequest &&other) = default;
-
-  void add_input(std::shared_ptr<Input> input);
-  std::vector<ByteBuffer> serialize();
+  InputType type() const override;
+  size_t serialize(uint8_t* buf) const override;
+  size_t hash() const override;
+  size_t size() const override;
+  size_t byte_size() const override;
 
  private:
-  std::vector<std::shared_ptr<Input>> inputs_;
-  InputType input_type_;
-  size_t input_data_size_;
-
+  std::string data_;
 };
+
+namespace rpc {
+
+  class PredictionRequest {
+   public:
+    explicit PredictionRequest(InputType input_type);
+    explicit PredictionRequest(std::vector<std::shared_ptr<Input>> inputs, InputType input_type);
+
+    // Disallow copy
+    PredictionRequest(PredictionRequest &other) = delete;
+    PredictionRequest &operator=(PredictionRequest &other) = delete;
+
+    // move constructors
+    PredictionRequest(PredictionRequest &&other) = default;
+    PredictionRequest &operator=(PredictionRequest &&other) = default;
+
+    void add_input(std::shared_ptr<Input> input);
+    std::vector<ByteBuffer> serialize();
+
+   private:
+    std::vector<std::shared_ptr<Input>> inputs_;
+    InputType input_type_;
+    size_t input_data_size_;
+
+  };
+
+} // namespace rpc
 
 class Query {
  public:

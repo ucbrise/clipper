@@ -53,7 +53,7 @@ class TaskExecutor {
   ~TaskExecutor() { active_ = false; };
   explicit TaskExecutor()
       : active_containers_(std::make_shared<ActiveContainers>()),
-        rpc_(std::make_unique<RPCService>(active_containers_)) {
+        rpc_(std::make_unique<rpc::RPCService>(active_containers_)) {
     std::cout << "TaskExecutor started" << std::endl;
     rpc_->start("*", 7000);
     active_ = true;
@@ -104,7 +104,7 @@ class TaskExecutor {
   // containers
   // to the collection when they connect
   std::shared_ptr<ActiveContainers> active_containers_;
-  std::unique_ptr<RPCService> rpc_;
+  std::unique_ptr<rpc::RPCService> rpc_;
   Scheduler scheduler_;
   PredictionCache cache_;
   bool active_ = false;
@@ -150,7 +150,7 @@ class TaskExecutor {
 
             std::vector<std::pair<VersionedModelId, std::shared_ptr<Input>>>
                 cur_batch;
-            PredictionRequest prediction_request(c->input_type_);
+            rpc::PredictionRequest prediction_request(c->input_type_);
             for (auto b : batch) {
               prediction_request.add_input(b.input_);
               cur_batch.emplace_back(b.model_, b.input_);

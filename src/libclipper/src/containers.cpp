@@ -32,7 +32,25 @@ ActiveContainers::ActiveContainers()
 void ActiveContainers::add_container(VersionedModelId model, int id, InputType input_type) {
   std::cout << "Adding new container: "
             << "model: " << model.first << ", version: " << model.second
-            << ", ID: " << id << ", INPUT_TYPE: " << input_type << std::endl;
+            << ", ID: " << id;
+  switch(input_type) {
+    case clipper::InputType::Bytes:
+      std::cout << ", INPUT_TYPE: Bytes" << std::endl;
+      break;
+    case clipper::InputType::Ints:
+      std::cout << ", INPUT_TYPE: Integers" << std::endl;
+      break;
+    case clipper::InputType::Floats:
+      std::cout << ", INPUT_TYPE: Floats" << std::endl;
+      break;
+    case clipper::InputType::Doubles:
+      std::cout << ", INPUT_TYPE: Doubles" << std::endl;
+      break;
+    case clipper::InputType::Strings:
+      std::cout << ", INPUT_TYPE: Strings" << std::endl;
+      break;
+  }
+
   boost::unique_lock<boost::shared_mutex> l{m_};
   auto new_container = std::make_shared<ModelContainer>(model, id, input_type);
   auto entry = containers_[new_container->model_];

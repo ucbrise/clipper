@@ -21,10 +21,12 @@ using std::list;
 
 namespace clipper {
 
+namespace rpc {
+
 using RPCResponse = std::pair<const int, vector<uint8_t>>;
 /// Tuple of container_id, message_id, vector of messages
 using RPCRequest =
-    std::tuple<const int, const int, const std::vector<std::vector<uint8_t>>>;
+std::tuple<const int, const int, const std::vector<std::vector<uint8_t>>>;
 
 class RPCService {
  public:
@@ -66,20 +68,24 @@ class RPCService {
   void send_messages(socket_t &socket,
                      shared_ptr<Queue<RPCRequest>> request_queue,
                      boost::bimap<int, vector<uint8_t>> &connections);
+
   void receive_message(socket_t &socket,
                        shared_ptr<Queue<RPCResponse>> response_queue,
                        boost::bimap<int, vector<uint8_t>> &connections,
                        int &container_id,
                        std::shared_ptr<ActiveContainers> containers);
+
   void shutdown_service(const string address, socket_t &socket);
-  shared_ptr<Queue<RPCRequest>> request_queue_;
-  shared_ptr<Queue<RPCResponse>> response_queue_;
+  shared_ptr <Queue<RPCRequest>> request_queue_;
+  shared_ptr <Queue<RPCResponse>> response_queue_;
   // Flag indicating whether rpc service is active
   bool active_ = false;
   // The next available message id
   int message_id_ = 0;
   std::shared_ptr<ActiveContainers> active_containers_;
 };
+
+} // namespace rpc
 
 }  // namespace clipper
 
