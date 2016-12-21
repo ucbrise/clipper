@@ -1,5 +1,6 @@
 
 #include <iostream>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -29,9 +30,7 @@ size_t versioned_model_hash(const VersionedModelId& key) {
 Output::Output(double y_hat, std::vector<VersionedModelId> models)
     : y_hat_(y_hat), models_used_(models) {}
 
-  
-DoubleVector::DoubleVector(std::vector<double> data)
-    : data_(std::move(data)) {}
+DoubleVector::DoubleVector(std::vector<double> data) : data_(std::move(data)) {}
 
 const ByteBuffer DoubleVector::serialize() const {
   std::vector<uint8_t> bytes;
@@ -62,7 +61,6 @@ Query::Query(std::string label, long user_id, std::shared_ptr<Input> input,
       selection_policy_(selection_policy),
       candidate_models_(candidate_models) {}
 
-
 Response::Response(Query query, QueryId query_id, long duration_micros,
                    Output output, std::vector<VersionedModelId> models_used)
     : query_(std::move(query)),
@@ -71,7 +69,6 @@ Response::Response(Query query, QueryId query_id, long duration_micros,
       output_(std::move(output)),
       models_used_(models_used) {}
 
-  
 std::string Response::debug_string() const noexcept {
   std::string debug;
   debug.append("Query id: ");
@@ -81,16 +78,12 @@ std::string Response::debug_string() const noexcept {
   return debug;
 }
 
-  
 Feedback::Feedback(std::shared_ptr<Input> input, double y)
-    : y_(y),
-      input_(input) {}
+    : y_(y), input_(input) {}
 
-
-FeedbackQuery::FeedbackQuery(std::string label, long user_id,
-                          Feedback feedback,
-                          std::string selection_policy,
-                          std::vector<VersionedModelId> candidate_models)
+FeedbackQuery::FeedbackQuery(std::string label, long user_id, Feedback feedback,
+                             std::string selection_policy,
+                             std::vector<VersionedModelId> candidate_models)
     : label_(label),
       user_id_(user_id),
       feedback_(feedback),

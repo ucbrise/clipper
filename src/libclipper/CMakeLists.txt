@@ -24,7 +24,7 @@ target_include_directories(clipper PUBLIC
     PRIVATE src)
 
 
-target_link_libraries(clipper boost zmqcpp)
+target_link_libraries(clipper boost zmqcpp pthread)
 
 # This makes the project importable from the build directory
 export(TARGETS clipper FILE ClipperConfig.cmake)

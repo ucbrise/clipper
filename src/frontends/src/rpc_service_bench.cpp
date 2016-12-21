@@ -36,7 +36,7 @@ void benchmark() {
   }).detach();
   
     // broken up messages
-  std::vector<const std::vector<uint8_t>> data;
+  std::vector<std::vector<uint8_t>> data;
   for (int num_inputs = 0; num_inputs < 500; ++num_inputs) {
     std::vector<double> cur_data;
     for (int j = 0; j < 784; ++j) {
@@ -48,7 +48,6 @@ void benchmark() {
   
   // one giant message, batch=1
   // no difference in time
-//  std::vector<const std::vector<uint8_t>> data;
 //  std::vector<double> cur_data;
 //  for (int num_inputs = 0; num_inputs < 500; ++num_inputs) {
 //    for (int j = 0; j < 784; ++j) {

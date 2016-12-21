@@ -1,13 +1,14 @@
 #ifndef CLIPPER_LIB_DATATYPES_H
 #define CLIPPER_LIB_DATATYPES_H
 
+#include <memory>
 #include <string>
 #include <vector>
 
 namespace clipper {
 
-//using ByteBuffer = std::vector<uint8_t>;
-  using ByteBuffer = std::vector<uint8_t>;
+// using ByteBuffer = std::vector<uint8_t>;
+using ByteBuffer = std::vector<uint8_t>;
 using VersionedModelId = std::pair<std::string, int>;
 using QueryId = long;
 using FeedbackAck = bool;
@@ -20,7 +21,7 @@ class Output {
   explicit Output() = default;
   Output(const Output&) = default;
   Output& operator=(const Output&) = default;
-  
+
   Output(Output&&) = default;
   Output& operator=(Output&&) = default;
   Output(double y_hat, std::vector<VersionedModelId> versioned_model);
@@ -113,17 +114,16 @@ class Response {
   std::vector<VersionedModelId> models_used_;
 };
 
-
 // using Feedback = std::pair<std::shared_ptr<Input>, std::shared_ptr<Output>>;
 
 class Feedback {
-public:
+ public:
   ~Feedback() = default;
   Feedback(std::shared_ptr<Input> input, double y);
-  
+
   Feedback(const Feedback&) = default;
   Feedback& operator=(const Feedback&) = default;
-  
+
   Feedback(Feedback&&) = default;
   Feedback& operator=(Feedback&&) = default;
 
