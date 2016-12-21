@@ -89,3 +89,4 @@ RPC requests sent from Clipper to model containers are divided into two categori
      inputs = np.array(raw_concatenated_content.split('\0')[:-1], dtype=np.string_)
      ```
 
+#### For additional deserialization references, see `clipper/containers/python/rpc.py`
