@@ -12,7 +12,21 @@ using VersionedModelId = std::pair<std::string, int>;
 using QueryId = long;
 using FeedbackAck = bool;
 
+enum class InputType {
+  Bytes = 0,
+  Ints = 1,
+  Floats = 2,
+  Doubles = 3,
+  Strings = 4,
+};
+
+enum class RequestType {
+  PredictRequest = 0,
+  FeedbackRequest = 1,
+};
+
 size_t versioned_model_hash(const VersionedModelId &key);
+std::string get_readable_input_type(InputType type);
 
 class Output {
  public:
@@ -29,19 +43,6 @@ class Output {
 };
 
 // using Output = std::pair<double;
-
-enum class InputType {
-  Bytes = 0,
-  Ints = 1,
-  Floats = 2,
-  Doubles = 3,
-  Strings = 4,
-};
-
-enum class RequestType {
-  PredictRequest = 0,
-  FeedbackRequest = 1,
-};
 
 class Input {
  public:
