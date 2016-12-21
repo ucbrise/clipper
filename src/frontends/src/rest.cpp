@@ -63,7 +63,7 @@ void RequestHandler::add_application(std::string name,
                                      InputType input_type,
                                      OutputType output_type, std::string policy,
                                      long latency) {
-  QueryProcessor& q = qp;
+  QueryProcessorBase& q = qp;
   auto predict_fn = [&q, name, input_type, policy, latency, models](
       std::shared_ptr<HttpServer::Response> response,
       std::shared_ptr<HttpServer::Request> request) {
@@ -147,10 +147,4 @@ void RequestHandler::start_listening() {
   std::thread server_thread([&s]() { s.start(); });
 
   server_thread.join();
-}
-
-int main() {
-  QueryProcessor qp;
-  RequestHandler rh(qp, "0.0.0.0", 1337, 1);
-  rh.start_listening();
 }

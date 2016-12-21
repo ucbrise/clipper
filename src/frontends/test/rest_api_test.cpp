@@ -6,6 +6,7 @@
 
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
+#include <frontends/rest.hpp>
 
 #include <client_http.hpp>
 
@@ -16,17 +17,17 @@ using clipper::FeedbackQuery;
 using clipper::Input;
 using clipper::Output;
 using clipper::Query;
-using clipper::QueryProcessor;
+using clipper::QueryProcessorBase;
 using clipper::Response;
 using clipper::VersionedModelId;
 using HttpClient = SimpleWeb::Client<SimpleWeb::HTTP>;
 
 namespace {
 
-class MockQueryProcessor {
+class MockQueryProcessor : public QueryProcessorBase {
   public:
     MOCK_METHOD1(predict, boost::future<Response>(Query query));
-    MOCK_METHOD1(update, boost::future<FeedbackAck>(Query query));
+    MOCK_METHOD1(update, boost::future<FeedbackAck>(FeedbackQuery query));
 };
 
 class RestApiTests : public ::testing::Test {
@@ -37,13 +38,28 @@ class RestApiTests : public ::testing::Test {
   RestApiTests() : rh_(qp_, "0.0.0.0", 1337, 8) {}
 };
 
+MATCHER_P(QueryEqual, expected_query, "") {
+  return arg.label_.compare(expected_query.label_) == 0;
+}
+
+MATCHER_P(FeedbackQueryEqual, expected_fq,"") {
+  return arg.label_.compare(expected_fq.label_) == 0;
+}
+
 TEST_F(RestApiTests, BasicInfoTest) {
+  std::thread server_thread([this](){
+    //Start server
+    rh_.start_listening();
+  });
+  // Wait for server to start
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+
   std::string app_name = "app";
   long uid = 1;
   std::vector<VersionedModelId> models = {std::make_pair("m", 1), std::make_pair("n", 2)};
   VersionedModelId model_to_update = std::make_pair("m", 1);
-  std::string input_type = "double_vec";
-  std::string output_type = "double_val";
+  InputType input_type = double_vec;
+  OutputType output_type = double_val;
   std::string selection_policy = "most_recent";
   long latency_micros = 20000;
   std::shared_ptr<Input> input =
@@ -56,13 +72,13 @@ TEST_F(RestApiTests, BasicInfoTest) {
   // Send predict and update requests
   std::string predict_json = "{\"uid\": 1, \"input\": [1.1, 2.2, 3.3, 4.4]}";
   Query expected_query = Query(app_name, uid, input, latency_micros, selection_policy, models);
+  EXPECT_CALL(qp_, predict(QueryEqual(expected_query)));
   client.request("POST", "/app/predict", predict_json);
-  EXPECT_CALL(qp_, predict(expected_query));
 
   std::string update_json = "{\"uid\": 1, \"input\": [1.1, 2.2, 3.3, 4.4], \"label\": 2.0, \"model_name\": \"m\", \"model_version\": 1}";
   FeedbackQuery expected_fq = FeedbackQuery(app_name, uid, feedback, selection_policy, models);
+  EXPECT_CALL(qp_, update(FeedbackQueryEqual(expected_fq)));
   client.request("POST", "/app/update", update_json);
-  EXPECT_CALL(qp_, update(expected_fq));
 }
 
-}
+} // namespace

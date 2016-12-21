@@ -10,7 +10,7 @@
 #include <server_http.hpp>
 
 using clipper::FeedbackAck;
-using clipper::QueryProcessor;
+using clipper::QueryProcessorBase;
 using clipper::VersionedModelId;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
@@ -19,9 +19,9 @@ enum OutputType { double_val, int_val };
 
 class RequestHandler {
  public:
-  RequestHandler(QueryProcessor& q, int portno, int num_threads)
+  RequestHandler(QueryProcessorBase& q, int portno, int num_threads)
       : server(portno, num_threads), qp(q) {}
-  RequestHandler(QueryProcessor& q, std::string address, int portno,
+  RequestHandler(QueryProcessorBase& q, std::string address, int portno,
                  int num_threads)
       : server(address, portno, num_threads), qp(q) {}
 
@@ -36,5 +36,5 @@ class RequestHandler {
 
  private:
   HttpServer server;
-  QueryProcessor& qp;
+  QueryProcessorBase& qp;
 };

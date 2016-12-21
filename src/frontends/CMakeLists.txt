@@ -11,7 +11,7 @@ target_link_libraries(bench clipper boost)
 ##################################
 # REST HTTP Server executable
 
-add_executable(rest src/rest.cpp README.md)
+add_executable(rest src/rest_server.cpp README.md)
 
 target_link_libraries(rest clipper frontends boost httpserver)
 
@@ -44,7 +44,7 @@ add_executable(frontendstests EXCLUDE_FROM_ALL
     test/test_main.cpp
     test/rest_api_test.cpp
     )
-target_link_libraries(frontendstests clipper gtest gmock_main httpserver)
+target_link_libraries(frontendstests frontends gtest gmock_main)
 add_dependencies(unittests frontendstests)
 
 
