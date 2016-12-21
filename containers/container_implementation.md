@@ -13,12 +13,12 @@ Model containers must implement functionality consistent with this information.
     ```
 
 ## Initializing a Connection
-- Once a ZeroMQ Dealer socket has been created, use it to connect to Clipper. In Python, this can be accomplished as follows:
+1. Once a ZeroMQ Dealer socket has been created, use it to connect to Clipper. In Python, this can be accomplished as follows:
 
     ```
     socket.connect(<CLIPPER_TCP_ADDRESS>, <CLIPPER_PORT>)
     ```
-- Then, send a series of ordered messages providing information about the model. This message should be preceded by an 
+2. Then, send a series of ordered messages providing information about the model. This message should be preceded by an 
 [empty ZeroMQ frame](http://zguide.zeromq.org/php:chapter3#The-Simple-Reply-Envelope). The following attributes should then be sent in order:
   * **Model Name**: The user-defined name of the model, as a string
   * **Model Version**: The **integer** model version. **This should be sent as a string**.
@@ -38,7 +38,7 @@ Model containers must implement functionality consistent with this information.
     socket.send(str(<MODEL_INPUT_TYPE>))
     ```
     
-- The socket should then be continually polled for requests from Clipper.
+3. The socket should then be continually polled for requests from Clipper.
   * Python example:
   
   ```
@@ -55,4 +55,37 @@ Model containers must implement functionality consistent with this information.
   
 
 
-## Serialiazation Formats
+## Serialization Formats
+RPC requests sent from Clipper to model containers are divided into two categories: **Prediction Requests** and **Feedback Requests**. Each request type has a specific serialization format that defines the container deserialization procedure.
+
+### Serializing Prediction Requests
+1. All requests begin with a 32-bit integer header, sent as a single ZeroMQ message. The value of this integer will be 0, indicating that the request is a prediction request.
+
+2. The next ZeroMQ message contains an input header.
+ * The input header begins with a 32-bit integer specifying the type of inputs contained in the request. This integer can assume values 0-4, as defined in point 2 of **Initializing a Connection**.
+
+ * The remainder of the input header is a list of 32-bit integers. These integers correspond to the offsets at which the deserialized output should be split.
+   * For example, if the request contains three double vectors of size 500, the offset list will be `[500, 1000]`, indicating that the deserialized vector of 1500 doubles should be split into three vectors containing doubles 0-499, 500-999, and 1000-1499 respectively.
+   
+    * In the case of strings, the offset list is not relevant and should not be used.
+   
+3. The final ZeroMQ message contains the concatenation of all inputs, represented as a string of bytes. This string of bytes should be converted to an array of the type specified by the input header.
+ * In the case of primitive inputs (types 0-3), deserialized inputs can then be obtained by splitting the typed array at the offsets specified in the input header.
+   * Python example:
+   
+     ```
+     raw_concatenated_content = socket.recv()
+     typed_inputs = np.frombuffer(raw_concatenated_content, dtype=<PRIMITIVE_INPUT_TYPE>)
+     inputs = np.split(typed_inputs, <OFFSETS_LIST>)
+     ```
+ 
+ * In the case of string inputs (type 4), all strings are sent with trailing null terminators. Therefore, deserialized inputs can be obtaining by splitting the typed array along the null terminator character, `\0`.
+   * Python example:
+   
+     ```
+     raw_concatenated_content = socket.recv()
+     # Split content based on trailing null terminators
+     # Ignore the extraneous final null terminator by using a -1 slice
+     inputs = np.array(raw_concatenated_content.split('\0')[:-1], dtype=np.string_)
+     ```
+
