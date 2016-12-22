@@ -59,9 +59,9 @@ Output decode_output(OutputType output_type, ptree parsed_json) {
 }
 
 void respond_http(std::string content, std::string message,
-    std::shared_ptr<HttpServer::Response> response) {
-  *response << "HTTP/1.1 " << message << "\r\nContent-Length: "
-            << content.length() << "\r\n\r\n"
+                  std::shared_ptr<HttpServer::Response> response) {
+  *response << "HTTP/1.1 " << message
+            << "\r\nContent-Length: " << content.length() << "\r\n\r\n"
             << content << "\n";
 }
 
@@ -91,8 +91,8 @@ boost::future<FeedbackAck> RequestHandler::decode_and_handle_update(
   long uid = pt.get<long>("uid");
   std::shared_ptr<Input> input = decode_input(input_type, pt);
   Output output = decode_output(output_type, pt);
-  auto update = q.update(
-      {name, uid, {std::make_pair(input, output)}, policy, models});
+  auto update =
+      q.update({name, uid, {std::make_pair(input, output)}, policy, models});
 
   return update;
 }
@@ -106,8 +106,9 @@ void RequestHandler::add_application(std::string name,
       std::shared_ptr<HttpServer::Response> response,
       std::shared_ptr<HttpServer::Request> request) {
     try {
-      auto prediction = decode_and_handle_predict(request->content.string(), qp,
-          name, models, policy, latency, input_type);
+      auto prediction =
+          decode_and_handle_predict(request->content.string(), qp, name, models,
+                                    policy, latency, input_type);
       prediction.then([response](boost::future<Response> f) {
         Response r = f.get();
         std::stringstream ss;
@@ -129,8 +130,9 @@ void RequestHandler::add_application(std::string name,
       std::shared_ptr<HttpServer::Response> response,
       std::shared_ptr<HttpServer::Request> request) {
     try {
-      auto update = decode_and_handle_update(request->content.string(), qp,
-          name, models, policy, input_type, output_type);
+      auto update =
+          decode_and_handle_update(request->content.string(), qp, name, models,
+                                   policy, input_type, output_type);
       update.then([response](boost::future<FeedbackAck> f) {
         FeedbackAck ack = f.get();
         std::stringstream ss;

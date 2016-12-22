@@ -35,13 +35,13 @@ class RequestHandler {
                         endpoint_fn);
 
   boost::future<Response> decode_and_handle_predict(
-    std::string json_content, QueryProcessorBase& q, std::string name,
-    std::vector<VersionedModelId> models, std::string policy, long latency,
-    InputType input_type);
+      std::string json_content, QueryProcessorBase& q, std::string name,
+      std::vector<VersionedModelId> models, std::string policy, long latency,
+      InputType input_type);
   boost::future<FeedbackAck> decode_and_handle_update(
-    std::string json_content, QueryProcessorBase& q, std::string name,
-    std::vector<VersionedModelId> models, std::string policy,
-    InputType input_type, OutputType output_type);
+      std::string json_content, QueryProcessorBase& q, std::string name,
+      std::vector<VersionedModelId> models, std::string policy,
+      InputType input_type, OutputType output_type);
 
   void start_listening();
 
