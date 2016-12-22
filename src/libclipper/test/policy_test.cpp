@@ -113,6 +113,12 @@ TEST_F(PolicyTests, Exp3Test) {
   auto query = Utility::create_query(models);
   auto tasks = Exp3Policy::select_predict_tasks(exp3state, query, 1000);
   ASSERT_NE(model_1.second, tasks.front().model_.second);
+  
+  // Serialization
+  auto bytes = Exp3Policy::serialize_state(exp3state);
+  auto new_state = Exp3Policy::deserialize_state(bytes);
+  ASSERT_EQ(exp3state.first, new_state.first);
 }
 
 }  // namespace
+
