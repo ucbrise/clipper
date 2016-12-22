@@ -58,6 +58,13 @@ Output decode_output(OutputType output_type, ptree parsed_json) {
   }
 }
 
+void respond_http(std::string content, std::string message,
+    std::shared_ptr<HttpServer::Response> response) {
+  *response << "HTTP/1.1 " << message << "\r\nContent-Length: "
+            << content.length() << "\r\n\r\n"
+            << content << "\n";
+}
+
 boost::future<Response> RequestHandler::decode_and_handle_predict(
     std::string json_content, QueryProcessorBase& q, std::string name,
     std::vector<VersionedModelId> models, std::string policy, long latency,
@@ -106,18 +113,12 @@ void RequestHandler::add_application(std::string name,
         std::stringstream ss;
         ss << "qid:" << r.query_id_ << " predict:" << r.output_.y_hat_;
         std::string content = ss.str();
-        *response << "HTTP/1.1 200 OK\r\nContent-Length: " << content.length()
-                  << "\r\n\r\n"
-                  << content << "\n";
+        respond_http(content, "200 OK", response);
       });
     } catch (const ptree_error& e) {
-      *response << "HTTP/1.1 200 OK\r\nContent-Length: "
-                << std::strlen(e.what()) << "\r\n\r\n"
-                << e.what() << "\n";
+      respond_http(e.what(), "400 Bad Request", response);
     } catch (const std::invalid_argument& e) {
-      *response << "HTTP/1.1 200 OK\r\nContent-Length: "
-                << std::strlen(e.what()) << "\r\n\r\n"
-                << e.what() << "\n";
+      respond_http(e.what(), "400 Bad Request", response);
     }
   };
   std::string predict_endpoint = "^/" + name + "/predict$";
@@ -135,18 +136,12 @@ void RequestHandler::add_application(std::string name,
         std::stringstream ss;
         ss << "Feedback received? " << ack;
         std::string content = ss.str();
-        *response << "HTTP/1.1 200 OK\r\nContent-Length: " << content.length()
-                  << "\r\n\r\n"
-                  << content << "\n";
+        respond_http(content, "200 OK", response);
       });
     } catch (const ptree_error& e) {
-      *response << "HTTP/1.1 200 OK\r\nContent-Length: "
-                << std::strlen(e.what()) << "\r\n\r\n"
-                << e.what() << "\n";
+      respond_http(e.what(), "400 Bad Request", response);
     } catch (const std::invalid_argument& e) {
-      *response << "HTTP/1.1 200 OK\r\nContent-Length: "
-                << std::strlen(e.what()) << "\r\n\r\n"
-                << e.what() << "\n";
+      respond_http(e.what(), "400 Bad Request", response);
     }
   };
   std::string update_endpoint = "^/" + name + "/update$";
