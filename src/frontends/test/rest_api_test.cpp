@@ -35,7 +35,7 @@ class RestApiTests : public ::testing::Test {
   RequestHandler rh_;
   MockQueryProcessor qp_;
 
-  RestApiTests() : rh_(qp_, "0.0.0.0", 1337, 8, true) {}
+  RestApiTests() : rh_(qp_, "0.0.0.0", 1337, 8) {}
 };
 
 MATCHER_P(QueryEqual, expected_query, "") {
@@ -47,13 +47,6 @@ MATCHER_P(FeedbackQueryEqual, expected_fq,"") {
 }
 
 TEST_F(RestApiTests, BasicInfoTest) {
-  std::thread server_thread([this](){
-    //Start server
-    rh_.start_listening();
-  });
-  // Wait for server to start
-  std::this_thread::sleep_for(std::chrono::seconds(1));
-
   // Variables for testing
   std::string app_name = "app";
   long uid = 1;
@@ -75,12 +68,13 @@ TEST_F(RestApiTests, BasicInfoTest) {
   FeedbackQuery expected_fq = FeedbackQuery(app_name, uid, feedback, selection_policy, models);
 
   rh_.add_application(app_name, models, input_type, output_type, selection_policy, latency_micros);
-  HttpClient client("localhost:1337");
-  // Send predict and update requests
+  // Handle predict and update requests
   EXPECT_CALL(qp_, predict(QueryEqual(expected_query)));
-  client.request("POST", "/app/predict", predict_json);
+  rh_.decode_and_handle_predict(predict_json, qp_, app_name, models,
+    selection_policy, latency_micros, input_type);
   EXPECT_CALL(qp_, update(FeedbackQueryEqual(expected_fq)));
-  client.request("POST", "/app/update", update_json);
+  rh_.decode_and_handle_update(update_json, qp_, app_name, models,
+    selection_policy, input_type, output_type);
 }
 
 } // namespace

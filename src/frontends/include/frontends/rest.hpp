@@ -9,6 +9,7 @@
 
 #include <server_http.hpp>
 
+using clipper::Response;
 using clipper::FeedbackAck;
 using clipper::QueryProcessorBase;
 using clipper::VersionedModelId;
@@ -19,12 +20,11 @@ enum OutputType { double_val, int_val };
 
 class RequestHandler {
  public:
-  RequestHandler(QueryProcessorBase& q, int portno, int num_threads,
-                 bool debug=false)
-      : server(portno, num_threads), qp(q), debug(debug) {}
+  RequestHandler(QueryProcessorBase& q, int portno, int num_threads)
+      : server(portno, num_threads), qp(q) {}
   RequestHandler(QueryProcessorBase& q, std::string address, int portno,
-                 int num_threads, bool debug=false)
-      : server(address, portno, num_threads), qp(q), debug(debug) {}
+                 int num_threads)
+      : server(address, portno, num_threads), qp(q) {}
 
   void add_application(std::string name, std::vector<VersionedModelId> models,
                        InputType input_type, OutputType output_type,
@@ -33,10 +33,19 @@ class RequestHandler {
                     std::function<void(std::shared_ptr<HttpServer::Response>,
                                        std::shared_ptr<HttpServer::Request>)>
                         endpoint_fn);
+
+  boost::future<Response> decode_and_handle_predict(
+    std::string json_content, QueryProcessorBase& q, std::string name,
+    std::vector<VersionedModelId> models, std::string policy, long latency,
+    InputType input_type);
+  boost::future<FeedbackAck> decode_and_handle_update(
+    std::string json_content, QueryProcessorBase& q, std::string name,
+    std::vector<VersionedModelId> models, std::string policy,
+    InputType input_type, OutputType output_type);
+
   void start_listening();
 
  private:
   HttpServer server;
   QueryProcessorBase& qp;
-  bool debug;
 };

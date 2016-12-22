@@ -58,38 +58,58 @@ Output decode_output(OutputType output_type, ptree parsed_json) {
   }
 }
 
+boost::future<Response> RequestHandler::decode_and_handle_predict(
+    std::string json_content, QueryProcessorBase& q, std::string name,
+    std::vector<VersionedModelId> models, std::string policy, long latency,
+    InputType input_type) {
+  std::istringstream is(json_content);
+  ptree pt;
+  read_json(is, pt);
+
+  long uid = pt.get<long>("uid");
+  std::shared_ptr<Input> input = decode_input(input_type, pt);
+  auto prediction = q.predict({name, uid, input, latency, policy, models});
+
+  return prediction;
+}
+
+boost::future<FeedbackAck> RequestHandler::decode_and_handle_update(
+    std::string json_content, QueryProcessorBase& q, std::string name,
+    std::vector<VersionedModelId> models, std::string policy,
+    InputType input_type, OutputType output_type) {
+  std::istringstream is(json_content);
+  ptree pt;
+  read_json(is, pt);
+
+  long uid = pt.get<long>("uid");
+  std::shared_ptr<Input> input = decode_input(input_type, pt);
+  Output output = decode_output(output_type, pt);
+  auto update = q.update(
+      {name, uid, {std::make_pair(input, output)}, policy, models});
+
+  return update;
+}
+
 void RequestHandler::add_application(std::string name,
                                      std::vector<VersionedModelId> models,
                                      InputType input_type,
                                      OutputType output_type, std::string policy,
                                      long latency) {
-  QueryProcessorBase& q = qp;
-  auto predict_fn = [this, &q, name, input_type, policy, latency, models](
+  auto predict_fn = [this, name, input_type, policy, latency, models](
       std::shared_ptr<HttpServer::Response> response,
       std::shared_ptr<HttpServer::Request> request) {
     try {
-      ptree pt;
-      read_json(request->content, pt);
-
-      long uid = pt.get<long>("uid");
-      std::shared_ptr<Input> input = decode_input(input_type, pt);
-      auto prediction = q.predict({name, uid, input, latency, policy, models});
-      if (debug) {
-        std::string content = "";
+      auto prediction = decode_and_handle_predict(request->content.string(), qp,
+          name, models, policy, latency, input_type);
+      prediction.then([response](boost::future<Response> f) {
+        Response r = f.get();
+        std::stringstream ss;
+        ss << "qid:" << r.query_id_ << " predict:" << r.output_.y_hat_;
+        std::string content = ss.str();
         *response << "HTTP/1.1 200 OK\r\nContent-Length: " << content.length()
-                    << "\r\n\r\n"
-                    << content << "\n";
-      } else {
-        prediction.then([response](boost::future<Response> f) {
-          Response r = f.get();
-          std::stringstream ss;
-          ss << "qid:" << r.query_id_ << " predict:" << r.output_.y_hat_;
-          std::string content = ss.str();
-          *response << "HTTP/1.1 200 OK\r\nContent-Length: " << content.length()
-                    << "\r\n\r\n"
-                    << content << "\n";
-        });
-      }
+                  << "\r\n\r\n"
+                  << content << "\n";
+      });
     } catch (const ptree_error& e) {
       *response << "HTTP/1.1 200 OK\r\nContent-Length: "
                 << std::strlen(e.what()) << "\r\n\r\n"
@@ -104,34 +124,21 @@ void RequestHandler::add_application(std::string name,
   server.add_endpoint(predict_endpoint, "POST", predict_fn);
   std::cout << "added endpoint " + predict_endpoint + " for " + name + "\n";
 
-  auto update_fn = [this, &q, name, input_type, output_type, policy, latency, models](
+  auto update_fn = [this, name, input_type, output_type, policy, models](
       std::shared_ptr<HttpServer::Response> response,
       std::shared_ptr<HttpServer::Request> request) {
     try {
-      ptree pt;
-      read_json(request->content, pt);
-
-      long uid = pt.get<long>("uid");
-      std::shared_ptr<Input> input = decode_input(input_type, pt);
-      Output output = decode_output(output_type, pt);
-      auto update = q.update(
-          {name, uid, {std::make_pair(input, output)}, policy, models});
-      if (debug) {
-        std::string content = "";
+      auto update = decode_and_handle_update(request->content.string(), qp,
+          name, models, policy, input_type, output_type);
+      update.then([response](boost::future<FeedbackAck> f) {
+        FeedbackAck ack = f.get();
+        std::stringstream ss;
+        ss << "Feedback received? " << ack;
+        std::string content = ss.str();
         *response << "HTTP/1.1 200 OK\r\nContent-Length: " << content.length()
-                    << "\r\n\r\n"
-                    << content << "\n";
-      } else {
-        update.then([response](boost::future<FeedbackAck> f) {
-          FeedbackAck ack = f.get();
-          std::stringstream ss;
-          ss << "Feedback received? " << ack;
-          std::string content = ss.str();
-          *response << "HTTP/1.1 200 OK\r\nContent-Length: " << content.length()
-                    << "\r\n\r\n"
-                    << content << "\n";
-        });
-      }
+                  << "\r\n\r\n"
+                  << content << "\n";
+      });
     } catch (const ptree_error& e) {
       *response << "HTTP/1.1 200 OK\r\nContent-Length: "
                 << std::strlen(e.what()) << "\r\n\r\n"
