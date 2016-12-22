@@ -35,7 +35,7 @@ class RestApiTests : public ::testing::Test {
   RequestHandler rh_;
   MockQueryProcessor qp_;
 
-  RestApiTests() : rh_(qp_, "0.0.0.0", 1337, 8) {}
+  RestApiTests() : rh_(qp_, "0.0.0.0", 1337, 8, true) {}
 };
 
 MATCHER_P(QueryEqual, expected_query, "") {
@@ -54,6 +54,7 @@ TEST_F(RestApiTests, BasicInfoTest) {
   // Wait for server to start
   std::this_thread::sleep_for(std::chrono::seconds(1));
 
+  // Variables for testing
   std::string app_name = "app";
   long uid = 1;
   std::vector<VersionedModelId> models = {std::make_pair("m", 1), std::make_pair("n", 2)};
@@ -67,16 +68,17 @@ TEST_F(RestApiTests, BasicInfoTest) {
   Output output = Output(2.0, model_to_update);
   Feedback feedback = std::make_pair(input, output);
 
+  // Make expected Query and FeedbackAck
+  std::string predict_json = "{\"uid\": 1, \"input\": [1.1, 2.2, 3.3, 4.4]}";
+  Query expected_query = Query(app_name, uid, input, latency_micros, selection_policy, models);
+  std::string update_json = "{\"uid\": 1, \"input\": [1.1, 2.2, 3.3, 4.4], \"label\": 2.0, \"model_name\": \"m\", \"model_version\": 1}";
+  FeedbackQuery expected_fq = FeedbackQuery(app_name, uid, feedback, selection_policy, models);
+
   rh_.add_application(app_name, models, input_type, output_type, selection_policy, latency_micros);
   HttpClient client("localhost:1337");
   // Send predict and update requests
-  std::string predict_json = "{\"uid\": 1, \"input\": [1.1, 2.2, 3.3, 4.4]}";
-  Query expected_query = Query(app_name, uid, input, latency_micros, selection_policy, models);
   EXPECT_CALL(qp_, predict(QueryEqual(expected_query)));
   client.request("POST", "/app/predict", predict_json);
-
-  std::string update_json = "{\"uid\": 1, \"input\": [1.1, 2.2, 3.3, 4.4], \"label\": 2.0, \"model_name\": \"m\", \"model_version\": 1}";
-  FeedbackQuery expected_fq = FeedbackQuery(app_name, uid, feedback, selection_policy, models);
   EXPECT_CALL(qp_, update(FeedbackQueryEqual(expected_fq)));
   client.request("POST", "/app/update", update_json);
 }

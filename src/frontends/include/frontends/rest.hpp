@@ -19,11 +19,12 @@ enum OutputType { double_val, int_val };
 
 class RequestHandler {
  public:
-  RequestHandler(QueryProcessorBase& q, int portno, int num_threads)
-      : server(portno, num_threads), qp(q) {}
+  RequestHandler(QueryProcessorBase& q, int portno, int num_threads,
+                 bool debug=false)
+      : server(portno, num_threads), qp(q), debug(debug) {}
   RequestHandler(QueryProcessorBase& q, std::string address, int portno,
-                 int num_threads)
-      : server(address, portno, num_threads), qp(q) {}
+                 int num_threads, bool debug=false)
+      : server(address, portno, num_threads), qp(q), debug(debug) {}
 
   void add_application(std::string name, std::vector<VersionedModelId> models,
                        InputType input_type, OutputType output_type,
@@ -37,4 +38,5 @@ class RequestHandler {
  private:
   HttpServer server;
   QueryProcessorBase& qp;
+  bool debug;
 };
