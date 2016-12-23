@@ -65,6 +65,9 @@ void respond_http(std::string content, std::string message,
             << content << "\n";
 }
 
+/* Input JSON format:
+ * {"uid": <user id>, "input": <query input>}
+ */
 boost::future<Response> RequestHandler::decode_and_handle_predict(
     std::string json_content, QueryProcessorBase& q, std::string name,
     std::vector<VersionedModelId> models, std::string policy, long latency,
@@ -80,6 +83,10 @@ boost::future<Response> RequestHandler::decode_and_handle_predict(
   return prediction;
 }
 
+/* Update JSON format:
+ * {"uid": <user id>, "input": <query input>, "label": <query y_hat>,
+ *  "model_name": <model name>, "model_version": <model_version>}
+ */
 boost::future<FeedbackAck> RequestHandler::decode_and_handle_update(
     std::string json_content, QueryProcessorBase& q, std::string name,
     std::vector<VersionedModelId> models, std::string policy,

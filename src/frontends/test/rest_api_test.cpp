@@ -8,8 +8,6 @@
 #include <clipper/query_processor.hpp>
 #include <frontends/rest.hpp>
 
-#include <client_http.hpp>
-
 using clipper::DoubleVector;
 using clipper::Feedback;
 using clipper::FeedbackAck;
@@ -20,7 +18,6 @@ using clipper::Query;
 using clipper::QueryProcessorBase;
 using clipper::Response;
 using clipper::VersionedModelId;
-using HttpClient = SimpleWeb::Client<SimpleWeb::HTTP>;
 
 namespace {
 
@@ -39,11 +36,41 @@ class RestApiTests : public ::testing::Test {
 };
 
 MATCHER_P(QueryEqual, expected_query, "") {
-  return arg.label_.compare(expected_query.label_) == 0;
+  std::shared_ptr<Input> arg_input = arg.input_;
+  std::shared_ptr<Input> expected_input = expected_query.input_;
+  // For now compare serialized bytes of Inputs
+  EXPECT_THAT(arg_input->serialize(),
+              testing::ContainerEq(expected_input->serialize()));
+
+  /* Test for equality of other instance variables */
+  EXPECT_EQ(arg.label_, expected_query.label_);
+  EXPECT_EQ(arg.user_id_, expected_query.user_id_);
+  EXPECT_EQ(arg.latency_micros_, expected_query.latency_micros_);
+  EXPECT_EQ(arg.selection_policy_, expected_query.selection_policy_);
+  EXPECT_THAT(arg.candidate_models_,
+              testing::ContainerEq(expected_query.candidate_models_));
+  return true;
 }
 
 MATCHER_P(FeedbackQueryEqual, expected_fq, "") {
-  return arg.label_.compare(expected_fq.label_) == 0;
+  /* Compare Input and Output */
+  std::shared_ptr<Input> arg_input = arg.feedback_.first;
+  std::shared_ptr<Input> expected_input = expected_fq.feedback_.first;
+  Output arg_output = arg.feedback_.second;
+  Output expected_output = expected_fq.feedback_.second;
+  EXPECT_EQ(arg_output.y_hat_, expected_output.y_hat_);
+  EXPECT_EQ(arg_output.versioned_model_, expected_output.versioned_model_);
+  // For now compare serialized bytes of Inputs
+  EXPECT_THAT(arg_input->serialize(),
+              testing::ContainerEq(expected_input->serialize()));
+
+  /* Test for equality of other instance variables */
+  EXPECT_EQ(arg.label_, expected_fq.label_);
+  EXPECT_EQ(arg.user_id_, expected_fq.user_id_);
+  EXPECT_EQ(arg.selection_policy_, expected_fq.selection_policy_);
+  EXPECT_THAT(arg.candidate_models_,
+              testing::ContainerEq(expected_fq.candidate_models_));
+  return true;
 }
 
 TEST_F(RestApiTests, BasicInfoTest) {
