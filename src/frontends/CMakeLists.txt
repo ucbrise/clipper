@@ -39,7 +39,8 @@ target_link_libraries(frontends clipper boost httpserver)
 ##################################
 # Tests for frontends
 
-set(GTEST_COMMAND "${CMAKE_CURRENT_BINARY_DIR}/frontendstests")
+get_target_property(GTEST_COMMAND unittests COMMAND)
+set_property(TARGET unittests PROPERTY COMMAND "${GTEST_COMMAND} ${CMAKE_CURRENT_BINARY_DIR}/frontendstests")
 add_executable(frontendstests EXCLUDE_FROM_ALL
     test/test_main.cpp
     test/rest_api_test.cpp
