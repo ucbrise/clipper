@@ -199,7 +199,7 @@ namespace rpc {
    private:
     std::vector<std::shared_ptr<Input>> inputs_;
     InputType input_type_;
-    size_t input_data_size_;
+    size_t input_data_size_ = 0;
 
   };
 

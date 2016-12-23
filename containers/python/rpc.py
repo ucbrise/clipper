@@ -80,7 +80,7 @@ class Server(threading.Thread):
 				t2 = datetime.now()
 
 				parsed_input_header = np.frombuffer(input_header, dtype=np.int32)
-				input_type, splits = parsed_input_header[0], parsed_input_header[1:]
+				input_type, input_size, splits = parsed_input_header[0], parsed_input_header[1], parsed_input_header[2:]
 
 				if int(input_type) != int(self.model_input_type):
 					print('Received an input of incorrect type for this container!')

@@ -206,6 +206,9 @@ void rpc::PredictionRequest::add_input(std::shared_ptr<Input> input) {
 }
 
 std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
+  if(input_data_size_ <= 0) {
+    throw std::length_error("Attempted to serialize a request with no input data!");
+  }
 
   long start = std::chrono::duration_cast<std::chrono::milliseconds>(
       std::chrono::system_clock::now().time_since_epoch())
@@ -216,6 +219,7 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
 
   std::vector<uint32_t> input_metadata;
   input_metadata.emplace_back(static_cast<uint32_t>(input_type_));
+  input_metadata.emplace_back(static_cast<uint32_t>(inputs_.size()));
 
   uint32_t index = 0;
   uint8_t *input_buf = (uint8_t *) malloc(input_data_size_);
