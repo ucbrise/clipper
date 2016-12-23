@@ -36,11 +36,11 @@ class RestApiTests : public ::testing::Test {
 };
 
 MATCHER_P(QueryEqual, expected_query, "") {
-  std::shared_ptr<Input> arg_input = arg.input_;
-  std::shared_ptr<Input> expected_input = expected_query.input_;
-  // For now compare serialized bytes of Inputs
-  EXPECT_THAT(arg_input->serialize(),
-              testing::ContainerEq(expected_input->serialize()));
+  auto arg_input = std::dynamic_pointer_cast<DoubleVector>(arg.input_);
+  auto expected_input =
+      std::dynamic_pointer_cast<DoubleVector>(expected_query.input_);
+  EXPECT_THAT(arg_input->get_data(),
+              testing::ContainerEq(expected_input->get_data()));
 
   /* Test for equality of other instance variables */
   EXPECT_EQ(arg.label_, expected_query.label_);
@@ -54,15 +54,15 @@ MATCHER_P(QueryEqual, expected_query, "") {
 
 MATCHER_P(FeedbackQueryEqual, expected_fq, "") {
   /* Compare Input and Output */
-  std::shared_ptr<Input> arg_input = arg.feedback_.first;
-  std::shared_ptr<Input> expected_input = expected_fq.feedback_.first;
+  auto arg_input = std::dynamic_pointer_cast<DoubleVector>(arg.feedback_.first);
+  auto expected_input =
+      std::dynamic_pointer_cast<DoubleVector>(expected_fq.feedback_.first);
   Output arg_output = arg.feedback_.second;
   Output expected_output = expected_fq.feedback_.second;
+  EXPECT_THAT(arg_input->get_data(),
+              testing::ContainerEq(expected_input->get_data()));
   EXPECT_EQ(arg_output.y_hat_, expected_output.y_hat_);
   EXPECT_EQ(arg_output.versioned_model_, expected_output.versioned_model_);
-  // For now compare serialized bytes of Inputs
-  EXPECT_THAT(arg_input->serialize(),
-              testing::ContainerEq(expected_input->serialize()));
 
   /* Test for equality of other instance variables */
   EXPECT_EQ(arg.label_, expected_fq.label_);

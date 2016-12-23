@@ -55,6 +55,8 @@ class DoubleVector : public Input {
 
   size_t hash() const;
 
+  const std::vector<double>& get_data() const;
+
  private:
   std::vector<double> data_;
 };

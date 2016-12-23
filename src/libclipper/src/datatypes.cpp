@@ -50,6 +50,10 @@ size_t DoubleVector::hash() const {
   return cur_hash;
 }
 
+const std::vector<double>& DoubleVector::get_data() const {
+  return data_;
+}
+
 Query::Query(std::string label, long user_id, std::shared_ptr<Input> input,
              long latency_micros, std::string selection_policy,
              std::vector<VersionedModelId> candidate_models)
