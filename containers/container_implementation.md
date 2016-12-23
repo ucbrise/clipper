@@ -61,11 +61,13 @@ RPC requests sent from Clipper to model containers are divided into two categori
 ### Serializing Prediction Requests
 1. All requests begin with a 32-bit integer header, sent as a single ZeroMQ message. The value of this integer will be 0, indicating that the request is a prediction request.
 
-2. The next ZeroMQ message contains an input header.
+2. The next ZeroMQ message contains an input header. This is a list of 32-bit integers.
  * The input header begins with a 32-bit integer specifying the type of inputs contained in the request. This integer can assume values 0-4, as defined in point 2 of **Initializing a Connection**.
+ 
+ * The next 32-bit integer in the input header is the number of inputs included in the serialized content.
 
- * The remainder of the input header is a list of 32-bit integers. These integers correspond to the offsets at which the deserialized output should be split.
-   * For example, if the request contains three double vectors of size 500, the offset list will be `[500, 1000]`, indicating that the deserialized vector of 1500 doubles should be split into three vectors containing doubles 0-499, 500-999, and 1000-1499 respectively.
+ * The remaining values in the input header correspond to the offsets at which the deserialized output should be split.
+   * For example, if the request contains three double vectors of size 500, the offsets will be `[500, 1000]`, indicating that the deserialized vector of 1500 doubles should be split into three vectors containing doubles 0-499, 500-999, and 1000-1499 respectively.
    
     * In the case of strings, the offset list is not relevant and should not be used.
    
