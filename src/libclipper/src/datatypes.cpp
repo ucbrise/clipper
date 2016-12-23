@@ -1,4 +1,5 @@
 
+#include <chrono>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -58,7 +59,8 @@ Query::Query(std::string label, long user_id, std::shared_ptr<Input> input,
       input_(input),
       latency_micros_(latency_micros),
       selection_policy_(selection_policy),
-      candidate_models_(candidate_models) {}
+      candidate_models_(candidate_models),
+      create_time_(std::chrono::high_resolution_clock::now()) {}
 
 Response::Response(Query query, QueryId query_id, long duration_micros,
                    Output output, std::vector<VersionedModelId> models_used)

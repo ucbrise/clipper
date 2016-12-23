@@ -10,3 +10,4 @@ debug/
 .DS_STORE
 .idea/
 src/.idea/
+config.log

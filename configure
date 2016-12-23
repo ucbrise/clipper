@@ -246,7 +246,7 @@ set -o pipefail
 
 
 
-if [ $run_cleanup ];
+if [ $release ];
 then
 
 echo -e "\n\n\n======================= Release ========================" \

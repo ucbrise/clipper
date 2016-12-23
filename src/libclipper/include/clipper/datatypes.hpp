@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <chrono>
 
 namespace clipper {
 
@@ -87,6 +88,7 @@ class Query {
   long latency_micros_;
   std::string selection_policy_;
   std::vector<VersionedModelId> candidate_models_;
+  std::chrono::time_point<std::chrono::high_resolution_clock> create_time_;
 };
 
 class Response {

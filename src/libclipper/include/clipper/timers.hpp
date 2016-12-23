@@ -15,11 +15,11 @@ class HighPrecisionClock {
  public:
   HighPrecisionClock() = default;
   ~HighPrecisionClock() = default;
-  HighPrecisionClock(const HighPrecisionClock &) = default;
-  HighPrecisionClock &operator=(const HighPrecisionClock &) = default;
+  HighPrecisionClock(const HighPrecisionClock&) = default;
+  HighPrecisionClock& operator=(const HighPrecisionClock&) = default;
 
-  HighPrecisionClock(HighPrecisionClock &&) = default;
-  HighPrecisionClock &operator=(HighPrecisionClock &&) = default;
+  HighPrecisionClock(HighPrecisionClock&&) = default;
+  HighPrecisionClock& operator=(HighPrecisionClock&&) = default;
 
   std::chrono::time_point<std::chrono::high_resolution_clock> now() const {
     return std::chrono::high_resolution_clock::now();
@@ -33,11 +33,11 @@ class ManualClock {
       : now_{std::chrono::time_point<
             std::chrono::high_resolution_clock>::min()} {}
 
-  ManualClock(const ManualClock &other) = default;
-  ManualClock &operator=(const ManualClock &other) = default;
+  ManualClock(const ManualClock& other) = default;
+  ManualClock& operator=(const ManualClock& other) = default;
 
-  ManualClock(ManualClock &&other) = default;
-  ManualClock &operator=(ManualClock &&other) = default;
+  ManualClock(ManualClock&& other) = default;
+  ManualClock& operator=(ManualClock&& other) = default;
 
   ~ManualClock() = default;
 
@@ -62,17 +62,17 @@ class Timer {
   ~Timer() = default;
 
   // Disallow copy
-  Timer(const Timer &) = delete;
-  Timer &operator=(const Timer &) = delete;
+  Timer(const Timer&) = delete;
+  Timer& operator=(const Timer&) = delete;
 
   // Move constructors
-  Timer(Timer &&) = default;
-  Timer &operator=(Timer &&) = default;
+  Timer(Timer&&) = default;
+  Timer& operator=(Timer&&) = default;
 
-  bool operator<(const Timer &rhs) const;
-  bool operator>(const Timer &rhs) const;
-  bool operator<=(const Timer &rhs) const;
-  bool operator>=(const Timer &rhs) const;
+  bool operator<(const Timer& rhs) const;
+  bool operator>(const Timer& rhs) const;
+  bool operator<=(const Timer& rhs) const;
+  bool operator>=(const Timer& rhs) const;
 
   void expire();
 
@@ -83,8 +83,8 @@ class Timer {
 };
 
 struct TimerCompare {
-  bool operator()(const std::shared_ptr<Timer> &lhs,
-                  const std::shared_ptr<Timer> &rhs) const {
+  bool operator()(const std::shared_ptr<Timer>& lhs,
+                  const std::shared_ptr<Timer>& rhs) const {
     return *lhs > *rhs;
     // return *rhs < *lhs;
   }
@@ -98,19 +98,15 @@ using TimerPQueue =
 template <typename Clock>
 class TimerSystem {
  public:
-  explicit TimerSystem(Clock c) : clock_(c), queue_(TimerPQueue{}) {
-    std::cout << "starting timer thread" << std::endl;
-    start();
-    std::cout << "timer thread started" << std::endl;
-  }
+  explicit TimerSystem(Clock c) : clock_(c), queue_(TimerPQueue{}) { start(); }
 
   ~TimerSystem() { shutdown(); }
 
-  TimerSystem(const TimerSystem &) = delete;
-  TimerSystem &operator=(const TimerSystem &) = delete;
+  TimerSystem(const TimerSystem&) = delete;
+  TimerSystem& operator=(const TimerSystem&) = delete;
 
-  TimerSystem(TimerSystem &&) = default;
-  TimerSystem &operator=(TimerSystem &&) = default;
+  TimerSystem(TimerSystem&&) = default;
+  TimerSystem& operator=(TimerSystem&&) = default;
 
   void start() {
     manager_thread_ = boost::thread(&TimerSystem::manage_timers, this);
@@ -118,7 +114,6 @@ class TimerSystem {
   }
 
   void manage_timers() {
-    std::cout << "In timer event loop" << std::endl;
     while (!shutdown_) {
       // wait for next timer to expire
       //    auto cur_time = high_resolution_clock::now();
@@ -141,17 +136,20 @@ class TimerSystem {
     // signal management thread to shutdown
     shutdown_ = true;
     // wait for it to finish
-    manager_thread_.join();
+    if (manager_thread_.joinable()) {
+      manager_thread_.join();
+    }
   }
 
   boost::future<void> set_timer(long duration_micros) {
-    assert(initialized_);
+    assert(initialized_ && !shutdown_);
     boost::promise<void> promise;
     auto f = promise.get_future();
     auto tp = clock_.now() + std::chrono::microseconds(duration_micros);
     //  Timer timer{tp, promise};
     std::unique_lock<std::mutex> l(queue_mutex_);
-    queue_.emplace(std::make_shared<Timer>(tp, std::move(promise)));
+    auto timer_tmp = std::make_shared<Timer>(tp, std::move(promise));
+    queue_.emplace(timer_tmp);
     return f;
   }
 
