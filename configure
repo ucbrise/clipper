@@ -39,6 +39,13 @@ function print_help {
 } # end of print help
 function run_cleanup {
   #!/bin/bash
+
+  if [ $# -gt 0 -a  "$1" == "-f" ]; then
+    echo "Force-removing release and debug folders";
+    rm -rf release debug deps config.log
+    exit 0
+  fi
+
   echo "This script completely erases all build folders including dependencies!!!"
   echo "Are you sure you want to continue? (yes or no)"
   read yesorno;
@@ -50,6 +57,7 @@ function run_cleanup {
   fi
   exit 1
 } # end of run cleanup
+
 function unknown_option {
   echo "Unrecognized option: $1"
   echo "To get help, run ./configure --help"
@@ -114,6 +122,7 @@ while [ $# -gt 0 ]
   do case $1 in
     --help)                 print_help=1 ;;
     --cleanup)              run_cleanup=1 ;;
+    --cleanup-quiet)        run_cleanup_quiet=1 ;;
     --no_tcmalloc)          no_tcmalloc=1 ;;
     --prefix=*)             prefix=${1##--prefix=} ;;
     --ide=*)                ide=${1##--ide=} ;;
@@ -127,8 +136,9 @@ if [ $print_help ]; then
   print_help;
 fi
 
-
-if [ $run_cleanup ]; then
+if [ $run_cleanup_quiet ]; then
+  run_cleanup -f
+elif [ $run_cleanup ]; then
   run_cleanup
 fi
 
