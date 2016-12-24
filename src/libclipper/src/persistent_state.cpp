@@ -6,11 +6,10 @@
 
 // #include <clipper/datatypes.hpp>
 #include <boost/thread.hpp>
+#include <clipper/constants.hpp>
 #include <clipper/persistent_state.hpp>
 
 namespace clipper {
-
-constexpr int REDIS_STATE_TABLE = 3;
 
 size_t state_key_hash(const StateKey& key) {
   return std::hash<std::string>()(std::get<0>(key)) ^
@@ -23,14 +22,14 @@ StateDB::StateDB() : initialized_(false) {
 }
 
 bool StateDB::init() {
-  while (!redis_connection_.connect("localhost", 6379)) {
+  while (!redis_connection_.connect("localhost", REDIS_PORT)) {
     std::cout << "ERROR connecting to Redis" << std::endl;
     std::cout << "Sleeping 1 second..." << std::endl;
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
   redox::Command<std::string>& set_table_cmd =
       redis_connection_.commandSync<std::string>(
-          {"SELECT", std::to_string(REDIS_STATE_TABLE)});
+          {"SELECT", std::to_string(REDIS_STATE_DB_NUM)});
   if (!set_table_cmd.ok()) {
     std::cerr << "Error selecting state table DB" << std::endl;
   } else {
