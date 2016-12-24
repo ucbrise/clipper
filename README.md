@@ -23,6 +23,9 @@ compile the code. You should only need to re-configure if you change one of the 
 To build for release, run `./configure --release` which generates the `release` build directory instead of debug.
 If you want to clean everything up, you can run `./configure --cleanup`.
 
+__NOTE:__ Redis must be running in localhost at the default port (6379) to run both the REST interface and the
+unittests.
+
 For example:
 
 ```bash
@@ -33,6 +36,9 @@ $ make
 
 # write some code
 $ make
+
+# start redis-server (assuming it's on your PATH)
+$ redis-server
 
 # build and run unit tests with googletest
 $ make unittests
