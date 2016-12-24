@@ -61,8 +61,12 @@ On a Mac you can install these with
 brew install cmake boost --c++11 zeromq hiredis libev
 
 ```
+On Debian stretch/sid:
+```
+sudo apt-get install cmake libzmq5 libzmq5-dev libhiredis-dev libev-dev libboost-all-dev
+```
 
-On Linux, depending on which distro and version you are running, the supplied packages for
-some of these dependencies are too old. You can try installing from your distro's package
+On other Linux distributions, depending on which distro and version you are running, the supplied packages for
+some of these dependencies may be too old. You can try installing from your distro's package
 repository, and if the version of a dependency is too old you may have to build it from source.
 
