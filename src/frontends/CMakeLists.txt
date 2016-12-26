@@ -18,8 +18,8 @@ target_link_libraries(rest clipper boost httpserver)
 ##################################
 # RPC Layer Testing executable
 
-add_executable(rpctest src/rpc_service_bench.cpp)
+add_executable(rpcbench src/rpc_service_bench.cpp)
 
-target_link_libraries(rpctest clipper)
+target_link_libraries(rpcbench clipper)
 
 ##################################

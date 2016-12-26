@@ -164,11 +164,12 @@ void run_benchmarks() {
   await_responses(rpc_service, times_map, shutdown, total_time_elapsed);
   // run_bytes_benchmark(0, num_iterations_per_benchmark, rpc_service,
   // times_map);
-  run_ints_benchmark(0, num_iterations_per_benchmark, rpc_service, times_map);
+  // run_ints_benchmark(0, num_iterations_per_benchmark, rpc_service,
+  // times_map);
   // run_floats_benchmark(0, num_iterations_per_benchmark, rpc_service,
   // times_map);
-  // run_doubles_benchmark(0, num_iterations_per_benchmark, rpc_service,
-  // times_map);
+  run_doubles_benchmark(0, num_iterations_per_benchmark, rpc_service,
+                        times_map);
   // run_strings_benchmark(0, num_iterations_per_benchmark, rpc_service,
   //                       times_map);
 
