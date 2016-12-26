@@ -15,7 +15,7 @@ namespace clipper {
 class ModelContainer {
  public:
   ~ModelContainer() = default;
-  ModelContainer(VersionedModelId model, int id);
+  ModelContainer(VersionedModelId model, int id, InputType input_type);
   // disallow copy
   ModelContainer(const ModelContainer &) = delete;
   ModelContainer &operator=(const ModelContainer &) = delete;
@@ -33,6 +33,7 @@ class ModelContainer {
 
   VersionedModelId model_;
   int container_id_;
+  InputType input_type_;
 
  private:
   bool connected_{true};
@@ -54,7 +55,7 @@ class ActiveContainers {
   ActiveContainers(ActiveContainers &&) = default;
   ActiveContainers &operator=(ActiveContainers &&) = default;
 
-  void add_container(VersionedModelId model, int id);
+  void add_container(VersionedModelId model, int id, InputType input_type);
 
   /// This method returns a vector of all the active containers (replicas)
   /// of the specified model. This is threadsafe because each individual

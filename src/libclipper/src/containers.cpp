@@ -13,8 +13,8 @@
 
 namespace clipper {
 
-ModelContainer::ModelContainer(VersionedModelId model, int container_id)
-    : model_(model), container_id_(container_id) {}
+ModelContainer::ModelContainer(VersionedModelId model, int container_id, InputType input_type)
+    : model_(model), container_id_(container_id), input_type_(input_type) {}
 
 int ModelContainer::get_queue_size() { return request_queue_.size(); }
 
@@ -29,12 +29,12 @@ ActiveContainers::ActiveContainers()
                              decltype(&versioned_model_hash)>(
               100, &versioned_model_hash)) {}
 
-void ActiveContainers::add_container(VersionedModelId model, int id) {
+void ActiveContainers::add_container(VersionedModelId model, int id, InputType input_type) {
   std::cout << "Adding new container: "
             << "model: " << model.first << ", version: " << model.second
-            << ", ID: " << id << std::endl;
+            << ", ID: " << id << ", input type: " << get_readable_input_type(input_type) << std::endl;
   boost::unique_lock<boost::shared_mutex> l{m_};
-  auto new_container = std::make_shared<ModelContainer>(model, id);
+  auto new_container = std::make_shared<ModelContainer>(model, id, input_type);
   auto entry = containers_[new_container->model_];
   entry.push_back(new_container);
   containers_[new_container->model_] = entry;
