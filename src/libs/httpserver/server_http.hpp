@@ -122,6 +122,8 @@ namespace SimpleWeb {
             friend class ServerBase<socket_type>;
 
             Config(unsigned short port, size_t num_threads): num_threads(num_threads), port(port), reuse_address(true) {}
+            Config(std::string address, unsigned short port, size_t num_threads):
+                num_threads(num_threads), port(port), address(address), reuse_address(true) {}
             size_t num_threads;
         public:
             unsigned short port;
@@ -224,15 +226,40 @@ namespace SimpleWeb {
         /// If you have your own boost::asio::io_service, store its pointer here before running start().
         /// You might also want to set config.num_threads to 0.
         std::shared_ptr<boost::asio::io_service> io_service;
+
+        /// Use this function to add new endpoints while the service is running
+        void add_endpoint(std::string res_name, std::string res_method,
+                          std::function<void(std::shared_ptr<typename ServerBase<socket_type>::Response>,
+                                             std::shared_ptr<typename ServerBase<socket_type>::Request>)> res_fn) {
+            mu.lock();
+            resource[res_name][res_method] = res_fn;
+            auto it=opt_resource.end();
+            for(auto opt_it=opt_resource.begin();opt_it!=opt_resource.end();opt_it++) {
+                if(res_method==opt_it->first) {
+                    it=opt_it;
+                    break;
+                }
+            }
+            if(it==opt_resource.end()) {
+                opt_resource.emplace_back();
+                it=opt_resource.begin()+(opt_resource.size()-1);
+                it->first=res_method;
+            }
+            it->second.emplace_back(REGEX_NS::regex(res_name), res_fn);
+            mu.unlock();
+        }
     protected:
         std::unique_ptr<boost::asio::ip::tcp::acceptor> acceptor;
         std::vector<std::thread> threads;
+        std::mutex mu;
         
         long timeout_request;
         long timeout_content;
         
         ServerBase(unsigned short port, size_t num_threads, long timeout_request, long timeout_send_or_receive) :
                 config(port, num_threads), timeout_request(timeout_request), timeout_content(timeout_send_or_receive) {}
+        ServerBase(std::string address, unsigned short port, size_t num_threads, long timeout_request, long timeout_send_or_receive) :
+                config(address, port, num_threads), timeout_request(timeout_request), timeout_content(timeout_send_or_receive) {}
         
         virtual void accept()=0;
         
@@ -438,6 +465,8 @@ namespace SimpleWeb {
     public:
         Server(unsigned short port, size_t num_threads=1, long timeout_request=5, long timeout_content=300) :
                 ServerBase<HTTP>::ServerBase(port, num_threads, timeout_request, timeout_content) {}
+        Server(std::string address, unsigned short port, size_t num_threads=1, long timeout_request=5, long timeout_content=300) :
+                ServerBase<HTTP>::ServerBase(address, port, num_threads, timeout_request, timeout_content) {}
         
     protected:
         void accept() {

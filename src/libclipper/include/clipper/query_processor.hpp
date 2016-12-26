@@ -17,7 +17,15 @@
 
 namespace clipper {
 
-class QueryProcessor {
+// For the purpose of testing
+class QueryProcessorBase {
+ public:
+  QueryProcessorBase() {}
+  virtual boost::future<Response> predict(Query query) = 0;
+  virtual boost::future<FeedbackAck> update(FeedbackQuery feedback) = 0;
+};
+
+class QueryProcessor : public QueryProcessorBase {
  public:
   ~QueryProcessor() = default;
 
