@@ -15,7 +15,7 @@ Start the NoopContainer:
 $ CLIPPER_MODEL_NAME="m" CLIPPER_MODEL_VERSION=1 CLIPPER_PORT=8000 CLIPPER_INPUT_TYPE="ints" python noop_container.py
 ```
 
-Edit the `run_benchmarks()` function in [`rpc_service_bench.cpp`](src/frontends/src/rpc_service_bench.cpp) to use the input type you specified when starting the model container.
+Edit the `run_benchmarks()` function in [`rpc_service_bench.cpp`](src/rpc_service_bench.cpp) to use the input type you specified when starting the model container.
 
 Then compile the benchmark and run it:
 ```bash
@@ -23,4 +23,4 @@ $ ./configure --release
 $ cd release
 $ make rpcbench
 $ ./src/frontends/rpcbench
-```
+``
