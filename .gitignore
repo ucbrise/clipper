@@ -2,11 +2,11 @@
 .color_coded
 .ycm_p
 .ycm_extra_conf.py
-.ycm_extra_conf.py.generated
+*.pyc
 
 # build directories
 release/
 debug/
 .DS_STORE
 .idea/
-src/.idea/
+config.log
