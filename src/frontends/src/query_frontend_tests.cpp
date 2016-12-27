@@ -6,25 +6,17 @@
 
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
-#include <frontends/rest.hpp>
 
-using clipper::DoubleVector;
-using clipper::Feedback;
-using clipper::FeedbackAck;
-using clipper::FeedbackQuery;
-using clipper::Input;
-using clipper::Output;
-using clipper::Query;
-using clipper::QueryProcessorBase;
-using clipper::Response;
-using clipper::VersionedModelId;
+#include "query_frontend.hpp"
+
+using namespace clipper;
 
 namespace {
 
-class MockQueryProcessor : public QueryProcessorBase {
+class MockQueryProcessor {
  public:
-  MOCK_METHOD1(predict, boost::future<Response>(Query query));
-  MOCK_METHOD1(update, boost::future<FeedbackAck>(FeedbackQuery query));
+  boost::future<Response> predict(Query query);
+  boost::future<FeedbackAck> update(FeedbackQuery feedback);
 };
 
 class RestApiTests : public ::testing::Test {
