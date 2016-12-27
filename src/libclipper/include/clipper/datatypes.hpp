@@ -55,7 +55,7 @@ class Input {
   /**
    * Serializes input and writes resulting data to provided buffer
    */
-  virtual size_t serialize(uint8_t* buf) const = 0;
+  virtual size_t serialize(uint8_t *buf) const = 0;
   virtual size_t hash() const = 0;
 
   /**
@@ -81,10 +81,11 @@ class ByteVector : public Input {
   ByteVector &operator=(ByteVector &&other) = default;
 
   InputType type() const override;
-  size_t serialize(uint8_t* buf) const override;
+  size_t serialize(uint8_t *buf) const override;
   size_t hash() const override;
   size_t size() const override;
   size_t byte_size() const override;
+  const std::vector<uint8_t> &get_data() const;
 
  private:
   std::vector<uint8_t> data_;
@@ -103,10 +104,12 @@ class IntVector : public Input {
   IntVector &operator=(IntVector &&other) = default;
 
   InputType type() const override;
-  size_t serialize(uint8_t* buf) const override;
+  size_t serialize(uint8_t *buf) const override;
   size_t hash() const override;
   size_t size() const override;
   size_t byte_size() const override;
+
+  const std::vector<int> &get_data() const;
 
  private:
   std::vector<int> data_;
@@ -125,10 +128,11 @@ class FloatVector : public Input {
   FloatVector &operator=(FloatVector &&other) = default;
 
   InputType type() const override;
-  size_t serialize(uint8_t* buf) const override;
+  size_t serialize(uint8_t *buf) const override;
   size_t hash() const override;
   size_t size() const override;
   size_t byte_size() const override;
+  const std::vector<float> &get_data() const;
 
  private:
   std::vector<float> data_;
@@ -147,10 +151,11 @@ class DoubleVector : public Input {
   DoubleVector &operator=(DoubleVector &&other) = default;
 
   InputType type() const override;
-  size_t serialize(uint8_t* buf) const override;
+  size_t serialize(uint8_t *buf) const override;
   size_t hash() const override;
   size_t size() const override;
   size_t byte_size() const override;
+  const std::vector<double> &get_data() const;
 
  private:
   std::vector<double> data_;
@@ -169,41 +174,15 @@ class SerializableString : public Input {
   SerializableString &operator=(SerializableString &&other) = default;
 
   InputType type() const override;
-  size_t serialize(uint8_t* buf) const override;
+  size_t serialize(uint8_t *buf) const override;
   size_t hash() const override;
   size_t size() const override;
   size_t byte_size() const override;
+  const std::string &get_data() const;
 
  private:
   std::string data_;
 };
-
-namespace rpc {
-
-  class PredictionRequest {
-   public:
-    explicit PredictionRequest(InputType input_type);
-    explicit PredictionRequest(std::vector<std::shared_ptr<Input>> inputs, InputType input_type);
-
-    // Disallow copy
-    PredictionRequest(PredictionRequest &other) = delete;
-    PredictionRequest &operator=(PredictionRequest &other) = delete;
-
-    // move constructors
-    PredictionRequest(PredictionRequest &&other) = default;
-    PredictionRequest &operator=(PredictionRequest &&other) = default;
-
-    void add_input(std::shared_ptr<Input> input);
-    std::vector<ByteBuffer> serialize();
-
-   private:
-    std::vector<std::shared_ptr<Input>> inputs_;
-    InputType input_type_;
-    size_t input_data_size_ = 0;
-
-  };
-
-} // namespace rpc
 
 class Query {
  public:
@@ -327,6 +306,33 @@ class FeedbackTask {
   QueryId query_id_;
   long latency_slo_micros_;
 };
+
+namespace rpc {
+
+class PredictionRequest {
+ public:
+  explicit PredictionRequest(InputType input_type);
+  explicit PredictionRequest(std::vector<std::shared_ptr<Input>> inputs,
+                             InputType input_type);
+
+  // Disallow copy
+  PredictionRequest(PredictionRequest &other) = delete;
+  PredictionRequest &operator=(PredictionRequest &other) = delete;
+
+  // move constructors
+  PredictionRequest(PredictionRequest &&other) = default;
+  PredictionRequest &operator=(PredictionRequest &&other) = default;
+
+  void add_input(std::shared_ptr<Input> input);
+  std::vector<ByteBuffer> serialize();
+
+ private:
+  std::vector<std::shared_ptr<Input>> inputs_;
+  InputType input_type_;
+  size_t input_data_size_ = 0;
+};
+
+}  // namespace rpc
 
 }  // namespace clipper
 

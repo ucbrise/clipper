@@ -31,8 +31,8 @@ export(TARGETS clipper FILE ClipperConfig.cmake)
 
 
 
-set(GTEST_COMMAND "${CMAKE_CURRENT_BINARY_DIR}/libclippertests")
-add_custom_target(unittests COMMAND ${GTEST_COMMAND})
+# set(GTEST_COMMAND "${CMAKE_CURRENT_BINARY_DIR}/libclippertests")
+add_custom_target(unittests)
 add_executable(libclippertests EXCLUDE_FROM_ALL
     test/test_main.cpp
     test/rpc_service_test.cpp
@@ -40,7 +40,6 @@ add_executable(libclippertests EXCLUDE_FROM_ALL
     test/serialization_test.cpp
     test/persistent_state_test.cpp
     )
-add_sanitizers(libclippertests)
 target_link_libraries(libclippertests clipper gtest gmock_main)
 # add_test(NAME rpc_service_test COMMAND rpc_service_test)
 add_dependencies(unittests libclippertests)
