@@ -27,7 +27,7 @@ $ cd ..
 $ ./bin/run_unittests.sh
 
 # start the query frontend
-$ .debug/src/frontends/query_frontend
+$ ./debug/src/frontends/query_frontend
 ```
 
 ### Dependencies

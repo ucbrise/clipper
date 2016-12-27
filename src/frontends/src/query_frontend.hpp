@@ -22,6 +22,8 @@ using clipper::VersionedModelId;
 using clipper::InputType;
 using clipper::Input;
 using clipper::Output;
+using clipper::Query;
+using clipper::FeedbackQuery;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
 namespace query_frontend {
@@ -148,14 +150,6 @@ class RequestHandler {
     server_.add_endpoint(update_endpoint, "POST", update_fn);
   }
 
-  void add_endpoint(std::string endpoint, std::string request_method,
-                    std::function<void(std::shared_ptr<HttpServer::Response>,
-                                       std::shared_ptr<HttpServer::Request>)>
-                        endpoint_fn) {
-    server_.resource[endpoint][request_method] = endpoint_fn;
-    std::cout << "added " + endpoint + "\n";
-  }
-
   boost::future<Response> decode_and_handle_predict(
       std::string json_content, std::string name,
       std::vector<VersionedModelId> models, std::string policy, long latency,
@@ -166,8 +160,8 @@ class RequestHandler {
 
     long uid = pt.get<long>("uid");
     std::shared_ptr<Input> input = decode_input(input_type, pt);
-    auto prediction =
-        query_processor_.predict({name, uid, input, latency, policy, models});
+    auto prediction = query_processor_.predict(
+        Query{name, uid, input, latency, policy, models});
 
     return prediction;
   }
@@ -187,8 +181,8 @@ class RequestHandler {
     long uid = pt.get<long>("uid");
     std::shared_ptr<Input> input = decode_input(input_type, pt);
     Output output = decode_output(output_type, pt);
-    auto update = query_processor_.update(
-        {name, uid, {std::make_pair(input, output)}, policy, models});
+    auto update = query_processor_.update(FeedbackQuery{
+        name, uid, {std::make_pair(input, output)}, policy, models});
 
     return update;
   }
