@@ -145,7 +145,8 @@ future<Response> QueryProcessor::predict(Query query) {
   auto f = promise.get_future();
 
   make_response_future.then([
-    query, query_id, p = std::move(promise), s = std::move(serialized_state),
+    query, query_id, moved_promise = std::move(promise),
+    moved_serialized_state = std::move(serialized_state),
     task_futures = std::move(task_completion_futures)
   ](auto result_future) mutable {
     std::cout << "ENTERED CONTINUATION LAMBDA" << std::endl;
@@ -171,10 +172,11 @@ future<Response> QueryProcessor::predict(Query query) {
 
     Output final_output;
     if (query.selection_policy_ == "newest_model") {
-      final_output =
-          combine_predictions<NewestModelSelectionPolicy>(query, outputs, s);
+      final_output = combine_predictions<NewestModelSelectionPolicy>(
+          query, outputs, moved_serialized_state);
     } else if (query.selection_policy_ == "simple_policy") {
-      final_output = combine_predictions<SimplePolicy>(query, outputs, s);
+      final_output = combine_predictions<SimplePolicy>(query, outputs,
+                                                       moved_serialized_state);
     } else {
       UNREACHABLE();
     }
@@ -182,7 +184,7 @@ future<Response> QueryProcessor::predict(Query query) {
               << std::endl;
     Response response{query, query_id, 20000, final_output,
                       query.candidate_models_};
-    p.set_value(response);
+    moved_promise.set_value(response);
 
   });
   return f;
@@ -253,9 +255,9 @@ boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
   auto state_db_ptr = get_state_table();
   auto select_policy_updated = select_policy_update_promise.get_future();
   predictions_completed.then([
-    p = std::move(select_policy_update_promise),
-    s = std::move(serialized_state), state_table = std::move(state_db_ptr),
-    feedback, query_id
+    moved_promise = std::move(select_policy_update_promise),
+    moved_serialized_state = std::move(serialized_state),
+    state_table = std::move(state_db_ptr), feedback, query_id
   ](auto pred_tasks_future) mutable {
     auto pred_futures = pred_tasks_future.get();
     std::vector<Output> preds;
@@ -266,16 +268,17 @@ boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
     if (feedback.selection_policy_ == "newest_model") {
       // update the selection policy state using the
       // appropriate selection policy
-      process_feedback<NewestModelSelectionPolicy>(feedback, preds, s,
-                                                   state_table);
+      process_feedback<NewestModelSelectionPolicy>(
+          feedback, preds, moved_serialized_state, state_table);
     } else if (feedback.selection_policy_ == "simple_policy") {
       // update the selection policy state using the
       // appropriate selection policy
-      process_feedback<SimplePolicy>(feedback, preds, s, state_table);
+      process_feedback<SimplePolicy>(feedback, preds, moved_serialized_state,
+                                     state_table);
     } else {
       UNREACHABLE();
     }
-    p.set_value(true);
+    moved_promise.set_value(true);
   });
 
   auto feedback_ack_ready_future =

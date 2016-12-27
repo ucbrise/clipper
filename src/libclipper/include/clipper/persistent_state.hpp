@@ -19,9 +19,6 @@ using StateKey = std::tuple<std::string, long, long>;
 
 size_t state_key_hash(const StateKey& key);
 
-// using StateMap =
-//     std::unordered_map<StateKey, ByteBuffer, decltype(&state_key_hash)>;
-
 // Threadsafe, non-copyable state storage
 class StateDB {
  public:
@@ -38,16 +35,40 @@ class StateDB {
 
   bool init();
 
-  // Non-const because we need to lock a mutex
+  /**
+   * Get the value associated with the key if present
+   * in the DB.
+   *
+   * @return Returns boost::none if the key is not found.
+   */
   boost::optional<std::string> get(const StateKey& key);
 
+  /**
+   * Puts the key-value pair into the DB. If the key already
+   * exists in the DB, the new value will blindly overwrite the old
+   * value.
+   *
+   * @return Logs an error and returns false if there was an unexpected
+   * error with the put.
+   */
   bool put(StateKey key, std::string value);
 
-  bool delete_key(StateKey key);
+  /**
+   * Removes the entry associated with the key from the DB if present.
+   * If the key is not present in the DB, this method has no effect.
+   *
+   * @return Logs an error and returns false if there was an unexpected
+   * error with the removal.
+   */
+  bool remove(StateKey key);
+
+  /**
+   * Returns the total number of keys in the DB.
+   */
+  int num_entries();
 
  private:
   std::atomic<bool> initialized_;
-  // StateMap state_table_{5, state_key_hash};
   redox::Redox redis_connection_;
 };
 

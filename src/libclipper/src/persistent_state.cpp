@@ -2,19 +2,23 @@
 #include <atomic>
 #include <chrono>
 #include <iostream>
+#include <sstream>
 #include <thread>
 
-// #include <clipper/datatypes.hpp>
 #include <boost/thread.hpp>
 #include <clipper/constants.hpp>
 #include <clipper/persistent_state.hpp>
 
 namespace clipper {
 
-size_t state_key_hash(const StateKey& key) {
-  return std::hash<std::string>()(std::get<0>(key)) ^
-         std::hash<long>()(std::get<1>(key)) ^
-         std::hash<long>()(std::get<2>(key));
+std::string generate_redis_key(const StateKey& key) {
+  std::stringstream key_stream;
+  key_stream << std::get<0>(key);
+  key_stream << ":";
+  key_stream << std::get<1>(key);
+  key_stream << ":";
+  key_stream << std::get<2>(key);
+  return key_stream.str();
 }
 
 StateDB::StateDB() : initialized_(false) {
@@ -52,11 +56,10 @@ boost::optional<std::string> StateDB::get(const StateKey& key) {
     std::cout << "Cannot get state from uninitialized StateDB" << std::endl;
     return boost::none;
   }
-  size_t hash = state_key_hash(key);
+  std::string redis_key = generate_redis_key(key);
   redox::Command<std::string>& cmd =
-      redis_connection_.commandSync<std::string>({"GET", std::to_string(hash)});
+      redis_connection_.commandSync<std::string>({"GET", redis_key});
   if (cmd.ok()) {
-    std::cout << "Found " << cmd.reply() << " in Redis StateDB" << std::endl;
     return cmd.reply();
   } else {
     if (cmd.status() != redox::Command<std::string>::NIL_REPLY) {
@@ -71,12 +74,11 @@ bool StateDB::put(StateKey key, std::string value) {
     std::cout << "Cannot put state into uninitialized StateDB" << std::endl;
     return false;
   } else {
-    size_t hash = state_key_hash(key);
+    std::string redis_key = generate_redis_key(key);
     redox::Command<std::string>& cmd =
-        redis_connection_.commandSync<std::string>(
-            {"SET", std::to_string(hash), value});
+        redis_connection_.commandSync<std::string>({"SET", redis_key, value});
     if (!cmd.ok()) {
-      std::cerr << "Error looking up state: " << cmd.lastError() << std::endl;
+      std::cerr << "Error modifying state: " << cmd.lastError() << std::endl;
       return false;
     } else {
       return true;
@@ -84,20 +86,34 @@ bool StateDB::put(StateKey key, std::string value) {
   }
 }
 
-bool StateDB::delete_key(StateKey key) {
+bool StateDB::remove(StateKey key) {
   if (!initialized_) {
     std::cout << "Cannot delete state from uninitialized StateDB" << std::endl;
     return false;
   } else {
-    size_t hash = state_key_hash(key);
+    std::string redis_key = generate_redis_key(key);
     redox::Command<int>& cmd =
-        redis_connection_.commandSync<int>({"DEL", std::to_string(hash)});
+        redis_connection_.commandSync<int>({"DEL", redis_key});
     if (!cmd.ok()) {
       std::cerr << "Error deleting key: " << cmd.lastError() << std::endl;
       return false;
     } else {
       return true;
     }
+  }
+}
+
+int StateDB::num_entries() {
+  if (!initialized_) {
+    std::cout << "Cannot count entries from uninitialized StateDB" << std::endl;
+    return 0;
+  }
+  redox::Command<int>& cmd = redis_connection_.commandSync<int>({"DBSIZE"});
+  if (cmd.ok()) {
+    return cmd.reply();
+  } else {
+    std::cerr << "Error looking up state: " << cmd.lastError() << std::endl;
+    return 0;
   }
 }
 
