@@ -19,6 +19,8 @@ using clipper::Response;
 using clipper::FeedbackAck;
 using clipper::VersionedModelId;
 using clipper::InputType;
+using clipper::Input;
+using clipper::Output;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
 enum OutputType { double_val, int_val };
@@ -26,16 +28,34 @@ enum OutputType { double_val, int_val };
 template <typename T>
 std::vector<T> as_vector(ptree const& pt, ptree::key_type const& key) {
   std::vector<T> r;
-  for (auto& item : pt.get_child(key)) r.push_back(item.second.get_value<T>());
+  for (auto& item : pt.get_child(key)) {
+    r.push_back(item.second.get_value<T>());
+  }
   return r;
 }
 
 std::shared_ptr<Input> decode_input(InputType input_type, ptree& parsed_json) {
   std::shared_ptr<Input> result;
   switch (input_type) {
-    case double_vec: {
+    case InputType::Doubles: {
       std::vector<double> inputs = as_vector<double>(parsed_json, "input");
-      return std::make_shared<DoubleVector>(inputs);
+      return std::make_shared<clipper::DoubleVector>(inputs);
+    }
+    case InputType::Floats: {
+      std::vector<float> inputs = as_vector<float>(parsed_json, "input");
+      return std::make_shared<clipper::FloatVector>(inputs);
+    }
+    case InputType::Ints: {
+      std::vector<int> inputs = as_vector<int>(parsed_json, "input");
+      return std::make_shared<clipper::IntVector>(inputs);
+    }
+    case InputType::Strings: {
+      std::string input_string =
+          parsed_json.get_child("input").get_value<std::string>();
+      return std::make_shared<clipper::SerializableString>(input_string);
+    }
+    case InputType::Bytes: {
+      throw std::invalid_argument("Base64 encoded bytes are not supported yet");
     }
     default:
       throw std::invalid_argument("input_type is not a valid type");
@@ -66,11 +86,10 @@ void respond_http(std::string content, std::string message,
 template <class QP>
 class RequestHandler {
  public:
-  RequestHandler(QP qp, int portno, int num_threads)
-      : server_(portno, num_threads), query_processor_(std::move(qp)) {}
-  RequestHandler(QP qp, std::string address, int portno, int num_threads)
-      : server_(address, portno, num_threads),
-        query_processor_(std::move(qp)) {}
+  RequestHandler(int portno, int num_threads)
+      : server_(portno, num_threads), query_processor_() {}
+  RequestHandler(std::string address, int portno, int num_threads)
+      : server_(address, portno, num_threads), query_processor_() {}
 
   void add_application(std::string name, std::vector<VersionedModelId> models,
                        InputType input_type, OutputType output_type,
@@ -127,7 +146,10 @@ class RequestHandler {
   void add_endpoint(std::string endpoint, std::string request_method,
                     std::function<void(std::shared_ptr<HttpServer::Response>,
                                        std::shared_ptr<HttpServer::Request>)>
-                        endpoint_fn) {}
+                        endpoint_fn) {
+    server_.resource[endpoint][request_method] = endpoint_fn;
+    std::cout << "added " + endpoint + "\n";
+  }
 
   boost::future<Response> decode_and_handle_predict(
       std::string json_content, std::string name,

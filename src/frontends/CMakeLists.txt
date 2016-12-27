@@ -39,13 +39,13 @@ target_link_libraries(rpcbench clipper)
 ##################################
 # Tests for frontends
 
-get_target_property(GTEST_COMMAND unittests COMMAND)
-set_property(TARGET unittests PROPERTY COMMAND "${GTEST_COMMAND} ${CMAKE_CURRENT_BINARY_DIR}/frontendtests")
+# get_target_property(GTEST_COMMAND unittests COMMAND)
+# set_property(TARGET unittests PROPERTY COMMAND "${GTEST_COMMAND} ${CMAKE_CURRENT_BINARY_DIR}/frontendtests")
 add_executable(frontendtests EXCLUDE_FROM_ALL
     src/frontend_tests.cpp
-    test/query_frontend_tests.cpp
+    src/query_frontend_tests.cpp
     )
-target_link_libraries(frontendtests gtest gmock_main)
-add_dependencies(unittests frontendstests)
+target_link_libraries(frontendtests clipper httpserver gtest gmock_main)
+add_dependencies(unittests frontendtests)
 
 
