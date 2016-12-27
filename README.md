@@ -23,10 +23,11 @@ $ make
 $ make
 
 # build and run unit tests with googletest
-$ make unittests
+$ cd ..
+$ ./bin/run_unittests.sh
 
-# start the REST interface
-$ ./frontends/rest
+# start the query frontend
+$ .debug/src/frontends/query_frontend
 ```
 
 ### Dependencies
