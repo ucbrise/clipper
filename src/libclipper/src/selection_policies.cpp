@@ -15,8 +15,8 @@ namespace clipper {
 VersionedModelId NewestModelSelectionPolicy::initialize(
     const std::vector<VersionedModelId>& candidate_models) {
   // TODO: IMPLEMENT
-    assert(candidate_models.size() > 0);
-    return candidate_models.front();
+  assert(candidate_models.size() > 0);
+  return candidate_models.front();
 }
 
 VersionedModelId NewestModelSelectionPolicy::add_models(
@@ -45,16 +45,17 @@ Output NewestModelSelectionPolicy::combine_predictions(
   UNUSED(state);
   UNUSED(query);
   // just return the first prediction
-    if (predictions.empty()) {
-        return Output{0.0, std::make_pair("none", 0)};
-    } else {
-        return predictions.front();
-    }
+  if (predictions.empty()) {
+    return Output{0.0, std::make_pair("none", 0)};
+  } else {
+    return predictions.front();
+  }
 }
 
 std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
 NewestModelSelectionPolicy::select_feedback_tasks(VersionedModelId state,
-                                                  FeedbackQuery query, long query_id) {
+                                                  FeedbackQuery query,
+                                                  long query_id) {
   UNUSED(state);
   UNUSED(query);
   UNUSED(query_id);
@@ -70,14 +71,15 @@ VersionedModelId NewestModelSelectionPolicy::process_feedback(
   return state;
 }
 
-ByteBuffer NewestModelSelectionPolicy::serialize_state(VersionedModelId state) {
-  std::vector<uint8_t> v;
+std::string NewestModelSelectionPolicy::serialize_state(
+    VersionedModelId state) {
+  std::string v;
   UNUSED(state);
   return v;
 }
 
 VersionedModelId NewestModelSelectionPolicy::deserialize_state(
-    const ByteBuffer& bytes) {
+    const std::string& bytes) {
   UNUSED(bytes);
   return std::make_pair("m", 1);
 }
@@ -87,12 +89,12 @@ VersionedModelId NewestModelSelectionPolicy::deserialize_state(
 SimpleState SimplePolicy::initialize(
     const std::vector<VersionedModelId>& candidate_models) {
   // TODO: IMPLEMENT
-    assert(candidate_models.size() > 0);
-    return SimpleState(candidate_models);
+  assert(candidate_models.size() > 0);
+  return SimpleState(candidate_models);
 }
 
-SimpleState SimplePolicy::add_models(
-    SimpleState state, std::vector<VersionedModelId> new_models) {
+SimpleState SimplePolicy::add_models(SimpleState state,
+                                     std::vector<VersionedModelId> new_models) {
   state.insert(state.end(), new_models.begin(), new_models.end());
   return state;
 }
@@ -103,70 +105,66 @@ long SimplePolicy::hash_models(
   return 0;
 }
 
-std::vector<PredictTask> SimplePolicy::select_predict_tasks(
-    SimpleState state, Query query, long query_id) {
+std::vector<PredictTask> SimplePolicy::select_predict_tasks(SimpleState state,
+                                                            Query query,
+                                                            long query_id) {
   std::vector<PredictTask> task_vec;
-  
+
   // construct the task and put in the vector
-  for (auto v: state) {
-    task_vec.emplace_back(query.input_, v, 1.0 / (float) state.size(), query_id,
+  for (auto v : state) {
+    task_vec.emplace_back(query.input_, v, 1.0 / (float)state.size(), query_id,
                           query.latency_micros_);
   }
   return task_vec;
 }
 
-Output SimplePolicy::combine_predictions(
-    SimpleState state, Query query, std::vector<Output> predictions) {
+Output SimplePolicy::combine_predictions(SimpleState state, Query query,
+                                         std::vector<Output> predictions) {
   UNUSED(state);
   UNUSED(query);
   // just return the first prediction
-    if (predictions.empty()) {
-        return Output{0.0, std::make_pair("none", 0)};
-    } else {
-      float sum = 0;
-      for (auto o: predictions) {
-        sum += o.y_hat_;
-      }
-      return Output{sum, std::make_pair("all", 0)};
+  if (predictions.empty()) {
+    return Output{0.0, std::make_pair("none", 0)};
+  } else {
+    float sum = 0;
+    for (auto o : predictions) {
+      sum += o.y_hat_;
     }
+    return Output{sum, std::make_pair("all", 0)};
+  }
 }
 
 std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-SimplePolicy::select_feedback_tasks(SimpleState state,
-                                    FeedbackQuery query, long query_id) {
+SimplePolicy::select_feedback_tasks(SimpleState state, FeedbackQuery query,
+                                    long query_id) {
   UNUSED(state);
   UNUSED(query);
   UNUSED(query_id);
   std::vector<PredictTask> pred_tasks_vec;
-  
+
   // construct the task and put in the vector
-  for (auto v: state) {
+  for (auto v : state) {
     pred_tasks_vec.emplace_back(query.feedback_.first, v, 1.0, query_id, 10000);
   }
-  return std::make_pair(pred_tasks_vec,
-                        std::vector<FeedbackTask>());
+  return std::make_pair(pred_tasks_vec, std::vector<FeedbackTask>());
 }
 
-SimpleState SimplePolicy::process_feedback(
-    SimpleState state, Feedback feedback,
-    std::vector<Output> predictions) {
+SimpleState SimplePolicy::process_feedback(SimpleState state, Feedback feedback,
+                                           std::vector<Output> predictions) {
   UNUSED(feedback);
   UNUSED(predictions);
   return state;
 }
 
-ByteBuffer SimplePolicy::serialize_state(SimpleState state) {
-  std::vector<uint8_t> v;
+std::string SimplePolicy::serialize_state(SimpleState state) {
+  std::string v;
   UNUSED(state);
   return v;
 }
 
-SimpleState SimplePolicy::deserialize_state(
-    const ByteBuffer& bytes) {
+SimpleState SimplePolicy::deserialize_state(const std::string& bytes) {
   UNUSED(bytes);
   return {std::make_pair("m", 1), std::make_pair("j", 1)};
 }
-
-
 
 }  // namespace clipper
