@@ -106,6 +106,8 @@ TEST_F(RedisTest, SubscribeNewModel) {
         ASSERT_EQ(key, std::to_string(model_id_key));
         notification_recv.notify_all();
       });
+  // give Redis some time to register the subscription
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
   ASSERT_TRUE(insert_model(*redis_, model, labels));
   std::unique_lock<std::mutex> l(notification_mutex);
   bool result = notification_recv.wait_for(l, std::chrono::milliseconds(1000),
@@ -132,8 +134,11 @@ TEST_F(RedisTest, SubscribeNewContainer) {
         ASSERT_EQ(key, std::to_string(replica_key));
         notification_recv.notify_one();
       });
+  // give Redis some time to register the subscription
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
   ASSERT_TRUE(
       insert_container(*redis_, model_id, model_replica_id, zmq_connection_id));
+  // std::this_thread::sleep_for(std::chrono::milliseconds(500));
   std::unique_lock<std::mutex> l(notification_mutex);
   bool result = notification_recv.wait_for(l, std::chrono::milliseconds(1000),
                                            [&recv]() { return recv == true; });
