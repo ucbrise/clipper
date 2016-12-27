@@ -12,7 +12,7 @@ using std::vector;
 
 class Metric {
  public:
-  virtual const std::string report() const = 0;
+  virtual void report() const = 0;
   virtual void clear() = 0;
 
 };
@@ -34,7 +34,7 @@ class Counter : public Metric {
   int value() const;
 
   // Metric implementation
-  const std::string report() const;
+  void report() const;
   void clear();
 
  private:
@@ -43,9 +43,16 @@ class Counter : public Metric {
 
 };
 
+/**
+ * Represents a numerator/denominator ratio, where both
+ * numerator and denominator are positive integers.
+ *
+ * Note: To prevent race conditions, all calls are blocking!
+ * TODO(Corey-Zumar): Explore alternative solution to blocking calls
+ */
 class RatioCounter : public Metric {
  public:
-  /** Creates a RatioCounter with numerator 1 and denominator 1 **/
+  /** Creates a RatioCounter with numerator 0 and denominator 0 **/
   explicit RatioCounter(const std::string name);
   explicit RatioCounter(const std::string name, const uint32_t num, const uint32_t denom);
 
@@ -56,16 +63,17 @@ class RatioCounter : public Metric {
   RatioCounter &operator=(RatioCounter &&other) = delete;
 
   void increment(const uint32_t num_incr, const uint32_t denom_incr);
-  double get_ratio();
+  double get_ratio() const;
 
   // Metric implementation
-  const std::string report() const;
+  void report() const;
   void clear();
 
  private:
   const std::string name_;
-  std::atomic<uint32_t> numerator_;
-  std::atomic<uint32_t> denominator_;
+  std::mutex ratio_lock_;
+  uint32_t numerator_;
+  uint32_t denominator_;
 
 };
 
@@ -73,7 +81,7 @@ class Meter : public Metric {
  public:
 
   // Metric implementation
-  const std::string report() const;
+  void report() const;
   void clear();
 
  private:
@@ -84,7 +92,7 @@ class Histogram : public Metric {
  public:
 
   // Metric implementation
-  const std::string report() const;
+  void report() const;
   void clear();
 
  private:

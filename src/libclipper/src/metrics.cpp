@@ -70,16 +70,17 @@ int Counter::value() const {
   return count_.load(std::memory_order_seq_cst);
 }
 
-const std::string Counter::report() const {
-  // Implement this!!!
-  return std::string("TODO!");
+void Counter::report() const {
+  int value = count_.load(std::memory_order_seq_cst);
+  std::cout << "name: " << name_ << std::endl;
+  std::cout << "count: " << value << std::endl;
 }
 
 void Counter::clear() {
-  return;
+  count_.store(0, std::memory_order_seq_cst);
 }
 
-RatioCounter::RatioCounter(const std::string name) : name_(name), numerator_(1), denominator_(1) {
+RatioCounter::RatioCounter(const std::string name) : name_(name), RatioCounter(name, 0, 0) {
 
 }
 
@@ -89,19 +90,31 @@ RatioCounter::RatioCounter(const std::string name, uint32_t num, uint32_t denom)
 }
 
 void RatioCounter::increment(const uint32_t num_incr, const uint32_t denom_incr) {
-  numerator_.fetch_add(num_incr);
-  denominator_.fetch_add(denom_incr);
+  std::lock_guard<std::mutex> guard(ratio_lock_);
+  numerator_ += num_incr;
+  denominator_ += denom_incr;
 }
 
-double RatioCounter::get_ratio() {
-  uint32_t num_value = numerator_.load(std::memory_order_relaxed);
-  uint32_t denom_value = denominator_.load(std::memory_order_relaxed);
-  if (denom_value == 0) {
-    std::string err_msg = name_ + " has denominator zero!";
-    throw std::out_of_range(err_msg);
+double RatioCounter::get_ratio() const {
+  std::lock_guard<std::mutex> guard(ratio_lock_);
+  if (denominator_ == 0) {
+    std::cout << "Ratio " << name_ << " has denominator zero!";
+    return std::nan("");
   }
-  double ratio = static_cast<double>(num_value) / static_cast<double>(denom_value);
+  double ratio = static_cast<double>(numerator_) / static_cast<double>(denominator_);
   return ratio;
+}
+
+void RatioCounter::report() const {
+  double ratio = get_ratio();
+  std::cout << "name: " << name_ << std::endl;
+  std::cout << "ratio: " << ratio << std::endl;
+}
+
+void RatioCounter::clear() {
+  std::lock_guard<std::mutex> guard(ratio_lock_);
+  numerator_ = 0;
+  denominator_ = 0;
 }
 
 } // namespace clipper
