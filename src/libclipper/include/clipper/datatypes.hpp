@@ -85,6 +85,7 @@ class ByteVector : public Input {
   size_t hash() const override;
   size_t size() const override;
   size_t byte_size() const override;
+  const std::vector<uint8_t> &get_data() const;
 
  private:
   std::vector<uint8_t> data_;
@@ -108,6 +109,8 @@ class IntVector : public Input {
   size_t size() const override;
   size_t byte_size() const override;
 
+  const std::vector<int> &get_data() const;
+
  private:
   std::vector<int> data_;
 };
@@ -129,6 +132,7 @@ class FloatVector : public Input {
   size_t hash() const override;
   size_t size() const override;
   size_t byte_size() const override;
+  const std::vector<float> &get_data() const;
 
  private:
   std::vector<float> data_;
@@ -151,6 +155,7 @@ class DoubleVector : public Input {
   size_t hash() const override;
   size_t size() const override;
   size_t byte_size() const override;
+  const std::vector<double> &get_data() const;
 
  private:
   std::vector<double> data_;
@@ -173,6 +178,7 @@ class SerializableString : public Input {
   size_t hash() const override;
   size_t size() const override;
   size_t byte_size() const override;
+  const std::string &get_data() const;
 
  private:
   std::string data_;

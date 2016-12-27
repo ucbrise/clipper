@@ -3,6 +3,8 @@
 
 #include <boost/thread.hpp>
 #define BOOST_SPIRIT_THREADSAFE
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
@@ -10,14 +12,21 @@
 #include "query_frontend.hpp"
 
 using namespace clipper;
+using namespace query_frontend;
+using namespace boost::property_tree;
 
 namespace {
 
 class MockQueryProcessor {
  public:
   MockQueryProcessor() = default;
-  boost::future<Response> predict(Query query);
-  boost::future<FeedbackAck> update(FeedbackQuery feedback);
+  boost::future<Response> predict(Query query) {
+    Response response(query, 3, 5, Output(-1.0, std::make_pair("m", 1)), {});
+    return boost::make_ready_future(response);
+  }
+  boost::future<FeedbackAck> update(FeedbackQuery /*feedback*/) {
+    return boost::make_ready_future(true);
+  }
 };
 
 class QueryFrontendTest : public ::testing::Test {
@@ -28,93 +37,145 @@ class QueryFrontendTest : public ::testing::Test {
   QueryFrontendTest() : rh_("0.0.0.0", 1337, 8) {}
 };
 
-TEST_F(QueryFrontendTest, TestDecodeCorrectInput) { ASSERT_TRUE(false); }
+TEST_F(QueryFrontendTest, TestDecodeCorrectInputInts) {
+  std::string test_json_ints = "{\"uid\": 23, \"input\": [1,2,3,4]}";
+  Response response =
+      rh_.decode_and_handle_predict(test_json_ints, "test", {}, "test_policy",
+                                    30000, InputType::Ints)
+          .get();
 
-TEST_F(QueryFrontendTest, TestDecodeMalformedInput) { ASSERT_TRUE(false); }
+  Query parsed_query = response.query_;
 
-TEST_F(QueryFrontendTest, TestDecodeCorrectOutpu) { ASSERT_TRUE(false); }
+  EXPECT_EQ(parsed_query.user_id_, 23);
+  const std::vector<int>& parsed_input =
+      std::static_pointer_cast<IntVector>(parsed_query.input_)->get_data();
+  std::vector<int> expected_input{1, 2, 3, 4};
+  EXPECT_EQ(parsed_input, expected_input);
+  EXPECT_EQ(parsed_query.label_, "test");
+  EXPECT_EQ(parsed_query.latency_micros_, 30000);
+  EXPECT_EQ(parsed_query.selection_policy_, "test_policy");
+}
 
-TEST_F(QueryFrontendTest, TestDecodeMalformedOutput) { ASSERT_TRUE(false); }
+TEST_F(QueryFrontendTest, TestDecodeCorrectInputDoubles) {
+  std::string test_json_doubles =
+      "{\"uid\": 23, \"input\": [1.4,2.23,3.243242,0.3223424]}";
+  Response response =
+      rh_.decode_and_handle_predict(test_json_doubles, "test", {},
+                                    "test_policy", 30000, InputType::Doubles)
+          .get();
 
-TEST_F(QueryFrontendTest, TestAddOneApplication) { ASSERT_TRUE(false); }
+  Query parsed_query = response.query_;
 
-TEST_F(QueryFrontendTest, TestAddManyApplications) { ASSERT_TRUE(false); }
+  EXPECT_EQ(parsed_query.user_id_, 23);
+  const std::vector<double>& parsed_input =
+      std::static_pointer_cast<DoubleVector>(parsed_query.input_)->get_data();
+  std::vector<double> expected_input{1.4, 2.23, 3.243242, 0.3223424};
+  EXPECT_EQ(parsed_input, expected_input);
+  EXPECT_EQ(parsed_query.label_, "test");
+  EXPECT_EQ(parsed_query.latency_micros_, 30000);
+  EXPECT_EQ(parsed_query.selection_policy_, "test_policy");
+}
 
-// MATCHER_P(QueryEqual, expected_query, "") {
-//   std::shared_ptr<Input> arg_input = arg.input_;
-//   std::shared_ptr<Input> expected_input = expected_query.input_;
-//   // For now compare serialized bytes of Inputs
-//   EXPECT_THAT(arg_input->serialize(),
-//               testing::ContainerEq(expected_input->serialize()));
-//
-//   #<{(| Test for equality of other instance variables |)}>#
-//   EXPECT_EQ(arg.label_, expected_query.label_);
-//   EXPECT_EQ(arg.user_id_, expected_query.user_id_);
-//   EXPECT_EQ(arg.latency_micros_, expected_query.latency_micros_);
-//   EXPECT_EQ(arg.selection_policy_, expected_query.selection_policy_);
-//   EXPECT_THAT(arg.candidate_models_,
-//               testing::ContainerEq(expected_query.candidate_models_));
-//   return true;
-// }
+TEST_F(QueryFrontendTest, TestDecodeCorrectInputString) {
+  std::string test_json_string =
+      "{\"uid\": 23, \"input\": \"hello world. This is a test string with "
+      "punctionation!@#$Y#;}#\"}";
+  Response response =
+      rh_.decode_and_handle_predict(test_json_string, "test", {}, "test_policy",
+                                    30000, InputType::Strings)
+          .get();
 
-// MATCHER_P(FeedbackQueryEqual, expected_fq, "") {
-//   #<{(| Compare Input and Output |)}>#
-//   std::shared_ptr<Input> arg_input = arg.feedback_.first;
-//   std::shared_ptr<Input> expected_input = expected_fq.feedback_.first;
-//   Output arg_output = arg.feedback_.second;
-//   Output expected_output = expected_fq.feedback_.second;
-//   EXPECT_EQ(arg_output.y_hat_, expected_output.y_hat_);
-//   EXPECT_EQ(arg_output.versioned_model_, expected_output.versioned_model_);
-//   // For now compare serialized bytes of Inputs
-//   EXPECT_THAT(arg_input->serialize(),
-//               testing::ContainerEq(expected_input->serialize()));
-//
-//   #<{(| Test for equality of other instance variables |)}>#
-//   EXPECT_EQ(arg.label_, expected_fq.label_);
-//   EXPECT_EQ(arg.user_id_, expected_fq.user_id_);
-//   EXPECT_EQ(arg.selection_policy_, expected_fq.selection_policy_);
-//   EXPECT_THAT(arg.candidate_models_,
-//               testing::ContainerEq(expected_fq.candidate_models_));
-//   return true;
-// }
+  Query parsed_query = response.query_;
 
-// TEST_F(RestApiTests, BasicInfoTest) {
-//   // Variables for testing
-//   std::string app_name = "app";
-//   long uid = 1;
-//   std::vector<VersionedModelId> models = {std::make_pair("m", 1),
-//                                           std::make_pair("n", 2)};
-//   VersionedModelId model_to_update = std::make_pair("m", 1);
-//   InputType input_type = double_vec;
-//   OutputType output_type = double_val;
-//   std::string selection_policy = "most_recent";
-//   long latency_micros = 20000;
-//   std::shared_ptr<Input> input =
-//       std::make_shared<DoubleVector>(std::vector<double>{1.1, 2.2, 3.3,
-//       4.4});
-//   Output output = Output(2.0, model_to_update);
-//   Feedback feedback = std::make_pair(input, output);
-//
-//   // Make expected Query and FeedbackAck
-//   std::string predict_json = "{\"uid\": 1, \"input\": [1.1, 2.2, 3.3, 4.4]}";
-//   Query expected_query =
-//       Query(app_name, uid, input, latency_micros, selection_policy, models);
-//   std::string update_json =
-//       "{\"uid\": 1, \"input\": [1.1, 2.2, 3.3, 4.4], \"label\": 2.0, "
-//       "\"model_name\": \"m\", \"model_version\": 1}";
-//   FeedbackQuery expected_fq =
-//       FeedbackQuery(app_name, uid, feedback, selection_policy, models);
-//
-//   rh_.add_application(app_name, models, input_type, output_type,
-//                       selection_policy, latency_micros);
-//   // Handle predict and update requests
-//   EXPECT_CALL(qp_, predict(QueryEqual(expected_query)));
-//   rh_.decode_and_handle_predict(predict_json, qp_, app_name, models,
-//                                 selection_policy, latency_micros,
-//                                 input_type);
-//   EXPECT_CALL(qp_, update(FeedbackQueryEqual(expected_fq)));
-//   rh_.decode_and_handle_update(update_json, qp_, app_name, models,
-//                                selection_policy, input_type, output_type);
-// }
+  EXPECT_EQ(parsed_query.user_id_, 23);
+  const std::string& parsed_input =
+      std::static_pointer_cast<SerializableString>(parsed_query.input_)
+          ->get_data();
+  std::string expected_input(
+      "hello world. This is a test string with punctionation!@#$Y#;}#");
+  EXPECT_EQ(parsed_input, expected_input);
+  EXPECT_EQ(parsed_query.label_, "test");
+  EXPECT_EQ(parsed_query.latency_micros_, 30000);
+  EXPECT_EQ(parsed_query.selection_policy_, "test_policy");
+}
+
+TEST_F(QueryFrontendTest, TestDecodeMalformedJSON) {
+  std::string gibberish_string1 =
+      "{\"uid\": 2hkdshfdshffhkj32kjhh{dskjfh32r\"3r32";
+
+  std::string gibberish_string2 =
+      "dshfdshffhkj32fsd32jk huf32h, 3 } 24j dskjfh32r\"3r32";
+
+  ASSERT_THROW(
+      rh_.decode_and_handle_predict(gibberish_string1, "test", {},
+                                    "test_policy", 30000, InputType::Doubles),
+      ptree_error);
+  ASSERT_THROW(
+      rh_.decode_and_handle_predict(gibberish_string2, "test", {},
+                                    "test_policy", 30000, InputType::Strings),
+      ptree_error);
+}
+
+TEST_F(QueryFrontendTest, TestDecodeMissingJsonField) {
+  std::string json_missing_field = "{\"input\": [1.4,2.23,3.243242,0.3223424]}";
+  ASSERT_THROW(
+      rh_.decode_and_handle_predict(json_missing_field, "test", {},
+                                    "test_policy", 30000, InputType::Doubles),
+      ptree_error);
+}
+
+TEST_F(QueryFrontendTest, TestDecodeWrongInputType) {
+  std::string test_json_doubles =
+      "{\"uid\": 23, \"input\": [1.4,2.23,3.243242,0.3223424]}";
+  ASSERT_THROW(
+      rh_.decode_and_handle_predict(test_json_doubles, "test", {},
+                                    "test_policy", 30000, InputType::Ints),
+      ptree_bad_data);
+}
+
+TEST_F(QueryFrontendTest, TestDecodeCorrectUpdate) {
+  std::string update_json =
+      "{\"uid\": 23, \"input\": [1.4,2.23,3.243242,0.3223424], \"model_name\": "
+      "\"m\", \"model_version\": 1, \"label\": 1.0}";
+  FeedbackAck ack =
+      rh_.decode_and_handle_update(update_json, "test", {}, "test_policy",
+                                   InputType::Doubles, OutputType::Double)
+          .get();
+
+  EXPECT_TRUE(ack);
+}
+
+TEST_F(QueryFrontendTest, TestDecodeUpdateMissingField) {
+  std::string update_json =
+      "{\"uid\": 23, \"input\": [1.4,2.23,3.243242,0.3223424], \"model_name\": "
+      "\"m\", \"label\": 1.0}";
+  ASSERT_THROW(
+      rh_.decode_and_handle_update(update_json, "test", {}, "test_policy",
+                                   InputType::Doubles, OutputType::Double),
+      ptree_error);
+}
+
+TEST_F(QueryFrontendTest, TestAddOneApplication) {
+  size_t no_apps = rh_.num_applications();
+  EXPECT_EQ(no_apps, (size_t)0);
+  rh_.add_application("test_app_1", {}, InputType::Doubles, OutputType::Double,
+                      "test_policy", 30000);
+  size_t one_app = rh_.num_applications();
+  EXPECT_EQ(one_app, (size_t)1);
+}
+
+TEST_F(QueryFrontendTest, TestAddManyApplications) {
+  size_t no_apps = rh_.num_applications();
+  EXPECT_EQ(no_apps, (size_t)0);
+
+  for (int i = 0; i < 500; ++i) {
+    std::string cur_name = "test_app_" + std::to_string(i);
+    rh_.add_application(cur_name, {}, InputType::Doubles, OutputType::Double,
+                        "test_policy", 30000);
+  }
+
+  size_t apps = rh_.num_applications();
+  EXPECT_EQ(apps, (size_t)500);
+}
 
 }  // namespace

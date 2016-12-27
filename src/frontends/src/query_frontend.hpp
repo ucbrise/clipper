@@ -1,3 +1,4 @@
+#include <cassert>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -23,7 +24,9 @@ using clipper::Input;
 using clipper::Output;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
-enum OutputType { double_val, int_val };
+namespace query_frontend {
+
+enum class OutputType { Double, Int };
 
 template <typename T>
 std::vector<T> as_vector(ptree const& pt, ptree::key_type const& key) {
@@ -67,8 +70,12 @@ Output decode_output(OutputType output_type, ptree parsed_json) {
   int model_version = parsed_json.get<int>("model_version");
   VersionedModelId versioned_model = std::make_pair(model_name, model_version);
   switch (output_type) {
-    case double_val: {
+    case OutputType::Double: {
       double y_hat = parsed_json.get<double>("label");
+      return Output(y_hat, versioned_model);
+    }
+    case OutputType::Int: {
+      double y_hat = parsed_json.get<int>("label");
       return Output(y_hat, versioned_model);
     }
     default:
@@ -116,7 +123,6 @@ class RequestHandler {
     };
     std::string predict_endpoint = "^/" + name + "/predict$";
     server_.add_endpoint(predict_endpoint, "POST", predict_fn);
-    std::cout << "added endpoint " + predict_endpoint + " for " + name + "\n";
 
     auto update_fn = [this, name, input_type, output_type, policy, models](
         std::shared_ptr<HttpServer::Response> response,
@@ -140,7 +146,6 @@ class RequestHandler {
     };
     std::string update_endpoint = "^/" + name + "/update$";
     server_.add_endpoint(update_endpoint, "POST", update_fn);
-    std::cout << "added endpoint " + update_endpoint + " for " + name + "\n";
   }
 
   void add_endpoint(std::string endpoint, std::string request_method,
@@ -195,7 +200,15 @@ class RequestHandler {
     server_thread.join();
   }
 
+  size_t num_applications() {
+    size_t count = server_.num_endpoints();
+    assert(count % 2 == 0);
+    return count / 2;
+  }
+
  private:
   HttpServer server_;
   QP query_processor_;
 };
+
+}  // namespace query_frontend

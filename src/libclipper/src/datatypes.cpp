@@ -81,6 +81,8 @@ size_t ByteVector::size() const { return data_.size(); }
 
 size_t ByteVector::byte_size() const { return data_.size() * sizeof(uint8_t); }
 
+const std::vector<uint8_t> &ByteVector::get_data() const { return data_; }
+
 IntVector::IntVector(std::vector<int> data) : data_(std::move(data)) {}
 
 InputType IntVector::type() const { return InputType::Ints; }
@@ -100,6 +102,8 @@ size_t IntVector::hash() const {
 size_t IntVector::size() const { return data_.size(); }
 
 size_t IntVector::byte_size() const { return data_.size() * sizeof(int); }
+
+const std::vector<int> &IntVector::get_data() const { return data_; }
 
 FloatVector::FloatVector(std::vector<float> data) : data_(std::move(data)) {}
 
@@ -121,6 +125,8 @@ size_t FloatVector::size() const { return data_.size(); }
 
 size_t FloatVector::byte_size() const { return data_.size() * sizeof(float); }
 
+const std::vector<float> &FloatVector::get_data() const { return data_; }
+
 DoubleVector::DoubleVector(std::vector<double> data) : data_(std::move(data)) {}
 
 InputType DoubleVector::type() const { return InputType::Doubles; }
@@ -140,6 +146,8 @@ size_t DoubleVector::hash() const {
 size_t DoubleVector::size() const { return data_.size(); }
 
 size_t DoubleVector::byte_size() const { return data_.size() * sizeof(double); }
+
+const std::vector<double> &DoubleVector::get_data() const { return data_; }
 
 SerializableString::SerializableString(std::string data)
     : data_(std::move(data)) {}
@@ -162,6 +170,8 @@ size_t SerializableString::byte_size() const {
   // The length of the string with an extra byte for the null terminator
   return data_.length() + 1;
 }
+
+const std::string &SerializableString::get_data() const { return data_; }
 
 rpc::PredictionRequest::PredictionRequest(InputType input_type)
     : input_type_(input_type) {}

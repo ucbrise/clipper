@@ -32,6 +32,7 @@
 
 #include <functional>
 #include <iostream>
+#include <mutex>
 #include <sstream>
 #include <thread>
 #include <unordered_map>
@@ -164,6 +165,13 @@ class ServerBase {
   std::function<void(const std::exception &)> exception_handler;
 
  private:
+  // Outer vector is a vector of http methods. E.g one entry for all
+  // POST endpoints, one entry for all GET endpoints, etc.
+  //
+  // For each method, there is a vector of pairs. Each pair represents
+  // a single endpoint. The first element in the pair is the regex defines
+  // the address of the endpoint. The second element is the handler for
+  // the endpoint.
   std::vector<std::pair<
       std::string,
       std::vector<std::pair<
@@ -266,7 +274,8 @@ class ServerBase {
           void(std::shared_ptr<typename ServerBase<socket_type>::Response>,
                std::shared_ptr<typename ServerBase<socket_type>::Request>)>
           res_fn) {
-    mu.lock();
+    std::unique_lock<std::mutex> l(mu);
+    // mu.lock();
     resource[res_name][res_method] = res_fn;
     auto it = opt_resource.end();
     for (auto opt_it = opt_resource.begin(); opt_it != opt_resource.end();
@@ -282,7 +291,16 @@ class ServerBase {
       it->first = res_method;
     }
     it->second.emplace_back(REGEX_NS::regex(res_name), res_fn);
-    mu.unlock();
+    // mu.unlock();
+  }
+
+  size_t num_endpoints() {
+    size_t count = 0;
+    std::unique_lock<std::mutex> l(mu);
+    for (auto e : opt_resource) {
+      count += e.second.size();
+    }
+    return count;
   }
 
  protected:
@@ -350,7 +368,7 @@ class ServerBase {
             // request->streambuf.size() is not necessarily the same as
             // bytes_transferred, from Boost-docs:
             //"After a successful async_read_until operation, the streambuf may
-            //contain additional data beyond the delimiter"
+            // contain additional data beyond the delimiter"
             // The chosen solution is to extract lines from the stream directly
             // when parsing the header. What is left of the
             // streambuf (maybe some bytes of the content) is appended to in the
