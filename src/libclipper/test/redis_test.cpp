@@ -14,12 +14,6 @@ namespace {
 
 const int REDIS_TEST_PORT = 34256;
 
-// TODO:
-//   + Change to test port
-//   + flush DBs to clean up
-//   +
-//
-
 class RedisTest : public ::testing::Test {
  public:
   RedisTest()
