@@ -67,24 +67,29 @@ TEST_F(RedisTest, InsertContainer) {
   VersionedModelId model = std::make_pair("m", 1);
   int replica_id = 4;
   int zmq_connection_id = 12;
-  ASSERT_TRUE(insert_container(*redis_, model, replica_id, zmq_connection_id));
+  InputType input_type = InputType::Doubles;
+  ASSERT_TRUE(insert_container(*redis_, model, replica_id, zmq_connection_id,
+                               input_type));
   auto result = get_container(*redis_, model, replica_id);
-  EXPECT_EQ(result.size(), static_cast<size_t>(6));
+  EXPECT_EQ(result.size(), static_cast<size_t>(7));
   EXPECT_EQ(result["model_name"], model.first);
   EXPECT_EQ(std::stoi(result["model_version"]), model.second);
   EXPECT_EQ(result["model_id"], std::to_string(versioned_model_hash(model)));
   EXPECT_EQ(std::stoi(result["model_replica_id"]), replica_id);
   EXPECT_EQ(std::stoi(result["zmq_connection_id"]), zmq_connection_id);
   EXPECT_EQ(std::stoi(result["batch_size"]), 1);
+  EXPECT_EQ(parse_input_type(result["input_type"]), input_type);
 }
 
 TEST_F(RedisTest, DeleteContainer) {
   VersionedModelId model = std::make_pair("m", 1);
   int replica_id = 4;
   int zmq_connection_id = 12;
-  ASSERT_TRUE(insert_container(*redis_, model, replica_id, zmq_connection_id));
+  InputType input_type = InputType::Strings;
+  ASSERT_TRUE(insert_container(*redis_, model, replica_id, zmq_connection_id,
+                               input_type));
   auto get_result = get_container(*redis_, model, replica_id);
-  EXPECT_EQ(get_result.size(), static_cast<size_t>(6));
+  EXPECT_EQ(get_result.size(), static_cast<size_t>(7));
   ASSERT_TRUE(delete_container(*redis_, model, replica_id));
   auto delete_result = get_container(*redis_, model, replica_id);
   EXPECT_EQ(delete_result.size(), static_cast<size_t>(0));
@@ -121,6 +126,7 @@ TEST_F(RedisTest, SubscribeNewContainer) {
   int model_replica_id = 0;
   int zmq_connection_id = 7;
   size_t replica_key = model_replica_hash(model_id, model_replica_id);
+  InputType input_type = InputType::Strings;
 
   std::condition_variable_any notification_recv;
   std::mutex notification_mutex;
@@ -136,8 +142,9 @@ TEST_F(RedisTest, SubscribeNewContainer) {
       });
   // give Redis some time to register the subscription
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
-  ASSERT_TRUE(
-      insert_container(*redis_, model_id, model_replica_id, zmq_connection_id));
+  ASSERT_TRUE(insert_container(*redis_, model_id, model_replica_id,
+                               zmq_connection_id, input_type));
+
   // std::this_thread::sleep_for(std::chrono::milliseconds(500));
   std::unique_lock<std::mutex> l(notification_mutex);
   bool result = notification_recv.wait_for(l, std::chrono::milliseconds(1000),

@@ -68,7 +68,8 @@ std::unordered_map<std::string, std::string> get_model_by_key(
     redox::Redox& redis, const std::string& key);
 
 bool insert_container(redox::Redox& redis, const VersionedModelId& model_id,
-                      int model_replica_id, int zmq_connection_id);
+                      int model_replica_id, int zmq_connection_id,
+                      InputType input_type);
 
 bool delete_container(redox::Redox& redis, const VersionedModelId& model_id,
                       int model_replica_id);

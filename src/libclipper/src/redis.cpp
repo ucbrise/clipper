@@ -161,25 +161,21 @@ unordered_map<string, string> get_model_by_key(Redox& redis,
 }
 
 bool insert_container(Redox& redis, const VersionedModelId& model_id,
-                      int model_replica_id, int zmq_connection_id) {
+                      int model_replica_id, int zmq_connection_id,
+                      InputType input_type) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_CONTAINER_DB_NUM)})) {
     size_t replica_key = model_replica_hash(model_id, model_replica_id);
     size_t model_id_key = versioned_model_hash(model_id);
-    vector<string> cmd_vec{"HMSET",
-                           std::to_string(replica_key),
-                           "model_id",
-                           std::to_string(model_id_key),
-                           "model_name",
-                           model_id.first,
-                           "model_version",
-                           std::to_string(model_id.second),
-                           "model_replica_id",
-                           std::to_string(model_replica_id),
-                           "zmq_connection_id",
-                           std::to_string(zmq_connection_id),
-                           "batch_size",
-                           std::to_string(1)};
+    vector<string> cmd_vec{
+        "HMSET", std::to_string(replica_key), "model_id",
+        std::to_string(model_id_key), "model_name", model_id.first,
+        "model_version", std::to_string(model_id.second), "model_replica_id",
+        std::to_string(model_replica_id), "zmq_connection_id",
+        std::to_string(zmq_connection_id), "batch_size", std::to_string(1),
+        "input_type", get_readable_input_type(input_type)
+
+    };
     return send_cmd_no_reply<string>(redis, cmd_vec);
   } else {
     return false;

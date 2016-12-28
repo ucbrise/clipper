@@ -185,8 +185,7 @@ void RPCService::receive_message(
     std::string input_type_str(static_cast<char *>(model_input_type.data()),
                                model_input_type.size());
 
-    int input_type = std::stoi(input_type_str);
-    UNUSED(input_type);
+    InputType input_type = static_cast<InputType>(std::stoi(input_type_str));
     int version = std::stoi(version_str);
     VersionedModelId model = std::make_pair(name, version);
     std::cout << "Container added" << std::endl;
@@ -198,7 +197,7 @@ void RPCService::receive_message(
     int cur_replica_id = replica_ids_[model];
     replica_ids_[model] = cur_replica_id + 1;
     redis::insert_container(*redis_connection, model, cur_replica_id,
-                            zmq_connection_id);
+                            zmq_connection_id, input_type);
     zmq_connection_id += 1;
   } else {
     message_t msg_id;
