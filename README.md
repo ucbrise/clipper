@@ -1,6 +1,5 @@
 # Clipper Prediction Server
 
-
 [Design doc (WIP)](https://docs.google.com/a/berkeley.edu/document/d/1Ghc-CAKXzzRshSa6FlonFa5ttmtHRAqFwMg7vhuJakw/edit?usp=sharing)
 
 ## Getting Clipper
@@ -23,8 +22,7 @@ compile the code. You should only need to re-configure if you change one of the 
 To build for release, run `./configure --release` which generates the `release` build directory instead of debug.
 If you want to clean everything up, you can run `./configure --cleanup`.
 
-__NOTE:__ Redis must be running in localhost at the default port (6379) 
-to run both the REST interface and the unit tests.
+__NOTE:__ Redis must be installed and on your path to run both the query REST frontend and the unit-tests.
 
 For example:
 
@@ -34,18 +32,14 @@ $ ./configure
 $ cd debug
 $ make
 
-# write some code
+# write some code and compile it
 $ make
 
-# start redis-server (assuming it's on your PATH)
-$ redis-server
-
 # build and run unit tests with googletest
-$ cd ..
-$ ./bin/run_unittests.sh
+$ ../bin/run_unittests.sh
 
-# start the query frontend
-$ ./debug/src/frontends/query_frontend
+# build and then start the query REST frontend
+$ ../bin/start_clipper.sh
 ```
 
 ### Dependencies
@@ -59,7 +53,7 @@ $ ./debug/src/frontends/query_frontend
 
 On a Mac you can install these with 
 ```
-brew install cmake boost --c++11 zeromq hiredis libev
+brew install cmake boost --c++11 zeromq hiredis libev redis
 
 ```
 On Debian stretch/sid:
@@ -70,4 +64,3 @@ sudo apt-get install cmake libzmq5 libzmq5-dev libhiredis-dev libev-dev libboost
 On other Linux distributions, depending on which distro and version you are running, the supplied packages for
 some of these dependencies may be too old. You can try installing from your distro's package
 repository, and if the version of a dependency is too old you may have to build it from source.
-
