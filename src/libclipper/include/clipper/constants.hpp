@@ -13,6 +13,7 @@ constexpr int REDIS_STATE_DB_NUM = 1;
 constexpr int REDIS_MODEL_DB_NUM = 2;
 constexpr int REDIS_CONTAINER_DB_NUM = 3;
 constexpr int REDIS_RESOURCE_DB_NUM = 4;
+constexpr int REDIS_APPLICATION_DB_NUM = 5;
 
 constexpr int RPC_SERVICE_PORT = 7000;
 
