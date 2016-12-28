@@ -8,6 +8,7 @@
 #include <boost/thread.hpp>
 #include <redox.hpp>
 
+#include <clipper/constants.hpp>
 #include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/redis.hpp>
@@ -57,7 +58,7 @@ class TaskExecutor {
       : active_containers_(std::make_shared<ActiveContainers>()),
         rpc_(std::make_unique<rpc::RPCService>()) {
     std::cout << "TaskExecutor started" << std::endl;
-    rpc_->start("*", 7000);
+    rpc_->start("*", RPC_SERVICE_PORT);
     active_ = true;
     redis_connection_.connect(REDIS_ADDRESS, REDIS_PORT);
     redis_subscriber_.connect(REDIS_ADDRESS, REDIS_PORT);

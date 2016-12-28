@@ -1,7 +1,7 @@
 #include <thread>
 #include <unordered_map>
 
-#include <clipper/containers.hpp>
+// #include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/rpc_service.hpp>
 
@@ -148,9 +148,9 @@ void run_strings_benchmark(
 }
 
 void run_benchmarks() {
-  auto containers = std::make_shared<clipper::ActiveContainers>();
+  // auto containers = std::make_shared<clipper::ActiveContainers>();
   std::shared_ptr<clipper::rpc::RPCService> rpc_service =
-      std::make_shared<clipper::rpc::RPCService>(containers);
+      std::make_shared<clipper::rpc::RPCService>();
   std::shared_ptr<std::unordered_map<int, long>> times_map =
       std::make_shared<std::unordered_map<int, long>>();
   bool shutdown = false;
