@@ -4,7 +4,6 @@
 #include <mutex>
 #include <iostream>
 
-#include <time.h>
 #include <math.h>
 
 #include <boost/thread.hpp>
@@ -107,6 +106,12 @@ std::shared_ptr<RatioCounter> MetricsRegistry::create_ratio_counter(const std::s
 
 std::shared_ptr<RatioCounter> MetricsRegistry::create_default_ratio_counter(const std::string name) {
   return create_ratio_counter(name, 0, 0);
+}
+
+std::shared_ptr<Meter> MetricsRegistry::create_meter(const std::string name, const std::shared_ptr<MeterClock> clock) {
+  std::shared_ptr<Meter> meter = std::make_shared<Meter>(name, clock);
+  metrics_->push_back(meter);
+  return meter;
 }
 
 Counter::Counter(const std::string name) : Counter(name, 1) {
@@ -224,13 +229,20 @@ void EWMA::tick() {
   } else {
     // Update the rate in accordance with an exponentially decaying function
     // of current_rate
-    rate_ = alpha_ * (current_rate - rate_);
+    rate_ += alpha_ * (current_rate - rate_);
   }
   rate_lock_.unlock();
 }
 
 void EWMA::mark_uncounted(uint32_t num) {
   uncounted_.fetch_add(num, std::memory_order_relaxed);
+}
+
+void EWMA::reset() {
+  rate_lock_.lock();
+  rate_ = -1;
+  uncounted_.store(0, std::memory_order_seq_cst);
+  rate_lock_.unlock();
 }
 
 double EWMA::get_rate_seconds() {
@@ -240,9 +252,9 @@ double EWMA::get_rate_seconds() {
   return rate;
 }
 
-Meter::Meter(std::string name, std::unique_ptr<MeterClock> clock)
+Meter::Meter(std::string name, std::shared_ptr<MeterClock> clock)
     : name_(name),
-      clock_(std::move(clock)),
+      clock_(clock),
       start_time_micros_(clock->get_time_micros()),
       last_ewma_tick_micros_(start_time_micros_),
       m1_rate(ewma_tick_interval_seconds_, LoadAverage::OneMinute),
@@ -253,6 +265,9 @@ Meter::Meter(std::string name, std::unique_ptr<MeterClock> clock)
 
 void Meter::mark(uint32_t num) {
   count_.fetch_add(num, std::memory_order_relaxed);
+  m1_rate.mark_uncounted(num);
+  m5_rate.mark_uncounted(num);
+  m15_rate.mark_uncounted(num);
 }
 
 void Meter::tick_if_necessary() {
@@ -280,13 +295,16 @@ void Meter::tick_if_necessary() {
   }
 }
 
-double Meter::get_rate_micros() const {
+double Meter::get_rate_micros() {
+  start_time_lock_.lock_shared();
   uint32_t curr_count = count_.load(std::memory_order_seq_cst);
   long curr_time_micros = clock_->get_time_micros();
-  return static_cast<double>(curr_count) / static_cast<double>(curr_time_micros - start_time_micros_);
+  double rate = static_cast<double>(curr_count) / static_cast<double>(curr_time_micros - start_time_micros_);
+  start_time_lock_.unlock();
+  return rate;
 }
 
-double Meter::get_rate_seconds() const {
+double Meter::get_rate_seconds() {
   return get_rate_micros() * MICROS_PER_SECOND;
 }
 
@@ -304,12 +322,27 @@ double Meter::get_fifteen_minute_rate_seconds() {
   return m15_rate.get_rate_seconds();
 }
 
-void Meter::report() {
+MetricType Meter::type() const {
+  return MetricType::Meter;
+}
 
+void Meter::report() {
+  std::cout << "name: " << name_ << std::endl;
+  std::cout << "unit: " << unit_ << std::endl;
+  std::cout << "rate: " << get_rate_seconds() << std::endl;
+  std::cout << "one min rate: " << get_one_minute_rate_seconds() << std::endl;
+  std::cout << "five min rate: " << get_five_minute_rate_seconds() << std::endl;
+  std::cout << "fifteen min rate: " << get_fifteen_minute_rate_seconds() << std::endl;
 }
 
 void Meter::clear() {
-
+  start_time_lock_.lock();
+  start_time_micros_ = clock_->get_time_micros();
+  count_.store(0, std::memory_order_seq_cst);
+  start_time_lock_.unlock();
+  m1_rate.reset();
+  m5_rate.reset();
+  m15_rate.reset();
 }
 
 } // namespace clipper

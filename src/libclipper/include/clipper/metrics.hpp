@@ -93,14 +93,14 @@ class MeterClock {
   virtual long get_time_micros() const = 0;
 };
 
-class RealTimeClock {
+class RealTimeClock : public MeterClock {
  public:
-  long get_time_micros() const;
+  long get_time_micros() const override;
 };
 
-class PresetClock {
+class PresetClock : public MeterClock {
  public:
-  long get_time_micros() const;
+  long get_time_micros() const override;
   void set_time_micros(long time_micros);
 
  private:
@@ -118,6 +118,7 @@ class EWMA {
   EWMA(long tick_interval, LoadAverage load_average);
   void tick();
   void mark_uncounted(uint32_t num);
+  void reset();
   double get_rate_seconds();
 
  private:
@@ -131,7 +132,7 @@ class EWMA {
 
 class Meter : public Metric {
  public:
-  Meter(std::string name, std::unique_ptr<MeterClock> clock);
+  Meter(std::string name, std::shared_ptr<MeterClock> clock);
 
   void mark(uint32_t num);
 
@@ -139,13 +140,13 @@ class Meter : public Metric {
    * @return The rate of this meter, in events-per-microsecond, since
    * the time of initialization
    */
-  double get_rate_micros() const;
+  double get_rate_micros();
 
   /**
    * @return The rate of this meter, in events-per-second, since the
    * time of initialization
    */
-  double get_rate_seconds() const;
+  double get_rate_seconds();
 
   /**
    * @return The rate of this meter, in events-per-second, for the last minute
@@ -166,14 +167,16 @@ class Meter : public Metric {
   double get_fifteen_minute_rate_seconds();
 
   // Metric implementation
-  void report();
-  void clear();
+  MetricType type() const override;
+  void report() override;
+  void clear() override;
 
  private:
   const std::string unit_ = std::string("events per second");
   std::string name_;
-  std::unique_ptr<MeterClock> clock_;
+  std::shared_ptr<MeterClock> clock_;
   std::atomic<uint32_t> count_;
+  std::shared_timed_mutex start_time_lock_;
   long start_time_micros_;
 
   // EWMA
@@ -230,7 +233,7 @@ class MetricsRegistry {
   /** Creates a RatioCounter with initial value zero */
   std::shared_ptr<RatioCounter> create_default_ratio_counter(const std::string name);
   std::shared_ptr<RatioCounter> create_ratio_counter(const std::string name, const uint32_t num, const uint32_t denom);
-  std::shared_ptr<Meter> create_meter(Meter meter);
+  std::shared_ptr<Meter> create_meter(const std::string name, const std::shared_ptr<MeterClock> clock);
   std::shared_ptr<Histogram> create_histogram(Histogram histogram);
 
  private:
