@@ -3,6 +3,7 @@
 #include <vector>
 #include <mutex>
 #include <iostream>
+#include <stdexcept>
 
 #include <math.h>
 
@@ -195,7 +196,7 @@ long RealTimeClock::get_time_micros() const {
   return static_cast<long>(clocks) * CLOCKS_PER_MILLISECOND;
 }
 
-void PresetClock::set_time_micros(long time_micros) {
+void PresetClock::set_time_micros(const long time_micros) {
   time_ = time_micros;
 }
 
@@ -276,7 +277,7 @@ void Meter::tick_if_necessary() {
   long last_tick = last_ewma_tick_micros_.load(std::memory_order_seq_cst);
   long time_since_last_tick = curr_micros - last_tick;
 
-  if(time_since_last_tick < tick_interval_micros) {
+  if (time_since_last_tick < tick_interval_micros) {
     // Not enough time has elapsed since the last tick, so we do no work
     return;
   }
@@ -343,6 +344,62 @@ void Meter::clear() {
   m1_rate.reset();
   m5_rate.reset();
   m15_rate.reset();
+}
+
+ReservoirSampler::ReservoirSampler(size_t sample_size) : sample_size_(sample_size) {
+
+}
+
+void ReservoirSampler::sample(const int64_t value) {
+  if (n_ < sample_size_) {
+    reservoir_.push_back(value);
+  } else {
+    if (reservoir_.size() != sample_size_) {
+      throw std::length_error("Reservoir size exceeds sample size!");
+    }
+    size_t j = rand() % (n_ + 1);
+    if (j < sample_size_) {
+      reservoir_[j] = value;
+    }
+  }
+  n_++;
+}
+
+const std::vector<int64_t> ReservoirSampler::snapshot() const {
+  return reservoir_;
+}
+
+void ReservoirSampler::clear() {
+  reservoir_.clear();
+  n_ = 0;
+}
+
+Histogram::Histogram(const std::string name, size_t sample_size) : name_(name), sampler_(sample_size) {
+
+}
+
+void Histogram::insert(const int64_t value) {
+  sampler_lock_.lock();
+  sampler_.sample(value);
+  sampler_lock_.unlock();
+}
+
+double Histogram::percentile(std::vector<int64_t> snapshot, double rank) {
+  if (snapshot.size()) {}
+  if (rank) {}
+  return 0.0;
+}
+
+MetricType Histogram::type() const {
+  return MetricType::Histogram;
+}
+
+void Histogram::report() {
+
+}
+
+void Histogram::clear() {
+
 }
 
 } // namespace clipper

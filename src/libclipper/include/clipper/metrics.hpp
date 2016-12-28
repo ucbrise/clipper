@@ -101,7 +101,7 @@ class RealTimeClock : public MeterClock {
 class PresetClock : public MeterClock {
  public:
   long get_time_micros() const override;
-  void set_time_micros(long time_micros);
+  void set_time_micros(const long time_micros);
 
  private:
   long time_ = 0;
@@ -132,7 +132,7 @@ class EWMA {
 
 class Meter : public Metric {
  public:
-  Meter(std::string name, std::shared_ptr<MeterClock> clock);
+  explicit Meter(std::string name, std::shared_ptr<MeterClock> clock);
 
   void mark(uint32_t num);
 
@@ -189,18 +189,6 @@ class Meter : public Metric {
 
 };
 
-class Histogram : public Metric {
- public:
-
-  // Metric implementation
-  MetricType type() const;
-  void report();
-  void clear();
-
- private:
-
-};
-
 class ReservoirSampler {
  public:
   explicit ReservoirSampler(size_t sample_size);
@@ -216,8 +204,28 @@ class ReservoirSampler {
   const std::vector<int64_t> snapshot() const;
 
  private:
-  size_t sample_size;
-  std::vector<int64_t> reservoir;
+  size_t sample_size_;
+  size_t n_ = 0;
+  std::vector<int64_t> reservoir_;
+
+};
+
+class Histogram : public Metric {
+ public:
+  explicit Histogram(const std::string name, size_t sample_size);
+
+  void insert(const int64_t value);
+  double percentile(std::vector<int64_t> snapshot, double rank);
+
+  // Metric implementation
+  MetricType type() const;
+  void report();
+  void clear();
+
+ private:
+  std::string name_;
+  ReservoirSampler sampler_;
+  std::shared_timed_mutex sampler_lock_;
 
 };
 
