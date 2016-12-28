@@ -186,6 +186,7 @@ void RPCService::receive_message(
                                model_input_type.size());
 
     int input_type = std::stoi(input_type_str);
+    UNUSED(input_type);
     int version = std::stoi(version_str);
     VersionedModelId model = std::make_pair(name, version);
     std::cout << "Container added" << std::endl;
