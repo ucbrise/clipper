@@ -1,7 +1,8 @@
 #include <atomic>
 #include <vector>
-
-#include <clipper/util.hpp>
+#include <mutex>
+#include <shared_mutex>
+#include <string>
 
 #ifndef CLIPPER_METRICS_HPP
 #define CLIPPER_METRICS_HPP
@@ -10,9 +11,17 @@ namespace clipper {
 
 using std::vector;
 
+enum class MetricType {
+  Counter = 0,
+  RatioCounter = 1,
+  Meter = 2,
+  Histogram = 3
+};
+
 class Metric {
  public:
-  virtual void report() const = 0;
+  virtual MetricType type() const = 0;
+  virtual void report() = 0;
   virtual void clear() = 0;
 
 };
@@ -34,8 +43,9 @@ class Counter : public Metric {
   int value() const;
 
   // Metric implementation
-  void report() const;
-  void clear();
+  MetricType type() const override;
+  void report() override;
+  void clear() override;
 
  private:
   const std::string name_;
@@ -63,11 +73,12 @@ class RatioCounter : public Metric {
   RatioCounter &operator=(RatioCounter &&other) = delete;
 
   void increment(const uint32_t num_incr, const uint32_t denom_incr);
-  double get_ratio() const;
+  double get_ratio();
 
   // Metric implementation
-  void report() const;
-  void clear();
+  MetricType type() const override;
+  void report() override;
+  void clear() override;
 
  private:
   const std::string name_;
@@ -77,14 +88,101 @@ class RatioCounter : public Metric {
 
 };
 
+class MeterClock {
+ public:
+  virtual long get_time_micros() const = 0;
+};
+
+class RealTimeClock {
+ public:
+  long get_time_micros() const;
+};
+
+class PresetClock {
+ public:
+  long get_time_micros() const;
+  void set_time_micros(long time_micros);
+
+ private:
+  long time_ = 0;
+};
+
+enum class LoadAverage {
+  OneMinute,
+  FiveMinute,
+  FifteenMinute
+};
+
+class EWMA {
+ public:
+  EWMA(long tick_interval, LoadAverage load_average);
+  void tick();
+  void mark_uncounted(uint32_t num);
+  double get_rate_seconds();
+
+ private:
+  const long tick_interval_seconds_;
+  double alpha_;
+  double rate_ = -1;
+  std::shared_timed_mutex rate_lock_;
+  std::atomic<uint32_t> uncounted_;
+
+};
+
 class Meter : public Metric {
  public:
+  Meter(std::string name, std::unique_ptr<MeterClock> clock);
+
+  void mark(uint32_t num);
+
+  /**
+   * @return The rate of this meter, in events-per-microsecond, since
+   * the time of initialization
+   */
+  double get_rate_micros() const;
+
+  /**
+   * @return The rate of this meter, in events-per-second, since the
+   * time of initialization
+   */
+  double get_rate_seconds() const;
+
+  /**
+   * @return The rate of this meter, in events-per-second, for the last minute
+   * This rate is calculated using an expontentially weighted moving average
+   */
+  double get_one_minute_rate_seconds();
+
+  /**
+   * @return the rate of this meter, in events-per-second, for the last five minutes
+   * This rate is calculated using an expontentially weighted moving average.
+   */
+  double get_five_minute_rate_seconds();
+
+  /**
+   * @return the rate of this meter, in events-per-second, for the last fifteen minutes
+   * This rate is calculated using an expontentially weighted moving average.
+   */
+  double get_fifteen_minute_rate_seconds();
 
   // Metric implementation
-  void report() const;
+  void report();
   void clear();
 
  private:
+  const std::string unit_ = std::string("events per second");
+  std::string name_;
+  std::unique_ptr<MeterClock> clock_;
+  std::atomic<uint32_t> count_;
+  long start_time_micros_;
+
+  // EWMA
+  void tick_if_necessary();
+  const long ewma_tick_interval_seconds_ = 5;
+  std::atomic_long last_ewma_tick_micros_;
+  EWMA m1_rate;
+  EWMA m5_rate;
+  EWMA m15_rate;
 
 };
 
@@ -92,7 +190,8 @@ class Histogram : public Metric {
  public:
 
   // Metric implementation
-  void report() const;
+  MetricType type() const;
+  void report();
   void clear();
 
  private:

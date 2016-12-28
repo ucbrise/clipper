@@ -1,18 +1,55 @@
 #include <atomic>
 #include <string>
 #include <vector>
+#include <mutex>
+#include <iostream>
 
+#include <time.h>
+#include <math.h>
+
+#include <boost/thread.hpp>
 #include <clipper/metrics.hpp>
-#include <clipper/util.hpp>
 
 namespace clipper {
+
+constexpr int LOGGING_SLEEP_DURATION_MICROS = 5000000;
+constexpr long MICROS_PER_SECOND = 1000000;
+constexpr long CLOCKS_PER_MILLISECOND = CLOCKS_PER_SEC / MICROS_PER_SECOND;
+constexpr double SECONDS_PER_MINUTE = 60;
+constexpr double ONE_MINUTE = 1;
+constexpr double FIVE_MINUTES = 5;
+constexpr double FIFTEEN_MINUTES = 15;
+
+bool compare_metrics(std::shared_ptr<Metric> first, std::shared_ptr<Metric> second) {
+  MetricType first_type = first->type();
+  MetricType second_type = second->type();
+  int diff = static_cast<int>(first_type) - static_cast<int>(second_type);
+  return (diff < 0);
+}
+
+/**
+ * When periodically logging metrics, this message indicates
+ * the start of a new category of metrics being logged
+ */
+void log_metrics_category(MetricType type) {
+  switch (type) {
+    case MetricType::Counter:std::cout << "Counters" << std::endl << "-------" << std::endl;
+      break;
+    case MetricType::RatioCounter:std::cout << "Ratio Counters" << std::endl << "-------" << std::endl;
+      break;
+    case MetricType::Meter:std::cout << "Meters" << std::endl << "-------" << std::endl;
+      break;
+    case MetricType::Histogram:std::cout << "Histograms" << std::endl << "-------" << std::endl;
+      break;
+  }
+}
 
 MetricsRegistry::MetricsRegistry()
     : metrics_(std::make_shared<std::vector<std::shared_ptr<Metric>>>()),
       metrics_lock_(std::make_shared<std::mutex>()) {
   boost::thread(boost::bind(&MetricsRegistry::manage_metrics, this, metrics_,
                             metrics_lock_, boost::ref(active_)))
-  .detach();
+      .detach();
 }
 
 MetricsRegistry::~MetricsRegistry() {
@@ -31,11 +68,22 @@ void MetricsRegistry::manage_metrics(std::shared_ptr<std::vector<std::shared_ptr
     if (!active) {
       return;
     }
-    if (!metrics) {
-
-    }
+    usleep(LOGGING_SLEEP_DURATION_MICROS);
     std::lock_guard<std::mutex> guard(*metrics_lock);
-    // Do logging, clearing here!
+    std::sort((*metrics).begin(), (*metrics).end(), compare_metrics);
+    MetricType prev_type;
+    for (int i = 0; i < (int) (*metrics).size(); i++) {
+      std::shared_ptr<Metric> metric = (*metrics)[i];
+      MetricType curr_type = metric->type();
+      if (i == 0 || prev_type != curr_type) {
+        log_metrics_category(curr_type);
+        std::cout << std::endl;
+      }
+      prev_type = curr_type;
+      metric->report();
+      metric->clear();
+      std::cout << std::endl;
+    }
   }
 }
 
@@ -47,6 +95,18 @@ std::shared_ptr<Counter> MetricsRegistry::create_counter(const std::string name,
 
 std::shared_ptr<Counter> MetricsRegistry::create_default_counter(const std::string name) {
   return create_counter(name, 0);
+}
+
+std::shared_ptr<RatioCounter> MetricsRegistry::create_ratio_counter(const std::string name,
+                                                                    const uint32_t num,
+                                                                    const uint32_t denom) {
+  std::shared_ptr<RatioCounter> ratio_counter = std::make_shared<RatioCounter>(name, num, denom);
+  metrics_->push_back(ratio_counter);
+  return ratio_counter;
+}
+
+std::shared_ptr<RatioCounter> MetricsRegistry::create_default_ratio_counter(const std::string name) {
+  return create_ratio_counter(name, 0, 0);
 }
 
 Counter::Counter(const std::string name) : Counter(name, 1) {
@@ -70,7 +130,11 @@ int Counter::value() const {
   return count_.load(std::memory_order_seq_cst);
 }
 
-void Counter::report() const {
+MetricType Counter::type() const {
+  return MetricType::Counter;
+}
+
+void Counter::report() {
   int value = count_.load(std::memory_order_seq_cst);
   std::cout << "name: " << name_ << std::endl;
   std::cout << "count: " << value << std::endl;
@@ -80,7 +144,7 @@ void Counter::clear() {
   count_.store(0, std::memory_order_seq_cst);
 }
 
-RatioCounter::RatioCounter(const std::string name) : name_(name), RatioCounter(name, 0, 0) {
+RatioCounter::RatioCounter(const std::string name) : RatioCounter(name, 0, 0) {
 
 }
 
@@ -95,17 +159,21 @@ void RatioCounter::increment(const uint32_t num_incr, const uint32_t denom_incr)
   denominator_ += denom_incr;
 }
 
-double RatioCounter::get_ratio() const {
+double RatioCounter::get_ratio() {
   std::lock_guard<std::mutex> guard(ratio_lock_);
   if (denominator_ == 0) {
-    std::cout << "Ratio " << name_ << " has denominator zero!";
+    std::cout << "Ratio " << name_ << " has denominator zero!" << std::endl;
     return std::nan("");
   }
   double ratio = static_cast<double>(numerator_) / static_cast<double>(denominator_);
   return ratio;
 }
 
-void RatioCounter::report() const {
+MetricType RatioCounter::type() const {
+  return MetricType::RatioCounter;
+}
+
+void RatioCounter::report() {
   double ratio = get_ratio();
   std::cout << "name: " << name_ << std::endl;
   std::cout << "ratio: " << ratio << std::endl;
@@ -115,6 +183,133 @@ void RatioCounter::clear() {
   std::lock_guard<std::mutex> guard(ratio_lock_);
   numerator_ = 0;
   denominator_ = 0;
+}
+
+long RealTimeClock::get_time_micros() const {
+  clock_t clocks = clock();
+  return static_cast<long>(clocks) * CLOCKS_PER_MILLISECOND;
+}
+
+void PresetClock::set_time_micros(long time_micros) {
+  time_ = time_micros;
+}
+
+long PresetClock::get_time_micros() const {
+  return time_;
+}
+
+EWMA::EWMA(long tick_interval, LoadAverage load_average)
+    : tick_interval_seconds_(tick_interval), uncounted_(0) {
+  double alpha_exp;
+  double alpha_exp_1 = (static_cast<double>(-1 * tick_interval)) / SECONDS_PER_MINUTE;
+  switch (load_average) {
+    case LoadAverage::OneMinute:alpha_exp = exp(alpha_exp_1 / ONE_MINUTE);
+      break;
+    case LoadAverage::FiveMinute:alpha_exp = exp(alpha_exp_1 / FIVE_MINUTES);
+      break;
+    case LoadAverage::FifteenMinute:alpha_exp = exp(alpha_exp_1 / FIFTEEN_MINUTES);
+      break;
+  }
+  alpha_ = 1 - alpha_exp;
+}
+
+void EWMA::tick() {
+  rate_lock_.lock();
+  double count = uncounted_.exchange(0, std::memory_order_relaxed);
+  double current_rate = count / static_cast<double>(tick_interval_seconds_);
+  if (rate_ == -1) {
+    // current_rate is the first rate we've calculated,
+    // so we set rate to current_rate.
+    rate_ = current_rate;
+  } else {
+    // Update the rate in accordance with an exponentially decaying function
+    // of current_rate
+    rate_ = alpha_ * (current_rate - rate_);
+  }
+  rate_lock_.unlock();
+}
+
+void EWMA::mark_uncounted(uint32_t num) {
+  uncounted_.fetch_add(num, std::memory_order_relaxed);
+}
+
+double EWMA::get_rate_seconds() {
+  rate_lock_.lock_shared();
+  double rate = rate_;
+  rate_lock_.unlock();
+  return rate;
+}
+
+Meter::Meter(std::string name, std::unique_ptr<MeterClock> clock)
+    : name_(name),
+      clock_(std::move(clock)),
+      start_time_micros_(clock->get_time_micros()),
+      last_ewma_tick_micros_(start_time_micros_),
+      m1_rate(ewma_tick_interval_seconds_, LoadAverage::OneMinute),
+      m5_rate(ewma_tick_interval_seconds_, LoadAverage::FiveMinute),
+      m15_rate(ewma_tick_interval_seconds_, LoadAverage::FifteenMinute) {
+
+}
+
+void Meter::mark(uint32_t num) {
+  count_.fetch_add(num, std::memory_order_relaxed);
+}
+
+void Meter::tick_if_necessary() {
+  long curr_micros = clock_->get_time_micros();
+  long tick_interval_micros = ewma_tick_interval_seconds_ * MICROS_PER_SECOND;
+  long last_tick = last_ewma_tick_micros_.load(std::memory_order_seq_cst);
+  long time_since_last_tick = curr_micros - last_tick;
+
+  if(time_since_last_tick < tick_interval_micros) {
+    // Not enough time has elapsed since the last tick, so we do no work
+    return;
+  }
+
+  long new_last_tick = curr_micros - (time_since_last_tick % tick_interval_micros);
+  bool last_tick_update_successful =
+      last_ewma_tick_micros_.compare_exchange_strong(last_tick, new_last_tick, std::memory_order_seq_cst);
+
+  if (last_tick_update_successful) {
+    double num_ticks = static_cast<double>(time_since_last_tick) / static_cast<double>(tick_interval_micros);
+    for (int i = 0; i < static_cast<int>(num_ticks); i++) {
+      m1_rate.tick();
+      m5_rate.tick();
+      m15_rate.tick();
+    }
+  }
+}
+
+double Meter::get_rate_micros() const {
+  uint32_t curr_count = count_.load(std::memory_order_seq_cst);
+  long curr_time_micros = clock_->get_time_micros();
+  return static_cast<double>(curr_count) / static_cast<double>(curr_time_micros - start_time_micros_);
+}
+
+double Meter::get_rate_seconds() const {
+  return get_rate_micros() * MICROS_PER_SECOND;
+}
+
+double Meter::get_one_minute_rate_seconds() {
+  tick_if_necessary();
+  return m1_rate.get_rate_seconds();
+}
+
+double Meter::get_five_minute_rate_seconds() {
+  tick_if_necessary();
+  return m5_rate.get_rate_seconds();
+}
+
+double Meter::get_fifteen_minute_rate_seconds() {
+  return m15_rate.get_rate_seconds();
+}
+
+void Meter::report() {
+
+}
+
+void Meter::clear() {
+
 }
 
 } // namespace clipper

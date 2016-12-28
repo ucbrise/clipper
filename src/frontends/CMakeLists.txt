@@ -49,3 +49,8 @@ target_link_libraries(frontendtests clipper httpserver gtest gmock_main)
 add_dependencies(unittests frontendtests)
 
 
+# Metrics Functionality Testing executable
+
+add_executable(metricsfunc src/metrics_functionality.cpp)
+
+target_link_libraries(metricsfunc clipper)
