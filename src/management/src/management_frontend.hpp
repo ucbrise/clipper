@@ -1,7 +1,9 @@
 #include <cassert>
+#include <chrono>
 #include <iostream>
 #include <memory>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -32,15 +34,16 @@ void insert_application(std::string /*name*/,
                         InputType /*input_type*/, std::string /*output_type*/,
                         std::string /*policy*/, long /*latency*/) {}
 
-void insert_model(VersionedModelId >, InputType, std::string,
-                  std::vector<std::string>) {}
+void insert_model(VersionedModelId /*model*/, InputType /*input_type*/,
+                  std::string /*output_type*/,
+                  std::vector<std::string> /*labels*/) {}
 
 }  // namespace redis
 }  // namespace clipper
 
 namespace management {
 
-const std::string ADMIN_PATH = "^/admin$";
+const std::string ADMIN_PATH = "^/admin";
 const std::string ADD_APPLICATION = ADMIN_PATH + "/add_app$";
 const std::string ADD_MODEL = ADMIN_PATH + "/add_model$";
 
@@ -85,13 +88,30 @@ void respond_http(std::string content, std::string message,
 class RequestHandler {
  public:
   RequestHandler(int portno, int num_threads) : server_(portno, num_threads) {
-    redis_connection_.connect(clipper::REDIS_IP, clipper::REDIS_PORT);
+    while (!redis_connection_.connect(clipper::REDIS_IP, clipper::REDIS_PORT)) {
+      std::cout << "ERROR connecting to Redis" << std::endl;
+      std::cout << "Sleeping 1 second..." << std::endl;
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
     server_.add_endpoint(
         ADD_APPLICATION, "POST",
         [this](std::shared_ptr<HttpServer::Response> response,
                std::shared_ptr<HttpServer::Request> request) {
           try {
             std::string result = add_application(response, request);
+            respond_http(result, "200 OK", response);
+          } catch (const ptree_error& e) {
+            respond_http(e.what(), "400 Bad Request", response);
+          } catch (const std::invalid_argument& e) {
+            respond_http(e.what(), "400 Bad Request", response);
+          }
+        });
+    server_.add_endpoint(
+        ADD_MODEL, "POST",
+        [this](std::shared_ptr<HttpServer::Response> response,
+               std::shared_ptr<HttpServer::Request> request) {
+          try {
+            std::string result = add_model(response, request);
             respond_http(result, "200 OK", response);
           } catch (const ptree_error& e) {
             respond_http(e.what(), "400 Bad Request", response);
@@ -128,7 +148,7 @@ class RequestHandler {
     InputType input_type =
         clipper::parse_input_type(pt.get<std::string>("input_type"));
     std::string output_type = pt.get<std::string>("output_type");
-    if (output_type != "int" || output_type != "double") {
+    if (!(output_type == "int" || output_type == "double")) {
       throw std::invalid_argument(output_type + " is invalid output type");
     }
     std::string selection_policy = pt.get<std::string>("selection_policy");
@@ -161,105 +181,16 @@ class RequestHandler {
 
     VersionedModelId model_id = std::make_pair(
         pt.get<std::string>("model_name"), pt.get<int>("model_version"));
-    std::vector<std::string> labels as_vector(pt, "labels");
+    std::vector<std::string> labels = as_vector<std::string>(pt, "labels");
     InputType input_type =
         clipper::parse_input_type(pt.get<std::string>("input_type"));
     std::string output_type = pt.get<std::string>("output_type");
-    if (output_type != "int" || output_type != "double") {
+    if (!(output_type == "int" || output_type == "double")) {
       throw std::invalid_argument(output_type + " is invalid output type");
     }
     clipper::redis::insert_model(model_id, input_type, output_type, labels);
 
     return "Success!";
-  }
-
-  // void add_application(std::string name, std::vector<VersionedModelId>
-  // models,
-  //                      InputType input_type, OutputType output_type,
-  //                      std::string policy, long latency) {
-  //   auto predict_fn = [this, name, input_type, policy, latency, models](
-  //       std::shared_ptr<HttpServer::Response> response,
-  //       std::shared_ptr<HttpServer::Request> request) {
-  //     try {
-  //       auto prediction =
-  //           decode_and_handle_predict(request->content.string(), name,
-  //           models,
-  //                                     policy, latency, input_type);
-  //       prediction.then([response](boost::future<Response> f) {
-  //         Response r = f.get();
-  //         std::stringstream ss;
-  //         ss << "qid:" << r.query_id_ << " predict:" << r.output_.y_hat_;
-  //         std::string content = ss.str();
-  //         respond_http(content, "200 OK", response);
-  //       });
-  //     } catch (const ptree_error& e) {
-  //       respond_http(e.what(), "400 Bad Request", response);
-  //     } catch (const std::invalid_argument& e) {
-  //       respond_http(e.what(), "400 Bad Request", response);
-  //     }
-  //   };
-  //   std::string predict_endpoint = "^/" + name + "/predict$";
-  //   server_.add_endpoint(predict_endpoint, "POST", predict_fn);
-  //
-  //   auto update_fn = [this, name, input_type, output_type, policy, models](
-  //       std::shared_ptr<HttpServer::Response> response,
-  //       std::shared_ptr<HttpServer::Request> request) {
-  //     try {
-  //       auto update =
-  //           decode_and_handle_update(request->content.string(), name, models,
-  //                                    policy, input_type, output_type);
-  //       update.then([response](boost::future<FeedbackAck> f) {
-  //         FeedbackAck ack = f.get();
-  //         std::stringstream ss;
-  //         ss << "Feedback received? " << ack;
-  //         std::string content = ss.str();
-  //         respond_http(content, "200 OK", response);
-  //       });
-  //     } catch (const ptree_error& e) {
-  //       respond_http(e.what(), "400 Bad Request", response);
-  //     } catch (const std::invalid_argument& e) {
-  //       respond_http(e.what(), "400 Bad Request", response);
-  //     }
-  //   };
-  //   std::string update_endpoint = "^/" + name + "/update$";
-  //   server_.add_endpoint(update_endpoint, "POST", update_fn);
-  // }
-
-  boost::future<Response> decode_and_handle_predict(
-      std::string json_content, std::string name,
-      std::vector<VersionedModelId> models, std::string policy, long latency,
-      InputType input_type) {
-    std::istringstream is(json_content);
-    ptree pt;
-    read_json(is, pt);
-
-    long uid = pt.get<long>("uid");
-    std::shared_ptr<Input> input = decode_input(input_type, pt);
-    auto prediction = query_processor_.predict(
-        Query{name, uid, input, latency, policy, models});
-
-    return prediction;
-  }
-
-  /* Update JSON format:
-   * {"uid": <user id>, "input": <query input>, "label": <query y_hat>,
-   *  "model_name": <model name>, "model_version": <model_version>}
-   */
-  boost::future<FeedbackAck> decode_and_handle_update(
-      std::string json_content, std::string name,
-      std::vector<VersionedModelId> models, std::string policy,
-      InputType input_type, OutputType output_type) {
-    std::istringstream is(json_content);
-    ptree pt;
-    read_json(is, pt);
-
-    long uid = pt.get<long>("uid");
-    std::shared_ptr<Input> input = decode_input(input_type, pt);
-    Output output = decode_output(output_type, pt);
-    auto update = query_processor_.update(FeedbackQuery{
-        name, uid, {std::make_pair(input, output)}, policy, models});
-
-    return update;
   }
 
   void start_listening() {

@@ -9,32 +9,19 @@
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
 
-#include "query_frontend.hpp"
+#include "management_frontend.hpp"
 
 using namespace clipper;
-using namespace query_frontend;
+using namespace management;
 using namespace boost::property_tree;
 
 namespace {
 
-class MockQueryProcessor {
+class ManagementFrontendTest : public ::testing::Test {
  public:
-  MockQueryProcessor() = default;
-  boost::future<Response> predict(Query query) {
-    Response response(query, 3, 5, Output(-1.0, std::make_pair("m", 1)), {});
-    return boost::make_ready_future(response);
-  }
-  boost::future<FeedbackAck> update(FeedbackQuery /*feedback*/) {
-    return boost::make_ready_future(true);
-  }
-};
+  RequestHandler rh_;
 
-class QueryFrontendTest : public ::testing::Test {
- public:
-  RequestHandler<MockQueryProcessor> rh_;
-  // MockQueryProcessor qp_;
-
-  QueryFrontendTest() : rh_("0.0.0.0", 1337, 8) {}
+  ManagementFrontendTest() : rh_(1338, 1) {}
 };
 
 TEST_F(QueryFrontendTest, TestDecodeCorrectInputInts) {
