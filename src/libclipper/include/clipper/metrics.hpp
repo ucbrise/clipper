@@ -210,17 +210,42 @@ class ReservoirSampler {
 
 };
 
+class HistogramStats {
+ public:
+  /** Constructs a HistogramStats object with all values zero **/
+  explicit HistogramStats() {};
+  explicit HistogramStats(size_t data_size,
+                          int64_t min,
+                          int64_t max,
+                          double mean,
+                          double std_dev,
+                          double p50,
+                          double p95,
+                          double p99);
+  const std::string to_reportable_string() const;
+
+  size_t data_size_ = 0;
+  int64_t min_ = 0;
+  int64_t max_ = 0;
+  double mean_ = 0;
+  double std_dev_ = 0;
+  double p50_ = 0;
+  double p95_ = 0;
+  double p99_ = 0;
+};
+
 class Histogram : public Metric {
  public:
-  explicit Histogram(const std::string name, size_t sample_size);
+  explicit Histogram(const std::string name, const size_t sample_size);
 
   void insert(const int64_t value);
-  double percentile(std::vector<int64_t> snapshot, double rank);
+  const HistogramStats compute_stats();
+  static double percentile(std::vector<int64_t> snapshot, double rank);
 
   // Metric implementation
-  MetricType type() const;
-  void report();
-  void clear();
+  MetricType type() const override;
+  void report() override;
+  void clear() override;
 
  private:
   std::string name_;
@@ -242,7 +267,7 @@ class MetricsRegistry {
   std::shared_ptr<RatioCounter> create_default_ratio_counter(const std::string name);
   std::shared_ptr<RatioCounter> create_ratio_counter(const std::string name, const uint32_t num, const uint32_t denom);
   std::shared_ptr<Meter> create_meter(const std::string name, const std::shared_ptr<MeterClock> clock);
-  std::shared_ptr<Histogram> create_histogram(Histogram histogram);
+  std::shared_ptr<Histogram> create_histogram(const std::string name, const size_t sample_size);
 
  private:
   MetricsRegistry();

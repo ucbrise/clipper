@@ -4,6 +4,7 @@
 #include <mutex>
 #include <iostream>
 #include <stdexcept>
+#include <numeric>
 
 #include <math.h>
 
@@ -113,6 +114,12 @@ std::shared_ptr<Meter> MetricsRegistry::create_meter(const std::string name, con
   std::shared_ptr<Meter> meter = std::make_shared<Meter>(name, clock);
   metrics_->push_back(meter);
   return meter;
+}
+
+std::shared_ptr<Histogram> MetricsRegistry::create_histogram(const std::string name, const size_t sample_size) {
+  std::shared_ptr<Histogram> histogram = std::make_shared<Histogram>(name, sample_size);
+  metrics_->push_back(histogram);
+  return histogram;
 }
 
 Counter::Counter(const std::string name) : Counter(name, 1) {
@@ -374,7 +381,32 @@ void ReservoirSampler::clear() {
   n_ = 0;
 }
 
-Histogram::Histogram(const std::string name, size_t sample_size) : name_(name), sampler_(sample_size) {
+HistogramStats::HistogramStats(size_t data_size,
+                               int64_t min,
+                               int64_t max,
+                               double mean,
+                               double std_dev,
+                               double p50,
+                               double p95,
+                               double p99)
+    : data_size_(data_size), min_(min), max_(max), mean_(mean), std_dev_(std_dev), p50_(p50), p95_(p95), p99_(p99) {
+
+}
+
+const std::string HistogramStats::to_reportable_string() const {
+  std::ostringstream ss;
+  ss << "size: " << data_size_ << ", ";
+  ss << "min: " << min_ << ", ";
+  ss << "max: " << max_ << "," << std::endl;
+  ss << "mean: " << mean_ << ", ";
+  ss << "std_dev: " << std_dev_ << "," << std::endl;
+  ss << "p50: " << p50_ << ", ";
+  ss << "p95: " << p95_ << ", ";
+  ss << "p99: " << p99_;
+  return ss.str();
+}
+
+Histogram::Histogram(const std::string name, const size_t sample_size) : name_(name), sampler_(sample_size) {
 
 }
 
@@ -385,9 +417,60 @@ void Histogram::insert(const int64_t value) {
 }
 
 double Histogram::percentile(std::vector<int64_t> snapshot, double rank) {
-  if (snapshot.size()) {}
-  if (rank) {}
-  return 0.0;
+  if (rank < 0 || rank > 1) {
+    throw std::invalid_argument("Percentile rank must be in [0,1]!");
+  }
+  size_t sample_size = snapshot.size();
+  if (sample_size <= 0) {
+    throw std::length_error("Percentile snapshot must have length greater than zero!");
+  }
+
+  double x;
+  double x_condition = (static_cast<double>(1) / static_cast<double>(sample_size + 1));
+  if (rank <= x_condition) {
+    x = 1;
+  } else if (rank > x_condition && rank < (static_cast<double>(sample_size) * x_condition)) {
+    x = rank * static_cast<double>(sample_size + 1);
+  } else {
+    x = sample_size;
+  }
+  size_t index = std::floor(x) - 1;
+  double v = snapshot[index];
+  double remainder = x - std::floor(x);
+  if (remainder == 0) {
+    return v;
+  } else {
+    return v + (remainder * (snapshot[index + 1] - snapshot[index]));
+  }
+}
+
+const HistogramStats Histogram::compute_stats() {
+  sampler_lock_.lock_shared();
+  std::vector<int64_t> snapshot = sampler_.snapshot();
+  sampler_lock_.unlock();
+  size_t snapshot_size = snapshot.size();
+  if (snapshot_size == 0) {
+    HistogramStats stats;
+    return stats;
+  }
+  std::sort(snapshot.begin(), snapshot.end());
+  int64_t min = snapshot.front();
+  int64_t max = snapshot.back();
+  double p50 = percentile(snapshot, .5);
+  double p95 = percentile(snapshot, .95);
+  double p99 = percentile(snapshot, .99);
+  double mean =
+      static_cast<double>(std::accumulate(snapshot.begin(), snapshot.end(), 0)) / static_cast<double>(snapshot_size);
+  double var = 0;
+  if(snapshot_size > 1) {
+    for(auto elem : snapshot) {
+      double incr = std::pow((static_cast<double>(elem) - mean), 2);
+      var += incr;
+    }
+    var = var / static_cast<double>(snapshot_size);
+  }
+  double std_dev = std::sqrt(var);
+  return HistogramStats(snapshot_size, min, max, mean, std_dev, p50, p95, p99);
 }
 
 MetricType Histogram::type() const {
@@ -395,11 +478,14 @@ MetricType Histogram::type() const {
 }
 
 void Histogram::report() {
-
+  HistogramStats stats = compute_stats();
+  std::cout << stats.to_reportable_string() << std::endl;
 }
 
 void Histogram::clear() {
-
+  sampler_lock_.lock();
+  sampler_.clear();
+  sampler_lock_.unlock();
 }
 
 } // namespace clipper
