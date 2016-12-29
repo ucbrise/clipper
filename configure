@@ -41,16 +41,16 @@ function print_help {
 } # end of print help
 function run_cleanup {
   #!/bin/bash
-  echo "This script completely erases all build folders including dependencies!!!"
-  echo "Are you sure you want to continue? (yes or no)"
-  read yesorno;
-  if [ "$yesorno" == "yes" ]; then
-    echo "Removing release and debug folders";
-    rm -rf release debug deps config.log
-  else
-    echo "Doing nothing!";
-  fi
-  exit 1
+  # echo "This script completely erases all build folders including dependencies!!!"
+  # echo "Are you sure you want to continue? (yes or no)"
+  # read yesorno;
+  # if [ "$yesorno" == "yes" ]; then
+  echo "Removing release and debug folders";
+  rm -rf release debug deps config.log
+  # else
+  #   echo "Doing nothing!";
+  # fi
+  exit 0
 } # end of run cleanup
 function unknown_option {
   echo "Unrecognized option: $1"

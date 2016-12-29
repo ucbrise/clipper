@@ -13,7 +13,7 @@ target_link_libraries(bench clipper boost)
 
 add_executable(query_frontend src/query_frontend.cpp)
 
-target_link_libraries(query_frontend clipper boost httpserver)
+target_link_libraries(query_frontend clipper boost httpserver cxxopts)
 
 ##################################
 # RPC Layer Testing executable
