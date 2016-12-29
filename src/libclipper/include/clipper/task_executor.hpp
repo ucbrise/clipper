@@ -65,15 +65,18 @@ class TaskExecutor {
     redis::send_cmd_no_reply<std::string>(
         redis_connection_, {"CONFIG", "SET", "notify-keyspace-events", "AKE"});
     redis::subscribe_to_container_changes(
-        redis_subscriber_, [this](const std::string &key) {
-          auto container_info =
-              redis::get_container_by_key(redis_connection_, key);
-          VersionedModelId vm =
-              std::make_pair(container_info["model_name"],
-                             std::stoi(container_info["model_version"]));
-          active_containers_->add_container(
-              vm, std::stoi(container_info["zmq_connection_id"]),
-              parse_input_type(container_info["input_type"]));
+        redis_subscriber_,
+        [this](const std::string &key, const std::string &event_type) {
+          if (event_type == "hset") {
+            auto container_info =
+                redis::get_container_by_key(redis_connection_, key);
+            VersionedModelId vm =
+                std::make_pair(container_info["model_name"],
+                               std::stoi(container_info["model_version"]));
+            active_containers_->add_container(
+                vm, std::stoi(container_info["zmq_connection_id"]),
+                parse_input_type(container_info["input_type"]));
+          }
 
         });
     boost::thread(&TaskExecutor::send_messages, this).detach();

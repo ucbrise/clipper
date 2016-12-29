@@ -68,7 +68,7 @@ TEST_F(RedisTest, InsertContainer) {
   EXPECT_EQ(result.size(), static_cast<size_t>(7));
   EXPECT_EQ(result["model_name"], model.first);
   EXPECT_EQ(std::stoi(result["model_version"]), model.second);
-  EXPECT_EQ(result["model_id"], std::to_string(versioned_model_hash(model)));
+  EXPECT_EQ(result["model_id"], gen_versioned_model_key(model));
   EXPECT_EQ(std::stoi(result["model_replica_id"]), replica_id);
   EXPECT_EQ(std::stoi(result["zmq_connection_id"]), zmq_connection_id);
   EXPECT_EQ(std::stoi(result["batch_size"]), 1);
@@ -89,20 +89,21 @@ TEST_F(RedisTest, DeleteContainer) {
   EXPECT_EQ(delete_result.size(), static_cast<size_t>(0));
 }
 
-TEST_F(RedisTest, SubscribeNewModel) {
+TEST_F(RedisTest, SubscriptionDetectModelInsert) {
   std::vector<std::string> labels{"ads", "images", "experimental"};
   VersionedModelId model = std::make_pair("m", 1);
   std::condition_variable_any notification_recv;
   std::mutex notification_mutex;
   std::atomic<bool> recv{false};
   subscribe_to_model_changes(
-      *subscriber_, [&notification_recv, &notification_mutex, &recv,
-                     model](const std::string& key) {
+      *subscriber_, [&notification_recv, &notification_mutex, &recv, model](
+                        const std::string& key, const std::string& event_type) {
         std::cout << "NEW MODEL CALLBACK FIRED" << std::endl;
+        ASSERT_EQ(event_type, "hset");
         std::unique_lock<std::mutex> l(notification_mutex);
         recv = true;
-        size_t model_id_key = versioned_model_hash(model);
-        ASSERT_EQ(key, std::to_string(model_id_key));
+        std::string model_id_key = gen_versioned_model_key(model);
+        ASSERT_EQ(key, model_id_key);
         notification_recv.notify_all();
       });
   // give Redis some time to register the subscription
@@ -114,24 +115,53 @@ TEST_F(RedisTest, SubscribeNewModel) {
   ASSERT_TRUE(result);
 }
 
-TEST_F(RedisTest, SubscribeNewContainer) {
+TEST_F(RedisTest, SubscriptionDetectModelDelete) {
+  std::vector<std::string> labels{"ads", "images", "experimental"};
+  VersionedModelId model = std::make_pair("m", 1);
+  ASSERT_TRUE(insert_model(*redis_, model, labels));
+  std::condition_variable_any notification_recv;
+  std::mutex notification_mutex;
+  std::atomic<bool> recv{false};
+  subscribe_to_model_changes(
+      *subscriber_, [&notification_recv, &notification_mutex, &recv, model](
+                        const std::string& key, const std::string& event_type) {
+        std::cout << "MODEL CHANGE DETECTED: " << event_type << std::endl;
+        ASSERT_TRUE(event_type == "hdel" || event_type == "del");
+        std::unique_lock<std::mutex> l(notification_mutex);
+        recv = true;
+        std::string model_id_key = gen_versioned_model_key(model);
+        ASSERT_EQ(key, model_id_key);
+        notification_recv.notify_all();
+      });
+  // give Redis some time to register the subscription
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  ASSERT_TRUE(delete_model(*redis_, model));
+  std::unique_lock<std::mutex> l(notification_mutex);
+  bool result = notification_recv.wait_for(l, std::chrono::milliseconds(1000),
+                                           [&recv]() { return recv == true; });
+  ASSERT_TRUE(result);
+}
+
+TEST_F(RedisTest, SubscriptionDetectContainerInsert) {
   std::vector<std::string> labels{"ads", "images", "experimental"};
   VersionedModelId model_id = std::make_pair("m", 1);
   int model_replica_id = 0;
   int zmq_connection_id = 7;
-  size_t replica_key = model_replica_hash(model_id, model_replica_id);
+  std::string replica_key = gen_model_replica_key(model_id, model_replica_id);
   InputType input_type = InputType::Strings;
 
   std::condition_variable_any notification_recv;
   std::mutex notification_mutex;
   std::atomic<bool> recv{false};
   subscribe_to_container_changes(
-      *subscriber_, [&notification_recv, &notification_mutex, &recv,
-                     replica_key](const std::string& key) {
+      *subscriber_,
+      [&notification_recv, &notification_mutex, &recv, replica_key](
+          const std::string& key, const std::string& event_type) {
         std::cout << "NEW CONTAINER CALLBACK FIRED" << std::endl;
+        ASSERT_EQ(event_type, "hset");
         std::unique_lock<std::mutex> l(notification_mutex);
         recv = true;
-        ASSERT_EQ(key, std::to_string(replica_key));
+        ASSERT_EQ(key, replica_key);
         notification_recv.notify_one();
       });
   // give Redis some time to register the subscription
@@ -140,6 +170,39 @@ TEST_F(RedisTest, SubscribeNewContainer) {
                                zmq_connection_id, input_type));
 
   // std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  std::unique_lock<std::mutex> l(notification_mutex);
+  bool result = notification_recv.wait_for(l, std::chrono::milliseconds(1000),
+                                           [&recv]() { return recv == true; });
+  ASSERT_TRUE(result);
+}
+
+TEST_F(RedisTest, SubscriptionDetectContainerDelete) {
+  std::vector<std::string> labels{"ads", "images", "experimental"};
+  VersionedModelId model_id = std::make_pair("m", 1);
+  int model_replica_id = 0;
+  int zmq_connection_id = 7;
+  std::string replica_key = gen_model_replica_key(model_id, model_replica_id);
+  InputType input_type = InputType::Strings;
+  ASSERT_TRUE(insert_container(*redis_, model_id, model_replica_id,
+                               zmq_connection_id, input_type));
+  std::condition_variable_any notification_recv;
+  std::mutex notification_mutex;
+  std::atomic<bool> recv{false};
+  subscribe_to_container_changes(
+      *subscriber_,
+      [&notification_recv, &notification_mutex, &recv, replica_key](
+          const std::string& key, const std::string& event_type) {
+        std::cout << "CONTAINER DELETED CALLBACK. EVENT TYPE: " << event_type
+                  << std::endl;
+        ASSERT_TRUE(event_type == "hdel" || event_type == "del");
+        std::unique_lock<std::mutex> l(notification_mutex);
+        recv = true;
+        ASSERT_EQ(key, replica_key);
+        notification_recv.notify_one();
+      });
+  // give Redis some time to register the subscription
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  ASSERT_TRUE(delete_container(*redis_, model_id, model_replica_id));
   std::unique_lock<std::mutex> l(notification_mutex);
   bool result = notification_recv.wait_for(l, std::chrono::milliseconds(1000),
                                            [&recv]() { return recv == true; });
