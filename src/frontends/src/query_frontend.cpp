@@ -1,6 +1,7 @@
 
 #include <cxxopts.hpp>
 
+#include <clipper/constants.hpp>
 #include <clipper/query_processor.hpp>
 #include "query_frontend.hpp"
 
@@ -13,6 +14,12 @@ int main(int argc, char* argv[]) {
     ("redis_port", "Redis port", cxxopts::value<int>()->default_value("6379"));
   // clang-format on
   options.parse(argc, argv);
+
+  clipper::Config& conf = clipper::get_config();
+  conf.set_redis_address(options["redis_ip"].as<std::string>());
+  conf.set_redis_port(options["redis_port"].as<int>());
+  conf.ready();
+
   query_frontend::RequestHandler<clipper::QueryProcessor> rh("0.0.0.0", 1337,
                                                              1);
   rh.start_listening();

@@ -1,12 +1,16 @@
 #include <gtest/gtest.h>
 
+#include <clipper/constants.hpp>
 #include <clipper/persistent_state.hpp>
 
 using namespace clipper;
 
 class StateDBTest : public ::testing::Test {
  public:
-  StateDBTest() {}
+  StateDBTest() {
+    get_config().reset();
+    get_config().ready();
+  }
 
   StateDB db_;
 };
