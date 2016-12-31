@@ -6,6 +6,7 @@
 
 #include <clipper/task_executor.hpp>
 #include <clipper/util.hpp>
+#include <clipper/metrics.hpp>
 
 #include <boost/thread.hpp>
 
