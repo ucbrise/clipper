@@ -136,6 +136,12 @@ class Meter : public Metric {
  public:
   explicit Meter(std::string name, std::shared_ptr<MeterClock> clock);
 
+  // Disallow copy and move
+  Meter(Meter &other) = delete;
+  Meter &operator=(Meter &other) = delete;
+  Meter(Meter &&other) = delete;
+  Meter &operator=(Meter &&other) = delete;
+
   void mark(uint32_t num);
 
   /**
@@ -239,6 +245,12 @@ class HistogramStats {
 class Histogram : public Metric {
  public:
   explicit Histogram(const std::string name, const size_t sample_size);
+
+  // Disallow copy and move
+  Histogram(Histogram &other) = delete;
+  Histogram &operator=(Histogram &other) = delete;
+  Histogram(Histogram &&other) = delete;
+  Histogram &operator=(Histogram &&other) = delete;
 
   void insert(const int64_t value);
   const HistogramStats compute_stats();
