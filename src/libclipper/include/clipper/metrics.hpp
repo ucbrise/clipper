@@ -9,6 +9,8 @@
 
 namespace clipper {
 
+namespace metrics {
+
 using std::vector;
 
 enum class MetricType {
@@ -284,6 +286,8 @@ class MetricsRegistry {
   bool active_ = true;
 
 };
+
+} // namespace metrics
 
 } // namespace clipper
 

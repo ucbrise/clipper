@@ -5,7 +5,7 @@
 
 #include <clipper/metrics.hpp>
 
-using namespace clipper;
+using namespace clipper::metrics;
 
 namespace {
 
@@ -24,7 +24,7 @@ TEST(MetricsTests, CounterCorrectness) {
 }
 
 TEST(MetricsTests, RatioCounterCorrectness) {
-  RatioCounter ratio_counter(std::string("Test Counter"));
+  RatioCounter ratio_counter(std::string("Test Ratio Counter"));
   // The ratio's denominator is initialized to zero, so we expect a NaN ratio
   ASSERT_TRUE(std::isnan(ratio_counter.get_ratio()));
   ratio_counter.increment(0,1);
@@ -116,7 +116,6 @@ TEST(MetricsTests, HistogramStatsCorrectness) {
   ASSERT_LE(std::abs(stats.p50_ - 108.5), .01);
   ASSERT_EQ(stats.p95_, 202);
   ASSERT_EQ(stats.p99_, 202);
-
 }
 
 } // namespace

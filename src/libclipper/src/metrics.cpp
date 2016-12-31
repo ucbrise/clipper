@@ -12,6 +12,8 @@
 
 namespace clipper {
 
+namespace metrics {
+
 constexpr int LOGGING_SLEEP_DURATION_MICROS = 5000000;
 constexpr long MICROS_PER_SECOND = 1000000;
 constexpr long CLOCKS_PER_MILLISECOND = CLOCKS_PER_SEC / MICROS_PER_SECOND;
@@ -490,5 +492,7 @@ void Histogram::clear() {
   sampler_.clear();
   sampler_lock_.unlock();
 }
+
+} // namespace metrics
 
 } // namespace clipper
