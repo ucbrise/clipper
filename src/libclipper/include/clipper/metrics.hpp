@@ -266,7 +266,7 @@ class MetricsRegistry {
   /** Creates a RatioCounter with initial value zero */
   std::shared_ptr<RatioCounter> create_default_ratio_counter(const std::string name);
   std::shared_ptr<RatioCounter> create_ratio_counter(const std::string name, const uint32_t num, const uint32_t denom);
-  std::shared_ptr<Meter> create_meter(const std::string name, const std::shared_ptr<MeterClock> clock);
+  std::shared_ptr<Meter> create_meter(const std::string name);
   std::shared_ptr<Histogram> create_histogram(const std::string name, const size_t sample_size);
 
  private:

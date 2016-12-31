@@ -3,7 +3,6 @@
 #include <vector>
 #include <mutex>
 #include <iostream>
-#include <stdexcept>
 #include <numeric>
 
 #include <math.h>
@@ -78,7 +77,6 @@ void MetricsRegistry::manage_metrics(std::shared_ptr<std::vector<std::shared_ptr
       MetricType curr_type = metric->type();
       if (i == 0 || prev_type != curr_type) {
         log_metrics_category(curr_type);
-        std::cout << std::endl;
       }
       prev_type = curr_type;
       metric->report();
@@ -110,8 +108,9 @@ std::shared_ptr<RatioCounter> MetricsRegistry::create_default_ratio_counter(cons
   return create_ratio_counter(name, 0, 0);
 }
 
-std::shared_ptr<Meter> MetricsRegistry::create_meter(const std::string name, const std::shared_ptr<MeterClock> clock) {
-  std::shared_ptr<Meter> meter = std::make_shared<Meter>(name, clock);
+std::shared_ptr<Meter> MetricsRegistry::create_meter(const std::string name) {
+  std::shared_ptr<RealTimeClock> clock = std::make_shared<RealTimeClock>();
+  std::shared_ptr<Meter> meter = std::make_shared<Meter>(name, std::dynamic_pointer_cast<MeterClock>(clock));
   metrics_->push_back(meter);
   return meter;
 }
@@ -122,7 +121,7 @@ std::shared_ptr<Histogram> MetricsRegistry::create_histogram(const std::string n
   return histogram;
 }
 
-Counter::Counter(const std::string name) : Counter(name, 1) {
+Counter::Counter(const std::string name) : Counter(name, 0) {
 
 }
 
@@ -263,6 +262,7 @@ double EWMA::get_rate_seconds() {
 Meter::Meter(std::string name, std::shared_ptr<MeterClock> clock)
     : name_(name),
       clock_(clock),
+      count_(0),
       start_time_micros_(clock->get_time_micros()),
       last_ewma_tick_micros_(start_time_micros_),
       m1_rate(ewma_tick_interval_seconds_, LoadAverage::OneMinute),
@@ -395,6 +395,7 @@ HistogramStats::HistogramStats(size_t data_size,
 
 const std::string HistogramStats::to_reportable_string() const {
   std::ostringstream ss;
+  ss << "{ ";
   ss << "size: " << data_size_ << ", ";
   ss << "min: " << min_ << ", ";
   ss << "max: " << max_ << "," << std::endl;
@@ -403,6 +404,7 @@ const std::string HistogramStats::to_reportable_string() const {
   ss << "p50: " << p50_ << ", ";
   ss << "p95: " << p95_ << ", ";
   ss << "p99: " << p99_;
+  ss << " }";
   return ss.str();
 }
 
@@ -462,8 +464,8 @@ const HistogramStats Histogram::compute_stats() {
   double mean =
       static_cast<double>(std::accumulate(snapshot.begin(), snapshot.end(), 0)) / static_cast<double>(snapshot_size);
   double var = 0;
-  if(snapshot_size > 1) {
-    for(auto elem : snapshot) {
+  if (snapshot_size > 1) {
+    for (auto elem : snapshot) {
       double incr = std::pow((static_cast<double>(elem) - mean), 2);
       var += incr;
     }
@@ -479,6 +481,7 @@ MetricType Histogram::type() const {
 
 void Histogram::report() {
   HistogramStats stats = compute_stats();
+  std::cout << "name: " << name_ << std::endl;
   std::cout << stats.to_reportable_string() << std::endl;
 }
 
