@@ -14,7 +14,6 @@
 #include <clipper/redis.hpp>
 #include <clipper/rpc_service.hpp>
 #include <clipper/util.hpp>
-#include <clipper/metrics.hpp>
 
 namespace clipper {
 
@@ -140,7 +139,6 @@ class TaskExecutor {
   std::unordered_map<
       int, std::vector<std::pair<VersionedModelId, std::shared_ptr<Input>>>>
       inflight_messages_;
-  std::shared_ptr<metrics::Meter> throughput_meter;
 
   /// TODO: The task executor needs executors to schedule tasks (assign
   /// tasks to containers), batch and serialize tasks to be sent via the
@@ -176,8 +174,6 @@ class TaskExecutor {
             // into the map
             std::unique_lock<std::mutex> l(inflight_messages_mutex_);
             // std::vector<const std::vector<uint8_t>> serialized_inputs;
-
-            throughput_meter->mark(batch.size());
 
             std::vector<std::pair<VersionedModelId, std::shared_ptr<Input>>>
                 cur_batch;
