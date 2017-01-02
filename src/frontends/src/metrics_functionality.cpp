@@ -22,10 +22,10 @@ void counters() {
   MetricsRegistry &registry = MetricsRegistry::instance();
   std::shared_ptr<Counter> counter1 = registry.create_counter(std::string("Test Counter"), 5);
   counter1->increment(4);
-  std::shared_ptr<RatioCounter> ratio_counter = registry.create_default_ratio_counter(std::string("TRC"));
+  std::shared_ptr<RatioCounter> ratio_counter = registry.create_ratio_counter(std::string("TRC"));
   ratio_counter->increment(2,9);
-  std::shared_ptr<Counter> counter2 = registry.create_default_counter(std::string("Test Counter2"));
-  std::shared_ptr<RatioCounter> ratio_counter2 = registry.create_default_ratio_counter(std::string("TRC2"));
+  std::shared_ptr<Counter> counter2 = registry.create_counter(std::string("Test Counter2"));
+  std::shared_ptr<RatioCounter> ratio_counter2 = registry.create_ratio_counter(std::string("TRC2"));
 
   usleep(7000000);
 

@@ -94,7 +94,7 @@ std::shared_ptr<Counter> MetricsRegistry::create_counter(const std::string name,
   return counter;
 }
 
-std::shared_ptr<Counter> MetricsRegistry::create_default_counter(const std::string name) {
+std::shared_ptr<Counter> MetricsRegistry::create_counter(const std::string name) {
   return create_counter(name, 0);
 }
 
@@ -106,7 +106,7 @@ std::shared_ptr<RatioCounter> MetricsRegistry::create_ratio_counter(const std::s
   return ratio_counter;
 }
 
-std::shared_ptr<RatioCounter> MetricsRegistry::create_default_ratio_counter(const std::string name) {
+std::shared_ptr<RatioCounter> MetricsRegistry::create_ratio_counter(const std::string name) {
   return create_ratio_counter(name, 0, 0);
 }
 

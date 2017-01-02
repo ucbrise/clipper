@@ -283,6 +283,7 @@ class PredictTask {
   float utility_;
   QueryId query_id_;
   long latency_slo_micros_;
+  long send_time_micros_ = -1;
 };
 
 /// NOTE: If a feedback task is scheduled, the task scheduler
