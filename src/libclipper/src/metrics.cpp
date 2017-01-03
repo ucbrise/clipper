@@ -34,7 +34,7 @@ bool compare_metrics(std::shared_ptr<Metric> first, std::shared_ptr<Metric> seco
 
 /**
  * When periodically logging metrics, this message indicates
- * the start of a new category of metrics being logged
+ * the beginning of a new metrics category
  */
 void log_metrics_category(MetricType type) {
   switch (type) {
