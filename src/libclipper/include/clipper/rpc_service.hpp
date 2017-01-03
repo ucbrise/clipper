@@ -11,7 +11,6 @@
 #include <zmq.hpp>
 
 #include <clipper/containers.hpp>
-//#include <clipper/task_executor.hpp>
 #include <clipper/util.hpp>
 
 using zmq::socket_t;
@@ -48,11 +47,14 @@ class RPCService {
    */
   void stop();
 
-  /// Send message takes ownership of the msg data because the caller cannot
-  /// know when the message will actually be sent.
-  /// @param msg A vector of individual messages to send to this container.
-  /// The messages will be sent as a single, multi-part ZeroMQ message so
-  /// it is very efficient.
+  /*
+  * Send message takes ownership of the msg data because the caller cannot
+  * know when the message will actually be sent.
+  *
+  * \param `msg`: A vector of individual messages to send to this container.
+  * The messages will be sent as a single, multi-part ZeroMQ message so
+  * it is very efficient.
+  */
   int send_message(const std::vector<std::vector<uint8_t>> msg,
                    const int zmq_connection_id);
 
@@ -62,7 +64,7 @@ class RPCService {
                       shared_ptr<Queue<RPCResponse>> response_queue,
                       const bool &active);
   /**
-   * @return The id of the sent message, used for match the correct response
+   * \return The id of the sent message, used for match the correct response
    * If the service is active, this id is non-negative. Otherwise, it is -1.
    */
   void send_messages(socket_t &socket,
@@ -81,7 +83,6 @@ class RPCService {
   bool active_ = false;
   // The next available message id
   int message_id_ = 0;
-  // std::shared_ptr<ActiveContainers> active_containers_;
   std::unordered_map<VersionedModelId, int, decltype(&versioned_model_hash)>
       replica_ids_;
 };

@@ -23,13 +23,18 @@ namespace clipper {
 
 namespace rpc {
 
+constexpr int INITIAL_REPLICA_ID_SIZE = 100;
+
 RPCService::RPCService()
     : request_queue_(std::make_shared<Queue<RPCRequest>>()),
       response_queue_(std::make_shared<Queue<RPCResponse>>()),
-      // active_containers_(std::move(containers)),
+      // The version of the unordered_map constructor that allows
+      // you to specify your own hash function also requires you
+      // to provide the initial size of the map. We define the initial
+      // size of the map somewhat arbitrarily as 100.
       replica_ids_(std::unordered_map<VersionedModelId, int,
                                       decltype(&versioned_model_hash)>(
-          100, &versioned_model_hash)) {}
+          INITIAL_REPLICA_ID_SIZE, &versioned_model_hash)) {}
 
 RPCService::~RPCService() { stop(); }
 
@@ -123,8 +128,6 @@ void RPCService::send_messages(
     boost::bimap<int, vector<uint8_t>> &connections) {
   while (request_queue->size() > 0) {
     RPCRequest request = request_queue->pop();
-    //    std::cout << "Sending request of batch size " <<
-    //    std::get<2>(request).size() << std::endl;
     boost::bimap<int, vector<uint8_t>>::left_const_iterator connection =
         connections.left.find(std::get<0>(request));
     if (connection == connections.left.end()) {
@@ -190,10 +193,10 @@ void RPCService::receive_message(
     VersionedModelId model = std::make_pair(name, version);
     std::cout << "Container added" << std::endl;
 
-    // TODO: Once we have a ConfigDB, we need to insert the new container ID
-    // into the table.
-    // For now, create a new container object directly.
-    // containers->add_container(model, container_id);
+    // Note that if the map does not have an entry for this model,
+    // a new entry will be created with the default value (0).
+    // This use of operator[] avoids the boilerplate of having to
+    // check if the key is present in the map.
     int cur_replica_id = replica_ids_[model];
     replica_ids_[model] = cur_replica_id + 1;
     redis::insert_container(*redis_connection, model, cur_replica_id,

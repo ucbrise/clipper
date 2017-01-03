@@ -19,7 +19,7 @@ namespace redis {
 
 /**
  * Issues a command to Redis and checks return code.
- * Returns true if the command was successful.
+ * \return Returns true if the command was successful.
 */
 template <class ReplyT>
 bool send_cmd_no_reply(redox::Redox& redis, std::vector<std::string> cmd_vec) {
@@ -37,9 +37,17 @@ bool send_cmd_no_reply(redox::Redox& redis, std::vector<std::string> cmd_vec) {
   return ok;
 }
 
+/**
+ * Generates a unique, human-interpretable key for a model replica.
+ * Intended for use as a primary key in a database table.
+ */
 std::string gen_model_replica_key(const VersionedModelId& key,
                                   int model_replica_id);
 
+/**
+ * Generates a unique, human-interpretable key for a versioned model.
+ * Intended for use as a primary key in a database table.
+ */
 std::string gen_versioned_model_key(const VersionedModelId& key);
 
 std::string labels_to_str(const std::vector<std::string>& labels);
@@ -49,13 +57,16 @@ std::vector<std::string> str_to_labels(const std::string& label_str);
 /**
  * Inserts a model into the model table. This will
  * overwrite any existing entry with the same key.
+ *
+ * \return Returns true if the insert was successful.
  */
 bool insert_model(redox::Redox& redis, const VersionedModelId& model_id,
                   const std::vector<std::string>& labels);
 
 /**
  * Deletes a model from the model table if it exists.
- * @return Returns true if the model was present in the table
+ *
+ * \return Returns true if the model was present in the table
  * and was successfully deleted. Returns false if there was a problem
  * or if the model was not in the table.
  */
@@ -65,6 +76,13 @@ bool delete_model(redox::Redox& redis, const VersionedModelId& model_id);
  * Looks up a model based on its model ID. This
  * is the canonical way of uniquely identifying a model in
  * the rest of the Clipper codebase.
+ *
+ * \return Returns a map of model attribute name-value pairs as
+ * strings. Any parsing of the attribute values from their string
+ * format (e.g. to a numerical representation) must be done by the
+ * caller of this function. The set of attributes stored for a
+ * model can be found in the source for `insert_model()`. If the
+ * model was not found, an empty map will be returned.
  */
 std::unordered_map<std::string, std::string> get_model(
     redox::Redox& redis, const VersionedModelId& model_id);
@@ -76,6 +94,13 @@ std::unordered_map<std::string, std::string> get_model(
  * This function is primarily used for looking up a model
  * entry after a subscriber detects a change to the model
  * with the given key.
+ *
+ * \return Returns a map of model attribute name-value pairs as
+ * strings. Any parsing of the attribute values from their string
+ * format (e.g. to a numerical representation) must be done by the
+ * caller of this function. The set of attributes stored for a
+ * model can be found in the source for `insert_model()`. If the
+ * model was not found, an empty map will be returned.
  */
 std::unordered_map<std::string, std::string> get_model_by_key(
     redox::Redox& redis, const std::string& key);
@@ -83,6 +108,8 @@ std::unordered_map<std::string, std::string> get_model_by_key(
 /**
  * Inserts a container into the container table. This will
  * overwrite any existing entry with the same key.
+ *
+ * \return Returns true of the insert was successful.
  */
 bool insert_container(redox::Redox& redis, const VersionedModelId& model_id,
                       int model_replica_id, int zmq_connection_id,
@@ -90,7 +117,8 @@ bool insert_container(redox::Redox& redis, const VersionedModelId& model_id,
 
 /**
  * Deletes a container from the container table if it exists.
- * @return Returns true if the container was present in the table
+ *
+ * \return Returns true if the container was present in the table
  * and was successfully deleted. Returns false if there was a problem
  * or if the container was not in the table.
  */
@@ -101,6 +129,13 @@ bool delete_container(redox::Redox& redis, const VersionedModelId& model_id,
  * Looks up a container based on its model and replica IDs. This
  * is the canonical way of uniquely identifying a container in
  * the rest of the Clipper codebase.
+ *
+ * \return Returns a map of container attribute name-value pairs as
+ * strings. Any parsing of the attribute values from their string
+ * format (e.g. to a numerical representation) must be done by the
+ * caller of this function. The set of attributes stored for a
+ * container can be found in the source for `insert_container()`. If the
+ * container was not found, an empty map will be returned.
  */
 std::unordered_map<std::string, std::string> get_container(
     redox::Redox& redis, const VersionedModelId& model_id,
@@ -113,6 +148,13 @@ std::unordered_map<std::string, std::string> get_container(
  * This function is primarily used for looking up a container
  * entry after a subscriber detects a change to the container
  * with the given key.
+ *
+ * \return Returns a map of container attribute name-value pairs as
+ * strings. Any parsing of the attribute values from their string
+ * format (e.g. to a numerical representation) must be done by the
+ * caller of this function. The set of attributes stored for a
+ * container can be found in the source for `insert_container()`. If the
+ * container was not found, an empty map will be returned.
  */
 std::unordered_map<std::string, std::string> get_container_by_key(
     redox::Redox& redis, const std::string& key);

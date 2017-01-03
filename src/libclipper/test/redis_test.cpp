@@ -12,6 +12,16 @@ using namespace clipper::redis;
 
 namespace {
 
+// NOTE: THIS IS A POTENTIALLY FLAKY TEST SUITE.
+//
+// Several of the tests in this suite register a subscription
+// with Redis, then issue commmands to test that the subscription
+// is behaving correctly. In order to make sure that the
+// subscription was registered, the tests wait 500ms between
+// requesting the subscription and testing its behavior. If this
+// is not enough time for the subscription to be registered, the
+// tests will fail.
+
 const int REDIS_TEST_PORT = 34256;
 
 class RedisTest : public ::testing::Test {

@@ -42,6 +42,13 @@ $ ../bin/run_unittests.sh
 $ ../bin/start_clipper.sh
 ```
 
+To query the REST API, send HTTP POST requests:
+```bash
+# Run this in a separate window
+# Send JSON request using curl
+$ curl -X POST --header "Content-Type:text/json" -d '{"uid": 1, "input": [1, 2, 3, 4]}' 127.0.0.1:1337/predict
+```
+
 ### Dependencies
 
 + Boost >= 1.62

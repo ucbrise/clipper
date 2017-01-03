@@ -66,6 +66,8 @@ class TaskExecutor {
         redis_connection_, {"CONFIG", "SET", "notify-keyspace-events", "AKE"});
     redis::subscribe_to_container_changes(
         redis_subscriber_,
+        // event_type corresponds to one of the Redis event types
+        // documented in https://redis.io/topics/notifications.
         [this](const std::string &key, const std::string &event_type) {
           if (event_type == "hset") {
             auto container_info =
