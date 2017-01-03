@@ -21,6 +21,7 @@ constexpr double SECONDS_PER_MINUTE = 60;
 constexpr double ONE_MINUTE = 1;
 constexpr double FIVE_MINUTES = 5;
 constexpr double FIFTEEN_MINUTES = 15;
+
 /**
  * This comparison function is used to sort metrics based on their
  * type (Counter, Meter, etc) for structured logging
