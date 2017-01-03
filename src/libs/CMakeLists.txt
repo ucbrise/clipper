@@ -29,3 +29,12 @@ target_include_directories(httpserver INTERFACE
 export(TARGETS httpserver FILE HttpServerConfig.cmake)
 
 add_subdirectory(redox)
+
+##########################################
+### RapidJSON
+##########################################
+add_library(rapidjson INTERFACE)
+target_include_directories(httpserver INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/rapidjson>
+    $<INSTALL_INTERFACE:rapidjson>)
+export(TARGETS rapidjson FILE RapidJsonConfig.cmake)

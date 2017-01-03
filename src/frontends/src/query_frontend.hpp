@@ -9,6 +9,8 @@
 #define BOOST_SPIRIT_THREADSAFE
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <rapidjson/document.h>
+#include <rapidjson/error/en.h>
 
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
@@ -109,6 +111,7 @@ class RequestHandler {
       std::string json_content, std::string name,
       std::vector<VersionedModelId> models, std::string policy, long latency,
       InputType input_type) {
+    /*
     std::istringstream is(json_content);
     ptree pt;
     try {
@@ -125,6 +128,25 @@ class RequestHandler {
       return prediction;
     } catch (const ptree_error& e) {
       throw json_semantic_error(e.what());
+    } */
+
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(json_content.c_str());
+    if (!ok) {
+      std::stringstream ss;
+      ss << "JSON parse error: " << rapidjson::GetParseError_En(ok.Code())
+         << " (offset " << ok.Offset() << ")\n";
+      throw json_parse_error(ss.str());
+    }
+
+    try {
+      long uid = d["uid"].GetInt64();
+      std::shared_ptr<Input> input = decode_input(input_type, d);
+      auto prediction = query_processor_.predict(
+          Query{name, uid, input, latency, policy, models});
+      return prediction;
+    } catch (const rapidjson_exception& e) {
+      throw json_semantic_error(e.what());
     }
   }
 
@@ -136,6 +158,7 @@ class RequestHandler {
       std::string json_content, std::string name,
       std::vector<VersionedModelId> models, std::string policy,
       InputType input_type, OutputType output_type) {
+    /*
     std::istringstream is(json_content);
     ptree pt;
     try {
@@ -152,6 +175,26 @@ class RequestHandler {
           name, uid, {std::make_pair(input, output)}, policy, models});
       return update;
     } catch (const ptree_error& e) {
+      throw json_semantic_error(e.what());
+    } */
+
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(json_content.c_str());
+    if (!ok) {
+      std::stringstream ss;
+      ss << "JSON parse error: " << rapidjson::GetParseError_En(ok.Code())
+         << " (offset " << ok.Offset() << ")\n";
+      throw json_parse_error(ss.str());
+    }
+
+    try {
+      long uid = d["uid"].GetInt64();
+      std::shared_ptr<Input> input = decode_input(input_type, d);
+      Output output = decode_output(output_type, d);
+      auto update = query_processor_.update(FeedbackQuery{
+          name, uid, {std::make_pair(input, output)}, policy, models});
+      return update;
+    } catch (const rapidjson_exception& e) {
       throw json_semantic_error(e.what());
     }
   }
