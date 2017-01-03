@@ -14,7 +14,7 @@ namespace clipper {
 
 namespace metrics {
 
-constexpr int METRICS_REPORTING_FREQUENCY_MICROS = 15000000;
+constexpr long METRICS_REPORTING_FREQUENCY_MICROS = 15000000;
 constexpr long MICROS_PER_SECOND = 1000000;
 constexpr long CLOCKS_PER_MILLISECOND = CLOCKS_PER_SEC / MICROS_PER_SECOND;
 constexpr double SECONDS_PER_MINUTE = 60;
