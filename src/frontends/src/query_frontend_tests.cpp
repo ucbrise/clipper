@@ -1,14 +1,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include <boost/thread.hpp>
-#define BOOST_SPIRIT_THREADSAFE
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/property_tree/ptree.hpp>
-
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
 
+#include "json_util.hpp"
 #include "query_frontend.hpp"
 
 using namespace clipper;
@@ -109,11 +105,11 @@ TEST_F(QueryFrontendTest, TestDecodeMalformedJSON) {
   ASSERT_THROW(
       rh_.decode_and_handle_predict(gibberish_string1, "test", {},
                                     "test_policy", 30000, InputType::Doubles),
-      ptree_error);
+      json_parse_error);
   ASSERT_THROW(
       rh_.decode_and_handle_predict(gibberish_string2, "test", {},
                                     "test_policy", 30000, InputType::Strings),
-      ptree_error);
+      json_parse_error);
 }
 
 TEST_F(QueryFrontendTest, TestDecodeMissingJsonField) {
@@ -121,7 +117,7 @@ TEST_F(QueryFrontendTest, TestDecodeMissingJsonField) {
   ASSERT_THROW(
       rh_.decode_and_handle_predict(json_missing_field, "test", {},
                                     "test_policy", 30000, InputType::Doubles),
-      ptree_error);
+      json_semantic_error);
 }
 
 TEST_F(QueryFrontendTest, TestDecodeWrongInputType) {
@@ -130,7 +126,7 @@ TEST_F(QueryFrontendTest, TestDecodeWrongInputType) {
   ASSERT_THROW(
       rh_.decode_and_handle_predict(test_json_doubles, "test", {},
                                     "test_policy", 30000, InputType::Ints),
-      ptree_bad_data);
+      json_semantic_error);
 }
 
 TEST_F(QueryFrontendTest, TestDecodeCorrectUpdate) {
@@ -152,7 +148,7 @@ TEST_F(QueryFrontendTest, TestDecodeUpdateMissingField) {
   ASSERT_THROW(
       rh_.decode_and_handle_update(update_json, "test", {}, "test_policy",
                                    InputType::Doubles, OutputType::Double),
-      ptree_error);
+      json_semantic_error);
 }
 
 TEST_F(QueryFrontendTest, TestAddOneApplication) {

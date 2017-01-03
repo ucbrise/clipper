@@ -117,7 +117,9 @@ class RequestHandler {
           std::string content = ss.str();
           respond_http(content, "200 OK", response);
         });
-      } catch (const ptree_error& e) {
+      } catch (const json_parse_error& e) {
+        respond_http(e.what(), "400 Bad Request", response);
+      } catch (const json_semantic_error& e) {
         respond_http(e.what(), "400 Bad Request", response);
       } catch (const std::invalid_argument& e) {
         respond_http(e.what(), "400 Bad Request", response);
@@ -140,7 +142,9 @@ class RequestHandler {
           std::string content = ss.str();
           respond_http(content, "200 OK", response);
         });
-      } catch (const ptree_error& e) {
+      } catch (const json_parse_error& e) {
+        respond_http(e.what(), "400 Bad Request", response);
+      } catch (const json_semantic_error& e) {
         respond_http(e.what(), "400 Bad Request", response);
       } catch (const std::invalid_argument& e) {
         respond_http(e.what(), "400 Bad Request", response);
@@ -156,14 +160,21 @@ class RequestHandler {
       InputType input_type) {
     std::istringstream is(json_content);
     ptree pt;
-    read_json(is, pt);
+    try {
+      read_json(is, pt);
+    } catch (const ptree_error& e) {
+      throw json_parse_error(e.what());
+    }
 
-    long uid = pt.get<long>("uid");
-    std::shared_ptr<Input> input = decode_input(input_type, pt);
-    auto prediction = query_processor_.predict(
-        Query{name, uid, input, latency, policy, models});
-
-    return prediction;
+    try {
+      long uid = pt.get<long>("uid");
+      std::shared_ptr<Input> input = decode_input(input_type, pt);
+      auto prediction = query_processor_.predict(
+          Query{name, uid, input, latency, policy, models});
+      return prediction;
+    } catch (const ptree_error& e) {
+      throw json_semantic_error(e.what());
+    }
   }
 
   /* Update JSON format:
@@ -176,15 +187,22 @@ class RequestHandler {
       InputType input_type, OutputType output_type) {
     std::istringstream is(json_content);
     ptree pt;
-    read_json(is, pt);
+    try {
+      read_json(is, pt);
+    } catch (const ptree_error& e) {
+      throw json_parse_error(e.what());
+    }
 
-    long uid = pt.get<long>("uid");
-    std::shared_ptr<Input> input = decode_input(input_type, pt);
-    Output output = decode_output(output_type, pt);
-    auto update = query_processor_.update(FeedbackQuery{
-        name, uid, {std::make_pair(input, output)}, policy, models});
-
-    return update;
+    try {
+      long uid = pt.get<long>("uid");
+      std::shared_ptr<Input> input = decode_input(input_type, pt);
+      Output output = decode_output(output_type, pt);
+      auto update = query_processor_.update(FeedbackQuery{
+          name, uid, {std::make_pair(input, output)}, policy, models});
+      return update;
+    } catch (const ptree_error& e) {
+      throw json_semantic_error(e.what());
+    }
   }
 
   void start_listening() {
