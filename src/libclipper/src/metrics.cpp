@@ -14,14 +14,17 @@ namespace clipper {
 
 namespace metrics {
 
-constexpr int LOGGING_SLEEP_DURATION_MICROS = 5000000;
+constexpr int METRICS_REPORTING_FREQUENCY_MICROS = 15000000;
 constexpr long MICROS_PER_SECOND = 1000000;
 constexpr long CLOCKS_PER_MILLISECOND = CLOCKS_PER_SEC / MICROS_PER_SECOND;
 constexpr double SECONDS_PER_MINUTE = 60;
 constexpr double ONE_MINUTE = 1;
 constexpr double FIVE_MINUTES = 5;
 constexpr double FIFTEEN_MINUTES = 15;
-
+/**
+ * This comparison function is used to sort metrics based on their
+ * type (Counter, Meter, etc) for structured logging
+ */
 bool compare_metrics(std::shared_ptr<Metric> first, std::shared_ptr<Metric> second) {
   MetricType first_type = first->type();
   MetricType second_type = second->type();
@@ -70,7 +73,7 @@ void MetricsRegistry::manage_metrics(std::shared_ptr<std::vector<std::shared_ptr
     if (!active) {
       return;
     }
-    usleep(LOGGING_SLEEP_DURATION_MICROS);
+    usleep(METRICS_REPORTING_FREQUENCY_MICROS);
     std::lock_guard<std::mutex> guard(*metrics_lock);
     std::sort((*metrics).begin(), (*metrics).end(), compare_metrics);
     MetricType prev_type;
