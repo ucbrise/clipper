@@ -20,7 +20,7 @@ namespace {
 class MockZmqSocket {};
 
 TEST(RPCServiceTests, SendBeforeStart) {
-  clipper::rpc::RPCService rpc{std::shared_ptr<ActiveContainers>()};
+  rpc::RPCService rpc{};
   EXPECT_EQ(-1, rpc.send_message(vector<vector<uint8_t>>(), 7));
 }
 

@@ -12,22 +12,22 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Let the user start this script from anywhere in the filesystem.
 cd $DIR/..
-./configure
-cd debug
-make -j2 unittests
+./configure --release
+cd release
+make -j2 query_frontend
 if ! type "redis-server" &> /dev/null; then
     echo -e "\nERROR:"
-    echo -e "\tUnit tests require Redis. Please install redis-server"
+    echo -e "\tClipper require Redis to run. Please install redis-server"
     echo -e "\tand make sure it's on your PATH.\n"
     exit 1
 fi
 
-# start Redis on the test port if it's not already running
-redis-server --port 34256 &> /dev/null &
+# start Redis if it's not already running
+redis-server &> /dev/null &
 
-./src/libclipper/libclippertests
-./src/frontends/frontendtests
+# start the query processor frontend
+./src/frontends/query_frontend
 
 # Kills all background jobs.
 # Will kill redis if it was started as part of this script.
-trap 'kill $(jobs -p) &> /dev/null' EXIT
+trap 'kill $(jobs -p) &> /dev/null' SIGINT SIGTERM EXIT

@@ -1,7 +1,6 @@
 #include <thread>
 #include <unordered_map>
 
-#include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/rpc_service.hpp>
 
@@ -42,7 +41,6 @@ void send_request_repeated(
                      std::chrono::system_clock::now().time_since_epoch())
                      .count();
     int id = rpc_service->send_message(request.serialize(), container_id);
-    //    std::cout << "send message " << id << std::endl;
     times_map->emplace(id, start);
     usleep(50000);
   }
@@ -148,9 +146,8 @@ void run_strings_benchmark(
 }
 
 void run_benchmarks() {
-  auto containers = std::make_shared<clipper::ActiveContainers>();
   std::shared_ptr<clipper::rpc::RPCService> rpc_service =
-      std::make_shared<clipper::rpc::RPCService>(containers);
+      std::make_shared<clipper::rpc::RPCService>();
   std::shared_ptr<std::unordered_map<int, long>> times_map =
       std::make_shared<std::unordered_map<int, long>>();
   bool shutdown = false;

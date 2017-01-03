@@ -102,14 +102,14 @@ class RequestHandler {
 
   void add_application(std::string name, std::vector<VersionedModelId> models,
                        InputType input_type, OutputType output_type,
-                       std::string policy, long latency) {
-    auto predict_fn = [this, name, input_type, policy, latency, models](
-        std::shared_ptr<HttpServer::Response> response,
-        std::shared_ptr<HttpServer::Request> request) {
+                       std::string policy, long latency_slo_micros) {
+    auto predict_fn = [this, name, input_type, policy, latency_slo_micros,
+                       models](std::shared_ptr<HttpServer::Response> response,
+                               std::shared_ptr<HttpServer::Request> request) {
       try {
         auto prediction =
             decode_and_handle_predict(request->content.string(), name, models,
-                                      policy, latency, input_type);
+                                      policy, latency_slo_micros, input_type);
         prediction.then([response](boost::future<Response> f) {
           Response r = f.get();
           std::stringstream ss;
@@ -152,8 +152,8 @@ class RequestHandler {
 
   boost::future<Response> decode_and_handle_predict(
       std::string json_content, std::string name,
-      std::vector<VersionedModelId> models, std::string policy, long latency,
-      InputType input_type) {
+      std::vector<VersionedModelId> models, std::string policy,
+      long latency_slo_micros, InputType input_type) {
     std::istringstream is(json_content);
     ptree pt;
     read_json(is, pt);
@@ -161,7 +161,7 @@ class RequestHandler {
     long uid = pt.get<long>("uid");
     std::shared_ptr<Input> input = decode_input(input_type, pt);
     auto prediction = query_processor_.predict(
-        Query{name, uid, input, latency, policy, models});
+        Query{name, uid, input, latency_slo_micros, policy, models});
 
     return prediction;
   }

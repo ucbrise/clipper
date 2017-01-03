@@ -6,9 +6,12 @@
 #include <unordered_map>
 
 #include <boost/thread.hpp>
+#include <redox.hpp>
 
+#include <clipper/constants.hpp>
 #include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/redis.hpp>
 #include <clipper/rpc_service.hpp>
 #include <clipper/util.hpp>
 
@@ -53,10 +56,31 @@ class TaskExecutor {
   ~TaskExecutor() { active_ = false; };
   explicit TaskExecutor()
       : active_containers_(std::make_shared<ActiveContainers>()),
-        rpc_(std::make_unique<rpc::RPCService>(active_containers_)) {
+        rpc_(std::make_unique<rpc::RPCService>()) {
     std::cout << "TaskExecutor started" << std::endl;
-    rpc_->start("*", 7000);
+    rpc_->start("*", RPC_SERVICE_PORT);
     active_ = true;
+    redis_connection_.connect(REDIS_ADDRESS, REDIS_PORT);
+    redis_subscriber_.connect(REDIS_ADDRESS, REDIS_PORT);
+    redis::send_cmd_no_reply<std::string>(
+        redis_connection_, {"CONFIG", "SET", "notify-keyspace-events", "AKE"});
+    redis::subscribe_to_container_changes(
+        redis_subscriber_,
+        // event_type corresponds to one of the Redis event types
+        // documented in https://redis.io/topics/notifications.
+        [this](const std::string &key, const std::string &event_type) {
+          if (event_type == "hset") {
+            auto container_info =
+                redis::get_container_by_key(redis_connection_, key);
+            VersionedModelId vm =
+                std::make_pair(container_info["model_name"],
+                               std::stoi(container_info["model_version"]));
+            active_containers_->add_container(
+                vm, std::stoi(container_info["zmq_connection_id"]),
+                parse_input_type(container_info["input_type"]));
+          }
+
+        });
     boost::thread(&TaskExecutor::send_messages, this).detach();
     boost::thread(&TaskExecutor::recv_messages, this).detach();
   }
@@ -107,6 +131,8 @@ class TaskExecutor {
   std::unique_ptr<rpc::RPCService> rpc_;
   Scheduler scheduler_;
   PredictionCache cache_;
+  redox::Subscriber redis_subscriber_;
+  redox::Redox redis_connection_;
   bool active_ = false;
   std::mutex inflight_messages_mutex_;
   std::unordered_map<
@@ -155,8 +181,8 @@ class TaskExecutor {
               prediction_request.add_input(b.input_);
               cur_batch.emplace_back(b.model_, b.input_);
             }
-            int message_id =
-                rpc_->send_message(prediction_request.serialize(), c->container_id_);
+            int message_id = rpc_->send_message(prediction_request.serialize(),
+                                                c->container_id_);
             inflight_messages_.emplace(message_id, std::move(cur_batch));
           }
         }

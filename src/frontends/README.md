@@ -1,12 +1,3 @@
-# REST Example
-A simple example using the REST API:
-```bash
-# Run this in a separate window
-$ ./rest
-# Send JSON request using curl
-$ curl -X POST --header "Content-Type:text/json" -d '{"uid": 1, "input": [1, 2, 3, 4]}' 127.0.0.1:1337/predict
-```
-
 # RPC Benchmark Example:
 To run the rpc service benchmark.
 
@@ -24,3 +15,6 @@ $ cd release
 $ make rpcbench
 $ ./src/frontends/rpcbench
 ``
+
+__NOTE:__ Redis must be running on port 6379 (the default port) to
+run the RPC benchmark.

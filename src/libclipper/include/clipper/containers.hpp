@@ -1,6 +1,6 @@
 
-#ifndef CLIPPER_LIB_CONTAINERS_H
-#define CLIPPER_LIB_CONTAINERS_H
+#ifndef CLIPPER_LIB_CONTAINERS_HPP
+#define CLIPPER_LIB_CONTAINERS_HPP
 
 #include <memory>
 #include <unordered_map>

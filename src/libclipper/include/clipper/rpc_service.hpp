@@ -7,10 +7,10 @@
 #include <vector>
 
 #include <boost/bimap.hpp>
+#include <redox.hpp>
 #include <zmq.hpp>
 
 #include <clipper/containers.hpp>
-//#include <clipper/task_executor.hpp>
 #include <clipper/util.hpp>
 
 using zmq::socket_t;
@@ -24,13 +24,13 @@ namespace clipper {
 namespace rpc {
 
 using RPCResponse = std::pair<const int, vector<uint8_t>>;
-/// Tuple of container_id, message_id, vector of messages
+/// Tuple of zmq_connection_id, message_id, vector of messages
 using RPCRequest =
-std::tuple<const int, const int, const std::vector<std::vector<uint8_t>>>;
+    std::tuple<const int, const int, const std::vector<std::vector<uint8_t>>>;
 
 class RPCService {
  public:
-  explicit RPCService(std::shared_ptr<ActiveContainers> containers);
+  explicit RPCService();
   ~RPCService();
   // Disallow copy
   RPCService(const RPCService &) = delete;
@@ -47,22 +47,24 @@ class RPCService {
    */
   void stop();
 
-  /// Send message takes ownership of the msg data because the caller cannot
-  /// know when the message will actually be sent.
-  /// @param msg A vector of individual messages to send to this container.
-  /// The messages will be sent as a single, multi-part ZeroMQ message so
-  /// it is very efficient.
+  /*
+  * Send message takes ownership of the msg data because the caller cannot
+  * know when the message will actually be sent.
+  *
+  * \param `msg`: A vector of individual messages to send to this container.
+  * The messages will be sent as a single, multi-part ZeroMQ message so
+  * it is very efficient.
+  */
   int send_message(const std::vector<std::vector<uint8_t>> msg,
-                   const int container_id);
+                   const int zmq_connection_id);
 
  private:
   void manage_service(const string address,
                       shared_ptr<Queue<RPCRequest>> request_queue,
                       shared_ptr<Queue<RPCResponse>> response_queue,
-                      shared_ptr<ActiveContainers> containers,
                       const bool &active);
   /**
-   * @return The id of the sent message, used for match the correct response
+   * \return The id of the sent message, used for match the correct response
    * If the service is active, this id is non-negative. Otherwise, it is -1.
    */
   void send_messages(socket_t &socket,
@@ -72,20 +74,20 @@ class RPCService {
   void receive_message(socket_t &socket,
                        shared_ptr<Queue<RPCResponse>> response_queue,
                        boost::bimap<int, vector<uint8_t>> &connections,
-                       int &container_id,
-                       std::shared_ptr<ActiveContainers> containers);
-
+                       int &zmq_connection_id,
+                       std::shared_ptr<redox::Redox> redis_connection);
   void shutdown_service(const string address, socket_t &socket);
-  shared_ptr <Queue<RPCRequest>> request_queue_;
-  shared_ptr <Queue<RPCResponse>> response_queue_;
+  shared_ptr<Queue<RPCRequest>> request_queue_;
+  shared_ptr<Queue<RPCResponse>> response_queue_;
   // Flag indicating whether rpc service is active
   bool active_ = false;
   // The next available message id
   int message_id_ = 0;
-  std::shared_ptr<ActiveContainers> active_containers_;
+  std::unordered_map<VersionedModelId, int, decltype(&versioned_model_hash)>
+      replica_ids_;
 };
 
-} // namespace rpc
+}  // namespace rpc
 
 }  // namespace clipper
 

@@ -42,21 +42,22 @@ std::string get_readable_input_type(InputType type) {
   }
   return std::string("Invalid input type");
 }
-//
-//    struct VersionedModelHash {
-//        std::size_t operator()(const VersionedModelId& k) const
-//        {
-//            return std::hash<std::string>()(k.first) ^
-//            (std::hash<std::string>()(k.second) << 1);
-//        }
-//    };
-//
-//    struct VersionedModelEqual {
-//        bool operator()(const Key& lhs, const Key& rhs) const
-//        {
-//            return lhs.first == rhs.first && lhs.second == rhs.second;
-//        }
-//    };
+
+InputType parse_input_type(std::string type_string) {
+  if (type_string == "bytes") {
+    return InputType::Bytes;
+  } else if (type_string == "integers") {
+    return InputType::Ints;
+  } else if (type_string == "floats") {
+    return InputType::Floats;
+  } else if (type_string == "doubles") {
+    return InputType::Doubles;
+  } else if (type_string == "strings") {
+    return InputType::Strings;
+  } else {
+    throw std::invalid_argument(type_string + " is not a valid input string");
+  }
+}
 
 Output::Output(double y_hat, VersionedModelId versioned_model)
     : y_hat_(y_hat), versioned_model_(versioned_model) {}
