@@ -220,7 +220,8 @@ class TaskExecutor {
         long current_time = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::system_clock::now().time_since_epoch()).count();
         for (int batch_num = 0; batch_num < batch_size; ++batch_num) {
-          latency_hist->insert(static_cast<int64_t>(current_time - std::get<0>(keys[batch_num])));
+          long send_time = std::get<0>(keys[batch_num]);
+          latency_hist->insert(static_cast<int64_t>(current_time - send_time));
           cache_.put(
               std::get<1>(keys[batch_num]), std::get<2>(keys[batch_num]),
               Output{deserialized_outputs[batch_num], std::get<1>(keys[batch_num])});
