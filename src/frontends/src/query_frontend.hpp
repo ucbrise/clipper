@@ -20,70 +20,18 @@ using clipper::Response;
 using clipper::FeedbackAck;
 using clipper::VersionedModelId;
 using clipper::InputType;
+using clipper::OutputType;
 using clipper::Input;
 using clipper::Output;
 using clipper::Query;
 using clipper::FeedbackQuery;
+using clipper_json::json_parse_error;
+using clipper_json::json_semantic_error;
+using clipper_json::decode_input;
+using clipper_json::decode_output;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
 namespace query_frontend {
-
-enum class OutputType { Double, Int };
-
-template <typename T>
-std::vector<T> as_vector(ptree const& pt, ptree::key_type const& key) {
-  std::vector<T> r;
-  for (auto& item : pt.get_child(key)) {
-    r.push_back(item.second.get_value<T>());
-  }
-  return r;
-}
-
-std::shared_ptr<Input> decode_input(InputType input_type, ptree& parsed_json) {
-  std::shared_ptr<Input> result;
-  switch (input_type) {
-    case InputType::Doubles: {
-      std::vector<double> inputs = as_vector<double>(parsed_json, "input");
-      return std::make_shared<clipper::DoubleVector>(inputs);
-    }
-    case InputType::Floats: {
-      std::vector<float> inputs = as_vector<float>(parsed_json, "input");
-      return std::make_shared<clipper::FloatVector>(inputs);
-    }
-    case InputType::Ints: {
-      std::vector<int> inputs = as_vector<int>(parsed_json, "input");
-      return std::make_shared<clipper::IntVector>(inputs);
-    }
-    case InputType::Strings: {
-      std::string input_string =
-          parsed_json.get_child("input").get_value<std::string>();
-      return std::make_shared<clipper::SerializableString>(input_string);
-    }
-    case InputType::Bytes: {
-      throw std::invalid_argument("Base64 encoded bytes are not supported yet");
-    }
-    default:
-      throw std::invalid_argument("input_type is not a valid type");
-  }
-}
-
-Output decode_output(OutputType output_type, ptree parsed_json) {
-  std::string model_name = parsed_json.get<std::string>("model_name");
-  int model_version = parsed_json.get<int>("model_version");
-  VersionedModelId versioned_model = std::make_pair(model_name, model_version);
-  switch (output_type) {
-    case OutputType::Double: {
-      double y_hat = parsed_json.get<double>("label");
-      return Output(y_hat, versioned_model);
-    }
-    case OutputType::Int: {
-      double y_hat = parsed_json.get<int>("label");
-      return Output(y_hat, versioned_model);
-    }
-    default:
-      throw std::invalid_argument("output_type is not a valid type");
-  }
-}
 
 void respond_http(std::string content, std::string message,
                   std::shared_ptr<HttpServer::Response> response) {
@@ -154,6 +102,9 @@ class RequestHandler {
     server_.add_endpoint(update_endpoint, "POST", update_fn);
   }
 
+  /* Predict JSON format:
+   * {"uid": <user id>, "input": <query input>}
+   */
   boost::future<Response> decode_and_handle_predict(
       std::string json_content, std::string name,
       std::vector<VersionedModelId> models, std::string policy, long latency,

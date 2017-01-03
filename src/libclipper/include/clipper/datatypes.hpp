@@ -20,6 +20,11 @@ enum class InputType {
   Strings = 4,
 };
 
+enum class OutputType {
+  Double = 0,
+  Int = 1,
+};
+
 enum class RequestType {
   PredictRequest = 0,
   FeedbackRequest = 1,

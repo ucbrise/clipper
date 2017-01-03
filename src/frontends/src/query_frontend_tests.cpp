@@ -9,7 +9,6 @@
 
 using namespace clipper;
 using namespace query_frontend;
-using namespace boost::property_tree;
 
 namespace {
 
