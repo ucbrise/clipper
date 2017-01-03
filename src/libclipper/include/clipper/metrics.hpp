@@ -58,9 +58,6 @@ class Counter : public Metric {
 /**
  * Represents a numerator/denominator ratio, where both
  * numerator and denominator are positive integers.
- *
- * Note: To prevent race conditions, all calls are blocking!
- * TODO(Corey-Zumar): Explore alternative solution to blocking calls
  */
 class RatioCounter : public Metric {
  public:
@@ -84,9 +81,9 @@ class RatioCounter : public Metric {
 
  private:
   const std::string name_;
-  std::mutex ratio_lock_;
-  uint32_t numerator_;
-  uint32_t denominator_;
+  std::shared_timed_mutex ratio_lock_;
+  std::atomic<uint32_t> numerator_;
+  std::atomic<uint32_t> denominator_;
 
 };
 

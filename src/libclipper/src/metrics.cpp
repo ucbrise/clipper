@@ -172,18 +172,22 @@ RatioCounter::RatioCounter(const std::string name, uint32_t num, uint32_t denom)
 }
 
 void RatioCounter::increment(const uint32_t num_incr, const uint32_t denom_incr) {
-  std::lock_guard<std::mutex> guard(ratio_lock_);
-  numerator_ += num_incr;
-  denominator_ += denom_incr;
+  ratio_lock_.lock_shared();
+  numerator_.fetch_add(num_incr, std::memory_order_relaxed);
+  denominator_.fetch_add(denom_incr, std::memory_order_relaxed);
+  ratio_lock_.unlock();
 }
 
 double RatioCounter::get_ratio() {
-  std::lock_guard<std::mutex> guard(ratio_lock_);
-  if (denominator_ == 0) {
+  ratio_lock_.lock();
+  uint32_t num_value = numerator_.load(std::memory_order_seq_cst);
+  uint32_t denom_value = denominator_.load(std::memory_order_seq_cst);
+  ratio_lock_.unlock();
+  if (denom_value == 0) {
     std::cout << "Ratio " << name_ << " has denominator zero!" << std::endl;
     return std::nan("");
   }
-  double ratio = static_cast<double>(numerator_) / static_cast<double>(denominator_);
+  double ratio = static_cast<double>(num_value) / static_cast<double>(denom_value);
   return ratio;
 }
 
@@ -198,9 +202,10 @@ void RatioCounter::report() {
 }
 
 void RatioCounter::clear() {
-  std::lock_guard<std::mutex> guard(ratio_lock_);
-  numerator_ = 0;
-  denominator_ = 0;
+  ratio_lock_.lock_shared();
+  numerator_.store(0, std::memory_order_seq_cst);
+  denominator_.store(0, std::memory_order_seq_cst);
+  ratio_lock_.unlock();
 }
 
 long RealTimeClock::get_time_micros() const {
