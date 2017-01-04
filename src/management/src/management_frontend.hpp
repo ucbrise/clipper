@@ -202,10 +202,10 @@ class RequestHandler {
   }
 
   void start_listening() {
-    HttpServer& s = server_;
-    std::thread server_thread([&s]() { s.start(); });
+    // std::thread server_thread([this]() { server_.start(); });
+    server_.start();
 
-    server_thread.join();
+    // server_thread.join();
   }
 
  private:

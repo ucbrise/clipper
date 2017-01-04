@@ -3,6 +3,20 @@
 set -e
 set -u
 set -o pipefail
+function clean_up {
+    # Perform program exit housekeeping
+    # echo Background jobs: $(jobs -l)
+    # echo
+    # echo Killing jobs
+    kill $(jobs -p) &> /dev/null
+    echo
+    sleep 2
+    # echo Remaining background jobs: $(jobs -l)
+    exit
+}
+
+trap clean_up SIGHUP SIGINT SIGTERM
+
 
 unset CDPATH
 # one-liner from http://stackoverflow.com/a/246128
@@ -27,10 +41,15 @@ redis-server &> /dev/null &
 
 # start the query processor frontend
 ./src/management/management_frontend &
+# MANAGER_PID=$!
+# echo $MANAGER_PID
+# echo $(jobs -p)
 
 # start the query processor frontend
 ./src/frontends/query_frontend
 
+clean_up
+
 # Kills all background jobs.
 # Will kill redis if it was started as part of this script.
-trap 'kill $(jobs -p) &> /dev/null' SIGINT SIGTERM EXIT
+# trap 'kill $(jobs -p) $MANAGER_PID &> /dev/null' SIGINT SIGTERM EXIT

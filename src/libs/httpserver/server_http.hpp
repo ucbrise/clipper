@@ -276,6 +276,7 @@ class ServerBase {
           res_fn) {
     std::unique_lock<std::mutex> l(mu);
     // mu.lock();
+    std::cout << "adding endpoint: " << res_name << std::endl;
     resource[res_name][res_method] = res_fn;
     auto it = opt_resource.end();
     for (auto opt_it = opt_resource.begin(); opt_it != opt_resource.end();

@@ -31,6 +31,16 @@ namespace query_frontend {
 
 enum class OutputType { Double, Int };
 
+OutputType parse_output_type(std::string output_str) {
+  if (output_str == "int") {
+    return OutputType::Int;
+  } else if (output_str == "double") {
+    return OutputType::Double;
+  } else {
+    throw std::invalid_argument(output_str + " is invalid output type.");
+  }
+}
+
 template <typename T>
 std::vector<T> as_vector(ptree const& pt, ptree::key_type const& key) {
   std::vector<T> r;
@@ -96,9 +106,9 @@ void respond_http(std::string content, std::string message,
 template <class QP>
 class RequestHandler {
  public:
-  RequestHandler(int portno, int num_threads,
+  RequestHandler(std::string address, int portno, int num_threads,
                  int redis_port = clipper::REDIS_PORT)
-      : server_(portno, num_threads), query_processor_() {
+      : server_(address, portno, num_threads), query_processor_() {
     while (!redis_connection_.connect(clipper::REDIS_IP, redis_port)) {
       std::cout << "ERROR: Query frontend connecting to Redis" << std::endl;
       std::cout << "Sleeping 1 second..." << std::endl;
@@ -113,15 +123,18 @@ class RequestHandler {
     clipper::redis::subscribe_to_application_changes(
         redis_subscriber_,
         [this](const std::string& key, const std::string& event_type) {
+          std::cout << "APPLICATION EVENT DETECTED. Key: " << key
+                    << ", event_type: " << event_type << std::endl;
           if (event_type == "hset") {
             std::string name = key;
+            std::cout << "New application detected: " << key << std::endl;
             auto app_info =
                 clipper::redis::get_application_by_key(redis_connection_, key);
             std::vector<VersionedModelId> candidate_models =
                 clipper::redis::str_to_models(app_info["candidate_models"]);
             InputType input_type =
                 clipper::parse_input_type(app_info["input_type"]);
-            std::string output_type = app_info["output_type"];
+            OutputType output_type = parse_output_type(app_info["output_type"]);
             std::string policy = app_info["policy"];
             int latency_slo_micros = std::stoi(app_info["latency_slo_micros"]);
             add_application(name, candidate_models, input_type, output_type,
@@ -129,8 +142,8 @@ class RequestHandler {
           }
         });
   }
-  RequestHandler(std::string address, int portno, int num_threads)
-      : server_(address, portno, num_threads), query_processor_() {}
+  // RequestHandler(std::string address, int portno, int num_threads)
+  //     : server_(address, portno, num_threads), query_processor_() {}
 
   void add_application(std::string name, std::vector<VersionedModelId> models,
                        InputType input_type, OutputType output_type,
@@ -220,10 +233,11 @@ class RequestHandler {
   }
 
   void start_listening() {
-    HttpServer& s = server_;
-    std::thread server_thread([&s]() { s.start(); });
+    // HttpServer& s = server_;
+    // std::thread server_thread([&s]() { s.start(); });
+    server_.start();
 
-    server_thread.join();
+    // server_thread.join();
   }
 
   size_t num_applications() {
