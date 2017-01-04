@@ -94,7 +94,7 @@ void RPCService::manage_service(const string address,
   int zmq_connection_id = 0;
   auto redis_connection = std::make_shared<redox::Redox>();
   while (!redis_connection->connect("REDIS_IP", REDIS_PORT)) {
-    std::cout << "ERROR connecting to Redis" << std::endl;
+    std::cout << "ERROR: RPCService connecting to Redis" << std::endl;
     std::cout << "Sleeping 1 second..." << std::endl;
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }

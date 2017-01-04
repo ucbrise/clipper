@@ -12,6 +12,7 @@
 
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
+#include <clipper/redis.hpp>
 
 #include <server_http.hpp>
 
@@ -95,8 +96,39 @@ void respond_http(std::string content, std::string message,
 template <class QP>
 class RequestHandler {
  public:
-  RequestHandler(int portno, int num_threads)
-      : server_(portno, num_threads), query_processor_() {}
+  RequestHandler(int portno, int num_threads,
+                 int redis_port = clipper::REDIS_PORT)
+      : server_(portno, num_threads), query_processor_() {
+    while (!redis_connection_.connect(clipper::REDIS_IP, redis_port)) {
+      std::cout << "ERROR: Query frontend connecting to Redis" << std::endl;
+      std::cout << "Sleeping 1 second..." << std::endl;
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+    while (!redis_subscriber_.connect(clipper::REDIS_IP, redis_port)) {
+      std::cout << "ERROR: Query frontend subscriber connecting to Redis"
+                << std::endl;
+      std::cout << "Sleeping 1 second..." << std::endl;
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+    clipper::redis::subscribe_to_application_changes(
+        redis_subscriber_,
+        [this](const std::string& key, const std::string& event_type) {
+          if (event_type == "hset") {
+            std::string name = key;
+            auto app_info =
+                clipper::redis::get_application_by_key(redis_connection_, key);
+            std::vector<VersionedModelId> candidate_models =
+                clipper::redis::str_to_models(app_info["candidate_models"]);
+            InputType input_type =
+                clipper::parse_input_type(app_info["input_type"]);
+            std::string output_type = app_info["output_type"];
+            std::string policy = app_info["policy"];
+            int latency_slo_micros = std::stoi(app_info["latency_slo_micros"]);
+            add_application(name, candidate_models, input_type, output_type,
+                            policy, latency_slo_micros);
+          }
+        });
+  }
   RequestHandler(std::string address, int portno, int num_threads)
       : server_(address, portno, num_threads), query_processor_() {}
 
@@ -203,6 +235,8 @@ class RequestHandler {
  private:
   HttpServer server_;
   QP query_processor_;
+  redox::Redox redis_connection_;
+  redox::Subscriber redis_subscriber_;
 };
 
 }  // namespace query_frontend

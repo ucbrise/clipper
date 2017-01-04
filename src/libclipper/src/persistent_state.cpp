@@ -29,7 +29,7 @@ bool StateDB::init() {
   Config& conf = get_config();
   while (!redis_connection_.connect(conf.get_redis_address(),
                                     conf.get_redis_port())) {
-    std::cout << "ERROR connecting to Redis" << std::endl;
+    std::cout << "ERROR: StateDB connecting to Redis" << std::endl;
     std::cout << "Sleeping 1 second..." << std::endl;
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }

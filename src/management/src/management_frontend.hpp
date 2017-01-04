@@ -95,12 +95,13 @@ class RequestHandler {
                  int redis_port = clipper::REDIS_PORT)
       : server_(portno, num_threads) {
     while (!redis_connection_.connect(clipper::REDIS_IP, redis_port)) {
-      std::cout << "ERROR connecting to Redis" << std::endl;
+      std::cout << "ERROR: Management connecting to Redis" << std::endl;
       std::cout << "Sleeping 1 second..." << std::endl;
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
     while (!redis_subscriber_.connect(clipper::REDIS_IP, redis_port)) {
-      std::cout << "ERROR connecting to Redis" << std::endl;
+      std::cout << "ERROR: Management subscriber connecting to Redis"
+                << std::endl;
       std::cout << "Sleeping 1 second..." << std::endl;
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }

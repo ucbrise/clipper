@@ -14,7 +14,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $DIR/..
 ./configure --release
 cd release
-make -j2 query_frontend
+make -j2 query_frontend management_frontend
 if ! type "redis-server" &> /dev/null; then
     echo -e "\nERROR:"
     echo -e "\tClipper require Redis to run. Please install redis-server"
@@ -24,6 +24,9 @@ fi
 
 # start Redis if it's not already running
 redis-server &> /dev/null &
+
+# start the query processor frontend
+./src/management/management_frontend &
 
 # start the query processor frontend
 ./src/frontends/query_frontend

@@ -25,8 +25,8 @@ fi
 # start Redis on the test port if it's not already running
 redis-server --port 34256 &> /dev/null &
 
-# ./src/libclipper/libclippertests
-# ./src/frontends/frontendtests
+./src/libclipper/libclippertests
+./src/frontends/frontendtests
 ./src/management/managementtests
 
 # Kills all background jobs.
