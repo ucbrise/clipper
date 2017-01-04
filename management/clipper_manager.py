@@ -46,6 +46,41 @@ class Cluster:
             print("Creating local model repository")
 
 
+    def start_clipper(self, config=None):
+        # conf_loc = "/home/ubuntu/conf.toml"
+        # if config is not None:
+        #     with hide("warnings", "output", "running"):
+        #         put(config, "~/conf.toml")
+        # else:
+            # Use default config
+            # clipper_conf_dict = {
+            #         "name" : "clipper-demo",
+            #         "slo_micros" : 20000,
+            #         "correction_policy" : "logistic_regression",
+            #         "use_lsh" : False,
+            #         "input_type" : "float",
+            #         "input_length" : 784,
+            #         "window_size" : -1,
+            #         "redis_ip" : "redis-clipper",
+            #         "redis_port" : 6379,
+            #         "num_predict_workers" : 1,
+            #         "num_update_workers" : 1,
+            #         "cache_size" : 49999,
+            #         "batching": { "strategy": "aimd", "sample_size": 1000},
+            #         "models": []
+            #         }
+            # with hide("output", "warnings", "running"):
+            #     run("rm ~/conf.toml", warn_only=True)
+            #     append("~/conf.toml", toml.dumps(clipper_conf_dict))
+            # print("starting Clipper with default settings:\n%s" % toml.dumps(clipper_conf_dict))
+        with hide("output"):
+            sudo("docker run -d --network={nw} -p 6379:6379 "
+                    "--cpuset-cpus=\"0\" --name redis-clipper redis:alpine".format(nw=DOCKER_NW))
+
+            sudo("docker run -d --network={nw} -p 1337:1337 "
+                    "--cpuset-cpus=\"{min_core}-{max_core}\" --name clipper "
+                    "dcrankshaw/clipper".format(nw=DOCKER_NW, min_core=1, max_core=4))
+
 
 
     def add_replicas(self, name, version, num_replicas=1):
@@ -182,52 +217,17 @@ class Cluster:
                 }
         self.inform_clipper_new_model(new_model_data)
 
-    def inform_clipper_new_model(self, new_model_data):
-        url = "http://%s:1337/addmodel" % self.host
-        req_json = json.dumps(new_model_data)
-        headers = {'Content-type': 'application/json'}
-        r = requests.post(url, headers=headers, data=req_json)
-
-    def inform_clipper_new_replica(self, new_replica_data):
-        url = "http://%s:1337/addreplica" % self.host
-        req_json = json.dumps(new_replica_data)
-        headers = {'Content-type': 'application/json'}
-        r = requests.post(url, headers=headers, data=req_json)
-
-    def start_clipper(self, config=None):
-        conf_loc = "/home/ubuntu/conf.toml"
-        if config is not None:
-            with hide("warnings", "output", "running"):
-                put(config, "~/conf.toml")
-        else:
-            # Use default config
-            clipper_conf_dict = {
-                    "name" : "clipper-demo",
-                    "slo_micros" : 20000,
-                    "correction_policy" : "logistic_regression",
-                    "use_lsh" : False,
-                    "input_type" : "float",
-                    "input_length" : 784,
-                    "window_size" : -1,
-                    "redis_ip" : "redis-clipper",
-                    "redis_port" : 6379,
-                    "num_predict_workers" : 1,
-                    "num_update_workers" : 1,
-                    "cache_size" : 49999,
-                    "batching": { "strategy": "aimd", "sample_size": 1000},
-                    "models": []
-                    }
-            with hide("output", "warnings", "running"):
-                run("rm ~/conf.toml", warn_only=True)
-                append("~/conf.toml", toml.dumps(clipper_conf_dict))
-            print("starting Clipper with default settings:\n%s" % toml.dumps(clipper_conf_dict))
-        with hide("output"):
-            sudo("docker run -d --network={nw} -p 6379:6379 "
-                    "--cpuset-cpus=\"0\" --name redis-clipper redis:alpine".format(nw=DOCKER_NW))
-
-            sudo("docker run -d --network={nw} -p 1337:1337 "
-                    "--cpuset-cpus=\"{min_core}-{max_core}\" --name clipper "
-                    "-v ~/conf.toml:/tmp/conf.toml dcrankshaw/clipper".format(nw=DOCKER_NW, min_core=1, max_core=4))
+    # def inform_clipper_new_model(self, new_model_data):
+    #     url = "http://%s:1337/addmodel" % self.host
+    #     req_json = json.dumps(new_model_data)
+    #     headers = {'Content-type': 'application/json'}
+    #     r = requests.post(url, headers=headers, data=req_json)
+    #
+    # def inform_clipper_new_replica(self, new_replica_data):
+    #     url = "http://%s:1337/addreplica" % self.host
+    #     req_json = json.dumps(new_replica_data)
+    #     headers = {'Content-type': 'application/json'}
+    #     r = requests.post(url, headers=headers, data=req_json)
 
     def get_metrics(self):
         # for h in self.hosts:
