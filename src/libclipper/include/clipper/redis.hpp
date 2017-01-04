@@ -54,6 +54,10 @@ std::string labels_to_str(const std::vector<std::string>& labels);
 
 std::vector<std::string> str_to_labels(const std::string& label_str);
 
+std::string models_to_str(const std::vector<VersionedModelId>& models);
+
+std::vector<VersionedModelId> str_to_models(const std::string& model_str);
+
 /**
  * Inserts a model into the model table. This will
  * overwrite any existing entry with the same key.
@@ -61,6 +65,7 @@ std::vector<std::string> str_to_labels(const std::string& label_str);
  * \return Returns true if the insert was successful.
  */
 bool insert_model(redox::Redox& redis, const VersionedModelId& model_id,
+                  InputType input_type, std::string output_type,
                   const std::vector<std::string>& labels);
 
 /**
@@ -160,6 +165,57 @@ std::unordered_map<std::string, std::string> get_container_by_key(
     redox::Redox& redis, const std::string& key);
 
 /**
+ * Inserts an application into the application table. This will
+ * overwrite any existing entry with the same key.
+ *
+ * \return Returns true of the insert was successful.
+ */
+bool insert_application(redox::Redox& redis, std::string name,
+                        std::vector<VersionedModelId> models,
+                        InputType input_type, std::string output_type,
+                        std::string policy, long latency_slo_micros);
+
+/**
+ * Deletes a container from the container table if it exists.
+ *
+ * \return Returns true if the container was present in the table
+ * and was successfully deleted. Returns false if there was a problem
+ * or if the application was not in the table.
+ */
+bool delete_application(redox::Redox& redis, std::string name);
+
+/**
+ * Looks up an application based on its name.
+ *
+ * \return Returns a map of application attribute name-value pairs as
+ * strings. Any parsing of the attribute values from their string
+ * format (e.g. to a numerical representation) must be done by the
+ * caller of this function. The set of attributes stored for a
+ * application can be found in the source for `insert_application()`. If the
+ * application was not found, an empty map will be returned.
+ */
+std::unordered_map<std::string, std::string> get_application(
+    redox::Redox& redis, std::string name);
+
+/**
+ * Looks up an entry in the application table by the fully
+ * specified Redis key.
+ *
+ * This function is primarily used for looking up a application
+ * entry after a subscriber detects a change to the application
+ * with the given key.
+ *
+ * \return Returns a map of application attribute name-value pairs as
+ * strings. Any parsing of the attribute values from their string
+ * format (e.g. to a numerical representation) must be done by the
+ * caller of this function. The set of attributes stored for a
+ * application can be found in the source for `insert_application()`. If the
+ * application was not found, an empty map will be returned.
+ */
+std::unordered_map<std::string, std::string> get_application_by_key(
+    redox::Redox& redis, const std::string& key);
+
+/**
 * Subscribes to changes in the model table. The
 * callback is called with the string key of the model
 * that changed and the Redis event type. The key can
@@ -179,6 +235,18 @@ void subscribe_to_model_changes(
  * to differentiate between inserts, updates, and deletes if necessary.
 */
 void subscribe_to_container_changes(
+    redox::Subscriber& subscriber,
+    std::function<void(const std::string&, const std::string&)> callback);
+
+/**
+ * Subscribes to changes in the application table. The
+ * callback is called with the string key of the application
+ * that changed and the Redis event type. The key can
+ * be used to look up the new value. The message type identifies
+ * what type of change was detected. This allows subscribers
+ * to differentiate between inserts, updates, and deletes if necessary.
+*/
+void subscribe_to_application_changes(
     redox::Subscriber& subscriber,
     std::function<void(const std::string&, const std::string&)> callback);
 

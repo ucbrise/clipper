@@ -22,5 +22,3 @@ target_link_libraries(
     gtest
     gmock_main)
 add_dependencies(unittests managementtests)
-
-

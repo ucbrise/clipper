@@ -60,8 +60,16 @@ class TaskExecutor {
     std::cout << "TaskExecutor started" << std::endl;
     rpc_->start("*", RPC_SERVICE_PORT);
     active_ = true;
-    redis_connection_.connect(REDIS_ADDRESS, REDIS_PORT);
-    redis_subscriber_.connect(REDIS_ADDRESS, REDIS_PORT);
+    while (!redis_connection_.connect(REDIS_IP, REDIS_PORT)) {
+      std::cout << "ERROR connecting to Redis" << std::endl;
+      std::cout << "Sleeping 1 second..." << std::endl;
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+    while (!redis_subscriber_.connect(REDIS_IP, REDIS_PORT)) {
+      std::cout << "ERROR connecting to Redis" << std::endl;
+      std::cout << "Sleeping 1 second..." << std::endl;
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
     redis::send_cmd_no_reply<std::string>(
         redis_connection_, {"CONFIG", "SET", "notify-keyspace-events", "AKE"});
     redis::subscribe_to_container_changes(
@@ -131,8 +139,8 @@ class TaskExecutor {
   std::unique_ptr<rpc::RPCService> rpc_;
   Scheduler scheduler_;
   PredictionCache cache_;
-  redox::Subscriber redis_subscriber_;
   redox::Redox redis_connection_;
+  redox::Subscriber redis_subscriber_;
   bool active_ = false;
   std::mutex inflight_messages_mutex_;
   std::unordered_map<

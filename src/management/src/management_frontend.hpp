@@ -17,6 +17,7 @@
 
 #include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/redis.hpp>
 #include <clipper/util.hpp>
 
 using namespace boost::property_tree;
@@ -24,22 +25,25 @@ using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 using clipper::VersionedModelId;
 using clipper::InputType;
 
-// Redis stubs:
-// TODO: Delete once redis-pubsub is committed
-namespace clipper {
-namespace redis {
-
-void insert_application(std::string /*name*/,
-                        std::vector<VersionedModelId> /*models*/,
-                        InputType /*input_type*/, std::string /*output_type*/,
-                        std::string /*policy*/, long /*latency*/) {}
-
-void insert_model(VersionedModelId /*model*/, InputType /*input_type*/,
-                  std::string /*output_type*/,
-                  std::vector<std::string> /*labels*/) {}
-
-}  // namespace redis
-}  // namespace clipper
+// // Redis stubs:
+// // TODO: Delete once redis-pubsub is committed
+// namespace clipper {
+// namespace redis {
+//
+// void insert_application(std::string #<{(|name|)}>#,
+//                         std::vector<VersionedModelId> #<{(|models|)}>#,
+//                         InputType #<{(|input_type|)}>#, std::string
+//                         #<{(|output_type|)}>#,
+//                         std::string #<{(|policy|)}>#, long #<{(|latency|)}>#)
+//                         {}
+//
+// void insert_model(VersionedModelId #<{(|model|)}>#, InputType
+// #<{(|input_type|)}>#,
+//                   std::string #<{(|output_type|)}>#,
+//                   std::vector<std::string> #<{(|labels|)}>#) {}
+//
+// }  // namespace redis
+// }  // namespace clipper
 
 namespace management {
 
@@ -87,8 +91,15 @@ void respond_http(std::string content, std::string message,
 
 class RequestHandler {
  public:
-  RequestHandler(int portno, int num_threads) : server_(portno, num_threads) {
-    while (!redis_connection_.connect(clipper::REDIS_IP, clipper::REDIS_PORT)) {
+  RequestHandler(int portno, int num_threads,
+                 int redis_port = clipper::REDIS_PORT)
+      : server_(portno, num_threads) {
+    while (!redis_connection_.connect(clipper::REDIS_IP, redis_port)) {
+      std::cout << "ERROR connecting to Redis" << std::endl;
+      std::cout << "Sleeping 1 second..." << std::endl;
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+    while (!redis_subscriber_.connect(clipper::REDIS_IP, redis_port)) {
       std::cout << "ERROR connecting to Redis" << std::endl;
       std::cout << "Sleeping 1 second..." << std::endl;
       std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -98,7 +109,7 @@ class RequestHandler {
         [this](std::shared_ptr<HttpServer::Response> response,
                std::shared_ptr<HttpServer::Request> request) {
           try {
-            std::string result = add_application(response, request);
+            std::string result = add_application(request->content.string());
             respond_http(result, "200 OK", response);
           } catch (const ptree_error& e) {
             respond_http(e.what(), "400 Bad Request", response);
@@ -111,7 +122,7 @@ class RequestHandler {
         [this](std::shared_ptr<HttpServer::Response> response,
                std::shared_ptr<HttpServer::Request> request) {
           try {
-            std::string result = add_model(response, request);
+            std::string result = add_model(request->content.string());
             respond_http(result, "200 OK", response);
           } catch (const ptree_error& e) {
             respond_http(e.what(), "400 Bad Request", response);
@@ -135,10 +146,7 @@ class RequestHandler {
    *  "latency_slo_micros" := int
    * }
    */
-  std::string add_application(
-      std::shared_ptr<HttpServer::Response> /*response*/,
-      std::shared_ptr<HttpServer::Request> request) {
-    std::string json = request->content.string();
+  std::string add_application(std::string json) {
     std::istringstream is(json);
     ptree pt;
     read_json(is, pt);
@@ -153,9 +161,9 @@ class RequestHandler {
     }
     std::string selection_policy = pt.get<std::string>("selection_policy");
     int latency_slo_micros = pt.get<int>("latency_slo_micros");
-    clipper::redis::insert_application(app_name, candidate_models, input_type,
-                                       output_type, selection_policy,
-                                       latency_slo_micros);
+    clipper::redis::insert_application(
+        redis_connection_, app_name, candidate_models, input_type, output_type,
+        selection_policy, latency_slo_micros);
 
     return "Success!";
   }
@@ -172,9 +180,7 @@ class RequestHandler {
    *  "output_type" := "double" | "int",
    * }
    */
-  std::string add_model(std::shared_ptr<HttpServer::Response> /*response*/,
-                        std::shared_ptr<HttpServer::Request> request) {
-    std::string json = request->content.string();
+  std::string add_model(std::string json) {
     std::istringstream is(json);
     ptree pt;
     read_json(is, pt);
@@ -188,7 +194,8 @@ class RequestHandler {
     if (!(output_type == "int" || output_type == "double")) {
       throw std::invalid_argument(output_type + " is invalid output type");
     }
-    clipper::redis::insert_model(model_id, input_type, output_type, labels);
+    clipper::redis::insert_model(redis_connection_, model_id, input_type,
+                                 output_type, labels);
 
     return "Success!";
   }
@@ -203,6 +210,7 @@ class RequestHandler {
  private:
   HttpServer server_;
   redox::Redox redis_connection_;
+  redox::Subscriber redis_subscriber_;
 };
 
 }  // namespace management

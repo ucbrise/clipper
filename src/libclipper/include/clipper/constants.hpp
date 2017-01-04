@@ -15,6 +15,8 @@ constexpr int REDIS_CONTAINER_DB_NUM = 3;
 constexpr int REDIS_RESOURCE_DB_NUM = 4;
 constexpr int REDIS_APPLICATION_DB_NUM = 5;
 
+const int REDIS_TEST_PORT = 34256;
+
 constexpr int RPC_SERVICE_PORT = 7000;
 
 // class invalid_config_state_error : public logic_error {

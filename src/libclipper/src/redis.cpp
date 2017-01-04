@@ -20,7 +20,11 @@ using std::unordered_map;
 namespace clipper {
 namespace redis {
 
-const std::string LABEL_DELIMITER = ",";
+const std::string ITEM_DELIMITER = ",";
+
+// used to concatenate multiple parts of an item, such as the
+// name and version of a VersionedModelID
+const std::string ITEM_PART_CONCATENATOR = ":";
 
 std::unordered_map<string, string> parse_redis_map(
     const std::vector<string>& redis_data) {
@@ -73,7 +77,7 @@ vector<string> send_cmd_vec_reply(Redox& redis, vector<string> cmd_vec) {
 string labels_to_str(const vector<string>& labels) {
   std::ostringstream ss;
   for (auto l = labels.begin(); l != labels.end() - 1; ++l) {
-    ss << *l << LABEL_DELIMITER;
+    ss << *l << ITEM_DELIMITER;
   }
   // don't forget to save the last label
   ss << *(labels.end() - 1);
@@ -83,20 +87,62 @@ string labels_to_str(const vector<string>& labels) {
 // String parsing taken from http://stackoverflow.com/a/14267455/814642
 vector<string> str_to_labels(const string& label_str) {
   auto start = 0;
-  auto end = label_str.find(LABEL_DELIMITER);
+  auto end = label_str.find(ITEM_DELIMITER);
   vector<string> labels;
 
   while (end != string::npos) {
     labels.push_back(label_str.substr(start, end - start));
-    start = end + LABEL_DELIMITER.length();
-    end = label_str.find(LABEL_DELIMITER, start);
+    start = end + ITEM_DELIMITER.length();
+    end = label_str.find(ITEM_DELIMITER, start);
   }
   // don't forget to parse the last label
   labels.push_back(label_str.substr(start, end - start));
   return labels;
 }
 
+std::string models_to_str(const std::vector<VersionedModelId>& models) {
+  std::ostringstream ss;
+  for (auto m = models.begin(); m != models.end() - 1; ++m) {
+    ss << m->first << ITEM_PART_CONCATENATOR << m->second << ITEM_DELIMITER;
+  }
+  // don't forget to save the last label
+  ss << (models.end() - 1)->first << ITEM_PART_CONCATENATOR
+     << (models.end() - 1)->second;
+  std::cout << "models_to_str result: " << ss.str() << std::endl;
+  return ss.str();
+}
+
+std::vector<VersionedModelId> str_to_models(const std::string& model_str) {
+  auto start = 0;
+  auto end = model_str.find(ITEM_DELIMITER);
+  vector<VersionedModelId> models;
+
+  while (end != string::npos) {
+    auto split =
+        start +
+        model_str.substr(start, end - start).find(ITEM_PART_CONCATENATOR);
+    std::string model_name = model_str.substr(start, split - start);
+    std::string model_version_str =
+        model_str.substr(split + 1, end - split - 1);
+    int version = std::stoi(model_version_str);
+    models.push_back(std::make_pair(model_name, version));
+    start = end + ITEM_DELIMITER.length();
+    end = model_str.find(ITEM_DELIMITER, start);
+  }
+
+  // don't forget to parse the last model
+  auto split =
+      start + model_str.substr(start, end - start).find(ITEM_PART_CONCATENATOR);
+  std::string model_name = model_str.substr(start, split - start);
+  std::string model_version_str = model_str.substr(split + 1, end - split - 1);
+  int version = std::stoi(model_version_str);
+  models.push_back(std::make_pair(model_name, version));
+
+  return models;
+}
+
 bool insert_model(Redox& redis, const VersionedModelId& model_id,
+                  InputType input_type, std::string output_type,
                   const vector<string>& labels) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
@@ -105,6 +151,8 @@ bool insert_model(Redox& redis, const VersionedModelId& model_id,
                            "model_name",    model_id.first,
                            "model_version", std::to_string(model_id.second),
                            "load",          std::to_string(0.0),
+                           "input_type",    get_readable_input_type(input_type),
+                           "output_type",   output_type,
                            "labels",        labels_to_str(labels)};
     return send_cmd_no_reply<string>(redis, cmd_vec);
   } else {
@@ -201,6 +249,58 @@ unordered_map<string, string> get_container_by_key(Redox& redis,
   }
 }
 
+bool insert_application(redox::Redox& redis, std::string name,
+                        std::vector<VersionedModelId> models,
+                        InputType input_type, std::string output_type,
+                        std::string policy, long latency_slo_micros) {
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_APPLICATION_DB_NUM)})) {
+    vector<string> cmd_vec{"HMSET",
+                           name,
+                           "candidate_models",
+                           models_to_str(models),
+                           "input_type",
+                           get_readable_input_type(input_type),
+                           "output_type",
+                           output_type,
+                           "policy",
+                           policy,
+                           "latency_slo_micros",
+                           std::to_string(latency_slo_micros)};
+    return send_cmd_no_reply<string>(redis, cmd_vec);
+  } else {
+    return false;
+  }
+}
+
+bool delete_application(redox::Redox& redis, std::string name) {
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_APPLICATION_DB_NUM)})) {
+    return send_cmd_no_reply<int>(redis, {"DEL", name});
+  } else {
+    return false;
+  }
+}
+
+std::unordered_map<std::string, std::string> get_application(
+    redox::Redox& redis, std::string name) {
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_APPLICATION_DB_NUM)})) {
+    auto container_data = send_cmd_vec_reply(redis, {"HGETALL", name});
+    return parse_redis_map(container_data);
+  } else {
+    return unordered_map<string, string>{};
+  }
+}
+
+std::unordered_map<std::string, std::string> get_application_by_key(
+    redox::Redox& redis, const std::string& key) {
+  // Applications just use their name as a key.
+  // We keep the get_*_by_key() to preserve the symmetry of the
+  // API.
+  return get_application(redis, key);
+}
+
 void subscribe_to_keyspace_changes(
     int db, Subscriber& subscriber,
     std::function<void(const std::string&, const std::string&)> callback) {
@@ -228,6 +328,13 @@ void subscribe_to_container_changes(
     Subscriber& subscriber,
     std::function<void(const std::string&, const std::string&)> callback) {
   subscribe_to_keyspace_changes(REDIS_CONTAINER_DB_NUM, subscriber,
+                                std::move(callback));
+}
+
+void subscribe_to_application_changes(
+    redox::Subscriber& subscriber,
+    std::function<void(const std::string&, const std::string&)> callback) {
+  subscribe_to_keyspace_changes(REDIS_APPLICATION_DB_NUM, subscriber,
                                 std::move(callback));
 }
 
