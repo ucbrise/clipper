@@ -36,7 +36,7 @@ RPCService::RPCService()
       replica_ids_(std::unordered_map<VersionedModelId, int,
                                       decltype(&versioned_model_hash)>(
           INITIAL_REPLICA_ID_SIZE, &versioned_model_hash)) {
-  msg_queueing_hist = metrics::MetricsRegistry::instance().create_histogram("rpc_request_queueing_delay", 2056);
+  msg_queueing_hist = metrics::MetricsRegistry::instance().create_histogram("rpc_request_queueing_delay_micros", 2056);
 }
 
 RPCService::~RPCService() { stop(); }
@@ -64,9 +64,9 @@ int RPCService::send_message(const vector<vector<uint8_t>> msg,
   }
   int id = message_id_;
   message_id_ += 1;
-  long current_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+  long current_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(
       std::chrono::system_clock::now().time_since_epoch()).count();
-  RPCRequest request(zmq_connection_id, id, std::move(msg), current_time);
+  RPCRequest request(zmq_connection_id, id, std::move(msg), current_time_micros);
   request_queue_->push(request);
   return id;
 }
@@ -132,10 +132,10 @@ void RPCService::send_messages(
     socket_t &socket, shared_ptr<Queue<RPCRequest>> request_queue,
     boost::bimap<int, vector<uint8_t>> &connections) {
   while (request_queue->size() > 0) {
-    long current_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+    long current_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();
     RPCRequest request = request_queue->pop();
-    msg_queueing_hist->insert(std::get<3>(request) - current_time);
+    msg_queueing_hist->insert(std::get<3>(request) - current_time_micros);
     boost::bimap<int, vector<uint8_t>>::left_const_iterator connection =
         connections.left.find(std::get<0>(request));
     if (connection == connections.left.end()) {
