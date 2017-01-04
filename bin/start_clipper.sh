@@ -8,6 +8,7 @@ function clean_up {
     # echo Background jobs: $(jobs -l)
     # echo
     # echo Killing jobs
+    echo Exiting...
     kill $(jobs -p) &> /dev/null
     echo
     sleep 2
