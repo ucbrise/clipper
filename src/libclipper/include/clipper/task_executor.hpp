@@ -141,7 +141,7 @@ class TaskExecutor {
   bool active_ = false;
   std::mutex inflight_messages_mutex_;
   std::unordered_map<
-      int, std::vector<std::tuple<long, VersionedModelId, std::shared_ptr<Input>>>>
+      int, std::vector<std::tuple<const long, VersionedModelId, std::shared_ptr<Input>>>>
       inflight_messages_;
   std::shared_ptr<metrics::Counter> predictions_counter;
   std::shared_ptr<metrics::Meter> throughput_meter;
@@ -182,7 +182,7 @@ class TaskExecutor {
             std::unique_lock<std::mutex> l(inflight_messages_mutex_);
             // std::vector<const std::vector<uint8_t>> serialized_inputs;
 
-            std::vector<std::tuple<long, VersionedModelId, std::shared_ptr<Input>>>
+            std::vector<std::tuple<const long, VersionedModelId, std::shared_ptr<Input>>>
                 cur_batch;
             rpc::PredictionRequest prediction_request(c->input_type_);
             for (auto b : batch) {

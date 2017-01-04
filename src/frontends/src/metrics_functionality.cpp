@@ -12,10 +12,10 @@ void histogram() {
   for(auto entry : arr) {
     histogram->insert(entry);
   }
-  usleep(7000000);
+  usleep(15000000);
   histogram->insert(100);
   histogram->insert(100);
-  usleep(7000000);
+  usleep(15000000);
 }
 
 void counters() {
@@ -27,11 +27,11 @@ void counters() {
   std::shared_ptr<Counter> counter2 = registry.create_counter(std::string("Test Counter2"));
   std::shared_ptr<RatioCounter> ratio_counter2 = registry.create_ratio_counter(std::string("TRC2"));
 
-  usleep(7000000);
+  usleep(15000000);
 
   ratio_counter2->increment(0,1);
 
-  usleep(7000000);
+  usleep(15000000);
 }
 
 int main() {
