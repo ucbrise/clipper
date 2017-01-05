@@ -19,7 +19,7 @@ MODEL_REPO = "/tmp/clipper-models"
 DOCKER_NW = "clipper_nw"
 CLIPPER_METADATA_FILE = "clipper_metadata.json"
 
-aws_cli_config="""
+aws_cli_config = """
 [default]
 region = us-east-1
 aws_access_key_id = {access_key}
@@ -28,6 +28,7 @@ aws_secret_access_key = {secret_key}
 
 
 class Cluster:
+
     def __init__(self, host, user, key_path):
         # global env
         env.key_filename = key_path
@@ -39,53 +40,42 @@ class Cluster:
             print("Checking if Docker running...")
             sudo("docker ps")
             print("Found Docker running")
-            nw_create_command = "docker network create --driver bridge {nw}".format(nw=DOCKER_NW)
+            nw_create_command = "docker network create --driver bridge {nw}".format(
+                nw=DOCKER_NW)
             sudo(nw_create_command, warn_only=True)
             print("Creating internal Docker network")
             run("mkdir -p {model_repo}".format(model_repo=MODEL_REPO))
             print("Creating local model repository")
 
-
     def start_clipper(self, config=None):
-        # conf_loc = "/home/ubuntu/conf.toml"
-        # if config is not None:
-        #     with hide("warnings", "output", "running"):
-        #         put(config, "~/conf.toml")
-        # else:
-            # Use default config
-            # clipper_conf_dict = {
-            #         "name" : "clipper-demo",
-            #         "slo_micros" : 20000,
-            #         "correction_policy" : "logistic_regression",
-            #         "use_lsh" : False,
-            #         "input_type" : "float",
-            #         "input_length" : 784,
-            #         "window_size" : -1,
-            #         "redis_ip" : "redis-clipper",
-            #         "redis_port" : 6379,
-            #         "num_predict_workers" : 1,
-            #         "num_update_workers" : 1,
-            #         "cache_size" : 49999,
-            #         "batching": { "strategy": "aimd", "sample_size": 1000},
-            #         "models": []
-            #         }
-            # with hide("output", "warnings", "running"):
-            #     run("rm ~/conf.toml", warn_only=True)
-            #     append("~/conf.toml", toml.dumps(clipper_conf_dict))
-            # print("starting Clipper with default settings:\n%s" % toml.dumps(clipper_conf_dict))
         with hide("output"):
-            sudo("docker run -d --network={nw} -p 6379:6379 "
-                    "--cpuset-cpus=\"0\" --name redis-clipper redis:alpine".format(nw=DOCKER_NW))
+            redis_ip = "redis_clipper"
+            sudo(
+                "docker run -d --network={nw} -p 6379:6379 "
+                "--cpuset-cpus=\"0\" --name {redis_ip} redis:alpine".format(
+                    nw=DOCKER_NW, redis_ip=redis_ip))
 
-            sudo("docker run -d --network={nw} -p 1337:1337 "
-                    "--cpuset-cpus=\"{min_core}-{max_core}\" --name clipper "
-                    "dcrankshaw/clipper".format(nw=DOCKER_NW, min_core=1, max_core=4))
+            # start query frontend
+            sudo(
+                "docker run -d --network={nw} -p 1337:1337 "
+                "--cpuset-cpus=\"{min_core}-{max_core}\" --name query_frontend "
+                "clipper/query_frontend --redis_ip={redis_ip} --redis_port=6379".format(
+                    nw=DOCKER_NW, min_core=1, max_core=4, redis_ip=redis_ip))
 
-
+            # start management frontend
+            sudo(
+                "docker run -d --network={nw} -p 1337:1337 "
+                "--cpuset-cpus=\"{min_core}-{max_core}\" --name management_frontend "
+                "clipper/management_frontend --redis_ip={redis_ip} --redis_port=6379".format(
+                    nw=DOCKER_NW, min_core=1, max_core=4, redis_ip=redis_ip))
 
     def add_replicas(self, name, version, num_replicas=1):
-        print("Adding {nr} replicas of model: {model}".format(nr=num_replicas, model=name))
-        vol = "{model_repo}/{name}/{version}".format(model_repo=MODEL_REPO, name=name, version=version)
+        print(
+            "Adding {nr} replicas of model: {model}".format(
+                nr=num_replicas,
+                model=name))
+        vol = "{model_repo}/{name}/{version}".format(
+            model_repo=MODEL_REPO, name=name, version=version)
         present = run("stat {vol}".format(vol=vol), warn_only=True)
         if present.return_code == 0:
             # Look up image name
@@ -113,11 +103,15 @@ class Cluster:
             for r in range(next_replica_num, next_replica_num + num_replicas):
                 container_name = "%s_v%d_r%d" % (name, version, r)
                 run_mw_command = "docker run -d --network={nw} --name {name} -v {vol}:/model:ro {image}".format(
-                        name=container_name,
-                        vol=os.path.join(vol, base_name),
-                        nw=DOCKER_NW, image=image_name)
-                sudo("docker stop {name}".format(name=container_name), warn_only=True)
-                sudo("docker rm {name}".format(name=container_name), warn_only=True)
+                    name=container_name, vol=os.path.join(vol, base_name), nw=DOCKER_NW, image=image_name)
+                sudo(
+                    "docker stop {name}".format(
+                        name=container_name),
+                    warn_only=True)
+                sudo(
+                    "docker rm {name}".format(
+                        name=container_name),
+                    warn_only=True)
                 sudo(run_mw_command)
                 addrs.append("{cn}:6001".format(cn=container_name))
 
@@ -128,18 +122,25 @@ class Cluster:
                     }
             self.inform_clipper_new_replica(new_replica_data)
         else:
-            print("{model} version {version} not found!".format(model=name, version=version))
+            print(
+                "{model} version {version} not found!".format(
+                    model=name, version=version))
 
-    def add_local_model(self, name, image_id, container_name, data_path, replicas=1):
+    def add_local_model(
+        self,
+        name,
+        image_id,
+        container_name,
+        data_path,
+     replicas=1):
         subprocess.call("docker save -o /tmp/{cn}.tar {image_id}".format(
             cn=container_name,
             image_id=image_id))
         tar_loc = "/tmp/{cn}.tar".format(cn=container_name)
         put(tar_loc, tar_loc)
         sudo("docker load -i {loc}".format(loc=tar_loc))
-        sudo("docker tag {image_id} {cn}".format(image_id = image_id, cn=cn))
+        sudo("docker tag {image_id} {cn}".format(image_id=image_id, cn=cn))
         self.add_model(name, container_name, data_path, replicas=replicas)
-
 
     def add_sklearn_model(self, name, model, replicas=1):
         if isinstance(model, base.BaseEstimator):
@@ -162,10 +163,10 @@ class Cluster:
         image_name = "dcrankshaw/clipper-spark-mw"
         self.add_model(name, image_name, data_path, replicas=replicas)
 
-
     def add_model(self, name, image_name, data_path, replicas=1):
         version = 1
-        vol = "{model_repo}/{name}/{version}".format(model_repo=MODEL_REPO, name=name, version=version)
+        vol = "{model_repo}/{name}/{version}".format(
+            model_repo=MODEL_REPO, name=name, version=version)
         print(vol)
 
         with hide("warnings", "output", "running"):
@@ -173,18 +174,23 @@ class Cluster:
 
         with cd(vol):
             with hide("warnings", "output", "running"):
-                run("rm {metadata}".format(metadata=CLIPPER_METADATA_FILE), warn_only=True)
+                run("rm {metadata}".format(
+                    metadata=CLIPPER_METADATA_FILE), warn_only=True)
                 append(CLIPPER_METADATA_FILE, json.dumps({
                     "image_name": image_name,
                     "base_name": os.path.basename(data_path),
                     }))
             if data_path.startswith("s3://"):
                 with hide("warnings", "output", "running"):
-                    aws_cli_installed = run("dpkg-query -Wf'${db:Status-abbrev}' awscli 2>/dev/null | grep -q '^i'", warn_only=True).return_code == 0
+                    aws_cli_installed = run(
+                        "dpkg-query -Wf'${db:Status-abbrev}' awscli 2>/dev/null | grep -q '^i'",
+                        warn_only=True).return_code == 0
                     if not aws_cli_installed:
                         sudo("apt-get update -qq")
                         sudo("apt-get install -yqq awscli")
-                    if sudo("stat ~/.aws/config", warn_only=True).return_code != 0:
+                    if sudo(
+                            "stat ~/.aws/config",
+                            warn_only=True).return_code != 0:
                         run("mkdir -p ~/.aws")
                         append("~/.aws/config", aws_cli_config.format(
                             access_key=os.environ["AWS_ACCESS_KEY_ID"],
@@ -205,8 +211,14 @@ class Cluster:
                     nw=DOCKER_NW, image=image_name)
 
             with hide("output", "warnings", "running"):
-                sudo("docker stop {name}".format(name=container_name), warn_only=True)
-                sudo("docker rm {name}".format(name=container_name), warn_only=True)
+                sudo(
+                    "docker stop {name}".format(
+                        name=container_name),
+                    warn_only=True)
+                sudo(
+                    "docker rm {name}".format(
+                        name=container_name),
+                    warn_only=True)
             with hide("output"):
                 sudo(run_mw_command)
             addrs.append("{cn}:6001".format(cn=container_name))
@@ -240,10 +252,10 @@ class Cluster:
             s = r.text
         return s
 
-    def get_correction_model(self, uid):
+    def get_selection_state_model(self, uid):
         # for h in self.hosts:
         url = "http://%s:1337/correctionmodel" % self.host
-        data = { "uid": uid, }
+        data = {"uid": uid, }
         req_json = json.dumps(data)
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
@@ -257,13 +269,8 @@ class Cluster:
         # print(json.dumps(r.json(), indent=4))
         return s
 
-
-
-
     def stop_all(self):
         print("Stopping Clipper and all running models...")
         with hide("output", "warnings", "running"):
             sudo("docker stop $(docker ps -a -q)", warn_only=True)
             sudo("docker rm $(docker ps -a -q)", warn_only=True)
-
-

@@ -11,3 +11,4 @@ RUN apk add --no-cache git bash make boost-dev cmake libev-dev hiredis-dev zerom
 
 ENTRYPOINT ["/clipper/release/src/frontends/query_frontend"]
 
+# vim: set filetype=dockerfile:
