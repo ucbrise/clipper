@@ -40,6 +40,7 @@ fi
 
 # start Redis if it's not already running
 redis-server &> /dev/null &
+sleep 5
 
 # start the query processor frontend
 ./src/management/management_frontend &

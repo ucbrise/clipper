@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
+#include <chrono>
 #include <condition_variable>
 #include <memory>
+#include <thread>
 #include <vector>
 
 #include <clipper/constants.hpp>
@@ -45,6 +47,22 @@ class RedisTest : public ::testing::Test {
     subscriber_->disconnect();
   }
 };
+
+TEST_F(RedisTest, RedisConnectionRetryLoop) {
+  redox::Redox no_connect_redis;
+  int attempts = 0;
+  int max_attempts = 20;
+  while (attempts < max_attempts) {
+    std::cout << "Attempt " << attempts << " to connect" << std::endl;
+    // there's no Redis instance running on port 9999
+    if (no_connect_redis.connect("localhost", 9999)) {
+      break;
+    }
+    attempts += 1;
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+  }
+  ASSERT_EQ(attempts, max_attempts);
+}
 
 TEST_F(RedisTest, InsertModel) {
   std::vector<std::string> labels{"ads", "images", "experimental", "other",
