@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
 
 add_executable(management_frontend src/management_frontend.cpp)
 
-target_link_libraries(management_frontend clipper redox boost httpserver)
+target_link_libraries(management_frontend clipper redox boost httpserver cxxopts)
 
 ##################################
 # Tests for management
