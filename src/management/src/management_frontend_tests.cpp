@@ -22,7 +22,7 @@ namespace {
 class ManagementFrontendTest : public ::testing::Test {
  public:
   ManagementFrontendTest()
-      : rh_(1338, 1, REDIS_TEST_PORT),
+      : rh_(1338, 1),
         redis_(std::make_shared<redox::Redox>()),
         subscriber_(std::make_shared<redox::Subscriber>()) {
     redis_->connect("localhost", REDIS_TEST_PORT);

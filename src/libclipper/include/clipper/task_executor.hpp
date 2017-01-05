@@ -60,12 +60,15 @@ class TaskExecutor {
     std::cout << "TaskExecutor started" << std::endl;
     rpc_->start("*", RPC_SERVICE_PORT);
     active_ = true;
-    while (!redis_connection_.connect(REDIS_IP, REDIS_PORT)) {
+    Config &conf = get_config();
+    while (!redis_connection_.connect(conf.get_redis_address(),
+                                      conf.get_redis_port())) {
       std::cout << "ERROR: TaskExecutor connecting to Redis" << std::endl;
       std::cout << "Sleeping 1 second..." << std::endl;
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
-    while (!redis_subscriber_.connect(REDIS_IP, REDIS_PORT)) {
+    while (!redis_subscriber_.connect(conf.get_redis_address(),
+                                      conf.get_redis_port())) {
       std::cout << "ERROR: TaskExecutor subscriber connecting to Redis"
                 << std::endl;
       std::cout << "Sleeping 1 second..." << std::endl;

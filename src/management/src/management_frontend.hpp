@@ -91,15 +91,16 @@ void respond_http(std::string content, std::string message,
 
 class RequestHandler {
  public:
-  RequestHandler(int portno, int num_threads,
-                 int redis_port = clipper::REDIS_PORT)
-      : server_(portno, num_threads) {
-    while (!redis_connection_.connect(clipper::REDIS_IP, redis_port)) {
+  RequestHandler(int portno, int num_threads) : server_(portno, num_threads) {
+    clipper::Config& conf = clipper::get_config();
+    while (!redis_connection_.connect(conf.get_redis_address(),
+                                      conf.get_redis_port())) {
       std::cout << "ERROR: Management connecting to Redis" << std::endl;
       std::cout << "Sleeping 1 second..." << std::endl;
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
-    while (!redis_subscriber_.connect(clipper::REDIS_IP, redis_port)) {
+    while (!redis_subscriber_.connect(conf.get_redis_address(),
+                                      conf.get_redis_port())) {
       std::cout << "ERROR: Management subscriber connecting to Redis"
                 << std::endl;
       std::cout << "Sleeping 1 second..." << std::endl;
@@ -131,6 +132,11 @@ class RequestHandler {
             respond_http(e.what(), "400 Bad Request", response);
           }
         });
+  }
+
+  ~RequestHandler() {
+    redis_connection_.disconnect();
+    redis_subscriber_.disconnect();
   }
 
   /**

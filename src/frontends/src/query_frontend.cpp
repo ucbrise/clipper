@@ -3,6 +3,7 @@
 
 #include <clipper/constants.hpp>
 #include <clipper/query_processor.hpp>
+
 #include "query_frontend.hpp"
 
 int main(int argc, char* argv[]) {

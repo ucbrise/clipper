@@ -10,6 +10,7 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
 
+#include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
 #include <clipper/redis.hpp>
@@ -106,15 +107,17 @@ void respond_http(std::string content, std::string message,
 template <class QP>
 class RequestHandler {
  public:
-  RequestHandler(std::string address, int portno, int num_threads,
-                 int redis_port = clipper::REDIS_PORT)
+  RequestHandler(std::string address, int portno, int num_threads)
       : server_(address, portno, num_threads), query_processor_() {
-    while (!redis_connection_.connect(clipper::REDIS_IP, redis_port)) {
+    clipper::Config& conf = clipper::get_config();
+    while (!redis_connection_.connect(conf.get_redis_address(),
+                                      conf.get_redis_port())) {
       std::cout << "ERROR: Query frontend connecting to Redis" << std::endl;
       std::cout << "Sleeping 1 second..." << std::endl;
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
-    while (!redis_subscriber_.connect(clipper::REDIS_IP, redis_port)) {
+    while (!redis_subscriber_.connect(conf.get_redis_address(),
+                                      conf.get_redis_port())) {
       std::cout << "ERROR: Query frontend subscriber connecting to Redis"
                 << std::endl;
       std::cout << "Sleeping 1 second..." << std::endl;
@@ -142,8 +145,11 @@ class RequestHandler {
           }
         });
   }
-  // RequestHandler(std::string address, int portno, int num_threads)
-  //     : server_(address, portno, num_threads), query_processor_() {}
+
+  ~RequestHandler() {
+    redis_connection_.disconnect();
+    redis_subscriber_.disconnect();
+  }
 
   void add_application(std::string name, std::vector<VersionedModelId> models,
                        InputType input_type, OutputType output_type,
