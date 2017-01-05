@@ -3,6 +3,7 @@
 set -e
 set -u
 set -o pipefail
+
 function clean_up {
     # Perform program exit housekeeping
     # echo Background jobs: $(jobs -l)
@@ -50,7 +51,3 @@ redis-server &> /dev/null &
 ./src/frontends/query_frontend
 
 clean_up
-
-# Kills all background jobs.
-# Will kill redis if it was started as part of this script.
-# trap 'kill $(jobs -p) $MANAGER_PID &> /dev/null' SIGINT SIGTERM EXIT

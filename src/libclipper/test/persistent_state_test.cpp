@@ -8,8 +8,10 @@ using namespace clipper;
 class StateDBTest : public ::testing::Test {
  public:
   StateDBTest() {
-    get_config().reset();
-    get_config().ready();
+    Config& conf = get_config();
+    conf.reset();
+    conf.set_redis_port(REDIS_TEST_PORT);
+    conf.ready();
   }
 
   StateDB db_;
