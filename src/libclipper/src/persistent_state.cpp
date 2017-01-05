@@ -8,6 +8,7 @@
 #include <clipper/config.hpp>
 #include <clipper/constants.hpp>
 #include <clipper/persistent_state.hpp>
+#include <clipper/redis.hpp>
 
 namespace clipper {
 
@@ -33,16 +34,7 @@ bool StateDB::init() {
     std::cout << "Sleeping 1 second..." << std::endl;
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
-  redox::Command<std::string>& set_table_cmd =
-      redis_connection_.commandSync<std::string>(
-          {"SELECT", std::to_string(REDIS_STATE_DB_NUM)});
-  if (!set_table_cmd.ok()) {
-    std::cerr << "Error selecting state table DB" << std::endl;
-  } else {
-    std::cout << "Success connecting to Redis" << std::endl;
-    initialized_ = true;
-  }
-  set_table_cmd.free();
+  initialized_ = true;
   return initialized_;
 }
 
@@ -59,50 +51,41 @@ boost::optional<std::string> StateDB::get(const StateKey& key) {
     return boost::none;
   }
   std::string redis_key = generate_redis_key(key);
-  redox::Command<std::string>& cmd =
-      redis_connection_.commandSync<std::string>({"GET", redis_key});
-  if (cmd.ok()) {
-    return cmd.reply();
-  } else {
-    if (cmd.status() != redox::Command<std::string>::NIL_REPLY) {
-      std::cerr << "Error looking up state: " << cmd.lastError() << std::endl;
-    }
-    return boost::none;
+  if (redis::send_cmd_no_reply<std::string>(
+          redis_connection_, {"SELECT", std::to_string(REDIS_STATE_DB_NUM)})) {
+    std::vector<std::string> cmd_vec{"GET", redis_key};
+    return redis::send_cmd_with_reply<std::string>(redis_connection_, cmd_vec);
   }
+  return boost::none;
 }
 
 bool StateDB::put(StateKey key, std::string value) {
   if (!initialized_) {
     std::cout << "Cannot put state into uninitialized StateDB" << std::endl;
     return false;
-  } else {
-    std::string redis_key = generate_redis_key(key);
-    redox::Command<std::string>& cmd =
-        redis_connection_.commandSync<std::string>({"SET", redis_key, value});
-    if (!cmd.ok()) {
-      std::cerr << "Error modifying state: " << cmd.lastError() << std::endl;
-      return false;
-    } else {
-      return true;
-    }
   }
+  std::string redis_key = generate_redis_key(key);
+  if (redis::send_cmd_no_reply<std::string>(
+          redis_connection_, {"SELECT", std::to_string(REDIS_STATE_DB_NUM)})) {
+    std::vector<std::string> cmd_vec{"SET", redis_key, value};
+    return redis::send_cmd_no_reply<std::string>(redis_connection_, cmd_vec);
+  }
+  return false;
 }
 
 bool StateDB::remove(StateKey key) {
   if (!initialized_) {
     std::cout << "Cannot delete state from uninitialized StateDB" << std::endl;
     return false;
-  } else {
-    std::string redis_key = generate_redis_key(key);
-    redox::Command<int>& cmd =
-        redis_connection_.commandSync<int>({"DEL", redis_key});
-    if (!cmd.ok()) {
-      std::cerr << "Error deleting key: " << cmd.lastError() << std::endl;
-      return false;
-    } else {
-      return true;
-    }
   }
+
+  std::string redis_key = generate_redis_key(key);
+  if (redis::send_cmd_no_reply<std::string>(
+          redis_connection_, {"SELECT", std::to_string(REDIS_STATE_DB_NUM)})) {
+    std::vector<std::string> cmd_vec{"DEL", redis_key};
+    return redis::send_cmd_no_reply<int>(redis_connection_, cmd_vec);
+  }
+  return false;
 }
 
 int StateDB::num_entries() {
@@ -110,13 +93,16 @@ int StateDB::num_entries() {
     std::cout << "Cannot count entries from uninitialized StateDB" << std::endl;
     return 0;
   }
-  redox::Command<int>& cmd = redis_connection_.commandSync<int>({"DBSIZE"});
-  if (cmd.ok()) {
-    return cmd.reply();
-  } else {
-    std::cerr << "Error looking up state: " << cmd.lastError() << std::endl;
-    return 0;
+  if (redis::send_cmd_no_reply<std::string>(
+          redis_connection_, {"SELECT", std::to_string(REDIS_STATE_DB_NUM)})) {
+    std::vector<std::string> cmd_vec{"DBSIZE"};
+    boost::optional<int> result =
+        redis::send_cmd_with_reply<int>(redis_connection_, cmd_vec);
+    if (result) {
+      return *result;
+    }
   }
+  return 0;
 }
 
 }  // namespace clipper

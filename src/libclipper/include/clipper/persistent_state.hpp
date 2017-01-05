@@ -10,6 +10,7 @@
 #include <boost/optional.hpp>
 #include <redox.hpp>
 
+#include "constants.hpp"
 #include "datatypes.hpp"
 
 namespace clipper {
