@@ -142,7 +142,7 @@ std::vector<VersionedModelId> str_to_models(const std::string& model_str) {
 }
 
 bool insert_model(Redox& redis, const VersionedModelId& model_id,
-                  InputType input_type, std::string output_type,
+                  const InputType& input_type, const std::string& output_type,
                   const vector<string>& labels) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
@@ -194,8 +194,8 @@ unordered_map<string, string> get_model_by_key(Redox& redis,
 }
 
 bool insert_container(Redox& redis, const VersionedModelId& model_id,
-                      int model_replica_id, int zmq_connection_id,
-                      InputType input_type) {
+                      const int model_replica_id, const int zmq_connection_id,
+                      const InputType& input_type) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_CONTAINER_DB_NUM)})) {
     std::string replica_key = gen_model_replica_key(model_id, model_replica_id);
@@ -215,7 +215,7 @@ bool insert_container(Redox& redis, const VersionedModelId& model_id,
 }
 
 bool delete_container(Redox& redis, const VersionedModelId& model_id,
-                      int model_replica_id) {
+                      const int model_replica_id) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_CONTAINER_DB_NUM)})) {
     std::string replica_key = gen_model_replica_key(model_id, model_replica_id);
@@ -227,7 +227,7 @@ bool delete_container(Redox& redis, const VersionedModelId& model_id,
 
 unordered_map<string, string> get_container(Redox& redis,
                                             const VersionedModelId& model_id,
-                                            int model_replica_id) {
+                                            const int model_replica_id) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_CONTAINER_DB_NUM)})) {
     std::string replica_key = gen_model_replica_key(model_id, model_replica_id);
@@ -249,14 +249,16 @@ unordered_map<string, string> get_container_by_key(Redox& redis,
   }
 }
 
-bool insert_application(redox::Redox& redis, std::string name,
-                        std::vector<VersionedModelId> models,
-                        InputType input_type, std::string output_type,
-                        std::string policy, long latency_slo_micros) {
+bool insert_application(redox::Redox& redis, const std::string& appname,
+                        const std::vector<VersionedModelId>& models,
+                        const InputType& input_type,
+                        const std::string& output_type,
+                        const std::string& policy,
+                        const long latency_slo_micros) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_APPLICATION_DB_NUM)})) {
     vector<string> cmd_vec{"HMSET",
-                           name,
+                           appname,
                            "candidate_models",
                            models_to_str(models),
                            "input_type",
@@ -273,20 +275,20 @@ bool insert_application(redox::Redox& redis, std::string name,
   }
 }
 
-bool delete_application(redox::Redox& redis, std::string name) {
+bool delete_application(redox::Redox& redis, const std::string& appname) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_APPLICATION_DB_NUM)})) {
-    return send_cmd_no_reply<int>(redis, {"DEL", name});
+    return send_cmd_no_reply<int>(redis, {"DEL", appname});
   } else {
     return false;
   }
 }
 
 std::unordered_map<std::string, std::string> get_application(
-    redox::Redox& redis, std::string name) {
+    redox::Redox& redis, const std::string& appname) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_APPLICATION_DB_NUM)})) {
-    auto container_data = send_cmd_vec_reply(redis, {"HGETALL", name});
+    auto container_data = send_cmd_vec_reply(redis, {"HGETALL", appname});
     return parse_redis_map(container_data);
   } else {
     return unordered_map<string, string>{};
@@ -295,7 +297,7 @@ std::unordered_map<std::string, std::string> get_application(
 
 std::unordered_map<std::string, std::string> get_application_by_key(
     redox::Redox& redis, const std::string& key) {
-  // Applications just use their name as a key.
+  // Applications just use their appname as a key.
   // We keep the get_*_by_key() to preserve the symmetry of the
   // API.
   return get_application(redis, key);

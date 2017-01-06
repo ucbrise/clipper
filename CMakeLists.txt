@@ -43,6 +43,9 @@ set(CMAKE_C_STANDARD_REQUIRED on)
 # add shared C++ definitions
 add_definitions( -DBOOST_THREAD_VERSION=4)
 
+# set up dummy unittests target
+add_custom_target(unittests)
+
 
 ### Google Test
 # Reference: https://crascit.com/2015/07/25/cmake-gtest/

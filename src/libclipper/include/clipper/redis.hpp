@@ -22,7 +22,8 @@ namespace redis {
  * \return Returns true if the command was successful.
 */
 template <class ReplyT>
-bool send_cmd_no_reply(redox::Redox& redis, std::vector<std::string> cmd_vec) {
+bool send_cmd_no_reply(redox::Redox& redis,
+                       const std::vector<std::string>& cmd_vec) {
   bool ok = true;
   redox::Command<ReplyT>& cmd = redis.commandSync<ReplyT>(cmd_vec);
   if (!cmd.ok()) {
@@ -42,7 +43,7 @@ bool send_cmd_no_reply(redox::Redox& redis, std::vector<std::string> cmd_vec) {
  * Intended for use as a primary key in a database table.
  */
 std::string gen_model_replica_key(const VersionedModelId& key,
-                                  int model_replica_id);
+                                  const int model_replica_id);
 
 /**
  * Generates a unique, human-interpretable key for a versioned model.
@@ -65,7 +66,7 @@ std::vector<VersionedModelId> str_to_models(const std::string& model_str);
  * \return Returns true if the insert was successful.
  */
 bool insert_model(redox::Redox& redis, const VersionedModelId& model_id,
-                  InputType input_type, std::string output_type,
+                  const InputType& input_type, const std::string& output_type,
                   const std::vector<std::string>& labels);
 
 /**
@@ -117,8 +118,8 @@ std::unordered_map<std::string, std::string> get_model_by_key(
  * \return Returns true of the insert was successful.
  */
 bool insert_container(redox::Redox& redis, const VersionedModelId& model_id,
-                      int model_replica_id, int zmq_connection_id,
-                      InputType input_type);
+                      const int model_replica_id, const int zmq_connection_id,
+                      const InputType& input_type);
 
 /**
  * Deletes a container from the container table if it exists.
@@ -128,7 +129,7 @@ bool insert_container(redox::Redox& redis, const VersionedModelId& model_id,
  * or if the container was not in the table.
  */
 bool delete_container(redox::Redox& redis, const VersionedModelId& model_id,
-                      int model_replica_id);
+                      const int model_replica_id);
 
 /**
  * Looks up a container based on its model and replica IDs. This
@@ -144,7 +145,7 @@ bool delete_container(redox::Redox& redis, const VersionedModelId& model_id,
  */
 std::unordered_map<std::string, std::string> get_container(
     redox::Redox& redis, const VersionedModelId& model_id,
-    int model_replica_id);
+    const int model_replica_id);
 
 /**
  * Looks up an entry in the container table by the fully
@@ -170,10 +171,12 @@ std::unordered_map<std::string, std::string> get_container_by_key(
  *
  * \return Returns true of the insert was successful.
  */
-bool insert_application(redox::Redox& redis, std::string name,
-                        std::vector<VersionedModelId> models,
-                        InputType input_type, std::string output_type,
-                        std::string policy, long latency_slo_micros);
+bool insert_application(redox::Redox& redis, const std::string& appname,
+                        const std::vector<VersionedModelId>& models,
+                        const InputType& input_type,
+                        const std::string& output_type,
+                        const std::string& policy,
+                        const long latency_slo_micros);
 
 /**
  * Deletes a container from the container table if it exists.
@@ -182,7 +185,7 @@ bool insert_application(redox::Redox& redis, std::string name,
  * and was successfully deleted. Returns false if there was a problem
  * or if the application was not in the table.
  */
-bool delete_application(redox::Redox& redis, std::string name);
+bool delete_application(redox::Redox& redis, const std::string& appname);
 
 /**
  * Looks up an application based on its name.
@@ -195,7 +198,7 @@ bool delete_application(redox::Redox& redis, std::string name);
  * application was not found, an empty map will be returned.
  */
 std::unordered_map<std::string, std::string> get_application(
-    redox::Redox& redis, std::string name);
+    redox::Redox& redis, const std::string& appname);
 
 /**
  * Looks up an entry in the application table by the fully

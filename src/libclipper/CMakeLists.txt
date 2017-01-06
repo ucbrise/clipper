@@ -32,8 +32,6 @@ export(TARGETS clipper FILE ClipperConfig.cmake)
 
 
 
-# set(GTEST_COMMAND "${CMAKE_CURRENT_BINARY_DIR}/libclippertests")
-add_custom_target(unittests)
 add_executable(libclippertests EXCLUDE_FROM_ALL
     test/test_main.cpp
     test/rpc_service_test.cpp
