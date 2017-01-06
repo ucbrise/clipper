@@ -5,7 +5,7 @@
 
 using namespace clipper;
 
-TEST(BanditPolicy, SerializeDeserializeBanditState) {
+TEST(BanditPolicy, TestSerializeDeserializeBanditState) {
   std::string m1_name = "my_model";
   std::string m2_name = "other_name";
   std::string m3_name = "images_cnn";
@@ -18,4 +18,37 @@ TEST(BanditPolicy, SerializeDeserializeBanditState) {
   EXPECT_EQ(ser_state, expected_ser_state);
   BanditState deser_state = BanditPolicy::deserialize_state(ser_state);
   ASSERT_EQ(test_state, deser_state);
+}
+
+TEST(BanditPolicy, TestBanditPolicyProcessFeedback) {
+  VersionedModelId good_model = std::make_pair("gm", 1);
+  VersionedModelId bad_model = std::make_pair("bm", 1);
+  BanditState state = BanditPolicy::initialize({good_model, bad_model});
+  Feedback f1pos =
+      std::make_pair(std::shared_ptr<Input>(), Output(1.0, good_model));
+
+  Feedback f2pos =
+      std::make_pair(std::shared_ptr<Input>(), Output(1.0, bad_model));
+
+  Feedback f3neg =
+      std::make_pair(std::shared_ptr<Input>(), Output(0.0, good_model));
+
+  // bad model incorrect
+  state = BanditPolicy::process_feedback(
+      state, f1pos, {Output(1.0, good_model), Output(0.0, bad_model)});
+
+  // bad model correct
+  state = BanditPolicy::process_feedback(
+      state, f2pos, {Output(1.0, good_model), Output(1.0, bad_model)});
+
+  // bad model correct
+  state = BanditPolicy::process_feedback(
+      state, f3neg, {Output(0.0, good_model), Output(1.0, bad_model)});
+
+  std::cout << BanditPolicy::serialize_state(state);
+
+  ASSERT_EQ(state[0].first, good_model);
+  ASSERT_EQ(state[1].first, bad_model);
+  ASSERT_GT(state[0].second, state[1].second);
+  ASSERT_FLOAT_EQ(state[0].second + state[1].second, 1.0);
 }

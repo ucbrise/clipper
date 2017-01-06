@@ -17,7 +17,9 @@
 
 #include <clipper/config.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/persistent_state.hpp>
 #include <clipper/redis.hpp>
+#include <clipper/selection_policy.hpp>
 #include <clipper/util.hpp>
 
 using namespace boost::property_tree;
@@ -33,8 +35,8 @@ const std::string ADD_MODEL = ADMIN_PATH + "/add_model$";
 
 // const std::string ADD_CONTAINER = ADMIN_PATH + "/add_container$";
 const std::string GET_METRICS = ADMIN_PATH + "/metrics$";
-const std::string GET_POLICY_STATE = ADMIN_PATH + "/policy_state$";
-const std::string GET_APPLICATIONS = ADMIN_PATH + "/applications$";
+const std::string GET_SELECTION_STATE = ADMIN_PATH + "/get_state$";
+const std::string GET_APPLICATIONS = ADMIN_PATH + "/get_applications$";
 
 template <typename T>
 std::vector<T> as_vector(ptree const& pt, ptree::key_type const& key) {
@@ -43,6 +45,22 @@ std::vector<T> as_vector(ptree const& pt, ptree::key_type const& key) {
     r.push_back(item.second.get_value<T>());
   }
   return r;
+}
+
+template <typename Policy>
+std::string lookup_selection_state(
+    clipper::StateDB& state_db, const std::string& appname, const int uid,
+    const std::vector<VersionedModelId> candidate_models) {
+  auto hashkey = Policy::hash_models(candidate_models);
+  typename Policy::state_type state;
+  std::string serialized_state;
+  if (auto state_opt = state_db.get(clipper::StateKey{appname, uid, hashkey})) {
+    serialized_state = *state_opt;
+    state = Policy::deserialize_state(serialized_state);
+    return Policy::state_debug_string(state);
+  } else {
+    return "State not found";
+  }
 }
 
 /**
@@ -71,7 +89,8 @@ void respond_http(std::string content, std::string message,
 
 class RequestHandler {
  public:
-  RequestHandler(int portno, int num_threads) : server_(portno, num_threads) {
+  RequestHandler(int portno, int num_threads)
+      : server_(portno, num_threads), state_db_{} {
     clipper::Config& conf = clipper::get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
@@ -112,6 +131,19 @@ class RequestHandler {
             respond_http(e.what(), "400 Bad Request", response);
           }
         });
+    server_.add_endpoint(
+        GET_SELECTION_STATE, "POST",
+        [this](std::shared_ptr<HttpServer::Response> response,
+               std::shared_ptr<HttpServer::Request> request) {
+          try {
+            std::string result = get_selection_state(request->content.string());
+            respond_http(result, "200 OK", response);
+          } catch (const ptree_error& e) {
+            respond_http(e.what(), "400 Bad Request", response);
+          } catch (const std::invalid_argument& e) {
+            respond_http(e.what(), "400 Bad Request", response);
+          }
+        });
   }
 
   ~RequestHandler() {
@@ -126,7 +158,8 @@ class RequestHandler {
    * JSON format:
    * {
    *  "name" := string,
-   *  "candidate_models" := [{"model_name" := string, "model_version" := int}],
+   *  "candidate_models" := [{"model_name" := string, "model_version" :=
+   * int}],
    *  "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
    *  "output_type" := "double" | "int",
    *  "selection_policy" := string,
@@ -158,7 +191,8 @@ class RequestHandler {
   }
 
   /**
-   * Creates an endpoint that listens for requests to add new models to Clipper.
+   * Creates an endpoint that listens for requests to add new models to
+   * Clipper.
    *
    * JSON format:
    * {
@@ -167,6 +201,8 @@ class RequestHandler {
    *  "labels" := [string]
    *  "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
    *  "output_type" := "double" | "int",
+   *  "container_name" := string,
+   *  "model_data_path" := string
    * }
    */
   std::string add_model(const std::string& json) {
@@ -183,25 +219,54 @@ class RequestHandler {
     if (!(output_type == "int" || output_type == "double")) {
       throw std::invalid_argument(output_type + " is invalid output type");
     }
+    std::string container_name = pt.get<std::string>("container_name");
+    std::string model_data_path = pt.get<std::string>("model_data_path");
     if (clipper::redis::add_model(redis_connection_, model_id, input_type,
-                                  output_type, labels)) {
+                                  output_type, labels, container_name,
+                                  model_data_path)) {
       return "Success!";
     } else {
       return "Error adding model to Redis.";
     }
   }
 
-  void start_listening() {
-    // std::thread server_thread([this]() { server_.start(); });
-    server_.start();
+  /**
+   * Creates an endpoint that looks up the debug string
+   * for a users selection policy state for an application.
+   *
+   * JSON format:
+   * {
+   *  "app_name" := string,
+   *  "uid" := int,
+   * }
+   */
+  std::string get_selection_state(const std::string& json) {
+    std::istringstream is(json);
+    ptree pt;
+    read_json(is, pt);
 
-    // server_thread.join();
+    std::string app_name = pt.get<std::string>("app_name");
+    int uid = std::stoi(pt.get<std::string>("uid"));
+    auto app_metadata =
+        clipper::redis::get_application(redis_connection_, app_name);
+    std::vector<VersionedModelId> candidate_models =
+        clipper::redis::str_to_models(app_metadata["candidate_models"]);
+    std::string policy = app_metadata["policy"];
+    if (policy == "bandit_policy") {
+      return lookup_selection_state<clipper::BanditPolicy>(
+          state_db_, app_name, uid, candidate_models);
+    } else {
+      return app_name + " does not support looking up selection policy state";
+    }
   }
+
+  void start_listening() { server_.start(); }
 
  private:
   HttpServer server_;
   redox::Redox redis_connection_;
   redox::Subscriber redis_subscriber_;
+  clipper::StateDB state_db_;
 };
 
 }  // namespace management

@@ -3,6 +3,7 @@ from fabric.api import *
 from fabric.colors import green as _green, yellow as _yellow
 from fabric.contrib.console import confirm
 from fabric.contrib.files import append
+from fabric.contrib.project import rsync_project
 from StringIO import StringIO
 import sys
 import os
@@ -12,13 +13,19 @@ import yaml
 import gevent
 import traceback
 import toml
+import pprint
 import subprocess32 as subprocess
 from sklearn import base
 from sklearn.externals import joblib
 
 MODEL_REPO = "/tmp/clipper-models"
 DOCKER_NW = "clipper_nw"
-CLIPPER_METADATA_FILE = "clipper_metadata.json"
+
+REDIS_STATE_DB_NUM = 1
+REDIS_MODEL_DB_NUM = 2
+REDIS_CONTAINER_DB_NUM = 3
+REDIS_RESOURCE_DB_NUM = 4
+REDIS_APPLICATION_DB_NUM = 5
 
 aws_cli_config = """
 [default]
@@ -38,7 +45,7 @@ DOCKER_COMPOSE_DICT = {
                 '--redis_ip=redis',
                 '--redis_port=6379'],
             'depends_on': ['redis'],
-            'image': 'clipper/management_frontend',
+            'image': 'clipper/management_frontend:test',
             'ports': ['1338:1338']},
         'query_frontend': {
             'command': [
@@ -47,7 +54,7 @@ DOCKER_COMPOSE_DICT = {
             'depends_on': [
                 'redis',
                 'mgmt_frontend'],
-            'image': 'clipper/query_frontend',
+            'image': 'clipper/query_frontend:test',
             'ports': [
                 '7000:7000',
                 '1337:1337']},
@@ -68,7 +75,7 @@ class Cluster:
         self.host = host
         # Make sure docker is running on cluster
         with hide("warnings", "output", "running"):
-            print("Checking if Docker running...")
+            print("Checking if Docker is running...")
             sudo("docker ps")
             print("Found Docker running")
             print("Checking if docker-compose is installed...")
@@ -77,7 +84,9 @@ class Cluster:
             if dc_installed.return_code != 0:
                 print("docker-compose not installed on host.")
                 print("attempting to install it")
-                sudo("curl -L https://github.com/docker/compose/releases/download/1.10.0-rc1/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose")
+                sudo("curl -L https://github.com/docker/compose/releases/"
+                     "download/1.10.0-rc1/docker-compose-`uname -s`-`uname -m` "
+                     "> /usr/local/bin/docker-compose")
                 sudo("chmod +x /usr/local/bin/docker-compose")
 
             print("Creating internal Docker network")
@@ -85,25 +94,27 @@ class Cluster:
                 nw=DOCKER_NW)
             sudo(nw_create_command, warn_only=True)
             run("mkdir -p {model_repo}".format(model_repo=MODEL_REPO))
-            print("Creating local model repository")
+            # print("Creating local model repository")
 
     def start_clipper(self):
-        with hide("output"):
+        with hide("output", "warnings", "running"):
+            run("rm -f docker-compose.yml")
             append(
                 "docker-compose.yml",
                 yaml.dump(
                     DOCKER_COMPOSE_DICT,
                     default_flow_style=False))
             sudo("docker-compose up -d query_frontend")
+            print("Clipper is running")
 
     def add_app(
-        self,
-        name,
-        candidate_models,
-        input_type="doubles",
-        output_type="double",
-        selection_policy="bandit_policy",
-        slo_micros=20000):
+            self,
+            name,
+            candidate_models,
+            input_type,
+            output_type="double",
+            selection_policy="bandit_policy",
+            slo_micros=20000):
 
         url = "http://%s:1338/admin/add_app" % self.host
         req_json = json.dumps({
@@ -112,89 +123,61 @@ class Cluster:
             "input_type": input_type,
             "output_type": output_type,
             "selection_policy": selection_policy,
-            "latency_slo_micros": 20000
+            "latency_slo_micros": slo_micros
         })
         headers = {'Content-type': 'application/json'}
-        start = datetime.now()
         r = requests.post(url, headers=headers, data=req_json)
-        end = datetime.now()
-        latency = (end - start).total_seconds() * 1000.0
-        print("'%s', %f ms" % (r.text, latency))
 
-    def add_replicas(self, name, version, num_replicas=1):
-        print(
-            "Adding {nr} replicas of model: {model}".format(
-                nr=num_replicas,
-                model=name))
-        vol = "{model_repo}/{name}/{version}".format(
-            model_repo=MODEL_REPO, name=name, version=version)
-        present = run("stat {vol}".format(vol=vol), warn_only=True)
-        if present.return_code == 0:
-            # Look up image name
-            fd = StringIO()
-            get(os.path.join(vol, CLIPPER_METADATA_FILE), fd)
-            metadata = json.loads(fd.getvalue())
-            image_name = metadata["image_name"]
-            base_name = metadata["base_name"]
+    def get_app_info(self, name):
+        with hide("output", "running"):
+            result = local("redis-cli -h {host} -p 6379 -n {db} hgetall {name}".format(
+                host=self.host, name=name, db=REDIS_APPLICATION_DB_NUM), capture=True)
 
-            # find the max current replica num
-            docker_ps_out = sudo("docker ps")
-            print(docker_ps_out)
-            rs = []
-            nv = "{name}_v{version}".format(name=name, version=version)
-            print("XXXXXXXXXXXXXXXXNAME: %s" % nv)
-            for line in docker_ps_out.split("\n"):
-                line_name = line.split()[-1]
-                print(line_name)
-                if nv in line_name:
-                    rep_num = int(line_name.split("_")[-1].lstrip("r"))
-                    rs.append(rep_num)
-            next_replica_num = max(rs) + 1
-            addrs = []
-            # Add new replicas
-            for r in range(next_replica_num, next_replica_num + num_replicas):
-                container_name = "%s_v%d_r%d" % (name, version, r)
-                run_mw_command = "docker run -d --network={nw} --name {name} -v {vol}:/model:ro {image}".format(
-                    name=container_name, vol=os.path.join(vol, base_name), nw=DOCKER_NW, image=image_name)
-                sudo(
-                    "docker stop {name}".format(
-                        name=container_name),
-                    warn_only=True)
-                sudo(
-                    "docker rm {name}".format(
-                        name=container_name),
-                    warn_only=True)
-                sudo(run_mw_command)
-                addrs.append("{cn}:6001".format(cn=container_name))
+            if len(result.stdout) > 0:
+                splits = result.stdout.split("\n")
+                fmt_result = dict([(splits[i], splits[i+1])
+                                for i in range(0, len(splits), 2)])
+                pp = pprint.PrettyPrinter(indent=2)
+                pp.pprint(fmt_result)
+            else:
+                warn("Application \"%s\" not found" % name)
 
-            new_replica_data = {
-                    "name": name,
-                    "version": version,
-                    "addrs": addrs
-                    }
-            self.inform_clipper_new_replica(new_replica_data)
-        else:
-            print(
-                "{model} version {version} not found!".format(
-                    model=name, version=version))
+    def get_selection_state(self, app_name, uid):
+        url = "http://%s:1338/admin/get_state" % self.host
+        req_json = json.dumps({
+            "app_name": app_name,
+            "uid": uid,
+        })
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
+        return r.text
 
-    def add_local_model(
+    def add_sklearn_model(
         self,
         name,
-        image_id,
+        version,
+        model,
         container_name,
-        data_path,
-     replicas=1):
-        subprocess.call("docker save -o /tmp/{cn}.tar {image_id}".format(
-            cn=container_name,
-            image_id=image_id))
-        tar_loc = "/tmp/{cn}.tar".format(cn=container_name)
-        put(tar_loc, tar_loc)
-        sudo("docker load -i {loc}".format(loc=tar_loc))
-        sudo("docker tag {image_id} {cn}".format(image_id=image_id, cn=cn))
-        self.add_model(name, container_name, data_path, replicas=replicas)
+        labels,
+        input_type,
+     num_containers=1):
+        """
+        Add a Scikit-Learn model to Clipper.
 
-    def add_sklearn_model(self, name, model, replicas=1):
+        Args:
+            name(str):      The name to assign this model.
+            version(int):   The version to assign this model.
+            model(str or BaseEstimator): The trained model to add to Clipper.
+                This can either be the Scikit-Learn trained model object, or
+                a path to a serialized Scikit-Learn model that was serialized
+                using the joblib library. If you provide a path, model should
+                be the path to the directory container all of the *.pkl and *.npy
+                files, not the path to the *.pkl file itself.
+            container_name(str): The Docker container image to use to run this model container.
+            labels(list of str): A set of strings annotating the model
+            num_containers(int optional): The number of replicas of the model to create. You can
+            also create more replicas later.
+        """
         if isinstance(model, base.BaseEstimator):
             fname = name.replace("/", "_")
             pkl_path = '/tmp/%s/%s.pkl' % (fname, fname)
@@ -208,90 +191,220 @@ class Cluster:
         elif isinstance(model, str):
             # assume that model is a model_path
             data_path = model
-        image_name = "dcrankshaw/clipper-sklearn-mw"
-        self.add_model(name, image_name, data_path, replicas=replicas)
+        else:
+            warn("%s is invalid model format" % str(type(model)))
+            return False
+        return self.add_model(
+            name,
+            version,
+            data_path,
+            container_name,
+            labels,
+            input_type,
+            num_containers)
 
-    def add_pyspark_model(self, name, data_path, replicas=1):
-        image_name = "dcrankshaw/clipper-spark-mw"
-        self.add_model(name, image_name, data_path, replicas=replicas)
+    def add_model(
+        self,
+        name,
+        version,
+        model_path,
+        container_name,
+        labels,
+        input_type,
+     num_containers=1):
+        if (not self.put_container_on_host(container_name)):
+            return False
+        print("Container %s available on host" % container_name)
 
-    def add_model(self, name, image_name, data_path, replicas=1):
-        version = 1
+        # Put model parameter data on host
         vol = "{model_repo}/{name}/{version}".format(
             model_repo=MODEL_REPO, name=name, version=version)
         print(vol)
-
         with hide("warnings", "output", "running"):
             run("mkdir -p {vol}".format(vol=vol))
 
         with cd(vol):
             with hide("warnings", "output", "running"):
-                run("rm {metadata}".format(
-                    metadata=CLIPPER_METADATA_FILE), warn_only=True)
-                append(CLIPPER_METADATA_FILE, json.dumps({
-                    "image_name": image_name,
-                    "base_name": os.path.basename(data_path),
-                    }))
-            if data_path.startswith("s3://"):
-                with hide("warnings", "output", "running"):
-                    aws_cli_installed = run(
-                        "dpkg-query -Wf'${db:Status-abbrev}' awscli 2>/dev/null | grep -q '^i'",
-                        warn_only=True).return_code == 0
-                    if not aws_cli_installed:
-                        sudo("apt-get update -qq")
-                        sudo("apt-get install -yqq awscli")
-                    if sudo(
-                            "stat ~/.aws/config",
-                            warn_only=True).return_code != 0:
-                        run("mkdir -p ~/.aws")
-                        append("~/.aws/config", aws_cli_config.format(
-                            access_key=os.environ["AWS_ACCESS_KEY_ID"],
-                            secret_key=os.environ["AWS_SECRET_ACCESS_KEY"]))
+                if model_path.startswith("s3://"):
+                    with hide("warnings", "output", "running"):
+                        aws_cli_installed = run(
+                            "dpkg-query -Wf'${db:Status-abbrev}' awscli 2>/dev/null | grep -q '^i'",
+                            warn_only=True).return_code == 0
+                        if not aws_cli_installed:
+                            sudo("apt-get update -qq")
+                            sudo("apt-get install -yqq awscli")
+                        if sudo(
+                                "stat ~/.aws/config",
+                                warn_only=True).return_code != 0:
+                            run("mkdir -p ~/.aws")
+                            append("~/.aws/config", aws_cli_config.format(
+                                access_key=os.environ["AWS_ACCESS_KEY_ID"],
+                                secret_key=os.environ["AWS_SECRET_ACCESS_KEY"]))
 
-                run("aws s3 cp {data_path} {dl_path} --recursive".format(
-                    data_path=data_path,
-                    dl_path=os.path.join(vol, os.path.basename(data_path))))
-            else:
-                with hide("output", "running"):
-                    put(data_path, ".")
-        addrs = []
-        for r in range(replicas):
-            container_name = "%s_v%d_r%d" % (name, version, r)
-            run_mw_command = "docker run -d --network={nw} --name {name} -v {vol}:/model:ro {image}".format(
-                    name=container_name,
-                    vol=os.path.join(vol, os.path.basename(data_path)),
-                    nw=DOCKER_NW, image=image_name)
+                    run("aws s3 cp {model_path} {dl_path} --recursive".format(
+                            model_path=model_path, dl_path=os.path.join(
+                                vol, os.path.basename(model_path))))
+                else:
+                    with hide("output", "running"):
+                        put(model_path, ".")
 
-            with hide("output", "warnings", "running"):
-                sudo(
-                    "docker stop {name}".format(
-                        name=container_name),
-                    warn_only=True)
-                sudo(
-                    "docker rm {name}".format(
-                        name=container_name),
-                    warn_only=True)
-            with hide("output"):
-                sudo(run_mw_command)
-            addrs.append("{cn}:6001".format(cn=container_name))
-        new_model_data = {
-                "name": name,
-                "version": version,
-                "addrs": addrs
-                }
-        self.inform_clipper_new_model(new_model_data)
+        print("Copied model data to host")
+        if not self.publish_new_model(name, version, labels, input_type,
+                                      container_name,
+                                      os.path.join(vol, os.path.basename(model_path))):
+            return False
+        else:
+            print("Published model to Clipper")
+            # aggregate results of starting all containers
+            with show("running"):
+                return all([self.add_container(name, version)
+                            for r in range(num_containers)])
 
-    # def inform_clipper_new_model(self, new_model_data):
-    #     url = "http://%s:1337/addmodel" % self.host
-    #     req_json = json.dumps(new_model_data)
-    #     headers = {'Content-type': 'application/json'}
-    #     r = requests.post(url, headers=headers, data=req_json)
-    #
-    # def inform_clipper_new_replica(self, new_replica_data):
-    #     url = "http://%s:1337/addreplica" % self.host
-    #     req_json = json.dumps(new_replica_data)
-    #     headers = {'Content-type': 'application/json'}
-    #     r = requests.post(url, headers=headers, data=req_json)
+    def add_container(self, model_name, model_version):
+        """
+        Starts a new container for a model that has already been added to
+        Clipper. This method will fail if you have not already called
+        Cluster.add_model() for the provided name and version.
+        """
+        # Look up model info in Redis
+        model_key = "{mn}:{mv}".format(mn=model_name, mv=model_version)
+        result = local("redis-cli -h {host} -p 6379 -n {db} hgetall {key}".format(
+            host=self.host, key=model_key, db=REDIS_MODEL_DB_NUM), capture=True)
+
+        if "nil" in result.stdout:
+            # Model not found
+            warn(
+                "Trying to add container but model {mn}:{mv} not in "
+                "Redis".format(
+                    mn=model_name,
+                    mv=model_version))
+            return False
+
+        splits = result.stdout.split("\n")
+        model_metadata = dict([(splits[i].strip(),
+                                splits[i + 1].strip())
+                               for i in range(0, len(splits),
+                                              2)])
+        image_name = model_metadata["container_name"]
+        model_data_path = model_metadata["model_data_path"]
+        model_input_type = model_metadata["input_type"]
+
+        # Start container
+        add_container_cmd = (
+            "docker run -d --network={nw} -v {path}:/model:ro "
+            "-e \"CLIPPER_MODEL_NAME={mn}\" -e \"CLIPPER_MODEL_VERSION={mv}\" "
+            "-e \"CLIPPER_IP=query_frontend\" -e \"CLIPPER_INPUT_TYPE={mip}\" "
+            "{image}".format(
+                path=model_data_path,
+                nw=DOCKER_NW,
+                image=image_name,
+                mn=model_name,
+                mv=model_version,
+                mip=model_input_type))
+        result = sudo(add_container_cmd)
+        return result.return_code == 0
+
+    def publish_new_model(
+        self,
+        name,
+        version,
+        labels,
+        input_type,
+        container_name,
+        model_data_path,
+     output_type="double"):
+        url = "http://%s:1338/admin/add_model" % self.host
+        req_json = json.dumps({
+            "model_name": name,
+            "model_version": version,
+            "labels": labels,
+            "input_type": input_type,
+            "output_type": output_type,
+            "container_name": container_name,
+            "model_data_path": model_data_path
+        })
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
+        if r.status_code == requests.codes.ok:
+            return True
+        else:
+            warn("Error publishing model: %s" % r.text)
+            return False
+
+    def put_container_on_host(self, container_name):
+        """
+        Puts the provided container on the host. This method is safe to call
+        multiple times with the same container name. Subsequent calls will
+        detect that the container is already present on the host and do
+        nothing.
+
+        Args:
+            container_name(str): The name of the container. This method will
+            first check the host, then Docker Hub, then the local machine to
+            find the container.
+
+        """
+        with hide("output", "warnings", "running"):
+            # first see if container is already present on host
+            host_result = sudo(
+                "docker images -q {cn}".format(cn=container_name))
+            if len(host_result.stdout) > 0:
+                print("Found %s on host" % container_name)
+                return True
+            # now try to pull from Docker Hub
+            hub_result = sudo("docker pull {cn}".format(cn=container_name),
+                              warn_only=True)
+            if hub_result.return_code == 0:
+                print("Found %s in Docker hub" % container_name)
+                return True
+
+            # assume container_name refers to a local container and
+            # copy it to host
+            local_result = local(
+                "docker images -q {cn}".format(cn=container_name))
+
+            if len(local_result.stdout) > 0:
+                saved_fname = container_name.replace("/", "_")
+                subprocess.call("docker save -o /tmp/{fn}.tar {cn}".format(
+                    fn=saved_fname,
+                    cn=container_name))
+                tar_loc = "/tmp/{fn}.tar".format(fn=saved_fname)
+                put(tar_loc, tar_loc)
+                sudo("docker load -i {loc}".format(loc=tar_loc))
+                # sudo("docker tag {image_id} {cn}".format(
+                #       image_id=image_id, cn=cn))
+                # now check to make sure we can access it
+                host_result = sudo(
+                    "docker images -q {cn}".format(cn=container_name))
+                if len(host_result.stdout) > 0:
+                    print("Successfuly copied %s to host" % container_name)
+                    return True
+                else:
+                    warn(
+                        "Problem copying container %s to host" %
+                        container_name)
+                    return False
+
+            # out of options
+            warn("Could not find %s, please try with a valid "
+                 "container docker image")
+            return False
+
+    def stop_all(self):
+        print("Stopping Clipper and all running models...")
+        with hide("output", "warnings", "running"):
+            sudo("docker-compose stop", warn_only=True)
+            sudo("docker stop $(docker ps -a -q)", warn_only=True)
+            sudo("docker rm $(docker ps -a -q)", warn_only=True)
+
+    def cleanup(self):
+        with hide("output", "warnings", "running"):
+            self.stop_all()
+            run("rm -rf {model_repo}".format(model_repo=MODEL_REPO))
+            sudo("docker rmi --force $(docker images -q)", warn_only=True)
+            sudo("docker network rm clipper_nw", warn_only=True)
+
+############################################################################
 
     def get_metrics(self):
         # for h in self.hosts:
@@ -320,10 +433,3 @@ class Cluster:
         return s
         # print(json.dumps(r.json(), indent=4))
         return s
-
-    def stop_all(self):
-        print("Stopping Clipper and all running models...")
-        with hide("output", "warnings", "running"):
-            sudo("docker-compose stop", warn_only=True)
-            sudo("docker stop $(docker ps -a -q)", warn_only=True)
-            sudo("docker rm $(docker ps -a -q)", warn_only=True)

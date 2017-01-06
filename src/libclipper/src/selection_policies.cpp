@@ -204,14 +204,23 @@ std::vector<PredictTask> BanditPolicy::select_predict_tasks(BanditState state,
   return task_vec;
 }
 
+// expects binary classification models with -1, +1 labels
 Output BanditPolicy::combine_predictions(BanditState state, Query /*query*/,
                                          std::vector<Output> predictions) {
   if (predictions.empty()) {
-    return Output{0.0, std::make_pair("none", 0)};
+    return Output{-1.0, std::make_pair("none", 0)};
   } else {
     float score_sum = 0.0;
     float weight_sum = 0.0;
     for (auto p : predictions) {
+      if (!(p.y_hat_ == -1.0 || p.y_hat_ == 1.0)) {
+        std::stringstream error_str;
+        error_str << "Model " << p.versioned_model_.first << ":"
+                  << p.versioned_model_.first << " predicted label " << p.y_hat_
+                  << ". Only labels of -1.0, 1.0 are supported"
+                  << " by the Bandit selection policy";
+        throw std::invalid_argument(error_str.str());
+      }
       auto cur_model = p.versioned_model_;
       for (auto m : state) {
         if (p.versioned_model_ == m.first) {
@@ -221,8 +230,11 @@ Output BanditPolicy::combine_predictions(BanditState state, Query /*query*/,
         }
       }
     }
-    float score = std::round(score_sum / weight_sum);
-    return Output{score, std::make_pair("all", 0)};
+    float weighted_score = score_sum / weight_sum;
+    float pred_label = weighted_score >= 0.0 ? 1.0 : -1.0;
+
+    // float score = std::round(score_sum / weight_sum);
+    return Output{pred_label, std::make_pair("all", 0)};
   }
 }
 
@@ -330,6 +342,10 @@ BanditState BanditPolicy::deserialize_state(const std::string& state_str) {
   float weight = std::stof(weight_str);
   state.emplace_back(std::make_pair(model_name, version), weight);
   return state;
+}
+
+std::string BanditPolicy::state_debug_string(BanditState state) {
+  return BanditPolicy::serialize_state(state);
 }
 
 }  // namespace clipper

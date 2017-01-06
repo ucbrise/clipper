@@ -165,7 +165,7 @@ class RequestHandler {
         prediction.then([response](boost::future<Response> f) {
           Response r = f.get();
           std::stringstream ss;
-          ss << "qid:" << r.query_id_ << " predict:" << r.output_.y_hat_;
+          ss << "qid:" << r.query_id_ << ", predict:" << r.output_.y_hat_;
           std::string content = ss.str();
           respond_http(content, "200 OK", response);
         });

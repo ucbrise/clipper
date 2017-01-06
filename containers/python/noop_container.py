@@ -44,6 +44,7 @@ if __name__ == "__main__":
     else:
         print("Connecting to Clipper on localhost")
 
+
     port = 7000
     if "CLIPPER_PORT" in os.environ:
         port = int(os.environ["CLIPPER_PORT"])

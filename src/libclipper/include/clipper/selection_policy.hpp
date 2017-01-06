@@ -80,6 +80,13 @@ class SelectionPolicy {
   static State deserialize_state(const std::string& bytes) {
     return Derived::deserialize_state(bytes);
   }
+
+  /**
+   * Human readable debug string for the state
+   */
+  static std::string state_debug_string(const State& state) {
+    return Derived::state_debug_string(state);
+  }
 };
 
 class NewestModelSelectionPolicy
@@ -186,6 +193,8 @@ class BanditPolicy : public SelectionPolicy<BanditPolicy, BanditState> {
   static std::string serialize_state(BanditState state);
 
   static BanditState deserialize_state(const std::string& bytes);
+
+  static std::string state_debug_string(BanditState state);
 };
 }
 

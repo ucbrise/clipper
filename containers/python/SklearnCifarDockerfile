@@ -1,0 +1,9 @@
+FROM clipper/py-rpc
+
+MAINTAINER Dan Crankshaw <dscrankshaw@gmail.com>
+
+COPY sklearn_cifar_container.py /container/
+
+CMD ["python", "/container/sklearn_cifar_container.py"]
+
+# vim: set filetype=dockerfile:
