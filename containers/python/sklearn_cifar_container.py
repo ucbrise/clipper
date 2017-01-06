@@ -5,17 +5,11 @@ import sys
 import numpy as np
 from sklearn.externals import joblib
 
-class SvmContainer(rpc.ModelContainerBase):
+class SklearnCifarContainer(rpc.ModelContainerBase):
     def __init__(self, path):
         self.model = joblib.load(path)
         print("Loaded %s model" % type(self.model), file=sys.stderr)
         self.path = path
-
-    def predict_ints(self, inputs):
-        preds = self.model.predict(inputs)
-        # Change -1 to 0 for binary classification
-        preds[np.where(preds == -1)] = 0.
-        return preds
 
     def predict_floats(self, inputs):
         preds = self.model.predict(inputs)
@@ -42,22 +36,17 @@ if __name__ == "__main__":
     else:
         print("Connecting to Clipper on localhost")
 
-    port = 6001
+    port = 7000
     if "CLIPPER_PORT" in os.environ:
         port = int(os.environ["CLIPPER_PORT"])
     else:
-        print("Connecting to Clipper with default port: 6001")
+        print("Connecting to Clipper with default port: 7000")
 
-    input_type = "doubles"
-    if "CLIPPER_INPUT_TYPE" in os.environ:
-        input_type = os.environ["CLIPPER_INPUT_TYPE"]
-    else:
-        print("Using default input type: doubles")
-
+    input_type = "floats"
     model_path = os.environ["CLIPPER_MODEL_PATH"]
     pkl_names = [l for l in os.listdir(model_path) if os.path.splitext(l)[1] == ".pkl"]
     assert len(pkl_names) == 1
     pkl_path = os.path.join(model_path, pkl_names[0])
     print(pkl_path, file=sys.stderr)
-    model = SvmContainer(pkl_path)
+    model = SklearnCifarContainer(pkl_path)
     rpc.start(model, ip, port, model_name, model_version, input_type)

@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import rpc
 import sys
-from svm_container import SvmContainer
+from sklearn_cifar_container import SklearnCifarContainer
 from sklearn.metrics import accuracy_score
 
 classes = ['airplane', 'automobile', 'bird', 'cat',
@@ -17,16 +17,16 @@ def load_cifar(cifar_location, cifar_filename = "train.data", norm=True):
     df = pd.read_csv(cifar_path, sep=",", header=None)
     data = df.values
     print("Number of image files: %d" % len(data))
-    y = data[:,0]           
-    X = data[:,1:]              
-    Z = X                           
-    if norm:                            
-        mu = np.mean(X,0)                           
-        sigma = np.var(X,0)                                 
+    y = data[:,0]
+    X = data[:,1:]
+    Z = X
+    if norm:
+        mu = np.mean(X,0)
+        sigma = np.var(X,0)
         Z = (X - mu) / np.array([np.sqrt(z) if z > 0 else 1. for z in sigma])
     return (Z, y)
 
-def filter_data(X, y): 
+def filter_data(X, y):
     X_train, y_train = [], []
     for (example, label) in zip(X, y):
         if label == positive_class:
@@ -45,7 +45,7 @@ if __name__ == '__main__':
     assert len(pkl_names) == 1
     pkl_path = os.path.join(model_path, pkl_names[0])
     print(pkl_path)
-    model = SvmContainer(pkl_path)
+    model = SklearnCifarContainer(pkl_path)
     X_test, y_test = load_cifar('data', 'test.data')
     X_test, y_test = filter_data(X_test, y_test)
     y_test[np.where(y_test == -1)] = 0

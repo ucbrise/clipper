@@ -44,7 +44,7 @@ for filename in os.listdir(batches_dir):
         batch_dict = unpickle(file_path)
         test_data = batch_dict['data']
         test_labels = np.array(batch_dict['labels'])
-        
+
 data = np.vstack(data)
 labels = np.hstack(labels)
 
