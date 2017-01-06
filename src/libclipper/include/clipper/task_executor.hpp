@@ -51,7 +51,7 @@ class PredictionCache {
   std::unordered_map<long, CacheEntry> cache_;
 };
 
-template <typename Scheduler>
+template<typename Scheduler>
 class TaskExecutor {
  public:
   ~TaskExecutor() { active_ = false; };
@@ -82,10 +82,10 @@ class TaskExecutor {
           }
 
         });
-    throughput_meter = metrics::MetricsRegistry::instance().create_meter(std::string("model_throughput"));
-    predictions_counter = metrics::MetricsRegistry::instance().create_counter(std::string("num_predictions"));
-    throughput_meter = metrics::MetricsRegistry::instance().create_meter(std::string("prediction_throughput"));
-    latency_hist = metrics::MetricsRegistry::instance().create_histogram(std::string("prediction_latency"), 2056);
+    throughput_meter = metrics::MetricsRegistry::get_metrics().create_meter("model_throughput");
+    predictions_counter = metrics::MetricsRegistry::get_metrics().create_counter("num_predictions");
+    throughput_meter = metrics::MetricsRegistry::get_metrics().create_meter("prediction_throughput");
+    latency_hist = metrics::MetricsRegistry::get_metrics().create_histogram("prediction_latency", "milliseconds", 2056);
     boost::thread(&TaskExecutor::send_messages, this).detach();
     boost::thread(&TaskExecutor::recv_messages, this).detach();
   }

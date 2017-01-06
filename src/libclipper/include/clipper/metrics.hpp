@@ -1,11 +1,12 @@
+#ifndef CLIPPER_METRICS_HPP
+#define CLIPPER_METRICS_HPP
+
 #include <atomic>
 #include <vector>
 #include <mutex>
 #include <shared_mutex>
 #include <string>
-
-#ifndef CLIPPER_METRICS_HPP
-#define CLIPPER_METRICS_HPP
+#include <thread>
 
 namespace clipper {
 
@@ -22,8 +23,18 @@ enum class MetricType {
 
 class Metric {
  public:
+  /**
+   * @return The metric's type (Counter, RatioCounter, Meter, etc...)
+   */
   virtual MetricType type() const = 0;
-  virtual void report() = 0;
+  /**
+   * @return A json-formatted string containing relevant metric
+   * attributes
+   */
+  virtual const std::string report() = 0;
+  /**
+   * Resets all metric attributes to their default values (typically zero)
+   */
   virtual void clear() = 0;
 
 };
@@ -46,7 +57,7 @@ class Counter : public Metric {
 
   // Metric implementation
   MetricType type() const override;
-  void report() override;
+  const std::string report() override;
   void clear() override;
 
  private:
@@ -76,7 +87,7 @@ class RatioCounter : public Metric {
 
   // Metric implementation
   MetricType type() const override;
-  void report() override;
+  const std::string report() override;
   void clear() override;
 
  private:
@@ -97,6 +108,11 @@ class RealTimeClock : public MeterClock {
   long get_time_micros() const override;
 };
 
+/**
+ * A manually adjustable clock used for testing
+ * exponentially weighted moving average (EWMA)
+ * functionality
+ */
 class PresetClock : public MeterClock {
  public:
   long get_time_micros() const override;
@@ -106,25 +122,43 @@ class PresetClock : public MeterClock {
   long time_ = 0;
 };
 
+/// Represents the different load average options for exponentially
+/// weighted moving averages (EWMA) within meters. For a one minute EWMA,
+/// we use the OneMinute load average, etc...
 enum class LoadAverage {
   OneMinute,
   FiveMinute,
   FifteenMinute
 };
 
+/// Represents an exponentially weighted moving average.
+/// Multiple EWMAs are included within a single meter
+/// corresponding to different load averages.
+///
+/// The EWMA is updated using "ticks" at a frequency determined
+/// by a specified tick interval. For a detailed explanation of the update
+/// (tick) procedure and decay mechanisms, see the following:
+/// 1. http://www.teamquest.com/pdfs/whitepaper/ldavg1.pdf
+/// 2. http://www.teamquest.com/pdfs/whitepaper/ldavg2.pdf
+/// 3. http://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average
 class EWMA {
  public:
-  EWMA(long tick_interval, LoadAverage load_average);
+  EWMA(long tick_interval_seconds, LoadAverage load_average);
   void tick();
   void mark_uncounted(uint32_t num);
   void reset();
   double get_rate_seconds();
 
  private:
+  // The time interval between ticks
   const long tick_interval_seconds_;
+  // The exponential decay factor applied to the previous
+  // rate at every tick
   double alpha_;
   double rate_ = -1;
   std::shared_timed_mutex rate_lock_;
+  // The number of new events to be included
+  // in the rate at the next tick
   std::atomic<uint32_t> uncounted_;
 
 };
@@ -173,11 +207,11 @@ class Meter : public Metric {
 
   // Metric implementation
   MetricType type() const override;
-  void report() override;
+  const std::string report() override;
   void clear() override;
 
  private:
-  const std::string unit_ = std::string("events per second");
+  const std::string unit_ = "events per second";
   std::string name_;
   std::shared_ptr<MeterClock> clock_;
   std::atomic<uint32_t> count_;
@@ -227,7 +261,6 @@ class HistogramStats {
                           double p50,
                           double p95,
                           double p99);
-  const std::string to_reportable_string() const;
 
   size_t data_size_ = 0;
   int64_t min_ = 0;
@@ -241,7 +274,7 @@ class HistogramStats {
 
 class Histogram : public Metric {
  public:
-  explicit Histogram(const std::string name, const size_t sample_size);
+  explicit Histogram(const std::string name, const std::string unit, const size_t sample_size);
 
   // Disallow copy and move
   Histogram(Histogram &other) = delete;
@@ -255,21 +288,30 @@ class Histogram : public Metric {
 
   // Metric implementation
   MetricType type() const override;
-  void report() override;
+  const std::string report() override;
   void clear() override;
 
  private:
   std::string name_;
+  std::string unit_;
   ReservoirSampler sampler_;
   std::shared_timed_mutex sampler_lock_;
 
 };
 
+/**
+ * Singleton object that manages creation, logging, and persistence
+ * of system metrics.
+ */
 class MetricsRegistry {
 
  public:
   ~MetricsRegistry();
-  static MetricsRegistry &instance();
+  /**
+   * Obtains an instance of the MetricsRegistry singleton
+   * that can be used to create new metrics
+   */
+  static MetricsRegistry &get_metrics();
 
   /** Creates a Counter with initial value zero */
   std::shared_ptr<Counter> create_counter(const std::string name);
@@ -278,7 +320,7 @@ class MetricsRegistry {
   std::shared_ptr<RatioCounter> create_ratio_counter(const std::string name);
   std::shared_ptr<RatioCounter> create_ratio_counter(const std::string name, const uint32_t num, const uint32_t denom);
   std::shared_ptr<Meter> create_meter(const std::string name);
-  std::shared_ptr<Histogram> create_histogram(const std::string name, const size_t sample_size);
+  std::shared_ptr<Histogram> create_histogram(const std::string name, const std::string unit, const size_t sample_size);
 
  private:
   MetricsRegistry();
@@ -287,12 +329,11 @@ class MetricsRegistry {
   MetricsRegistry(MetricsRegistry &&other) = delete;
   MetricsRegistry &operator=(MetricsRegistry &&other) = delete;
 
-  void manage_metrics(std::shared_ptr<vector<std::shared_ptr<Metric>>> metrics,
-                      std::shared_ptr<std::mutex> metrics_lock,
-                      bool &active);
+  void manage_metrics();
+  std::thread metrics_thread_;
   std::shared_ptr<vector<std::shared_ptr<Metric>>> metrics_;
   std::shared_ptr<std::mutex> metrics_lock_;
-  bool active_ = true;
+  std::atomic_bool active_;
 
 };
 

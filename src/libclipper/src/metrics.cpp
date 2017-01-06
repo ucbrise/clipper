@@ -4,10 +4,14 @@
 #include <mutex>
 #include <iostream>
 #include <numeric>
+#include <thread>
+#include <chrono>
 
 #include <math.h>
 
 #include <boost/thread.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 #include <clipper/metrics.hpp>
 
 namespace clipper {
@@ -52,40 +56,44 @@ void log_metrics_category(MetricType type) {
 
 MetricsRegistry::MetricsRegistry()
     : metrics_(std::make_shared<std::vector<std::shared_ptr<Metric>>>()),
-      metrics_lock_(std::make_shared<std::mutex>()) {
-  boost::thread(boost::bind(&MetricsRegistry::manage_metrics, this, metrics_,
-                            metrics_lock_, boost::ref(active_)))
-      .detach();
+      metrics_lock_(std::make_shared<std::mutex>()),
+      active_(true) {
+  metrics_thread_ = std::thread([this]() {
+    manage_metrics();
+  });
 }
 
 MetricsRegistry::~MetricsRegistry() {
-  active_ = false;
+  // signal metrics thread to shutdown
+  active_.store(false, std::memory_order_seq_cst);
+  // wait for it to finish
+  metrics_thread_.join();
 }
 
-MetricsRegistry &MetricsRegistry::instance() {
+MetricsRegistry &MetricsRegistry::get_metrics() {
+  // References a global singleton MetricsRegistry object.
+  // This object is created if it does not already exist,
+  // and it is automatically memory managed
   static MetricsRegistry instance;
   return instance;
 }
 
-void MetricsRegistry::manage_metrics(std::shared_ptr<std::vector<std::shared_ptr<Metric>>> metrics,
-                                     std::shared_ptr<std::mutex> metrics_lock,
-                                     bool &active) {
-  while (true) {
-    if (!active) {
-      return;
-    }
-    usleep(METRICS_REPORTING_FREQUENCY_MICROS);
-    std::lock_guard<std::mutex> guard(*metrics_lock);
-    std::sort((*metrics).begin(), (*metrics).end(), compare_metrics);
+void MetricsRegistry::manage_metrics() {
+  while (active_.load(std::memory_order_seq_cst)) {
+    std::this_thread::sleep_for(std::chrono::microseconds(METRICS_REPORTING_FREQUENCY_MICROS));
+    std::lock_guard<std::mutex> guard(*metrics_lock_);
+    // Sorts the metrics by MetricType in order to log them by category
+    std::sort((*metrics_).begin(), (*metrics_).end(), compare_metrics);
     MetricType prev_type;
-    for (int i = 0; i < (int) (*metrics).size(); i++) {
-      std::shared_ptr<Metric> metric = (*metrics)[i];
+    for (int i = 0; i < (int) (*metrics_).size(); i++) {
+      std::shared_ptr<Metric> metric = (*metrics_)[i];
       MetricType curr_type = metric->type();
       if (i == 0 || prev_type != curr_type) {
         log_metrics_category(curr_type);
       }
       prev_type = curr_type;
-      metric->report();
+      const std::string report = metric->report();
+      std::cout << report;
       metric->clear();
       std::cout << std::endl;
     }
@@ -121,8 +129,10 @@ std::shared_ptr<Meter> MetricsRegistry::create_meter(const std::string name) {
   return meter;
 }
 
-std::shared_ptr<Histogram> MetricsRegistry::create_histogram(const std::string name, const size_t sample_size) {
-  std::shared_ptr<Histogram> histogram = std::make_shared<Histogram>(name, sample_size);
+std::shared_ptr<Histogram> MetricsRegistry::create_histogram(const std::string name,
+                                                             const std::string unit,
+                                                             const size_t sample_size) {
+  std::shared_ptr<Histogram> histogram = std::make_shared<Histogram>(name, unit, sample_size);
   metrics_->push_back(histogram);
   return histogram;
 }
@@ -152,10 +162,14 @@ MetricType Counter::type() const {
   return MetricType::Counter;
 }
 
-void Counter::report() {
+const std::string Counter::report() {
   int value = count_.load(std::memory_order_seq_cst);
-  std::cout << "name: " << name_ << std::endl;
-  std::cout << "count: " << value << std::endl;
+  boost::property_tree::ptree ptree;
+  ptree.put("name", name_);
+  ptree.put("count", value);
+  std::ostringstream ss;
+  boost::property_tree::write_json(ss, ptree);
+  return ss.str();
 }
 
 void Counter::clear() {
@@ -195,10 +209,14 @@ MetricType RatioCounter::type() const {
   return MetricType::RatioCounter;
 }
 
-void RatioCounter::report() {
+const std::string RatioCounter::report() {
   double ratio = get_ratio();
-  std::cout << "name: " << name_ << std::endl;
-  std::cout << "ratio: " << ratio << std::endl;
+  boost::property_tree::ptree ptree;
+  ptree.put("name", name_);
+  ptree.put("ratio", ratio);
+  std::ostringstream ss;
+  boost::property_tree::write_json(ss, ptree);
+  return ss.str();
 }
 
 void RatioCounter::clear() {
@@ -221,10 +239,10 @@ long PresetClock::get_time_micros() const {
   return time_;
 }
 
-EWMA::EWMA(long tick_interval, LoadAverage load_average)
-    : tick_interval_seconds_(tick_interval), uncounted_(0) {
+EWMA::EWMA(long tick_interval_seconds, LoadAverage load_average)
+    : tick_interval_seconds_(tick_interval_seconds), uncounted_(0) {
   double alpha_exp;
-  double alpha_exp_1 = (static_cast<double>(-1 * tick_interval)) / SECONDS_PER_MINUTE;
+  double alpha_exp_1 = (static_cast<double>(-1 * tick_interval_seconds)) / SECONDS_PER_MINUTE;
   switch (load_average) {
     case LoadAverage::OneMinute:alpha_exp = exp(alpha_exp_1 / ONE_MINUTE);
       break;
@@ -345,13 +363,17 @@ MetricType Meter::type() const {
   return MetricType::Meter;
 }
 
-void Meter::report() {
-  std::cout << "name: " << name_ << std::endl;
-  std::cout << "unit: " << unit_ << std::endl;
-  std::cout << "rate: " << get_rate_seconds() << std::endl;
-  std::cout << "one min rate: " << get_one_minute_rate_seconds() << std::endl;
-  std::cout << "five min rate: " << get_five_minute_rate_seconds() << std::endl;
-  std::cout << "fifteen min rate: " << get_fifteen_minute_rate_seconds() << std::endl;
+const std::string Meter::report() {
+  boost::property_tree::ptree ptree;
+  ptree.put("name", name_);
+  ptree.put("unit", unit_);
+  ptree.put("rate", get_rate_seconds());
+  ptree.put("rate_1min", get_one_minute_rate_seconds());
+  ptree.put("rate_5min", get_five_minute_rate_seconds());
+  ptree.put("rate_15min", get_fifteen_minute_rate_seconds());
+  std::ostringstream ss;
+  boost::property_tree::write_json(ss, ptree);
+  return ss.str();
 }
 
 void Meter::clear() {
@@ -404,22 +426,8 @@ HistogramStats::HistogramStats(size_t data_size,
 
 }
 
-const std::string HistogramStats::to_reportable_string() const {
-  std::ostringstream ss;
-  ss << "{ ";
-  ss << "size: " << data_size_ << ", ";
-  ss << "min: " << min_ << ", ";
-  ss << "max: " << max_ << "," << std::endl;
-  ss << "mean: " << mean_ << ", ";
-  ss << "std_dev: " << std_dev_ << "," << std::endl;
-  ss << "p50: " << p50_ << ", ";
-  ss << "p95: " << p95_ << ", ";
-  ss << "p99: " << p99_;
-  ss << " }";
-  return ss.str();
-}
-
-Histogram::Histogram(const std::string name, const size_t sample_size) : name_(name), sampler_(sample_size) {
+Histogram::Histogram(const std::string name, const std::string unit, const size_t sample_size)
+    : name_(name), unit_(unit), sampler_(sample_size) {
 
 }
 
@@ -437,7 +445,7 @@ double Histogram::percentile(std::vector<int64_t> snapshot, double rank) {
   if (sample_size <= 0) {
     throw std::length_error("Percentile snapshot must have length greater than zero!");
   }
-
+  std::sort(snapshot.begin(), snapshot.end());
   double x;
   double x_condition = (static_cast<double>(1) / static_cast<double>(sample_size + 1));
   if (rank <= x_condition) {
@@ -490,10 +498,22 @@ MetricType Histogram::type() const {
   return MetricType::Histogram;
 }
 
-void Histogram::report() {
+const std::string Histogram::report() {
   HistogramStats stats = compute_stats();
-  std::cout << "name: " << name_ << std::endl;
-  std::cout << stats.to_reportable_string() << std::endl;
+  boost::property_tree::ptree ptree;
+  ptree.put("name", name_);
+  ptree.put("unit", unit_);
+  ptree.put("size", stats.data_size_);
+  ptree.put("min", stats.min_);
+  ptree.put("max", stats.max_);
+  ptree.put("mean", stats.mean_);
+  ptree.put("std_dev", stats.std_dev_);
+  ptree.put("p50", stats.p50_);
+  ptree.put("p95", stats.p95_);
+  ptree.put("p99", stats.p99_);
+  std::ostringstream ss;
+  boost::property_tree::write_json(ss, ptree);
+  return ss.str();
 }
 
 void Histogram::clear() {

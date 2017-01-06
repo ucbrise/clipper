@@ -10,7 +10,7 @@ using namespace clipper::metrics;
 namespace {
 
 TEST(MetricsTests, CounterCorrectness) {
-  Counter counter(std::string("Test Counter"));
+  Counter counter("Test Counter");
   counter.decrement(183);
   ASSERT_EQ(counter.value(), -183);
   counter.increment(7);
@@ -24,7 +24,7 @@ TEST(MetricsTests, CounterCorrectness) {
 }
 
 TEST(MetricsTests, RatioCounterCorrectness) {
-  RatioCounter ratio_counter(std::string("Test Ratio Counter"));
+  RatioCounter ratio_counter("Test Ratio Counter");
   // The ratio's denominator is initialized to zero, so we expect a NaN ratio
   ASSERT_TRUE(std::isnan(ratio_counter.get_ratio()));
   ratio_counter.increment(0,1);
@@ -34,13 +34,13 @@ TEST(MetricsTests, RatioCounterCorrectness) {
   ratio_counter.increment(5, 10);
   ASSERT_LE(std::abs(ratio_counter.get_ratio() - .461), .001);
 
-  RatioCounter ratio_counter_2(std::string("Test Counter"), 17, 1);
+  RatioCounter ratio_counter_2("Test Counter", 17, 1);
   ASSERT_EQ(ratio_counter_2.get_ratio(), 17);
 }
 
 TEST(MetricsTests, MeterCorrectness) {
   std::shared_ptr<PresetClock> clock = std::make_shared<PresetClock>();
-  Meter meter(std::string("Test meter"), std::dynamic_pointer_cast<MeterClock>(clock));
+  Meter meter("Test meter", std::dynamic_pointer_cast<MeterClock>(clock));
   meter.mark(100);
   clock->set_time_micros(100000000);
   ASSERT_DOUBLE_EQ(meter.get_rate_seconds(), 1);
@@ -52,7 +52,7 @@ TEST(MetricsTests, MeterCorrectness) {
 
 TEST(MetricsTests, EWMACorrectness) {
   std::shared_ptr<PresetClock> clock = std::make_shared<PresetClock>();
-  Meter meter(std::string("Test meter"), std::dynamic_pointer_cast<MeterClock>(clock));
+  Meter meter("Test meter", std::dynamic_pointer_cast<MeterClock>(clock));
   meter.mark(1);
   clock->set_time_micros(5000000);
   ASSERT_LE(meter.get_one_minute_rate_seconds() - .2,  .01);
@@ -88,23 +88,15 @@ TEST(MetricsTests, HistogramPercentile) {
   ASSERT_EQ(static_cast<int>(percentile4), 15);
 
   std::vector<int64_t> vec3;
-  bool caught_exception = false;
-  try {
-    Histogram::percentile(vec3, p2);
-  } catch(std::length_error) {
-    caught_exception = true;
-  }
-  // If our attempt to compute a percentile without snapshot data
-  // does not throw an exception, then the test fails
-  if(!caught_exception) {
-    FAIL();
-  }
+  // We expect a length error when computing a percentile
+  // without snapshot data
+  ASSERT_THROW(Histogram::percentile(vec3, p2), std::length_error);
 }
 
 TEST(MetricsTests, HistogramStatsCorrectness) {
   int64_t arr[] = {16, 53, 104, 113, 185, 202};
   size_t sample_size = 6;
-  Histogram histogram(std::string("Test Histogram"), sample_size);
+  Histogram histogram("Test Histogram", "milliseconds", sample_size);
   for(int64_t elem : arr) {
     histogram.insert(elem);
   }
