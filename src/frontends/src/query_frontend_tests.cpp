@@ -6,6 +6,7 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
 
+#include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
 

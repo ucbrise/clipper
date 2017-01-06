@@ -10,8 +10,11 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
 
+#include <clipper/config.hpp>
+#include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
+#include <clipper/redis.hpp>
 
 #include <server_http.hpp>
 
@@ -29,6 +32,16 @@ using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 namespace query_frontend {
 
 enum class OutputType { Double, Int };
+
+OutputType parse_output_type(std::string output_str) {
+  if (output_str == "int") {
+    return OutputType::Int;
+  } else if (output_str == "double") {
+    return OutputType::Double;
+  } else {
+    throw std::invalid_argument(output_str + " is invalid output type.");
+  }
+}
 
 template <typename T>
 std::vector<T> as_vector(ptree const& pt, ptree::key_type const& key) {
@@ -95,10 +108,49 @@ void respond_http(std::string content, std::string message,
 template <class QP>
 class RequestHandler {
  public:
-  RequestHandler(int portno, int num_threads)
-      : server_(portno, num_threads), query_processor_() {}
   RequestHandler(std::string address, int portno, int num_threads)
-      : server_(address, portno, num_threads), query_processor_() {}
+      : server_(address, portno, num_threads), query_processor_() {
+    clipper::Config& conf = clipper::get_config();
+    while (!redis_connection_.connect(conf.get_redis_address(),
+                                      conf.get_redis_port())) {
+      std::cout << "ERROR: Query frontend connecting to Redis" << std::endl;
+      std::cout << "Sleeping 1 second..." << std::endl;
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+    while (!redis_subscriber_.connect(conf.get_redis_address(),
+                                      conf.get_redis_port())) {
+      std::cout << "ERROR: Query frontend subscriber connecting to Redis"
+                << std::endl;
+      std::cout << "Sleeping 1 second..." << std::endl;
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+    clipper::redis::subscribe_to_application_changes(
+        redis_subscriber_,
+        [this](const std::string& key, const std::string& event_type) {
+          std::cout << "APPLICATION EVENT DETECTED. Key: " << key
+                    << ", event_type: " << event_type << std::endl;
+          if (event_type == "hset") {
+            std::string name = key;
+            std::cout << "New application detected: " << key << std::endl;
+            auto app_info =
+                clipper::redis::get_application_by_key(redis_connection_, key);
+            std::vector<VersionedModelId> candidate_models =
+                clipper::redis::str_to_models(app_info["candidate_models"]);
+            InputType input_type =
+                clipper::parse_input_type(app_info["input_type"]);
+            OutputType output_type = parse_output_type(app_info["output_type"]);
+            std::string policy = app_info["policy"];
+            int latency_slo_micros = std::stoi(app_info["latency_slo_micros"]);
+            add_application(name, candidate_models, input_type, output_type,
+                            policy, latency_slo_micros);
+          }
+        });
+  }
+
+  ~RequestHandler() {
+    redis_connection_.disconnect();
+    redis_subscriber_.disconnect();
+  }
 
   void add_application(std::string name, std::vector<VersionedModelId> models,
                        InputType input_type, OutputType output_type,
@@ -150,6 +202,13 @@ class RequestHandler {
     server_.add_endpoint(update_endpoint, "POST", update_fn);
   }
 
+  /*
+   * JSON format for prediction query request:
+   * {
+   *  "uid" := string,
+   *  "input" := [double] | [int] | [string] | [byte] | [float],
+   * }
+   */
   boost::future<Response> decode_and_handle_predict(
       std::string json_content, std::string name,
       std::vector<VersionedModelId> models, std::string policy,
@@ -166,9 +225,15 @@ class RequestHandler {
     return prediction;
   }
 
-  /* Update JSON format:
-   * {"uid": <user id>, "input": <query input>, "label": <query y_hat>,
-   *  "model_name": <model name>, "model_version": <model_version>}
+  /*
+   * JSON format for feedback query request:
+   * {
+   *  "uid" := string,
+   *  "input" := [double] | [int] | [string] | [byte] | [float],
+   *  "model_name" := string,
+   *  "model_version" := int,
+   *  "label" := double
+   * }
    */
   boost::future<FeedbackAck> decode_and_handle_update(
       std::string json_content, std::string name,
@@ -188,10 +253,11 @@ class RequestHandler {
   }
 
   void start_listening() {
-    HttpServer& s = server_;
-    std::thread server_thread([&s]() { s.start(); });
+    // HttpServer& s = server_;
+    // std::thread server_thread([&s]() { s.start(); });
+    server_.start();
 
-    server_thread.join();
+    // server_thread.join();
   }
 
   size_t num_applications() {
@@ -203,6 +269,8 @@ class RequestHandler {
  private:
   HttpServer server_;
   QP query_processor_;
+  redox::Redox redis_connection_;
+  redox::Subscriber redis_subscriber_;
 };
 
 }  // namespace query_frontend

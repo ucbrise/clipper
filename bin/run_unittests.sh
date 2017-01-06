@@ -4,6 +4,21 @@ set -e
 set -u
 set -o pipefail
 
+function clean_up {
+    # Perform program exit housekeeping
+    # echo Background jobs: $(jobs -l)
+    # echo
+    # echo Killing jobs
+    echo Exiting...
+    kill $(jobs -p) &> /dev/null
+    echo
+    sleep 2
+    # echo Remaining background jobs: $(jobs -l)
+    exit
+}
+
+trap clean_up SIGHUP SIGINT SIGTERM
+
 unset CDPATH
 # one-liner from http://stackoverflow.com/a/246128
 # Determines absolute path of the directory containing
@@ -27,7 +42,6 @@ redis-server --port 34256 &> /dev/null &
 
 ./src/libclipper/libclippertests
 ./src/frontends/frontendtests
+./src/management/managementtests
 
-# Kills all background jobs.
-# Will kill redis if it was started as part of this script.
-trap 'kill $(jobs -p) &> /dev/null' EXIT
+clean_up

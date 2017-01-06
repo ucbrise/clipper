@@ -8,7 +8,7 @@
 #include <boost/thread.hpp>
 #include <redox.hpp>
 
-#include <clipper/constants.hpp>
+#include <clipper/config.hpp>
 #include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/redis.hpp>
@@ -60,8 +60,20 @@ class TaskExecutor {
     std::cout << "TaskExecutor started" << std::endl;
     rpc_->start("*", RPC_SERVICE_PORT);
     active_ = true;
-    redis_connection_.connect(REDIS_ADDRESS, REDIS_PORT);
-    redis_subscriber_.connect(REDIS_ADDRESS, REDIS_PORT);
+    Config &conf = get_config();
+    while (!redis_connection_.connect(conf.get_redis_address(),
+                                      conf.get_redis_port())) {
+      std::cout << "ERROR: TaskExecutor connecting to Redis" << std::endl;
+      std::cout << "Sleeping 1 second..." << std::endl;
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+    while (!redis_subscriber_.connect(conf.get_redis_address(),
+                                      conf.get_redis_port())) {
+      std::cout << "ERROR: TaskExecutor subscriber connecting to Redis"
+                << std::endl;
+      std::cout << "Sleeping 1 second..." << std::endl;
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
     redis::send_cmd_no_reply<std::string>(
         redis_connection_, {"CONFIG", "SET", "notify-keyspace-events", "AKE"});
     redis::subscribe_to_container_changes(
@@ -118,21 +130,15 @@ class TaskExecutor {
     return {};
   }
 
-  // void add_model(VersionedModelId model);
-  // void add_container(VersionedModelId model);
-  //
-  // void remove_model(VersionedModelId model);
-
  private:
   // active_containers_ is shared with the RPC service so it can add new
-  // containers
-  // to the collection when they connect
+  // containers to the collection when they connect
   std::shared_ptr<ActiveContainers> active_containers_;
   std::unique_ptr<rpc::RPCService> rpc_;
   Scheduler scheduler_;
   PredictionCache cache_;
-  redox::Subscriber redis_subscriber_;
   redox::Redox redis_connection_;
+  redox::Subscriber redis_subscriber_;
   bool active_ = false;
   std::mutex inflight_messages_mutex_;
   std::unordered_map<
@@ -223,25 +229,6 @@ class PowerTwoChoicesScheduler {
       const PredictTask &task,
       std::vector<std::shared_ptr<ModelContainer>> &containers) const;
 };
-
-// class FakeTaskExecutor : TaskExecutor {
-//  public:
-//   virtual std::vector<boost::future<Output>> schedule_prediction(
-//       const std::vector<PredictTask> t);
-//   virtual std::vector<boost::future<FeedbackAck>> schedule_feedback(
-//       const std::vector<FeedbackTask> t);
-// };
-//
-// class Scheduler {
-//  public:
-//   virtual void add_model() = 0;
-//   virtual void add_replica() = 0;
-//
-//   virtual void remove_model() = 0;
-//   virtual void remove_replica() = 0;
-//
-//   // backpressure??
-// };
 
 }  // namespace clipper
 

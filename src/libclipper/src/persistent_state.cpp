@@ -1,4 +1,3 @@
-
 #include <atomic>
 #include <chrono>
 #include <iostream>
@@ -6,6 +5,7 @@
 #include <thread>
 
 #include <boost/thread.hpp>
+#include <clipper/config.hpp>
 #include <clipper/constants.hpp>
 #include <clipper/persistent_state.hpp>
 
@@ -26,8 +26,10 @@ StateDB::StateDB() : initialized_(false) {
 }
 
 bool StateDB::init() {
-  while (!redis_connection_.connect("localhost", REDIS_PORT)) {
-    std::cout << "ERROR connecting to Redis" << std::endl;
+  Config& conf = get_config();
+  while (!redis_connection_.connect(conf.get_redis_address(),
+                                    conf.get_redis_port())) {
+    std::cout << "ERROR: StateDB connecting to Redis" << std::endl;
     std::cout << "Sleeping 1 second..." << std::endl;
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }

@@ -20,7 +20,11 @@ set_property(TARGET boost PROPERTY
 set_property(TARGET boost PROPERTY
     INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra -Werror -Wno-deprecated-declarations -Wno-unsupported-friend")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra -Werror -Wno-deprecated-declarations -Wno-unsupported-friend")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra -Wno-deprecated-declarations")
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unsupported-friend")
+endif()
 
 # be nice to vim users
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
@@ -38,6 +42,9 @@ set(CMAKE_C_STANDARD_REQUIRED on)
 
 # add shared C++ definitions
 add_definitions( -DBOOST_THREAD_VERSION=4)
+
+# set up dummy unittests target
+add_custom_target(unittests)
 
 
 ### Google Test

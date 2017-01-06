@@ -28,4 +28,16 @@ target_include_directories(httpserver INTERFACE
     $<INSTALL_INTERFACE:httpserver>)
 export(TARGETS httpserver FILE HttpServerConfig.cmake)
 
+##########################################
+### CXXOpts Option Parser
+##########################################
+
+add_library(cxxopts INTERFACE)
+target_include_directories(cxxopts INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/cxxopts>
+    $<INSTALL_INTERFACE:cxxopts>)
+export(TARGETS cxxopts FILE CxxOptsConfig.cmake)
+
+
+
 add_subdirectory(redox)

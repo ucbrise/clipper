@@ -5,7 +5,7 @@
 
 #include <redox.hpp>
 
-#include <clipper/constants.hpp>
+#include <clipper/config.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/redis.hpp>
 #include <clipper/rpc_service.hpp>
@@ -93,8 +93,10 @@ void RPCService::manage_service(const string address,
   zmq::pollitem_t items[] = {{socket, 0, ZMQ_POLLIN, 0}};
   int zmq_connection_id = 0;
   auto redis_connection = std::make_shared<redox::Redox>();
-  while (!redis_connection->connect("localhost", REDIS_PORT)) {
-    std::cout << "ERROR connecting to Redis" << std::endl;
+  Config &conf = get_config();
+  while (!redis_connection->connect(conf.get_redis_address(),
+                                    conf.get_redis_port())) {
+    std::cout << "ERROR: RPCService connecting to Redis" << std::endl;
     std::cout << "Sleeping 1 second..." << std::endl;
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
@@ -199,8 +201,8 @@ void RPCService::receive_message(
     // check if the key is present in the map.
     int cur_replica_id = replica_ids_[model];
     replica_ids_[model] = cur_replica_id + 1;
-    redis::insert_container(*redis_connection, model, cur_replica_id,
-                            zmq_connection_id, input_type);
+    redis::add_container(*redis_connection, model, cur_replica_id,
+                         zmq_connection_id, input_type);
     zmq_connection_id += 1;
   } else {
     message_t msg_id;
