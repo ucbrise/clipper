@@ -8,6 +8,7 @@ import sys
 import os
 import requests
 import json
+import yaml
 import gevent
 import traceback
 import toml
@@ -26,6 +27,36 @@ aws_access_key_id = {access_key}
 aws_secret_access_key = {secret_key}
 """
 
+DOCKER_COMPOSE_DICT = {
+    'networks': {
+        'default': {
+            'external': {
+                'name': DOCKER_NW}}},
+    'services': {
+        'mgmt_frontend': {
+            'command': [
+                '--redis_ip=redis',
+                '--redis_port=6379'],
+            'depends_on': ['redis'],
+            'image': 'clipper/management_frontend',
+            'ports': ['1338:1338']},
+        'query_frontend': {
+            'command': [
+                '--redis_ip=redis',
+                '--redis_port=6379'],
+            'depends_on': [
+                'redis',
+                'mgmt_frontend'],
+            'image': 'clipper/query_frontend',
+            'ports': [
+                '7000:7000',
+                '1337:1337']},
+        'redis': {
+            'image': 'redis:alpine',
+            'ports': ['6379:6379']}},
+    'version': '2'
+}
+
 
 class Cluster:
 
@@ -40,34 +71,55 @@ class Cluster:
             print("Checking if Docker running...")
             sudo("docker ps")
             print("Found Docker running")
+            print("Checking if docker-compose is installed...")
+            dc_installed = sudo("docker-compose --version", warn_only=True)
+            print("Found docker-compose installed")
+            if dc_installed.return_code != 0:
+                print("docker-compose not installed on host.")
+                print("attempting to install it")
+                sudo("curl -L https://github.com/docker/compose/releases/download/1.10.0-rc1/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose")
+                sudo("chmod +x /usr/local/bin/docker-compose")
+
+            print("Creating internal Docker network")
             nw_create_command = "docker network create --driver bridge {nw}".format(
                 nw=DOCKER_NW)
             sudo(nw_create_command, warn_only=True)
-            print("Creating internal Docker network")
             run("mkdir -p {model_repo}".format(model_repo=MODEL_REPO))
             print("Creating local model repository")
 
-    def start_clipper(self, config=None):
+    def start_clipper(self):
         with hide("output"):
-            redis_ip = "redis_clipper"
-            sudo(
-                "docker run -d --network={nw} -p 6379:6379 "
-                "--cpuset-cpus=\"0\" --name {redis_ip} redis:alpine".format(
-                    nw=DOCKER_NW, redis_ip=redis_ip))
+            append(
+                "docker-compose.yml",
+                yaml.dump(
+                    DOCKER_COMPOSE_DICT,
+                    default_flow_style=False))
+            sudo("docker-compose up -d query_frontend")
 
-            # start query frontend
-            sudo(
-                "docker run -d --network={nw} -p 1337:1337 "
-                "--cpuset-cpus=\"{min_core}-{max_core}\" --name query_frontend "
-                "clipper/query_frontend --redis_ip={redis_ip} --redis_port=6379".format(
-                    nw=DOCKER_NW, min_core=1, max_core=4, redis_ip=redis_ip))
+    def add_app(
+        self,
+        name,
+        candidate_models,
+        input_type="doubles",
+        output_type="double",
+        selection_policy="bandit_policy",
+        slo_micros=20000):
 
-            # start management frontend
-            sudo(
-                "docker run -d --network={nw} -p 1337:1337 "
-                "--cpuset-cpus=\"{min_core}-{max_core}\" --name management_frontend "
-                "clipper/management_frontend --redis_ip={redis_ip} --redis_port=6379".format(
-                    nw=DOCKER_NW, min_core=1, max_core=4, redis_ip=redis_ip))
+        url = "http://%s:1338/admin/add_app" % self.host
+        req_json = json.dumps({
+            "name": name,
+            "candidate_models": candidate_models,
+            "input_type": input_type,
+            "output_type": output_type,
+            "selection_policy": selection_policy,
+            "latency_slo_micros": 20000
+        })
+        headers = {'Content-type': 'application/json'}
+        start = datetime.now()
+        r = requests.post(url, headers=headers, data=req_json)
+        end = datetime.now()
+        latency = (end - start).total_seconds() * 1000.0
+        print("'%s', %f ms" % (r.text, latency))
 
     def add_replicas(self, name, version, num_replicas=1):
         print(
@@ -272,5 +324,6 @@ class Cluster:
     def stop_all(self):
         print("Stopping Clipper and all running models...")
         with hide("output", "warnings", "running"):
+            sudo("docker-compose stop", warn_only=True)
             sudo("docker stop $(docker ps -a -q)", warn_only=True)
             sudo("docker rm $(docker ps -a -q)", warn_only=True)

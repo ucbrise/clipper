@@ -152,6 +152,41 @@ class SimplePolicy : public SelectionPolicy<SimplePolicy, SimpleState> {
 
   static SimpleState deserialize_state(const std::string& bytes);
 };
+
+using BanditState = std::vector<std::pair<VersionedModelId, float>>;
+
+class BanditPolicy : public SelectionPolicy<BanditPolicy, BanditState> {
+ public:
+  typedef BanditState state_type;
+
+  BanditPolicy() = delete;
+  ~BanditPolicy() = delete;
+  static BanditState initialize(
+      const std::vector<VersionedModelId>& candidate_models);
+
+  static BanditState add_models(BanditState state,
+                                std::vector<VersionedModelId> new_models);
+
+  static long hash_models(
+      const std::vector<VersionedModelId>& candidate_models);
+
+  static std::vector<PredictTask> select_predict_tasks(BanditState state,
+                                                       Query query,
+                                                       long query_id);
+
+  static Output combine_predictions(BanditState state, Query query,
+                                    std::vector<Output> predictions);
+
+  static std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
+  select_feedback_tasks(BanditState state, FeedbackQuery query, long query_id);
+
+  static BanditState process_feedback(BanditState state, Feedback feedback,
+                                      std::vector<Output> predictions);
+
+  static std::string serialize_state(BanditState state);
+
+  static BanditState deserialize_state(const std::string& bytes);
+};
 }
 
 #endif  // CLIPPER_LIB_SELECTION_POLICY_H

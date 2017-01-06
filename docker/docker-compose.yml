@@ -28,4 +28,3 @@ services:
     command: 
       - "--redis_ip=redis"
       - "--redis_port=6379"
-

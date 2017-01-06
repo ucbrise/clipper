@@ -20,12 +20,6 @@ using std::unordered_map;
 namespace clipper {
 namespace redis {
 
-const std::string ITEM_DELIMITER = ",";
-
-// used to concatenate multiple parts of an item, such as the
-// name and version of a VersionedModelID
-const std::string ITEM_PART_CONCATENATOR = ":";
-
 std::unordered_map<string, string> parse_redis_map(
     const std::vector<string>& redis_data) {
   std::unordered_map<string, string> parsed_map;
