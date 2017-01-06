@@ -58,22 +58,6 @@ std::string gen_versioned_model_key(const VersionedModelId& key) {
   return ss.str();
 }
 
-// vector<string> send_cmd_vec_reply(Redox& redis, vector<string> cmd_vec) {
-//   vector<string> v;
-//   redox::Command<vector<string>>& cmd =
-//       redis.commandSync<vector<string>>(cmd_vec);
-//   if (!cmd.ok()) {
-//     std::cout << "Error with command \"" << redis.vecToStr(cmd_vec)
-//               << "\": " << cmd.lastError() << std::endl;
-//   } else {
-//     std::cout << "Successfully issued command \"" << redis.vecToStr(cmd_vec)
-//               << "\": " << std::endl;
-//     v = cmd.reply();
-//   }
-//   cmd.free();
-//   return v;
-// }
-
 string labels_to_str(const vector<string>& labels) {
   std::ostringstream ss;
   for (auto l = labels.begin(); l != labels.end() - 1; ++l) {
