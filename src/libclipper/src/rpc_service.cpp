@@ -5,7 +5,7 @@
 
 #include <redox.hpp>
 
-#include <clipper/constants.hpp>
+#include <clipper/config.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/redis.hpp>
 #include <clipper/rpc_service.hpp>
@@ -201,8 +201,8 @@ void RPCService::receive_message(
     // check if the key is present in the map.
     int cur_replica_id = replica_ids_[model];
     replica_ids_[model] = cur_replica_id + 1;
-    redis::insert_container(*redis_connection, model, cur_replica_id,
-                            zmq_connection_id, input_type);
+    redis::add_container(*redis_connection, model, cur_replica_id,
+                         zmq_connection_id, input_type);
     zmq_connection_id += 1;
   } else {
     message_t msg_id;

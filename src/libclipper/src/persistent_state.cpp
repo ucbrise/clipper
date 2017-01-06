@@ -1,4 +1,3 @@
-
 #include <atomic>
 #include <chrono>
 #include <iostream>
@@ -6,6 +5,7 @@
 #include <thread>
 
 #include <boost/thread.hpp>
+#include <clipper/config.hpp>
 #include <clipper/constants.hpp>
 #include <clipper/persistent_state.hpp>
 

@@ -39,7 +39,7 @@ add_executable(libclippertests EXCLUDE_FROM_ALL
     test/serialization_test.cpp
     test/persistent_state_test.cpp
     test/redis_test.cpp
-    test/constants_test.cpp
+    test/config_test.cpp
     )
 target_link_libraries(libclippertests clipper gtest gmock_main)
 # add_test(NAME rpc_service_test COMMAND rpc_service_test)

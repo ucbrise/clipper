@@ -60,14 +60,14 @@ std::string models_to_str(const std::vector<VersionedModelId>& models);
 std::vector<VersionedModelId> str_to_models(const std::string& model_str);
 
 /**
- * Inserts a model into the model table. This will
+ * Adds a model into the model table. This will
  * overwrite any existing entry with the same key.
  *
- * \return Returns true if the insert was successful.
+ * \return Returns true if the add was successful.
  */
-bool insert_model(redox::Redox& redis, const VersionedModelId& model_id,
-                  const InputType& input_type, const std::string& output_type,
-                  const std::vector<std::string>& labels);
+bool add_model(redox::Redox& redis, const VersionedModelId& model_id,
+               const InputType& input_type, const std::string& output_type,
+               const std::vector<std::string>& labels);
 
 /**
  * Deletes a model from the model table if it exists.
@@ -87,7 +87,7 @@ bool delete_model(redox::Redox& redis, const VersionedModelId& model_id);
  * strings. Any parsing of the attribute values from their string
  * format (e.g. to a numerical representation) must be done by the
  * caller of this function. The set of attributes stored for a
- * model can be found in the source for `insert_model()`. If the
+ * model can be found in the source for `add_model()`. If the
  * model was not found, an empty map will be returned.
  */
 std::unordered_map<std::string, std::string> get_model(
@@ -105,21 +105,21 @@ std::unordered_map<std::string, std::string> get_model(
  * strings. Any parsing of the attribute values from their string
  * format (e.g. to a numerical representation) must be done by the
  * caller of this function. The set of attributes stored for a
- * model can be found in the source for `insert_model()`. If the
+ * model can be found in the source for `add_model()`. If the
  * model was not found, an empty map will be returned.
  */
 std::unordered_map<std::string, std::string> get_model_by_key(
     redox::Redox& redis, const std::string& key);
 
 /**
- * Inserts a container into the container table. This will
+ * Adds a container into the container table. This will
  * overwrite any existing entry with the same key.
  *
- * \return Returns true of the insert was successful.
+ * \return Returns true of the add was successful.
  */
-bool insert_container(redox::Redox& redis, const VersionedModelId& model_id,
-                      const int model_replica_id, const int zmq_connection_id,
-                      const InputType& input_type);
+bool add_container(redox::Redox& redis, const VersionedModelId& model_id,
+                   const int model_replica_id, const int zmq_connection_id,
+                   const InputType& input_type);
 
 /**
  * Deletes a container from the container table if it exists.
@@ -140,7 +140,7 @@ bool delete_container(redox::Redox& redis, const VersionedModelId& model_id,
  * strings. Any parsing of the attribute values from their string
  * format (e.g. to a numerical representation) must be done by the
  * caller of this function. The set of attributes stored for a
- * container can be found in the source for `insert_container()`. If the
+ * container can be found in the source for `add_container()`. If the
  * container was not found, an empty map will be returned.
  */
 std::unordered_map<std::string, std::string> get_container(
@@ -159,24 +159,23 @@ std::unordered_map<std::string, std::string> get_container(
  * strings. Any parsing of the attribute values from their string
  * format (e.g. to a numerical representation) must be done by the
  * caller of this function. The set of attributes stored for a
- * container can be found in the source for `insert_container()`. If the
+ * container can be found in the source for `add_container()`. If the
  * container was not found, an empty map will be returned.
  */
 std::unordered_map<std::string, std::string> get_container_by_key(
     redox::Redox& redis, const std::string& key);
 
 /**
- * Inserts an application into the application table. This will
+ * Adds an application into the application table. This will
  * overwrite any existing entry with the same key.
  *
- * \return Returns true of the insert was successful.
+ * \return Returns true of the add was successful.
  */
-bool insert_application(redox::Redox& redis, const std::string& appname,
-                        const std::vector<VersionedModelId>& models,
-                        const InputType& input_type,
-                        const std::string& output_type,
-                        const std::string& policy,
-                        const long latency_slo_micros);
+bool add_application(redox::Redox& redis, const std::string& appname,
+                     const std::vector<VersionedModelId>& models,
+                     const InputType& input_type,
+                     const std::string& output_type, const std::string& policy,
+                     const long latency_slo_micros);
 
 /**
  * Deletes a container from the container table if it exists.
@@ -194,7 +193,7 @@ bool delete_application(redox::Redox& redis, const std::string& appname);
  * strings. Any parsing of the attribute values from their string
  * format (e.g. to a numerical representation) must be done by the
  * caller of this function. The set of attributes stored for a
- * application can be found in the source for `insert_application()`. If the
+ * application can be found in the source for `add_application()`. If the
  * application was not found, an empty map will be returned.
  */
 std::unordered_map<std::string, std::string> get_application(
@@ -212,7 +211,7 @@ std::unordered_map<std::string, std::string> get_application(
  * strings. Any parsing of the attribute values from their string
  * format (e.g. to a numerical representation) must be done by the
  * caller of this function. The set of attributes stored for a
- * application can be found in the source for `insert_application()`. If the
+ * application can be found in the source for `add_application()`. If the
  * application was not found, an empty map will be returned.
  */
 std::unordered_map<std::string, std::string> get_application_by_key(
@@ -224,7 +223,7 @@ std::unordered_map<std::string, std::string> get_application_by_key(
 * that changed and the Redis event type. The key can
 * be used to look up the new value. The message type identifies
 * what type of change was detected. This allows subscribers
-* to differentiate between inserts, updates, and deletes if necessary.
+* to differentiate between adds, updates, and deletes if necessary.
 */
 void subscribe_to_model_changes(
     redox::Subscriber& subscriber,
@@ -235,7 +234,7 @@ void subscribe_to_model_changes(
  * that changed and the Redis event type. The key can
  * be used to look up the new value. The message type identifies
  * what type of change was detected. This allows subscribers
- * to differentiate between inserts, updates, and deletes if necessary.
+ * to differentiate between adds, updates, and deletes if necessary.
 */
 void subscribe_to_container_changes(
     redox::Subscriber& subscriber,
@@ -247,7 +246,7 @@ void subscribe_to_container_changes(
  * that changed and the Redis event type. The key can
  * be used to look up the new value. The message type identifies
  * what type of change was detected. This allows subscribers
- * to differentiate between inserts, updates, and deletes if necessary.
+ * to differentiate between adds, updates, and deletes if necessary.
 */
 void subscribe_to_application_changes(
     redox::Subscriber& subscriber,

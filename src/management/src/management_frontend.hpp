@@ -15,7 +15,7 @@
 #include <redox.hpp>
 #include <server_http.hpp>
 
-#include <clipper/constants.hpp>
+#include <clipper/config.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/redis.hpp>
 #include <clipper/util.hpp>
@@ -24,26 +24,6 @@ using namespace boost::property_tree;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 using clipper::VersionedModelId;
 using clipper::InputType;
-
-// // Redis stubs:
-// // TODO: Delete once redis-pubsub is committed
-// namespace clipper {
-// namespace redis {
-//
-// void insert_application(std::string #<{(|name|)}>#,
-//                         std::vector<VersionedModelId> #<{(|models|)}>#,
-//                         InputType #<{(|input_type|)}>#, std::string
-//                         #<{(|output_type|)}>#,
-//                         std::string #<{(|policy|)}>#, long #<{(|latency|)}>#)
-//                         {}
-//
-// void insert_model(VersionedModelId #<{(|model|)}>#, InputType
-// #<{(|input_type|)}>#,
-//                   std::string #<{(|output_type|)}>#,
-//                   std::vector<std::string> #<{(|labels|)}>#) {}
-//
-// }  // namespace redis
-// }  // namespace clipper
 
 namespace management {
 
@@ -135,8 +115,8 @@ class RequestHandler {
   }
 
   ~RequestHandler() {
-    redis_connection_.disconnect();
     redis_subscriber_.disconnect();
+    redis_connection_.disconnect();
   }
 
   /**
@@ -153,7 +133,7 @@ class RequestHandler {
    *  "latency_slo_micros" := int
    * }
    */
-  std::string add_application(std::string json) {
+  std::string add_application(const std::string& json) {
     std::istringstream is(json);
     ptree pt;
     read_json(is, pt);
@@ -168,11 +148,13 @@ class RequestHandler {
     }
     std::string selection_policy = pt.get<std::string>("selection_policy");
     int latency_slo_micros = pt.get<int>("latency_slo_micros");
-    clipper::redis::insert_application(
-        redis_connection_, app_name, candidate_models, input_type, output_type,
-        selection_policy, latency_slo_micros);
-
-    return "Success!";
+    if (clipper::redis::add_application(
+            redis_connection_, app_name, candidate_models, input_type,
+            output_type, selection_policy, latency_slo_micros)) {
+      return "Success!";
+    } else {
+      return "Error adding application to Redis.";
+    }
   }
 
   /**
@@ -187,7 +169,7 @@ class RequestHandler {
    *  "output_type" := "double" | "int",
    * }
    */
-  std::string add_model(std::string json) {
+  std::string add_model(const std::string& json) {
     std::istringstream is(json);
     ptree pt;
     read_json(is, pt);
@@ -201,10 +183,12 @@ class RequestHandler {
     if (!(output_type == "int" || output_type == "double")) {
       throw std::invalid_argument(output_type + " is invalid output type");
     }
-    clipper::redis::insert_model(redis_connection_, model_id, input_type,
-                                 output_type, labels);
-
-    return "Success!";
+    if (clipper::redis::add_model(redis_connection_, model_id, input_type,
+                                  output_type, labels)) {
+      return "Success!";
+    } else {
+      return "Error adding model to Redis.";
+    }
   }
 
   void start_listening() {

@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
 ##################################
 # Management REST frontend executable
 
-add_executable(management_frontend src/management_frontend.cpp)
+add_executable(management_frontend src/management_frontend_main.cpp)
 
 target_link_libraries(management_frontend clipper redox boost httpserver cxxopts)
 

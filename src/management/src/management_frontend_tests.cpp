@@ -9,10 +9,12 @@
 #include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
+#include <clipper/test_constants.hpp>
 
 #include "management_frontend.hpp"
 
 using namespace clipper;
+using namespace clipper_test;
 using namespace clipper::redis;
 using namespace management;
 using namespace boost::property_tree;
@@ -22,7 +24,7 @@ namespace {
 class ManagementFrontendTest : public ::testing::Test {
  public:
   ManagementFrontendTest()
-      : rh_(1338, 1),
+      : rh_(MANAGEMENT_FRONTEND_PORT, 1),
         redis_(std::make_shared<redox::Redox>()),
         subscriber_(std::make_shared<redox::Subscriber>()) {
     redis_->connect("localhost", REDIS_TEST_PORT);
@@ -60,6 +62,9 @@ TEST_F(ManagementFrontendTest, TestAddApplicationCorrect) {
 
   ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
   auto result = get_application(*redis_, "myappname");
+  // The application table has 5 fields, so we expect to get back a map with 5
+  // entries in it (see add_application() in redis.cpp for details on what the
+  // fields are).
   ASSERT_EQ(result.size(), static_cast<size_t>(5));
 }
 
@@ -101,6 +106,9 @@ TEST_F(ManagementFrontendTest, TestAddModelCorrect) {
 
   ASSERT_EQ(rh_.add_model(add_model_json), "Success!");
   auto result = get_model(*redis_, std::make_pair("mymodelname", 4));
+  // The model table has 6 fields, so we expect to get back a map with 6
+  // entries in it (see add_model() in redis.cpp for details on what the
+  // fields are).
   ASSERT_EQ(result.size(), static_cast<size_t>(6));
 }
 

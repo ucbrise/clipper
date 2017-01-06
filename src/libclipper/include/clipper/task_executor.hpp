@@ -8,7 +8,7 @@
 #include <boost/thread.hpp>
 #include <redox.hpp>
 
-#include <clipper/constants.hpp>
+#include <clipper/config.hpp>
 #include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/redis.hpp>
@@ -130,15 +130,9 @@ class TaskExecutor {
     return {};
   }
 
-  // void add_model(VersionedModelId model);
-  // void add_container(VersionedModelId model);
-  //
-  // void remove_model(VersionedModelId model);
-
  private:
   // active_containers_ is shared with the RPC service so it can add new
-  // containers
-  // to the collection when they connect
+  // containers to the collection when they connect
   std::shared_ptr<ActiveContainers> active_containers_;
   std::unique_ptr<rpc::RPCService> rpc_;
   Scheduler scheduler_;
@@ -235,25 +229,6 @@ class PowerTwoChoicesScheduler {
       const PredictTask &task,
       std::vector<std::shared_ptr<ModelContainer>> &containers) const;
 };
-
-// class FakeTaskExecutor : TaskExecutor {
-//  public:
-//   virtual std::vector<boost::future<Output>> schedule_prediction(
-//       const std::vector<PredictTask> t);
-//   virtual std::vector<boost::future<FeedbackAck>> schedule_feedback(
-//       const std::vector<FeedbackTask> t);
-// };
-//
-// class Scheduler {
-//  public:
-//   virtual void add_model() = 0;
-//   virtual void add_replica() = 0;
-//
-//   virtual void remove_model() = 0;
-//   virtual void remove_replica() = 0;
-//
-//   // backpressure??
-// };
 
 }  // namespace clipper
 

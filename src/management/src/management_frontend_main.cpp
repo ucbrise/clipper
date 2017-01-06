@@ -1,14 +1,15 @@
 
 #include <cxxopts.hpp>
 
+#include <clipper/config.hpp>
 #include <clipper/constants.hpp>
-#include <clipper/query_processor.hpp>
 
-#include "query_frontend.hpp"
+#include "management_frontend.hpp"
 
 int main(int argc, char* argv[]) {
-  cxxopts::Options options("query_frontend",
-                           "Clipper query processing frontend");
+  cxxopts::Options options("management_frontend",
+                           "Clipper management interface");
+
   // clang-format off
   options.add_options()
     ("redis_ip", "Redis address", cxxopts::value<std::string>()->default_value("localhost"))
@@ -20,8 +21,6 @@ int main(int argc, char* argv[]) {
   conf.set_redis_address(options["redis_ip"].as<std::string>());
   conf.set_redis_port(options["redis_port"].as<int>());
   conf.ready();
-
-  query_frontend::RequestHandler<clipper::QueryProcessor> rh("0.0.0.0", 1337,
-                                                             1);
+  management::RequestHandler rh(clipper::MANAGEMENT_FRONTEND_PORT, 1);
   rh.start_listening();
 }

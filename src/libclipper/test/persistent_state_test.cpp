@@ -1,7 +1,8 @@
 #include <gtest/gtest.h>
 
-#include <clipper/constants.hpp>
+#include <clipper/config.hpp>
 #include <clipper/persistent_state.hpp>
+#include <clipper/test_constants.hpp>
 
 using namespace clipper;
 
@@ -10,7 +11,7 @@ class StateDBTest : public ::testing::Test {
   StateDBTest() {
     Config& conf = get_config();
     conf.reset();
-    conf.set_redis_port(REDIS_TEST_PORT);
+    conf.set_redis_port(clipper_test::REDIS_TEST_PORT);
     conf.ready();
   }
 

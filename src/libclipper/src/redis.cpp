@@ -141,9 +141,9 @@ std::vector<VersionedModelId> str_to_models(const std::string& model_str) {
   return models;
 }
 
-bool insert_model(Redox& redis, const VersionedModelId& model_id,
-                  const InputType& input_type, const std::string& output_type,
-                  const vector<string>& labels) {
+bool add_model(Redox& redis, const VersionedModelId& model_id,
+               const InputType& input_type, const std::string& output_type,
+               const vector<string>& labels) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
     std::string model_id_key = gen_versioned_model_key(model_id);
@@ -193,9 +193,9 @@ unordered_map<string, string> get_model_by_key(Redox& redis,
   }
 }
 
-bool insert_container(Redox& redis, const VersionedModelId& model_id,
-                      const int model_replica_id, const int zmq_connection_id,
-                      const InputType& input_type) {
+bool add_container(Redox& redis, const VersionedModelId& model_id,
+                   const int model_replica_id, const int zmq_connection_id,
+                   const InputType& input_type) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_CONTAINER_DB_NUM)})) {
     std::string replica_key = gen_model_replica_key(model_id, model_replica_id);
@@ -249,12 +249,11 @@ unordered_map<string, string> get_container_by_key(Redox& redis,
   }
 }
 
-bool insert_application(redox::Redox& redis, const std::string& appname,
-                        const std::vector<VersionedModelId>& models,
-                        const InputType& input_type,
-                        const std::string& output_type,
-                        const std::string& policy,
-                        const long latency_slo_micros) {
+bool add_application(redox::Redox& redis, const std::string& appname,
+                     const std::vector<VersionedModelId>& models,
+                     const InputType& input_type,
+                     const std::string& output_type, const std::string& policy,
+                     const long latency_slo_micros) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_APPLICATION_DB_NUM)})) {
     vector<string> cmd_vec{"HMSET",

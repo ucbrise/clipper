@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <thread>
 
-#include <clipper/constants.hpp>
+#include <clipper/config.hpp>
 
 using namespace clipper;
 
