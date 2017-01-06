@@ -47,3 +47,5 @@ add_executable(frontendtests EXCLUDE_FROM_ALL
     )
 target_link_libraries(frontendtests clipper httpserver gtest gmock_main)
 add_dependencies(unittests frontendtests)
+
+
