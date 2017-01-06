@@ -201,6 +201,13 @@ class RequestHandler {
     server_.add_endpoint(update_endpoint, "POST", update_fn);
   }
 
+  /*
+   * JSON format for prediction query request:
+   * {
+   *  "uid" := string,
+   *  "input" := [double] | [int] | [string] | [byte] | [float],
+   * }
+   */
   boost::future<Response> decode_and_handle_predict(
       std::string json_content, std::string name,
       std::vector<VersionedModelId> models, std::string policy,
@@ -217,9 +224,15 @@ class RequestHandler {
     return prediction;
   }
 
-  /* Update JSON format:
-   * {"uid": <user id>, "input": <query input>, "label": <query y_hat>,
-   *  "model_name": <model name>, "model_version": <model_version>}
+  /*
+   * JSON format for feedback query request:
+   * {
+   *  "uid" := string,
+   *  "input" := [double] | [int] | [string] | [byte] | [float],
+   *  "model_name" := string,
+   *  "model_version" := int,
+   *  "label" := double
+   * }
    */
   boost::future<FeedbackAck> decode_and_handle_update(
       std::string json_content, std::string name,
