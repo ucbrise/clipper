@@ -1,43 +1,18 @@
 from __future__ import print_function
-import sys
 import json
-import os
 import requests
-import random
 from datetime import datetime
 import time
-
-import pandas as pd
 import numpy as np
 
 
-def load_digits(
-    digits_location,
-     digits_filename="train-mnist-dense-with-labels.data"):
-    digits_path = digits_location + "/" + digits_filename
-    print("Source file:", digits_path)
-    df = pd.read_csv(digits_path, sep=",", header=None)
-    data = df.values
-    print("Number of image files:", len(data))
-    y = data[:, 0]
-    X = data[:, 1:]
-    return (X, y)
-
-
-def normalize_digits(X):
-    mu = np.mean(X, 0)
-    sigma = np.var(X, 0)
-    Z = (X - mu) / np.array([np.sqrt(z) if z > 0 else 1. for z in sigma])
-    return Z
-
-
-def mnist_update(uid, x, y):
-    url = "http://localhost:1337/update"
+def update(host, uid, x, y):
+    url = "http://%s:1337/example_app/update" % host
     req_json = json.dumps({
         'uid': uid,
         'input': list(x),
         'label': float(y),
-        'model_name': 'mnist_model',
+        'model_name': 'example_model',
         'model_version': 1
         })
     headers = {'Content-type': 'application/json'}
@@ -48,11 +23,10 @@ def mnist_update(uid, x, y):
     print("'%s', %f ms" % (r.text, latency))
 
 
-def mnist_prediction(host, uid, x):
-    url = "http://%s:1337/mnist_app/predict" % host
+def predict(host, uid, x):
+    url = "http://%s:1337/example_app/predict" % host
     req_json = json.dumps({'uid': uid, 'input': list(x)})
     headers = {'Content-type': 'application/json'}
-    # x_str = ", ".join(["%d" % a for a in x])
     start = datetime.now()
     r = requests.post(url, headers=headers, data=req_json)
     end = datetime.now()
@@ -63,16 +37,14 @@ def mnist_prediction(host, uid, x):
 def add_mnist_app(host):
     url = "http://%s:1338/admin/add_app" % host
     req_json = json.dumps({
-     "name": "mnist_app",
-     "candidate_models": [{"model_name": "mnist_model", "model_version": 1}],
+     "name": "example_app",
+     "candidate_models": [{"model_name": "example_model", "model_version": 1}],
      "input_type": "doubles",
      "output_type": "double",
      "selection_policy": "simple_policy",
      "latency_slo_micros": 20000
     })
-
     headers = {'Content-type': 'application/json'}
-    # x_str = ", ".join(["%d" % a for a in x])
     start = datetime.now()
     r = requests.post(url, headers=headers, data=req_json)
     end = datetime.now()
@@ -82,14 +54,8 @@ def add_mnist_app(host):
 if __name__ == '__main__':
     add_mnist_app("localhost")
     time.sleep(1.0)
-    args = sys.argv
-    x, y = load_digits(
-        os.path.expanduser("~/model-serving/data/mnist_data"),
-        digits_filename="test.data")
     uid = 4
     while True:
-        # mnist_update(uid, x[int(i)], float(y[int(i)]))
-        example_num = np.random.randint(0, len(x))
         # mnist_update(uid, x[example_num], float(y[example_num]))
-        mnist_prediction("localhost", uid, x[example_num])
+        predict("localhost", uid, np.random.random(1000))
         time.sleep(0.2)
