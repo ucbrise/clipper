@@ -38,8 +38,8 @@ class ManagementFrontendTest : public ::testing::Test {
   }
 
   virtual ~ManagementFrontendTest() {
-    redis_->disconnect();
     subscriber_->disconnect();
+    redis_->disconnect();
   }
   RequestHandler rh_;
   std::shared_ptr<redox::Redox> redis_;

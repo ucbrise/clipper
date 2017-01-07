@@ -92,7 +92,6 @@ void process_feedback(FeedbackQuery feedback, std::vector<Output> predictions,
 }
 
 QueryProcessor::QueryProcessor() : state_db_(std::make_shared<StateDB>()) {
-  assert(state_db_->init());
   std::cout << "Query Processor started" << std::endl;
 }
 

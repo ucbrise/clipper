@@ -34,8 +34,6 @@ class StateDB {
 
   StateDB& operator=(StateDB&&) = default;
 
-  bool init();
-
   /**
    * Get the value associated with the key if present
    * in the DB.
@@ -69,7 +67,6 @@ class StateDB {
   int num_entries();
 
  private:
-  std::atomic<bool> initialized_;
   redox::Redox redis_connection_;
 };
 
