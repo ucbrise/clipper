@@ -6,15 +6,14 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
 
+#include <clipper/config.hpp>
 #include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
-#include <clipper/test_constants.hpp>
 
 #include "management_frontend.hpp"
 
 using namespace clipper;
-using namespace clipper_test;
 using namespace clipper::redis;
 using namespace management;
 using namespace boost::property_tree;
@@ -27,8 +26,9 @@ class ManagementFrontendTest : public ::testing::Test {
       : rh_(MANAGEMENT_FRONTEND_PORT, 1),
         redis_(std::make_shared<redox::Redox>()),
         subscriber_(std::make_shared<redox::Subscriber>()) {
-    redis_->connect("localhost", REDIS_TEST_PORT);
-    subscriber_->connect("localhost", REDIS_TEST_PORT);
+    Config& conf = get_config();
+    redis_->connect(conf.get_redis_address(), conf.get_redis_port());
+    subscriber_->connect(conf.get_redis_address(), conf.get_redis_port());
 
     // delete all keys
     send_cmd_no_reply<std::string>(*redis_, {"FLUSHALL"});

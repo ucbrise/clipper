@@ -8,16 +8,9 @@ using namespace clipper;
 
 namespace {
 
-const int REDIS_TEST_PORT = 34256;
-
 class StateDBTest : public ::testing::Test {
  public:
-  StateDBTest() {
-    Config& conf = get_config();
-    conf.reset();
-    conf.set_redis_port(clipper_test::REDIS_TEST_PORT);
-    conf.ready();
-  }
+  StateDBTest() {}
 
   StateDB db_;
 };
