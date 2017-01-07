@@ -290,7 +290,13 @@ std::unordered_map<std::string, std::string> get_application(
     redox::Redox& redis, const std::string& appname) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_APPLICATION_DB_NUM)})) {
-    auto container_data = send_cmd_vec_reply(redis, {"HGETALL", appname});
+    std::vector<std::string> container_data;
+    auto result =
+        send_cmd_with_reply<vector<string>>(redis, {"HGETALL", appname});
+    if (result) {
+      container_data = *result;
+    }
+
     return parse_redis_map(container_data);
   } else {
     return unordered_map<string, string>{};
