@@ -11,7 +11,7 @@ class SklearnCifarContainer(rpc.ModelContainerBase):
         print("Loaded %s model" % type(self.model), file=sys.stderr)
         self.path = path
 
-    def predict_floats(self, inputs):
+    def predict_ints(self, inputs):
         mean, sigma = np.mean(inputs, axis=1), np.std(inputs, axis=1)
         np.place(sigma, sigma == 0, 1.)
         normalized_inputs = np.transpose((inputs.T - mean) / sigma)
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     else:
         print("Connecting to Clipper with default port: 7000")
 
-    input_type = "floats"
+    input_type = "ints"
     model_path = os.environ["CLIPPER_MODEL_PATH"]
     pkl_names = [l for l in os.listdir(model_path) if os.path.splitext(l)[1] == ".pkl"]
     assert len(pkl_names) == 1

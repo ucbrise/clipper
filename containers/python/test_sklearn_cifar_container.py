@@ -50,5 +50,5 @@ if __name__ == '__main__':
     X_test, y_test = load_cifar('data', 'test.data')
     X_test, y_test = filter_data(X_test, y_test)
     y_test[np.where(y_test == -1)] = 0
-    preds = model.predict_floats(X_test)
+    preds = model.predict_ints(X_test)
     print("Test accuracy: %f" % accuracy_score(y_test, preds))
