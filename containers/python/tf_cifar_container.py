@@ -17,7 +17,7 @@ class TfCifarContainer(rpc.ModelContainerBase):
             saver = tf.train.import_meta_graph(path + '.meta')
             saver.restore(self.sess, path)
 
-    def predict_floats(self, inputs):
+    def predict_ints(self, inputs):
         mean, sigma = np.mean(inputs, axis=1), np.std(inputs, axis=1)
         np.place(sigma, sigma == 0, 1.)
         normalized_inputs = np.transpose((inputs.T - mean) / sigma)
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     else:
         print("Connecting to Clipper with default port: 7000")
 
-    input_type = "floats"
+    input_type = "ints"
     model_path = os.environ["CLIPPER_MODEL_PATH"]
     model = TfCifarContainer(model_path)
     rpc.start(model, ip, port, model_name, model_version, input_type)
