@@ -55,14 +55,28 @@ def max_pool_2x2(x):
                           strides=[1, 2, 2, 1], padding='SAME')
 
 x = tf.placeholder(tf.float32, [None, 3072], name="x")
+train_flag = tf.placeholder(tf.int32, shape=[], name="distort_images")
 x_image = tf.reshape(x, [-1,32,32,3])
+x_image = tf.map_fn(
+    lambda img: tf.image.per_image_whitening(img), x_image)
+distorted_image = tf.map_fn(
+    lambda img: tf.random_crop(img, [32, 32, 3]), x_image)
+distorted_image = tf.map_fn(
+    lambda img: tf.image.random_flip_left_right(img), distorted_image)
+distorted_image = tf.map_fn(
+    lambda img: tf.image.random_brightness(img, max_delta=63), distorted_image)
+distorted_image = tf.map_fn(
+    lambda img: tf.image.random_contrast(img, lower=0.2, upper=1.8), distorted_image)
+distorted_image = tf.map_fn(
+    lambda img: tf.image.per_image_whitening(img), distorted_image)
+inputs = tf.cond(train_flag > 0, lambda: distorted_image, lambda: x_image)
 
 # Put in weight decay and initialization params
 # Layer 1
 W_conv1 = weight_variable([5, 5, 3, 64], stddev=5e-2)
 b_conv1 = bias_variable([64], init_val=0.0)
 
-conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
+conv1 = tf.nn.relu(conv2d(inputs, W_conv1) + b_conv1)
 pool1 = tf.nn.max_pool(conv1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                        padding='SAME', name='pool1')
 norm1 = tf.nn.lrn(pool1, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
@@ -82,12 +96,16 @@ reshape = tf.reshape(pool2, [-1, 8 * 8 * 64])
 # Layer 3
 W_local3 = weight_variable([8 * 8 * 64, 384], stddev=0.04)
 b_local3 = bias_variable([384])
+W_local3_weight_decay = tf.mul(tf.nn.l2_loss(W_local3), 0.004)
+tf.add_to_collection('losses', W_local3_weight_decay)
 
 local3 = tf.nn.relu(tf.matmul(reshape, W_local3) + b_local3)
 
 # Layer 4
 W_local4 = weight_variable([384, 192], stddev=0.04)
 b_local4 = bias_variable([192])
+W_local4_weight_decay = tf.mul(tf.nn.l2_loss(W_local4), 0.004)
+tf.add_to_collection('losses', W_local4_weight_decay)
 
 local4 = tf.nn.relu(tf.matmul(local3, W_local4) + b_local4)
 
@@ -100,7 +118,10 @@ y_ = tf.placeholder(tf.int64, [None], name="y_")
 cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
     softmax_logits, y_, name='cross_entropy_per_example')
 cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
-train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
+tf.add_to_collection('losses', cross_entropy_mean)
+total_loss = tf.add_n(tf.get_collection('losses'), name='total_loss')
+# train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
+train_step = tf.train.AdamOptimizer(1e-4).minimize(total_loss)
 correct_prediction = tf.equal(tf.argmax(softmax_logits,1), y_)
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
@@ -121,16 +142,18 @@ if not os.path.exists(export_dir):
     os.mkdir(export_dir)
 saver = tf.train.Saver(sharded=False)
 
-X_train, y_train = load_cifar('data')
+X_train, y_train = load_cifar('data', norm=False)
 batch_iter_ = data_iterator(X_train, y_train)
 sess.run(tf.initialize_all_variables())
 for i in range(20):
     images_batch, labels_batch = batch_iter_.next()
     if i % 10 == 0:
         train_accuracy = accuracy.eval(
-            feed_dict={x:images_batch, y_: labels_batch})
-        print("step %d, training accuracy %g" % (i, train_accuracy))
-    train_step.run(feed_dict={x: images_batch, y_: labels_batch})
+            feed_dict={x:images_batch, y_: labels_batch, train_flag: 0})
+        train_loss = total_loss.eval(
+                feed_dict={x:images_batch, y_: labels_batch, train_flag: 0})
+        print("step %d, training accuracy %g, training loss %f" % (i, train_accuracy, train_loss))
+    train_step.run(feed_dict={x: images_batch, y_: labels_batch, train_flag: 1})
 
 # Write out everything
 save_full_graph(sess, os.path.join(export_dir, 'cifar10_model_full'))
@@ -138,4 +161,5 @@ save_full_graph(sess, os.path.join(export_dir, 'cifar10_model_full'))
 sess = load_full_graph(os.path.join(export_dir, 'cifar10_model_full'))
 for i in range(20):
     images_batch, labels_batch = batch_iter_.next()
-    print(sess.run('softmax_logits:0', feed_dict={'x:0':images_batch}))
+    print(sess.run('softmax_logits:0',
+        feed_dict={'x:0':images_batch, 'distort_images:0':0}))
