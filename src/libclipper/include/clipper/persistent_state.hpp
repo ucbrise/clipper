@@ -10,6 +10,7 @@
 #include <boost/optional.hpp>
 #include <redox.hpp>
 
+#include "constants.hpp"
 #include "datatypes.hpp"
 
 namespace clipper {
@@ -32,8 +33,6 @@ class StateDB {
   StateDB(StateDB&&) = default;
 
   StateDB& operator=(StateDB&&) = default;
-
-  bool init();
 
   /**
    * Get the value associated with the key if present
@@ -68,7 +67,6 @@ class StateDB {
   int num_entries();
 
  private:
-  std::atomic<bool> initialized_;
   redox::Redox redis_connection_;
 };
 

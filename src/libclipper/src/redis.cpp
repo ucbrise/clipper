@@ -58,22 +58,6 @@ std::string gen_versioned_model_key(const VersionedModelId& key) {
   return ss.str();
 }
 
-vector<string> send_cmd_vec_reply(Redox& redis, vector<string> cmd_vec) {
-  vector<string> v;
-  redox::Command<vector<string>>& cmd =
-      redis.commandSync<vector<string>>(cmd_vec);
-  if (!cmd.ok()) {
-    std::cerr << "Error with command \"" << redis.vecToStr(cmd_vec)
-              << "\": " << cmd.lastError() << std::endl;
-  } else {
-    std::cout << "Successfully issued command \"" << redis.vecToStr(cmd_vec)
-              << "\": " << std::endl;
-    v = cmd.reply();
-  }
-  cmd.free();
-  return v;
-}
-
 string labels_to_str(const vector<string>& labels) {
   std::ostringstream ss;
   for (auto l = labels.begin(); l != labels.end() - 1; ++l) {
@@ -147,13 +131,14 @@ bool add_model(Redox& redis, const VersionedModelId& model_id,
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
     std::string model_id_key = gen_versioned_model_key(model_id);
-    vector<string> cmd_vec{"HMSET",         model_id_key,
-                           "model_name",    model_id.first,
-                           "model_version", std::to_string(model_id.second),
-                           "load",          std::to_string(0.0),
-                           "input_type",    get_readable_input_type(input_type),
-                           "output_type",   output_type,
-                           "labels",        labels_to_str(labels)};
+    const vector<string> cmd_vec{
+        "HMSET",         model_id_key,
+        "model_name",    model_id.first,
+        "model_version", std::to_string(model_id.second),
+        "load",          std::to_string(0.0),
+        "input_type",    get_readable_input_type(input_type),
+        "output_type",   output_type,
+        "labels",        labels_to_str(labels)};
     return send_cmd_no_reply<string>(redis, cmd_vec);
   } else {
     return false;
@@ -175,7 +160,13 @@ unordered_map<string, string> get_model(Redox& redis,
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
     std::string model_id_key = gen_versioned_model_key(model_id);
-    auto model_data = send_cmd_vec_reply(redis, {"HGETALL", model_id_key});
+
+    std::vector<std::string> model_data;
+    auto result =
+        send_cmd_with_reply<vector<string>>(redis, {"HGETALL", model_id_key});
+    if (result) {
+      model_data = *result;
+    }
     return parse_redis_map(model_data);
   } else {
     return unordered_map<string, string>{};
@@ -186,7 +177,11 @@ unordered_map<string, string> get_model_by_key(Redox& redis,
                                                const std::string& key) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
-    auto model_data = send_cmd_vec_reply(redis, {"HGETALL", key});
+    std::vector<std::string> model_data;
+    auto result = send_cmd_with_reply<vector<string>>(redis, {"HGETALL", key});
+    if (result) {
+      model_data = *result;
+    }
     return parse_redis_map(model_data);
   } else {
     return unordered_map<string, string>{};
@@ -200,7 +195,7 @@ bool add_container(Redox& redis, const VersionedModelId& model_id,
           redis, {"SELECT", std::to_string(REDIS_CONTAINER_DB_NUM)})) {
     std::string replica_key = gen_model_replica_key(model_id, model_replica_id);
     std::string model_id_key = gen_versioned_model_key(model_id);
-    vector<string> cmd_vec{
+    const vector<string> cmd_vec{
         "HMSET", replica_key, "model_id", model_id_key, "model_name",
         model_id.first, "model_version", std::to_string(model_id.second),
         "model_replica_id", std::to_string(model_replica_id),
@@ -231,7 +226,12 @@ unordered_map<string, string> get_container(Redox& redis,
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_CONTAINER_DB_NUM)})) {
     std::string replica_key = gen_model_replica_key(model_id, model_replica_id);
-    auto container_data = send_cmd_vec_reply(redis, {"HGETALL", replica_key});
+    std::vector<std::string> container_data;
+    auto result =
+        send_cmd_with_reply<vector<string>>(redis, {"HGETALL", replica_key});
+    if (result) {
+      container_data = *result;
+    }
     return parse_redis_map(container_data);
   } else {
     return unordered_map<string, string>{};
@@ -242,7 +242,11 @@ unordered_map<string, string> get_container_by_key(Redox& redis,
                                                    const std::string& key) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_CONTAINER_DB_NUM)})) {
-    auto container_data = send_cmd_vec_reply(redis, {"HGETALL", key});
+    std::vector<std::string> container_data;
+    auto result = send_cmd_with_reply<vector<string>>(redis, {"HGETALL", key});
+    if (result) {
+      container_data = *result;
+    }
     return parse_redis_map(container_data);
   } else {
     return unordered_map<string, string>{};
@@ -256,18 +260,18 @@ bool add_application(redox::Redox& redis, const std::string& appname,
                      const long latency_slo_micros) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_APPLICATION_DB_NUM)})) {
-    vector<string> cmd_vec{"HMSET",
-                           appname,
-                           "candidate_models",
-                           models_to_str(models),
-                           "input_type",
-                           get_readable_input_type(input_type),
-                           "output_type",
-                           output_type,
-                           "policy",
-                           policy,
-                           "latency_slo_micros",
-                           std::to_string(latency_slo_micros)};
+    const vector<string> cmd_vec{"HMSET",
+                                 appname,
+                                 "candidate_models",
+                                 models_to_str(models),
+                                 "input_type",
+                                 get_readable_input_type(input_type),
+                                 "output_type",
+                                 output_type,
+                                 "policy",
+                                 policy,
+                                 "latency_slo_micros",
+                                 std::to_string(latency_slo_micros)};
     return send_cmd_no_reply<string>(redis, cmd_vec);
   } else {
     return false;
@@ -287,7 +291,13 @@ std::unordered_map<std::string, std::string> get_application(
     redox::Redox& redis, const std::string& appname) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_APPLICATION_DB_NUM)})) {
-    auto container_data = send_cmd_vec_reply(redis, {"HGETALL", appname});
+    std::vector<std::string> container_data;
+    auto result =
+        send_cmd_with_reply<vector<string>>(redis, {"HGETALL", appname});
+    if (result) {
+      container_data = *result;
+    }
+
     return parse_redis_map(container_data);
   } else {
     return unordered_map<string, string>{};

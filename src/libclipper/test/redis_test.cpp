@@ -5,13 +5,12 @@
 #include <thread>
 #include <vector>
 
+#include <clipper/config.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/redis.hpp>
-#include <clipper/test_constants.hpp>
 #include <redox.hpp>
 
 using namespace clipper;
-using namespace clipper_test;
 using namespace clipper::redis;
 
 namespace {
@@ -31,8 +30,9 @@ class RedisTest : public ::testing::Test {
   RedisTest()
       : redis_(std::make_shared<redox::Redox>()),
         subscriber_(std::make_shared<redox::Subscriber>()) {
-    redis_->connect("localhost", REDIS_TEST_PORT);
-    subscriber_->connect("localhost", REDIS_TEST_PORT);
+    Config& conf = get_config();
+    redis_->connect(conf.get_redis_address(), conf.get_redis_port());
+    subscriber_->connect(conf.get_redis_address(), conf.get_redis_port());
 
     // delete all keys
     send_cmd_no_reply<std::string>(*redis_, {"FLUSHALL"});

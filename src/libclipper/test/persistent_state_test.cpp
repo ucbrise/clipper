@@ -6,27 +6,16 @@
 
 using namespace clipper;
 
+namespace {
+
 class StateDBTest : public ::testing::Test {
  public:
-  StateDBTest() {
-    Config& conf = get_config();
-    conf.reset();
-    conf.set_redis_port(clipper_test::REDIS_TEST_PORT);
-    conf.ready();
-  }
+  StateDBTest() {}
 
   StateDB db_;
 };
 
-TEST_F(StateDBTest, TestOpsRefusedWhenDBUninitialized) {
-  StateKey key = std::make_tuple("Dan", 13622, 32432432);
-  ASSERT_FALSE(db_.get(key));
-  ASSERT_FALSE(db_.put(key, "valuestring"));
-  ASSERT_FALSE(db_.get(key));
-}
-
 TEST_F(StateDBTest, TestSinglePutGet) {
-  ASSERT_TRUE(db_.init());
   StateKey key = std::make_tuple("Dan", 13622, 32432432);
   ASSERT_FALSE(db_.get(key));
   ASSERT_TRUE(db_.put(key, "valuestring"));
@@ -39,7 +28,6 @@ TEST_F(StateDBTest, TestSinglePutGet) {
 }
 
 TEST_F(StateDBTest, TestManyPutGet) {
-  ASSERT_TRUE(db_.init());
   ASSERT_EQ(db_.num_entries(), 0);
   for (int i = 0; i < 5000; ++i) {
     StateKey key = std::make_tuple("Dan", i, 1234);
@@ -52,3 +40,5 @@ TEST_F(StateDBTest, TestManyPutGet) {
   }
   ASSERT_EQ(db_.num_entries(), 0);
 }
+
+}  // namespace

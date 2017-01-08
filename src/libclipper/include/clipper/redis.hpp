@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <boost/optional.hpp>
 #include <redox.hpp>
 
 #include "constants.hpp"
@@ -27,7 +28,7 @@ bool send_cmd_no_reply(redox::Redox& redis,
   bool ok = true;
   redox::Command<ReplyT>& cmd = redis.commandSync<ReplyT>(cmd_vec);
   if (!cmd.ok()) {
-    std::cerr << "Error with command \"" << redis.vecToStr(cmd_vec)
+    std::cout << "Error with command \"" << redis.vecToStr(cmd_vec)
               << "\": " << cmd.lastError() << std::endl;
     ok = false;
   } else {
@@ -36,6 +37,22 @@ bool send_cmd_no_reply(redox::Redox& redis,
   }
   cmd.free();
   return ok;
+}
+
+template <class ReplyT>
+boost::optional<ReplyT> send_cmd_with_reply(
+    redox::Redox& redis, const std::vector<std::string>& cmd_vec) {
+  redox::Command<ReplyT>& cmd = redis.commandSync<ReplyT>(cmd_vec);
+  if (!cmd.ok()) {
+    std::cout << "Error with command \"" << redis.vecToStr(cmd_vec)
+              << "\": " << cmd.lastError() << std::endl;
+  } else {
+    std::cout << "Successfully issued command \"" << redis.vecToStr(cmd_vec)
+              << "\": " << std::endl;
+    return cmd.reply();
+  }
+  cmd.free();
+  return boost::none;
 }
 
 /**
