@@ -9,7 +9,7 @@ NUM_CLASSES = 10
 sess = tf.InteractiveSession()
 
 # Preprocess data
-def load_cifar(cifar_location, cifar_filename = "train.data", norm=True):
+def load_cifar(cifar_location, cifar_filename = "train.data", norm=False):
     cifar_path = cifar_location + "/" + cifar_filename
     print("Source file: %s" % cifar_path)
     df = pd.read_csv(cifar_path, sep=",", header=None)
@@ -19,9 +19,10 @@ def load_cifar(cifar_location, cifar_filename = "train.data", norm=True):
     X = data[:,1:]
     Z = X
     if norm:
-        mu = np.mean(X,0)
-        sigma = np.var(X,0)
-        Z = (X - mu) / np.array([np.sqrt(z) if z > 0 else 1. for z in sigma])
+        mu = np.mean(X.T,0)
+        sigma = np.var(X.T,0)
+        Z = (X.T - mu) / np.array([np.sqrt(z) if z > 0 else 1. for z in sigma])
+        Z = Z.T
     return (Z, y)
 
 # https://indico.io/blog/tensorflow-data-inputs-part1-placeholders-protobufs-queues/
@@ -55,28 +56,14 @@ def max_pool_2x2(x):
                           strides=[1, 2, 2, 1], padding='SAME')
 
 x = tf.placeholder(tf.float32, [None, 3072], name="x")
-train_flag = tf.placeholder(tf.int32, shape=[], name="distort_images")
 x_image = tf.reshape(x, [-1,32,32,3])
-x_image = tf.map_fn(
-    lambda img: tf.image.per_image_whitening(img), x_image)
-distorted_image = tf.map_fn(
-    lambda img: tf.random_crop(img, [32, 32, 3]), x_image)
-distorted_image = tf.map_fn(
-    lambda img: tf.image.random_flip_left_right(img), distorted_image)
-distorted_image = tf.map_fn(
-    lambda img: tf.image.random_brightness(img, max_delta=63), distorted_image)
-distorted_image = tf.map_fn(
-    lambda img: tf.image.random_contrast(img, lower=0.2, upper=1.8), distorted_image)
-distorted_image = tf.map_fn(
-    lambda img: tf.image.per_image_whitening(img), distorted_image)
-inputs = tf.cond(train_flag > 0, lambda: distorted_image, lambda: x_image)
 
 # Put in weight decay and initialization params
 # Layer 1
 W_conv1 = weight_variable([5, 5, 3, 64], stddev=5e-2)
 b_conv1 = bias_variable([64], init_val=0.0)
 
-conv1 = tf.nn.relu(conv2d(inputs, W_conv1) + b_conv1)
+conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
 pool1 = tf.nn.max_pool(conv1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                        padding='SAME', name='pool1')
 norm1 = tf.nn.lrn(pool1, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
@@ -142,18 +129,18 @@ if not os.path.exists(export_dir):
     os.mkdir(export_dir)
 saver = tf.train.Saver(sharded=False)
 
-X_train, y_train = load_cifar('data', norm=False)
+X_train, y_train = load_cifar('data', norm=True)
 batch_iter_ = data_iterator(X_train, y_train)
 sess.run(tf.initialize_all_variables())
-for i in range(20):
+for i in range(50000):
     images_batch, labels_batch = batch_iter_.next()
-    if i % 10 == 0:
+    if i % 100 == 0:
         train_accuracy = accuracy.eval(
-            feed_dict={x:images_batch, y_: labels_batch, train_flag: 0})
+            feed_dict={x:images_batch, y_: labels_batch})
         train_loss = total_loss.eval(
-                feed_dict={x:images_batch, y_: labels_batch, train_flag: 0})
+                feed_dict={x:images_batch, y_: labels_batch})
         print("step %d, training accuracy %g, training loss %f" % (i, train_accuracy, train_loss))
-    train_step.run(feed_dict={x: images_batch, y_: labels_batch, train_flag: 1})
+    train_step.run(feed_dict={x: images_batch, y_: labels_batch})
 
 # Write out everything
 save_full_graph(sess, os.path.join(export_dir, 'cifar10_model_full'))
@@ -162,4 +149,4 @@ sess = load_full_graph(os.path.join(export_dir, 'cifar10_model_full'))
 for i in range(20):
     images_batch, labels_batch = batch_iter_.next()
     print(sess.run('softmax_logits:0',
-        feed_dict={'x:0':images_batch, 'distort_images:0':0}))
+        feed_dict={'x:0':images_batch}))
