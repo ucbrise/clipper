@@ -40,8 +40,8 @@ bool send_cmd_no_reply(redox::Redox& redis,
 }
 
 template <class ReplyT>
-boost::optional<ReplyT> send_cmd_with_reply(redox::Redox& redis,
-                                            std::vector<std::string> cmd_vec) {
+boost::optional<ReplyT> send_cmd_with_reply(
+    redox::Redox& redis, const std::vector<std::string>& cmd_vec) {
   redox::Command<ReplyT>& cmd = redis.commandSync<ReplyT>(cmd_vec);
   if (!cmd.ok()) {
     std::cout << "Error with command \"" << redis.vecToStr(cmd_vec)

@@ -43,24 +43,24 @@ StateDB::~StateDB() { redis_connection_.disconnect(); }
 
 boost::optional<std::string> StateDB::get(const StateKey& key) {
   std::string redis_key = generate_redis_key(key);
-  std::vector<std::string> cmd_vec{"GET", redis_key};
+  const std::vector<std::string> cmd_vec{"GET", redis_key};
   return redis::send_cmd_with_reply<std::string>(redis_connection_, cmd_vec);
 }
 
 bool StateDB::put(StateKey key, std::string value) {
   std::string redis_key = generate_redis_key(key);
-  std::vector<std::string> cmd_vec{"SET", redis_key, value};
+  const std::vector<std::string> cmd_vec{"SET", redis_key, value};
   return redis::send_cmd_no_reply<std::string>(redis_connection_, cmd_vec);
 }
 
 bool StateDB::remove(StateKey key) {
   std::string redis_key = generate_redis_key(key);
-  std::vector<std::string> cmd_vec{"DEL", redis_key};
+  const std::vector<std::string> cmd_vec{"DEL", redis_key};
   return redis::send_cmd_no_reply<int>(redis_connection_, cmd_vec);
 }
 
 int StateDB::num_entries() {
-  std::vector<std::string> cmd_vec{"DBSIZE"};
+  const std::vector<std::string> cmd_vec{"DBSIZE"};
   boost::optional<int> result =
       redis::send_cmd_with_reply<int>(redis_connection_, cmd_vec);
   if (result) {

@@ -131,13 +131,14 @@ bool add_model(Redox& redis, const VersionedModelId& model_id,
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
     std::string model_id_key = gen_versioned_model_key(model_id);
-    vector<string> cmd_vec{"HMSET",         model_id_key,
-                           "model_name",    model_id.first,
-                           "model_version", std::to_string(model_id.second),
-                           "load",          std::to_string(0.0),
-                           "input_type",    get_readable_input_type(input_type),
-                           "output_type",   output_type,
-                           "labels",        labels_to_str(labels)};
+    const vector<string> cmd_vec{
+        "HMSET",         model_id_key,
+        "model_name",    model_id.first,
+        "model_version", std::to_string(model_id.second),
+        "load",          std::to_string(0.0),
+        "input_type",    get_readable_input_type(input_type),
+        "output_type",   output_type,
+        "labels",        labels_to_str(labels)};
     return send_cmd_no_reply<string>(redis, cmd_vec);
   } else {
     return false;
@@ -194,7 +195,7 @@ bool add_container(Redox& redis, const VersionedModelId& model_id,
           redis, {"SELECT", std::to_string(REDIS_CONTAINER_DB_NUM)})) {
     std::string replica_key = gen_model_replica_key(model_id, model_replica_id);
     std::string model_id_key = gen_versioned_model_key(model_id);
-    vector<string> cmd_vec{
+    const vector<string> cmd_vec{
         "HMSET", replica_key, "model_id", model_id_key, "model_name",
         model_id.first, "model_version", std::to_string(model_id.second),
         "model_replica_id", std::to_string(model_replica_id),
@@ -259,18 +260,18 @@ bool add_application(redox::Redox& redis, const std::string& appname,
                      const long latency_slo_micros) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_APPLICATION_DB_NUM)})) {
-    vector<string> cmd_vec{"HMSET",
-                           appname,
-                           "candidate_models",
-                           models_to_str(models),
-                           "input_type",
-                           get_readable_input_type(input_type),
-                           "output_type",
-                           output_type,
-                           "policy",
-                           policy,
-                           "latency_slo_micros",
-                           std::to_string(latency_slo_micros)};
+    const vector<string> cmd_vec{"HMSET",
+                                 appname,
+                                 "candidate_models",
+                                 models_to_str(models),
+                                 "input_type",
+                                 get_readable_input_type(input_type),
+                                 "output_type",
+                                 output_type,
+                                 "policy",
+                                 policy,
+                                 "latency_slo_micros",
+                                 std::to_string(latency_slo_micros)};
     return send_cmd_no_reply<string>(redis, cmd_vec);
   } else {
     return false;
