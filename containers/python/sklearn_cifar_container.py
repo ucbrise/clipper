@@ -12,7 +12,10 @@ class SklearnCifarContainer(rpc.ModelContainerBase):
         self.path = path
 
     def predict_floats(self, inputs):
-        preds = self.model.predict(inputs)
+        mean, sigma = np.mean(inputs, axis=1), np.std(inputs, axis=1)
+        np.place(sigma, sigma == 0, 1.)
+        normalized_inputs = np.transpose((inputs.T - mean) / sigma)
+        preds = self.model.predict(normalized_inputs)
         # Change -1 to 0 for binary classification
         preds[np.where(preds == -1)] = 0.
         return preds
