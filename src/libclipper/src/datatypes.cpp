@@ -1,8 +1,8 @@
-
 #include <chrono>
 #include <cstring>
 #include <iostream>
 #include <vector>
+#include <sstream>
 
 #include <clipper/datatypes.hpp>
 
@@ -180,19 +180,23 @@ rpc::PredictionRequest::PredictionRequest(InputType input_type)
 rpc::PredictionRequest::PredictionRequest(
     std::vector<std::shared_ptr<Input>> inputs, InputType input_type)
     : inputs_(inputs), input_type_(input_type) {
-  for (int i = 0; i < (int)inputs.size(); i++) {
-    if (inputs[i]->type() != input_type) {
-      std::cout << "Attempted to add an input of type "
-                << get_readable_input_type(inputs[i]->type())
-                << "to a prediction request with input type "
-                << get_readable_input_type(input_type) << std::endl;
-      throw std::invalid_argument("");
-    }
+  for (int i = 0; i < (int) inputs.size(); i++) {
+    validate_input_type(inputs[i]);
     input_data_size_ += inputs[i]->byte_size();
   }
 }
 
+void rpc::PredictionRequest::validate_input_type(std::shared_ptr<Input> &input) const {
+  if (input->type() != input_type_) {
+    std::ostringstream ss;
+    ss << "Attempted to add an input of type " << get_readable_input_type(input->type())
+       << " to a prediction request with input type " << get_readable_input_type(input_type_);
+    throw std::invalid_argument(ss.str());
+  }
+}
+
 void rpc::PredictionRequest::add_input(std::shared_ptr<Input> input) {
+  validate_input_type(input);
   inputs_.push_back(input);
   input_data_size_ += input->byte_size();
 }

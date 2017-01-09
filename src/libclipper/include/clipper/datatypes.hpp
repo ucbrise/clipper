@@ -329,6 +329,8 @@ class PredictionRequest {
   std::vector<ByteBuffer> serialize();
 
  private:
+  void validate_input_type(std::shared_ptr<Input> &input) const;
+
   std::vector<std::shared_ptr<Input>> inputs_;
   InputType input_type_;
   size_t input_data_size_ = 0;
