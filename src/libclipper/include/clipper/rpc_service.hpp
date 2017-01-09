@@ -12,6 +12,7 @@
 
 #include <clipper/containers.hpp>
 #include <clipper/util.hpp>
+#include <clipper/metrics.hpp>
 
 using zmq::socket_t;
 using std::string;
@@ -24,9 +25,9 @@ namespace clipper {
 namespace rpc {
 
 using RPCResponse = std::pair<const int, vector<uint8_t>>;
-/// Tuple of zmq_connection_id, message_id, vector of messages
+/// Tuple of zmq_connection_id, message_id, vector of messages, creation time
 using RPCRequest =
-    std::tuple<const int, const int, const std::vector<std::vector<uint8_t>>>;
+std::tuple<const int, const int, const std::vector<std::vector<uint8_t>>, const long>;
 
 class RPCService {
  public:
@@ -85,6 +86,7 @@ class RPCService {
   int message_id_ = 0;
   std::unordered_map<VersionedModelId, int, decltype(&versioned_model_hash)>
       replica_ids_;
+  std::shared_ptr<metrics::Histogram> msg_queueing_hist;
 };
 
 }  // namespace rpc

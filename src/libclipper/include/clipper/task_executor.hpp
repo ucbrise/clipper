@@ -14,6 +14,7 @@
 #include <clipper/redis.hpp>
 #include <clipper/rpc_service.hpp>
 #include <clipper/util.hpp>
+#include <clipper/metrics.hpp>
 
 namespace clipper {
 
@@ -50,7 +51,7 @@ class PredictionCache {
   std::unordered_map<long, CacheEntry> cache_;
 };
 
-template <typename Scheduler>
+template<typename Scheduler>
 class TaskExecutor {
  public:
   ~TaskExecutor() { active_ = false; };
@@ -93,6 +94,10 @@ class TaskExecutor {
           }
 
         });
+    throughput_meter = metrics::MetricsRegistry::get_metrics().create_meter("model_throughput");
+    predictions_counter = metrics::MetricsRegistry::get_metrics().create_counter("num_predictions");
+    throughput_meter = metrics::MetricsRegistry::get_metrics().create_meter("prediction_throughput");
+    latency_hist = metrics::MetricsRegistry::get_metrics().create_histogram("prediction_latency", "milliseconds", 2056);
     boost::thread(&TaskExecutor::send_messages, this).detach();
     boost::thread(&TaskExecutor::recv_messages, this).detach();
   }
@@ -142,8 +147,11 @@ class TaskExecutor {
   bool active_ = false;
   std::mutex inflight_messages_mutex_;
   std::unordered_map<
-      int, std::vector<std::pair<VersionedModelId, std::shared_ptr<Input>>>>
+      int, std::vector<std::tuple<const long, VersionedModelId, std::shared_ptr<Input>>>>
       inflight_messages_;
+  std::shared_ptr<metrics::Counter> predictions_counter;
+  std::shared_ptr<metrics::Meter> throughput_meter;
+  std::shared_ptr<metrics::Histogram> latency_hist;
 
   /// TODO: The task executor needs executors to schedule tasks (assign
   /// tasks to containers), batch and serialize tasks to be sent via the
@@ -180,12 +188,12 @@ class TaskExecutor {
             std::unique_lock<std::mutex> l(inflight_messages_mutex_);
             // std::vector<const std::vector<uint8_t>> serialized_inputs;
 
-            std::vector<std::pair<VersionedModelId, std::shared_ptr<Input>>>
+            std::vector<std::tuple<const long, VersionedModelId, std::shared_ptr<Input>>>
                 cur_batch;
             rpc::PredictionRequest prediction_request(c->input_type_);
             for (auto b : batch) {
               prediction_request.add_input(b.input_);
-              cur_batch.emplace_back(b.model_, b.input_);
+              cur_batch.emplace_back(b.send_time_micros_, b.model_, b.input_);
             }
             int message_id = rpc_->send_message(prediction_request.serialize(),
                                                 c->container_id_);
@@ -213,10 +221,16 @@ class TaskExecutor {
         std::vector<float> deserialized_outputs = deserialize_outputs(r.second);
         assert(deserialized_outputs.size() == keys.size());
         int batch_size = keys.size();
+        predictions_counter->increment(batch_size);
+        throughput_meter->mark(batch_size);
+        long current_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
         for (int batch_num = 0; batch_num < batch_size; ++batch_num) {
+          long send_time = std::get<0>(keys[batch_num]);
+          latency_hist->insert(static_cast<int64_t>(current_time - send_time));
           cache_.put(
-              keys[batch_num].first, keys[batch_num].second,
-              Output{deserialized_outputs[batch_num], keys[batch_num].first});
+              std::get<1>(keys[batch_num]), std::get<2>(keys[batch_num]),
+              Output{deserialized_outputs[batch_num], std::get<1>(keys[batch_num])});
         }
       }
     }

@@ -6,6 +6,7 @@ project(libclipper VERSION 0.1.0 LANGUAGES CXX)
 add_library(clipper
     src/query_processor.cpp
     src/datatypes.cpp
+    src/metrics.cpp
     src/selection_policies.cpp
     src/persistent_state.cpp
     src/task_executor.cpp
@@ -34,6 +35,7 @@ export(TARGETS clipper FILE ClipperConfig.cmake)
 
 add_executable(libclippertests EXCLUDE_FROM_ALL
     test/test_main.cpp
+    test/metrics_test.cpp
     test/rpc_service_test.cpp
     test/timers_test.cpp
     test/serialization_test.cpp

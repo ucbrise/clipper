@@ -11,6 +11,7 @@
 #include <clipper/rpc_service.hpp>
 #include <clipper/task_executor.hpp>
 #include <clipper/util.hpp>
+#include <clipper/metrics.hpp>
 
 using zmq::socket_t;
 using zmq::message_t;
@@ -28,13 +29,16 @@ constexpr int INITIAL_REPLICA_ID_SIZE = 100;
 RPCService::RPCService()
     : request_queue_(std::make_shared<Queue<RPCRequest>>()),
       response_queue_(std::make_shared<Queue<RPCResponse>>()),
-      // The version of the unordered_map constructor that allows
-      // you to specify your own hash function also requires you
-      // to provide the initial size of the map. We define the initial
-      // size of the map somewhat arbitrarily as 100.
+    // The version of the unordered_map constructor that allows
+    // you to specify your own hash function also requires you
+    // to provide the initial size of the map. We define the initial
+    // size of the map somewhat arbitrarily as 100.
       replica_ids_(std::unordered_map<VersionedModelId, int,
                                       decltype(&versioned_model_hash)>(
-          INITIAL_REPLICA_ID_SIZE, &versioned_model_hash)) {}
+          INITIAL_REPLICA_ID_SIZE, &versioned_model_hash)) {
+  msg_queueing_hist =
+      metrics::MetricsRegistry::get_metrics().create_histogram("rpc_request_queueing_delay", "microseconds", 2056);
+}
 
 RPCService::~RPCService() { stop(); }
 
@@ -55,13 +59,15 @@ int RPCService::send_message(const vector<vector<uint8_t>> msg,
                              const int zmq_connection_id) {
   if (!active_) {
     std::cout << "Cannot send message to inactive RPCService instance. "
-                 "Dropping message"
+        "Dropping message"
               << std::endl;
     return -1;
   }
   int id = message_id_;
   message_id_ += 1;
-  RPCRequest request(zmq_connection_id, id, std::move(msg));
+  long current_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(
+      std::chrono::system_clock::now().time_since_epoch()).count();
+  RPCRequest request(zmq_connection_id, id, std::move(msg), current_time_micros);
   request_queue_->push(request);
   return id;
 }
@@ -129,7 +135,10 @@ void RPCService::send_messages(
     socket_t &socket, shared_ptr<Queue<RPCRequest>> request_queue,
     boost::bimap<int, vector<uint8_t>> &connections) {
   while (request_queue->size() > 0) {
+    long current_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
     RPCRequest request = request_queue->pop();
+    msg_queueing_hist->insert(std::get<3>(request) - current_time_micros);
     boost::bimap<int, vector<uint8_t>>::left_const_iterator connection =
         connections.left.find(std::get<0>(request));
     if (connection == connections.left.end()) {
@@ -150,9 +159,9 @@ void RPCService::send_messages(
     for (const std::vector<uint8_t> &m : std::get<2>(request)) {
       // send the sndmore flag unless we are on the last message part
       if (cur_msg_num < last_msg_num) {
-        socket.send((uint8_t *)m.data(), m.size(), ZMQ_SNDMORE);
+        socket.send((uint8_t *) m.data(), m.size(), ZMQ_SNDMORE);
       } else {
-        socket.send((uint8_t *)m.data(), m.size(), 0);
+        socket.send((uint8_t *) m.data(), m.size(), 0);
       }
       cur_msg_num += 1;
     }
@@ -169,8 +178,8 @@ void RPCService::receive_message(
   socket.recv(&msg_delimiter, 0);
 
   vector<uint8_t> connection_id(
-      (uint8_t *)msg_identity.data(),
-      (uint8_t *)msg_identity.data() + msg_identity.size());
+      (uint8_t *) msg_identity.data(),
+      (uint8_t *) msg_identity.data() + msg_identity.size());
   boost::bimap<int, vector<uint8_t>>::right_const_iterator connection =
       connections.right.find(connection_id);
   if (connection == connections.right.end()) {
@@ -210,9 +219,9 @@ void RPCService::receive_message(
     socket.recv(&msg_id, 0);
     socket.recv(&msg_content, 0);
     // TODO: get rid of c-style casts
-    int id = ((int *)msg_id.data())[0];
-    vector<uint8_t> content((uint8_t *)msg_content.data(),
-                            (uint8_t *)msg_content.data() + msg_content.size());
+    int id = ((int *) msg_id.data())[0];
+    vector<uint8_t> content((uint8_t *) msg_content.data(),
+                            (uint8_t *) msg_content.data() + msg_content.size());
     RPCResponse response(id, content);
     response_queue->push(response);
   }

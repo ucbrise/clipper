@@ -19,6 +19,8 @@ ModelContainer::ModelContainer(VersionedModelId model, int container_id, InputTy
 int ModelContainer::get_queue_size() { return request_queue_.size(); }
 
 void ModelContainer::send_prediction(PredictTask task) {
+  task.send_time_micros_ = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::system_clock::now().time_since_epoch()).count();
   request_queue_.push(task);
 }
 
