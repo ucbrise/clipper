@@ -12,14 +12,14 @@ size_t versioned_model_hash(const VersionedModelId &key) {
   return std::hash<std::string>()(key.first) ^ std::hash<int>()(key.second);
 }
 
-template<typename T>
+template <typename T>
 ByteBuffer get_byte_buffer(std::vector<T> vector) {
   uint8_t *data = reinterpret_cast<uint8_t *>(vector.data());
   ByteBuffer bytes(data, data + vector.size() * (sizeof(T) / sizeof(uint8_t)));
   return bytes;
 }
 
-template<typename T>
+template <typename T>
 size_t serialize_to_buffer(const std::vector<T> &vector, uint8_t *buf) {
   const uint8_t *byte_data = reinterpret_cast<const uint8_t *>(vector.data());
   size_t amt_to_write = vector.size() * (sizeof(T) / sizeof(uint8_t));
@@ -29,11 +29,16 @@ size_t serialize_to_buffer(const std::vector<T> &vector, uint8_t *buf) {
 
 std::string get_readable_input_type(InputType type) {
   switch (type) {
-    case InputType::Bytes:return std::string("bytes");
-    case InputType::Ints:return std::string("integers");
-    case InputType::Floats:return std::string("floats");
-    case InputType::Doubles:return std::string("doubles");
-    case InputType::Strings:return std::string("strings");
+    case InputType::Bytes:
+      return std::string("bytes");
+    case InputType::Ints:
+      return std::string("integers");
+    case InputType::Floats:
+      return std::string("floats");
+    case InputType::Doubles:
+      return std::string("doubles");
+    case InputType::Strings:
+      return std::string("strings");
   }
   return std::string("Invalid input type");
 }
@@ -203,8 +208,8 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
   }
 
   long start = std::chrono::duration_cast<std::chrono::milliseconds>(
-      std::chrono::system_clock::now().time_since_epoch())
-      .count();
+                   std::chrono::system_clock::now().time_since_epoch())
+                   .count();
 
   std::vector<uint32_t> request_metadata;
   request_metadata.emplace_back(
@@ -215,10 +220,10 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
   input_metadata.emplace_back(static_cast<uint32_t>(inputs_.size()));
 
   uint32_t index = 0;
-  uint8_t *input_buf = (uint8_t *) malloc(input_data_size_);
+  uint8_t *input_buf = (uint8_t *)malloc(input_data_size_);
   uint8_t *input_buf_start = input_buf;
 
-  for (int i = 0; i < (int) inputs_.size(); i++) {
+  for (int i = 0; i < (int)inputs_.size(); i++) {
     size_t amt_written = inputs_[i]->serialize(input_buf);
     input_buf += amt_written;
     index += inputs_[i]->size();
@@ -239,8 +244,8 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
   serialized_request.push_back(serialized_inputs);
 
   long stop = std::chrono::duration_cast<std::chrono::milliseconds>(
-      std::chrono::system_clock::now().time_since_epoch())
-      .count();
+                  std::chrono::system_clock::now().time_since_epoch())
+                  .count();
 
   std::cout << stop - start << std::endl;
 
