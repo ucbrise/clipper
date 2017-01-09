@@ -39,8 +39,7 @@ class Metric {
    */
   virtual const boost::property_tree::ptree report_tree() = 0;
   /**
-   * @return A json-formatted string containing relevant metric
-   * attributes
+   * @return A json-formatted string containing relevant metric attributes
    */
   virtual const std::string report_str() = 0;
   /**
