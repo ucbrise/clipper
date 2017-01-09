@@ -1,18 +1,18 @@
 from __future__ import print_function, with_statement
 from fabric.api import *
-from fabric.colors import green as _green, yellow as _yellow
-from fabric.contrib.console import confirm
+# from fabric.colors import green as _green, yellow as _yellow
+# from fabric.contrib.console import confirm
 from fabric.contrib.files import append
-from fabric.contrib.project import rsync_project
-from StringIO import StringIO
-import sys
+# from fabric.contrib.project import rsync_project
+# from StringIO import StringIO
+# import sys
 import os
 import requests
 import json
 import yaml
-import gevent
-import traceback
-import toml
+# import gevent
+# import traceback
+# import toml
 import pprint
 import subprocess32 as subprocess
 from sklearn import base
@@ -34,6 +34,8 @@ aws_access_key_id = {access_key}
 aws_secret_access_key = {secret_key}
 """
 
+# TODO TODO TODO: change images from :test to :lates
+# before accepting PR
 DOCKER_COMPOSE_DICT = {
     'networks': {
         'default': {
@@ -90,8 +92,8 @@ class Cluster:
                 sudo("chmod +x /usr/local/bin/docker-compose")
 
             print("Creating internal Docker network")
-            nw_create_command = "docker network create --driver bridge {nw}".format(
-                nw=DOCKER_NW)
+            nw_create_command = ("docker network create --driver bridge {nw}"
+                                 .format(nw=DOCKER_NW))
             sudo(nw_create_command, warn_only=True)
             run("mkdir -p {model_repo}".format(model_repo=MODEL_REPO))
             # print("Creating local model repository")
@@ -127,6 +129,24 @@ class Cluster:
         })
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
+        print(r.text)
+
+    def list_apps(self):
+        with hide("output", "running"):
+            result = local(("redis-cli -h {host} -p 6379 -n {db} keys \"*\""
+                            .format(host=self.host,
+                                    db=REDIS_APPLICATION_DB_NUM)),
+                           capture=True)
+
+            if len(result.stdout) > 0:
+                print(result.stdout)
+                # splits = result.stdout.split("\n")
+                # fmt_result = dict([(splits[i], splits[i+1])
+                #                 for i in range(0, len(splits), 2)])
+                # pp = pprint.PrettyPrinter(indent=2)
+                # pp.pprint(fmt_result)
+            else:
+                print("Clipper has no applications registered")
 
     def get_app_info(self, name):
         with hide("output", "running"):
@@ -256,9 +276,8 @@ class Cluster:
         else:
             print("Published model to Clipper")
             # aggregate results of starting all containers
-            with show("running"):
-                return all([self.add_container(name, version)
-                            for r in range(num_containers)])
+            return all([self.add_container(name, version)
+                        for r in range(num_containers)])
 
     def add_container(self, model_name, model_version):
         """
@@ -390,6 +409,16 @@ class Cluster:
                  "container docker image")
             return False
 
+    # def get_selection_state(self, app_name, uid):
+    #     url = "http://%s:1338/admin/get_state" % self.host
+    #     req_json = json.dumps({
+    #         "app_name": app_name,
+    #         "uid": uid
+    #     })
+    #     headers = {'Content-type': 'application/json'}
+    #     r = requests.post(url, headers=headers, data=req_json)
+    #     return r.text
+
     def stop_all(self):
         print("Stopping Clipper and all running models...")
         with hide("output", "warnings", "running"):
@@ -403,6 +432,14 @@ class Cluster:
             run("rm -rf {model_repo}".format(model_repo=MODEL_REPO))
             sudo("docker rmi --force $(docker images -q)", warn_only=True)
             sudo("docker network rm clipper_nw", warn_only=True)
+
+    def pull_docker_images(self):
+        with hide("output"):
+            sudo("docker pull clipper/query_frontend:test")
+            sudo("docker pull clipper/management_frontend:test")
+            sudo("docker pull redis")
+            sudo("docker pull clipper/sklearn_cifar_container")
+            sudo("docker pull clipper/tf_cifar_container")
 
 ############################################################################
 

@@ -57,10 +57,10 @@ std::string lookup_selection_state(
   if (auto state_opt = state_db.get(clipper::StateKey{appname, uid, hashkey})) {
     serialized_state = *state_opt;
     state = Policy::deserialize_state(serialized_state);
-    return Policy::state_debug_string(state);
   } else {
-    return "State not found";
+    state = Policy::initialize(candidate_models);
   }
+  return Policy::state_debug_string(state);
 }
 
 /**

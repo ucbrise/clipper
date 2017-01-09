@@ -1,10 +1,10 @@
 from __future__ import print_function
+from sklearn.externals import joblib
 import rpc
 import os
 import sys
 import numpy as np
 np.set_printoptions(threshold=np.nan)
-from sklearn.externals import joblib
 
 
 class SklearnCifarContainer(rpc.ModelContainerBase):
@@ -14,8 +14,16 @@ class SklearnCifarContainer(rpc.ModelContainerBase):
         self.path = path
 
     def predict_doubles(self, inputs):
-        preds = (self.model.predict(inputs)).astype(np.float32)
+        preds = self.model.predict(inputs).astype(np.float32)
         return preds
+
+    # def predict_ints(self, inputs):
+    #     mean, sigma = np.mean(inputs, axis=1), np.std(inputs, axis=1)
+    #     np.place(sigma, sigma == 0, 1.)
+    #     normalized_inputs = np.transpose((inputs.T - mean) / sigma)
+    #     preds = self.model.predict(normalized_inputs).astype(np.float32)
+    #     return preds
+
 
 
 if __name__ == "__main__":
@@ -47,7 +55,8 @@ if __name__ == "__main__":
 
     input_type = "doubles"
     model_path = os.environ["CLIPPER_MODEL_PATH"]
-    pkl_names = [l for l in os.listdir(model_path) if os.path.splitext(l)[-1] == ".pkl"]
+    pkl_names = [l for l in os.listdir(model_path) if
+                 os.path.splitext(l)[-1] == ".pkl"]
     print(pkl_names)
     if len(pkl_names) != 1:
         print("Found %d *.pkl files. Expected 1" % len(pkl_names))
