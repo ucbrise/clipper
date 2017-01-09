@@ -2,7 +2,6 @@ import json
 import os
 import requests
 from datetime import datetime
-from skimage.io import imshow
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -15,10 +14,28 @@ positive_class = classes.index('airplane')
 negative_class = classes.index('bird')
 
 
-def show_image(x):
-    img = x.reshape(3, 32, 32)
-    img = np.transpose(img, (2, 0, 1))
-    imshow(img)
+def recover_pixels(x):
+    return np.transpose(x.reshape(3, 32, 32), (1, 2, 0))
+
+
+def plot_random_images(images, labels, num_rows):
+    imgs_per_row = 8
+    num_images = imgs_per_row * num_rows
+    idxs = np.random.randint(0, len(labels), num_images)
+    f, axes = plt.subplots(nrows=num_rows,
+                           ncols=imgs_per_row,
+                           figsize=(1.5*imgs_per_row, 2*num_rows))
+    for i, idx in enumerate(idxs):
+        image = recover_pixels(images[idx])
+        label = labels[idx]
+        cur_ax = axes[i / imgs_per_row][i % imgs_per_row]
+        cur_ax.imshow(image, interpolation="nearest")
+        cur_ax.axis('off')
+        if label == -1:
+            title = classes[negative_class]
+        else:
+            title = classes[positive_class]
+        cur_ax.set_title(title)
 
 
 def load_cifar(cifar_location, cifar_filename="cifar_train.data", norm=True):
