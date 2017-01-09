@@ -44,15 +44,21 @@ std::string get_readable_input_type(InputType type) {
 }
 
 InputType parse_input_type(std::string type_string) {
-  if (type_string == "bytes") {
+  if (type_string == "bytes" || type_string == "byte" || type_string == "b") {
     return InputType::Bytes;
-  } else if (type_string == "integers") {
+  } else if (type_string == "integers" || type_string == "ints" ||
+             type_string == "integer" || type_string == "int" ||
+             type_string == "i") {
     return InputType::Ints;
-  } else if (type_string == "floats") {
+  } else if (type_string == "floats" || type_string == "float" ||
+             type_string == "f") {
     return InputType::Floats;
-  } else if (type_string == "doubles") {
+  } else if (type_string == "doubles" || type_string == "double" ||
+             type_string == "d") {
     return InputType::Doubles;
-  } else if (type_string == "strings") {
+  } else if (type_string == "strings" || type_string == "string" ||
+             type_string == "str" || type_string == "strs" ||
+             type_string == "s") {
     return InputType::Strings;
   } else {
     throw std::invalid_argument(type_string + " is not a valid input string");

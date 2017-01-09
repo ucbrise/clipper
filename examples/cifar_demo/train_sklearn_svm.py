@@ -9,7 +9,7 @@ classes = ['airplane', 'automobile', 'bird', 'cat',
 positive_class = classes.index('airplane')
 negative_class = classes.index('bird')
 
-def load_cifar(cifar_location, cifar_filename = "train.data", norm=False):
+def load_cifar(cifar_location, cifar_filename = "cifar_train.data", norm=True):
     cifar_path = cifar_location + "/" + cifar_filename
     print("Source file: %s" % cifar_path)
     df = pd.read_csv(cifar_path, sep=",", header=None)
@@ -19,10 +19,9 @@ def load_cifar(cifar_location, cifar_filename = "train.data", norm=False):
     X = data[:,1:]
     Z = X
     if norm:
-        mu = np.mean(X.T,0)
-        sigma = np.var(X.T,0)
-        Z = (X.T - mu) / np.array([np.sqrt(z) if z > 0 else 1. for z in sigma])
-        Z = Z.T
+        mu = np.mean(X,0)
+        sigma = np.var(X,0)
+        Z = (X - mu) / np.array([np.sqrt(z) if z > 0 else 1. for z in sigma])
     return (Z, y)
 
 def filter_data(X, y):
@@ -46,9 +45,10 @@ def train_svm(X, y):
     return model
 
 if __name__ == '__main__':
-    X, y = load_cifar('data', norm=True)
+    cifar_path = os.path.expanduser("~/model-serving/data/cifar")
+    X, y = load_cifar(cifar_path)
     model = train_svm(X, y)
-    X_test, y_test = load_cifar('data', 'test.data', norm=True)
+    X_test, y_test = load_cifar(cifar_path, 'cifar_test.data')
     X_test, y_test = filter_data(X_test, y_test)
     print(model.score(X_test, y_test))
     if not os.path.exists('models'):

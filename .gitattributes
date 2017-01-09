@@ -1,0 +1,3 @@
+examples/cifar_demo/tf_cifar_model filter=lfs diff=lfs merge=lfs -text
+examples/cifar_demo/tf_cifar_model/cifar10_model_full filter=lfs diff=lfs merge=lfs -text
+examples/cifar_demo/tf_cifar_model/cifar10_model_full.meta filter=lfs diff=lfs merge=lfs -text

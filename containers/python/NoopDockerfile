@@ -1,0 +1,9 @@
+FROM clipper/py-rpc
+
+MAINTAINER Dan Crankshaw <dscrankshaw@gmail.com>
+
+COPY noop_container.py /container/
+
+CMD ["python", "/container/noop_container.py"]
+
+# vim: set filetype=dockerfile:
