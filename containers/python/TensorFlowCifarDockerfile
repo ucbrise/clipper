@@ -1,4 +1,6 @@
-FROM clipper/py-rpc
+# TODO TODO TODO: Before merge, change :test to :latest
+
+FROM clipper/py-rpc:test
 
 MAINTAINER Dan Crankshaw <dscrankshaw@gmail.com>
 
