@@ -4,6 +4,7 @@ import threading
 import numpy as np
 import struct
 from datetime import datetime
+import socket
 
 INPUT_TYPE_BYTES = 0
 INPUT_TYPE_INTS = 1
@@ -18,7 +19,7 @@ REQUEST_TYPE_FEEDBACK = 1
 def string_to_input_type(input_str):
     input_str = input_str.strip().lower()
     byte_strs = ["b", "bytes", "byte"]
-    int_strs = ["i", "ints", "int"]
+    int_strs = ["i", "ints", "int", "integer", "integers"]
     float_strs = ["f", "floats", "float"]
     double_strs = ["d", "doubles", "double"]
     string_strs = ["s", "strings", "string", "strs", "str"]
@@ -140,11 +141,11 @@ class Server(threading.Thread):
                         raw_content.split('\0')[
                             :-1], dtype=input_type_to_dtype(input_type))
                 else:
-                    inputs = np.split(
+                    inputs = np.array(np.split(
                         np.frombuffer(
                             raw_content, dtype=input_type_to_dtype(
                                 input_type)),
-                        splits)
+                        splits))
 
                 t3 = datetime.now()
 
@@ -202,7 +203,7 @@ class ModelContainerBase(object):
         pass
 
 
-def start(model, ip, port, model_name, model_version, input_type):
+def start(model, host, port, model_name, model_version, input_type):
     """
     Args:
         model (object): The loaded model object ready to make predictions.
@@ -212,6 +213,11 @@ def start(model, ip, port, model_name, model_version, input_type):
         model_version (int): The version of the model
         input_type (str): One of ints, doubles, floats, bytes, strings.
     """
+
+    try:
+        ip = socket.gethostbyname(host)
+    except socket.error as e:
+        print("Error resolving %s: %s" % (host, e))
     context = zmq.Context()
     server = Server(context, ip, port)
     model_input_type = string_to_input_type(input_type)
