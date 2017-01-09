@@ -79,3 +79,10 @@ on Docker Hub in the [Clipper repository](https://hub.docker.com/u/clipper/).
 
 The recommended way of running Clipper in Docker is using docker-compose.
 Check out the [guide](docker/README.md) for instructions.
+
+
+## Contributing
+
+We welcome bug reports and feature requests.
+
+[Clipper Jira](https://clipper.atlassian.net/browse/CLIPPER)
