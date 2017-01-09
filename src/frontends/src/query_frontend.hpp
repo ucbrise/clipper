@@ -276,7 +276,8 @@ class RequestHandler {
   }
 
   size_t num_applications() {
-    size_t count = server_.num_endpoints();
+    // Subtract one to account for the /metrics endpoint
+    size_t count = server_.num_endpoints() - 1;
     assert(count % 2 == 0);
     return count / 2;
   }
