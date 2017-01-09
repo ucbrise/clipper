@@ -8,6 +8,8 @@
 #include <string>
 #include <thread>
 
+#include <boost/property_tree/ptree.hpp>
+
 namespace clipper {
 
 namespace metrics {
@@ -28,10 +30,19 @@ class Metric {
    */
   virtual MetricType type() const = 0;
   /**
+   *
+   * @return The name of the metric, generally user-defined
+   */
+  virtual const std::string name() const = 0;
+  /**
+   * @return A boost property tree containing relevant metric attributes
+   */
+  virtual const boost::property_tree::ptree report_tree() = 0;
+  /**
    * @return A json-formatted string containing relevant metric
    * attributes
    */
-  virtual const std::string report() = 0;
+  virtual const std::string report_str() = 0;
   /**
    * Resets all metric attributes to their default values (typically zero)
    */
@@ -57,7 +68,9 @@ class Counter : public Metric {
 
   // Metric implementation
   MetricType type() const override;
-  const std::string report() override;
+  const std::string name() const override;
+  const boost::property_tree::ptree report_tree() override;
+  const std::string report_str() override;
   void clear() override;
 
  private:
@@ -87,7 +100,9 @@ class RatioCounter : public Metric {
 
   // Metric implementation
   MetricType type() const override;
-  const std::string report() override;
+  const std::string name() const override;
+  const boost::property_tree::ptree report_tree() override;
+  const std::string report_str() override;
   void clear() override;
 
  private:
@@ -207,7 +222,9 @@ class Meter : public Metric {
 
   // Metric implementation
   MetricType type() const override;
-  const std::string report() override;
+  const std::string name() const override;
+  const boost::property_tree::ptree report_tree() override;
+  const std::string report_str() override;
   void clear() override;
 
  private:
@@ -288,7 +305,9 @@ class Histogram : public Metric {
 
   // Metric implementation
   MetricType type() const override;
-  const std::string report() override;
+  const std::string name() const override;
+  const std::string report_str() override;
+  const boost::property_tree::ptree report_tree() override;
   void clear() override;
 
  private:
@@ -306,12 +325,21 @@ class Histogram : public Metric {
 class MetricsRegistry {
 
  public:
-  ~MetricsRegistry();
   /**
    * Obtains an instance of the MetricsRegistry singleton
    * that can be used to create new metrics
    */
   static MetricsRegistry &get_metrics();
+  /**
+   * @return A JSON-formatted string containing structured reports
+   * of all metrics in the registry. The schema is as follows:
+   * {
+   *  "counters" : [{counter_name: counter_report}, {counter_name: counter_report}],
+   *  "histograms": [{counter_name: counter_report}, {counter_name: counter_report}],
+   *  ...
+   * }
+   */
+  const std::string report_metrics(const bool clear=false);
 
   /** Creates a Counter with initial value zero */
   std::shared_ptr<Counter> create_counter(const std::string name);
@@ -330,10 +358,8 @@ class MetricsRegistry {
   MetricsRegistry &operator=(MetricsRegistry &&other) = delete;
 
   void manage_metrics();
-  std::thread metrics_thread_;
   std::shared_ptr<vector<std::shared_ptr<Metric>>> metrics_;
   std::shared_ptr<std::mutex> metrics_lock_;
-  std::atomic_bool active_;
 
 };
 
