@@ -80,11 +80,17 @@ std::vector<VersionedModelId> str_to_models(const std::string& model_str);
  * Adds a model into the model table. This will
  * overwrite any existing entry with the same key.
  *
+ * \param container_name should be the name of a Docker container
+ * \param model_data_path should be the path on the Clipper host
+ * to the serialized model data needed for the container
+ *
  * \return Returns true if the add was successful.
  */
 bool add_model(redox::Redox& redis, const VersionedModelId& model_id,
                const InputType& input_type, const std::string& output_type,
-               const std::vector<std::string>& labels);
+               const std::vector<std::string>& labels,
+               const std::string& container_name,
+               const std::string& model_data_path);
 
 /**
  * Deletes a model from the model table if it exists.
