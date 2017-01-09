@@ -45,23 +45,6 @@ const std::string get_metrics_category_name(MetricType type) {
   }
 }
 
-/**
- * When periodically logging metrics, this message indicates
- * the beginning of a new metrics category
- */
-void log_metrics_category(MetricType type) {
-  switch (type) {
-    case MetricType::Counter:std::cout << "Counters" << std::endl << "-------" << std::endl;
-      break;
-    case MetricType::RatioCounter:std::cout << "Ratio Counters" << std::endl << "-------" << std::endl;
-      break;
-    case MetricType::Meter:std::cout << "Meters" << std::endl << "-------" << std::endl;
-      break;
-    case MetricType::Histogram:std::cout << "Histograms" << std::endl << "-------" << std::endl;
-      break;
-  }
-}
-
 MetricsRegistry::MetricsRegistry()
     : metrics_(std::make_shared<std::vector<std::shared_ptr<Metric>>>()),
       metrics_lock_(std::make_shared<std::mutex>()) {

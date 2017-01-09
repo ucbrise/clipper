@@ -317,6 +317,12 @@ class Histogram : public Metric {
 
 };
 
+
+/**
+ * Obtains a human readable string representation of the provided MetricType
+ */
+const std::string get_metrics_category_name(MetricType type);
+
 /**
  * Singleton object that manages creation, logging, and persistence
  * of system metrics.
