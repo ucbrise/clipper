@@ -69,25 +69,33 @@ TEST_F(RedisTest, AddModel) {
   std::vector<std::string> labels{"ads", "images", "experimental", "other",
                                   "labels"};
   VersionedModelId model = std::make_pair("m", 1);
-  ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, "double", labels));
+  std::string container_name = "clipper/test_container";
+  std::string model_path = "/tmp/models/m/1";
+  ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, "double", labels,
+                        container_name, model_path));
   auto result = get_model(*redis_, model);
-  // The model table has 6 fields, so we expect
-  // to get back a map with 6 entries in it
+  // The model table has 8 fields, so we expect
+  // to get back a map with 8 entries in it
   // (see add_model() in redis.cpp for details on what the fields are).
-  EXPECT_EQ(result.size(), static_cast<size_t>(6));
+  EXPECT_EQ(result.size(), static_cast<size_t>(8));
   ASSERT_EQ(result["model_name"], model.first);
   ASSERT_EQ(std::stoi(result["model_version"]), model.second);
   ASSERT_FLOAT_EQ(std::stof(result["load"]), 0.0);
   ASSERT_EQ(str_to_labels(result["labels"]), labels);
   ASSERT_EQ(parse_input_type(result["input_type"]), InputType::Ints);
+  ASSERT_EQ(result["container_name"], container_name);
+  ASSERT_EQ(result["model_data_path"], model_path);
 }
 
 TEST_F(RedisTest, DeleteModel) {
   std::vector<std::string> labels{"ads", "images", "experimental"};
   VersionedModelId model = std::make_pair("m", 1);
-  ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, "double", labels));
+  std::string container_name = "clipper/test_container";
+  std::string model_path = "/tmp/models/m/1";
+  ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, "double", labels,
+                        container_name, model_path));
   auto add_result = get_model(*redis_, model);
-  EXPECT_EQ(add_result.size(), static_cast<size_t>(6));
+  EXPECT_EQ(add_result.size(), static_cast<size_t>(8));
   ASSERT_TRUE(delete_model(*redis_, model));
   auto delete_result = get_model(*redis_, model);
   EXPECT_EQ(delete_result.size(), static_cast<size_t>(0));
@@ -172,6 +180,8 @@ TEST_F(RedisTest, DeleteApplication) {
 TEST_F(RedisTest, SubscriptionDetectModelAdd) {
   std::vector<std::string> labels{"ads", "images", "experimental"};
   VersionedModelId model = std::make_pair("m", 1);
+  std::string container_name = "clipper/test_container";
+  std::string model_path = "/tmp/models/m/1";
   std::condition_variable_any notification_recv;
   std::mutex notification_mutex;
   std::atomic<bool> recv{false};
@@ -188,7 +198,8 @@ TEST_F(RedisTest, SubscriptionDetectModelAdd) {
       });
   // give Redis some time to register the subscription
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
-  ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, "double", labels));
+  ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, "double", labels,
+                        container_name, model_path));
   std::unique_lock<std::mutex> l(notification_mutex);
   bool result = notification_recv.wait_for(l, std::chrono::milliseconds(1000),
                                            [&recv]() { return recv == true; });
@@ -198,7 +209,10 @@ TEST_F(RedisTest, SubscriptionDetectModelAdd) {
 TEST_F(RedisTest, SubscriptionDetectModelDelete) {
   std::vector<std::string> labels{"ads", "images", "experimental"};
   VersionedModelId model = std::make_pair("m", 1);
-  ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, "double", labels));
+  std::string container_name = "clipper/test_container";
+  std::string model_path = "/tmp/models/m/1";
+  ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, "double", labels,
+                        container_name, model_path));
   std::condition_variable_any notification_recv;
   std::mutex notification_mutex;
   std::atomic<bool> recv{false};

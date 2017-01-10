@@ -100,7 +100,9 @@ TEST_F(ManagementFrontendTest, TestAddModelCorrect) {
     "model_version": 4,
     "labels": ["label1", "label2", "label3"],
     "input_type": "integers",
-    "output_type": "double"
+    "output_type": "double",
+    "container_name": "clipper/sklearn_cifar",
+    "model_data_path": "/tmp/model/repo/m/1"
   }
   )";
 
@@ -109,7 +111,7 @@ TEST_F(ManagementFrontendTest, TestAddModelCorrect) {
   // The model table has 6 fields, so we expect to get back a map with 6
   // entries in it (see add_model() in redis.cpp for details on what the
   // fields are).
-  ASSERT_EQ(result.size(), static_cast<size_t>(6));
+  ASSERT_EQ(result.size(), static_cast<size_t>(8));
 }
 
 TEST_F(ManagementFrontendTest, TestAddModelMissingField) {

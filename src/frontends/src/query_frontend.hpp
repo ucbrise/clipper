@@ -13,6 +13,7 @@
 #include <clipper/config.hpp>
 #include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/metrics.hpp>
 #include <clipper/query_processor.hpp>
 #include <clipper/redis.hpp>
 
@@ -30,6 +31,8 @@ using clipper::FeedbackQuery;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
 namespace query_frontend {
+
+const std::string GET_METRICS = "^/metrics$";
 
 enum class OutputType { Double, Int };
 
@@ -124,6 +127,18 @@ class RequestHandler {
       std::cout << "Sleeping 1 second..." << std::endl;
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
+
+    server_.add_endpoint(
+        GET_METRICS, "GET",
+        [](std::shared_ptr<HttpServer::Response> response,
+           std::shared_ptr<HttpServer::Request> /*request*/) {
+          clipper::metrics::MetricsRegistry& registry =
+              clipper::metrics::MetricsRegistry::get_metrics();
+          std::string metrics_report = registry.report_metrics();
+          std::cout << "METRICS\n" << metrics_report << std::endl;
+          respond_http(metrics_report, "200 OK", response);
+        });
+
     clipper::redis::subscribe_to_application_changes(
         redis_subscriber_,
         [this](const std::string& key, const std::string& event_type) {
@@ -165,7 +180,7 @@ class RequestHandler {
         prediction.then([response](boost::future<Response> f) {
           Response r = f.get();
           std::stringstream ss;
-          ss << "qid:" << r.query_id_ << " predict:" << r.output_.y_hat_;
+          ss << "qid:" << r.query_id_ << ", predict:" << r.output_.y_hat_;
           std::string content = ss.str();
           respond_http(content, "200 OK", response);
         });
@@ -252,16 +267,17 @@ class RequestHandler {
     return update;
   }
 
-  void start_listening() {
-    // HttpServer& s = server_;
-    // std::thread server_thread([&s]() { s.start(); });
-    server_.start();
+  void start_listening() { server_.start(); }
 
-    // server_thread.join();
-  }
-
+  /**
+   * Returns the number of applications that have been registered
+   * with Clipper. This is equivalent to the number of /predict,/update
+   * REST endpoint pairs that have been registered with the server.
+   * We don't count the /metrics endpoint as it does not serve predictions.
+   */
   size_t num_applications() {
-    size_t count = server_.num_endpoints();
+    // Subtract one to account for the /metrics endpoint
+    size_t count = server_.num_endpoints() - 1;
     assert(count % 2 == 0);
     return count / 2;
   }

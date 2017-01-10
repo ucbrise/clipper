@@ -42,14 +42,8 @@ add_executable(libclippertests EXCLUDE_FROM_ALL
     test/persistent_state_test.cpp
     test/redis_test.cpp
     test/config_test.cpp
+    test/selection_policies_test.cpp
     )
 target_link_libraries(libclippertests clipper gtest gmock_main)
-# add_test(NAME rpc_service_test COMMAND rpc_service_test)
 add_dependencies(unittests libclippertests)
-
-# add_executable(timers_test EXCLUDE_FROM_ALL test/timers_test.cpp)
-# target_link_libraries(timers_test clipper gtest gmock_main)
-# add_test(NAME timers_test COMMAND timers_test)
-# add_dependencies(check timers_test)
-
 

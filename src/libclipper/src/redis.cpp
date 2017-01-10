@@ -20,12 +20,6 @@ using std::unordered_map;
 namespace clipper {
 namespace redis {
 
-const std::string ITEM_DELIMITER = ",";
-
-// used to concatenate multiple parts of an item, such as the
-// name and version of a VersionedModelID
-const std::string ITEM_PART_CONCATENATOR = ":";
-
 std::unordered_map<string, string> parse_redis_map(
     const std::vector<string>& redis_data) {
   std::unordered_map<string, string> parsed_map;
@@ -127,18 +121,23 @@ std::vector<VersionedModelId> str_to_models(const std::string& model_str) {
 
 bool add_model(Redox& redis, const VersionedModelId& model_id,
                const InputType& input_type, const std::string& output_type,
-               const vector<string>& labels) {
+               const vector<string>& labels, const std::string& container_name,
+               const std::string& model_data_path) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
     std::string model_id_key = gen_versioned_model_key(model_id);
+    // clang-format off
     const vector<string> cmd_vec{
-        "HMSET",         model_id_key,
-        "model_name",    model_id.first,
-        "model_version", std::to_string(model_id.second),
-        "load",          std::to_string(0.0),
-        "input_type",    get_readable_input_type(input_type),
-        "output_type",   output_type,
-        "labels",        labels_to_str(labels)};
+      "HMSET",            model_id_key,
+      "model_name",       model_id.first,
+      "model_version",    std::to_string(model_id.second),
+      "load",             std::to_string(0.0),
+      "input_type",       get_readable_input_type(input_type),
+      "output_type",      output_type,
+      "labels",           labels_to_str(labels),
+      "container_name",   container_name,
+      "model_data_path",  model_data_path};
+    // clang-format on
     return send_cmd_no_reply<string>(redis, cmd_vec);
   } else {
     return false;
