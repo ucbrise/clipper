@@ -267,14 +267,14 @@ class RequestHandler {
     return update;
   }
 
-  void start_listening() {
-    // HttpServer& s = server_;
-    // std::thread server_thread([&s]() { s.start(); });
-    server_.start();
+  void start_listening() { server_.start(); }
 
-    // server_thread.join();
-  }
-
+  /**
+   * Returns the number of applications that have been registered
+   * with Clipper. This is equivalent to the number of /predict,/update
+   * REST endpoint pairs that have been registered with the server.
+   * We don't count the /metrics endpoint as it does not serve predictions.
+   */
   size_t num_applications() {
     // Subtract one to account for the /metrics endpoint
     size_t count = server_.num_endpoints() - 1;

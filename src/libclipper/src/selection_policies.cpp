@@ -10,8 +10,6 @@
 #include <clipper/selection_policy.hpp>
 #include <clipper/util.hpp>
 
-// hack to get around unused argument compiler errors
-
 namespace clipper {
 
 VersionedModelId NewestModelSelectionPolicy::initialize(
@@ -169,21 +167,14 @@ SimpleState SimplePolicy::deserialize_state(const std::string& bytes) {
   return {std::make_pair("m", 1), std::make_pair("j", 1)};
 }
 
-///////////////////////////////////////////////////////////
-
 BanditState BanditPolicy::initialize(
     const std::vector<VersionedModelId>& candidate_models) {
   BanditState weights;
-  float initial_weight = 1.0 / (float)candidate_models.size();
+  float initial_weight = 1.0 / static_cast<float>(candidate_models.size());
   for (auto c : candidate_models) {
     weights.emplace_back(c, initial_weight);
   }
   return weights;
-}
-
-BanditState BanditPolicy::add_models(
-    BanditState /*state*/, std::vector<VersionedModelId> /*new_models*/) {
-  throw std::runtime_error("add_models() is unsupported");
 }
 
 long BanditPolicy::hash_models(
@@ -198,8 +189,9 @@ std::vector<PredictTask> BanditPolicy::select_predict_tasks(BanditState state,
 
   // construct the task and put in the vector
   for (auto v : state) {
-    task_vec.emplace_back(query.input_, v.first, 1.0 / (float)state.size(),
-                          query_id, query.latency_micros_);
+    task_vec.emplace_back(query.input_, v.first,
+                          1.0 / static_cast<float>(state.size()), query_id,
+                          query.latency_micros_);
   }
   return task_vec;
 }
@@ -280,6 +272,7 @@ BanditState BanditPolicy::process_feedback(BanditState state, Feedback feedback,
 
 std::string BanditPolicy::serialize_state(BanditState state) {
   std::ostringstream ss;
+  // TODO: clean up this function. The nested pairs make it hard to read.
   for (auto m = state.begin(); m != state.end() - 1; ++m) {
     ss << m->first.first << ITEM_PART_CONCATENATOR << m->first.second
        << ITEM_PART_CONCATENATOR << std::to_string(m->second) << ITEM_DELIMITER;

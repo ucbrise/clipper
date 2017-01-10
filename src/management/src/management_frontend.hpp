@@ -158,9 +158,11 @@ class RequestHandler {
    * JSON format:
    * {
    *  "name" := string,
-   *  "candidate_models" := [{"model_name" := string, "model_version" :=
-   * int}],
-   *  "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
+   *  "candidate_models" := [
+   *    {"model_name" := string, "model_version" := int}
+   *  ],
+   *  "input_type" := "integers" | "bytes" | "floats" |
+   *                  "doubles" | "strings",
    *  "output_type" := "double" | "int",
    *  "selection_policy" := string,
    *  "latency_slo_micros" := int
@@ -232,7 +234,7 @@ class RequestHandler {
 
   /**
    * Creates an endpoint that looks up the debug string
-   * for a users selection policy state for an application.
+   * for a user's selection policy state for an application.
    *
    * JSON format:
    * {
@@ -256,7 +258,8 @@ class RequestHandler {
       return lookup_selection_state<clipper::BanditPolicy>(
           state_db_, app_name, uid, candidate_models);
     } else {
-      return app_name + " does not support looking up selection policy state";
+      return "ERROR: " + app_name +
+             " does not support looking up selection policy state";
     }
   }
 

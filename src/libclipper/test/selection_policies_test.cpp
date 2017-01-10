@@ -33,15 +33,15 @@ TEST(BanditPolicy, TestBanditPolicyProcessFeedback) {
   Feedback f3neg =
       std::make_pair(std::shared_ptr<Input>(), Output(0.0, good_model));
 
-  // bad model incorrect
+  // bad model incorrect, good model correct
   state = BanditPolicy::process_feedback(
       state, f1pos, {Output(1.0, good_model), Output(0.0, bad_model)});
 
-  // bad model correct
+  // both models correct
   state = BanditPolicy::process_feedback(
       state, f2pos, {Output(1.0, good_model), Output(1.0, bad_model)});
 
-  // bad model correct
+  // bad model incorrect, good model correct
   state = BanditPolicy::process_feedback(
       state, f3neg, {Output(0.0, good_model), Output(1.0, bad_model)});
 

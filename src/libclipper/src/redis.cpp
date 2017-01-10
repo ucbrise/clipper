@@ -137,7 +137,7 @@ bool add_model(Redox& redis, const VersionedModelId& model_id,
       "labels",           labels_to_str(labels),
       "container_name",   container_name,
       "model_data_path",  model_data_path};
-    // clang-format off
+    // clang-format on
     return send_cmd_no_reply<string>(redis, cmd_vec);
   } else {
     return false;

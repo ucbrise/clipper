@@ -171,8 +171,8 @@ class BanditPolicy : public SelectionPolicy<BanditPolicy, BanditState> {
   static BanditState initialize(
       const std::vector<VersionedModelId>& candidate_models);
 
-  static BanditState add_models(BanditState state,
-                                std::vector<VersionedModelId> new_models);
+  static BanditState add_models(
+      BanditState state, std::vector<VersionedModelId> new_models) = delete;
 
   static long hash_models(
       const std::vector<VersionedModelId>& candidate_models);
