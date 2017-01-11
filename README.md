@@ -71,3 +71,18 @@ sudo apt-get install cmake libzmq5 libzmq5-dev libhiredis-dev libev-dev libboost
 On other Linux distributions, depending on which distro and version you are running, the supplied packages for
 some of these dependencies may be too old. You can try installing from your distro's package
 repository, and if the version of a dependency is too old you may have to build it from source.
+
+## Docker Support
+
+We maintain Docker images for both the Query Processor and Management processes
+on Docker Hub in the [Clipper repository](https://hub.docker.com/u/clipper/).
+
+The recommended way of running Clipper in Docker is using docker-compose.
+Check out the [guide](docker/README.md) for instructions.
+
+
+## Contributing
+
+We welcome bug reports and feature requests.
+
+[Clipper Jira](https://clipper.atlassian.net/browse/CLIPPER)
