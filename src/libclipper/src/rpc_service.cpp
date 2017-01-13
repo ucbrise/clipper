@@ -136,13 +136,12 @@ void RPCService::shutdown_service(const string address, socket_t &socket) {
 }
 
 void RPCService::send_messages(
-    socket_t &socket, boost::bimap<int, vector<uint8_t>> &connections) {
-  while (request_queue_->size() > 0) {
-    long current_time_micros =
-        std::chrono::duration_cast<std::chrono::microseconds>(
-            std::chrono::system_clock::now().time_since_epoch())
-            .count();
-    RPCRequest request = request_queue_->pop();
+    socket_t &socket, shared_ptr<Queue<RPCRequest>> request_queue,
+    boost::bimap<int, vector<uint8_t>> &connections) {
+  while (request_queue->size() > 0) {
+    long current_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    RPCRequest request = request_queue->pop();
     msg_queueing_hist->insert(current_time_micros - std::get<3>(request));
     boost::bimap<int, vector<uint8_t>>::left_const_iterator connection =
         connections.left.find(std::get<0>(request));
