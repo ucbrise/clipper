@@ -36,6 +36,7 @@ export(TARGETS clipper FILE ClipperConfig.cmake)
 add_executable(libclippertests EXCLUDE_FROM_ALL
     test/test_main.cpp
     test/metrics_test.cpp
+    test/regression_test.cpp
     test/rpc_service_test.cpp
     test/timers_test.cpp
     test/serialization_test.cpp
