@@ -49,7 +49,7 @@ void RPCService::start(const string ip, const int port) {
         "Attempted to start RPC Service when it is already running!");
   }
   const string address = "tcp://" + ip + ":" + std::to_string(port);
-  active_ = true;
+  active_.store(true, std::memory_order_seq_cst);
   // TODO: Propagate errors from new child thread for handling
   // TODO: Explore bind vs static method call for thread creation
   rpc_thread = std::thread([this, address]() { manage_service(address); });
@@ -64,7 +64,7 @@ void RPCService::stop() {
 
 int RPCService::send_message(const vector<vector<uint8_t>> msg,
                              const int zmq_connection_id) {
-  if (!active_) {
+  if (!active_.load(std::memory_order_seq_cst)) {
     std::cout << "Cannot send message to inactive RPCService instance. "
         "Dropping message"
               << std::endl;
