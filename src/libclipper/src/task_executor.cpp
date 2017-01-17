@@ -58,7 +58,6 @@ void PredictionCache::put(const VersionedModelId &model,
 
 size_t PredictionCache::hash(const VersionedModelId &model,
                              size_t input_hash) const {
-  std::cout << "HASH: " << input_hash << std::endl;
   return versioned_model_hash(model) ^ input_hash;
 }
 
