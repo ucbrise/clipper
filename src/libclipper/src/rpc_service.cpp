@@ -43,30 +43,21 @@ RPCService::RPCService()
 RPCService::~RPCService() { stop(); }
 
 void RPCService::start(const string ip, const int port) {
-  if(active_.load(std::memory_order_seq_cst)) {
-    // THROW EXCEPTION HERE!!!!!
-    std::cout << "RPC Service is has already been started!" << std::endl;
-    return;
-  }
   const string address = "tcp://" + ip + ":" + std::to_string(port);
-  active_.store(true, std::memory_order_seq_cst);
+  active_ = true;
   // TODO: Propagate errors from new child thread for handling
   // TODO: Explore bind vs static method call for thread creation
-  rpc_thread = std::thread([this, address]() {
-    manage_service(address);
-  });
+  boost::thread(boost::bind(&RPCService::manage_service, this, address,
+                            request_queue_, response_queue_,
+                            boost::ref(active_)))
+      .detach();
 }
 
-void RPCService::stop() {
-  if(active_.load(std::memory_order_seq_cst)) {
-    active_.store(false, std::memory_order_seq_cst);
-    rpc_thread.join();
-  }
-}
+void RPCService::stop() { active_ = false; }
 
 int RPCService::send_message(const vector<vector<uint8_t>> msg,
                              const int zmq_connection_id) {
-  if (!active_.load(std::memory_order_seq_cst)) {
+  if (!active_) {
     std::cout << "Cannot send message to inactive RPCService instance. "
         "Dropping message"
               << std::endl;
@@ -119,14 +110,18 @@ void RPCService::manage_service(const string address,
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
 
-  while (active_.load(std::memory_order_seq_cst)) {
+  while (true) {
+    if (!active) {
+      shutdown_service(address, socket);
+      return;
+    }
     zmq_poll(items, 1, 0);
     if (items[0].revents & ZMQ_POLLIN) {
       // TODO: Balance message sending and receiving fairly
       // Note: We only receive one message per event loop iteration
       std::cout << "Found message to receive" << std::endl;
 
-      receive_message(socket, connections, zmq_connection_id,
+      receive_message(socket, response_queue, connections, zmq_connection_id,
                       redis_connection);
     }
     // Note: We send all queued messages per event loop iteration
@@ -139,11 +134,13 @@ void RPCService::shutdown_service(const string address, socket_t &socket) {
   socket.close();
 }
 
-void RPCService::send_messages(socket_t &socket, boost::bimap<int, vector<uint8_t>> &connections) {
-  while (request_queue_->size() > 0) {
+void RPCService::send_messages(
+    socket_t &socket, shared_ptr<Queue<RPCRequest>> request_queue,
+    boost::bimap<int, vector<uint8_t>> &connections) {
+  while (request_queue->size() > 0) {
     long current_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();
-    RPCRequest request = request_queue_->pop();
+    RPCRequest request = request_queue->pop();
     msg_queueing_hist->insert(current_time_micros - std::get<3>(request));
     boost::bimap<int, vector<uint8_t>>::left_const_iterator connection =
         connections.left.find(std::get<0>(request));
@@ -224,7 +221,8 @@ void RPCService::receive_message(
     message_t msg_content;
     socket.recv(&msg_id, 0);
     socket.recv(&msg_content, 0);
-    int id = static_cast<int *>(msg_id.data())[0];
+    // TODO: get rid of c-style casts
+    int id = ((int *) msg_id.data())[0];
     vector<uint8_t> content((uint8_t *) msg_content.data(),
                             (uint8_t *) msg_content.data() + msg_content.size());
     RPCResponse response(id, content);
