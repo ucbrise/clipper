@@ -1,6 +1,5 @@
 #include <memory>
 #include <random>
-
 // uncomment to disable assert()
 // #define NDEBUG
 #include <cassert>
