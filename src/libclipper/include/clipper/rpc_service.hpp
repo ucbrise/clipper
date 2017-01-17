@@ -60,23 +60,28 @@ class RPCService {
                    const int zmq_connection_id);
 
  private:
-  void manage_service(const string address);
+  void manage_service(const string address,
+                      shared_ptr<Queue<RPCRequest>> request_queue,
+                      shared_ptr<Queue<RPCResponse>> response_queue,
+                      const bool &active);
   /**
    * \return The id of the sent message, used for match the correct response
    * If the service is active, this id is non-negative. Otherwise, it is -1.
    */
-  void send_messages(socket_t &socket, boost::bimap<int, vector<uint8_t>> &connections);
+  void send_messages(socket_t &socket,
+                     shared_ptr<Queue<RPCRequest>> request_queue,
+                     boost::bimap<int, vector<uint8_t>> &connections);
 
   void receive_message(socket_t &socket,
+                       shared_ptr<Queue<RPCResponse>> response_queue,
                        boost::bimap<int, vector<uint8_t>> &connections,
                        int &zmq_connection_id,
                        std::shared_ptr<redox::Redox> redis_connection);
   void shutdown_service(const string address, socket_t &socket);
-  std::thread rpc_thread;
   shared_ptr<Queue<RPCRequest>> request_queue_;
   shared_ptr<Queue<RPCResponse>> response_queue_;
   // Flag indicating whether rpc service is active
-  std::atomic_bool active_;
+  bool active_ = false;
   // The next available message id
   int message_id_ = 0;
   std::unordered_map<VersionedModelId, int, decltype(&versioned_model_hash)>

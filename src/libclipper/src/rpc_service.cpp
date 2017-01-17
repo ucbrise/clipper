@@ -29,7 +29,6 @@ constexpr int INITIAL_REPLICA_ID_SIZE = 100;
 RPCService::RPCService()
     : request_queue_(std::make_shared<Queue<RPCRequest>>()),
       response_queue_(std::make_shared<Queue<RPCResponse>>()),
-      active_(false),
     // The version of the unordered_map constructor that allows
     // you to specify your own hash function also requires you
     // to provide the initial size of the map. We define the initial
@@ -49,7 +48,7 @@ void RPCService::start(const string ip, const int port) {
         "Attempted to start RPC Service when it is already running!");
   }
   const string address = "tcp://" + ip + ":" + std::to_string(port);
-  active_.store(true, std::memory_order_seq_cst);
+  active_ = true;
   // TODO: Propagate errors from new child thread for handling
   // TODO: Explore bind vs static method call for thread creation
   rpc_thread = std::thread([this, address]() { manage_service(address); });
@@ -64,7 +63,7 @@ void RPCService::stop() {
 
 int RPCService::send_message(const vector<vector<uint8_t>> msg,
                              const int zmq_connection_id) {
-  if (!active_.load(std::memory_order_seq_cst)) {
+  if (!active_) {
     std::cout << "Cannot send message to inactive RPCService instance. "
         "Dropping message"
               << std::endl;
@@ -94,7 +93,10 @@ vector<RPCResponse> RPCService::try_get_responses(const int max_num_responses) {
   return responses;
 }
 
-void RPCService::manage_service(const string address) {
+void RPCService::manage_service(const string address,
+                                shared_ptr<Queue<RPCRequest>> request_queue,
+                                shared_ptr<Queue<RPCResponse>> response_queue,
+                                const bool &active) {
   // Map from container id to unique routing id for zeromq
   // Note that zeromq socket id is a byte vector
   std::cout << "RPC thread started on address: " << address << std::endl;
@@ -124,9 +126,8 @@ void RPCService::manage_service(const string address) {
       receive_message(socket, connections, zmq_connection_id, redis_connection);
     }
     // Note: We send all queued messages per event loop iteration
-    send_messages(socket, connections);
+    send_messages(socket, request_queue, connections);
   }
-  shutdown_service(address, socket);
 }
 
 void RPCService::shutdown_service(const string address, socket_t &socket) {
@@ -173,8 +174,9 @@ void RPCService::send_messages(
 }
 
 void RPCService::receive_message(
-    socket_t &socket, boost::bimap<int, vector<uint8_t>> &connections,
-    int &zmq_connection_id, std::shared_ptr<redox::Redox> redis_connection) {
+    socket_t &socket, shared_ptr<Queue<RPCResponse>> response_queue,
+    boost::bimap<int, vector<uint8_t>> &connections, int &zmq_connection_id,
+    std::shared_ptr<redox::Redox> redis_connection) {
   message_t msg_identity;
   message_t msg_delimiter;
   socket.recv(&msg_identity, 0);
@@ -225,7 +227,7 @@ void RPCService::receive_message(
     vector<uint8_t> content((uint8_t *)msg_content.data(),
                             (uint8_t *)msg_content.data() + msg_content.size());
     RPCResponse response(id, content);
-    response_queue_->push(response);
+    response_queue->push(response);
   }
 }
 
