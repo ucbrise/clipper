@@ -45,7 +45,7 @@ RPCService::~RPCService() { stop(); }
 
 void RPCService::start(const string ip, const int port) {
   if(active_.load(std::memory_order_seq_cst)) {
-    throw std::runtime_error("Attempted to start an RPC Service that is already running!");
+    throw std::runtime_error("Attempted to start RPC Service when it is already running!");
   }
   const string address = "tcp://" + ip + ":" + std::to_string(port);
   active_.store(true, std::memory_order_seq_cst);
