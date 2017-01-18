@@ -57,7 +57,7 @@ void RPCService::start(const string ip, const int port) {
 
 void RPCService::stop() {
   if (active_) {
-    active_.store(false, std::memory_order_seq_cst);
+    active_ = false;
     rpc_thread.join();
   }
 }
