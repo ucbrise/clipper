@@ -98,6 +98,6 @@ Clipper can also be run in Docker containers. See the [Docker guide](docker/READ
 
 To file a bug or request a feature, please file an issue. Pull requests are welcome.
 
-Our mailing list is <clipper-dev@googlegroups.com>. For more information about the project, please contact [Dan Crankshaw](crankshaw@cs.berkeley.edu).
+Our mailing list is <clipper-dev@googlegroups.com>. For more information about the project, please contact Dan Crankshaw (crankshaw@cs.berkeley.edu).
 
 Development planning and progress is tracked with the [Clipper Jira](https://clipper.atlassian.net/projects/CLIPPER/issues).
