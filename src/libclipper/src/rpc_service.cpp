@@ -7,11 +7,11 @@
 
 #include <clipper/config.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/metrics.hpp>
 #include <clipper/redis.hpp>
 #include <clipper/rpc_service.hpp>
 #include <clipper/task_executor.hpp>
 #include <clipper/util.hpp>
-#include <clipper/metrics.hpp>
 
 using zmq::socket_t;
 using zmq::message_t;
@@ -37,27 +37,26 @@ RPCService::RPCService()
       replica_ids_(std::unordered_map<VersionedModelId, int,
                                       decltype(&versioned_model_hash)>(
           INITIAL_REPLICA_ID_SIZE, &versioned_model_hash)) {
-  msg_queueing_hist =
-      metrics::MetricsRegistry::get_metrics().create_histogram("rpc_request_queueing_delay", "microseconds", 2056);
+  msg_queueing_hist = metrics::MetricsRegistry::get_metrics().create_histogram(
+      "rpc_request_queueing_delay", "microseconds", 2056);
 }
 
 RPCService::~RPCService() { stop(); }
 
 void RPCService::start(const string ip, const int port) {
-  if(active_.load(std::memory_order_seq_cst)) {
-    throw std::runtime_error("Attempted to start RPC Service when it is already running!");
+  if (active_) {
+    throw std::runtime_error(
+        "Attempted to start RPC Service when it is already running!");
   }
   const string address = "tcp://" + ip + ":" + std::to_string(port);
-  active_.store(true, std::memory_order_seq_cst);
+  active_ = true;
   // TODO: Propagate errors from new child thread for handling
   // TODO: Explore bind vs static method call for thread creation
-  rpc_thread = std::thread([this, address]() {
-    manage_service(address);
-  });
+  rpc_thread = std::thread([this, address]() { manage_service(address); });
 }
 
 void RPCService::stop() {
-  if(active_.load(std::memory_order_seq_cst)) {
+  if (active_) {
     active_.store(false, std::memory_order_seq_cst);
     rpc_thread.join();
   }
@@ -65,7 +64,7 @@ void RPCService::stop() {
 
 int RPCService::send_message(const vector<vector<uint8_t>> msg,
                              const int zmq_connection_id) {
-  if (!active_.load(std::memory_order_seq_cst)) {
+  if (!active_) {
     std::cout << "Cannot send message to inactive RPCService instance. "
         "Dropping message"
               << std::endl;
@@ -73,9 +72,12 @@ int RPCService::send_message(const vector<vector<uint8_t>> msg,
   }
   int id = message_id_;
   message_id_ += 1;
-  long current_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(
-      std::chrono::system_clock::now().time_since_epoch()).count();
-  RPCRequest request(zmq_connection_id, id, std::move(msg), current_time_micros);
+  long current_time_micros =
+      std::chrono::duration_cast<std::chrono::microseconds>(
+          std::chrono::system_clock::now().time_since_epoch())
+          .count();
+  RPCRequest request(zmq_connection_id, id, std::move(msg),
+                     current_time_micros);
   request_queue_->push(request);
   return id;
 }
@@ -112,15 +114,14 @@ void RPCService::manage_service(const string address) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
 
-  while (active_.load(std::memory_order_seq_cst)) {
+  while (active_) {
     zmq_poll(items, 1, 0);
     if (items[0].revents & ZMQ_POLLIN) {
       // TODO: Balance message sending and receiving fairly
       // Note: We only receive one message per event loop iteration
       std::cout << "Found message to receive" << std::endl;
 
-      receive_message(socket, connections, zmq_connection_id,
-                      redis_connection);
+      receive_message(socket, connections, zmq_connection_id, redis_connection);
     }
     // Note: We send all queued messages per event loop iteration
     send_messages(socket, connections);
@@ -133,10 +134,13 @@ void RPCService::shutdown_service(const string address, socket_t &socket) {
   socket.close();
 }
 
-void RPCService::send_messages(socket_t &socket, boost::bimap<int, vector<uint8_t>> &connections) {
+void RPCService::send_messages(
+    socket_t &socket, boost::bimap<int, vector<uint8_t>> &connections) {
   while (request_queue_->size() > 0) {
-    long current_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(
-        std::chrono::system_clock::now().time_since_epoch()).count();
+    long current_time_micros =
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count();
     RPCRequest request = request_queue_->pop();
     msg_queueing_hist->insert(current_time_micros - std::get<3>(request));
     boost::bimap<int, vector<uint8_t>>::left_const_iterator connection =
@@ -159,9 +163,9 @@ void RPCService::send_messages(socket_t &socket, boost::bimap<int, vector<uint8_
     for (const std::vector<uint8_t> &m : std::get<2>(request)) {
       // send the sndmore flag unless we are on the last message part
       if (cur_msg_num < last_msg_num) {
-        socket.send((uint8_t *) m.data(), m.size(), ZMQ_SNDMORE);
+        socket.send((uint8_t *)m.data(), m.size(), ZMQ_SNDMORE);
       } else {
-        socket.send((uint8_t *) m.data(), m.size(), 0);
+        socket.send((uint8_t *)m.data(), m.size(), 0);
       }
       cur_msg_num += 1;
     }
@@ -177,8 +181,8 @@ void RPCService::receive_message(
   socket.recv(&msg_delimiter, 0);
 
   vector<uint8_t> connection_id(
-      (uint8_t *) msg_identity.data(),
-      (uint8_t *) msg_identity.data() + msg_identity.size());
+      (uint8_t *)msg_identity.data(),
+      (uint8_t *)msg_identity.data() + msg_identity.size());
   boost::bimap<int, vector<uint8_t>>::right_const_iterator connection =
       connections.right.find(connection_id);
   if (connection == connections.right.end()) {
@@ -218,8 +222,8 @@ void RPCService::receive_message(
     socket.recv(&msg_id, 0);
     socket.recv(&msg_content, 0);
     int id = static_cast<int *>(msg_id.data())[0];
-    vector<uint8_t> content((uint8_t *) msg_content.data(),
-                            (uint8_t *) msg_content.data() + msg_content.size());
+    vector<uint8_t> content((uint8_t *)msg_content.data(),
+                            (uint8_t *)msg_content.data() + msg_content.size());
     RPCResponse response(id, content);
     response_queue_->push(response);
   }
