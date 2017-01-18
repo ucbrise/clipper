@@ -350,37 +350,23 @@ namespace {
   }
 
   TEST(SerializationTests, ByteVectorsHashCorrectly) {
-    // Obtains 3 vectors containing byte intepretations of the integers 0-99.
+    // Obtains 3 vectors containing double intepretations of the integers 0-99.
     // The first two are identical, and the third is reversed
-    std::vector<uint8_t> byte_vec_1;
-    for(int i = 0; i < 100; i++) {
-      uint8_t* bytes = reinterpret_cast<uint8_t*>(i);
-      for(int j = 0; j < static_cast<int>(sizeof(int) / sizeof(uint8_t)); j++) {
-        byte_vec_1.push_back(bytes[j]);
-      }
-    }
-    std::vector<uint8_t> byte_vec_2 = byte_vec_1;
-    std::vector<uint8_t> byte_vec_3 = byte_vec_1;
-    std::reverse(byte_vec_3.begin(), byte_vec_3.end());
-
-    ASSERT_EQ(ByteVector(byte_vec_1).hash(), ByteVector(byte_vec_2).hash());
-    ASSERT_NE(ByteVector(byte_vec_1).hash(), ByteVector(byte_vec_3).hash());
-    byte_vec_2.pop_back();
+    std::vector<std::vector<uint8_t>> byte_hash_vecs = get_primitive_hash_vectors<uint8_t>();
+    ASSERT_EQ(ByteVector(byte_hash_vecs[0]).hash(), ByteVector(byte_hash_vecs[1]).hash());
+    ASSERT_NE(ByteVector(byte_hash_vecs[0]).hash(), ByteVector(byte_hash_vecs[2]).hash());
+    byte_hash_vecs[1].pop_back();
     // Removing the last element of the second vector renders the first two vectors
     // distinct, so they should have different hashes
-    ASSERT_NE(ByteVector(byte_vec_1).hash(), ByteVector(byte_vec_2).hash());
-    uint8_t* more_bytes = reinterpret_cast<uint8_t*>(500);
-    for(int j = 0; j < static_cast<int>(sizeof(int) / sizeof(uint8_t)); j++) {
-      byte_vec_2.push_back(more_bytes[j]);
-    }
-    // Adding the byte representation of 500, which is not present in the first vector,
-    // to the second vector leaves the first two vectors distinct,
-    // so they should have different hashes
-    ASSERT_NE(ByteVector(byte_vec_1).hash(), ByteVector(byte_vec_2).hash());
-    std::reverse(byte_vec_3.begin(), byte_vec_3.begin());
+    ASSERT_NE(ByteVector(byte_hash_vecs[0]).hash(), ByteVector(byte_hash_vecs[1]).hash());
+    byte_hash_vecs[1].push_back(static_cast<uint8_t>(500));
+    // Adding the element 500.0, which is not present in the first vector, to the second vector
+    // leaves the first two vectors distinct, so they should have different hashes
+    ASSERT_NE(ByteVector(byte_hash_vecs[0]).hash(), ByteVector(byte_hash_vecs[1]).hash());
+    std::reverse(byte_hash_vecs[2].begin(), byte_hash_vecs[2].end());
     // Reversing the third vector, which was initially the reverse of the first vector,
     // renders the first and third vectors identical, so they should have the same hash
-    ASSERT_EQ(ByteVector(byte_vec_1).hash(), ByteVector(byte_vec_3).hash());
+    ASSERT_EQ(ByteVector(byte_hash_vecs[0]).hash(), ByteVector(byte_hash_vecs[2]).hash());
   }
 
   TEST(SerializationTests, SerializableStringsHashCorrectly) {
