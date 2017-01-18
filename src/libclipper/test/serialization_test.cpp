@@ -1,4 +1,5 @@
 #include <stdexcept>
+#include <type_traits>
 
 #include <gtest/gtest.h>
 #include <clipper/datatypes.hpp>
@@ -14,15 +15,16 @@ namespace {
   const int NUM_STRING_INPUTS = 300;
 
   template<typename T>
-  void get_primitive_data_vectors(clipper::InputType type, std::vector<std::vector<T>> &data_vectors) {
+  std::vector<std::vector<T>> get_primitive_data_vectors() {
+    std::vector<std::vector<T>> data_vectors;
     for (int i = 0; i < NUM_PRIMITIVE_INPUTS; i++) {
       std::vector<T> data_vector;
       for (int j = 0; j < PRIMITIVE_INPUT_SIZE_ELEMS; j++) {
         // Differentiate vectors by populating them with the index j under differing moduli
         int k = j % (i + 1);
-        if (type == clipper::InputType::Bytes) {
+        if (std::is_same<T, uint8_t>::value) {
           uint8_t *bytes = reinterpret_cast<uint8_t *>(&k);
-          for (int i = 0; i < (int) (sizeof(int) / sizeof(uint8_t)); i++) {
+          for (int i = 0; i < static_cast<int>((sizeof(int) / sizeof(uint8_t))); i++) {
             data_vector.push_back(*(bytes + i));
           }
         } else {
@@ -31,6 +33,7 @@ namespace {
       }
       data_vectors.push_back(data_vector);
     }
+    return data_vectors;
   }
 
   void get_string_data(std::vector<std::string> &string_vector) {
@@ -67,8 +70,7 @@ namespace {
 
   TEST(SerializationTests, ByteSerialization) {
     clipper::rpc::PredictionRequest request(InputType::Bytes);
-    std::vector<std::vector<uint8_t>> data_vectors;
-    get_primitive_data_vectors(InputType::Bytes, data_vectors);
+    std::vector<std::vector<uint8_t>> data_vectors = get_primitive_data_vectors<uint8_t>();
     for(int i = 0; i < (int) data_vectors.size(); i++) {
       std::shared_ptr<ByteVector> byte_vec = std::make_shared<ByteVector>(data_vectors[i]);
       request.add_input(byte_vec);
@@ -104,8 +106,7 @@ namespace {
 
   TEST(SerializationTests, IntSerialization) {
   clipper::rpc::PredictionRequest request(InputType::Ints);
-    std::vector<std::vector<int>> data_vectors;
-    get_primitive_data_vectors(InputType::Ints, data_vectors);
+    std::vector<std::vector<int>> data_vectors = get_primitive_data_vectors<int>();
     for(int i = 0; i < (int) data_vectors.size(); i++) {
       std::shared_ptr<IntVector> int_vec = std::make_shared<IntVector>(data_vectors[i]);
       request.add_input(int_vec);
@@ -141,8 +142,7 @@ namespace {
 
   TEST(SerializationTests, FloatSerialization) {
     clipper::rpc::PredictionRequest request(InputType::Floats);
-    std::vector<std::vector<float>> data_vectors;
-    get_primitive_data_vectors(InputType::Floats, data_vectors);
+    std::vector<std::vector<float>> data_vectors = get_primitive_data_vectors<float>();
     for(int i = 0; i < (int) data_vectors.size(); i++) {
       std::shared_ptr<FloatVector> float_vec = std::make_shared<FloatVector>(data_vectors[i]);
       request.add_input(float_vec);
@@ -178,8 +178,7 @@ namespace {
 
   TEST(SerializationTests, DoubleSerialization) {
     clipper::rpc::PredictionRequest request(InputType::Doubles);
-    std::vector<std::vector<double>> data_vectors;
-    get_primitive_data_vectors(InputType::Doubles, data_vectors);
+    std::vector<std::vector<double>> data_vectors = get_primitive_data_vectors<double>();
     for(int i = 0; i < (int) data_vectors.size(); i++) {
       std::shared_ptr<DoubleVector> double_vec = std::make_shared<DoubleVector>(data_vectors[i]);
       request.add_input(double_vec);
@@ -277,8 +276,15 @@ namespace {
     std::vector<std::vector<T>> hash_vectors;
     std::vector<T> hash_vec_1;
     for(int i = 0; i < 100; i++) {
-      T elem = static_cast<T>(i);
-      hash_vec_1.push_back(elem);
+      if(std::is_same<T, uint8_t>::value) {
+        uint8_t* byte_data = reinterpret_cast<uint8_t*>(&i);
+        for(int j = 0; j < static_cast<int>(sizeof(int) / sizeof(uint8_t)); j++) {
+          hash_vec_1.push_back(byte_data[j]);
+        }
+      } else {
+        T elem = static_cast<T>(i);
+        hash_vec_1.push_back(elem);
+      }
     }
     std::vector<T> hash_vec_2 = hash_vec_1;
     std::vector<T> hash_vec_3 = hash_vec_1;
@@ -359,8 +365,12 @@ namespace {
     // Removing the last element of the second vector renders the first two vectors
     // distinct, so they should have different hashes
     ASSERT_NE(ByteVector(byte_hash_vecs[0]).hash(), ByteVector(byte_hash_vecs[1]).hash());
-    byte_hash_vecs[1].push_back(static_cast<uint8_t>(500));
-    // Adding a single byte intepretation of the integer 500, which is not present in the first vector,
+    int x = 500;
+    uint8_t* byte_data = reinterpret_cast<uint8_t*>(&x);
+    for(int i = 0; i < static_cast<int>(sizeof(int) / sizeof(uint8_t)); i++) {
+      byte_hash_vecs[1].push_back(byte_data[i]);
+    }
+    // Adding a byte intepretation of the integer 500, which is not present in the first vector,
     // to the second vector leaves the first two vectors distinct, so they should have different hashes
     ASSERT_NE(ByteVector(byte_hash_vecs[0]).hash(), ByteVector(byte_hash_vecs[1]).hash());
     std::reverse(byte_hash_vecs[2].begin(), byte_hash_vecs[2].end());
