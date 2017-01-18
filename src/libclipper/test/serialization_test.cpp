@@ -350,7 +350,7 @@ namespace {
   }
 
   TEST(SerializationTests, ByteVectorsHashCorrectly) {
-    // Obtains 3 vectors containing double intepretations of the integers 0-99.
+    // Obtains 3 vectors containing single byte intepretations of the integers 0-99.
     // The first two are identical, and the third is reversed
     std::vector<std::vector<uint8_t>> byte_hash_vecs = get_primitive_hash_vectors<uint8_t>();
     ASSERT_EQ(ByteVector(byte_hash_vecs[0]).hash(), ByteVector(byte_hash_vecs[1]).hash());
@@ -360,8 +360,8 @@ namespace {
     // distinct, so they should have different hashes
     ASSERT_NE(ByteVector(byte_hash_vecs[0]).hash(), ByteVector(byte_hash_vecs[1]).hash());
     byte_hash_vecs[1].push_back(static_cast<uint8_t>(500));
-    // Adding the element 500.0, which is not present in the first vector, to the second vector
-    // leaves the first two vectors distinct, so they should have different hashes
+    // Adding a single byte intepretation of the integer 500, which is not present in the first vector,
+    // to the second vector leaves the first two vectors distinct, so they should have different hashes
     ASSERT_NE(ByteVector(byte_hash_vecs[0]).hash(), ByteVector(byte_hash_vecs[1]).hash());
     std::reverse(byte_hash_vecs[2].begin(), byte_hash_vecs[2].end());
     // Reversing the third vector, which was initially the reverse of the first vector,
