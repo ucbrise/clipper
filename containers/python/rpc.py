@@ -104,7 +104,8 @@ class Server(threading.Thread):
         self.socket.send(str(self.model_version), zmq.SNDMORE)
         self.socket.send(str(self.model_input_type))
         print(self.model_input_type)
-        print("Serving predictions for {0} input type.".format(input_type_to_string(self.model_input_type)))
+        print("Serving predictions for {0} input type.".format(
+                  input_type_to_string(self.model_input_type)))
         while True:
             # Receive delimiter between identity and content
             self.socket.recv()
@@ -128,8 +129,10 @@ class Server(threading.Thread):
                     0], parsed_input_header[1], parsed_input_header[2:]
 
                 if int(input_type) != int(self.model_input_type):
-                    print(
-                        'Received an input of incorrect type for this container!')
+                    print(("Received incorrect input. Expected {expected}, "
+                           "received {received}").format(
+                              expected=input_type_to_string(int(self.model_input_type)),
+                              received=input_type_to_string(int(input_type))))
                     raise
 
                 if input_type == INPUT_TYPE_STRINGS:

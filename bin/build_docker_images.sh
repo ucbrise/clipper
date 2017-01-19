@@ -18,8 +18,4 @@ time docker build -t clipper/query_frontend -f QueryFrontendDockerfile ./
 time docker build -t clipper/management_frontend -f ManagementFrontendDockerfile ./
 
 # Build the Python model containers
-cd $DIR/../containers/python
-time docker build -t clipper/py-rpc -f RPCDockerfile ./
-time docker build -t clipper/sklearn_cifar_container -f SklearnCifarDockerfile ./
-time docker build -t clipper/tf_cifar_container -f TensorFlowCifarDockerfile ./
-time docker build -t clipper/noop_container -f NoopDockerfile ./
+$DIR/../containers/python/build_container_images.sh
