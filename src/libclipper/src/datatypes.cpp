@@ -123,8 +123,8 @@ size_t FloatVector::serialize(uint8_t *buf) const {
 InputType FloatVector::type() const { return InputType::Floats; }
 
 size_t FloatVector::hash() const {
-  // TODO [CLIPPER-63]: Find an alternative to hashing floats directly,
-  // as this is generally a bad idea due to comparison difficulties
+  // TODO [CLIPPER-63]: Find an alternative to hashing floats directly, as this is
+  // generally a bad idea due to loss of precision from floating point representations
   return primitive_input_hash(data_);
 }
 
@@ -143,8 +143,8 @@ size_t DoubleVector::serialize(uint8_t *buf) const {
 }
 
 size_t DoubleVector::hash() const {
-  // TODO [CLIPPER-63]: Find an alternative to hashing doubles directly,
-  // as this is generally a bad idea due to comparison difficulties
+  // TODO [CLIPPER-63]: Find an alternative to hashing doubles directly, as this is
+  // generally a bad idea due to loss of precision from floating point representations
   return primitive_input_hash(data_);
 }
 

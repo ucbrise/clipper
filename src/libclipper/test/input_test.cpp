@@ -11,25 +11,18 @@ namespace {
 
   const unsigned long SERIALIZED_REQUEST_SIZE = 3;
   const int NUM_PRIMITIVE_INPUTS = 500;
-  const int PRIMITIVE_INPUT_SIZE_ELEMS = 784;
   const int NUM_STRING_INPUTS = 300;
+  const uint8_t PRIMITIVE_INPUT_SIZE_ELEMS = 200;
 
   template<typename T>
   std::vector<std::vector<T>> get_primitive_data_vectors() {
     std::vector<std::vector<T>> data_vectors;
     for (int i = 0; i < NUM_PRIMITIVE_INPUTS; i++) {
       std::vector<T> data_vector;
-      for (int j = 0; j < PRIMITIVE_INPUT_SIZE_ELEMS; j++) {
+      for (uint8_t j = 0; j < PRIMITIVE_INPUT_SIZE_ELEMS; j++) {
         // Differentiate vectors by populating them with the index j under differing moduli
-        int k = j % (i + 1);
-        if (std::is_same<T, uint8_t>::value) {
-          uint8_t *bytes = reinterpret_cast<uint8_t *>(&k);
-          for (int i = 0; i < static_cast<int>((sizeof(int) / sizeof(uint8_t))); i++) {
-            data_vector.push_back(*(bytes + i));
-          }
-        } else {
-          data_vector.push_back(static_cast<T>(k));
-        }
+        int k = static_cast<int>(j) % (i + 1);
+        data_vector.push_back(static_cast<T>(k));
       }
       data_vectors.push_back(data_vector);
     }
@@ -57,7 +50,7 @@ namespace {
     }
   }
 
-  TEST(SerializationTests, EmptySerialization) {
+  TEST(InputSerializationTests, EmptySerialization) {
     clipper::rpc::PredictionRequest request(InputType::Bytes);
     try {
       request.serialize();
@@ -68,7 +61,7 @@ namespace {
     FAIL();
   }
 
-  TEST(SerializationTests, ByteSerialization) {
+  TEST(InputSerializationTests, ByteSerialization) {
     clipper::rpc::PredictionRequest request(InputType::Bytes);
     std::vector<std::vector<uint8_t>> data_vectors = get_primitive_data_vectors<uint8_t>();
     for(int i = 0; i < (int) data_vectors.size(); i++) {
@@ -104,7 +97,7 @@ namespace {
     ASSERT_EQ(tail_vec, data_vectors[data_vectors.size() - 1]);
   }
 
-  TEST(SerializationTests, IntSerialization) {
+  TEST(InputSerializationTests, IntSerialization) {
   clipper::rpc::PredictionRequest request(InputType::Ints);
     std::vector<std::vector<int>> data_vectors = get_primitive_data_vectors<int>();
     for(int i = 0; i < (int) data_vectors.size(); i++) {
@@ -140,7 +133,7 @@ namespace {
     ASSERT_EQ(tail_vec, data_vectors[data_vectors.size() - 1]);
   }
 
-  TEST(SerializationTests, FloatSerialization) {
+  TEST(InputSerializationTests, FloatSerialization) {
     clipper::rpc::PredictionRequest request(InputType::Floats);
     std::vector<std::vector<float>> data_vectors = get_primitive_data_vectors<float>();
     for(int i = 0; i < (int) data_vectors.size(); i++) {
@@ -176,7 +169,7 @@ namespace {
     ASSERT_EQ(tail_vec, data_vectors[data_vectors.size() - 1]);
   }
 
-  TEST(SerializationTests, DoubleSerialization) {
+  TEST(InputSerializationTests, DoubleSerialization) {
     clipper::rpc::PredictionRequest request(InputType::Doubles);
     std::vector<std::vector<double>> data_vectors = get_primitive_data_vectors<double>();
     for(int i = 0; i < (int) data_vectors.size(); i++) {
@@ -212,7 +205,7 @@ namespace {
     ASSERT_EQ(tail_vec, data_vectors[data_vectors.size() - 1]);
   }
 
-  TEST(SerializationTests, StringSerialization) {
+  TEST(InputSerializationTests, StringSerialization) {
     clipper::rpc::PredictionRequest request(InputType::Strings);
     std::vector<std::string> string_vector;
     get_string_data(string_vector);
@@ -242,7 +235,7 @@ namespace {
     }
   }
 
-  TEST(SerializationTests, RpcPredictionRequestsOnlyAcceptValidInputs) {
+  TEST(InputSerializationTests, RpcPredictionRequestsOnlyAcceptValidInputs) {
     int int_data[] = {5, 6, 7, 8, 9};
     std::vector<int> raw_data_vec;
     for(int elem : int_data) {
@@ -275,16 +268,9 @@ namespace {
   std::vector<std::vector<T>> get_primitive_hash_vectors() {
     std::vector<std::vector<T>> hash_vectors;
     std::vector<T> hash_vec_1;
-    for(int i = 0; i < 100; i++) {
-      if(std::is_same<T, uint8_t>::value) {
-        uint8_t* byte_data = reinterpret_cast<uint8_t*>(&i);
-        for(int j = 0; j < static_cast<int>(sizeof(int) / sizeof(uint8_t)); j++) {
-          hash_vec_1.push_back(byte_data[j]);
-        }
-      } else {
+    for(uint8_t i = 0; i < 100; i++) {
         T elem = static_cast<T>(i);
         hash_vec_1.push_back(elem);
-      }
     }
     std::vector<T> hash_vec_2 = hash_vec_1;
     std::vector<T> hash_vec_3 = hash_vec_1;
@@ -295,9 +281,9 @@ namespace {
     return hash_vectors;
   }
 
-  TEST(SerializationTests, IntVectorsHashCorrectly) {
-    // Obtains 3 vectors containing integers 0-99. The first two are identical,
-    // and the third is reversed
+  TEST(InputHashTests, IntVectorsHashCorrectly) {
+    // Obtains 3 vectors containing integer interpretations of unsigned bytes 0-99.
+    // The first two are identical, and the third is reversed
     std::vector<std::vector<int>> int_hash_vecs = get_primitive_hash_vectors<int>();
     ASSERT_EQ(IntVector(int_hash_vecs[0]).hash(), IntVector(int_hash_vecs[1]).hash());
     ASSERT_NE(IntVector(int_hash_vecs[0]).hash(), IntVector(int_hash_vecs[2]).hash());
@@ -315,8 +301,8 @@ namespace {
     ASSERT_EQ(IntVector(int_hash_vecs[0]).hash(), IntVector(int_hash_vecs[2]).hash());
   }
 
-  TEST(SerializationTests, FloatVectorsHashCorrectly) {
-    // Obtains 3 vectors containing float intepretations of the integers 0-99.
+  TEST(InputHashTests, FloatVectorsHashCorrectly) {
+    // Obtains 3 vectors containing float intepretations of unsigned bytes 0-99.
     // The first two are identical, and the third is reversed
     std::vector<std::vector<float>> float_hash_vecs = get_primitive_hash_vectors<float>();
     ASSERT_EQ(FloatVector(float_hash_vecs[0]).hash(), FloatVector(float_hash_vecs[1]).hash());
@@ -335,8 +321,8 @@ namespace {
     ASSERT_EQ(FloatVector(float_hash_vecs[0]).hash(), FloatVector(float_hash_vecs[2]).hash());
   }
 
-  TEST(SerializationTests, DoubleVectorsHashCorrectly) {
-    // Obtains 3 vectors containing double intepretations of the integers 0-99.
+  TEST(InputHashTests, DoubleVectorsHashCorrectly) {
+    // Obtains 3 vectors containing double intepretations of unsigned bytes 0-99.
     // The first two are identical, and the third is reversed
     std::vector<std::vector<double>> double_hash_vecs = get_primitive_hash_vectors<double>();
     ASSERT_EQ(DoubleVector(double_hash_vecs[0]).hash(), DoubleVector(double_hash_vecs[1]).hash());
@@ -355,8 +341,8 @@ namespace {
     ASSERT_EQ(DoubleVector(double_hash_vecs[0]).hash(), DoubleVector(double_hash_vecs[2]).hash());
   }
 
-  TEST(SerializationTests, ByteVectorsHashCorrectly) {
-    // Obtains 3 vectors containing single byte intepretations of the integers 0-99.
+  TEST(InputHashTests, ByteVectorsHashCorrectly) {
+    // Obtains 3 vectors containing unsigned bytes 0-99.
     // The first two are identical, and the third is reversed
     std::vector<std::vector<uint8_t>> byte_hash_vecs = get_primitive_hash_vectors<uint8_t>();
     ASSERT_EQ(ByteVector(byte_hash_vecs[0]).hash(), ByteVector(byte_hash_vecs[1]).hash());
@@ -365,12 +351,8 @@ namespace {
     // Removing the last element of the second vector renders the first two vectors
     // distinct, so they should have different hashes
     ASSERT_NE(ByteVector(byte_hash_vecs[0]).hash(), ByteVector(byte_hash_vecs[1]).hash());
-    int x = 500;
-    uint8_t* byte_data = reinterpret_cast<uint8_t*>(&x);
-    for(int i = 0; i < static_cast<int>(sizeof(int) / sizeof(uint8_t)); i++) {
-      byte_hash_vecs[1].push_back(byte_data[i]);
-    }
-    // Adding a byte intepretation of the integer 500, which is not present in the first vector,
+    byte_hash_vecs[1].push_back(200);
+    // Adding an unsigned byte with value 200, which is not present in the first vector,
     // to the second vector leaves the first two vectors distinct, so they should have different hashes
     ASSERT_NE(ByteVector(byte_hash_vecs[0]).hash(), ByteVector(byte_hash_vecs[1]).hash());
     std::reverse(byte_hash_vecs[2].begin(), byte_hash_vecs[2].end());
@@ -379,7 +361,7 @@ namespace {
     ASSERT_EQ(ByteVector(byte_hash_vecs[0]).hash(), ByteVector(byte_hash_vecs[2]).hash());
   }
 
-  TEST(SerializationTests, SerializableStringsHashCorrectly) {
+  TEST(InputHashTests, SerializableStringsHashCorrectly) {
     std::string cat_string = "CAT";
     std::string cat_string_copy = cat_string;
     std::string tac_string = "TAC";
