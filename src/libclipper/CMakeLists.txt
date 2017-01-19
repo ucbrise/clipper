@@ -6,12 +6,14 @@ project(libclipper VERSION 0.1.0 LANGUAGES CXX)
 add_library(clipper
     src/query_processor.cpp
     src/datatypes.cpp
+    src/metrics.cpp
     src/selection_policies.cpp
     src/persistent_state.cpp
     src/task_executor.cpp
     src/rpc_service.cpp
     src/timers.cpp
     src/containers.cpp
+    src/redis.cpp
     )
 
 
@@ -31,22 +33,17 @@ export(TARGETS clipper FILE ClipperConfig.cmake)
 
 
 
-# set(GTEST_COMMAND "${CMAKE_CURRENT_BINARY_DIR}/libclippertests")
-add_custom_target(unittests)
 add_executable(libclippertests EXCLUDE_FROM_ALL
     test/test_main.cpp
+    test/metrics_test.cpp
     test/rpc_service_test.cpp
     test/timers_test.cpp
     test/serialization_test.cpp
     test/persistent_state_test.cpp
+    test/redis_test.cpp
+    test/config_test.cpp
+    test/selection_policies_test.cpp
     )
 target_link_libraries(libclippertests clipper gtest gmock_main)
-# add_test(NAME rpc_service_test COMMAND rpc_service_test)
 add_dependencies(unittests libclippertests)
-
-# add_executable(timers_test EXCLUDE_FROM_ALL test/timers_test.cpp)
-# target_link_libraries(timers_test clipper gtest gmock_main)
-# add_test(NAME timers_test COMMAND timers_test)
-# add_dependencies(check timers_test)
-
 

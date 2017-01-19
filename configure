@@ -40,7 +40,13 @@ function print_help {
   exit 1
 } # end of print help
 function run_cleanup {
-  #!/bin/bash
+  #!/usr/bin/env bash
+  if [ $# -gt 0 -a  "$1" == "-f" ]; then
+    echo "Force-removing release and debug folders";
+    rm -rf release debug deps config.log
+    exit 0
+  fi
+
   echo "This script completely erases all build folders including dependencies!!!"
   echo "Are you sure you want to continue? (yes or no)"
   read yesorno;
@@ -50,7 +56,7 @@ function run_cleanup {
   else
     echo "Doing nothing!";
   fi
-  exit 1
+  exit 0
 } # end of run cleanup
 function unknown_option {
   echo "Unrecognized option: $1"
@@ -116,6 +122,7 @@ while [ $# -gt 0 ]
   do case $1 in
     --help)                 print_help=1 ;;
     --cleanup)              run_cleanup=1 ;;
+    --cleanup-quiet)        run_cleanup_quiet=1 ;;
     --no_tcmalloc)          no_tcmalloc=1 ;;
     --release)              release=1 ;;
     --prefix=*)             prefix=${1##--prefix=} ;;
@@ -130,8 +137,9 @@ if [ $print_help ]; then
   print_help;
 fi
 
-
-if [ $run_cleanup ]; then
+if [ $run_cleanup_quiet ]; then
+  run_cleanup -f
+elif [ $run_cleanup ]; then
   run_cleanup
 fi
 
@@ -286,25 +294,6 @@ eval $build_cmd | tee -a ../$LOG_FILE
 cd $CLIPPER_HOME
 
 fi
-
-# echo "*****************************************************"
-# echo "*                 Important Note                    *"
-# echo "*                 --------------                    *"
-# echo "*       You do not have to build everything!        *"
-# echo "*                                                   *"
-# echo "* Everything takes a very long time, and a ton of   *"
-# echo "* of memory to build. You can just cd into toolkit  *"
-# echo "* directory you want, and just build that. For      *"
-# echo "* instance, if I just want the release build of     *"
-# echo "* PageRank, I could:                                *"
-# echo "*                                                   *"
-# echo "*       cd release/toolkits/graph_analytics         *"
-# echo "*       make -j2                                    *"
-# echo "*                                                   *"
-# echo "* Use at most [RAM in GB] parallel builds. The      *"
-# echo "* compilation consumes a lot of RAM. i.e. if you    *"
-# echo "* have 4 GB of RAM, do not do more than make -j4.   *"
-# echo "*****************************************************"
 
 # vim:filetype=sh
 

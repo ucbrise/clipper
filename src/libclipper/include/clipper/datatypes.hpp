@@ -32,6 +32,7 @@ enum class RequestType {
 
 size_t versioned_model_hash(const VersionedModelId &key);
 std::string get_readable_input_type(InputType type);
+InputType parse_input_type(std::string type_string);
 
 class Output {
  public:
@@ -47,8 +48,6 @@ class Output {
   VersionedModelId versioned_model_;
 };
 
-// using Output = std::pair<double;
-
 class Input {
  public:
   // TODO: pure virtual or default?
@@ -56,11 +55,13 @@ class Input {
 
   virtual InputType type() const = 0;
 
-  // used by RPC system
   /**
-   * Serializes input and writes resulting data to provided buffer
+   * Serializes input and writes resulting data to provided buffer.
+   *
+   * The serialization methods are used for RPC.
    */
   virtual size_t serialize(uint8_t *buf) const = 0;
+
   virtual size_t hash() const = 0;
 
   /**
@@ -287,6 +288,7 @@ class PredictTask {
   float utility_;
   QueryId query_id_;
   long latency_slo_micros_;
+  long send_time_micros_;
 };
 
 /// NOTE: If a feedback task is scheduled, the task scheduler
@@ -332,6 +334,8 @@ class PredictionRequest {
   std::vector<ByteBuffer> serialize();
 
  private:
+  void validate_input_type(std::shared_ptr<Input> &input) const;
+
   std::vector<std::shared_ptr<Input>> inputs_;
   InputType input_type_;
   size_t input_data_size_ = 0;

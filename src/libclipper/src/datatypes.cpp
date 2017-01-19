@@ -1,8 +1,8 @@
-
 #include <chrono>
 #include <cstring>
 #include <iostream>
 #include <vector>
+#include <sstream>
 
 #include <clipper/datatypes.hpp>
 
@@ -42,21 +42,28 @@ std::string get_readable_input_type(InputType type) {
   }
   return std::string("Invalid input type");
 }
-//
-//    struct VersionedModelHash {
-//        std::size_t operator()(const VersionedModelId& k) const
-//        {
-//            return std::hash<std::string>()(k.first) ^
-//            (std::hash<std::string>()(k.second) << 1);
-//        }
-//    };
-//
-//    struct VersionedModelEqual {
-//        bool operator()(const Key& lhs, const Key& rhs) const
-//        {
-//            return lhs.first == rhs.first && lhs.second == rhs.second;
-//        }
-//    };
+
+InputType parse_input_type(std::string type_string) {
+  if (type_string == "bytes" || type_string == "byte" || type_string == "b") {
+    return InputType::Bytes;
+  } else if (type_string == "integers" || type_string == "ints" ||
+             type_string == "integer" || type_string == "int" ||
+             type_string == "i") {
+    return InputType::Ints;
+  } else if (type_string == "floats" || type_string == "float" ||
+             type_string == "f") {
+    return InputType::Floats;
+  } else if (type_string == "doubles" || type_string == "double" ||
+             type_string == "d") {
+    return InputType::Doubles;
+  } else if (type_string == "strings" || type_string == "string" ||
+             type_string == "str" || type_string == "strs" ||
+             type_string == "s") {
+    return InputType::Strings;
+  } else {
+    throw std::invalid_argument(type_string + " is not a valid input string");
+  }
+}
 
 Output::Output(double y_hat, VersionedModelId versioned_model)
     : y_hat_(y_hat), versioned_model_(versioned_model) {}
@@ -179,19 +186,23 @@ rpc::PredictionRequest::PredictionRequest(InputType input_type)
 rpc::PredictionRequest::PredictionRequest(
     std::vector<std::shared_ptr<Input>> inputs, InputType input_type)
     : inputs_(inputs), input_type_(input_type) {
-  for (int i = 0; i < (int)inputs.size(); i++) {
-    if (inputs[i]->type() != input_type) {
-      std::cout << "Attempted to add an input of type "
-                << get_readable_input_type(inputs[i]->type())
-                << "to a prediction request with input type "
-                << get_readable_input_type(input_type) << std::endl;
-      throw std::invalid_argument("");
-    }
+  for (int i = 0; i < (int) inputs.size(); i++) {
+    validate_input_type(inputs[i]);
     input_data_size_ += inputs[i]->byte_size();
   }
 }
 
+void rpc::PredictionRequest::validate_input_type(std::shared_ptr<Input> &input) const {
+  if (input->type() != input_type_) {
+    std::ostringstream ss;
+    ss << "Attempted to add an input of type " << get_readable_input_type(input->type())
+       << " to a prediction request with input type " << get_readable_input_type(input_type_);
+    throw std::invalid_argument(ss.str());
+  }
+}
+
 void rpc::PredictionRequest::add_input(std::shared_ptr<Input> input) {
+  validate_input_type(input);
   inputs_.push_back(input);
   input_data_size_ += input->byte_size();
 }

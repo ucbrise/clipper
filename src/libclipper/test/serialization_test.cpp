@@ -1,3 +1,5 @@
+#include <stdexcept>
+
 #include <gtest/gtest.h>
 #include <clipper/datatypes.hpp>
 
@@ -241,5 +243,33 @@ namespace {
     }
   }
 
+  TEST(SerializationTests, RpcPredictionRequestsOnlyAcceptValidInputs) {
+    int int_data[] = {5, 6, 7, 8, 9};
+    std::vector<int> raw_data_vec;
+    for(int elem : int_data) {
+      raw_data_vec.push_back(elem);
+    }
+    std::shared_ptr<IntVector> int_vec = std::make_shared<IntVector>(raw_data_vec);
+    std::vector<std::shared_ptr<Input>> inputs;
+    inputs.push_back(int_vec);
+
+    // Without error, we should be able to directly construct an integer-typed
+    // PredictionRequest by supplying a vector of IntVector inputs
+    ASSERT_NO_THROW(rpc::PredictionRequest(inputs, InputType::Ints));
+
+    // Without error, we should be able to add an IntVector input to
+    // an integer-typed PredictionRequest
+    rpc::PredictionRequest ints_prediction_request(InputType::Ints);
+    ASSERT_NO_THROW(ints_prediction_request.add_input(int_vec));
+
+    // We expect an invalid argument exception when we attempt to construct a
+    // double-typed PredictionRequest by supplying a vector of IntVector inputs
+    ASSERT_THROW(rpc::PredictionRequest(inputs, InputType::Doubles), std::invalid_argument);
+
+    // We expect an invalid argument exception when we attempt to add
+    // an IntVector input to a double-typed PredictionRequest
+    rpc::PredictionRequest doubles_prediction_request(InputType::Doubles);
+    ASSERT_THROW(doubles_prediction_request.add_input(int_vec), std::invalid_argument);
+  }
 
 } //namespace

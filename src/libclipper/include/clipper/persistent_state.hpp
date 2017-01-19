@@ -1,5 +1,5 @@
-#ifndef CLIPPER_LIB_PERSISTENT_STATE_H
-#define CLIPPER_LIB_PERSISTENT_STATE_H
+#ifndef CLIPPER_LIB_PERSISTENT_STATE_HPP
+#define CLIPPER_LIB_PERSISTENT_STATE_HPP
 
 #include <atomic>
 #include <functional>
@@ -10,6 +10,7 @@
 #include <boost/optional.hpp>
 #include <redox.hpp>
 
+#include "constants.hpp"
 #include "datatypes.hpp"
 
 namespace clipper {
@@ -32,8 +33,6 @@ class StateDB {
   StateDB(StateDB&&) = default;
 
   StateDB& operator=(StateDB&&) = default;
-
-  bool init();
 
   /**
    * Get the value associated with the key if present
@@ -68,10 +67,9 @@ class StateDB {
   int num_entries();
 
  private:
-  std::atomic<bool> initialized_;
   redox::Redox redis_connection_;
 };
 
 }  // namespace clipper
 
-#endif  // CLIPPER_LIB_PERSISTENT_STATE_H
+#endif  // CLIPPER_LIB_PERSISTENT_STATE_HPP

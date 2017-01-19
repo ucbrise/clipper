@@ -6,11 +6,15 @@
 #include <unordered_map>
 
 #include <boost/thread.hpp>
+#include <redox.hpp>
 
+#include <clipper/config.hpp>
 #include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/redis.hpp>
 #include <clipper/rpc_service.hpp>
 #include <clipper/util.hpp>
+#include <clipper/metrics.hpp>
 
 namespace clipper {
 
@@ -47,16 +51,53 @@ class PredictionCache {
   std::unordered_map<long, CacheEntry> cache_;
 };
 
-template <typename Scheduler>
+template<typename Scheduler>
 class TaskExecutor {
  public:
   ~TaskExecutor() { active_ = false; };
   explicit TaskExecutor()
       : active_containers_(std::make_shared<ActiveContainers>()),
-        rpc_(std::make_unique<rpc::RPCService>(active_containers_)) {
+        rpc_(std::make_unique<rpc::RPCService>()) {
     std::cout << "TaskExecutor started" << std::endl;
-    rpc_->start("*", 7000);
+    rpc_->start("*", RPC_SERVICE_PORT);
     active_ = true;
+    Config &conf = get_config();
+    while (!redis_connection_.connect(conf.get_redis_address(),
+                                      conf.get_redis_port())) {
+      std::cout << "ERROR: TaskExecutor connecting to Redis" << std::endl;
+      std::cout << "Sleeping 1 second..." << std::endl;
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+    while (!redis_subscriber_.connect(conf.get_redis_address(),
+                                      conf.get_redis_port())) {
+      std::cout << "ERROR: TaskExecutor subscriber connecting to Redis"
+                << std::endl;
+      std::cout << "Sleeping 1 second..." << std::endl;
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+    redis::send_cmd_no_reply<std::string>(
+        redis_connection_, {"CONFIG", "SET", "notify-keyspace-events", "AKE"});
+    redis::subscribe_to_container_changes(
+        redis_subscriber_,
+        // event_type corresponds to one of the Redis event types
+        // documented in https://redis.io/topics/notifications.
+        [this](const std::string &key, const std::string &event_type) {
+          if (event_type == "hset") {
+            auto container_info =
+                redis::get_container_by_key(redis_connection_, key);
+            VersionedModelId vm =
+                std::make_pair(container_info["model_name"],
+                               std::stoi(container_info["model_version"]));
+            active_containers_->add_container(
+                vm, std::stoi(container_info["zmq_connection_id"]),
+                parse_input_type(container_info["input_type"]));
+          }
+
+        });
+    throughput_meter = metrics::MetricsRegistry::get_metrics().create_meter("model_throughput");
+    predictions_counter = metrics::MetricsRegistry::get_metrics().create_counter("num_predictions");
+    throughput_meter = metrics::MetricsRegistry::get_metrics().create_meter("prediction_throughput");
+    latency_hist = metrics::MetricsRegistry::get_metrics().create_histogram("prediction_latency", "milliseconds", 2056);
     boost::thread(&TaskExecutor::send_messages, this).detach();
     boost::thread(&TaskExecutor::recv_messages, this).detach();
   }
@@ -94,24 +135,23 @@ class TaskExecutor {
     return {};
   }
 
-  // void add_model(VersionedModelId model);
-  // void add_container(VersionedModelId model);
-  //
-  // void remove_model(VersionedModelId model);
-
  private:
   // active_containers_ is shared with the RPC service so it can add new
-  // containers
-  // to the collection when they connect
+  // containers to the collection when they connect
   std::shared_ptr<ActiveContainers> active_containers_;
   std::unique_ptr<rpc::RPCService> rpc_;
   Scheduler scheduler_;
   PredictionCache cache_;
+  redox::Redox redis_connection_;
+  redox::Subscriber redis_subscriber_;
   bool active_ = false;
   std::mutex inflight_messages_mutex_;
   std::unordered_map<
-      int, std::vector<std::pair<VersionedModelId, std::shared_ptr<Input>>>>
+      int, std::vector<std::tuple<const long, VersionedModelId, std::shared_ptr<Input>>>>
       inflight_messages_;
+  std::shared_ptr<metrics::Counter> predictions_counter;
+  std::shared_ptr<metrics::Meter> throughput_meter;
+  std::shared_ptr<metrics::Histogram> latency_hist;
 
   /// TODO: The task executor needs executors to schedule tasks (assign
   /// tasks to containers), batch and serialize tasks to be sent via the
@@ -148,15 +188,15 @@ class TaskExecutor {
             std::unique_lock<std::mutex> l(inflight_messages_mutex_);
             // std::vector<const std::vector<uint8_t>> serialized_inputs;
 
-            std::vector<std::pair<VersionedModelId, std::shared_ptr<Input>>>
+            std::vector<std::tuple<const long, VersionedModelId, std::shared_ptr<Input>>>
                 cur_batch;
             rpc::PredictionRequest prediction_request(c->input_type_);
             for (auto b : batch) {
               prediction_request.add_input(b.input_);
-              cur_batch.emplace_back(b.model_, b.input_);
+              cur_batch.emplace_back(b.send_time_micros_, b.model_, b.input_);
             }
-            int message_id =
-                rpc_->send_message(prediction_request.serialize(), c->container_id_);
+            int message_id = rpc_->send_message(prediction_request.serialize(),
+                                                c->container_id_);
             inflight_messages_.emplace(message_id, std::move(cur_batch));
           }
         }
@@ -181,10 +221,16 @@ class TaskExecutor {
         std::vector<float> deserialized_outputs = deserialize_outputs(r.second);
         assert(deserialized_outputs.size() == keys.size());
         int batch_size = keys.size();
+        predictions_counter->increment(batch_size);
+        throughput_meter->mark(batch_size);
+        long current_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
         for (int batch_num = 0; batch_num < batch_size; ++batch_num) {
+          long send_time = std::get<0>(keys[batch_num]);
+          latency_hist->insert(static_cast<int64_t>(current_time - send_time));
           cache_.put(
-              keys[batch_num].first, keys[batch_num].second,
-              Output{deserialized_outputs[batch_num], keys[batch_num].first});
+              std::get<1>(keys[batch_num]), std::get<2>(keys[batch_num]),
+              Output{deserialized_outputs[batch_num], std::get<1>(keys[batch_num])});
         }
       }
     }
@@ -197,25 +243,6 @@ class PowerTwoChoicesScheduler {
       const PredictTask &task,
       std::vector<std::shared_ptr<ModelContainer>> &containers) const;
 };
-
-// class FakeTaskExecutor : TaskExecutor {
-//  public:
-//   virtual std::vector<boost::future<Output>> schedule_prediction(
-//       const std::vector<PredictTask> t);
-//   virtual std::vector<boost::future<FeedbackAck>> schedule_feedback(
-//       const std::vector<FeedbackTask> t);
-// };
-//
-// class Scheduler {
-//  public:
-//   virtual void add_model() = 0;
-//   virtual void add_replica() = 0;
-//
-//   virtual void remove_model() = 0;
-//   virtual void remove_replica() = 0;
-//
-//   // backpressure??
-// };
 
 }  // namespace clipper
 

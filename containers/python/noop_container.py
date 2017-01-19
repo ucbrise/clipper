@@ -44,11 +44,11 @@ if __name__ == "__main__":
     else:
         print("Connecting to Clipper on localhost")
 
-    port = 6001
+    port = 7000
     if "CLIPPER_PORT" in os.environ:
         port = int(os.environ["CLIPPER_PORT"])
     else:
-        print("Connecting to Clipper with default port: 6001")
+        print("Connecting to Clipper with default port: 7000")
 
     input_type = "doubles"
     if "CLIPPER_INPUT_TYPE" in os.environ:

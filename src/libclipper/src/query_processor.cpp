@@ -92,7 +92,6 @@ void process_feedback(FeedbackQuery feedback, std::vector<Output> predictions,
 }
 
 QueryProcessor::QueryProcessor() : state_db_(std::make_shared<StateDB>()) {
-  assert(state_db_->init());
   std::cout << "Query Processor started" << std::endl;
 }
 
@@ -119,6 +118,12 @@ future<Response> QueryProcessor::predict(Query query) {
     tasks = tasks_and_state.first;
     serialized_state = tasks_and_state.second;
     std::cout << "Used SimplePolicy to select tasks" << std::endl;
+  } else if (query.selection_policy_ == "bandit_policy") {
+    auto tasks_and_state =
+        select_predict_tasks<BanditPolicy>(query, query_id, get_state_table());
+    tasks = tasks_and_state.first;
+    serialized_state = tasks_and_state.second;
+    std::cout << "Used BanditPolicy to select tasks" << std::endl;
   } else {
     std::cout << query.selection_policy_ << " is invalid selection policy"
               << std::endl;
@@ -177,6 +182,9 @@ future<Response> QueryProcessor::predict(Query query) {
     } else if (query.selection_policy_ == "simple_policy") {
       final_output = combine_predictions<SimplePolicy>(query, outputs,
                                                        moved_serialized_state);
+    } else if (query.selection_policy_ == "bandit_policy") {
+      final_output = combine_predictions<BanditPolicy>(query, outputs,
+                                                       moved_serialized_state);
     } else {
       UNREACHABLE();
     }
@@ -217,6 +225,15 @@ boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
     feedback_tasks = tasks_and_state.first.second;
     serialized_state = tasks_and_state.second;
     std::cout << "Used SimplePolicy to select tasks during feedback"
+              << std::endl;
+  } else if (feedback.selection_policy_ == "bandit_policy") {
+    auto tasks_and_state = select_feedback_tasks<BanditPolicy>(
+        feedback, query_id, get_state_table());
+    // TODO: clean this up
+    predict_tasks = tasks_and_state.first.first;
+    feedback_tasks = tasks_and_state.first.second;
+    serialized_state = tasks_and_state.second;
+    std::cout << "Used BanditPolicy to select tasks during feedback"
               << std::endl;
   } else {
     std::cout << feedback.selection_policy_ << " is invalid selection policy"
@@ -274,6 +291,11 @@ boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
       // update the selection policy state using the
       // appropriate selection policy
       process_feedback<SimplePolicy>(feedback, preds, moved_serialized_state,
+                                     state_table);
+    } else if (feedback.selection_policy_ == "bandit_policy") {
+      // update the selection policy state using the
+      // appropriate selection policy
+      process_feedback<BanditPolicy>(feedback, preds, moved_serialized_state,
                                      state_table);
     } else {
       UNREACHABLE();
