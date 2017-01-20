@@ -65,6 +65,26 @@ InputType parse_input_type(std::string type_string) {
   }
 }
 
+std::string get_readable_output_type(OutputType type) {
+  switch (type) {
+    case OutputType::Int:
+      return std::string("integer");
+    case OutputType::Double:
+      return std::string("double");
+  }
+  return std::string("Invalid input type");
+}
+
+OutputType parse_output_type(std::string output_str) {
+  if (output_str == "int") {
+    return OutputType::Int;
+  } else if (output_str == "double") {
+    return OutputType::Double;
+  } else {
+    throw std::invalid_argument(output_str + " is invalid output type.");
+  }
+}
+
 Output::Output(double y_hat, VersionedModelId versioned_model)
     : y_hat_(y_hat), versioned_model_(versioned_model) {}
 

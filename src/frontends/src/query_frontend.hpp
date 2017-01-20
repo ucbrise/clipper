@@ -20,14 +20,15 @@
 #include <clipper/redis.hpp>
 
 #include <server_http.hpp>
+#include "json_util.hpp"
 
 using namespace boost::property_tree;
 using clipper::Response;
 using clipper::FeedbackAck;
 using clipper::VersionedModelId;
 using clipper::InputType;
-using clipper::OutputType;
 using clipper::Input;
+using clipper::OutputType;
 using clipper::Output;
 using clipper::Query;
 using clipper::FeedbackQuery;
@@ -38,6 +39,8 @@ using clipper_json::decode_output;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
 namespace query_frontend {
+
+const std::string GET_METRICS = "^/metrics$";
 
 void respond_http(std::string content, std::string message,
                   std::shared_ptr<HttpServer::Response> response) {
@@ -91,7 +94,8 @@ class RequestHandler {
                 clipper::redis::str_to_models(app_info["candidate_models"]);
             InputType input_type =
                 clipper::parse_input_type(app_info["input_type"]);
-            OutputType output_type = parse_output_type(app_info["output_type"]);
+            OutputType output_type =
+                clipper::parse_output_type(app_info["output_type"]);
             std::string policy = app_info["policy"];
             int latency_slo_micros = std::stoi(app_info["latency_slo_micros"]);
             add_application(name, candidate_models, input_type, output_type,

@@ -4,7 +4,6 @@
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
 
-#include "json_util.hpp"
 #include "query_frontend.hpp"
 
 using namespace clipper;
