@@ -16,6 +16,9 @@ cd $DIR/..
 # Build the Clipper Docker images
 time docker build -t clipper/query_frontend -f QueryFrontendDockerfile ./
 time docker build -t clipper/management_frontend -f ManagementFrontendDockerfile ./
+cd -
 
 # Build the Python model containers
-$DIR/../containers/python/build_container_images.sh
+cd $DIR/../containers/python
+./build_container_images.sh
+cd -

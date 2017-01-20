@@ -2,11 +2,11 @@
 #define CLIPPER_METRICS_HPP
 
 #include <atomic>
-#include <vector>
 #include <mutex>
 #include <shared_mutex>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include <boost/property_tree/ptree.hpp>
 
@@ -46,7 +46,6 @@ class Metric {
    * Resets all metric attributes to their default values (typically zero)
    */
   virtual void clear() = 0;
-
 };
 
 class Counter : public Metric {
@@ -75,7 +74,6 @@ class Counter : public Metric {
  private:
   const std::string name_;
   std::atomic_int count_;
-
 };
 
 /**
@@ -86,7 +84,8 @@ class RatioCounter : public Metric {
  public:
   /** Creates a RatioCounter with numerator 0 and denominator 0 **/
   explicit RatioCounter(const std::string name);
-  explicit RatioCounter(const std::string name, const uint32_t num, const uint32_t denom);
+  explicit RatioCounter(const std::string name, const uint32_t num,
+                        const uint32_t denom);
 
   // Disallow copy and move
   RatioCounter(RatioCounter &other) = delete;
@@ -109,7 +108,6 @@ class RatioCounter : public Metric {
   std::shared_timed_mutex ratio_lock_;
   std::atomic<uint32_t> numerator_;
   std::atomic<uint32_t> denominator_;
-
 };
 
 class MeterClock {
@@ -139,11 +137,7 @@ class PresetClock : public MeterClock {
 /// Represents the different load average options for exponentially
 /// weighted moving averages (EWMA) within meters. For a one minute EWMA,
 /// we use the OneMinute load average, etc...
-enum class LoadAverage {
-  OneMinute,
-  FiveMinute,
-  FifteenMinute
-};
+enum class LoadAverage { OneMinute, FiveMinute, FifteenMinute };
 
 /// Represents an exponentially weighted moving average.
 /// Multiple EWMAs are included within a single meter
@@ -174,7 +168,6 @@ class EWMA {
   // The number of new events to be included
   // in the rate at the next tick
   std::atomic<uint32_t> uncounted_;
-
 };
 
 class Meter : public Metric {
@@ -208,13 +201,15 @@ class Meter : public Metric {
   double get_one_minute_rate_seconds();
 
   /**
-   * @return the rate of this meter, in events-per-second, for the last five minutes
+   * @return the rate of this meter, in events-per-second, for the last five
+   * minutes
    * This rate is calculated using an expontentially weighted moving average.
    */
   double get_five_minute_rate_seconds();
 
   /**
-   * @return the rate of this meter, in events-per-second, for the last fifteen minutes
+   * @return the rate of this meter, in events-per-second, for the last fifteen
+   * minutes
    * This rate is calculated using an expontentially weighted moving average.
    */
   double get_fifteen_minute_rate_seconds();
@@ -241,7 +236,6 @@ class Meter : public Metric {
   EWMA m1_rate;
   EWMA m5_rate;
   EWMA m15_rate;
-
 };
 
 class ReservoirSampler {
@@ -262,20 +256,14 @@ class ReservoirSampler {
   size_t sample_size_;
   size_t n_ = 0;
   std::vector<int64_t> reservoir_;
-
 };
 
 class HistogramStats {
  public:
   /** Constructs a HistogramStats object with all values zero **/
-  explicit HistogramStats() {};
-  explicit HistogramStats(size_t data_size,
-                          int64_t min,
-                          int64_t max,
-                          double mean,
-                          double std_dev,
-                          double p50,
-                          double p95,
+  explicit HistogramStats(){};
+  explicit HistogramStats(size_t data_size, int64_t min, int64_t max,
+                          double mean, double std_dev, double p50, double p95,
                           double p99);
 
   size_t data_size_ = 0;
@@ -290,7 +278,8 @@ class HistogramStats {
 
 class Histogram : public Metric {
  public:
-  explicit Histogram(const std::string name, const std::string unit, const size_t sample_size);
+  explicit Histogram(const std::string name, const std::string unit,
+                     const size_t sample_size);
 
   // Disallow copy and move
   Histogram(Histogram &other) = delete;
@@ -314,9 +303,7 @@ class Histogram : public Metric {
   std::string unit_;
   ReservoirSampler sampler_;
   std::shared_timed_mutex sampler_lock_;
-
 };
-
 
 /**
  * Obtains a human readable string representation of the provided MetricType
@@ -328,7 +315,6 @@ const std::string get_metrics_category_name(MetricType type);
  * of system metrics.
  */
 class MetricsRegistry {
-
  public:
   /**
    * Obtains an instance of the MetricsRegistry singleton
@@ -339,21 +325,28 @@ class MetricsRegistry {
    * @return A JSON-formatted string containing structured reports
    * of all metrics in the registry. The schema is as follows:
    * {
-   *  "counters" : [{counter_name: counter_report}, {counter_name: counter_report}],
-   *  "histograms": [{counter_name: counter_report}, {counter_name: counter_report}],
+   *  "counters" : [{counter_name: counter_report}, {counter_name:
+   * counter_report}],
+   *  "histograms": [{counter_name: counter_report}, {counter_name:
+   * counter_report}],
    *  ...
    * }
    */
-  const std::string report_metrics(const bool clear=false);
+  const std::string report_metrics(const bool clear = false);
 
   /** Creates a Counter with initial value zero */
   std::shared_ptr<Counter> create_counter(const std::string name);
-  std::shared_ptr<Counter> create_counter(const std::string name, const int initial_count);
+  std::shared_ptr<Counter> create_counter(const std::string name,
+                                          const int initial_count);
   /** Creates a RatioCounter with initial value zero */
   std::shared_ptr<RatioCounter> create_ratio_counter(const std::string name);
-  std::shared_ptr<RatioCounter> create_ratio_counter(const std::string name, const uint32_t num, const uint32_t denom);
+  std::shared_ptr<RatioCounter> create_ratio_counter(const std::string name,
+                                                     const uint32_t num,
+                                                     const uint32_t denom);
   std::shared_ptr<Meter> create_meter(const std::string name);
-  std::shared_ptr<Histogram> create_histogram(const std::string name, const std::string unit, const size_t sample_size);
+  std::shared_ptr<Histogram> create_histogram(const std::string name,
+                                              const std::string unit,
+                                              const size_t sample_size);
 
  private:
   MetricsRegistry();
@@ -365,11 +358,10 @@ class MetricsRegistry {
   void manage_metrics();
   std::shared_ptr<vector<std::shared_ptr<Metric>>> metrics_;
   std::shared_ptr<std::mutex> metrics_lock_;
-
 };
 
-} // namespace metrics
+}  // namespace metrics
 
-} // namespace clipper
+}  // namespace clipper
 
-#endif //CLIPPER_METRICS_HPP
+#endif  // CLIPPER_METRICS_HPP
