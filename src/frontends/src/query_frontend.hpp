@@ -27,6 +27,7 @@ using clipper::InputType;
 using clipper::Input;
 using clipper::Output;
 using clipper::Query;
+using clipper::Feedback;
 using clipper::FeedbackQuery;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
@@ -84,17 +85,18 @@ std::shared_ptr<Input> decode_input(InputType input_type, ptree& parsed_json) {
 }
 
 Output decode_output(OutputType output_type, ptree parsed_json) {
+  // TODO: change this to decode an array of versioned models
   std::string model_name = parsed_json.get<std::string>("model_name");
   int model_version = parsed_json.get<int>("model_version");
   VersionedModelId versioned_model = std::make_pair(model_name, model_version);
   switch (output_type) {
     case OutputType::Double: {
       double y_hat = parsed_json.get<double>("label");
-      return Output(y_hat, versioned_model);
+      return Output(y_hat, {versioned_model});
     }
     case OutputType::Int: {
       double y_hat = parsed_json.get<int>("label");
-      return Output(y_hat, versioned_model);
+      return Output(y_hat, {versioned_model});
     }
     default:
       throw std::invalid_argument("output_type is not a valid type");
@@ -262,7 +264,7 @@ class RequestHandler {
     std::shared_ptr<Input> input = decode_input(input_type, pt);
     Output output = decode_output(output_type, pt);
     auto update = query_processor_.update(FeedbackQuery{
-        name, uid, {std::make_pair(input, output)}, policy, models});
+        name, uid, {Feedback(input, output.y_hat_)}, policy, models});
 
     return update;
   }

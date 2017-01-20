@@ -1,4 +1,3 @@
-
 #include <float.h>
 #include <math.h>
 #include <functional>
@@ -11,6 +10,9 @@
 
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/string.hpp>
+#include <boost/serialization/unordered_map.hpp>
+#include <boost/serialization/utility.hpp>
 
 #include <clipper/datatypes.hpp>
 #include <clipper/selection_policies.hpp>
