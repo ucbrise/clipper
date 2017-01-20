@@ -5,6 +5,7 @@ import numpy as np
 import struct
 from datetime import datetime
 import socket
+import sys
 
 INPUT_TYPE_BYTES = 0
 INPUT_TYPE_INTS = 1
@@ -210,7 +211,7 @@ def start(model, host, port, model_name, model_version, input_type):
     """
     Args:
         model (object): The loaded model object ready to make predictions.
-        ip (str): The Clipper RPC IP address.
+        host (str): The Clipper RPC hostname or IP address.
         port (int): The Clipper RPC port.
         model_name (str): The name of the model.
         model_version (int): The version of the model
@@ -221,6 +222,7 @@ def start(model, host, port, model_name, model_version, input_type):
         ip = socket.gethostbyname(host)
     except socket.error as e:
         print("Error resolving %s: %s" % (host, e))
+        sys.exit(1)
     context = zmq.Context()
     server = Server(context, ip, port)
     model_input_type = string_to_input_type(input_type)
