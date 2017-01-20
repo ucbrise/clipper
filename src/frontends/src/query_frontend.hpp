@@ -5,10 +5,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/thread.hpp>
-#define BOOST_SPIRIT_THREADSAFE
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/property_tree/ptree.hpp>
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
 
@@ -22,7 +18,6 @@
 #include <server_http.hpp>
 #include "json_util.hpp"
 
-using namespace boost::property_tree;
 using clipper::Response;
 using clipper::FeedbackAck;
 using clipper::VersionedModelId;
@@ -174,25 +169,6 @@ class RequestHandler {
       std::string json_content, std::string name,
       std::vector<VersionedModelId> models, std::string policy,
       long latency_slo_micros, InputType input_type) {
-    /*
-    std::istringstream is(json_content);
-    ptree pt;
-    try {
-      read_json(is, pt);
-    } catch (const ptree_error& e) {
-      throw json_parse_error(e.what());
-    }
-
-    try {
-      long uid = pt.get<long>("uid");
-      std::shared_ptr<Input> input = decode_input(input_type, pt);
-      auto prediction = query_processor_.predict(
-          Query{name, uid, input, latency_slo_micros, policy, models});
-      return prediction;
-    } catch (const ptree_error& e) {
-      throw json_semantic_error(e.what());
-    } */
-
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(json_content.c_str());
     if (!ok) {
@@ -227,26 +203,6 @@ class RequestHandler {
       std::string json_content, std::string name,
       std::vector<VersionedModelId> models, std::string policy,
       InputType input_type, OutputType output_type) {
-    /*
-    std::istringstream is(json_content);
-    ptree pt;
-    try {
-      read_json(is, pt);
-    } catch (const ptree_error& e) {
-      throw json_parse_error(e.what());
-    }
-
-    try {
-      long uid = pt.get<long>("uid");
-      std::shared_ptr<Input> input = decode_input(input_type, pt);
-      Output output = decode_output(output_type, pt);
-      auto update = query_processor_.update(FeedbackQuery{
-          name, uid, {std::make_pair(input, output)}, policy, models});
-      return update;
-    } catch (const ptree_error& e) {
-      throw json_semantic_error(e.what());
-    } */
-
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(json_content.c_str());
     if (!ok) {
