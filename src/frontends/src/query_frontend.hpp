@@ -179,15 +179,11 @@ class RequestHandler {
       throw json_parse_error(ss.str());
     }
 
-    try {
-      long uid = getLong(d, "uid");
-      std::shared_ptr<Input> input = decode_input(input_type, d);
-      auto prediction = query_processor_.predict(
-          Query{name, uid, input, latency_slo_micros, policy, models});
-      return prediction;
-    } catch (const rapidjson_exception& e) {
-      throw json_semantic_error(e.what());
-    }
+    long uid = getLong(d, "uid");
+    std::shared_ptr<Input> input = decode_input(input_type, d);
+    auto prediction = query_processor_.predict(
+        Query{name, uid, input, latency_slo_micros, policy, models});
+    return prediction;
   }
 
   /*
@@ -213,16 +209,12 @@ class RequestHandler {
       throw json_parse_error(ss.str());
     }
 
-    try {
-      long uid = getLong(d, "uid");
-      std::shared_ptr<Input> input = decode_input(input_type, d);
-      Output output = decode_output(output_type, d);
-      auto update = query_processor_.update(FeedbackQuery{
-          name, uid, {std::make_pair(input, output)}, policy, models});
-      return update;
-    } catch (const rapidjson_exception& e) {
-      throw json_semantic_error(e.what());
-    }
+    long uid = getLong(d, "uid");
+    std::shared_ptr<Input> input = decode_input(input_type, d);
+    Output output = decode_output(output_type, d);
+    auto update = query_processor_.update(FeedbackQuery{
+        name, uid, {std::make_pair(input, output)}, policy, models});
+    return update;
   }
 
   void start_listening() { server_.start(); }

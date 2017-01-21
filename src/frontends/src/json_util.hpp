@@ -1,6 +1,6 @@
-#include <stdexcept>
 #include <rapidjson/document.h>
 #include <clipper/datatypes.hpp>
+#include <stdexcept>
 
 using clipper::Input;
 using clipper::InputType;
@@ -9,8 +9,8 @@ using clipper::OutputType;
 using clipper::VersionedModelId;
 using rapidjson::Type;
 
-static std::vector<std::string> kTypeNames =
-  {"Null", "False", "True", "Object", "Array", "String", "Number"};
+static std::vector<std::string> kTypeNames = {
+    "Null", "False", "True", "Object", "Array", "String", "Number"};
 
 // RapidJSON value types
 /*
@@ -28,28 +28,29 @@ namespace clipper_json {
 
 class json_parse_error : public std::runtime_error {
  public:
-  json_parse_error(const std::string &what) : std::runtime_error(what) {}
-  ~json_parse_error() throw() {};
+  json_parse_error(const std::string& what) : std::runtime_error(what) {}
+  ~json_parse_error() throw(){};
 };
 
 class json_semantic_error : public std::runtime_error {
  public:
-  json_semantic_error(const std::string &what) : std::runtime_error(what) {}
-  ~json_semantic_error() throw() {};
+  json_semantic_error(const std::string& what) : std::runtime_error(what) {}
+  ~json_semantic_error() throw(){};
 };
 
 /* Check for matching types else throw exception */
-void check_type(
-    rapidjson::Document& d, const char* key_name, Type expected_type) {
+void check_type(rapidjson::Document& d, const char* key_name,
+                Type expected_type) {
   if (!d.HasMember(key_name)) {
-    throw json_semantic_error(
-      "JSON object does not have required key: " + std::string(key_name));
+    throw json_semantic_error("JSON object does not have required key: " +
+                              std::string(key_name));
   }
   rapidjson::Value& val = d[key_name];
   if (val.GetType() != expected_type) {
-    throw json_semantic_error(
-      "Type mismatch! JSON key " + std::string(key_name) + " expected type " +
-      kTypeNames[expected_type] + "but found type " + kTypeNames[val.GetType()]);
+    throw json_semantic_error("Type mismatch! JSON key " +
+                              std::string(key_name) + " expected type " +
+                              kTypeNames[expected_type] + "but found type " +
+                              kTypeNames[val.GetType()]);
   }
 }
 
@@ -58,8 +59,8 @@ double getDouble(rapidjson::Document& d, const char* key_name) {
   check_type(d, key_name, rapidjson::kNumberType);
   rapidjson::Value& v = d[key_name];
   if (!v.IsDouble()) {
-    throw json_semantic_error(
-      "Input of type " + kTypeNames[v.GetType()] + "is not of type double");
+    throw json_semantic_error("Input of type " + kTypeNames[v.GetType()] +
+                              "is not of type double");
   }
   return v.GetDouble();
 }
@@ -68,8 +69,8 @@ float getFloat(rapidjson::Document& d, const char* key_name) {
   check_type(d, key_name, rapidjson::kNumberType);
   rapidjson::Value& v = d[key_name];
   if (!v.IsFloat()) {
-    throw json_semantic_error(
-      "Input of type " + kTypeNames[v.GetType()] + "is not of type float");
+    throw json_semantic_error("Input of type " + kTypeNames[v.GetType()] +
+                              "is not of type float");
   }
   return v.GetFloat();
 }
@@ -78,18 +79,18 @@ long getLong(rapidjson::Document& d, const char* key_name) {
   check_type(d, key_name, rapidjson::kNumberType);
   rapidjson::Value& v = d[key_name];
   if (!v.IsInt64()) {
-    throw json_semantic_error(
-      "Input of type " + kTypeNames[v.GetType()] + "is not of type long");
+    throw json_semantic_error("Input of type " + kTypeNames[v.GetType()] +
+                              "is not of type long");
   }
-  return (long) v.GetInt64();
+  return (long)v.GetInt64();
 }
 
 int getInt(rapidjson::Document& d, const char* key_name) {
   check_type(d, key_name, rapidjson::kNumberType);
   rapidjson::Value& v = d[key_name];
   if (!v.IsInt()) {
-    throw json_semantic_error(
-      "Input of type " + kTypeNames[v.GetType()] + "is not of type int");
+    throw json_semantic_error("Input of type " + kTypeNames[v.GetType()] +
+                              "is not of type int");
   }
   return v.GetInt();
 }
@@ -98,8 +99,8 @@ std::string getString(rapidjson::Document& d, const char* key_name) {
   check_type(d, key_name, rapidjson::kStringType);
   rapidjson::Value& v = d[key_name];
   if (!v.IsString()) {
-    throw json_semantic_error(
-      "Input of type " + kTypeNames[v.GetType()] + "is not of type string");
+    throw json_semantic_error("Input of type " + kTypeNames[v.GetType()] +
+                              "is not of type string");
   }
   return std::string(v.GetString());
 }
@@ -113,8 +114,9 @@ std::vector<double> getDoubleArray(rapidjson::Document& d,
   vals.reserve(v.Capacity());
   for (rapidjson::Value& elem : v.GetArray()) {
     if (!elem.IsDouble()) {
-      throw json_semantic_error(
-        "Array input of type " + kTypeNames[elem.GetType()] + "is not of type double");
+      throw json_semantic_error("Array input of type " +
+                                kTypeNames[elem.GetType()] +
+                                "is not of type double");
     }
     vals.push_back(elem.GetDouble());
   }
@@ -128,8 +130,9 @@ std::vector<float> getFloatArray(rapidjson::Document& d, const char* key_name) {
   vals.reserve(v.Capacity());
   for (rapidjson::Value& elem : v.GetArray()) {
     if (!elem.IsFloat()) {
-      throw json_semantic_error(
-        "Array input of type " + kTypeNames[elem.GetType()] + "is not of type float");
+      throw json_semantic_error("Array input of type " +
+                                kTypeNames[elem.GetType()] +
+                                "is not of type float");
     }
     vals.push_back(elem.GetFloat());
   }
@@ -143,8 +146,9 @@ std::vector<int> getIntArray(rapidjson::Document& d, const char* key_name) {
   vals.reserve(v.Capacity());
   for (rapidjson::Value& elem : v.GetArray()) {
     if (!elem.IsInt()) {
-      throw json_semantic_error(
-        "Array input of type " + kTypeNames[elem.GetType()] + "is not of type int");
+      throw json_semantic_error("Array input of type " +
+                                kTypeNames[elem.GetType()] +
+                                "is not of type int");
     }
     vals.push_back(elem.GetInt());
   }
@@ -196,4 +200,4 @@ Output decode_output(OutputType output_type, rapidjson::Document& parsed_json) {
   }
 }
 
-} // namespace clipper_json
+}  // namespace clipper_json
