@@ -31,6 +31,7 @@ using clipper_json::json_parse_error;
 using clipper_json::json_semantic_error;
 using clipper_json::decode_input;
 using clipper_json::decode_output;
+using clipper_json::getLong;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
 namespace query_frontend {
@@ -179,7 +180,7 @@ class RequestHandler {
     }
 
     try {
-      long uid = d["uid"].GetInt64();
+      long uid = getLong(d, "uid");
       std::shared_ptr<Input> input = decode_input(input_type, d);
       auto prediction = query_processor_.predict(
           Query{name, uid, input, latency_slo_micros, policy, models});
@@ -213,7 +214,7 @@ class RequestHandler {
     }
 
     try {
-      long uid = d["uid"].GetInt64();
+      long uid = getLong(d, "uid");
       std::shared_ptr<Input> input = decode_input(input_type, d);
       Output output = decode_output(output_type, d);
       auto update = query_processor_.update(FeedbackQuery{
