@@ -41,7 +41,7 @@ void PolicyState::set_weight_sum(double sum) {
 // Descripton: Single Model Selection Policy, iteratively update weights
 PolicyState Exp3Policy::initialize(
     const std::vector<VersionedModelId>& candidate_models_) {
-  // Exp: sum of weights; each model has "weight", "max loss"
+
   Map map(candidate_models_.size(), &versioned_model_hash);
   for (VersionedModelId id : candidate_models_) {
     ModelInfo info = {{"weight", 1.0}, {"max loss", 0.0}};
@@ -92,8 +92,11 @@ std::vector<PredictTask> Exp3Policy::select_predict_tasks(PolicyState state,
 
 Output Exp3Policy::combine_predictions(PolicyState /*state*/, Query /*query*/,
                                        std::vector<Output> predictions) {
-  // Don't need to do anything
-  // TODO: what if predictions is empty?
+  
+  if (predictions.empty()) {
+    Output output;
+    return output;
+  }
   return predictions.front();
 }
 
@@ -114,6 +117,10 @@ Exp3Policy::select_feedback_tasks(PolicyState state, FeedbackQuery feedback,
 
 PolicyState Exp3Policy::process_feedback(PolicyState state, Feedback feedback,
                                        std::vector<Output> predictions) {
+  // Edge case
+  if (predictions.empty()) {
+    return state;
+  }
   // Compute loss and find which model to update
   auto loss = std::abs(predictions.front().y_hat_ - feedback.y_);
   auto model_id = predictions.front().models_used_.front();
@@ -183,7 +190,6 @@ Output Exp4Policy::combine_predictions(PolicyState state, Query /*query*/,
   // Weighted Combination of All predictions
   auto y_hat = 0;
   std::vector<VersionedModelId> models;
-
   for (auto p : predictions) {
     auto model_id = (p.models_used_).front();
     y_hat += (state.model_map_[model_id]["weight"] / state.weight_sum_) * p.y_hat_;
@@ -295,39 +301,31 @@ VersionedModelId EpsilonGreedyPolicy::select(
 
 std::vector<PredictTask> EpsilonGreedyPolicy::select_predict_tasks(
     PolicyState state, Query query, long query_id) {
-  auto selected_model = select(state, query.candidate_models_);
-  auto task = PredictTask(query.input_, selected_model, 1.0, query_id,
-                          query.latency_micros_);
-  std::vector<PredictTask> tasks{task};
-  return tasks;
+  return Exp3Policy::select_predict_tasks(state, query, query_id);
 }
 
 Output EpsilonGreedyPolicy::combine_predictions(
-    PolicyState /*state*/, Query /*query*/,
+    PolicyState state, Query query,
     std::vector<Output> predictions) {
-  // Don't need to do anything
-  return predictions.front();
+  return Exp3Policy::combine_predictions(state, query, predictions);
 }
 
 std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
 EpsilonGreedyPolicy::select_feedback_tasks(PolicyState state,
                                            FeedbackQuery feedback,
                                            long query_id) {
-  // Predict Task
-  auto selected_model = select(state, feedback.candidate_models_);
-  auto task1 =
-      PredictTask(feedback.feedback_.input_, selected_model, -1, query_id, -1);
-  std::vector<PredictTask> predict_tasks{task1};
-  // Feedback Task
-  auto task2 = FeedbackTask(feedback.feedback_, selected_model, query_id, -1);
-  std::vector<FeedbackTask> feedback_tasks{task2};
-
-  return make_pair(predict_tasks, feedback_tasks);
+  return Exp3Policy::select_feedback_tasks(state, feedback, query_id);
 }
 
 PolicyState EpsilonGreedyPolicy::process_feedback(
     PolicyState state, Feedback feedback,
     std::vector<Output> predictions) {
+  
+  // Edge case
+  if (predictions.empty()) {
+    return state;
+  }
+  
   auto model_id = predictions.front().models_used_.front();
   auto new_loss = std::abs(feedback.y_ - predictions.front().y_hat_);
   // Update times selected
@@ -366,13 +364,11 @@ PolicyState EpsilonGreedyPolicy::deserialize_state(
 // method
 PolicyState UCBPolicy::initialize(
     const std::vector<VersionedModelId>& candidate_models_) {
-  // Same as Epsilon Greedy
   return EpsilonGreedyPolicy::initialize(candidate_models_);
 }
 
 PolicyState UCBPolicy::add_models(
     PolicyState state, const std::vector<VersionedModelId>& new_models) {
-  // Same as Epsilon Greedy
   return EpsilonGreedyPolicy::add_models(state, new_models);
 }
 
@@ -396,36 +392,30 @@ VersionedModelId UCBPolicy::select(PolicyState state,
 std::vector<PredictTask> UCBPolicy::select_predict_tasks(PolicyState state,
                                                          Query query,
                                                          long query_id) {
-  // Same as Epsilon Greedy
-  return EpsilonGreedyPolicy::select_predict_tasks(state, query, query_id);
+  return Exp3Policy::select_predict_tasks(state, query, query_id);
 }
 
 Output UCBPolicy::combine_predictions(PolicyState state, Query query,
                                       std::vector<Output> predictions) {
-  // Same as Epsilon Greedy
-  return EpsilonGreedyPolicy::combine_predictions(state, query, predictions);
+  return Exp3Policy::combine_predictions(state, query, predictions);
 }
 
 std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
 UCBPolicy::select_feedback_tasks(PolicyState state, FeedbackQuery feedback,
                                  long query_id) {
-  // Same as Epsilon Greedy
-  return EpsilonGreedyPolicy::select_feedback_tasks(state, feedback, query_id);
+  return Exp3Policy::select_feedback_tasks(state, feedback, query_id);
 }
 
 PolicyState UCBPolicy::process_feedback(PolicyState state, Feedback feedback,
                                      std::vector<Output> predictions) {
-  // Same as Epsilon Greedy
   return EpsilonGreedyPolicy::process_feedback(state, feedback, predictions);
 }
 
 std::string UCBPolicy::serialize_state(PolicyState state) {
-  // Same as Epsilon Greedy
   return EpsilonGreedyPolicy::serialize_state(state);
 }
 
 PolicyState UCBPolicy::deserialize_state(const std::string& bytes) {
-  // Same as Epsilon Greedy
   return EpsilonGreedyPolicy::deserialize_state(bytes);
 }
 
