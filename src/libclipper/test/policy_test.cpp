@@ -73,19 +73,19 @@ class PolicyTests : public ::testing::Test {
     models.emplace_back(model_1);  // good
     models.emplace_back(model_2);  // so-so
     models.emplace_back(model_3);  // bad
-    exp3state = Exp3Policy::initialize(models);
+    PolicyState = Exp3Policy::initialize(models);
   }
   std::vector<VersionedModelId> models;
   VersionedModelId model_1 = std::make_pair("classification", 0);
   VersionedModelId model_2 = std::make_pair("regression", 1);
   VersionedModelId model_3 = std::make_pair("random_forest", 2);
-  Exp3State exp3state;
+  PolicyState PolicyState;
 };
 
 // Exp3
 TEST_F(PolicyTests, Exp3Test) {
   // Test initiate
-  ASSERT_EQ(3, exp3state.first);
+  ASSERT_EQ(3, PolicyState.first);
   // Update many times
   auto feedback = Utility::create_feedback(20);
   std::vector<Output> predictions;
@@ -99,25 +99,25 @@ TEST_F(PolicyTests, Exp3Test) {
     } else {
       predictions = Utility::create_predictions(model_2, y_hat);
     }
-    exp3state = Exp3Policy::process_feedback(exp3state, feedback, predictions);
+    PolicyState = Exp3Policy::process_feedback(PolicyState, feedback, predictions);
     times -= 1;
   }
 
   // Test weights are different
-  ASSERT_GT(exp3state.second[model_1]["weight"],
-            exp3state.second[model_2]["weight"]);
-  ASSERT_GT(exp3state.second[model_2]["weight"],
-            exp3state.second[model_3]["weight"]);
+  ASSERT_GT(PolicyState.second[model_1]["weight"],
+            PolicyState.second[model_2]["weight"]);
+  ASSERT_GT(PolicyState.second[model_2]["weight"],
+            PolicyState.second[model_3]["weight"]);
 
   // Select
   auto query = Utility::create_query(models);
-  auto tasks = Exp3Policy::select_predict_tasks(exp3state, query, 1000);
+  auto tasks = Exp3Policy::select_predict_tasks(PolicyState, query, 1000);
   ASSERT_NE(model_3.second, tasks.front().model_.second);
   
   // Serialization
-  // auto bytes = Exp3Policy::serialize_state(exp3state);
+  // auto bytes = Exp3Policy::serialize_state(PolicyState);
   // auto new_state = Exp3Policy::deserialize_state(bytes);
-  // ASSERT_EQ(exp3state.first, new_state.first);
+  // ASSERT_EQ(PolicyState.first, new_state.first);
 }
 
 }  // namespace
