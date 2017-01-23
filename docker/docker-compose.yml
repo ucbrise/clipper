@@ -8,7 +8,7 @@ services:
       - "6379:6379"
 
   query_frontend:
-    image: clipper/query_frontend
+    image: "clipper/query_frontend"
     depends_on:
       - redis
       - mgmt_frontend
@@ -20,7 +20,7 @@ services:
       - "--redis_port=6379"
 
   mgmt_frontend:
-    image: clipper/management_frontend
+    image: "clipper/management_frontend"
     depends_on:
       - redis
     ports:
@@ -28,4 +28,3 @@ services:
     command: 
       - "--redis_ip=redis"
       - "--redis_port=6379"
-
