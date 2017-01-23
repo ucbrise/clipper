@@ -34,6 +34,48 @@ void PolicyState::set_weight_sum(double sum) {
   weight_sum_ = sum;
 }
 
+std::string PolicyState::serialize() const {
+  std::stringstream ss;
+  boost::archive::binary_oarchive oa(ss);
+  oa << model_map_;
+  oa << weight_sum_;
+  return ss.str();
+};
+
+PolicyState PolicyState::deserialize(const std::string& bytes) {
+  std::stringstream ss;
+  ss << bytes;
+  boost::archive::binary_iarchive ia(ss);
+  Map map;
+  PolicyState state;
+  double sum;
+  ia >> map;
+  ia >> sum;
+  state.set_model_map(map);
+  state.set_weight_sum(sum);
+  return state;
+};
+
+std::string PolicyState::debug_string() const {
+
+  // State string example: "3.0;model1,1.0,0.4;model2,1.0,0.4;......."
+  std::string string_state = "Exp3State;";
+  if (model_map_.empty()) {
+    std::cout << "State is empty" << std::endl;
+    return string_state;
+  }
+  string_state += std::to_string(weight_sum_) + ";"; // Weight Sum
+  for (auto it: model_map_) {
+    string_state += it.first.first + std::to_string(it.first.second); // Model Name
+    for (auto model_info_it : it.second) { // Model information
+      string_state += "," + std::to_string(model_info_it.second);
+    }
+    string_state += ";";
+  }
+  return string_state;
+};
+
+
 // ********
 // * EXP3 *
 // ********
@@ -145,64 +187,34 @@ PolicyState Exp3Policy::process_feedback(PolicyState state, Feedback feedback,
 }
 
 std::string Exp3Policy::serialize_state(PolicyState state) {
-  std::stringstream ss;
-  boost::archive::binary_oarchive oa(ss);
-  oa << state.model_map_;
-  oa << state.weight_sum_;
-  return ss.str();
+  return state.serialize();
 }
 
 PolicyState Exp3Policy::deserialize_state(const std::string& bytes) {
-  std::stringstream ss;
-  ss << bytes;
-  boost::archive::binary_iarchive ia(ss);
-  Map map;
-  PolicyState state;
-  double sum;
-  ia >> map;
-  ia >> sum;
-  state.set_model_map(map);
-  state.set_weight_sum(sum);
-  return state;
+  return PolicyState::deserialize(bytes);
 }
 
 std::string Exp3Policy::state_debug_string(const PolicyState& state) {
-  // State string example: "3.0;model1,1.0,0.4;model2,1.0,0.4;......."
-  std::string string_state = "Exp3State;";
-  if (state.model_map_.empty()) {
-    std::cout << "State is empty" << std::endl;
-    return string_state;
-  }
-  string_state += std::to_string(state.weight_sum_) + ";"; // Weight Sum
-  for (auto it: state.model_map_) {
-    string_state += it.first.first + std::to_string(it.first.second); // Model Name
-    for (auto model_info_it : it.second) { // Model information
-      string_state += "," + std::to_string(model_info_it.second);
-    }
-    string_state += ";";
-  }
-  return string_state;
+  return state.debug_string();
 };
 
 //// ********
 //// * EXP4 *
 //// ********
-//// Descripton: Ensemble Model Selection Policy, combined version of EXP3
+
 PolicyState Exp4Policy::initialize(
     const std::vector<VersionedModelId>& candidate_models_) {
-  // Same as Exp3
   return Exp3Policy::initialize(candidate_models_);
 }
 
 PolicyState Exp4Policy::add_models(
     PolicyState state, const std::vector<VersionedModelId>& new_models) {
-  // Same as Exp3
   return Exp3Policy::add_models(state, new_models);
 }
 
 std::vector<PredictTask> Exp4Policy::select_predict_tasks(PolicyState& /*state*/,
-                                                          Query query,
-                                                          long query_id) {
+                                                Query query,
+                                                long query_id) {
   // Pass along all models selected
   std::vector<PredictTask> tasks;
   for (VersionedModelId id : query.candidate_models_) {
@@ -214,7 +226,7 @@ std::vector<PredictTask> Exp4Policy::select_predict_tasks(PolicyState& /*state*/
 }
 
 Output Exp4Policy::combine_predictions(PolicyState state, Query /*query*/,
-                                       std::vector<Output> predictions) {
+                                  std::vector<Output> predictions) {
   // Weighted Combination of All predictions
   auto y_hat = 0;
   std::vector<VersionedModelId> models;
@@ -228,8 +240,9 @@ Output Exp4Policy::combine_predictions(PolicyState state, Query /*query*/,
 }
 
 std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-Exp4Policy::select_feedback_tasks(PolicyState& /*state*/, FeedbackQuery feedback,
-                                  long query_id) {
+Exp4Policy::select_feedback_tasks(PolicyState& /*state*/,
+                              FeedbackQuery feedback,
+                              long query_id) {
   std::vector<PredictTask> predict_tasks;
   std::vector<FeedbackTask> feedback_tasks;
   for (VersionedModelId id : feedback.candidate_models_) {
@@ -241,8 +254,9 @@ Exp4Policy::select_feedback_tasks(PolicyState& /*state*/, FeedbackQuery feedback
   return std::make_pair(predict_tasks, feedback_tasks);
 }
 
-PolicyState Exp4Policy::process_feedback(PolicyState state, Feedback feedback,
-                                       std::vector<Output> predictions) {
+PolicyState Exp4Policy::process_feedback(PolicyState state,
+                                  Feedback feedback,
+                                  std::vector<Output> predictions) {
   // Update every individual model's distribution
   for (auto p : predictions) {
     // Compute loss and find which model to update
@@ -261,23 +275,21 @@ PolicyState Exp4Policy::process_feedback(PolicyState state, Feedback feedback,
 }
 
 std::string Exp4Policy::serialize_state(PolicyState state) {
-  // Same as Exp3
-  return Exp3Policy::serialize_state(state);
+  return state.serialize();
 }
 
 PolicyState Exp4Policy::deserialize_state(const std::string& bytes) {
-  // Same as Exp3
-  return Exp3Policy::deserialize_state(bytes);
+  return PolicyState::deserialize(bytes);
 }
 
 std::string Exp4Policy::state_debug_string(const PolicyState& state) {
-  return Exp3Policy::state_debug_string(state);
+  return state.debug_string();
 };
 
 // ******************
 // * Epsilon Greedy *
 // ******************
-// Descripton: Single Model Selection Policy, select lowest expected loss
+
 PolicyState EpsilonGreedyPolicy::initialize(
     const std::vector<VersionedModelId>& candidate_models_) {
   // Epsilon Greedy State: unordered_map (model_id, Pair (expected loss,
@@ -374,23 +386,21 @@ PolicyState EpsilonGreedyPolicy::process_feedback(
 }
 
 std::string EpsilonGreedyPolicy::serialize_state(PolicyState state) {
-  return Exp3Policy::serialize_state(state);
+  return state.serialize();
 }
 
-PolicyState EpsilonGreedyPolicy::deserialize_state(
-    const std::string& bytes) {
-  return Exp3Policy::deserialize_state(bytes);
+PolicyState EpsilonGreedyPolicy::deserialize_state(const std::string& bytes) {
+  return PolicyState::deserialize(bytes);
 }
 
 std::string EpsilonGreedyPolicy::state_debug_string(const PolicyState& state) {
-  return Exp3Policy::state_debug_string(state);
+  return state.debug_string();
 };
 
 // ********
 // * UCB1 *
 // ********
-// Descripton: Single Model Selection Policy, similar to E-greedy besides select
-// method
+
 PolicyState UCBPolicy::initialize(
     const std::vector<VersionedModelId>& candidate_models_) {
   return EpsilonGreedyPolicy::initialize(candidate_models_);
@@ -445,15 +455,15 @@ PolicyState UCBPolicy::process_feedback(PolicyState state, Feedback feedback,
 }
 
 std::string UCBPolicy::serialize_state(PolicyState state) {
-  return Exp3Policy::serialize_state(state);
+  return state.serialize();
 }
 
 PolicyState UCBPolicy::deserialize_state(const std::string& bytes) {
-  return Exp3Policy::deserialize_state(bytes);
+  return PolicyState::deserialize(bytes);
 }
 
 std::string UCBPolicy::state_debug_string(const PolicyState& state) {
-  return Exp3Policy::state_debug_string(state);
+  return state.debug_string();
 };
 
 }  // namespace clipper

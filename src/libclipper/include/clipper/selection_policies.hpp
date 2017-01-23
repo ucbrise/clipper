@@ -25,9 +25,14 @@ class PolicyState {
   public:
     PolicyState() = default;
     ~PolicyState() = default;
+  
     void set_model_map(Map map);
     void add_model(VersionedModelId id, ModelInfo model);
     void set_weight_sum(double sum);
+    std::string serialize() const;
+    static PolicyState deserialize(const std::string& bytes);
+    std::string debug_string() const;
+  
     Map model_map_;
     double weight_sum_ = 0.0;
 };

@@ -52,14 +52,19 @@ class Utility {
 };
 
 
-// Test Base Class
+// Exp3
 class PolicyTests : public ::testing::Test {
  public:
   virtual void SetUp() {
+    times = 1000;
     models.emplace_back(model_1);  // good
     models.emplace_back(model_2);  // so-so
     models.emplace_back(model_3);  // bad
     Exp3state = Exp3Policy::initialize(models);
+    Exp4state = Exp4Policy::initialize(models);
+    EpsilonGreedystate = EpsilonGreedyPolicy::initialize(models);
+    UCBstate = UCBPolicy::initialize(models);
+    
   }
   std::vector<VersionedModelId> models;
   VersionedModelId model_1 = std::make_pair("classification", 0);
@@ -69,6 +74,7 @@ class PolicyTests : public ::testing::Test {
   PolicyState Exp4state;
   PolicyState EpsilonGreedystate;
   PolicyState UCBstate;
+  int times;
 };
 
 
@@ -78,7 +84,6 @@ TEST_F(PolicyTests, Exp3Test) {
   // Update Test
   auto feedback = Utility::create_feedback(20);
   std::vector<Output> predictions;
-  auto times = 100;
   while (times > 0) {
     auto y_hat = rand() % 100;
     if (y_hat < 33) {
@@ -113,7 +118,6 @@ TEST_F(PolicyTests, Exp4Test) {
   // Update Test
   auto feedback = Utility::create_feedback(20);
   std::vector<Output> predictions;
-  auto times = 100;
   while (times > 0) {
     auto y_hat = rand() % 100;
     if (y_hat < 33) {
@@ -148,7 +152,6 @@ TEST_F(PolicyTests, EpsilonGreedyTest) {
   // Update Test
   auto feedback = Utility::create_feedback(20);
   std::vector<Output> predictions;
-  auto times = 100;
   while (times > 0) {
     auto y_hat = rand() % 100;
     if (y_hat < 33) {
@@ -183,7 +186,6 @@ TEST_F(PolicyTests, UCBTest) {
   // Update Test
   auto feedback = Utility::create_feedback(20);
   std::vector<Output> predictions;
-  auto times = 100;
   while (times > 0) {
     auto y_hat = rand() % 100;
     if (y_hat < 33) {
