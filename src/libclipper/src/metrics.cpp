@@ -1,17 +1,18 @@
 #include <atomic>
-#include <string>
-#include <vector>
-#include <mutex>
-#include <iostream>
-#include <numeric>
-#include <thread>
 #include <chrono>
+#include <iostream>
+#include <mutex>
+#include <numeric>
+#include <stdexcept>
+#include <string>
+#include <thread>
+#include <vector>
 
 #include <math.h>
 
-#include <boost/thread.hpp>
-#include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/thread.hpp>
 #include <clipper/metrics.hpp>
 
 namespace clipper {
@@ -29,7 +30,8 @@ constexpr double FIFTEEN_MINUTES = 15;
  * This comparison function is used to sort metrics based on their
  * type (Counter, Meter, etc) for structured logging
  */
-bool compare_metrics(std::shared_ptr<Metric> first, std::shared_ptr<Metric> second) {
+bool compare_metrics(std::shared_ptr<Metric> first,
+                     std::shared_ptr<Metric> second) {
   MetricType first_type = first->type();
   MetricType second_type = second->type();
   int diff = static_cast<int>(first_type) - static_cast<int>(second_type);
@@ -38,18 +40,23 @@ bool compare_metrics(std::shared_ptr<Metric> first, std::shared_ptr<Metric> seco
 
 const std::string get_metrics_category_name(MetricType type) {
   switch (type) {
-    case MetricType::Counter:return "counters";
-    case MetricType::RatioCounter:return "ratio_counters";
-    case MetricType::Meter:return "meters";
-    case MetricType::Histogram:return "histograms";
+    case MetricType::Counter:
+      return "counters";
+    case MetricType::RatioCounter:
+      return "ratio_counters";
+    case MetricType::Meter:
+      return "meters";
+    case MetricType::Histogram:
+      return "histograms";
+    default:
+      throw std::invalid_argument(std::to_string(static_cast<int>(type)) +
+                                  " is unknown MetricType");
   }
 }
 
 MetricsRegistry::MetricsRegistry()
     : metrics_(std::make_shared<std::vector<std::shared_ptr<Metric>>>()),
-      metrics_lock_(std::make_shared<std::mutex>()) {
-
-}
+      metrics_lock_(std::make_shared<std::mutex>()) {}
 
 MetricsRegistry &MetricsRegistry::get_metrics() {
   // References a global singleton MetricsRegistry object.
@@ -61,79 +68,87 @@ MetricsRegistry &MetricsRegistry::get_metrics() {
 
 const std::string MetricsRegistry::report_metrics(const bool clear) {
   std::lock_guard<std::mutex> guard(*metrics_lock_);
-  // Sorts the metrics by MetricType in order to output them by category
-  std::sort((*metrics_).begin(), (*metrics_).end(), compare_metrics);
-  boost::property_tree::ptree main_tree;
-  boost::property_tree::ptree curr_category_tree;
-  MetricType prev_type;
-  for (int i = 0; i < (int) (*metrics_).size(); i++) {
-    std::shared_ptr<Metric> metric = (*metrics_)[i];
-    MetricType curr_type = metric->type();
-    if (i > 0 && curr_type != prev_type) {
-      main_tree.put_child(get_metrics_category_name(prev_type), curr_category_tree);
-      curr_category_tree.clear();
+  if (metrics_->size() > 0) {
+    // Sorts the metrics by MetricType in order to output them by category
+    std::sort(metrics_->begin(), metrics_->end(), compare_metrics);
+    boost::property_tree::ptree main_tree;
+    boost::property_tree::ptree curr_category_tree;
+    MetricType prev_type = metrics_->front()->type();
+    for (int i = 0; i < (int)metrics_->size(); i++) {
+      std::shared_ptr<Metric> metric = (*metrics_)[i];
+      MetricType curr_type = metric->type();
+      if (i > 0 && curr_type != prev_type) {
+        main_tree.put_child(get_metrics_category_name(prev_type),
+                            curr_category_tree);
+        curr_category_tree.clear();
+      }
+      boost::property_tree::ptree named_tree;
+      boost::property_tree::ptree report_tree = metric->report_tree();
+      named_tree.put_child(metric->name(), report_tree);
+      curr_category_tree.push_back(std::make_pair("", named_tree));
+      if (clear) {
+        metric->clear();
+      }
+      prev_type = curr_type;
     }
-    boost::property_tree::ptree named_tree;
-    boost::property_tree::ptree report_tree = metric->report_tree();
-    named_tree.put_child(metric->name(), report_tree);
-    curr_category_tree.push_back(std::make_pair("", named_tree));
-    if (clear) {
-      metric->clear();
-    }
-    prev_type = curr_type;
+    // Tail case
+    main_tree.put_child(get_metrics_category_name(prev_type),
+                        curr_category_tree);
+    std::ostringstream ss;
+    boost::property_tree::write_json(ss, main_tree);
+    return ss.str();
+  } else {
+    // If no metrics registered, return an empty string
+    return std::string("");
   }
-  // Tail case
-  main_tree.put_child(get_metrics_category_name(prev_type), curr_category_tree);
-  std::ostringstream ss;
-  boost::property_tree::write_json(ss, main_tree);
-  return ss.str();
 }
 
-std::shared_ptr<Counter> MetricsRegistry::create_counter(const std::string name, const int initial_count) {
-  std::shared_ptr<Counter> counter = std::make_shared<Counter>(name, initial_count);
+std::shared_ptr<Counter> MetricsRegistry::create_counter(
+    const std::string name, const int initial_count) {
+  std::shared_ptr<Counter> counter =
+      std::make_shared<Counter>(name, initial_count);
   metrics_->push_back(counter);
   return counter;
 }
 
-std::shared_ptr<Counter> MetricsRegistry::create_counter(const std::string name) {
+std::shared_ptr<Counter> MetricsRegistry::create_counter(
+    const std::string name) {
   return create_counter(name, 0);
 }
 
-std::shared_ptr<RatioCounter> MetricsRegistry::create_ratio_counter(const std::string name,
-                                                                    const uint32_t num,
-                                                                    const uint32_t denom) {
-  std::shared_ptr<RatioCounter> ratio_counter = std::make_shared<RatioCounter>(name, num, denom);
+std::shared_ptr<RatioCounter> MetricsRegistry::create_ratio_counter(
+    const std::string name, const uint32_t num, const uint32_t denom) {
+  std::shared_ptr<RatioCounter> ratio_counter =
+      std::make_shared<RatioCounter>(name, num, denom);
   metrics_->push_back(ratio_counter);
   return ratio_counter;
 }
 
-std::shared_ptr<RatioCounter> MetricsRegistry::create_ratio_counter(const std::string name) {
+std::shared_ptr<RatioCounter> MetricsRegistry::create_ratio_counter(
+    const std::string name) {
   return create_ratio_counter(name, 0, 0);
 }
 
 std::shared_ptr<Meter> MetricsRegistry::create_meter(const std::string name) {
   std::shared_ptr<RealTimeClock> clock = std::make_shared<RealTimeClock>();
-  std::shared_ptr<Meter> meter = std::make_shared<Meter>(name, std::dynamic_pointer_cast<MeterClock>(clock));
+  std::shared_ptr<Meter> meter = std::make_shared<Meter>(
+      name, std::dynamic_pointer_cast<MeterClock>(clock));
   metrics_->push_back(meter);
   return meter;
 }
 
-std::shared_ptr<Histogram> MetricsRegistry::create_histogram(const std::string name,
-                                                             const std::string unit,
-                                                             const size_t sample_size) {
-  std::shared_ptr<Histogram> histogram = std::make_shared<Histogram>(name, unit, sample_size);
+std::shared_ptr<Histogram> MetricsRegistry::create_histogram(
+    const std::string name, const std::string unit, const size_t sample_size) {
+  std::shared_ptr<Histogram> histogram =
+      std::make_shared<Histogram>(name, unit, sample_size);
   metrics_->push_back(histogram);
   return histogram;
 }
 
-Counter::Counter(const std::string name) : Counter(name, 0) {
-
-}
+Counter::Counter(const std::string name) : Counter(name, 0) {}
 
 Counter::Counter(const std::string name, int initial_count)
-    : name_(name), count_(initial_count) {
-
-}
+    : name_(name), count_(initial_count) {}
 
 void Counter::increment(const int value) {
   count_.fetch_add(value, std::memory_order_relaxed);
@@ -143,17 +158,11 @@ void Counter::decrement(const int value) {
   count_.fetch_sub(value, std::memory_order_relaxed);
 }
 
-int Counter::value() const {
-  return count_.load(std::memory_order_seq_cst);
-}
+int Counter::value() const { return count_.load(std::memory_order_seq_cst); }
 
-MetricType Counter::type() const {
-  return MetricType::Counter;
-}
+MetricType Counter::type() const { return MetricType::Counter; }
 
-const std::string Counter::name() const {
-  return name_;
-}
+const std::string Counter::name() const { return name_; }
 
 const boost::property_tree::ptree Counter::report_tree() {
   int value = count_.load(std::memory_order_seq_cst);
@@ -169,20 +178,15 @@ const std::string Counter::report_str() {
   return ss.str();
 }
 
-void Counter::clear() {
-  count_.store(0, std::memory_order_seq_cst);
-}
+void Counter::clear() { count_.store(0, std::memory_order_seq_cst); }
 
-RatioCounter::RatioCounter(const std::string name) : RatioCounter(name, 0, 0) {
-
-}
+RatioCounter::RatioCounter(const std::string name) : RatioCounter(name, 0, 0) {}
 
 RatioCounter::RatioCounter(const std::string name, uint32_t num, uint32_t denom)
-    : name_(name), numerator_(num), denominator_(denom) {
+    : name_(name), numerator_(num), denominator_(denom) {}
 
-}
-
-void RatioCounter::increment(const uint32_t num_incr, const uint32_t denom_incr) {
+void RatioCounter::increment(const uint32_t num_incr,
+                             const uint32_t denom_incr) {
   ratio_lock_.lock_shared();
   numerator_.fetch_add(num_incr, std::memory_order_relaxed);
   denominator_.fetch_add(denom_incr, std::memory_order_relaxed);
@@ -198,17 +202,14 @@ double RatioCounter::get_ratio() {
     std::cout << "Ratio " << name_ << " has denominator zero!" << std::endl;
     return std::nan("");
   }
-  double ratio = static_cast<double>(num_value) / static_cast<double>(denom_value);
+  double ratio =
+      static_cast<double>(num_value) / static_cast<double>(denom_value);
   return ratio;
 }
 
-MetricType RatioCounter::type() const {
-  return MetricType::RatioCounter;
-}
+MetricType RatioCounter::type() const { return MetricType::RatioCounter; }
 
-const std::string RatioCounter::name() const {
-  return name_;
-}
+const std::string RatioCounter::name() const { return name_; }
 
 const boost::property_tree::ptree RatioCounter::report_tree() {
   double ratio = get_ratio();
@@ -240,20 +241,22 @@ void PresetClock::set_time_micros(const long time_micros) {
   time_ = time_micros;
 }
 
-long PresetClock::get_time_micros() const {
-  return time_;
-}
+long PresetClock::get_time_micros() const { return time_; }
 
 EWMA::EWMA(long tick_interval_seconds, LoadAverage load_average)
     : tick_interval_seconds_(tick_interval_seconds), uncounted_(0) {
-  double alpha_exp;
-  double alpha_exp_1 = (static_cast<double>(-1 * tick_interval_seconds)) / SECONDS_PER_MINUTE;
+  double alpha_exp = 0;
+  double alpha_exp_1 =
+      (static_cast<double>(-1 * tick_interval_seconds)) / SECONDS_PER_MINUTE;
   switch (load_average) {
-    case LoadAverage::OneMinute:alpha_exp = exp(alpha_exp_1 / ONE_MINUTE);
+    case LoadAverage::OneMinute:
+      alpha_exp = exp(alpha_exp_1 / ONE_MINUTE);
       break;
-    case LoadAverage::FiveMinute:alpha_exp = exp(alpha_exp_1 / FIVE_MINUTES);
+    case LoadAverage::FiveMinute:
+      alpha_exp = exp(alpha_exp_1 / FIVE_MINUTES);
       break;
-    case LoadAverage::FifteenMinute:alpha_exp = exp(alpha_exp_1 / FIFTEEN_MINUTES);
+    case LoadAverage::FifteenMinute:
+      alpha_exp = exp(alpha_exp_1 / FIFTEEN_MINUTES);
       break;
   }
   alpha_ = 1 - alpha_exp;
@@ -301,9 +304,7 @@ Meter::Meter(std::string name, std::shared_ptr<MeterClock> clock)
       last_ewma_tick_micros_(start_time_micros_),
       m1_rate(ewma_tick_interval_seconds_, LoadAverage::OneMinute),
       m5_rate(ewma_tick_interval_seconds_, LoadAverage::FiveMinute),
-      m15_rate(ewma_tick_interval_seconds_, LoadAverage::FifteenMinute) {
-
-}
+      m15_rate(ewma_tick_interval_seconds_, LoadAverage::FifteenMinute) {}
 
 void Meter::mark(uint32_t num) {
   count_.fetch_add(num, std::memory_order_relaxed);
@@ -323,12 +324,15 @@ void Meter::tick_if_necessary() {
     return;
   }
 
-  long new_last_tick = curr_micros - (time_since_last_tick % tick_interval_micros);
+  long new_last_tick =
+      curr_micros - (time_since_last_tick % tick_interval_micros);
   bool last_tick_update_successful =
-      last_ewma_tick_micros_.compare_exchange_strong(last_tick, new_last_tick, std::memory_order_seq_cst);
+      last_ewma_tick_micros_.compare_exchange_strong(last_tick, new_last_tick,
+                                                     std::memory_order_seq_cst);
 
   if (last_tick_update_successful) {
-    double num_ticks = static_cast<double>(time_since_last_tick) / static_cast<double>(tick_interval_micros);
+    double num_ticks = static_cast<double>(time_since_last_tick) /
+                       static_cast<double>(tick_interval_micros);
     for (int i = 0; i < static_cast<int>(num_ticks); i++) {
       m1_rate.tick();
       m5_rate.tick();
@@ -341,7 +345,8 @@ double Meter::get_rate_micros() {
   start_time_lock_.lock_shared();
   uint32_t curr_count = count_.load(std::memory_order_seq_cst);
   long curr_time_micros = clock_->get_time_micros();
-  double rate = static_cast<double>(curr_count) / static_cast<double>(curr_time_micros - start_time_micros_);
+  double rate = static_cast<double>(curr_count) /
+                static_cast<double>(curr_time_micros - start_time_micros_);
   start_time_lock_.unlock();
   return rate;
 }
@@ -364,13 +369,9 @@ double Meter::get_fifteen_minute_rate_seconds() {
   return m15_rate.get_rate_seconds();
 }
 
-MetricType Meter::type() const {
-  return MetricType::Meter;
-}
+MetricType Meter::type() const { return MetricType::Meter; }
 
-const std::string Meter::name() const {
-  return name_;
-}
+const std::string Meter::name() const { return name_; }
 
 const boost::property_tree::ptree Meter::report_tree() {
   boost::property_tree::ptree report_tree;
@@ -399,9 +400,8 @@ void Meter::clear() {
   m15_rate.reset();
 }
 
-ReservoirSampler::ReservoirSampler(size_t sample_size) : sample_size_(sample_size) {
-
-}
+ReservoirSampler::ReservoirSampler(size_t sample_size)
+    : sample_size_(sample_size) {}
 
 void ReservoirSampler::sample(const int64_t value) {
   if (n_ < sample_size_) {
@@ -427,22 +427,21 @@ void ReservoirSampler::clear() {
   n_ = 0;
 }
 
-HistogramStats::HistogramStats(size_t data_size,
-                               int64_t min,
-                               int64_t max,
-                               double mean,
-                               double std_dev,
-                               double p50,
-                               double p95,
-                               double p99)
-    : data_size_(data_size), min_(min), max_(max), mean_(mean), std_dev_(std_dev), p50_(p50), p95_(p95), p99_(p99) {
+HistogramStats::HistogramStats(size_t data_size, int64_t min, int64_t max,
+                               double mean, double std_dev, double p50,
+                               double p95, double p99)
+    : data_size_(data_size),
+      min_(min),
+      max_(max),
+      mean_(mean),
+      std_dev_(std_dev),
+      p50_(p50),
+      p95_(p95),
+      p99_(p99) {}
 
-}
-
-Histogram::Histogram(const std::string name, const std::string unit, const size_t sample_size)
-    : name_(name), unit_(unit), sampler_(sample_size) {
-
-}
+Histogram::Histogram(const std::string name, const std::string unit,
+                     const size_t sample_size)
+    : name_(name), unit_(unit), sampler_(sample_size) {}
 
 void Histogram::insert(const int64_t value) {
   sampler_lock_.lock();
@@ -456,14 +455,17 @@ double Histogram::percentile(std::vector<int64_t> snapshot, double rank) {
   }
   size_t sample_size = snapshot.size();
   if (sample_size <= 0) {
-    throw std::length_error("Percentile snapshot must have length greater than zero!");
+    throw std::length_error(
+        "Percentile snapshot must have length greater than zero!");
   }
   std::sort(snapshot.begin(), snapshot.end());
   double x;
-  double x_condition = (static_cast<double>(1) / static_cast<double>(sample_size + 1));
+  double x_condition =
+      (static_cast<double>(1) / static_cast<double>(sample_size + 1));
   if (rank <= x_condition) {
     x = 1;
-  } else if (rank > x_condition && rank < (static_cast<double>(sample_size) * x_condition)) {
+  } else if (rank > x_condition &&
+             rank < (static_cast<double>(sample_size) * x_condition)) {
     x = rank * static_cast<double>(sample_size + 1);
   } else {
     x = sample_size;
@@ -493,8 +495,9 @@ const HistogramStats Histogram::compute_stats() {
   double p50 = percentile(snapshot, .5);
   double p95 = percentile(snapshot, .95);
   double p99 = percentile(snapshot, .99);
-  double mean =
-      static_cast<double>(std::accumulate(snapshot.begin(), snapshot.end(), 0)) / static_cast<double>(snapshot_size);
+  double mean = static_cast<double>(
+                    std::accumulate(snapshot.begin(), snapshot.end(), 0)) /
+                static_cast<double>(snapshot_size);
   double var = 0;
   if (snapshot_size > 1) {
     for (auto elem : snapshot) {
@@ -507,13 +510,9 @@ const HistogramStats Histogram::compute_stats() {
   return HistogramStats(snapshot_size, min, max, mean, std_dev, p50, p95, p99);
 }
 
-MetricType Histogram::type() const {
-  return MetricType::Histogram;
-}
+MetricType Histogram::type() const { return MetricType::Histogram; }
 
-const std::string Histogram::name() const {
-  return name_;
-}
+const std::string Histogram::name() const { return name_; }
 
 const boost::property_tree::ptree Histogram::report_tree() {
   HistogramStats stats = compute_stats();
@@ -543,6 +542,6 @@ void Histogram::clear() {
   sampler_lock_.unlock();
 }
 
-} // namespace metrics
+}  // namespace metrics
 
-} // namespace clipper
+}  // namespace clipper

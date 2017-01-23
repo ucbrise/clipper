@@ -30,12 +30,14 @@ if __name__ == "__main__":
     try:
         model_name = os.environ["CLIPPER_MODEL_NAME"]
     except KeyError:
-        print("ERROR: CLIPPER_MODEL_NAME environment variable must be set", file=sys.stderr)
+        print("ERROR: CLIPPER_MODEL_NAME environment variable must be set",
+              file=sys.stdout)
         sys.exit(1)
     try:
         model_version = os.environ["CLIPPER_MODEL_VERSION"]
     except KeyError:
-        print("ERROR: CLIPPER_MODEL_VERSION environment variable must be set", file=sys.stderr)
+        print("ERROR: CLIPPER_MODEL_VERSION environment variable must be set",
+              file=sys.stdout)
         sys.exit(1)
 
     ip = "127.0.0.1"
