@@ -238,8 +238,6 @@ class Response {
   std::vector<VersionedModelId> models_used_;
 };
 
-// using Feedback = std::pair<std::shared_ptr<Input>, Output>;
-
 class Feedback {
  public:
   ~Feedback() = default;

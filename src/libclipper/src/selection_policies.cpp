@@ -23,14 +23,13 @@ namespace clipper {
 // *********
 // * State *
 // *********
+
 void PolicyState::set_model_map(Map map) {
   model_map_ = map;
 }
-
 void PolicyState::add_model(VersionedModelId id, ModelInfo model) {
   model_map_.insert({id, model});
 }
-
 void PolicyState::set_weight_sum(double sum) {
   weight_sum_ = sum;
 }
@@ -38,13 +37,12 @@ void PolicyState::set_weight_sum(double sum) {
 // ********
 // * EXP3 *
 // ********
-// Descripton: Single Model Selection Policy, iteratively update weights
-PolicyState Exp3Policy::initialize(
-    const std::vector<VersionedModelId>& candidate_models_) {
 
+PolicyState Exp3Policy::initialize(const std::vector<VersionedModelId>& candidate_models_) {
+  
   Map map(candidate_models_.size(), &versioned_model_hash);
   for (VersionedModelId id : candidate_models_) {
-    ModelInfo info = {{"weight", 1.0}, {"max loss", 0.0}};
+    ModelInfo info = {{"weight", 1.0}, {"max_loss", 0.0}};
     map.insert({id, info});
   }
   PolicyState state;
@@ -53,37 +51,47 @@ PolicyState Exp3Policy::initialize(
   return state;
 }
 
-PolicyState Exp3Policy::add_models(
-    PolicyState state, const std::vector<VersionedModelId>& new_models) {
-  // Give new models average weight from old models
-  auto avg = state.weight_sum_ / state.model_map_.size();
+PolicyState Exp3Policy::add_models(PolicyState state,
+                            const std::vector<VersionedModelId>& new_models) {
+  
+  double avg;
+  if (state.model_map_.empty()) { // State hasn't been initiated or no models
+    avg = 1.0;
+  } else {
+    avg = state.weight_sum_ / state.model_map_.size();
+  }
+  
   for (VersionedModelId id : new_models) {
-    ModelInfo info = {{"weight", avg}, {"max loss", 0.0}};
+    ModelInfo info = {{"weight", avg}, {"max_loss", 0.0}};
     state.add_model(id, info);
     state.set_weight_sum(state.weight_sum_ + avg);
   }
   return state;
 }
 
-VersionedModelId Exp3Policy::select(PolicyState state,
-                                    std::vector<VersionedModelId>& models) {
+VersionedModelId Exp3Policy::select(PolicyState& state) {
+  
   // Helper function for randomly drawing an arm based on its normalized weight
-  auto rand_num = rand() % 1;
   VersionedModelId selected_model;
-  auto it = models.begin();
-  while (rand_num >= 0) {
-    rand_num -= (1 - eta) * (state.model_map_[*it]["weight"] / state.weight_sum_) +
+  if (state.model_map_.empty()) {
+    std::cout << "No models to select from" << std::endl;
+  } else {
+    auto rand_num = rand() % 1; // Pick random number between [0, 1]
+    auto it = state.model_map_.begin();
+    while (rand_num >= 0) { // Find the corresponding model based on rand_num
+      rand_num -= (1 - eta) * (it->second["weight"] / state.weight_sum_) +
                 eta / state.model_map_.size();
-    selected_model = *it;
-    it++;
+      selected_model = it->first;
+      it++;
+    }
   }
   return selected_model;
 }
 
-std::vector<PredictTask> Exp3Policy::select_predict_tasks(PolicyState state,
-                                                          Query query,
-                                                          long query_id) {
-  auto selected_model = select(state, query.candidate_models_);
+std::vector<PredictTask> Exp3Policy::select_predict_tasks(PolicyState& state,
+                                                Query query,
+                                                long query_id) {
+  auto selected_model = select(state);
   auto task = PredictTask(query.input_, selected_model, 1.0, query_id,
                           query.latency_micros_);
   std::vector<PredictTask> tasks{task};
@@ -94,6 +102,7 @@ Output Exp3Policy::combine_predictions(PolicyState /*state*/, Query /*query*/,
                                        std::vector<Output> predictions) {
   
   if (predictions.empty()) {
+    std::cout << "No predictions to combine" << std::endl;
     Output output;
     return output;
   }
@@ -101,33 +110,34 @@ Output Exp3Policy::combine_predictions(PolicyState /*state*/, Query /*query*/,
 }
 
 std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-Exp3Policy::select_feedback_tasks(PolicyState state, FeedbackQuery feedback,
+Exp3Policy::select_feedback_tasks(PolicyState& state, FeedbackQuery feedback,
                                   long query_id) {
   // Predict Task
-  auto selected_model = select(state, feedback.candidate_models_);
-  auto task1 =
-      PredictTask(feedback.feedback_.input_, selected_model, -1, query_id, -1);
-  std::vector<PredictTask> predict_tasks{task1};
+  auto selected_model = select(state);
+  auto predict_task = PredictTask(feedback.feedback_.input_, selected_model, -1, query_id, -1);
+  std::vector<PredictTask> predict_tasks{predict_task};
   // Feedback Task
-  auto task2 = FeedbackTask(feedback.feedback_, selected_model, query_id, -1);
-  std::vector<FeedbackTask> feedback_tasks{task2};
+  auto feedback_task = FeedbackTask(feedback.feedback_, selected_model, query_id, -1);
+  std::vector<FeedbackTask> feedback_tasks{feedback_task};
 
   return make_pair(predict_tasks, feedback_tasks);
 }
 
 PolicyState Exp3Policy::process_feedback(PolicyState state, Feedback feedback,
                                        std::vector<Output> predictions) {
-  // Edge case
-  if (predictions.empty()) {
+  
+  if (predictions.empty()) { // Edge case
+    std::cout << "No predictions, so can't update state." << std::endl;
     return state;
   }
+  
   // Compute loss and find which model to update
   auto loss = std::abs(predictions.front().y_hat_ - feedback.y_);
   auto model_id = predictions.front().models_used_.front();
   // Update max loss and Normalize loss
-  if (state.model_map_[model_id]["max loss"] < loss)
-    state.model_map_[model_id]["max loss"] = loss;
-  loss /= state.model_map_[model_id]["max loss"];
+  if (state.model_map_[model_id]["max_loss"] < loss)
+    state.model_map_[model_id]["max_loss"] = loss;
+  loss /= state.model_map_[model_id]["max_loss"];
   // Update arm with normalized loss
   auto s_i = state.model_map_[model_id]["weight"];
   state.model_map_[model_id]["weight"] += exp(-eta * loss / (s_i / state.weight_sum_));
@@ -156,6 +166,10 @@ PolicyState Exp3Policy::deserialize_state(const std::string& bytes) {
   return state;
 }
 
+std::string Exp3Policy::state_debug_string(const PolicyState& /*state*/) {
+  // TODO
+};
+
 //// ********
 //// * EXP4 *
 //// ********
@@ -172,7 +186,7 @@ PolicyState Exp4Policy::add_models(
   return Exp3Policy::add_models(state, new_models);
 }
 
-std::vector<PredictTask> Exp4Policy::select_predict_tasks(PolicyState /*state*/,
+std::vector<PredictTask> Exp4Policy::select_predict_tasks(PolicyState& /*state*/,
                                                           Query query,
                                                           long query_id) {
   // Pass along all models selected
@@ -200,15 +214,15 @@ Output Exp4Policy::combine_predictions(PolicyState state, Query /*query*/,
 }
 
 std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-Exp4Policy::select_feedback_tasks(PolicyState /*state*/, FeedbackQuery feedback,
+Exp4Policy::select_feedback_tasks(PolicyState& /*state*/, FeedbackQuery feedback,
                                   long query_id) {
   std::vector<PredictTask> predict_tasks;
   std::vector<FeedbackTask> feedback_tasks;
   for (VersionedModelId id : feedback.candidate_models_) {
-    auto task1 = PredictTask(feedback.feedback_.input_, id, -1, query_id, -1);
-    auto task2 = FeedbackTask(feedback.feedback_, id, query_id, -1);
-    predict_tasks.push_back(task1);
-    feedback_tasks.push_back(task2);
+    auto predict_task = PredictTask(feedback.feedback_.input_, id, -1, query_id, -1);
+    auto feedback_task = FeedbackTask(feedback.feedback_, id, query_id, -1);
+    predict_tasks.push_back(predict_task);
+    feedback_tasks.push_back(feedback_task);
   }
   return std::make_pair(predict_tasks, feedback_tasks);
 }
@@ -221,10 +235,10 @@ PolicyState Exp4Policy::process_feedback(PolicyState state, Feedback feedback,
     auto loss = std::abs(feedback.y_ - p.y_hat_);
     auto model_id = p.models_used_.front();
     // Update max loss and Normalize loss
-    if (state.model_map_[model_id]["max loss"] < loss) {
-      state.model_map_[model_id]["max loss"] = loss;
+    if (state.model_map_[model_id]["max_loss"] < loss) {
+      state.model_map_[model_id]["max_loss"] = loss;
     }
-    loss /= state.model_map_[model_id]["max loss"];
+    loss /= state.model_map_[model_id]["max_loss"];
     // Update arm with normalized loss
     auto s_i = state.model_map_[model_id]["weight"];
     state.model_map_[model_id]["weight"] += exp(-eta * loss / (s_i / state.weight_sum_));
@@ -242,6 +256,10 @@ PolicyState Exp4Policy::deserialize_state(const std::string& bytes) {
   return Exp3Policy::deserialize_state(bytes);
 }
 
+std::string Exp4Policy::state_debug_string(const PolicyState& state) {
+  return Exp3Policy::state_debug_string(state);
+};
+
 // ******************
 // * Epsilon Greedy *
 // ******************
@@ -253,7 +271,7 @@ PolicyState EpsilonGreedyPolicy::initialize(
   PolicyState state;
   Map map(candidate_models_.size(), &versioned_model_hash);
   for (VersionedModelId id : candidate_models_) {
-    ModelInfo info = {{"expected loss", 0.0}, {"times selected", 0.0}};
+    ModelInfo info = {{"expected_loss", 0.0}, {"times_selected", 0.0}};
     map.insert({id, info});
   }
   state.set_model_map(map);
@@ -265,42 +283,45 @@ PolicyState EpsilonGreedyPolicy::add_models(
   // Calculate expected loss from old models
   auto sum = 0.0;
   for (auto model : state.model_map_) {
-    sum += model.second.at("expected loss");
+    sum += model.second.at("expected_loss");
   }
   auto avg = sum / state.model_map_.size();
   // Add new model with average reward
   for (auto id : new_models) {
-    ModelInfo info = {{"expected loss", avg}, {"times selected", 0.0}};
+    ModelInfo info = {{"expected_loss", avg}, {"times_selected", 0.0}};
     state.add_model(id, info);
   }
   return state;
 }
 
-VersionedModelId EpsilonGreedyPolicy::select(
-    PolicyState state, std::vector<VersionedModelId>& models) {
+VersionedModelId EpsilonGreedyPolicy::select(PolicyState& state) {
+  
   // Helper function for selecting an arm based on lowest expected loss
-  auto rand_num = rand() % 1;
   VersionedModelId selected_model;
-
-  if (rand_num >= epsilon) {  // Select best model
-    auto min_loss = DBL_MAX;
-    for (auto id = state.model_map_.begin(); id != state.model_map_.end(); ++id) {
-      auto model_loss = id->second["expected loss"];
-      if (model_loss < min_loss) {
-        min_loss = model_loss;
-        selected_model = id->first;
+  if (state.model_map_.empty()) { // Edge case
+    std::cout << "No models to select from." << std::endl;
+  } else {
+    auto rand_num = rand() % 1;
+    if (rand_num >= epsilon) { // Select best model
+      auto min_loss = DBL_MAX;
+      for (auto id = state.model_map_.begin(); id != state.model_map_.end(); ++id) {
+        auto model_loss = id->second["expected_loss"];
+        if (model_loss < min_loss) {
+          min_loss = model_loss;
+          selected_model = id->first;
+        }
       }
+    } else { // Randomly select
+      auto random_it = next(begin(state.model_map_), rand() % state.model_map_.size());
+      selected_model = random_it->first;
     }
-  } else {  // Randomly select
-    auto random_it = next(begin(state.model_map_), rand() % models.size());
-    selected_model = random_it->first;
   }
 
   return selected_model;
 }
 
 std::vector<PredictTask> EpsilonGreedyPolicy::select_predict_tasks(
-    PolicyState state, Query query, long query_id) {
+    PolicyState& state, Query query, long query_id) {
   return Exp3Policy::select_predict_tasks(state, query, query_id);
 }
 
@@ -311,7 +332,7 @@ Output EpsilonGreedyPolicy::combine_predictions(
 }
 
 std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-EpsilonGreedyPolicy::select_feedback_tasks(PolicyState state,
+EpsilonGreedyPolicy::select_feedback_tasks(PolicyState& state,
                                            FeedbackQuery feedback,
                                            long query_id) {
   return Exp3Policy::select_feedback_tasks(state, feedback, query_id);
@@ -329,11 +350,11 @@ PolicyState EpsilonGreedyPolicy::process_feedback(
   auto model_id = predictions.front().models_used_.front();
   auto new_loss = std::abs(feedback.y_ - predictions.front().y_hat_);
   // Update times selected
-  state.model_map_[model_id]["times selected"] += 1;
+  state.model_map_[model_id]["times_selected"] += 1;
   // Update expected loss
-  state.model_map_[model_id]["expected loss"] +=
-      (new_loss - state.model_map_[model_id]["expected loss"]) /
-      state.model_map_[model_id]["times selected"];
+  state.model_map_[model_id]["expected_loss"] +=
+      (new_loss - state.model_map_[model_id]["expected_loss"]) /
+      state.model_map_[model_id]["times_selected"];
 
   return state;
 }
@@ -357,6 +378,10 @@ PolicyState EpsilonGreedyPolicy::deserialize_state(
   return state;
 }
 
+std::string EpsilonGreedyPolicy::state_debug_string(const PolicyState& state) {
+  // TODO
+};
+
 // ********
 // * UCB1 *
 // ********
@@ -372,24 +397,28 @@ PolicyState UCBPolicy::add_models(
   return EpsilonGreedyPolicy::add_models(state, new_models);
 }
 
-VersionedModelId UCBPolicy::select(PolicyState state,
-                                   std::vector<VersionedModelId>& models) {
+VersionedModelId UCBPolicy::select(PolicyState& state) {
+  
   // Helper function for selecting an arm based on lowest upper confidence bound
   VersionedModelId selected_model;
-  auto min_upper_bound = DBL_MAX;
-  for (auto id = state.model_map_.begin(); id != state.model_map_.end(); ++id) {
-    auto model_loss = id->second["expected loss"];
-    auto bound = sqrt(2 * log(models.size()) / id->second["times selected"]);
-    if (model_loss + bound < min_upper_bound) {
-      min_upper_bound = model_loss + bound;
-      selected_model = id->first;
+  if (state.model_map_.empty()) { //Edge case
+    std::cout << "No models to select from." << std::endl;
+  } else {
+    auto min_upper_bound = DBL_MAX;
+    for (auto id = state.model_map_.begin(); id != state.model_map_.end(); ++id) {
+      auto model_loss = id->second["expected_loss"];
+      auto bound = sqrt(2 * log(state.model_map_.size()) / id->second["times_selected"]);
+      if (model_loss + bound < min_upper_bound) {
+        min_upper_bound = model_loss + bound;
+        selected_model = id->first;
+      }
     }
   }
 
   return selected_model;
 }
 
-std::vector<PredictTask> UCBPolicy::select_predict_tasks(PolicyState state,
+std::vector<PredictTask> UCBPolicy::select_predict_tasks(PolicyState& state,
                                                          Query query,
                                                          long query_id) {
   return Exp3Policy::select_predict_tasks(state, query, query_id);
@@ -401,7 +430,7 @@ Output UCBPolicy::combine_predictions(PolicyState state, Query query,
 }
 
 std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-UCBPolicy::select_feedback_tasks(PolicyState state, FeedbackQuery feedback,
+UCBPolicy::select_feedback_tasks(PolicyState& state, FeedbackQuery feedback,
                                  long query_id) {
   return Exp3Policy::select_feedback_tasks(state, feedback, query_id);
 }
@@ -418,5 +447,9 @@ std::string UCBPolicy::serialize_state(PolicyState state) {
 PolicyState UCBPolicy::deserialize_state(const std::string& bytes) {
   return EpsilonGreedyPolicy::deserialize_state(bytes);
 }
+
+std::string UCBPolicy::state_debug_string(const PolicyState& state) {
+  return EpsilonGreedyPolicy::state_debug_string(state);
+};
 
 }  // namespace clipper
