@@ -1,6 +1,8 @@
 #include <spdlog/spdlog.h>
 
 #include <clipper/logging.hpp>
+#include <sstream>
+#include <iostream>
 
 namespace clipper {
 
@@ -9,21 +11,9 @@ namespace clipper {
     spdlogger_ = spdlog::stdout_color_mt(LOGGER_NAME);
   }
 
-  Logger& Logger::get_logger() {
+  Logger& Logger::get() {
     static Logger instance;
     return instance;
-  }
-
-  void Logger::log_info(const std::string message) const {
-    spdlogger_->info(message);
-  }
-
-  void Logger::log_debug(const std::string message) const {
-    spdlogger_->debug(message);
-  }
-
-  void Logger::log_error(const std::string message) const {
-    spdlogger_->error(message);
   }
 
 }
