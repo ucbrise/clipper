@@ -29,9 +29,10 @@ using clipper::Query;
 using clipper::FeedbackQuery;
 using clipper_json::json_parse_error;
 using clipper_json::json_semantic_error;
-using clipper_json::decode_input;
-using clipper_json::decode_output;
-using clipper_json::getLong;
+using clipper_json::parse_json;
+using clipper_json::parse_input;
+using clipper_json::parse_output;
+using clipper_json::get_long;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
 namespace query_frontend {
@@ -171,16 +172,9 @@ class RequestHandler {
       std::vector<VersionedModelId> models, std::string policy,
       long latency_slo_micros, InputType input_type) {
     rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(json_content.c_str());
-    if (!ok) {
-      std::stringstream ss;
-      ss << "JSON parse error: " << rapidjson::GetParseError_En(ok.Code())
-         << " (offset " << ok.Offset() << ")\n";
-      throw json_parse_error(ss.str());
-    }
-
-    long uid = getLong(d, "uid");
-    std::shared_ptr<Input> input = decode_input(input_type, d);
+    parse_json(json_content, d);
+    long uid = get_long(d, "uid");
+    std::shared_ptr<Input> input = parse_input(input_type, d);
     auto prediction = query_processor_.predict(
         Query{name, uid, input, latency_slo_micros, policy, models});
     return prediction;
@@ -201,17 +195,10 @@ class RequestHandler {
       std::vector<VersionedModelId> models, std::string policy,
       InputType input_type, OutputType output_type) {
     rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(json_content.c_str());
-    if (!ok) {
-      std::stringstream ss;
-      ss << "JSON parse error: " << rapidjson::GetParseError_En(ok.Code())
-         << " (offset " << ok.Offset() << ")\n";
-      throw json_parse_error(ss.str());
-    }
-
-    long uid = getLong(d, "uid");
-    std::shared_ptr<Input> input = decode_input(input_type, d);
-    Output output = decode_output(output_type, d);
+    parse_json(json_content, d);
+    long uid = get_long(d, "uid");
+    std::shared_ptr<Input> input = parse_input(input_type, d);
+    Output output = parse_output(output_type, d);
     auto update = query_processor_.update(FeedbackQuery{
         name, uid, {std::make_pair(input, output)}, policy, models});
     return update;
