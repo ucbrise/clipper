@@ -1,4 +1,7 @@
+#ifndef CLIPPER_LIB_JSON_UTIL_H
+#define CLIPPER_LIB_JSON_UTIL_H
 #include <rapidjson/document.h>
+#include <rapidjson/error/en.h>
 #include <clipper/datatypes.hpp>
 #include <stdexcept>
 
@@ -107,7 +110,7 @@ std::string get_string(rapidjson::Value& d, const char* key_name) {
   return std::string(v.GetString());
 }
 
-/* Getters with error handling for arrays of double, float, int */
+/* Getters with error handling for arrays of double, float, int, string */
 std::vector<double> get_double_array(rapidjson::Value& d,
                                      const char* key_name) {
   check_type(d, key_name, rapidjson::kArrayType);
@@ -157,6 +160,23 @@ std::vector<int> get_int_array(rapidjson::Value& d, const char* key_name) {
   return vals;
 }
 
+std::vector<std::string> get_string_array(rapidjson::Value& d,
+                                          const char* key_name) {
+  check_type(d, key_name, rapidjson::kArrayType);
+  rapidjson::Value& v = d[key_name];
+  std::vector<std::string> vals;
+  vals.reserve(v.Capacity());
+  for (rapidjson::Value& elem : v.GetArray()) {
+    if (!elem.IsString()) {
+      throw json_semantic_error("Array input of type " +
+                                kTypeNames[elem.GetType()] +
+                                "is not of type string");
+    }
+    vals.push_back(elem.GetString());
+  }
+  return vals;
+}
+
 std::vector<VersionedModelId> get_candidate_models(rapidjson::Value& d,
                                                    const char* key_name) {
   check_type(d, key_name, rapidjson::kArrayType);
@@ -168,13 +188,15 @@ std::vector<VersionedModelId> get_candidate_models(rapidjson::Value& d,
       throw json_semantic_error("Array input of type " +
                                 kTypeNames[elem.GetType()] +
                                 "is not of type Object");
-    } else if (elem.MemberCount() != 1) {
+    } else if (!elem.HasMember("model_name")) {
       throw json_semantic_error(
-        "Candidate model JSON object must have exactly one item.");
+        "Candidate model JSON object missing model_name.");
+    } else if (!elem.HasMember("model_version")) {
+      throw json_semantic_error(
+        "Candidate model JSON object missing model_version.");
     }
-    rapidjson::Value::ConstMemberIterator start = elem.MemberBegin();
-    std::string model_name = start->name.GetString();
-    int model_version = get_int(elem, model_name.c_str());
+    std::string model_name = get_string(elem, "model_name");
+    int model_version = get_int(elem, "model_version");
     candidate_models.push_back(std::make_pair(model_name, model_version));
   }
   return candidate_models;
@@ -307,3 +329,4 @@ void add_object(rapidjson::Document to_add,
 }
 
 }  // namespace clipper_json
+#endif  // CLIPPER_LIB_JSON_UTIL_H
