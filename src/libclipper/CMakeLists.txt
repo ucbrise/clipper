@@ -26,7 +26,7 @@ target_include_directories(clipper PUBLIC
     PRIVATE src)
 
 
-target_link_libraries(clipper boost zmqcpp redox pthread)
+target_link_libraries(clipper boost zmqcpp redox pthread rapidjson)
 
 # This makes the project importable from the build directory
 export(TARGETS clipper FILE ClipperConfig.cmake)
