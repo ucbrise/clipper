@@ -374,22 +374,12 @@ PolicyState EpsilonGreedyPolicy::process_feedback(
 }
 
 std::string EpsilonGreedyPolicy::serialize_state(PolicyState state) {
-  std::stringstream ss;
-  boost::archive::binary_oarchive oa(ss);
-  oa << state.model_map_;
-  return ss.str();
+  return Exp3Policy::serialize_state(state);
 }
 
 PolicyState EpsilonGreedyPolicy::deserialize_state(
     const std::string& bytes) {
-  std::stringstream ss;
-  ss << bytes;
-  boost::archive::binary_iarchive ia(ss);
-  PolicyState state;
-  Map map;
-  ia >> map;
-  state.set_model_map(map);
-  return state;
+  return Exp3Policy::deserialize_state(bytes);
 }
 
 std::string EpsilonGreedyPolicy::state_debug_string(const PolicyState& state) {
@@ -455,11 +445,11 @@ PolicyState UCBPolicy::process_feedback(PolicyState state, Feedback feedback,
 }
 
 std::string UCBPolicy::serialize_state(PolicyState state) {
-  return EpsilonGreedyPolicy::serialize_state(state);
+  return Exp3Policy::serialize_state(state);
 }
 
 PolicyState UCBPolicy::deserialize_state(const std::string& bytes) {
-  return EpsilonGreedyPolicy::deserialize_state(bytes);
+  return Exp3Policy::deserialize_state(bytes);
 }
 
 std::string UCBPolicy::state_debug_string(const PolicyState& state) {
