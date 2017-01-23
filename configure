@@ -218,7 +218,6 @@ if [ -z $CMAKE ]; then
   tar -xzvf cmake.tar.gz
   # cd into the extracted directory and install
   cd cmake-*
-  exit 0
   ./configure --prefix=$DEPS_PREFIX
   make -j2
   make install
