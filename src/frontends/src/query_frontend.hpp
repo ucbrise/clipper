@@ -11,12 +11,12 @@
 #include <clipper/config.hpp>
 #include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/json_util.hpp>
 #include <clipper/metrics.hpp>
 #include <clipper/query_processor.hpp>
 #include <clipper/redis.hpp>
 
 #include <server_http.hpp>
-#include "json_util.hpp"
 
 using clipper::Response;
 using clipper::FeedbackAck;
