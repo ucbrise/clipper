@@ -166,8 +166,22 @@ PolicyState Exp3Policy::deserialize_state(const std::string& bytes) {
   return state;
 }
 
-std::string Exp3Policy::state_debug_string(const PolicyState& /*state*/) {
-  // TODO
+std::string Exp3Policy::state_debug_string(const PolicyState& state) {
+  // State string example: "3.0;model1,1.0,0.4;model2,1.0,0.4;......."
+  std::string string_state = "Exp3State;";
+  if (state.model_map_.empty()) {
+    std::cout << "State is empty" << std::endl;
+    return string_state;
+  }
+  string_state += std::to_string(state.weight_sum_) + ";"; // Weight Sum
+  for (auto it: state.model_map_) {
+    string_state += it.first.first + std::to_string(it.first.second); // Model Name
+    for (auto model_info_it : it.second) { // Model information
+      string_state += "," + std::to_string(model_info_it.second);
+    }
+    string_state += ";";
+  }
+  return string_state;
 };
 
 //// ********
@@ -379,7 +393,7 @@ PolicyState EpsilonGreedyPolicy::deserialize_state(
 }
 
 std::string EpsilonGreedyPolicy::state_debug_string(const PolicyState& state) {
-  // TODO
+  return Exp3Policy::state_debug_string(state);
 };
 
 // ********
@@ -449,7 +463,7 @@ PolicyState UCBPolicy::deserialize_state(const std::string& bytes) {
 }
 
 std::string UCBPolicy::state_debug_string(const PolicyState& state) {
-  return EpsilonGreedyPolicy::state_debug_string(state);
+  return Exp3Policy::state_debug_string(state);
 };
 
 }  // namespace clipper
