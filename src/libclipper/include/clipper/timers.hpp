@@ -9,7 +9,11 @@
 
 #include <boost/thread.hpp>
 
+#include <clipper/logging.hpp>
+
 namespace clipper {
+
+const std::string LOGGING_TAG = "TIMERS";
 
 class HighPrecisionClock {
  public:
@@ -99,9 +103,9 @@ template <typename Clock>
 class TimerSystem {
  public:
   explicit TimerSystem(Clock c) : clock_(c), queue_(TimerPQueue{}) {
-    std::cout << "starting timer thread" << std::endl;
+    Logger::get().log_info(LOGGING_TAG, "Starting timer thread");
     start();
-    std::cout << "timer thread started" << std::endl;
+    Logger::get().log_info(LOGGING_TAG, "Timer thread started");
   }
 
   ~TimerSystem() { shutdown(); }
@@ -118,7 +122,7 @@ class TimerSystem {
   }
 
   void manage_timers() {
-    std::cout << "In timer event loop" << std::endl;
+    Logger::get().log_info(LOGGING_TAG, "In timer event loop");
     while (!shutdown_) {
       // wait for next timer to expire
       //    auto cur_time = high_resolution_clock::now();

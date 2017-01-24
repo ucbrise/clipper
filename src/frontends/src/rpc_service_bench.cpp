@@ -3,6 +3,7 @@
 
 #include <clipper/datatypes.hpp>
 #include <clipper/rpc_service.hpp>
+#include <clipper/logging.hpp>
 
 void await_responses(std::shared_ptr<clipper::rpc::RPCService> rpc_service,
                      std::shared_ptr<std::unordered_map<int, long>> times_map,
@@ -177,6 +178,21 @@ void run_benchmarks() {
 }
 
 int main() {
-  run_benchmarks();
+  //run_benchmarks();
+  clipper::Logger::get().log_error("Redis", "Clipper connecting to redis...", "Sleeping 1 second...");
+  clipper::Logger::get().log_error("GEN", "Meeselzorp");
+  clipper::Logger::get().log_info("REDIS", "Why???");
+  clipper::Logger::get().log_info_formatted("QUERYFRNTD", "Test {}", 82.90);
+
+  const std::string key = "COW";
+  const std::string event_type = "SUCK";
+
+  clipper::Logger::get().log_info_formatted("REDIS",
+      "APPLICATION EVENT DETECTED. Key: {}, event_type: {}", key, event_type);
+
+  clipper::Logger::get().log_error_formatted("RPC", "It's all dying. We're screwed");
+
+  clipper::Logger::get().log_info("COMPLEXHUGESYSTEM", "Uhhh...");
+
   return 0;
 }
