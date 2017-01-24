@@ -25,6 +25,8 @@ namespace clipper {
 //   virtual boost::future<FeedbackAck> update(FeedbackQuery feedback) = 0;
 // };
 
+const std::string LOGGING_TAG_QUERY_PROCESSOR = "QRYPROCSSR";
+
 class QueryProcessor {
  public:
   ~QueryProcessor() = default;

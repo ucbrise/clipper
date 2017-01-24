@@ -21,6 +21,7 @@
 #include <clipper/redis.hpp>
 #include <clipper/selection_policy.hpp>
 #include <clipper/util.hpp>
+#include <clipper/logging.hpp>
 
 using namespace boost::property_tree;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
@@ -28,6 +29,8 @@ using clipper::VersionedModelId;
 using clipper::InputType;
 
 namespace management {
+
+const std::string LOGGING_TAG_MANAGEMENT_FRONTEND = "MGMTFRNTD";
 
 const std::string ADMIN_PATH = "^/admin";
 const std::string ADD_APPLICATION = ADMIN_PATH + "/add_app$";
@@ -94,15 +97,16 @@ class RequestHandler {
     clipper::Config& conf = clipper::get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
-      std::cout << "ERROR: Management connecting to Redis" << std::endl;
-      std::cout << "Sleeping 1 second..." << std::endl;
+      clipper::Logger::get().log_error(
+          LOGGING_TAG_MANAGEMENT_FRONTEND, "Management frontend failed to connect to Redis", "Retrying in 1 second...");
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
     while (!redis_subscriber_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
-      std::cout << "ERROR: Management subscriber connecting to Redis"
-                << std::endl;
-      std::cout << "Sleeping 1 second..." << std::endl;
+      clipper::Logger::get().log_error(
+          LOGGING_TAG_MANAGEMENT_FRONTEND,
+          "Management frontend subscriber failed to connect to Redis",
+          "Retrying in 1 second...");
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
     server_.add_endpoint(

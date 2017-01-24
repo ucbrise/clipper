@@ -8,6 +8,8 @@
 
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
+#include <clipper/logging.hpp>
+#include <clipper/constants.hpp>
 
 using namespace clipper;
 
@@ -17,5 +19,5 @@ int main() {
       std::make_shared<DoubleVector>(std::vector<double>{1.1, 2.2, 3.3, 4.4});
   boost::future<Response> prediction = qp.predict(
       {"test", 3, input, 20000, "newest_model", {std::make_pair("m", 1)}});
-  std::cout << prediction.get().debug_string() << std::endl;
+  Logger::get().log_info(LOGGING_TAG_CLIPPER, prediction.get().debug_string());
 }

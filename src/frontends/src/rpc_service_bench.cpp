@@ -178,21 +178,6 @@ void run_benchmarks() {
 }
 
 int main() {
-  //run_benchmarks();
-  clipper::Logger::get().log_error("Redis", "Clipper connecting to redis...", "Sleeping 1 second...");
-  clipper::Logger::get().log_error("GEN", "Meeselzorp");
-  clipper::Logger::get().log_info("REDIS", "Why???");
-  clipper::Logger::get().log_info_formatted("QUERYFRNTD", "Test {}", 82.90);
-
-  const std::string key = "COW";
-  const std::string event_type = "SUCK";
-
-  clipper::Logger::get().log_info_formatted("REDIS",
-      "APPLICATION EVENT DETECTED. Key: {}, event_type: {}", key, event_type);
-
-  clipper::Logger::get().log_error_formatted("RPC", "It's all dying. We're screwed");
-
-  clipper::Logger::get().log_info("COMPLEXHUGESYSTEM", "Uhhh...");
-
+  run_benchmarks();
   return 0;
 }

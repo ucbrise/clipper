@@ -24,6 +24,8 @@ namespace clipper {
 
 namespace rpc {
 
+const std::string LOGGING_TAG_RPC = "RPC";
+
 using RPCResponse = std::pair<const int, vector<uint8_t>>;
 /// Tuple of zmq_connection_id, message_id, vector of messages, creation time
 using RPCRequest =

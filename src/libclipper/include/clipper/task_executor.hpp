@@ -19,7 +19,7 @@
 
 namespace clipper {
 
-const std::string LOGGING_TAG = "TaskExec";
+const std::string LOGGING_TAG_TASK_EXECUTOR = "TaskExec";
 
 std::vector<float> deserialize_outputs(std::vector<uint8_t> bytes);
 
@@ -64,20 +64,20 @@ class TaskExecutor {
   explicit TaskExecutor()
       : active_containers_(std::make_shared<ActiveContainers>()),
         rpc_(std::make_unique<rpc::RPCService>()) {
-    Logger::get().log_info(LOGGING_TAG, "TaskExecutor started");
+    Logger::get().log_info(LOGGING_TAG_TASK_EXECUTOR, "TaskExecutor started");
     rpc_->start("*", RPC_SERVICE_PORT);
     active_ = true;
     Config &conf = get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
       Logger::get().log_error(
-          LOGGING_TAG, "TaskExecutor failed to connect to redis", "Retrying in 1 second...");
+          LOGGING_TAG_TASK_EXECUTOR, "TaskExecutor failed to connect to redis", "Retrying in 1 second...");
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
     while (!redis_subscriber_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
       Logger::get().log_error(
-          LOGGING_TAG, "TaskExecutor subscriber failed to connect to redis", "Retrying in 1 second...");
+          LOGGING_TAG_TASK_EXECUTOR, "TaskExecutor subscriber failed to connect to redis", "Retrying in 1 second...");
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
     redis::send_cmd_no_reply<std::string>(
@@ -127,7 +127,7 @@ class TaskExecutor {
         output_futures.push_back(std::move(cache_.fetch(t.model_, t.input_)));
       } else {
         Logger::get().log_info_formatted(
-            LOGGING_TAG, "No active containers found for model {}:{}", t.model_.first, t.model_.second);
+            LOGGING_TAG_TASK_EXECUTOR, "No active containers found for model {}:{}", t.model_.first, t.model_.second);
       }
     }
     return output_futures;

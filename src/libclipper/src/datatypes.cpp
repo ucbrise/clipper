@@ -211,10 +211,6 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
         "Attempted to serialize a request with no input data!");
   }
 
-  long start = std::chrono::duration_cast<std::chrono::milliseconds>(
-                   std::chrono::system_clock::now().time_since_epoch())
-                   .count();
-
   std::vector<uint32_t> request_metadata;
   request_metadata.emplace_back(
       static_cast<uint32_t>(RequestType::PredictRequest));
@@ -246,12 +242,6 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
   serialized_request.push_back(serialized_request_metadata);
   serialized_request.push_back(serialized_input_metadata);
   serialized_request.push_back(serialized_inputs);
-
-  long stop = std::chrono::duration_cast<std::chrono::milliseconds>(
-                  std::chrono::system_clock::now().time_since_epoch())
-                  .count();
-
-  std::cout << stop - start << std::endl;
 
   return serialized_request;
 }
