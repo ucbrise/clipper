@@ -3,7 +3,6 @@
 
 #include <clipper/datatypes.hpp>
 #include <clipper/rpc_service.hpp>
-#include <clipper/logging.hpp>
 
 void await_responses(std::shared_ptr<clipper::rpc::RPCService> rpc_service,
                      std::shared_ptr<std::unordered_map<int, long>> times_map,
