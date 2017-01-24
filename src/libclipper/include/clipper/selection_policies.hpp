@@ -90,7 +90,7 @@ class SelectionPolicy {
   /// while feedback tasks can be used to optionally propogate feedback
   /// into the model containers.
   static std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-  select_feedback_tasks(PolicyState state, FeedbackQuery query, long query_id) {
+  select_feedback_tasks(PolicyState& state, FeedbackQuery query, long query_id) {
     return Derived::select_feedback_tasks(state, query, query_id);
   }
 
@@ -143,7 +143,7 @@ class Exp3Policy : public SelectionPolicy<Exp3Policy> {
     return 0;
   };
 
-  static std::vector<PredictTask> select_predict_tasks(PolicyState& state,
+  static std::vector<PredictTask> select_predict_tasks(PolicyState state,
                                                        Query query,
                                                        long query_id);
 
@@ -163,7 +163,7 @@ class Exp3Policy : public SelectionPolicy<Exp3Policy> {
   static std::string state_debug_string(const PolicyState& state);
   
  private:
-  static VersionedModelId select(PolicyState& state);
+  static VersionedModelId select(PolicyState state);
 };
 
 class Exp4Policy : public SelectionPolicy<Exp4Policy> {

@@ -111,12 +111,11 @@ PolicyState Exp3Policy::add_models(PolicyState state,
   return state;
 }
 
-VersionedModelId Exp3Policy::select(PolicyState& state) {
-  
+VersionedModelId Exp3Policy::select(PolicyState state) {
   // Helper function for randomly drawing an arm based on its normalized weight
   VersionedModelId selected_model;
   if (state.model_map_.empty()) {
-    std::cout << "No models to select from" << std::endl;
+    //std::cout << "No models to select from" << std::endl;
   } else {
     auto rand_num = rand() % 1; // Pick random number between [0, 1]
     auto it = state.model_map_.begin();
@@ -130,7 +129,7 @@ VersionedModelId Exp3Policy::select(PolicyState& state) {
   return selected_model;
 }
 
-std::vector<PredictTask> Exp3Policy::select_predict_tasks(PolicyState& state,
+std::vector<PredictTask> Exp3Policy::select_predict_tasks(PolicyState state,
                                                 Query query,
                                                 long query_id) {
   auto selected_model = select(state);
@@ -180,9 +179,11 @@ PolicyState Exp3Policy::process_feedback(PolicyState state, Feedback feedback,
   if (state.model_map_[model_id]["max_loss"] < loss)
     state.model_map_[model_id]["max_loss"] = loss;
   loss /= state.model_map_[model_id]["max_loss"];
-  // Update arm with normalized loss
+  // Update arm weight and weight_sum
   auto s_i = state.model_map_[model_id]["weight"];
-  state.model_map_[model_id]["weight"] += exp(-eta * loss / (s_i / state.weight_sum_));
+  double update = exp(-eta * loss / (s_i / state.weight_sum_));
+  state.model_map_[model_id]["weight"] += update;
+  state.set_weight_sum(state.weight_sum_ + update);
   return state;
 }
 
@@ -267,9 +268,11 @@ PolicyState Exp4Policy::process_feedback(PolicyState state,
       state.model_map_[model_id]["max_loss"] = loss;
     }
     loss /= state.model_map_[model_id]["max_loss"];
-    // Update arm with normalized loss
+    // Update arm weight and weight_sum
     auto s_i = state.model_map_[model_id]["weight"];
-    state.model_map_[model_id]["weight"] += exp(-eta * loss / (s_i / state.weight_sum_));
+    double update = exp(-eta * loss / (s_i / state.weight_sum_));
+    state.model_map_[model_id]["weight"] += update;
+    state.set_weight_sum(state.weight_sum_ + update);
   }
   return state;
 }
