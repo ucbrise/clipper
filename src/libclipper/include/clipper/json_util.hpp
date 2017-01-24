@@ -2,6 +2,8 @@
 #define CLIPPER_LIB_JSON_UTIL_H
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
 #include <clipper/datatypes.hpp>
 #include <stdexcept>
 
@@ -65,7 +67,7 @@ double get_double(rapidjson::Value& d, const char* key_name) {
   rapidjson::Value& v = d[key_name];
   if (!v.IsDouble()) {
     throw json_semantic_error("Input of type " + kTypeNames[v.GetType()] +
-                              "is not of type double");
+                              " is not of type double");
   }
   return v.GetDouble();
 }
@@ -75,7 +77,7 @@ float get_float(rapidjson::Value& d, const char* key_name) {
   rapidjson::Value& v = d[key_name];
   if (!v.IsFloat()) {
     throw json_semantic_error("Input of type " + kTypeNames[v.GetType()] +
-                              "is not of type float");
+                              " is not of type float");
   }
   return v.GetFloat();
 }
@@ -85,7 +87,7 @@ long get_long(rapidjson::Value& d, const char* key_name) {
   rapidjson::Value& v = d[key_name];
   if (!v.IsInt64()) {
     throw json_semantic_error("Input of type " + kTypeNames[v.GetType()] +
-                              "is not of type long");
+                              " is not of type long");
   }
   return (long)v.GetInt64();
 }
@@ -95,7 +97,7 @@ int get_int(rapidjson::Value& d, const char* key_name) {
   rapidjson::Value& v = d[key_name];
   if (!v.IsInt()) {
     throw json_semantic_error("Input of type " + kTypeNames[v.GetType()] +
-                              "is not of type int");
+                              " is not of type int");
   }
   return v.GetInt();
 }
@@ -105,7 +107,7 @@ std::string get_string(rapidjson::Value& d, const char* key_name) {
   rapidjson::Value& v = d[key_name];
   if (!v.IsString()) {
     throw json_semantic_error("Input of type " + kTypeNames[v.GetType()] +
-                              "is not of type string");
+                              " is not of type string");
   }
   return std::string(v.GetString());
 }
@@ -121,7 +123,7 @@ std::vector<double> get_double_array(rapidjson::Value& d,
     if (!elem.IsDouble()) {
       throw json_semantic_error("Array input of type " +
                                 kTypeNames[elem.GetType()] +
-                                "is not of type double");
+                                " is not of type double");
     }
     vals.push_back(elem.GetDouble());
   }
@@ -137,7 +139,7 @@ std::vector<float> get_float_array(rapidjson::Value& d, const char* key_name) {
     if (!elem.IsFloat()) {
       throw json_semantic_error("Array input of type " +
                                 kTypeNames[elem.GetType()] +
-                                "is not of type float");
+                                " is not of type float");
     }
     vals.push_back(elem.GetFloat());
   }
@@ -153,7 +155,7 @@ std::vector<int> get_int_array(rapidjson::Value& d, const char* key_name) {
     if (!elem.IsInt()) {
       throw json_semantic_error("Array input of type " +
                                 kTypeNames[elem.GetType()] +
-                                "is not of type int");
+                                " is not of type int");
     }
     vals.push_back(elem.GetInt());
   }
@@ -170,7 +172,7 @@ std::vector<std::string> get_string_array(rapidjson::Value& d,
     if (!elem.IsString()) {
       throw json_semantic_error("Array input of type " +
                                 kTypeNames[elem.GetType()] +
-                                "is not of type string");
+                                " is not of type string");
     }
     vals.push_back(elem.GetString());
   }
@@ -187,7 +189,7 @@ std::vector<VersionedModelId> get_candidate_models(rapidjson::Value& d,
     if (!elem.IsObject()) {
       throw json_semantic_error("Array input of type " +
                                 kTypeNames[elem.GetType()] +
-                                "is not of type Object");
+                                " is not of type Object");
     } else if (!elem.HasMember("model_name")) {
       throw json_semantic_error(
         "Candidate model JSON object missing model_name.");
@@ -262,6 +264,9 @@ void add_kv_pair(rapidjson::Document& d,
     const char* key_name, rapidjson::Value& value_to_add) {
   if (!d.IsObject()) {
     throw json_semantic_error("Can only add a key-value pair to an object");
+  } else if (d.HasMember(key_name)) {
+    // Remove old value associated with key_name
+    d.RemoveMember(key_name);
   }
   rapidjson::Document::AllocatorType& allocator = d.GetAllocator();
   rapidjson::Value key(key_name, allocator);
@@ -298,6 +303,17 @@ void add_int_array(std::vector<int> values_to_add,
   add_kv_pair(d, key_name, int_array);
 }
 
+void add_string_array(std::vector<std::string> values_to_add,
+    const char* key_name, rapidjson::Document& d) {
+  rapidjson::Value string_array(rapidjson::kArrayType);
+  rapidjson::Document::AllocatorType& allocator = d.GetAllocator();
+  for (int i = 0; i < values_to_add.size(); i++) {
+    rapidjson::Value string_val(values_to_add[i].c_str(), allocator);
+    string_array.PushBack(string_val, allocator);
+  }
+  add_kv_pair(d, key_name, string_array);
+}
+
 void add_double(double val, const char* key_name, rapidjson::Document& d) {
   rapidjson::Value val_to_add(val);
   add_kv_pair(d, key_name, val_to_add);
@@ -323,9 +339,16 @@ void add_string(std::string val, const char* key_name, rapidjson::Document& d) {
   add_kv_pair(d, key_name, val_to_add);
 }
 
-void add_object(rapidjson::Document to_add,
+void add_object(rapidjson::Document& to_add,
     const char* key_name, rapidjson::Document& d) {
-  add_kv_pair(to_add, key_name, d);
+  add_kv_pair(d, key_name, to_add);
+}
+
+std::string to_json_string(rapidjson::Document& d) {
+  rapidjson::StringBuffer buffer;
+  rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+  d.Accept(writer);
+  return buffer.GetString();
 }
 
 }  // namespace clipper_json

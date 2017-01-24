@@ -8,9 +8,6 @@
 #include <vector>
 
 #include <boost/thread.hpp>
-#define BOOST_SPIRIT_THREADSAFE
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/property_tree/ptree.hpp>
 
 #include <redox.hpp>
 #include <server_http.hpp>
@@ -23,7 +20,6 @@
 #include <clipper/selection_policy.hpp>
 #include <clipper/util.hpp>
 
-using namespace boost::property_tree;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 using clipper::VersionedModelId;
 using clipper::InputType;

@@ -14,7 +14,6 @@
 using namespace clipper;
 using namespace clipper::redis;
 using namespace management;
-using namespace boost::property_tree;
 
 namespace {
 
