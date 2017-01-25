@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <time.h>
 
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
@@ -37,16 +38,7 @@ void PolicyState::set_weight_sum(double sum) {
 std::string PolicyState::serialize() const {
   std::stringstream ss;
   boost::archive::binary_oarchive oa(ss);
-  oa << weight_sum_; // save weight_sum
-  oa << model_map_.size(); // save map size
-  for (auto const& p: model_map_) {
-    oa << p.first; // save this model's version id
-    oa << p.second.size(); // save this model's info size
-    for (auto const& pt: p.second) {
-      oa << pt.first << pt.second; // save info label and info value
-    }
-  }
-  //oa << model_map_;
+  oa << weight_sum_ << model_map_.size() << model_map_; // save weight_sum, map size and map
   return ss.str();
 };
 
@@ -58,27 +50,12 @@ PolicyState PolicyState::deserialize(const std::string& bytes) {
   PolicyState state;
   double sum;
   size_t size;
-  ia >> sum; // load weight_sum
-  ia >> size; // load map size
-  
+  ia >> sum >> size; // load weight_sum and map size
   Map map(size, &versioned_model_hash);
-  for (size_t i = 0; i != size; ++i) {
-    VersionedModelId versionID;
-    ModelInfo modelInfo;
-    size_t infoSize;
-    ia >> versionID; // load this model's version id
-    ia >> infoSize; // save this model's info size
-    for (size_t j = 0; j != infoSize; ++j) {
-      std::string infoLabel;
-      double infoVal;
-      ia >> infoLabel >> infoVal; // load info label and info value
-      modelInfo.insert({infoLabel, infoVal});
-    }
-    map.insert({versionID, modelInfo});
-  }
-  
+  ia >> map;
   state.set_model_map(map);
   state.set_weight_sum(sum);
+  
   return state;
 };
 
@@ -141,13 +118,15 @@ VersionedModelId Exp3Policy::select(PolicyState& state) {
   // Helper function for randomly drawing an arm based on its normalized weight
   VersionedModelId selected_model;
   if (state.model_map_.empty()) {
-    //std::cout << "No models to select from" << std::endl;
-  } else {
-    auto rand_num = (double) rand() / (RAND_MAX); // Pick random number between [0, 1]
-    for (auto it = state.model_map_.begin(); it != state.model_map_.end() && rand_num >= 0; ++it) {
-      rand_num -= (1 - eta) * (it->second["weight"] / state.weight_sum_) + eta / state.model_map_.size();
-      selected_model = it->first;
-    }
+    std::cout << "No models to select from" << std::endl;
+    return selected_model;
+  }
+  double rand_num;
+  srand (time(NULL)); // seed random generator
+  rand_num = (double) rand() / (RAND_MAX); // Pick random number between [0, 1]
+  for (auto it = state.model_map_.begin(); it != state.model_map_.end() && rand_num >= 0; ++it) {
+    rand_num -= (1 - eta) * (it->second["weight"] / state.weight_sum_) + eta / state.model_map_.size();
+    selected_model = it->first;
   }
   return selected_model;
 }
@@ -352,21 +331,27 @@ VersionedModelId EpsilonGreedyPolicy::select(PolicyState& state) {
   VersionedModelId selected_model;
   if (state.model_map_.empty()) { // Edge case
     std::cout << "No models to select from." << std::endl;
-  } else {
-    auto rand_num = (double) rand() / RAND_MAX;
-    if (rand_num >= epsilon) { // Select best model
-      auto min_loss = DBL_MAX;
-      for (auto id = state.model_map_.begin(); id != state.model_map_.end(); ++id) {
-        auto model_loss = id->second["expected_loss"];
-        if (model_loss < min_loss) {
-          min_loss = model_loss;
-          selected_model = id->first;
-        }
+    return selected_model;
+  }
+  double rand_num;
+  srand (time(NULL));
+  rand_num = (double) rand() / RAND_MAX;
+  std::cout << rand_num << std::endl;
+  if (rand_num >= epsilon) { // Select best model
+    auto min_loss = DBL_MAX;
+    for (auto id = state.model_map_.begin(); id != state.model_map_.end(); ++id) {
+      auto model_loss = id->second["expected_loss"];
+      if (model_loss < min_loss) {
+        min_loss = model_loss;
+        selected_model = id->first;
       }
-    } else { // Randomly select
-      auto random_it = next(begin(state.model_map_), (int) rand() * state.model_map_.size() / RAND_MAX);
-      selected_model = random_it->first;
     }
+  } else { // Randomly select
+    int rand_num;
+    srand (time(NULL));
+    rand_num = rand() * state.model_map_.size() / RAND_MAX;
+    auto random_it = next(begin(state.model_map_), rand_num);
+    selected_model = random_it->first;
   }
 
   return selected_model;
@@ -374,7 +359,12 @@ VersionedModelId EpsilonGreedyPolicy::select(PolicyState& state) {
 
 std::vector<PredictTask> EpsilonGreedyPolicy::select_predict_tasks(
     PolicyState& state, Query query, long query_id) {
-  return Exp3Policy::select_predict_tasks(state, query, query_id);
+  
+  auto selected_model = select(state);
+  auto task = PredictTask(query.input_, selected_model, 1.0, query_id,
+                          query.latency_micros_);
+  std::vector<PredictTask> tasks{task};
+  return tasks;
 }
 
 Output EpsilonGreedyPolicy::combine_predictions(
@@ -398,7 +388,6 @@ PolicyState EpsilonGreedyPolicy::process_feedback(
   if (predictions.empty()) {
     return state;
   }
-  
   auto model_id = predictions.front().models_used_.front();
   auto new_loss = std::abs(feedback.y_ - predictions.front().y_hat_);
   // Update times selected
