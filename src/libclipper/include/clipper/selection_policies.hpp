@@ -163,7 +163,7 @@ class Exp3Policy : public SelectionPolicy<Exp3Policy> {
   static std::string state_debug_string(const PolicyState& state);
   
  private:
-  static VersionedModelId select(PolicyState state);
+  static VersionedModelId select(PolicyState& state);
 };
 
 class Exp4Policy : public SelectionPolicy<Exp4Policy> {

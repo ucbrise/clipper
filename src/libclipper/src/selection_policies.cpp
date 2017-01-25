@@ -111,19 +111,16 @@ PolicyState Exp3Policy::add_models(PolicyState state,
   return state;
 }
 
-VersionedModelId Exp3Policy::select(PolicyState state) {
+VersionedModelId Exp3Policy::select(PolicyState& state) {
   // Helper function for randomly drawing an arm based on its normalized weight
   VersionedModelId selected_model;
   if (state.model_map_.empty()) {
     //std::cout << "No models to select from" << std::endl;
   } else {
-    auto rand_num = rand() % 1; // Pick random number between [0, 1]
-    auto it = state.model_map_.begin();
-    while (rand_num >= 0) { // Find the corresponding model based on rand_num
-      rand_num -= (1 - eta) * (it->second["weight"] / state.weight_sum_) +
-                eta / state.model_map_.size();
+    auto rand_num = (double) rand() / (RAND_MAX); // Pick random number between [0, 1]
+    for (auto it = state.model_map_.begin(); it != state.model_map_.end() && rand_num >= 0; ++it) {
+      rand_num -= (1 - eta) * (it->second["weight"] / state.weight_sum_) + eta / state.model_map_.size();
       selected_model = it->first;
-      it++;
     }
   }
   return selected_model;
@@ -330,7 +327,7 @@ VersionedModelId EpsilonGreedyPolicy::select(PolicyState& state) {
   if (state.model_map_.empty()) { // Edge case
     std::cout << "No models to select from." << std::endl;
   } else {
-    auto rand_num = rand() % 1;
+    auto rand_num = (double) rand() / RAND_MAX;
     if (rand_num >= epsilon) { // Select best model
       auto min_loss = DBL_MAX;
       for (auto id = state.model_map_.begin(); id != state.model_map_.end(); ++id) {
@@ -341,7 +338,7 @@ VersionedModelId EpsilonGreedyPolicy::select(PolicyState& state) {
         }
       }
     } else { // Randomly select
-      auto random_it = next(begin(state.model_map_), rand() % state.model_map_.size());
+      auto random_it = next(begin(state.model_map_), (int) rand() * state.model_map_.size() / RAND_MAX);
       selected_model = random_it->first;
     }
   }
