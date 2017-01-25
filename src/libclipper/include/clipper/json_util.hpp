@@ -44,8 +44,8 @@ class json_semantic_error : public std::runtime_error {
 };
 
 /* Check for matching types else throw exception */
-void check_type(rapidjson::Value& d, const char* key_name,
-                Type expected_type) {
+rapidjson::Value& check_kv_type_and_return(
+    rapidjson::Value& d, const char* key_name, Type expected_type) {
   if (!d.IsObject()) {
     throw json_semantic_error("Can only get key-value pair from an object");
   } else if (!d.HasMember(key_name)) {
@@ -59,12 +59,13 @@ void check_type(rapidjson::Value& d, const char* key_name,
                               kTypeNames[expected_type] + "but found type " +
                               kTypeNames[val.GetType()]);
   }
+  return val;
 }
 
 /* Getters with error handling for double, float, long, int, string */
 double get_double(rapidjson::Value& d, const char* key_name) {
-  check_type(d, key_name, rapidjson::kNumberType);
-  rapidjson::Value& v = d[key_name];
+  rapidjson::Value& v =
+      check_kv_type_and_return(d, key_name, rapidjson::kNumberType);
   if (!v.IsDouble()) {
     throw json_semantic_error("Input of type " + kTypeNames[v.GetType()] +
                               " is not of type double");
@@ -73,8 +74,8 @@ double get_double(rapidjson::Value& d, const char* key_name) {
 }
 
 float get_float(rapidjson::Value& d, const char* key_name) {
-  check_type(d, key_name, rapidjson::kNumberType);
-  rapidjson::Value& v = d[key_name];
+  rapidjson::Value& v =
+      check_kv_type_and_return(d, key_name, rapidjson::kNumberType);
   if (!v.IsFloat()) {
     throw json_semantic_error("Input of type " + kTypeNames[v.GetType()] +
                               " is not of type float");
@@ -83,8 +84,8 @@ float get_float(rapidjson::Value& d, const char* key_name) {
 }
 
 long get_long(rapidjson::Value& d, const char* key_name) {
-  check_type(d, key_name, rapidjson::kNumberType);
-  rapidjson::Value& v = d[key_name];
+  rapidjson::Value& v =
+      check_kv_type_and_return(d, key_name, rapidjson::kNumberType);
   if (!v.IsInt64()) {
     throw json_semantic_error("Input of type " + kTypeNames[v.GetType()] +
                               " is not of type long");
@@ -93,8 +94,8 @@ long get_long(rapidjson::Value& d, const char* key_name) {
 }
 
 int get_int(rapidjson::Value& d, const char* key_name) {
-  check_type(d, key_name, rapidjson::kNumberType);
-  rapidjson::Value& v = d[key_name];
+  rapidjson::Value& v =
+      check_kv_type_and_return(d, key_name, rapidjson::kNumberType);
   if (!v.IsInt()) {
     throw json_semantic_error("Input of type " + kTypeNames[v.GetType()] +
                               " is not of type int");
@@ -103,8 +104,8 @@ int get_int(rapidjson::Value& d, const char* key_name) {
 }
 
 std::string get_string(rapidjson::Value& d, const char* key_name) {
-  check_type(d, key_name, rapidjson::kStringType);
-  rapidjson::Value& v = d[key_name];
+  rapidjson::Value& v =
+      check_kv_type_and_return(d, key_name, rapidjson::kStringType);
   if (!v.IsString()) {
     throw json_semantic_error("Input of type " + kTypeNames[v.GetType()] +
                               " is not of type string");
@@ -115,8 +116,8 @@ std::string get_string(rapidjson::Value& d, const char* key_name) {
 /* Getters with error handling for arrays of double, float, int, string */
 std::vector<double> get_double_array(rapidjson::Value& d,
                                      const char* key_name) {
-  check_type(d, key_name, rapidjson::kArrayType);
-  rapidjson::Value& v = d[key_name];
+  rapidjson::Value& v =
+      check_kv_type_and_return(d, key_name, rapidjson::kArrayType);
   std::vector<double> vals;
   vals.reserve(v.Capacity());
   for (rapidjson::Value& elem : v.GetArray()) {
@@ -131,8 +132,8 @@ std::vector<double> get_double_array(rapidjson::Value& d,
 }
 
 std::vector<float> get_float_array(rapidjson::Value& d, const char* key_name) {
-  check_type(d, key_name, rapidjson::kArrayType);
-  rapidjson::Value& v = d[key_name];
+  rapidjson::Value& v =
+      check_kv_type_and_return(d, key_name, rapidjson::kArrayType);
   std::vector<float> vals;
   vals.reserve(v.Capacity());
   for (rapidjson::Value& elem : v.GetArray()) {
@@ -147,8 +148,8 @@ std::vector<float> get_float_array(rapidjson::Value& d, const char* key_name) {
 }
 
 std::vector<int> get_int_array(rapidjson::Value& d, const char* key_name) {
-  check_type(d, key_name, rapidjson::kArrayType);
-  rapidjson::Value& v = d[key_name];
+  rapidjson::Value& v =
+      check_kv_type_and_return(d, key_name, rapidjson::kArrayType);
   std::vector<int> vals;
   vals.reserve(v.Capacity());
   for (rapidjson::Value& elem : v.GetArray()) {
@@ -164,8 +165,8 @@ std::vector<int> get_int_array(rapidjson::Value& d, const char* key_name) {
 
 std::vector<std::string> get_string_array(rapidjson::Value& d,
                                           const char* key_name) {
-  check_type(d, key_name, rapidjson::kArrayType);
-  rapidjson::Value& v = d[key_name];
+  rapidjson::Value& v =
+      check_kv_type_and_return(d, key_name, rapidjson::kArrayType);
   std::vector<std::string> vals;
   vals.reserve(v.Capacity());
   for (rapidjson::Value& elem : v.GetArray()) {
@@ -181,8 +182,8 @@ std::vector<std::string> get_string_array(rapidjson::Value& d,
 
 std::vector<VersionedModelId> get_candidate_models(rapidjson::Value& d,
                                                    const char* key_name) {
-  check_type(d, key_name, rapidjson::kArrayType);
-  rapidjson::Value& v = d[key_name];
+  rapidjson::Value& v =
+      check_kv_type_and_return(d, key_name, rapidjson::kArrayType);
   std::vector<VersionedModelId> candidate_models;
   candidate_models.reserve(v.Capacity());
   for (rapidjson::Value& elem : v.GetArray()) {
@@ -202,6 +203,12 @@ std::vector<VersionedModelId> get_candidate_models(rapidjson::Value& d,
     candidate_models.push_back(std::make_pair(model_name, model_version));
   }
   return candidate_models;
+}
+
+rapidjson::Value& get_object(rapidjson::Value& d, const char* key_name) {
+  rapidjson::Value& object =
+      check_kv_type_and_return(d, key_name, rapidjson::kObjectType);
+  return object;
 }
 
 void parse_json(std::string json_content, rapidjson::Document& d) {

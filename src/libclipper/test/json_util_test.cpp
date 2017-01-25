@@ -5,6 +5,7 @@
 
 using namespace clipper_json;
 
+/* Test JSON serialization utilities */
 TEST(JsonUtilTests, TestCorrectJsonValues) {
   std::string expected_json =
       "{\"string_val\":\"test_string\",\"double_val\":0.3,\"int_val\":-100}";
@@ -91,6 +92,7 @@ TEST(JsonUtilTests, TestAddEmptyValues) {
   add_int_array({}, "empty_int_array", d);
 }
 
+/* Test JSON deserialization utilities */
 TEST(JsonUtilTests, TestDoubleIntFormatting) {
   // Numbers require a decimal point to be a float, and cannot have a
   //  decimal point as an integer.
@@ -184,4 +186,21 @@ TEST(JsonUtilTests, TestParseCandidateModels) {
   ASSERT_THROW(
         get_candidate_models(d, "wrong_version_type"),
         json_semantic_error);
+}
+
+TEST(JsonUtilTests, TestParseNestedObject) {
+  std::string source_json =
+      "{\"nested_object\":{\"double_array\":[1.4,2.23,3.243242,0.3223424],"
+                          "\"twice_nested_object\":{\"double_val\":0.3}}}";
+  std::vector<double> double_array = {1.4,2.23,3.243242,0.3223424};
+  double double_val = 0.3;
+
+  rapidjson::Document d;
+  parse_json(source_json, d);
+
+  rapidjson::Value& nested_object = get_object(d, "nested_object");
+  EXPECT_EQ(get_double_array(nested_object, "double_array"), double_array);
+  rapidjson::Value& twice_nested_object =
+      get_object(nested_object, "twice_nested_object");
+  EXPECT_EQ(get_double(twice_nested_object, "double_val"), double_val);
 }
