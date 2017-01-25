@@ -5,11 +5,21 @@
 #include <sstream>
 
 #include <clipper/datatypes.hpp>
+#include <boost/functional/hash.hpp>
 
 namespace clipper {
 
 size_t versioned_model_hash(const VersionedModelId &key) {
   return std::hash<std::string>()(key.first) ^ std::hash<int>()(key.second);
+}
+
+template <typename T>
+size_t primitive_input_hash(const std::vector<T> &data) {
+  size_t cur_hash = 0;
+  for (const auto d : data) {
+    boost::hash_combine(cur_hash, d);
+  }
+  return cur_hash;
 }
 
 template <typename T>
@@ -97,11 +107,7 @@ size_t ByteVector::serialize(uint8_t *buf) const {
 }
 
 size_t ByteVector::hash() const {
-  size_t cur_hash = 0;
-  for (const auto d : data_) {
-    cur_hash ^= std::hash<uint8_t>()(d);
-  }
-  return cur_hash;
+  return primitive_input_hash(data_);
 }
 
 size_t ByteVector::size() const { return data_.size(); }
@@ -119,11 +125,7 @@ size_t IntVector::serialize(uint8_t *buf) const {
 }
 
 size_t IntVector::hash() const {
-  size_t cur_hash = 0;
-  for (const auto d : data_) {
-    cur_hash ^= std::hash<int>()(d);
-  }
-  return cur_hash;
+  return primitive_input_hash(data_);
 }
 
 size_t IntVector::size() const { return data_.size(); }
@@ -141,11 +143,9 @@ size_t FloatVector::serialize(uint8_t *buf) const {
 InputType FloatVector::type() const { return InputType::Floats; }
 
 size_t FloatVector::hash() const {
-  size_t cur_hash = 0;
-  for (const auto d : data_) {
-    cur_hash ^= std::hash<float>()(d);
-  }
-  return cur_hash;
+  // TODO [CLIPPER-63]: Find an alternative to hashing floats directly, as this is
+  // generally a bad idea due to loss of precision from floating point representations
+  return primitive_input_hash(data_);
 }
 
 size_t FloatVector::size() const { return data_.size(); }
@@ -163,11 +163,9 @@ size_t DoubleVector::serialize(uint8_t *buf) const {
 }
 
 size_t DoubleVector::hash() const {
-  size_t cur_hash = 0;
-  for (const auto d : data_) {
-    cur_hash ^= std::hash<double>()(d);
-  }
-  return cur_hash;
+  // TODO [CLIPPER-63]: Find an alternative to hashing doubles directly, as this is
+  // generally a bad idea due to loss of precision from floating point representations
+  return primitive_input_hash(data_);
 }
 
 size_t DoubleVector::size() const { return data_.size(); }

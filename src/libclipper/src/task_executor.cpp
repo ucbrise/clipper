@@ -5,6 +5,7 @@
 #include <cassert>
 
 #include <clipper/task_executor.hpp>
+#include <clipper/metrics.hpp>
 #include <clipper/util.hpp>
 
 #include <boost/thread.hpp>
@@ -13,17 +14,25 @@ namespace clipper {
 
 CacheEntry::CacheEntry() { value_ = value_promise_.get_future(); }
 
+PredictionCache::PredictionCache() {
+  lookups_counter_ = metrics::MetricsRegistry::get_metrics().create_counter("prediction_cache_lookups");
+  hit_ratio_ = metrics::MetricsRegistry::get_metrics().create_ratio_counter("prediction_cache_hit_ratio");
+}
+
 boost::shared_future<Output> PredictionCache::fetch(
     const VersionedModelId &model, const std::shared_ptr<Input> &input) {
   std::unique_lock<std::mutex> l(m_);
   auto key = hash(model, input->hash());
   auto search = cache_.find(key);
+  lookups_counter_->increment(1);
   if (search != cache_.end()) {
+    hit_ratio_->increment(1,1);
     return search->second.value_;
   } else {
     CacheEntry new_entry;
     auto f = new_entry.value_;
     cache_.insert(std::make_pair(key, std::move(new_entry)));
+    hit_ratio_->increment(0,1);
     return f;
   }
 }

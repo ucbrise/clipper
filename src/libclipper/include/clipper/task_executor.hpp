@@ -38,6 +38,7 @@ class CacheEntry {
 
 class PredictionCache {
  public:
+  PredictionCache();
   boost::shared_future<Output> fetch(const VersionedModelId &model,
                                      const std::shared_ptr<Input> &input);
 
@@ -49,6 +50,8 @@ class PredictionCache {
   size_t hash(const VersionedModelId &model, size_t input_hash) const;
   // TODO cache needs a promise as well?
   std::unordered_map<long, CacheEntry> cache_;
+  std::shared_ptr<metrics::Counter> lookups_counter_;
+  std::shared_ptr<metrics::RatioCounter> hit_ratio_;
 };
 
 template<typename Scheduler>
