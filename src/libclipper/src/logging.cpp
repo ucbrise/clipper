@@ -10,10 +10,13 @@ namespace clipper {
   Logger::Logger() {
     spdlog::set_async_mode(8192, spdlog::async_overflow_policy::block_retry);
     spdlogger_ = spdlog::stdout_color_mt(LOGGER_NAME);
-    spdlogger_->set_pattern("[%T.%e][%L] %v");
+    spdlogger_->set_pattern(LOGGING_FORMAT);
   }
 
   Logger& Logger::get() {
+    // References a global singleton Logger object.
+    // This object is created if it does not already exist,
+    // and it is automatically memory managed
     static Logger instance;
     return instance;
   }

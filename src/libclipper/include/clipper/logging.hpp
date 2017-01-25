@@ -10,35 +10,87 @@ namespace clipper {
 
 static constexpr uint LOGGING_FORMAT_LENGTH = 18;
 static constexpr uint MAX_TAG_LENGTH = 10;
+// Defines the logging format as [HH:MM:SS.mmm][<LOG_LEVEL_1_CHAR>] <Message>
+// Note: <Message> includes a formatted, user-defined tag (see get_formatted_tag())
+static const std::string LOGGING_FORMAT = "[%T.%e][%L] %v";
 static const std::string LOGGER_NAME = "clipper";
 
 class Logger {
  public:
   Logger();
+  /**
+   * Obtains an instance of the Logger singleton
+   * that can be used to log messages at specified levels
+   */
   static Logger &get();
 
+  /**
+   * Logs one or more string messages at the "info" log level with the specified tag
+   */
   template<class ...Strings>
   void log_info(const std::string tag, Strings... messages) const;
+  /**
+   * Logs a single formatted message at the "info" log level
+   * with the specified tag
+   *
+   * @param args The formatting arguments
+   */
   template<class ...Args>
   void log_info_formatted(const std::string tag, const char *message, Args... args) const;
+  /**
+   * Logs one or more string messages at the "debug" log level with the specified tag
+   */
   template<class ...Strings>
   void log_debug(const std::string tag, Strings...messages) const;
   template<class ...Args>
+  /**
+   * Logs a single formatted message at the "debug" log level
+   * with the specified tag
+   *
+   * @param args The formatting arguments
+   */
   void log_debug_formatted(const std::string tag, const char *message, Args... args) const;
   template<class ...Strings>
+  /**
+   * Logs one or more string messages at the "error" log level with the specified tag
+   */
   void log_error(const std::string tag, Strings...messages) const;
   template<class ...Args>
+  /**
+   * Logs a single formatted message at the "error" log level
+   * with the specified tag
+   *
+   * @param args The formatting arguments
+   */
   void log_error_formatted(const std::string tag, const char *message, Args... args) const;
 
  private:
+  /**
+   * Concatenates multiple log messages into a single message, where
+   * individual messages are separated by "newlines" and padded based
+   * on other log attributes (tag length and format length) to achieve
+   * even spacing and alignment. This is a recursive function that makes
+   * use of variadic templates.
+   */
   template<class T, class ...Rest>
   void concatenate_messages(std::stringstream &ss,
                             size_t tag_length,
                             bool first_message,
                             T message,
                             Rest... messages) const;
+  /**
+   * The base case for concatenating multiple log messages into a single message.
+   * For more information, explore recursion with variadic template functions.
+   */
   template<class T>
   void concatenate_messages(std::stringstream &ss, size_t tag_length, bool first_message, T message) const;
+  /**
+   * Given tag text for a log message, creates a formated tag of the form
+   * <padding>[<tag_text>], where <padding is a series of space characters
+   * used to ensure that all formatted tags are of the same length, dependent
+   * upon MAX_TAG_LENGTH. tags with text exceeding MAX_TAG_LENGTH are
+   * truncated and ellipsized during formatting.
+   */
   const std::string get_formatted_tag(const std::string tag) const;
 
   std::shared_ptr<spdlog::logger> spdlogger_;
