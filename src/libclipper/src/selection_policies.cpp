@@ -37,20 +37,46 @@ void PolicyState::set_weight_sum(double sum) {
 std::string PolicyState::serialize() const {
   std::stringstream ss;
   boost::archive::binary_oarchive oa(ss);
-  oa << model_map_;
-  oa << weight_sum_;
+  oa << weight_sum_; // save weight_sum
+  oa << model_map_.size(); // save map size
+  for (auto const& p: model_map_) {
+    oa << p.first; // save this model's version id
+    oa << p.second.size(); // save this model's info size
+    for (auto const& pt: p.second) {
+      oa << pt.first << pt.second; // save info label and info value
+    }
+  }
+  //oa << model_map_;
   return ss.str();
 };
 
 PolicyState PolicyState::deserialize(const std::string& bytes) {
+  
   std::stringstream ss;
-  ss << bytes;
+  ss.str(bytes);
   boost::archive::binary_iarchive ia(ss);
-  Map map;
   PolicyState state;
   double sum;
-  ia >> map;
-  ia >> sum;
+  size_t size;
+  ia >> sum; // load weight_sum
+  ia >> size; // load map size
+  
+  Map map(size, &versioned_model_hash);
+  for (size_t i = 0; i != size; ++i) {
+    VersionedModelId versionID;
+    ModelInfo modelInfo;
+    size_t infoSize;
+    ia >> versionID; // load this model's version id
+    ia >> infoSize; // save this model's info size
+    for (size_t j = 0; j != infoSize; ++j) {
+      std::string infoLabel;
+      double infoVal;
+      ia >> infoLabel >> infoVal; // load info label and info value
+      modelInfo.insert({infoLabel, infoVal});
+    }
+    map.insert({versionID, modelInfo});
+  }
+  
   state.set_model_map(map);
   state.set_weight_sum(sum);
   return state;

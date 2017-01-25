@@ -69,7 +69,7 @@ class PolicyTests : public ::testing::Test {
 
 TEST_F(PolicyTests, Exp3Test) {
 
-  PolicyState Exp3state = Exp3Policy::initialize(models);
+  PolicyState exp3state = Exp3Policy::initialize(models);
   
   // Update Test
   auto feedback = Utility::create_feedback(20);
@@ -83,23 +83,23 @@ TEST_F(PolicyTests, Exp3Test) {
     } else {
       predictions = Utility::create_predictions(model_2, y_hat);
     }
-    Exp3state = Exp3Policy::process_feedback(Exp3state, feedback, predictions);
+    exp3state = Exp3Policy::process_feedback(exp3state, feedback, predictions);
     times -= 1;
   }
-  ASSERT_GT(Exp3state.model_map_[model_1]["weight"],
-            Exp3state.model_map_[model_2]["weight"]);
-  ASSERT_GT(Exp3state.model_map_[model_2]["weight"],
-            Exp3state.model_map_[model_3]["weight"]);
+  ASSERT_GT(exp3state.model_map_[model_1]["weight"],
+            exp3state.model_map_[model_2]["weight"]);
+  ASSERT_GT(exp3state.model_map_[model_2]["weight"],
+            exp3state.model_map_[model_3]["weight"]);
   
   // Selection Test
   auto query = Utility::create_query(models);
-  auto tasks = Exp3Policy::select_predict_tasks(Exp3state, query, 1000);
+  auto tasks = Exp3Policy::select_predict_tasks(exp3state, query, 1000);
   ASSERT_NE(model_3.second, tasks.front().model_.second);
   
   // Serialization Test
-  auto bytes = Exp3Policy::serialize_state(Exp3state);
+  auto bytes = Exp3Policy::serialize_state(exp3state);
   auto new_state = Exp3Policy::deserialize_state(bytes);
-  ASSERT_EQ(Exp3state.weight_sum_, new_state.weight_sum_);
+  ASSERT_EQ(exp3state.weight_sum_, new_state.weight_sum_);
 }
 
 }  // namespace
