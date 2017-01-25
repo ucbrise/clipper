@@ -3,7 +3,6 @@
 
 #include <atomic>
 #include <mutex>
-#include <shared_mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -105,7 +104,7 @@ class RatioCounter : public Metric {
 
  private:
   const std::string name_;
-  std::shared_timed_mutex ratio_lock_;
+  std::mutex ratio_lock_;
   std::atomic<uint32_t> numerator_;
   std::atomic<uint32_t> denominator_;
 };
@@ -164,7 +163,7 @@ class EWMA {
   // rate at every tick
   double alpha_;
   double rate_ = -1;
-  std::shared_timed_mutex rate_lock_;
+  std::mutex rate_lock_;
   // The number of new events to be included
   // in the rate at the next tick
   std::atomic<uint32_t> uncounted_;
@@ -226,7 +225,7 @@ class Meter : public Metric {
   std::string name_;
   std::shared_ptr<MeterClock> clock_;
   std::atomic<uint32_t> count_;
-  std::shared_timed_mutex start_time_lock_;
+  std::mutex start_time_lock_;
   long start_time_micros_;
 
   // EWMA
@@ -302,7 +301,7 @@ class Histogram : public Metric {
   std::string name_;
   std::string unit_;
   ReservoirSampler sampler_;
-  std::shared_timed_mutex sampler_lock_;
+  std::mutex sampler_lock_;
 };
 
 /**

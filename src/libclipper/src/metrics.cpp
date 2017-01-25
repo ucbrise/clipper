@@ -187,17 +187,15 @@ RatioCounter::RatioCounter(const std::string name, uint32_t num, uint32_t denom)
 
 void RatioCounter::increment(const uint32_t num_incr,
                              const uint32_t denom_incr) {
-  ratio_lock_.lock_shared();
+  std::lock_guard<std::mutex> guard(ratio_lock_);
   numerator_.fetch_add(num_incr, std::memory_order_relaxed);
   denominator_.fetch_add(denom_incr, std::memory_order_relaxed);
-  ratio_lock_.unlock();
 }
 
 double RatioCounter::get_ratio() {
-  ratio_lock_.lock();
+  std::lock_guard<std::mutex> guard(ratio_lock_);
   uint32_t num_value = numerator_.load(std::memory_order_seq_cst);
   uint32_t denom_value = denominator_.load(std::memory_order_seq_cst);
-  ratio_lock_.unlock();
   if (denom_value == 0) {
     std::cout << "Ratio " << name_ << " has denominator zero!" << std::endl;
     return std::nan("");
@@ -226,10 +224,9 @@ const std::string RatioCounter::report_str() {
 }
 
 void RatioCounter::clear() {
-  ratio_lock_.lock_shared();
+  std::lock_guard<std::mutex> guard(ratio_lock_);
   numerator_.store(0, std::memory_order_seq_cst);
   denominator_.store(0, std::memory_order_seq_cst);
-  ratio_lock_.unlock();
 }
 
 long RealTimeClock::get_time_micros() const {
@@ -263,7 +260,7 @@ EWMA::EWMA(long tick_interval_seconds, LoadAverage load_average)
 }
 
 void EWMA::tick() {
-  rate_lock_.lock();
+  std::lock_guard<std::mutex> guard(rate_lock_);
   double count = uncounted_.exchange(0, std::memory_order_relaxed);
   double current_rate = count / static_cast<double>(tick_interval_seconds_);
   if (rate_ == -1) {
@@ -275,7 +272,6 @@ void EWMA::tick() {
     // of current_rate
     rate_ += alpha_ * (current_rate - rate_);
   }
-  rate_lock_.unlock();
 }
 
 void EWMA::mark_uncounted(uint32_t num) {
@@ -283,16 +279,14 @@ void EWMA::mark_uncounted(uint32_t num) {
 }
 
 void EWMA::reset() {
-  rate_lock_.lock();
+  std::lock_guard<std::mutex> guard(rate_lock_);
   rate_ = -1;
   uncounted_.store(0, std::memory_order_seq_cst);
-  rate_lock_.unlock();
 }
 
 double EWMA::get_rate_seconds() {
-  rate_lock_.lock_shared();
+  std::lock_guard<std::mutex> guard(rate_lock_);
   double rate = rate_;
-  rate_lock_.unlock();
   return rate;
 }
 
@@ -342,12 +336,11 @@ void Meter::tick_if_necessary() {
 }
 
 double Meter::get_rate_micros() {
-  start_time_lock_.lock_shared();
+  std::lock_guard<std::mutex> guard(start_time_lock_);
   uint32_t curr_count = count_.load(std::memory_order_seq_cst);
   long curr_time_micros = clock_->get_time_micros();
   double rate = static_cast<double>(curr_count) /
                 static_cast<double>(curr_time_micros - start_time_micros_);
-  start_time_lock_.unlock();
   return rate;
 }
 
@@ -391,10 +384,9 @@ const std::string Meter::report_str() {
 }
 
 void Meter::clear() {
-  start_time_lock_.lock();
+  std::lock_guard<std::mutex> guard(start_time_lock_);
   start_time_micros_ = clock_->get_time_micros();
   count_.store(0, std::memory_order_seq_cst);
-  start_time_lock_.unlock();
   m1_rate.reset();
   m5_rate.reset();
   m15_rate.reset();
@@ -444,9 +436,8 @@ Histogram::Histogram(const std::string name, const std::string unit,
     : name_(name), unit_(unit), sampler_(sample_size) {}
 
 void Histogram::insert(const int64_t value) {
-  sampler_lock_.lock();
+  std::lock_guard<std::mutex> guard(sampler_lock_);
   sampler_.sample(value);
-  sampler_lock_.unlock();
 }
 
 double Histogram::percentile(std::vector<int64_t> snapshot, double rank) {
@@ -481,9 +472,8 @@ double Histogram::percentile(std::vector<int64_t> snapshot, double rank) {
 }
 
 const HistogramStats Histogram::compute_stats() {
-  sampler_lock_.lock_shared();
+  std::lock_guard<std::mutex> guard(sampler_lock_);
   std::vector<int64_t> snapshot = sampler_.snapshot();
-  sampler_lock_.unlock();
   size_t snapshot_size = snapshot.size();
   if (snapshot_size == 0) {
     HistogramStats stats;
@@ -537,9 +527,8 @@ const std::string Histogram::report_str() {
 }
 
 void Histogram::clear() {
-  sampler_lock_.lock();
+  std::lock_guard<std::mutex> guard(sampler_lock_);
   sampler_.clear();
-  sampler_lock_.unlock();
 }
 
 }  // namespace metrics
