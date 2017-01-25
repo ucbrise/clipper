@@ -192,16 +192,10 @@ TEST_F(EpsilonGreedyTest, UpdateTest) {
     state = EpsilonGreedyPolicy::process_feedback(state, feedback, predictions);
     times -= 1;
   }
-  ASSERT_GT(state.model_map_[model_1]["weight"],
-            state.model_map_[model_2]["weight"]);
-  ASSERT_GT(state.model_map_[model_2]["weight"],
-            state.model_map_[model_3]["weight"]);
-}
-
-TEST_F(EpsilonGreedyTest, SelectionTest) {
-  auto query = Utility::create_query(models);
-  auto tasks = EpsilonGreedyPolicy::select_predict_tasks(state, query, 1000);
-  ASSERT_NE(model_3.second, tasks.front().model_.second);
+  ASSERT_GT(state.model_map_[model_3]["expected_loss"],
+            state.model_map_[model_2]["expected_loss"]);
+  ASSERT_GT(state.model_map_[model_2]["expected_loss"],
+            state.model_map_[model_1]["expected_loss"]);
 }
 
 TEST_F(EpsilonGreedyTest, SerializationTest) {
@@ -245,16 +239,16 @@ TEST_F(UCBTest, UpdateTest) {
     state = UCBPolicy::process_feedback(state, feedback, predictions);
     times -= 1;
   }
-  ASSERT_GT(state.model_map_[model_1]["weight"],
-            state.model_map_[model_2]["weight"]);
-  ASSERT_GT(state.model_map_[model_2]["weight"],
-            state.model_map_[model_3]["weight"]);
+  ASSERT_GT(state.model_map_[model_3]["expected_loss"],
+            state.model_map_[model_2]["expected_loss"]);
+  ASSERT_GT(state.model_map_[model_2]["expected_loss"],
+            state.model_map_[model_1]["expected_loss"]);
 }
 
 TEST_F(UCBTest, SelectionTest) {
   auto query = Utility::create_query(models);
   auto tasks = UCBPolicy::select_predict_tasks(state, query, 1000);
-  ASSERT_NE(model_3.second, tasks.front().model_.second);
+  ASSERT_EQ(model_1.second, tasks.front().model_.second);
 }
 
 TEST_F(UCBTest, SerializationTest) {
