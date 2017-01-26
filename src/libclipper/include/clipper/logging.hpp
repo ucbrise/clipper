@@ -17,7 +17,12 @@ static const std::string LOGGER_NAME = "clipper";
 
 class Logger {
  public:
-  Logger();
+  /**
+   * Constructs a logger that will write all output
+   * to the specified output stream. To be used for
+   * testing!
+   */
+  explicit Logger(std::ostringstream& output_stream);
   /**
    * Obtains an instance of the Logger singleton
    * that can be used to log messages at specified levels
@@ -65,6 +70,7 @@ class Logger {
   void log_error_formatted(const std::string tag, const char *message, Args... args) const;
 
  private:
+  Logger();
   /**
    * Concatenates multiple log messages into a single message, where
    * individual messages are separated by "newlines" and padded based
@@ -161,6 +167,6 @@ void Logger::concatenate_messages(std::stringstream &ss, size_t tag_length, bool
   ss << message;
 }
 
-}
+} // namespace clipper
 
 #endif //CLIPPER_LOGGING_HPP
