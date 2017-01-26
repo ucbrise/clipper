@@ -1,18 +1,10 @@
 from __future__ import print_function, with_statement
 from fabric.api import *
-# from fabric.colors import green as _green, yellow as _yellow
-# from fabric.contrib.console import confirm
 from fabric.contrib.files import append
-# from fabric.contrib.project import rsync_project
-# from StringIO import StringIO
-# import sys
 import os
 import requests
 import json
 import yaml
-# import gevent
-# import traceback
-# import toml
 import pprint
 import subprocess32 as subprocess
 from sklearn import base
@@ -34,8 +26,6 @@ aws_access_key_id = {access_key}
 aws_secret_access_key = {secret_key}
 """
 
-# TODO TODO TODO: change images from :test to :lates
-# before accepting PR
 DOCKER_COMPOSE_DICT = {
     'networks': {
         'default': {
@@ -47,7 +37,7 @@ DOCKER_COMPOSE_DICT = {
                 '--redis_ip=redis',
                 '--redis_port=6379'],
             'depends_on': ['redis'],
-            'image': 'clipper/management_frontend:test',
+            'image': 'clipper/management_frontend:latest',
             'ports': ['1338:1338']},
         'query_frontend': {
             'command': [
@@ -56,7 +46,7 @@ DOCKER_COMPOSE_DICT = {
             'depends_on': [
                 'redis',
                 'mgmt_frontend'],
-            'image': 'clipper/query_frontend:test',
+            'image': 'clipper/query_frontend:latest',
             'ports': [
                 '7000:7000',
                 '1337:1337']},
@@ -67,10 +57,31 @@ DOCKER_COMPOSE_DICT = {
 }
 
 
-class Cluster:
+class Clipper:
+    """
+    Connection to a Clipper instance for administrative purposes.
+
+    """
 
     def __init__(self, host, user, key_path):
-        # global env
+        """Sets up the machine for running Clipper.
+
+        Parameters
+        ----------
+        host : str
+            The hostname of the machine to start Clipper on. The machine
+            should allow passwordless SSH access.
+        user : str
+            The SSH username.
+        key_path : str
+            The path to the SSH private key.
+
+        Sets up the machine for running Clipper. This includes verifying
+        SSH credentials and initializing Docker.
+
+        Docker and docker-compose must already by installed on the machine
+        before initialization.
+        """
         env.key_filename = key_path
         env.user = user
         env.host_string = host
@@ -79,10 +90,7 @@ class Cluster:
         with hide("warnings", "output", "running"):
             print("Checking if Docker is running...")
             sudo("docker ps")
-            # print("Found Docker running")
-            # print("Checking if docker-compose is installed...")
             dc_installed = sudo("docker-compose --version", warn_only=True)
-            # print("Found docker-compose installed")
             if dc_installed.return_code != 0:
                 print("docker-compose not installed on host.")
                 print("attempting to install it")
@@ -98,7 +106,10 @@ class Cluster:
             run("mkdir -p {model_repo}".format(model_repo=MODEL_REPO))
             # print("Creating local model repository")
 
-    def start_clipper(self):
+    def start(self):
+        """Start a Clipper instance.
+
+        """
         with hide("output", "warnings", "running"):
             run("rm -f docker-compose.yml")
             append(
@@ -110,11 +121,32 @@ class Cluster:
             print("Clipper is running")
 
     def register_application(self, **kwargs):
+        """Register a new Clipper application.
+
+        Parameters
+        ----------
+        name : str
+            The name of the application.
+        candidate_models : list of dict
+            The list of models this application will attempt to query.
+            Each candidate model is defined as a dict with keys `model_name`
+            and `model_version`.
+        input_type : str
+            One of "integers", "floats", "doubles", "bytes", or "strings".
+        output_type : str, optional
+            Either "double" or "int". Default is "double".
+        selection_policy : str
+            The name of the model selection policy to be used for the
+            application.
+        slo_micros : int, optional
+            The query latency objective for the application in microseconds.
+            Default is 20,000 (20 ms).
+        """
         name = kwargs.pop('name')
         candidate_models = kwargs.pop('candidate_models')
         input_type = kwargs.pop('input_type')
         output_type = kwargs.pop('output_type', "double")
-        selection_policy = kwargs.pop('selection_policy', "bandit_policy")
+        selection_policy = kwargs.pop('selection_policy')
         slo_micros = kwargs.pop('slo_micros', 20000)
         if kwargs:
             raise TypeError('Unexpected **kwargs: %r' % kwargs)
@@ -132,6 +164,14 @@ class Cluster:
         print(r.text)
 
     def list_apps(self):
+        """List the names of all applications registered with Clipper.
+
+        Returns
+        -------
+        str
+            The string describing each registered application. If no
+            applications are found, an empty string is returned.
+        """
         with hide("output", "running"):
             result = local(("redis-cli -h {host} -p 6379 -n {db} keys \"*\""
                             .format(host=self.host,
@@ -139,16 +179,25 @@ class Cluster:
                            capture=True)
 
             if len(result.stdout) > 0:
-                print(result.stdout)
-                # splits = result.stdout.split("\n")
-                # fmt_result = dict([(splits[i], splits[i+1])
-                #                 for i in range(0, len(splits), 2)])
-                # pp = pprint.PrettyPrinter(indent=2)
-                # pp.pprint(fmt_result)
+                return result.stdout
             else:
                 print("Clipper has no applications registered")
+                return ""
 
     def get_app_info(self, name):
+        """Gets detailed information about a registered application.
+
+        Parameters
+        ----------
+        name : str
+            The name of the application to look up
+
+        Returns
+        -------
+        dict or None
+            Returns a dict with the application info if found. If the application
+            is not registered, None is returned.
+        """
         with hide("output", "running"):
             result = local("redis-cli -h {host} -p 6379 -n {db} hgetall {name}".format(
                 host=self.host, name=name, db=REDIS_APPLICATION_DB_NUM), capture=True)
@@ -159,10 +208,30 @@ class Cluster:
                                 for i in range(0, len(splits), 2)])
                 pp = pprint.PrettyPrinter(indent=2)
                 pp.pprint(fmt_result)
+                return fmt_result
             else:
                 warn("Application \"%s\" not found" % name)
+                return None
 
-    def get_bandit_weights(self, **kwargs):
+    def inspect_selection_policy(self, **kwargs):
+        """Fetches a human-readable string with the current selection policy state.
+
+        Parameters
+        ----------
+        app_name : str
+            The application whose policy state should be inspected.
+        uid : int
+            The user whose policy state should be inspected. The convention
+            in Clipper is to use 0 as the default user ID, but this may be
+            application specific.
+
+        Returns
+        -------
+        str
+            The string describing the selection state. Note that if the
+            policy state was not found, this string may contain an error
+            message from Clipper describing the problem.
+        """
         app_name = kwargs.pop('app_name')
         uid = kwargs.pop('uid')
         if kwargs:
@@ -175,32 +244,34 @@ class Cluster:
         })
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
-        raw_weights = r.text
-        def extract_model(m):
-            ps = m.split(":")
-            print(ps[0] + ": " + ps[2])
-            return ((ps[0]+":"+ps[1]), float(ps[2]))
-        weights = [extract_model(m) for m in raw_weights.split(",")]
-        return weights
+        return r.text
 
 
     def deploy_model(self, **kwargs):
-        """
-        Add a model model to Clipper.
+        """Add a model to Clipper.
 
-        Args:
-            name(str):      The name to assign this model.
-            version(int):   The version to assign this model.
-            model(str or BaseEstimator): The trained model to add to Clipper.
-                This can either be the Scikit-Learn trained model object, or
-                a path to a serialized Scikit-Learn model that was serialized
-                using the joblib library. If you provide a path, model should
-                be the path to the directory container all of the *.pkl and *.npy
-                files, not the path to the *.pkl file itself.
-            container_name(str): The Docker container image to use to run this model container.
-            labels(list of str): A set of strings annotating the model
-            num_containers(int optional): The number of replicas of the model to create. You can
-            also create more replicas later.
+        Parameters
+        __________
+        name : str
+            The name to assign this model.
+        version : int
+            The version to assign this model.
+        model : str or BaseEstimator
+            The trained model to add to Clipper. This can either be a
+            Scikit-Learn trained model object (an instance of BaseEstimator),
+            or a path to a serialized model. Note that many model serialization
+            formats split the model across multiple files (e.g. definition file
+            and weights file or files). If this is the case, model must be a path
+            to the root of a directory tree containing ALL the needed files.
+            Depending on the model serialization library you use, this may or may not
+            be the path you provided to the serialize method call.
+        container_name : str
+            The Docker container image to use to run this model container.
+        labels : list of str
+            A set of strings annotating the model
+        num_containers : int, optional
+            The number of replicas of the model to create. More replicas can be
+            created later as well.
         """
 
         name = kwargs.pop('name')
@@ -231,14 +302,12 @@ class Cluster:
                 warn("%s is invalid model format" % str(type(model)))
                 return False
 
-            if (not self.put_container_on_host(container_name)):
+            if (not self._put_container_on_host(container_name)):
                 return False
-            # print("Container %s available on host" % container_name)
 
             # Put model parameter data on host
             vol = "{model_repo}/{name}/{version}".format(
                 model_repo=MODEL_REPO, name=name, version=version)
-            # print(vol)
             with hide("warnings", "output", "running"):
                 run("mkdir -p {vol}".format(vol=vol))
 
@@ -268,7 +337,7 @@ class Cluster:
                             put(model_data_path, ".")
 
             print("Copied model data to host")
-            if not self.publish_new_model(name, version, labels, input_type,
+            if not self._publish_new_model(name, version, labels, input_type,
                                         container_name,
                                         os.path.join(vol, os.path.basename(model_data_path))):
                 return False
@@ -279,10 +348,19 @@ class Cluster:
                             for r in range(num_containers)])
 
     def add_container(self, model_name, model_version):
-        """
+        """Create a new container for an existing model.
+
         Starts a new container for a model that has already been added to
-        Clipper. This method will fail if you have not already called
-        Cluster.add_model() for the provided name and version.
+        Clipper. Note that models are uniquely identified by both name
+        and version, so this method will fail if you have not already called
+        Clipper.add_model() for the specified name and version.
+
+        Parameters
+        ----------
+        model_name : str
+            The name of the model
+        model_version : int
+            The version of the model
         """
         with hide("warnings", "output", "running"):
             # Look up model info in Redis
@@ -323,7 +401,47 @@ class Cluster:
             result = sudo(add_container_cmd)
             return result.return_code == 0
 
-    def publish_new_model(
+    def inspect_instance(self):
+        """Fetches metrics from the running Clipper instance.
+
+        Returns
+        -------
+        str
+            The JSON string containing the current set of metrics
+            for this instance. On error, the string will be an error message
+            (not JSON formatted).
+        """
+        url = "http://%s:1337/metrics" % self.host
+        r = requests.get(url)
+        try:
+            s = r.json()
+        except TypeError:
+            s = r.text
+        return s
+
+    def stop_all(self):
+        """Stops and removes all Docker containers on the host.
+
+        """
+        print("Stopping Clipper and all running models...")
+        with hide("output", "warnings", "running"):
+            sudo("docker-compose stop", warn_only=True)
+            sudo("docker stop $(docker ps -a -q)", warn_only=True)
+            sudo("docker rm $(docker ps -a -q)", warn_only=True)
+
+    def cleanup(self):
+        """Cleans up all Docker artifacts.
+
+        This will stop and remove all Docker containers and images
+        from the host and destroy the Docker network Clipper uses.
+        """
+        with hide("output", "warnings", "running"):
+            self.stop_all()
+            run("rm -rf {model_repo}".format(model_repo=MODEL_REPO))
+            sudo("docker rmi --force $(docker images -q)", warn_only=True)
+            sudo("docker network rm clipper_nw", warn_only=True)
+
+    def _publish_new_model(
         self,
         name,
         version,
@@ -350,17 +468,22 @@ class Cluster:
             warn("Error publishing model: %s" % r.text)
             return False
 
-    def put_container_on_host(self, container_name):
-        """
-        Puts the provided container on the host. This method is safe to call
-        multiple times with the same container name. Subsequent calls will
-        detect that the container is already present on the host and do
-        nothing.
+    def _put_container_on_host(self, container_name):
+        """Puts the provided container on the host.
 
-        Args:
-            container_name(str): The name of the container. This method will
-            first check the host, then Docker Hub, then the local machine to
-            find the container.
+        Parameters
+        __________
+        container_name : str
+            The name of the container.
+
+        Notes
+        -----
+        This method will first check the host, then Docker Hub, then the local
+        machine to find the container.
+
+        This method is safe to call multiple times with the same container name.
+        Subsequent calls will detect that the container is already present on
+        the host and do nothing.
 
         """
         with hide("output", "warnings", "running"):
@@ -410,37 +533,6 @@ class Cluster:
             return False
 
 
-    def stop_all(self):
-        print("Stopping Clipper and all running models...")
-        with hide("output", "warnings", "running"):
-            sudo("docker-compose stop", warn_only=True)
-            sudo("docker stop $(docker ps -a -q)", warn_only=True)
-            sudo("docker rm $(docker ps -a -q)", warn_only=True)
-
-    def cleanup(self):
-        with hide("output", "warnings", "running"):
-            self.stop_all()
-            run("rm -rf {model_repo}".format(model_repo=MODEL_REPO))
-            sudo("docker rmi --force $(docker images -q)", warn_only=True)
-            sudo("docker network rm clipper_nw", warn_only=True)
-
-    def pull_docker_images(self):
-        with hide("output"):
-            sudo("docker pull clipper/query_frontend:test")
-            sudo("docker pull clipper/management_frontend:test")
-            sudo("docker pull redis")
-            sudo("docker pull clipper/sklearn_cifar_container:test")
-            sudo("docker pull clipper/tf_cifar_container:test")
 
 ############################################################################
 
-    def get_metrics(self):
-        # for h in self.hosts:
-        url = "http://%s:1337/metrics" % self.host
-        r = requests.get(url)
-        try:
-            # s = json.dumps(r.json(), indent=4)
-            s = r.json()
-        except TypeError:
-            s = r.text
-        return s
