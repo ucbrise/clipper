@@ -35,15 +35,15 @@ export(TARGETS clipper FILE ClipperConfig.cmake)
 
 
 add_executable(libclippertests EXCLUDE_FROM_ALL
-#    test/test_main.cpp
-#    test/metrics_test.cpp
-#    test/rpc_service_test.cpp
-#    test/timers_test.cpp
-#    test/input_test.cpp
-#    test/persistent_state_test.cpp
-#    test/redis_test.cpp
-#    test/config_test.cpp
-#    test/selection_policies_test.cpp
+    test/test_main.cpp
+    test/metrics_test.cpp
+    test/rpc_service_test.cpp
+    test/timers_test.cpp
+    test/input_test.cpp
+    test/persistent_state_test.cpp
+    test/redis_test.cpp
+    test/config_test.cpp
+    test/selection_policies_test.cpp
     test/logging_test.cpp)
 target_link_libraries(libclippertests clipper gtest gmock_main)
 add_dependencies(unittests libclippertests)
