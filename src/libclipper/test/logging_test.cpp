@@ -37,7 +37,7 @@ TEST_F(LoggingTest, LogsContainSpecifiedTagAndMessage) {
   ASSERT_NE(log_msg1.find(msg1), std::string::npos);
 }
 
-TEST_F(LoggingTest, ContentPrecedingLogMessagesHasConsistentLength) {
+TEST_F(LoggingTest, LogContentPrecedingMessageHasConsistentLength) {
   std::string tag1 = "REDIS";
   std::string tag2 = "RPCSERVICE";
   std::string tag3 = "EXCESSIVELYLONGTAG";
