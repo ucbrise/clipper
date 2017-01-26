@@ -46,7 +46,6 @@ add_library(spdlog INTERFACE)
 target_include_directories(spdlog INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/spdlog/include>
     $<INSTALL_INTERFACE:spdlog>)
-
 export(TARGETS spdlog FILE SpdlogConfig.cmake)
 
 add_subdirectory(redox)
