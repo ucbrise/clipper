@@ -61,27 +61,24 @@ class Clipper:
     """
     Connection to a Clipper instance for administrative purposes.
 
+    Parameters
+    ----------
+    host : str
+        The hostname of the machine to start Clipper on. The machine
+        should allow passwordless SSH access.
+    user : str
+        The SSH username.
+    key_path : str
+        The path to the SSH private key.
+
+    Sets up the machine for running Clipper. This includes verifying
+    SSH credentials and initializing Docker.
+
+    Docker and docker-compose must already by installed on the machine
+    before connecting to a machine.
     """
 
     def __init__(self, host, user, key_path):
-        """Sets up the machine for running Clipper.
-
-        Parameters
-        ----------
-        host : str
-            The hostname of the machine to start Clipper on. The machine
-            should allow passwordless SSH access.
-        user : str
-            The SSH username.
-        key_path : str
-            The path to the SSH private key.
-
-        Sets up the machine for running Clipper. This includes verifying
-        SSH credentials and initializing Docker.
-
-        Docker and docker-compose must already by installed on the machine
-        before initialization.
-        """
         env.key_filename = key_path
         env.user = user
         env.host_string = host
@@ -98,13 +95,10 @@ class Clipper:
                      "download/1.10.0-rc1/docker-compose-`uname -s`-`uname -m` "
                      "> /usr/local/bin/docker-compose")
                 sudo("chmod +x /usr/local/bin/docker-compose")
-
-            # print("Creating internal Docker network")
             nw_create_command = ("docker network create --driver bridge {nw}"
                                  .format(nw=DOCKER_NW))
             sudo(nw_create_command, warn_only=True)
             run("mkdir -p {model_repo}".format(model_repo=MODEL_REPO))
-            # print("Creating local model repository")
 
     def start(self):
         """Start a Clipper instance.
@@ -120,7 +114,13 @@ class Clipper:
             sudo("docker-compose up -d query_frontend")
             print("Clipper is running")
 
-    def register_application(self, **kwargs):
+    def register_application(self,
+                             name,
+                             candidate_models,
+                             input_type,
+                             selection_policy,
+                             output_type="double",
+                             slo_micros=20000):
         """Register a new Clipper application.
 
         Parameters
@@ -130,26 +130,22 @@ class Clipper:
         candidate_models : list of dict
             The list of models this application will attempt to query.
             Each candidate model is defined as a dict with keys `model_name`
-            and `model_version`.
+            and `model_version`. Example::
+                candidate_models = [
+                    {"model_name": "my_model", "model_version": 1},
+                    {"model_name": "other_model", "model_version": 1},
+                ]
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
-        output_type : str, optional
-            Either "double" or "int". Default is "double".
         selection_policy : str
             The name of the model selection policy to be used for the
             application.
+        output_type : str, optional
+            Either "double" or "int". Default is "double".
         slo_micros : int, optional
             The query latency objective for the application in microseconds.
             Default is 20,000 (20 ms).
         """
-        name = kwargs.pop('name')
-        candidate_models = kwargs.pop('candidate_models')
-        input_type = kwargs.pop('input_type')
-        output_type = kwargs.pop('output_type', "double")
-        selection_policy = kwargs.pop('selection_policy')
-        slo_micros = kwargs.pop('slo_micros', 20000)
-        if kwargs:
-            raise TypeError('Unexpected **kwargs: %r' % kwargs)
         url = "http://%s:1338/admin/add_app" % self.host
         req_json = json.dumps({
             "name": name,
@@ -205,7 +201,7 @@ class Clipper:
             if len(result.stdout) > 0:
                 splits = result.stdout.split("\n")
                 fmt_result = dict([(splits[i], splits[i+1])
-                                for i in range(0, len(splits), 2)])
+                                   for i in range(0, len(splits), 2)])
                 pp = pprint.PrettyPrinter(indent=2)
                 pp.pprint(fmt_result)
                 return fmt_result
@@ -213,7 +209,7 @@ class Clipper:
                 warn("Application \"%s\" not found" % name)
                 return None
 
-    def inspect_selection_policy(self, **kwargs):
+    def inspect_selection_policy(self, app_name):
         """Fetches a human-readable string with the current selection policy state.
 
         Parameters
@@ -246,12 +242,11 @@ class Clipper:
         r = requests.post(url, headers=headers, data=req_json)
         return r.text
 
-
-    def deploy_model(self, **kwargs):
+    def deploy_model(self, name, version, model, container, labels, num_containers=1):
         """Add a model to Clipper.
 
         Parameters
-        __________
+        ----------
         name : str
             The name to assign this model.
         version : int
@@ -271,19 +266,19 @@ class Clipper:
             A set of strings annotating the model
         num_containers : int, optional
             The number of replicas of the model to create. More replicas can be
-            created later as well.
+            created later as well. Defaults to 1.
         """
 
-        name = kwargs.pop('name')
-        version = kwargs.pop('version')
-        model_data = kwargs.pop('model_data')
-        container_name = kwargs.pop('container_name')
-        labels = kwargs.pop('labels')
-        input_type = kwargs.pop('input_type')
-        num_containers = kwargs.pop('num_containers', 1)
-
-        if kwargs:
-            raise TypeError('Unexpected **kwargs: %r' % kwargs)
+        # name = kwargs.pop('name')
+        # version = kwargs.pop('version')
+        # model_data = kwargs.pop('model_data')
+        # container_name = kwargs.pop('container_name')
+        # labels = kwargs.pop('labels')
+        # input_type = kwargs.pop('input_type')
+        # num_containers = kwargs.pop('num_containers', 1)
+        #
+        # if kwargs:
+        #     raise TypeError('Unexpected **kwargs: %r' % kwargs)
 
         with hide("warnings", "output", "running"):
             if isinstance(model_data, base.BaseEstimator):
@@ -338,8 +333,8 @@ class Clipper:
 
             print("Copied model data to host")
             if not self._publish_new_model(name, version, labels, input_type,
-                                        container_name,
-                                        os.path.join(vol, os.path.basename(model_data_path))):
+                                           container_name,
+                                           os.path.join(vol, os.path.basename(model_data_path))):
                 return False
             else:
                 print("Published model to Clipper")
@@ -353,7 +348,7 @@ class Clipper:
         Starts a new container for a model that has already been added to
         Clipper. Note that models are uniquely identified by both name
         and version, so this method will fail if you have not already called
-        Clipper.add_model() for the specified name and version.
+        `Clipper.add_model()` for the specified name and version.
 
         Parameters
         ----------
@@ -378,10 +373,8 @@ class Clipper:
                 return False
 
             splits = result.stdout.split("\n")
-            model_metadata = dict([(splits[i].strip(),
-                                    splits[i + 1].strip())
-                                for i in range(0, len(splits),
-                                                2)])
+            model_metadata = dict([(splits[i].strip(), splits[i + 1].strip())
+                                   for i in range(0, len(splits), 2)])
             image_name = model_metadata["container_name"]
             model_data_path = model_metadata["model_data_path"]
             model_input_type = model_metadata["input_type"]
@@ -442,14 +435,14 @@ class Clipper:
             sudo("docker network rm clipper_nw", warn_only=True)
 
     def _publish_new_model(
-        self,
-        name,
-        version,
-        labels,
-        input_type,
-        container_name,
-        model_data_path,
-     output_type="double"):
+            self,
+            name,
+            version,
+            labels,
+            input_type,
+            container_name,
+            model_data_path,
+            output_type="double"):
         url = "http://%s:1338/admin/add_model" % self.host
         req_json = json.dumps({
             "model_name": name,
@@ -531,8 +524,3 @@ class Clipper:
             warn("Could not find %s, please try with a valid "
                  "container docker image")
             return False
-
-
-
-############################################################################
-
