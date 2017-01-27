@@ -36,6 +36,23 @@ namespace query_frontend {
 
 const std::string GET_METRICS = "^/metrics$";
 
+const std::string PREDICTION_JSON_SCHEMA =
+   "JSON format for prediction query request:\n"
+   "{\n"
+   "\"uid\" := string,\n"
+   "\"input\" := [double] | [int] | [string] | [byte] | [float],\n"
+   "}\n";
+
+const std::string UPDATE_JSON_SCHEMA =
+   "JSON format for feedback query request:\n"
+   "{\n"
+   "\"uid\" := string,\n"
+   "\"input\" := [double] | [int] | [string] | [byte] | [float],\n"
+   "\"model_name\" := string,\n"
+   "\"model_version\" := int,\n"
+   "\"label\" := double\n"
+   "}\n";
+
 void respond_http(std::string content, std::string message,
                   std::shared_ptr<HttpServer::Response> response) {
   *response << "HTTP/1.1 " << message
@@ -121,9 +138,11 @@ class RequestHandler {
           respond_http(content, "200 OK", response);
         });
       } catch (const json_parse_error& e) {
-        respond_http(e.what(), "400 Bad Request", response);
+        std::string error_msg = PREDICTION_JSON_SCHEMA + e.what();
+        respond_http(error_msg, "400 Bad Request", response);
       } catch (const json_semantic_error& e) {
-        respond_http(e.what(), "400 Bad Request", response);
+        std::string error_msg = PREDICTION_JSON_SCHEMA + e.what();
+        respond_http(error_msg, "400 Bad Request", response);
       } catch (const std::invalid_argument& e) {
         respond_http(e.what(), "400 Bad Request", response);
       }
@@ -146,9 +165,11 @@ class RequestHandler {
           respond_http(content, "200 OK", response);
         });
       } catch (const json_parse_error& e) {
-        respond_http(e.what(), "400 Bad Request", response);
+        std::string error_msg = UPDATE_JSON_SCHEMA + e.what();
+        respond_http(error_msg, "400 Bad Request", response);
       } catch (const json_semantic_error& e) {
-        respond_http(e.what(), "400 Bad Request", response);
+        std::string error_msg = UPDATE_JSON_SCHEMA + e.what();
+        respond_http(error_msg, "400 Bad Request", response);
       } catch (const std::invalid_argument& e) {
         respond_http(e.what(), "400 Bad Request", response);
       }

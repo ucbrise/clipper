@@ -42,6 +42,38 @@ const std::string GET_METRICS = ADMIN_PATH + "/metrics$";
 const std::string GET_SELECTION_STATE = ADMIN_PATH + "/get_state$";
 const std::string GET_APPLICATIONS = ADMIN_PATH + "/get_applications$";
 
+const std::string APPLICATION_JSON_SCHEMA =
+    "JSON format for application add request:\n"
+    "{\n"
+    " \"name\" := string,\n"
+    " \"candidate_models\" := [\n"
+    "   {\"model_name\" := string, \"model_version\" := int}\n"
+    " ],\n"
+    " \"input_type\" := \"integers\" | \"bytes\" | \"floats\" |\b\n"
+    "                   \"doubles\" | \"strings\",\n"
+    " \"output_type\" := \"double\" | \"int\",\n"
+    " \"selection_policy\" := string,\n"
+    " \"latency_slo_micros\" := int\n"
+    "}\n";
+
+const std::string MODEL_JSON_SCHEMA =
+    "JSON format for model add request:\n"
+    "{\n"
+    " \"model_name\" := string,\n"
+    " \"labels\" := [string],\n"
+    " \"input_type\" := \"integers\" | \"bytes\" | \"floats\" | \"doubles\" | \"strings\",\n"
+    " \"output_type\" := \"double\" | \"int\",\n"
+    " \"container_name\" := string,\n"
+    " \"model_data_path\" := string\n"
+    "}\n";
+
+const std::string SELECTION_JSON_SCHEMA =
+    "JSON format:\n"
+    "{\n"
+    " \"app_name\" := string,\n"
+    " \"uid\" := int,\n"
+    "}\n";
+
 template <typename Policy>
 std::string lookup_selection_state(
     clipper::StateDB& state_db, const std::string& appname, const int uid,
@@ -91,9 +123,11 @@ class RequestHandler {
             std::string result = add_application(request->content.string());
             respond_http(result, "200 OK", response);
           } catch (const json_parse_error& e) {
-            respond_http(e.what(), "400 Bad Request", response);
+            std::string err_msg = APPLICATION_JSON_SCHEMA + e.what();
+            respond_http(err_msg, "400 Bad Request", response);
           } catch (const json_semantic_error& e) {
-            respond_http(e.what(), "400 Bad Request", response);
+            std::string err_msg = APPLICATION_JSON_SCHEMA + e.what();
+            respond_http(err_msg, "400 Bad Request", response);
           } catch (const std::invalid_argument& e) {
             respond_http(e.what(), "400 Bad Request", response);
           }
@@ -106,9 +140,11 @@ class RequestHandler {
             std::string result = add_model(request->content.string());
             respond_http(result, "200 OK", response);
           } catch (const json_parse_error& e) {
-            respond_http(e.what(), "400 Bad Request", response);
+            std::string err_msg = MODEL_JSON_SCHEMA + e.what();
+            respond_http(err_msg, "400 Bad Request", response);
           } catch (const json_semantic_error& e) {
-            respond_http(e.what(), "400 Bad Request", response);
+            std::string err_msg = MODEL_JSON_SCHEMA + e.what();
+            respond_http(err_msg, "400 Bad Request", response);
           } catch (const std::invalid_argument& e) {
             respond_http(e.what(), "400 Bad Request", response);
           }
@@ -121,9 +157,11 @@ class RequestHandler {
             std::string result = get_selection_state(request->content.string());
             respond_http(result, "200 OK", response);
           } catch (const json_parse_error& e) {
-            respond_http(e.what(), "400 Bad Request", response);
+            std::string err_msg = SELECTION_JSON_SCHEMA + e.what();
+            respond_http(err_msg, "400 Bad Request", response);
           } catch (const json_semantic_error& e) {
-            respond_http(e.what(), "400 Bad Request", response);
+            std::string err_msg = SELECTION_JSON_SCHEMA + e.what();
+            respond_http(err_msg, "400 Bad Request", response);
           } catch (const std::invalid_argument& e) {
             respond_http(e.what(), "400 Bad Request", response);
           }
