@@ -52,13 +52,13 @@ print("Writing out to CSV...")
 # Output to CSV format
 # Based off load_digits used in previous scripts
 # Format: label,pixel0,pixel1,...
-with open('data/train.data', 'w') as outfile:
+with open('data/cifar_train.data', 'w') as outfile:
     for i in range(len(data)):
         example_data = [labels[i]] + data[i].tolist()
         example_data = map(lambda x: str(x), example_data)
         output_line = ','.join(example_data) + '\n'
         outfile.write(output_line)
-with open('data/test.data', 'w') as outfile:
+with open('data/cifar_test.data', 'w') as outfile:
     for i in range(len(test_data)):
         example_data = [test_labels[i]] + test_data[i].tolist()
         example_data = map(lambda x: str(x), example_data)

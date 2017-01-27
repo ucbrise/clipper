@@ -1,0 +1,13 @@
+# TODO TODO TODO: Before merge, change :test to :latest
+
+FROM clipper/py-rpc:test
+
+MAINTAINER Dan Crankshaw <dscrankshaw@gmail.com>
+
+RUN pip install tensorflow
+
+COPY tf_cifar_container.py /container/
+
+CMD ["python", "/container/tf_cifar_container.py"]
+
+# vim: set filetype=dockerfile:
