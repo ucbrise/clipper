@@ -107,9 +107,7 @@ def cifar_prediction(host, app, uid, x):
     end = datetime.now()
     latency = (end - start).total_seconds() * 1000.0
     qid, pred = parse_pred(r.text)
-    # TODO TODO TODO: remove check for 0 once selection policy is updated
     if pred == 0.0:
-        # print("Warning: Clipper predicted 0.0")
         pred = -1.0
     assert pred == 1.0 or pred == -1.0
     return (pred, latency)
@@ -153,9 +151,7 @@ def run_serving_workload(host, app, test_x, test_y):
     fig, (ax_acc) = plt.subplots(1, 1, sharex=True)
     ax_acc.set_ylabel("application accuracy")
     ax_acc.set_xlabel("iterations")
-    # DON'T SHOW LATENCY
     ax_acc.set_ylim(0, 1.0)
-    ax_acc.set_title("Superman Detection Accuracy Over Time")
     xs = []
     accs = []
     lats = []
@@ -169,23 +165,15 @@ def run_serving_workload(host, app, test_x, test_y):
         lats.append(mean_lat)
         j += 1
         ax_acc.set_xlim(0, j + 1)
-
         ax_acc.plot(xs, accs, 'b')
-        # fig.set_size_inches(6, 3)
         fig.tight_layout()
         fig.canvas.draw()
-        # print(("Accuracy: {cor}, false positives: {fp}, "
-        #       "false negatives: {fn}, true positives: {tp}, "
-        #        "true negatives: {tn}").format(
-        #     cor=correct, fp=fp, fn=fn, tp=tp, tn=tn))
-        # print("Mean latency: {lat} ms".format(lat=mean_lat))
 
 
 def run_serving_workload_show_latency(host, app, test_x, test_y):
     fig, (ax_acc, ax_lat) = plt.subplots(2, 1, sharex=True)
     ax_acc.set_ylabel("accuracy")
     ax_lat.set_xlabel("time")
-    # DON'T SHOW LATENCY
     ax_lat.set_ylabel("latency")
     ax_acc.set_ylim(0, 1.0)
     xs = []
