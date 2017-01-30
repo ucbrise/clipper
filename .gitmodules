@@ -3,4 +3,4 @@
 	url = https://github.com/dcrankshaw/redox.git
 [submodule "src/libs/rapidjson"]
 	path = src/libs/rapidjson
-	url = https://github.com/giulio-zhou/rapidjson.git
+	url = https://github.com/dcrankshaw/rapidjson.git

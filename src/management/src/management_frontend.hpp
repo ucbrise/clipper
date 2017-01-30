@@ -23,13 +23,13 @@
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 using clipper::VersionedModelId;
 using clipper::InputType;
-using clipper_json::get_candidate_models;
-using clipper_json::get_int;
-using clipper_json::get_string;
-using clipper_json::get_string_array;
-using clipper_json::json_parse_error;
-using clipper_json::json_semantic_error;
-using clipper_json::parse_json;
+using clipper::json::get_candidate_models;
+using clipper::json::get_int;
+using clipper::json::get_string;
+using clipper::json::get_string_array;
+using clipper::json::json_parse_error;
+using clipper::json::json_semantic_error;
+using clipper::json::parse_json;
 
 namespace management {
 
@@ -42,37 +42,37 @@ const std::string GET_METRICS = ADMIN_PATH + "/metrics$";
 const std::string GET_SELECTION_STATE = ADMIN_PATH + "/get_state$";
 const std::string GET_APPLICATIONS = ADMIN_PATH + "/get_applications$";
 
-const std::string APPLICATION_JSON_SCHEMA =
-    "JSON format for application add request:\n"
-    "{\n"
-    " \"name\" := string,\n"
-    " \"candidate_models\" := [\n"
-    "   {\"model_name\" := string, \"model_version\" := int}\n"
-    " ],\n"
-    " \"input_type\" := \"integers\" | \"bytes\" | \"floats\" |\b\n"
-    "                   \"doubles\" | \"strings\",\n"
-    " \"output_type\" := \"double\" | \"int\",\n"
-    " \"selection_policy\" := string,\n"
-    " \"latency_slo_micros\" := int\n"
-    "}\n";
+const std::string APPLICATION_JSON_SCHEMA = R"(
+  {
+   "name" := string,
+   "candidate_models" := [
+     {"model_name" := string, "model_version" := int}
+   ],
+   "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
+   "output_type" := "double" | "int",
+   "selection_policy" := string,
+   "latency_slo_micros" := int
+  }
+)";
 
-const std::string MODEL_JSON_SCHEMA =
-    "JSON format for model add request:\n"
-    "{\n"
-    " \"model_name\" := string,\n"
-    " \"labels\" := [string],\n"
-    " \"input_type\" := \"integers\" | \"bytes\" | \"floats\" | \"doubles\" | \"strings\",\n"
-    " \"output_type\" := \"double\" | \"int\",\n"
-    " \"container_name\" := string,\n"
-    " \"model_data_path\" := string\n"
-    "}\n";
+const std::string MODEL_JSON_SCHEMA = R"(
+  {
+   "model_name" := string,
+   "model_version" := int,
+   "labels" := [string],
+   "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
+   "output_type" := "double" | "int",
+   "container_name" := string,
+   "model_data_path" := string
+  }
+)";
 
-const std::string SELECTION_JSON_SCHEMA =
-    "JSON format:\n"
-    "{\n"
-    " \"app_name\" := string,\n"
-    " \"uid\" := int,\n"
-    "}\n";
+const std::string SELECTION_JSON_SCHEMA = R"(
+  {
+   "app_name" := string,
+   "uid" := int,
+  }
+)";
 
 template <typename Policy>
 std::string lookup_selection_state(
@@ -95,6 +95,14 @@ void respond_http(std::string content, std::string message,
   *response << "HTTP/1.1 " << message
             << "\r\nContent-Length: " << content.length() << "\r\n\r\n"
             << content << "\n";
+}
+
+std::string json_error_msg(const std::string& exception_msg,
+                           const std::string& expected_schema) {
+  std::stringstream ss;
+  ss << "Error parsing JSON: " << exception_msg << ". "
+     << "Expected JSON schema: " << expected_schema;
+  return ss.str();
 }
 
 class RequestHandler {
@@ -123,10 +131,12 @@ class RequestHandler {
             std::string result = add_application(request->content.string());
             respond_http(result, "200 OK", response);
           } catch (const json_parse_error& e) {
-            std::string err_msg = APPLICATION_JSON_SCHEMA + e.what();
+            std::string err_msg =
+                json_error_msg(e.what(), APPLICATION_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
           } catch (const json_semantic_error& e) {
-            std::string err_msg = APPLICATION_JSON_SCHEMA + e.what();
+            std::string err_msg =
+                json_error_msg(e.what(), APPLICATION_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
           } catch (const std::invalid_argument& e) {
             respond_http(e.what(), "400 Bad Request", response);
@@ -140,10 +150,10 @@ class RequestHandler {
             std::string result = add_model(request->content.string());
             respond_http(result, "200 OK", response);
           } catch (const json_parse_error& e) {
-            std::string err_msg = MODEL_JSON_SCHEMA + e.what();
+            std::string err_msg = json_error_msg(e.what(), MODEL_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
           } catch (const json_semantic_error& e) {
-            std::string err_msg = MODEL_JSON_SCHEMA + e.what();
+            std::string err_msg = json_error_msg(e.what(), MODEL_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
           } catch (const std::invalid_argument& e) {
             respond_http(e.what(), "400 Bad Request", response);
@@ -157,10 +167,12 @@ class RequestHandler {
             std::string result = get_selection_state(request->content.string());
             respond_http(result, "200 OK", response);
           } catch (const json_parse_error& e) {
-            std::string err_msg = SELECTION_JSON_SCHEMA + e.what();
+            std::string err_msg =
+                json_error_msg(e.what(), SELECTION_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
           } catch (const json_semantic_error& e) {
-            std::string err_msg = SELECTION_JSON_SCHEMA + e.what();
+            std::string err_msg =
+                json_error_msg(e.what(), SELECTION_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
           } catch (const std::invalid_argument& e) {
             respond_http(e.what(), "400 Bad Request", response);
@@ -183,8 +195,7 @@ class RequestHandler {
    *  "candidate_models" := [
    *    {"model_name" := string, "model_version" := int}
    *  ],
-   *  "input_type" := "integers" | "bytes" | "floats" |
-   *                  "doubles" | "strings",
+   *  "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
    *  "output_type" := "double" | "int",
    *  "selection_policy" := string,
    *  "latency_slo_micros" := int

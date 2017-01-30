@@ -14,9 +14,6 @@ using clipper::OutputType;
 using clipper::VersionedModelId;
 using rapidjson::Type;
 
-static std::vector<std::string> kTypeNames = {
-    "Null", "False", "True", "Object", "Array", "String", "Number"};
-
 // RapidJSON value types
 /*
 enum Type {
@@ -28,8 +25,10 @@ enum Type {
   kStringType = 5,    // string
   kNumberType = 6     // number
 }; */
+static std::vector<std::string> kTypeNames = {
+    "Null", "False", "True", "Object", "Array", "String", "Number"};
 
-namespace clipper_json {
+namespace clipper::json {
 
 class json_parse_error : public std::runtime_error {
  public:
@@ -211,7 +210,7 @@ rapidjson::Value& get_object(rapidjson::Value& d, const char* key_name) {
   return object;
 }
 
-void parse_json(std::string json_content, rapidjson::Document& d) {
+void parse_json(const std::string& json_content, rapidjson::Document& d) {
   rapidjson::ParseResult ok = d.Parse(json_content.c_str());
   if (!ok) {
     std::stringstream ss;
@@ -280,74 +279,75 @@ void add_kv_pair(rapidjson::Document& d,
   d.AddMember(key, value_to_add, allocator);
 }
 
-void add_double_array(std::vector<double> values_to_add,
-    const char* key_name, rapidjson::Document& d) {
+void add_double_array(rapidjson::Document& d,
+    const char* key_name, std::vector<double>& values_to_add) {
   rapidjson::Value double_array(rapidjson::kArrayType);
   rapidjson::Document::AllocatorType& allocator = d.GetAllocator();
-  for (int i = 0; i < values_to_add.size(); i++) {
+  for (std::size_t i = 0; i < values_to_add.size(); i++) {
     double_array.PushBack(values_to_add[i], allocator);
   }
   add_kv_pair(d, key_name, double_array);
 }
 
-void add_float_array(std::vector<float> values_to_add,
-    const char* key_name, rapidjson::Document& d) {
+void add_float_array(rapidjson::Document& d,
+    const char* key_name, std::vector<float>& values_to_add) {
   rapidjson::Value float_array(rapidjson::kArrayType);
   rapidjson::Document::AllocatorType& allocator = d.GetAllocator();
-  for (int i = 0; i < values_to_add.size(); i++) {
+  for (std::size_t i = 0; i < values_to_add.size(); i++) {
     float_array.PushBack(values_to_add[i], allocator);
   }
   add_kv_pair(d, key_name, float_array);
 }
 
-void add_int_array(std::vector<int> values_to_add,
-    const char* key_name, rapidjson::Document& d) {
+void add_int_array(rapidjson::Document& d,
+    const char* key_name, std::vector<int>& values_to_add) {
   rapidjson::Value int_array(rapidjson::kArrayType);
   rapidjson::Document::AllocatorType& allocator = d.GetAllocator();
-  for (int i = 0; i < values_to_add.size(); i++) {
+  for (std::size_t i = 0; i < values_to_add.size(); i++) {
     int_array.PushBack(values_to_add[i], allocator);
   }
   add_kv_pair(d, key_name, int_array);
 }
 
-void add_string_array(std::vector<std::string> values_to_add,
-    const char* key_name, rapidjson::Document& d) {
+void add_string_array(rapidjson::Document& d,
+    const char* key_name, std::vector<std::string>& values_to_add) {
   rapidjson::Value string_array(rapidjson::kArrayType);
   rapidjson::Document::AllocatorType& allocator = d.GetAllocator();
-  for (int i = 0; i < values_to_add.size(); i++) {
+  for (std::size_t i = 0; i < values_to_add.size(); i++) {
     rapidjson::Value string_val(values_to_add[i].c_str(), allocator);
     string_array.PushBack(string_val, allocator);
   }
   add_kv_pair(d, key_name, string_array);
 }
 
-void add_double(double val, const char* key_name, rapidjson::Document& d) {
+void add_double(rapidjson::Document& d, const char* key_name, double val) {
   rapidjson::Value val_to_add(val);
   add_kv_pair(d, key_name, val_to_add);
 }
 
-void add_float(float val, const char* key_name, rapidjson::Document& d) {
+void add_float(rapidjson::Document& d, const char* key_name, float val) {
   rapidjson::Value val_to_add(val);
   add_kv_pair(d, key_name, val_to_add);
 }
 
-void add_int(int val, const char* key_name, rapidjson::Document& d) {
+void add_int(rapidjson::Document& d, const char* key_name, int val) {
   rapidjson::Value val_to_add(val);
   add_kv_pair(d, key_name, val_to_add);
 }
 
-void add_long(long val, const char* key_name, rapidjson::Document& d) {
+void add_long(rapidjson::Document& d, const char* key_name, long val) {
   rapidjson::Value val_to_add((int64_t) val);
   add_kv_pair(d, key_name, val_to_add);
 }
 
-void add_string(std::string val, const char* key_name, rapidjson::Document& d) {
+void add_string(rapidjson::Document& d,
+    const char* key_name, const std::string& val) {
   rapidjson::Value val_to_add(val.c_str(), d.GetAllocator());
   add_kv_pair(d, key_name, val_to_add);
 }
 
-void add_object(rapidjson::Document& to_add,
-    const char* key_name, rapidjson::Document& d) {
+void add_object(rapidjson::Document& d,
+    const char* key_name, rapidjson::Document& to_add) {
   add_kv_pair(d, key_name, to_add);
 }
 
@@ -358,5 +358,5 @@ std::string to_json_string(rapidjson::Document& d) {
   return buffer.GetString();
 }
 
-}  // namespace clipper_json
+}  // namespace clipper::json
 #endif  // CLIPPER_LIB_JSON_UTIL_H

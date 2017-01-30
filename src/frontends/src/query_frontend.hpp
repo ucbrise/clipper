@@ -24,40 +24,48 @@ using clipper::OutputType;
 using clipper::Output;
 using clipper::Query;
 using clipper::FeedbackQuery;
-using clipper_json::json_parse_error;
-using clipper_json::json_semantic_error;
-using clipper_json::parse_json;
-using clipper_json::parse_input;
-using clipper_json::parse_output;
-using clipper_json::get_long;
+using clipper::json::json_parse_error;
+using clipper::json::json_semantic_error;
+using clipper::json::parse_json;
+using clipper::json::parse_input;
+using clipper::json::parse_output;
+using clipper::json::get_long;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
 namespace query_frontend {
 
 const std::string GET_METRICS = "^/metrics$";
 
-const std::string PREDICTION_JSON_SCHEMA =
-   "JSON format for prediction query request:\n"
-   "{\n"
-   "\"uid\" := string,\n"
-   "\"input\" := [double] | [int] | [string] | [byte] | [float],\n"
-   "}\n";
+const std::string PREDICTION_JSON_SCHEMA = R"(
+  {
+   "uid" := string,
+   "input" := [double] | [int] | [string] | [byte] | [float],
+  }
+)";
 
-const std::string UPDATE_JSON_SCHEMA =
-   "JSON format for feedback query request:\n"
-   "{\n"
-   "\"uid\" := string,\n"
-   "\"input\" := [double] | [int] | [string] | [byte] | [float],\n"
-   "\"model_name\" := string,\n"
-   "\"model_version\" := int,\n"
-   "\"label\" := double\n"
-   "}\n";
+const std::string UPDATE_JSON_SCHEMA = R"(
+  {
+   "uid" := string,
+   "input" := [double] | [int] | [string] | [byte] | [float],
+   "model_name" := string,
+   "model_version" := int,
+   "label" := double
+  }
+)";
 
 void respond_http(std::string content, std::string message,
                   std::shared_ptr<HttpServer::Response> response) {
   *response << "HTTP/1.1 " << message
             << "\r\nContent-Length: " << content.length() << "\r\n\r\n"
             << content << "\n";
+}
+
+std::string json_error_msg(const std::string& exception_msg,
+                           const std::string& expected_schema) {
+  std::stringstream ss;
+  ss << "Error parsing JSON: " << exception_msg << ". "
+     << "Expected JSON schema: " << expected_schema;
+  return ss.str();
 }
 
 template <class QP>
@@ -138,10 +146,12 @@ class RequestHandler {
           respond_http(content, "200 OK", response);
         });
       } catch (const json_parse_error& e) {
-        std::string error_msg = PREDICTION_JSON_SCHEMA + e.what();
+        std::string error_msg =
+            json_error_msg(e.what(), PREDICTION_JSON_SCHEMA);
         respond_http(error_msg, "400 Bad Request", response);
       } catch (const json_semantic_error& e) {
-        std::string error_msg = PREDICTION_JSON_SCHEMA + e.what();
+        std::string error_msg =
+            json_error_msg(e.what(), PREDICTION_JSON_SCHEMA);
         respond_http(error_msg, "400 Bad Request", response);
       } catch (const std::invalid_argument& e) {
         respond_http(e.what(), "400 Bad Request", response);
@@ -165,10 +175,10 @@ class RequestHandler {
           respond_http(content, "200 OK", response);
         });
       } catch (const json_parse_error& e) {
-        std::string error_msg = UPDATE_JSON_SCHEMA + e.what();
+        std::string error_msg = json_error_msg(e.what(), UPDATE_JSON_SCHEMA);
         respond_http(error_msg, "400 Bad Request", response);
       } catch (const json_semantic_error& e) {
-        std::string error_msg = UPDATE_JSON_SCHEMA + e.what();
+        std::string error_msg = json_error_msg(e.what(), UPDATE_JSON_SCHEMA);
         respond_http(error_msg, "400 Bad Request", response);
       } catch (const std::invalid_argument& e) {
         respond_http(e.what(), "400 Bad Request", response);

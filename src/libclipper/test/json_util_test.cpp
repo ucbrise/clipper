@@ -3,7 +3,7 @@
 #include <clipper/datatypes.hpp>
 #include <clipper/json_util.hpp>
 
-using namespace clipper_json;
+using namespace clipper::json;
 
 /* Test JSON serialization utilities */
 TEST(JsonUtilTests, TestCorrectJsonValues) {
@@ -15,9 +15,9 @@ TEST(JsonUtilTests, TestCorrectJsonValues) {
 
   rapidjson::Document d;
   d.SetObject();
-  add_string(string_val, "string_val", d);
-  add_double(double_val, "double_val", d);
-  add_int(int_val, "int_val", d);
+  add_string(d, "string_val", string_val);
+  add_double(d, "double_val", double_val);
+  add_int(d, "int_val", int_val);
   std::string output_json = to_json_string(d);
   EXPECT_EQ(output_json, expected_json); 
 }
@@ -33,9 +33,9 @@ TEST(JsonUtilTests, TestCorrectJsonArrays) {
 
   rapidjson::Document d;
   d.SetObject();
-  add_string_array(string_array, "string_array", d);
-  add_double_array(double_array, "double_array", d);
-  add_int_array(int_array, "int_array", d);
+  add_string_array(d, "string_array", string_array);
+  add_double_array(d, "double_array", double_array);
+  add_int_array(d, "int_array", int_array);
   std::string output_json = to_json_string(d);
   EXPECT_EQ(output_json, expected_json); 
 }
@@ -54,10 +54,10 @@ TEST(JsonUtilTests, TestCorrectJsonNestedObjects) {
   rapidjson::Document twice_nested_object;
   twice_nested_object.SetObject();
 
-  add_double(double_val, "double_val", twice_nested_object);
-  add_double_array(double_array, "double_array", nested_object);
-  add_object(twice_nested_object, "twice_nested_object", nested_object);
-  add_object(nested_object, "nested_object", main_doc);
+  add_double(twice_nested_object, "double_val", double_val);
+  add_double_array(nested_object, "double_array", double_array);
+  add_object(nested_object, "twice_nested_object", twice_nested_object);
+  add_object(main_doc, "nested_object", nested_object);
   std::string output_json = to_json_string(main_doc);
   EXPECT_EQ(output_json, expected_json);
 }
@@ -73,10 +73,10 @@ TEST(JsonUtilTests, TestOverwritePastValues) {
   double new_double_val = 0.3;
   std::vector<double> old_double_array = {1.5,2.23,3.243242,0.3223424};
   std::vector<double> new_double_array = {1.4,2.23,3.243242,0.3223424};
-  add_double(old_double_val, "double_val", d);
-  add_double(new_double_val, "double_val", d);
-  add_double_array(old_double_array, "double_array", d);
-  add_double_array(new_double_array, "double_array", d);
+  add_double(d, "double_val", old_double_val);
+  add_double(d, "double_val", new_double_val);
+  add_double_array(d, "double_array", old_double_array);
+  add_double_array(d, "double_array", new_double_array);
   std::string output_json = to_json_string(d);
   EXPECT_EQ(output_json, expected_json);
 }
@@ -88,8 +88,9 @@ TEST(JsonUtilTests, TestAddEmptyValues) {
   rapidjson::Document d;
   d.SetObject();
 
-  add_string("", "empty_string", d);
-  add_int_array({}, "empty_int_array", d);
+  std::vector<int> empty_int_array = {};
+  add_string(d, "empty_string", "");
+  add_int_array(d, "empty_int_array", empty_int_array);
 }
 
 /* Test JSON deserialization utilities */
@@ -143,7 +144,7 @@ TEST(JsonUtilTests, TestEmptyDocumentToString) {
 TEST(JsonUtilTests, TestAddToNonObject) {
   rapidjson::Document d;
   d.SetArray();
-  ASSERT_THROW(add_int(3, "int_val", d), json_semantic_error);
+  ASSERT_THROW(add_int(d, "int_val", 3), json_semantic_error);
 }
 
 TEST(JsonUtilTests, TestParseCandidateModels) {
