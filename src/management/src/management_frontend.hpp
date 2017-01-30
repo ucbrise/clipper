@@ -19,7 +19,7 @@
 #include <clipper/datatypes.hpp>
 #include <clipper/persistent_state.hpp>
 #include <clipper/redis.hpp>
-#include <clipper/selection_policy.hpp>
+#include <clipper/selection_policies.hpp>
 #include <clipper/util.hpp>
 
 using namespace boost::property_tree;
@@ -248,19 +248,22 @@ class RequestHandler {
     read_json(is, pt);
 
     std::string app_name = pt.get<std::string>("app_name");
-    int uid = std::stoi(pt.get<std::string>("uid"));
+    // int uid = std::stoi(pt.get<std::string>("uid"));
     auto app_metadata =
         clipper::redis::get_application(redis_connection_, app_name);
     std::vector<VersionedModelId> candidate_models =
         clipper::redis::str_to_models(app_metadata["candidate_models"]);
     std::string policy = app_metadata["policy"];
-    if (policy == "bandit_policy") {
-      return lookup_selection_state<clipper::BanditPolicy>(
-          state_db_, app_name, uid, candidate_models);
-    } else {
-      return "ERROR: " + app_name +
-             " does not support looking up selection policy state";
-    }
+    return "ERROR: " + app_name +
+           " does not support looking up selection policy state";
+    // TODO: change this
+    // if (policy == "bandit_policy") {
+    //   return lookup_selection_state<clipper::BanditPolicy>(
+    //       state_db_, app_name, uid, candidate_models);
+    // } else {
+    //   return "ERROR: " + app_name +
+    //          " does not support looking up selection policy state";
+    // }
   }
 
   void start_listening() { server_.start(); }

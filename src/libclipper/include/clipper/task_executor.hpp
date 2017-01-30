@@ -11,10 +11,10 @@
 #include <clipper/config.hpp>
 #include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/metrics.hpp>
 #include <clipper/redis.hpp>
 #include <clipper/rpc_service.hpp>
 #include <clipper/util.hpp>
-#include <clipper/metrics.hpp>
 
 namespace clipper {
 
@@ -54,7 +54,7 @@ class PredictionCache {
   std::shared_ptr<metrics::RatioCounter> hit_ratio_;
 };
 
-template<typename Scheduler>
+template <typename Scheduler>
 class TaskExecutor {
  public:
   ~TaskExecutor() { active_ = false; };
@@ -97,10 +97,15 @@ class TaskExecutor {
           }
 
         });
-    throughput_meter = metrics::MetricsRegistry::get_metrics().create_meter("model_throughput");
-    predictions_counter = metrics::MetricsRegistry::get_metrics().create_counter("num_predictions");
-    throughput_meter = metrics::MetricsRegistry::get_metrics().create_meter("prediction_throughput");
-    latency_hist = metrics::MetricsRegistry::get_metrics().create_histogram("prediction_latency", "milliseconds", 2056);
+    throughput_meter = metrics::MetricsRegistry::get_metrics().create_meter(
+        "model_throughput");
+    predictions_counter =
+        metrics::MetricsRegistry::get_metrics().create_counter(
+            "num_predictions");
+    throughput_meter = metrics::MetricsRegistry::get_metrics().create_meter(
+        "prediction_throughput");
+    latency_hist = metrics::MetricsRegistry::get_metrics().create_histogram(
+        "prediction_latency", "milliseconds", 2056);
     boost::thread(&TaskExecutor::send_messages, this).detach();
     boost::thread(&TaskExecutor::recv_messages, this).detach();
   }
@@ -149,8 +154,8 @@ class TaskExecutor {
   redox::Subscriber redis_subscriber_;
   bool active_ = false;
   std::mutex inflight_messages_mutex_;
-  std::unordered_map<
-      int, std::vector<std::tuple<const long, VersionedModelId, std::shared_ptr<Input>>>>
+  std::unordered_map<int, std::vector<std::tuple<const long, VersionedModelId,
+                                                 std::shared_ptr<Input>>>>
       inflight_messages_;
   std::shared_ptr<metrics::Counter> predictions_counter;
   std::shared_ptr<metrics::Meter> throughput_meter;
@@ -191,7 +196,8 @@ class TaskExecutor {
             std::unique_lock<std::mutex> l(inflight_messages_mutex_);
             // std::vector<const std::vector<uint8_t>> serialized_inputs;
 
-            std::vector<std::tuple<const long, VersionedModelId, std::shared_ptr<Input>>>
+            std::vector<std::tuple<const long, VersionedModelId,
+                                   std::shared_ptr<Input>>>
                 cur_batch;
             rpc::PredictionRequest prediction_request(c->input_type_);
             for (auto b : batch) {
@@ -226,14 +232,16 @@ class TaskExecutor {
         int batch_size = keys.size();
         predictions_counter->increment(batch_size);
         throughput_meter->mark(batch_size);
-        long current_time = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::system_clock::now().time_since_epoch()).count();
+        long current_time =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch())
+                .count();
         for (int batch_num = 0; batch_num < batch_size; ++batch_num) {
           long send_time = std::get<0>(keys[batch_num]);
           latency_hist->insert(static_cast<int64_t>(current_time - send_time));
-          cache_.put(
-              std::get<1>(keys[batch_num]), std::get<2>(keys[batch_num]),
-              Output{deserialized_outputs[batch_num], std::get<1>(keys[batch_num])});
+          cache_.put(std::get<1>(keys[batch_num]), std::get<2>(keys[batch_num]),
+                     Output{deserialized_outputs[batch_num],
+                            {std::get<1>(keys[batch_num])}});
         }
       }
     }

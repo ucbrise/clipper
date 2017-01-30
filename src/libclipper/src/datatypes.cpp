@@ -1,11 +1,11 @@
 #include <chrono>
 #include <cstring>
 #include <iostream>
-#include <vector>
 #include <sstream>
+#include <vector>
 
-#include <clipper/datatypes.hpp>
 #include <boost/functional/hash.hpp>
+#include <clipper/datatypes.hpp>
 
 namespace clipper {
 
@@ -75,8 +75,8 @@ InputType parse_input_type(std::string type_string) {
   }
 }
 
-Output::Output(double y_hat, VersionedModelId versioned_model)
-    : y_hat_(y_hat), versioned_model_(versioned_model) {}
+Output::Output(double y_hat, std::vector<VersionedModelId> models_used)
+    : y_hat_(y_hat), models_used_(models_used) {}
 
 ByteVector::ByteVector(std::vector<uint8_t> data) : data_(std::move(data)) {}
 
@@ -86,9 +86,7 @@ size_t ByteVector::serialize(uint8_t *buf) const {
   return serialize_to_buffer(data_, buf);
 }
 
-size_t ByteVector::hash() const {
-  return primitive_input_hash(data_);
-}
+size_t ByteVector::hash() const { return primitive_input_hash(data_); }
 
 size_t ByteVector::size() const { return data_.size(); }
 
@@ -104,9 +102,7 @@ size_t IntVector::serialize(uint8_t *buf) const {
   return serialize_to_buffer(data_, buf);
 }
 
-size_t IntVector::hash() const {
-  return primitive_input_hash(data_);
-}
+size_t IntVector::hash() const { return primitive_input_hash(data_); }
 
 size_t IntVector::size() const { return data_.size(); }
 
@@ -123,8 +119,10 @@ size_t FloatVector::serialize(uint8_t *buf) const {
 InputType FloatVector::type() const { return InputType::Floats; }
 
 size_t FloatVector::hash() const {
-  // TODO [CLIPPER-63]: Find an alternative to hashing floats directly, as this is
-  // generally a bad idea due to loss of precision from floating point representations
+  // TODO [CLIPPER-63]: Find an alternative to hashing floats directly, as this
+  // is
+  // generally a bad idea due to loss of precision from floating point
+  // representations
   return primitive_input_hash(data_);
 }
 
@@ -143,8 +141,10 @@ size_t DoubleVector::serialize(uint8_t *buf) const {
 }
 
 size_t DoubleVector::hash() const {
-  // TODO [CLIPPER-63]: Find an alternative to hashing doubles directly, as this is
-  // generally a bad idea due to loss of precision from floating point representations
+  // TODO [CLIPPER-63]: Find an alternative to hashing doubles directly, as this
+  // is
+  // generally a bad idea due to loss of precision from floating point
+  // representations
   return primitive_input_hash(data_);
 }
 
@@ -184,17 +184,20 @@ rpc::PredictionRequest::PredictionRequest(InputType input_type)
 rpc::PredictionRequest::PredictionRequest(
     std::vector<std::shared_ptr<Input>> inputs, InputType input_type)
     : inputs_(inputs), input_type_(input_type) {
-  for (int i = 0; i < (int) inputs.size(); i++) {
+  for (int i = 0; i < (int)inputs.size(); i++) {
     validate_input_type(inputs[i]);
     input_data_size_ += inputs[i]->byte_size();
   }
 }
 
-void rpc::PredictionRequest::validate_input_type(std::shared_ptr<Input> &input) const {
+void rpc::PredictionRequest::validate_input_type(
+    std::shared_ptr<Input> &input) const {
   if (input->type() != input_type_) {
     std::ostringstream ss;
-    ss << "Attempted to add an input of type " << get_readable_input_type(input->type())
-       << " to a prediction request with input type " << get_readable_input_type(input_type_);
+    ss << "Attempted to add an input of type "
+       << get_readable_input_type(input->type())
+       << " to a prediction request with input type "
+       << get_readable_input_type(input_type_);
     throw std::invalid_argument(ss.str());
   }
 }
@@ -282,6 +285,9 @@ std::string Response::debug_string() const noexcept {
   debug.append(std::to_string(output_.y_hat_));
   return debug;
 }
+
+Feedback::Feedback(std::shared_ptr<Input> input, double y)
+    : y_(y), input_(input) {}
 
 FeedbackQuery::FeedbackQuery(std::string label, long user_id, Feedback feedback,
                              std::string selection_policy,
