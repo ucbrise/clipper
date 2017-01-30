@@ -19,6 +19,12 @@ REDIS_CONTAINER_DB_NUM = 3
 REDIS_RESOURCE_DB_NUM = 4
 REDIS_APPLICATION_DB_NUM = 5
 
+REDIS_PORT = 6379
+CLIPPER_QUERY_PORT = 1337
+CLIPPER_MANAGEMENT_PORT = 1338
+CLIPPER_RPC_PORT = 7000
+
+
 aws_cli_config = """
 [default]
 region = us-east-1
@@ -35,24 +41,24 @@ DOCKER_COMPOSE_DICT = {
         'mgmt_frontend': {
             'command': [
                 '--redis_ip=redis',
-                '--redis_port=6379'],
+                '--redis_port=%d' % REDIS_PORT],
             'depends_on': ['redis'],
             'image': 'clipper/management_frontend:latest',
-            'ports': ['1338:1338']},
+            'ports': ['%d:%d' % (CLIPPER_MANAGEMENT_PORT, CLIPPER_MANAGEMENT_PORT)]},
         'query_frontend': {
             'command': [
                 '--redis_ip=redis',
-                '--redis_port=6379'],
+                '--redis_port=%d' % REDIS_PORT],
             'depends_on': [
                 'redis',
                 'mgmt_frontend'],
             'image': 'clipper/query_frontend:latest',
             'ports': [
-                '7000:7000',
-                '1337:1337']},
+                '%d:%d' % (CLIPPER_RPC_PORT, CLIPPER_RPC_PORT),
+                '%d:%d' % (CLIPPER_QUERY_PORT, CLIPPER_QUERY_PORT)]},
         'redis': {
             'image': 'redis:alpine',
-            'ports': ['6379:6379']}},
+            'ports': ['%d:%d' % (REDIS_PORT, REDIS_PORT)]}},
     'version': '2'
 }
 
@@ -209,7 +215,7 @@ class Clipper:
                 warn("Application \"%s\" not found" % name)
                 return None
 
-    def inspect_selection_policy(self, app_name):
+    def inspect_selection_policy(self, app_name, uid):
         """Fetches a human-readable string with the current selection policy state.
 
         Parameters
@@ -228,10 +234,6 @@ class Clipper:
             policy state was not found, this string may contain an error
             message from Clipper describing the problem.
         """
-        app_name = kwargs.pop('app_name')
-        uid = kwargs.pop('uid')
-        if kwargs:
-            raise TypeError('Unexpected **kwargs: %r' % kwargs)
 
         url = "http://%s:1338/admin/get_state" % self.host
         req_json = json.dumps({
@@ -242,7 +244,7 @@ class Clipper:
         r = requests.post(url, headers=headers, data=req_json)
         return r.text
 
-    def deploy_model(self, name, version, model, container, labels, num_containers=1):
+    def deploy_model(self, name, version, model, container_name, labels, num_containers=1):
         """Add a model to Clipper.
 
         Parameters
@@ -268,18 +270,6 @@ class Clipper:
             The number of replicas of the model to create. More replicas can be
             created later as well. Defaults to 1.
         """
-
-        # name = kwargs.pop('name')
-        # version = kwargs.pop('version')
-        # model_data = kwargs.pop('model_data')
-        # container_name = kwargs.pop('container_name')
-        # labels = kwargs.pop('labels')
-        # input_type = kwargs.pop('input_type')
-        # num_containers = kwargs.pop('num_containers', 1)
-        #
-        # if kwargs:
-        #     raise TypeError('Unexpected **kwargs: %r' % kwargs)
-
         with hide("warnings", "output", "running"):
             if isinstance(model_data, base.BaseEstimator):
                 fname = name.replace("/", "_")
