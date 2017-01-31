@@ -66,6 +66,9 @@ boost::future<R> wrap_when_any(
   });
 }
 
+/**
+ *
+ */
 template <typename R0, typename R1>
 std::tuple<boost::future<void>, boost::future<R0>, boost::future<R1>> when_any(
     boost::future<R0> f0, boost::future<R1> f1,
