@@ -8,6 +8,7 @@
 #include <unordered_map>
 
 #define BOOST_THREAD_PROVIDES_FUTURE_CONTINUATION
+#define BOOST_THREAD_PROVIDES_FUTURE_WHEN_ALL_WHEN_ANY
 #define PROVIDES_EXECUTORS
 #include <boost/thread.hpp>
 #include <boost/thread/executors/basic_thread_pool.hpp>
@@ -261,6 +262,7 @@ boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
   vector<boost::future<FeedbackAck>> feedback_task_completion_futures =
       task_executor_.schedule_feedback(std::move(feedback_tasks));
 
+  // TODO: replace with clipper::future implementation of when_all
   // when this future completes, we are ready to update the selection state
   auto predictions_completed =
       boost::when_all(predict_task_completion_futures.begin(),
