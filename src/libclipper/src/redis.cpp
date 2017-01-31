@@ -8,6 +8,7 @@
 
 #include <clipper/constants.hpp>
 #include <clipper/redis.hpp>
+#include <clipper/logging.hpp>
 #include <redox.hpp>
 
 using redox::Command;
@@ -27,7 +28,7 @@ std::unordered_map<string, string> parse_redis_map(
     auto key = *m;
     m += 1;
     auto value = *m;
-    std::cout << "\t" << key << ": " << value << std::endl;
+    log_info_formatted(LOGGING_TAG_REDIS, "\t {}: {}", key, value);
     parsed_map[key] = value;
   }
   return parsed_map;
@@ -86,7 +87,7 @@ std::string models_to_str(const std::vector<VersionedModelId>& models) {
   // don't forget to save the last label
   ss << (models.end() - 1)->first << ITEM_PART_CONCATENATOR
      << (models.end() - 1)->second;
-  std::cout << "models_to_str result: " << ss.str() << std::endl;
+  log_info_formatted(LOGGING_TAG_REDIS, "models_to_str result: {}", ss.str());
   return ss.str();
 }
 
@@ -317,12 +318,12 @@ void subscribe_to_keyspace_changes(
   std::ostringstream subscription;
   subscription << "__keyspace@" << std::to_string(db) << "__:*";
   std::string sub_str = subscription.str();
-  std::cout << "SUBSCRIPTION STRING: " << sub_str << std::endl;
+  log_info_formatted(LOGGING_TAG_REDIS, "SUBSCRIPTION STRING: {}", sub_str);
   subscriber.psubscribe(
       sub_str, [callback](const std::string& topic, const std::string& msg) {
         size_t split_idx = topic.find_first_of(":");
         std::string key = topic.substr(split_idx + 1);
-        std::cout << "MESSAGE: " << msg << std::endl;
+        log_info_formatted(LOGGING_TAG_REDIS, "MESSAGE: {}", msg);
         callback(key, msg);
       });
 }

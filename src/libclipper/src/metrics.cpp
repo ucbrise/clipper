@@ -14,6 +14,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/thread.hpp>
 #include <clipper/metrics.hpp>
+#include <clipper/logging.hpp>
 
 namespace clipper {
 
@@ -197,7 +198,7 @@ double RatioCounter::get_ratio() {
   uint32_t num_value = numerator_.load(std::memory_order_seq_cst);
   uint32_t denom_value = denominator_.load(std::memory_order_seq_cst);
   if (denom_value == 0) {
-    std::cout << "Ratio " << name_ << " has denominator zero!" << std::endl;
+    log_error_formatted(LOGGING_TAG_METRICS, "Ratio {} has denominator zero!", name_);
     return std::nan("");
   }
   double ratio =

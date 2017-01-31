@@ -17,6 +17,7 @@
 #include <clipper/query_processor.hpp>
 #include <clipper/task_executor.hpp>
 #include <clipper/timers.hpp>
+#include <clipper/logging.hpp>
 
 #define UNREACHABLE() assert(false)
 
@@ -92,7 +93,7 @@ void process_feedback(FeedbackQuery feedback, std::vector<Output> predictions,
 }
 
 QueryProcessor::QueryProcessor() : state_db_(std::make_shared<StateDB>()) {
-  std::cout << "Query Processor started" << std::endl;
+  log_info(LOGGING_TAG_QUERY_PROCESSOR, "Query Processor started");
 }
 
 std::shared_ptr<StateDB> QueryProcessor::get_state_table() const {
@@ -110,35 +111,34 @@ future<Response> QueryProcessor::predict(Query query) {
         query, query_id, get_state_table());
     tasks = tasks_and_state.first;
     serialized_state = tasks_and_state.second;
-
-    std::cout << "Used NewestModelSelectionPolicy to select tasks" << std::endl;
+    log_info(LOGGING_TAG_QUERY_PROCESSOR, "Used NewestModelSelectionPolicy to select tasks");
   } else if (query.selection_policy_ == "simple_policy") {
     auto tasks_and_state =
         select_predict_tasks<SimplePolicy>(query, query_id, get_state_table());
     tasks = tasks_and_state.first;
     serialized_state = tasks_and_state.second;
-    std::cout << "Used SimplePolicy to select tasks" << std::endl;
+    log_info(LOGGING_TAG_QUERY_PROCESSOR, "Used SimplePolicy to select tasks");
   } else if (query.selection_policy_ == "bandit_policy") {
     auto tasks_and_state =
         select_predict_tasks<BanditPolicy>(query, query_id, get_state_table());
     tasks = tasks_and_state.first;
     serialized_state = tasks_and_state.second;
-    std::cout << "Used BanditPolicy to select tasks" << std::endl;
+    log_info(LOGGING_TAG_QUERY_PROCESSOR, "Used BanditPolicy to select tasks");
   } else {
-    std::cout << query.selection_policy_ << " is invalid selection policy"
-              << std::endl;
+    log_error_formatted(
+        LOGGING_TAG_QUERY_PROCESSOR, "{} is an invalid selection policy", query.selection_policy_);
     // TODO better error handling
     return boost::make_ready_future(
         Response{query, query_id, 20000, Output{1.0, std::make_pair("m1", 1)},
                  std::vector<VersionedModelId>()});
   }
-  std::cout << "Found " << tasks.size() << " tasks" << std::endl;
+  log_info_formatted(LOGGING_TAG_QUERY_PROCESSOR, "Found {} tasks", tasks.size());
 
   vector<shared_future<Output>> task_completion_futures =
       task_executor_.schedule_predictions(tasks);
   auto task_completion_copies = task_completion_futures;
-  std::cout << "Found " << task_completion_futures.size()
-            << " task completion futures" << std::endl;
+  log_info_formatted(
+      LOGGING_TAG_QUERY_PROCESSOR, "Found {} task completion futures", task_completion_futures.size());
   future<void> timer_future = timer_system_.set_timer(query.latency_micros_);
 
   auto all_tasks_completed = boost::when_all(task_completion_copies.begin(),
@@ -154,13 +154,13 @@ future<Response> QueryProcessor::predict(Query query) {
     moved_serialized_state = std::move(serialized_state),
     task_futures = std::move(task_completion_futures)
   ](auto result_future) mutable {
-    std::cout << "ENTERED CONTINUATION LAMBDA" << std::endl;
+    log_info(LOGGING_TAG_QUERY_PROCESSOR, "ENTERED CONTINUATION LAMBDA");
 
     auto result = result_future.get();
-    std::cout << std::boolalpha;
-    std::cout << "All tasks finished: " << std::get<0>(result).is_ready()
-              << ", Timer fired: " << std::get<1>(result).is_ready()
-              << std::endl;
+    log_info(LOGGING_TAG_QUERY_PROCESSOR, std::boolalpha);
+    log_info_formatted(
+        LOGGING_TAG_QUERY_PROCESSOR, "All tasks finished: ", std::get<0>(result).is_ready());
+    log_info_formatted(LOGGING_TAG_QUERY_PROCESSOR, "Timer Fired: ", std::get<1>(result).is_ready());
     vector<Output> outputs;
     vector<VersionedModelId> used_models;
     //    vector<shared_future<Output>> completed_tasks =
@@ -173,7 +173,7 @@ future<Response> QueryProcessor::predict(Query query) {
         outputs.push_back((*r).get());
       }
     }
-    std::cout << "Found " << outputs.size() << " completed tasks" << std::endl;
+    log_info_formatted(LOGGING_TAG_QUERY_PROCESSOR, "Found {} completed tasks", outputs.size());
 
     Output final_output;
     if (query.selection_policy_ == "newest_model") {
@@ -188,8 +188,6 @@ future<Response> QueryProcessor::predict(Query query) {
     } else {
       UNREACHABLE();
     }
-    std::cout << "RESPONSE FUTURE THREAD: " << std::this_thread::get_id()
-              << std::endl;
     Response response{query, query_id, 20000, final_output,
                       query.candidate_models_};
     moved_promise.set_value(response);
@@ -199,7 +197,7 @@ future<Response> QueryProcessor::predict(Query query) {
 }
 
 boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
-  std::cout << "received feedback for user " << feedback.user_id_ << std::endl;
+  log_info(LOGGING_TAG_QUERY_PROCESSOR, "Received feedback for user {}", feedback.user_id_);
 
   long query_id = query_counter_.fetch_add(1);
   std::vector<PredictTask> predict_tasks;
@@ -214,9 +212,8 @@ boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
     predict_tasks = tasks_and_state.first.first;
     feedback_tasks = tasks_and_state.first.second;
     serialized_state = tasks_and_state.second;
-    std::cout
-        << "Used NewestModelSelectionPolicy to select tasks during feedback"
-        << std::endl;
+    log_info(
+        LOGGING_TAG_QUERY_PROCESSOR, "Used NewestModelSelectionPolicy to select tasks during feedback");
   } else if (feedback.selection_policy_ == "simple_policy") {
     auto tasks_and_state = select_feedback_tasks<SimplePolicy>(
         feedback, query_id, get_state_table());
@@ -224,8 +221,7 @@ boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
     predict_tasks = tasks_and_state.first.first;
     feedback_tasks = tasks_and_state.first.second;
     serialized_state = tasks_and_state.second;
-    std::cout << "Used SimplePolicy to select tasks during feedback"
-              << std::endl;
+    log_info(LOGGING_TAG_QUERY_PROCESSOR, "Used SimplePolicy to select tasks during feedback");
   } else if (feedback.selection_policy_ == "bandit_policy") {
     auto tasks_and_state = select_feedback_tasks<BanditPolicy>(
         feedback, query_id, get_state_table());
@@ -233,17 +229,16 @@ boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
     predict_tasks = tasks_and_state.first.first;
     feedback_tasks = tasks_and_state.first.second;
     serialized_state = tasks_and_state.second;
-    std::cout << "Used BanditPolicy to select tasks during feedback"
-              << std::endl;
+    log_info(LOGGING_TAG_QUERY_PROCESSOR, "Used BanditPolicy to select tasks during feedback");
   } else {
-    std::cout << feedback.selection_policy_ << " is invalid selection policy"
-              << std::endl;
+    log_error_formatted(
+        LOGGING_TAG_QUERY_PROCESSOR, "{} is an invalid feedback selection policy", feedback.selection_policy_);
     // TODO better error handling
     return boost::make_ready_future(false);
   }
-
-  std::cout << "Scheduling " << predict_tasks.size() << " predict tasks and "
-            << feedback_tasks.size() << " feedback tasks " << std::endl;
+  log_info_formatted(LOGGING_TAG_QUERY_PROCESSOR,
+      "Scheduling {} prediction tasks and {} feedback tasks",
+      predict_tasks.size(), feedback_tasks.size());
 
   // 1) Wait for all prediction_tasks to complete
   // 2) Update selection policy

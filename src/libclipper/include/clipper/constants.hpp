@@ -25,5 +25,7 @@ const std::string ITEM_DELIMITER = ",";
 // name and version of a VersionedModelID
 const std::string ITEM_PART_CONCATENATOR = ":";
 
+const std::string LOGGING_TAG_CLIPPER = "Clipper";
+
 }  // namespace clipper
 #endif

@@ -16,6 +16,7 @@
 #include <clipper/metrics.hpp>
 #include <clipper/query_processor.hpp>
 #include <clipper/redis.hpp>
+#include <clipper/logging.hpp>
 
 #include <server_http.hpp>
 
@@ -32,6 +33,7 @@ using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
 namespace query_frontend {
 
+const std::string LOGGING_TAG_QUERY_FRONTEND = "QUERYFRONTEND";
 const std::string GET_METRICS = "^/metrics$";
 
 enum class OutputType { Double, Int };
@@ -116,15 +118,16 @@ class RequestHandler {
     clipper::Config& conf = clipper::get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
-      std::cout << "ERROR: Query frontend connecting to Redis" << std::endl;
-      std::cout << "Sleeping 1 second..." << std::endl;
+      clipper::log_error(
+          LOGGING_TAG_QUERY_FRONTEND, "Query frontend failed to connect to Redis", "Retrying in 1 second...");
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
     while (!redis_subscriber_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
-      std::cout << "ERROR: Query frontend subscriber connecting to Redis"
-                << std::endl;
-      std::cout << "Sleeping 1 second..." << std::endl;
+      clipper::log_error(
+          LOGGING_TAG_QUERY_FRONTEND,
+          "Query frontend subscriber failed to connect to Redis",
+          "Retrying in 1 second...");
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
@@ -135,18 +138,18 @@ class RequestHandler {
           clipper::metrics::MetricsRegistry& registry =
               clipper::metrics::MetricsRegistry::get_metrics();
           std::string metrics_report = registry.report_metrics();
-          std::cout << "METRICS\n" << metrics_report << std::endl;
+          clipper::log_info(LOGGING_TAG_QUERY_FRONTEND, "METRICS", metrics_report);
           respond_http(metrics_report, "200 OK", response);
         });
 
     clipper::redis::subscribe_to_application_changes(
         redis_subscriber_,
         [this](const std::string& key, const std::string& event_type) {
-          std::cout << "APPLICATION EVENT DETECTED. Key: " << key
-                    << ", event_type: " << event_type << std::endl;
+          clipper::log_info_formatted(
+              LOGGING_TAG_QUERY_FRONTEND, "APPLICATION EVENT DETECTED. Key: {}, event_type: {}", key, event_type);
           if (event_type == "hset") {
             std::string name = key;
-            std::cout << "New application detected: " << key << std::endl;
+            clipper::log_info_formatted(LOGGING_TAG_QUERY_FRONTEND, "New application detected: {}", key);
             auto app_info =
                 clipper::redis::get_application_by_key(redis_connection_, key);
             std::vector<VersionedModelId> candidate_models =

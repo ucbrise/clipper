@@ -15,6 +15,8 @@ namespace metrics {
 
 using std::vector;
 
+const std::string LOGGING_TAG_METRICS = "METRICS";
+
 enum class MetricType {
   Counter = 0,
   RatioCounter = 1,

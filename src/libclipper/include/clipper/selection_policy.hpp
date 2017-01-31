@@ -9,6 +9,8 @@
 
 namespace clipper {
 
+const std::string LOGGING_TAG_SELECTION_POLICY = "SELECTIONPOLICY";
+
 template <typename Derived, typename State>
 class SelectionPolicy {
  public:

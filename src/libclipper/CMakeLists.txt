@@ -14,6 +14,7 @@ add_library(clipper
     src/timers.cpp
     src/containers.cpp
     src/redis.cpp
+    src/logging.cpp
     )
 
 
@@ -26,7 +27,7 @@ target_include_directories(clipper PUBLIC
     PRIVATE src)
 
 
-target_link_libraries(clipper boost zmqcpp redox pthread)
+target_link_libraries(clipper boost zmqcpp redox pthread spdlog)
 
 # This makes the project importable from the build directory
 export(TARGETS clipper FILE ClipperConfig.cmake)
@@ -43,7 +44,7 @@ add_executable(libclippertests EXCLUDE_FROM_ALL
     test/redis_test.cpp
     test/config_test.cpp
     test/selection_policies_test.cpp
-    )
+    test/logging_test.cpp)
 target_link_libraries(libclippertests clipper gtest gmock_main)
 add_dependencies(unittests libclippertests)
 
