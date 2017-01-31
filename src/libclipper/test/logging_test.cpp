@@ -120,18 +120,29 @@ TEST_F(LoggingTest, LogsOfDifferentLevelsDifferByLevelTag) {
   std::string error_log = oss_.str();
   oss_.str("");
 
+  // The info level tag length is the length of the tag "INFO" + 2 characters
+  // for the surrounding brackets. The level tag in its entirety is [INFO]
+  size_t info_level_tag_length = LOGGING_LEVEL_FORMAT_INFO_LENGTH + 2;
+  // The info level tag length is the length of the tag "ERROR" + 2 characters
+  // for the surrounding brackets. The level tag in its entirety is [ERROR]
+  size_t error_level_tag_length = LOGGING_LEVEL_FORMAT_ERROR_LENGTH + 2;
+
   size_t level_index = info_log.substr(1).find("[") + 1;
   // Obtains the text used to indicate that a log is at the "info" level
-  std::string info_level_tag = info_log.substr(level_index, 3);
+  std::string info_level_tag = info_log.substr(level_index, info_level_tag_length);
   // Obtains the text used to indicate that a log is at the "error" level
-  std::string error_level_tag = error_log.substr(level_index, 3);
+  std::string error_level_tag = error_log.substr(level_index, error_level_tag_length);
 
   // We expect the "info" and "error" level tags to differ
   ASSERT_NE(info_level_tag, error_level_tag);
-  // However, we expect that the message content (everything after the level tag)
-  // of the "info" log is equivalent to that of the "error" log
-  ASSERT_EQ(info_log.substr(level_index + 3), error_log.substr(level_index + 3));
-}
 
+  size_t info_message_index = level_index + info_log.substr(level_index + 1).find("[") + 1;
+  size_t error_message_index = level_index + error_log.substr(level_index + 1).find("[") + 1;
+
+  // However, we expect that the message content (everything after the level tag and subsequent padding)
+  // of the "info" log is equivalent to that of the "error" log
+  ASSERT_EQ(info_log.substr(info_message_index),
+            error_log.substr(error_message_index));
+}
 
 } // namespace

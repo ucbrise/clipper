@@ -33,7 +33,7 @@ using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
 namespace query_frontend {
 
-const std::string LOGGING_TAG_QUERY_FRONTEND = "QURYFRNTD";
+const std::string LOGGING_TAG_QUERY_FRONTEND = "QUERYFRONTEND";
 const std::string GET_METRICS = "^/metrics$";
 
 enum class OutputType { Double, Int };
