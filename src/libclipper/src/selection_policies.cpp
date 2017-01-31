@@ -25,29 +25,29 @@ namespace clipper {
 // * State *
 // *********
 
-void PolicyState::set_model_map(Map map) {
+void BanditPolicyState::set_model_map(Map map) {
   model_map_ = map;
 }
-void PolicyState::add_model(VersionedModelId id, ModelInfo model) {
+void BanditPolicyState::add_model(VersionedModelId id, ModelInfo model) {
   model_map_.insert({id, model});
 }
-void PolicyState::set_weight_sum(double sum) {
+void BanditPolicyState::set_weight_sum(double sum) {
   weight_sum_ = sum;
 }
 
-std::string PolicyState::serialize() const {
+std::string BanditPolicyState::serialize() const {
   std::stringstream ss;
   boost::archive::binary_oarchive oa(ss);
   oa << weight_sum_ << model_map_.size() << model_map_; // save weight_sum, map size and map
   return ss.str();
 };
 
-PolicyState PolicyState::deserialize(const std::string& bytes) {
+BanditPolicyState BanditPolicyState::deserialize(const std::string& bytes) {
   
   std::stringstream ss;
   ss.str(bytes);
   boost::archive::binary_iarchive ia(ss);
-  PolicyState state;
+  BanditPolicyState state;
   double sum;
   size_t size;
   ia >> sum >> size; // load weight_sum and map size
@@ -59,9 +59,13 @@ PolicyState PolicyState::deserialize(const std::string& bytes) {
   return state;
 };
 
-std::string PolicyState::debug_string() const {
-
-  // State string example: "3.0;model1,1.0,0.4;model2,1.0,0.4;......."
+std::string BanditPolicyState::debug_string() const {
+  /* State string representation:
+      For each model: Model Name, Model ID, Model Property Value 1, Model Property Value 2 
+      Different models are separated by semi-colon
+      e.g. "3.0;classification,00001,1.0,0.4;regression,203422,1.0,0.4;......."
+  */
+  
   std::string string_state = "Exp3State;";
   if (model_map_.empty()) {
     std::cout << "State is empty" << std::endl;
@@ -83,20 +87,20 @@ std::string PolicyState::debug_string() const {
 // * EXP3 *
 // ********
 
-PolicyState Exp3Policy::initialize(const std::vector<VersionedModelId>& candidate_models_) {
+BanditPolicyState Exp3Policy::initialize(const std::vector<VersionedModelId>& candidate_models_) {
   
   Map map(candidate_models_.size(), &versioned_model_hash);
   for (VersionedModelId id : candidate_models_) {
     ModelInfo info = {{"weight", 1.0}, {"max_loss", 0.0}};
     map.insert({id, info});
   }
-  PolicyState state;
+  BanditPolicyState state;
   state.set_model_map(map);
   state.set_weight_sum(map.size() * 1.0);
   return state;
 }
 
-PolicyState Exp3Policy::add_models(PolicyState state,
+BanditPolicyState Exp3Policy::add_models(BanditPolicyState state,
                             const std::vector<VersionedModelId>& new_models) {
   
   double avg;
@@ -114,7 +118,7 @@ PolicyState Exp3Policy::add_models(PolicyState state,
   return state;
 }
 
-VersionedModelId Exp3Policy::select(PolicyState& state) {
+VersionedModelId Exp3Policy::select(BanditPolicyState& state) {
   // Helper function for randomly drawing an arm based on its normalized weight
   VersionedModelId selected_model;
   if (state.model_map_.empty()) {
@@ -131,7 +135,7 @@ VersionedModelId Exp3Policy::select(PolicyState& state) {
   return selected_model;
 }
 
-std::vector<PredictTask> Exp3Policy::select_predict_tasks(PolicyState state,
+std::vector<PredictTask> Exp3Policy::select_predict_tasks(BanditPolicyState state,
                                                 Query query,
                                                 long query_id) {
   auto selected_model = select(state);
@@ -141,7 +145,7 @@ std::vector<PredictTask> Exp3Policy::select_predict_tasks(PolicyState state,
   return tasks;
 }
 
-Output Exp3Policy::combine_predictions(PolicyState /*state*/, Query /*query*/,
+Output Exp3Policy::combine_predictions(BanditPolicyState /*state*/, Query /*query*/,
                                        std::vector<Output> predictions) {
   
   if (predictions.empty()) {
@@ -153,7 +157,7 @@ Output Exp3Policy::combine_predictions(PolicyState /*state*/, Query /*query*/,
 }
 
 std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-Exp3Policy::select_feedback_tasks(PolicyState& state, FeedbackQuery feedback,
+Exp3Policy::select_feedback_tasks(BanditPolicyState& state, FeedbackQuery feedback,
                                   long query_id) {
   // Predict Task
   auto selected_model = select(state);
@@ -166,7 +170,7 @@ Exp3Policy::select_feedback_tasks(PolicyState& state, FeedbackQuery feedback,
   return make_pair(predict_tasks, feedback_tasks);
 }
 
-PolicyState Exp3Policy::process_feedback(PolicyState state, Feedback feedback,
+BanditPolicyState Exp3Policy::process_feedback(BanditPolicyState state, Feedback feedback,
                                        std::vector<Output> predictions) {
   
   if (predictions.empty()) { // Edge case
@@ -189,15 +193,15 @@ PolicyState Exp3Policy::process_feedback(PolicyState state, Feedback feedback,
   return state;
 }
 
-std::string Exp3Policy::serialize_state(PolicyState state) {
+std::string Exp3Policy::serialize_state(BanditPolicyState state) {
   return state.serialize();
 }
 
-PolicyState Exp3Policy::deserialize_state(const std::string& bytes) {
-  return PolicyState::deserialize(bytes);
+BanditPolicyState Exp3Policy::deserialize_state(const std::string& bytes) {
+  return BanditPolicyState::deserialize(bytes);
 }
 
-std::string Exp3Policy::state_debug_string(const PolicyState& state) {
+std::string Exp3Policy::state_debug_string(const BanditPolicyState& state) {
   return state.debug_string();
 };
 
@@ -205,17 +209,17 @@ std::string Exp3Policy::state_debug_string(const PolicyState& state) {
 //// * EXP4 *
 //// ********
 
-PolicyState Exp4Policy::initialize(
+BanditPolicyState Exp4Policy::initialize(
     const std::vector<VersionedModelId>& candidate_models_) {
   return Exp3Policy::initialize(candidate_models_);
 }
 
-PolicyState Exp4Policy::add_models(
-    PolicyState state, const std::vector<VersionedModelId>& new_models) {
+BanditPolicyState Exp4Policy::add_models(
+    BanditPolicyState state, const std::vector<VersionedModelId>& new_models) {
   return Exp3Policy::add_models(state, new_models);
 }
 
-std::vector<PredictTask> Exp4Policy::select_predict_tasks(PolicyState& /*state*/,
+std::vector<PredictTask> Exp4Policy::select_predict_tasks(BanditPolicyState& /*state*/,
                                                 Query query,
                                                 long query_id) {
   // Pass along all models selected
@@ -228,7 +232,7 @@ std::vector<PredictTask> Exp4Policy::select_predict_tasks(PolicyState& /*state*/
   return tasks;
 }
 
-Output Exp4Policy::combine_predictions(PolicyState state, Query /*query*/,
+Output Exp4Policy::combine_predictions(BanditPolicyState state, Query /*query*/,
                                   std::vector<Output> predictions) {
   // Weighted Combination of All predictions
   auto y_hat = 0;
@@ -243,7 +247,7 @@ Output Exp4Policy::combine_predictions(PolicyState state, Query /*query*/,
 }
 
 std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-Exp4Policy::select_feedback_tasks(PolicyState& /*state*/,
+Exp4Policy::select_feedback_tasks(BanditPolicyState& /*state*/,
                               FeedbackQuery feedback,
                               long query_id) {
   std::vector<PredictTask> predict_tasks;
@@ -257,9 +261,14 @@ Exp4Policy::select_feedback_tasks(PolicyState& /*state*/,
   return std::make_pair(predict_tasks, feedback_tasks);
 }
 
-PolicyState Exp4Policy::process_feedback(PolicyState state,
+BanditPolicyState Exp4Policy::process_feedback(BanditPolicyState state,
                                   Feedback feedback,
                                   std::vector<Output> predictions) {
+  
+  if (predictions.empty()) { // Edge case
+    std::cout << "No predictions, so can't update state." << std::endl;
+    return state;
+  }
   // Update every individual model's distribution
   for (auto p : predictions) {
     // Compute loss and find which model to update
@@ -279,15 +288,15 @@ PolicyState Exp4Policy::process_feedback(PolicyState state,
   return state;
 }
 
-std::string Exp4Policy::serialize_state(PolicyState state) {
+std::string Exp4Policy::serialize_state(BanditPolicyState state) {
   return state.serialize();
 }
 
-PolicyState Exp4Policy::deserialize_state(const std::string& bytes) {
-  return PolicyState::deserialize(bytes);
+BanditPolicyState Exp4Policy::deserialize_state(const std::string& bytes) {
+  return BanditPolicyState::deserialize(bytes);
 }
 
-std::string Exp4Policy::state_debug_string(const PolicyState& state) {
+std::string Exp4Policy::state_debug_string(const BanditPolicyState& state) {
   return state.debug_string();
 };
 
@@ -295,11 +304,11 @@ std::string Exp4Policy::state_debug_string(const PolicyState& state) {
 // * Epsilon Greedy *
 // ******************
 
-PolicyState EpsilonGreedyPolicy::initialize(
+BanditPolicyState EpsilonGreedyPolicy::initialize(
     const std::vector<VersionedModelId>& candidate_models_) {
   // Epsilon Greedy State: unordered_map (model_id, Pair (expected loss,
   // Vector(loss)))
-  PolicyState state;
+  BanditPolicyState state;
   Map map(candidate_models_.size(), &versioned_model_hash);
   for (VersionedModelId id : candidate_models_) {
     ModelInfo info = {{"expected_loss", 0.0}, {"times_selected", 0.0}};
@@ -309,8 +318,8 @@ PolicyState EpsilonGreedyPolicy::initialize(
   return state;
 }
 
-PolicyState EpsilonGreedyPolicy::add_models(
-    PolicyState state, const std::vector<VersionedModelId>& new_models) {
+BanditPolicyState EpsilonGreedyPolicy::add_models(
+    BanditPolicyState state, const std::vector<VersionedModelId>& new_models) {
   // Calculate expected loss from old models
   auto sum = 0.0;
   for (auto model : state.model_map_) {
@@ -325,7 +334,7 @@ PolicyState EpsilonGreedyPolicy::add_models(
   return state;
 }
 
-VersionedModelId EpsilonGreedyPolicy::select(PolicyState& state) {
+VersionedModelId EpsilonGreedyPolicy::select(BanditPolicyState& state) {
   
   // Helper function for selecting an arm based on lowest expected loss
   VersionedModelId selected_model;
@@ -358,7 +367,7 @@ VersionedModelId EpsilonGreedyPolicy::select(PolicyState& state) {
 }
 
 std::vector<PredictTask> EpsilonGreedyPolicy::select_predict_tasks(
-    PolicyState& state, Query query, long query_id) {
+    BanditPolicyState& state, Query query, long query_id) {
   
   auto selected_model = select(state);
   auto task = PredictTask(query.input_, selected_model, 1.0, query_id,
@@ -368,20 +377,20 @@ std::vector<PredictTask> EpsilonGreedyPolicy::select_predict_tasks(
 }
 
 Output EpsilonGreedyPolicy::combine_predictions(
-    PolicyState state, Query query,
+    BanditPolicyState state, Query query,
     std::vector<Output> predictions) {
   return Exp3Policy::combine_predictions(state, query, predictions);
 }
 
 std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-EpsilonGreedyPolicy::select_feedback_tasks(PolicyState& state,
+EpsilonGreedyPolicy::select_feedback_tasks(BanditPolicyState& state,
                                            FeedbackQuery feedback,
                                            long query_id) {
   return Exp3Policy::select_feedback_tasks(state, feedback, query_id);
 }
 
-PolicyState EpsilonGreedyPolicy::process_feedback(
-    PolicyState state, Feedback feedback,
+BanditPolicyState EpsilonGreedyPolicy::process_feedback(
+    BanditPolicyState state, Feedback feedback,
     std::vector<Output> predictions) {
   
   // Edge case
@@ -400,15 +409,15 @@ PolicyState EpsilonGreedyPolicy::process_feedback(
   return state;
 }
 
-std::string EpsilonGreedyPolicy::serialize_state(PolicyState state) {
+std::string EpsilonGreedyPolicy::serialize_state(BanditPolicyState state) {
   return state.serialize();
 }
 
-PolicyState EpsilonGreedyPolicy::deserialize_state(const std::string& bytes) {
-  return PolicyState::deserialize(bytes);
+BanditPolicyState EpsilonGreedyPolicy::deserialize_state(const std::string& bytes) {
+  return BanditPolicyState::deserialize(bytes);
 }
 
-std::string EpsilonGreedyPolicy::state_debug_string(const PolicyState& state) {
+std::string EpsilonGreedyPolicy::state_debug_string(const BanditPolicyState& state) {
   return state.debug_string();
 };
 
@@ -416,17 +425,17 @@ std::string EpsilonGreedyPolicy::state_debug_string(const PolicyState& state) {
 // * UCB1 *
 // ********
 
-PolicyState UCBPolicy::initialize(
+BanditPolicyState UCBPolicy::initialize(
     const std::vector<VersionedModelId>& candidate_models_) {
   return EpsilonGreedyPolicy::initialize(candidate_models_);
 }
 
-PolicyState UCBPolicy::add_models(
-    PolicyState state, const std::vector<VersionedModelId>& new_models) {
+BanditPolicyState UCBPolicy::add_models(
+    BanditPolicyState state, const std::vector<VersionedModelId>& new_models) {
   return EpsilonGreedyPolicy::add_models(state, new_models);
 }
 
-VersionedModelId UCBPolicy::select(PolicyState& state) {
+VersionedModelId UCBPolicy::select(BanditPolicyState& state) {
   
   // Helper function for selecting an arm based on lowest upper confidence bound
   VersionedModelId selected_model;
@@ -447,37 +456,41 @@ VersionedModelId UCBPolicy::select(PolicyState& state) {
   return selected_model;
 }
 
-std::vector<PredictTask> UCBPolicy::select_predict_tasks(PolicyState& state,
+std::vector<PredictTask> UCBPolicy::select_predict_tasks(BanditPolicyState& state,
                                                          Query query,
                                                          long query_id) {
-  return Exp3Policy::select_predict_tasks(state, query, query_id);
+  auto selected_model = select(state);
+  auto task = PredictTask(query.input_, selected_model, 1.0, query_id,
+                          query.latency_micros_);
+  std::vector<PredictTask> tasks{task};
+  return tasks;
 }
 
-Output UCBPolicy::combine_predictions(PolicyState state, Query query,
+Output UCBPolicy::combine_predictions(BanditPolicyState state, Query query,
                                       std::vector<Output> predictions) {
   return Exp3Policy::combine_predictions(state, query, predictions);
 }
 
 std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-UCBPolicy::select_feedback_tasks(PolicyState& state, FeedbackQuery feedback,
+UCBPolicy::select_feedback_tasks(BanditPolicyState& state, FeedbackQuery feedback,
                                  long query_id) {
   return Exp3Policy::select_feedback_tasks(state, feedback, query_id);
 }
 
-PolicyState UCBPolicy::process_feedback(PolicyState state, Feedback feedback,
+BanditPolicyState UCBPolicy::process_feedback(BanditPolicyState state, Feedback feedback,
                                      std::vector<Output> predictions) {
   return EpsilonGreedyPolicy::process_feedback(state, feedback, predictions);
 }
 
-std::string UCBPolicy::serialize_state(PolicyState state) {
+std::string UCBPolicy::serialize_state(BanditPolicyState state) {
   return state.serialize();
 }
 
-PolicyState UCBPolicy::deserialize_state(const std::string& bytes) {
-  return PolicyState::deserialize(bytes);
+BanditPolicyState UCBPolicy::deserialize_state(const std::string& bytes) {
+  return BanditPolicyState::deserialize(bytes);
 }
 
-std::string UCBPolicy::state_debug_string(const PolicyState& state) {
+std::string UCBPolicy::state_debug_string(const BanditPolicyState& state) {
   return state.debug_string();
 };
 

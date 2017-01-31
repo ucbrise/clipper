@@ -2,6 +2,7 @@
 #include <chrono>
 #include <ctime>
 #include <thread>
+#include <time.h>
 
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_real_distribution.hpp>
@@ -67,15 +68,18 @@ class Exp3Test : public ::testing::Test {
   VersionedModelId model_2 = std::make_pair("regression", 1);
   VersionedModelId model_3 = std::make_pair("random_forest", 2);
   int times = 1000;
-  PolicyState state;
+  BanditPolicyState state;
 };
 
 TEST_F(Exp3Test, UpdateTest) {
 
   auto feedback = Utility::create_feedback(20);
   std::vector<Output> predictions;
+  int y_hat;
+  srand (time(NULL));
+  
   while (times > 0) {
-    auto y_hat = rand() % 100;
+    y_hat = rand() % 100;
     if (y_hat < 33) {
       predictions = Utility::create_predictions(model_1, y_hat);
     } else if (y_hat > 66) {
@@ -120,15 +124,18 @@ class Exp4Test : public ::testing::Test {
   VersionedModelId model_2 = std::make_pair("regression", 1);
   VersionedModelId model_3 = std::make_pair("random_forest", 2);
   int times = 1000;
-  PolicyState state;
+  BanditPolicyState state;
 };
 
 TEST_F(Exp4Test, UpdateTest) {
 
   auto feedback = Utility::create_feedback(20);
   std::vector<Output> predictions;
+  int y_hat;
+  srand (time(NULL));
+  
   while (times > 0) {
-    auto y_hat = rand() % 100;
+    y_hat = rand() % 101;
     if (y_hat < 33) {
       predictions = Utility::create_predictions(model_1, y_hat);
     } else if (y_hat > 66) {
@@ -173,15 +180,18 @@ class EpsilonGreedyTest : public ::testing::Test {
   VersionedModelId model_2 = std::make_pair("regression", 1);
   VersionedModelId model_3 = std::make_pair("random_forest", 2);
   int times = 1000;
-  PolicyState state;
+  BanditPolicyState state;
 };
 
 TEST_F(EpsilonGreedyTest, UpdateTest) {
 
   auto feedback = Utility::create_feedback(20);
   std::vector<Output> predictions;
+  int y_hat;
+  srand (time(NULL));
+  
   while (times > 0) {
-    auto y_hat = rand() % 100;
+    y_hat = rand() % 100;
     if (y_hat < 33) {
       predictions = Utility::create_predictions(model_1, y_hat);
     } else if (y_hat > 66) {
@@ -220,15 +230,18 @@ class UCBTest : public ::testing::Test {
   VersionedModelId model_2 = std::make_pair("regression", 1);
   VersionedModelId model_3 = std::make_pair("random_forest", 2);
   int times = 1000;
-  PolicyState state;
+  BanditPolicyState state;
 };
 
 TEST_F(UCBTest, UpdateTest) {
 
   auto feedback = Utility::create_feedback(20);
   std::vector<Output> predictions;
+  int y_hat;
+  srand (time(NULL));
+  
   while (times > 0) {
-    auto y_hat = rand() % 100;
+    y_hat = rand() % 101;
     if (y_hat < 33) {
       predictions = Utility::create_predictions(model_1, y_hat);
     } else if (y_hat > 66) {
