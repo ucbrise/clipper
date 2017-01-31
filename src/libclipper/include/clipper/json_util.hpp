@@ -89,7 +89,7 @@ long get_long(rapidjson::Value& d, const char* key_name) {
     throw json_semantic_error("Input of type " + kTypeNames[v.GetType()] +
                               " is not of type long");
   }
-  return (long)v.GetInt64();
+  return static_cast<long>(v.GetInt64());
 }
 
 int get_int(rapidjson::Value& d, const char* key_name) {

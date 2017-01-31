@@ -60,6 +60,8 @@ void respond_http(std::string content, std::string message,
             << content << "\n";
 }
 
+/* Generate a user-facing error message containing the exception
+ * content and the expected JSON schema. */
 std::string json_error_msg(const std::string& exception_msg,
                            const std::string& expected_schema) {
   std::stringstream ss;

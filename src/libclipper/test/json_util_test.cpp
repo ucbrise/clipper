@@ -5,10 +5,14 @@
 
 using namespace clipper::json;
 
-/* Test JSON serialization utilities */
+/* Test JSON serialization utilities
+ * Note:
+ *   RapidJSON output strings do not contain any whitespace or newlines
+ *   Expected JSON strings spanning multiple lines are formatted using
+ *    multiple string literals to avoid introducing newlines */
 TEST(JsonUtilTests, TestCorrectJsonValues) {
   std::string expected_json =
-      "{\"string_val\":\"test_string\",\"double_val\":0.3,\"int_val\":-100}";
+      R"({"string_val":"test_string","double_val":0.3,"int_val":-100})";
   std::string string_val = "test_string";
   double double_val = 0.3;
   int int_val = -100;
@@ -24,9 +28,9 @@ TEST(JsonUtilTests, TestCorrectJsonValues) {
 
 TEST(JsonUtilTests, TestCorrectJsonArrays) {
   std::string expected_json =
-      "{\"string_array\":[\"test1\",\"word2\",\"phrase3\"],"
-       "\"double_array\":[1.4,2.23,3.243242,0.3223424],"
-       "\"int_array\":[1,2,3,4]}";
+      R"({"string_array":["test1","word2","phrase3"],)"
+       R"("double_array":[1.4,2.23,3.243242,0.3223424],)"
+       R"("int_array":[1,2,3,4]})";
   std::vector<std::string> string_array = {"test1", "word2", "phrase3"};
   std::vector<double> double_array = {1.4,2.23,3.243242,0.3223424};
   std::vector<int> int_array = {1, 2, 3, 4};
@@ -42,8 +46,8 @@ TEST(JsonUtilTests, TestCorrectJsonArrays) {
 
 TEST(JsonUtilTests, TestCorrectJsonNestedObjects) {
   std::string expected_json =
-      "{\"nested_object\":{\"double_array\":[1.4,2.23,3.243242,0.3223424],"
-                          "\"twice_nested_object\":{\"double_val\":0.3}}}";
+      R"({"nested_object":{"double_array":[1.4,2.23,3.243242,0.3223424],)"
+                        R"("twice_nested_object":{"double_val":0.3}}})";
   double double_val = 0.3;
   std::vector<double> double_array = {1.4,2.23,3.243242,0.3223424};
 
@@ -64,7 +68,7 @@ TEST(JsonUtilTests, TestCorrectJsonNestedObjects) {
 
 TEST(JsonUtilTests, TestOverwritePastValues) {
   std::string expected_json =
-      "{\"double_val\":0.3,\"double_array\":[1.4,2.23,3.243242,0.3223424]}";
+      R"({"double_val":0.3,"double_array":[1.4,2.23,3.243242,0.3223424]})";
 
   rapidjson::Document d;
   d.SetObject();
@@ -83,7 +87,7 @@ TEST(JsonUtilTests, TestOverwritePastValues) {
 
 TEST(JsonUtilTests, TestAddEmptyValues) {
   std::string expected_json =
-      "{\"empty_string\":\"\",\"empty_int_array\":[]}";
+      R"({"empty_string":"","empty_int_array":[]})";
 
   rapidjson::Document d;
   d.SetObject();
@@ -97,8 +101,9 @@ TEST(JsonUtilTests, TestAddEmptyValues) {
 TEST(JsonUtilTests, TestDoubleIntFormatting) {
   // Numbers require a decimal point to be a float, and cannot have a
   //  decimal point as an integer.
-  std::string source_json =
-      "{\"number_with_decimal\": 0.3, \"number_without_decimal\": 5}";
+  std::string source_json = R"(
+      {"number_with_decimal": 0.3, "number_without_decimal": 5}
+  )";
   rapidjson::Document d;
   parse_json(source_json, d);
   EXPECT_EQ(get_double(d, "number_with_decimal"), 0.3);
@@ -110,10 +115,13 @@ TEST(JsonUtilTests, TestDoubleIntFormatting) {
 TEST(JsonUtilTests, TestArrayTypeMismatch) {
   // JSON arrays may contain items of different types so the array
   //  parsing methods should throw an exception if this is the case.
-  std::string source_json =
-      "{\"double_array_with_int\": [1.2, 3.4, 5, 6.7],"
-       "\"int_array_with_string\": [1, 2, 3, \"4\"],"
-       "\"string_array_with_bool\": [\"test1\", \"phrase2\", true]}";
+  std::string source_json = R"(
+  {
+    "double_array_with_int": [1.2, 3.4, 5, 6.7],
+    "int_array_with_string": [1, 2, 3, "4"],
+    "string_array_with_bool": ["test1", "phrase2", true]
+  }
+  )";
 
   rapidjson::Document d;
   parse_json(source_json, d);
@@ -148,23 +156,31 @@ TEST(JsonUtilTests, TestAddToNonObject) {
 }
 
 TEST(JsonUtilTests, TestParseCandidateModels) {
-  // Semantic checking to assert that model_version > 0?
-  std::string correct_json =
-      "{\"correct_candidate_models\": ["
-          "{\"model_name\": \"sklearn_svm\", \"model_version\": 1},"
-          "{\"model_name\": \"sklearn_svm\", \"model_version\": 2},"
-          "{\"model_name\": \"network\", \"model_version\": 3}"
-       "]}";
-  std::string missing_name_json =
-      "{\"missing_name\": [{\"model_version\": 3}]}";
-  std::string missing_version_json =
-      "{\"missing_version\": [{\"model_name\": \"m\"}]}";
-  std::string wrong_name_type_json =
-      "{\"wrong_name_type\": [{\"model_name\": 123, \"model_version\": 1}]}";
-  std::string wrong_version_type_json =
-      "{\"wrong_version_type\": ["
-          "{\"model_name\": \"g\", \"model_version\": \"123\"}"
-       "]}";
+  std::string correct_json = R"(
+  {
+    "correct_candidate_models": [
+      {"model_name": "sklearn_svm", "model_version": 1},
+      {"model_name": "sklearn_svm", "model_version": 2},
+      {"model_name": "network", "model_version": 3}
+    ]
+  }
+  )";
+  std::string missing_name_json = R"(
+      {"missing_name": [{"model_version": 3}]}
+  )";
+  std::string missing_version_json = R"(
+      {"missing_version": [{"model_name": "m"}]}
+  )";
+  std::string wrong_name_type_json = R"(
+      {"wrong_name_type": [{"model_name": 123, "model_version": 1}]}
+  )";
+  std::string wrong_version_type_json = R"(
+  {
+    "wrong_version_type": [
+      {"model_name": "g", "model_version": "123"}
+    ]
+  }
+  )";
   std::vector<clipper::VersionedModelId> expected_models =
       {{"sklearn_svm", 1}, {"sklearn_svm", 2}, {"network", 3}};
 
@@ -190,9 +206,14 @@ TEST(JsonUtilTests, TestParseCandidateModels) {
 }
 
 TEST(JsonUtilTests, TestParseNestedObject) {
-  std::string source_json =
-      "{\"nested_object\":{\"double_array\":[1.4,2.23,3.243242,0.3223424],"
-                          "\"twice_nested_object\":{\"double_val\":0.3}}}";
+  std::string source_json = R"(
+  {
+    "nested_object": {
+        "double_array": [1.4,2.23,3.243242,0.3223424],
+        "twice_nested_object": {"double_val":0.3}
+    }
+  }
+  )";
   std::vector<double> double_array = {1.4,2.23,3.243242,0.3223424};
   double double_val = 0.3;
 
