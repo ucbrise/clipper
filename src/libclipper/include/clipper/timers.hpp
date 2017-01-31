@@ -103,9 +103,9 @@ template <typename Clock>
 class TimerSystem {
  public:
   explicit TimerSystem(Clock c) : clock_(c), queue_(TimerPQueue{}) {
-    Logger::get().log_info(LOGGING_TAG_TIMERS, "Starting timer thread");
+    log_info(LOGGING_TAG_TIMERS, "Starting timer thread");
     start();
-    Logger::get().log_info(LOGGING_TAG_TIMERS, "Timer thread started");
+    log_info(LOGGING_TAG_TIMERS, "Timer thread started");
   }
 
   ~TimerSystem() { shutdown(); }
@@ -122,7 +122,7 @@ class TimerSystem {
   }
 
   void manage_timers() {
-    Logger::get().log_info(LOGGING_TAG_TIMERS, "In timer event loop");
+    log_info(LOGGING_TAG_TIMERS, "In timer event loop");
     while (!shutdown_) {
       // wait for next timer to expire
       //    auto cur_time = high_resolution_clock::now();

@@ -31,11 +31,11 @@ bool send_cmd_no_reply(redox::Redox& redis,
   bool ok = true;
   redox::Command<ReplyT>& cmd = redis.commandSync<ReplyT>(cmd_vec);
   if (!cmd.ok()) {
-    Logger::get().log_error_formatted(
+    log_error_formatted(
         LOGGING_TAG_REDIS, "Error with command \"{}\": {}", redis.vecToStr(cmd_vec), cmd.lastError());
     ok = false;
   } else {
-    Logger::get().log_info_formatted(
+    log_info_formatted(
         LOGGING_TAG_REDIS, "Successfully issued command \"{}\"", redis.vecToStr(cmd_vec));
   }
   cmd.free();
@@ -47,10 +47,10 @@ boost::optional<ReplyT> send_cmd_with_reply(
     redox::Redox& redis, const std::vector<std::string>& cmd_vec) {
   redox::Command<ReplyT>& cmd = redis.commandSync<ReplyT>(cmd_vec);
   if (!cmd.ok()) {
-    Logger::get().log_error_formatted(
+    log_error_formatted(
         LOGGING_TAG_REDIS, "Error with command \"{}\": {}", redis.vecToStr(cmd_vec), cmd.lastError());
   } else {
-    Logger::get().log_info_formatted(
+    log_info_formatted(
         LOGGING_TAG_REDIS, "Successfully issued command \"{}\"", redis.vecToStr(cmd_vec));
     return cmd.reply();
   }

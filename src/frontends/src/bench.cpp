@@ -19,5 +19,5 @@ int main() {
       std::make_shared<DoubleVector>(std::vector<double>{1.1, 2.2, 3.3, 4.4});
   boost::future<Response> prediction = qp.predict(
       {"test", 3, input, 20000, "newest_model", {std::make_pair("m", 1)}});
-  Logger::get().log_info(LOGGING_TAG_CLIPPER, prediction.get().debug_string());
+  log_info(LOGGING_TAG_CLIPPER, prediction.get().debug_string());
 }

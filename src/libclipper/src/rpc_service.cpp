@@ -66,7 +66,7 @@ void RPCService::stop() {
 int RPCService::send_message(const vector<vector<uint8_t>> msg,
                              const int zmq_connection_id) {
   if (!active_) {
-    Logger::get().log_error(LOGGING_TAG_RPC, "Cannot send message to inactive RPCService instance", "Dropping Message");
+    log_error(LOGGING_TAG_RPC, "Cannot send message to inactive RPCService instance", "Dropping Message");
     return -1;
   }
   int id = message_id_;
@@ -96,7 +96,7 @@ vector<RPCResponse> RPCService::try_get_responses(const int max_num_responses) {
 void RPCService::manage_service(const string address) {
   // Map from container id to unique routing id for zeromq
   // Note that zeromq socket id is a byte vector
-  Logger::get().log_info_formatted(LOGGING_TAG_RPC, "RPC thread started at address: ", address);
+  log_info_formatted(LOGGING_TAG_RPC, "RPC thread started at address: ", address);
   boost::bimap<int, vector<uint8_t>> connections;
   context_t context = context_t(1);
   socket_t socket = socket_t(context, ZMQ_ROUTER);
@@ -108,7 +108,7 @@ void RPCService::manage_service(const string address) {
   Config &conf = get_config();
   while (!redis_connection->connect(conf.get_redis_address(),
                                     conf.get_redis_port())) {
-    Logger::get().log_error(LOGGING_TAG_RPC, "RPCService failed to connect to Redis", "Retrying in 1 second...");
+    log_error(LOGGING_TAG_RPC, "RPCService failed to connect to Redis", "Retrying in 1 second...");
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
 
@@ -117,7 +117,7 @@ void RPCService::manage_service(const string address) {
     if (items[0].revents & ZMQ_POLLIN) {
       // TODO: Balance message sending and receiving fairly
       // Note: We only receive one message per event loop iteration
-      Logger::get().log_info(LOGGING_TAG_RPC, "Found message to receive");
+      log_info(LOGGING_TAG_RPC, "Found message to receive");
 
       receive_message(socket, connections, zmq_connection_id, redis_connection);
     }
@@ -145,7 +145,7 @@ void RPCService::send_messages(
         connections.left.find(std::get<0>(request));
     if (connection == connections.left.end()) {
       // Error handling
-      Logger::get().log_error_formatted(
+      log_error_formatted(
           LOGGING_TAG_CLIPPER, "Attempted to send message to unknown container: ", std::get<0>(request));
       continue;
     }
@@ -187,7 +187,7 @@ void RPCService::receive_message(
     // We have a new connection, process it accordingly
     connections.insert(boost::bimap<int, vector<uint8_t>>::value_type(
         zmq_connection_id, connection_id));
-    Logger::get().log_info(LOGGING_TAG_RPC, "New container connected");
+    log_info(LOGGING_TAG_RPC, "New container connected");
     message_t model_name;
     message_t model_version;
     message_t model_input_type;
@@ -203,7 +203,7 @@ void RPCService::receive_message(
     InputType input_type = static_cast<InputType>(std::stoi(input_type_str));
     int version = std::stoi(version_str);
     VersionedModelId model = std::make_pair(name, version);
-    Logger::get().log_info(LOGGING_TAG_RPC, "Container added");
+    log_info(LOGGING_TAG_RPC, "Container added");
 
     // Note that if the map does not have an entry for this model,
     // a new entry will be created with the default value (0).

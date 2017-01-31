@@ -97,13 +97,13 @@ class RequestHandler {
     clipper::Config& conf = clipper::get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
-      clipper::Logger::get().log_error(
+      clipper::log_error(
           LOGGING_TAG_MANAGEMENT_FRONTEND, "Management frontend failed to connect to Redis", "Retrying in 1 second...");
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
     while (!redis_subscriber_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
-      clipper::Logger::get().log_error(
+      clipper::log_error(
           LOGGING_TAG_MANAGEMENT_FRONTEND,
           "Management frontend subscriber failed to connect to Redis",
           "Retrying in 1 second...");

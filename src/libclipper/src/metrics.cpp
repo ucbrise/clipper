@@ -196,7 +196,7 @@ double RatioCounter::get_ratio() {
   uint32_t denom_value = denominator_.load(std::memory_order_seq_cst);
   ratio_lock_.unlock();
   if (denom_value == 0) {
-    Logger::get().log_error_formatted(LOGGING_TAG_METRICS, "Ratio {} has denominator zero!", name_);
+    log_error_formatted(LOGGING_TAG_METRICS, "Ratio {} has denominator zero!", name_);
     return std::nan("");
   }
   double ratio = static_cast<double>(num_value) / static_cast<double>(denom_value);

@@ -29,14 +29,14 @@ StateDB::StateDB() {
   Config& conf = get_config();
   while (!redis_connection_.connect(conf.get_redis_address(),
                                     conf.get_redis_port())) {
-    Logger::get().log_error(LOGGING_TAG_STATE_DB, "StateDB failed to connect to redis", "Retrying in 1 second...");
+    log_error(LOGGING_TAG_STATE_DB, "StateDB failed to connect to redis", "Retrying in 1 second...");
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
   if (!redis::send_cmd_no_reply<std::string>(
           redis_connection_, {"SELECT", std::to_string(REDIS_STATE_DB_NUM)})) {
     throw std::runtime_error("Could not select StateDB table from Redis");
   }
-  Logger::get().log_info(LOGGING_TAG_STATE_DB, "Persistent state DB created");
+  log_info(LOGGING_TAG_STATE_DB, "Persistent state DB created");
 }
 
 StateDB::~StateDB() { redis_connection_.disconnect(); }

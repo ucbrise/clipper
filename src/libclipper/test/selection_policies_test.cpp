@@ -46,7 +46,7 @@ TEST(BanditPolicy, TestBanditPolicyProcessFeedback) {
   state = BanditPolicy::process_feedback(
       state, f3neg, {Output(0.0, good_model), Output(1.0, bad_model)});
 
-  Logger::get().log_info(LOGGING_TAG_SELECTION_POLICY, BanditPolicy::serialize_state(state));
+  log_info(LOGGING_TAG_SELECTION_POLICY, BanditPolicy::serialize_state(state));
 
   ASSERT_EQ(state[0].first, good_model);
   ASSERT_EQ(state[1].first, bad_model);

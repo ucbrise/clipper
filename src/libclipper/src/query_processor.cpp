@@ -93,7 +93,7 @@ void process_feedback(FeedbackQuery feedback, std::vector<Output> predictions,
 }
 
 QueryProcessor::QueryProcessor() : state_db_(std::make_shared<StateDB>()) {
-  Logger::get().log_info(LOGGING_TAG_QUERY_PROCESSOR, "Query Processor started");
+  log_info(LOGGING_TAG_QUERY_PROCESSOR, "Query Processor started");
 }
 
 std::shared_ptr<StateDB> QueryProcessor::get_state_table() const {
@@ -111,33 +111,33 @@ future<Response> QueryProcessor::predict(Query query) {
         query, query_id, get_state_table());
     tasks = tasks_and_state.first;
     serialized_state = tasks_and_state.second;
-    Logger::get().log_info(LOGGING_TAG_QUERY_PROCESSOR, "Used NewestModelSelectionPolicy to select tasks");
+    log_info(LOGGING_TAG_QUERY_PROCESSOR, "Used NewestModelSelectionPolicy to select tasks");
   } else if (query.selection_policy_ == "simple_policy") {
     auto tasks_and_state =
         select_predict_tasks<SimplePolicy>(query, query_id, get_state_table());
     tasks = tasks_and_state.first;
     serialized_state = tasks_and_state.second;
-    Logger::get().log_info(LOGGING_TAG_QUERY_PROCESSOR, "Used SimplePolicy to select tasks");
+    log_info(LOGGING_TAG_QUERY_PROCESSOR, "Used SimplePolicy to select tasks");
   } else if (query.selection_policy_ == "bandit_policy") {
     auto tasks_and_state =
         select_predict_tasks<BanditPolicy>(query, query_id, get_state_table());
     tasks = tasks_and_state.first;
     serialized_state = tasks_and_state.second;
-    Logger::get().log_info(LOGGING_TAG_QUERY_PROCESSOR, "Used BanditPolicy to select tasks");
+    log_info(LOGGING_TAG_QUERY_PROCESSOR, "Used BanditPolicy to select tasks");
   } else {
-    Logger::get().log_error_formatted(
+    log_error_formatted(
         LOGGING_TAG_QUERY_PROCESSOR, "{} is an invalid selection policy", query.selection_policy_);
     // TODO better error handling
     return boost::make_ready_future(
         Response{query, query_id, 20000, Output{1.0, std::make_pair("m1", 1)},
                  std::vector<VersionedModelId>()});
   }
-  Logger::get().log_info_formatted(LOGGING_TAG_QUERY_PROCESSOR, "Found {} tasks", tasks.size());
+  log_info_formatted(LOGGING_TAG_QUERY_PROCESSOR, "Found {} tasks", tasks.size());
 
   vector<shared_future<Output>> task_completion_futures =
       task_executor_.schedule_predictions(tasks);
   auto task_completion_copies = task_completion_futures;
-  Logger::get().log_info_formatted(
+  log_info_formatted(
       LOGGING_TAG_QUERY_PROCESSOR, "Found {} task completion futures", task_completion_futures.size());
   future<void> timer_future = timer_system_.set_timer(query.latency_micros_);
 
@@ -154,13 +154,13 @@ future<Response> QueryProcessor::predict(Query query) {
     moved_serialized_state = std::move(serialized_state),
     task_futures = std::move(task_completion_futures)
   ](auto result_future) mutable {
-    Logger::get().log_info(LOGGING_TAG_QUERY_PROCESSOR, "ENTERED CONTINUATION LAMBDA");
+    log_info(LOGGING_TAG_QUERY_PROCESSOR, "ENTERED CONTINUATION LAMBDA");
 
     auto result = result_future.get();
-    Logger::get().log_info(LOGGING_TAG_QUERY_PROCESSOR, std::boolalpha);
-    Logger::get().log_info_formatted(
+    log_info(LOGGING_TAG_QUERY_PROCESSOR, std::boolalpha);
+    log_info_formatted(
         LOGGING_TAG_QUERY_PROCESSOR, "All tasks finished: ", std::get<0>(result).is_ready());
-    Logger::get().log_info_formatted(LOGGING_TAG_QUERY_PROCESSOR, "Timer Fired: ", std::get<1>(result).is_ready());
+    log_info_formatted(LOGGING_TAG_QUERY_PROCESSOR, "Timer Fired: ", std::get<1>(result).is_ready());
     vector<Output> outputs;
     vector<VersionedModelId> used_models;
     //    vector<shared_future<Output>> completed_tasks =
@@ -173,7 +173,7 @@ future<Response> QueryProcessor::predict(Query query) {
         outputs.push_back((*r).get());
       }
     }
-    Logger::get().log_info_formatted(LOGGING_TAG_QUERY_PROCESSOR, "Found {} completed tasks", outputs.size());
+    log_info_formatted(LOGGING_TAG_QUERY_PROCESSOR, "Found {} completed tasks", outputs.size());
 
     Output final_output;
     if (query.selection_policy_ == "newest_model") {
@@ -197,7 +197,7 @@ future<Response> QueryProcessor::predict(Query query) {
 }
 
 boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
-  Logger::get().log_info(LOGGING_TAG_QUERY_PROCESSOR, "Received feedback for user {}", feedback.user_id_);
+  log_info(LOGGING_TAG_QUERY_PROCESSOR, "Received feedback for user {}", feedback.user_id_);
 
   long query_id = query_counter_.fetch_add(1);
   std::vector<PredictTask> predict_tasks;
@@ -212,7 +212,7 @@ boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
     predict_tasks = tasks_and_state.first.first;
     feedback_tasks = tasks_and_state.first.second;
     serialized_state = tasks_and_state.second;
-    Logger::get().log_info(
+    log_info(
         LOGGING_TAG_QUERY_PROCESSOR, "Used NewestModelSelectionPolicy to select tasks during feedback");
   } else if (feedback.selection_policy_ == "simple_policy") {
     auto tasks_and_state = select_feedback_tasks<SimplePolicy>(
@@ -221,7 +221,7 @@ boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
     predict_tasks = tasks_and_state.first.first;
     feedback_tasks = tasks_and_state.first.second;
     serialized_state = tasks_and_state.second;
-    Logger::get().log_info(LOGGING_TAG_QUERY_PROCESSOR, "Used SimplePolicy to select tasks during feedback");
+    log_info(LOGGING_TAG_QUERY_PROCESSOR, "Used SimplePolicy to select tasks during feedback");
   } else if (feedback.selection_policy_ == "bandit_policy") {
     auto tasks_and_state = select_feedback_tasks<BanditPolicy>(
         feedback, query_id, get_state_table());
@@ -229,14 +229,14 @@ boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
     predict_tasks = tasks_and_state.first.first;
     feedback_tasks = tasks_and_state.first.second;
     serialized_state = tasks_and_state.second;
-    Logger::get().log_info(LOGGING_TAG_QUERY_PROCESSOR, "Used BanditPolicy to select tasks during feedback");
+    log_info(LOGGING_TAG_QUERY_PROCESSOR, "Used BanditPolicy to select tasks during feedback");
   } else {
-    Logger::get().log_error_formatted(
+    log_error_formatted(
         LOGGING_TAG_QUERY_PROCESSOR, "{} is an invalid feedback selection policy", feedback.selection_policy_);
     // TODO better error handling
     return boost::make_ready_future(false);
   }
-  Logger::get().log_info_formatted(LOGGING_TAG_QUERY_PROCESSOR,
+  log_info_formatted(LOGGING_TAG_QUERY_PROCESSOR,
       "Scheduling {} prediction tasks and {} feedback tasks",
       predict_tasks.size(), feedback_tasks.size());
 

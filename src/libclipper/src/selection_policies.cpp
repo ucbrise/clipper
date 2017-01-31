@@ -282,7 +282,7 @@ std::string BanditPolicy::serialize_state(BanditState state) {
   ss << (state.end() - 1)->first.first << ITEM_PART_CONCATENATOR
      << (state.end() - 1)->first.second << ITEM_PART_CONCATENATOR
      << std::to_string((state.end() - 1)->second);
-  Logger::get().log_debug_formatted(LOGGING_TAG_SELECTION_POLICY, "BanditPolicy::serialize_state result: ", ss.str());
+  log_debug_formatted(LOGGING_TAG_SELECTION_POLICY, "BanditPolicy::serialize_state result: ", ss.str());
   return ss.str();
 }
 
@@ -301,14 +301,14 @@ BanditState BanditPolicy::deserialize_state(const std::string& state_str) {
         state_str.substr(weight_search_start, end - weight_search_start)
             .find(ITEM_PART_CONCATENATOR);
     std::string model_name = state_str.substr(start, vm_split - start);
-    Logger::get().log_debug_formatted(LOGGING_TAG_SELECTION_POLICY, "Model name: ", model_name);
+    log_debug_formatted(LOGGING_TAG_SELECTION_POLICY, "Model name: ", model_name);
     std::string model_version_str = state_str.substr(
         weight_search_start, weight_split - weight_search_start);
-    Logger::get().log_debug_formatted(LOGGING_TAG_SELECTION_POLICY, "Model version: ", model_version_str);
+    log_debug_formatted(LOGGING_TAG_SELECTION_POLICY, "Model version: ", model_version_str);
     int version = std::stoi(model_version_str);
     std::string weight_str = state_str.substr(
         weight_split + ITEM_PART_CONCATENATOR.size(), end - weight_split - 1);
-    Logger::get().log_debug_formatted(LOGGING_TAG_SELECTION_POLICY, "Model weight: ", weight_str);
+    log_debug_formatted(LOGGING_TAG_SELECTION_POLICY, "Model weight: ", weight_str);
     float weight = std::stof(weight_str);
     state.emplace_back(std::make_pair(model_name, version), weight);
     start = end + ITEM_DELIMITER.size();
@@ -324,14 +324,14 @@ BanditState BanditPolicy::deserialize_state(const std::string& state_str) {
       state_str.substr(weight_search_start, end - weight_search_start)
           .find(ITEM_PART_CONCATENATOR);
   std::string model_name = state_str.substr(start, vm_split - start);
-  Logger::get().log_debug_formatted(LOGGING_TAG_SELECTION_POLICY, "Model name: ", model_name);
+  log_debug_formatted(LOGGING_TAG_SELECTION_POLICY, "Model name: ", model_name);
   std::string model_version_str =
       state_str.substr(weight_search_start, weight_split - weight_search_start);
-  Logger::get().log_debug_formatted(LOGGING_TAG_SELECTION_POLICY, "Model version: ", model_version_str);
+  log_debug_formatted(LOGGING_TAG_SELECTION_POLICY, "Model version: ", model_version_str);
   int version = std::stoi(model_version_str);
   std::string weight_str = state_str.substr(
       weight_split + ITEM_PART_CONCATENATOR.size(), end - weight_split - 1);
-  Logger::get().log_debug_formatted(LOGGING_TAG_SELECTION_POLICY, "Model weight: ", weight_str);
+  log_debug_formatted(LOGGING_TAG_SELECTION_POLICY, "Model weight: ", weight_str);
   float weight = std::stof(weight_str);
   state.emplace_back(std::make_pair(model_name, version), weight);
   return state;
