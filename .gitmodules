@@ -4,3 +4,6 @@
 [submodule "src/libs/rapidjson"]
 	path = src/libs/rapidjson
 	url = https://github.com/dcrankshaw/rapidjson.git
+[submodule "src/libs/spdlog"]
+	path = src/libs/spdlog
+	url = https://github.com/gabime/spdlog.git

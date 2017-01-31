@@ -9,6 +9,7 @@
 
 #include <boost/optional.hpp>
 #include <redox.hpp>
+#include <clipper/logging.hpp>
 
 #include "constants.hpp"
 #include "datatypes.hpp"
@@ -17,6 +18,8 @@
 
 namespace clipper {
 namespace redis {
+
+const std::string LOGGING_TAG_REDIS = "Redis";
 
 /**
  * Issues a command to Redis and checks return code.
@@ -28,12 +31,12 @@ bool send_cmd_no_reply(redox::Redox& redis,
   bool ok = true;
   redox::Command<ReplyT>& cmd = redis.commandSync<ReplyT>(cmd_vec);
   if (!cmd.ok()) {
-    std::cout << "Error with command \"" << redis.vecToStr(cmd_vec)
-              << "\": " << cmd.lastError() << std::endl;
+    log_error_formatted(
+        LOGGING_TAG_REDIS, "Error with command \"{}\": {}", redis.vecToStr(cmd_vec), cmd.lastError());
     ok = false;
   } else {
-    std::cout << "Successfully issued command \"" << redis.vecToStr(cmd_vec)
-              << "\": " << std::endl;
+    log_info_formatted(
+        LOGGING_TAG_REDIS, "Successfully issued command \"{}\"", redis.vecToStr(cmd_vec));
   }
   cmd.free();
   return ok;
@@ -44,11 +47,11 @@ boost::optional<ReplyT> send_cmd_with_reply(
     redox::Redox& redis, const std::vector<std::string>& cmd_vec) {
   redox::Command<ReplyT>& cmd = redis.commandSync<ReplyT>(cmd_vec);
   if (!cmd.ok()) {
-    std::cout << "Error with command \"" << redis.vecToStr(cmd_vec)
-              << "\": " << cmd.lastError() << std::endl;
+    log_error_formatted(
+        LOGGING_TAG_REDIS, "Error with command \"{}\": {}", redis.vecToStr(cmd_vec), cmd.lastError());
   } else {
-    std::cout << "Successfully issued command \"" << redis.vecToStr(cmd_vec)
-              << "\": " << std::endl;
+    log_info_formatted(
+        LOGGING_TAG_REDIS, "Successfully issued command \"{}\"", redis.vecToStr(cmd_vec));
     return cmd.reply();
   }
   cmd.free();

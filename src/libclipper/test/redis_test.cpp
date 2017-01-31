@@ -8,6 +8,7 @@
 #include <clipper/config.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/redis.hpp>
+#include <clipper/logging.hpp>
 #include <redox.hpp>
 
 using namespace clipper;
@@ -24,6 +25,8 @@ namespace {
 // requesting the subscription and testing its behavior. If this
 // is not enough time for the subscription to be registered, the
 // tests will fail.
+
+const std::string LOGGING_TAG_REDIS_TEST = "REDISTEST";
 
 class RedisTest : public ::testing::Test {
  public:
@@ -54,7 +57,7 @@ TEST_F(RedisTest, RedisConnectionRetryLoop) {
   int attempts = 0;
   int max_attempts = 20;
   while (attempts < max_attempts) {
-    std::cout << "Attempt " << attempts << " to connect" << std::endl;
+    log_info_formatted(LOGGING_TAG_REDIS_TEST, "Attempt {} to connect to Redis", attempts);
     // there's no Redis instance running on port 9999
     if (no_connect_redis.connect("localhost", 9999)) {
       break;
@@ -188,7 +191,7 @@ TEST_F(RedisTest, SubscriptionDetectModelAdd) {
   subscribe_to_model_changes(
       *subscriber_, [&notification_recv, &notification_mutex, &recv, model](
                         const std::string& key, const std::string& event_type) {
-        std::cout << "NEW MODEL CALLBACK FIRED" << std::endl;
+        log_info(LOGGING_TAG_REDIS_TEST, "NEW MODEL CALLBACK FIRED");
         ASSERT_EQ(event_type, "hset");
         std::unique_lock<std::mutex> l(notification_mutex);
         recv = true;
@@ -219,7 +222,7 @@ TEST_F(RedisTest, SubscriptionDetectModelDelete) {
   subscribe_to_model_changes(
       *subscriber_, [&notification_recv, &notification_mutex, &recv, model](
                         const std::string& key, const std::string& event_type) {
-        std::cout << "MODEL CHANGE DETECTED: " << event_type << std::endl;
+        log_info_formatted(LOGGING_TAG_REDIS_TEST, "MODEL CHANGE DETECTED: ", event_type);
         ASSERT_TRUE(event_type == "hdel" || event_type == "del");
         std::unique_lock<std::mutex> l(notification_mutex);
         recv = true;
@@ -251,7 +254,7 @@ TEST_F(RedisTest, SubscriptionDetectContainerAdd) {
       *subscriber_,
       [&notification_recv, &notification_mutex, &recv, replica_key](
           const std::string& key, const std::string& event_type) {
-        std::cout << "NEW CONTAINER CALLBACK FIRED" << std::endl;
+        log_info(LOGGING_TAG_REDIS_TEST, "NEW CONTAINER CALLBACK FIRED");
         ASSERT_EQ(event_type, "hset");
         std::unique_lock<std::mutex> l(notification_mutex);
         recv = true;
@@ -286,8 +289,8 @@ TEST_F(RedisTest, SubscriptionDetectContainerDelete) {
       *subscriber_,
       [&notification_recv, &notification_mutex, &recv, replica_key](
           const std::string& key, const std::string& event_type) {
-        std::cout << "CONTAINER DELETED CALLBACK. EVENT TYPE: " << event_type
-                  << std::endl;
+        log_info_formatted(
+            LOGGING_TAG_REDIS_TEST, "CONTAINER DELETED CALLBACK. EVENT TYPE: ", event_type);
         ASSERT_TRUE(event_type == "hdel" || event_type == "del");
         std::unique_lock<std::mutex> l(notification_mutex);
         recv = true;
