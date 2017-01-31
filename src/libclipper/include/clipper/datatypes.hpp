@@ -20,6 +20,11 @@ enum class InputType {
   Strings = 4,
 };
 
+enum class OutputType {
+  Double = 0,
+  Int = 1,
+};
+
 enum class RequestType {
   PredictRequest = 0,
   FeedbackRequest = 1,
@@ -28,6 +33,8 @@ enum class RequestType {
 size_t versioned_model_hash(const VersionedModelId &key);
 std::string get_readable_input_type(InputType type);
 InputType parse_input_type(std::string type_string);
+std::string get_readable_output_type(OutputType type);
+OutputType parse_output_type(std::string type_string);
 
 class Output {
  public:

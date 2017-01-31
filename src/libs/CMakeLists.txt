@@ -49,3 +49,5 @@ target_include_directories(spdlog INTERFACE
 export(TARGETS spdlog FILE SpdlogConfig.cmake)
 
 add_subdirectory(redox)
+
+add_subdirectory(rapidjson)

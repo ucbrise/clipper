@@ -8,25 +8,29 @@
 #include <vector>
 
 #include <boost/thread.hpp>
-#define BOOST_SPIRIT_THREADSAFE
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/property_tree/ptree.hpp>
 
 #include <redox.hpp>
 #include <server_http.hpp>
 
 #include <clipper/config.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/json_util.hpp>
 #include <clipper/persistent_state.hpp>
 #include <clipper/redis.hpp>
 #include <clipper/selection_policy.hpp>
 #include <clipper/util.hpp>
 #include <clipper/logging.hpp>
 
-using namespace boost::property_tree;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 using clipper::VersionedModelId;
 using clipper::InputType;
+using clipper::json::get_candidate_models;
+using clipper::json::get_int;
+using clipper::json::get_string;
+using clipper::json::get_string_array;
+using clipper::json::json_parse_error;
+using clipper::json::json_semantic_error;
+using clipper::json::parse_json;
 
 namespace management {
 
@@ -41,14 +45,37 @@ const std::string GET_METRICS = ADMIN_PATH + "/metrics$";
 const std::string GET_SELECTION_STATE = ADMIN_PATH + "/get_state$";
 const std::string GET_APPLICATIONS = ADMIN_PATH + "/get_applications$";
 
-template <typename T>
-std::vector<T> as_vector(ptree const& pt, ptree::key_type const& key) {
-  std::vector<T> r;
-  for (auto& item : pt.get_child(key)) {
-    r.push_back(item.second.get_value<T>());
+const std::string APPLICATION_JSON_SCHEMA = R"(
+  {
+   "name" := string,
+   "candidate_models" := [
+     {"model_name" := string, "model_version" := int}
+   ],
+   "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
+   "output_type" := "double" | "int",
+   "selection_policy" := string,
+   "latency_slo_micros" := int
   }
-  return r;
-}
+)";
+
+const std::string MODEL_JSON_SCHEMA = R"(
+  {
+   "model_name" := string,
+   "model_version" := int,
+   "labels" := [string],
+   "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
+   "output_type" := "double" | "int",
+   "container_name" := string,
+   "model_data_path" := string
+  }
+)";
+
+const std::string SELECTION_JSON_SCHEMA = R"(
+  {
+   "app_name" := string,
+   "uid" := int,
+  }
+)";
 
 template <typename Policy>
 std::string lookup_selection_state(
@@ -66,28 +93,21 @@ std::string lookup_selection_state(
   return Policy::state_debug_string(state);
 }
 
-/**
- * @param models_node A ptree with a child object named `key` that
- * contains an array of VersionedModelId objects
- * objects.
- */
-std::vector<VersionedModelId> parse_candidate_models(
-    const ptree& models_node, ptree::key_type const& key) {
-  std::vector<VersionedModelId> models;
-  for (auto vm_json : models_node.get_child(key)) {
-    VersionedModelId cur_vm =
-        std::make_pair(vm_json.second.get<std::string>("model_name"),
-                       vm_json.second.get<int>("model_version"));
-    models.push_back(cur_vm);
-  }
-  return models;
-}
-
 void respond_http(std::string content, std::string message,
                   std::shared_ptr<HttpServer::Response> response) {
   *response << "HTTP/1.1 " << message
             << "\r\nContent-Length: " << content.length() << "\r\n\r\n"
             << content << "\n";
+}
+
+/* Generate a user-facing error message containing the exception
+ * content and the expected JSON schema. */
+std::string json_error_msg(const std::string& exception_msg,
+                           const std::string& expected_schema) {
+  std::stringstream ss;
+  ss << "Error parsing JSON: " << exception_msg << ". "
+     << "Expected JSON schema: " << expected_schema;
+  return ss.str();
 }
 
 class RequestHandler {
@@ -116,8 +136,14 @@ class RequestHandler {
           try {
             std::string result = add_application(request->content.string());
             respond_http(result, "200 OK", response);
-          } catch (const ptree_error& e) {
-            respond_http(e.what(), "400 Bad Request", response);
+          } catch (const json_parse_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), APPLICATION_JSON_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const json_semantic_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), APPLICATION_JSON_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
           } catch (const std::invalid_argument& e) {
             respond_http(e.what(), "400 Bad Request", response);
           }
@@ -129,8 +155,12 @@ class RequestHandler {
           try {
             std::string result = add_model(request->content.string());
             respond_http(result, "200 OK", response);
-          } catch (const ptree_error& e) {
-            respond_http(e.what(), "400 Bad Request", response);
+          } catch (const json_parse_error& e) {
+            std::string err_msg = json_error_msg(e.what(), MODEL_JSON_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const json_semantic_error& e) {
+            std::string err_msg = json_error_msg(e.what(), MODEL_JSON_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
           } catch (const std::invalid_argument& e) {
             respond_http(e.what(), "400 Bad Request", response);
           }
@@ -142,8 +172,14 @@ class RequestHandler {
           try {
             std::string result = get_selection_state(request->content.string());
             respond_http(result, "200 OK", response);
-          } catch (const ptree_error& e) {
-            respond_http(e.what(), "400 Bad Request", response);
+          } catch (const json_parse_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), SELECTION_JSON_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const json_semantic_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), SELECTION_JSON_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
           } catch (const std::invalid_argument& e) {
             respond_http(e.what(), "400 Bad Request", response);
           }
@@ -165,28 +201,27 @@ class RequestHandler {
    *  "candidate_models" := [
    *    {"model_name" := string, "model_version" := int}
    *  ],
-   *  "input_type" := "integers" | "bytes" | "floats" |
-   *                  "doubles" | "strings",
+   *  "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
    *  "output_type" := "double" | "int",
    *  "selection_policy" := string,
    *  "latency_slo_micros" := int
    * }
    */
   std::string add_application(const std::string& json) {
-    std::istringstream is(json);
-    ptree pt;
-    read_json(is, pt);
-    std::string app_name = pt.get<std::string>("name");
+    rapidjson::Document d;
+    parse_json(json, d);
+
+    std::string app_name = get_string(d, "name");
     std::vector<VersionedModelId> candidate_models =
-        parse_candidate_models(pt, "candidate_models");
+        get_candidate_models(d, "candidate_models");
     InputType input_type =
-        clipper::parse_input_type(pt.get<std::string>("input_type"));
-    std::string output_type = pt.get<std::string>("output_type");
+        clipper::parse_input_type(get_string(d, "input_type"));
+    std::string output_type = get_string(d, "output_type");
     if (!(output_type == "int" || output_type == "double")) {
       throw std::invalid_argument(output_type + " is invalid output type");
     }
-    std::string selection_policy = pt.get<std::string>("selection_policy");
-    int latency_slo_micros = pt.get<int>("latency_slo_micros");
+    std::string selection_policy = get_string(d, "selection_policy");
+    int latency_slo_micros = get_int(d, "latency_slo_micros");
     if (clipper::redis::add_application(
             redis_connection_, app_name, candidate_models, input_type,
             output_type, selection_policy, latency_slo_micros)) {
@@ -212,21 +247,20 @@ class RequestHandler {
    * }
    */
   std::string add_model(const std::string& json) {
-    std::istringstream is(json);
-    ptree pt;
-    read_json(is, pt);
+    rapidjson::Document d;
+    parse_json(json, d);
 
     VersionedModelId model_id = std::make_pair(
-        pt.get<std::string>("model_name"), pt.get<int>("model_version"));
-    std::vector<std::string> labels = as_vector<std::string>(pt, "labels");
+        get_string(d, "model_name"), get_int(d, "model_version"));
+    std::vector<std::string> labels = get_string_array(d, "labels");
     InputType input_type =
-        clipper::parse_input_type(pt.get<std::string>("input_type"));
-    std::string output_type = pt.get<std::string>("output_type");
+        clipper::parse_input_type(get_string(d, "input_type"));
+    std::string output_type = get_string(d, "output_type");
     if (!(output_type == "int" || output_type == "double")) {
       throw std::invalid_argument(output_type + " is invalid output type");
     }
-    std::string container_name = pt.get<std::string>("container_name");
-    std::string model_data_path = pt.get<std::string>("model_data_path");
+    std::string container_name = get_string(d, "container_name");
+    std::string model_data_path = get_string(d, "model_data_path");
     if (clipper::redis::add_model(redis_connection_, model_id, input_type,
                                   output_type, labels, container_name,
                                   model_data_path)) {
@@ -247,12 +281,11 @@ class RequestHandler {
    * }
    */
   std::string get_selection_state(const std::string& json) {
-    std::istringstream is(json);
-    ptree pt;
-    read_json(is, pt);
+    rapidjson::Document d;
+    parse_json(json, d);
 
-    std::string app_name = pt.get<std::string>("app_name");
-    int uid = std::stoi(pt.get<std::string>("uid"));
+    std::string app_name = get_string(d, "app_name");
+    int uid = std::stoi(get_string(d, "uid"));
     auto app_metadata =
         clipper::redis::get_application(redis_connection_, app_name);
     std::vector<VersionedModelId> candidate_models =

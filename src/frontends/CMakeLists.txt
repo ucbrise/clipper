@@ -12,7 +12,7 @@ target_link_libraries(bench clipper boost)
 
 add_executable(query_frontend src/query_frontend_main.cpp)
 
-target_link_libraries(query_frontend clipper boost httpserver cxxopts)
+target_link_libraries(query_frontend clipper boost httpserver cxxopts rapidjson)
 
 ##################################
 # RPC Layer Testing executable
@@ -28,5 +28,5 @@ add_executable(frontendtests EXCLUDE_FROM_ALL
     src/frontend_tests.cpp
     src/query_frontend_tests.cpp
     )
-target_link_libraries(frontendtests clipper httpserver gtest gmock_main)
+target_link_libraries(frontendtests clipper httpserver gtest gmock_main rapidjson)
 add_dependencies(unittests frontendtests)
