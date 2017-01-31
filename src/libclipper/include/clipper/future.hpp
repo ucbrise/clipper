@@ -13,12 +13,18 @@ namespace clipper {
 
 namespace future {
 
-/// The first element in the pair is a future that will complete when
-/// all the futures provided have completed. The value of the future
-/// will always be true (there were some issues with a future<void>).
-/// The second element is a vector
-/// of futures that have the same values and will complete at the same time
-/// as the futures passed in as argument.
+/*
+ * The first element in the pair is a future that will complete when
+ * all the futures provided have completed. The second element is a vector
+ * of futures that have the same values and will complete at the same time
+ * as the futures passed in as argument.
+ *
+ * \param futures A list of futures to compose
+ * \param num_completed A counter indicating the number of futures that
+ * have completed so far. The reason this is an argument to the function
+ * instead of internal state is that the caller of `when_all` must make sure
+ * that the counter stays in scope for the lifetime of all the futures.
+*/
 template <class T>
 std::pair<boost::future<void>, std::vector<boost::future<T>>> when_all(
     std::vector<boost::shared_future<T>> futures,
@@ -31,8 +37,6 @@ std::pair<boost::future<void>, std::vector<boost::future<T>>> when_all(
   auto completion_promise = std::make_shared<boost::promise<void>>();
   std::vector<boost::future<T>> wrapped_futures;
   for (auto f = futures.begin(); f != futures.end(); ++f) {
-    // PROBLEM: Passing a reference to an atomic (num_completed) but the atomic
-    // can go out of scope and be destructed
     wrapped_futures.push_back(f->then(
         [num_futures, completion_promise, num_completed](auto result) mutable {
           if (*num_completed + 1 == num_futures) {
@@ -67,7 +71,19 @@ boost::future<R> wrap_when_any(
 }
 
 /**
+ * A function for waiting until either of a pair of futures has completed.
  *
+ *
+ *
+ * \param num_completed A counter indicating the number of futures that
+ * have completed so far. The reason this is an argument to the function
+ * instead of internal state is that the caller of `when_all` must make sure
+ * that the counter stays in scope for the lifetime of all the futures.
+ *
+ * \return A tuple of three futures. The first is the composed future that will
+ * complete when either of the two futures provided as argument completes. The
+ * second two elements in the tuple are futures that will complete at the same
+ * time and with the same value as the futures passed in as arguments.
  */
 template <typename R0, typename R1>
 std::tuple<boost::future<void>, boost::future<R0>, boost::future<R1>> when_any(
