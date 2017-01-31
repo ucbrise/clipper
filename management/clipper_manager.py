@@ -240,7 +240,7 @@ class Clipper:
         r = requests.post(url, headers=headers, data=req_json)
         return r.text
 
-    def deploy_model(self, name, version, model, container_name, labels, num_containers=1):
+    def deploy_model(self, name, version, model_data, container_name, labels, input_type, num_containers=1):
         """Add a model to Clipper.
 
         Parameters
@@ -249,12 +249,12 @@ class Clipper:
             The name to assign this model.
         version : int
             The version to assign this model.
-        model : str or BaseEstimator
+        model_data : str or BaseEstimator
             The trained model to add to Clipper. This can either be a
             Scikit-Learn trained model object (an instance of BaseEstimator),
             or a path to a serialized model. Note that many model serialization
             formats split the model across multiple files (e.g. definition file
-            and weights file or files). If this is the case, model must be a path
+            and weights file or files). If this is the case, `model_data` must be a path
             to the root of a directory tree containing ALL the needed files.
             Depending on the model serialization library you use, this may or may not
             be the path you provided to the serialize method call.
@@ -262,6 +262,8 @@ class Clipper:
             The Docker container image to use to run this model container.
         labels : list of str
             A set of strings annotating the model
+        input_type : str
+            One of "integers", "floats", "doubles", "bytes", or "strings".
         num_containers : int, optional
             The number of replicas of the model to create. More replicas can be
             created later as well. Defaults to 1.
