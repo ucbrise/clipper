@@ -248,22 +248,29 @@ class RequestHandler {
     read_json(is, pt);
 
     std::string app_name = pt.get<std::string>("app_name");
-    // int uid = std::stoi(pt.get<std::string>("uid"));
+    int uid = std::stoi(pt.get<std::string>("uid"));
     auto app_metadata =
         clipper::redis::get_application(redis_connection_, app_name);
     std::vector<VersionedModelId> candidate_models =
         clipper::redis::str_to_models(app_metadata["candidate_models"]);
     std::string policy = app_metadata["policy"];
-    return "ERROR: " + app_name +
-           " does not support looking up selection policy state";
-    // TODO: change this
-    // if (policy == "bandit_policy") {
-    //   return lookup_selection_state<clipper::BanditPolicy>(
-    //       state_db_, app_name, uid, candidate_models);
-    // } else {
-    //   return "ERROR: " + app_name +
-    //          " does not support looking up selection policy state";
-    // }
+
+    if (policy == "EXP3") {
+       return lookup_selection_state<clipper::Exp3Policy>(
+           state_db_, app_name, uid, candidate_models);
+     } else if (policy == "EXP4") {
+      return lookup_selection_state<clipper::Exp4Policy>(
+           state_db_, app_name, uid, candidate_models);
+     } else if (policy == "EpsilonGreedy") {
+      return lookup_selection_state<clipper::EpsilonGreedyPolicy>(
+           state_db_, app_name, uid, candidate_models);
+     } else if (policy == "UCB") {
+      return lookup_selection_state<clipper::UCBPolicy>(
+           state_db_, app_name, uid, candidate_models);
+     } else {
+       return "ERROR: " + app_name +
+              " does not support looking up selection policy state";
+     }
   }
 
   void start_listening() { server_.start(); }

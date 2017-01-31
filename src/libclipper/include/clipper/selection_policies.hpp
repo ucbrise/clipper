@@ -44,7 +44,7 @@ class BanditPolicyState {
     std::string debug_string() const;
   
     Map model_map_;
-    double weight_sum_ = 0.0;
+    double weight_sum_ = 0.0; // Only for Exp3, Exp4
 };
 
   

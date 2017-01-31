@@ -98,8 +98,21 @@ TEST_F(Exp3Test, UpdateTest) {
 
 TEST_F(Exp3Test, SelectionTest) {
   auto query = Utility::create_query(models);
-  auto tasks = Exp3Policy::select_predict_tasks(state, query, 1000);
-  ASSERT_NE(model_3.second, tasks.front().model_.second);
+  int select_1 = 0;
+  int select_2 = 0;
+  int select_3 = 0;
+  for (int i=0; i<100; ++i) {
+    auto tasks = Exp3Policy::select_predict_tasks(state, query, 1000);
+    if (model_1.second == tasks.front().model_.second) {
+      select_1 ++;
+    } else if (model_2.second == tasks.front().model_.second) {
+      select_2 ++;
+    } else {
+      select_3 ++;
+    };
+    ASSERT_GE(select_1, select_2);
+    ASSERT_GE(select_2, select_3);
+  }
 }
 
 TEST_F(Exp3Test, SerializationTest) {
@@ -152,12 +165,6 @@ TEST_F(Exp4Test, UpdateTest) {
             state.model_map_[model_3]["weight"]);
 }
 
-TEST_F(Exp4Test, SelectionTest) {
-  auto query = Utility::create_query(models);
-  auto tasks = Exp4Policy::select_predict_tasks(state, query, 1000);
-  ASSERT_NE(model_3.second, tasks.front().model_.second);
-}
-
 TEST_F(Exp4Test, SerializationTest) {
   auto bytes = Exp4Policy::serialize_state(state);
   auto new_state = Exp4Policy::deserialize_state(bytes);
@@ -206,6 +213,24 @@ TEST_F(EpsilonGreedyTest, UpdateTest) {
             state.model_map_[model_2]["expected_loss"]);
   ASSERT_GT(state.model_map_[model_2]["expected_loss"],
             state.model_map_[model_1]["expected_loss"]);
+}
+
+TEST_F(EpsilonGreedyTest, SelectionTest) {
+  auto query = Utility::create_query(models);
+  int select_1 = 0;
+  int select_2 = 0;
+  int select_3 = 0;
+  for (int i=0; i<500; ++i) {
+    auto tasks = EpsilonGreedyPolicy::select_predict_tasks(state, query, 1000);
+    if (model_1.second == tasks.front().model_.second) {
+      select_1 ++;
+    } else if (model_2.second == tasks.front().model_.second) {
+      select_2 ++;
+    } else {
+      select_3 ++;
+    };
+    ASSERT_GE(select_1, select_2);
+  }
 }
 
 TEST_F(EpsilonGreedyTest, SerializationTest) {
@@ -261,7 +286,9 @@ TEST_F(UCBTest, UpdateTest) {
 TEST_F(UCBTest, SelectionTest) {
   auto query = Utility::create_query(models);
   auto tasks = UCBPolicy::select_predict_tasks(state, query, 1000);
-  ASSERT_EQ(model_1.second, tasks.front().model_.second);
+  for (int i=0; i<10; ++i) {
+    ASSERT_EQ(model_1.second, tasks.front().model_.second);
+  }
 }
 
 TEST_F(UCBTest, SerializationTest) {
