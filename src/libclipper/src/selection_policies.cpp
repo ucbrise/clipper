@@ -127,7 +127,7 @@ VersionedModelId Exp3Policy::select(BanditPolicyState& state) {
   }
   double rand_num = (double) rand() / (RAND_MAX); // Pick random number between [0, 1]
   for (auto it = state.model_map_.begin(); it != state.model_map_.end() && rand_num >= 0; ++it) {
-    rand_num -= (1 - eta) * (it->second["weight"] / state.weight_sum_) + eta / state.model_map_.size();
+    rand_num -= it->second["weight"] / state.weight_sum_;
     selected_model = it->first;
   }
   return selected_model;
@@ -179,12 +179,13 @@ BanditPolicyState Exp3Policy::process_feedback(BanditPolicyState state, Feedback
   // Compute loss and find which model to update
   auto loss = std::abs(predictions.front().y_hat_ - feedback.y_);
   auto model_id = predictions.front().models_used_.front();
-
   // Update arm weight and weight_sum
   auto s_i = state.model_map_[model_id]["weight"];
-  double update = exp(-eta * loss / (s_i / state.weight_sum_));
-  state.model_map_[model_id]["weight"] += update;
-  state.set_weight_sum(state.weight_sum_ + update);
+  if (s_i != 0) {
+    auto update = exp(-eta * loss / (s_i / state.weight_sum_));
+    state.model_map_[model_id]["weight"] = s_i * update;
+    state.set_weight_sum(state.weight_sum_ - s_i + state.model_map_[model_id]["weight"]);
+  }
   return state;
 }
 
@@ -279,9 +280,11 @@ BanditPolicyState Exp4Policy::process_feedback(BanditPolicyState state,
 
     // Update arm weight and weight_sum
     auto s_i = state.model_map_[model_id]["weight"];
-    double update = exp(-eta * loss / (s_i / state.weight_sum_));
-    state.model_map_[model_id]["weight"] += update;
-    state.set_weight_sum(state.weight_sum_ + update);
+    if (s_i != 0) {
+      double update = exp(-eta * loss / (s_i / state.weight_sum_));
+      state.model_map_[model_id]["weight"] *= update;
+      state.set_weight_sum(state.weight_sum_ - s_i + state.model_map_[model_id]["weight"]);
+    }
   }
   return state;
 }

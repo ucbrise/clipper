@@ -84,7 +84,7 @@ TEST_F(Exp3Test, UpdateTest) {
   int rand_draw;
   srand (time(NULL));
   
-  for (int i=0; i<10000; ++i) {
+  for (int i=0; i<1000; ++i) {
     y_hat = 0;
     rand_index = rand() % models.size(); // Randomly pick model
     rand_draw = rand() % 100; // Randomly pick number to determine whether this model return 0 or 1
@@ -106,6 +106,8 @@ TEST_F(Exp3Test, UpdateTest) {
   }
   
   // Test if model_0 weight > model_1 weight > model_2 weight
+  ASSERT_EQ(state.weight_sum_,
+    state.model_map_[model_0]["weight"] + state.model_map_[model_1]["weight"] + state.model_map_[model_2]["weight"]);
   ASSERT_GT(state.model_map_[model_0]["weight"],
             state.model_map_[model_1]["weight"]);
   ASSERT_GT(state.model_map_[model_1]["weight"],
@@ -117,7 +119,7 @@ TEST_F(Exp3Test, SelectionTest) {
   int select_0 = 0;
   int select_1 = 0;
   int select_2 = 0;
-  for (int i=0; i<100; ++i) {
+  for (int i=0; i<1000; ++i) {
     auto tasks = Exp3Policy::select_predict_tasks(state, query, 1000);
     if (model_0.second == tasks.front().model_.second) {
       select_0 ++;
@@ -127,7 +129,7 @@ TEST_F(Exp3Test, SelectionTest) {
       select_2 ++;
     };
   }
-  
+
   // Test if times selected model_0 > model_1 > model_2
   ASSERT_GE(select_0, select_1);
   ASSERT_GE(select_1, select_2);
@@ -167,7 +169,7 @@ TEST_F(Exp4Test, UpdateTest) {
   int rand_draw;
   srand (time(NULL));
   
-  for (int i=0; i<10000; ++i) {
+  for (int i=0; i<1000; ++i) {
     y_hat = 0;
     rand_index = rand() % models.size(); // Randomly pick model
     rand_draw = rand() % 100; // Randomly pick number to determine whether this model return 0 or 1
@@ -194,6 +196,7 @@ TEST_F(Exp4Test, UpdateTest) {
             state.model_map_[model_1]["weight"]);
   ASSERT_GT(state.model_map_[model_1]["weight"],
             state.model_map_[model_2]["weight"]);
+
 }
 
 TEST_F(Exp4Test, SerializationTest) {
