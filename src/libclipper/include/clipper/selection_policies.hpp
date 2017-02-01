@@ -8,6 +8,11 @@
 #include "datatypes.hpp"
 #include "task_executor.hpp"
 
+/* IMPORTANT NOTES FOR USING SELECTION POLICIES
+    1. The selection policy only supports binary classfication models
+    2. The binary classes must use 0 as negative class indicator and 1 as positive class indicator
+*/
+
 namespace clipper {
 
 // *********
@@ -18,7 +23,6 @@ namespace clipper {
     Each model has properties and we use an unordered_map to contain these properties
     - EXP3/EXP4 Model Properties:
       "weight": weight of this model
-      "max_loss": the maximum loss this model has received so far
     - EpsilonGreedy/UCB Properties:
       "expected_loss": the mean of the loss distribution of this model
       "times_selected": how many times we have used this model
@@ -42,7 +46,6 @@ class BanditPolicyState {
     std::string serialize() const;
     static BanditPolicyState deserialize(const std::string& bytes);
     std::string debug_string() const;
-  
     Map model_map_;
     double weight_sum_ = 0.0; // Only for Exp3, Exp4
 };
@@ -51,6 +54,7 @@ class BanditPolicyState {
 // **********
 // * Policy *
 // **********
+
 template <typename Derived>
 class SelectionPolicy {
  public:

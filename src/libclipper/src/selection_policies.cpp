@@ -91,7 +91,7 @@ BanditPolicyState Exp3Policy::initialize(const std::vector<VersionedModelId>& ca
   
   Map map(candidate_models_.size(), &versioned_model_hash);
   for (VersionedModelId id : candidate_models_) {
-    ModelInfo info = {{"weight", 1.0}, {"max_loss", 0.0}};
+    ModelInfo info = {{"weight", 1.0}};
     map.insert({id, info});
   }
   BanditPolicyState state;
@@ -111,7 +111,7 @@ BanditPolicyState Exp3Policy::add_models(BanditPolicyState state,
   }
   
   for (VersionedModelId id : new_models) {
-    ModelInfo info = {{"weight", avg}, {"max_loss", 0.0}};
+    ModelInfo info = {{"weight", avg}};
     state.add_model(id, info);
     state.set_weight_sum(state.weight_sum_ + avg);
   }
@@ -179,10 +179,7 @@ BanditPolicyState Exp3Policy::process_feedback(BanditPolicyState state, Feedback
   // Compute loss and find which model to update
   auto loss = std::abs(predictions.front().y_hat_ - feedback.y_);
   auto model_id = predictions.front().models_used_.front();
-  // Update max loss and Normalize loss
-  if (state.model_map_[model_id]["max_loss"] < loss)
-    state.model_map_[model_id]["max_loss"] = loss;
-  loss /= state.model_map_[model_id]["max_loss"];
+
   // Update arm weight and weight_sum
   auto s_i = state.model_map_[model_id]["weight"];
   double update = exp(-eta * loss / (s_i / state.weight_sum_));
@@ -240,6 +237,13 @@ Output Exp4Policy::combine_predictions(BanditPolicyState state, Query /*query*/,
     y_hat += (state.model_map_[model_id]["weight"] / state.weight_sum_) * p.y_hat_;
     models.push_back(model_id);
   }
+  // Turn y_hat into either 0 or 1
+  if (y_hat < 0.5) {
+    y_hat = 0;
+  } else {
+    y_hat = 1;
+  }
+  
   auto output = Output(y_hat, models);
   return output;
 }
@@ -272,11 +276,7 @@ BanditPolicyState Exp4Policy::process_feedback(BanditPolicyState state,
     // Compute loss and find which model to update
     auto loss = std::abs(feedback.y_ - p.y_hat_);
     auto model_id = p.models_used_.front();
-    // Update max loss and Normalize loss
-    if (state.model_map_[model_id]["max_loss"] < loss) {
-      state.model_map_[model_id]["max_loss"] = loss;
-    }
-    loss /= state.model_map_[model_id]["max_loss"];
+
     // Update arm weight and weight_sum
     auto s_i = state.model_map_[model_id]["weight"];
     double update = exp(-eta * loss / (s_i / state.weight_sum_));
@@ -304,8 +304,7 @@ std::string Exp4Policy::state_debug_string(const BanditPolicyState& state) {
 
 BanditPolicyState EpsilonGreedyPolicy::initialize(
     const std::vector<VersionedModelId>& candidate_models_) {
-  // Epsilon Greedy State: unordered_map (model_id, Pair (expected loss,
-  // Vector(loss)))
+
   BanditPolicyState state;
   Map map(candidate_models_.size(), &versioned_model_hash);
   for (VersionedModelId id : candidate_models_) {
@@ -341,7 +340,6 @@ VersionedModelId EpsilonGreedyPolicy::select(BanditPolicyState& state) {
     return selected_model;
   }
   double rand_num = (double) rand() / RAND_MAX;
-  //std::cout << rand_num << std::endl;
   if (rand_num >= epsilon) { // Select best model
     auto min_loss = DBL_MAX;
     for (auto id = state.model_map_.begin(); id != state.model_map_.end(); ++id) {
@@ -352,7 +350,7 @@ VersionedModelId EpsilonGreedyPolicy::select(BanditPolicyState& state) {
       }
     }
   } else { // Randomly select
-    int rand_draw = rand() * state.model_map_.size() / RAND_MAX;
+    int rand_draw = rand() % state.model_map_.size();
     auto random_it = next(begin(state.model_map_), rand_draw);
     selected_model = random_it->first;
   }
@@ -393,13 +391,13 @@ BanditPolicyState EpsilonGreedyPolicy::process_feedback(
   }
   auto model_id = predictions.front().models_used_.front();
   auto new_loss = std::abs(feedback.y_ - predictions.front().y_hat_);
-  // Update times selected
-  state.model_map_[model_id]["times_selected"] += 1;
   // Update expected loss
-  state.model_map_[model_id]["expected_loss"] +=
-      (new_loss - state.model_map_[model_id]["expected_loss"]) /
-      state.model_map_[model_id]["times_selected"];
-
+  int times = state.model_map_[model_id]["times_selected"];
+  state.model_map_[model_id]["expected_loss"] =
+      (state.model_map_[model_id]["expected_loss"] * times + new_loss) / (times + 1);
+  // Update times selected
+  state.model_map_[model_id]["times_selected"] = times + 1;
+  
   return state;
 }
 

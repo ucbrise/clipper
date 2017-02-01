@@ -11,6 +11,11 @@
 #include <clipper/datatypes.hpp>
 #include <clipper/selection_policies.hpp>
 
+/* UNIT TESTS LOGISTICS
+    1. Used 3 binary classifiers (good=0, so-so=1, bad=2)
+    2. Set feedback as 1
+    3. Good classifier has 75% chance returning 1, so-so has 50%, bad has 25%
+*/
 using namespace clipper;
 
 namespace {
@@ -58,61 +63,74 @@ class Utility {
 class Exp3Test : public ::testing::Test {
  public:
   virtual void SetUp() {
-    models.emplace_back(model_1);  // good
-    models.emplace_back(model_2);  // so-so
-    models.emplace_back(model_3);  // bad
+    models.emplace_back(model_0);  // good
+    models.emplace_back(model_1);  // so-so
+    models.emplace_back(model_2);  // bad
     state = Exp3Policy::initialize(models);
   }
   std::vector<VersionedModelId> models;
-  VersionedModelId model_1 = std::make_pair("classification", 0);
-  VersionedModelId model_2 = std::make_pair("regression", 1);
-  VersionedModelId model_3 = std::make_pair("random_forest", 2);
-  int times = 1000;
+  VersionedModelId model_0 = std::make_pair("classifier0", 0);
+  VersionedModelId model_1 = std::make_pair("classifier1", 1);
+  VersionedModelId model_2 = std::make_pair("classifier2", 2);
   BanditPolicyState state;
 };
 
 TEST_F(Exp3Test, UpdateTest) {
 
-  auto feedback = Utility::create_feedback(20);
+  auto feedback = Utility::create_feedback(1);
   std::vector<Output> predictions;
   int y_hat;
+  int rand_index;
+  int rand_draw;
   srand (time(NULL));
   
-  while (times > 0) {
-    y_hat = rand() % 100;
-    if (y_hat < 33) {
-      predictions = Utility::create_predictions(model_1, y_hat);
-    } else if (y_hat > 66) {
-      predictions = Utility::create_predictions(model_3, y_hat);
+  for (int i=0; i<10000; ++i) {
+    y_hat = 0;
+    rand_index = rand() % models.size(); // Randomly pick model
+    rand_draw = rand() % 100; // Randomly pick number to determine whether this model return 0 or 1
+    if (rand_index == 0) { // good model
+      if (rand_draw < 75) {
+        y_hat = 1;
+      }
+    } else if (rand_index == 1) { // so-so model
+      if (rand_draw < 50) {
+        y_hat = 1;
+      }
     } else {
-      predictions = Utility::create_predictions(model_2, y_hat);
+      if (rand_draw < 25) { // bad model
+        y_hat = 1;
+      }
     }
+    predictions = Utility::create_predictions(models[rand_index], y_hat);
     state = Exp3Policy::process_feedback(state, feedback, predictions);
-    times -= 1;
   }
+  
+  // Test if model_0 weight > model_1 weight > model_2 weight
+  ASSERT_GT(state.model_map_[model_0]["weight"],
+            state.model_map_[model_1]["weight"]);
   ASSERT_GT(state.model_map_[model_1]["weight"],
             state.model_map_[model_2]["weight"]);
-  ASSERT_GT(state.model_map_[model_2]["weight"],
-            state.model_map_[model_3]["weight"]);
 }
 
 TEST_F(Exp3Test, SelectionTest) {
   auto query = Utility::create_query(models);
+  int select_0 = 0;
   int select_1 = 0;
   int select_2 = 0;
-  int select_3 = 0;
   for (int i=0; i<100; ++i) {
     auto tasks = Exp3Policy::select_predict_tasks(state, query, 1000);
-    if (model_1.second == tasks.front().model_.second) {
+    if (model_0.second == tasks.front().model_.second) {
+      select_0 ++;
+    } else if (model_1.second == tasks.front().model_.second) {
       select_1 ++;
-    } else if (model_2.second == tasks.front().model_.second) {
-      select_2 ++;
     } else {
-      select_3 ++;
+      select_2 ++;
     };
   }
+  
+  // Test if times selected model_0 > model_1 > model_2
+  ASSERT_GE(select_0, select_1);
   ASSERT_GE(select_1, select_2);
-  ASSERT_GE(select_2, select_3);
 }
 
 TEST_F(Exp3Test, SerializationTest) {
@@ -127,42 +145,55 @@ TEST_F(Exp3Test, SerializationTest) {
 class Exp4Test : public ::testing::Test {
  public:
   virtual void SetUp() {
-    models.emplace_back(model_1);  // good
-    models.emplace_back(model_2);  // so-so
-    models.emplace_back(model_3);  // bad
+    models.emplace_back(model_0);  // good
+    models.emplace_back(model_1);  // so-so
+    models.emplace_back(model_2);  // bad
     state = Exp4Policy::initialize(models);
   }
   std::vector<VersionedModelId> models;
-  VersionedModelId model_1 = std::make_pair("classification", 0);
-  VersionedModelId model_2 = std::make_pair("regression", 1);
-  VersionedModelId model_3 = std::make_pair("random_forest", 2);
-  int times = 1000;
+  VersionedModelId model_0 = std::make_pair("classifier0", 0);
+  VersionedModelId model_1 = std::make_pair("classifier1", 1);
+  VersionedModelId model_2 = std::make_pair("classifier2", 2);
   BanditPolicyState state;
+
 };
 
 TEST_F(Exp4Test, UpdateTest) {
 
-  auto feedback = Utility::create_feedback(20);
+  auto feedback = Utility::create_feedback(1);
   std::vector<Output> predictions;
   int y_hat;
+  int rand_index;
+  int rand_draw;
   srand (time(NULL));
   
-  while (times > 0) {
-    y_hat = rand() % 101;
-    if (y_hat < 33) {
-      predictions = Utility::create_predictions(model_1, y_hat);
-    } else if (y_hat > 66) {
-      predictions = Utility::create_predictions(model_3, y_hat);
+  for (int i=0; i<10000; ++i) {
+    y_hat = 0;
+    rand_index = rand() % models.size(); // Randomly pick model
+    rand_draw = rand() % 100; // Randomly pick number to determine whether this model return 0 or 1
+    
+    if (rand_index == 0) { // good model
+      if (rand_draw < 75) {
+        y_hat = 1;
+      }
+    } else if (rand_index == 1) { // so-so model
+      if (rand_draw < 50) {
+        y_hat = 1;
+      }
     } else {
-      predictions = Utility::create_predictions(model_2, y_hat);
+      if (rand_draw < 25) { // bad model
+        y_hat = 1;
+      }
     }
+    predictions = Utility::create_predictions(models[rand_index], y_hat);
     state = Exp4Policy::process_feedback(state, feedback, predictions);
-    times -= 1;
   }
+  
+  // Test if model_0 weight > model_1 weight > model_2 weight
+  ASSERT_GT(state.model_map_[model_0]["weight"],
+            state.model_map_[model_1]["weight"]);
   ASSERT_GT(state.model_map_[model_1]["weight"],
             state.model_map_[model_2]["weight"]);
-  ASSERT_GT(state.model_map_[model_2]["weight"],
-            state.model_map_[model_3]["weight"]);
 }
 
 TEST_F(Exp4Test, SerializationTest) {
@@ -177,60 +208,75 @@ TEST_F(Exp4Test, SerializationTest) {
 class EpsilonGreedyTest : public ::testing::Test {
  public:
   virtual void SetUp() {
-    models.emplace_back(model_1);  // good
-    models.emplace_back(model_2);  // so-so
-    models.emplace_back(model_3);  // bad
+    models.emplace_back(model_0);  // good
+    models.emplace_back(model_1);  // so-so
+    models.emplace_back(model_2);  // bad
     state = EpsilonGreedyPolicy::initialize(models);
   }
   std::vector<VersionedModelId> models;
-  VersionedModelId model_1 = std::make_pair("classification", 0);
-  VersionedModelId model_2 = std::make_pair("regression", 1);
-  VersionedModelId model_3 = std::make_pair("random_forest", 2);
-  int times = 1000;
+  VersionedModelId model_0 = std::make_pair("classifier0", 0);
+  VersionedModelId model_1 = std::make_pair("classifier1", 1);
+  VersionedModelId model_2 = std::make_pair("classifier2", 2);
   BanditPolicyState state;
 };
 
 TEST_F(EpsilonGreedyTest, UpdateTest) {
 
-  auto feedback = Utility::create_feedback(20);
+  auto feedback = Utility::create_feedback(1);
   std::vector<Output> predictions;
   int y_hat;
+  int rand_index;
+  int rand_draw;
   srand (time(NULL));
   
-  while (times > 0) {
-    y_hat = rand() % 100;
-    if (y_hat < 33) {
-      predictions = Utility::create_predictions(model_1, y_hat);
-    } else if (y_hat > 66) {
-      predictions = Utility::create_predictions(model_3, y_hat);
+  for (int i=0; i<1000; ++i) {
+    y_hat = 0;
+    rand_index = rand() % models.size(); // Randomly pick model
+    rand_draw = rand() % 100; // Randomly pick number to determine whether this model return 0 or 1
+    
+    if (rand_index == 0) { // good model
+      if (rand_draw < 75) {
+        y_hat = 1;
+      }
+    } else if (rand_index == 1) { // so-so model
+      if (rand_draw < 50) {
+        y_hat = 1;
+      }
     } else {
-      predictions = Utility::create_predictions(model_2, y_hat);
+      if (rand_draw < 25) { // bad model
+        y_hat = 1;
+      }
     }
+    predictions = Utility::create_predictions(models[rand_index], y_hat);
     state = EpsilonGreedyPolicy::process_feedback(state, feedback, predictions);
-    times -= 1;
   }
-  ASSERT_GT(state.model_map_[model_3]["expected_loss"],
-            state.model_map_[model_2]["expected_loss"]);
+  
+  // Test if the expected loss of model_2 > model_1 > model_0
   ASSERT_GT(state.model_map_[model_2]["expected_loss"],
             state.model_map_[model_1]["expected_loss"]);
+  ASSERT_GT(state.model_map_[model_1]["expected_loss"],
+            state.model_map_[model_0]["expected_loss"]);
 }
 
 TEST_F(EpsilonGreedyTest, SelectionTest) {
+
   auto query = Utility::create_query(models);
+  int select_0 = 0;
   int select_1 = 0;
   int select_2 = 0;
-  int select_3 = 0;
-  for (int i=0; i<500; ++i) {
+  for (int i=0; i<100; ++i) {
     auto tasks = EpsilonGreedyPolicy::select_predict_tasks(state, query, 1000);
-    if (model_1.second == tasks.front().model_.second) {
+    if (model_0.second == tasks.front().model_.second) {
+      select_0 ++;
+    } else if (model_1.second == tasks.front().model_.second) {
       select_1 ++;
-    } else if (model_2.second == tasks.front().model_.second) {
-      select_2 ++;
     } else {
-      select_3 ++;
+      select_2 ++;
     };
   }
-  ASSERT_GE(select_1, select_2);
+  
+  // Test if times selected model_0 > model_1
+  ASSERT_GE(select_0, select_1);
 }
 
 TEST_F(EpsilonGreedyTest, SerializationTest) {
@@ -245,49 +291,62 @@ TEST_F(EpsilonGreedyTest, SerializationTest) {
 class UCBTest : public ::testing::Test {
  public:
   virtual void SetUp() {
-    models.emplace_back(model_1);  // good
-    models.emplace_back(model_2);  // so-so
-    models.emplace_back(model_3);  // bad
+    models.emplace_back(model_0);  // good
+    models.emplace_back(model_1);  // so-so
+    models.emplace_back(model_2);  // bad
     state = UCBPolicy::initialize(models);
   }
   std::vector<VersionedModelId> models;
-  VersionedModelId model_1 = std::make_pair("classification", 0);
-  VersionedModelId model_2 = std::make_pair("regression", 1);
-  VersionedModelId model_3 = std::make_pair("random_forest", 2);
-  int times = 1000;
+  VersionedModelId model_0 = std::make_pair("classifier0", 0);
+  VersionedModelId model_1 = std::make_pair("classifier1", 1);
+  VersionedModelId model_2 = std::make_pair("classifier2", 2);
   BanditPolicyState state;
 };
 
 TEST_F(UCBTest, UpdateTest) {
 
-  auto feedback = Utility::create_feedback(20);
+  auto feedback = Utility::create_feedback(1);
   std::vector<Output> predictions;
   int y_hat;
+  int rand_index;
+  int rand_draw;
   srand (time(NULL));
   
-  while (times > 0) {
-    y_hat = rand() % 101;
-    if (y_hat < 33) {
-      predictions = Utility::create_predictions(model_1, y_hat);
-    } else if (y_hat > 66) {
-      predictions = Utility::create_predictions(model_3, y_hat);
+  for (int i=0; i<10000; ++i) {
+    y_hat = 0;
+    rand_index = rand() % models.size(); // Randomly pick model
+    rand_draw = rand() % 100; // Randomly pick number to determine whether this model return 0 or 1
+    
+    if (rand_index == 0) { // good model
+      if (rand_draw < 75) {
+        y_hat = 1;
+      }
+    } else if (rand_index == 1) { // so-so model
+      if (rand_draw < 50) {
+        y_hat = 1;
+      }
     } else {
-      predictions = Utility::create_predictions(model_2, y_hat);
+      if (rand_draw < 25) { // bad model
+        y_hat = 1;
+      }
     }
+    predictions = Utility::create_predictions(models[rand_index], y_hat);
     state = UCBPolicy::process_feedback(state, feedback, predictions);
-    times -= 1;
   }
-  ASSERT_GT(state.model_map_[model_3]["expected_loss"],
-            state.model_map_[model_2]["expected_loss"]);
+  
+  // Test if the expected loss of model_2 > model_1 > model_0
   ASSERT_GT(state.model_map_[model_2]["expected_loss"],
             state.model_map_[model_1]["expected_loss"]);
+  ASSERT_GT(state.model_map_[model_1]["expected_loss"],
+            state.model_map_[model_0]["expected_loss"]);
 }
 
 TEST_F(UCBTest, SelectionTest) {
   auto query = Utility::create_query(models);
+  // UCB should always select the optimal bandit
   for (int i=0; i<10; ++i) {
     auto tasks = UCBPolicy::select_predict_tasks(state, query, 1000);
-    ASSERT_EQ(model_1.second, tasks.front().model_.second);
+    ASSERT_EQ(model_0.second, tasks.front().model_.second);
   }
 }
 
