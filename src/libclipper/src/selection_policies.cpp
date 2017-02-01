@@ -125,9 +125,7 @@ VersionedModelId Exp3Policy::select(BanditPolicyState& state) {
     std::cout << "No models to select from" << std::endl;
     return selected_model;
   }
-  double rand_num;
-  srand (time(NULL)); // seed random generator
-  rand_num = (double) rand() / (RAND_MAX); // Pick random number between [0, 1]
+  double rand_num = (double) rand() / (RAND_MAX); // Pick random number between [0, 1]
   for (auto it = state.model_map_.begin(); it != state.model_map_.end() && rand_num >= 0; ++it) {
     rand_num -= (1 - eta) * (it->second["weight"] / state.weight_sum_) + eta / state.model_map_.size();
     selected_model = it->first;
@@ -164,8 +162,8 @@ Exp3Policy::select_feedback_tasks(BanditPolicyState& state, FeedbackQuery feedba
   auto predict_task = PredictTask(feedback.feedback_.input_, selected_model, -1, query_id, -1);
   std::vector<PredictTask> predict_tasks{predict_task};
   // Feedback Task
-  auto feedback_task = FeedbackTask(feedback.feedback_, selected_model, query_id, -1);
-  std::vector<FeedbackTask> feedback_tasks{feedback_task};
+  // auto feedback_task = FeedbackTask(feedback.feedback_, selected_model, query_id, -1);
+  std::vector<FeedbackTask> feedback_tasks;
 
   return make_pair(predict_tasks, feedback_tasks);
 }
@@ -254,9 +252,9 @@ Exp4Policy::select_feedback_tasks(BanditPolicyState& /*state*/,
   std::vector<FeedbackTask> feedback_tasks;
   for (VersionedModelId id : feedback.candidate_models_) {
     auto predict_task = PredictTask(feedback.feedback_.input_, id, -1, query_id, -1);
-    auto feedback_task = FeedbackTask(feedback.feedback_, id, query_id, -1);
+    // auto feedback_task = FeedbackTask(feedback.feedback_, id, query_id, -1);
     predict_tasks.push_back(predict_task);
-    feedback_tasks.push_back(feedback_task);
+    // feedback_tasks.push_back(feedback_task);
   }
   return std::make_pair(predict_tasks, feedback_tasks);
 }
@@ -342,10 +340,8 @@ VersionedModelId EpsilonGreedyPolicy::select(BanditPolicyState& state) {
     std::cout << "No models to select from." << std::endl;
     return selected_model;
   }
-  double rand_num;
-  srand (time(NULL));
-  rand_num = (double) rand() / RAND_MAX;
-  std::cout << rand_num << std::endl;
+  double rand_num = (double) rand() / RAND_MAX;
+  //std::cout << rand_num << std::endl;
   if (rand_num >= epsilon) { // Select best model
     auto min_loss = DBL_MAX;
     for (auto id = state.model_map_.begin(); id != state.model_map_.end(); ++id) {
@@ -356,10 +352,8 @@ VersionedModelId EpsilonGreedyPolicy::select(BanditPolicyState& state) {
       }
     }
   } else { // Randomly select
-    int rand_num;
-    srand (time(NULL));
-    rand_num = rand() * state.model_map_.size() / RAND_MAX;
-    auto random_it = next(begin(state.model_map_), rand_num);
+    int rand_draw = rand() * state.model_map_.size() / RAND_MAX;
+    auto random_it = next(begin(state.model_map_), rand_draw);
     selected_model = random_it->first;
   }
 

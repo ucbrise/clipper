@@ -110,9 +110,9 @@ TEST_F(Exp3Test, SelectionTest) {
     } else {
       select_3 ++;
     };
-    ASSERT_GE(select_1, select_2);
-    ASSERT_GE(select_2, select_3);
   }
+  ASSERT_GE(select_1, select_2);
+  ASSERT_GE(select_2, select_3);
 }
 
 TEST_F(Exp3Test, SerializationTest) {
@@ -229,8 +229,8 @@ TEST_F(EpsilonGreedyTest, SelectionTest) {
     } else {
       select_3 ++;
     };
-    ASSERT_GE(select_1, select_2);
   }
+  ASSERT_GE(select_1, select_2);
 }
 
 TEST_F(EpsilonGreedyTest, SerializationTest) {
@@ -285,8 +285,8 @@ TEST_F(UCBTest, UpdateTest) {
 
 TEST_F(UCBTest, SelectionTest) {
   auto query = Utility::create_query(models);
-  auto tasks = UCBPolicy::select_predict_tasks(state, query, 1000);
   for (int i=0; i<10; ++i) {
+    auto tasks = UCBPolicy::select_predict_tasks(state, query, 1000);
     ASSERT_EQ(model_1.second, tasks.front().model_.second);
   }
 }
