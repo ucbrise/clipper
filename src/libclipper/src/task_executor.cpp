@@ -4,36 +4,53 @@
 // #define NDEBUG
 #include <cassert>
 
-#include <clipper/task_executor.hpp>
 #include <clipper/metrics.hpp>
+#include <clipper/task_executor.hpp>
 #include <clipper/util.hpp>
 
 #include <boost/thread.hpp>
 
 namespace clipper {
 
-CacheEntry::CacheEntry() { value_ = value_promise_.get_future(); }
+CacheEntry::CacheEntry() {}
 
 PredictionCache::PredictionCache() {
-  lookups_counter_ = metrics::MetricsRegistry::get_metrics().create_counter("prediction_cache_lookups");
-  hit_ratio_ = metrics::MetricsRegistry::get_metrics().create_ratio_counter("prediction_cache_hit_ratio");
+  lookups_counter_ = metrics::MetricsRegistry::get_metrics().create_counter(
+      "prediction_cache_lookups");
+  hit_ratio_ = metrics::MetricsRegistry::get_metrics().create_ratio_counter(
+      "prediction_cache_hit_ratio");
 }
 
-boost::shared_future<Output> PredictionCache::fetch(
+boost::future<Output> PredictionCache::fetch(
     const VersionedModelId &model, const std::shared_ptr<Input> &input) {
   std::unique_lock<std::mutex> l(m_);
   auto key = hash(model, input->hash());
   auto search = cache_.find(key);
   lookups_counter_->increment(1);
   if (search != cache_.end()) {
-    hit_ratio_->increment(1,1);
-    return search->second.value_;
+    // cache entry exists
+    if (search->second.completed_) {
+      // value already in cache
+      hit_ratio_->increment(1, 1);
+      return boost::make_ready_future<Output>(search->second.value_);
+    } else {
+      // value not in cache yet
+      boost::promise<Output> new_promise;
+      boost::future<Output> new_future = new_promise.get_future();
+      search->second.value_promises_.push_back(std::move(new_promise));
+      hit_ratio_->increment(0, 1);
+      return new_future;
+    }
   } else {
+    // cache entry doesn't exist yet, so create entry
     CacheEntry new_entry;
-    auto f = new_entry.value_;
+    // create promise/future pair for this request
+    boost::promise<Output> new_promise;
+    boost::future<Output> new_future = new_promise.get_future();
+    new_entry.value_promises_.push_back(std::move(new_promise));
     cache_.insert(std::make_pair(key, std::move(new_entry)));
-    hit_ratio_->increment(0,1);
-    return f;
+    hit_ratio_->increment(0, 1);
+    return new_future;
   }
 }
 
@@ -45,12 +62,16 @@ void PredictionCache::put(const VersionedModelId &model,
   auto search = cache_.find(key);
   if (search != cache_.end()) {
     if (!search->second.completed_) {
-      search->second.value_promise_.set_value(output);
+      // Complete the outstanding promises
+      for (auto &p : search->second.value_promises_) {
+        p.set_value(output);
+      }
       search->second.completed_ = true;
+      search->second.value_ = output;
     }
   } else {
     CacheEntry new_entry;
-    new_entry.value_promise_.set_value(output);
+    new_entry.value_ = output;
     new_entry.completed_ = true;
     cache_.insert(std::make_pair(key, std::move(new_entry)));
   }
@@ -88,7 +109,7 @@ std::shared_ptr<ModelContainer> PowerTwoChoicesScheduler::assign_container(
 
 std::vector<float> deserialize_outputs(std::vector<uint8_t> bytes) {
   assert(bytes.size() % sizeof(float) == 0);
-//  uint8_t *bytes_ptr = bytes.data();  // point to beginning of memory
+  //  uint8_t *bytes_ptr = bytes.data();  // point to beginning of memory
   float *float_array = reinterpret_cast<float *>(bytes.data());
   std::vector<float> outputs(float_array,
                              float_array + bytes.size() / sizeof(float));

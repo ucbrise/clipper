@@ -8,7 +8,6 @@
 #include <unordered_map>
 
 #define BOOST_THREAD_PROVIDES_FUTURE_CONTINUATION
-#define BOOST_THREAD_PROVIDES_FUTURE_WHEN_ALL_WHEN_ANY
 #define PROVIDES_EXECUTORS
 #include <boost/thread.hpp>
 #include <boost/thread/executors/basic_thread_pool.hpp>
@@ -137,35 +136,37 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   log_info_formatted(LOGGING_TAG_QUERY_PROCESSOR, "Found {} tasks",
                      tasks.size());
 
-  vector<boost::shared_future<Output>> shared_task_completion_futures =
+  vector<boost::future<Output>> task_futures =
       task_executor_.schedule_predictions(tasks);
   boost::future<void> timer_future =
       timer_system_.set_timer(query.latency_micros_);
 
-  vector<boost::future<Output>> task_completion_futures;
+  // vector<boost::future<Output>> task_completion_futures;
 
   boost::future<void> all_tasks_completed;
   auto num_completed = std::make_shared<std::atomic<int>>(0);
-  std::tie(all_tasks_completed, task_completion_futures) = future::when_all(
-      std::move(shared_task_completion_futures), num_completed);
+  std::tie(all_tasks_completed, task_futures) =
+      future::when_all(std::move(task_futures), num_completed);
 
-  auto completion_flag = std::make_shared<std::atomic<int>>(0);
+  auto completed_flag = std::make_shared<std::atomic_flag>();
+  // Due to some complexities of initializing the atomic_flag in a shared_ptr,
+  // we explicitly set the value of the flag to false after initialization.
+  completed_flag->clear();
   boost::future<void> response_ready_future;
-  boost::future<void> all_tasks_completed_wrapped;
-  boost::future<void> timer_future_wrapped;
 
-  std::tie(response_ready_future, all_tasks_completed_wrapped,
-           timer_future_wrapped) =
-      future::when_any(std::move(all_tasks_completed), std::move(timer_future),
-                       completion_flag);
+  std::tie(response_ready_future, all_tasks_completed, timer_future) =
+      future::when_either(std::move(all_tasks_completed),
+                          std::move(timer_future), completed_flag);
 
-  boost::promise<Response> promise;
-  auto f = promise.get_future();
+  boost::promise<Response> response_promise;
+  auto response_future = response_promise.get_future();
 
+  // NOTE: We capture the num_completed and completed_flag variables
+  // so that they outlive the composed_futures.
   response_ready_future.then([
-    query, query_id, p = std::move(promise), s = std::move(serialized_state),
-    task_futures = std::move(task_completion_futures), num_completed,
-    completion_flag
+    query, query_id, response_promise = std::move(response_promise),
+    serialized_state = std::move(serialized_state),
+    task_futures = std::move(task_futures), num_completed, completed_flag
   ](auto) mutable {
 
     vector<Output> outputs;
@@ -178,12 +179,14 @@ boost::future<Response> QueryProcessor::predict(Query query) {
 
     Output final_output;
     if (query.selection_policy_ == "newest_model") {
-      final_output =
-          combine_predictions<NewestModelSelectionPolicy>(query, outputs, s);
+      final_output = combine_predictions<NewestModelSelectionPolicy>(
+          query, outputs, serialized_state);
     } else if (query.selection_policy_ == "simple_policy") {
-      final_output = combine_predictions<SimplePolicy>(query, outputs, s);
+      final_output =
+          combine_predictions<SimplePolicy>(query, outputs, serialized_state);
     } else if (query.selection_policy_ == "bandit_policy") {
-      final_output = combine_predictions<BanditPolicy>(query, outputs, s);
+      final_output =
+          combine_predictions<BanditPolicy>(query, outputs, serialized_state);
     } else {
       UNREACHABLE();
     }
@@ -196,10 +199,10 @@ boost::future<Response> QueryProcessor::predict(Query query) {
 
     Response response{query, query_id, duration_micros, final_output,
                       query.candidate_models_};
-    p.set_value(response);
+    response_promise.set_value(response);
 
   });
-  return f;
+  return response_future;
 }
 
 boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
@@ -255,38 +258,41 @@ boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
   // 3) Complete select_policy_update_promise
   // 4) Wait for all feedback_tasks to complete (feedback_processed future)
 
-  // copy the vector
-  vector<boost::shared_future<Output>> predict_task_completion_futures =
+  vector<boost::future<Output>> predict_task_futures =
       task_executor_.schedule_predictions({predict_tasks});
 
-  vector<boost::future<FeedbackAck>> feedback_task_completion_futures =
+  vector<boost::future<FeedbackAck>> feedback_task_futures =
       task_executor_.schedule_feedback(std::move(feedback_tasks));
 
   // TODO: replace with clipper::future implementation of when_all
   // when this future completes, we are ready to update the selection state
-  auto predictions_completed =
-      boost::when_all(predict_task_completion_futures.begin(),
-                      predict_task_completion_futures.end());
+  boost::future<void> all_preds_completed;
+  auto num_preds_completed = std::make_shared<std::atomic<int>>(0);
+  std::tie(all_preds_completed, predict_task_futures) =
+      future::when_all(std::move(predict_task_futures), num_preds_completed);
 
-  auto feedback_processed =
-      boost::when_all(feedback_task_completion_futures.begin(),
-                      feedback_task_completion_futures.end());
+  boost::future<void> all_feedback_completed;
+  auto num_feedback_completed = std::make_shared<std::atomic<int>>(0);
+  std::tie(all_feedback_completed, feedback_task_futures) = future::when_all(
+      std::move(feedback_task_futures), num_feedback_completed);
 
   // This promise gets completed after selection policy state update has
   // finished.
   boost::promise<FeedbackAck> select_policy_update_promise;
   auto state_db_ptr = get_state_table();
   auto select_policy_updated = select_policy_update_promise.get_future();
-  predictions_completed.then([
+  all_preds_completed.then([
     moved_promise = std::move(select_policy_update_promise),
     moved_serialized_state = std::move(serialized_state),
-    state_table = std::move(state_db_ptr), feedback, query_id
-  ](auto pred_tasks_future) mutable {
-    auto pred_futures = pred_tasks_future.get();
+    state_table = std::move(state_db_ptr), feedback, query_id,
+    predict_task_futures = std::move(predict_task_futures)
+  ](auto) mutable {
+    // auto pred_futures = pred_tasks_future.get();
+
     std::vector<Output> preds;
     // collect actual predictions from their futures
-    for (auto r = pred_futures.begin(); r != pred_futures.end(); ++r) {
-      preds.push_back((*r).get());
+    for (auto& r : predict_task_futures) {
+      preds.push_back(r.get());
     }
     if (feedback.selection_policy_ == "newest_model") {
       // update the selection policy state using the
@@ -309,27 +315,35 @@ boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
     moved_promise.set_value(true);
   });
 
-  auto feedback_ack_ready_future =
-      boost::when_all(std::move(feedback_processed),
-                      std::move(select_policy_updated))
-          .then([](auto f) {
-            // check that all feedback was successful
-            auto result = f.get();
-            auto feedback_results = std::get<0>(result).get();
-            auto select_policy_update_result = std::get<1>(result).get();
-            if (!select_policy_update_result) {
-              return false;
-            }
-            for (auto r = feedback_results.begin(); r != feedback_results.end();
-                 ++r) {
-              if (!(*r).get()) {
-                return false;
-              }
-            }
-            return true;
-          });
+  boost::future<void> feedback_ack_ready_future;
+  auto num_futures_completed = std::make_shared<std::atomic<int>>(0);
+  std::tie(feedback_ack_ready_future, all_feedback_completed,
+           select_policy_updated) =
+      future::when_both(std::move(all_feedback_completed),
+                        std::move(select_policy_updated),
+                        num_futures_completed);
 
-  return feedback_ack_ready_future;
+  boost::future<FeedbackAck> final_feedback_future =
+      feedback_ack_ready_future.then([
+        select_policy_updated = std::move(select_policy_updated),
+        feedback_task_futures = std::move(feedback_task_futures)
+      ](auto) mutable {
+        // check that all feedback was successful
+        // auto result = f.get();
+        // auto feedback_results = std::get<0>(result).get();
+        auto select_policy_update_result = select_policy_updated.get();
+        if (!select_policy_update_result) {
+          return false;
+        }
+        for (auto& r : feedback_task_futures) {
+          if (!r.get()) {
+            return false;
+          }
+        }
+        return true;
+      });
+
+  return final_feedback_future;
 }
 
 }  // namespace clipper
