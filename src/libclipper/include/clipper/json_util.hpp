@@ -28,7 +28,8 @@ enum Type {
 static std::vector<std::string> kTypeNames = {
     "Null", "False", "True", "Object", "Array", "String", "Number"};
 
-namespace clipper::json {
+namespace clipper {
+namespace json {
 
 class json_parse_error : public std::runtime_error {
  public:
@@ -358,5 +359,6 @@ std::string to_json_string(rapidjson::Document& d) {
   return buffer.GetString();
 }
 
-}  // namespace clipper::json
+}  // namespace json
+} // namespace clipper
 #endif  // CLIPPER_LIB_JSON_UTIL_H
