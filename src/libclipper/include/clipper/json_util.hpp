@@ -1,11 +1,14 @@
 #ifndef CLIPPER_LIB_JSON_UTIL_H
 #define CLIPPER_LIB_JSON_UTIL_H
+
+#include <stdexcept>
+
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+
 #include <clipper/datatypes.hpp>
-#include <stdexcept>
 
 using clipper::Input;
 using clipper::InputType;
