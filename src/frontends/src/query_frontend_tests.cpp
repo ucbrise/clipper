@@ -136,8 +136,7 @@ TEST_F(QueryFrontendTest, TestDecodeWrongInputType) {
 
 TEST_F(QueryFrontendTest, TestDecodeCorrectUpdate) {
   std::string update_json =
-      "{\"uid\": 23, \"input\": [1.4,2.23,3.243242,0.3223424], \"model_name\": "
-      "\"m\", \"model_version\": 1, \"label\": 1.0}";
+      "{\"uid\": 23, \"input\": [1.4,2.23,3.243242,0.3223424], \"label\": 1.0}";
   FeedbackAck ack =
       rh_.decode_and_handle_update(update_json, "test", {}, "test_policy",
                                    InputType::Doubles, OutputType::Double)
@@ -148,8 +147,7 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectUpdate) {
 
 TEST_F(QueryFrontendTest, TestDecodeUpdateMissingField) {
   std::string update_json =
-      "{\"uid\": 23, \"input\": [1.4,2.23,3.243242,0.3223424], \"model_name\": "
-      "\"m\", \"label\": 1.0}";
+      "{\"uid\": 23, \"input\": [1.4,2.23,3.243242,0.3223424]}";
   ASSERT_THROW(
       rh_.decode_and_handle_update(update_json, "test", {}, "test_policy",
                                    InputType::Doubles, OutputType::Double),

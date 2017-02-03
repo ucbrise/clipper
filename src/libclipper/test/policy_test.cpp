@@ -6,8 +6,6 @@
 
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_real_distribution.hpp>
-
-// #include <boost/property_tree/json_parser.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/selection_policies.hpp>
 

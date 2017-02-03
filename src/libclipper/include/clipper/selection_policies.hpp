@@ -8,10 +8,10 @@
 #include "datatypes.hpp"
 #include "task_executor.hpp"
 
-/* IMPORTANT NOTES FOR USING SELECTION POLICIES
-    1. The selection policy only supports binary classfication models
-    2. The binary classes must use 0 as negative class indicator and 1 as positive class indicator
-*/
+/** IMPORTANT NOTES FOR USING SELECTION POLICIES
+  * The selection policy only supports binary classfication models
+  * The binary classes must use 0 as negative class indicator and 1 as positive class indicator
+  */
 
 namespace clipper {
 
@@ -19,19 +19,19 @@ namespace clipper {
 // * State *
 // *********
 
-/* Model Information
-    Each model has properties and we use an unordered_map to contain these properties
-    - EXP3/EXP4 Model Properties:
-      "weight": weight of this model
-    - EpsilonGreedy/UCB Properties:
-      "expected_loss": the mean of the loss distribution of this model
-      "times_selected": how many times we have used this model
-*/
+/** Model Information
+  * Each model has properties and we use an unordered_map to contain these properties
+  * - EXP3/EXP4 Model Properties:
+  *    "weight": weight of this model
+  * - EpsilonGreedy/UCB Properties:
+  *    "expected_loss": the mean of the loss distribution of this model
+  *    "times_selected": how many times we have used this model
+  */
 using ModelInfo = std::unordered_map<std::string, double>;
 
-/* Model Map
-    A map of the models to their corresponding model information
-*/
+/** Model Map
+  * A map of the models to their corresponding model information
+  */
 using Map = std::unordered_map<VersionedModelId, ModelInfo,
 std::function<size_t(const VersionedModelId&)>>;
 
@@ -126,9 +126,7 @@ class SelectionPolicy {
     return Derived::deserialize_state(bytes);
   }
 
-  /**
-   * Human readable debug string for the state
-   */
+  /* Human readable debug string for the state */
   static std::string state_debug_string(const BanditPolicyState& state) {
     return Derived::state_debug_string(state);
   }

@@ -60,11 +60,11 @@ BanditPolicyState BanditPolicyState::deserialize(const std::string& bytes) {
 };
 
 std::string BanditPolicyState::debug_string() const {
-  /* State string representation:
-      For each model: Model Name, Model ID, Model Property Value 1, Model Property Value 2 
-      Different models are separated by semi-colon
-      e.g. "3.0;classification,00001,1.0,0.4;regression,203422,1.0,0.4;......."
-  */
+  /** State string representation:
+    *  For each model: Model Name, Model ID, Model Property Value 1, Model Property Value 2
+    *  Different models are separated by semi-colon
+    *  e.g. "3.0;classification,00001,1.0,0.4;regression,203422,1.0,0.4;......."
+    */
   
   std::string string_state = "Exp3State;";
   if (model_map_.empty()) {
@@ -162,7 +162,6 @@ Exp3Policy::select_feedback_tasks(BanditPolicyState& state, FeedbackQuery feedba
   auto predict_task = PredictTask(feedback.feedback_.input_, selected_model, -1, query_id, -1);
   std::vector<PredictTask> predict_tasks{predict_task};
   // Feedback Task
-  // auto feedback_task = FeedbackTask(feedback.feedback_, selected_model, query_id, -1);
   std::vector<FeedbackTask> feedback_tasks;
 
   return make_pair(predict_tasks, feedback_tasks);
@@ -257,9 +256,7 @@ Exp4Policy::select_feedback_tasks(BanditPolicyState& /*state*/,
   std::vector<FeedbackTask> feedback_tasks;
   for (VersionedModelId id : feedback.candidate_models_) {
     auto predict_task = PredictTask(feedback.feedback_.input_, id, -1, query_id, -1);
-    // auto feedback_task = FeedbackTask(feedback.feedback_, id, query_id, -1);
     predict_tasks.push_back(predict_task);
-    // feedback_tasks.push_back(feedback_task);
   }
   return std::make_pair(predict_tasks, feedback_tasks);
 }
