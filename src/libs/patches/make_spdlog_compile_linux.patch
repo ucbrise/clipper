@@ -1,0 +1,25 @@
+From c0fcb37692da01049b4acfd92a779738c14d32ff Mon Sep 17 00:00:00 2001
+From: Dan Crankshaw <dscrankshaw@gmail.com>
+Date: Thu, 2 Feb 2017 15:05:56 -0800
+Subject: [PATCH] make compile on alpine
+
+---
+ include/spdlog/details/os.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/spdlog/details/os.h b/include/spdlog/details/os.h
+index b63ce66..dae02f2 100644
+--- a/include/spdlog/details/os.h
++++ b/include/spdlog/details/os.h
+@@ -378,7 +378,7 @@ inline std::string errno_str(int err_num)
+         return "Unkown error";
+ 
+ #elif defined(__FreeBSD__) || defined(__APPLE__) || defined(ANDROID) || defined(__SUNPRO_CC) || \
+-      ((_POSIX_C_SOURCE >= 200112L) && ! defined(_GNU_SOURCE)) // posix version
++      ((_POSIX_C_SOURCE >= 200112L) && ! defined(_GNU_SOURCE)) || !defined(__GLIBC__)   // posix version
+ 
+     if (strerror_r(err_num, buf, buf_size) == 0)
+         return std::string(buf);
+-- 
+1.9.1
+
