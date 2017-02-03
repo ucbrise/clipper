@@ -45,7 +45,9 @@ add_executable(libclippertests EXCLUDE_FROM_ALL
     test/config_test.cpp
     test/selection_policies_test.cpp
     test/json_util_test.cpp
-    test/logging_test.cpp)
+    test/logging_test.cpp
+    test/future_test.cpp
+    )
 target_link_libraries(libclippertests clipper gtest gmock_main)
 add_dependencies(unittests libclippertests)
 
