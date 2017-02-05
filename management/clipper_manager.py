@@ -90,7 +90,6 @@ class Clipper:
         if not self.host_is_local():
             env.user = user
             env.key_filename = key_path
-
         # Make sure docker is running on cluster
         self.start_docker_if_necessary()
 
