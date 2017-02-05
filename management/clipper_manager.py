@@ -52,7 +52,7 @@ DOCKER_COMPOSE_DICT = {
             'depends_on': [
                 'redis',
                 'mgmt_frontend'],
-            'image': 'clipper/query_frontend:latest',
+            'image': 'czumar/clresilience:latest',
             'ports': [
                 '%d:%d' % (CLIPPER_RPC_PORT, CLIPPER_RPC_PORT),
                 '%d:%d' % (CLIPPER_QUERY_PORT, CLIPPER_QUERY_PORT)]},
@@ -128,7 +128,8 @@ class Clipper:
 
     def execute_local(self, *args, **kwargs):
         # fabric.local() does not accept the "warn_only"
-        # key word argument, so we must remove it before calling
+        # key word argument, so we must remove it before
+        # calling
         if "warn_only" in kwargs.keys():
                 del kwargs["warn_only"]
             # Forces execution to continue in the face of an error,
