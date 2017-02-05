@@ -428,7 +428,7 @@ class Clipper:
             result = self.execute_root(add_container_cmd)
             return result.return_code == 0
 
-    def inspect_instance(self, clear=False):
+    def inspect_instance(self):
         """Fetches metrics from the running Clipper instance.
 
         Returns
@@ -439,10 +439,7 @@ class Clipper:
             (not JSON formatted).
         """
         url = "http://%s:1337/metrics" % self.host
-        if clear:
-            r = requests.post(url)
-        else:
-            r = requests.get(url)
+        r = requests.get(url)
         try:
             s = r.json()
         except TypeError:
