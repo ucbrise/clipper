@@ -157,7 +157,6 @@ class Clipper:
         """
         with hide("output", "warnings", "running"):
             self.execute_standard("rm -f docker-compose.yml")
-            print(yaml.dump(DOCKER_COMPOSE_DICT, default_flow_style=False))
             self.execute_append(
                 "docker-compose.yml",
                 yaml.dump(
