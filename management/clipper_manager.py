@@ -52,7 +52,7 @@ DOCKER_COMPOSE_DICT = {
             'depends_on': [
                 'redis',
                 'mgmt_frontend'],
-            'image': 'czumar/clresilience:latest',
+            'image': 'clipper/query_frontend:latest',
             'ports': [
                 '%d:%d' % (CLIPPER_RPC_PORT, CLIPPER_RPC_PORT),
                 '%d:%d' % (CLIPPER_QUERY_PORT, CLIPPER_QUERY_PORT)]},
@@ -116,13 +116,13 @@ class Clipper:
 
     def execute_root(self, *args, **kwargs):
         if self.host_is_local():
-            self.execute_local(*args, **kwargs)
+            return self.execute_local(*args, **kwargs)
         else:
             return sudo(*args, **kwargs)
 
     def execute_standard(self, *args, **kwargs):
         if self.host_is_local():
-            self.execute_local(*args, **kwargs)
+            return self.execute_local(*args, **kwargs)
         else:
             return run(*args, **kwargs)
 
@@ -131,12 +131,14 @@ class Clipper:
         # key word argument, so we must remove it before
         # calling
         if "warn_only" in kwargs.keys():
-                del kwargs["warn_only"]
+            del kwargs["warn_only"]
             # Forces execution to continue in the face of an error,
             # just like warn_only=True
             with warn_only():
                 result = local(*args, **kwargs)
-                return result
+        else:
+            result = local(*args, **kwargs)
+        return result
 
     def execute_append(self, filename, text, **kwargs):
         if self.host_is_local():
