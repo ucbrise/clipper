@@ -52,7 +52,7 @@ DOCKER_COMPOSE_DICT = {
             'depends_on': [
                 'redis',
                 'mgmt_frontend'],
-            'image': 'clipper/query_frontend:latest',
+            'image': 'czumar/clresilience:latest',
             'ports': [
                 '%d:%d' % (CLIPPER_RPC_PORT, CLIPPER_RPC_PORT),
                 '%d:%d' % (CLIPPER_QUERY_PORT, CLIPPER_QUERY_PORT)]},
@@ -85,39 +85,83 @@ class Clipper:
     """
 
     def __init__(self, host, user, key_path):
-        env.key_filename = key_path
-        env.user = user
-        env.host_string = host
         self.host = host
+        env.host_string = host
+        if not self.host_is_local():
+            env.user = user
+            env.key_filename = key_path
+
         # Make sure docker is running on cluster
+        self.start_docker_if_necessary()
+
+    def host_is_local(self):
+        return self.host == "localhost" or self.host == "127.0.0.1"
+
+    def start_docker_if_necessary(self):
         with hide("warnings", "output", "running"):
             print("Checking if Docker is running...")
-            sudo("docker ps")
-            dc_installed = sudo("docker-compose --version", warn_only=True)
+            self.execute_root("docker ps")
+            dc_installed = self.execute_root("docker-compose --version", warn_only=True)
             if dc_installed.return_code != 0:
                 print("docker-compose not installed on host.")
                 print("attempting to install it")
-                sudo("curl -L https://github.com/docker/compose/releases/"
+                self.execute_root("curl -L https://github.com/docker/compose/releases/"
                      "download/1.10.0-rc1/docker-compose-`uname -s`-`uname -m` "
                      "> /usr/local/bin/docker-compose")
-                sudo("chmod +x /usr/local/bin/docker-compose")
+                self.execute_root("chmod +x /usr/local/bin/docker-compose")
             nw_create_command = ("docker network create --driver bridge {nw}"
                                  .format(nw=DOCKER_NW))
-            sudo(nw_create_command, warn_only=True)
-            run("mkdir -p {model_repo}".format(model_repo=MODEL_REPO))
+            self.execute_root(nw_create_command, warn_only=True)
+            self.execute_standard("mkdir -p {model_repo}".format(model_repo=MODEL_REPO))
+
+    def execute_root(self, *args, **kwargs):
+        if self.host_is_local():
+            self.execute_local(*args, **kwargs)
+        else:
+            return sudo(*args, **kwargs)
+
+    def execute_standard(self, *args, **kwargs):
+        if self.host_is_local():
+            self.execute_local(*args, **kwargs)
+        else:
+            return run(*args, **kwargs)
+
+    def execute_local(self, *args, **kwargs):
+        # fabric.local() does not accept the "warn_only"
+        # key word argument, so we must remove it before
+        # calling
+        if "warn_only" in kwargs.keys():
+                del kwargs["warn_only"]
+            # Forces execution to continue in the face of an error,
+            # just like warn_only=True
+            with warn_only():
+                result = local(*args, **kwargs)
+                return result
+
+    def execute_append(self, filename, text, **kwargs):
+        if self.host_is_local():
+            file = open(filename, "a+")
+            if text not in file.read():
+                file.write(text)
+            file.close()
+
+        else:
+            append(filename, text, **kwargs)
+
 
     def start(self):
         """Start a Clipper instance.
 
         """
         with hide("output", "warnings", "running"):
-            run("rm -f docker-compose.yml")
-            append(
+            self.execute_standard("rm -f docker-compose.yml")
+            print(yaml.dump(DOCKER_COMPOSE_DICT, default_flow_style=False))
+            self.execute_append(
                 "docker-compose.yml",
                 yaml.dump(
                     DOCKER_COMPOSE_DICT,
                     default_flow_style=False))
-            sudo("docker-compose up -d query_frontend")
+            self.execute_root("docker-compose up -d query_frontend")
             print("Clipper is running")
 
     def register_application(self,
@@ -292,27 +336,27 @@ class Clipper:
             vol = "{model_repo}/{name}/{version}".format(
                 model_repo=MODEL_REPO, name=name, version=version)
             with hide("warnings", "output", "running"):
-                run("mkdir -p {vol}".format(vol=vol))
+                self.execute_standard("mkdir -p {vol}".format(vol=vol))
 
             with cd(vol):
                 with hide("warnings", "output", "running"):
                     if model_data_path.startswith("s3://"):
                         with hide("warnings", "output", "running"):
-                            aws_cli_installed = run(
+                            aws_cli_installed = self.execute_standard(
                                 "dpkg-query -Wf'${db:Status-abbrev}' awscli 2>/dev/null | grep -q '^i'",
                                 warn_only=True).return_code == 0
                             if not aws_cli_installed:
-                                sudo("apt-get update -qq")
-                                sudo("apt-get install -yqq awscli")
-                            if sudo(
+                                self.execute_root("apt-get update -qq")
+                                self.execute_root("apt-get install -yqq awscli")
+                            if self.execute_root(
                                     "stat ~/.aws/config",
                                     warn_only=True).return_code != 0:
-                                run("mkdir -p ~/.aws")
-                                append("~/.aws/config", aws_cli_config.format(
+                                self.execute_standard("mkdir -p ~/.aws")
+                                self.execute_append("~/.aws/config", aws_cli_config.format(
                                     access_key=os.environ["AWS_ACCESS_KEY_ID"],
                                     secret_key=os.environ["AWS_SECRET_ACCESS_KEY"]))
 
-                        run("aws s3 cp {model_data_path} {dl_path} --recursive".format(
+                        self.execute_standard("aws s3 cp {model_data_path} {dl_path} --recursive".format(
                                 model_data_path=model_data_path, dl_path=os.path.join(
                                     vol, os.path.basename(model_data_path))))
                     else:
@@ -379,10 +423,10 @@ class Clipper:
                     mn=model_name,
                     mv=model_version,
                     mip=model_input_type))
-            result = sudo(add_container_cmd)
+            result = self.execute_root(add_container_cmd)
             return result.return_code == 0
 
-    def inspect_instance(self):
+    def inspect_instance(self, clear=False):
         """Fetches metrics from the running Clipper instance.
 
         Returns
@@ -393,7 +437,10 @@ class Clipper:
             (not JSON formatted).
         """
         url = "http://%s:1337/metrics" % self.host
-        r = requests.get(url)
+        if clear:
+            r = requests.post(url)
+        else:
+            r = requests.get(url)
         try:
             s = r.json()
         except TypeError:
@@ -406,9 +453,9 @@ class Clipper:
         """
         print("Stopping Clipper and all running models...")
         with hide("output", "warnings", "running"):
-            sudo("docker-compose stop", warn_only=True)
-            sudo("docker stop $(docker ps -a -q)", warn_only=True)
-            sudo("docker rm $(docker ps -a -q)", warn_only=True)
+            self.execute_root("docker-compose stop", warn_only=True)
+            self.execute_root("docker stop $(docker ps -a -q)", warn_only=True)
+            self.execute_root("docker rm $(docker ps -a -q)", warn_only=True)
 
     def cleanup(self):
         """Cleans up all Docker artifacts.
@@ -418,9 +465,9 @@ class Clipper:
         """
         with hide("output", "warnings", "running"):
             self.stop_all()
-            run("rm -rf {model_repo}".format(model_repo=MODEL_REPO))
-            sudo("docker rmi --force $(docker images -q)", warn_only=True)
-            sudo("docker network rm clipper_nw", warn_only=True)
+            self.execute_standard("rm -rf {model_repo}".format(model_repo=MODEL_REPO))
+            self.execute_root("docker rmi --force $(docker images -q)", warn_only=True)
+            self.execute_root("docker network rm clipper_nw", warn_only=True)
 
     def _publish_new_model(
             self,
@@ -467,13 +514,13 @@ class Clipper:
         """
         with hide("output", "warnings", "running"):
             # first see if container is already present on host
-            host_result = sudo(
+            host_result = self.execute_root(
                 "docker images -q {cn}".format(cn=container_name))
             if len(host_result.stdout) > 0:
                 print("Found %s on host" % container_name)
                 return True
             # now try to pull from Docker Hub
-            hub_result = sudo("docker pull {cn}".format(cn=container_name),
+            hub_result = self.execute_root("docker pull {cn}".format(cn=container_name),
                               warn_only=True)
             if hub_result.return_code == 0:
                 print("Found %s in Docker hub" % container_name)
@@ -491,11 +538,11 @@ class Clipper:
                     cn=container_name))
                 tar_loc = "/tmp/{fn}.tar".format(fn=saved_fname)
                 put(tar_loc, tar_loc)
-                sudo("docker load -i {loc}".format(loc=tar_loc))
-                # sudo("docker tag {image_id} {cn}".format(
+                self.execute_root("docker load -i {loc}".format(loc=tar_loc))
+                # self.execute_root("docker tag {image_id} {cn}".format(
                 #       image_id=image_id, cn=cn))
                 # now check to make sure we can access it
-                host_result = sudo(
+                host_result = self.execute_root(
                     "docker images -q {cn}".format(cn=container_name))
                 if len(host_result.stdout) > 0:
                     print("Successfuly copied %s to host" % container_name)
