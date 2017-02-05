@@ -143,10 +143,12 @@ class Clipper:
     def execute_append(self, filename, text, **kwargs):
         if self.host_is_local():
             file = open(filename, "a+")
+            # As with fabric.append(), we should only
+            # append the text if it is not already
+            # present within the file
             if text not in file.read():
                 file.write(text)
             file.close()
-
         else:
             append(filename, text, **kwargs)
 
