@@ -51,7 +51,6 @@ TEST_F(ManagementFrontendTest, TestAddApplicationCorrect) {
         {"model_name": "m", "model_version": 4},
         {"model_name": "image_model", "model_version": 3}],
     "input_type": "integers",
-    "output_type": "double",
     "selection_policy": "sample_policy",
     "latency_slo_micros": 10000
   }
@@ -62,7 +61,7 @@ TEST_F(ManagementFrontendTest, TestAddApplicationCorrect) {
   // The application table has 5 fields, so we expect to get back a map with 5
   // entries in it (see add_application() in redis.cpp for details on what the
   // fields are).
-  ASSERT_EQ(result.size(), static_cast<size_t>(5));
+  ASSERT_EQ(result.size(), static_cast<size_t>(4));
 }
 
 TEST_F(ManagementFrontendTest, TestAddApplicationMissingField) {
@@ -97,7 +96,6 @@ TEST_F(ManagementFrontendTest, TestAddModelCorrect) {
     "model_version": 4,
     "labels": ["label1", "label2", "label3"],
     "input_type": "integers",
-    "output_type": "double",
     "container_name": "clipper/sklearn_cifar",
     "model_data_path": "/tmp/model/repo/m/1"
   }
@@ -108,7 +106,7 @@ TEST_F(ManagementFrontendTest, TestAddModelCorrect) {
   // The model table has 6 fields, so we expect to get back a map with 6
   // entries in it (see add_model() in redis.cpp for details on what the
   // fields are).
-  ASSERT_EQ(result.size(), static_cast<size_t>(8));
+  ASSERT_EQ(result.size(), static_cast<size_t>(7));
 }
 
 TEST_F(ManagementFrontendTest, TestAddModelMissingField) {
@@ -116,8 +114,7 @@ TEST_F(ManagementFrontendTest, TestAddModelMissingField) {
   {
     "model_name": "mymodelname",
     "model_version": 4,
-    "labels": ["label1", "label2", "label3"],
-    "output_type": "double"
+    "labels": ["label1", "label2", "label3"]
   }
   )";
 
@@ -129,7 +126,6 @@ TEST_F(ManagementFrontendTest, TestAddModelMalformedJson) {
     "model_name": "mymodelname
     "model_version": 4
     "labels": ["label1", "label2", "label3"
-    "output_type": "double",
   )";
   ASSERT_THROW(rh_.add_model(add_model_json), json_parse_error);
 }
