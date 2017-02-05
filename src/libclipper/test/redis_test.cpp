@@ -7,6 +7,7 @@
 
 #include <clipper/config.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/logging.hpp>
 #include <clipper/redis.hpp>
 #include <redox.hpp>
 
@@ -24,6 +25,8 @@ namespace {
 // requesting the subscription and testing its behavior. If this
 // is not enough time for the subscription to be registered, the
 // tests will fail.
+
+const std::string LOGGING_TAG_REDIS_TEST = "REDISTEST";
 
 class RedisTest : public ::testing::Test {
  public:
@@ -54,7 +57,8 @@ TEST_F(RedisTest, RedisConnectionRetryLoop) {
   int attempts = 0;
   int max_attempts = 20;
   while (attempts < max_attempts) {
-    std::cout << "Attempt " << attempts << " to connect" << std::endl;
+    log_info_formatted(LOGGING_TAG_REDIS_TEST, "Attempt {} to connect to Redis",
+                       attempts);
     // there's no Redis instance running on port 9999
     if (no_connect_redis.connect("localhost", 9999)) {
       break;
@@ -71,8 +75,8 @@ TEST_F(RedisTest, AddModel) {
   VersionedModelId model = std::make_pair("m", 1);
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
-  ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, "double", labels,
-                        container_name, model_path));
+  ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, labels, container_name,
+                        model_path));
   auto result = get_model(*redis_, model);
   // The model table has 8 fields, so we expect
   // to get back a map with 8 entries in it
@@ -92,8 +96,8 @@ TEST_F(RedisTest, DeleteModel) {
   VersionedModelId model = std::make_pair("m", 1);
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
-  ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, "double", labels,
-                        container_name, model_path));
+  ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, labels, container_name,
+                        model_path));
   auto add_result = get_model(*redis_, model);
   EXPECT_EQ(add_result.size(), static_cast<size_t>(8));
   ASSERT_TRUE(delete_model(*redis_, model));
@@ -142,19 +146,17 @@ TEST_F(RedisTest, AddApplication) {
       std::make_pair("music_random_features", 1),
       std::make_pair("simple_svm", 2), std::make_pair("music_cnn", 4)};
   InputType input_type = InputType::Doubles;
-  std::string output_type = "double";
   std::string policy = "exp3_policy";
   int latency_slo_micros = 10000;
-  ASSERT_TRUE(add_application(*redis_, name, models, input_type, output_type,
-                              policy, latency_slo_micros));
+  ASSERT_TRUE(add_application(*redis_, name, models, input_type, policy,
+                              latency_slo_micros));
   auto result = get_application(*redis_, name);
   // The application table has 5 fields, so we expect to get back a map with 5
   // entries in it (see add_application() in redis.cpp for details on what the
   // fields are).
-  EXPECT_EQ(result.size(), static_cast<size_t>(5));
+  EXPECT_EQ(result.size(), static_cast<size_t>(4));
   EXPECT_EQ(str_to_models(result["candidate_models"]), models);
   EXPECT_EQ(parse_input_type(result["input_type"]), input_type);
-  EXPECT_EQ(result["output_type"], output_type);
   EXPECT_EQ(result["policy"], policy);
   EXPECT_EQ(std::stoi(result["latency_slo_micros"]), latency_slo_micros);
 }
@@ -165,13 +167,12 @@ TEST_F(RedisTest, DeleteApplication) {
       std::make_pair("music_random_features", 1),
       std::make_pair("music_cnn", 4)};
   InputType input_type = InputType::Doubles;
-  std::string output_type = "double";
   std::string policy = "exp3_policy";
   int latency_slo_micros = 10000;
-  ASSERT_TRUE(add_application(*redis_, name, models, input_type, output_type,
-                              policy, latency_slo_micros));
+  ASSERT_TRUE(add_application(*redis_, name, models, input_type, policy,
+                              latency_slo_micros));
   auto get_result = get_application(*redis_, name);
-  EXPECT_EQ(get_result.size(), static_cast<size_t>(5));
+  EXPECT_EQ(get_result.size(), static_cast<size_t>(4));
   ASSERT_TRUE(delete_application(*redis_, name));
   auto delete_result = get_application(*redis_, name);
   EXPECT_EQ(delete_result.size(), static_cast<size_t>(0));
@@ -188,7 +189,7 @@ TEST_F(RedisTest, SubscriptionDetectModelAdd) {
   subscribe_to_model_changes(
       *subscriber_, [&notification_recv, &notification_mutex, &recv, model](
                         const std::string& key, const std::string& event_type) {
-        std::cout << "NEW MODEL CALLBACK FIRED" << std::endl;
+        log_info(LOGGING_TAG_REDIS_TEST, "NEW MODEL CALLBACK FIRED");
         ASSERT_EQ(event_type, "hset");
         std::unique_lock<std::mutex> l(notification_mutex);
         recv = true;
@@ -198,8 +199,8 @@ TEST_F(RedisTest, SubscriptionDetectModelAdd) {
       });
   // give Redis some time to register the subscription
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
-  ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, "double", labels,
-                        container_name, model_path));
+  ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, labels, container_name,
+                        model_path));
   std::unique_lock<std::mutex> l(notification_mutex);
   bool result = notification_recv.wait_for(l, std::chrono::milliseconds(1000),
                                            [&recv]() { return recv == true; });
@@ -211,15 +212,16 @@ TEST_F(RedisTest, SubscriptionDetectModelDelete) {
   VersionedModelId model = std::make_pair("m", 1);
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
-  ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, "double", labels,
-                        container_name, model_path));
+  ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, labels, container_name,
+                        model_path));
   std::condition_variable_any notification_recv;
   std::mutex notification_mutex;
   std::atomic<bool> recv{false};
   subscribe_to_model_changes(
       *subscriber_, [&notification_recv, &notification_mutex, &recv, model](
                         const std::string& key, const std::string& event_type) {
-        std::cout << "MODEL CHANGE DETECTED: " << event_type << std::endl;
+        log_info_formatted(LOGGING_TAG_REDIS_TEST, "MODEL CHANGE DETECTED: ",
+                           event_type);
         ASSERT_TRUE(event_type == "hdel" || event_type == "del");
         std::unique_lock<std::mutex> l(notification_mutex);
         recv = true;
@@ -251,7 +253,7 @@ TEST_F(RedisTest, SubscriptionDetectContainerAdd) {
       *subscriber_,
       [&notification_recv, &notification_mutex, &recv, replica_key](
           const std::string& key, const std::string& event_type) {
-        std::cout << "NEW CONTAINER CALLBACK FIRED" << std::endl;
+        log_info(LOGGING_TAG_REDIS_TEST, "NEW CONTAINER CALLBACK FIRED");
         ASSERT_EQ(event_type, "hset");
         std::unique_lock<std::mutex> l(notification_mutex);
         recv = true;
@@ -286,8 +288,9 @@ TEST_F(RedisTest, SubscriptionDetectContainerDelete) {
       *subscriber_,
       [&notification_recv, &notification_mutex, &recv, replica_key](
           const std::string& key, const std::string& event_type) {
-        std::cout << "CONTAINER DELETED CALLBACK. EVENT TYPE: " << event_type
-                  << std::endl;
+        log_info_formatted(LOGGING_TAG_REDIS_TEST,
+                           "CONTAINER DELETED CALLBACK. EVENT TYPE: ",
+                           event_type);
         ASSERT_TRUE(event_type == "hdel" || event_type == "del");
         std::unique_lock<std::mutex> l(notification_mutex);
         recv = true;
@@ -309,7 +312,6 @@ TEST_F(RedisTest, SubscriptionDetectApplicationAdd) {
       std::make_pair("music_random_features", 1),
       std::make_pair("music_cnn", 4)};
   InputType input_type = InputType::Doubles;
-  std::string output_type = "double";
   std::string policy = "exp3_policy";
   int latency_slo_micros = 10000;
 
@@ -328,8 +330,8 @@ TEST_F(RedisTest, SubscriptionDetectApplicationAdd) {
   // give Redis some time to register the subscription
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-  ASSERT_TRUE(add_application(*redis_, name, models, input_type, output_type,
-                              policy, latency_slo_micros));
+  ASSERT_TRUE(add_application(*redis_, name, models, input_type, policy,
+                              latency_slo_micros));
 
   std::unique_lock<std::mutex> l(notification_mutex);
   bool result = notification_recv.wait_for(l, std::chrono::milliseconds(1000),
@@ -343,11 +345,10 @@ TEST_F(RedisTest, SubscriptionDetectApplicationDelete) {
       std::make_pair("music_random_features", 1),
       std::make_pair("music_cnn", 4)};
   InputType input_type = InputType::Doubles;
-  std::string output_type = "double";
   std::string policy = "exp3_policy";
   int latency_slo_micros = 10000;
-  ASSERT_TRUE(add_application(*redis_, name, models, input_type, output_type,
-                              policy, latency_slo_micros));
+  ASSERT_TRUE(add_application(*redis_, name, models, input_type, policy,
+                              latency_slo_micros));
   std::condition_variable_any notification_recv;
   std::mutex notification_mutex;
   std::atomic<bool> recv{false};

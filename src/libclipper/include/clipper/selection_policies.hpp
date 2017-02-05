@@ -1,5 +1,5 @@
-#ifndef CLIPPER_LIB_SELECTION_POLICY_H
-#define CLIPPER_LIB_SELECTION_POLICY_H
+#ifndef CLIPPER_LIB_SELECTION_POLICIES_H
+#define CLIPPER_LIB_SELECTION_POLICIES_H
 
 #include <map>
 #include <memory>
@@ -8,49 +8,54 @@
 #include "datatypes.hpp"
 #include "task_executor.hpp"
 
-/** IMPORTANT NOTES FOR USING SELECTION POLICIES
-  * The selection policy only supports binary classfication models
-  * The binary classes must use 0 as negative class indicator and 1 as positive class indicator
-  */
+/**
+ * IMPORTANT NOTES FOR USING SELECTION POLICIES
+ * The selection policy only supports binary classfication models
+ * The binary classes must use 0 as negative class indicator and 1 as positive
+ * class indicator
+ */
 
 namespace clipper {
+
+const std::string LOGGING_TAG_SELECTION_POLICY = "SELECTIONPOLICY";
 
 // *********
 // * State *
 // *********
 
-/** Model Information
-  * Each model has properties and we use an unordered_map to contain these properties
-  * - EXP3/EXP4 Model Properties:
-  *    "weight": weight of this model
-  * - EpsilonGreedy/UCB Properties:
-  *    "expected_loss": the mean of the loss distribution of this model
-  *    "times_selected": how many times we have used this model
-  */
+/**
+ * Model Information
+ * Each model has properties and we use an unordered_map to contain these
+ * properties
+ *  - EXP3/EXP4 Model Properties:
+ *    "weight": weight of this model
+ *  - EpsilonGreedy/UCB Properties:
+ *    "expected_loss": the mean of the loss distribution of this model
+ *    "times_selected": how many times we have used this model
+ */
 using ModelInfo = std::unordered_map<std::string, double>;
 
 /** Model Map
-  * A map of the models to their corresponding model information
-  */
+ * A map of the models to their corresponding model information
+ */
 using Map = std::unordered_map<VersionedModelId, ModelInfo,
-std::function<size_t(const VersionedModelId&)>>;
+                               std::function<size_t(const VersionedModelId&)>>;
 
 class BanditPolicyState {
-  public:
-    BanditPolicyState() = default;
-    ~BanditPolicyState() = default;
-  
-    void set_model_map(Map map);
-    void add_model(VersionedModelId id, ModelInfo model);
-    void set_weight_sum(double sum);
-    std::string serialize() const;
-    static BanditPolicyState deserialize(const std::string& bytes);
-    std::string debug_string() const;
-    Map model_map_;
-    double weight_sum_ = 0.0; // Only for Exp3, Exp4
+ public:
+  BanditPolicyState() = default;
+  ~BanditPolicyState() = default;
+
+  void set_model_map(Map map);
+  void add_model(VersionedModelId id, ModelInfo model);
+  void set_weight_sum(double sum);
+  std::string serialize() const;
+  static BanditPolicyState deserialize(const std::string& bytes);
+  std::string debug_string() const;
+  Map model_map_;
+  double weight_sum_ = 0.0;  // Only for Exp3, Exp4
 };
 
-  
 // **********
 // * Policy *
 // **********
@@ -67,8 +72,9 @@ class SelectionPolicy {
     return Derived::initialize(candidate_models);
   };
 
-  static BanditPolicyState add_models(BanditPolicyState state,
-                          const std::vector<VersionedModelId>& new_models) {
+  static BanditPolicyState add_models(
+      BanditPolicyState state,
+      const std::vector<VersionedModelId>& new_models) {
     return Derived::add_models(state, new_models);
   };
 
@@ -84,7 +90,8 @@ class SelectionPolicy {
   }
 
   // Query Pre-processing: select models and generate tasks
-  static std::vector<PredictTask> select_predict_tasks(BanditPolicyState state, Query query,
+  static std::vector<PredictTask> select_predict_tasks(BanditPolicyState state,
+                                                       Query query,
                                                        long query_id) {
     return Derived::select_predict_tasks(state, query, query_id);
   }
@@ -94,8 +101,7 @@ class SelectionPolicy {
   // from select_predict_tasks in some cases
   static Output combine_predictions(BanditPolicyState state, Query query,
                                     std::vector<Output> predictions) {
-    return Derived::combine_predictions(state, query,
-                                        predictions);
+    return Derived::combine_predictions(state, query, predictions);
   }
 
   /// When feedback is received, the selection policy can choose
@@ -104,7 +110,8 @@ class SelectionPolicy {
   /// while feedback tasks can be used to optionally propogate feedback
   /// into the model containers.
   static std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-  select_feedback_tasks(BanditPolicyState& state, FeedbackQuery query, long query_id) {
+  select_feedback_tasks(BanditPolicyState& state, FeedbackQuery query,
+                        long query_id) {
     return Derived::select_feedback_tasks(state, query, query_id);
   }
 
@@ -112,10 +119,10 @@ class SelectionPolicy {
   /// was scheduled for this piece of feedback. This method
   /// is guaranteed to be called sometime after all the predict
   /// tasks scheduled by `select_feedback_tasks` complete.
-  static BanditPolicyState process_feedback(BanditPolicyState state, Feedback feedback,
-                                std::vector<Output> predictions) {
-    return Derived::process_feedback(state, feedback,
-                                     predictions);
+  static BanditPolicyState process_feedback(BanditPolicyState state,
+                                            Feedback feedback,
+                                            std::vector<Output> predictions) {
+    return Derived::process_feedback(state, feedback, predictions);
   }
 
   static std::string serialize_state(BanditPolicyState state) {
@@ -147,8 +154,8 @@ class Exp3Policy : public SelectionPolicy<Exp3Policy> {
   static BanditPolicyState initialize(
       const std::vector<VersionedModelId>& candidate_models);
 
-  static BanditPolicyState add_models(BanditPolicyState state,
-                              const std::vector<VersionedModelId>& new_models);
+  static BanditPolicyState add_models(
+      BanditPolicyState state, const std::vector<VersionedModelId>& new_models);
 
   static long hash_models(
       const std::vector<VersionedModelId>& /*candidate_models*/) {
@@ -163,17 +170,19 @@ class Exp3Policy : public SelectionPolicy<Exp3Policy> {
                                     std::vector<Output> predictions);
 
   static std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-  select_feedback_tasks(BanditPolicyState& state, FeedbackQuery query, long query_id);
+  select_feedback_tasks(BanditPolicyState& state, FeedbackQuery query,
+                        long query_id);
 
-  static BanditPolicyState process_feedback(BanditPolicyState state, Feedback feedback,
-                                    std::vector<Output> predictions);
+  static BanditPolicyState process_feedback(BanditPolicyState state,
+                                            Feedback feedback,
+                                            std::vector<Output> predictions);
 
   static std::string serialize_state(BanditPolicyState state);
 
   static BanditPolicyState deserialize_state(const std::string& bytes);
 
   static std::string state_debug_string(const BanditPolicyState& state);
-  
+
  private:
   static VersionedModelId select(BanditPolicyState& state);
 };
@@ -193,8 +202,8 @@ class Exp4Policy : public SelectionPolicy<Exp4Policy> {
   static BanditPolicyState initialize(
       const std::vector<VersionedModelId>& candidate_models);
 
-  static BanditPolicyState add_models(BanditPolicyState state,
-                              const std::vector<VersionedModelId>& new_models);
+  static BanditPolicyState add_models(
+      BanditPolicyState state, const std::vector<VersionedModelId>& new_models);
 
   static long hash_models(
       const std::vector<VersionedModelId>& /*candidate_models*/) {
@@ -209,15 +218,17 @@ class Exp4Policy : public SelectionPolicy<Exp4Policy> {
                                     std::vector<Output> predictions);
 
   static std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-  select_feedback_tasks(BanditPolicyState& state, FeedbackQuery feedback, long query_id);
+  select_feedback_tasks(BanditPolicyState& state, FeedbackQuery feedback,
+                        long query_id);
 
-  static BanditPolicyState process_feedback(BanditPolicyState state, Feedback feedback,
-                                    std::vector<Output> predictions);
+  static BanditPolicyState process_feedback(BanditPolicyState state,
+                                            Feedback feedback,
+                                            std::vector<Output> predictions);
 
   static std::string serialize_state(BanditPolicyState state);
 
   static BanditPolicyState deserialize_state(const std::string& bytes);
-  
+
   static std::string state_debug_string(const BanditPolicyState& state);
 };
 
@@ -238,8 +249,7 @@ class EpsilonGreedyPolicy : public SelectionPolicy<Exp4Policy> {
       const std::vector<VersionedModelId>& candidate_models);
 
   static BanditPolicyState add_models(
-      BanditPolicyState state,
-      const std::vector<VersionedModelId>& new_models);
+      BanditPolicyState state, const std::vector<VersionedModelId>& new_models);
 
   static long hash_models(
       const std::vector<VersionedModelId>& /*candidate_models*/) {
@@ -258,13 +268,13 @@ class EpsilonGreedyPolicy : public SelectionPolicy<Exp4Policy> {
                         long query_id);
 
   static BanditPolicyState process_feedback(BanditPolicyState state,
-                                             Feedback feedback,
-                                             std::vector<Output> predictions);
+                                            Feedback feedback,
+                                            std::vector<Output> predictions);
 
   static std::string serialize_state(BanditPolicyState state);
 
   static BanditPolicyState deserialize_state(const std::string& bytes);
-  
+
   static std::string state_debug_string(const BanditPolicyState& state);
 
  private:
@@ -284,8 +294,8 @@ class UCBPolicy : public SelectionPolicy<UCBPolicy> {
   static BanditPolicyState initialize(
       const std::vector<VersionedModelId>& candidate_models);
 
-  static BanditPolicyState add_models(BanditPolicyState state,
-                             const std::vector<VersionedModelId>& new_models);
+  static BanditPolicyState add_models(
+      BanditPolicyState state, const std::vector<VersionedModelId>& new_models);
 
   static long hash_models(
       const std::vector<VersionedModelId>& /*candidate_models*/) {
@@ -300,15 +310,17 @@ class UCBPolicy : public SelectionPolicy<UCBPolicy> {
                                     std::vector<Output> predictions);
 
   static std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-  select_feedback_tasks(BanditPolicyState& state, FeedbackQuery feedback, long query_id);
+  select_feedback_tasks(BanditPolicyState& state, FeedbackQuery feedback,
+                        long query_id);
 
-  static BanditPolicyState process_feedback(BanditPolicyState state, Feedback feedback,
-                                   std::vector<Output> predictions);
+  static BanditPolicyState process_feedback(BanditPolicyState state,
+                                            Feedback feedback,
+                                            std::vector<Output> predictions);
 
   static std::string serialize_state(BanditPolicyState state);
 
   static BanditPolicyState deserialize_state(const std::string& bytes);
-  
+
   static std::string state_debug_string(const BanditPolicyState& state);
 
  private:
@@ -316,4 +328,4 @@ class UCBPolicy : public SelectionPolicy<UCBPolicy> {
 };
 }
 
-#endif  // CLIPPER_LIB_SELECTION_POLICY_H
+#endif  // CLIPPER_LIB_SELECTION_POLICIES_H

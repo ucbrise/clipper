@@ -1,8 +1,10 @@
-FROM frolvlad/alpine-gcc
+FROM frolvlad/alpine-gxx
 
 COPY ./ /clipper
 
 RUN apk add --no-cache git bash make boost-dev cmake libev-dev hiredis-dev zeromq-dev \
+    && cd /clipper/src/libs/spdlog \
+    && git apply ../patches/make_spdlog_compile_linux.patch \
     && cd /clipper \
     && ./configure --cleanup-quiet \
     && ./configure --release \

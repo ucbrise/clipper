@@ -120,8 +120,7 @@ InputType FloatVector::type() const { return InputType::Floats; }
 
 size_t FloatVector::hash() const {
   // TODO [CLIPPER-63]: Find an alternative to hashing floats directly, as this
-  // is
-  // generally a bad idea due to loss of precision from floating point
+  // is generally a bad idea due to loss of precision from floating point
   // representations
   return primitive_input_hash(data_);
 }
@@ -141,9 +140,8 @@ size_t DoubleVector::serialize(uint8_t *buf) const {
 }
 
 size_t DoubleVector::hash() const {
-  // TODO [CLIPPER-63]: Find an alternative to hashing doubles directly, as this
-  // is
-  // generally a bad idea due to loss of precision from floating point
+  // TODO [CLIPPER-63]: Find an alternative to hashing doubles directly, as
+  // this is generally a bad idea due to loss of precision from floating point
   // representations
   return primitive_input_hash(data_);
 }
@@ -214,10 +212,6 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
         "Attempted to serialize a request with no input data!");
   }
 
-  long start = std::chrono::duration_cast<std::chrono::milliseconds>(
-                   std::chrono::system_clock::now().time_since_epoch())
-                   .count();
-
   std::vector<uint32_t> request_metadata;
   request_metadata.emplace_back(
       static_cast<uint32_t>(RequestType::PredictRequest));
@@ -250,12 +244,6 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
   serialized_request.push_back(serialized_input_metadata);
   serialized_request.push_back(serialized_inputs);
 
-  long stop = std::chrono::duration_cast<std::chrono::milliseconds>(
-                  std::chrono::system_clock::now().time_since_epoch())
-                  .count();
-
-  std::cout << stop - start << std::endl;
-
   return serialized_request;
 }
 
@@ -267,7 +255,8 @@ Query::Query(std::string label, long user_id, std::shared_ptr<Input> input,
       input_(input),
       latency_micros_(latency_micros),
       selection_policy_(selection_policy),
-      candidate_models_(candidate_models) {}
+      candidate_models_(candidate_models),
+      create_time_(std::chrono::high_resolution_clock::now()) {}
 
 Response::Response(Query query, QueryId query_id, long duration_micros,
                    Output output, std::vector<VersionedModelId> models_used)

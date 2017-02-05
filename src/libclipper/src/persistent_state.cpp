@@ -11,6 +11,7 @@
 #include <clipper/constants.hpp>
 #include <clipper/persistent_state.hpp>
 #include <clipper/redis.hpp>
+#include <clipper/logging.hpp>
 
 namespace clipper {
 
@@ -28,15 +29,14 @@ StateDB::StateDB() {
   Config& conf = get_config();
   while (!redis_connection_.connect(conf.get_redis_address(),
                                     conf.get_redis_port())) {
-    std::cout << "ERROR: StateDB connecting to Redis" << std::endl;
-    std::cout << "Sleeping 1 second..." << std::endl;
+    log_error(LOGGING_TAG_STATE_DB, "StateDB failed to connect to redis", "Retrying in 1 second...");
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
   if (!redis::send_cmd_no_reply<std::string>(
           redis_connection_, {"SELECT", std::to_string(REDIS_STATE_DB_NUM)})) {
     throw std::runtime_error("Could not select StateDB table from Redis");
   }
-  std::cout << "Persistent state DB created" << std::endl;
+  log_info(LOGGING_TAG_STATE_DB, "Persistent state DB created");
 }
 
 StateDB::~StateDB() { redis_connection_.disconnect(); }

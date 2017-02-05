@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <boost/optional.hpp>
+#include <clipper/logging.hpp>
 #include <redox.hpp>
 
 #include "constants.hpp"
@@ -17,6 +18,8 @@
 
 namespace clipper {
 namespace redis {
+
+const std::string LOGGING_TAG_REDIS = "REDIS";
 
 /**
  * Issues a command to Redis and checks return code.
@@ -28,12 +31,12 @@ bool send_cmd_no_reply(redox::Redox& redis,
   bool ok = true;
   redox::Command<ReplyT>& cmd = redis.commandSync<ReplyT>(cmd_vec);
   if (!cmd.ok()) {
-    std::cout << "Error with command \"" << redis.vecToStr(cmd_vec)
-              << "\": " << cmd.lastError() << std::endl;
+    log_error_formatted(LOGGING_TAG_REDIS, "Error with command \"{}\": {}",
+                        redis.vecToStr(cmd_vec), cmd.lastError());
     ok = false;
   } else {
-    std::cout << "Successfully issued command \"" << redis.vecToStr(cmd_vec)
-              << "\": " << std::endl;
+    log_info_formatted(LOGGING_TAG_REDIS, "Successfully issued command \"{}\"",
+                       redis.vecToStr(cmd_vec));
   }
   cmd.free();
   return ok;
@@ -44,11 +47,11 @@ boost::optional<ReplyT> send_cmd_with_reply(
     redox::Redox& redis, const std::vector<std::string>& cmd_vec) {
   redox::Command<ReplyT>& cmd = redis.commandSync<ReplyT>(cmd_vec);
   if (!cmd.ok()) {
-    std::cout << "Error with command \"" << redis.vecToStr(cmd_vec)
-              << "\": " << cmd.lastError() << std::endl;
+    log_error_formatted(LOGGING_TAG_REDIS, "Error with command \"{}\": {}",
+                        redis.vecToStr(cmd_vec), cmd.lastError());
   } else {
-    std::cout << "Successfully issued command \"" << redis.vecToStr(cmd_vec)
-              << "\": " << std::endl;
+    log_info_formatted(LOGGING_TAG_REDIS, "Successfully issued command \"{}\"",
+                       redis.vecToStr(cmd_vec));
     return cmd.reply();
   }
   cmd.free();
@@ -87,7 +90,7 @@ std::vector<VersionedModelId> str_to_models(const std::string& model_str);
  * \return Returns true if the add was successful.
  */
 bool add_model(redox::Redox& redis, const VersionedModelId& model_id,
-               const InputType& input_type, const std::string& output_type,
+               const InputType& input_type,
                const std::vector<std::string>& labels,
                const std::string& container_name,
                const std::string& model_data_path);
@@ -196,8 +199,7 @@ std::unordered_map<std::string, std::string> get_container_by_key(
  */
 bool add_application(redox::Redox& redis, const std::string& appname,
                      const std::vector<VersionedModelId>& models,
-                     const InputType& input_type,
-                     const std::string& output_type, const std::string& policy,
+                     const InputType& input_type, const std::string& policy,
                      const long latency_slo_micros);
 
 /**

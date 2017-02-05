@@ -5,21 +5,17 @@
 #include <utility>
 #include <vector>
 
-#include <boost/thread.hpp>
-#define BOOST_SPIRIT_THREADSAFE
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/property_tree/ptree.hpp>
-
 #include <clipper/config.hpp>
 #include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/json_util.hpp>
+#include <clipper/logging.hpp>
 #include <clipper/metrics.hpp>
 #include <clipper/query_processor.hpp>
 #include <clipper/redis.hpp>
 
 #include <server_http.hpp>
 
-using namespace boost::property_tree;
 using clipper::Response;
 using clipper::FeedbackAck;
 using clipper::VersionedModelId;
@@ -29,66 +25,45 @@ using clipper::Output;
 using clipper::Query;
 using clipper::Feedback;
 using clipper::FeedbackQuery;
+using clipper::json::json_parse_error;
+using clipper::json::json_semantic_error;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
 namespace query_frontend {
 
+const std::string LOGGING_TAG_QUERY_FRONTEND = "QUERYFRONTEND";
 const std::string GET_METRICS = "^/metrics$";
 
-enum class OutputType { Double, Int };
-
-OutputType parse_output_type(std::string output_str) {
-  if (output_str == "int") {
-    return OutputType::Int;
-  } else if (output_str == "double") {
-    return OutputType::Double;
-  } else {
-    throw std::invalid_argument(output_str + " is invalid output type.");
+const std::string PREDICTION_JSON_SCHEMA = R"(
+  {
+   "uid" := string,
+   "input" := [double] | [int] | [string] | [byte] | [float],
   }
-}
+)";
 
-template <typename T>
-std::vector<T> as_vector(ptree const& pt, ptree::key_type const& key) {
-  std::vector<T> r;
-  for (auto& item : pt.get_child(key)) {
-    r.push_back(item.second.get_value<T>());
+const std::string UPDATE_JSON_SCHEMA = R"(
+  {
+   "uid" := string,
+   "input" := [double] | [int] | [string] | [byte] | [float],
+   "label" := double
   }
-  return r;
-}
-
-std::shared_ptr<Input> decode_input(InputType input_type, ptree& parsed_json) {
-  std::shared_ptr<Input> result;
-  switch (input_type) {
-    case InputType::Doubles: {
-      std::vector<double> inputs = as_vector<double>(parsed_json, "input");
-      return std::make_shared<clipper::DoubleVector>(inputs);
-    }
-    case InputType::Floats: {
-      std::vector<float> inputs = as_vector<float>(parsed_json, "input");
-      return std::make_shared<clipper::FloatVector>(inputs);
-    }
-    case InputType::Ints: {
-      std::vector<int> inputs = as_vector<int>(parsed_json, "input");
-      return std::make_shared<clipper::IntVector>(inputs);
-    }
-    case InputType::Strings: {
-      std::string input_string =
-          parsed_json.get_child("input").get_value<std::string>();
-      return std::make_shared<clipper::SerializableString>(input_string);
-    }
-    case InputType::Bytes: {
-      throw std::invalid_argument("Base64 encoded bytes are not supported yet");
-    }
-    default:
-      throw std::invalid_argument("input_type is not a valid type");
-  }
-}
+)";
 
 void respond_http(std::string content, std::string message,
                   std::shared_ptr<HttpServer::Response> response) {
   *response << "HTTP/1.1 " << message
             << "\r\nContent-Length: " << content.length() << "\r\n\r\n"
             << content << "\n";
+}
+
+/* Generate a user-facing error message containing the exception
+ * content and the expected JSON schema. */
+std::string json_error_msg(const std::string& exception_msg,
+                           const std::string& expected_schema) {
+  std::stringstream ss;
+  ss << "Error parsing JSON: " << exception_msg << ". "
+     << "Expected JSON schema: " << expected_schema;
+  return ss.str();
 }
 
 template <class QP>
@@ -99,48 +74,52 @@ class RequestHandler {
     clipper::Config& conf = clipper::get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
-      std::cout << "ERROR: Query frontend connecting to Redis" << std::endl;
-      std::cout << "Sleeping 1 second..." << std::endl;
+      clipper::log_error(LOGGING_TAG_QUERY_FRONTEND,
+                         "Query frontend failed to connect to Redis",
+                         "Retrying in 1 second...");
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
     while (!redis_subscriber_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
-      std::cout << "ERROR: Query frontend subscriber connecting to Redis"
-                << std::endl;
-      std::cout << "Sleeping 1 second..." << std::endl;
+      clipper::log_error(LOGGING_TAG_QUERY_FRONTEND,
+                         "Query frontend subscriber failed to connect to Redis",
+                         "Retrying in 1 second...");
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
-    server_.add_endpoint(
-        GET_METRICS, "GET",
-        [](std::shared_ptr<HttpServer::Response> response,
-           std::shared_ptr<HttpServer::Request> /*request*/) {
-          clipper::metrics::MetricsRegistry& registry =
-              clipper::metrics::MetricsRegistry::get_metrics();
-          std::string metrics_report = registry.report_metrics();
-          std::cout << "METRICS\n" << metrics_report << std::endl;
-          respond_http(metrics_report, "200 OK", response);
-        });
+    server_.add_endpoint(GET_METRICS, "GET",
+                         [](std::shared_ptr<HttpServer::Response> response,
+                            std::shared_ptr<HttpServer::Request> /*request*/) {
+                           clipper::metrics::MetricsRegistry& registry =
+                               clipper::metrics::MetricsRegistry::get_metrics();
+                           std::string metrics_report =
+                               registry.report_metrics();
+                           clipper::log_info(LOGGING_TAG_QUERY_FRONTEND,
+                                             "METRICS", metrics_report);
+                           respond_http(metrics_report, "200 OK", response);
+                         });
 
     clipper::redis::subscribe_to_application_changes(
         redis_subscriber_,
         [this](const std::string& key, const std::string& event_type) {
-          std::cout << "APPLICATION EVENT DETECTED. Key: " << key
-                    << ", event_type: " << event_type << std::endl;
+          clipper::log_info_formatted(
+              LOGGING_TAG_QUERY_FRONTEND,
+              "APPLICATION EVENT DETECTED. Key: {}, event_type: {}", key,
+              event_type);
           if (event_type == "hset") {
             std::string name = key;
-            std::cout << "New application detected: " << key << std::endl;
+            clipper::log_info_formatted(LOGGING_TAG_QUERY_FRONTEND,
+                                        "New application detected: {}", key);
             auto app_info =
                 clipper::redis::get_application_by_key(redis_connection_, key);
             std::vector<VersionedModelId> candidate_models =
                 clipper::redis::str_to_models(app_info["candidate_models"]);
             InputType input_type =
                 clipper::parse_input_type(app_info["input_type"]);
-            OutputType output_type = parse_output_type(app_info["output_type"]);
             std::string policy = app_info["policy"];
             int latency_slo_micros = std::stoi(app_info["latency_slo_micros"]);
-            add_application(name, candidate_models, input_type, output_type,
-                            policy, latency_slo_micros);
+            add_application(name, candidate_models, input_type, policy,
+                            latency_slo_micros);
           }
         });
   }
@@ -151,8 +130,8 @@ class RequestHandler {
   }
 
   void add_application(std::string name, std::vector<VersionedModelId> models,
-                       InputType input_type, OutputType output_type,
-                       std::string policy, long latency_slo_micros) {
+                       InputType input_type, std::string policy,
+                       long latency_slo_micros) {
     auto predict_fn = [this, name, input_type, policy, latency_slo_micros,
                        models](std::shared_ptr<HttpServer::Response> response,
                                std::shared_ptr<HttpServer::Request> request) {
@@ -167,8 +146,14 @@ class RequestHandler {
           std::string content = ss.str();
           respond_http(content, "200 OK", response);
         });
-      } catch (const ptree_error& e) {
-        respond_http(e.what(), "400 Bad Request", response);
+      } catch (const json_parse_error& e) {
+        std::string error_msg =
+            json_error_msg(e.what(), PREDICTION_JSON_SCHEMA);
+        respond_http(error_msg, "400 Bad Request", response);
+      } catch (const json_semantic_error& e) {
+        std::string error_msg =
+            json_error_msg(e.what(), PREDICTION_JSON_SCHEMA);
+        respond_http(error_msg, "400 Bad Request", response);
       } catch (const std::invalid_argument& e) {
         respond_http(e.what(), "400 Bad Request", response);
       }
@@ -176,13 +161,12 @@ class RequestHandler {
     std::string predict_endpoint = "^/" + name + "/predict$";
     server_.add_endpoint(predict_endpoint, "POST", predict_fn);
 
-    auto update_fn = [this, name, input_type, output_type, policy, models](
+    auto update_fn = [this, name, input_type, policy, models](
         std::shared_ptr<HttpServer::Response> response,
         std::shared_ptr<HttpServer::Request> request) {
       try {
-        auto update =
-            decode_and_handle_update(request->content.string(), name, models,
-                                     policy, input_type, output_type);
+        auto update = decode_and_handle_update(request->content.string(), name,
+                                               models, policy, input_type);
         update.then([response](boost::future<FeedbackAck> f) {
           FeedbackAck ack = f.get();
           std::stringstream ss;
@@ -190,8 +174,12 @@ class RequestHandler {
           std::string content = ss.str();
           respond_http(content, "200 OK", response);
         });
-      } catch (const ptree_error& e) {
-        respond_http(e.what(), "400 Bad Request", response);
+      } catch (const json_parse_error& e) {
+        std::string error_msg = json_error_msg(e.what(), UPDATE_JSON_SCHEMA);
+        respond_http(error_msg, "400 Bad Request", response);
+      } catch (const json_semantic_error& e) {
+        std::string error_msg = json_error_msg(e.what(), UPDATE_JSON_SCHEMA);
+        respond_http(error_msg, "400 Bad Request", response);
       } catch (const std::invalid_argument& e) {
         respond_http(e.what(), "400 Bad Request", response);
       }
@@ -211,15 +199,12 @@ class RequestHandler {
       std::string json_content, std::string name,
       std::vector<VersionedModelId> models, std::string policy,
       long latency_slo_micros, InputType input_type) {
-    std::istringstream is(json_content);
-    ptree pt;
-    read_json(is, pt);
-
-    long uid = pt.get<long>("uid");
-    std::shared_ptr<Input> input = decode_input(input_type, pt);
+    rapidjson::Document d;
+    clipper::json::parse_json(json_content, d);
+    long uid = clipper::json::get_long(d, "uid");
+    std::shared_ptr<Input> input = clipper::json::parse_input(input_type, d);
     auto prediction = query_processor_.predict(
         Query{name, uid, input, latency_slo_micros, policy, models});
-
     return prediction;
   }
 
@@ -228,25 +213,20 @@ class RequestHandler {
    * {
    *  "uid" := string,
    *  "input" := [double] | [int] | [string] | [byte] | [float],
-   *  "model_name" := string,
-   *  "model_version" := int,
    *  "label" := double
    * }
    */
   boost::future<FeedbackAck> decode_and_handle_update(
       std::string json_content, std::string name,
       std::vector<VersionedModelId> models, std::string policy,
-      InputType input_type, OutputType /*output_type*/) {
-    std::istringstream is(json_content);
-    ptree pt;
-    read_json(is, pt);
-
-    long uid = pt.get<long>("uid");
-    std::shared_ptr<Input> input = decode_input(input_type, pt);
-    double y_hat = pt.get<double>("label");
-    auto update = query_processor_.update(FeedbackQuery{
-        name, uid, {Feedback(input, y_hat)}, policy, models});
-
+      InputType input_type) {
+    rapidjson::Document d;
+    clipper::json::parse_json(json_content, d);
+    long uid = clipper::json::get_long(d, "uid");
+    std::shared_ptr<Input> input = clipper::json::parse_input(input_type, d);
+    double y_hat = clipper::json::get_double(d, "label");
+    auto update = query_processor_.update(
+        FeedbackQuery{name, uid, {Feedback(input, y_hat)}, policy, models});
     return update;
   }
 

@@ -11,12 +11,15 @@
 #include <clipper/config.hpp>
 #include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/logging.hpp>
 #include <clipper/metrics.hpp>
 #include <clipper/redis.hpp>
 #include <clipper/rpc_service.hpp>
 #include <clipper/util.hpp>
 
 namespace clipper {
+
+const std::string LOGGING_TAG_TASK_EXECUTOR = "TASKEXECUTOR";
 
 std::vector<float> deserialize_outputs(std::vector<uint8_t> bytes);
 
@@ -32,15 +35,15 @@ class CacheEntry {
   CacheEntry &operator=(CacheEntry &&) = default;
 
   bool completed_ = false;
-  boost::promise<Output> value_promise_;
-  boost::shared_future<Output> value_;
+  Output value_;
+  std::vector<boost::promise<Output>> value_promises_;
 };
 
 class PredictionCache {
  public:
   PredictionCache();
-  boost::shared_future<Output> fetch(const VersionedModelId &model,
-                                     const std::shared_ptr<Input> &input);
+  boost::future<Output> fetch(const VersionedModelId &model,
+                              const std::shared_ptr<Input> &input);
 
   void put(const VersionedModelId &model, const std::shared_ptr<Input> &input,
            const Output &output);
@@ -61,21 +64,22 @@ class TaskExecutor {
   explicit TaskExecutor()
       : active_containers_(std::make_shared<ActiveContainers>()),
         rpc_(std::make_unique<rpc::RPCService>()) {
-    std::cout << "TaskExecutor started" << std::endl;
+    log_info(LOGGING_TAG_TASK_EXECUTOR, "TaskExecutor started");
     rpc_->start("*", RPC_SERVICE_PORT);
     active_ = true;
     Config &conf = get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
-      std::cout << "ERROR: TaskExecutor connecting to Redis" << std::endl;
-      std::cout << "Sleeping 1 second..." << std::endl;
+      log_error(LOGGING_TAG_TASK_EXECUTOR,
+                "TaskExecutor failed to connect to redis",
+                "Retrying in 1 second...");
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
     while (!redis_subscriber_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
-      std::cout << "ERROR: TaskExecutor subscriber connecting to Redis"
-                << std::endl;
-      std::cout << "Sleeping 1 second..." << std::endl;
+      log_error(LOGGING_TAG_TASK_EXECUTOR,
+                "TaskExecutor subscriber failed to connect to redis",
+                "Retrying in 1 second...");
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
     redis::send_cmd_no_reply<std::string>(
@@ -117,9 +121,9 @@ class TaskExecutor {
   TaskExecutor(TaskExecutor &&other) = default;
   TaskExecutor &operator=(TaskExecutor &&other) = default;
 
-  std::vector<boost::shared_future<Output>> schedule_predictions(
+  std::vector<boost::future<Output>> schedule_predictions(
       std::vector<PredictTask> tasks) {
-    std::vector<boost::shared_future<Output>> output_futures;
+    std::vector<boost::future<Output>> output_futures;
     for (auto t : tasks) {
       // assign tasks to containers independently
       auto replicas = active_containers_->get_model_replicas_snapshot(t.model_);
@@ -129,8 +133,9 @@ class TaskExecutor {
         container->send_prediction(t);
         output_futures.push_back(std::move(cache_.fetch(t.model_, t.input_)));
       } else {
-        std::cout << "No active containers found for model " << t.model_.first
-                  << ":" << t.model_.second << std::endl;
+        log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
+                           "No active containers found for model {}:{}",
+                           t.model_.first, t.model_.second);
       }
     }
     return output_futures;

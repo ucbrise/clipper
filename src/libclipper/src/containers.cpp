@@ -8,6 +8,8 @@
 
 #include <clipper/containers.hpp>
 #include <clipper/util.hpp>
+#include <clipper/constants.hpp>
+#include <clipper/logging.hpp>
 
 #include <boost/thread.hpp>
 
@@ -32,9 +34,10 @@ ActiveContainers::ActiveContainers()
               100, &versioned_model_hash)) {}
 
 void ActiveContainers::add_container(VersionedModelId model, int id, InputType input_type) {
-  std::cout << "Adding new container: "
-            << "model: " << model.first << ", version: " << model.second
-            << ", ID: " << id << ", input type: " << get_readable_input_type(input_type) << std::endl;
+  log_info(
+      LOGGING_TAG_CLIPPER,
+      "Adding new container - model: {}, version: {}, ID: {}, input_type: {}",
+      model.first, model.second, id, get_readable_input_type(input_type));
   boost::unique_lock<boost::shared_mutex> l{m_};
   auto new_container = std::make_shared<ModelContainer>(model, id, input_type);
   auto entry = containers_[new_container->model_];

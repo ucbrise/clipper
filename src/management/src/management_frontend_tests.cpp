@@ -2,13 +2,11 @@
 #include <gtest/gtest.h>
 
 #include <boost/thread.hpp>
-#define BOOST_SPIRIT_THREADSAFE
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/property_tree/ptree.hpp>
 
 #include <clipper/config.hpp>
 #include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/json_util.hpp>
 #include <clipper/query_processor.hpp>
 
 #include "management_frontend.hpp"
@@ -16,7 +14,6 @@
 using namespace clipper;
 using namespace clipper::redis;
 using namespace management;
-using namespace boost::property_tree;
 
 namespace {
 
@@ -78,7 +75,7 @@ TEST_F(ManagementFrontendTest, TestAddApplicationMissingField) {
   }
   )";
 
-  ASSERT_THROW(rh_.add_application(add_app_json), ptree_error);
+  ASSERT_THROW(rh_.add_application(add_app_json), json_semantic_error);
 }
 
 TEST_F(ManagementFrontendTest, TestAddApplicationMalformedJson) {
@@ -90,7 +87,7 @@ TEST_F(ManagementFrontendTest, TestAddApplicationMalformedJson) {
     "latency_slo_micros": 10000
   )";
 
-  ASSERT_THROW(rh_.add_application(add_app_json), ptree_error);
+  ASSERT_THROW(rh_.add_application(add_app_json), json_parse_error);
 }
 
 TEST_F(ManagementFrontendTest, TestAddModelCorrect) {
@@ -124,7 +121,7 @@ TEST_F(ManagementFrontendTest, TestAddModelMissingField) {
   }
   )";
 
-  ASSERT_THROW(rh_.add_model(add_model_json), ptree_error);
+  ASSERT_THROW(rh_.add_model(add_model_json), json_semantic_error);
 }
 
 TEST_F(ManagementFrontendTest, TestAddModelMalformedJson) {
@@ -134,7 +131,7 @@ TEST_F(ManagementFrontendTest, TestAddModelMalformedJson) {
     "labels": ["label1", "label2", "label3"
     "output_type": "double",
   )";
-  ASSERT_THROW(rh_.add_model(add_model_json), ptree_error);
+  ASSERT_THROW(rh_.add_model(add_model_json), json_parse_error);
 }
 
 }  // namespace

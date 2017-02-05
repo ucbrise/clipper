@@ -1,12 +1,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include <boost/thread.hpp>
-#define BOOST_SPIRIT_THREADSAFE
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/property_tree/ptree.hpp>
-
-#include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
 
@@ -14,7 +8,6 @@
 
 using namespace clipper;
 using namespace query_frontend;
-using namespace boost::property_tree;
 
 namespace {
 
@@ -110,11 +103,11 @@ TEST_F(QueryFrontendTest, TestDecodeMalformedJSON) {
   ASSERT_THROW(
       rh_.decode_and_handle_predict(gibberish_string1, "test", {},
                                     "test_policy", 30000, InputType::Doubles),
-      ptree_error);
+      json_parse_error);
   ASSERT_THROW(
       rh_.decode_and_handle_predict(gibberish_string2, "test", {},
                                     "test_policy", 30000, InputType::Strings),
-      ptree_error);
+      json_parse_error);
 }
 
 TEST_F(QueryFrontendTest, TestDecodeMissingJsonField) {
@@ -122,7 +115,7 @@ TEST_F(QueryFrontendTest, TestDecodeMissingJsonField) {
   ASSERT_THROW(
       rh_.decode_and_handle_predict(json_missing_field, "test", {},
                                     "test_policy", 30000, InputType::Doubles),
-      ptree_error);
+      json_semantic_error);
 }
 
 TEST_F(QueryFrontendTest, TestDecodeWrongInputType) {
@@ -131,7 +124,7 @@ TEST_F(QueryFrontendTest, TestDecodeWrongInputType) {
   ASSERT_THROW(
       rh_.decode_and_handle_predict(test_json_doubles, "test", {},
                                     "test_policy", 30000, InputType::Ints),
-      ptree_bad_data);
+      json_semantic_error);
 }
 
 TEST_F(QueryFrontendTest, TestDecodeCorrectUpdate) {
@@ -139,7 +132,7 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectUpdate) {
       "{\"uid\": 23, \"input\": [1.4,2.23,3.243242,0.3223424], \"label\": 1.0}";
   FeedbackAck ack =
       rh_.decode_and_handle_update(update_json, "test", {}, "test_policy",
-                                   InputType::Doubles, OutputType::Double)
+                                   InputType::Doubles)
           .get();
 
   EXPECT_TRUE(ack);
@@ -148,17 +141,16 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectUpdate) {
 TEST_F(QueryFrontendTest, TestDecodeUpdateMissingField) {
   std::string update_json =
       "{\"uid\": 23, \"input\": [1.4,2.23,3.243242,0.3223424]}";
-  ASSERT_THROW(
-      rh_.decode_and_handle_update(update_json, "test", {}, "test_policy",
-                                   InputType::Doubles, OutputType::Double),
-      ptree_error);
+  ASSERT_THROW(rh_.decode_and_handle_update(update_json, "test", {},
+                                            "test_policy", InputType::Doubles),
+               json_semantic_error);
 }
 
 TEST_F(QueryFrontendTest, TestAddOneApplication) {
   size_t no_apps = rh_.num_applications();
   EXPECT_EQ(no_apps, (size_t)0);
-  rh_.add_application("test_app_1", {}, InputType::Doubles, OutputType::Double,
-                      "test_policy", 30000);
+  rh_.add_application("test_app_1", {}, InputType::Doubles, "test_policy",
+                      30000);
   size_t one_app = rh_.num_applications();
   EXPECT_EQ(one_app, (size_t)1);
 }
@@ -169,8 +161,7 @@ TEST_F(QueryFrontendTest, TestAddManyApplications) {
 
   for (int i = 0; i < 500; ++i) {
     std::string cur_name = "test_app_" + std::to_string(i);
-    rh_.add_application(cur_name, {}, InputType::Doubles, OutputType::Double,
-                        "test_policy", 30000);
+    rh_.add_application(cur_name, {}, InputType::Doubles, "test_policy", 30000);
   }
 
   size_t apps = rh_.num_applications();

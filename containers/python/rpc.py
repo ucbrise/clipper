@@ -4,6 +4,8 @@ import threading
 import numpy as np
 import struct
 from datetime import datetime
+import socket
+import sys
 
 INPUT_TYPE_BYTES = 0
 INPUT_TYPE_INTS = 1
@@ -18,7 +20,7 @@ REQUEST_TYPE_FEEDBACK = 1
 def string_to_input_type(input_str):
     input_str = input_str.strip().lower()
     byte_strs = ["b", "bytes", "byte"]
-    int_strs = ["i", "ints", "int"]
+    int_strs = ["i", "ints", "int", "integer", "integers"]
     float_strs = ["f", "floats", "float"]
     double_strs = ["d", "doubles", "double"]
     string_strs = ["s", "strings", "string", "strs", "str"]
@@ -103,7 +105,8 @@ class Server(threading.Thread):
         self.socket.send(str(self.model_version), zmq.SNDMORE)
         self.socket.send(str(self.model_input_type))
         print(self.model_input_type)
-        print("Serving predictions for {0} input type.".format(input_type_to_string(self.model_input_type)))
+        print("Serving predictions for {0} input type.".format(
+                  input_type_to_string(self.model_input_type)))
         while True:
             # Receive delimiter between identity and content
             self.socket.recv()
@@ -127,8 +130,10 @@ class Server(threading.Thread):
                     0], parsed_input_header[1], parsed_input_header[2:]
 
                 if int(input_type) != int(self.model_input_type):
-                    print(
-                        'Received an input of incorrect type for this container!')
+                    print(("Received incorrect input. Expected {expected}, "
+                           "received {received}").format(
+                              expected=input_type_to_string(int(self.model_input_type)),
+                              received=input_type_to_string(int(input_type))))
                     raise
 
                 if input_type == INPUT_TYPE_STRINGS:
@@ -140,11 +145,11 @@ class Server(threading.Thread):
                         raw_content.split('\0')[
                             :-1], dtype=input_type_to_dtype(input_type))
                 else:
-                    inputs = np.split(
+                    inputs = np.array(np.split(
                         np.frombuffer(
                             raw_content, dtype=input_type_to_dtype(
                                 input_type)),
-                        splits)
+                        splits))
 
                 t3 = datetime.now()
 
@@ -202,16 +207,22 @@ class ModelContainerBase(object):
         pass
 
 
-def start(model, ip, port, model_name, model_version, input_type):
+def start(model, host, port, model_name, model_version, input_type):
     """
     Args:
         model (object): The loaded model object ready to make predictions.
-        ip (str): The Clipper RPC IP address.
+        host (str): The Clipper RPC hostname or IP address.
         port (int): The Clipper RPC port.
         model_name (str): The name of the model.
         model_version (int): The version of the model
         input_type (str): One of ints, doubles, floats, bytes, strings.
     """
+
+    try:
+        ip = socket.gethostbyname(host)
+    except socket.error as e:
+        print("Error resolving %s: %s" % (host, e))
+        sys.exit(1)
     context = zmq.Context()
     server = Server(context, ip, port)
     model_input_type = string_to_input_type(input_type)
