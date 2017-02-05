@@ -125,7 +125,6 @@ class Clipper:
                              candidate_models,
                              input_type,
                              selection_policy,
-                             output_type="double",
                              slo_micros=20000):
         """Register a new Clipper application.
 
@@ -146,8 +145,6 @@ class Clipper:
         selection_policy : str
             The name of the model selection policy to be used for the
             application.
-        output_type : str, optional
-            Either "double" or "int". Default is "double".
         slo_micros : int, optional
             The query latency objective for the application in microseconds.
             Default is 20,000 (20 ms).
@@ -157,7 +154,6 @@ class Clipper:
             "name": name,
             "candidate_models": candidate_models,
             "input_type": input_type,
-            "output_type": output_type,
             "selection_policy": selection_policy,
             "latency_slo_micros": slo_micros
         })
@@ -431,15 +427,13 @@ class Clipper:
             labels,
             input_type,
             container_name,
-            model_data_path,
-            output_type="double"):
+            model_data_path):
         url = "http://%s:1338/admin/add_model" % self.host
         req_json = json.dumps({
             "model_name": name,
             "model_version": version,
             "labels": labels,
             "input_type": input_type,
-            "output_type": output_type,
             "container_name": container_name,
             "model_data_path": model_data_path
         })
