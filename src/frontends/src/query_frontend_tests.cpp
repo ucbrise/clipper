@@ -15,7 +15,7 @@ class MockQueryProcessor {
  public:
   MockQueryProcessor() = default;
   boost::future<Response> predict(Query query) {
-    Response response(query, 3, 5, Output(-1.0, std::make_pair("m", 1)), {});
+    Response response(query, 3, 5, Output(-1.0, {std::make_pair("m", 1)}), {});
     return boost::make_ready_future(response);
   }
   boost::future<FeedbackAck> update(FeedbackQuery /*feedback*/) {
@@ -129,11 +129,10 @@ TEST_F(QueryFrontendTest, TestDecodeWrongInputType) {
 
 TEST_F(QueryFrontendTest, TestDecodeCorrectUpdate) {
   std::string update_json =
-      "{\"uid\": 23, \"input\": [1.4,2.23,3.243242,0.3223424], \"model_name\": "
-      "\"m\", \"model_version\": 1, \"label\": 1.0}";
+      "{\"uid\": 23, \"input\": [1.4,2.23,3.243242,0.3223424], \"label\": 1.0}";
   FeedbackAck ack =
       rh_.decode_and_handle_update(update_json, "test", {}, "test_policy",
-                                   InputType::Doubles, OutputType::Double)
+                                   InputType::Doubles)
           .get();
 
   EXPECT_TRUE(ack);
@@ -141,19 +140,17 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectUpdate) {
 
 TEST_F(QueryFrontendTest, TestDecodeUpdateMissingField) {
   std::string update_json =
-      "{\"uid\": 23, \"input\": [1.4,2.23,3.243242,0.3223424], \"model_name\": "
-      "\"m\", \"label\": 1.0}";
-  ASSERT_THROW(
-      rh_.decode_and_handle_update(update_json, "test", {}, "test_policy",
-                                   InputType::Doubles, OutputType::Double),
-      json_semantic_error);
+      "{\"uid\": 23, \"input\": [1.4,2.23,3.243242,0.3223424]}";
+  ASSERT_THROW(rh_.decode_and_handle_update(update_json, "test", {},
+                                            "test_policy", InputType::Doubles),
+               json_semantic_error);
 }
 
 TEST_F(QueryFrontendTest, TestAddOneApplication) {
   size_t no_apps = rh_.num_applications();
   EXPECT_EQ(no_apps, (size_t)0);
-  rh_.add_application("test_app_1", {}, InputType::Doubles, OutputType::Double,
-                      "test_policy", 30000);
+  rh_.add_application("test_app_1", {}, InputType::Doubles, "test_policy",
+                      30000);
   size_t one_app = rh_.num_applications();
   EXPECT_EQ(one_app, (size_t)1);
 }
@@ -164,8 +161,7 @@ TEST_F(QueryFrontendTest, TestAddManyApplications) {
 
   for (int i = 0; i < 500; ++i) {
     std::string cur_name = "test_app_" + std::to_string(i);
-    rh_.add_application(cur_name, {}, InputType::Doubles, OutputType::Double,
-                        "test_policy", 30000);
+    rh_.add_application(cur_name, {}, InputType::Doubles, "test_policy", 30000);
   }
 
   size_t apps = rh_.num_applications();

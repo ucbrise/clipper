@@ -246,7 +246,7 @@ class TaskExecutor {
           latency_hist->insert(static_cast<int64_t>(current_time - send_time));
           cache_.put(std::get<1>(keys[batch_num]), std::get<2>(keys[batch_num]),
                      Output{deserialized_outputs[batch_num],
-                            std::get<1>(keys[batch_num])});
+                            {std::get<1>(keys[batch_num])}});
         }
       }
     }

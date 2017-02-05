@@ -13,7 +13,6 @@
 using clipper::Input;
 using clipper::InputType;
 using clipper::Output;
-using clipper::OutputType;
 using clipper::VersionedModelId;
 using rapidjson::Type;
 
@@ -248,24 +247,6 @@ std::shared_ptr<Input> parse_input(InputType input_type, rapidjson::Value& d) {
     }
     default:
       throw std::invalid_argument("input_type is not a valid type");
-  }
-}
-
-Output parse_output(OutputType output_type, rapidjson::Value& parsed_json) {
-  std::string model_name = get_string(parsed_json, "model_name");
-  int model_version = get_int(parsed_json, "model_version");
-  VersionedModelId versioned_model = std::make_pair(model_name, model_version);
-  switch (output_type) {
-    case OutputType::Double: {
-      double y_hat = get_double(parsed_json, "label");
-      return Output(y_hat, versioned_model);
-    }
-    case OutputType::Int: {
-      double y_hat = get_int(parsed_json, "label");
-      return Output(y_hat, versioned_model);
-    }
-    default:
-      throw std::invalid_argument("output_type is not a valid type");
   }
 }
 

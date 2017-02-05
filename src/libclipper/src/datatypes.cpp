@@ -75,28 +75,8 @@ InputType parse_input_type(std::string type_string) {
   }
 }
 
-std::string get_readable_output_type(OutputType type) {
-  switch (type) {
-    case OutputType::Int:
-      return std::string("integer");
-    case OutputType::Double:
-      return std::string("double");
-  }
-  return std::string("Invalid input type");
-}
-
-OutputType parse_output_type(std::string output_str) {
-  if (output_str == "int") {
-    return OutputType::Int;
-  } else if (output_str == "double") {
-    return OutputType::Double;
-  } else {
-    throw std::invalid_argument(output_str + " is invalid output type.");
-  }
-}
-
-Output::Output(double y_hat, VersionedModelId versioned_model)
-    : y_hat_(y_hat), versioned_model_(versioned_model) {}
+Output::Output(double y_hat, std::vector<VersionedModelId> models_used)
+    : y_hat_(y_hat), models_used_(models_used) {}
 
 ByteVector::ByteVector(std::vector<uint8_t> data) : data_(std::move(data)) {}
 
@@ -294,6 +274,9 @@ std::string Response::debug_string() const noexcept {
   debug.append(std::to_string(output_.y_hat_));
   return debug;
 }
+
+Feedback::Feedback(std::shared_ptr<Input> input, double y)
+    : y_(y), input_(input) {}
 
 FeedbackQuery::FeedbackQuery(std::string label, long user_id, Feedback feedback,
                              std::string selection_policy,

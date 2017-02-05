@@ -21,11 +21,6 @@ enum class InputType {
   Strings = 4,
 };
 
-enum class OutputType {
-  Double = 0,
-  Int = 1,
-};
-
 enum class RequestType {
   PredictRequest = 0,
   FeedbackRequest = 1,
@@ -34,8 +29,6 @@ enum class RequestType {
 size_t versioned_model_hash(const VersionedModelId &key);
 std::string get_readable_input_type(InputType type);
 InputType parse_input_type(std::string type_string);
-std::string get_readable_output_type(OutputType type);
-OutputType parse_output_type(std::string type_string);
 
 class Output {
  public:
@@ -46,9 +39,9 @@ class Output {
 
   Output(Output &&) = default;
   Output &operator=(Output &&) = default;
-  Output(double y_hat, VersionedModelId versioned_model);
+  Output(double y_hat, std::vector<VersionedModelId> models_used);
   double y_hat_;
-  VersionedModelId versioned_model_;
+  std::vector<VersionedModelId> models_used_;
 };
 
 class Input {
@@ -247,7 +240,20 @@ class Response {
   std::vector<VersionedModelId> models_used_;
 };
 
-using Feedback = std::pair<std::shared_ptr<Input>, Output>;
+class Feedback {
+ public:
+  ~Feedback() = default;
+  Feedback(std::shared_ptr<Input> input, double y);
+
+  Feedback(const Feedback &) = default;
+  Feedback &operator=(const Feedback &) = default;
+
+  Feedback(Feedback &&) = default;
+  Feedback &operator=(Feedback &&) = default;
+
+  double y_;
+  std::shared_ptr<Input> input_;
+};
 
 class FeedbackQuery {
  public:

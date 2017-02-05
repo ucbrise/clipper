@@ -7,8 +7,8 @@
 #include <vector>
 
 #include <clipper/constants.hpp>
-#include <clipper/redis.hpp>
 #include <clipper/logging.hpp>
+#include <clipper/redis.hpp>
 #include <redox.hpp>
 
 using redox::Command;
@@ -121,8 +121,8 @@ std::vector<VersionedModelId> str_to_models(const std::string& model_str) {
 }
 
 bool add_model(Redox& redis, const VersionedModelId& model_id,
-               const InputType& input_type, const std::string& output_type,
-               const vector<string>& labels, const std::string& container_name,
+               const InputType& input_type, const vector<string>& labels,
+               const std::string& container_name,
                const std::string& model_data_path) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
@@ -134,7 +134,6 @@ bool add_model(Redox& redis, const VersionedModelId& model_id,
       "model_version",    std::to_string(model_id.second),
       "load",             std::to_string(0.0),
       "input_type",       get_readable_input_type(input_type),
-      "output_type",      output_type,
       "labels",           labels_to_str(labels),
       "container_name",   container_name,
       "model_data_path",  model_data_path};
@@ -255,8 +254,7 @@ unordered_map<string, string> get_container_by_key(Redox& redis,
 
 bool add_application(redox::Redox& redis, const std::string& appname,
                      const std::vector<VersionedModelId>& models,
-                     const InputType& input_type,
-                     const std::string& output_type, const std::string& policy,
+                     const InputType& input_type, const std::string& policy,
                      const long latency_slo_micros) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_APPLICATION_DB_NUM)})) {
@@ -266,8 +264,6 @@ bool add_application(redox::Redox& redis, const std::string& appname,
                                  models_to_str(models),
                                  "input_type",
                                  get_readable_input_type(input_type),
-                                 "output_type",
-                                 output_type,
                                  "policy",
                                  policy,
                                  "latency_slo_micros",

@@ -104,33 +104,36 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   std::vector<PredictTask> tasks;
   std::string serialized_state;
 
-  // select tasks
-  if (query.selection_policy_ == "newest_model") {
-    auto tasks_and_state = select_predict_tasks<NewestModelSelectionPolicy>(
+  if (query.selection_policy_ == "EXP3") {
+    auto tasks_and_state =
+        select_predict_tasks<Exp3Policy>(query, query_id, get_state_table());
+    tasks = tasks_and_state.first;
+    serialized_state = tasks_and_state.second;
+
+  } else if (query.selection_policy_ == "EXP4") {
+    auto tasks_and_state =
+        select_predict_tasks<Exp4Policy>(query, query_id, get_state_table());
+    tasks = tasks_and_state.first;
+    serialized_state = tasks_and_state.second;
+
+  } else if (query.selection_policy_ == "EpsilonGreedy") {
+    auto tasks_and_state = select_predict_tasks<EpsilonGreedyPolicy>(
         query, query_id, get_state_table());
     tasks = tasks_and_state.first;
     serialized_state = tasks_and_state.second;
-    log_info(LOGGING_TAG_QUERY_PROCESSOR,
-             "Used NewestModelSelectionPolicy to select tasks");
-  } else if (query.selection_policy_ == "simple_policy") {
+
+  } else if (query.selection_policy_ == "UCB") {
     auto tasks_and_state =
-        select_predict_tasks<SimplePolicy>(query, query_id, get_state_table());
+        select_predict_tasks<UCBPolicy>(query, query_id, get_state_table());
     tasks = tasks_and_state.first;
     serialized_state = tasks_and_state.second;
-    log_info(LOGGING_TAG_QUERY_PROCESSOR, "Used SimplePolicy to select tasks");
-  } else if (query.selection_policy_ == "bandit_policy") {
-    auto tasks_and_state =
-        select_predict_tasks<BanditPolicy>(query, query_id, get_state_table());
-    tasks = tasks_and_state.first;
-    serialized_state = tasks_and_state.second;
-    log_info(LOGGING_TAG_QUERY_PROCESSOR, "Used BanditPolicy to select tasks");
   } else {
     log_error_formatted(LOGGING_TAG_QUERY_PROCESSOR,
                         "{} is an invalid selection policy",
                         query.selection_policy_);
     // TODO better error handling
     return boost::make_ready_future(
-        Response{query, query_id, 20000, Output{1.0, std::make_pair("m1", 1)},
+        Response{query, query_id, 20000, Output{1.0, {std::make_pair("m1", 1)}},
                  std::vector<VersionedModelId>()});
   }
   log_info_formatted(LOGGING_TAG_QUERY_PROCESSOR, "Found {} tasks",
@@ -178,15 +181,21 @@ boost::future<Response> QueryProcessor::predict(Query query) {
     }
 
     Output final_output;
-    if (query.selection_policy_ == "newest_model") {
-      final_output = combine_predictions<NewestModelSelectionPolicy>(
-          query, outputs, serialized_state);
-    } else if (query.selection_policy_ == "simple_policy") {
+
+    if (query.selection_policy_ == "EXP3") {
       final_output =
-          combine_predictions<SimplePolicy>(query, outputs, serialized_state);
-    } else if (query.selection_policy_ == "bandit_policy") {
+          combine_predictions<Exp3Policy>(query, outputs, serialized_state);
+
+    } else if (query.selection_policy_ == "EXP4") {
       final_output =
-          combine_predictions<BanditPolicy>(query, outputs, serialized_state);
+          combine_predictions<Exp4Policy>(query, outputs, serialized_state);
+    } else if (query.selection_policy_ == "EpsilonGreedy") {
+      final_output = combine_predictions<EpsilonGreedyPolicy>(query, outputs,
+                                                              serialized_state);
+
+    } else if (query.selection_policy_ == "UCB") {
+      final_output =
+          combine_predictions<UCBPolicy>(query, outputs, serialized_state);
     } else {
       UNREACHABLE();
     }
@@ -214,34 +223,36 @@ boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
   std::vector<FeedbackTask> feedback_tasks;
   std::string serialized_state;
 
-  // select tasks
-  if (feedback.selection_policy_ == "newest_model") {
-    auto tasks_and_state = select_feedback_tasks<NewestModelSelectionPolicy>(
+  if (feedback.selection_policy_ == "EXP3") {
+    auto tasks_and_state = select_feedback_tasks<Exp3Policy>(feedback, query_id,
+                                                             get_state_table());
+    // TODO: clean this up
+    predict_tasks = tasks_and_state.first.first;
+    feedback_tasks = tasks_and_state.first.second;
+    serialized_state = tasks_and_state.second;
+
+  } else if (feedback.selection_policy_ == "EXP4") {
+    auto tasks_and_state = select_feedback_tasks<Exp4Policy>(feedback, query_id,
+                                                             get_state_table());
+    // TODO: clean this up
+    predict_tasks = tasks_and_state.first.first;
+    feedback_tasks = tasks_and_state.first.second;
+    serialized_state = tasks_and_state.second;
+  } else if (feedback.selection_policy_ == "EpsilonGreedy") {
+    auto tasks_and_state = select_feedback_tasks<EpsilonGreedyPolicy>(
         feedback, query_id, get_state_table());
     // TODO: clean this up
     predict_tasks = tasks_and_state.first.first;
     feedback_tasks = tasks_and_state.first.second;
     serialized_state = tasks_and_state.second;
-    log_info(LOGGING_TAG_QUERY_PROCESSOR,
-             "Used NewestModelSelectionPolicy to select tasks during feedback");
-  } else if (feedback.selection_policy_ == "simple_policy") {
-    auto tasks_and_state = select_feedback_tasks<SimplePolicy>(
-        feedback, query_id, get_state_table());
+
+  } else if (feedback.selection_policy_ == "UCB") {
+    auto tasks_and_state =
+        select_feedback_tasks<UCBPolicy>(feedback, query_id, get_state_table());
     // TODO: clean this up
     predict_tasks = tasks_and_state.first.first;
     feedback_tasks = tasks_and_state.first.second;
     serialized_state = tasks_and_state.second;
-    log_info(LOGGING_TAG_QUERY_PROCESSOR,
-             "Used SimplePolicy to select tasks during feedback");
-  } else if (feedback.selection_policy_ == "bandit_policy") {
-    auto tasks_and_state = select_feedback_tasks<BanditPolicy>(
-        feedback, query_id, get_state_table());
-    // TODO: clean this up
-    predict_tasks = tasks_and_state.first.first;
-    feedback_tasks = tasks_and_state.first.second;
-    serialized_state = tasks_and_state.second;
-    log_info(LOGGING_TAG_QUERY_PROCESSOR,
-             "Used BanditPolicy to select tasks during feedback");
   } else {
     log_error_formatted(LOGGING_TAG_QUERY_PROCESSOR,
                         "{} is an invalid feedback selection policy",
@@ -294,21 +305,21 @@ boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
     for (auto& r : predict_task_futures) {
       preds.push_back(r.get());
     }
-    if (feedback.selection_policy_ == "newest_model") {
-      // update the selection policy state using the
-      // appropriate selection policy
-      process_feedback<NewestModelSelectionPolicy>(
+
+    if (feedback.selection_policy_ == "EXP3") {
+      process_feedback<Exp3Policy>(feedback, preds, moved_serialized_state,
+                                   state_table);
+
+    } else if (feedback.selection_policy_ == "EXP4") {
+      process_feedback<Exp4Policy>(feedback, preds, moved_serialized_state,
+                                   state_table);
+    } else if (feedback.selection_policy_ == "EpsilonGreedy") {
+      process_feedback<EpsilonGreedyPolicy>(
           feedback, preds, moved_serialized_state, state_table);
-    } else if (feedback.selection_policy_ == "simple_policy") {
-      // update the selection policy state using the
-      // appropriate selection policy
-      process_feedback<SimplePolicy>(feedback, preds, moved_serialized_state,
-                                     state_table);
-    } else if (feedback.selection_policy_ == "bandit_policy") {
-      // update the selection policy state using the
-      // appropriate selection policy
-      process_feedback<BanditPolicy>(feedback, preds, moved_serialized_state,
-                                     state_table);
+
+    } else if (feedback.selection_policy_ == "UCB") {
+      process_feedback<UCBPolicy>(feedback, preds, moved_serialized_state,
+                                  state_table);
     } else {
       UNREACHABLE();
     }

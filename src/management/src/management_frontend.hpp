@@ -15,11 +15,11 @@
 #include <clipper/config.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/json_util.hpp>
+#include <clipper/logging.hpp>
 #include <clipper/persistent_state.hpp>
 #include <clipper/redis.hpp>
-#include <clipper/selection_policy.hpp>
+#include <clipper/selection_policies.hpp>
 #include <clipper/util.hpp>
-#include <clipper/logging.hpp>
 
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 using clipper::VersionedModelId;
@@ -52,7 +52,6 @@ const std::string APPLICATION_JSON_SCHEMA = R"(
      {"model_name" := string, "model_version" := int}
    ],
    "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
-   "output_type" := "double" | "int",
    "selection_policy" := string,
    "latency_slo_micros" := int
   }
@@ -64,7 +63,6 @@ const std::string MODEL_JSON_SCHEMA = R"(
    "model_version" := int,
    "labels" := [string],
    "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
-   "output_type" := "double" | "int",
    "container_name" := string,
    "model_data_path" := string
   }
@@ -117,8 +115,9 @@ class RequestHandler {
     clipper::Config& conf = clipper::get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
-      clipper::log_error(
-          LOGGING_TAG_MANAGEMENT_FRONTEND, "Management frontend failed to connect to Redis", "Retrying in 1 second...");
+      clipper::log_error(LOGGING_TAG_MANAGEMENT_FRONTEND,
+                         "Management frontend failed to connect to Redis",
+                         "Retrying in 1 second...");
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
     while (!redis_subscriber_.connect(conf.get_redis_address(),
@@ -202,7 +201,6 @@ class RequestHandler {
    *    {"model_name" := string, "model_version" := int}
    *  ],
    *  "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
-   *  "output_type" := "double" | "int",
    *  "selection_policy" := string,
    *  "latency_slo_micros" := int
    * }
@@ -216,15 +214,11 @@ class RequestHandler {
         get_candidate_models(d, "candidate_models");
     InputType input_type =
         clipper::parse_input_type(get_string(d, "input_type"));
-    std::string output_type = get_string(d, "output_type");
-    if (!(output_type == "int" || output_type == "double")) {
-      throw std::invalid_argument(output_type + " is invalid output type");
-    }
     std::string selection_policy = get_string(d, "selection_policy");
     int latency_slo_micros = get_int(d, "latency_slo_micros");
-    if (clipper::redis::add_application(
-            redis_connection_, app_name, candidate_models, input_type,
-            output_type, selection_policy, latency_slo_micros)) {
+    if (clipper::redis::add_application(redis_connection_, app_name,
+                                        candidate_models, input_type,
+                                        selection_policy, latency_slo_micros)) {
       return "Success!";
     } else {
       return "Error adding application to Redis.";
@@ -241,7 +235,6 @@ class RequestHandler {
    *  "model_version" := int,
    *  "labels" := [string]
    *  "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
-   *  "output_type" := "double" | "int",
    *  "container_name" := string,
    *  "model_data_path" := string
    * }
@@ -250,20 +243,15 @@ class RequestHandler {
     rapidjson::Document d;
     parse_json(json, d);
 
-    VersionedModelId model_id = std::make_pair(
-        get_string(d, "model_name"), get_int(d, "model_version"));
+    VersionedModelId model_id = std::make_pair(get_string(d, "model_name"),
+                                               get_int(d, "model_version"));
     std::vector<std::string> labels = get_string_array(d, "labels");
     InputType input_type =
         clipper::parse_input_type(get_string(d, "input_type"));
-    std::string output_type = get_string(d, "output_type");
-    if (!(output_type == "int" || output_type == "double")) {
-      throw std::invalid_argument(output_type + " is invalid output type");
-    }
     std::string container_name = get_string(d, "container_name");
     std::string model_data_path = get_string(d, "model_data_path");
     if (clipper::redis::add_model(redis_connection_, model_id, input_type,
-                                  output_type, labels, container_name,
-                                  model_data_path)) {
+                                  labels, container_name, model_data_path)) {
       return "Success!";
     } else {
       return "Error adding model to Redis.";
@@ -291,9 +279,19 @@ class RequestHandler {
     std::vector<VersionedModelId> candidate_models =
         clipper::redis::str_to_models(app_metadata["candidate_models"]);
     std::string policy = app_metadata["policy"];
-    if (policy == "bandit_policy") {
-      return lookup_selection_state<clipper::BanditPolicy>(
+
+    if (policy == "EXP3") {
+      return lookup_selection_state<clipper::Exp3Policy>(state_db_, app_name,
+                                                         uid, candidate_models);
+    } else if (policy == "EXP4") {
+      return lookup_selection_state<clipper::Exp4Policy>(state_db_, app_name,
+                                                         uid, candidate_models);
+    } else if (policy == "EpsilonGreedy") {
+      return lookup_selection_state<clipper::EpsilonGreedyPolicy>(
           state_db_, app_name, uid, candidate_models);
+    } else if (policy == "UCB") {
+      return lookup_selection_state<clipper::UCBPolicy>(state_db_, app_name,
+                                                        uid, candidate_models);
     } else {
       return "ERROR: " + app_name +
              " does not support looking up selection policy state";

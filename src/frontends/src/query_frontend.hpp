@@ -9,10 +9,10 @@
 #include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/json_util.hpp>
+#include <clipper/logging.hpp>
 #include <clipper/metrics.hpp>
 #include <clipper/query_processor.hpp>
 #include <clipper/redis.hpp>
-#include <clipper/logging.hpp>
 
 #include <server_http.hpp>
 
@@ -21,16 +21,12 @@ using clipper::FeedbackAck;
 using clipper::VersionedModelId;
 using clipper::InputType;
 using clipper::Input;
-using clipper::OutputType;
 using clipper::Output;
 using clipper::Query;
+using clipper::Feedback;
 using clipper::FeedbackQuery;
 using clipper::json::json_parse_error;
 using clipper::json::json_semantic_error;
-using clipper::json::parse_json;
-using clipper::json::parse_input;
-using clipper::json::parse_output;
-using clipper::json::get_long;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
 namespace query_frontend {
@@ -49,8 +45,6 @@ const std::string UPDATE_JSON_SCHEMA = R"(
   {
    "uid" := string,
    "input" := [double] | [int] | [string] | [byte] | [float],
-   "model_name" := string,
-   "model_version" := int,
    "label" := double
   }
 )";
@@ -80,50 +74,52 @@ class RequestHandler {
     clipper::Config& conf = clipper::get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
-      clipper::log_error(
-          LOGGING_TAG_QUERY_FRONTEND, "Query frontend failed to connect to Redis", "Retrying in 1 second...");
+      clipper::log_error(LOGGING_TAG_QUERY_FRONTEND,
+                         "Query frontend failed to connect to Redis",
+                         "Retrying in 1 second...");
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
     while (!redis_subscriber_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
-      clipper::log_error(
-          LOGGING_TAG_QUERY_FRONTEND,
-          "Query frontend subscriber failed to connect to Redis",
-          "Retrying in 1 second...");
+      clipper::log_error(LOGGING_TAG_QUERY_FRONTEND,
+                         "Query frontend subscriber failed to connect to Redis",
+                         "Retrying in 1 second...");
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
-    server_.add_endpoint(
-        GET_METRICS, "GET",
-        [](std::shared_ptr<HttpServer::Response> response,
-           std::shared_ptr<HttpServer::Request> /*request*/) {
-          clipper::metrics::MetricsRegistry& registry =
-              clipper::metrics::MetricsRegistry::get_metrics();
-          std::string metrics_report = registry.report_metrics();
-          clipper::log_info(LOGGING_TAG_QUERY_FRONTEND, "METRICS", metrics_report);
-          respond_http(metrics_report, "200 OK", response);
-        });
+    server_.add_endpoint(GET_METRICS, "GET",
+                         [](std::shared_ptr<HttpServer::Response> response,
+                            std::shared_ptr<HttpServer::Request> /*request*/) {
+                           clipper::metrics::MetricsRegistry& registry =
+                               clipper::metrics::MetricsRegistry::get_metrics();
+                           std::string metrics_report =
+                               registry.report_metrics();
+                           clipper::log_info(LOGGING_TAG_QUERY_FRONTEND,
+                                             "METRICS", metrics_report);
+                           respond_http(metrics_report, "200 OK", response);
+                         });
 
     clipper::redis::subscribe_to_application_changes(
         redis_subscriber_,
         [this](const std::string& key, const std::string& event_type) {
           clipper::log_info_formatted(
-              LOGGING_TAG_QUERY_FRONTEND, "APPLICATION EVENT DETECTED. Key: {}, event_type: {}", key, event_type);
+              LOGGING_TAG_QUERY_FRONTEND,
+              "APPLICATION EVENT DETECTED. Key: {}, event_type: {}", key,
+              event_type);
           if (event_type == "hset") {
             std::string name = key;
-            clipper::log_info_formatted(LOGGING_TAG_QUERY_FRONTEND, "New application detected: {}", key);
+            clipper::log_info_formatted(LOGGING_TAG_QUERY_FRONTEND,
+                                        "New application detected: {}", key);
             auto app_info =
                 clipper::redis::get_application_by_key(redis_connection_, key);
             std::vector<VersionedModelId> candidate_models =
                 clipper::redis::str_to_models(app_info["candidate_models"]);
             InputType input_type =
                 clipper::parse_input_type(app_info["input_type"]);
-            OutputType output_type =
-                clipper::parse_output_type(app_info["output_type"]);
             std::string policy = app_info["policy"];
             int latency_slo_micros = std::stoi(app_info["latency_slo_micros"]);
-            add_application(name, candidate_models, input_type, output_type,
-                            policy, latency_slo_micros);
+            add_application(name, candidate_models, input_type, policy,
+                            latency_slo_micros);
           }
         });
   }
@@ -134,8 +130,8 @@ class RequestHandler {
   }
 
   void add_application(std::string name, std::vector<VersionedModelId> models,
-                       InputType input_type, OutputType output_type,
-                       std::string policy, long latency_slo_micros) {
+                       InputType input_type, std::string policy,
+                       long latency_slo_micros) {
     auto predict_fn = [this, name, input_type, policy, latency_slo_micros,
                        models](std::shared_ptr<HttpServer::Response> response,
                                std::shared_ptr<HttpServer::Request> request) {
@@ -165,13 +161,12 @@ class RequestHandler {
     std::string predict_endpoint = "^/" + name + "/predict$";
     server_.add_endpoint(predict_endpoint, "POST", predict_fn);
 
-    auto update_fn = [this, name, input_type, output_type, policy, models](
+    auto update_fn = [this, name, input_type, policy, models](
         std::shared_ptr<HttpServer::Response> response,
         std::shared_ptr<HttpServer::Request> request) {
       try {
-        auto update =
-            decode_and_handle_update(request->content.string(), name, models,
-                                     policy, input_type, output_type);
+        auto update = decode_and_handle_update(request->content.string(), name,
+                                               models, policy, input_type);
         update.then([response](boost::future<FeedbackAck> f) {
           FeedbackAck ack = f.get();
           std::stringstream ss;
@@ -205,9 +200,9 @@ class RequestHandler {
       std::vector<VersionedModelId> models, std::string policy,
       long latency_slo_micros, InputType input_type) {
     rapidjson::Document d;
-    parse_json(json_content, d);
-    long uid = get_long(d, "uid");
-    std::shared_ptr<Input> input = parse_input(input_type, d);
+    clipper::json::parse_json(json_content, d);
+    long uid = clipper::json::get_long(d, "uid");
+    std::shared_ptr<Input> input = clipper::json::parse_input(input_type, d);
     auto prediction = query_processor_.predict(
         Query{name, uid, input, latency_slo_micros, policy, models});
     return prediction;
@@ -218,22 +213,20 @@ class RequestHandler {
    * {
    *  "uid" := string,
    *  "input" := [double] | [int] | [string] | [byte] | [float],
-   *  "model_name" := string,
-   *  "model_version" := int,
    *  "label" := double
    * }
    */
   boost::future<FeedbackAck> decode_and_handle_update(
       std::string json_content, std::string name,
       std::vector<VersionedModelId> models, std::string policy,
-      InputType input_type, OutputType output_type) {
+      InputType input_type) {
     rapidjson::Document d;
-    parse_json(json_content, d);
-    long uid = get_long(d, "uid");
-    std::shared_ptr<Input> input = parse_input(input_type, d);
-    Output output = parse_output(output_type, d);
-    auto update = query_processor_.update(FeedbackQuery{
-        name, uid, {std::make_pair(input, output)}, policy, models});
+    clipper::json::parse_json(json_content, d);
+    long uid = clipper::json::get_long(d, "uid");
+    std::shared_ptr<Input> input = clipper::json::parse_input(input_type, d);
+    double y_hat = clipper::json::get_double(d, "label");
+    auto update = query_processor_.update(
+        FeedbackQuery{name, uid, {Feedback(input, y_hat)}, policy, models});
     return update;
   }
 
