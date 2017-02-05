@@ -38,7 +38,7 @@ std::string BanditPolicyState::serialize() const {
   oa << weight_sum_ << model_map_.size()
      << model_map_;  // save weight_sum, map size and map
   return ss.str();
-};
+}
 
 BanditPolicyState BanditPolicyState::deserialize(const std::string& bytes) {
   std::stringstream ss;
@@ -54,7 +54,7 @@ BanditPolicyState BanditPolicyState::deserialize(const std::string& bytes) {
   state.set_weight_sum(sum);
 
   return state;
-};
+}
 
 std::string BanditPolicyState::debug_string() const {
   /** State string representation:
@@ -79,7 +79,7 @@ std::string BanditPolicyState::debug_string() const {
     string_state += ";";
   }
   return string_state;
-};
+}
 
 // ********
 // * EXP3 *
@@ -198,7 +198,7 @@ BanditPolicyState Exp3Policy::deserialize_state(const std::string& bytes) {
 
 std::string Exp3Policy::state_debug_string(const BanditPolicyState& state) {
   return state.debug_string();
-};
+}
 
 //// ********
 //// * EXP4 *
@@ -296,7 +296,7 @@ BanditPolicyState Exp4Policy::deserialize_state(const std::string& bytes) {
 
 std::string Exp4Policy::state_debug_string(const BanditPolicyState& state) {
   return state.debug_string();
-};
+}
 
 // ******************
 // * Epsilon Greedy *
@@ -410,7 +410,7 @@ BanditPolicyState EpsilonGreedyPolicy::deserialize_state(
 std::string EpsilonGreedyPolicy::state_debug_string(
     const BanditPolicyState& state) {
   return state.debug_string();
-};
+}
 
 // ********
 // * UCB1 *
@@ -484,6 +484,6 @@ BanditPolicyState UCBPolicy::deserialize_state(const std::string& bytes) {
 
 std::string UCBPolicy::state_debug_string(const BanditPolicyState& state) {
   return state.debug_string();
-};
+}
 
 }  // namespace clipper
