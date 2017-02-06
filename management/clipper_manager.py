@@ -7,7 +7,6 @@ import json
 import yaml
 import pprint
 import subprocess32 as subprocess
-import shutil
 from sklearn import base
 from sklearn.externals import joblib
 
@@ -91,7 +90,6 @@ class Clipper:
         if not self.host_is_local():
             env.user = user
             env.key_filename = key_path
-
         # Make sure docker is running on cluster
         self.start_docker_if_necessary()
 
@@ -141,36 +139,24 @@ class Clipper:
             result = local(*args, **kwargs)
         return result
 
-    def execute_put(self, local_path, remote_path, *args, **kwargs):
-        if self.host_is_local():
-            # We should only copy data if the paths are different
-            if local_path != remote_path:
-                if os.path.isdir(local_path):
-                    self.copytree(local_path, remote_path)
-                else:
-                    shutil.copy2(local_path, remote_path)
-        else:
-            put(local_path=local_path, remote_path=remote_path, *args, **kwargs)
-
     def execute_append(self, filename, text, **kwargs):
         if self.host_is_local():
             file = open(filename, "a+")
+            # As with fabric.append(), we should only
+            # append the text if it is not already
+            # present within the file
             if text not in file.read():
                 file.write(text)
             file.close()
-
         else:
             append(filename, text, **kwargs)
 
-    # Modified from http://stackoverflow.com/a/12514470
+    # Taken from http://stackoverflow.com/a/12514470
     # Recursively copies a directory from src to dst,
     # where dst may or may not exist. We cannot use
     # shutil.copytree() alone because it stipulates that
     # dst cannot already exist
     def copytree(self, src, dst, symlinks=False, ignore=None):
-        # Appends the final directory in the tree specified by "src" to
-        # the tree specified by "dst". This is consistent with fabric's
-        # put() behavior
         final_dst_char = dst[len(dst) - 1]
         if final_dst_char != "/":
             dst = dst + "/"
@@ -187,7 +173,6 @@ class Clipper:
             else:
                 if not os.path.exists(d) or os.stat(s).st_mtime - os.stat(d).st_mtime > 1:
                     shutil.copy2(s, d)
-
 
     def start(self):
         """Start a Clipper instance.
@@ -323,7 +308,7 @@ class Clipper:
         r = requests.post(url, headers=headers, data=req_json)
         return r.text
 
-    def deploy_model(self, name, version, model_data, container_name, labels, input_type, num_containers=1):
+    def deploy_model(self, name, version, model, container_name, labels, num_containers=1):
         """Add a model to Clipper.
 
         Parameters
@@ -332,12 +317,12 @@ class Clipper:
             The name to assign this model.
         version : int
             The version to assign this model.
-        model_data : str or BaseEstimator
+        model : str or BaseEstimator
             The trained model to add to Clipper. This can either be a
             Scikit-Learn trained model object (an instance of BaseEstimator),
             or a path to a serialized model. Note that many model serialization
             formats split the model across multiple files (e.g. definition file
-            and weights file or files). If this is the case, `model_data` must be a path
+            and weights file or files). If this is the case, model must be a path
             to the root of a directory tree containing ALL the needed files.
             Depending on the model serialization library you use, this may or may not
             be the path you provided to the serialize method call.
@@ -345,8 +330,6 @@ class Clipper:
             The Docker container image to use to run this model container.
         labels : list of str
             A set of strings annotating the model
-        input_type : str
-            One of "integers", "floats", "doubles", "bytes", or "strings".
         num_containers : int, optional
             The number of replicas of the model to create. More replicas can be
             created later as well. Defaults to 1.
@@ -400,7 +383,7 @@ class Clipper:
                                     vol, os.path.basename(model_data_path))))
                     else:
                         with hide("output", "running"):
-                                self.execute_put(model_data_path, vol)
+                            self.execute_put(model_data_path, vol)
 
             print("Copied model data to host")
             if not self._publish_new_model(name, version, labels, input_type,
@@ -465,7 +448,7 @@ class Clipper:
             result = self.execute_root(add_container_cmd)
             return result.return_code == 0
 
-    def inspect_instance(self, clear=False):
+    def inspect_instance(self):
         """Fetches metrics from the running Clipper instance.
 
         Returns
@@ -524,7 +507,6 @@ class Clipper:
         })
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
-
         if r.status_code == requests.codes.ok:
             return True
         else:
@@ -574,7 +556,7 @@ class Clipper:
                     fn=saved_fname,
                     cn=container_name))
                 tar_loc = "/tmp/{fn}.tar".format(fn=saved_fname)
-                self.execute_put(tar_loc, tar_loc)
+                put(tar_loc, tar_loc)
                 self.execute_root("docker load -i {loc}".format(loc=tar_loc))
                 # self.execute_root("docker tag {image_id} {cn}".format(
                 #       image_id=image_id, cn=cn))
