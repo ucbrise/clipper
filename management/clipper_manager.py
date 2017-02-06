@@ -157,6 +157,9 @@ class Clipper:
     # shutil.copytree() alone because it stipulates that
     # dst cannot already exist
     def copytree(self, src, dst, symlinks=False, ignore=None):
+        # Appends the final directory in the tree specified by "src" to
+        # the tree specified by "dst". This is consistent with fabric's
+        # put() behavior
         final_dst_char = dst[len(dst) - 1]
         if final_dst_char != "/":
             dst = dst + "/"
