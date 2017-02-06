@@ -151,6 +151,28 @@ class Clipper:
         else:
             append(filename, text, **kwargs)
 
+    # Taken from http://stackoverflow.com/a/12514470
+    # Recursively copies a directory from src to dst,
+    # where dst may or may not exist. We cannot use
+    # shutil.copytree() alone because it stipulates that
+    # dst cannot already exist
+    def copytree(self, src, dst, symlinks=False, ignore=None):
+        final_dst_char = dst[len(dst) - 1]
+        if final_dst_char != "/":
+            dst = dst + "/"
+        nested_dir_names = src.split("/")
+        dst = dst + nested_dir_names[len(nested_dir_names) - 1]
+
+        if not os.path.exists(dst):
+            os.makedirs(dst)
+        for item in os.listdir(src):
+            s = os.path.join(src, item)
+            d = os.path.join(dst, item)
+            if os.path.isdir(s):
+                copytree(s, d, symlinks, ignore)
+            else:
+                if not os.path.exists(d) or os.stat(s).st_mtime - os.stat(d).st_mtime > 1:
+                    shutil.copy2(s, d)
 
     def start(self):
         """Start a Clipper instance.
@@ -363,7 +385,7 @@ class Clipper:
                                     vol, os.path.basename(model_data_path))))
                     else:
                         with hide("output", "running"):
-                            put(model_data_path, ".")
+                            self.execute_put(model_data_path, vol)
 
             print("Copied model data to host")
             if not self._publish_new_model(name, version, labels, input_type,
