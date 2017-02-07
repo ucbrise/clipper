@@ -33,7 +33,7 @@ def show_example_images(images, labels, num_rows):
         cur_ax = axes[i / imgs_per_row][i % imgs_per_row]
         cur_ax.imshow(image.astype(np.ubyte), interpolation="nearest")
         cur_ax.axis('off')
-        if label == -1:
+        if label == 0:
             title = classes[negative_class]
         else:
             title = classes[positive_class]
@@ -65,7 +65,7 @@ def filter_data(X, y):
             y_train.append(1.0)
         elif label == negative_class:
             X_train.append(example)
-            y_train.append(-1.0)
+            y_train.append(0.0)
     X_train = np.array(X_train)
     y_train = np.array(y_train)
     return X_train, y_train
@@ -107,9 +107,9 @@ def cifar_prediction(host, app, uid, x):
     end = datetime.now()
     latency = (end - start).total_seconds() * 1000.0
     qid, pred = parse_pred(r.text)
-    if pred == 0.0:
-        pred = -1.0
-    assert pred == 1.0 or pred == -1.0
+    if pred == -1.0:
+        pred = 0.0
+    assert pred == 1.0 or pred == 0.0
     return (pred, latency)
 
 
@@ -126,14 +126,14 @@ def run_iteration(host, app, uid, test_x, test_y):
         correct_y = float(test_y[example_num])
         pred_y, latency = cifar_prediction(host, app, uid, test_x[example_num])
         if correct_y == pred_y:
-            if correct_y == -1:
+            if correct_y == 0:
                 true_neg += 1
             elif correct_y == 1:
                 true_pos += 1
             correct += 1
-        elif correct_y == -1 and pred_y == 1:
+        elif correct_y == 0 and pred_y == 1:
             false_pos += 1
-        elif correct_y == 1 and pred_y == -1:
+        elif correct_y == 1 and pred_y == 0:
             false_neg += 1
         else:
             print "predicted: {p}, correct: {c}".format(p=pred_y, c=correct_y)

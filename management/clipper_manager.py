@@ -52,7 +52,7 @@ DOCKER_COMPOSE_DICT = {
             'depends_on': [
                 'redis',
                 'mgmt_frontend'],
-            'image': 'clipper/query_frontend:latest',
+            'image': 'clipper/query_frontend:test',
             'ports': [
                 '%d:%d' % (CLIPPER_RPC_PORT, CLIPPER_RPC_PORT),
                 '%d:%d' % (CLIPPER_QUERY_PORT, CLIPPER_QUERY_PORT)]},

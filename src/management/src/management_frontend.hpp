@@ -273,7 +273,7 @@ class RequestHandler {
     parse_json(json, d);
 
     std::string app_name = get_string(d, "app_name");
-    int uid = std::stoi(get_string(d, "uid"));
+    int uid = get_int(d, "uid");
     auto app_metadata =
         clipper::redis::get_application(redis_connection_, app_name);
     std::vector<VersionedModelId> candidate_models =

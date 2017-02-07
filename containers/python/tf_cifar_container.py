@@ -23,20 +23,7 @@ class TfCifarContainer(rpc.ModelContainerBase):
                                feed_dict={'x:0': inputs})
         relevant_activations = logits[:, [negative_class, positive_class]]
         preds = np.argmax(relevant_activations, axis=1)
-        preds[preds == 0] = -1.0
         return preds.astype(np.float32)
-
-    # def predict_ints(self, inputs):
-    #     mean, sigma = np.mean(inputs, axis=1), np.std(inputs, axis=1)
-    #     np.place(sigma, sigma == 0, 1.)
-    #     normalized_inputs = np.transpose((inputs.T - mean) / sigma)
-    #     logits = self.sess.run('softmax_logits:0',
-    #                            feed_dict={'x:0': normalized_inputs})
-    #     relevant_activations = logits[:, [negative_class, positive_class]]
-    #     preds = np.argmax(relevant_activations, axis=1)
-    #     preds[preds == 0] = -1.0
-    #     return preds.astype(np.float32)
-
 
 if __name__ == "__main__":
     print("Starting TensorFlow Cifar container")
