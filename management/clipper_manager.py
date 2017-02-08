@@ -336,7 +336,7 @@ class Clipper:
             Scikit-Learn trained model object (an instance of BaseEstimator),
             or a path to a serialized model. Note that many model serialization
             formats split the model across multiple files (e.g. definition file
-            and weights file or files). If this is the case, model_data must be a path
+            and weights file or files). If this is the case, `model_data` must be a path
             to the root of a directory tree containing ALL the needed files.
             Depending on the model serialization library you use, this may or may not
             be the path you provided to the serialize method call.
