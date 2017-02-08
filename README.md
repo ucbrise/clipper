@@ -14,16 +14,16 @@ consume predictions from trained models that produce predictions.
 Clipper is a robust,
 high-performance serving system that can scale to thousands of requests per second and provide
 responses that meet latency service level objectives on the order of milliseconds.
-As a result, Clipper can be safely incorporated into a production serving stack without a
-detrimental impact on an application's request latency.
+As a result, Clipper can be safely incorporated into a production serving stack without negatively
+impacting application latencies.
 
 Simultaneously, Clipper allows data scientists to easily deploy trained models to production.
 Data science is an iterative process, and simplifying the model deployment process allows
 data scientists to more easily experiment with new features and models to quickly improve
 application accuracy. Data scientists deploy models to Clipper with the same code used for
 training, eliminating a common class of bugs in machine-learning that arise from code duplication.
-And Clipper supports deploying models written in many programming languages to support the full
-ecosystem of data science tools in use today spanning languages such as Python, C++, Java, and more.
+And Clipper supports deploying models trained in many machine learning frameworks and implemented
+in many programming languages to support the rich ecosystem of data science tools available today.
 
 Clipper is a project of the UC Berkeley [RISE Lab](https://rise.cs.berkeley.edu/).
 
@@ -47,7 +47,7 @@ curl -O https://raw.githubusercontent.com/ucbrise/clipper/develop/docker/docker-
        && docker-compose up -d query_frontend
 ```
 
-Alternatively, if you've alread cloned the repository, you can run:
+Alternatively, if you've already cloned the repository, you can run:
 ```sh
 cd docker && docker-compose up -d query_frontend
 ```
