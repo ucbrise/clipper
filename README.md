@@ -6,11 +6,11 @@
 
 ## What is Clipper?
 
-Clipper is a prediction serving system that sits between user-facing applications and a wide range of commonly used machine learning frameworks.
+Clipper is a prediction serving system that sits between user-facing applications and a wide range of commonly used machine learning models and frameworks.
 
 ## What does Clipper do?
 
-* Clipper **simplifies integration of machine learning techniques** into user facing applications by providing a simple standard prediction and feedback REST interface across a wide range of commonly used machine learning frameworks.  *Clipper makes product teams happy.*
+* Clipper **simplifies integration of machine learning techniques** into user facing applications by providing a simple standard REST interface for prediction and feedback across a wide range of commonly used machine learning frameworks.  *Clipper makes product teams happy.*
 
 
 * Clipper **simplifies model deployment** and **helps reduce common bugs** by using the same tools and libraries used in model development to render live predictions.  *Clipper makes data scientists happy.*
@@ -35,13 +35,13 @@ responses that meet latency service level objectives on the order of millisecond
 As a result, Clipper can be safely incorporated into a production serving stack without negatively
 impacting application latencies.
 
-Simultaneously, Clipper allows data scientists to easily deploy trained models to production.
+At the same time, Clipper allows data scientists to easily deploy trained models to production.
 Data science is an iterative process, and simplifying the model deployment process allows
 data scientists to more easily experiment with new features and models to quickly improve
 application accuracy. Data scientists deploy models to Clipper with the same code used for
 training, eliminating a common class of bugs in machine-learning that arise from code duplication.
 And Clipper supports deploying models trained in many machine learning frameworks and implemented
-in many programming languages to support the rich ecosystem of data science tools available today.
+in a variety of programming languages to support the rich ecosystem of data science tools available today.
 
 
 
@@ -106,7 +106,7 @@ First generate the CMake files with `./configure`. This generates an out-of-sour
 Go into this directory and then run `make` to actually
 compile the code. You should only need to re-run the configuration script if you change one of the `CMakeLists.txt` files.
 To build for release, run `./configure --release` which generates the `release` build directory instead of debug.
-If you want to clean everything up, you can run `./configure --cleanup`.
+If you want to clean everything up, you can run `./configure --cleanup` (if you get tired of being prompted, you can run `./configure --cleanup-quiet` to force cleanup without prompting).
 
 __NOTE:__ Redis must be installed and on your path to run both the query REST frontend and the unit-tests.
 You can test this with `redis-server --version`.
