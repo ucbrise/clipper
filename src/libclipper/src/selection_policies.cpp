@@ -146,8 +146,7 @@ Output Exp3Policy::combine_predictions(BanditPolicyState /*state*/,
                                        std::vector<Output> predictions) {
   if (predictions.empty()) {
     std::cout << "No predictions to combine" << std::endl;
-    Output output;
-    return output;
+    return Output(0.0, {});
   }
   return predictions.front();
 }
@@ -394,8 +393,7 @@ Output EpsilonGreedyPolicy::combine_predictions(
     std::vector<Output> predictions) {
   if (predictions.empty()) {
     std::cout << "No predictions to combine" << std::endl;
-    Output output;
-    return output;
+    return Output(0.0, {});
   }
   return predictions.front();
 }
@@ -517,8 +515,7 @@ Output UCBPolicy::combine_predictions(BanditPolicyState /*state*/,
                                       std::vector<Output> predictions) {
   if (predictions.empty()) {
     std::cout << "No predictions to combine" << std::endl;
-    Output output;
-    return output;
+    return Output(0.0, {});
   }
   return predictions.front();
 }
