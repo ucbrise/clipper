@@ -87,45 +87,45 @@ class Clipper:
     def __init__(self, host, user, key_path):
         self.host = host
         env.host_string = host
-        if not self.host_is_local():
+        if not self._host_is_local():
             env.user = user
             env.key_filename = key_path
         # Make sure docker is running on cluster
-        self.start_docker_if_necessary()
+        self._start_docker_if_necessary()
 
-    def host_is_local(self):
+    def _host_is_local(self):
         return self.host == "localhost" or self.host == "127.0.0.1"
 
-    def start_docker_if_necessary(self):
+    def _start_docker_if_necessary(self):
         with hide("warnings", "output", "running"):
             print("Checking if Docker is running...")
-            self.execute_root("docker ps")
-            dc_installed = self.execute_root("docker-compose --version", warn_only=True)
+            self._execute_root("docker ps")
+            dc_installed = self._execute_root("docker-compose --version", warn_only=True)
             if dc_installed.return_code != 0:
                 print("docker-compose not installed on host.")
                 print("attempting to install it")
-                self.execute_root("curl -L https://github.com/docker/compose/releases/"
+                self._execute_root("curl -L https://github.com/docker/compose/releases/"
                      "download/1.10.0-rc1/docker-compose-`uname -s`-`uname -m` "
                      "> /usr/local/bin/docker-compose")
-                self.execute_root("chmod +x /usr/local/bin/docker-compose")
+                self._execute_root("chmod +x /usr/local/bin/docker-compose")
             nw_create_command = ("docker network create --driver bridge {nw}"
                                  .format(nw=DOCKER_NW))
-            self.execute_root(nw_create_command, warn_only=True)
-            self.execute_standard("mkdir -p {model_repo}".format(model_repo=MODEL_REPO))
+            self._execute_root(nw_create_command, warn_only=True)
+            self._execute_standard("mkdir -p {model_repo}".format(model_repo=MODEL_REPO))
 
-    def execute_root(self, *args, **kwargs):
-        if self.host_is_local():
-            return self.execute_local(*args, **kwargs)
+    def _execute_root(self, *args, **kwargs):
+        if self._host_is_local():
+            return self._execute_local(*args, **kwargs)
         else:
             return sudo(*args, **kwargs)
 
-    def execute_standard(self, *args, **kwargs):
-        if self.host_is_local():
-            return self.execute_local(*args, **kwargs)
+    def _execute_standard(self, *args, **kwargs):
+        if self._host_is_local():
+            return self._execute_local(*args, **kwargs)
         else:
             return run(*args, **kwargs)
 
-    def execute_local(self, *args, **kwargs):
+    def _execute_local(self, *args, **kwargs):
         # fabric.local() does not accept the "warn_only"
         # key word argument, so we must remove it before
         # calling
@@ -139,8 +139,8 @@ class Clipper:
             result = local(*args, **kwargs)
         return result
 
-    def execute_append(self, filename, text, **kwargs):
-        if self.host_is_local():
+    def _execute_append(self, filename, text, **kwargs):
+        if self._host_is_local():
             file = open(filename, "a+")
             # As with fabric.append(), we should only
             # append the text if it is not already
@@ -151,12 +151,23 @@ class Clipper:
         else:
             append(filename, text, **kwargs)
 
+    def _execute_put(self, local_path, remote_path, *args, **kwargs):
+        if self.host_is_local():
+            # We should only copy data if the paths are different
+            if local_path != remote_path:
+                if os.path.isdir(local_path):
+                    self._copytree(local_path, remote_path)
+                else:
+                    shutil.copy2(local_path, remote_path)
+        else:
+            put(local_path=local_path, remote_path=remote_path, *args, **kwargs)
+
     # Taken from http://stackoverflow.com/a/12514470
     # Recursively copies a directory from src to dst,
     # where dst may or may not exist. We cannot use
     # shutil.copytree() alone because it stipulates that
     # dst cannot already exist
-    def copytree(self, src, dst, symlinks=False, ignore=None):
+    def _copytree(self, src, dst, symlinks=False, ignore=None):
         # Appends the final directory in the tree specified by "src" to
         # the tree specified by "dst". This is consistent with fabric's
         # put() behavior
@@ -172,7 +183,7 @@ class Clipper:
             s = os.path.join(src, item)
             d = os.path.join(dst, item)
             if os.path.isdir(s):
-                copytree(s, d, symlinks, ignore)
+                _copytree(s, d, symlinks, ignore)
             else:
                 if not os.path.exists(d) or os.stat(s).st_mtime - os.stat(d).st_mtime > 1:
                     shutil.copy2(s, d)
@@ -182,13 +193,13 @@ class Clipper:
 
         """
         with hide("output", "warnings", "running"):
-            self.execute_standard("rm -f docker-compose.yml")
-            self.execute_append(
+            self._execute_standard("rm -f docker-compose.yml")
+            self._execute_append(
                 "docker-compose.yml",
                 yaml.dump(
                     DOCKER_COMPOSE_DICT,
                     default_flow_style=False))
-            self.execute_root("docker-compose up -d query_frontend")
+            self._execute_root("docker-compose up -d query_frontend")
             print("Clipper is running")
 
     def register_application(self,
@@ -361,32 +372,32 @@ class Clipper:
             vol = "{model_repo}/{name}/{version}".format(
                 model_repo=MODEL_REPO, name=name, version=version)
             with hide("warnings", "output", "running"):
-                self.execute_standard("mkdir -p {vol}".format(vol=vol))
+                self._execute_standard("mkdir -p {vol}".format(vol=vol))
 
             with cd(vol):
                 with hide("warnings", "output", "running"):
                     if model_data_path.startswith("s3://"):
                         with hide("warnings", "output", "running"):
-                            aws_cli_installed = self.execute_standard(
+                            aws_cli_installed = self._execute_standard(
                                 "dpkg-query -Wf'${db:Status-abbrev}' awscli 2>/dev/null | grep -q '^i'",
                                 warn_only=True).return_code == 0
                             if not aws_cli_installed:
-                                self.execute_root("apt-get update -qq")
-                                self.execute_root("apt-get install -yqq awscli")
-                            if self.execute_root(
+                                self._execute_root("apt-get update -qq")
+                                self._execute_root("apt-get install -yqq awscli")
+                            if self._execute_root(
                                     "stat ~/.aws/config",
                                     warn_only=True).return_code != 0:
-                                self.execute_standard("mkdir -p ~/.aws")
-                                self.execute_append("~/.aws/config", aws_cli_config.format(
+                                self._execute_standard("mkdir -p ~/.aws")
+                                self._execute_append("~/.aws/config", aws_cli_config.format(
                                     access_key=os.environ["AWS_ACCESS_KEY_ID"],
                                     secret_key=os.environ["AWS_SECRET_ACCESS_KEY"]))
 
-                        self.execute_standard("aws s3 cp {model_data_path} {dl_path} --recursive".format(
+                        self._execute_standard("aws s3 cp {model_data_path} {dl_path} --recursive".format(
                                 model_data_path=model_data_path, dl_path=os.path.join(
                                     vol, os.path.basename(model_data_path))))
                     else:
                         with hide("output", "running"):
-                            self.execute_put(model_data_path, vol)
+                            self._execute_put(model_data_path, vol)
 
             print("Copied model data to host")
             if not self._publish_new_model(name, version, labels, input_type,
@@ -448,7 +459,7 @@ class Clipper:
                     mn=model_name,
                     mv=model_version,
                     mip=model_input_type))
-            result = self.execute_root(add_container_cmd)
+            result = self._execute_root(add_container_cmd)
             return result.return_code == 0
 
     def inspect_instance(self):
@@ -475,9 +486,9 @@ class Clipper:
         """
         print("Stopping Clipper and all running models...")
         with hide("output", "warnings", "running"):
-            self.execute_root("docker-compose stop", warn_only=True)
-            self.execute_root("docker stop $(docker ps -a -q)", warn_only=True)
-            self.execute_root("docker rm $(docker ps -a -q)", warn_only=True)
+            self._execute_root("docker-compose stop", warn_only=True)
+            self._execute_root("docker stop $(docker ps -a -q)", warn_only=True)
+            self._execute_root("docker rm $(docker ps -a -q)", warn_only=True)
 
     def cleanup(self):
         """Cleans up all Docker artifacts.
@@ -487,9 +498,9 @@ class Clipper:
         """
         with hide("output", "warnings", "running"):
             self.stop_all()
-            self.execute_standard("rm -rf {model_repo}".format(model_repo=MODEL_REPO))
-            self.execute_root("docker rmi --force $(docker images -q)", warn_only=True)
-            self.execute_root("docker network rm clipper_nw", warn_only=True)
+            self._execute_standard("rm -rf {model_repo}".format(model_repo=MODEL_REPO))
+            self._execute_root("docker rmi --force $(docker images -q)", warn_only=True)
+            self._execute_root("docker network rm clipper_nw", warn_only=True)
 
     def _publish_new_model(
             self,
@@ -536,13 +547,13 @@ class Clipper:
         """
         with hide("output", "warnings", "running"):
             # first see if container is already present on host
-            host_result = self.execute_root(
+            host_result = self._execute_root(
                 "docker images -q {cn}".format(cn=container_name))
             if len(host_result.stdout) > 0:
                 print("Found %s on host" % container_name)
                 return True
             # now try to pull from Docker Hub
-            hub_result = self.execute_root("docker pull {cn}".format(cn=container_name),
+            hub_result = self._execute_root("docker pull {cn}".format(cn=container_name),
                               warn_only=True)
             if hub_result.return_code == 0:
                 print("Found %s in Docker hub" % container_name)
@@ -559,12 +570,12 @@ class Clipper:
                     fn=saved_fname,
                     cn=container_name))
                 tar_loc = "/tmp/{fn}.tar".format(fn=saved_fname)
-                put(tar_loc, tar_loc)
-                self.execute_root("docker load -i {loc}".format(loc=tar_loc))
-                # self.execute_root("docker tag {image_id} {cn}".format(
+                self._execute_put(tar_loc, tar_loc)
+                self._execute_root("docker load -i {loc}".format(loc=tar_loc))
+                # self._execute_root("docker tag {image_id} {cn}".format(
                 #       image_id=image_id, cn=cn))
                 # now check to make sure we can access it
-                host_result = self.execute_root(
+                host_result = self._execute_root(
                     "docker images -q {cn}".format(cn=container_name))
                 if len(host_result.stdout) > 0:
                     print("Successfuly copied %s to host" % container_name)
