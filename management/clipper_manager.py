@@ -322,7 +322,7 @@ class Clipper:
         r = requests.post(url, headers=headers, data=req_json)
         return r.text
 
-    def deploy_model(self, name, version, model, container_name, labels, num_containers=1):
+    def deploy_model(self, name, version, model_data, container_name, labels, input_type, num_containers=1):
         """Add a model to Clipper.
 
         Parameters
