@@ -88,7 +88,7 @@ Clipper has been tested on OSX 10.11, 10.12, and on Debian stretch/sid and Ubunt
 
 ### Querying Clipper
 
-For an example of querying Clipper, see the Python [example client](examples/example_client.py).
+For an example of querying Clipper, see the Python [example client](examples/basic_query/example_client.py).
 
 ### Running Clipper in Docker
 

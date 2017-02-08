@@ -1,5 +1,5 @@
 
-# Examples Requirements
+# Basic Query Example Requirements
 
 The examples in this directory depend on a few Python packages.
 We recommend using [Anaconda](https://www.continuum.io/downloads)
