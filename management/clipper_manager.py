@@ -7,6 +7,7 @@ import json
 import yaml
 import pprint
 import subprocess32 as subprocess
+import shutil
 from sklearn import base
 from sklearn.externals import joblib
 
@@ -62,6 +63,8 @@ DOCKER_COMPOSE_DICT = {
     'version': '2'
 }
 
+LOCAL_HOST_NAMES = ["local", "localhost", "127.0.0.1"]
+
 
 class Clipper:
     """
@@ -71,11 +74,11 @@ class Clipper:
     ----------
     host : str
         The hostname of the machine to start Clipper on. The machine
-        should allow passwordless SSH access.
-    user : str
-        The SSH username.
-    key_path : str
-        The path to the SSH private key.
+        should allow passwordless SSH access. 
+    user : str, optional
+        The SSH username. This field must be specified if `host` is not local.
+    key_path : str, optional.
+        The path to the SSH private key. This field must be specified if `host` is not local.
 
     Sets up the machine for running Clipper. This includes verifying
     SSH credentials and initializing Docker.
@@ -84,17 +87,20 @@ class Clipper:
     before connecting to a machine.
     """
 
-    def __init__(self, host, user, key_path):
+    def __init__(self, host, user=None, key_path=None):
         self.host = host
         env.host_string = host
         if not self._host_is_local():
+            if not user or not key_path:
+                print("user and key_path must be specified when instantiating Clipper with a nonlocal host")
+                raise
             env.user = user
             env.key_filename = key_path
         # Make sure docker is running on cluster
         self._start_docker_if_necessary()
 
     def _host_is_local(self):
-        return self.host == "localhost" or self.host == "127.0.0.1"
+        return self.host in LOCAL_HOST_NAMES
 
     def _start_docker_if_necessary(self):
         with hide("warnings", "output", "running"):
@@ -152,7 +158,7 @@ class Clipper:
             append(filename, text, **kwargs)
 
     def _execute_put(self, local_path, remote_path, *args, **kwargs):
-        if self.host_is_local():
+        if self._host_is_local():
             # We should only copy data if the paths are different
             if local_path != remote_path:
                 if os.path.isdir(local_path):
