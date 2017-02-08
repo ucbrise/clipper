@@ -2,8 +2,8 @@ FROM clipper/py-rpc:latest
 
 MAINTAINER Dan Crankshaw <dscrankshaw@gmail.com>
 
-COPY noop_container.py /container/
+COPY sklearn_cifar_container.py /container/
 
-CMD ["python", "/container/noop_container.py"]
+CMD ["python", "/container/sklearn_cifar_container.py"]
 
 # vim: set filetype=dockerfile:

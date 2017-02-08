@@ -146,8 +146,7 @@ Output Exp3Policy::combine_predictions(BanditPolicyState /*state*/,
                                        std::vector<Output> predictions) {
   if (predictions.empty()) {
     std::cout << "No predictions to combine" << std::endl;
-    Output output;
-    return output;
+    return Output(0.0, {});
   }
   return predictions.front();
 }
@@ -206,12 +205,32 @@ std::string Exp3Policy::state_debug_string(const BanditPolicyState& state) {
 
 BanditPolicyState Exp4Policy::initialize(
     const std::vector<VersionedModelId>& candidate_models_) {
-  return Exp3Policy::initialize(candidate_models_);
+  Map map(candidate_models_.size(), &versioned_model_hash);
+  for (VersionedModelId id : candidate_models_) {
+    ModelInfo info = {{"weight", 1.0}};
+    map.insert({id, info});
+  }
+  BanditPolicyState state;
+  state.set_model_map(map);
+  state.set_weight_sum(map.size() * 1.0);
+  return state;
 }
 
 BanditPolicyState Exp4Policy::add_models(
     BanditPolicyState state, const std::vector<VersionedModelId>& new_models) {
-  return Exp3Policy::add_models(state, new_models);
+  double avg;
+  if (state.model_map_.empty()) {  // State hasn't been initiated or no models
+    avg = 1.0;
+  } else {
+    avg = state.weight_sum_ / state.model_map_.size();
+  }
+
+  for (VersionedModelId id : new_models) {
+    ModelInfo info = {{"weight", avg}};
+    state.add_model(id, info);
+    state.set_weight_sum(state.weight_sum_ + avg);
+  }
+  return state;
 }
 
 std::vector<PredictTask> Exp4Policy::select_predict_tasks(
@@ -229,19 +248,22 @@ std::vector<PredictTask> Exp4Policy::select_predict_tasks(
 Output Exp4Policy::combine_predictions(BanditPolicyState state, Query /*query*/,
                                        std::vector<Output> predictions) {
   // Weighted Combination of All predictions
-  auto y_hat = 0;
+  double score_sum = 0.0;
+  double weight_sum = 0.0;
   std::vector<VersionedModelId> models;
   for (auto p : predictions) {
     auto model_id = (p.models_used_).front();
-    y_hat +=
-        (state.model_map_[model_id]["weight"] / state.weight_sum_) * p.y_hat_;
+    score_sum += state.model_map_[model_id]["weight"] * p.y_hat_;
+    weight_sum += state.model_map_[model_id]["weight"];
     models.push_back(model_id);
   }
+
+  double y_hat = score_sum / weight_sum;
   // Turn y_hat into either 0 or 1
   if (y_hat < 0.5) {
-    y_hat = 0;
+    y_hat = 0.0;
   } else {
-    y_hat = 1;
+    y_hat = 1.0;
   }
 
   auto output = Output(y_hat, models);
@@ -367,15 +389,28 @@ std::vector<PredictTask> EpsilonGreedyPolicy::select_predict_tasks(
 }
 
 Output EpsilonGreedyPolicy::combine_predictions(
-    BanditPolicyState state, Query query, std::vector<Output> predictions) {
-  return Exp3Policy::combine_predictions(state, query, predictions);
+    BanditPolicyState /*state*/, Query /*query*/,
+    std::vector<Output> predictions) {
+  if (predictions.empty()) {
+    std::cout << "No predictions to combine" << std::endl;
+    return Output(0.0, {});
+  }
+  return predictions.front();
 }
 
 std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
 EpsilonGreedyPolicy::select_feedback_tasks(BanditPolicyState& state,
                                            FeedbackQuery feedback,
                                            long query_id) {
-  return Exp3Policy::select_feedback_tasks(state, feedback, query_id);
+  // Predict Task
+  auto selected_model = select(state);
+  auto predict_task =
+      PredictTask(feedback.feedback_.input_, selected_model, -1, query_id, -1);
+  std::vector<PredictTask> predict_tasks{predict_task};
+  // Feedback Task
+  std::vector<FeedbackTask> feedback_tasks;
+
+  return make_pair(predict_tasks, feedback_tasks);
 }
 
 BanditPolicyState EpsilonGreedyPolicy::process_feedback(
@@ -418,12 +453,30 @@ std::string EpsilonGreedyPolicy::state_debug_string(
 
 BanditPolicyState UCBPolicy::initialize(
     const std::vector<VersionedModelId>& candidate_models_) {
-  return EpsilonGreedyPolicy::initialize(candidate_models_);
+  BanditPolicyState state;
+  Map map(candidate_models_.size(), &versioned_model_hash);
+  for (VersionedModelId id : candidate_models_) {
+    ModelInfo info = {{"expected_loss", 0.0}, {"times_selected", 0.0}};
+    map.insert({id, info});
+  }
+  state.set_model_map(map);
+  return state;
 }
 
 BanditPolicyState UCBPolicy::add_models(
     BanditPolicyState state, const std::vector<VersionedModelId>& new_models) {
-  return EpsilonGreedyPolicy::add_models(state, new_models);
+  // Calculate expected loss from old models
+  auto sum = 0.0;
+  for (auto model : state.model_map_) {
+    sum += model.second.at("expected_loss");
+  }
+  auto avg = sum / state.model_map_.size();
+  // Add new model with average reward
+  for (auto id : new_models) {
+    ModelInfo info = {{"expected_loss", avg}, {"times_selected", 0.0}};
+    state.add_model(id, info);
+  }
+  return state;
 }
 
 VersionedModelId UCBPolicy::select(BanditPolicyState& state) {
@@ -457,21 +510,48 @@ std::vector<PredictTask> UCBPolicy::select_predict_tasks(
   return tasks;
 }
 
-Output UCBPolicy::combine_predictions(BanditPolicyState state, Query query,
+Output UCBPolicy::combine_predictions(BanditPolicyState /*state*/,
+                                      Query /*query*/,
                                       std::vector<Output> predictions) {
-  return Exp3Policy::combine_predictions(state, query, predictions);
+  if (predictions.empty()) {
+    std::cout << "No predictions to combine" << std::endl;
+    return Output(0.0, {});
+  }
+  return predictions.front();
 }
 
 std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
 UCBPolicy::select_feedback_tasks(BanditPolicyState& state,
                                  FeedbackQuery feedback, long query_id) {
-  return Exp3Policy::select_feedback_tasks(state, feedback, query_id);
+  // Predict Task
+  auto selected_model = select(state);
+  auto predict_task =
+      PredictTask(feedback.feedback_.input_, selected_model, -1, query_id, -1);
+  std::vector<PredictTask> predict_tasks{predict_task};
+  // Feedback Task
+  std::vector<FeedbackTask> feedback_tasks;
+
+  return make_pair(predict_tasks, feedback_tasks);
 }
 
 BanditPolicyState UCBPolicy::process_feedback(BanditPolicyState state,
                                               Feedback feedback,
                                               std::vector<Output> predictions) {
-  return EpsilonGreedyPolicy::process_feedback(state, feedback, predictions);
+  // Edge case
+  if (predictions.empty()) {
+    return state;
+  }
+  auto model_id = predictions.front().models_used_.front();
+  auto new_loss = std::abs(feedback.y_ - predictions.front().y_hat_);
+  // Update expected loss
+  int times = state.model_map_[model_id]["times_selected"];
+  state.model_map_[model_id]["expected_loss"] =
+      (state.model_map_[model_id]["expected_loss"] * times + new_loss) /
+      (times + 1);
+  // Update times selected
+  state.model_map_[model_id]["times_selected"] = times + 1;
+
+  return state;
 }
 
 std::string UCBPolicy::serialize_state(BanditPolicyState state) {

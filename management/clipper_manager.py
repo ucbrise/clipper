@@ -125,7 +125,6 @@ class Clipper:
                              candidate_models,
                              input_type,
                              selection_policy,
-                             output_type="double",
                              slo_micros=20000):
         """Register a new Clipper application.
 
@@ -146,8 +145,6 @@ class Clipper:
         selection_policy : str
             The name of the model selection policy to be used for the
             application.
-        output_type : str, optional
-            Either "double" or "int". Default is "double".
         slo_micros : int, optional
             The query latency objective for the application in microseconds.
             Default is 20,000 (20 ms).
@@ -157,7 +154,6 @@ class Clipper:
             "name": name,
             "candidate_models": candidate_models,
             "input_type": input_type,
-            "output_type": output_type,
             "selection_policy": selection_policy,
             "latency_slo_micros": slo_micros
         })
@@ -244,7 +240,7 @@ class Clipper:
         r = requests.post(url, headers=headers, data=req_json)
         return r.text
 
-    def deploy_model(self, name, version, model, container_name, labels, num_containers=1):
+    def deploy_model(self, name, version, model_data, container_name, labels, input_type, num_containers=1):
         """Add a model to Clipper.
 
         Parameters
@@ -253,12 +249,12 @@ class Clipper:
             The name to assign this model.
         version : int
             The version to assign this model.
-        model : str or BaseEstimator
+        model_data : str or BaseEstimator
             The trained model to add to Clipper. This can either be a
             Scikit-Learn trained model object (an instance of BaseEstimator),
             or a path to a serialized model. Note that many model serialization
             formats split the model across multiple files (e.g. definition file
-            and weights file or files). If this is the case, model must be a path
+            and weights file or files). If this is the case, `model_data` must be a path
             to the root of a directory tree containing ALL the needed files.
             Depending on the model serialization library you use, this may or may not
             be the path you provided to the serialize method call.
@@ -266,6 +262,8 @@ class Clipper:
             The Docker container image to use to run this model container.
         labels : list of str
             A set of strings annotating the model
+        input_type : str
+            One of "integers", "floats", "doubles", "bytes", or "strings".
         num_containers : int, optional
             The number of replicas of the model to create. More replicas can be
             created later as well. Defaults to 1.
@@ -431,15 +429,13 @@ class Clipper:
             labels,
             input_type,
             container_name,
-            model_data_path,
-            output_type="double"):
+            model_data_path):
         url = "http://%s:1338/admin/add_model" % self.host
         req_json = json.dumps({
             "model_name": name,
             "model_version": version,
             "labels": labels,
             "input_type": input_type,
-            "output_type": output_type,
             "container_name": container_name,
             "model_data_path": model_data_path
         })
