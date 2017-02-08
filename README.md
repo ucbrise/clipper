@@ -130,12 +130,12 @@ make
 
 Clipper has been tested on OSX 10.11, 10.12, and on Debian stretch/sid and Ubuntu 12.04 and 16.04. It does not support Windows.
 
-### Status and Roadmap
+## Status and Roadmap
 
 Clipper is currently under active development in preparation for an 0.1 alpha release
 in mid-April.
 
-#### Features for 0.1 Release
+### Features for 0.1 Release
 
 The 0.1 release will be focused on providing a reliable, robust system for serving
 predictions for single model applications.
@@ -147,7 +147,7 @@ predictions for single model applications.
 + Extensible metrics library for measuring and reporting system performance metrics
 
 
-#### Beyond 0.1
+### Beyond 0.1
 
 The priorities of Clipper in the near-term are to improve support for the entire
 machine-learning application lifecycle, including the ongoing maintenance and evolution
@@ -158,13 +158,13 @@ hardware support. Critical features include:
 + Model performance monitoring to detect and prevent application performance degradation over time
 + New scheduler design to leverage the model and resource heterogeneity common to machine learning applications
 
-### Additional Resources
+## Additional Resources
 
 + [Design Doc (work-in-progress)](https://docs.google.com/document/d/1Ghc-CAKXzzRshSa6FlonFa5ttmtHRAqFwMg7vhuJakw/edit?usp=sharing)
 + [Research Paper](https://arxiv.org/abs/1612.03079)
 
 
-### Contributing
+## Contributing
 
 To file a bug or request a feature, please file a GitHub issue. Pull requests are welcome.
 

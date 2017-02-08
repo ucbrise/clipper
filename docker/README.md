@@ -51,7 +51,7 @@ docker logs docker_query_frontend_1
 docker logs --follow docker_query_frontend_1
 ```
 
-You can run the [client example](../examples/example_client.py) to create
+You can run the [client example](../examples/basic_query/example_client.py) to create
 a new application endpoint and start querying Clipper.
 
 ## Stopping Clipper with Docker-Compose
