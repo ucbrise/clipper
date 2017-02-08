@@ -1,5 +1,9 @@
 # Clipper
 
+## Project Overview
+
+![Clipper System Overview](images/clipper_arch.png)
+
 Clipper is a system for serving machine-learning predictions to interactive, user-facing
 applications. Deploying trained machine-learning models into production today is an ad-hoc,
 labor-intensive, and error-prone process. This creates an enormous impediment to
@@ -23,7 +27,6 @@ ecosystem of data science tools in use today spanning languages such as Python, 
 
 Clipper is a project of the UC Berkeley [RISE Lab](https://rise.cs.berkeley.edu/).
 
-![Clipper System Overview](images/clipper_arch.png)
 
 ## Key Features
 
@@ -36,9 +39,15 @@ Clipper is a project of the UC Berkeley [RISE Lab](https://rise.cs.berkeley.edu/
 
 ## Getting Started
 
-The easiest way to get started running Clipper is with Docker. Clone
-or download the repository, then run:
+The easiest way to get started running Clipper is with Docker.
 
+Download the Clipper [`docker-compose.yml`](docker/docker-compose.yml) configuration and start Clipper:
+```sh
+curl -O https://raw.githubusercontent.com/ucbrise/clipper/develop/docker/docker-compose.yml \
+       && docker-compose up -d query_frontend
+```
+
+Alternatively, if you've alread cloned the repository, you can run:
 ```sh
 cd docker && docker-compose up -d query_frontend
 ```
@@ -47,6 +56,8 @@ For an example of querying Clipper, see the Python [example client](examples/bas
 
 The best way to explore Clipper's features is through the [tutorial iPython notebook](examples/cifar_demo/tutorial.ipynb).
 
+For more information on running Clipper with Docker, check out the [Docker README](docker/README.md).
+
 ## Next Steps
 
 ### Developing Clipper
@@ -54,11 +65,11 @@ The best way to explore Clipper's features is through the [tutorial iPython note
 Clipper is distributed through GitHub.
 
 Clone the repository and submodules:
-```
-$ git clone --recursive https://github.com/ucbrise/clipper.git
+```sh
+git clone --recursive https://github.com/ucbrise/clipper.git
 ```
 
-__Dependencies:__
+__Build Dependencies:__
 
 + Boost >= 1.60
 + cmake >= 3.2
@@ -76,23 +87,24 @@ compile the code. You should only need to re-configure if you change one of the 
 To build for release, run `./configure --release` which generates the `release` build directory instead of debug.
 If you want to clean everything up, you can run `./configure --cleanup`.
 
-__NOTE:__ Redis must be installed and on your path to run both the Query REST frontend and the unit-tests.
+__NOTE:__ Redis must be installed and on your path to run both the query REST frontend and the unit-tests.
+You can test this with `redis-server --version`.
 
 For example:
-```
-$ cd $CLIPPER_ROOT_DIR
-$ ./configure
-$ cd debug
-$ make
+```sh
+cd $CLIPPER_ROOT_DIR
+./configure
+cd debug
+make
 
 # write some code and compile it
-$ make
+make
 
 # build and run unit tests with googletest
-$ ../bin/run_unittests.sh
+../bin/run_unittests.sh
 
 # build and then start the query REST frontend
-$ ../bin/start_clipper.sh
+../bin/start_clipper.sh
 ```
 
 Clipper has been tested on OSX 10.11, 10.12, and on Debian stretch/sid and Ubuntu 12.04 and 16.04. It does not support Windows.
