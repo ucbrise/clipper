@@ -344,6 +344,8 @@ class Clipper:
             The Docker container image to use to run this model container.
         labels : list of str
             A set of strings annotating the model
+        input_type : str
+            One of "integers", "floats", "doubles", "bytes", or "strings".
         num_containers : int, optional
             The number of replicas of the model to create. More replicas can be
             created later as well. Defaults to 1.
