@@ -15,20 +15,20 @@ Once Docker is installed, you can install docker-compose using your
 OS's package manager.
 
 On Debian/Ubuntu:
-```bash
-$ apt-get install docker-compose
+```sh
+apt-get install docker-compose
 ```
 
 On a Mac:
-```bash
-$ brew install docker-compose
+```sh
+brew install docker-compose
 ```
 
 ## Running Clipper with Docker-Compose
 
 From within this directory (`$CLIPPER_ROOT/docker/`), run
-```bash
-$ docker-compose up -d query_frontend
+```sh
+docker-compose up -d query_frontend
 ```
 to start the services. You can then interact with Clipper normally.
 
@@ -38,26 +38,29 @@ to start the services. You can then interact with Clipper normally.
 > [documentation](https://docs.docker.com/compose/gettingstarted/#/step-4-build-and-run-your-app-with-compose)
 > for more information.
 
-```bash
+```sh
 # See all running docker containers
-$ docker ps
+docker ps
 # or just the containers docker-compose started
-$ docker-compose ps
+docker-compose ps
 
 # view logs for container named docker_query_frontend_1
-$ docker logs docker_query_frontend_1
+docker logs docker_query_frontend_1
 
 # tail a logfile
-$ docker logs --follow docker_query_frontend_1
+docker logs --follow docker_query_frontend_1
 ```
 
-You can run the [client example](../examples/example_client.py) to create
+You can run the [client example](../examples/basic_query/example_client.py) to create
 a new application endpoint and start querying Clipper.
 
 ## Stopping Clipper with Docker-Compose
 
 To stop the Clipper containers, from within this directory run:
-```bash
-$ docker-compose stop
+```sh
+docker-compose stop
 ```
 
+## Docker images
+
+Clipper distributes Docker images through the [Clipper repository](https://hub.docker.com/u/clipper/dashboard/) on Docker Hub.
