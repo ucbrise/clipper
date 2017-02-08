@@ -23,7 +23,7 @@ ecosystem of data science tools in use today spanning languages such as Python, 
 
 Clipper is a project of the UC Berkeley [RISE Lab](https://rise.cs.berkeley.edu/).
 
-![Clipper System Overview](images/arch_diagram.png)
+![Clipper System Overview](images/clipper_arch.png)
 
 ## Key Features
 
