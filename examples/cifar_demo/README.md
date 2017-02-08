@@ -5,8 +5,9 @@ and querying Clipper for predictions.
 
 ## Setup
 
-Before you can run the demo, you must have access to a machine running
-Docker that you can SSH into. If running on EC2, you can use AMI `ami-3ba0f05b`,
+In order to run the demo, you must either have Docker installed locally
+or have access to a machine running Docker that you can SSH into.
+If running on EC2, you can use AMI `ami-3ba0f05b`,
 an Ubuntu image that has Docker and Docker-Compose installed.
 
 The demo uses Python and Jupyter notebooks to interact with Clipper and
