@@ -45,7 +45,6 @@ def load_cifar(cifar_location, cifar_filename="cifar_train.data", norm=True):
     # print("Source file: %s" % cifar_path)
     df = pd.read_csv(cifar_path, sep=",", header=None)
     data = df.values
-    print("Number of image files: %d" % len(data))
     y = data[:, 0]
     X = data[:, 1:]
     Z = X
@@ -113,14 +112,13 @@ def cifar_prediction(host, app, uid, x):
     return (pred, latency)
 
 
-def run_iteration(host, app, uid, test_x, test_y):
+def run_iteration(host, app, uid, test_x, test_y, total=100):
     correct = 0
     false_pos = 0
     false_neg = 0
     latencies = []
     true_pos = 0
     true_neg = 0
-    total = 100
     for i in range(total):
         example_num = np.random.randint(0, len(test_y))
         correct_y = float(test_y[example_num])
