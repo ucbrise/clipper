@@ -34,7 +34,7 @@ ActiveContainers::ActiveContainers()
               100, &versioned_model_hash)) {}
 
 void ActiveContainers::add_container(VersionedModelId model, int id, InputType input_type) {
-  log_info(
+  log_info_formatted(
       LOGGING_TAG_CLIPPER,
       "Adding new container - model: {}, version: {}, ID: {}, input_type: {}",
       model.first, model.second, id, get_readable_input_type(input_type));

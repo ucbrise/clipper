@@ -123,6 +123,7 @@ class TaskExecutor {
 
   std::vector<boost::future<Output>> schedule_predictions(
       std::vector<PredictTask> tasks) {
+    predictions_counter->increment(tasks.size());
     std::vector<boost::future<Output>> output_futures;
     for (auto t : tasks) {
       // assign tasks to containers independently
@@ -235,7 +236,6 @@ class TaskExecutor {
         std::vector<float> deserialized_outputs = deserialize_outputs(r.second);
         assert(deserialized_outputs.size() == keys.size());
         int batch_size = keys.size();
-        predictions_counter->increment(batch_size);
         throughput_meter->mark(batch_size);
         long current_time =
             std::chrono::duration_cast<std::chrono::milliseconds>(
