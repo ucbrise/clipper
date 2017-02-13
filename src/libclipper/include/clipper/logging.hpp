@@ -1,8 +1,8 @@
 #ifndef CLIPPER_LOGGING_HPP
 #define CLIPPER_LOGGING_HPP
 
-#include <string>
 #include <sstream>
+#include <string>
 
 #include <spdlog/spdlog.h>
 
@@ -15,15 +15,12 @@ static constexpr uint LOGGING_LEVEL_FORMAT_DEBUG_LENGTH = 5;
 static constexpr uint MAX_LOGGING_LEVEL_FORMAT_LENGTH = 5;
 static constexpr uint MAX_TAG_LENGTH = 10;
 // Defines the logging format as [HH:MM:SS.mmm][<LOG_LEVEL>] <Message>
-// Note: <Message> includes a formatted, user-defined tag (see get_formatted_tag())
+// Note: <Message> includes a formatted, user-defined tag (see
+// get_formatted_tag())
 static const std::string LOGGING_FORMAT = "[%T.%e][%l] %v";
 static const std::string LOGGER_NAME = "clipper";
 
-enum class LogLevel {
-  Info,
-  Debug,
-  Error
-};
+enum class LogLevel { Info, Debug, Error };
 
 class Logger {
  public:
@@ -40,9 +37,10 @@ class Logger {
   static Logger &get();
 
   /**
-   * Logs one or more string messages at the "info" log level with the specified tag
+   * Logs one or more string messages at the "info" log level with the specified
+   * tag
    */
-  template<class ...Strings>
+  template <class... Strings>
   void log_info(const std::string tag, Strings... messages) const;
   /**
    * Logs a single formatted message at the "info" log level
@@ -50,34 +48,39 @@ class Logger {
    *
    * @param args The formatting arguments
    */
-  template<class ...Args>
-  void log_info_formatted(const std::string tag, const char *message, Args... args) const;
+  template <class... Args>
+  void log_info_formatted(const std::string tag, const char *message,
+                          Args... args) const;
   /**
-   * Logs one or more string messages at the "debug" log level with the specified tag
+   * Logs one or more string messages at the "debug" log level with the
+   * specified tag
    */
-  template<class ...Strings>
-  void log_debug(const std::string tag, Strings...messages) const;
+  template <class... Strings>
+  void log_debug(const std::string tag, Strings... messages) const;
   /**
    * Logs a single formatted message at the "debug" log level
    * with the specified tag
    *
    * @param args The formatting arguments
    */
-  template<class ...Args>
-  void log_debug_formatted(const std::string tag, const char *message, Args... args) const;
+  template <class... Args>
+  void log_debug_formatted(const std::string tag, const char *message,
+                           Args... args) const;
   /**
-   * Logs one or more string messages at the "error" log level with the specified tag
+   * Logs one or more string messages at the "error" log level with the
+   * specified tag
    */
-  template<class ...Strings>
-  void log_error(const std::string tag, Strings...messages) const;
+  template <class... Strings>
+  void log_error(const std::string tag, Strings... messages) const;
   /**
    * Logs a single formatted message at the "error" log level
    * with the specified tag
    *
    * @param args The formatting arguments
    */
-  template<class ...Args>
-  void log_error_formatted(const std::string tag, const char *message, Args... args) const;
+  template <class... Args>
+  void log_error_formatted(const std::string tag, const char *message,
+                           Args... args) const;
 
  private:
   Logger();
@@ -88,22 +91,18 @@ class Logger {
    * even spacing and alignment. This is a recursive function that makes
    * use of variadic templates.
    */
-  template<class T, class ...Rest>
-  void concatenate_messages(std::stringstream &ss,
-                            LogLevel log_level,
-                            size_t tag_length,
-                            bool first_message,
-                            T message,
+  template <class T, class... Rest>
+  void concatenate_messages(std::stringstream &ss, LogLevel log_level,
+                            size_t tag_length, bool first_message, T message,
                             Rest... messages) const;
   /**
-   * The base case for concatenating multiple log messages into a single message.
+   * The base case for concatenating multiple log messages into a single
+   * message.
    * For more information, explore recursion with variadic template functions.
    */
-  template<class T>
-  void concatenate_messages(std::stringstream &ss,
-                            LogLevel log_level,
-                            size_t tag_length,
-                            bool first_message,
+  template <class T>
+  void concatenate_messages(std::stringstream &ss, LogLevel log_level,
+                            size_t tag_length, bool first_message,
                             T message) const;
   /**
    * Given tag text for a log message, creates a formated tag of the form
@@ -112,63 +111,68 @@ class Logger {
    * upon MAX_TAG_LENGTH. tags with text exceeding MAX_TAG_LENGTH are
    * truncated and ellipsized during formatting.
    */
-  const std::string get_formatted_tag(const std::string tag, LogLevel log_level) const;
+  const std::string get_formatted_tag(const std::string tag,
+                                      LogLevel log_level) const;
 
-  void pad_logging_stream_for_alignment(std::stringstream &ss, LogLevel log_level, size_t tag_length) const;
+  void pad_logging_stream_for_alignment(std::stringstream &ss,
+                                        LogLevel log_level,
+                                        size_t tag_length) const;
 
   std::shared_ptr<spdlog::logger> spdlogger_;
-
 };
 
-template<class ...Strings>
-void Logger::log_info(const std::string tag, Strings...messages) const {
+template <class... Strings>
+void Logger::log_info(const std::string tag, Strings... messages) const {
   const std::string tag_string = get_formatted_tag(tag, LogLevel::Info);
   std::stringstream ss;
-  concatenate_messages(ss, LogLevel::Info, tag_string.length(), true, messages...);
+  concatenate_messages(ss, LogLevel::Info, tag_string.length(), true,
+                       messages...);
   spdlogger_->info((tag_string + ss.str()).data());
 }
 
-template<class ...Args>
-void Logger::log_info_formatted(const std::string tag, const char *message, Args... args) const {
+template <class... Args>
+void Logger::log_info_formatted(const std::string tag, const char *message,
+                                Args... args) const {
   const std::string tag_string = get_formatted_tag(tag, LogLevel::Info);
   spdlogger_->info((tag_string + message).data(), args...);
 }
 
-template<class ...Strings>
-void Logger::log_debug(const std::string tag, Strings...messages) const {
+template <class... Strings>
+void Logger::log_debug(const std::string tag, Strings... messages) const {
   const std::string tag_string = get_formatted_tag(tag, LogLevel::Debug);
   std::stringstream ss;
-  concatenate_messages(ss, LogLevel::Debug, tag_string.length(), true, messages...);
+  concatenate_messages(ss, LogLevel::Debug, tag_string.length(), true,
+                       messages...);
   spdlogger_->debug((tag_string + ss.str()).data());
 }
 
-template<class ...Args>
-void Logger::log_debug_formatted(const std::string tag, const char *message, Args... args) const {
+template <class... Args>
+void Logger::log_debug_formatted(const std::string tag, const char *message,
+                                 Args... args) const {
   const std::string tag_string = get_formatted_tag(tag, LogLevel::Debug);
   spdlogger_->debug((tag_string + message).data(), args...);
 }
 
-template<class ...Strings>
-void Logger::log_error(const std::string tag, Strings...messages) const {
+template <class... Strings>
+void Logger::log_error(const std::string tag, Strings... messages) const {
   const std::string tag_string = get_formatted_tag(tag, LogLevel::Error);
   std::stringstream ss;
-  concatenate_messages(ss, LogLevel::Error, tag_string.length(), true, messages...);
+  concatenate_messages(ss, LogLevel::Error, tag_string.length(), true,
+                       messages...);
   spdlogger_->error((tag_string + ss.str()).data());
 }
 
-template<class ...Args>
-void Logger::log_error_formatted(const std::string tag, const char *message, Args... args) const {
+template <class... Args>
+void Logger::log_error_formatted(const std::string tag, const char *message,
+                                 Args... args) const {
   const std::string tag_string = get_formatted_tag(tag, LogLevel::Error);
   spdlogger_->error((tag_string + message).data(), args...);
 }
 
-template<class T, class ...Rest>
-void Logger::concatenate_messages(std::stringstream &ss,
-                                  LogLevel log_level,
-                                  size_t tag_length,
-                                  bool first_message,
-                                  T message,
-                                  Rest... messages) const {
+template <class T, class... Rest>
+void Logger::concatenate_messages(std::stringstream &ss, LogLevel log_level,
+                                  size_t tag_length, bool first_message,
+                                  T message, Rest... messages) const {
   if (!first_message) {
     pad_logging_stream_for_alignment(ss, log_level, tag_length);
   }
@@ -177,11 +181,9 @@ void Logger::concatenate_messages(std::stringstream &ss,
   concatenate_messages(ss, log_level, tag_length, false, messages...);
 }
 
-template<class T>
-void Logger::concatenate_messages(std::stringstream &ss,
-                                  LogLevel log_level,
-                                  size_t tag_length,
-                                  bool first_message,
+template <class T>
+void Logger::concatenate_messages(std::stringstream &ss, LogLevel log_level,
+                                  size_t tag_length, bool first_message,
                                   T message) const {
   if (!first_message) {
     pad_logging_stream_for_alignment(ss, log_level, tag_length);
@@ -189,31 +191,34 @@ void Logger::concatenate_messages(std::stringstream &ss,
   ss << message;
 }
 
-template<class ...Strings>
+template <class... Strings>
 static void log_info(const std::string tag, Strings... messages) {
   Logger::get().log_info(tag, messages...);
 }
-template<class ...Args>
-static void log_info_formatted(const std::string tag, const char *message, Args... args) {
+template <class... Args>
+static void log_info_formatted(const std::string tag, const char *message,
+                               Args... args) {
   Logger::get().log_info_formatted(tag, message, args...);
 }
-template<class ...Strings>
-static void log_debug(const std::string tag, Strings...messages) {
+template <class... Strings>
+static void log_debug(const std::string tag, Strings... messages) {
   Logger::get().log_debug(tag, messages...);
 }
-template<class ...Args>
-static void log_debug_formatted(const std::string tag, const char *message, Args... args) {
+template <class... Args>
+static void log_debug_formatted(const std::string tag, const char *message,
+                                Args... args) {
   Logger::get().log_debug_formatted(tag, message, args...);
 }
-template<class ...Strings>
-static void log_error(const std::string tag, Strings...messages) {
+template <class... Strings>
+static void log_error(const std::string tag, Strings... messages) {
   Logger::get().log_error(tag, messages...);
 }
-template<class ...Args>
-static void log_error_formatted(const std::string tag, const char *message, Args... args) {
+template <class... Args>
+static void log_error_formatted(const std::string tag, const char *message,
+                                Args... args) {
   Logger::get().log_error_formatted(tag, message, args...);
 }
 
-} // namespace clipper
+}  // namespace clipper
 
-#endif //CLIPPER_LOGGING_HPP
+#endif  // CLIPPER_LOGGING_HPP

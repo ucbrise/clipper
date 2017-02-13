@@ -9,9 +9,9 @@
 #include <boost/thread.hpp>
 #include <clipper/config.hpp>
 #include <clipper/constants.hpp>
+#include <clipper/logging.hpp>
 #include <clipper/persistent_state.hpp>
 #include <clipper/redis.hpp>
-#include <clipper/logging.hpp>
 
 namespace clipper {
 
@@ -29,7 +29,8 @@ StateDB::StateDB() {
   Config& conf = get_config();
   while (!redis_connection_.connect(conf.get_redis_address(),
                                     conf.get_redis_port())) {
-    log_error(LOGGING_TAG_STATE_DB, "StateDB failed to connect to redis", "Retrying in 1 second...");
+    log_error(LOGGING_TAG_STATE_DB, "StateDB failed to connect to redis",
+              "Retrying in 1 second...");
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
   if (!redis::send_cmd_no_reply<std::string>(

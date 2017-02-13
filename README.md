@@ -1,5 +1,7 @@
 # Clipper
 
+[![Build Status](https://amplab.cs.berkeley.edu/jenkins/buildStatus/icon?job=Clipper)](https://amplab.cs.berkeley.edu/jenkins/job/Clipper/)
+
 ## Project Overview
 
 ![Clipper System Overview](images/clipper_arch.png)
