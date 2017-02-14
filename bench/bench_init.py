@@ -46,18 +46,20 @@ class BenchSetup():
 		return test_x, test_y, train_x, train_y
 
 	def train_sklearn_model(self):
+		print("Loading CIFAR data...")
+		test_x, test_y, train_x, train_y = self.get_cifar_data()
+		print(len(test_y))
 		model_location = BASE_DATA_PATH + SKLEARN_MODEL_FILE
 		if os.path.isfile(model_location):
 			model = joblib.load(model_location)
 			print("Found and loaded model!")
 		else:
-			print("Loading CIFAR data...")
-			test_x, test_y, train_x, train_y = self.get_cifar_data()
 			print("Training model...")
 			model = lm.LogisticRegression()
 			model.fit(train_x, train_y)
 			joblib.dump(model, model_location)
 			print("Model trained!")
+
 		
 			print("Logistic Regression test score: %f" % model.score(test_x, test_y))
 
