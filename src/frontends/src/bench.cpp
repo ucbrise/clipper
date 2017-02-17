@@ -20,15 +20,18 @@
 using namespace clipper;
 
 const std::string SKLEARN_MODEL_NAME = "bench_sklearn_cifar";
-constexpr long NUM_THREADS = 50;
-constexpr long NUM_BATCHES = 20;
-constexpr long NUM_REQUESTS_PER_BATCH = 100;
-constexpr long SLEEP_PER_BATCH_SECONDS = 0;
+const std::string CONFIG_KEY_PATH = "path";
+const std::string CONFIG_KEY_NUM_THREADS = "num_threads";
+const std::string CONFIG_KEY_NUM_BATCHES = "num_batches";
+const std::string CONFIG_KEY_BATCH_SIZE = "batch_size";
+const std::string CONFIG_KEY_BATCH_DELAY = "batch_delay";
+
 constexpr double SKLEARN_PLANE_LABEL = 1;
 constexpr double SKLEARN_BIRD_LABEL = 0;
 
-std::unordered_map<int, std::vector<std::vector<double>>> load_cifar() {
-  std::ifstream cifar_file("/Users/Corey/Documents/RISE/clipper/bench/data/cifar-10-batches-bin/data_batch_1.bin", std::ios::binary);
+std::unordered_map<int, std::vector<std::vector<double>>> load_cifar(
+    std::unordered_map<std::string, std::string>& config) {
+  std::ifstream cifar_file(config.find(CONFIG_KEY_PATH)->second, std::ios::binary);
   std::istreambuf_iterator<char> cifar_data(cifar_file);
   std::unordered_map<int, std::vector<std::vector<double>>> vecs_map;
   for (int i = 0; i < 10000; i++) {
@@ -53,15 +56,19 @@ std::unordered_map<int, std::vector<std::vector<double>>> load_cifar() {
   return vecs_map;
 }
 
-void send_predictions(QueryProcessor &qp,
+void send_predictions(std::unordered_map<std::string, std::string>& config, QueryProcessor &qp,
                       std::unordered_map<int, std::vector<std::vector<double>>> &cifar_data,
                       std::shared_ptr<metrics::RatioCounter> accuracy_ratio) {
   std::vector<std::vector<double>> planes_vecs = cifar_data.find(0)->second;
   std::vector<std::vector<double>> birds_vecs = cifar_data.find(2)->second;
-  for (int j = 0; j < NUM_BATCHES; j++) {
+
+  int num_batches = std::stoi(config.find(CONFIG_KEY_NUM_BATCHES)->second);
+  int batch_size = std::stoi(config.find(CONFIG_KEY_BATCH_SIZE)->second);
+  long batch_delay_millis = static_cast<long>(std::stoi(config.find(CONFIG_KEY_BATCH_DELAY)->second));
+  for (int j = 0; j < num_batches; j++) {
     std::vector<boost::future<Response>> futures;
     std::vector<int> binary_labels;
-    for (int i = 0; i < NUM_REQUESTS_PER_BATCH; i++) {
+    for (int i = 0; i < batch_size; i++) {
       std::srand(time(NULL));
       int index = std::rand() % 2;
       std::vector<double> query_vec;
@@ -97,21 +104,51 @@ void send_predictions(QueryProcessor &qp,
         accuracy_ratio->increment(0,1);
       }
     }
-    std::this_thread::sleep_for(std::chrono::seconds(SLEEP_PER_BATCH_SECONDS));
+    std::this_thread::sleep_for(std::chrono::milliseconds(batch_delay_millis));
   }
 }
 
+std::unordered_map<std::string, std::string> setup() {
+  std::unordered_map<std::string, std::string> config;
+  std::string path;
+  std::string num_threads;
+  std::string num_batches;
+  std::string batch_size;
+  std::string batch_delay;
+
+  std::cout << "Enter a path to the CIFAR10 binary data set: ";
+  std::cin >> path;
+  std::cout << "Enter the number of threads of execution: ";
+  std::cin >> num_threads;
+  std::cout << "Enter the number of request batches to be sent by each thread: ";
+  std::cin >> num_batches;
+  std::cout << "Enter the number of requests per batch: ";
+  std::cin >> batch_size;
+  std::cout << "Enter the delay between batches, in milliseconds: ";
+  std::cin >> batch_delay;
+
+  config.emplace(CONFIG_KEY_PATH, path);
+  config.emplace(CONFIG_KEY_NUM_THREADS, num_threads);
+  config.emplace(CONFIG_KEY_NUM_BATCHES, num_batches);
+  config.emplace(CONFIG_KEY_BATCH_SIZE, batch_size);
+  config.emplace(CONFIG_KEY_BATCH_DELAY, batch_delay);
+  return config;
+};
+
 int main() {
+  std::unordered_map<std::string, std::string> test_config = setup();
   get_config().ready();
   QueryProcessor qp;
   std::this_thread::sleep_for(std::chrono::seconds(3));
   std::shared_ptr<metrics::RatioCounter> accuracy_ratio =
       metrics::MetricsRegistry::get_metrics().create_ratio_counter("accuracy");
-  std::unordered_map<int, std::vector<std::vector<double>>> cifar_data = load_cifar();
+  std::unordered_map<int, std::vector<std::vector<double>>> cifar_data = load_cifar(test_config);
+
+  int num_threads = std::stoi(test_config.find(CONFIG_KEY_NUM_THREADS)->second);
   std::vector<std::thread> threads;
-  for (int i = 0; i < NUM_THREADS; i++) {
+  for (int i = 0; i < num_threads; i++) {
     std::thread thread([&]() {
-      send_predictions(qp, cifar_data, accuracy_ratio);
+      send_predictions(test_config, qp, cifar_data, accuracy_ratio);
     });
     threads.push_back(std::move(thread));
   }
@@ -120,5 +157,5 @@ int main() {
   }
   std::string metrics = metrics::MetricsRegistry::get_metrics().report_metrics();
   log_info("BENCH", metrics);
-  std::this_thread::sleep_for(std::chrono::seconds(10));
+  std::this_thread::sleep_for(std::chrono::seconds(5));
 }
