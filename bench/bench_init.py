@@ -32,35 +32,29 @@ class BenchSetup():
 	def run(self):
 		self.print_green("Loading Sklearn Model...")
 		self.train_sklearn_model()
-		#self.print_green("Creating Application...")
-		#print("")
-		#self.create_application(APP_NAME, "EXP3")
 
 
 	def get_cifar_data(self):
 		train_x, train_y = cifar_utils.filter_data(
-			*cifar_utils.load_cifar(self.cifar_dir_path, cifar_filename="cifar_train.data", norm=True))
+			*cifar_utils.load_cifar(self.cifar_dir_path, cifar_filename="cifar_train.data", norm=False))
 		test_x, test_y = cifar_utils.filter_data(
-			*cifar_utils.load_cifar(self.cifar_dir_path, cifar_filename="cifar_test.data", norm=True))
+			*cifar_utils.load_cifar(self.cifar_dir_path, cifar_filename="cifar_test.data", norm=False))
 
 		return test_x, test_y, train_x, train_y
 
 	def train_sklearn_model(self):
-		print("Loading CIFAR data...")
-		test_x, test_y, train_x, train_y = self.get_cifar_data()
-		print(len(test_y))
 		model_location = BASE_DATA_PATH + SKLEARN_MODEL_FILE
 		if os.path.isfile(model_location):
 			model = joblib.load(model_location)
 			print("Found and loaded model!")
 		else:
+			print("Loading CIFAR data...")
+			test_x, test_y, train_x, train_y = self.get_cifar_data()
 			print("Training model...")
 			model = lm.LogisticRegression()
 			model.fit(train_x, train_y)
 			joblib.dump(model, model_location)
 			print("Model trained!")
-
-		
 			print("Logistic Regression test score: %f" % model.score(test_x, test_y))
 
 	def create_application(self, name, selection_policy, slo_micros=20000):
