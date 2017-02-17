@@ -115,6 +115,7 @@ std::unordered_map<std::string, std::string> setup() {
   std::string batch_size;
   std::string batch_delay;
 
+  std::cout << "Before proceeding, run bench/setup_bench.sh from clipper's root directory." << std::endl;
   std::cout << "Enter a path to the CIFAR10 binary data set: ";
   std::cin >> path;
   std::cout << "Enter the number of threads of execution: ";
