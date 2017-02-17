@@ -57,23 +57,6 @@ class BenchSetup():
 			print("Model trained!")
 			print("Logistic Regression test score: %f" % model.score(test_x, test_y))
 
-	def create_application(self, name, selection_policy, slo_micros=20000):
-		candidate_models = [
-			{"model_name": SKLEARN_MODEL_NAME, "model_version": 1},
-		]
-
-		url = "http://%s:1338/admin/add_app" % self.host
-		req_json = json.dumps({
-			"name": name,
-			"candidate_models": candidate_models,
-			"input_type": "doubles",
-			"selection_policy": selection_policy,
-			"latency_slo_micros": slo_micros
-		})
-		headers = {'Content-type': 'application/json'}
-		r = requests.post(url, headers=headers, data=req_json)
-		print(r.text)
-
 if __name__ == '__main__':
 	setup = BenchSetup("localhost", "../examples/cifar_demo")
 	setup.run()
