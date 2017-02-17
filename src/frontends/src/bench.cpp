@@ -5,7 +5,6 @@
 #include <vector>
 #include <functional>
 
-#include <math.h>
 #include <time.h>
 
 #include <boost/thread.hpp>
