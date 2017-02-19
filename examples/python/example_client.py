@@ -59,3 +59,4 @@ if __name__ == '__main__':
         # mnist_update(uid, x[example_num], float(y[example_num]))
         predict("localhost", uid, np.random.random(1000))
         time.sleep(0.2)
+        
