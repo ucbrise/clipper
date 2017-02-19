@@ -3,21 +3,19 @@ from subprocess import check_output
 
 succeed = "-"*40
 
-# Runs a command.
-# The program exits if it fails.
-def run(cmd):
+# Executes a Linux command.
+# If `check` is True, the program will exit if it fails.
+# Otherwise, an exception will be thrown if it fails.
+def run(cmd, check=True):
 	print("Execute:", cmd)
-	try:
+	if check:
+		try:
+			return check_output(cmd, shell=True)
+		except Exception as e:
+			print(e)
+			exit(1)
+	else:
 		return check_output(cmd, shell=True)
-	except Exception as e:
-		print(e)
-		exit(1)
-
-# Runs a command.
-# Throws exception if it fails.
-def run_nocheck(cmd):
-	print("Execute:", cmd)
-	return check_output(cmd, shell=True)
 
 # Install common tools.
 def install_common():
@@ -36,8 +34,8 @@ def compile_check(header, content, version):
 	run("""printf '#include %s\n#include <iostream>\n
 		int main() {std::cout << %s;}\n' > temp.cpp""" % (header, content))
 	try:
-		run_nocheck("g++ -I/usr/local/include temp.cpp")
-		if version not in run_nocheck("./a.out"):
+		run("g++ -I/usr/local/include temp.cpp", False)
+		if version not in run("./a.out", False):
 			return False
 	except Exception:
 		return False
