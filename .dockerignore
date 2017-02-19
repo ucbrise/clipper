@@ -1,0 +1,6 @@
+.git
+.cache
+**/*.class
+**/*.o
+**/*.zip
+**/*.tar.gz
