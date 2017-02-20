@@ -1,4 +1,5 @@
 from __future__ import print_function
+from subprocess import check_call
 from subprocess import check_output
 
 succeed = "-"*40
@@ -10,7 +11,7 @@ def run(cmd, check=True):
 	print("Execute:", cmd)
 	if check:
 		try:
-			return check_output(cmd, shell=True)
+			check_call(cmd, shell=True)
 		except Exception as e:
 			print(e)
 			exit(1)
@@ -20,8 +21,7 @@ def run(cmd, check=True):
 # Install common tools.
 def install_common():
 	tools = ['make', 'git', 'cmake', 'gcc', 'g++', 'libev-dev', \
-	'redis-server', 'wget', 'unzip']
-	run("sudo sed 's/main$/main universe/' -i /etc/apt/sources.list")
+	'redis-server', 'wget', 'unzip', 'libboost-all-dev']
 	run("sudo add-apt-repository -y ppa:george-edison55/cmake-3.x")
 	run("sudo add-apt-repository -y ppa:chris-lea/redis-server")
 	run("sudo apt-get update")
@@ -40,7 +40,7 @@ def compile_check(header, content, version):
 	except Exception:
 		return False
 	finally:
-		run("rm temp.cpp a.out")
+		run("rm -f temp.cpp a.out")
 	return True
 
 # Install Hiredis.
