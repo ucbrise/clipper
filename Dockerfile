@@ -1,23 +1,12 @@
 FROM ubuntu:16.04
 
-# Install common tools: make, git, cmake, gcc, g++, libev-dev, redis-server, wget, unzip, etc.
-RUN sed 's/main$/main universe/' -i /etc/apt/sources.list
-RUN apt-get update
-RUN apt-get install -y make
-RUN apt-get install -y git
-RUN apt-get install -y software-properties-common
-RUN add-apt-repository ppa:george-edison55/cmake-3.x
-RUN apt-get update
-RUN apt-get install -y cmake
-RUN apt-get upgrade -y
-RUN apt-get install -y gcc
-RUN apt-get install -y g++
-RUN apt-get install -y libev-dev
-RUN add-apt-repository ppa:chris-lea/redis-server
-RUN apt-get update
-RUN apt-get install -y redis-server
-RUN apt-get install -y wget
-RUN apt-get install -y unzip
+# Install common tools.
+RUN apt-get update && \
+	apt-get install -y --no-install-recommends make git software-properties-common && \
+	add-apt-repository ppa:george-edison55/cmake-3.x && \
+	add-apt-repository ppa:chris-lea/redis-server && \
+	apt-get update && \
+	apt-get install -y --no-install-recommends cmake gcc g++ libev-dev redis-server wget unzip
 
 # Create directory for Clipper.
 RUN mkdir -p /usr/local/clipper
@@ -25,22 +14,22 @@ ADD . /usr/local/clipper
 WORKDIR "/usr/local/clipper"
 
 # Install Hiredis.
-RUN git clone https://github.com/redis/hiredis.git
-RUN cd hiredis/ && make && make install
-RUN rm -rf hiredis/
+RUN git clone https://github.com/redis/hiredis.git && \
+	cd hiredis/ && make && make install && \
+	rm -rf hiredis/
 
 # Install Boost 1.63.
-RUN wget -O boost_1_63_0.zip https://sourceforge.net/projects/boost/files/boost/1.63.0/boost_1_63_0.zip/download
-RUN unzip boost_1_63_0.zip -d boost
-RUN cd boost/boost_1_63_0/ && ./bootstrap.sh && ./b2 && ./bjam install
-RUN rm -rf boost*
+RUN wget -O boost_1_63_0.zip https://sourceforge.net/projects/boost/files/boost/1.63.0/boost_1_63_0.zip/download && \
+	unzip boost_1_63_0.zip -d boost && \
+	cd boost/boost_1_63_0/ && ./bootstrap.sh && ./b2 && ./bjam install && \
+	rm -rf boost*
 
 # Install ZeroMQ 4.1.6.
-RUN wget https://github.com/zeromq/zeromq4-1/releases/download/v4.1.6/zeromq-4.1.6.zip
-RUN unzip zeromq-4.1.6.zip -d zeromq
-RUN cd zeromq/zeromq-4.1.6 && ./configure && make && make install
-RUN rm -rf zeromq*
+RUN wget https://github.com/zeromq/zeromq4-1/releases/download/v4.1.6/zeromq-4.1.6.zip && \
+	unzip zeromq-4.1.6.zip -d zeromq && \
+	cd zeromq/zeromq-4.1.6 && ./configure && make && make install && \
+	rm -rf zeromq*
 
 # Build Clipper.
-RUN ./configure && cd debug && make
-RUN ./configure --release && cd release && make -j2 query_frontend management_frontend
+RUN ./configure && cd debug && make && cd .. \
+	./configure --release && cd release && make -j2 query_frontend management_frontend
