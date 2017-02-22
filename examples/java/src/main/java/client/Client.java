@@ -32,7 +32,7 @@ public class Client {
     @SuppressWarnings("unchecked")
     private void add_mnist_app(String host) throws Exception {
         JSONObject json = new JSONObject();
-        json.put("name", "example_model");
+        json.put("name", "example_app");
         JSONObject models = new JSONObject();
         models.put("model_name", "example_model");
         models.put("model_version", 1);
