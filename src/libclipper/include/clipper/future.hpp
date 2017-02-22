@@ -39,12 +39,16 @@ std::pair<boost::future<void>, std::vector<boost::future<T>>> when_all(
   for (auto f = futures.begin(); f != futures.end(); ++f) {
     wrapped_futures.push_back(f->then(
         [num_futures, completion_promise, num_completed](auto result) mutable {
-          if (*num_completed + 1 == num_futures) {
+          if (num_completed->fetch_add(1) + 1 == num_futures) {
             completion_promise->set_value();
-            //
-          } else {
-            *num_completed += 1;
+            assert(*num_completed == num_futures);
           }
+          // if (*num_completed + 1 == num_futures) {
+          //   completion_promise->set_value();
+          //   //
+          // } else {
+          //   *num_completed += 1;
+          // }
           return result.get();
         }));
   }
