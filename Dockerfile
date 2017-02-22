@@ -16,20 +16,20 @@ WORKDIR "/usr/local/clipper"
 # Install Hiredis.
 RUN git clone https://github.com/redis/hiredis.git && \
 	cd hiredis/ && make && make install && \
-	rm -rf hiredis/
+	cd ../ && rm -rf hiredis/
 
 # Install Boost 1.63.
 RUN wget -O boost_1_63_0.zip https://sourceforge.net/projects/boost/files/boost/1.63.0/boost_1_63_0.zip/download && \
 	unzip boost_1_63_0.zip -d boost && \
 	cd boost/boost_1_63_0/ && ./bootstrap.sh && ./b2 && ./bjam install && \
-	rm -rf boost*
+	cd ../../ && rm -rf boost*
 
 # Install ZeroMQ 4.1.6.
 RUN wget https://github.com/zeromq/zeromq4-1/releases/download/v4.1.6/zeromq-4.1.6.zip && \
 	unzip zeromq-4.1.6.zip -d zeromq && \
 	cd zeromq/zeromq-4.1.6 && ./configure && make && make install && \
-	rm -rf zeromq*
+	cd ../../ && rm -rf zeromq*
 
 # Build Clipper.
-RUN ./configure && cd debug && make && cd .. && \
+RUN ./configure && cd debug && make && cd ../ && \
 	./configure --release && cd release && make -j2 query_frontend management_frontend
