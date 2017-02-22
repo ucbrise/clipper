@@ -30,8 +30,21 @@ the tutorial with:
 pip install -r requirements.txt
 ```
 
-Note these dependencies must be installed for both the local and remote
-versions of the tutorial.
+Finally, the tutorial uses the `redis-cli` tool to query Redis directly for some Clipper inspection commands. This tool is usually part of the Redis package.
+
+On a Mac:
+
+```console
+brew install redis
+```
+
+On Ubuntu 16.04:
+
+```console
+apt-get install redis-tools
+```
+
+Note the Python and Redis-CLI dependencies must be installed for both the local and remote versions of the tutorial.
 
 ## Running the tutorial
 
