@@ -31,5 +31,5 @@ RUN wget https://github.com/zeromq/zeromq4-1/releases/download/v4.1.6/zeromq-4.1
 	rm -rf zeromq*
 
 # Build Clipper.
-RUN ./configure && cd debug && make && cd .. \
+RUN ./configure && cd debug && make && cd .. && \
 	./configure --release && cd release && make -j2 query_frontend management_frontend
