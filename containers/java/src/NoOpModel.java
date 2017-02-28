@@ -12,9 +12,7 @@ public class NoOpModel extends Model<DoubleVector, DoubleVector> {
 
     @Override
     public DoubleVector predict(DoubleVector inputVector) {
-        List<Double> data = new ArrayList<Double>();
-        data.add(255.0);
-        DoubleVector outputVector = new DoubleVector(data);
+        DoubleVector outputVector = new DoubleVector(new double[]{255});
         return outputVector;
     }
 

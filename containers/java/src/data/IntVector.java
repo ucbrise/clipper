@@ -1,10 +1,11 @@
 package data;
 
-import java.util.List;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 
-public class IntVector extends DataVector<Integer> {
+public class IntVector extends DataVector<int[]> {
 
-    public IntVector(List<Integer> data) {
+    public IntVector(int[] data) {
         super(data);
     }
 
@@ -13,16 +14,31 @@ public class IntVector extends DataVector<Integer> {
         return DataUtils.getBytesFromInts(data);
     }
 
-    public static class Parser extends DataVectorParser<Integer, IntVector> {
+    public static class Parser extends DataVectorParser<int[], IntVector> {
 
         @Override
-        List<Integer> parseBytes(byte[] bytes) {
-            return DataUtils.getSignedIntsFromBytes(bytes);
+        IntVector constructDataVector(int[] data) {
+            return new IntVector(data);
         }
 
         @Override
-        IntVector constructDataVector(List<Integer> data) {
-            return new IntVector(data);
+        DataBuffer<int[]> getDataBuffer() {
+            return new DataBuffer<int[]>() {
+
+                IntBuffer intBuffer;
+
+                @Override
+                void init(ByteBuffer buffer) {
+                    intBuffer = buffer.asIntBuffer();
+                }
+
+                @Override
+                int[] get(int offset, int size) {
+                    int[] data = new int[size];
+                    intBuffer.get(data, offset, size);
+                    return data;
+                }
+            };
         }
     }
 

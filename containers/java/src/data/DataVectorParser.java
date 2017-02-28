@@ -1,28 +1,34 @@
 package data;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
 public abstract class DataVectorParser<U, T extends DataVector<U>> {
 
-    abstract List<U> parseBytes(byte[] bytes);
+    abstract T constructDataVector(U data);
 
-    abstract T constructDataVector(List<U> data);
+    abstract DataBuffer<U> getDataBuffer();
 
-    public List<T> parse(byte[] bytes, List<Integer> splits) {
+    private List<U> parseBytes(ByteBuffer byteBuffer, List<Integer> splits) {
+        DataBuffer<U> dataBuffer = getDataBuffer();
+        dataBuffer.init(byteBuffer);
+        List<U> parsedArrays = new ArrayList<>();
+        int prevSplit = 0;
+        for(int split : splits) {
+            U parsedArray = dataBuffer.get(0, split - prevSplit);
+            parsedArrays.add(parsedArray);
+            prevSplit = split;
+        }
+        return parsedArrays;
+    }
+
+    public List<T> parse(ByteBuffer byteBuffer, List<Integer> splits) {
         List<T> dataVectors = new ArrayList<>();
-        List<U> data = parseBytes(bytes);
-        if(splits.size() == 0) {
-            T dataVector = constructDataVector(data);
+        List<U> data = parseBytes(byteBuffer, splits);
+        for(U dataItem : data) {
+            T dataVector = constructDataVector(dataItem);
             dataVectors.add(dataVector);
-        } else {
-            int prevSplit = 0;
-            for(int currSplit : splits) {
-                List<U> currData = new ArrayList<U>(data.subList(prevSplit, currSplit));
-                T currVector = constructDataVector(currData);
-                dataVectors.add(currVector);
-                prevSplit = currSplit;
-            }
         }
         return dataVectors;
     }

@@ -1,18 +1,16 @@
 package data;
 
-import java.util.List;
-
 public abstract class DataVector<T> {
 
-    List<T> data;
+    T data;
 
-    DataVector(List<T> data) {
+    DataVector(T data) {
         this.data = data;
     }
 
     public abstract byte[] toBytes();
 
-    protected List<T> getData() {
+    protected T getData() {
         return data;
     }
 

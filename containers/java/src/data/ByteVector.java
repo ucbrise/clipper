@@ -1,28 +1,42 @@
 package data;
 
-import java.util.List;
+import java.nio.ByteBuffer;
 
-public class ByteVector extends DataVector<Byte> {
+public class ByteVector extends DataVector<byte[]> {
 
-    public ByteVector(List<Byte> data) {
+    public ByteVector(byte[] data) {
         super(data);
     }
 
     @Override
     public byte[] toBytes() {
-        return new byte[0];
+        return data;
     }
 
-    public static class Parser extends DataVectorParser<Byte, ByteVector> {
-
+    public static class Parser extends DataVectorParser<byte[], ByteVector> {
         @Override
-        List<Byte> parseBytes(byte[] bytes) {
-            return DataUtils.getBytesAsList(bytes);
+        ByteVector constructDataVector(byte[] data) {
+            return new ByteVector(data);
         }
 
         @Override
-        ByteVector constructDataVector(List<Byte> data) {
-            return new ByteVector(data);
+        DataBuffer<byte[]> getDataBuffer() {
+            return new DataBuffer<byte[]>() {
+
+                ByteBuffer buffer;
+
+                @Override
+                void init(ByteBuffer buffer) {
+                    this.buffer = buffer;
+                }
+
+                @Override
+                byte[] get(int offset, int size) {
+                    byte[] data = new byte[size];
+                    buffer.get(data, offset, size);
+                    return data;
+                }
+            };
         }
     }
 

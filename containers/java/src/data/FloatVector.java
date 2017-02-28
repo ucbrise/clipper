@@ -1,10 +1,11 @@
 package data;
 
-import java.util.List;
+import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
 
-public class FloatVector extends DataVector<Float> {
+public class FloatVector extends DataVector<float[]> {
 
-    public FloatVector(List<Float> data) {
+    public FloatVector(float[] data) {
         super(data);
     }
 
@@ -13,16 +14,31 @@ public class FloatVector extends DataVector<Float> {
         return DataUtils.getBytesFromFloats(data);
     }
 
-    public static class Parser extends DataVectorParser<Float, FloatVector> {
+    public static class Parser extends DataVectorParser<float[], FloatVector> {
 
         @Override
-        List<Float> parseBytes(byte[] bytes) {
-            return DataUtils.getFloatsFromBytes(bytes);
+        FloatVector constructDataVector(float[] data) {
+            return new FloatVector(data);
         }
 
         @Override
-        FloatVector constructDataVector(List<Float> data) {
-            return new FloatVector(data);
+        DataBuffer<float[]> getDataBuffer() {
+            return new DataBuffer<float[]>() {
+
+                FloatBuffer buffer;
+
+                @Override
+                void init(ByteBuffer buffer) {
+                    this.buffer = buffer.asFloatBuffer();
+                }
+
+                @Override
+                float[] get(int offset, int size) {
+                    float[] data = new float[size];
+                    buffer.get(data, offset, size);
+                    return data;
+                }
+            };
         }
     }
 

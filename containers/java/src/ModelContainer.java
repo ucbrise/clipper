@@ -8,6 +8,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -93,7 +94,7 @@ class ModelContainer<I extends DataVector<?>, O extends DataVector> {
                 List<Integer> inputSplits = inputHeader.subList(2, inputHeader.size());
                 validateRequestInputType(model, inputType);
                 // PROCESS SPLITS
-                List<I> dataVectors = inputVectorParser.parse(rawContent, inputSplits);
+                List<I> dataVectors = inputVectorParser.parse(ByteBuffer.wrap(rawContent), inputSplits);
 
                 PerformanceTimer.logElapsed("Parse");
 

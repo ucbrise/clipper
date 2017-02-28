@@ -14,45 +14,31 @@ public class DataUtils {
         return buffer;
     }
 
-    public static <T> byte[] getBytesFromType(List<T> data, int itemSize, BiFunction<T, ByteBuffer, Void> func) {
-        ByteBuffer byteBuffer = ByteBuffer.allocate(data.size() * itemSize).order(ByteOrder.LITTLE_ENDIAN);
-        for(T item : data) {
-            func.apply(item, byteBuffer);
+    public static byte[] getBytesFromInts(int[] data) {
+        ByteBuffer byteBuffer = ByteBuffer.allocate(data.length * 4);
+        for(int item : data) {
+            byteBuffer.putInt(item);
         }
         return byteBuffer.array();
     }
 
-    public static byte[] getBytesFromInts(List<Integer> data) {
-        return getBytesFromType(data, 4, new BiFunction<Integer, ByteBuffer, Void>() {
-            @Override
-            public Void apply(Integer item, ByteBuffer byteBuffer) {
-                byteBuffer.putInt(item);
-                return null;
-            }
-        });
+    public static byte[] getBytesFromFloats(float[] data) {
+        ByteBuffer byteBuffer = ByteBuffer.allocate(data.length * 4);
+        for(float item : data) {
+            byteBuffer.putFloat(item);
+        }
+        return byteBuffer.array();
     }
 
-    public static byte[] getBytesFromFloats(List<Float> data) {
-        return getBytesFromType(data, 4, new BiFunction<Float, ByteBuffer, Void>() {
-            @Override
-            public Void apply(Float item, ByteBuffer byteBuffer) {
-                byteBuffer.putFloat(item);
-                return null;
-            }
-        });
+    public static byte[] getBytesFromDoubles(double[] data) {
+        ByteBuffer byteBuffer = ByteBuffer.allocate(data.length * 8);
+        for(double item : data) {
+            byteBuffer.putDouble(item);
+        }
+        return byteBuffer.array();
     }
 
-    public static byte[] getBytesFromDoubles(List<Double> data) {
-        return getBytesFromType(data, 8, new BiFunction<Double, ByteBuffer, Void>() {
-            @Override
-            public Void apply(Double item, ByteBuffer byteBuffer) {
-                byteBuffer.putDouble(item);
-                return null;
-            }
-        });
-    }
-
-    public static <T> List<T> getTypeFromBytes(byte[] bytes, Function<ByteBuffer, T> func) {
+    private static <T> List<T> getTypeFromBytes(byte[] bytes, Function<ByteBuffer, T> func) {
         List<T> parsedData = new ArrayList<>();
         ByteBuffer byteBuffer = getByteBuffer(bytes);
         while (byteBuffer.remaining() > 0) {
@@ -60,15 +46,6 @@ public class DataUtils {
             parsedData.add(item);
         }
         return parsedData;
-    }
-
-    public static List<Byte> getBytesAsList(byte[] bytes) {
-        return getTypeFromBytes(bytes, new Function<ByteBuffer, Byte>() {
-            @Override
-            public Byte apply(ByteBuffer byteBuffer) {
-                return byteBuffer.get();
-            }
-        });
     }
 
     public static List<Long> getUnsignedIntsFromBytes(byte[] bytes) {
@@ -110,7 +87,7 @@ public class DataUtils {
     }
 
     public static List<String> getStringsFromBytes(byte[] bytes) {
-        // TOOD: This one's harder
+        // TODO: This one's harder
         return null;
     }
 }
