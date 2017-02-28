@@ -10,7 +10,7 @@ public abstract class DataVector<T> {
 
     public abstract byte[] toBytes();
 
-    protected T getData() {
+    public T getData() {
         return data;
     }
 
