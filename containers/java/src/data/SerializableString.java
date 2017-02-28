@@ -6,6 +6,7 @@ import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,7 +19,7 @@ public class SerializableString extends DataVector<String> {
     @Override
     public byte[] toBytes() {
         String nullTerminatedData = data + '\0';
-        return nullTerminatedData.getBytes();
+        return nullTerminatedData.getBytes(StandardCharsets.US_ASCII);
     }
 
     public static class Parser extends DataVectorParser<String, SerializableString> {
@@ -34,13 +35,6 @@ public class SerializableString extends DataVector<String> {
         @Override
         public List<SerializableString> parse(ByteBuffer byteBuffer, List<Integer> splits) {
             List<SerializableString> serializableStrings = new ArrayList<>();
-//            while(byteBuffer.remaining() > 0) {
-//                try {
-//                    System.out.println(new String(new byte[]{byteBuffer.get()}, "ASCII"));
-//                } catch (UnsupportedEncodingException e) {
-//                    e.printStackTrace();
-//                }
-//            }
             Charset asciiCharSet = US_ASCII.defaultCharset();
             CharBuffer iterBuffer = asciiCharSet.decode(byteBuffer);
             CharBuffer copyBuffer = iterBuffer.duplicate();
