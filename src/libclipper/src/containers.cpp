@@ -32,7 +32,7 @@ void ModelContainer::send_prediction(PredictTask task) {
 ActiveContainers::ActiveContainers()
     : containers_(
           std::unordered_map<VersionedModelId,
-                             std::vector<std::shared_ptr<ModelContainer>>,
+                             std::map<int, std::shared_ptr<ModelContainer>>,
                              decltype(&versioned_model_hash)>(
               100, &versioned_model_hash)) {}
 
@@ -45,7 +45,7 @@ void ActiveContainers::add_container(VersionedModelId model, int id,
   boost::unique_lock<boost::shared_mutex> l{m_};
   auto new_container = std::make_shared<ModelContainer>(model, id, input_type);
   auto entry = containers_[new_container->model_];
-  entry.push_back(new_container);
+  entry.emplace(id, new_container);
   containers_[new_container->model_] = entry;
   assert(containers_[new_container->model_].size() > 0);
 }
@@ -53,11 +53,32 @@ void ActiveContainers::add_container(VersionedModelId model, int id,
 std::vector<std::shared_ptr<ModelContainer>>
 ActiveContainers::get_model_replicas_snapshot(const VersionedModelId &model) {
   boost::shared_lock<boost::shared_mutex> l{m_};
-  auto replicas = containers_.find(model);
-  if (replicas != containers_.end()) {
-    return replicas->second;
-  } else {
+  auto replicas_map_entry = containers_.find(model);
+  if (replicas_map_entry == containers_.end()) {
     return {};
+  }
+
+  std::vector<std::shared_ptr<ModelContainer>> all_replicas;
+  for (auto kv : replicas_map_entry->second) {
+    all_replicas.push_back(kv.second);
+  }
+
+  return all_replicas;
+}
+
+std::shared_ptr<ModelContainer>
+ActiveContainers::get_model_replica(const VersionedModelId &model, const int replica_id) {
+  auto replicas_map_entry = containers_.find(model);
+  if (replicas_map_entry == containers_.end()) {
+    return nullptr;
+  }
+
+  std::map<int, std::shared_ptr<ModelContainer>> replicas_map = replicas_map_entry->second;
+  auto replica_entry = replicas_map.find(replica_id);
+  if (replica_entry != replicas_map.end()) {
+    return replica_entry->second;
+  } else {
+    return nullptr;
   }
 }
 

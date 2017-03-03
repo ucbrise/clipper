@@ -13,6 +13,7 @@
 #include <clipper/containers.hpp>
 #include <clipper/metrics.hpp>
 #include <clipper/util.hpp>
+#include <clipper/datatypes.hpp>
 
 using zmq::socket_t;
 using std::string;
@@ -32,6 +33,14 @@ using RPCRequest =
     std::tuple<const int, const int, const std::vector<std::vector<uint8_t>>,
                const long>;
 
+template <class T>
+class VectorHasher {
+ public:
+  size_t operator()(const vector<T> &v) const {
+    return boost::hash_range(v.begin(), v.end());
+  }
+};
+
 class RPCService {
  public:
   explicit RPCService();
@@ -44,7 +53,11 @@ class RPCService {
    * Starts the RPC Service. This must be called explicitly, as it is not
    * invoked during construction.
    */
-  void start(const string ip, const int port);
+  void start(const string ip,
+             const int port,
+             const std::function<void(VersionedModelId, int)> &&new_container_callback,
+             std::function<void(VersionedModelId, int)> &&container_ready_callback,
+             std::function<void(RPCResponse)> &&new_response_callback);
   /**
    * Stops the RPC Service. This is called implicitly within the RPCService
    * destructor.
@@ -73,6 +86,9 @@ class RPCService {
 
   void receive_message(socket_t &socket,
                        boost::bimap<int, vector<uint8_t>> &connections,
+                       std::unordered_map<std::vector<uint8_t>,
+                                          std::pair<VersionedModelId, int>,
+                                          VectorHasher<uint8_t>>& containers,
                        int &zmq_connection_id,
                        std::shared_ptr<redox::Redox> redis_connection);
   void shutdown_service(socket_t &socket);
@@ -86,6 +102,10 @@ class RPCService {
   std::unordered_map<VersionedModelId, int, decltype(&versioned_model_hash)>
       replica_ids_;
   std::shared_ptr<metrics::Histogram> msg_queueing_hist;
+
+  std::function<void(VersionedModelId, int)> new_container_callback_;
+  std::function<void(VersionedModelId, int)> container_ready_callback_;
+  std::function<void(RPCResponse)> new_response_callback_;
 };
 
 }  // namespace rpc

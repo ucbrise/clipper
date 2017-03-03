@@ -1,5 +1,6 @@
 #include <boost/bimap.hpp>
 #include <boost/thread.hpp>
+#include <boost/functional/hash.hpp>
 #include <chrono>
 #include <iostream>
 
@@ -44,7 +45,14 @@ RPCService::RPCService()
 
 RPCService::~RPCService() { stop(); }
 
-void RPCService::start(const string ip, const int port) {
+void RPCService::start(const string ip,
+           const int port,
+           const std::function<void(VersionedModelId, int)> &&new_container_callback,
+           std::function<void(VersionedModelId, int)> &&container_ready_callback,
+           std::function<void(RPCResponse)> &&new_response_callback) {
+  new_container_callback_ = new_container_callback;
+  container_ready_callback_ = container_ready_callback;
+  new_response_callback_ = new_response_callback;
   if (active_) {
     throw std::runtime_error(
         "Attempted to start RPC Service when it is already running!");
@@ -101,6 +109,7 @@ void RPCService::manage_service(const string address) {
   log_info_formatted(LOGGING_TAG_RPC, "RPC thread started at address: ",
                      address);
   boost::bimap<int, vector<uint8_t>> connections;
+  std::unordered_map<std::vector<uint8_t>, std::pair<VersionedModelId, int>, VectorHasher<uint8_t>> containers;
   context_t context = context_t(1);
   socket_t socket = socket_t(context, ZMQ_ROUTER);
   socket.bind(address);
@@ -123,7 +132,7 @@ void RPCService::manage_service(const string address) {
       // Note: We only receive one message per event loop iteration
       log_info(LOGGING_TAG_RPC, "Found message to receive");
 
-      receive_message(socket, connections, zmq_connection_id, redis_connection);
+      receive_message(socket, connections, containers, zmq_connection_id, redis_connection);
     }
     // Note: We send all queued messages per event loop iteration
     send_messages(socket, connections);
@@ -179,9 +188,13 @@ void RPCService::send_messages(
   }
 }
 
-void RPCService::receive_message(
-    socket_t &socket, boost::bimap<int, vector<uint8_t>> &connections,
-    int &zmq_connection_id, std::shared_ptr<redox::Redox> redis_connection) {
+void RPCService::receive_message(socket_t &socket,
+                                 boost::bimap<int, vector<uint8_t>> &connections,
+                                 std::unordered_map<std::vector<uint8_t>,
+                                                    std::pair<VersionedModelId, int>,
+                                                    VectorHasher<uint8_t>>& containers,
+                                 int &zmq_connection_id,
+                                 std::shared_ptr<redox::Redox> redis_connection) {
   message_t msg_identity;
   message_t msg_delimiter;
   socket.recv(&msg_identity, 0);
@@ -222,6 +235,12 @@ void RPCService::receive_message(
     replica_ids_[model] = cur_replica_id + 1;
     redis::add_container(*redis_connection, model, cur_replica_id,
                          zmq_connection_id, input_type);
+    containers.emplace(connection_id, std::pair<VersionedModelId, int>(model, cur_replica_id));
+
+    // The order in which these call backs are executed is important
+    // TODO: Submit callback executions as separate jobs to a threadpool
+    new_container_callback_(model, cur_replica_id);
+    container_ready_callback_(model, cur_replica_id);
     zmq_connection_id += 1;
   } else {
     message_t msg_id;
@@ -232,6 +251,18 @@ void RPCService::receive_message(
     vector<uint8_t> content((uint8_t *)msg_content.data(),
                             (uint8_t *)msg_content.data() + msg_content.size());
     RPCResponse response(id, content);
+
+    auto container_info_entry = containers.find(connection_id);
+    if(container_info_entry == containers.end()) {
+      // This is unusual, throw?
+    }
+    std::pair<VersionedModelId, int> container_info = container_info_entry->second;
+
+    // The order in which these call backs are executed is important
+    // TODO: Submit callback executions as separate jobs to a threadpool
+    new_response_callback_(response);
+    container_ready_callback_(container_info.first, container_info.second);
+
     response_queue_->push(response);
   }
 }

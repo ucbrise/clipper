@@ -67,6 +67,13 @@ class ActiveContainers {
   std::vector<std::shared_ptr<ModelContainer>> get_model_replicas_snapshot(
       const VersionedModelId &model);
 
+  /// This method returns the active container specified by the
+  /// provided model id and replica id. This is threadsafe because each
+  /// individual ModelContainer object is threadsafe, and this method returns
+  /// a shared_ptr to a ModelContainer object.
+  std::shared_ptr<ModelContainer> get_model_replica(
+      const VersionedModelId &model, const int replica_id);
+
   /// Get list of all models that have at least one active replica.
   std::vector<VersionedModelId> get_known_models();
 
@@ -76,9 +83,8 @@ class ActiveContainers {
   // the queues. The queues are independently threadsafe.
   boost::shared_mutex m_;
 
-  // Each queue corresponds to a single model container.
   std::unordered_map<VersionedModelId,
-                     std::vector<std::shared_ptr<ModelContainer>>,
+                     std::map<int, std::shared_ptr<ModelContainer>>,
                      decltype(&versioned_model_hash)>
       containers_;
 };
