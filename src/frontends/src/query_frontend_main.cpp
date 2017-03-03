@@ -12,14 +12,19 @@ int main(int argc, char* argv[]) {
                            "Clipper query processing frontend");
   // clang-format off
   options.add_options()
-    ("redis_ip", "Redis address", cxxopts::value<std::string>()->default_value("localhost"))
-    ("redis_port", "Redis port", cxxopts::value<int>()->default_value("6379"));
+    ("redis_ip", "Redis address",
+        cxxopts::value<std::string>()->default_value("localhost"))
+    ("redis_port", "Redis port",
+        cxxopts::value<int>()->default_value("6379"))
+    ("threadpool_size", "Number of threads for the task execution threadpool",
+        cxxopts::value<int>()->default_value("4"));
   // clang-format on
   options.parse(argc, argv);
 
   clipper::Config& conf = clipper::get_config();
   conf.set_redis_address(options["redis_ip"].as<std::string>());
   conf.set_redis_port(options["redis_port"].as<int>());
+  conf.set_default_threadpool_size(options["threadpool_size"].as<int>());
   conf.ready();
 
   query_frontend::RequestHandler<clipper::QueryProcessor> rh(

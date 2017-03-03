@@ -13,6 +13,7 @@ class ConfigTest : public ::testing::Test {
   ConfigTest() { get_config().reset(); }
 };
 
+// TODO: add default_thread_pool to these tests
 TEST_F(ConfigTest, TestChangeValues) {
   Config& conf1 = get_config();
   ASSERT_FALSE(conf1.is_readable());
