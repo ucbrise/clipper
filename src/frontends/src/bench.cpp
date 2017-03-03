@@ -14,7 +14,10 @@
 #include <clipper/logging.hpp>
 #include <clipper/query_processor.hpp>
 #include <clipper/future.hpp>
+#include <clipper/json_util.hpp>
 #include <fstream>
+#include <rapidjson/document.h>
+#include "../../libs/cxxopts/cxxopts.hpp"
 
 using namespace clipper;
 
@@ -29,13 +32,12 @@ constexpr double SKLEARN_PLANE_LABEL = 1;
 constexpr double SKLEARN_BIRD_LABEL = 0;
 
 std::unordered_map<int, std::vector<std::vector<double>>> load_cifar(
-    std::unordered_map<std::string, std::string>& config) {
+    std::unordered_map<std::string, std::string> &config) {
   std::ifstream cifar_file(config.find(CONFIG_KEY_PATH)->second, std::ios::binary);
   std::istreambuf_iterator<char> cifar_data(cifar_file);
   std::unordered_map<int, std::vector<std::vector<double>>> vecs_map;
   for (int i = 0; i < 10000; i++) {
     int label = static_cast<int>(*cifar_data);
-    std::cout << label << std::endl;
     cifar_data++;
     std::vector<uint8_t> cifar_byte_vec;
     cifar_byte_vec.reserve(3072);
@@ -44,7 +46,7 @@ std::unordered_map<int, std::vector<std::vector<double>>> load_cifar(
     std::vector<double> cifar_double_vec(cifar_byte_vec.begin(), cifar_byte_vec.end());
 
     std::unordered_map<int, std::vector<std::vector<double>>>::iterator label_vecs = vecs_map.find(label);
-    if(label_vecs != vecs_map.end()) {
+    if (label_vecs != vecs_map.end()) {
       label_vecs->second.push_back(cifar_double_vec);
     } else {
       std::vector<std::vector<double>> new_label_vecs;
@@ -55,7 +57,7 @@ std::unordered_map<int, std::vector<std::vector<double>>> load_cifar(
   return vecs_map;
 }
 
-void send_predictions(std::unordered_map<std::string, std::string>& config, QueryProcessor &qp,
+void send_predictions(std::unordered_map<std::string, std::string> &config, QueryProcessor &qp,
                       std::unordered_map<int, std::vector<std::vector<double>>> &cifar_data,
                       std::shared_ptr<metrics::RatioCounter> accuracy_ratio) {
   std::vector<std::vector<double>> planes_vecs = cifar_data.find(0)->second;
@@ -71,7 +73,7 @@ void send_predictions(std::unordered_map<std::string, std::string>& config, Quer
       std::srand(time(NULL));
       int index = std::rand() % 2;
       std::vector<double> query_vec;
-      if(index == 0) {
+      if (index == 0) {
         // Send a plane
         size_t plane_index = std::rand() % planes_vecs.size();
         query_vec = planes_vecs[plane_index];
@@ -93,22 +95,35 @@ void send_predictions(std::unordered_map<std::string, std::string>& config, Quer
     std::pair<boost::future<void>, std::vector<boost::future<Response>>> results =
         future::when_all(std::move(futures), completed);
     results.first.get();
-    for(int i = 0; i < static_cast<int>(results.second.size()); i++) {
-      boost::future<Response>& future = results.second[i];
+    for (int i = 0; i < static_cast<int>(results.second.size()); i++) {
+      boost::future<Response> &future = results.second[i];
       double label = static_cast<double>(binary_labels[i]);
       double pred = future.get().output_.y_hat_;
-      if(pred == label) {
-        accuracy_ratio->increment(1,1);
+      if (pred == label) {
+        accuracy_ratio->increment(1, 1);
       } else {
-        accuracy_ratio->increment(0,1);
+        accuracy_ratio->increment(0, 1);
       }
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(batch_delay_millis));
   }
 }
 
-std::unordered_map<std::string, std::string> setup() {
+std::unordered_map<std::string, std::string> create_config(std::string path,
+                                                           std::string num_threads,
+                                                           std::string num_batches,
+                                                           std::string batch_size,
+                                                           std::string batch_delay) {
   std::unordered_map<std::string, std::string> config;
+  config.emplace(CONFIG_KEY_PATH, path);
+  config.emplace(CONFIG_KEY_NUM_THREADS, num_threads);
+  config.emplace(CONFIG_KEY_NUM_BATCHES, num_batches);
+  config.emplace(CONFIG_KEY_BATCH_SIZE, batch_size);
+  config.emplace(CONFIG_KEY_BATCH_DELAY, batch_delay);
+  return config;
+};
+
+std::unordered_map<std::string, std::string> get_config_from_prompt() {
   std::string path;
   std::string num_threads;
   std::string num_batches;
@@ -127,16 +142,41 @@ std::unordered_map<std::string, std::string> setup() {
   std::cout << "Enter the delay between batches, in milliseconds: ";
   std::cin >> batch_delay;
 
-  config.emplace(CONFIG_KEY_PATH, path);
-  config.emplace(CONFIG_KEY_NUM_THREADS, num_threads);
-  config.emplace(CONFIG_KEY_NUM_BATCHES, num_batches);
-  config.emplace(CONFIG_KEY_BATCH_SIZE, batch_size);
-  config.emplace(CONFIG_KEY_BATCH_DELAY, batch_delay);
-  return config;
+  return create_config(path, num_threads, num_batches, batch_size, batch_delay);
 };
 
-int main() {
-  std::unordered_map<std::string, std::string> test_config = setup();
+std::unordered_map<std::string, std::string> get_config_from_json(std::string json_path) {
+  std::ifstream json_file(json_path);
+  std::stringstream buffer;
+  buffer << json_file.rdbuf();
+  std::string json_text = buffer.str();
+  rapidjson::Document d;
+  json::parse_json(json_text, d);
+  std::string cifar_path = json::get_string(d, "cifar_data_path");
+  std::string num_threads = json::get_string(d, "num_threads");
+  std::string num_batches = json::get_string(d, "num_batches");
+  std::string batch_size = json::get_string(d, "batch_size");
+  std::string batch_delay = json::get_string(d, "batch_delay_millis");
+  return create_config(cifar_path, num_threads, num_batches, batch_size, batch_delay);
+};
+
+int main(int argc, char *argv[]) {
+  cxxopts::Options options("performance_bench",
+                           "Clipper performance benchmarking");
+  // clang-format off
+  options.add_options()
+      ("f,filename", "Config file name", cxxopts::value<std::string>());
+  // clang-format on
+  options.parse(argc, argv);
+  bool json_specified = (options.count("filename") > 0);
+  std::unordered_map<std::string, std::string> test_config;
+
+  if(json_specified) {
+    std::string json_path = options["filename"].as<std::string>();
+    test_config = get_config_from_json(json_path);
+  } else {
+    test_config = get_config_from_prompt();
+  }
   get_config().ready();
   QueryProcessor qp;
   std::this_thread::sleep_for(std::chrono::seconds(3));

@@ -1,10 +1,13 @@
 trap "exit" INT TERM
 trap "kill 0" EXIT
 
-python bench_init.py
+echo -n "Enter path to the CIFAR python data set: "
+read cifar_path
+
+python bench_init.py $cifar_path
 
 export CLIPPER_MODEL_NAME="bench_sklearn_cifar"
 export CLIPPER_MODEL_VERSION="1"
-export CLIPPER_MODEL_PATH="data/"
+export CLIPPER_MODEL_PATH="model/"
 
 python ../containers/python/sklearn_cifar_container.py 

@@ -1,18 +1,17 @@
 import sys
 import os
-import json
-import requests
-sys.path.append("..")
+import errno
+sys.path.append(os.path.abspath("../management"))
+sys.path.append(os.path.abspath("../examples"))
 
-from management import clipper_manager
-from examples.tutorial import cifar_utils
+import clipper_manager
+from tutorial import cifar_utils
 from sklearn import linear_model as lm
 from sklearn.externals import joblib
 from fabric.api import *
 
-
 APP_NAME = "bench"
-BASE_DATA_PATH = "data/"
+BASE_MODEL_PATH = "model/"
 SKLEARN_MODEL_FILE = "bench_sk_model.pkl"
 SKLEARN_MODEL_NAME = "bench_sklearn_cifar"
 
@@ -42,8 +41,16 @@ class BenchSetup():
 
 		return test_x, test_y, train_x, train_y
 
+	def create_model_directory_if_necessary(self):
+	    try:
+	        os.makedirs(BASE_MODEL_PATH)
+	    except OSError as exception:
+	        if exception.errno != errno.EEXIST:
+	            raise
+
 	def train_sklearn_model(self):
-		model_location = BASE_DATA_PATH + SKLEARN_MODEL_FILE
+		self.create_model_directory_if_necessary()
+		model_location = os.path.join(BASE_MODEL_PATH, SKLEARN_MODEL_FILE)
 		if os.path.isfile(model_location):
 			model = joblib.load(model_location)
 			print("Found and loaded model!")
@@ -58,6 +65,10 @@ class BenchSetup():
 			print("Logistic Regression test score: %f" % model.score(test_x, test_y))
 
 if __name__ == '__main__':
-	setup = BenchSetup("localhost", "../examples/cifar_demo")
+	if len(sys.argv) < 2:
+		print("Correct usage is 'python bench_init.py <path_to_CIFAR_data_set>")
+		raise
+	cifar_dir_path = sys.argv[1]
+	setup = BenchSetup("localhost", cifar_dir_path)
 	setup.run()
 
