@@ -43,12 +43,6 @@ std::pair<boost::future<void>, std::vector<boost::future<T>>> when_all(
             completion_promise->set_value();
             assert(*num_completed == num_futures);
           }
-          // if (*num_completed + 1 == num_futures) {
-          //   completion_promise->set_value();
-          //   //
-          // } else {
-          //   *num_completed += 1;
-          // }
           return result.get();
         }));
   }
