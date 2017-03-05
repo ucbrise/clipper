@@ -2,14 +2,13 @@
 
 #include <clipper/config.hpp>
 #include <clipper/persistent_state.hpp>
-#include <clipper/test_constants.hpp>
 
 using namespace clipper;
 
 namespace {
 
 class StateDBTest : public ::testing::Test {
- public:
+  public:
   StateDBTest() {}
 
   StateDB db_;

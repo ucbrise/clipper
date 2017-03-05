@@ -20,5 +20,5 @@ target_link_libraries(
     httpserver
     redox
     gtest
-    gmock_main)
+    gmock_main cxxopts)
 add_dependencies(unittests managementtests)
