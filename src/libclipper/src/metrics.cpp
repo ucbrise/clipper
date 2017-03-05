@@ -41,14 +41,10 @@ bool compare_metrics(std::shared_ptr<Metric> first,
 
 const std::string get_metrics_category_name(MetricType type) {
   switch (type) {
-    case MetricType::Counter:
-      return "counters";
-    case MetricType::RatioCounter:
-      return "ratio_counters";
-    case MetricType::Meter:
-      return "meters";
-    case MetricType::Histogram:
-      return "histograms";
+    case MetricType::Counter: return "counters";
+    case MetricType::RatioCounter: return "ratio_counters";
+    case MetricType::Meter: return "meters";
+    case MetricType::Histogram: return "histograms";
     default:
       throw std::invalid_argument(std::to_string(static_cast<int>(type)) +
                                   " is unknown MetricType");

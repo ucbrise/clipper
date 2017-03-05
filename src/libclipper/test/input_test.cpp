@@ -34,18 +34,10 @@ void get_string_data(std::vector<std::string>& string_vector) {
   for (int i = 0; i < NUM_STRING_INPUTS; i++) {
     std::string str;
     switch (i % 3) {
-      case 0:
-        str = std::string("CAT");
-        break;
-      case 1:
-        str = std::string("DOG");
-        break;
-      case 2:
-        str = std::string("COW");
-        break;
-      default:
-        str = std::string("INVALID");
-        break;
+      case 0: str = std::string("CAT"); break;
+      case 1: str = std::string("DOG"); break;
+      case 2: str = std::string("COW"); break;
+      default: str = std::string("INVALID"); break;
     }
     string_vector.push_back(str);
   }

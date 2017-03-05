@@ -8,7 +8,7 @@ using namespace clipper;
 namespace {
 
 class StateDBTest : public ::testing::Test {
-  public:
+ public:
   StateDBTest() {}
 
   StateDB db_;

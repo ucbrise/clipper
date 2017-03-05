@@ -52,8 +52,7 @@ const std::string Logger::get_formatted_tag(const std::string tag,
       level_padding =
           MAX_LOGGING_LEVEL_FORMAT_LENGTH - LOGGING_LEVEL_FORMAT_DEBUG_LENGTH;
       break;
-    default:
-      break;
+    default: break;
   }
   ss << std::string(level_padding, ' ');
   if (tag_length < MAX_TAG_LENGTH) {
@@ -71,17 +70,14 @@ void Logger::pad_logging_stream_for_alignment(std::stringstream &ss,
   ss << std::string(LOGGING_FORMAT_LENGTH + tag_length, ' ');
   size_t log_padding = 0;
   switch (log_level) {
-    case LogLevel::Info:
-      log_padding = LOGGING_LEVEL_FORMAT_INFO_LENGTH;
-      break;
+    case LogLevel::Info: log_padding = LOGGING_LEVEL_FORMAT_INFO_LENGTH; break;
     case LogLevel::Error:
       log_padding = LOGGING_LEVEL_FORMAT_ERROR_LENGTH;
       break;
     case LogLevel::Debug:
       log_padding = LOGGING_LEVEL_FORMAT_DEBUG_LENGTH;
       break;
-    default:
-      break;
+    default: break;
   }
   ss << std::string(log_padding, ' ');
 }
