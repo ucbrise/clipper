@@ -57,8 +57,6 @@ TEST(ThreadPoolTests, TestManyJobsComplete) {
 // Tests that a single long-running task blocks all subsequent tasks
 // in a threadpool with 1 thread.
 TEST(ThreadPoolTests, TestHangingTaskOneThread) {
-  std::cout << "Test main thread ID: " << std::this_thread::get_id()
-            << std::endl;
   int num_tasks = 500;
   ThreadPool threadpool(1);
   std::atomic<int> counter(0);
