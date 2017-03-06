@@ -27,6 +27,8 @@ function print_help {
   echo
   echo "  --cleanup           remove all build directories"
   echo
+  echo "  --cleanup-quiet     remove all build directories without asking for confirmation"
+  echo
   echo "  --release           build for release (should be used for all performance testing)"
   echo
   echo "  --prefix=[PREFIX]   Clipper Installation target directory. Defaults to /usr/local"

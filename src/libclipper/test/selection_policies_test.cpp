@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
+#include <time.h>
 #include <chrono>
 #include <ctime>
 #include <thread>
-#include <time.h>
 
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_real_distribution.hpp>
@@ -20,7 +20,6 @@ namespace {
 
 // Helper Functions
 class Utility {
-
  public:
   // Input
   static std::shared_ptr<Input> create_input() {
@@ -74,7 +73,6 @@ class PolicyTests : public ::testing::Test {
 };
 
 TEST_F(PolicyTests, Exp3Test) {
-
   /* Update Test */
   BanditPolicyState state = Exp3Policy::initialize(models);
   auto feedback = Utility::create_feedback(1);
@@ -82,22 +80,23 @@ TEST_F(PolicyTests, Exp3Test) {
   int y_hat;
   int rand_index;
   int rand_draw;
-  srand (time(NULL));
-  
-  for (int i=0; i<update_times_; ++i) {
+  srand(time(NULL));
+
+  for (int i = 0; i < update_times_; ++i) {
     y_hat = 0;
-    rand_index = rand() % models.size(); // Randomly pick model
-    rand_draw = rand() % 100; // Randomly pick number to determine whether this model return 0 or 1
-    if (rand_index == 0) { // good model
+    rand_index = rand() % models.size();  // Randomly pick model
+    rand_draw = rand() % 100;  // Randomly pick number to determine whether this
+                               // model return 0 or 1
+    if (rand_index == 0) {     // good model
       if (rand_draw < 75) {
         y_hat = 1;
       }
-    } else if (rand_index == 1) { // so-so model
+    } else if (rand_index == 1) {  // so-so model
       if (rand_draw < 50) {
         y_hat = 1;
       }
     } else {
-      if (rand_draw < 25) { // bad model
+      if (rand_draw < 25) {  // bad model
         y_hat = 1;
       }
     }
@@ -115,14 +114,14 @@ TEST_F(PolicyTests, Exp3Test) {
   int select_0 = 0;
   int select_1 = 0;
   int select_2 = 0;
-  for (int i=0; i<select_times_; ++i) {
+  for (int i = 0; i < select_times_; ++i) {
     auto tasks = Exp3Policy::select_predict_tasks(state, query, 1000);
     if (model_0.second == tasks.front().model_.second) {
-      select_0 ++;
+      select_0++;
     } else if (model_1.second == tasks.front().model_.second) {
-      select_1 ++;
+      select_1++;
     } else {
-      select_2 ++;
+      select_2++;
     };
   }
   // Test if times selected model_0 > model_1 > model_2
@@ -140,7 +139,6 @@ TEST_F(PolicyTests, Exp3Test) {
 // ********
 
 TEST_F(PolicyTests, Exp4Test) {
-  
   /* Update Test */
   BanditPolicyState state = Exp4Policy::initialize(models);
   auto feedback = Utility::create_feedback(1);
@@ -148,23 +146,24 @@ TEST_F(PolicyTests, Exp4Test) {
   int y_hat;
   int rand_index;
   int rand_draw;
-  srand (time(NULL));
-  
-  for (int i=0; i<update_times_; ++i) {
+  srand(time(NULL));
+
+  for (int i = 0; i < update_times_; ++i) {
     y_hat = 0;
-    rand_index = rand() % models.size(); // Randomly pick model
-    rand_draw = rand() % 100; // Randomly pick number to determine whether this model return 0 or 1
-    
-    if (rand_index == 0) { // good model
+    rand_index = rand() % models.size();  // Randomly pick model
+    rand_draw = rand() % 100;  // Randomly pick number to determine whether this
+                               // model return 0 or 1
+
+    if (rand_index == 0) {  // good model
       if (rand_draw < 75) {
         y_hat = 1;
       }
-    } else if (rand_index == 1) { // so-so model
+    } else if (rand_index == 1) {  // so-so model
       if (rand_draw < 50) {
         y_hat = 1;
       }
     } else {
-      if (rand_draw < 25) { // bad model
+      if (rand_draw < 25) {  // bad model
         y_hat = 1;
       }
     }
@@ -188,7 +187,6 @@ TEST_F(PolicyTests, Exp4Test) {
 // *****************
 
 TEST_F(PolicyTests, EpsilonGreedyTest) {
-  
   /* Update Test */
   BanditPolicyState state = EpsilonGreedyPolicy::initialize(models);
   auto feedback = Utility::create_feedback(1);
@@ -196,23 +194,24 @@ TEST_F(PolicyTests, EpsilonGreedyTest) {
   int y_hat;
   int rand_index;
   int rand_draw;
-  srand (time(NULL));
-  
-  for (int i=0; i<update_times_; ++i) {
+  srand(time(NULL));
+
+  for (int i = 0; i < update_times_; ++i) {
     y_hat = 0;
-    rand_index = rand() % models.size(); // Randomly pick model
-    rand_draw = rand() % 100; // Randomly pick number to determine whether this model return 0 or 1
-    
-    if (rand_index == 0) { // good model
+    rand_index = rand() % models.size();  // Randomly pick model
+    rand_draw = rand() % 100;  // Randomly pick number to determine whether this
+                               // model return 0 or 1
+
+    if (rand_index == 0) {  // good model
       if (rand_draw < 75) {
         y_hat = 1;
       }
-    } else if (rand_index == 1) { // so-so model
+    } else if (rand_index == 1) {  // so-so model
       if (rand_draw < 50) {
         y_hat = 1;
       }
     } else {
-      if (rand_draw < 25) { // bad model
+      if (rand_draw < 25) {  // bad model
         y_hat = 1;
       }
     }
@@ -230,14 +229,14 @@ TEST_F(PolicyTests, EpsilonGreedyTest) {
   int select_0 = 0;
   int select_1 = 0;
   int select_2 = 0;
-  for (int i=0; i<select_times_; ++i) {
+  for (int i = 0; i < select_times_; ++i) {
     auto tasks = EpsilonGreedyPolicy::select_predict_tasks(state, query, 1000);
     if (model_0.second == tasks.front().model_.second) {
-      select_0 ++;
+      select_0++;
     } else if (model_1.second == tasks.front().model_.second) {
-      select_1 ++;
+      select_1++;
     } else {
-      select_2 ++;
+      select_2++;
     };
   }
   // Test if times selected model_0 > model_1
@@ -253,7 +252,6 @@ TEST_F(PolicyTests, EpsilonGreedyTest) {
 // * UCB *
 // ********
 TEST_F(PolicyTests, UCBTest) {
-  
   /* Update Test */
   BanditPolicyState state = UCBPolicy::initialize(models);
   auto feedback = Utility::create_feedback(1);
@@ -261,23 +259,24 @@ TEST_F(PolicyTests, UCBTest) {
   int y_hat;
   int rand_index;
   int rand_draw;
-  srand (time(NULL));
-  
-  for (int i=0; i<update_times_; ++i) {
+  srand(time(NULL));
+
+  for (int i = 0; i < update_times_; ++i) {
     y_hat = 0;
-    rand_index = rand() % models.size(); // Randomly pick model
-    rand_draw = rand() % 100; // Randomly pick number to determine whether this model return 0 or 1
-    
-    if (rand_index == 0) { // good model
+    rand_index = rand() % models.size();  // Randomly pick model
+    rand_draw = rand() % 100;  // Randomly pick number to determine whether this
+                               // model return 0 or 1
+
+    if (rand_index == 0) {  // good model
       if (rand_draw < 75) {
         y_hat = 1;
       }
-    } else if (rand_index == 1) { // so-so model
+    } else if (rand_index == 1) {  // so-so model
       if (rand_draw < 50) {
         y_hat = 1;
       }
     } else {
-      if (rand_draw < 25) { // bad model
+      if (rand_draw < 25) {  // bad model
         y_hat = 1;
       }
     }
@@ -293,7 +292,7 @@ TEST_F(PolicyTests, UCBTest) {
   /* Selection Test */
   auto query = Utility::create_query(models);
   // UCB should always select the optimal bandit
-  for (int i=0; i<select_times_; ++i) {
+  for (int i = 0; i < select_times_; ++i) {
     auto tasks = UCBPolicy::select_predict_tasks(state, query, 1000);
     ASSERT_EQ(model_0.second, tasks.front().model_.second);
   }
@@ -305,4 +304,3 @@ TEST_F(PolicyTests, UCBTest) {
 }
 
 }  // namespace
-

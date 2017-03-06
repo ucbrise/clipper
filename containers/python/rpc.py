@@ -66,7 +66,6 @@ def input_type_to_string(input_type):
 
 
 class Server(threading.Thread):
-
     def __init__(self, context, clipper_ip, clipper_port):
         threading.Thread.__init__(self)
         self.socket = context.socket(zmq.DEALER)
@@ -98,15 +97,15 @@ class Server(threading.Thread):
         return msg
 
     def run(self):
-        self.socket.connect("tcp://{0}:{1}".format(self.clipper_ip,
-                                                   self.clipper_port))
+        self.socket.connect(
+            "tcp://{0}:{1}".format(self.clipper_ip, self.clipper_port))
         self.socket.send("", zmq.SNDMORE)
         self.socket.send(self.model_name, zmq.SNDMORE)
         self.socket.send(str(self.model_version), zmq.SNDMORE)
         self.socket.send(str(self.model_input_type))
         print(self.model_input_type)
         print("Serving predictions for {0} input type.".format(
-                  input_type_to_string(self.model_input_type)))
+            input_type_to_string(self.model_input_type)))
         while True:
             # Receive delimiter between identity and content
             self.socket.recv()
@@ -132,8 +131,9 @@ class Server(threading.Thread):
                 if int(input_type) != int(self.model_input_type):
                     print(("Received incorrect input. Expected {expected}, "
                            "received {received}").format(
-                              expected=input_type_to_string(int(self.model_input_type)),
-                              received=input_type_to_string(int(input_type))))
+                               expected=input_type_to_string(
+                                   int(self.model_input_type)),
+                               received=input_type_to_string(int(input_type))))
                     raise
 
                 if input_type == INPUT_TYPE_STRINGS:
@@ -142,14 +142,15 @@ class Server(threading.Thread):
                     # ignoring the extraneous final null terminator by
                     # using a -1 slice
                     inputs = np.array(
-                        raw_content.split('\0')[
-                            :-1], dtype=input_type_to_dtype(input_type))
+                        raw_content.split('\0')[:-1],
+                        dtype=input_type_to_dtype(input_type))
                 else:
-                    inputs = np.array(np.split(
-                        np.frombuffer(
-                            raw_content, dtype=input_type_to_dtype(
-                                input_type)),
-                        splits))
+                    inputs = np.array(
+                        np.split(
+                            np.frombuffer(
+                                raw_content,
+                                dtype=input_type_to_dtype(input_type)),
+                            splits))
 
                 t3 = datetime.now()
 
@@ -160,9 +161,9 @@ class Server(threading.Thread):
 
                 response.send(self.socket)
 
-                print(
-                    "recv: %f us, parse: %f us, handle: %f us" %
-                    ((t2 - t1).microseconds, (t3 - t2).microseconds, (t4-t3).microseconds))
+                print("recv: %f us, parse: %f us, handle: %f us" %
+                      ((t2 - t1).microseconds, (t3 - t2).microseconds,
+                       (t4 - t3).microseconds))
 
             else:
                 received_msg = Message(msg_id_bytes, [])
@@ -172,7 +173,6 @@ class Server(threading.Thread):
 
 
 class Message:
-
     def __init__(self, msg_id, content):
         self.msg_id = msg_id
         self.content = content
@@ -190,7 +190,6 @@ class Message:
 
 
 class ModelContainerBase(object):
-
     def predict_ints(self, inputs):
         pass
 

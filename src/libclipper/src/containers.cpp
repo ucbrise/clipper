@@ -6,23 +6,26 @@
 // #define NDEBUG
 #include <cassert>
 
-#include <clipper/containers.hpp>
-#include <clipper/util.hpp>
 #include <clipper/constants.hpp>
+#include <clipper/containers.hpp>
 #include <clipper/logging.hpp>
+#include <clipper/util.hpp>
 
 #include <boost/thread.hpp>
 
 namespace clipper {
 
-ModelContainer::ModelContainer(VersionedModelId model, int container_id, InputType input_type)
+ModelContainer::ModelContainer(VersionedModelId model, int container_id,
+                               InputType input_type)
     : model_(model), container_id_(container_id), input_type_(input_type) {}
 
 int ModelContainer::get_queue_size() { return request_queue_.size(); }
 
 void ModelContainer::send_prediction(PredictTask task) {
-  task.send_time_micros_ = std::chrono::duration_cast<std::chrono::milliseconds>(
-      std::chrono::system_clock::now().time_since_epoch()).count();
+  task.send_time_micros_ =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::system_clock::now().time_since_epoch())
+          .count();
   request_queue_.push(task);
 }
 
@@ -33,7 +36,8 @@ ActiveContainers::ActiveContainers()
                              decltype(&versioned_model_hash)>(
               100, &versioned_model_hash)) {}
 
-void ActiveContainers::add_container(VersionedModelId model, int id, InputType input_type) {
+void ActiveContainers::add_container(VersionedModelId model, int id,
+                                     InputType input_type) {
   log_info_formatted(
       LOGGING_TAG_CLIPPER,
       "Adding new container - model: {}, version: {}, ID: {}, input_type: {}",

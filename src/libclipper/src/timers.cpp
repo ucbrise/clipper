@@ -34,8 +34,6 @@ bool Timer::operator>=(const Timer &rhs) const {
   return deadline_ >= rhs.deadline_;
 }
 
-void Timer::expire() {
-  completion_promise_.set_value();
-}
+void Timer::expire() { completion_promise_.set_value(); }
 
 }  // namespace clipper

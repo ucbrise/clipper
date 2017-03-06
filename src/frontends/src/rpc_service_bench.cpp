@@ -172,8 +172,9 @@ void run_benchmarks() {
 
   shutdown = true;
   rpc_service->stop();
-  printf("%f ms\n", ((double)total_time_elapsed) /
-                        (num_iterations_per_benchmark * num_benchmarks));
+  printf("%f ms\n",
+         ((double)total_time_elapsed) /
+             (num_iterations_per_benchmark * num_benchmarks));
 }
 
 int main() {

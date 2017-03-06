@@ -23,16 +23,16 @@ TEST(JsonUtilTests, TestCorrectJsonValues) {
   add_double(d, "double_val", double_val);
   add_int(d, "int_val", int_val);
   std::string output_json = to_json_string(d);
-  EXPECT_EQ(output_json, expected_json); 
+  EXPECT_EQ(output_json, expected_json);
 }
 
 TEST(JsonUtilTests, TestCorrectJsonArrays) {
   std::string expected_json =
       R"({"string_array":["test1","word2","phrase3"],)"
-       R"("double_array":[1.4,2.23,3.243242,0.3223424],)"
-       R"("int_array":[1,2,3,4]})";
+      R"("double_array":[1.4,2.23,3.243242,0.3223424],)"
+      R"("int_array":[1,2,3,4]})";
   std::vector<std::string> string_array = {"test1", "word2", "phrase3"};
-  std::vector<double> double_array = {1.4,2.23,3.243242,0.3223424};
+  std::vector<double> double_array = {1.4, 2.23, 3.243242, 0.3223424};
   std::vector<int> int_array = {1, 2, 3, 4};
 
   rapidjson::Document d;
@@ -41,15 +41,15 @@ TEST(JsonUtilTests, TestCorrectJsonArrays) {
   add_double_array(d, "double_array", double_array);
   add_int_array(d, "int_array", int_array);
   std::string output_json = to_json_string(d);
-  EXPECT_EQ(output_json, expected_json); 
+  EXPECT_EQ(output_json, expected_json);
 }
 
 TEST(JsonUtilTests, TestCorrectJsonNestedObjects) {
   std::string expected_json =
       R"({"nested_object":{"double_array":[1.4,2.23,3.243242,0.3223424],)"
-                        R"("twice_nested_object":{"double_val":0.3}}})";
+      R"("twice_nested_object":{"double_val":0.3}}})";
   double double_val = 0.3;
-  std::vector<double> double_array = {1.4,2.23,3.243242,0.3223424};
+  std::vector<double> double_array = {1.4, 2.23, 3.243242, 0.3223424};
 
   rapidjson::Document main_doc;
   main_doc.SetObject();
@@ -75,8 +75,8 @@ TEST(JsonUtilTests, TestOverwritePastValues) {
 
   double old_double_val = 0.5;
   double new_double_val = 0.3;
-  std::vector<double> old_double_array = {1.5,2.23,3.243242,0.3223424};
-  std::vector<double> new_double_array = {1.4,2.23,3.243242,0.3223424};
+  std::vector<double> old_double_array = {1.5, 2.23, 3.243242, 0.3223424};
+  std::vector<double> new_double_array = {1.4, 2.23, 3.243242, 0.3223424};
   add_double(d, "double_val", old_double_val);
   add_double(d, "double_val", new_double_val);
   add_double_array(d, "double_array", old_double_array);
@@ -125,15 +125,11 @@ TEST(JsonUtilTests, TestArrayTypeMismatch) {
 
   rapidjson::Document d;
   parse_json(source_json, d);
-  ASSERT_THROW(
-        get_double_array(d, "double_array_with_int"),
-        json_semantic_error);
-  ASSERT_THROW(
-        get_int_array(d, "int_array_with_string"),
-        json_semantic_error);
-  ASSERT_THROW(
-        get_string_array(d, "string_array_with_bool"),
-        json_semantic_error);
+  ASSERT_THROW(get_double_array(d, "double_array_with_int"),
+               json_semantic_error);
+  ASSERT_THROW(get_int_array(d, "int_array_with_string"), json_semantic_error);
+  ASSERT_THROW(get_string_array(d, "string_array_with_bool"),
+               json_semantic_error);
 }
 
 TEST(JsonUtilTests, TestEmptyDocumentToString) {
@@ -181,14 +177,13 @@ TEST(JsonUtilTests, TestParseCandidateModels) {
     ]
   }
   )";
-  std::vector<clipper::VersionedModelId> expected_models =
-      {{"sklearn_svm", 1}, {"sklearn_svm", 2}, {"network", 3}};
+  std::vector<clipper::VersionedModelId> expected_models = {
+      {"sklearn_svm", 1}, {"sklearn_svm", 2}, {"network", 3}};
 
   rapidjson::Document d;
   parse_json(correct_json, d);
-  EXPECT_EQ(
-        get_candidate_models(d, "correct_candidate_models"),
-        expected_models);
+  EXPECT_EQ(get_candidate_models(d, "correct_candidate_models"),
+            expected_models);
 
   parse_json(missing_name_json, d);
   ASSERT_THROW(get_candidate_models(d, "missing_name"), json_semantic_error);
@@ -200,9 +195,8 @@ TEST(JsonUtilTests, TestParseCandidateModels) {
   ASSERT_THROW(get_candidate_models(d, "wrong_name_type"), json_semantic_error);
 
   parse_json(wrong_version_type_json, d);
-  ASSERT_THROW(
-        get_candidate_models(d, "wrong_version_type"),
-        json_semantic_error);
+  ASSERT_THROW(get_candidate_models(d, "wrong_version_type"),
+               json_semantic_error);
 }
 
 TEST(JsonUtilTests, TestParseNestedObject) {
@@ -214,7 +208,7 @@ TEST(JsonUtilTests, TestParseNestedObject) {
     }
   }
   )";
-  std::vector<double> double_array = {1.4,2.23,3.243242,0.3223424};
+  std::vector<double> double_array = {1.4, 2.23, 3.243242, 0.3223424};
   double double_val = 0.3;
 
   rapidjson::Document d;

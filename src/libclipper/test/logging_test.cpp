@@ -11,9 +11,7 @@ namespace {
 
 class LoggingTest : public ::testing::Test {
  public:
-  LoggingTest() : logger_(oss_) {
-
-  }
+  LoggingTest() : logger_(oss_) {}
 
   std::ostringstream oss_;
   Logger logger_;
@@ -94,8 +92,10 @@ TEST_F(LoggingTest, MultipleMessagesLogCorrectly) {
   // Check that a newline character is used to delimit the predefined
   // messages within the log output
   ASSERT_EQ(delimiting_newline, "\n");
-  std::string padding = std::string(LOGGING_FORMAT_LENGTH + MAX_TAG_LENGTH, ' ');
-  // Check that a required amount of padding exists between the predefined messages
+  std::string padding =
+      std::string(LOGGING_FORMAT_LENGTH + MAX_TAG_LENGTH, ' ');
+  // Check that a required amount of padding exists between the predefined
+  // messages
   // This ensures that the messages on separate lines are properly aligned
   ASSERT_NE(log.find(padding), std::string::npos);
 }
@@ -129,20 +129,25 @@ TEST_F(LoggingTest, LogsOfDifferentLevelsDifferByLevelTag) {
 
   size_t level_index = info_log.substr(1).find("[") + 1;
   // Obtains the text used to indicate that a log is at the "info" level
-  std::string info_level_tag = info_log.substr(level_index, info_level_tag_length);
+  std::string info_level_tag =
+      info_log.substr(level_index, info_level_tag_length);
   // Obtains the text used to indicate that a log is at the "error" level
-  std::string error_level_tag = error_log.substr(level_index, error_level_tag_length);
+  std::string error_level_tag =
+      error_log.substr(level_index, error_level_tag_length);
 
   // We expect the "info" and "error" level tags to differ
   ASSERT_NE(info_level_tag, error_level_tag);
 
-  size_t info_message_index = level_index + info_log.substr(level_index + 1).find("[") + 1;
-  size_t error_message_index = level_index + error_log.substr(level_index + 1).find("[") + 1;
+  size_t info_message_index =
+      level_index + info_log.substr(level_index + 1).find("[") + 1;
+  size_t error_message_index =
+      level_index + error_log.substr(level_index + 1).find("[") + 1;
 
-  // However, we expect that the message content (everything after the level tag and subsequent padding)
+  // However, we expect that the message content (everything after the level tag
+  // and subsequent padding)
   // of the "info" log is equivalent to that of the "error" log
   ASSERT_EQ(info_log.substr(info_message_index),
             error_log.substr(error_message_index));
 }
 
-} // namespace
+}  // namespace

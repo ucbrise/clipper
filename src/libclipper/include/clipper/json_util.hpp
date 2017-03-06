@@ -245,8 +245,7 @@ std::shared_ptr<Input> parse_input(InputType input_type, rapidjson::Value& d) {
     case InputType::Bytes: {
       throw std::invalid_argument("Base64 encoded bytes are not supported yet");
     }
-    default:
-      throw std::invalid_argument("input_type is not a valid type");
+    default: throw std::invalid_argument("input_type is not a valid type");
   }
 }
 

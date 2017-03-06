@@ -6,19 +6,22 @@ import sys
 from sklearn_cifar_container import SklearnCifarContainer
 from sklearn.metrics import accuracy_score
 
-classes = ['airplane', 'automobile', 'bird', 'cat',
-                   'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+classes = [
+    'airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse',
+    'ship', 'truck'
+]
 positive_class = classes.index('airplane')
 negative_class = classes.index('bird')
 
-def load_cifar(cifar_location, cifar_filename = "train.data", norm=False):
+
+def load_cifar(cifar_location, cifar_filename="train.data", norm=False):
     cifar_path = cifar_location + "/" + cifar_filename
     print("Source file: %s" % cifar_path)
     df = pd.read_csv(cifar_path, sep=",", header=None)
     data = df.values
     print("Number of image files: %d" % len(data))
-    y = data[:,0]
-    X = data[:,1:]
+    y = data[:, 0]
+    X = data[:, 1:]
     Z = X
     if norm:
         mu = np.mean(X.T, 0)
@@ -26,6 +29,7 @@ def load_cifar(cifar_location, cifar_filename = "train.data", norm=False):
         Z = (X.T - mu) / np.array([np.sqrt(z) if z > 0 else 1. for z in sigma])
         Z = Z.T
     return (Z, y)
+
 
 def filter_data(X, y):
     X_train, y_train = [], []
@@ -40,9 +44,12 @@ def filter_data(X, y):
     y_train = np.array(y_train)
     return X_train, y_train
 
+
 if __name__ == '__main__':
     model_path = os.environ["CLIPPER_MODEL_PATH"]
-    pkl_names = [l for l in os.listdir(model_path) if os.path.splitext(l)[1] == ".pkl"]
+    pkl_names = [
+        l for l in os.listdir(model_path) if os.path.splitext(l)[1] == ".pkl"
+    ]
     assert len(pkl_names) == 1
     pkl_path = os.path.join(model_path, pkl_names[0])
     print(pkl_path)

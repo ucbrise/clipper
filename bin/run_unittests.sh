@@ -17,6 +17,23 @@ function clean_up {
     exit
 }
 
+function randomize_redis_port {
+    set +e  # turn of exit on command fail
+    REDIS_PORT=$((34256 + RANDOM % 1000))
+    lsof -i :$REDIS_PORT &> /dev/null
+
+    if [ $? -eq 0 ]; then # existing port in use found
+      while true; do
+        REDIS_PORT=$(($REDIS_PORT + RANDOM % 1000))
+        lsof -i :$REDIS_PORT &> /dev/null
+        if [ $? -eq 1 ]; then  # port not in use
+          break
+        fi
+      done
+    fi
+    echo "$REDIS_PORT"
+}
+
 trap clean_up SIGHUP SIGINT SIGTERM
 
 unset CDPATH
@@ -37,11 +54,13 @@ if ! type "redis-server" &> /dev/null; then
     exit 1
 fi
 
-# start Redis on the test port if it's not already running
-redis-server --port 34256 &> /dev/null &
+randomize_redis_port
 
-./src/libclipper/libclippertests
-./src/frontends/frontendtests
-./src/management/managementtests
+# start Redis on the test port if it's not already running
+redis-server --port $REDIS_PORT &> /dev/null &
+
+./src/libclipper/libclippertests --redis_port $REDIS_PORT
+./src/frontends/frontendtests --redis_port $REDIS_PORT
+./src/management/managementtests --redis_port $REDIS_PORT
 
 clean_up
