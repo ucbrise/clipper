@@ -29,7 +29,7 @@ if [ $num_violations -eq 0 ]; then
 else
     echo "Found $num_violations Clang-Format violations"
     find ./src -not \( -path ./src/libs -prune \) -name '*pp' -print \
-        | xargs clang-format -style=file -output-replacements-xml
+        | xargs clang-format -style=file
     exit 1
 fi
 
