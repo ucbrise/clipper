@@ -101,6 +101,8 @@ class TaskExecutor {
                 vm, std::stoi(container_info["zmq_connection_id"]),
                 parse_input_type(container_info["input_type"]));
             int replica_id = std::stoi(container_info["model_replica_id"]);
+            // TODO: These callbacks should be submitted to a thread pool
+            // for execution on separate threads
             on_new_container_added(vm, replica_id);
             std::thread([&]() {
               on_container_ready(vm, replica_id);

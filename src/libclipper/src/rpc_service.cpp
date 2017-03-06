@@ -251,10 +251,11 @@ void RPCService::receive_message(socket_t &socket,
     }
     std::pair<VersionedModelId, int> container_info = container_info_entry->second;
 
+    // TODO: These callbacks should be submitted to a threadpool for
+    // execution on separate threads
     std::thread([&]() {
       new_response_callback_(response);
     }).detach();
-
     std::thread([&]() {
       container_ready_callback_(container_info.first, container_info.second);
     }).detach();
