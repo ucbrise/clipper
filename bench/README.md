@@ -1,7 +1,3 @@
-Can you add some documentation about how to run the benchmark?
-At a minimum, you need to specify what the dataset for the model container 
-should be and what the dataset for the bench binary should be.
-
 # Running the performance benchmark
 
 ## Required Files
