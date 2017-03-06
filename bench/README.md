@@ -2,7 +2,7 @@
 
 ## Required Files
 ### CIFAR10 Python Dataset for SKLearn Model
-This benchmark serves an SKLearn model that depends on the CIFAR10 Python dataset for training. This dataset can be obtained from [https://www.cs.toronto.edu/~kriz/cifar.html](https://www.cs.toronto.edu/~kriz/cifar.html).
+This benchmark serves an SKLearn model that depends on the CIFAR10 Python dataset for training. In order to parse the dataset, it must be converted to CSV format. The [CIFAR10 python download utility](https://github.com/ucbrise/clipper/blob/develop/examples/tutorial/download_cifar.py) can be used to obtain the required CSV file.
 
 ### CIFAR10 Binary Dataset for Query Execution
 The C++ benchmark works by sending CIFAR10 query vectors to the container serving the trained SKLearn model. To achieve this, the **binary dataset** is required. It can also be obtained from [https://www.cs.toronto.edu/~kriz/cifar.html](https://www.cs.toronto.edu/~kriz/cifar.html).
@@ -36,7 +36,7 @@ If a configuration file is not specified, the benchmark will prompt you for the 
   ```
   $ ./setup_bench.sh <path_to_cifar_python_dataset>
   ```
-where `<path_to_cifar_python_dataset>` is the path to the **directory** containing CIFAR10 data files of the form `data_batch_n`.
+where `<path_to_cifar_python_dataset>` is the path to the **directory** containing a parsed CIFAR10 CSV data file with name `cifar_train.data`.
 
 2. Execute the following:
   ```
