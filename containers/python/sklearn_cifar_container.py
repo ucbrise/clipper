@@ -25,20 +25,21 @@ class SklearnCifarContainer(rpc.ModelContainerBase):
     #     return preds
 
 
-
 if __name__ == "__main__":
     print("Starting Sklearn Cifar container")
     try:
         model_name = os.environ["CLIPPER_MODEL_NAME"]
     except KeyError:
-        print("ERROR: CLIPPER_MODEL_NAME environment variable must be set",
-              file=sys.stdout)
+        print(
+            "ERROR: CLIPPER_MODEL_NAME environment variable must be set",
+            file=sys.stdout)
         sys.exit(1)
     try:
         model_version = os.environ["CLIPPER_MODEL_VERSION"]
     except KeyError:
-        print("ERROR: CLIPPER_MODEL_VERSION environment variable must be set",
-              file=sys.stdout)
+        print(
+            "ERROR: CLIPPER_MODEL_VERSION environment variable must be set",
+            file=sys.stdout)
         sys.exit(1)
 
     ip = "127.0.0.1"
@@ -55,8 +56,9 @@ if __name__ == "__main__":
 
     input_type = "doubles"
     model_path = os.environ["CLIPPER_MODEL_PATH"]
-    pkl_names = [l for l in os.listdir(model_path) if
-                 os.path.splitext(l)[-1] == ".pkl"]
+    pkl_names = [
+        l for l in os.listdir(model_path) if os.path.splitext(l)[-1] == ".pkl"
+    ]
     print(pkl_names)
     if len(pkl_names) != 1:
         print("Found %d *.pkl files. Expected 1" % len(pkl_names))

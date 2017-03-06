@@ -25,8 +25,9 @@ def download_cifar(loc):
         print("CIFAR10 dataset not found, downloading...")
         # http://stackoverflow.com/a/19602990
         testfile = urllib.URLopener()
-        testfile.retrieve('https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
-                          os.path.join(loc, 'cifar-10-python.tar.gz'))
+        testfile.retrieve(
+            'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
+            os.path.join(loc, 'cifar-10-python.tar.gz'))
         print("Finished downloading")
 
     print("Extracting tar file...")
@@ -73,6 +74,7 @@ def extract_to_csv(loc, data, labels, test_data, test_labels):
             output_line = ','.join(example_data) + '\n'
             outfile.write(output_line)
     print("Finished!")
+
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:

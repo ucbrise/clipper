@@ -4,26 +4,30 @@ import pandas as pd
 from sklearn import svm
 from sklearn.externals import joblib
 
-classes = ['airplane', 'automobile', 'bird', 'cat',
-           'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+classes = [
+    'airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse',
+    'ship', 'truck'
+]
 positive_class = classes.index('airplane')
 negative_class = classes.index('bird')
 
-def load_cifar(cifar_location, cifar_filename = "train.data", norm=False):
+
+def load_cifar(cifar_location, cifar_filename="train.data", norm=False):
     cifar_path = cifar_location + "/" + cifar_filename
     print("Source file: %s" % cifar_path)
     df = pd.read_csv(cifar_path, sep=",", header=None)
     data = df.values
     print("Number of image files: %d" % len(data))
-    y = data[:,0]
-    X = data[:,1:]
+    y = data[:, 0]
+    X = data[:, 1:]
     Z = X
     if norm:
-        mu = np.mean(X.T,0)
-        sigma = np.var(X.T,0)
+        mu = np.mean(X.T, 0)
+        sigma = np.var(X.T, 0)
         Z = (X.T - mu) / np.array([np.sqrt(z) if z > 0 else 1. for z in sigma])
         Z = Z.T
     return (Z, y)
+
 
 def filter_data(X, y):
     X_train, y_train = [], []
@@ -38,12 +42,14 @@ def filter_data(X, y):
     y_train = np.array(y_train)
     return X_train, y_train
 
+
 def train_svm(X, y):
     X_train, y_train = filter_data(X, y)
     model = svm.SVC()
     model.fit(X_train, y_train)
     print(model.score(X_train, y_train))
     return model
+
 
 if __name__ == '__main__':
     X, y = load_cifar('data', norm=True)
@@ -56,4 +62,3 @@ if __name__ == '__main__':
     model_path = 'models/svm_cifar10.pkl'
     joblib.dump(model, model_path)
     print("Saved model as %s" % model_path)
-
