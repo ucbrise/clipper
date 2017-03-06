@@ -57,6 +57,10 @@ class ActiveContainers {
 
   void add_container(VersionedModelId model, int id, InputType input_type);
 
+  /// TODO: this method should be deprecated / removed when per-model
+  /// queueing is implemented, as it currently functions as an efficiency
+  /// method in the context of assigning tasks to containers directly
+  ///
   /// This method returns a vector of all the active containers (replicas)
   /// of the specified model. This is threadsafe because each individual
   /// ModelContainer object is threadsafe, and this method returns

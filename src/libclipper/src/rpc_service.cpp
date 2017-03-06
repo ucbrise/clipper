@@ -247,7 +247,7 @@ void RPCService::receive_message(socket_t &socket,
 
     auto container_info_entry = containers.find(connection_id);
     if(container_info_entry == containers.end()) {
-      // This is unusual, throw?
+      throw std::runtime_error("Failed to find container that was previously registered via RPC");
     }
     std::pair<VersionedModelId, int> container_info = container_info_entry->second;
 

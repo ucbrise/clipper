@@ -22,13 +22,6 @@ size_t primitive_input_hash(const std::vector<T> &data) {
   return cur_hash;
 }
 
-template <typename Container> // we can make this generic for any container [1]
-struct container_hash {
-  std::size_t operator()(Container const& c) const {
-    return boost::hash_range(c.begin(), c.end());
-  }
-};
-
 template <typename T>
 ByteBuffer get_byte_buffer(std::vector<T> vector) {
   uint8_t *data = reinterpret_cast<uint8_t *>(vector.data());

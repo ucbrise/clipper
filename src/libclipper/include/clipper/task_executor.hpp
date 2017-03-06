@@ -185,7 +185,7 @@ class TaskExecutor {
   /// thread that will each continuously try to send/receive.
 
   void on_new_container_added(VersionedModelId model_id, int replica_id) {
-    // Create a new model queue if this is the first connected container
+    // TODO: Create a new model queue if this is the first connected container
     // hosting the specified model (i.e. replica_id == 0)
     UNUSED(model_id);
     UNUSED(replica_id);
@@ -193,11 +193,9 @@ class TaskExecutor {
   }
 
   void on_container_ready(VersionedModelId model_id, int replica_id) {
-    // We need to request batch of size `batch_size`, send to container via its socket ID
     std::shared_ptr<ModelContainer> container = active_containers_->get_model_replica(model_id, replica_id);
     if(!container) {
-      // Throw?
-      return;
+      throw std::runtime_error("TaskExecutor failed to find previously registered active container!");
     }
     
     while(true) {
@@ -226,7 +224,6 @@ class TaskExecutor {
   }
 
   void on_new_response(rpc::RPCResponse response) {
-    // Handle the response
     std::unique_lock<std::mutex> l(inflight_messages_mutex_);
     auto keys = inflight_messages_[response.first];
 
