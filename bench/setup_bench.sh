@@ -1,8 +1,7 @@
 trap "exit" INT TERM
 trap "kill 0" EXIT
 
-echo -n "Enter path to the CIFAR python data set: "
-read cifar_path
+cifar_path=$1
 
 python bench_init.py $cifar_path
 

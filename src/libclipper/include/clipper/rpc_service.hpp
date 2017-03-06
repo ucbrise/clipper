@@ -73,7 +73,7 @@ class RPCService {
                        boost::bimap<int, vector<uint8_t>> &connections,
                        int &zmq_connection_id,
                        std::shared_ptr<redox::Redox> redis_connection);
-  void shutdown_service(const string address, socket_t &socket);
+  void shutdown_service(socket_t &socket);
   std::thread rpc_thread;
   shared_ptr<Queue<RPCRequest>> request_queue_;
   shared_ptr<Queue<RPCResponse>> response_queue_;

@@ -197,5 +197,4 @@ int main(int argc, char *argv[]) {
   }
   std::string metrics = metrics::MetricsRegistry::get_metrics().report_metrics();
   log_info("BENCH", metrics);
-  std::this_thread::sleep_for(std::chrono::seconds(5));
 }
