@@ -245,7 +245,6 @@ class TaskExecutor {
                         {std::get<1>(keys[batch_num])}});
     }
   }
-
 };
 
 class PowerTwoChoicesScheduler {
