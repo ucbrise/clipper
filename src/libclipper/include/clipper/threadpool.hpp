@@ -134,7 +134,7 @@ class ThreadPool {
   template <typename Func>
   class ThreadTask : public IThreadTask {
    public:
-    ThreadTask(Func&& func) : m_func{std::move(func)} {}
+    ThreadTask(Func&& func) : func_{std::move(func)} {}
 
     ~ThreadTask(void) override = default;
     ThreadTask(const ThreadTask& rhs) = delete;
@@ -145,10 +145,10 @@ class ThreadPool {
     /**
      * Run the task.
      */
-    void execute() override { m_func(); }
+    void execute() override { func_(); }
 
    private:
-    Func m_func;
+    Func func_;
   };
 
  public:
@@ -168,10 +168,10 @@ class ThreadPool {
    * Constructor.
    */
   explicit ThreadPool(const std::uint32_t numThreads)
-      : m_done{false}, m_workQueue{}, m_threads{} {
+      : done_{false}, work_queue_{}, threads_{} {
     try {
       for (std::uint32_t i = 0u; i < numThreads; ++i) {
-        m_threads.emplace_back(&ThreadPool::worker, this);
+        threads_.emplace_back(&ThreadPool::worker, this);
       }
     } catch (...) {
       destroy();
@@ -207,7 +207,7 @@ class ThreadPool {
     PackagedTask task{std::move(boundTask)};
     auto result_future = task.get_future();
 
-    m_workQueue.push(std::make_unique<TaskType>(std::move(task)));
+    work_queue_.push(std::make_unique<TaskType>(std::move(task)));
     return result_future;
   }
 
@@ -217,9 +217,9 @@ class ThreadPool {
    * queue.
    */
   void worker(void) {
-    while (!m_done) {
+    while (!done_) {
       std::unique_ptr<IThreadTask> pTask{nullptr};
-      if (m_workQueue.wait_pop(pTask)) {
+      if (work_queue_.wait_pop(pTask)) {
         pTask->execute();
       }
     }
@@ -229,9 +229,9 @@ class ThreadPool {
    * Invalidates the queue and joins all running threads.
    */
   void destroy(void) {
-    m_done = true;
-    m_workQueue.invalidate();
-    for (auto& thread : m_threads) {
+    done_ = true;
+    work_queue_.invalidate();
+    for (auto& thread : threads_) {
       if (thread.joinable()) {
         thread.join();
       }
@@ -239,9 +239,9 @@ class ThreadPool {
   }
 
  private:
-  std::atomic_bool m_done;
-  ThreadSafeQueue<std::unique_ptr<IThreadTask>> m_workQueue;
-  std::vector<std::thread> m_threads;
+  std::atomic_bool done_;
+  ThreadSafeQueue<std::unique_ptr<IThreadTask>> work_queue_;
+  std::vector<std::thread> threads_;
 };
 
 namespace DefaultThreadPool {
