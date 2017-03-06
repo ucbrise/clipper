@@ -47,10 +47,8 @@ RPCService::~RPCService() { stop(); }
 
 void RPCService::start(const string ip,
            const int port,
-           const std::function<void(VersionedModelId, int)> &&new_container_callback,
            std::function<void(VersionedModelId, int)> &&container_ready_callback,
            std::function<void(RPCResponse)> &&new_response_callback) {
-  new_container_callback_ = new_container_callback;
   container_ready_callback_ = container_ready_callback;
   new_response_callback_ = new_response_callback;
   if (active_) {
@@ -236,11 +234,6 @@ void RPCService::receive_message(socket_t &socket,
     redis::add_container(*redis_connection, model, cur_replica_id,
                          zmq_connection_id, input_type);
     containers.emplace(connection_id, std::pair<VersionedModelId, int>(model, cur_replica_id));
-
-    // The order in which these call backs are executed is important
-    // TODO: Submit callback executions as separate jobs to a threadpool
-    new_container_callback_(model, cur_replica_id);
-    container_ready_callback_(model, cur_replica_id);
     zmq_connection_id += 1;
   } else {
     message_t msg_id;
@@ -258,10 +251,13 @@ void RPCService::receive_message(socket_t &socket,
     }
     std::pair<VersionedModelId, int> container_info = container_info_entry->second;
 
-    // The order in which these call backs are executed is important
-    // TODO: Submit callback executions as separate jobs to a threadpool
-    new_response_callback_(response);
-    container_ready_callback_(container_info.first, container_info.second);
+    std::thread([&]() {
+      new_response_callback_(response);
+    }).detach();
+
+    std::thread([&]() {
+      container_ready_callback_(container_info.first, container_info.second);
+    }).detach();
 
     response_queue_->push(response);
   }

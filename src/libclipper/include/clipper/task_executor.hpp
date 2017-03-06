@@ -66,7 +66,6 @@ class TaskExecutor {
         rpc_(std::make_unique<rpc::RPCService>()) {
     log_info(LOGGING_TAG_TASK_EXECUTOR, "TaskExecutor started");
     rpc_->start("*", RPC_SERVICE_PORT,
-                [this](VersionedModelId model, int replica_id) { on_new_container_added(model, replica_id); },
                 [this](VersionedModelId model, int replica_id) { on_container_ready(model, replica_id); },
                 [this](rpc::RPCResponse response) { on_new_response(std::move(response)); });
     active_ = true;
@@ -101,6 +100,11 @@ class TaskExecutor {
             active_containers_->add_container(
                 vm, std::stoi(container_info["zmq_connection_id"]),
                 parse_input_type(container_info["input_type"]));
+            int replica_id = std::stoi(container_info["model_replica_id"]);
+            on_new_container_added(vm, replica_id);
+            std::thread([&]() {
+              on_container_ready(vm, replica_id);
+            }).detach();
           }
 
         });
@@ -113,8 +117,6 @@ class TaskExecutor {
         "prediction_throughput");
     latency_hist = metrics::MetricsRegistry::get_metrics().create_histogram(
         "prediction_latency", "milliseconds", 2056);
-    //boost::thread(&TaskExecutor::send_messages, this).detach();
-    //boost::thread(&TaskExecutor::recv_messages, this).detach();
   }
 
   // Disallow copy
@@ -187,6 +189,7 @@ class TaskExecutor {
     // hosting the specified model (i.e. replica_id == 0)
     UNUSED(model_id);
     UNUSED(replica_id);
+
   }
 
   void on_container_ready(VersionedModelId model_id, int replica_id) {
@@ -196,24 +199,29 @@ class TaskExecutor {
       // Throw?
       return;
     }
-    auto batch = container->dequeue_predictions(max_batch_size_);
-    if(batch.size() > 0) {
-      // move the lock up here, so that nothing can pull from the
-      // inflight_messages_
-      // map between the time a message is sent and when it gets inserted
-      // into the map
-      std::unique_lock<std::mutex> l(inflight_messages_mutex_);
-      std::vector<std::tuple<const long, VersionedModelId,
-                             std::shared_ptr<Input>>>
-          cur_batch;
-      rpc::PredictionRequest prediction_request(container->input_type_);
-      for (auto b : batch) {
-        prediction_request.add_input(b.input_);
-        cur_batch.emplace_back(b.send_time_micros_, b.model_, b.input_);
+    
+    while(true) {
+      auto batch = container->dequeue_predictions(max_batch_size_);
+      if (batch.size() > 0) {
+        // move the lock up here, so that nothing can pull from the
+        // inflight_messages_
+        // map between the time a message is sent and when it gets inserted
+        // into the map
+        std::unique_lock<std::mutex> l(inflight_messages_mutex_);
+
+        std::vector<std::tuple<const long, VersionedModelId,
+                               std::shared_ptr<Input>>>
+            cur_batch;
+        rpc::PredictionRequest prediction_request(container->input_type_);
+        for (auto b : batch) {
+          prediction_request.add_input(b.input_);
+          cur_batch.emplace_back(b.send_time_micros_, b.model_, b.input_);
+        }
+        int message_id = rpc_->send_message(prediction_request.serialize(),
+                                            container->container_id_);
+        inflight_messages_.emplace(message_id, std::move(cur_batch));
+        return;
       }
-      int message_id = rpc_->send_message(prediction_request.serialize(),
-                                          container->container_id_);
-      inflight_messages_.emplace(message_id, std::move(cur_batch));
     }
   }
 

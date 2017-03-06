@@ -55,7 +55,6 @@ class RPCService {
    */
   void start(const string ip,
              const int port,
-             const std::function<void(VersionedModelId, int)> &&new_container_callback,
              std::function<void(VersionedModelId, int)> &&container_ready_callback,
              std::function<void(RPCResponse)> &&new_response_callback);
   /**
@@ -103,7 +102,6 @@ class RPCService {
       replica_ids_;
   std::shared_ptr<metrics::Histogram> msg_queueing_hist;
 
-  std::function<void(VersionedModelId, int)> new_container_callback_;
   std::function<void(VersionedModelId, int)> container_ready_callback_;
   std::function<void(RPCResponse)> new_response_callback_;
 };
