@@ -5,8 +5,10 @@ import sys
 import numpy as np
 import tensorflow as tf
 
-classes = ['airplane', 'automobile', 'bird', 'cat',
-           'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+classes = [
+    'airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse',
+    'ship', 'truck'
+]
 positive_class = classes.index('airplane')
 negative_class = classes.index('bird')
 
@@ -19,25 +21,27 @@ class TfCifarContainer(rpc.ModelContainerBase):
             saver.restore(self.sess, path)
 
     def predict_doubles(self, inputs):
-        logits = self.sess.run('softmax_logits:0',
-                               feed_dict={'x:0': inputs})
+        logits = self.sess.run('softmax_logits:0', feed_dict={'x:0': inputs})
         relevant_activations = logits[:, [negative_class, positive_class]]
         preds = np.argmax(relevant_activations, axis=1)
         return preds.astype(np.float32)
+
 
 if __name__ == "__main__":
     print("Starting TensorFlow Cifar container")
     try:
         model_name = os.environ["CLIPPER_MODEL_NAME"]
     except KeyError:
-        print("ERROR: CLIPPER_MODEL_NAME environment variable must be set",
-              file=sys.stdout)
+        print(
+            "ERROR: CLIPPER_MODEL_NAME environment variable must be set",
+            file=sys.stdout)
         sys.exit(1)
     try:
         model_version = os.environ["CLIPPER_MODEL_VERSION"]
     except KeyError:
-        print("ERROR: CLIPPER_MODEL_VERSION environment variable must be set",
-              file=sys.stdout)
+        print(
+            "ERROR: CLIPPER_MODEL_VERSION environment variable must be set",
+            file=sys.stdout)
         sys.exit(1)
 
     ip = "127.0.0.1"

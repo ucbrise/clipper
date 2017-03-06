@@ -7,3 +7,6 @@
 [submodule "src/libs/spdlog"]
 	path = src/libs/spdlog
 	url = https://github.com/gabime/spdlog.git
+[submodule "bin/yapf"]
+	path = bin/yapf
+	url = https://github.com/google/yapf.git

@@ -13,8 +13,8 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/thread.hpp>
-#include <clipper/metrics.hpp>
 #include <clipper/logging.hpp>
+#include <clipper/metrics.hpp>
 
 namespace clipper {
 
@@ -41,14 +41,10 @@ bool compare_metrics(std::shared_ptr<Metric> first,
 
 const std::string get_metrics_category_name(MetricType type) {
   switch (type) {
-    case MetricType::Counter:
-      return "counters";
-    case MetricType::RatioCounter:
-      return "ratio_counters";
-    case MetricType::Meter:
-      return "meters";
-    case MetricType::Histogram:
-      return "histograms";
+    case MetricType::Counter: return "counters";
+    case MetricType::RatioCounter: return "ratio_counters";
+    case MetricType::Meter: return "meters";
+    case MetricType::Histogram: return "histograms";
     default:
       throw std::invalid_argument(std::to_string(static_cast<int>(type)) +
                                   " is unknown MetricType");
@@ -198,7 +194,8 @@ double RatioCounter::get_ratio() {
   uint32_t num_value = numerator_.load(std::memory_order_seq_cst);
   uint32_t denom_value = denominator_.load(std::memory_order_seq_cst);
   if (denom_value == 0) {
-    log_error_formatted(LOGGING_TAG_METRICS, "Ratio {} has denominator zero!", name_);
+    log_error_formatted(LOGGING_TAG_METRICS, "Ratio {} has denominator zero!",
+                        name_);
     return std::nan("");
   }
   double ratio =

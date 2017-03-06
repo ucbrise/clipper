@@ -25,7 +25,6 @@ CLIPPER_QUERY_PORT = 1337
 CLIPPER_MANAGEMENT_PORT = 1338
 CLIPPER_RPC_PORT = 7000
 
-
 aws_cli_config = """
 [default]
 region = us-east-1
@@ -37,29 +36,33 @@ DOCKER_COMPOSE_DICT = {
     'networks': {
         'default': {
             'external': {
-                'name': DOCKER_NW}}},
+                'name': DOCKER_NW
+            }
+        }
+    },
     'services': {
         'mgmt_frontend': {
-            'command': [
-                '--redis_ip=redis',
-                '--redis_port=%d' % REDIS_PORT],
+            'command': ['--redis_ip=redis', '--redis_port=%d' % REDIS_PORT],
             'depends_on': ['redis'],
             'image': 'clipper/management_frontend:latest',
-            'ports': ['%d:%d' % (CLIPPER_MANAGEMENT_PORT, CLIPPER_MANAGEMENT_PORT)]},
+            'ports':
+            ['%d:%d' % (CLIPPER_MANAGEMENT_PORT, CLIPPER_MANAGEMENT_PORT)]
+        },
         'query_frontend': {
-            'command': [
-                '--redis_ip=redis',
-                '--redis_port=%d' % REDIS_PORT],
-            'depends_on': [
-                'redis',
-                'mgmt_frontend'],
-            'image': 'clipper/query_frontend:latest',
+            'command': ['--redis_ip=redis', '--redis_port=%d' % REDIS_PORT],
+            'depends_on': ['redis', 'mgmt_frontend'],
+            'image':
+            'clipper/query_frontend:latest',
             'ports': [
                 '%d:%d' % (CLIPPER_RPC_PORT, CLIPPER_RPC_PORT),
-                '%d:%d' % (CLIPPER_QUERY_PORT, CLIPPER_QUERY_PORT)]},
+                '%d:%d' % (CLIPPER_QUERY_PORT, CLIPPER_QUERY_PORT)
+            ]
+        },
         'redis': {
             'image': 'redis:alpine',
-            'ports': ['%d:%d' % (REDIS_PORT, REDIS_PORT)]}},
+            'ports': ['%d:%d' % (REDIS_PORT, REDIS_PORT)]
+        }
+    },
     'version': '2'
 }
 
@@ -92,7 +95,9 @@ class Clipper:
         env.host_string = host
         if not self._host_is_local():
             if not user or not key_path:
-                print("user and key_path must be specified when instantiating Clipper with a nonlocal host")
+                print(
+                    "user and key_path must be specified when instantiating Clipper with a nonlocal host"
+                )
                 raise
             env.user = user
             env.key_filename = key_path
@@ -106,18 +111,21 @@ class Clipper:
         with hide("warnings", "output", "running"):
             print("Checking if Docker is running...")
             self._execute_root("docker ps")
-            dc_installed = self._execute_root("docker-compose --version", warn_only=True)
+            dc_installed = self._execute_root(
+                "docker-compose --version", warn_only=True)
             if dc_installed.return_code != 0:
                 print("docker-compose not installed on host.")
                 print("attempting to install it")
-                self._execute_root("curl -L https://github.com/docker/compose/releases/"
-                     "download/1.10.0-rc1/docker-compose-`uname -s`-`uname -m` "
-                     "> /usr/local/bin/docker-compose")
+                self._execute_root(
+                    "curl -L https://github.com/docker/compose/releases/"
+                    "download/1.10.0-rc1/docker-compose-`uname -s`-`uname -m` "
+                    "> /usr/local/bin/docker-compose")
                 self._execute_root("chmod +x /usr/local/bin/docker-compose")
             nw_create_command = ("docker network create --driver bridge {nw}"
                                  .format(nw=DOCKER_NW))
             self._execute_root(nw_create_command, warn_only=True)
-            self._execute_standard("mkdir -p {model_repo}".format(model_repo=MODEL_REPO))
+            self._execute_standard(
+                "mkdir -p {model_repo}".format(model_repo=MODEL_REPO))
 
     def _execute_root(self, *args, **kwargs):
         if self._host_is_local():
@@ -166,7 +174,11 @@ class Clipper:
                 else:
                     shutil.copy2(local_path, remote_path)
         else:
-            put(local_path=local_path, remote_path=remote_path, *args, **kwargs)
+            put(
+                local_path=local_path,
+                remote_path=remote_path,
+                *args,
+                **kwargs)
 
     # Taken from http://stackoverflow.com/a/12514470
     # Recursively copies a directory from src to dst,
@@ -191,7 +203,8 @@ class Clipper:
             if os.path.isdir(s):
                 _copytree(s, d, symlinks, ignore)
             else:
-                if not os.path.exists(d) or os.stat(s).st_mtime - os.stat(d).st_mtime > 1:
+                if not os.path.exists(
+                        d) or os.stat(s).st_mtime - os.stat(d).st_mtime > 1:
                     shutil.copy2(s, d)
 
     def start(self):
@@ -200,11 +213,10 @@ class Clipper:
         """
         with hide("output", "warnings", "running"):
             self._execute_standard("rm -f docker-compose.yml")
-            self._execute_append(
-                "docker-compose.yml",
-                yaml.dump(
-                    DOCKER_COMPOSE_DICT,
-                    default_flow_style=False))
+            self._execute_append("docker-compose.yml",
+                                 yaml.dump(
+                                     DOCKER_COMPOSE_DICT,
+                                     default_flow_style=False))
             self._execute_root("docker-compose up -d query_frontend")
             print("Clipper is running")
 
@@ -259,10 +271,10 @@ class Clipper:
             applications are found, an empty string is returned.
         """
         with hide("output", "running"):
-            result = local(("redis-cli -h {host} -p 6379 -n {db} keys \"*\""
-                            .format(host=self.host,
-                                    db=REDIS_APPLICATION_DB_NUM)),
-                           capture=True)
+            result = local(
+                ("redis-cli -h {host} -p 6379 -n {db} keys \"*\"".format(
+                    host=self.host, db=REDIS_APPLICATION_DB_NUM)),
+                capture=True)
 
             if len(result.stdout) > 0:
                 return result.stdout
@@ -285,12 +297,14 @@ class Clipper:
             is not registered, None is returned.
         """
         with hide("output", "running"):
-            result = local("redis-cli -h {host} -p 6379 -n {db} hgetall {name}".format(
-                host=self.host, name=name, db=REDIS_APPLICATION_DB_NUM), capture=True)
+            result = local(
+                "redis-cli -h {host} -p 6379 -n {db} hgetall {name}".format(
+                    host=self.host, name=name, db=REDIS_APPLICATION_DB_NUM),
+                capture=True)
 
             if len(result.stdout) > 0:
                 splits = result.stdout.split("\n")
-                fmt_result = dict([(splits[i], splits[i+1])
+                fmt_result = dict([(splits[i], splits[i + 1])
                                    for i in range(0, len(splits), 2)])
                 pp = pprint.PrettyPrinter(indent=2)
                 pp.pprint(fmt_result)
@@ -328,7 +342,14 @@ class Clipper:
         r = requests.post(url, headers=headers, data=req_json)
         return r.text
 
-    def deploy_model(self, name, version, model_data, container_name, labels, input_type, num_containers=1):
+    def deploy_model(self,
+                     name,
+                     version,
+                     model_data,
+                     container_name,
+                     labels,
+                     input_type,
+                     num_containers=1):
         """Add a model to Clipper.
 
         Parameters
@@ -391,32 +412,42 @@ class Clipper:
                                 warn_only=True).return_code == 0
                             if not aws_cli_installed:
                                 self._execute_root("apt-get update -qq")
-                                self._execute_root("apt-get install -yqq awscli")
+                                self._execute_root(
+                                    "apt-get install -yqq awscli")
                             if self._execute_root(
                                     "stat ~/.aws/config",
                                     warn_only=True).return_code != 0:
                                 self._execute_standard("mkdir -p ~/.aws")
-                                self._execute_append("~/.aws/config", aws_cli_config.format(
-                                    access_key=os.environ["AWS_ACCESS_KEY_ID"],
-                                    secret_key=os.environ["AWS_SECRET_ACCESS_KEY"]))
+                                self._execute_append(
+                                    "~/.aws/config",
+                                    aws_cli_config.format(
+                                        access_key=os.environ[
+                                            "AWS_ACCESS_KEY_ID"],
+                                        secret_key=os.environ[
+                                            "AWS_SECRET_ACCESS_KEY"]))
 
-                        self._execute_standard("aws s3 cp {model_data_path} {dl_path} --recursive".format(
-                                model_data_path=model_data_path, dl_path=os.path.join(
+                        self._execute_standard(
+                            "aws s3 cp {model_data_path} {dl_path} --recursive".
+                            format(
+                                model_data_path=model_data_path,
+                                dl_path=os.path.join(
                                     vol, os.path.basename(model_data_path))))
                     else:
                         with hide("output", "running"):
                             self._execute_put(model_data_path, vol)
 
             print("Copied model data to host")
-            if not self._publish_new_model(name, version, labels, input_type,
-                                           container_name,
-                                           os.path.join(vol, os.path.basename(model_data_path))):
+            if not self._publish_new_model(
+                    name, version, labels, input_type, container_name,
+                    os.path.join(vol, os.path.basename(model_data_path))):
                 return False
             else:
                 print("Published model to Clipper")
                 # aggregate results of starting all containers
-                return all([self.add_container(name, version)
-                            for r in range(num_containers)])
+                return all([
+                    self.add_container(name, version)
+                    for r in range(num_containers)
+                ])
 
     def add_container(self, model_name, model_version):
         """Create a new container for an existing model.
@@ -436,16 +467,15 @@ class Clipper:
         with hide("warnings", "output", "running"):
             # Look up model info in Redis
             model_key = "{mn}:{mv}".format(mn=model_name, mv=model_version)
-            result = local("redis-cli -h {host} -p 6379 -n {db} hgetall {key}".format(
-                host=self.host, key=model_key, db=REDIS_MODEL_DB_NUM), capture=True)
+            result = local(
+                "redis-cli -h {host} -p 6379 -n {db} hgetall {key}".format(
+                    host=self.host, key=model_key, db=REDIS_MODEL_DB_NUM),
+                capture=True)
 
             if "nil" in result.stdout:
                 # Model not found
-                warn(
-                    "Trying to add container but model {mn}:{mv} not in "
-                    "Redis".format(
-                        mn=model_name,
-                        mv=model_version))
+                warn("Trying to add container but model {mn}:{mv} not in "
+                     "Redis".format(mn=model_name, mv=model_version))
                 return False
 
             splits = result.stdout.split("\n")
@@ -495,7 +525,8 @@ class Clipper:
         print("Stopping Clipper and all running models...")
         with hide("output", "warnings", "running"):
             self._execute_root("docker-compose stop", warn_only=True)
-            self._execute_root("docker stop $(docker ps -a -q)", warn_only=True)
+            self._execute_root(
+                "docker stop $(docker ps -a -q)", warn_only=True)
             self._execute_root("docker rm $(docker ps -a -q)", warn_only=True)
 
     def cleanup(self):
@@ -506,18 +537,14 @@ class Clipper:
         """
         with hide("output", "warnings", "running"):
             self.stop_all()
-            self._execute_standard("rm -rf {model_repo}".format(model_repo=MODEL_REPO))
-            self._execute_root("docker rmi --force $(docker images -q)", warn_only=True)
+            self._execute_standard(
+                "rm -rf {model_repo}".format(model_repo=MODEL_REPO))
+            self._execute_root(
+                "docker rmi --force $(docker images -q)", warn_only=True)
             self._execute_root("docker network rm clipper_nw", warn_only=True)
 
-    def _publish_new_model(
-            self,
-            name,
-            version,
-            labels,
-            input_type,
-            container_name,
-            model_data_path):
+    def _publish_new_model(self, name, version, labels, input_type,
+                           container_name, model_data_path):
         url = "http://%s:1338/admin/add_model" % self.host
         req_json = json.dumps({
             "model_name": name,
@@ -561,8 +588,8 @@ class Clipper:
                 print("Found %s on host" % container_name)
                 return True
             # now try to pull from Docker Hub
-            hub_result = self._execute_root("docker pull {cn}".format(cn=container_name),
-                              warn_only=True)
+            hub_result = self._execute_root(
+                "docker pull {cn}".format(cn=container_name), warn_only=True)
             if hub_result.return_code == 0:
                 print("Found %s in Docker hub" % container_name)
                 return True
@@ -575,8 +602,7 @@ class Clipper:
             if len(local_result.stdout) > 0:
                 saved_fname = container_name.replace("/", "_")
                 subprocess.call("docker save -o /tmp/{fn}.tar {cn}".format(
-                    fn=saved_fname,
-                    cn=container_name))
+                    fn=saved_fname, cn=container_name))
                 tar_loc = "/tmp/{fn}.tar".format(fn=saved_fname)
                 self._execute_put(tar_loc, tar_loc)
                 self._execute_root("docker load -i {loc}".format(loc=tar_loc))
@@ -589,9 +615,8 @@ class Clipper:
                     print("Successfuly copied %s to host" % container_name)
                     return True
                 else:
-                    warn(
-                        "Problem copying container %s to host" %
-                        container_name)
+                    warn("Problem copying container %s to host" %
+                         container_name)
                     return False
 
             # out of options

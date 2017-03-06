@@ -8,8 +8,10 @@ import matplotlib.pyplot as plt
 
 DEMO_UID = 0
 
-classes = ['airplane', 'automobile', 'bird', 'cat',
-           'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+classes = [
+    'airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse',
+    'ship', 'truck'
+]
 positive_class = classes.index('airplane')
 negative_class = classes.index('bird')
 
@@ -22,9 +24,10 @@ def show_example_images(images, labels, num_rows):
     imgs_per_row = 6
     num_images = imgs_per_row * num_rows
     idxs = np.random.randint(0, len(labels), num_images)
-    f, axes = plt.subplots(nrows=num_rows,
-                           ncols=imgs_per_row,
-                           figsize=(1.5*imgs_per_row, 1.5*num_rows))
+    f, axes = plt.subplots(
+        nrows=num_rows,
+        ncols=imgs_per_row,
+        figsize=(1.5 * imgs_per_row, 1.5 * num_rows))
 
     f.tight_layout()
     for i, idx in enumerate(idxs):
@@ -81,7 +84,7 @@ def cifar_update(host, app, uid, x, y, print_result=False):
         # model, so we can ignore the model name and version fields.
         'model_name': 'NA',
         'model_version': 1
-        })
+    })
     headers = {'Content-type': 'application/json'}
     start = datetime.now()
     r = requests.post(url, headers=headers, data=req_json)
@@ -139,12 +142,9 @@ def run_iteration(host, app, uid, test_x, test_y):
             print "predicted: {p}, correct: {c}".format(p=pred_y, c=correct_y)
         latencies.append(latency)
     total = float(total)
-    return (float(correct)/total,
-            float(false_pos)/total,
-            float(false_neg)/total,
-            float(true_pos)/total,
-            float(true_neg)/total,
-            np.mean(latencies))
+    return (float(correct) / total, float(false_pos) / total,
+            float(false_neg) / total, float(true_pos) / total,
+            float(true_neg) / total, np.mean(latencies))
 
 
 def run_serving_workload(host, app, test_x, test_y):
@@ -158,8 +158,8 @@ def run_serving_workload(host, app, test_x, test_y):
     j = 0
     uid = DEMO_UID
     while True:
-        correct, fp, fn, tp, tn, mean_lat, = run_iteration(host, app, uid,
-                                                           test_x, test_y)
+        correct, fp, fn, tp, tn, mean_lat, = run_iteration(
+            host, app, uid, test_x, test_y)
         xs.append(j)
         accs.append(correct)
         lats.append(mean_lat)
@@ -182,8 +182,8 @@ def run_serving_workload_show_latency(host, app, test_x, test_y):
     j = 0
     uid = DEMO_UID
     while True:
-        correct, fp, fn, tp, tn, mean_lat, = run_iteration(host, app, uid,
-                                                           test_x, test_y)
+        correct, fp, fn, tp, tn, mean_lat, = run_iteration(
+            host, app, uid, test_x, test_y)
         xs.append(j)
         accs.append(correct)
         lats.append(mean_lat)
@@ -196,9 +196,9 @@ def run_serving_workload_show_latency(host, app, test_x, test_y):
         ax_lat.set_ylim(0, 300)
         fig.canvas.draw()
         print(("Accuracy: {cor}, false positives: {fp}, "
-              "false negatives: {fn}, true positives: {tp}, "
+               "false negatives: {fn}, true positives: {tp}, "
                "true negatives: {tn}").format(
-            cor=correct, fp=fp, fn=fn, tp=tp, tn=tn))
+                   cor=correct, fp=fp, fn=fn, tp=tp, tn=tn))
         print("Mean latency: {lat} ms".format(lat=mean_lat))
 
 

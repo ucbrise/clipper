@@ -7,12 +7,12 @@
 
 #include <clipper/config.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/logging.hpp>
 #include <clipper/metrics.hpp>
 #include <clipper/redis.hpp>
 #include <clipper/rpc_service.hpp>
 #include <clipper/task_executor.hpp>
 #include <clipper/util.hpp>
-#include <clipper/logging.hpp>
 
 using zmq::socket_t;
 using zmq::message_t;
@@ -31,10 +31,10 @@ RPCService::RPCService()
     : request_queue_(std::make_shared<Queue<RPCRequest>>()),
       response_queue_(std::make_shared<Queue<RPCResponse>>()),
       active_(false),
-    // The version of the unordered_map constructor that allows
-    // you to specify your own hash function also requires you
-    // to provide the initial size of the map. We define the initial
-    // size of the map somewhat arbitrarily as 100.
+      // The version of the unordered_map constructor that allows
+      // you to specify your own hash function also requires you
+      // to provide the initial size of the map. We define the initial
+      // size of the map somewhat arbitrarily as 100.
       replica_ids_(std::unordered_map<VersionedModelId, int,
                                       decltype(&versioned_model_hash)>(
           INITIAL_REPLICA_ID_SIZE, &versioned_model_hash)) {
@@ -66,7 +66,9 @@ void RPCService::stop() {
 int RPCService::send_message(const vector<vector<uint8_t>> msg,
                              const int zmq_connection_id) {
   if (!active_) {
-    log_error(LOGGING_TAG_RPC, "Cannot send message to inactive RPCService instance", "Dropping Message");
+    log_error(LOGGING_TAG_RPC,
+              "Cannot send message to inactive RPCService instance",
+              "Dropping Message");
     return -1;
   }
   int id = message_id_;
@@ -96,7 +98,8 @@ vector<RPCResponse> RPCService::try_get_responses(const int max_num_responses) {
 void RPCService::manage_service(const string address) {
   // Map from container id to unique routing id for zeromq
   // Note that zeromq socket id is a byte vector
-  log_info_formatted(LOGGING_TAG_RPC, "RPC thread started at address: ", address);
+  log_info_formatted(LOGGING_TAG_RPC, "RPC thread started at address: ",
+                     address);
   boost::bimap<int, vector<uint8_t>> connections;
   context_t context = context_t(1);
   socket_t socket = socket_t(context, ZMQ_ROUTER);
@@ -108,7 +111,8 @@ void RPCService::manage_service(const string address) {
   Config &conf = get_config();
   while (!redis_connection->connect(conf.get_redis_address(),
                                     conf.get_redis_port())) {
-    log_error(LOGGING_TAG_RPC, "RPCService failed to connect to Redis", "Retrying in 1 second...");
+    log_error(LOGGING_TAG_RPC, "RPCService failed to connect to Redis",
+              "Retrying in 1 second...");
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
 
@@ -145,8 +149,9 @@ void RPCService::send_messages(
         connections.left.find(std::get<0>(request));
     if (connection == connections.left.end()) {
       // Error handling
-      log_error_formatted(
-          LOGGING_TAG_CLIPPER, "Attempted to send message to unknown container: ", std::get<0>(request));
+      log_error_formatted(LOGGING_TAG_CLIPPER,
+                          "Attempted to send message to unknown container: ",
+                          std::get<0>(request));
       continue;
     }
     message_t id_message(sizeof(int));

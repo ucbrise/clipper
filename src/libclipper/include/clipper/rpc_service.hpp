@@ -11,8 +11,8 @@
 #include <zmq.hpp>
 
 #include <clipper/containers.hpp>
-#include <clipper/util.hpp>
 #include <clipper/metrics.hpp>
+#include <clipper/util.hpp>
 
 using zmq::socket_t;
 using std::string;
@@ -29,7 +29,8 @@ const std::string LOGGING_TAG_RPC = "RPC";
 using RPCResponse = std::pair<const int, vector<uint8_t>>;
 /// Tuple of zmq_connection_id, message_id, vector of messages, creation time
 using RPCRequest =
-std::tuple<const int, const int, const std::vector<std::vector<uint8_t>>, const long>;
+    std::tuple<const int, const int, const std::vector<std::vector<uint8_t>>,
+               const long>;
 
 class RPCService {
  public:
@@ -67,7 +68,8 @@ class RPCService {
    * \return The id of the sent message, used for match the correct response
    * If the service is active, this id is non-negative. Otherwise, it is -1.
    */
-  void send_messages(socket_t &socket, boost::bimap<int, vector<uint8_t>> &connections);
+  void send_messages(socket_t &socket,
+                     boost::bimap<int, vector<uint8_t>> &connections);
 
   void receive_message(socket_t &socket,
                        boost::bimap<int, vector<uint8_t>> &connections,
