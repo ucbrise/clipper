@@ -69,7 +69,7 @@ Alternatively, if you've already cloned the repository, you can run:
 cd docker && docker-compose up -d query_frontend
 ```
 
-For an example of querying Clipper, see the Python [example client](examples/basic_query/example_client.py).
+For an example of querying Clipper, see the Python [example client](examples/python/) and the Java [example client](examples/java/).
 
 The best way to explore Clipper's features is through the [tutorial](examples/tutorial/tutorial.md).
 
