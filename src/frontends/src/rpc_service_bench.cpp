@@ -1,3 +1,4 @@
+#include <iostream>
 #include <thread>
 #include <unordered_map>
 
@@ -25,7 +26,7 @@ void await_responses(std::shared_ptr<clipper::rpc::RPCService> rpc_service,
       if (start_time != times_map->end()) {
         long elapsed = end - start_time->second;
         total_time_elapsed += elapsed;
-        printf("%d ms\n", (int)elapsed);
+        std::cout << (int)elapsed << " ms" << std::endl;
       }
     }
   }).detach();
@@ -172,9 +173,9 @@ void run_benchmarks() {
 
   shutdown = true;
   rpc_service->stop();
-  printf("%f ms\n",
-         ((double)total_time_elapsed) /
-             (num_iterations_per_benchmark * num_benchmarks));
+  double time_per_iter = ((double)total_time_elapsed) /
+                         (num_iterations_per_benchmark * num_benchmarks);
+  std::cout << time_per_iter << " ms" << std::endl;
 }
 
 int main() {
