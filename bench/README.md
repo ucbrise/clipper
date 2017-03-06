@@ -1,0 +1,60 @@
+Can you add some documentation about how to run the benchmark?
+At a minimum, you need to specify what the dataset for the model container 
+should be and what the dataset for the bench binary should be.
+
+# Running the performance benchmark
+
+## Required Files
+### CIFAR10 Python Dataset for SKLearn Model
+This benchmark serves an SKLearn model that depends on the CIFAR10 Python dataset for training. This dataset can be obtained from [https://www.cs.toronto.edu/~kriz/cifar.html](https://www.cs.toronto.edu/~kriz/cifar.html).
+
+### CIFAR10 Binary Dataset for Query Execution
+The C++ benchmark works by sending CIFAR10 query vectors to the container serving the trained SKLearn model. To achieve this, the **binary dataset** is required. It can also be obtained from [https://www.cs.toronto.edu/~kriz/cifar.html](https://www.cs.toronto.edu/~kriz/cifar.html).
+
+## Optional Configuration Files
+The following benchmark attributes can be loaded via a JSON configuration file:
+- **cifar_data_path**: The path to a **specific binary data file** within the CIFAR10 binary dataset with a name of the form `data_batch_<n>.bin`. (`data_batch_1.bin`, for example)
+- **num_threads**: The number of threads of execution
+- **num_batches**: The number of batches of requests to be sent by each thread
+- **batch_size**: The number of requests to be sent in each batch
+- **batch_delay_millis**: The per-thread delay between batches, in milliseconds
+
+To configure these attributes, create a JSON file with the following format and specify its path when the benchmark is executed (see **Steps of Execution** below).
+
+```
+{
+   "cifar_data_path":"<cifar_data_path>",
+   "num_threads":"<num_threads>",
+   "num_batches":"<num_batches>",
+   "batch_size":"<batch_size>",
+   "batch_delay_millis":"<batch_delay_millis>"
+}
+```
+
+If a configuration file is not specified, the benchmark will prompt you for the values of these attributes at runtime.
+
+## Steps of Execution
+**These steps are given relative to the current directory.**
+
+1. Execute the following:
+  ```
+  $ ./setup_bench.sh <path_to_cifar_python_dataset>
+  ```
+where `<path_to_cifar_python_dataset>` is the path to the **directory** containing CIFAR10 data files of the form `data_batch_n`.
+
+2. Execute the following:
+  ```
+  $ ../configure --release && cd ../release
+  $ make bench
+  ```
+  
+3. If you created a JSON configuration file above, execute the following:
+  ```
+  $ ./src/frontends/bench -f "<path_to_config_.json>"
+  ```
+  
+  Otherwise, execute
+  ```
+  $ ./src/frontends/bench
+  ```
+  and specify the values of the attributes enumerated in the **Optional Configuration Files** section above. 
