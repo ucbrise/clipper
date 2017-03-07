@@ -128,11 +128,15 @@ void RPCService::manage_service(const string address) {
     // Note: We send all queued messages per event loop iteration
     send_messages(socket, connections);
   }
-  shutdown_service(address, socket);
+  shutdown_service(socket);
 }
 
-void RPCService::shutdown_service(const string address, socket_t &socket) {
-  socket.disconnect(address);
+void RPCService::shutdown_service(socket_t &socket) {
+  size_t buf_size = 32;
+  std::vector<char> buf(buf_size);
+  socket.getsockopt(ZMQ_LAST_ENDPOINT, (void *) buf.data(), &buf_size);
+  std::string last_endpoint = std::string(buf.begin(), buf.end());
+  socket.unbind(last_endpoint);
   socket.close();
 }
 
