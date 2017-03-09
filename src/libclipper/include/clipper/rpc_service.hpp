@@ -33,14 +33,6 @@ using RPCRequest =
     std::tuple<const int, const int, const std::vector<std::vector<uint8_t>>,
                const long>;
 
-template<class T>
-class VectorHasher {
- public:
-  size_t operator()(const vector<T> &v) const {
-    return boost::hash_range(v.begin(), v.end());
-  }
-};
-
 class RPCService {
  public:
   explicit RPCService();
