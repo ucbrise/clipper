@@ -6,20 +6,12 @@
 
 #include <boost/functional/hash.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/util.hpp>
 
 namespace clipper {
 
 size_t versioned_model_hash(const VersionedModelId &key) {
   return std::hash<std::string>()(key.first) ^ std::hash<int>()(key.second);
-}
-
-template <typename T>
-size_t primitive_input_hash(const std::vector<T> &data) {
-  size_t cur_hash = 0;
-  for (const auto d : data) {
-    boost::hash_combine(cur_hash, d);
-  }
-  return cur_hash;
 }
 
 template <typename T>
@@ -81,7 +73,7 @@ size_t ByteVector::serialize(uint8_t *buf) const {
   return serialize_to_buffer(data_, buf);
 }
 
-size_t ByteVector::hash() const { return primitive_input_hash(data_); }
+size_t ByteVector::hash() const { return hash_vector(data_); }
 
 size_t ByteVector::size() const { return data_.size(); }
 
@@ -97,7 +89,7 @@ size_t IntVector::serialize(uint8_t *buf) const {
   return serialize_to_buffer(data_, buf);
 }
 
-size_t IntVector::hash() const { return primitive_input_hash(data_); }
+size_t IntVector::hash() const { return hash_vector(data_); }
 
 size_t IntVector::size() const { return data_.size(); }
 
@@ -117,7 +109,7 @@ size_t FloatVector::hash() const {
   // TODO [CLIPPER-63]: Find an alternative to hashing floats directly, as this
   // is generally a bad idea due to loss of precision from floating point
   // representations
-  return primitive_input_hash(data_);
+  return hash_vector(data_);
 }
 
 size_t FloatVector::size() const { return data_.size(); }
@@ -138,7 +130,7 @@ size_t DoubleVector::hash() const {
   // TODO [CLIPPER-63]: Find an alternative to hashing doubles directly, as
   // this is generally a bad idea due to loss of precision from floating point
   // representations
-  return primitive_input_hash(data_);
+  return hash_vector(data_);
 }
 
 size_t DoubleVector::size() const { return data_.size(); }

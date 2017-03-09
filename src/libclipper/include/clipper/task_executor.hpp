@@ -67,7 +67,7 @@ class TaskExecutor {
     log_info(LOGGING_TAG_TASK_EXECUTOR, "TaskExecutor started");
     rpc_->start("*", RPC_SERVICE_PORT,
                 [this](VersionedModelId model, int replica_id) { on_container_ready(model, replica_id); },
-                [this](rpc::RPCResponse response) { on_new_response(std::move(response)); });
+                [this](rpc::RPCResponse response) { on_response_recv(std::move(response)); });
     active_ = true;
     Config &conf = get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
@@ -101,12 +101,11 @@ class TaskExecutor {
                 vm, std::stoi(container_info["zmq_connection_id"]),
                 parse_input_type(container_info["input_type"]));
             int replica_id = std::stoi(container_info["model_replica_id"]);
-            // TODO: These callbacks should be submitted to a thread pool
-            // for execution on separate threads
-            on_new_container_added(vm, replica_id);
-            std::thread([&]() {
-              on_container_ready(vm, replica_id);
-            }).detach();
+            // TODO: This callback should be submitted to a thread pool
+            // for execution on a separate thread
+            on_container_ready(vm, replica_id);
+            // TODO: Create a new model queue if this is the first connected container
+            // hosting the specified model (i.e. replica_id == 0)
           }
 
         });
@@ -166,6 +165,7 @@ class TaskExecutor {
   redox::Redox redis_connection_;
   redox::Subscriber redis_subscriber_;
   bool active_ = false;
+  // TODO: Replace the statically configured batch size with dynamic batching
   const int max_batch_size_ = 5;
   std::mutex inflight_messages_mutex_;
   std::unordered_map<int, std::vector<std::tuple<const long, VersionedModelId,
@@ -174,25 +174,6 @@ class TaskExecutor {
   std::shared_ptr<metrics::Counter> predictions_counter;
   std::shared_ptr<metrics::Meter> throughput_meter;
   std::shared_ptr<metrics::Histogram> latency_hist;
-
-  /// TODO: The task executor needs executors to schedule tasks (assign
-  /// tasks to containers), batch and serialize tasks to be sent via the
-  /// RPC service by dequeing from individual container queues, and receiving
-  /// responses from the RPC service and putting the results in the prediction
-  /// cache. Finally, when results are placed in the prediction
-  /// cache and a promise is completed, we need to determine what thread any
-  /// continuations attached to the corresponding future will be executed on.
-  /// In the meantime, the TaskExecutor will spawn a sending thread and a
-  /// receiving
-  /// thread that will each continuously try to send/receive.
-
-  void on_new_container_added(VersionedModelId model_id, int replica_id) {
-    // TODO: Create a new model queue if this is the first connected container
-    // hosting the specified model (i.e. replica_id == 0)
-    UNUSED(model_id);
-    UNUSED(replica_id);
-
-  }
 
   void on_container_ready(VersionedModelId model_id, int replica_id) {
     std::shared_ptr<ModelContainer> container = active_containers_->get_model_replica(model_id, replica_id);
@@ -225,7 +206,7 @@ class TaskExecutor {
     }
   }
 
-  void on_new_response(rpc::RPCResponse response) {
+  void on_response_recv(rpc::RPCResponse response) {
     std::unique_lock<std::mutex> l(inflight_messages_mutex_);
     auto keys = inflight_messages_[response.first];
 
