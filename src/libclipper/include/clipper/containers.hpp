@@ -55,7 +55,7 @@ class ActiveContainers {
   ActiveContainers(ActiveContainers &&) = default;
   ActiveContainers &operator=(ActiveContainers &&) = default;
 
-  void add_container(VersionedModelId model, int id, InputType input_type);
+  void add_container(VersionedModelId model, int connection_id, int replica_id, InputType input_type);
 
   /// TODO: this method should be deprecated / removed when per-model
   /// queueing is implemented, as it currently functions as an efficiency

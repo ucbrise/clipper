@@ -97,10 +97,10 @@ class TaskExecutor {
             VersionedModelId vm =
                 std::make_pair(container_info["model_name"],
                                std::stoi(container_info["model_version"]));
+            int replica_id = std::stoi(container_info["model_replica_id"]);
             active_containers_->add_container(
                 vm, std::stoi(container_info["zmq_connection_id"]),
-                parse_input_type(container_info["input_type"]));
-            int replica_id = std::stoi(container_info["model_replica_id"]);
+                replica_id, parse_input_type(container_info["input_type"]));
             // TODO: This callback should be submitted to a thread pool
             // for execution on a separate thread
             on_container_ready(vm, replica_id);
