@@ -87,8 +87,8 @@ class ActiveContainers {
   // the queues. The queues are independently threadsafe.
   boost::shared_mutex m_;
 
-  // A map of models to their replica task queues. The replicas
-  // for each model are represented as a map keyed on replica id
+  // A mapping of models to their replica task queues. The replicas
+  // for each model are represented as a map keyed on replica id.
   std::unordered_map<VersionedModelId,
                      std::map<int, std::shared_ptr<ModelContainer>>,
                      decltype(&versioned_model_hash)>
