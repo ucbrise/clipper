@@ -28,7 +28,7 @@ struct Config {
       : readable_(false),
         redis_address_("localhost"),
         redis_port_(6379),
-        default_threadpool_size_(4) {}
+        task_execution_threadpool_size_(4) {}
 
   /**
    * For unit testing only!
@@ -37,7 +37,7 @@ struct Config {
     readable_ = false;
     redis_address_ = "localhost";
     redis_port_ = 6379;
-    default_threadpool_size_ = 4;
+    task_execution_threadpool_size_ = 4;
   }
 
   void ready() { readable_ = true; }
@@ -80,29 +80,29 @@ struct Config {
     redis_port_ = port;
   }
 
-  int get_default_threadpool_size() const {
+  int get_task_execution_threadpool_size() const {
     if (!readable_) {
       // TODO: use a better exception
       throw std::logic_error("Cannot read Config until ready");
     }
     assert(readable_);
-    return default_threadpool_size_;
+    return task_execution_threadpool_size_;
   }
 
-  void set_default_threadpool_size(int size) {
+  void set_task_execution_threadpool_size(int size) {
     if (readable_) {
       // TODO: use a better exception
       throw std::logic_error("Cannot write to Config after ready");
     }
     assert(!readable_);
-    default_threadpool_size_ = size;
+    task_execution_threadpool_size_ = size;
   }
 
  private:
   bool readable_;
   std::string redis_address_;
   int redis_port_;
-  int default_threadpool_size_;
+  int task_execution_threadpool_size_;
 };
 
 inline Config& get_config() {

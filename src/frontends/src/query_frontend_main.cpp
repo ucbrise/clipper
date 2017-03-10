@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
   clipper::Config& conf = clipper::get_config();
   conf.set_redis_address(options["redis_ip"].as<std::string>());
   conf.set_redis_port(options["redis_port"].as<int>());
-  conf.set_default_threadpool_size(options["threadpool_size"].as<int>());
+  conf.set_task_execution_threadpool_size(options["threadpool_size"].as<int>());
   conf.ready();
 
   query_frontend::RequestHandler<clipper::QueryProcessor> rh(

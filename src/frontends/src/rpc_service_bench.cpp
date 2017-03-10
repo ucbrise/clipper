@@ -3,7 +3,10 @@
 #include <unordered_map>
 
 #include <clipper/datatypes.hpp>
+#include <clipper/logging.hpp>
 #include <clipper/rpc_service.hpp>
+
+const std::string LOGGING_TAG_RPC_BENCH = "RPCBENCH";
 
 void await_responses(std::shared_ptr<clipper::rpc::RPCService> rpc_service,
                      std::shared_ptr<std::unordered_map<int, long>> times_map,
@@ -26,7 +29,8 @@ void await_responses(std::shared_ptr<clipper::rpc::RPCService> rpc_service,
       if (start_time != times_map->end()) {
         long elapsed = end - start_time->second;
         total_time_elapsed += elapsed;
-        std::cout << (int)elapsed << " ms" << std::endl;
+        clipper::log_info_formatted(LOGGING_TAG_RPC_BENCH, "{} ms",
+                                    (int)elapsed);
       }
     }
   }).detach();
@@ -175,7 +179,7 @@ void run_benchmarks() {
   rpc_service->stop();
   double time_per_iter = ((double)total_time_elapsed) /
                          (num_iterations_per_benchmark * num_benchmarks);
-  std::cout << time_per_iter << " ms" << std::endl;
+  clipper::log_info_formatted(LOGGING_TAG_RPC_BENCH, "{} ms", time_per_iter);
 }
 
 int main() {

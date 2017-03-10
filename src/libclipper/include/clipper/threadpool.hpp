@@ -11,6 +11,9 @@
 
 namespace clipper {
 
+/// Implementation adapted from
+/// https://goo.gl/Iav87R
+
 template <typename T>
 class ThreadSafeQueue {
  public:
@@ -244,19 +247,19 @@ class ThreadPool {
   std::vector<std::thread> threads_;
 };
 
-namespace DefaultThreadPool {
+namespace TaskExecutionThreadPool {
 
 /**
- * Get the default thread pool for the application.
- * This pool is created with 4 threads.
+ * Convenience method to get the task execution thread pool for the application.
  */
 inline ThreadPool& get_thread_pool(void) {
-  static ThreadPool defaultPool(get_config().get_default_threadpool_size());
-  return defaultPool;
+  static ThreadPool taskExecutionPool(
+      get_config().get_task_execution_threadpool_size());
+  return taskExecutionPool;
 }
 
 /**
- * Submit a job to the default thread pool.
+ * Submit a job to the task execution thread pool.
  */
 template <typename Func, typename... Args>
 inline auto submit_job(Func&& func, Args&&... args) {
