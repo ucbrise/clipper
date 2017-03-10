@@ -18,6 +18,7 @@ echo $CLIPPER_ROOT
 cd  $CLIPPER_ROOT
 
 set +e
+
 # Run clang-format
 num_violations="$(find ./src -not \( -path ./src/libs -prune \) -name '*pp' -print \
     | xargs clang-format -style=file -output-replacements-xml \
@@ -27,6 +28,8 @@ if [ $num_violations -eq 0 ]; then
     echo "Passed Clang-Format check"
 else
     echo "Found $num_violations Clang-Format violations"
+    find ./src -not \( -path ./src/libs -prune \) -name '*pp' -print \
+        | xargs clang-format -style=file
     exit 1
 fi
 

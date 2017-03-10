@@ -25,7 +25,10 @@ namespace clipper {
 struct Config {
  public:
   explicit Config()
-      : readable_(false), redis_address_("localhost"), redis_port_(6379) {}
+      : readable_(false),
+        redis_address_("localhost"),
+        redis_port_(6379),
+        task_execution_threadpool_size_(4) {}
 
   /**
    * For unit testing only!
@@ -34,9 +37,12 @@ struct Config {
     readable_ = false;
     redis_address_ = "localhost";
     redis_port_ = 6379;
+    task_execution_threadpool_size_ = 4;
   }
 
   void ready() { readable_ = true; }
+
+  bool is_readable() const { return readable_; }
 
   std::string get_redis_address() const {
     if (!readable_) {
@@ -46,8 +52,6 @@ struct Config {
     assert(readable_);
     return redis_address_;
   }
-
-  bool is_readable() const { return readable_; }
 
   void set_redis_address(const std::string& address) {
     if (readable_) {
@@ -76,10 +80,29 @@ struct Config {
     redis_port_ = port;
   }
 
+  int get_task_execution_threadpool_size() const {
+    if (!readable_) {
+      // TODO: use a better exception
+      throw std::logic_error("Cannot read Config until ready");
+    }
+    assert(readable_);
+    return task_execution_threadpool_size_;
+  }
+
+  void set_task_execution_threadpool_size(int size) {
+    if (readable_) {
+      // TODO: use a better exception
+      throw std::logic_error("Cannot write to Config after ready");
+    }
+    assert(!readable_);
+    task_execution_threadpool_size_ = size;
+  }
+
  private:
   bool readable_;
   std::string redis_address_;
   int redis_port_;
+  int task_execution_threadpool_size_;
 };
 
 inline Config& get_config() {
