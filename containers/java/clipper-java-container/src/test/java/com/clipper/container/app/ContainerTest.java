@@ -1,17 +1,19 @@
 import data.*;
 
 import java.net.UnknownHostException;
+import org.junit.Test;
 
-public class Test {
+public class ContainerTest {
 
-    public static void main(String[] args) {
+    @Test
+    public void TestContainer() {
         NoOpModel model = new NoOpModel("test", 1);
         runContainer(model, new DoubleVector.Parser());
 //        NoOpStringModel model = new NoOpStringModel("test", 1);
 //        runContainer(model, new SerializableString.Parser());
     }
 
-    public static <I extends DataVector<?>, O extends DataVector> void runContainer(
+    public <I extends DataVector<?>, O extends DataVector> void runContainer(
             Model<I,O> model,
             DataVectorParser<?, I> parser) {
         System.out.println("Starting...");
