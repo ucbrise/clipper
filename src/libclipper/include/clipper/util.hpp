@@ -86,5 +86,10 @@ class Queue {
   std::queue<T> xs_;
 };
 
+template <class T>
+size_t hash_vector(const std::vector<T> &vec) {
+  return boost::hash_range(vec.begin(), vec.end());
+}
+
 }  // namespace clipper
 #endif

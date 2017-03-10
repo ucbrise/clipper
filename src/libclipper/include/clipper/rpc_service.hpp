@@ -13,6 +13,7 @@
 #include <clipper/containers.hpp>
 #include <clipper/metrics.hpp>
 #include <clipper/util.hpp>
+#include <clipper/datatypes.hpp>
 
 using zmq::socket_t;
 using std::string;
@@ -44,7 +45,10 @@ class RPCService {
    * Starts the RPC Service. This must be called explicitly, as it is not
    * invoked during construction.
    */
-  void start(const string ip, const int port);
+  void start(const string ip,
+             const int port,
+             std::function<void(VersionedModelId, int)> &&container_ready_callback,
+             std::function<void(RPCResponse)> &&new_response_callback);
   /**
    * Stops the RPC Service. This is called implicitly within the RPCService
    * destructor.
@@ -73,10 +77,17 @@ class RPCService {
 
   void receive_message(socket_t &socket,
                        boost::bimap<int, vector<uint8_t>> &connections,
+                       // This is a mapping from a ZMQ connection id
+                       // to metadata associated with the container using
+                       // this connection. Values are pairs of
+                       // model id and integer replica id
+                       std::unordered_map<std::vector<uint8_t>,
+                                          std::pair<VersionedModelId, int>,
+                                          std::function<size_t(const std::vector<uint8_t> &vec)>> &connections_containers_map,
                        int &zmq_connection_id,
                        std::shared_ptr<redox::Redox> redis_connection);
   void shutdown_service(socket_t &socket);
-  std::thread rpc_thread;
+  std::thread rpc_thread_;
   shared_ptr<Queue<RPCRequest>> request_queue_;
   shared_ptr<Queue<RPCResponse>> response_queue_;
   // Flag indicating whether rpc service is active
@@ -85,7 +96,10 @@ class RPCService {
   int message_id_ = 0;
   std::unordered_map<VersionedModelId, int, decltype(&versioned_model_hash)>
       replica_ids_;
-  std::shared_ptr<metrics::Histogram> msg_queueing_hist;
+  std::shared_ptr<metrics::Histogram> msg_queueing_hist_;
+
+  std::function<void(VersionedModelId, int)> container_ready_callback_;
+  std::function<void(RPCResponse)> new_response_callback_;
 };
 
 }  // namespace rpc
