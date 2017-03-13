@@ -201,7 +201,7 @@ class Clipper:
             s = os.path.join(src, item)
             d = os.path.join(dst, item)
             if os.path.isdir(s):
-                _copytree(s, d, symlinks, ignore)
+                self._copytree(s, d, symlinks, ignore)
             else:
                 if not os.path.exists(
                         d) or os.stat(s).st_mtime - os.stat(d).st_mtime > 1:
@@ -391,7 +391,7 @@ class Clipper:
                 # assume that model_data is a path to the serialized model
                 model_data_path = model_data
             else:
-                warn("%s is invalid model format" % str(type(model)))
+                warn("%s is invalid model format" % str(type(model_data)))
                 return False
 
             if (not self._put_container_on_host(container_name)):
