@@ -37,24 +37,24 @@ If a configuration file is not specified, the benchmark will prompt you for the 
 **These steps are given relative to the current directory.**
 
 1. Execute the following:
-  ```
-  $ ./setup_bench.sh <path_to_cifar_python_dataset>
+  ```sh
+  ./setup_bench.sh <path_to_cifar_python_dataset>
   ```
 where `<path_to_cifar_python_dataset>` is the path to the **directory** containing a parsed CIFAR10 CSV data file with name `cifar_train.data`.
 
 2. Execute the following:
-  ```
-  $ ../configure --release && cd ../release
-  $ make bench
+  ```sh
+  ../configure --release && cd ../release
+  make end_to_end_bench
   ```
   
 3. If you created a JSON configuration file above, execute the following:
-  ```
-  $ ./src/frontends/bench -f "<path_to_config_.json>"
+  ```sh
+  ./src/benchmarks/end_to_end_bench -f "<path_to_config_.json>"
   ```
   
   Otherwise, execute
-  ```
-  $ ./src/frontends/bench
+  ```sh
+  ./src/benchmarks/end_to_end_bench
   ```
   and specify the values of the attributes enumerated in the **Optional Configuration Files** section above. 

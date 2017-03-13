@@ -1,25 +1,11 @@
 cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
 
 ##################################
-# Benchmark executable
-
-add_executable(bench src/bench.cpp)
-
-target_link_libraries(bench clipper boost)
-
-##################################
 # Query REST frontend executable
 
 add_executable(query_frontend src/query_frontend_main.cpp)
 
 target_link_libraries(query_frontend clipper boost httpserver cxxopts rapidjson)
-
-##################################
-# RPC Layer Testing executable
-
-add_executable(rpcbench src/rpc_service_bench.cpp)
-
-target_link_libraries(rpcbench clipper)
 
 ##################################
 # Tests for frontends
