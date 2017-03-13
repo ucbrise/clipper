@@ -13,5 +13,5 @@ target_link_libraries(end_to_end_bench clipper boost)
 
 add_executable(rpcbench src/rpc_service_bench.cpp)
 
-target_link_libraries(rpcbench clipper)
+target_link_libraries(rpcbench clipper cxxopts)
 

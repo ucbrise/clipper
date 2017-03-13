@@ -9,6 +9,7 @@
 #include <clipper/redis.hpp>
 #include <clipper/rpc_service.hpp>
 #include <clipper/util.hpp>
+#include <cxxopts.hpp>
 
 using namespace clipper;
 
@@ -29,46 +30,11 @@ std::string gen_random_string(size_t length) {
   return str;
 }
 
-// void await_responses(std::shared_ptr<rpc::RPCService> rpc_service,
-//                      std::shared_ptr<std::unordered_map<int, long>>
-//                      times_map,
-//                      bool &shutdown, long &total_time_elapsed) {
-//   std::thread([&] {
-//     while (true) {
-//       if (shutdown) {
-//         return;
-//       }
-//       long end = std::chrono::duration_cast<std::chrono::milliseconds>(
-//                      std::chrono::system_clock::now().time_since_epoch())
-//                      .count();
-//       vector<rpc::RPCResponse> responses = rpc_service->try_get_responses(1);
-//       if (responses.empty()) {
-//         continue;
-//       }
-//       std::unordered_map<int, long>::const_iterator start_time =
-//           times_map->find(responses.front().first);
-//       if (start_time != times_map->end()) {
-//         long elapsed = end - start_time->second;
-//         total_time_elapsed += elapsed;
-//         log_info_formatted(LOGGING_TAG_RPC_BENCH, "{} ms", (int)elapsed);
-//       }
-//     }
-//   }).detach();
-// }
-
-// void send_request_repeated(
-//     int container_id, int num_iterations, rpc::PredictionRequest &request,
-//     std::shared_ptr<rpc::RPCService> rpc_service,
-//     std::shared_ptr<std::unordered_map<int, long>> times_map) {
-//   for (int i = 0; i < num_iterations; i++) {
-//     long start = std::chrono::duration_cast<std::chrono::milliseconds>(
-//                      std::chrono::system_clock::now().time_since_epoch())
-//                      .count();
-//     int id = rpc_service->send_message(request.serialize(), container_id);
-//     times_map->emplace(id, start);
-//     usleep(50000);
-//   }
-// }
+std::string get_thread_id() {
+  std::stringstream ss;
+  ss << std::this_thread::get_id();
+  return ss.str();
+}
 
 template <typename T, class N>
 std::vector<std::shared_ptr<Input>> get_primitive_inputs(
@@ -93,80 +59,6 @@ std::vector<std::shared_ptr<Input>> get_primitive_inputs(
   }
   return generic_input_vector;
 }
-
-// void run_bytes_benchmark(
-//     int container_id, int num_iterations,
-//     std::shared_ptr<rpc::RPCService> rpc_service,
-//     std::shared_ptr<std::unordered_map<int, long>> times_map) {
-//   std::vector<uint8_t> type_vec;
-//   std::vector<std::shared_ptr<ByteVector>> input_vec;
-//   std::vector<std::shared_ptr<Input>> inputs =
-//       get_primitive_inputs(InputType::Bytes, type_vec, input_vec);
-//   rpc::PredictionRequest request(inputs, InputType::Bytes);
-//   send_request_repeated(container_id, num_iterations, request, rpc_service,
-//                         times_map);
-// }
-//
-// void run_ints_benchmark(
-//     int container_id, int num_iterations,
-//     std::shared_ptr<rpc::RPCService> rpc_service,
-//     std::shared_ptr<std::unordered_map<int, long>> times_map) {
-//   std::vector<int> type_vec;
-//   std::vector<std::shared_ptr<IntVector>> input_vec;
-//   std::vector<std::shared_ptr<Input>> inputs =
-//       get_primitive_inputs(InputType::Ints, type_vec, input_vec);
-//   rpc::PredictionRequest request(inputs, InputType::Ints);
-//   send_request_repeated(container_id, num_iterations, request, rpc_service,
-//                         times_map);
-// }
-//
-// void run_floats_benchmark(
-//     int container_id, int num_iterations,
-//     std::shared_ptr<rpc::RPCService> rpc_service,
-//     std::shared_ptr<std::unordered_map<int, long>> times_map) {
-//   std::vector<float> type_vec;
-//   std::vector<std::shared_ptr<FloatVector>> input_vec;
-//   std::vector<std::shared_ptr<Input>> inputs =
-//       get_primitive_inputs(InputType::Floats, type_vec, input_vec);
-//   rpc::PredictionRequest request(inputs, InputType::Floats);
-//   send_request_repeated(container_id, num_iterations, request, rpc_service,
-//                         times_map);
-// }
-//
-// void run_doubles_benchmark(
-//     int container_id, int num_iterations,
-//     std::shared_ptr<rpc::RPCService> rpc_service,
-//     std::shared_ptr<std::unordered_map<int, long>> times_map) {
-//   std::vector<double> type_vec;
-//   std::vector<std::shared_ptr<DoubleVector>> input_vec;
-//   std::vector<std::shared_ptr<Input>> inputs =
-//       get_primitive_inputs(InputType::Doubles, type_vec, input_vec);
-//   rpc::PredictionRequest request(inputs, InputType::Doubles);
-//   send_request_repeated(container_id, num_iterations, request, rpc_service,
-//                         times_map);
-// }
-//
-// void run_strings_benchmark(
-//     int container_id, int num_iterations,
-//     std::shared_ptr<rpc::RPCService> rpc_service,
-//     std::shared_ptr<std::unordered_map<int, long>> times_map) {
-//   rpc::PredictionRequest request(InputType::Strings);
-//   for (int num_inputs = 0; num_inputs < 500; ++num_inputs) {
-//     std::string str = random_string(150);
-//     if ((num_inputs % 3) == 0) {
-//       str = std::string("CAT");
-//     } else if ((num_inputs % 3) == 1) {
-//       str = std::string("DOG");
-//     } else {
-//       str = std::string("COW");
-//     }
-//     std::shared_ptr<SerializableString> input =
-//         std::make_shared<SerializableString>(str);
-//     request.add_input(input);
-//   }
-//   send_request_repeated(container_id, num_iterations, request, rpc_service,
-//                         times_map);
-// }
 
 rpc::PredictionRequest generate_bytes_request(int num_inputs) {
   std::vector<uint8_t> type_vec;
@@ -215,38 +107,6 @@ rpc::PredictionRequest generate_string_request(int num_inputs) {
   return request;
 }
 
-// void run_benchmarks() {
-//   std::shared_ptr<rpc::RPCService> rpc_service =
-//       std::make_shared<rpc::RPCService>();
-//   std::shared_ptr<std::unordered_map<int, long>> times_map =
-//       std::make_shared<std::unordered_map<int, long>>();
-//   bool shutdown = false;
-//   long total_time_elapsed = 0;
-//   int num_iterations_per_benchmark = 300;
-//   int num_benchmarks = 1;
-//
-//   rpc_service->start("127.0.0.1", 8000);
-//   usleep(5000000);
-//
-//   await_responses(rpc_service, times_map, shutdown, total_time_elapsed);
-//   // run_bytes_benchmark(0, num_iterations_per_benchmark, rpc_service,
-//   // times_map);
-//   // run_ints_benchmark(0, num_iterations_per_benchmark, rpc_service,
-//   // times_map);
-//   // run_floats_benchmark(0, num_iterations_per_benchmark, rpc_service,
-//   // times_map);
-//   run_doubles_benchmark(0, num_iterations_per_benchmark, rpc_service,
-//                         times_map);
-//   // run_strings_benchmark(0, num_iterations_per_benchmark, rpc_service,
-//   //                       times_map);
-//
-//   shutdown = true;
-//   rpc_service->stop();
-//   double time_per_iter = ((double)total_time_elapsed) /
-//                          (num_iterations_per_benchmark * num_benchmarks);
-//   log_info_formatted(LOGGING_TAG_RPC_BENCH, "{} ms", time_per_iter);
-// }
-
 rpc::PredictionRequest create_request(InputType input_type) {
   int num_inputs = 500;
   switch (input_type) {
@@ -261,18 +121,20 @@ rpc::PredictionRequest create_request(InputType input_type) {
 
 class Benchmarker {
  public:
-  Benchmarker(int num_iterations, InputType input_type)
-      : num_iterations_(num_iterations), request_(create_request(input_type)) {}
+  Benchmarker(int num_messages, InputType input_type)
+      : num_messages_(num_messages),
+        rpc_(std::make_unique<rpc::RPCService>()),
+        request_(create_request(input_type)) {}
 
   void start() {
-    rpc_->start("*", RPC_SERVICE_PORT, [this](VersionedModelId, int) {},
+    rpc_->start("*", RPC_SERVICE_PORT, [](VersionedModelId, int) {},
                 [this](rpc::RPCResponse response) {
                   on_response_recv(std::move(response));
                 });
 
     msg_latency_hist_ =
         metrics::MetricsRegistry::get_metrics().create_histogram(
-            "rpc_bench_msg_latency", "microseconds", 8260);
+            "rpc_bench_msg_latency", "milliseconds", 8260);
     throughput_meter_ = metrics::MetricsRegistry::get_metrics().create_meter(
         "rpc_bench_throughput");
 
@@ -315,29 +177,13 @@ class Benchmarker {
 
   Benchmarker(Benchmarker &&other) = default;
   Benchmarker &operator=(Benchmarker &&other) = default;
-
-  // void start(int container_id) {
-  //   switch (input_type_) {
-  //     case InputType::Strings: run_strings_benchmarks(container_id); break;
-  //     case InputType::Doubles: run_doubles_benchmarks(container_id); break;
-  //     case InputType::Floats: run_floats_benchmarks(container_id); break;
-  //     case InputType::Bytes: run_bytes_benchmarks(container_id); break;
-  //     case InputType::Ints: run_ints_benchmarks(container_id); break;
-  //   }
-  // }
-
-  // void on_container_ready(VersionedModelId, int) {
-  //   // std::unique_lock<std::mutex> l(inflight_messages_mutex_);
-  //   int id = rpc_->send_message(request.serialize(), container_id);
-  //   inflight_message_start_times_->emplace(id, start);
-  //   long current_time =
-  //   std::chrono::duration_cast<std::chrono::milliseconds>(
-  //                           std::chrono::system_clock::now().time_since_epoch())
-  //                           .count();
-  // }
+  ~Benchmarker() {
+    std::unique_lock<std::mutex> l(bench_completed_cv_mutex);
+    bench_completed_cv_.wait(l, [this]() { return bench_completed_ == true; });
+  }
 
   void send_message() {
-    cur_msg_start_time_micros_ =
+    cur_msg_start_time_millis_ =
         std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::system_clock::now().time_since_epoch())
             .count();
@@ -347,22 +193,21 @@ class Benchmarker {
 
   void on_response_recv(rpc::RPCResponse response) {
     // process the response
-    long recv_time_micros =
-        std::chrono::duration_cast<std::chrono::microseconds>(
+    long recv_time_millis =
+        std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::system_clock::now().time_since_epoch())
             .count();
     if (response.first != cur_message_id_) {
       throw std::logic_error(
           "Response message ID did not match in flight message ID");
     }
-    long message_duration_micros =
-        recv_time_micros - cur_msg_start_time_micros_;
-    msg_latency_hist_->insert(message_duration_micros);
+    long message_duration_millis =
+        recv_time_millis - cur_msg_start_time_millis_;
+    msg_latency_hist_->insert(message_duration_millis);
     throughput_meter_->mark(1);
     messages_completed_ += 1;
 
-    if (messages_completed_ < num_iterations_) {
-      // send the new message
+    if (messages_completed_ < num_messages_) {
       send_message();
     } else {
       bench_completed_ = true;
@@ -377,24 +222,43 @@ class Benchmarker {
  private:
   std::shared_ptr<metrics::Histogram> msg_latency_hist_;
   std::shared_ptr<metrics::Meter> throughput_meter_;
-  int num_iterations_;
+  int num_messages_;
   redox::Redox redis_connection_;
   redox::Subscriber redis_subscriber_;
-  std::atomic<int> messages_completed_;
+  std::atomic<int> messages_completed_{0};
   std::unique_ptr<rpc::RPCService> rpc_;
-  long cur_msg_start_time_micros_;
-  int benchmark_container_id_;
+  std::atomic<long> cur_msg_start_time_millis_;
+  std::atomic<int> benchmark_container_id_;
   rpc::PredictionRequest request_;
   int cur_message_id_;
 };
 
 int main(int argc, char *argv[]) {
-  Benchmarker benchmarker(10, InputType::Doubles);
-  auto jh = std::thread([&benchmarker] { benchmarker.start(); });
+  cxxopts::Options options("rpc_bench", "Clipper RPC Benchmark");
+  // clang-format off
+  options.add_options()
+    ("redis_ip", "Redis address",
+        cxxopts::value<std::string>()->default_value("localhost"))
+    ("redis_port", "Redis port",
+        cxxopts::value<int>()->default_value("6379"))
+    ("m,num_messages", "Number of messages to send",
+        cxxopts::value<int>()->default_value("100"));
+  // clang-format on
+  options.parse(argc, argv);
+
+  clipper::Config &conf = clipper::get_config();
+  conf.set_redis_address(options["redis_ip"].as<std::string>());
+  conf.set_redis_port(options["redis_port"].as<int>());
+  conf.ready();
+  Benchmarker benchmarker(options["num_messages"].as<int>(),
+                          InputType::Doubles);
+  benchmarker.start();
+
+  // auto jh = std::thread([&benchmarker]() { benchmarker.start(); });
   std::unique_lock<std::mutex> l(benchmarker.bench_completed_cv_mutex);
   benchmarker.bench_completed_cv_.wait(
       l, [&benchmarker]() { return benchmarker.bench_completed_ == true; });
-
+  // jh.join();
   metrics::MetricsRegistry &registry = metrics::MetricsRegistry::get_metrics();
   std::string metrics_report = registry.report_metrics();
   log_info(LOGGING_TAG_RPC_BENCH, "METRICS", metrics_report);
