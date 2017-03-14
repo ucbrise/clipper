@@ -2,14 +2,16 @@
 #include <thread>
 #include <unordered_map>
 
+#include <cxxopts.hpp>
+
 #include <clipper/config.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/logging.hpp>
 #include <clipper/metrics.hpp>
 #include <clipper/redis.hpp>
 #include <clipper/rpc_service.hpp>
+#include <clipper/task_executor.hpp>
 #include <clipper/util.hpp>
-#include <cxxopts.hpp>
 
 using namespace clipper;
 
@@ -92,6 +94,13 @@ rpc::PredictionRequest generate_doubles_request(int num_inputs) {
   std::vector<std::shared_ptr<DoubleVector>> input_vec;
   std::vector<std::shared_ptr<Input>> inputs = get_primitive_inputs(
       num_inputs, 784, InputType::Doubles, type_vec, input_vec);
+  double sum = 0.0;
+  for (auto i : inputs) {
+    for (double d : std::static_pointer_cast<DoubleVector>(i)->get_data()) {
+      sum += d;
+    }
+  }
+  log_info_formatted(LOGGING_TAG_RPC_BENCH, "Request inputs sum: {}", sum);
   rpc::PredictionRequest request(inputs, InputType::Doubles);
   return request;
 }
@@ -207,6 +216,13 @@ class Benchmarker {
     }
     long message_duration_millis =
         recv_time_millis - cur_msg_start_time_millis_;
+    std::vector<float> deserialized_outputs =
+        deserialize_outputs(response.second);
+    float sum = 0.0;
+    for (float f : deserialized_outputs) {
+      sum += f;
+    }
+    log_info_formatted(LOGGING_TAG_RPC_BENCH, "output sum: {}", sum);
     msg_latency_hist_->insert(message_duration_millis);
     throughput_meter_->mark(1);
     messages_completed_ += 1;
