@@ -1,9 +1,3 @@
-import data.DataType;
-import data.DataUtils;
-import data.DataVector;
-import data.DataVectorParser;
-import org.zeromq.ZMQ;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -13,7 +7,15 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 
-class ModelContainer<I extends DataVector<?>, O extends DataVector> {
+import org.zeromq.ZMQ;
+
+import data.DataType;
+import data.DataUtils;
+import data.DataVector;
+import data.FloatVector;
+import data.DataVectorParser;
+
+class ModelContainer<I extends DataVector<?>> {
   private static String CONNECTION_ADDRESS = "tcp://%s:%s";
 
   private DataVectorParser<?, I> inputVectorParser;
@@ -23,7 +25,7 @@ class ModelContainer<I extends DataVector<?>, O extends DataVector> {
     this.inputVectorParser = inputVectorParser;
   }
 
-  public void start(final Model<I, O> model, final String host, final int port)
+  public void start(final Model<I> model, final String host, final int port)
       throws UnknownHostException {
     InetAddress address = InetAddress.getByName(host);
     String ip = address.getHostAddress();
@@ -48,7 +50,7 @@ class ModelContainer<I extends DataVector<?>, O extends DataVector> {
     }
   }
 
-  private void createConnection(ZMQ.Socket socket, Model<I, O> model, String ip, int port) {
+  private void createConnection(ZMQ.Socket socket, Model<I> model, String ip, int port) {
     String address = String.format(CONNECTION_ADDRESS, ip, port);
     socket.connect(address);
     socket.send("", ZMQ.SNDMORE);
@@ -57,7 +59,7 @@ class ModelContainer<I extends DataVector<?>, O extends DataVector> {
     socket.send(String.valueOf(model.getInputType().getCode()));
   }
 
-  private void serveModel(ZMQ.Socket socket, Model<I, O> model) {
+  private void serveModel(ZMQ.Socket socket, Model<I> model) {
     while (true) {
       socket.recv();
       PerformanceTimer.startTiming();
@@ -82,6 +84,7 @@ class ModelContainer<I extends DataVector<?>, O extends DataVector> {
         // Handle Predict request
         byte[] inputHeaderMessage = socket.recv();
         byte[] rawContent = socket.recv();
+        System.out.println("rawContent length: " + rawContent.length);
 
         PerformanceTimer.logElapsed("Recv");
 
@@ -114,24 +117,27 @@ class ModelContainer<I extends DataVector<?>, O extends DataVector> {
     }
   }
 
-  private void validateRequestInputType(Model<I, O> model, DataType inputType) {
+  private void validateRequestInputType(Model<I> model, DataType inputType) {
     if (model.inputType != inputType) {
       // TODO: THROW HERE
     }
   }
 
   private void handlePredictRequest(
-      long msgId, List<I> dataVectors, Model<I, O> model, ZMQ.Socket socket) throws IOException {
-    List<O> predictions = model.predict(dataVectors);
-    // for (I dataVector : dataVectors) {
-    //   O prediction = model.predict(dataVector);
-    //   predictions.add(prediction);
-    // }
-    ByteArrayOutputStream concatenatedByteStream = new ByteArrayOutputStream();
-    for (O prediction : predictions) {
-      concatenatedByteStream.write(prediction.toBytes());
+      long msgId, List<I> dataVectors, Model<I> model, ZMQ.Socket socket) throws IOException {
+    List<FloatVector> predictions = model.predict(dataVectors);
+    int outputBufferLen = 0;
+    for (FloatVector p : predictions) {
+      outputBufferLen += p.getData().length;
     }
-    byte[] responseData = concatenatedByteStream.toByteArray();
+    ByteBuffer outputBuffer = ByteBuffer.allocate(outputBufferLen * 4);
+    outputBuffer.order(ByteOrder.LITTLE_ENDIAN);
+    for (FloatVector preds : predictions) {
+      for (float p : preds.getData()) {
+        outputBuffer.putFloat(p);
+      }
+    }
+    byte[] responseData = outputBuffer.array();
     socket.send("", ZMQ.SNDMORE);
     ByteBuffer b = ByteBuffer.allocate(8);
     b.order(ByteOrder.LITTLE_ENDIAN);

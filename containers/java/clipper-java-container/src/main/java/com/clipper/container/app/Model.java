@@ -1,18 +1,17 @@
 import data.DataVector;
+import data.FloatVector;
 import data.DataType;
 import java.util.List;
 
-abstract class Model<I extends DataVector, O extends DataVector> {
+abstract class Model<I extends DataVector> {
   private String name;
   private int version;
   DataType inputType;
-  DataType outputType;
 
-  Model(String name, int version, DataType inputType, DataType outputType) {
+  Model(String name, int version, DataType inputType) {
     this.name = name;
     this.version = version;
     this.inputType = inputType;
-    this.outputType = outputType;
   }
 
   public String getName() {
@@ -28,8 +27,8 @@ abstract class Model<I extends DataVector, O extends DataVector> {
   }
 
   public DataType getOutputType() {
-    return outputType;
+    return DataType.Floats;
   }
 
-  public abstract List<O> predict(List<I> inputVectors);
+  public abstract List<FloatVector> predict(List<I> inputVectors);
 }

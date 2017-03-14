@@ -5,9 +5,9 @@ import data.SerializableString;
 import java.util.ArrayList;
 import java.util.List;
 
-public class NoOpStringModel extends Model<SerializableString, FloatVector> {
+public class NoOpStringModel extends Model<SerializableString> {
   NoOpStringModel(String name, int version) {
-    super(name, version, DataType.Strings, DataType.Floats);
+    super(name, version, DataType.Strings);
   }
 
   @Override

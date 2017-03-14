@@ -12,10 +12,10 @@ public class ContainerTest {
     //        runContainer(model, new SerializableString.Parser());
   }
 
-  public <I extends DataVector<?>, O extends DataVector> void runContainer(
-      Model<I, O> model, DataVectorParser<?, I> parser) {
+  public <I extends DataVector<?>> void runContainer(
+      Model<I> model, DataVectorParser<?, I> parser) {
     System.out.println("Starting...");
-    ModelContainer<I, O> modelContainer = new ModelContainer(parser);
+    ModelContainer<I> modelContainer = new ModelContainer(parser);
     try {
       modelContainer.start(model, "127.0.0.1", 7000);
     } catch (UnknownHostException e) {
