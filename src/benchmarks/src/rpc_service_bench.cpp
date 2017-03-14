@@ -198,8 +198,12 @@ class Benchmarker {
             std::chrono::system_clock::now().time_since_epoch())
             .count();
     if (response.first != cur_message_id_) {
-      throw std::logic_error(
-          "Response message ID did not match in flight message ID");
+      std::stringstream ss;
+      ss << "Response message ID ";
+      ss << response.first;
+      ss << " did not match in flight message ID ";
+      ss << cur_message_id_;
+      throw std::logic_error(ss.str());
     }
     long message_duration_millis =
         recv_time_millis - cur_msg_start_time_millis_;
