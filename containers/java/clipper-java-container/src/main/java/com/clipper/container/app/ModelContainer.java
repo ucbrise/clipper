@@ -84,7 +84,6 @@ class ModelContainer<I extends DataVector<?>> {
         // Handle Predict request
         byte[] inputHeaderMessage = socket.recv();
         byte[] rawContent = socket.recv();
-        System.out.println("rawContent length: " + rawContent.length);
 
         PerformanceTimer.logElapsed("Recv");
 
