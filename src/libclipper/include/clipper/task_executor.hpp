@@ -16,6 +16,7 @@
 #include <clipper/redis.hpp>
 #include <clipper/rpc_service.hpp>
 #include <clipper/util.hpp>
+#include <clipper/threadpool.hpp>
 
 namespace clipper {
 
@@ -101,9 +102,10 @@ class TaskExecutor {
             active_containers_->add_container(
                 vm, std::stoi(container_info["zmq_connection_id"]),
                 replica_id, parse_input_type(container_info["input_type"]));
-            // TODO: This callback should be submitted to a thread pool
-            // for execution on a separate thread
-            on_container_ready(vm, replica_id);
+
+            TaskExecutionThreadPool::submit_job([=]() {
+              on_container_ready(vm, replica_id);
+            });
             // TODO: Create a new model queue if this is the first connected container
             // hosting the specified model (i.e. replica_id == 0)
           }
