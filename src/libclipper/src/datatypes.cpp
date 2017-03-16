@@ -253,12 +253,12 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
 }
 
 Query::Query(std::string label, long user_id, std::shared_ptr<Input> input,
-             long latency_micros, std::string selection_policy,
+             long deadline, std::string selection_policy,
              std::vector<VersionedModelId> candidate_models)
     : label_(label),
       user_id_(user_id),
       input_(input),
-      latency_micros_(latency_micros),
+      deadline_(deadline),
       selection_policy_(selection_policy),
       candidate_models_(candidate_models),
       create_time_(std::chrono::high_resolution_clock::now()) {}
