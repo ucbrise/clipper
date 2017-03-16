@@ -193,7 +193,7 @@ class Query {
   ~Query() = default;
 
   Query(std::string label, long user_id, std::shared_ptr<Input> input,
-        long latency_budget_micros, std::string selection_policy,
+        long deadline, std::string selection_policy,
         std::vector<VersionedModelId> candidate_models);
 
   // Note that it should be relatively cheap to copy queries because
@@ -212,8 +212,7 @@ class Query {
   std::string label_;
   long user_id_;
   std::shared_ptr<Input> input_;
-  // TODO change this to a deadline instead of a duration
-  long latency_budget_micros_;
+  long deadline_;
   std::string selection_policy_;
   std::vector<VersionedModelId> candidate_models_;
   std::chrono::time_point<std::chrono::high_resolution_clock> create_time_;
