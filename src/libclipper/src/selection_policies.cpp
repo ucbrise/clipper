@@ -4,6 +4,7 @@
 #include <functional>
 #include <iostream>
 // #include <random>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -57,19 +58,14 @@ Output DefaultOutputSelectionState::deserialize(std::string serialized_state) {
 
 ///////////////////// DefaultOutputSelectionPolicy ////////////////////
 
-SelectionState DefaultOutputSelectionPolicy::init_state(
+std::shared_ptr<SelectionState> DefaultOutputSelectionPolicy::init_state(
     Output default_output) const {
-  return DefaultOutputSelectionState(default_output);
-}
-
-SelectionState DefaultOutputSelectionPolicy::update_candidate_models(
-    SelectionState state,
-    const std::vector<VersionedModelId>& candidate_models) const {
-  return state;
+  return std::make_shared<DefaultOutputSelectionState>(default_output);
 }
 
 std::vector<PredictTask> DefaultOutputSelectionPolicy::select_predict_tasks(
-    SelectionState /*state*/, Query query, long query_id) const {
+    std::shared_ptr<SelectionState> /*state*/, Query query,
+    long query_id) const {
   std::vector<PredictTask> tasks;
   int num_candidate_models = query.candidate_models_.size();
   if (num_candidate_models == 0) {
@@ -91,13 +87,13 @@ std::vector<PredictTask> DefaultOutputSelectionPolicy::select_predict_tasks(
 }
 
 Output DefaultOutputSelectionPolicy::combine_predictions(
-    const SelectionState& state, Query query,
+    const std::shared_ptr<SelectionState>& state, Query query,
     std::vector<Output> predictions) const {
   if (predictions.size() == 1) {
     return predictions.front();
   } else if (predictions.empty()) {
-    return dynamic_cast<const DefaultOutputSelectionState&>(state)
-        .default_output_;
+    return std::static_pointer_cast<DefaultOutputSelectionState>(state)
+        ->default_output_;
   } else {
     log_error_formatted(LOGGING_TAG_SELECTION_POLICY,
                         "DefaultOutputSelectionPolicy only expecting 1 "
@@ -109,26 +105,27 @@ Output DefaultOutputSelectionPolicy::combine_predictions(
 
 std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
 DefaultOutputSelectionPolicy::select_feedback_tasks(
-    const SelectionState& /*state*/, FeedbackQuery /*query*/,
+    const std::shared_ptr<SelectionState>& /*state*/, FeedbackQuery /*query*/,
     long /*query_id*/) const {
   return std::make_pair<std::vector<PredictTask>, std::vector<FeedbackTask>>(
       {}, {});
 }
 
-SelectionState DefaultOutputSelectionPolicy::process_feedback(
-    SelectionState state, Feedback /*feedback*/,
+std::shared_ptr<SelectionState> DefaultOutputSelectionPolicy::process_feedback(
+    std::shared_ptr<SelectionState> state, Feedback /*feedback*/,
     std::vector<Output> /*predictions*/) const {
   return state;
 }
 
-SelectionState DefaultOutputSelectionPolicy::deserialize(
+std::shared_ptr<SelectionState> DefaultOutputSelectionPolicy::deserialize(
     std::string serialized_state) const {
   return DefaultOutputSelectionState(serialized_state);
 }
 
 std::string DefaultOutputSelectionPolicy::serialize(
-    SelectionState state) const {
-  return dynamic_cast<const DefaultOutputSelectionState&>(state).serialize();
+    std::shared_ptr<SelectionState> state) const {
+  return std::static_pointer_cast<DefaultOutputSelectionState>(state)
+      ->serialize();
 }
 
 }  // namespace clipper

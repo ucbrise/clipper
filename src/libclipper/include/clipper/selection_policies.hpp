@@ -28,6 +28,12 @@ class SelectionState {
 };
 
 class SelectionPolicy {
+  // Note that we need to use pointers to the SelectionState because
+  // C++ doesn't let you have an object with an abstract type on the stack
+  // because it doesn't know how big it is. It must be on heap.
+  // We use shared_ptr instead of unique_ptr so that we can do pointer
+  // casts down the inheritance hierarchy.
+
  public:
   SelectionPolicy() = default;
   SelectionPolicy(const SelectionPolicy&) = default;
@@ -37,9 +43,9 @@ class SelectionPolicy {
   virtual ~SelectionPolicy();
   // virtual SelectionState initialize(
   //     const std::vector<VersionedModelId>& candidate_models) const = 0;
-  virtual SelectionState update_candidate_models(
-      SelectionState state,
-      const std::vector<VersionedModelId>& candidate_models) const = 0;
+  // virtual std::shared_ptr<SelectionState> update_candidate_models(
+  //     std::shared_ptr<SelectionState> state,
+  //     const std::vector<VersionedModelId>& candidate_models) const = 0;
 
   // Used to identify a unique selection policy instance. For example,
   // if using a bandit-algorithm that does not tolerate variable-armed
@@ -54,10 +60,12 @@ class SelectionPolicy {
 
   // Query Pre-processing: select models and generate tasks
   virtual std::vector<PredictTask> select_predict_tasks(
-      SelectionState state, Query query, long query_id) const = 0;
+      std::shared_ptr<SelectionState> state, Query query,
+      long query_id) const = 0;
 
-  virtual Output combine_predictions(const SelectionState& state, Query query,
-                                     std::vector<Output> predictions) const = 0;
+  virtual Output combine_predictions(
+      const std::shared_ptr<SelectionState>& state, Query query,
+      std::vector<Output> predictions) const = 0;
 
   /// When feedback is received, the selection policy can choose
   /// to schedule both feedback and prediction tasks. Prediction tasks
@@ -65,19 +73,21 @@ class SelectionPolicy {
   /// while feedback tasks can be used to optionally propogate feedback
   /// into the model containers.
   virtual std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-  select_feedback_tasks(const SelectionState& state, FeedbackQuery query,
-                        long query_id) const = 0;
+  select_feedback_tasks(const std::shared_ptr<SelectionState>& state,
+                        FeedbackQuery query, long query_id) const = 0;
 
   /// This method will be called if at least one PredictTask
   /// was scheduled for this piece of feedback. This method
   /// is guaranteed to be called sometime after all the predict
   /// tasks scheduled by `select_feedback_tasks` complete.
-  virtual SelectionState process_feedback(
-      SelectionState state, Feedback feedback,
+  virtual std::shared_ptr<SelectionState> process_feedback(
+      std::shared_ptr<SelectionState> state, Feedback feedback,
       std::vector<Output> predictions) const = 0;
 
-  virtual SelectionState deserialize(std::string serialized_state) const = 0;
-  virtual std::string serialize(SelectionState state) const = 0;
+  virtual std::shared_ptr<SelectionState> deserialize(
+      std::string serialized_state) const = 0;
+  virtual std::string serialize(
+      std::shared_ptr<SelectionState> state) const = 0;
 };
 
 ////////////////////////////////////////////////////////////////////
@@ -112,29 +122,27 @@ class DefaultOutputSelectionPolicy : public SelectionPolicy {
   DefaultOutputSelectionPolicy& operator=(DefaultOutputSelectionPolicy&&) =
       default;
   ~DefaultOutputSelectionPolicy() = default;
-  SelectionState init_state(Output default_output) const;
+  std::shared_ptr<SelectionState> init_state(Output default_output) const;
 
-  SelectionState update_candidate_models(
-      SelectionState state,
-      const std::vector<VersionedModelId>& candidate_models) const override;
+  std::vector<PredictTask> select_predict_tasks(
+      std::shared_ptr<SelectionState> state, Query query,
+      long query_id) const override;
 
-  std::vector<PredictTask> select_predict_tasks(SelectionState state,
-                                                Query query,
-                                                long query_id) const override;
-
-  Output combine_predictions(const SelectionState& state, Query query,
+  Output combine_predictions(const std::shared_ptr<SelectionState>& state,
+                             Query query,
                              std::vector<Output> predictions) const override;
 
   std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
-  select_feedback_tasks(const SelectionState& state, FeedbackQuery query,
-                        long query_id) const override;
+  select_feedback_tasks(const std::shared_ptr<SelectionState>& state,
+                        FeedbackQuery query, long query_id) const override;
 
-  SelectionState process_feedback(
-      SelectionState state, Feedback feedback,
+  std::shared_ptr<SelectionState> process_feedback(
+      std::shared_ptr<SelectionState> state, Feedback feedback,
       std::vector<Output> predictions) const override;
 
-  SelectionState deserialize(std::string serialized_state) const override;
-  std::string serialize(SelectionState state) const override;
+  std::shared_ptr<SelectionState> deserialize(
+      std::string serialized_state) const override;
+  std::string serialize(std::shared_ptr<SelectionState> state) const override;
 };
 
 }  // namespace clipper

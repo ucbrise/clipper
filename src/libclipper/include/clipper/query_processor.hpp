@@ -17,14 +17,6 @@
 
 namespace clipper {
 
-// // For the purpose of testing
-// class QueryProcessorBase {
-//  public:
-//   QueryProcessorBase() {}
-//   virtual boost::future<Response> predict(Query query) = 0;
-//   virtual boost::future<FeedbackAck> update(FeedbackQuery feedback) = 0;
-// };
-
 const std::string LOGGING_TAG_QUERY_PROCESSOR = "QUERYPROCESSOR";
 
 class QueryProcessor {
@@ -51,6 +43,16 @@ class QueryProcessor {
   std::shared_ptr<StateDB> state_db_;
   TaskExecutor task_executor_;
   TimerSystem<HighPrecisionClock> timer_system_{HighPrecisionClock()};
+  // This is a heteregenous container of different instances of selection
+  // policy.
+  // The key is the name of the specific selection policy, the value is an
+  // instance
+  // of that policy. All SelectionPolicy implementations (derived classes)
+  // should
+  // be stateless so there should be no issues with re-using the same instance
+  // for different applications or users.
+  std::unordered_map<std::string, std::shared_ptr<SelectionPolicy>>
+      selection_policies_;
 };
 
 }  // namespace clipper
