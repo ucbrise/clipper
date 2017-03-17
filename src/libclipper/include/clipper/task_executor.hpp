@@ -103,7 +103,7 @@ class TaskExecutor {
                 vm, std::stoi(container_info["zmq_connection_id"]),
                 replica_id, parse_input_type(container_info["input_type"]));
 
-            TaskExecutionThreadPool::submit_job([=]() {
+            TaskExecutionThreadPool::submit_job([this, vm, replica_id]() {
               on_container_ready(vm, replica_id);
             });
             // TODO: Create a new model queue if this is the first connected container
