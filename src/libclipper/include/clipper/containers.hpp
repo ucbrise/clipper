@@ -30,7 +30,6 @@ class ModelContainer {
     return max_batch_size_;
   }
 
-  int get_queue_size();
   void send_feedback(PredictTask task);
 
   VersionedModelId model_;

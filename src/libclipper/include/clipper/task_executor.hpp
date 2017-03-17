@@ -133,7 +133,6 @@ class ModelQueue {
   std::condition_variable_any queue_not_empty_;
 };
 
-template <typename Scheduler>
 class TaskExecutor {
  public:
   ~TaskExecutor() { active_ = false; };
@@ -253,13 +252,10 @@ class TaskExecutor {
   // containers to the collection when they connect
   std::shared_ptr<ActiveContainers> active_containers_;
   std::unique_ptr<rpc::RPCService> rpc_;
-  Scheduler scheduler_;
   PredictionCache cache_;
   redox::Redox redis_connection_;
   redox::Subscriber redis_subscriber_;
   bool active_ = false;
-  // TODO: Replace the statically configured batch size with dynamic batching
-  const int max_batch_size_ = 5;
   std::mutex inflight_messages_mutex_;
   std::unordered_map<int, std::vector<std::tuple<const long, VersionedModelId,
                                                  std::shared_ptr<Input>>>>
@@ -338,13 +334,6 @@ class TaskExecutor {
                         {std::get<1>(keys[batch_num])}});
     }
   }
-};
-
-class PowerTwoChoicesScheduler {
- public:
-  std::shared_ptr<ModelContainer> assign_container(
-      const PredictTask &task,
-      std::vector<std::shared_ptr<ModelContainer>> &containers) const;
 };
 
 }  // namespace clipper
