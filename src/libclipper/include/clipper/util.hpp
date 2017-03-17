@@ -87,7 +87,7 @@ class Queue {
 };
 
 template <class T>
-size_t hash_vector(const std::vector<T> &vec) {
+size_t hash_vector(const std::vector<T>& vec) {
   return boost::hash_range(vec.begin(), vec.end());
 }
 

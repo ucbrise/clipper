@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <iostream>
 #include <thread>
 #include <unordered_map>
@@ -19,13 +20,14 @@ const std::string LOGGING_TAG_RPC_BENCH = "RPCBENCH";
 
 // taken from http://stackoverflow.com/a/12468109/814642
 std::string gen_random_string(size_t length) {
+  std::srand(time(NULL));
   auto randchar = []() -> char {
     const char charset[] =
         "0123456789"
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz";
     const size_t max_index = (sizeof(charset) - 1);
-    return charset[rand() % max_index];
+    return charset[std::rand() % max_index];
   };
   std::string str(length, 0);
   std::generate_n(str.begin(), length, randchar);
@@ -40,11 +42,11 @@ std::string get_thread_id() {
 
 template <typename T, class N>
 std::vector<std::shared_ptr<Input>> get_primitive_inputs(
-    int num_inputs, int input_len, InputType type, std::vector<T> data_vector,
+    int message_size, int input_len, InputType type, std::vector<T> data_vector,
     std::vector<std::shared_ptr<N>> input_vector) {
   input_vector.clear();
   std::vector<std::shared_ptr<Input>> generic_input_vector;
-  for (int k = 0; k < num_inputs; ++k) {
+  for (int k = 0; k < message_size; ++k) {
     for (int j = 0; j < input_len; ++j) {
       if (type == InputType::Bytes) {
         uint8_t *bytes = reinterpret_cast<uint8_t *>(&j);
@@ -62,52 +64,45 @@ std::vector<std::shared_ptr<Input>> get_primitive_inputs(
   return generic_input_vector;
 }
 
-rpc::PredictionRequest generate_bytes_request(int num_inputs) {
+rpc::PredictionRequest generate_bytes_request(int message_size) {
   std::vector<uint8_t> type_vec;
   std::vector<std::shared_ptr<ByteVector>> input_vec;
   std::vector<std::shared_ptr<Input>> inputs = get_primitive_inputs(
-      num_inputs, 784, InputType::Bytes, type_vec, input_vec);
+      message_size, 784, InputType::Bytes, type_vec, input_vec);
   rpc::PredictionRequest request(inputs, InputType::Bytes);
   return request;
 }
 
-rpc::PredictionRequest generate_floats_request(int num_inputs) {
+rpc::PredictionRequest generate_floats_request(int message_size) {
   std::vector<float> type_vec;
   std::vector<std::shared_ptr<FloatVector>> input_vec;
   std::vector<std::shared_ptr<Input>> inputs = get_primitive_inputs(
-      num_inputs, 784, InputType::Floats, type_vec, input_vec);
+      message_size, 784, InputType::Floats, type_vec, input_vec);
   rpc::PredictionRequest request(inputs, InputType::Floats);
   return request;
 }
 
-rpc::PredictionRequest generate_ints_request(int num_inputs) {
+rpc::PredictionRequest generate_ints_request(int message_size) {
   std::vector<int> type_vec;
   std::vector<std::shared_ptr<IntVector>> input_vec;
   std::vector<std::shared_ptr<Input>> inputs = get_primitive_inputs(
-      num_inputs, 784, InputType::Ints, type_vec, input_vec);
+      message_size, 784, InputType::Ints, type_vec, input_vec);
   rpc::PredictionRequest request(inputs, InputType::Ints);
   return request;
 }
 
-rpc::PredictionRequest generate_doubles_request(int num_inputs) {
+rpc::PredictionRequest generate_doubles_request(int message_size) {
   std::vector<double> type_vec;
   std::vector<std::shared_ptr<DoubleVector>> input_vec;
   std::vector<std::shared_ptr<Input>> inputs = get_primitive_inputs(
-      num_inputs, 784, InputType::Doubles, type_vec, input_vec);
-  double sum = 0.0;
-  for (auto i : inputs) {
-    for (double d : std::static_pointer_cast<DoubleVector>(i)->get_data()) {
-      sum += d;
-    }
-  }
-  log_info_formatted(LOGGING_TAG_RPC_BENCH, "Request inputs sum: {}", sum);
+      message_size, 784, InputType::Doubles, type_vec, input_vec);
   rpc::PredictionRequest request(inputs, InputType::Doubles);
   return request;
 }
 
-rpc::PredictionRequest generate_string_request(int num_inputs) {
+rpc::PredictionRequest generate_string_request(int message_size) {
   rpc::PredictionRequest request(InputType::Strings);
-  for (int i = 0; i < num_inputs; ++i) {
+  for (int i = 0; i < message_size; ++i) {
     std::string str = gen_random_string(150);
     std::shared_ptr<SerializableString> input =
         std::make_shared<SerializableString>(str);
@@ -116,24 +111,23 @@ rpc::PredictionRequest generate_string_request(int num_inputs) {
   return request;
 }
 
-rpc::PredictionRequest create_request(InputType input_type) {
-  int num_inputs = 500;
+rpc::PredictionRequest create_request(InputType input_type, int message_size) {
   switch (input_type) {
-    case InputType::Strings: return generate_string_request(num_inputs);
-    case InputType::Doubles: return generate_doubles_request(num_inputs);
-    case InputType::Floats: return generate_floats_request(num_inputs);
-    case InputType::Bytes: return generate_bytes_request(num_inputs);
-    case InputType::Ints: return generate_ints_request(num_inputs);
+    case InputType::Strings: return generate_string_request(message_size);
+    case InputType::Doubles: return generate_doubles_request(message_size);
+    case InputType::Floats: return generate_floats_request(message_size);
+    case InputType::Bytes: return generate_bytes_request(message_size);
+    case InputType::Ints: return generate_ints_request(message_size);
   }
   throw std::invalid_argument("Unsupported input type");
 }
 
 class Benchmarker {
  public:
-  Benchmarker(int num_messages, InputType input_type)
+  Benchmarker(int num_messages, int message_size, InputType input_type)
       : num_messages_(num_messages),
         rpc_(std::make_unique<rpc::RPCService>()),
-        request_(create_request(input_type)) {}
+        request_(create_request(input_type, message_size)) {}
 
   void start() {
     rpc_->start("*", RPC_SERVICE_PORT, [](VersionedModelId, int) {},
@@ -187,7 +181,7 @@ class Benchmarker {
   Benchmarker(Benchmarker &&other) = default;
   Benchmarker &operator=(Benchmarker &&other) = default;
   ~Benchmarker() {
-    std::unique_lock<std::mutex> l(bench_completed_cv_mutex);
+    std::unique_lock<std::mutex> l(bench_completed_cv_mutex_);
     bench_completed_cv_.wait(l, [this]() { return bench_completed_ == true; });
   }
 
@@ -201,7 +195,6 @@ class Benchmarker {
   }
 
   void on_response_recv(rpc::RPCResponse response) {
-    // process the response
     long recv_time_millis =
         std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::system_clock::now().time_since_epoch())
@@ -216,13 +209,6 @@ class Benchmarker {
     }
     long message_duration_millis =
         recv_time_millis - cur_msg_start_time_millis_;
-    std::vector<float> deserialized_outputs =
-        deserialize_outputs(response.second);
-    float sum = 0.0;
-    for (float f : deserialized_outputs) {
-      sum += f;
-    }
-    log_info_formatted(LOGGING_TAG_RPC_BENCH, "output sum: {}", sum);
     msg_latency_hist_->insert(message_duration_millis);
     throughput_meter_->mark(1);
     messages_completed_ += 1;
@@ -236,7 +222,7 @@ class Benchmarker {
   }
 
   std::condition_variable_any bench_completed_cv_;
-  std::mutex bench_completed_cv_mutex;
+  std::mutex bench_completed_cv_mutex_;
   std::atomic<bool> bench_completed_{false};
 
  private:
@@ -262,7 +248,11 @@ int main(int argc, char *argv[]) {
     ("redis_port", "Redis port",
         cxxopts::value<int>()->default_value("6379"))
     ("m,num_messages", "Number of messages to send",
-        cxxopts::value<int>()->default_value("100"));
+        cxxopts::value<int>()->default_value("100"))
+    ("s,message_size", "Number of inputs per message",
+        cxxopts::value<int>()->default_value("500"))
+    ("input_type", "Can be bytes, ints, floats, doubles, or strings",
+        cxxopts::value<std::string>()->default_value("doubles"));
   // clang-format on
   options.parse(argc, argv);
 
@@ -270,15 +260,15 @@ int main(int argc, char *argv[]) {
   conf.set_redis_address(options["redis_ip"].as<std::string>());
   conf.set_redis_port(options["redis_port"].as<int>());
   conf.ready();
+  InputType input_type =
+      clipper::parse_input_type(options["input_type"].as<std::string>());
   Benchmarker benchmarker(options["num_messages"].as<int>(),
-                          InputType::Doubles);
+                          options["message_size"].as<int>(), input_type);
   benchmarker.start();
 
-  // auto jh = std::thread([&benchmarker]() { benchmarker.start(); });
-  std::unique_lock<std::mutex> l(benchmarker.bench_completed_cv_mutex);
+  std::unique_lock<std::mutex> l(benchmarker.bench_completed_cv_mutex_);
   benchmarker.bench_completed_cv_.wait(
       l, [&benchmarker]() { return benchmarker.bench_completed_ == true; });
-  // jh.join();
   metrics::MetricsRegistry &registry = metrics::MetricsRegistry::get_metrics();
   std::string metrics_report = registry.report_metrics();
   log_info(LOGGING_TAG_RPC_BENCH, "METRICS", metrics_report);
