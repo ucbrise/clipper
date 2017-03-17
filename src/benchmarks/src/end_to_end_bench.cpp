@@ -75,7 +75,6 @@ void send_predictions(
     std::vector<boost::future<Response>> futures;
     std::vector<int> binary_labels;
     for (int i = 0; i < batch_size; i++) {
-      std::srand(time(NULL));
       int index = std::rand() % 2;
       std::vector<double> query_vec;
       if (index == 0) {
@@ -200,6 +199,9 @@ int main(int argc, char *argv[]) {
   std::unordered_map<int, std::vector<std::vector<double>>> cifar_data =
       load_cifar(test_config);
 
+  // Seed the random number generator that will be used to randomly select
+  // query input vectors from the CIFAR dataset
+  std::srand(time(NULL));
   int num_threads = std::stoi(test_config.find(CONFIG_KEY_NUM_THREADS)->second);
   std::vector<std::thread> threads;
   for (int i = 0; i < num_threads; i++) {

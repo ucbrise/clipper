@@ -25,7 +25,6 @@ boost::future<Output> PredictionCache::fetch(
     const VersionedModelId &model, const std::shared_ptr<Input> &input) {
   std::unique_lock<std::mutex> l(m_);
   auto key = hash(model, input->hash());
-  log_info_formatted("HASHKEY", "KEY: {}", key);
   auto search = cache_.find(key);
   lookups_counter_->increment(1);
   if (search != cache_.end()) {

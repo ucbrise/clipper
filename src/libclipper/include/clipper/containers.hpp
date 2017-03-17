@@ -25,17 +25,12 @@ class ModelContainer {
   ModelContainer(ModelContainer &&) = default;
   ModelContainer &operator=(ModelContainer &&) = default;
 
-  std::vector<PredictTask> dequeue_predictions(int batch_size) {
-    return request_queue_.try_pop_batch(batch_size);
-  }
-
   size_t get_batch_size(Deadline /*deadline*/) {
     // TODO: Replace the statically configured batch size with dynamic batching
     return max_batch_size_;
   }
 
   int get_queue_size();
-  void send_prediction(PredictTask task);
   void send_feedback(PredictTask task);
 
   VersionedModelId model_;
@@ -45,7 +40,6 @@ class ModelContainer {
  private:
   const int max_batch_size_ = 5;
   bool connected_{true};
-  Queue<PredictTask> request_queue_;
   Queue<FeedbackTask> feedback_queue_;
 };
 
@@ -77,12 +71,12 @@ class ActiveContainers {
   std::vector<VersionedModelId> get_known_models();
 
  private:
-  // Protects the map of task queues. Must acquire an exclusive
-  // lock to modify request_queues_ and a shared_lock when accessing
-  // the queues. The queues are independently threadsafe.
+  // Protects the models-replicas map. Must acquire an exclusive
+  // lock to modify the map and a shared_lock when accessing
+  // replicas. The replica ModelContainer entries are independently threadsafe.
   boost::shared_mutex m_;
 
-  // A mapping of models to their replica task queues. The replicas
+  // A mapping of models to their replicas. The replicas
   // for each model are represented as a map keyed on replica id.
   std::unordered_map<VersionedModelId,
                      std::map<int, std::shared_ptr<ModelContainer>>,
