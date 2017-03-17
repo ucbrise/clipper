@@ -19,10 +19,6 @@ class SelectionState {
   SelectionState& operator=(const SelectionState&) = default;
   SelectionState(SelectionState&&) = default;
   SelectionState& operator=(SelectionState&&) = default;
-  /**
-   * Constructor to create a SelectionState object from serialized
-   * representation.
-   */
   virtual ~SelectionState();
   virtual std::string get_debug_string() const = 0;
 };
@@ -41,22 +37,6 @@ class SelectionPolicy {
   SelectionPolicy(SelectionPolicy&&) = default;
   SelectionPolicy& operator=(SelectionPolicy&&) = default;
   virtual ~SelectionPolicy();
-  // virtual SelectionState initialize(
-  //     const std::vector<VersionedModelId>& candidate_models) const = 0;
-  // virtual std::shared_ptr<SelectionState> update_candidate_models(
-  //     std::shared_ptr<SelectionState> state,
-  //     const std::vector<VersionedModelId>& candidate_models) const = 0;
-
-  // Used to identify a unique selection policy instance. For example,
-  // if using a bandit-algorithm that does not tolerate variable-armed
-  // bandits, one could hash the candidate models to identify
-  // which policy instance corresponds to this exact set of arms.
-  // Similarly, it provides flexibility in how to deal with different
-  // versions of the same arm (different versions of same model).
-  virtual long hash_models(
-      const std::vector<VersionedModelId>& /*models*/) const {
-    return 0;
-  }
 
   // Query Pre-processing: select models and generate tasks
   virtual std::vector<PredictTask> select_predict_tasks(

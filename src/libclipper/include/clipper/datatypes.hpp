@@ -210,6 +210,7 @@ class Query {
   std::string label_;
   long user_id_;
   std::shared_ptr<Input> input_;
+  // TODO change this to a deadline instead of a duration
   long latency_budget_micros_;
   std::string selection_policy_;
   std::vector<VersionedModelId> candidate_models_;
