@@ -52,9 +52,7 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   }
   std::shared_ptr<SelectionPolicy> current_policy = current_policy_iter->second;
 
-  auto hashkey = current_policy->hash_models(query.candidate_models_);
-  auto state_opt =
-      state_db_->get(StateKey{query.label_, query.user_id_, hashkey});
+  auto state_opt = state_db_->get(StateKey{query.label_, query.user_id_, 0});
   if (!state_opt) {
     log_error_formatted(LOGGING_TAG_QUERY_PROCESSOR,
                         "No selection state found for query with label: {}",
@@ -146,9 +144,8 @@ boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
   }
   std::shared_ptr<SelectionPolicy> current_policy = current_policy_iter->second;
 
-  auto hashkey = current_policy->hash_models(feedback.candidate_models_);
   auto state_opt =
-      state_db_->get(StateKey{feedback.label_, feedback.user_id_, hashkey});
+      state_db_->get(StateKey{feedback.label_, feedback.user_id_, 0});
   if (!state_opt) {
     log_error_formatted(LOGGING_TAG_QUERY_PROCESSOR,
                         "No selection state found for query with label: {}",

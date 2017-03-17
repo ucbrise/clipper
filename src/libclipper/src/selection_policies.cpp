@@ -1,20 +1,10 @@
-// #include <float.h>
-// #include <math.h>
-// #include <time.h>
 #include <functional>
 #include <iostream>
-// #include <random>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
-
-// #include <boost/archive/binary_iarchive.hpp>
-// #include <boost/archive/binary_oarchive.hpp>
-// #include <boost/serialization/string.hpp>
-// #include <boost/serialization/unordered_map.hpp>
-// #include <boost/serialization/utility.hpp>
 
 #include <rapidjson/document.h>
 
@@ -25,8 +15,6 @@
 #include <clipper/util.hpp>
 
 namespace clipper {
-
-// DefaultOutputSelectionState
 
 DefaultOutputSelectionState::DefaultOutputSelectionState(Output default_output)
     : default_output_(default_output) {}
@@ -56,8 +44,6 @@ Output DefaultOutputSelectionState::deserialize(std::string serialized_state) {
   return Output(json::get_double(d, "y_hat"), {});
 }
 
-///////////////////// DefaultOutputSelectionPolicy ////////////////////
-
 std::shared_ptr<SelectionState> DefaultOutputSelectionPolicy::init_state(
     Output default_output) const {
   return std::make_shared<DefaultOutputSelectionState>(default_output);
@@ -74,14 +60,14 @@ std::vector<PredictTask> DefaultOutputSelectionPolicy::select_predict_tasks(
                         query.label_);
   } else if (num_candidate_models == 1) {
     tasks.emplace_back(query.input_, query.candidate_models_.front(), 1.0,
-                       query_id, query.deadline_);
+                       query_id, query.latency_budget_micros_);
   } else {
     log_error_formatted(LOGGING_TAG_SELECTION_POLICY,
                         "{} candidate models provided for query with label "
                         "{}. Picking the first one.",
                         num_candidate_models, query.label_);
     tasks.emplace_back(query.input_, query.candidate_models_.front(), 1.0,
-                       query_id, query.deadline_);
+                       query_id, query.latency_budget_micros_);
   }
   return tasks;
 }
