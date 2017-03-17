@@ -280,12 +280,12 @@ class TaskExecutor {
           "TaskExecutor failed to find previously registered active "
           "container!");
     }
+    auto model_queue_entry = model_queues_.find(container->model_);
+    if(model_queue_entry == model_queues_.end()) {
+      throw std::runtime_error("Failed to find model queue associated with a previously registered container!");
+    }
     
     while(true) {
-      auto model_queue_entry = model_queues_.find(container->model_);
-      if(model_queue_entry == model_queues_.end()) {
-        throw std::runtime_error("Failed to find model queue associated with a previously registered container!");
-      }
       Deadline earliest_deadline = model_queue_entry->second.get_earliest_deadline();
       size_t batch_size = container->get_batch_size(earliest_deadline);
       auto batch = model_queue_entry->second.get_batch(batch_size);
