@@ -14,6 +14,7 @@
 #include <clipper/rpc_service.hpp>
 #include <clipper/task_executor.hpp>
 #include <clipper/util.hpp>
+#include <clipper/threadpool.hpp>
 
 using zmq::socket_t;
 using zmq::message_t;
@@ -258,10 +259,8 @@ void RPCService::receive_message(socket_t &socket,
     }
     std::pair<VersionedModelId, int> container_info = container_info_entry->second;
 
-    // TODO: These callbacks should be submitted to a threadpool for
-    // execution on separate threads
-    new_response_callback_(response);
-    container_ready_callback_(container_info.first, container_info.second);
+    TaskExecutionThreadPool::submit_job(new_response_callback_, response);
+    TaskExecutionThreadPool::submit_job(container_ready_callback_, container_info.first, container_info.second);
 
     response_queue_->push(response);
   }
