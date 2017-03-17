@@ -58,13 +58,91 @@ class PredictionCache {
   std::shared_ptr<metrics::RatioCounter> hit_ratio_;
 };
 
+struct DeadlineCompare {
+  bool operator()(const std::pair<Deadline, PredictTask>& lhs,
+                  const std::pair<Deadline, PredictTask>& rhs) {
+    return lhs.first > rhs.first;
+  }
+};
+
+// thread safe model queue
+class ModelQueue {
+ public:
+  ModelQueue() : queue_(ModelPQueue{}) {}
+
+  // Disallow copy and assign
+  ModelQueue(const ModelQueue&) = delete;
+  ModelQueue& operator=(const ModelQueue&) = delete;
+
+  ModelQueue(ModelQueue&&) = default;
+  ModelQueue& operator=(ModelQueue&&) = default;
+
+  ~ModelQueue() = default;
+
+  void add_task(PredictTask task) {
+    std::unique_lock<std::mutex> l(queue_mutex_);
+    Deadline deadline = std::chrono::high_resolution_clock::now() +
+        std::chrono::microseconds(task.latency_slo_micros_);
+    queue_.emplace(deadline, std::move(task));
+    queue_not_empty_.notify_all();
+  }
+
+  int get_size() {
+    std::unique_lock<std::mutex> l(queue_mutex_);
+    return queue_.size();
+  }
+
+  // TODO: If we implement the scheduler so that it calls
+  // get_earliest_deadline(), then uses that to compute the batch size,
+  // then calls dequeue with that batch size, it's possible for a new
+  // task with an earlier deadline to be submitted. I'm not sure what the
+  // correct behavior here should be.
+  Deadline get_earliest_deadline() {
+    std::unique_lock<std::mutex> l(queue_mutex_);
+    if (queue_.size() == 0) {
+      queue_not_empty_.wait(l, [this] { return queue_.size() > 0; });
+    }
+    return queue_.top().first;
+  }
+
+  // Dequeues up to max_batch_size tasks from the queue without blocking
+  std::vector<PredictTask> get_batch(int max_batch_size) {
+    // NOTE: Because the queue lock is released and reacquired between a
+    // call to get_earliest_deadline() (which blocks until the queue is
+    // not empty) and the call to this method, it's possible for the queue
+    // to be empty, in which case the returned vector will have size 0.
+
+    std::unique_lock<std::mutex> l(queue_mutex_);
+    std::vector<PredictTask> batch;
+    while (batch.size() < (size_t)max_batch_size && queue_.size() > 0) {
+      batch.push_back(queue_.top().second);
+      queue_.pop();
+    }
+    return batch;
+  }
+
+ private:
+  // Min PriorityQueue so that the task with the earliest
+  // deadline is at the front of the queue
+  using ModelPQueue =
+  std::priority_queue<std::pair<Deadline, PredictTask>,
+                      std::vector<std::pair<Deadline, PredictTask>>,
+                      DeadlineCompare>;
+  ModelPQueue queue_;
+  std::mutex queue_mutex_;
+  std::condition_variable_any queue_not_empty_;
+};
+
 template <typename Scheduler>
 class TaskExecutor {
  public:
   ~TaskExecutor() { active_ = false; };
   explicit TaskExecutor()
       : active_containers_(std::make_shared<ActiveContainers>()),
-        rpc_(std::make_unique<rpc::RPCService>()) {
+        rpc_(std::make_unique<rpc::RPCService>()),
+        model_queues_(
+            std::unordered_map<const VersionedModelId, ModelQueue, decltype(&versioned_model_hash)>
+                (100, &versioned_model_hash)) {
     log_info(LOGGING_TAG_TASK_EXECUTOR, "TaskExecutor started");
     rpc_->start("*", RPC_SERVICE_PORT,
                 [this](VersionedModelId model, int replica_id) {
@@ -113,6 +191,11 @@ class TaskExecutor {
             // TODO: Create a new model queue if this is the first connected
             // container
             // hosting the specified model (i.e. replica_id == 0)
+            bool created_queue = create_model_queue_if_necessary(vm);
+            if(created_queue) {
+              log_info_formatted(
+                  LOGGING_TAG_TASK_EXECUTOR, "Created queue for new model: {} : {}", vm.first, vm.second);
+            }
           }
 
         });
@@ -139,17 +222,20 @@ class TaskExecutor {
     predictions_counter->increment(tasks.size());
     std::vector<boost::future<Output>> output_futures;
     for (auto t : tasks) {
-      // assign tasks to containers independently
-      auto replicas = active_containers_->get_model_replicas_snapshot(t.model_);
-      if (replicas.size() > 0) {
-        std::shared_ptr<ModelContainer> container =
-            scheduler_.assign_container(t, replicas);
-        container->send_prediction(t);
-        output_futures.push_back(std::move(cache_.fetch(t.model_, t.input_)));
+      // add each task to the queue corresponding to its associated model
+      auto model_queue_entry = model_queues_.find(t.model_);
+      if(model_queue_entry != model_queues_.end()) {
+        output_futures.push_back(cache_.fetch(t.model_, t.input_));
+        if(!output_futures.back().is_ready()) {
+          t.send_time_micros_ =
+              std::chrono::duration_cast<std::chrono::milliseconds>(
+                  std::chrono::system_clock::now().time_since_epoch())
+                  .count();
+          model_queue_entry->second.add_task(t);
+        }
       } else {
-        log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
-                           "No active containers found for model {}:{}",
-                           t.model_.first, t.model_.second);
+        log_error_formatted(
+            LOGGING_TAG_TASK_EXECUTOR, "Received task for unknown model: {} : {}", t.model_.first, t.model_.second);
       }
     }
     return output_futures;
@@ -181,6 +267,14 @@ class TaskExecutor {
   std::shared_ptr<metrics::Counter> predictions_counter;
   std::shared_ptr<metrics::Meter> throughput_meter;
   std::shared_ptr<metrics::Histogram> latency_hist;
+  std::unordered_map<const VersionedModelId, ModelQueue, decltype(&versioned_model_hash)> model_queues_;
+
+  bool create_model_queue_if_necessary(const VersionedModelId &model_id) {
+    auto queue_added = model_queues_.emplace(std::piecewise_construct,
+                                              std::forward_as_tuple(model_id),
+                                              std::forward_as_tuple());
+    return queue_added.second;
+  }
 
   void on_container_ready(VersionedModelId model_id, int replica_id) {
     std::shared_ptr<ModelContainer> container =
@@ -190,9 +284,15 @@ class TaskExecutor {
           "TaskExecutor failed to find previously registered active "
           "container!");
     }
-
-    while (true) {
-      auto batch = container->dequeue_predictions(max_batch_size_);
+    
+    while(true) {
+      auto model_queue_entry = model_queues_.find(container->model_);
+      if(model_queue_entry == model_queues_.end()) {
+        throw std::runtime_error("Failed to find model queue associated with a previously registered container!");
+      }
+      Deadline earliest_deadline = model_queue_entry->second.get_earliest_deadline();
+      size_t batch_size = container->get_batch_size(earliest_deadline);
+      auto batch = model_queue_entry->second.get_batch(batch_size);
       if (batch.size() > 0) {
         // move the lock up here, so that nothing can pull from the
         // inflight_messages_

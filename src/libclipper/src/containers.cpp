@@ -52,22 +52,6 @@ void ActiveContainers::add_container(VersionedModelId model, int connection_id,
   assert(containers_[new_container->model_].size() > 0);
 }
 
-std::vector<std::shared_ptr<ModelContainer>>
-ActiveContainers::get_model_replicas_snapshot(const VersionedModelId &model) {
-  boost::shared_lock<boost::shared_mutex> l{m_};
-  auto replicas_map_entry = containers_.find(model);
-  if (replicas_map_entry == containers_.end()) {
-    return {};
-  }
-
-  std::vector<std::shared_ptr<ModelContainer>> all_replicas;
-  for (auto kv : replicas_map_entry->second) {
-    all_replicas.push_back(kv.second);
-  }
-
-  return all_replicas;
-}
-
 std::shared_ptr<ModelContainer> ActiveContainers::get_model_replica(
     const VersionedModelId &model, const int replica_id) {
   auto replicas_map_entry = containers_.find(model);
