@@ -19,7 +19,7 @@ class SelectionState {
   SelectionState& operator=(const SelectionState&) = default;
   SelectionState(SelectionState&&) = default;
   SelectionState& operator=(SelectionState&&) = default;
-  virtual ~SelectionState();
+  virtual ~SelectionState() = default;
   virtual std::string get_debug_string() const = 0;
 };
 
@@ -36,7 +36,7 @@ class SelectionPolicy {
   SelectionPolicy& operator=(const SelectionPolicy&) = default;
   SelectionPolicy(SelectionPolicy&&) = default;
   SelectionPolicy& operator=(SelectionPolicy&&) = default;
-  virtual ~SelectionPolicy();
+  virtual ~SelectionPolicy() = default;
 
   // Query Pre-processing: select models and generate tasks
   virtual std::vector<PredictTask> select_predict_tasks(

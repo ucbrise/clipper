@@ -65,6 +65,14 @@ InputType parse_input_type(std::string type_string) {
 Output::Output(double y_hat, std::vector<VersionedModelId> models_used)
     : y_hat_(y_hat), models_used_(models_used) {}
 
+bool Output::operator==(const Output &rhs) const {
+  return (y_hat_ == rhs.y_hat_ && models_used_ == rhs.models_used_);
+}
+
+bool Output::operator!=(const Output &rhs) const {
+  return !(y_hat_ == rhs.y_hat_ && models_used_ == rhs.models_used_);
+}
+
 ByteVector::ByteVector(std::vector<uint8_t> data) : data_(std::move(data)) {}
 
 InputType ByteVector::type() const { return InputType::Bytes; }

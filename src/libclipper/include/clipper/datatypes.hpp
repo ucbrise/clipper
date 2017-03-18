@@ -40,6 +40,8 @@ class Output {
   Output(Output &&) = default;
   Output &operator=(Output &&) = default;
   Output(double y_hat, std::vector<VersionedModelId> models_used);
+  bool operator==(const Output &rhs) const;
+  bool operator!=(const Output &rhs) const;
   double y_hat_;
   std::vector<VersionedModelId> models_used_;
 };
