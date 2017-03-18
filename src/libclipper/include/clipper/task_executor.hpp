@@ -285,7 +285,7 @@ class TaskExecutor {
       throw std::runtime_error("Failed to find model queue associated with a previously registered container!");
     }
     
-    while(true) {
+    for(int i = 0; i < 1000; i++) {
       Deadline earliest_deadline = model_queue_entry->second.get_earliest_deadline();
       size_t batch_size = container->get_batch_size(earliest_deadline);
       auto batch = model_queue_entry->second.get_batch(batch_size);
@@ -310,6 +310,9 @@ class TaskExecutor {
         return;
       }
     }
+    TaskExecutionThreadPool::submit_job([this, model_id, replica_id]() {
+      on_container_ready(model_id, replica_id);
+    });
   }
 
   void on_response_recv(rpc::RPCResponse response) {
