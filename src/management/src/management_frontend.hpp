@@ -236,7 +236,7 @@ class RequestHandler {
    *  "name" := string,
    *  "candidate_model_names" := [string],
    *  "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
-   *  "selection_policy" := string,
+   *  "default_output" := json_string,
    *  "latency_slo_micros" := int
    * }
    */
@@ -247,9 +247,18 @@ class RequestHandler {
     std::string app_name = get_string(d, "name");
     std::vector<string> candidate_model_names =
         get_string_array(d, "candidate_model_names");
+    if (candidate_model_names.size() != 1) {
+      std::stringstream ss;
+      ss << "Applications must provide exactly 1 candidate model. ";
+      ss << app_name << " provided " << candidate_model_names.size();
+      std::string error_msg = ss.str();
+      clipper::log_error(LOGGING_TAG_MANAGEMENT_FRONTEND, error_msg);
+      return error_msg;
+    }
     InputType input_type =
         clipper::parse_input_type(get_string(d, "input_type"));
-    std::string selection_policy = get_string(d, "selection_policy");
+    std::string default_output = get_string(d, "default_output");
+    std::string selection_policy = "DefaultOutputSelectionPolicy";
     int latency_slo_micros = get_int(d, "latency_slo_micros");
     // check if application already exists
     std::unordered_map<std::string, std::string> existing_app_data =
@@ -257,7 +266,7 @@ class RequestHandler {
     if (existing_app_data.empty()) {
       if (clipper::redis::add_application(
               redis_connection_, app_name, candidate_model_names, input_type,
-              selection_policy, latency_slo_micros)) {
+              selection_policy, default_output, latency_slo_micros)) {
         return "Success!";
       } else {
         std::stringstream ss;
