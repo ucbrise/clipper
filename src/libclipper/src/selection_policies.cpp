@@ -73,7 +73,7 @@ std::vector<PredictTask> DefaultOutputSelectionPolicy::select_predict_tasks(
 }
 
 Output DefaultOutputSelectionPolicy::combine_predictions(
-    const std::shared_ptr<SelectionState>& state, Query query,
+    const std::shared_ptr<SelectionState>& state, Query /*query*/,
     std::vector<Output> predictions) const {
   if (predictions.size() == 1) {
     return predictions.front();
@@ -105,7 +105,7 @@ std::shared_ptr<SelectionState> DefaultOutputSelectionPolicy::process_feedback(
 
 std::shared_ptr<SelectionState> DefaultOutputSelectionPolicy::deserialize(
     std::string serialized_state) const {
-  return DefaultOutputSelectionState(serialized_state);
+  return std::make_shared<DefaultOutputSelectionState>(serialized_state);
 }
 
 std::string DefaultOutputSelectionPolicy::serialize(

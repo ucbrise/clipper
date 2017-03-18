@@ -1,6 +1,9 @@
 #ifndef CLIPPER_LIB_JSON_UTIL_H
 #define CLIPPER_LIB_JSON_UTIL_H
 
+#include <sstream>
+#include <stdexcept>
+
 #include <rapidjson/document.h>
 
 #include <clipper/datatypes.hpp>

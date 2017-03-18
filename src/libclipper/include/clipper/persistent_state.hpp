@@ -25,7 +25,7 @@ size_t state_key_hash(const StateKey& key);
 // Threadsafe, non-copyable state storage
 class StateDB {
  public:
-  StateDB();
+  explicit StateDB();
   ~StateDB();
 
   // Disallow copies because of the mutex

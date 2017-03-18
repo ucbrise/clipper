@@ -120,30 +120,8 @@ class RequestHandler {
             std::string policy = app_info["policy"];
             std::string default_output = app_info["default_output"];
             int latency_slo_micros = std::stoi(app_info["latency_slo_micros"]);
-            add_application(name, candidate_model_names, input_type, policy,
+            add_application(name, candidate_models, input_type, policy,
                             default_output, latency_slo_micros);
-          }
-        });
-
-    clipper::redis::subscribe_to_model_version_changes(
-        redis_subscriber_,
-        [this](const std::string& key, const std::string& event_type) {
-          clipper::log_info_formatted(
-              LOGGING_TAG_QUERY_FRONTEND,
-              "MODEL VERSION CHANGE DETECTED. Key: {}, event_type: {}", key,
-              event_type);
-          if (event_type == "set") {
-            std::string model_name = key;
-            int new_version = clipper::redis::get_current_model_version(
-                redis_connection_, key);
-            if (new_version >= 0) {
-              std::unique_lock<std::mutex> l(current_model_versions_mutex_);
-              current_model_versions_[key] = new_version;
-            } else {
-              clipper::log_error_formatted(
-                  LOGGING_TAG_QUERY_FRONTEND,
-                  "Model version change for model {} was invalid (-1).", key);
-            }
           }
         });
   }
@@ -161,7 +139,7 @@ class RequestHandler {
     // selection policies have a default output?
     //
     // Initialize selection state for this application
-    if (policy == clipper::DefaultOutputSelectionPolicy::get_name()) {
+    if (policy == "DefaultOutputSelectionPolicy") {
       clipper::DefaultOutputSelectionPolicy p;
       clipper::Output parsed_default_output(std::stod(default_output), {});
       auto init_state = p.init_state(parsed_default_output);

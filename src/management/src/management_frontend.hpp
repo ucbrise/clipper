@@ -334,29 +334,6 @@ class RequestHandler {
     return app_metadata["default_output"];
   }
 
-  bool set_model_version(const string& model_name,
-                         const int new_model_version) {
-    std::vector<int> versions =
-        clipper::redis::get_model_versions(redis_connection_, model_name);
-    bool version_exists = false;
-    for (auto v : versions) {
-      if (v == new_model_version) {
-        version_exists = true;
-        break;
-      }
-    }
-    if (version_exists) {
-      return clipper::redis::set_current_model_version(
-          redis_connection_, model_name, new_model_version);
-    } else {
-      clipper::log_error_formatted(
-          LOGGING_TAG_MANAGEMENT_FRONTEND,
-          "Cannot set non-existent version {} for model {}", new_model_version,
-          model_name);
-      return false;
-    }
-  }
-
   void start_listening() { server_.start(); }
 
  private:

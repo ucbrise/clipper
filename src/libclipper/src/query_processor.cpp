@@ -144,8 +144,8 @@ boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
   }
   std::shared_ptr<SelectionPolicy> current_policy = current_policy_iter->second;
 
-  auto state_opt =
-      state_db_->get(StateKey{feedback.label_, feedback.user_id_, 0});
+  StateKey state_key{feedback.label_, feedback.user_id_, 0};
+  auto state_opt = state_db_->get(state_key);
   if (!state_opt) {
     log_error_formatted(LOGGING_TAG_QUERY_PROCESSOR,
                         "No selection state found for query with label: {}",
@@ -194,7 +194,7 @@ boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
   auto select_policy_updated = select_policy_update_promise.get_future();
   all_preds_completed.then([
     moved_promise = std::move(select_policy_update_promise), selection_state,
-    current_policy, state_table, feedback, query_id,
+    current_policy, state_table, feedback, query_id, state_key,
     predict_task_futures = std::move(predict_task_futures)
   ](auto) mutable {
 
@@ -203,8 +203,9 @@ boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
     for (auto& r : predict_task_futures) {
       preds.push_back(r.get());
     }
-    current_policy->process_feedback(selection_state, feedback.feedback_,
-                                     preds);
+    auto new_selection_state = current_policy->process_feedback(
+        selection_state, feedback.feedback_, preds);
+    state_table->put(state_key, current_policy->serialize(new_selection_state));
     moved_promise.set_value(true);
   });
 
