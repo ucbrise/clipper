@@ -285,7 +285,6 @@ class TaskExecutor {
     if(model_queue_entry == model_queues_.end()) {
       throw std::runtime_error("Failed to find model queue associated with a previously registered container!");
     }
-<<<<<<< 6636e54bd4f21fd1434b30c76484af86fdcfd0f2
     
     for(int i = 0; i < 1000; i++) {
       Deadline earliest_deadline = model_queue_entry->second.get_earliest_deadline();
@@ -297,7 +296,7 @@ class TaskExecutor {
         // map between the time a message is sent and when it gets inserted
         // into the map
         std::unique_lock<std::mutex> l(inflight_messages_mutex_);
-
+        
         std::vector<
             std::tuple<const long, VersionedModelId, std::shared_ptr<Input>>>
             cur_batch;
@@ -306,8 +305,11 @@ class TaskExecutor {
           prediction_request.add_input(b.input_);
           cur_batch.emplace_back(b.send_time_micros_, b.model_, b.input_);
         }
+        int message_id = rpc_->send_message(prediction_request.serialize(),
+                                            container->container_id_);
+        inflight_messages_.emplace(message_id, std::move(cur_batch));
+        return;
       }
-      std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
     TaskExecutionThreadPool::submit_job([this, model_id, replica_id]() {
       on_container_ready(model_id, replica_id);
