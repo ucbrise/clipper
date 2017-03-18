@@ -39,7 +39,13 @@ def extract_cifar(loc):
     return (data, labels, test_data, test_labels)
 
 
-def extract_to_csv(loc, data, labels, test_data, test_labels, max_train_datapoints=None, max_test_datapoints=None):
+def extract_to_csv(loc,
+                   data,
+                   labels,
+                   test_data,
+                   test_labels,
+                   max_train_datapoints=None,
+                   max_test_datapoints=None):
     print("Writing out to CSV...")
     # Output to CSV format
     # Format: label,pixel0,pixel1,...
@@ -71,19 +77,23 @@ if __name__ == '__main__':
             <max_train_datapoints> <max_test_datapoints>")
         sys.exit(1)
     loc = os.path.abspath(os.path.expanduser(sys.argv[1]))
+
     def parse_datapoint_limits(input):
         if input == "None":
             return None
         else:
             limit = int(input)
-            if limit <=0:
+            if limit <= 0:
                 raise ValueError
             return limit
+
     try:
         max_train_datapoints = parse_datapoint_limits(sys.argv[2])
         max_test_datapoints = parse_datapoint_limits(sys.argv[3])
     except ValueError:
-        print("Invalid Input: <max_train_datapoints> and <max_test_datapoints> must be positive integers or None.")
+        print(
+            "Invalid Input: <max_train_datapoints> and <max_test_datapoints> must be positive integers or None."
+        )
         sys.exit(1)
     extract_to_csv(loc, *extract_cifar(loc), \
         max_train_datapoints=max_train_datapoints, max_test_datapoints=max_test_datapoints)
