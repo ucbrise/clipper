@@ -21,6 +21,10 @@ class MockQueryProcessor {
   boost::future<FeedbackAck> update(FeedbackQuery /*feedback*/) {
     return boost::make_ready_future(true);
   }
+
+  std::shared_ptr<StateDB> get_state_table() const {
+    return std::shared_ptr<StateDB>();
+  }
 };
 
 class QueryFrontendTest : public ::testing::Test {
@@ -46,7 +50,7 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputInts) {
   std::vector<int> expected_input{1, 2, 3, 4};
   EXPECT_EQ(parsed_input, expected_input);
   EXPECT_EQ(parsed_query.label_, "test");
-  EXPECT_EQ(parsed_query.latency_micros_, 30000);
+  EXPECT_EQ(parsed_query.latency_budget_micros_, 30000);
   EXPECT_EQ(parsed_query.selection_policy_, "test_policy");
 }
 
@@ -66,7 +70,7 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputDoubles) {
   std::vector<double> expected_input{1.4, 2.23, 3.243242, 0.3223424};
   EXPECT_EQ(parsed_input, expected_input);
   EXPECT_EQ(parsed_query.label_, "test");
-  EXPECT_EQ(parsed_query.latency_micros_, 30000);
+  EXPECT_EQ(parsed_query.latency_budget_micros_, 30000);
   EXPECT_EQ(parsed_query.selection_policy_, "test_policy");
 }
 
@@ -89,7 +93,7 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputString) {
       "hello world. This is a test string with punctionation!@#$Y#;}#");
   EXPECT_EQ(parsed_input, expected_input);
   EXPECT_EQ(parsed_query.label_, "test");
-  EXPECT_EQ(parsed_query.latency_micros_, 30000);
+  EXPECT_EQ(parsed_query.latency_budget_micros_, 30000);
   EXPECT_EQ(parsed_query.selection_policy_, "test_policy");
 }
 

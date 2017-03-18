@@ -15,6 +15,7 @@ add_library(clipper
     src/containers.cpp
     src/redis.cpp
     src/logging.cpp
+    src/json_util.cpp
     )
 
 

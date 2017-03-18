@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include <rapidjson/document.h>
+// #include <rapidjson/document.h>
 
 #include <clipper/datatypes.hpp>
 #include <clipper/json_util.hpp>
