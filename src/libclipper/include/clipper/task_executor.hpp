@@ -141,7 +141,7 @@ class TaskExecutor {
         rpc_(std::make_unique<rpc::RPCService>()),
         model_queues_(
             std::unordered_map<const VersionedModelId, ModelQueue, decltype(&versioned_model_hash)>
-                (100, &versioned_model_hash)) {
+                (INITIAL_MODEL_QUEUES_MAP_SIZE, &versioned_model_hash)) {
     log_info(LOGGING_TAG_TASK_EXECUTOR, "TaskExecutor started");
     rpc_->start("*", RPC_SERVICE_PORT,
                 [this](VersionedModelId model, int replica_id) {
@@ -264,6 +264,7 @@ class TaskExecutor {
   std::shared_ptr<metrics::Meter> throughput_meter;
   std::shared_ptr<metrics::Histogram> latency_hist;
   std::unordered_map<const VersionedModelId, ModelQueue, decltype(&versioned_model_hash)> model_queues_;
+  static constexpr int INITIAL_MODEL_QUEUES_MAP_SIZE = 100;
 
   bool create_model_queue_if_necessary(const VersionedModelId &model_id) {
     auto queue_added = model_queues_.emplace(std::piecewise_construct,
