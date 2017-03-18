@@ -141,8 +141,16 @@ boost::future<Response> QueryProcessor::predict(Query query) {
 
   vector<boost::future<Output>> task_futures =
       task_executor_.schedule_predictions(tasks);
+  long curr_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(
+      std::chrono::system_clock::now().time_since_epoch()).count();
+  long deadline_micros =
+      std::chrono::duration_cast<std::chrono::microseconds>(query.deadline_.time_since_epoch()).count();
+  long time_until_deadline_micros = deadline_micros - curr_time_micros;
+  if(time_until_deadline_micros < 0) {
+    time_until_deadline_micros = 0;
+  }
   boost::future<void> timer_future =
-      timer_system_.set_timer(query.latency_micros_);
+      timer_system_.set_timer(time_until_deadline_micros);
 
   // vector<boost::future<Output>> task_completion_futures;
 

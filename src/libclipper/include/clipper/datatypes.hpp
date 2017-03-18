@@ -12,6 +12,7 @@ using ByteBuffer = std::vector<uint8_t>;
 using VersionedModelId = std::pair<std::string, int>;
 using QueryId = long;
 using FeedbackAck = bool;
+using Deadline = std::chrono::time_point<std::chrono::high_resolution_clock>;
 
 enum class InputType {
   Bytes = 0,
@@ -191,7 +192,7 @@ class Query {
   ~Query() = default;
 
   Query(std::string label, long user_id, std::shared_ptr<Input> input,
-        long latency_micros, std::string selection_policy,
+        Deadline deadline, std::string selection_policy,
         std::vector<VersionedModelId> candidate_models);
 
   // Note that it should be relatively cheap to copy queries because
@@ -210,7 +211,7 @@ class Query {
   std::string label_;
   long user_id_;
   std::shared_ptr<Input> input_;
-  long latency_micros_;
+  Deadline deadline_;
   std::string selection_policy_;
   std::vector<VersionedModelId> candidate_models_;
   std::chrono::time_point<std::chrono::high_resolution_clock> create_time_;
@@ -283,7 +284,7 @@ class PredictTask {
   ~PredictTask() = default;
 
   PredictTask(std::shared_ptr<Input> input, VersionedModelId model,
-              float utility, QueryId query_id, long latency_slo_micros);
+              float utility, QueryId query_id, Deadline deadline);
 
   PredictTask(const PredictTask &other) = default;
 
@@ -297,7 +298,7 @@ class PredictTask {
   VersionedModelId model_;
   float utility_;
   QueryId query_id_;
-  long latency_slo_micros_;
+  Deadline deadline_;
   long send_time_micros_;
 };
 

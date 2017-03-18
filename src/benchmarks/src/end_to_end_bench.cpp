@@ -88,7 +88,6 @@ void send_predictions(
         query_vec = birds_vecs[bird_index];
         binary_labels.emplace_back(SKLEARN_BIRD_LABEL);
       }
-
       std::shared_ptr<Input> cifar_input =
           std::make_shared<DoubleVector>(query_vec);
       boost::future<Response> future =
