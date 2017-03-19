@@ -2,6 +2,7 @@ import urllib
 import sys
 import os
 
+
 def download_cifar(loc):
     # download and extract the data
     if not os.path.exists(loc):
@@ -15,7 +16,10 @@ def download_cifar(loc):
             os.path.join(loc, 'cifar-10-python.tar.gz'))
         print("Finished downloading")
     else:
-        print("CIFAR10 dataset found! If you wish to redownload, delete cifar-10-python.tar.gz at the given download location and re-run this command.")
+        print(
+            "CIFAR10 dataset found! If you wish to redownload, delete cifar-10-python.tar.gz at the given download location and re-run this command."
+        )
+
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:

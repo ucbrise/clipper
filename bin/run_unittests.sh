@@ -46,7 +46,8 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $DIR/..
 ./configure
 cd debug
-make -j2 unittests
+# make all to make sure all the binaries compile
+make -j2 all unittests
 if ! type "redis-server" &> /dev/null; then
     echo -e "\nERROR:"
     echo -e "\tUnit tests require Redis. Please install redis-server"

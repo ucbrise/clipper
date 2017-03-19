@@ -20,7 +20,6 @@ COLOR_GREEN = '\033[32m'
 
 
 class BenchSetup():
-
     def __init__(self, host, cifar_dir_path):
         self.host = host
         self.cifar_dir_path = cifar_dir_path
@@ -35,10 +34,11 @@ class BenchSetup():
         self.train_sklearn_model()
 
     def get_cifar_data(self):
-        train_x, train_y = cifar_utils.filter_data(
-            *cifar_utils.load_cifar(self.cifar_dir_path, cifar_filename="cifar_train.data", norm=False))
-        test_x, test_y = cifar_utils.filter_data(
-            *cifar_utils.load_cifar(self.cifar_dir_path, cifar_filename="cifar_test.data", norm=False))
+        train_x, train_y = cifar_utils.filter_data(*cifar_utils.load_cifar(
+            self.cifar_dir_path, cifar_filename="cifar_train.data",
+            norm=False))
+        test_x, test_y = cifar_utils.filter_data(*cifar_utils.load_cifar(
+            self.cifar_dir_path, cifar_filename="cifar_test.data", norm=False))
 
         return test_x, test_y, train_x, train_y
 
@@ -63,14 +63,14 @@ class BenchSetup():
             model.fit(train_x, train_y)
             joblib.dump(model, model_location)
             print("Model trained!")
-            print(
-                "Logistic Regression test score: %f" %
-                model.score(
-                    test_x, test_y))
+            print("Logistic Regression test score: %f" % model.score(
+                test_x, test_y))
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print("Correct usage is 'python bench_init.py <path_to_CIFAR_data_set>")
+        print(
+            "Correct usage is 'python bench_init.py <path_to_CIFAR_data_set>")
         raise
     cifar_dir_path = sys.argv[1]
     setup = BenchSetup("localhost", cifar_dir_path)

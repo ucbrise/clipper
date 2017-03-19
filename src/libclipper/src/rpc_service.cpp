@@ -1,6 +1,6 @@
 #include <boost/bimap.hpp>
-#include <boost/thread.hpp>
 #include <boost/functional/hash.hpp>
+#include <boost/thread.hpp>
 #include <chrono>
 #include <iostream>
 
@@ -13,8 +13,8 @@
 #include <clipper/redis.hpp>
 #include <clipper/rpc_service.hpp>
 #include <clipper/task_executor.hpp>
-#include <clipper/util.hpp>
 #include <clipper/threadpool.hpp>
+#include <clipper/util.hpp>
 
 using zmq::socket_t;
 using zmq::message_t;
@@ -46,10 +46,10 @@ RPCService::RPCService()
 
 RPCService::~RPCService() { stop(); }
 
-void RPCService::start(const string ip,
-           const int port,
-           std::function<void(VersionedModelId, int)> &&container_ready_callback,
-           std::function<void(RPCResponse)> &&new_response_callback) {
+void RPCService::start(
+    const string ip, const int port,
+    std::function<void(VersionedModelId, int)> &&container_ready_callback,
+    std::function<void(RPCResponse)> &&new_response_callback) {
   container_ready_callback_ = container_ready_callback;
   new_response_callback_ = new_response_callback;
   if (active_) {
@@ -112,9 +112,9 @@ void RPCService::manage_service(const string address) {
   // of connected containers with their metadata, including
   // model id and replica id
 
-  std::unordered_map
-      <std::vector<uint8_t>, std::pair<VersionedModelId, int>, std::function<size_t(const std::vector<uint8_t> &vec)>>
-       connections_containers_map(INITIAL_REPLICA_ID_SIZE, hash_vector<uint8_t>);
+  std::unordered_map<std::vector<uint8_t>, std::pair<VersionedModelId, int>,
+                     std::function<size_t(const std::vector<uint8_t> &vec)>>
+      connections_containers_map(INITIAL_REPLICA_ID_SIZE, hash_vector<uint8_t>);
   context_t context = context_t(1);
   socket_t socket = socket_t(context, ZMQ_ROUTER);
   socket.bind(address);
@@ -137,7 +137,8 @@ void RPCService::manage_service(const string address) {
       // Note: We only receive one message per event loop iteration
       log_info(LOGGING_TAG_RPC, "Found message to receive");
 
-      receive_message(socket, connections, connections_containers_map, zmq_connection_id, redis_connection);
+      receive_message(socket, connections, connections_containers_map,
+                      zmq_connection_id, redis_connection);
     }
     // Note: We send all queued messages per event loop iteration
     send_messages(socket, connections);
@@ -148,7 +149,7 @@ void RPCService::manage_service(const string address) {
 void RPCService::shutdown_service(socket_t &socket) {
   size_t buf_size = 32;
   std::vector<char> buf(buf_size);
-  socket.getsockopt(ZMQ_LAST_ENDPOINT, (void *) buf.data(), &buf_size);
+  socket.getsockopt(ZMQ_LAST_ENDPOINT, (void *)buf.data(), &buf_size);
   std::string last_endpoint = std::string(buf.begin(), buf.end());
   socket.unbind(last_endpoint);
   socket.close();
@@ -193,14 +194,12 @@ void RPCService::send_messages(
   }
 }
 
-void RPCService::receive_message(socket_t &socket,
-                                 boost::bimap<int, vector<uint8_t>> &connections,
-                                 std::unordered_map<std::vector<uint8_t>,
-                                                    std::pair<VersionedModelId, int>,
-                                                    std::function<size_t(const std::vector<uint8_t> &vec)>>
-                                                    &connections_containers_map,
-                                 int &zmq_connection_id,
-                                 std::shared_ptr<redox::Redox> redis_connection) {
+void RPCService::receive_message(
+    socket_t &socket, boost::bimap<int, vector<uint8_t>> &connections,
+    std::unordered_map<std::vector<uint8_t>, std::pair<VersionedModelId, int>,
+                       std::function<size_t(const std::vector<uint8_t> &vec)>>
+        &connections_containers_map,
+    int &zmq_connection_id, std::shared_ptr<redox::Redox> redis_connection) {
   message_t msg_identity;
   message_t msg_delimiter;
   socket.recv(&msg_identity, 0);
@@ -241,7 +240,8 @@ void RPCService::receive_message(socket_t &socket,
     replica_ids_[model] = cur_replica_id + 1;
     redis::add_container(*redis_connection, model, cur_replica_id,
                          zmq_connection_id, input_type);
-    connections_containers_map.emplace(connection_id, std::pair<VersionedModelId, int>(model, cur_replica_id));
+    connections_containers_map.emplace(
+        connection_id, std::pair<VersionedModelId, int>(model, cur_replica_id));
     zmq_connection_id += 1;
   } else {
     message_t msg_id;
@@ -254,13 +254,16 @@ void RPCService::receive_message(socket_t &socket,
     RPCResponse response(id, content);
 
     auto container_info_entry = connections_containers_map.find(connection_id);
-    if(container_info_entry == connections_containers_map.end()) {
-      throw std::runtime_error("Failed to find container that was previously registered via RPC");
+    if (container_info_entry == connections_containers_map.end()) {
+      throw std::runtime_error(
+          "Failed to find container that was previously registered via RPC");
     }
-    std::pair<VersionedModelId, int> container_info = container_info_entry->second;
+    std::pair<VersionedModelId, int> container_info =
+        container_info_entry->second;
 
     TaskExecutionThreadPool::submit_job(new_response_callback_, response);
-    TaskExecutionThreadPool::submit_job(container_ready_callback_, container_info.first, container_info.second);
+    TaskExecutionThreadPool::submit_job(
+        container_ready_callback_, container_info.first, container_info.second);
 
     response_queue_->push(response);
   }

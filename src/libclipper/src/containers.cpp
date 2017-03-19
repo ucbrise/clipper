@@ -41,9 +41,11 @@ void ActiveContainers::add_container(VersionedModelId model, int connection_id,
   log_info_formatted(
       LOGGING_TAG_CLIPPER,
       "Adding new container - model: {}, version: {}, ID: {}, input_type: {}",
-      model.first, model.second, connection_id, get_readable_input_type(input_type));
+      model.first, model.second, connection_id,
+      get_readable_input_type(input_type));
   boost::unique_lock<boost::shared_mutex> l{m_};
-  auto new_container = std::make_shared<ModelContainer>(model, connection_id, input_type);
+  auto new_container =
+      std::make_shared<ModelContainer>(model, connection_id, input_type);
   auto entry = containers_[new_container->model_];
   entry.emplace(replica_id, new_container);
   containers_[new_container->model_] = entry;
@@ -66,14 +68,15 @@ ActiveContainers::get_model_replicas_snapshot(const VersionedModelId &model) {
   return all_replicas;
 }
 
-std::shared_ptr<ModelContainer>
-ActiveContainers::get_model_replica(const VersionedModelId &model, const int replica_id) {
+std::shared_ptr<ModelContainer> ActiveContainers::get_model_replica(
+    const VersionedModelId &model, const int replica_id) {
   auto replicas_map_entry = containers_.find(model);
   if (replicas_map_entry == containers_.end()) {
     return nullptr;
   }
 
-  std::map<int, std::shared_ptr<ModelContainer>> replicas_map = replicas_map_entry->second;
+  std::map<int, std::shared_ptr<ModelContainer>> replicas_map =
+      replicas_map_entry->second;
   auto replica_entry = replicas_map.find(replica_id);
   if (replica_entry != replicas_map.end()) {
     return replica_entry->second;

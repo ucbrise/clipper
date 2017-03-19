@@ -15,8 +15,8 @@
 #include <clipper/metrics.hpp>
 #include <clipper/redis.hpp>
 #include <clipper/rpc_service.hpp>
-#include <clipper/util.hpp>
 #include <clipper/threadpool.hpp>
+#include <clipper/util.hpp>
 
 namespace clipper {
 
@@ -67,8 +67,12 @@ class TaskExecutor {
         rpc_(std::make_unique<rpc::RPCService>()) {
     log_info(LOGGING_TAG_TASK_EXECUTOR, "TaskExecutor started");
     rpc_->start("*", RPC_SERVICE_PORT,
-                [this](VersionedModelId model, int replica_id) { on_container_ready(model, replica_id); },
-                [this](rpc::RPCResponse response) { on_response_recv(std::move(response)); });
+                [this](VersionedModelId model, int replica_id) {
+                  on_container_ready(model, replica_id);
+                },
+                [this](rpc::RPCResponse response) {
+                  on_response_recv(std::move(response));
+                });
     active_ = true;
     Config &conf = get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
@@ -100,13 +104,14 @@ class TaskExecutor {
                                std::stoi(container_info["model_version"]));
             int replica_id = std::stoi(container_info["model_replica_id"]);
             active_containers_->add_container(
-                vm, std::stoi(container_info["zmq_connection_id"]),
-                replica_id, parse_input_type(container_info["input_type"]));
+                vm, std::stoi(container_info["zmq_connection_id"]), replica_id,
+                parse_input_type(container_info["input_type"]));
 
             TaskExecutionThreadPool::submit_job([this, vm, replica_id]() {
               on_container_ready(vm, replica_id);
             });
-            // TODO: Create a new model queue if this is the first connected container
+            // TODO: Create a new model queue if this is the first connected
+            // container
             // hosting the specified model (i.e. replica_id == 0)
           }
 
@@ -178,12 +183,15 @@ class TaskExecutor {
   std::shared_ptr<metrics::Histogram> latency_hist;
 
   void on_container_ready(VersionedModelId model_id, int replica_id) {
-    std::shared_ptr<ModelContainer> container = active_containers_->get_model_replica(model_id, replica_id);
-    if(!container) {
-      throw std::runtime_error("TaskExecutor failed to find previously registered active container!");
+    std::shared_ptr<ModelContainer> container =
+        active_containers_->get_model_replica(model_id, replica_id);
+    if (!container) {
+      throw std::runtime_error(
+          "TaskExecutor failed to find previously registered active "
+          "container!");
     }
-    
-    while(true) {
+
+    while (true) {
       auto batch = container->dequeue_predictions(max_batch_size_);
       if (batch.size() > 0) {
         // move the lock up here, so that nothing can pull from the
@@ -192,8 +200,8 @@ class TaskExecutor {
         // into the map
         std::unique_lock<std::mutex> l(inflight_messages_mutex_);
 
-        std::vector<std::tuple<const long, VersionedModelId,
-                               std::shared_ptr<Input>>>
+        std::vector<
+            std::tuple<const long, VersionedModelId, std::shared_ptr<Input>>>
             cur_batch;
         rpc::PredictionRequest prediction_request(container->input_type_);
         for (auto b : batch) {
@@ -213,15 +221,15 @@ class TaskExecutor {
     auto keys = inflight_messages_[response.first];
 
     inflight_messages_.erase(response.first);
-    std::vector<float> deserialized_outputs = deserialize_outputs(response.second);
+    std::vector<float> deserialized_outputs =
+        deserialize_outputs(response.second);
     assert(deserialized_outputs.size() == keys.size());
     int batch_size = keys.size();
     predictions_counter->increment(batch_size);
     throughput_meter->mark(batch_size);
-    long current_time =
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::system_clock::now().time_since_epoch())
-            .count();
+    long current_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::system_clock::now().time_since_epoch())
+                            .count();
     for (int batch_num = 0; batch_num < batch_size; ++batch_num) {
       long send_time = std::get<0>(keys[batch_num]);
       latency_hist->insert(static_cast<int64_t>(current_time - send_time));
