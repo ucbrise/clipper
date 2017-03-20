@@ -98,7 +98,7 @@ class Clipper:
         self.sudo = sudo
         self.host = host
         if self._host_is_local():
-            self.host="localhost"
+            self.host = "localhost"
             env.host_string = self.host
         else:
             if not user or not key_path:
