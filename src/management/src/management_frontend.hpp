@@ -242,7 +242,8 @@ class RequestHandler {
     InputType input_type =
         clipper::parse_input_type(get_string(d, "input_type"));
     std::string default_output = get_string(d, "default_output");
-    std::string selection_policy = "DefaultOutputSelectionPolicy";
+    std::string selection_policy =
+        clipper::DefaultOutputSelectionPolicy::get_name();
     int latency_slo_micros = get_int(d, "latency_slo_micros");
     // check if application already exists
     std::unordered_map<std::string, std::string> existing_app_data =

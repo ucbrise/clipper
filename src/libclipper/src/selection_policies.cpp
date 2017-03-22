@@ -6,8 +6,6 @@
 #include <utility>
 #include <vector>
 
-// #include <rapidjson/document.h>
-
 #include <clipper/datatypes.hpp>
 #include <clipper/json_util.hpp>
 #include <clipper/logging.hpp>
@@ -44,6 +42,10 @@ Output DefaultOutputSelectionState::deserialize(std::string serialized_state) {
   return Output(json::get_double(d, "y_hat"), {});
 }
 
+DefaultOutputSelectionPolicy::std::string get_name() const {
+  return "DefaultOutputSelectionPolicy";
+}
+
 std::shared_ptr<SelectionState> DefaultOutputSelectionPolicy::init_state(
     Output default_output) const {
   return std::make_shared<DefaultOutputSelectionState>(default_output);
@@ -53,19 +55,18 @@ std::vector<PredictTask> DefaultOutputSelectionPolicy::select_predict_tasks(
     std::shared_ptr<SelectionState> /*state*/, Query query,
     long query_id) const {
   std::vector<PredictTask> tasks;
-  int num_candidate_models = query.candidate_models_.size();
-  if (num_candidate_models == 0) {
+  size_t num_candidate_models = query.candidate_models_.size();
+  if (num_candidate_models == (size_t)0) {
     log_error_formatted(LOGGING_TAG_SELECTION_POLICY,
                         "No candidate models for query with label {}",
                         query.label_);
-  } else if (num_candidate_models == 1) {
-    tasks.emplace_back(query.input_, query.candidate_models_.front(), 1.0,
-                       query_id, query.latency_budget_micros_);
   } else {
-    log_error_formatted(LOGGING_TAG_SELECTION_POLICY,
-                        "{} candidate models provided for query with label "
-                        "{}. Picking the first one.",
-                        num_candidate_models, query.label_);
+    if (num_candidate_models > 1) {
+      log_error_formatted(LOGGING_TAG_SELECTION_POLICY,
+                          "{} candidate models provided for query with label "
+                          "{}. Picking the first one.",
+                          num_candidate_models, query.label_);
+    }
     tasks.emplace_back(query.input_, query.candidate_models_.front(), 1.0,
                        query_id, query.latency_budget_micros_);
   }
@@ -78,7 +79,7 @@ Output DefaultOutputSelectionPolicy::combine_predictions(
   if (predictions.size() == 1) {
     return predictions.front();
   } else if (predictions.empty()) {
-    return std::static_pointer_cast<DefaultOutputSelectionState>(state)
+    return std::dynamic_pointer_cast<DefaultOutputSelectionState>(state)
         ->default_output_;
   } else {
     log_error_formatted(LOGGING_TAG_SELECTION_POLICY,
@@ -110,7 +111,7 @@ std::shared_ptr<SelectionState> DefaultOutputSelectionPolicy::deserialize(
 
 std::string DefaultOutputSelectionPolicy::serialize(
     std::shared_ptr<SelectionState> state) const {
-  return std::static_pointer_cast<DefaultOutputSelectionState>(state)
+  return std::dynamic_pointer_cast<DefaultOutputSelectionState>(state)
       ->serialize();
 }
 

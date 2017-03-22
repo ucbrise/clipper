@@ -1,3 +1,4 @@
+#include <time.h>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -5,9 +6,8 @@
 #include <utility>
 #include <vector>
 
-#include <time.h>
-
 #include <boost/thread.hpp>
+#include <cxxopts.hpp>
 
 #include <rapidjson/document.h>
 #include <clipper/constants.hpp>
@@ -17,7 +17,6 @@
 #include <clipper/logging.hpp>
 #include <clipper/query_processor.hpp>
 #include <fstream>
-#include "../../libs/cxxopts/cxxopts.hpp"
 
 using namespace clipper;
 
@@ -30,6 +29,8 @@ const std::string CONFIG_KEY_BATCH_DELAY = "batch_delay";
 
 constexpr double SKLEARN_PLANE_LABEL = 1;
 constexpr double SKLEARN_BIRD_LABEL = 0;
+
+const std::string TEST_APPLICATION_LABEL = "test";
 
 std::unordered_map<int, std::vector<std::vector<double>>> load_cifar(
     std::unordered_map<std::string, std::string> &config) {
@@ -92,11 +93,11 @@ void send_predictions(
       std::shared_ptr<Input> cifar_input =
           std::make_shared<DoubleVector>(query_vec);
       boost::future<Response> future =
-          qp.predict({"test",
+          qp.predict({TEST_APPLICATION_LABEL,
                       0,
                       cifar_input,
                       100000,
-                      "EXP3",
+                      clipper::DefaultOutputSelectionPolicy::get_name(),
                       {std::make_pair(SKLEARN_MODEL_NAME, 1)}});
       futures.push_back(std::move(future));
     }
@@ -194,6 +195,13 @@ int main(int argc, char *argv[]) {
   get_config().ready();
   QueryProcessor qp;
   std::this_thread::sleep_for(std::chrono::seconds(3));
+
+  clipper::DefaultOutputSelectionPolicy p;
+  clipper::Output parsed_default_output(0.0, {});
+  auto init_state = p.init_state(parsed_default_output);
+  clipper::StateKey state_key{TEST_APPLICATION_LABEL, clipper::DEFAULT_USER_ID,
+                              0};
+  qp.get_state_table()->put(state_key, p.serialize(init_state));
   std::shared_ptr<metrics::RatioCounter> accuracy_ratio =
       metrics::MetricsRegistry::get_metrics().create_ratio_counter("accuracy");
   std::unordered_map<int, std::vector<std::vector<double>>> cifar_data =
