@@ -28,7 +28,7 @@ namespace clipper {
 
 QueryProcessor::QueryProcessor() : state_db_(std::make_shared<StateDB>()) {
   // Create selection policy instances
-  selection_policies_.emplace("DefaultOutputSelectionPolicy",
+  selection_policies_.emplace(DefaultOutputSelectionPolicy::get_name(),
                               std::make_shared<DefaultOutputSelectionPolicy>());
   log_info(LOGGING_TAG_QUERY_PROCESSOR, "Query Processor started");
 }

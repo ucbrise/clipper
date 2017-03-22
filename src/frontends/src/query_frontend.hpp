@@ -139,7 +139,7 @@ class RequestHandler {
     // selection policies have a default output?
     //
     // Initialize selection state for this application
-    if (policy == "DefaultOutputSelectionPolicy") {
+    if (policy == clipper::DefaultOutputSelectionPolicy::get_name()) {
       clipper::DefaultOutputSelectionPolicy p;
       clipper::Output parsed_default_output(std::stod(default_output), {});
       auto init_state = p.init_state(parsed_default_output);

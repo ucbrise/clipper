@@ -12,6 +12,20 @@ namespace clipper {
 
 const std::string LOGGING_TAG_SELECTION_POLICY = "SELECTIONPOLICY";
 
+/**
+ * An instance of a SelectionPolicy class must be stateless and Clipper
+ * provides no guarantees about which instance of a SelectionPolicy
+ * will be used at any given time. The only reason SelectionPolicy
+ * objects are created at all is that in C++ using object hierarchies
+ * is the simplest way to achieve the type of polymorphic specialization
+ * we need for selection policies.
+ *
+ * Because these SelectionPolicy instances are stateless, all state
+ * needed for processing is encapsulated in a SelectionState object
+ * which is managed by Clipper and stored in a persistent
+ * database. The separate of policy and state allows Clipper to re-use
+ * the same SelectionPolicy instance with different SelectionStates.
+ */
 class SelectionState {
  public:
   SelectionState() = default;
@@ -102,6 +116,9 @@ class DefaultOutputSelectionPolicy : public SelectionPolicy {
   DefaultOutputSelectionPolicy& operator=(DefaultOutputSelectionPolicy&&) =
       default;
   ~DefaultOutputSelectionPolicy() = default;
+
+  static std::string get_name() const;
+
   std::shared_ptr<SelectionState> init_state(Output default_output) const;
 
   std::vector<PredictTask> select_predict_tasks(

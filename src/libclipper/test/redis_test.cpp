@@ -182,7 +182,7 @@ TEST_F(RedisTest, AddApplication) {
   std::vector<std::string> model_names{"music_random_features", "simple_svm",
                                        "music_cnn"};
   InputType input_type = InputType::Doubles;
-  std::string policy = "exp3_policy";
+  std::string policy = DefaultOutputSelectionPolicy::get_name();
   std::string default_output = "1.0";
   int latency_slo_micros = 10000;
   ASSERT_TRUE(add_application(*redis_, name, models, input_type, policy,
