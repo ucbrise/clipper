@@ -33,10 +33,10 @@ public enum DataType {
         }
     }
 
-    public static DataType fromCode(int code) {
+    public static DataType fromCode(int code) throws IllegalArgumentException {
         if(!typeResolutionMap.containsKey(code)) {
-            // TODO: THROW HERE!!!
-            return Bytes;
+            throw new IllegalArgumentException(
+                    String.format("Attempted to get data type from invalid code \"%d\"", code));
         }
         return typeResolutionMap.get(code);
     }
