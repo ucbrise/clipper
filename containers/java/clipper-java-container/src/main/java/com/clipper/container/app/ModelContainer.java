@@ -1,19 +1,14 @@
-import java.io.ByteArrayOutputStream;
+package com.clipper.container.app;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.ArrayList;
 import java.util.List;
 
+import com.clipper.container.app.data.*;
 import org.zeromq.ZMQ;
-
-import data.DataType;
-import data.DataUtils;
-import data.DataVector;
-import data.FloatVector;
-import data.DataVectorParser;
 
 class ModelContainer<I extends DataVector<?>> {
   private static String CONNECTION_ADDRESS = "tcp://%s:%s";

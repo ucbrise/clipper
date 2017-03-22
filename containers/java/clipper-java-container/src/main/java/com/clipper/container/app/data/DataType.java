@@ -1,4 +1,4 @@
-package data;
+package com.clipper.container.app.data;
 
 import java.util.HashMap;
 import java.util.Map;

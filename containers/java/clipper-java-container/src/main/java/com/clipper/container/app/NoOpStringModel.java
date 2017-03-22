@@ -1,6 +1,8 @@
-import data.DataType;
-import data.FloatVector;
-import data.SerializableString;
+package com.clipper.container.app;
+
+import com.clipper.container.app.data.DataType;
+import com.clipper.container.app.data.FloatVector;
+import com.clipper.container.app.data.SerializableString;
 
 import java.util.ArrayList;
 import java.util.List;

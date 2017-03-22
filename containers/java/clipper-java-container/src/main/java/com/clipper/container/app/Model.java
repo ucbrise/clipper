@@ -1,6 +1,9 @@
-import data.DataVector;
-import data.FloatVector;
-import data.DataType;
+package com.clipper.container.app;
+
+import com.clipper.container.app.data.DataType;
+import com.clipper.container.app.data.DataVector;
+import com.clipper.container.app.data.FloatVector;
+
 import java.util.List;
 
 abstract class Model<I extends DataVector> {
@@ -8,7 +11,7 @@ abstract class Model<I extends DataVector> {
   private int version;
   DataType inputType;
 
-  Model(String name, int version, DataType inputType) {
+  protected Model(String name, int version, DataType inputType) {
     this.name = name;
     this.version = version;
     this.inputType = inputType;

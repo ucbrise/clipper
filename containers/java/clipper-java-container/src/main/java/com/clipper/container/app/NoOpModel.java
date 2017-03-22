@@ -1,11 +1,14 @@
-import data.DataType;
-import data.DoubleVector;
-import data.FloatVector;
+package com.clipper.container.app;
+
+import com.clipper.container.app.data.DataType;
+import com.clipper.container.app.data.DoubleVector;
+import com.clipper.container.app.data.FloatVector;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class NoOpModel extends Model<DoubleVector> {
+class NoOpModel extends Model<DoubleVector> {
+
   NoOpModel(String name, int version) {
     super(name, version, DataType.Doubles);
   }

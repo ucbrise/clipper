@@ -1,3 +1,5 @@
+package com.clipper.container.app;
+
 public class PerformanceTimer {
 
     static long lastLog;
