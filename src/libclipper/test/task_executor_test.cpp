@@ -91,6 +91,4 @@ TEST(TaskExecutorTests, ModelQueueOrdersElementsOnEarliestDeadline) {
   ASSERT_EQ(third_task.query_id_, task_a.query_id_);
 }
 
-
-
 }
