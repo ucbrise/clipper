@@ -305,11 +305,8 @@ class TaskExecutor {
           prediction_request.add_input(b.input_);
           cur_batch.emplace_back(b.send_time_micros_, b.model_, b.input_);
         }
-        int message_id = rpc_->send_message(prediction_request.serialize(),
-                                            container->container_id_);
-        inflight_messages_.emplace(message_id, std::move(cur_batch));
-        return;
       }
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
     TaskExecutionThreadPool::submit_job([this, model_id, replica_id]() {
       on_container_ready(model_id, replica_id);
