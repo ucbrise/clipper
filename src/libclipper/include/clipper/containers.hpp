@@ -12,6 +12,8 @@
 
 namespace clipper {
 
+using Deadline = std::chrono::time_point<std::chrono::high_resolution_clock>;
+
 class ModelContainer {
  public:
   ~ModelContainer() = default;

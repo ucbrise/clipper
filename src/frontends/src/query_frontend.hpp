@@ -13,7 +13,6 @@
 #include <clipper/metrics.hpp>
 #include <clipper/query_processor.hpp>
 #include <clipper/redis.hpp>
-#include <clipper/datatypes.hpp>
 
 #include <server_http.hpp>
 
@@ -204,11 +203,8 @@ class RequestHandler {
     clipper::json::parse_json(json_content, d);
     long uid = clipper::json::get_long(d, "uid");
     std::shared_ptr<Input> input = clipper::json::parse_input(input_type, d);
-    auto deadline_duration = std::chrono::duration_cast<std::chrono::microseconds>(
-        std::chrono::system_clock::now().time_since_epoch()) + latency_slo_micros;
-    Deadline deadline(curr_time_micros + latency_slo_micros);
     auto prediction = query_processor_.predict(
-        Query{name, uid, input, deadline, policy, models});
+        Query{name, uid, input, latency_slo_micros, policy, models});
     return prediction;
   }
 

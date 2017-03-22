@@ -136,7 +136,7 @@ std::vector<PredictTask> Exp3Policy::select_predict_tasks(
     BanditPolicyState state, Query query, long query_id) {
   auto selected_model = select(state);
   auto task = PredictTask(query.input_, selected_model, 1.0, query_id,
-                          query.deadline_);
+                          query.latency_micros_);
   std::vector<PredictTask> tasks{task};
   return tasks;
 }
@@ -156,9 +156,8 @@ Exp3Policy::select_feedback_tasks(BanditPolicyState& state,
                                   FeedbackQuery feedback, long query_id) {
   // Predict Task
   auto selected_model = select(state);
-  Deadline deadline(std::chrono::system_clock::now().time_since_epoch());
   auto predict_task =
-      PredictTask(feedback.feedback_.input_, selected_model, -1, query_id, deadline);
+      PredictTask(feedback.feedback_.input_, selected_model, -1, query_id, -1);
   std::vector<PredictTask> predict_tasks{predict_task};
   // Feedback Task
   std::vector<FeedbackTask> feedback_tasks;
@@ -240,7 +239,7 @@ std::vector<PredictTask> Exp4Policy::select_predict_tasks(
   std::vector<PredictTask> tasks;
   for (VersionedModelId id : query.candidate_models_) {
     auto task =
-        PredictTask(query.input_, id, 1.0, query_id, query.deadline_);
+        PredictTask(query.input_, id, 1.0, query_id, query.latency_micros_);
     tasks.push_back(task);
   }
   return tasks;
@@ -276,10 +275,9 @@ Exp4Policy::select_feedback_tasks(BanditPolicyState& /*state*/,
                                   FeedbackQuery feedback, long query_id) {
   std::vector<PredictTask> predict_tasks;
   std::vector<FeedbackTask> feedback_tasks;
-  Deadline deadline(std::chrono::system_clock::now().time_since_epoch());
   for (VersionedModelId id : feedback.candidate_models_) {
     auto predict_task =
-        PredictTask(feedback.feedback_.input_, id, -1, query_id, deadline);
+        PredictTask(feedback.feedback_.input_, id, -1, query_id, -1);
     predict_tasks.push_back(predict_task);
   }
   return std::make_pair(predict_tasks, feedback_tasks);
@@ -385,7 +383,7 @@ std::vector<PredictTask> EpsilonGreedyPolicy::select_predict_tasks(
     BanditPolicyState& state, Query query, long query_id) {
   auto selected_model = select(state);
   auto task = PredictTask(query.input_, selected_model, 1.0, query_id,
-                          query.deadline_);
+                          query.latency_micros_);
   std::vector<PredictTask> tasks{task};
   return tasks;
 }
@@ -406,9 +404,8 @@ EpsilonGreedyPolicy::select_feedback_tasks(BanditPolicyState& state,
                                            long query_id) {
   // Predict Task
   auto selected_model = select(state);
-  Deadline deadline(std::chrono::system_clock::now().time_since_epoch());
   auto predict_task =
-      PredictTask(feedback.feedback_.input_, selected_model, -1, query_id, deadline);
+      PredictTask(feedback.feedback_.input_, selected_model, -1, query_id, -1);
   std::vector<PredictTask> predict_tasks{predict_task};
   // Feedback Task
   std::vector<FeedbackTask> feedback_tasks;
@@ -508,7 +505,7 @@ std::vector<PredictTask> UCBPolicy::select_predict_tasks(
     BanditPolicyState& state, Query query, long query_id) {
   auto selected_model = select(state);
   auto task = PredictTask(query.input_, selected_model, 1.0, query_id,
-                          query.deadline_);
+                          query.latency_micros_);
   std::vector<PredictTask> tasks{task};
   return tasks;
 }
@@ -528,9 +525,8 @@ UCBPolicy::select_feedback_tasks(BanditPolicyState& state,
                                  FeedbackQuery feedback, long query_id) {
   // Predict Task
   auto selected_model = select(state);
-  Deadline deadline(std::chrono::system_clock::now().time_since_epoch());
   auto predict_task =
-      PredictTask(feedback.feedback_.input_, selected_model, -1, query_id, deadline);
+      PredictTask(feedback.feedback_.input_, selected_model, -1, query_id, -1);
   std::vector<PredictTask> predict_tasks{predict_task};
   // Feedback Task
   std::vector<FeedbackTask> feedback_tasks;

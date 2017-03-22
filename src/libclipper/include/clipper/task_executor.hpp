@@ -4,11 +4,8 @@
 #include <memory>
 #include <mutex>
 #include <unordered_map>
-#include <chrono>
-#include <thread>
 
 #include <boost/thread.hpp>
-#include <boost/optional.hpp>
 #include <redox.hpp>
 
 #include <clipper/config.hpp>
@@ -84,7 +81,10 @@ class ModelQueue {
 
   void add_task(PredictTask task) {
     std::unique_lock<std::mutex> l(queue_mutex_);
-    queue_.emplace(task.deadline_, std::move(task));
+    Deadline deadline = std::chrono::high_resolution_clock::now() +
+        std::chrono::microseconds(task.latency_slo_micros_);
+    queue_.emplace(deadline, std::move(task));
+    queue_not_empty_.notify_all();
   }
 
   int get_size() {
@@ -97,14 +97,12 @@ class ModelQueue {
   // then calls dequeue with that batch size, it's possible for a new
   // task with an earlier deadline to be submitted. I'm not sure what the
   // correct behavior here should be.
-  boost::optional<Deadline> get_earliest_deadline() {
+  Deadline get_earliest_deadline() {
     std::unique_lock<std::mutex> l(queue_mutex_);
-    if(queue_.size() > 0) {
-      Deadline earliest_deadline = queue_.top().first;
-      return earliest_deadline;
-    } else {
-      return boost::optional<Deadline>{};
+    if (queue_.size() == 0) {
+      queue_not_empty_.wait(l, [this] { return queue_.size() > 0; });
     }
+    return queue_.top().first;
   }
 
   // Dequeues up to max_batch_size tasks from the queue without blocking
@@ -132,6 +130,7 @@ class ModelQueue {
                       DeadlineCompare>;
   ModelPQueue queue_;
   std::mutex queue_mutex_;
+  std::condition_variable_any queue_not_empty_;
 };
 
 class TaskExecutor {
@@ -188,6 +187,8 @@ class TaskExecutor {
             TaskExecutionThreadPool::submit_job([this, vm, replica_id]() {
               on_container_ready(vm, replica_id);
             });
+            // TODO: Create a new model queue if this is the first connected container
+            // hosting the specified model (i.e. replica_id == 0)
             bool created_queue = create_model_queue_if_necessary(vm);
             if(created_queue) {
               log_info_formatted(
@@ -265,8 +266,6 @@ class TaskExecutor {
   static constexpr int INITIAL_MODEL_QUEUES_MAP_SIZE = 100;
 
   bool create_model_queue_if_necessary(const VersionedModelId &model_id) {
-    // Adds a new queue corresponding to the supplied model_id,
-    // if no queue already exists for the given model
     auto queue_added = model_queues_.emplace(std::piecewise_construct,
                                               std::forward_as_tuple(model_id),
                                               std::forward_as_tuple());
@@ -296,7 +295,6 @@ class TaskExecutor {
         // map between the time a message is sent and when it gets inserted
         // into the map
         std::unique_lock<std::mutex> l(inflight_messages_mutex_);
-        
         std::vector<
             std::tuple<const long, VersionedModelId, std::shared_ptr<Input>>>
             cur_batch;
@@ -305,8 +303,11 @@ class TaskExecutor {
           prediction_request.add_input(b.input_);
           cur_batch.emplace_back(b.send_time_micros_, b.model_, b.input_);
         }
+        int message_id = rpc_->send_message(prediction_request.serialize(),
+                                            container->container_id_);
+        inflight_messages_.emplace(message_id, std::move(cur_batch));
+        return;
       }
-      std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
     TaskExecutionThreadPool::submit_job([this, model_id, replica_id]() {
       on_container_ready(model_id, replica_id);
