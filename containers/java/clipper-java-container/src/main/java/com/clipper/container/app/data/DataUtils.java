@@ -85,9 +85,4 @@ public class DataUtils {
             }
         });
     }
-
-    public static List<String> getStringsFromBytes(byte[] bytes) {
-        // TODO: This one's harder
-        return null;
-    }
 }

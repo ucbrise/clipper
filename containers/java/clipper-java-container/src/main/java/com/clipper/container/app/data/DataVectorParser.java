@@ -14,17 +14,11 @@ public abstract class DataVectorParser<U, T extends DataVector<U>> {
     dataBuffer.init(byteBuffer);
     List<U> parsedArrays = new ArrayList<>();
     int prevSplit = 0;
-    // System.out.println(splits);
     for (int split : splits) {
       U parsedArray = dataBuffer.get(0, split - prevSplit);
       parsedArrays.add(parsedArray);
       prevSplit = split;
     }
-    // System.out.println("array length: " + byteBuffer.array().length);
-    // System.out.println("prevSplit: " + prevSplit);
-    // System.out.print("last size: ");
-    // System.out.println(byteBuffer.array().length - prevSplit);
-    // get the last input
     U parsedArray = dataBuffer.getAll();
     parsedArrays.add(parsedArray);
     return parsedArrays;
