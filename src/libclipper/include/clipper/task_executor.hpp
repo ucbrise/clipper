@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include <boost/thread.hpp>
+#include <boost/optional.hpp>
 #include <redox.hpp>
 
 #include <clipper/config.hpp>
@@ -84,7 +85,6 @@ class ModelQueue {
     Deadline deadline = std::chrono::high_resolution_clock::now() +
         std::chrono::microseconds(task.latency_slo_micros_);
     queue_.emplace(deadline, std::move(task));
-    queue_not_empty_.notify_all();
   }
 
   int get_size() {
@@ -97,12 +97,14 @@ class ModelQueue {
   // then calls dequeue with that batch size, it's possible for a new
   // task with an earlier deadline to be submitted. I'm not sure what the
   // correct behavior here should be.
-  Deadline get_earliest_deadline() {
+  boost::optional<Deadline> get_earliest_deadline() {
     std::unique_lock<std::mutex> l(queue_mutex_);
     if (queue_.size() == 0) {
-      queue_not_empty_.wait(l, [this] { return queue_.size() > 0; });
+      return boost::optional<Deadline>{};
+    } else {
+      Deadline earliest_deadline = queue_.top().first;
+      return boost::optional<Deadline>(earliest_deadline);
     }
-    return queue_.top().first;
   }
 
   // Dequeues up to max_batch_size tasks from the queue without blocking
@@ -130,7 +132,6 @@ class ModelQueue {
                       DeadlineCompare>;
   ModelPQueue queue_;
   std::mutex queue_mutex_;
-  std::condition_variable_any queue_not_empty_;
 };
 
 class TaskExecutor {
@@ -284,28 +285,30 @@ class TaskExecutor {
     if(model_queue_entry == model_queues_.end()) {
       throw std::runtime_error("Failed to find model queue associated with a previously registered container!");
     }
-    
-    Deadline earliest_deadline = model_queue_entry->second.get_earliest_deadline();
-    size_t batch_size = container->get_batch_size(earliest_deadline);
-    auto batch = model_queue_entry->second.get_batch(batch_size);
-    if (batch.size() > 0) {
-      // move the lock up here, so that nothing can pull from the
-      // inflight_messages_
-      // map between the time a message is sent and when it gets inserted
-      // into the map
-      std::unique_lock<std::mutex> l(inflight_messages_mutex_);
-      std::vector<
-          std::tuple<const long, VersionedModelId, std::shared_ptr<Input>>>
-          cur_batch;
-      rpc::PredictionRequest prediction_request(container->input_type_);
-      for (auto b : batch) {
-        prediction_request.add_input(b.input_);
-        cur_batch.emplace_back(b.send_time_micros_, b.model_, b.input_);
+
+    boost::optional<Deadline> earliest_deadline = model_queue_entry->second.get_earliest_deadline();
+    if(earliest_deadline) {
+      size_t batch_size = container->get_batch_size(earliest_deadline.get());
+      auto batch = model_queue_entry->second.get_batch(batch_size);
+      if (batch.size() > 0) {
+        // move the lock up here, so that nothing can pull from the
+        // inflight_messages_
+        // map between the time a message is sent and when it gets inserted
+        // into the map
+        std::unique_lock<std::mutex> l(inflight_messages_mutex_);
+        std::vector<
+            std::tuple<const long, VersionedModelId, std::shared_ptr<Input>>>
+            cur_batch;
+        rpc::PredictionRequest prediction_request(container->input_type_);
+        for (auto b : batch) {
+          prediction_request.add_input(b.input_);
+          cur_batch.emplace_back(b.send_time_micros_, b.model_, b.input_);
+        }
+        int message_id = rpc_->send_message(prediction_request.serialize(),
+                                            container->container_id_);
+        inflight_messages_.emplace(message_id, std::move(cur_batch));
+        return;
       }
-      int message_id = rpc_->send_message(prediction_request.serialize(),
-                                          container->container_id_);
-      inflight_messages_.emplace(message_id, std::move(cur_batch));
-      return;
     }
 
     TaskExecutionThreadPool::submit_job([this, model_id, replica_id]() {
