@@ -187,8 +187,6 @@ class TaskExecutor {
             TaskExecutionThreadPool::submit_job([this, vm, replica_id]() {
               on_container_ready(vm, replica_id);
             });
-            // TODO: Create a new model queue if this is the first connected container
-            // hosting the specified model (i.e. replica_id == 0)
             bool created_queue = create_model_queue_if_necessary(vm);
             if(created_queue) {
               log_info_formatted(
@@ -266,6 +264,8 @@ class TaskExecutor {
   static constexpr int INITIAL_MODEL_QUEUES_MAP_SIZE = 100;
 
   bool create_model_queue_if_necessary(const VersionedModelId &model_id) {
+    // Adds a new <model_id, task_queue> entry to the queues map, if one
+    // does not already exist
     auto queue_added = model_queues_.emplace(std::piecewise_construct,
                                               std::forward_as_tuple(model_id),
                                               std::forward_as_tuple());
@@ -285,30 +285,29 @@ class TaskExecutor {
       throw std::runtime_error("Failed to find model queue associated with a previously registered container!");
     }
     
-    for(int i = 0; i < 1000; i++) {
-      Deadline earliest_deadline = model_queue_entry->second.get_earliest_deadline();
-      size_t batch_size = container->get_batch_size(earliest_deadline);
-      auto batch = model_queue_entry->second.get_batch(batch_size);
-      if (batch.size() > 0) {
-        // move the lock up here, so that nothing can pull from the
-        // inflight_messages_
-        // map between the time a message is sent and when it gets inserted
-        // into the map
-        std::unique_lock<std::mutex> l(inflight_messages_mutex_);
-        std::vector<
-            std::tuple<const long, VersionedModelId, std::shared_ptr<Input>>>
-            cur_batch;
-        rpc::PredictionRequest prediction_request(container->input_type_);
-        for (auto b : batch) {
-          prediction_request.add_input(b.input_);
-          cur_batch.emplace_back(b.send_time_micros_, b.model_, b.input_);
-        }
-        int message_id = rpc_->send_message(prediction_request.serialize(),
-                                            container->container_id_);
-        inflight_messages_.emplace(message_id, std::move(cur_batch));
-        return;
+    Deadline earliest_deadline = model_queue_entry->second.get_earliest_deadline();
+    size_t batch_size = container->get_batch_size(earliest_deadline);
+    auto batch = model_queue_entry->second.get_batch(batch_size);
+    if (batch.size() > 0) {
+      // move the lock up here, so that nothing can pull from the
+      // inflight_messages_
+      // map between the time a message is sent and when it gets inserted
+      // into the map
+      std::unique_lock<std::mutex> l(inflight_messages_mutex_);
+      std::vector<
+          std::tuple<const long, VersionedModelId, std::shared_ptr<Input>>>
+          cur_batch;
+      rpc::PredictionRequest prediction_request(container->input_type_);
+      for (auto b : batch) {
+        prediction_request.add_input(b.input_);
+        cur_batch.emplace_back(b.send_time_micros_, b.model_, b.input_);
       }
+      int message_id = rpc_->send_message(prediction_request.serialize(),
+                                          container->container_id_);
+      inflight_messages_.emplace(message_id, std::move(cur_batch));
+      return;
     }
+
     TaskExecutionThreadPool::submit_job([this, model_id, replica_id]() {
       on_container_ready(model_id, replica_id);
     });
