@@ -131,7 +131,7 @@ class Clipper:
                 "mkdir -p {model_repo}".format(model_repo=MODEL_REPO))
 
     def _execute_root(self, *args, **kwargs):
-        if not sudo:
+        if not self.sudo:
             return self._execute_standard(*args, **kwargs)
         else if self._host_is_local():
             return self._execute_local(*args, **kwargs)
