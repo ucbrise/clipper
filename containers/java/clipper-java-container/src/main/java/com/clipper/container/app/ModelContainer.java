@@ -32,7 +32,11 @@ class ModelContainer<I extends DataVector<?>> {
         // Initialize ZMQ
         ZMQ.Socket socket = context.socket(ZMQ.DEALER);
         createConnection(socket, model, ip, port);
-        serveModel(socket, model);
+        try {
+          serveModel(socket, model);
+        } catch (NoSuchFieldException | IllegalArgumentException e) {
+          e.printStackTrace();
+        }
       }
     });
     servingThread.start();
@@ -54,15 +58,14 @@ class ModelContainer<I extends DataVector<?>> {
     socket.send(String.valueOf(model.getInputType().getCode()));
   }
 
-  private void serveModel(ZMQ.Socket socket, Model<I> model) {
+  private void serveModel(ZMQ.Socket socket, Model<I> model) throws NoSuchFieldException, IllegalArgumentException {
     while (true) {
       socket.recv();
       PerformanceTimer.startTiming();
       byte[] idMessage = socket.recv();
       List<Long> parsedIdMessage = DataUtils.getUnsignedIntsFromBytes(idMessage);
       if (parsedIdMessage.size() < 1) {
-        // TODO: Throw an exception here
-        return;
+        throw new NoSuchFieldException("Field \"message_id\" is missing from RPC message");
       }
       long msgId = parsedIdMessage.get(0);
       System.out.println("Message ID: " + msgId);
@@ -70,8 +73,7 @@ class ModelContainer<I extends DataVector<?>> {
       byte[] requestHeaderMessage = socket.recv();
       List<Integer> requestHeader = DataUtils.getSignedIntsFromBytes(requestHeaderMessage);
       if (requestHeader.size() < 1) {
-        // TODO: Throw an exception here
-        return;
+        throw new NoSuchFieldException("Request header is missing from RPC message");
       }
       RequestType requestType = RequestType.fromCode(requestHeader.get(0));
 
@@ -84,8 +86,7 @@ class ModelContainer<I extends DataVector<?>> {
 
         List<Integer> inputHeader = DataUtils.getSignedIntsFromBytes(inputHeaderMessage);
         if (inputHeader.size() < 2) {
-          // TODO: Throw here
-          return;
+          throw new NoSuchFieldException("RPC message input header is missing or is of insufficient size");
         }
 
         DataType inputType = DataType.fromCode(inputHeader.get(0));
@@ -111,9 +112,13 @@ class ModelContainer<I extends DataVector<?>> {
     }
   }
 
-  private void validateRequestInputType(Model<I> model, DataType inputType) {
+  private void validateRequestInputType(Model<I> model, DataType inputType) throws IllegalArgumentException {
     if (model.inputType != inputType) {
-      // TODO: THROW HERE
+      throw new IllegalArgumentException(
+              String.format(
+                      "RPC message has input of incorrect type \"{}\". Expected type: \"{}\"",
+                      inputType.toString(),
+                      model.inputType.toString()));
     }
   }
 

@@ -25,10 +25,10 @@ public enum RequestType {
         }
     }
 
-    public static RequestType fromCode(int code) {
+    public static RequestType fromCode(int code) throws IllegalArgumentException {
         if(!typeResolutionMap.containsKey(code)) {
-            // TODO: THROW HERE!!!
-            return Predict;
+            throw new IllegalArgumentException(
+                    String.format("Attempted to get request type from invalid code \"%d\"", code));
         }
         return typeResolutionMap.get(code);
     }
