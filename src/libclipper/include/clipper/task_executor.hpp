@@ -5,8 +5,8 @@
 #include <mutex>
 #include <unordered_map>
 
-#include <boost/thread.hpp>
 #include <boost/optional.hpp>
+#include <boost/thread.hpp>
 #include <redox.hpp>
 
 #include <clipper/config.hpp>
@@ -60,8 +60,8 @@ class PredictionCache {
 };
 
 struct DeadlineCompare {
-  bool operator()(const std::pair<Deadline, PredictTask>& lhs,
-                  const std::pair<Deadline, PredictTask>& rhs) {
+  bool operator()(const std::pair<Deadline, PredictTask> &lhs,
+                  const std::pair<Deadline, PredictTask> &rhs) {
     return lhs.first > rhs.first;
   }
 };
@@ -72,18 +72,18 @@ class ModelQueue {
   ModelQueue() : queue_(ModelPQueue{}) {}
 
   // Disallow copy and assign
-  ModelQueue(const ModelQueue&) = delete;
-  ModelQueue& operator=(const ModelQueue&) = delete;
+  ModelQueue(const ModelQueue &) = delete;
+  ModelQueue &operator=(const ModelQueue &) = delete;
 
-  ModelQueue(ModelQueue&&) = default;
-  ModelQueue& operator=(ModelQueue&&) = default;
+  ModelQueue(ModelQueue &&) = default;
+  ModelQueue &operator=(ModelQueue &&) = default;
 
   ~ModelQueue() = default;
 
   void add_task(PredictTask task) {
     std::unique_lock<std::mutex> l(queue_mutex_);
     Deadline deadline = std::chrono::high_resolution_clock::now() +
-        std::chrono::microseconds(task.latency_slo_micros_);
+                        std::chrono::microseconds(task.latency_slo_micros_);
     queue_.emplace(deadline, std::move(task));
   }
 
@@ -127,9 +127,9 @@ class ModelQueue {
   // Min PriorityQueue so that the task with the earliest
   // deadline is at the front of the queue
   using ModelPQueue =
-  std::priority_queue<std::pair<Deadline, PredictTask>,
-                      std::vector<std::pair<Deadline, PredictTask>>,
-                      DeadlineCompare>;
+      std::priority_queue<std::pair<Deadline, PredictTask>,
+                          std::vector<std::pair<Deadline, PredictTask>>,
+                          DeadlineCompare>;
   ModelPQueue queue_;
   std::mutex queue_mutex_;
 };
@@ -140,9 +140,9 @@ class TaskExecutor {
   explicit TaskExecutor()
       : active_containers_(std::make_shared<ActiveContainers>()),
         rpc_(std::make_unique<rpc::RPCService>()),
-        model_queues_(
-            std::unordered_map<const VersionedModelId, ModelQueue, decltype(&versioned_model_hash)>
-                (INITIAL_MODEL_QUEUES_MAP_SIZE, &versioned_model_hash)) {
+        model_queues_(std::unordered_map<const VersionedModelId, ModelQueue,
+                                         decltype(&versioned_model_hash)>(
+            INITIAL_MODEL_QUEUES_MAP_SIZE, &versioned_model_hash)) {
     log_info(LOGGING_TAG_TASK_EXECUTOR, "TaskExecutor started");
     rpc_->start("*", RPC_SERVICE_PORT,
                 [this](VersionedModelId model, int replica_id) {
@@ -189,9 +189,10 @@ class TaskExecutor {
               on_container_ready(vm, replica_id);
             });
             bool created_queue = create_model_queue_if_necessary(vm);
-            if(created_queue) {
-              log_info_formatted(
-                  LOGGING_TAG_TASK_EXECUTOR, "Created queue for new model: {} : {}", vm.first, vm.second);
+            if (created_queue) {
+              log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
+                                 "Created queue for new model: {} : {}",
+                                 vm.first, vm.second);
             }
           }
 
@@ -221,9 +222,9 @@ class TaskExecutor {
     for (auto t : tasks) {
       // add each task to the queue corresponding to its associated model
       auto model_queue_entry = model_queues_.find(t.model_);
-      if(model_queue_entry != model_queues_.end()) {
+      if (model_queue_entry != model_queues_.end()) {
         output_futures.push_back(cache_.fetch(t.model_, t.input_));
-        if(!output_futures.back().is_ready()) {
+        if (!output_futures.back().is_ready()) {
           t.send_time_micros_ =
               std::chrono::duration_cast<std::chrono::milliseconds>(
                   std::chrono::system_clock::now().time_since_epoch())
@@ -231,8 +232,9 @@ class TaskExecutor {
           model_queue_entry->second.add_task(t);
         }
       } else {
-        log_error_formatted(
-            LOGGING_TAG_TASK_EXECUTOR, "Received task for unknown model: {} : {}", t.model_.first, t.model_.second);
+        log_error_formatted(LOGGING_TAG_TASK_EXECUTOR,
+                            "Received task for unknown model: {} : {}",
+                            t.model_.first, t.model_.second);
       }
     }
     return output_futures;
@@ -261,15 +263,17 @@ class TaskExecutor {
   std::shared_ptr<metrics::Counter> predictions_counter;
   std::shared_ptr<metrics::Meter> throughput_meter;
   std::shared_ptr<metrics::Histogram> latency_hist;
-  std::unordered_map<const VersionedModelId, ModelQueue, decltype(&versioned_model_hash)> model_queues_;
+  std::unordered_map<const VersionedModelId, ModelQueue,
+                     decltype(&versioned_model_hash)>
+      model_queues_;
   static constexpr int INITIAL_MODEL_QUEUES_MAP_SIZE = 100;
 
   bool create_model_queue_if_necessary(const VersionedModelId &model_id) {
     // Adds a new <model_id, task_queue> entry to the queues map, if one
     // does not already exist
     auto queue_added = model_queues_.emplace(std::piecewise_construct,
-                                              std::forward_as_tuple(model_id),
-                                              std::forward_as_tuple());
+                                             std::forward_as_tuple(model_id),
+                                             std::forward_as_tuple());
     return queue_added.second;
   }
 
@@ -282,12 +286,15 @@ class TaskExecutor {
           "container!");
     }
     auto model_queue_entry = model_queues_.find(container->model_);
-    if(model_queue_entry == model_queues_.end()) {
-      throw std::runtime_error("Failed to find model queue associated with a previously registered container!");
+    if (model_queue_entry == model_queues_.end()) {
+      throw std::runtime_error(
+          "Failed to find model queue associated with a previously registered "
+          "container!");
     }
 
-    boost::optional<Deadline> earliest_deadline = model_queue_entry->second.get_earliest_deadline();
-    if(earliest_deadline) {
+    boost::optional<Deadline> earliest_deadline =
+        model_queue_entry->second.get_earliest_deadline();
+    if (earliest_deadline) {
       size_t batch_size = container->get_batch_size(earliest_deadline.get());
       auto batch = model_queue_entry->second.get_batch(batch_size);
       if (batch.size() > 0) {

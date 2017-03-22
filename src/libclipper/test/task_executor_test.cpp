@@ -1,13 +1,13 @@
 #include <gtest/gtest.h>
 #include <chrono>
 
-#include <clipper/task_executor.hpp>
-#include <clipper/datatypes.hpp>
 #include <clipper/containers.hpp>
+#include <clipper/datatypes.hpp>
+#include <clipper/task_executor.hpp>
 
 using namespace clipper;
 
-namespace  {
+namespace {
 
 /**
  * Creates a predict task with the specified query_id.
@@ -16,7 +16,7 @@ namespace  {
  */
 PredictTask create_predict_task(long query_id, long latency_slo_millis) {
   std::vector<double> data;
-  VersionedModelId model_id = std::make_pair<std::string,int>("test", 1);
+  VersionedModelId model_id = std::make_pair<std::string, int>("test", 1);
   data.push_back(1.0);
   std::shared_ptr<Input> input = std::make_shared<DoubleVector>(data);
   PredictTask task(input, model_id, 1.0, query_id, latency_slo_millis);
@@ -29,23 +29,32 @@ TEST(TaskExecutorTests, TestDeadlineComparisonsWorkCorrectly) {
   Deadline later = current_time + std::chrono::hours(1);
 
   PredictTask task = create_predict_task(1, 10000);
-  std::pair<Deadline, PredictTask> deadline_task_pair_current = std::make_pair(current_time, task);
-  std::pair<Deadline, PredictTask> deadline_task_pair_earlier = std::make_pair(earlier, task);
-  std::pair<Deadline, PredictTask> deadline_task_pair_later = std::make_pair(later, task);
+  std::pair<Deadline, PredictTask> deadline_task_pair_current =
+      std::make_pair(current_time, task);
+  std::pair<Deadline, PredictTask> deadline_task_pair_earlier =
+      std::make_pair(earlier, task);
+  std::pair<Deadline, PredictTask> deadline_task_pair_later =
+      std::make_pair(later, task);
 
   DeadlineCompare deadline_compare;
-  bool current_greater_than_earlier = deadline_compare(deadline_task_pair_current, deadline_task_pair_earlier);
-  bool earlier_greater_than_current = deadline_compare(deadline_task_pair_earlier, deadline_task_pair_current);
+  bool current_greater_than_earlier =
+      deadline_compare(deadline_task_pair_current, deadline_task_pair_earlier);
+  bool earlier_greater_than_current =
+      deadline_compare(deadline_task_pair_earlier, deadline_task_pair_current);
   ASSERT_TRUE(current_greater_than_earlier);
   ASSERT_FALSE(earlier_greater_than_current);
 
-  bool current_greater_than_later = deadline_compare(deadline_task_pair_current, deadline_task_pair_later);
-  bool later_greater_than_current = deadline_compare(deadline_task_pair_later, deadline_task_pair_current);
+  bool current_greater_than_later =
+      deadline_compare(deadline_task_pair_current, deadline_task_pair_later);
+  bool later_greater_than_current =
+      deadline_compare(deadline_task_pair_later, deadline_task_pair_current);
   ASSERT_FALSE(current_greater_than_later);
   ASSERT_TRUE(later_greater_than_current);
 
-  bool earlier_greater_than_later = deadline_compare(deadline_task_pair_earlier, deadline_task_pair_later);
-  bool later_greater_than_earlier = deadline_compare(deadline_task_pair_later, deadline_task_pair_earlier);
+  bool earlier_greater_than_later =
+      deadline_compare(deadline_task_pair_earlier, deadline_task_pair_later);
+  bool later_greater_than_earlier =
+      deadline_compare(deadline_task_pair_later, deadline_task_pair_earlier);
   ASSERT_FALSE(earlier_greater_than_later);
   ASSERT_TRUE(later_greater_than_earlier);
 }
@@ -90,5 +99,4 @@ TEST(TaskExecutorTests, ModelQueueOrdersElementsOnEarliestDeadline) {
   ASSERT_EQ(second_task.query_id_, task_b.query_id_);
   ASSERT_EQ(third_task.query_id_, task_a.query_id_);
 }
-
 }
