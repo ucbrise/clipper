@@ -42,7 +42,7 @@ Output DefaultOutputSelectionState::deserialize(std::string serialized_state) {
   return Output(json::get_double(d, "y_hat"), {});
 }
 
-DefaultOutputSelectionPolicy::std::string get_name() const {
+std::string DefaultOutputSelectionPolicy::get_name() {
   return "DefaultOutputSelectionPolicy";
 }
 

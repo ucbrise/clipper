@@ -10,6 +10,7 @@
 #include <clipper/datatypes.hpp>
 #include <clipper/logging.hpp>
 #include <clipper/redis.hpp>
+#include <clipper/selection_policies.hpp>
 #include <redox.hpp>
 
 using namespace clipper;
