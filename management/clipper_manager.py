@@ -77,13 +77,15 @@ class Clipper:
     ----------
     host : str
         The hostname of the machine to start Clipper on. The machine
-        should allow passwordless SSH access. 
+        should allow passwordless SSH access.
     user : str, optional
         The SSH username. This field must be specified if `host` is not local.
     key_path : str, optional.
         The path to the SSH private key. This field must be specified if `host` is not local.
     sudo : bool, optional.
         Specifies level of execution for docker commands (sudo if true, standard if false).
+    ssh_port : int, optional
+        The SSH port to use. Default is port 22.
 
     Sets up the machine for running Clipper. This includes verifying
     SSH credentials and initializing Docker.
@@ -92,11 +94,13 @@ class Clipper:
     before connecting to a machine.
     """
 
-    def __init__(self, host, user=None, key_path=None, sudo=False):
-        self.host = host
+    def __init__(self, host, user=None, key_path=None, sudo=False, ssh_port=22):
         self.sudo = sudo
-        env.host_string = host
-        if not self._host_is_local():
+        self.host = host
+        if self._host_is_local():
+            self.host = "localhost"
+            env.host_string = self.host
+        else:
             if not user or not key_path:
                 print(
                     "user and key_path must be specified when instantiating Clipper with a nonlocal host"
@@ -104,6 +108,7 @@ class Clipper:
                 raise
             env.user = user
             env.key_filename = key_path
+            env.host_string = "%s:%d" % (host, ssh_port)
         # Make sure docker is running on cluster
         self._start_docker_if_necessary()
 
