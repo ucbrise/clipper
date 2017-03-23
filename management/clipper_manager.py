@@ -243,7 +243,7 @@ class Clipper:
                              name,
                              model,
                              input_type,
-                             selection_policy,
+                             default_output,
                              slo_micros=20000):
         """Register a new Clipper application.
 
@@ -255,9 +255,9 @@ class Clipper:
             The name of the model this application will query.
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
-        selection_policy : str
-            The name of the model selection policy to be used for the
-            application.
+        default_output : float
+            The default prediction to use if the model does not return a prediction
+            by the end of the latency objective.
         slo_micros : int, optional
             The query latency objective for the application in microseconds.
             Default is 20,000 (20 ms).
@@ -267,7 +267,7 @@ class Clipper:
             "name": name,
             "candidate_model_names": list(model),
             "input_type": input_type,
-            "selection_policy": selection_policy,
+            "default_output": default_output,
             "latency_slo_micros": slo_micros
         })
         headers = {'Content-type': 'application/json'}
