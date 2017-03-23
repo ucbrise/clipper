@@ -117,7 +117,7 @@ class DefaultOutputSelectionPolicy : public SelectionPolicy {
       default;
   ~DefaultOutputSelectionPolicy() = default;
 
-  static std::string get_name() const;
+  static std::string get_name();
 
   std::shared_ptr<SelectionState> init_state(Output default_output) const;
 
