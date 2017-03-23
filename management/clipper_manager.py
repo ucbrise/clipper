@@ -274,7 +274,7 @@ class Clipper:
             "name": name,
             "candidate_models": list(model),
             "input_type": input_type,
-            "default_output": str(default_output),
+            "default_output": default_output,
             "latency_slo_micros": slo_micros
         })
         headers = {'Content-type': 'application/json'}
