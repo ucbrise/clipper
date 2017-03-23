@@ -82,6 +82,8 @@ class Clipper:
         The SSH username. This field must be specified if `host` is not local.
     key_path : str, optional.
         The path to the SSH private key. This field must be specified if `host` is not local.
+    sudo : bool, optional.
+        Specifies level of execution for docker commands (sudo if true, standard if false).
 
     Sets up the machine for running Clipper. This includes verifying
     SSH credentials and initializing Docker.
@@ -90,8 +92,9 @@ class Clipper:
     before connecting to a machine.
     """
 
-    def __init__(self, host, user=None, key_path=None):
+    def __init__(self, host, user=None, key_path=None, sudo=False):
         self.host = host
+        self.sudo = sudo
         env.host_string = host
         if not self._host_is_local():
             if not user or not key_path:
@@ -128,7 +131,9 @@ class Clipper:
                 "mkdir -p {model_repo}".format(model_repo=MODEL_REPO))
 
     def _execute_root(self, *args, **kwargs):
-        if self._host_is_local():
+        if not self.sudo:
+            return self._execute_standard(*args, **kwargs)
+        else if self._host_is_local():
             return self._execute_local(*args, **kwargs)
         else:
             return sudo(*args, **kwargs)
