@@ -438,10 +438,8 @@ class Clipper:
                                             "AWS_SECRET_ACCESS_KEY"]))
 
                         self._execute_standard(
-                            "aws s3 cp {model_data_path} {dl_path} --recursive".
-                            format(
-                                model_data_path=model_data_path,
-                                dl_path=os.path.join(
+                            "aws s3 cp {model_data_path} {dl_path} --recursive". format(
+                                model_data_path=model_data_path, dl_path=os.path.join(
                                     vol, os.path.basename(model_data_path))))
                     else:
                         with hide("output", "running"):
