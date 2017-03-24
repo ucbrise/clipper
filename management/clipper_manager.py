@@ -94,7 +94,8 @@ class Clipper:
     before connecting to a machine.
     """
 
-    def __init__(self, host, user=None, key_path=None, sudo=False, ssh_port=22):
+    def __init__(self, host, user=None, key_path=None, sudo=False,
+                 ssh_port=22):
         self.sudo = sudo
         self.host = host
         if self._host_is_local():
@@ -138,7 +139,7 @@ class Clipper:
     def _execute_root(self, *args, **kwargs):
         if not self.sudo:
             return self._execute_standard(*args, **kwargs)
-        else if self._host_is_local():
+        elif self._host_is_local():
             return self._execute_local(*args, **kwargs)
         else:
             return sudo(*args, **kwargs)
