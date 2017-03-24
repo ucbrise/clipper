@@ -138,7 +138,7 @@ class Clipper:
     def _execute_root(self, *args, **kwargs):
         if not self.sudo:
             return self._execute_standard(*args, **kwargs)
-        else if self._host_is_local():
+        elif self._host_is_local():
             return self._execute_local(*args, **kwargs)
         else:
             return sudo(*args, **kwargs)
