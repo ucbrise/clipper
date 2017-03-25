@@ -34,6 +34,9 @@ namespace query_frontend {
 const std::string LOGGING_TAG_QUERY_FRONTEND = "QUERYFRONTEND";
 const std::string GET_METRICS = "^/metrics$";
 
+const std::string RESPONSE_KEY_OUTPUT = "output";
+const std::string RESPONSE_KEY_USED_DEFAULT = "default";
+
 const std::string PREDICTION_JSON_SCHEMA = R"(
   {
    "uid" := string,
@@ -169,6 +172,11 @@ class RequestHandler {
           Response r = f.get();
           std::stringstream ss;
           ss << "qid:" << r.query_id_ << ", predict:" << r.output_.y_hat_;
+
+          rapidjson::Document json_response;
+          clipper::json::add_double(json_response, RESPONSE_KEY_OUTPUT, r.output_.y_hat_);
+          clipper::json::
+
           std::string content = ss.str();
           respond_http(content, "200 OK", response);
         });
