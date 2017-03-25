@@ -41,7 +41,7 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   long query_id = query_counter_.fetch_add(1);
   boost::future<Response> error_response =
       boost::make_ready_future(Response{query, query_id, 20000, Output{1.0, {}},
-                                        std::vector<VersionedModelId>()});
+                                        false, std::vector<VersionedModelId>()});
   auto current_policy_iter = selection_policies_.find(query.selection_policy_);
   if (current_policy_iter == selection_policies_.end()) {
     log_error_formatted(LOGGING_TAG_QUERY_PROCESSOR,
@@ -110,7 +110,7 @@ boost::future<Response> QueryProcessor::predict(Query query) {
       }
     }
 
-    Output final_output =
+    std::pair<Output, bool> final_output =
         current_policy->combine_predictions(selection_state, query, outputs);
     std::chrono::time_point<std::chrono::high_resolution_clock> end =
         std::chrono::high_resolution_clock::now();
@@ -119,8 +119,8 @@ boost::future<Response> QueryProcessor::predict(Query query) {
             end - query.create_time_)
             .count();
 
-    Response response{query, query_id, duration_micros, final_output,
-                      query.candidate_models_};
+    Response response{query, query_id, duration_micros, final_output.first,
+                      final_output.second, query.candidate_models_};
     response_promise.set_value(response);
   });
   return response_future;

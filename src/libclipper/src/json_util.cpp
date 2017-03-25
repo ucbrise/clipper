@@ -46,7 +46,17 @@ rapidjson::Value& check_kv_type_and_return(rapidjson::Value& d,
   return val;
 }
 
-/* Getters with error handling for double, float, long, int, string */
+/* Getters with error handling for boolean, double, float, long, int, string */
+bool get_bool(rapidjson::Value& d, const char* key_name) {
+  rapidjson::Value& v =
+      check_kv_type_and_return(d, key_name, rapidjson::kNumberType);
+  if (!v.IsBool()) {
+    throw json_semantic_error("Input of type " + kTypeNames[v.GetType()] +
+        " is not of type double");
+  }
+  return v.GetBool();
+}
+
 double get_double(rapidjson::Value& d, const char* key_name) {
   rapidjson::Value& v =
       check_kv_type_and_return(d, key_name, rapidjson::kNumberType);
@@ -242,6 +252,12 @@ void add_kv_pair(rapidjson::Document& d, const char* key_name,
   rapidjson::Document::AllocatorType& allocator = d.GetAllocator();
   rapidjson::Value key(key_name, allocator);
   d.AddMember(key, value_to_add, allocator);
+}
+
+void add_bool(rapidjson::Document& d, const char* key_name, bool value_to_add) {
+  rapidjson::Document boolean_doc;
+  boolean_doc.SetBool(value_to_add);
+  add_kv_pair(d, key_name, boolean_doc);
 }
 
 void add_double_array(rapidjson::Document& d, const char* key_name,

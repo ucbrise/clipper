@@ -45,7 +45,9 @@ rapidjson::Value& check_kv_type_and_return(rapidjson::Value& d,
                                            const char* key_name,
                                            Type expected_type);
 
-/* Getters with error handling for double, float, long, int, string */
+/* Getters with error handling for bool, double, float, long, int, string */
+bool get_bool(rapidjson::Value& d, const char* key_name);
+
 double get_double(rapidjson::Value& d, const char* key_name);
 
 float get_float(rapidjson::Value& d, const char* key_name);
@@ -78,6 +80,8 @@ std::shared_ptr<Input> parse_input(InputType input_type, rapidjson::Value& d);
 /* Utilities for serialization into JSON */
 void add_kv_pair(rapidjson::Document& d, const char* key_name,
                  rapidjson::Value& value_to_add);
+
+void add_bool(rapidjson::Document& d, const char* key_name, bool value_to_add);
 
 void add_double_array(rapidjson::Document& d, const char* key_name,
                       std::vector<double>& values_to_add);

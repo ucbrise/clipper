@@ -73,20 +73,23 @@ std::vector<PredictTask> DefaultOutputSelectionPolicy::select_predict_tasks(
   return tasks;
 }
 
-Output DefaultOutputSelectionPolicy::combine_predictions(
-    const std::shared_ptr<SelectionState>& state, Query /*query*/,
+const std::pair<Output, bool>
+DefaultOutputSelectionPolicy::combine_predictions(
+    const std::shared_ptr<SelectionState>& state,
+    Query /*query*/,
     std::vector<Output> predictions) const {
   if (predictions.size() == 1) {
-    return predictions.front();
+    return std::make_pair(std::move(predictions.front()), false);
   } else if (predictions.empty()) {
-    return std::dynamic_pointer_cast<DefaultOutputSelectionState>(state)
-        ->default_output_;
+    Output default_output =
+        std::dynamic_pointer_cast<DefaultOutputSelectionState>(state)->default_output_;
+    return std::make_pair(std::move(default_output), true);
   } else {
     log_error_formatted(LOGGING_TAG_SELECTION_POLICY,
                         "DefaultOutputSelectionPolicy only expecting 1 "
                         "output but found {}. Returning the first one.",
                         predictions.size());
-    return predictions.front();
+    return std::make_pair(std::move(predictions.front()), false);
   }
 }
 
