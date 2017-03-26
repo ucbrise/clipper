@@ -5,6 +5,8 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import com.clipper.container.app.data.*;
@@ -94,7 +96,7 @@ class ModelContainer<I extends DataVector<?>> {
         List<Integer> inputSplits = inputHeader.subList(2, inputHeader.size());
         validateRequestInputType(model, inputType);
         // PROCESS SPLITS
-        List<I> dataVectors = inputVectorParser.parse(ByteBuffer.wrap(rawContent), inputSplits);
+        Iterator<I> dataVectors = inputVectorParser.parseDataVectors(ByteBuffer.wrap(rawContent), inputSplits);
 
         PerformanceTimer.logElapsed("Parse");
 
@@ -123,8 +125,13 @@ class ModelContainer<I extends DataVector<?>> {
   }
 
   private void handlePredictRequest(
-      long msgId, List<I> dataVectors, Model<I> model, ZMQ.Socket socket) throws IOException {
-    List<FloatVector> predictions = model.predict(dataVectors);
+      long msgId, Iterator<I> dataVectors, Model<I> model, ZMQ.Socket socket) throws IOException {
+    List<FloatVector> predictions = new ArrayList<FloatVector>();
+    while(dataVectors.hasNext()) {
+      I dataVector = dataVectors.next();
+      FloatVector prediction = model.predict(dataVector);
+      predictions.add(prediction);
+    }
     int outputBufferLen = 0;
     for (FloatVector p : predictions) {
       outputBufferLen += p.getData().length;

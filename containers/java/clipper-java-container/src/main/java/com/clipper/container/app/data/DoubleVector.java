@@ -1,5 +1,7 @@
 package com.clipper.container.app.data;
 
+import com.clipper.container.app.Pair;
+
 import java.nio.ByteBuffer;
 import java.nio.DoubleBuffer;
 import java.nio.ByteOrder;
@@ -21,20 +23,24 @@ public class DoubleVector extends DataVector<double[]> {
     }
 
     @Override
-    DataBuffer<double[]> getDataBuffer() {
+    DataBuffer<double[]> createDataBuffer() {
       return new DataBuffer<double[]>() {
 
         DoubleBuffer buffer;
+        double[] data = new double[INITIAL_BUFFER_SIZE];
 
         @Override
         void init(ByteBuffer buffer) {
+
           buffer.order(ByteOrder.LITTLE_ENDIAN);
           this.buffer = buffer.asDoubleBuffer();
         }
 
         @Override
         double[] get(int offset, int size) {
-          double[] data = new double[size];
+          if(size > data.length) {
+            data = new double[data.length * 2];
+          }
           buffer.get(data, offset, size);
           return data;
         }
@@ -42,9 +48,7 @@ public class DoubleVector extends DataVector<double[]> {
         @Override
         double[] getAll() {
           int size = buffer.remaining();
-          double[] data = new double[size];
-          buffer.get(data, 0, size);
-          return data;
+          return get(0, size);
         }
       };
     }

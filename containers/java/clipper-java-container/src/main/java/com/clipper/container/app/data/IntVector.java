@@ -21,30 +21,31 @@ public class IntVector extends DataVector<int[]> {
     }
 
     @Override
-    DataBuffer<int[]> getDataBuffer() {
+    DataBuffer<int[]> createDataBuffer() {
       return new DataBuffer<int[]>() {
 
-        IntBuffer intBuffer;
+        IntBuffer buffer;
+        int[] data = new int[INITIAL_BUFFER_SIZE];
 
         @Override
         void init(ByteBuffer buffer) {
           buffer.order(ByteOrder.LITTLE_ENDIAN);
-          intBuffer = buffer.asIntBuffer();
+          this.buffer = buffer.asIntBuffer();
         }
 
         @Override
         int[] get(int offset, int size) {
-          int[] data = new int[size];
-          intBuffer.get(data, offset, size);
+          if(size > data.length) {
+            data = new int[data.length * 2];
+          }
+          buffer.get(data, offset, size);
           return data;
         }
 
         @Override
         int[] getAll() {
-          int size = intBuffer.remaining();
-          int[] data = new int[size];
-          intBuffer.get(data, 0, size);
-          return data;
+          int size = buffer.remaining();
+          return get(0, size);
         }
       };
     }

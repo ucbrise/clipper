@@ -33,5 +33,5 @@ abstract class Model<I extends DataVector> {
     return DataType.Floats;
   }
 
-  public abstract List<FloatVector> predict(List<I> inputVectors);
+  public abstract FloatVector predict(I inputVector);
 }

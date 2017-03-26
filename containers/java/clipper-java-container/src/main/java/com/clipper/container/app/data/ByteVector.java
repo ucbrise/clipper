@@ -19,10 +19,11 @@ public class ByteVector extends DataVector<byte[]> {
     }
 
     @Override
-    DataBuffer<byte[]> getDataBuffer() {
+    DataBuffer<byte[]> createDataBuffer() {
       return new DataBuffer<byte[]>() {
 
         ByteBuffer buffer;
+        byte[] data = new byte[INITIAL_BUFFER_SIZE];
 
         @Override
         void init(ByteBuffer buffer) {
@@ -31,7 +32,9 @@ public class ByteVector extends DataVector<byte[]> {
 
         @Override
         byte[] get(int offset, int size) {
-          byte[] data = new byte[size];
+          if(size > data.length) {
+            data = new byte[data.length * 2];
+          }
           buffer.get(data, offset, size);
           return data;
         }
@@ -39,9 +42,7 @@ public class ByteVector extends DataVector<byte[]> {
         @Override
         byte[] getAll() {
           int size = buffer.remaining();
-          byte[] data = new byte[size];
-          buffer.get(data, 0, size);
-          return data;
+          return get(0, size);
         }
       };
     }

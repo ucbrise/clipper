@@ -14,15 +14,11 @@ class NoOpModel extends Model<DoubleVector> {
   }
 
   @Override
-  public List<FloatVector> predict(List<DoubleVector> inputVectors) {
-    List<FloatVector> outputs = new ArrayList<FloatVector>();
-    for (DoubleVector i : inputVectors) {
-      float sum = 0.0f;
-      for (double d : i.getData()) {
+  public FloatVector predict(DoubleVector inputVector) {
+    float sum = 0.0f;
+      for (double d : inputVector.getData()) {
         sum += (float) d;
       }
-      outputs.add(new FloatVector(new float[] {sum}));
-    }
-    return outputs;
+    return new FloatVector(new float[] {sum});
   }
 }

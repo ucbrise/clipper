@@ -13,11 +13,7 @@ public class NoOpStringModel extends Model<SerializableString> {
   }
 
   @Override
-  public List<FloatVector> predict(List<SerializableString> inputVectors) {
-    List<FloatVector> outputs = new ArrayList<FloatVector>();
-    for (SerializableString s : inputVectors) {
-      outputs.add(new FloatVector(new float[] {(float) s.getData().length()}));
-    }
-    return outputs;
+  public FloatVector predict(SerializableString inputVector) {
+    return new FloatVector(new float[] {(float) inputVector.getData().length()});
   }
 }
