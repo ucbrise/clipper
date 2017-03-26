@@ -203,6 +203,7 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
   request_metadata.emplace_back(
       static_cast<uint32_t>(RequestType::PredictRequest));
 
+
   std::vector<uint32_t> input_metadata;
   input_metadata.emplace_back(static_cast<uint32_t>(input_type_));
   input_metadata.emplace_back(static_cast<uint32_t>(inputs_.size()));
@@ -237,7 +238,7 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
 
   std::vector<long> inputs_size_bytes;
   // Add the size of the serialized inputs in bytes. This will be
-  // sent prior to the input metadata to allow for proactive
+  // sent prior to the input data to allow for proactive
   // buffer allocation in the receiving container
   inputs_size_bytes.push_back(serialized_inputs.size());
   ByteBuffer serialized_inputs_size = get_byte_buffer(inputs_size_bytes);
