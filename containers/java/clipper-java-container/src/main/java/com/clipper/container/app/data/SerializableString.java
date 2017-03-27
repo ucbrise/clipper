@@ -1,26 +1,9 @@
 package com.clipper.container.app.data;
 
-import sun.nio.cs.US_ASCII;
-
-import java.io.UnsupportedEncodingException;
-import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.nio.ByteOrder;
-
 public class SerializableString extends DataVector<String> {
+
   public SerializableString(String data) {
     super(data);
-  }
-
-  @Override
-  public byte[] toBytes() {
-    String nullTerminatedData = data + '\0';
-    return nullTerminatedData.getBytes(StandardCharsets.US_ASCII);
   }
 
   public static class Parser extends DataVectorParser<String, SerializableString> {
