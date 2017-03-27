@@ -4,48 +4,51 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.ByteOrder;
 
-public class IntVector extends DataVector<int[]> {
-  public IntVector(int[] data) {
+public class IntVector extends DataVector<IntBuffer> {
+  public IntVector(IntBuffer data) {
     super(data);
   }
 
   @Override
   public byte[] toBytes() {
-    return DataUtils.getBytesFromInts(data);
+    int[] output = new int[data.remaining()];
+    data.get(output);
+    return DataUtils.getBytesFromInts(output);
   }
 
-  public static class Parser extends DataVectorParser<int[], IntVector> {
+  public static class Parser extends DataVectorParser<IntBuffer, IntVector> {
     @Override
-    IntVector constructDataVector(int[] data) {
+    IntVector constructDataVector(IntBuffer data) {
       return new IntVector(data);
     }
 
     @Override
-    DataBuffer<int[]> createDataBuffer() {
-      return new DataBuffer<int[]>() {
+    DataBuffer<IntBuffer> createDataBuffer() {
+      return new DataBuffer<IntBuffer>() {
 
         IntBuffer buffer;
-        int[] data = new int[INITIAL_BUFFER_SIZE];
+        int bufferSize;
 
         @Override
-        void init(ByteBuffer buffer) {
-          buffer.order(ByteOrder.LITTLE_ENDIAN);
-          this.buffer = buffer.asIntBuffer();
+        void init(ByteBuffer inputBuffer) {
+          inputBuffer.order(ByteOrder.LITTLE_ENDIAN);
+          this.buffer = inputBuffer.asIntBuffer();
+          this.bufferSize = buffer.remaining();
         }
 
         @Override
-        int[] get(int offset, int size) {
-          if(size > data.length) {
-            data = new int[data.length * 2];
-          }
-          buffer.get(data, offset, size);
-          return data;
+        IntBuffer get(int size) {
+          int outputLimit = buffer.position() + size;
+          buffer.limit(outputLimit);
+          IntBuffer outputBuffer = buffer.slice();
+          buffer.position(outputLimit);
+          buffer.limit(bufferSize);
+          return outputBuffer;
         }
 
         @Override
-        int[] getAll() {
-          int size = buffer.remaining();
-          return get(0, size);
+        IntBuffer getAll() {
+          return buffer;
         }
       };
     }

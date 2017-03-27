@@ -4,8 +4,7 @@ import com.clipper.container.app.data.DataType;
 import com.clipper.container.app.data.DoubleVector;
 import com.clipper.container.app.data.FloatVector;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.nio.FloatBuffer;
 
 class NoOpModel extends Model<DoubleVector> {
 
@@ -16,9 +15,9 @@ class NoOpModel extends Model<DoubleVector> {
   @Override
   public FloatVector predict(DoubleVector inputVector) {
     float sum = 0.0f;
-      for (double d : inputVector.getData()) {
-        sum += (float) d;
-      }
-    return new FloatVector(new float[] {sum});
+    while(inputVector.getData().hasRemaining()) {
+      sum += inputVector.getData().get();
+    }
+    return new FloatVector(FloatBuffer.wrap(new float[] {sum}));
   }
 }

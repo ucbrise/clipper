@@ -2,47 +2,50 @@ package com.clipper.container.app.data;
 
 import java.nio.ByteBuffer;
 
-public class ByteVector extends DataVector<byte[]> {
-  public ByteVector(byte[] data) {
+public class ByteVector extends DataVector<ByteBuffer> {
+  public ByteVector(ByteBuffer data) {
     super(data);
   }
 
   @Override
   public byte[] toBytes() {
-    return data;
+    byte[] output = new byte[data.remaining()];
+    data.get(output);
+    return output;
   }
 
-  public static class Parser extends DataVectorParser<byte[], ByteVector> {
+  public static class Parser extends DataVectorParser<ByteBuffer, ByteVector> {
     @Override
-    ByteVector constructDataVector(byte[] data) {
+    ByteVector constructDataVector(ByteBuffer data) {
       return new ByteVector(data);
     }
 
     @Override
-    DataBuffer<byte[]> createDataBuffer() {
-      return new DataBuffer<byte[]>() {
+    DataBuffer<ByteBuffer> createDataBuffer() {
+      return new DataBuffer<ByteBuffer>() {
 
         ByteBuffer buffer;
-        byte[] data = new byte[INITIAL_BUFFER_SIZE];
+        int bufferSize;
 
         @Override
-        void init(ByteBuffer buffer) {
-          this.buffer = buffer;
+        void init(ByteBuffer inputBuffer) {
+          this.buffer = inputBuffer;
+          this.bufferSize = buffer.remaining();
         }
 
         @Override
-        byte[] get(int offset, int size) {
-          if(size > data.length) {
-            data = new byte[data.length * 2];
-          }
-          buffer.get(data, offset, size);
-          return data;
+        ByteBuffer get(int size) {
+          int outputLimit = buffer.position() + size;
+          buffer.limit(outputLimit);
+          ByteBuffer outputBuffer = buffer.slice();
+          buffer.position(outputLimit);
+          buffer.limit(bufferSize);
+          return outputBuffer;
         }
 
         @Override
-        byte[] getAll() {
-          int size = buffer.remaining();
-          return get(0, size);
+        ByteBuffer getAll() {
+          return buffer;
         }
       };
     }

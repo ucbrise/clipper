@@ -1,11 +1,8 @@
 package com.clipper.container.app.data;
 
-import com.clipper.container.app.Pair;
-
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
+import java.nio.IntBuffer;
 import java.util.Iterator;
-import java.util.List;
 
 public abstract class DataVectorParser<U, T extends DataVector<U>> {
 
@@ -22,18 +19,18 @@ public abstract class DataVectorParser<U, T extends DataVector<U>> {
     return dataBuffer;
   }
 
-  public Iterator<T> parseDataVectors(ByteBuffer byteBuffer, List<Integer> splits) {
+  public Iterator<T> parseDataVectors(ByteBuffer byteBuffer, IntBuffer splits) {
     return new DataVectorIterator(byteBuffer, splits);
   }
 
   class DataVectorIterator implements Iterator<T> {
 
-    private List<Integer> splits;
+    private IntBuffer splits;
     private ByteBuffer buffer;
     private int currentSplitIndex;
     private int prevSplit;
 
-    DataVectorIterator(ByteBuffer buffer, List<Integer> splits) {
+    DataVectorIterator(ByteBuffer buffer, IntBuffer splits) {
       this.splits = splits;
       this.buffer = buffer;
       this.currentSplitIndex = 0;
@@ -49,7 +46,7 @@ public abstract class DataVectorParser<U, T extends DataVector<U>> {
               // If the split index is equivalent to the length
               // of the splits list, data must be processed
               // from the last split through the buffer's end
-              && (currentSplitIndex <= splits.size());
+              && (currentSplitIndex <= splits.remaining());
     }
 
     @Override
@@ -57,9 +54,9 @@ public abstract class DataVectorParser<U, T extends DataVector<U>> {
       DataBuffer<U> dataBuffer = getDataBuffer();
       U parsedArray;
       T dataVector;
-      if(currentSplitIndex < splits.size()) {
+      if(currentSplitIndex < splits.remaining()) {
         int currSplit = splits.get(currentSplitIndex);
-        parsedArray = dataBuffer.get(0, currSplit - prevSplit);
+        parsedArray = dataBuffer.get(currSplit - prevSplit);
         prevSplit = currSplit;
       } else {
         parsedArray = dataBuffer.getAll();

@@ -5,6 +5,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -61,6 +62,10 @@ class ModelContainer<I extends DataVector<?>> {
   }
 
   private void serveModel(ZMQ.Socket socket, Model<I> model) throws NoSuchFieldException, IllegalArgumentException {
+    int inputHeaderBufferSize = 0;
+    int inputBufferSize = 0;
+    ByteBuffer inputHeaderBuffer = null;
+    ByteBuffer inputBuffer = null;
     while (true) {
       socket.recv();
       PerformanceTimer.startTiming();
@@ -80,23 +85,51 @@ class ModelContainer<I extends DataVector<?>> {
       RequestType requestType = RequestType.fromCode(requestHeader.get(0));
 
       if (requestType == RequestType.Predict) {
-        // Handle Predict request
-        byte[] inputHeaderMessage = socket.recv();
-        byte[] rawContent = socket.recv();
+        byte[] inputHeaderSizeMessage = socket.recv();
+        List<Long> parsedInputHeaderSizeMessage = DataUtils.getLongsFromBytes(inputHeaderSizeMessage);
+        if(parsedInputHeaderSizeMessage.size() < 1) {
+          throw new NoSuchFieldException("Input header size is missing from RPC predict request message");
+        }
+        int inputHeaderSize = (int) ((long) parsedInputHeaderSizeMessage.get(0));
+        if(inputHeaderBuffer == null || inputHeaderBufferSize < inputHeaderSize) {
+          inputHeaderBufferSize = inputHeaderSize * 2;
+          inputHeaderBuffer = ByteBuffer.allocateDirect(inputHeaderBufferSize);
+        }
+        inputHeaderBuffer.rewind();
+        inputHeaderBuffer.limit(inputHeaderBufferSize);
+        int inputHeaderBytesRead = socket.recvZeroCopy(inputHeaderBuffer, inputHeaderSize, -1);
+        inputHeaderBuffer.rewind();
+        inputHeaderBuffer.limit(inputHeaderBytesRead);
+
+        IntBuffer inputHeader = inputHeaderBuffer.slice().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+
+        byte[] inputContentSizeMessage = socket.recv();
+        List<Long> parsedInputContentSizeMessage = DataUtils.getLongsFromBytes(inputContentSizeMessage);
+        if(parsedInputContentSizeMessage.size() < 1) {
+          throw new NoSuchFieldException("Input content size is missing from RPC predict request message");
+        }
+
+        int inputContentSize = (int) ((long) parsedInputContentSizeMessage.get(0));
+        if(inputBufferSize < inputContentSize) {
+          inputBufferSize = inputContentSize * 2;
+          inputBuffer = ByteBuffer.allocateDirect(inputBufferSize);
+        }
+        inputBuffer.rewind();
+        inputBuffer.limit(inputBufferSize);
+        int inputBytesRead = socket.recvZeroCopy(inputBuffer, inputContentSize, -1);
+        inputBuffer.rewind();
+        inputBuffer.limit(inputBytesRead);
 
         PerformanceTimer.logElapsed("Recv");
 
-        List<Integer> inputHeader = DataUtils.getSignedIntsFromBytes(inputHeaderMessage);
-        if (inputHeader.size() < 2) {
+        if (inputHeader.remaining() < 2) {
           throw new NoSuchFieldException("RPC message input header is missing or is of insufficient size");
         }
 
-        DataType inputType = DataType.fromCode(inputHeader.get(0));
-        int numInputs = inputHeader.get(1);
-        List<Integer> inputSplits = inputHeader.subList(2, inputHeader.size());
+        DataType inputType = DataType.fromCode(inputHeader.get());
+        int numInputs = inputHeader.get();
         validateRequestInputType(model, inputType);
-        // PROCESS SPLITS
-        Iterator<I> dataVectors = inputVectorParser.parseDataVectors(ByteBuffer.wrap(rawContent), inputSplits);
+        Iterator<I> dataVectors = inputVectorParser.parseDataVectors(inputBuffer.slice(), inputHeader.slice());
 
         PerformanceTimer.logElapsed("Parse");
 
@@ -134,13 +167,13 @@ class ModelContainer<I extends DataVector<?>> {
     }
     int outputBufferLen = 0;
     for (FloatVector p : predictions) {
-      outputBufferLen += p.getData().length;
+      outputBufferLen += p.getData().remaining();
     }
     ByteBuffer outputBuffer = ByteBuffer.allocate(outputBufferLen * 4);
     outputBuffer.order(ByteOrder.LITTLE_ENDIAN);
     for (FloatVector preds : predictions) {
-      for (float p : preds.getData()) {
-        outputBuffer.putFloat(p);
+      while(preds.getData().hasRemaining()) {
+        outputBuffer.putFloat(preds.getData().get());
       }
     }
     byte[] responseData = outputBuffer.array();

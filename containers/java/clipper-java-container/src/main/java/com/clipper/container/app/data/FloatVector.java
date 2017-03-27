@@ -4,48 +4,51 @@ import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.ByteOrder;
 
-public class FloatVector extends DataVector<float[]> {
-  public FloatVector(float[] data) {
+public class FloatVector extends DataVector<FloatBuffer> {
+  public FloatVector(FloatBuffer data) {
     super(data);
   }
 
   @Override
   public byte[] toBytes() {
-    return DataUtils.getBytesFromFloats(data);
+    float[] output = new float[data.remaining()];
+    data.get(output);
+    return DataUtils.getBytesFromFloats(output);
   }
 
-  public static class Parser extends DataVectorParser<float[], FloatVector> {
+  public static class Parser extends DataVectorParser<FloatBuffer, FloatVector> {
     @Override
-    FloatVector constructDataVector(float[] data) {
+    FloatVector constructDataVector(FloatBuffer data) {
       return new FloatVector(data);
     }
 
     @Override
-    DataBuffer<float[]> createDataBuffer() {
-      return new DataBuffer<float[]>() {
+    DataBuffer<FloatBuffer> createDataBuffer() {
+      return new DataBuffer<FloatBuffer>() {
 
         FloatBuffer buffer;
-        float[] data = new float[INITIAL_BUFFER_SIZE];
+        int bufferSize;
 
         @Override
         void init(ByteBuffer buffer) {
           buffer.order(ByteOrder.LITTLE_ENDIAN);
           this.buffer = buffer.asFloatBuffer();
+          this.bufferSize = buffer.remaining();
         }
 
         @Override
-        float[] get(int offset, int size) {
-          if(size > data.length) {
-            data = new float[data.length * 2];
-          }
-          buffer.get(data, offset, size);
-          return data;
+        FloatBuffer get(int size) {
+          int outputLimit = buffer.position() + size;
+          buffer.limit(outputLimit);
+          FloatBuffer outputBuffer = buffer.slice();
+          buffer.position(outputLimit);
+          buffer.limit(bufferSize);
+          return outputBuffer;
         }
 
         @Override
-        float[] getAll() {
-          int size = buffer.remaining();
-          return get(0, size);
+        FloatBuffer getAll() {
+          return buffer;
         }
       };
     }

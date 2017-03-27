@@ -1,54 +1,54 @@
 package com.clipper.container.app.data;
 
-import com.clipper.container.app.Pair;
-
 import java.nio.ByteBuffer;
 import java.nio.DoubleBuffer;
 import java.nio.ByteOrder;
 
-public class DoubleVector extends DataVector<double[]> {
-  public DoubleVector(double[] data) {
+public class DoubleVector extends DataVector<DoubleBuffer> {
+  public DoubleVector(DoubleBuffer data) {
     super(data);
   }
 
   @Override
   public byte[] toBytes() {
-    return DataUtils.getBytesFromDoubles(data);
+    double[] output = new double[data.remaining()];
+    data.get(output);
+    return DataUtils.getBytesFromDoubles(output);
   }
 
-  public static class Parser extends DataVectorParser<double[], DoubleVector> {
+  public static class Parser extends DataVectorParser<DoubleBuffer, DoubleVector> {
     @Override
-    DoubleVector constructDataVector(double[] data) {
+    DoubleVector constructDataVector(DoubleBuffer data) {
       return new DoubleVector(data);
     }
 
     @Override
-    DataBuffer<double[]> createDataBuffer() {
-      return new DataBuffer<double[]>() {
+    DataBuffer<DoubleBuffer> createDataBuffer() {
+      return new DataBuffer<DoubleBuffer>() {
 
         DoubleBuffer buffer;
-        double[] data = new double[INITIAL_BUFFER_SIZE];
+        int bufferSize;
 
         @Override
-        void init(ByteBuffer buffer) {
-
-          buffer.order(ByteOrder.LITTLE_ENDIAN);
-          this.buffer = buffer.asDoubleBuffer();
+        void init(ByteBuffer inputBuffer) {
+          inputBuffer.order(ByteOrder.LITTLE_ENDIAN);
+          this.buffer = inputBuffer.asDoubleBuffer();
+          this.bufferSize = buffer.remaining();
         }
 
         @Override
-        double[] get(int offset, int size) {
-          if(size > data.length) {
-            data = new double[data.length * 2];
-          }
-          buffer.get(data, offset, size);
-          return data;
+        DoubleBuffer get(int size) {
+          int outputLimit = buffer.position() + size;
+          buffer.limit(outputLimit);
+          DoubleBuffer outputBuffer = buffer.slice();
+          buffer.position(outputLimit);
+          buffer.limit(bufferSize);
+          return outputBuffer;
         }
 
         @Override
-        double[] getAll() {
-          int size = buffer.remaining();
-          return get(0, size);
+        DoubleBuffer getAll() {
+          return buffer;
         }
       };
     }

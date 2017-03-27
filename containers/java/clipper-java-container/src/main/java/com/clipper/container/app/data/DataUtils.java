@@ -22,6 +22,14 @@ public class DataUtils {
         return byteBuffer.array();
     }
 
+    public static byte[] getBytesFromLongs(long[] data) {
+        ByteBuffer byteBuffer = ByteBuffer.allocate(data.length * 8);
+        for(long item : data) {
+            byteBuffer.putLong(item);
+        }
+        return byteBuffer.array();
+    }
+
     public static byte[] getBytesFromFloats(float[] data) {
         ByteBuffer byteBuffer = ByteBuffer.allocate(data.length * 4);
         for(float item : data) {
@@ -64,6 +72,15 @@ public class DataUtils {
             @Override
             public Integer apply(ByteBuffer byteBuffer) {
                 return byteBuffer.getInt();
+            }
+        });
+    }
+
+    public static List<Long> getLongsFromBytes(byte[] bytes) {
+        return getTypeFromBytes(bytes, new Function<ByteBuffer, Long>() {
+            @Override
+            public Long apply(ByteBuffer byteBuffer) {
+                return byteBuffer.getLong();
             }
         });
     }

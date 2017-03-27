@@ -4,8 +4,7 @@ import com.clipper.container.app.data.DataType;
 import com.clipper.container.app.data.FloatVector;
 import com.clipper.container.app.data.SerializableString;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.nio.FloatBuffer;
 
 public class NoOpStringModel extends Model<SerializableString> {
   NoOpStringModel(String name, int version) {
@@ -14,6 +13,6 @@ public class NoOpStringModel extends Model<SerializableString> {
 
   @Override
   public FloatVector predict(SerializableString inputVector) {
-    return new FloatVector(new float[] {(float) inputVector.getData().length()});
+    return new FloatVector(FloatBuffer.wrap(new float[] {(float) inputVector.getData().length()}));
   }
 }
