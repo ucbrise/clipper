@@ -5,15 +5,9 @@ import java.nio.IntBuffer;
 import java.nio.ByteOrder;
 
 public class IntVector extends DataVector<IntBuffer> {
+
   public IntVector(IntBuffer data) {
     super(data);
-  }
-
-  @Override
-  public byte[] toBytes() {
-    int[] output = new int[data.remaining()];
-    data.get(output);
-    return DataUtils.getBytesFromInts(output);
   }
 
   public static class Parser extends DataVectorParser<IntBuffer, IntVector> {

@@ -3,15 +3,9 @@ package com.clipper.container.app.data;
 import java.nio.ByteBuffer;
 
 public class ByteVector extends DataVector<ByteBuffer> {
+
   public ByteVector(ByteBuffer data) {
     super(data);
-  }
-
-  @Override
-  public byte[] toBytes() {
-    byte[] output = new byte[data.remaining()];
-    data.get(output);
-    return output;
   }
 
   public static class Parser extends DataVectorParser<ByteBuffer, ByteVector> {

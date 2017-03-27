@@ -5,15 +5,9 @@ import java.nio.DoubleBuffer;
 import java.nio.ByteOrder;
 
 public class DoubleVector extends DataVector<DoubleBuffer> {
+
   public DoubleVector(DoubleBuffer data) {
     super(data);
-  }
-
-  @Override
-  public byte[] toBytes() {
-    double[] output = new double[data.remaining()];
-    data.get(output);
-    return DataUtils.getBytesFromDoubles(output);
   }
 
   public static class Parser extends DataVectorParser<DoubleBuffer, DoubleVector> {

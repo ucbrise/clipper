@@ -5,15 +5,9 @@ import java.nio.FloatBuffer;
 import java.nio.ByteOrder;
 
 public class FloatVector extends DataVector<FloatBuffer> {
+
   public FloatVector(FloatBuffer data) {
     super(data);
-  }
-
-  @Override
-  public byte[] toBytes() {
-    float[] output = new float[data.remaining()];
-    data.get(output);
-    return DataUtils.getBytesFromFloats(output);
   }
 
   public static class Parser extends DataVectorParser<FloatBuffer, FloatVector> {

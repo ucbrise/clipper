@@ -8,8 +8,6 @@ public abstract class DataVector<T> {
         this.data = data;
     }
 
-    public abstract byte[] toBytes();
-
     public T getData() {
         return data;
     }
