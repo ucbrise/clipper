@@ -159,7 +159,7 @@ class ModelContainer<I extends DataVector<?>> {
 
   private void handlePredictRequest(
       long msgId, Iterator<I> dataVectors, Model<I> model, ZMQ.Socket socket) throws IOException {
-    List<FloatVector> predictions = new ArrayList<FloatVector>();
+    List<FloatVector> predictions = new ArrayList<>();
     while(dataVectors.hasNext()) {
       I dataVector = dataVectors.next();
       FloatVector prediction = model.predict(dataVector);
