@@ -5,6 +5,7 @@ import java.net.UnknownHostException;
 import com.clipper.container.app.data.DataVector;
 import com.clipper.container.app.data.DataVectorParser;
 import com.clipper.container.app.data.DoubleVector;
+import com.clipper.container.app.data.SerializableString;
 import org.junit.Test;
 
 public class ContainerTest {
@@ -12,8 +13,8 @@ public class ContainerTest {
   public void TestContainer() {
     NoOpModel model = new NoOpModel("test", 1);
     runContainer(model, new DoubleVector.Parser());
-    //        NoOpStringModel model = new NoOpStringModel("test", 1);
-    //        runContainer(model, new SerializableString.Parser());
+//    NoOpStringModel model = new NoOpStringModel("test", 1);
+//    runContainer(model, new SerializableString.Parser());
   }
 
   public <I extends DataVector<?>> void runContainer(
@@ -25,7 +26,6 @@ public class ContainerTest {
     } catch (UnknownHostException e) {
       e.printStackTrace();
     }
-    while (true)
-      ;
+    while (true);
   }
 }

@@ -18,6 +18,8 @@ class ModelContainer<I extends DataVector<?>> {
 
   private DataVectorParser<?, I> inputVectorParser;
   private Thread servingThread;
+  private ByteBuffer responseBuffer;
+  private int responseBufferSize;
 
   ModelContainer(DataVectorParser<?, I> inputVectorParser) {
     this.inputVectorParser = inputVectorParser;
@@ -165,18 +167,23 @@ class ModelContainer<I extends DataVector<?>> {
       FloatVector prediction = model.predict(dataVector);
       predictions.add(prediction);
     }
-    int outputBufferLen = 0;
+    int outputLenBytes = 0;
     for (FloatVector p : predictions) {
-      outputBufferLen += p.getData().remaining();
+      outputLenBytes += p.getData().remaining();
     }
-    ByteBuffer outputBuffer = ByteBuffer.allocate(outputBufferLen * 4);
-    outputBuffer.order(ByteOrder.LITTLE_ENDIAN);
+    outputLenBytes = outputLenBytes * 4;
+    if(responseBuffer == null || responseBufferSize < outputLenBytes) {
+      responseBufferSize = outputLenBytes * 2;
+      responseBuffer = ByteBuffer.allocateDirect(responseBufferSize);
+      responseBuffer.order(ByteOrder.LITTLE_ENDIAN);
+    }
+    responseBuffer.rewind();
+    responseBuffer.limit(outputLenBytes);
     for (FloatVector preds : predictions) {
       while(preds.getData().hasRemaining()) {
-        outputBuffer.putFloat(preds.getData().get());
+        responseBuffer.putFloat(preds.getData().get());
       }
     }
-    byte[] responseData = outputBuffer.array();
     socket.send("", ZMQ.SNDMORE);
     ByteBuffer b = ByteBuffer.allocate(8);
     b.order(ByteOrder.LITTLE_ENDIAN);
@@ -184,6 +191,6 @@ class ModelContainer<I extends DataVector<?>> {
     b.position(4);
     byte[] msgIdByteArr = b.slice().array();
     socket.send(msgIdByteArr, ZMQ.SNDMORE);
-    socket.send(responseData, 0, responseData.length);
+    socket.sendZeroCopy(responseBuffer, responseBuffer.position(), 0);
   }
 }

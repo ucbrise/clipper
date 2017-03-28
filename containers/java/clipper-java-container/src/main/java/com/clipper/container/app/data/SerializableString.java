@@ -1,5 +1,14 @@
 package com.clipper.container.app.data;
 
+import sun.nio.cs.US_ASCII;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.CharBuffer;
+import java.nio.IntBuffer;
+import java.nio.charset.Charset;
+import java.util.Iterator;
+
 public class SerializableString extends DataVector<String> {
 
   public SerializableString(String data) {
@@ -17,29 +26,33 @@ public class SerializableString extends DataVector<String> {
       return null;
     }
 
-//    @Override
-//    public List<SerializableString> parse(ByteBuffer byteBuffer, List<Integer> splits) {
-//      byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
-//      List<SerializableString> serializableStrings = new ArrayList<>();
-//      Charset asciiCharSet = US_ASCII.defaultCharset();
-//      CharBuffer iterBuffer = asciiCharSet.decode(byteBuffer);
-//      CharBuffer copyBuffer = iterBuffer.duplicate();
-//      int stringLength = 0;
-//      while (iterBuffer.remaining() > 0) {
-//        char elem = iterBuffer.get();
-//        if (elem == '\0' && stringLength > 0) {
-//          char[] stringChars = new char[stringLength];
-//          copyBuffer.get(stringChars, 0, stringLength);
-//          copyBuffer.get();
-//          String data = new String(stringChars);
-//          SerializableString serializableString = new SerializableString(data);
-//          serializableStrings.add(serializableString);
-//          stringLength = 0;
-//        } else {
-//          stringLength++;
-//        }
-//      }
-//      return serializableStrings;
-//    }
+    @Override
+    public Iterator<SerializableString> parseDataVectors(ByteBuffer byteBuffer, IntBuffer splits) {
+      byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+      Charset asciiCharSet = US_ASCII.defaultCharset();
+      CharBuffer iterBuffer = asciiCharSet.decode(byteBuffer);
+      CharBuffer copyBuffer = iterBuffer.duplicate();
+
+      return new Iterator<SerializableString>() {
+
+        @Override
+        public boolean hasNext() {
+          return iterBuffer.hasRemaining();
+        }
+
+        @Override
+        public SerializableString next() {
+          int stringLength = 0;
+          while(iterBuffer.get() != '\0') {
+            stringLength++;
+          }
+          char[] stringChars = new char[stringLength];
+          copyBuffer.get(stringChars, 0, stringLength);
+          copyBuffer.get();
+          String stringData = new String(stringChars);
+          return new SerializableString(stringData);
+        }
+      };
+    }
   }
 }
