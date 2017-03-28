@@ -22,7 +22,7 @@ public class ContainerTest {
     System.out.println("Starting...");
     ModelContainer<I> modelContainer = new ModelContainer(parser);
     try {
-      modelContainer.start(model, "127.0.0.1", 8000);
+      modelContainer.start(model, "127.0.0.1", 7000);
     } catch (UnknownHostException e) {
       e.printStackTrace();
     }
