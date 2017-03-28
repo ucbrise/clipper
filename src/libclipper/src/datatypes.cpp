@@ -226,7 +226,7 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
   ByteBuffer serialized_request_metadata = get_byte_buffer(request_metadata);
   ByteBuffer serialized_inputs =
       ByteBuffer(input_buf_start, input_buf_start + input_data_size_);
-  
+
   std::vector<long> input_metadata_size_bytes;
   // Add the size of the input metadata in bytes. This will be
   // sent prior to the input metadata to allow for proactive
