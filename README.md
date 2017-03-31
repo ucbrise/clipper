@@ -132,6 +132,32 @@ make
 
 # build and then start the query REST frontend
 ../bin/start_clipper.sh
+
+```
+
+__Using Vagrant:__
+
+You can use Vagrant to automatically create a development environment in a virtual machine.
+This is one method for using Windows for Clipper development. Before you start, you must have [Vagrant](https://www.vagrantup.com/) and [VirtualBox](https://www.virtualbox.org/wiki/VirtualBox)
+installed.  Once you have them installed, perform the following command to initialize Vagrant.
+
+```sh
+vagrant up
+```
+
+And the environment will be created for you. You can now edit Clipper files
+on your local machine and when you want to test your changes, you can just
+perform the following commands:
+
+```sh
+# Log in to the virtual machine
+vagrant ssh
+
+# Enter root Clipper directory
+cd /vagrant
+
+# Run tests
+./bin/run_unittests.sh
 ```
 
 Clipper has been tested on OSX 10.11, 10.12, and on Debian stretch/sid and Ubuntu 12.04 and 16.04. It does not support Windows.
