@@ -49,7 +49,7 @@ class QueryProcessor {
  private:
   std::atomic<long> query_counter_{0};
   std::shared_ptr<StateDB> state_db_;
-  TaskExecutor<PowerTwoChoicesScheduler> task_executor_;
+  TaskExecutor task_executor_;
   TimerSystem<HighPrecisionClock> timer_system_{HighPrecisionClock()};
 };
 

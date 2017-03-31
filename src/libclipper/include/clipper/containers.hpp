@@ -12,6 +12,8 @@
 
 namespace clipper {
 
+using Deadline = std::chrono::time_point<std::chrono::high_resolution_clock>;
+
 class ModelContainer {
  public:
   ~ModelContainer() = default;
@@ -23,12 +25,11 @@ class ModelContainer {
   ModelContainer(ModelContainer &&) = default;
   ModelContainer &operator=(ModelContainer &&) = default;
 
-  std::vector<PredictTask> dequeue_predictions(int batch_size) {
-    return request_queue_.try_pop_batch(batch_size);
+  size_t get_batch_size(Deadline /*deadline*/) {
+    // TODO: Replace the statically configured batch size with dynamic batching
+    return max_batch_size_;
   }
 
-  int get_queue_size();
-  void send_prediction(PredictTask task);
   void send_feedback(PredictTask task);
 
   VersionedModelId model_;
@@ -36,8 +37,8 @@ class ModelContainer {
   InputType input_type_;
 
  private:
+  const int max_batch_size_ = 5;
   bool connected_{true};
-  Queue<PredictTask> request_queue_;
   Queue<FeedbackTask> feedback_queue_;
 };
 
@@ -58,20 +59,6 @@ class ActiveContainers {
   void add_container(VersionedModelId model, int connection_id, int replica_id,
                      InputType input_type);
 
-  /// TODO: this method should be deprecated / removed when per-model
-  /// queueing is implemented, as it currently functions as an efficiency
-  /// method in the context of assigning tasks to containers directly
-  ///
-  /// This method returns a vector of all the active containers (replicas)
-  /// of the specified model. This is threadsafe because each individual
-  /// ModelContainer object is threadsafe, and this method returns
-  /// shared_ptrs to the ModelContainer objects. This ensures that
-  /// even if one of these ModelContainers gets deleted from the set of
-  /// active containers, the object itself won't get destroyed until
-  /// the last shared_ptr copy goes out of scope.
-  std::vector<std::shared_ptr<ModelContainer>> get_model_replicas_snapshot(
-      const VersionedModelId &model);
-
   /// This method returns the active container specified by the
   /// provided model id and replica id. This is threadsafe because each
   /// individual ModelContainer object is threadsafe, and this method returns
@@ -83,12 +70,12 @@ class ActiveContainers {
   std::vector<VersionedModelId> get_known_models();
 
  private:
-  // Protects the map of task queues. Must acquire an exclusive
-  // lock to modify request_queues_ and a shared_lock when accessing
-  // the queues. The queues are independently threadsafe.
+  // Protects the models-replicas map. Must acquire an exclusive
+  // lock to modify the map and a shared_lock when accessing
+  // replicas. The replica ModelContainer entries are independently threadsafe.
   boost::shared_mutex m_;
 
-  // A mapping of models to their replica task queues. The replicas
+  // A mapping of models to their replicas. The replicas
   // for each model are represented as a map keyed on replica id.
   std::unordered_map<VersionedModelId,
                      std::map<int, std::shared_ptr<ModelContainer>>,

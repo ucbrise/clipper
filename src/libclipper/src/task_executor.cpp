@@ -82,31 +82,6 @@ size_t PredictionCache::hash(const VersionedModelId &model,
   return versioned_model_hash(model) ^ input_hash;
 }
 
-std::shared_ptr<ModelContainer> PowerTwoChoicesScheduler::assign_container(
-    const PredictTask &task,
-    std::vector<std::shared_ptr<ModelContainer>> &containers) const {
-  UNUSED(task);
-  assert(containers.size() >= 1);
-  if (containers.size() > 1) {
-    std::random_device rd;
-    std::mt19937 generator(rd());
-    std::uniform_int_distribution<> dist(0, containers.size());
-    int first_choice = dist(generator);
-    int second_choice = first_choice;
-    while (second_choice == first_choice) {
-      second_choice = dist(generator);
-    }
-    if (containers[first_choice]->get_queue_size() >
-        containers[second_choice]->get_queue_size()) {
-      return containers[second_choice];
-    } else {
-      return containers[first_choice];
-    }
-  } else {
-    return containers[0];
-  }
-}
-
 std::vector<float> deserialize_outputs(std::vector<uint8_t> bytes) {
   assert(bytes.size() % sizeof(float) == 0);
   //  uint8_t *bytes_ptr = bytes.data();  // point to beginning of memory
