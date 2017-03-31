@@ -61,7 +61,9 @@ RPC requests sent from Clipper to model containers are divided into two categori
 ### Serializing Prediction Requests
 1. All requests begin with a 32-bit integer header, sent as a single ZeroMQ message. The value of this integer will be 0, indicating that the request is a prediction request.
 
-2. The next ZeroMQ message contains an input header. This is a list of 32-bit integers.
+2. The second ZeroMQ message contains the size of the input header, in bytes, as a 64-bit long. This is the size of the content of the third ZeroMQ message.
+
+3. The third ZeroMQ message contains an input header. This is a list of 32-bit integers.
  * The input header begins with a 32-bit integer specifying the type of inputs contained in the request. This integer can assume values 0-4, as defined in point 2 of **Initializing a Connection**.
  
  * The next 32-bit integer in the input header is the number of inputs included in the serialized content.
@@ -70,8 +72,10 @@ RPC requests sent from Clipper to model containers are divided into two categori
    * For example, if the request contains three double vectors of size 500, the offsets will be `[500, 1000]`, indicating that the deserialized vector of 1500 doubles should be split into three vectors containing doubles 0-499, 500-999, and 1000-1499 respectively.
    
     * In the case of strings, the offset list is not relevant and should not be used.
+    
+4. The fourth ZeroMQ message contains the size of the input content, in bytes, as a 64-bit long. This is the size of the content of the fifth ZeroMQ message.
    
-3. The final ZeroMQ message contains the concatenation of all inputs, represented as a string of bytes. This string of bytes should be converted to an array of the type specified by the input header.
+5. The final ZeroMQ message contains the concatenation of all inputs, represented as a string of bytes. This string of bytes should be converted to an array of the type specified by the input header.
  * In the case of primitive inputs (types 0-3), deserialized inputs can then be obtained by splitting the typed array at the offsets specified in the input header.
    * Python example:
    

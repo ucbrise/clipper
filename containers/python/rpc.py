@@ -118,7 +118,9 @@ class Server(threading.Thread):
             request_type = struct.unpack("<I", request_header)[0]
 
             if request_type == REQUEST_TYPE_PREDICT:
+                input_header_size = self.socket.recv()
                 input_header = self.socket.recv()
+                raw_content_size = self.socket.recv()
                 raw_content = self.socket.recv()
 
                 t2 = datetime.now()
