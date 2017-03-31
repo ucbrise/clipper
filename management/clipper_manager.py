@@ -77,11 +77,15 @@ class Clipper:
     ----------
     host : str
         The hostname of the machine to start Clipper on. The machine
-        should allow passwordless SSH access. 
+        should allow passwordless SSH access.
     user : str, optional
         The SSH username. This field must be specified if `host` is not local.
     key_path : str, optional.
         The path to the SSH private key. This field must be specified if `host` is not local.
+    sudo : bool, optional.
+        Specifies level of execution for docker commands (sudo if true, standard if false).
+    ssh_port : int, optional
+        The SSH port to use. Default is port 22.
 
     Sets up the machine for running Clipper. This includes verifying
     SSH credentials and initializing Docker.
@@ -90,10 +94,14 @@ class Clipper:
     before connecting to a machine.
     """
 
-    def __init__(self, host, user=None, key_path=None):
+    def __init__(self, host, user=None, key_path=None, sudo=False,
+                 ssh_port=22):
+        self.sudo = sudo
         self.host = host
-        env.host_string = host
-        if not self._host_is_local():
+        if self._host_is_local():
+            self.host = "localhost"
+            env.host_string = self.host
+        else:
             if not user or not key_path:
                 print(
                     "user and key_path must be specified when instantiating Clipper with a nonlocal host"
@@ -101,6 +109,7 @@ class Clipper:
                 raise
             env.user = user
             env.key_filename = key_path
+            env.host_string = "%s:%d" % (host, ssh_port)
         # Make sure docker is running on cluster
         self._start_docker_if_necessary()
 
@@ -128,7 +137,9 @@ class Clipper:
                 "mkdir -p {model_repo}".format(model_repo=MODEL_REPO))
 
     def _execute_root(self, *args, **kwargs):
-        if self._host_is_local():
+        if not self.sudo:
+            return self._execute_standard(*args, **kwargs)
+        elif self._host_is_local():
             return self._execute_local(*args, **kwargs)
         else:
             return sudo(*args, **kwargs)
