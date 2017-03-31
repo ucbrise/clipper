@@ -174,6 +174,7 @@ class RequestHandler {
           std::stringstream ss;
           ss << "qid:" << r.query_id_ << ", predict:" << r.output_.y_hat_;
           rapidjson::Document json_response;
+          json_response.SetObject();
           clipper::json::add_long(json_response, RESPONSE_KEY_QUERY_ID, r.query_id_);
           clipper::json::add_double(json_response, RESPONSE_KEY_OUTPUT, r.output_.y_hat_);
           clipper::json::add_bool(json_response, RESPONSE_KEY_USED_DEFAULT, r.output_is_default_);
