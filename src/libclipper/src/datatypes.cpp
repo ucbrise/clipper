@@ -202,8 +202,7 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
   std::vector<uint32_t> request_metadata;
   request_metadata.emplace_back(
       static_cast<uint32_t>(RequestType::PredictRequest));
-
-
+  
   std::vector<uint32_t> input_metadata;
   input_metadata.emplace_back(static_cast<uint32_t>(input_type_));
   input_metadata.emplace_back(static_cast<uint32_t>(inputs_.size()));
