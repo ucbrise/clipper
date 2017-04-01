@@ -24,9 +24,9 @@ public class FloatVector extends DataVector<FloatBuffer> {
         int bufferSize;
 
         @Override
-        void init(ByteBuffer buffer) {
-          buffer.order(ByteOrder.LITTLE_ENDIAN);
-          this.buffer = buffer.asFloatBuffer();
+        void init(ByteBuffer inputBuffer) {
+          inputBuffer.order(ByteOrder.LITTLE_ENDIAN);
+          this.buffer = inputBuffer.asFloatBuffer();
           this.bufferSize = buffer.remaining();
         }
 

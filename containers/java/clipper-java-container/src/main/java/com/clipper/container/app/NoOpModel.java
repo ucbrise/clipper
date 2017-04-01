@@ -1,23 +1,20 @@
 package com.clipper.container.app;
 
 import com.clipper.container.app.data.DataType;
-import com.clipper.container.app.data.DoubleVector;
+import com.clipper.container.app.data.DataVector;
 import com.clipper.container.app.data.FloatVector;
 
+import java.nio.Buffer;
 import java.nio.FloatBuffer;
 
-class NoOpModel extends Model<DoubleVector> {
+public class NoOpModel<T extends DataVector<Buffer>> extends Model<T> {
 
-  NoOpModel(String name, int version) {
-    super(name, version, DataType.Doubles);
-  }
-
-  @Override
-  public FloatVector predict(DoubleVector inputVector) {
-    float sum = 0.0f;
-    while(inputVector.getData().hasRemaining()) {
-      sum += inputVector.getData().get();
+    public NoOpModel(String name, int version, DataType inputType) {
+        super(name, version, inputType);
     }
-    return new FloatVector(FloatBuffer.wrap(new float[] {sum}));
-  }
+
+    @Override
+    public FloatVector predict(T inputVector) {
+        return new FloatVector(FloatBuffer.wrap(new float[] {(float) inputVector.getData().remaining()}));
+    }
 }

@@ -1,7 +1,5 @@
 package com.clipper.container.app.data;
 
-import com.clipper.container.app.Pair;
-
 import java.nio.ByteBuffer;
 
 public abstract class DataBuffer<T> {

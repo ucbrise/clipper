@@ -2,22 +2,19 @@ package com.clipper.container.app;
 
 import java.net.UnknownHostException;
 
-import com.clipper.container.app.data.DataVector;
-import com.clipper.container.app.data.DataVectorParser;
-import com.clipper.container.app.data.DoubleVector;
-import com.clipper.container.app.data.SerializableString;
+import com.clipper.container.app.data.*;
 import org.junit.Test;
 
 public class ContainerTest {
   @Test
   public void TestContainer() {
-    NoOpModel model = new NoOpModel("test", 1);
+    NoOpModel model = new NoOpModel("test", 1, DataType.Doubles);
     runContainer(model, new DoubleVector.Parser());
 //    NoOpStringModel model = new NoOpStringModel("test", 1);
 //    runContainer(model, new SerializableString.Parser());
   }
 
-  public <I extends DataVector<?>> void runContainer(
+  private <I extends DataVector<?>> void runContainer(
           Model<I> model, DataVectorParser<?, I> parser) {
     System.out.println("Starting...");
     ModelContainer<I> modelContainer = new ModelContainer(parser);

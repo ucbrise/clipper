@@ -153,7 +153,7 @@ class ModelContainer<I extends DataVector<?>> {
     if (model.inputType != inputType) {
       throw new IllegalArgumentException(
               String.format(
-                      "RPC message has input of incorrect type \"{}\". Expected type: \"{}\"",
+                      "RPC message has input of incorrect type \"%s\". Expected type: \"%s\"",
                       inputType.toString(),
                       model.inputType.toString()));
     }
