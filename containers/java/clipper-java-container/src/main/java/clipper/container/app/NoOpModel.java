@@ -1,8 +1,8 @@
-package com.clipper.container.app;
+package clipper.container.app;
 
-import com.clipper.container.app.data.DataType;
-import com.clipper.container.app.data.DataVector;
-import com.clipper.container.app.data.FloatVector;
+import clipper.container.app.data.DataType;
+import clipper.container.app.data.DataVector;
+import clipper.container.app.data.FloatVector;
 
 import java.nio.Buffer;
 import java.nio.FloatBuffer;

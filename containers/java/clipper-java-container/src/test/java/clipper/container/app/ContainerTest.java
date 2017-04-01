@@ -1,8 +1,8 @@
-package com.clipper.container.app;
+package clipper.container.app;
 
 import java.net.UnknownHostException;
 
-import com.clipper.container.app.data.*;
+import clipper.container.app.data.*;
 import org.junit.Test;
 
 public class ContainerTest {

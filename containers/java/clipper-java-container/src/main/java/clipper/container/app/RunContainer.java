@@ -1,6 +1,6 @@
-package com.clipper.container.app;
+package clipper.container.app;
 
-import com.clipper.container.app.data.*;
+import clipper.container.app.data.*;
 
 import java.net.UnknownHostException;
 

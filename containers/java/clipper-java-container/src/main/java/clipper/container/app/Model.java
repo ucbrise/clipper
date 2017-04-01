@@ -1,10 +1,8 @@
-package com.clipper.container.app;
+package clipper.container.app;
 
-import com.clipper.container.app.data.DataType;
-import com.clipper.container.app.data.DataVector;
-import com.clipper.container.app.data.FloatVector;
-
-import java.util.List;
+import clipper.container.app.data.DataType;
+import clipper.container.app.data.DataVector;
+import clipper.container.app.data.FloatVector;
 
 abstract class Model<I extends DataVector> {
   private String name;

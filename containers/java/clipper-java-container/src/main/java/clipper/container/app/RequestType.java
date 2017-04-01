@@ -1,4 +1,4 @@
-package com.clipper.container.app;
+package clipper.container.app;
 
 import java.util.HashMap;
 import java.util.Map;

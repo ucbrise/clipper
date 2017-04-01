@@ -1,4 +1,4 @@
-package com.clipper.container.app;
+package clipper.container.app;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import com.clipper.container.app.data.*;
+import clipper.container.app.data.*;
 import org.zeromq.ZMQ;
 
 class ModelContainer<I extends DataVector<?>> {

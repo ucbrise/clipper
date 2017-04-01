@@ -1,4 +1,4 @@
-package com.clipper.container.app.data;
+package clipper.container.app.data;
 
 public abstract class DataVector<T> {
 

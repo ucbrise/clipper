@@ -1,12 +1,13 @@
-package com.clipper.container.app;
+package clipper.container.app;
 
-import com.clipper.container.app.data.DataType;
-import com.clipper.container.app.data.FloatVector;
-import com.clipper.container.app.data.SerializableString;
+import clipper.container.app.data.DataType;
+import clipper.container.app.data.FloatVector;
+import clipper.container.app.data.SerializableString;
 
 import java.nio.FloatBuffer;
 
 public class NoOpStringModel extends Model<SerializableString> {
+
     NoOpStringModel(String name, int version) {
         super(name, version, DataType.Strings);
     }

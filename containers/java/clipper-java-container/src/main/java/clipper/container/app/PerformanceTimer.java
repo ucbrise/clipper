@@ -1,4 +1,4 @@
-package com.clipper.container.app;
+package clipper.container.app;
 
 public class PerformanceTimer {
 
