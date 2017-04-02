@@ -5,7 +5,6 @@ import java.nio.IntBuffer;
 import java.util.Iterator;
 
 public abstract class DataVectorParser<U, T extends DataVector<U>> {
-
   private DataBuffer<U> dataBuffer;
 
   abstract T constructDataVector(U data);
@@ -13,7 +12,7 @@ public abstract class DataVectorParser<U, T extends DataVector<U>> {
   abstract DataBuffer<U> createDataBuffer();
 
   private DataBuffer<U> getDataBuffer() {
-    if(dataBuffer == null) {
+    if (dataBuffer == null) {
       dataBuffer = createDataBuffer();
     }
     return dataBuffer;
@@ -24,7 +23,6 @@ public abstract class DataVectorParser<U, T extends DataVector<U>> {
   }
 
   class DataVectorIterator implements Iterator<T> {
-
     private IntBuffer splits;
     private ByteBuffer buffer;
     private int currentSplitIndex;
@@ -40,13 +38,11 @@ public abstract class DataVectorParser<U, T extends DataVector<U>> {
 
     @Override
     public boolean hasNext() {
-      return (buffer != null)
-              && (splits != null)
-              && (currentSplitIndex >= 0)
-              // If the split index is equivalent to the length
-              // of the splits list, data must be processed
-              // from the last split through the buffer's end
-              && (currentSplitIndex <= splits.remaining());
+      return (buffer != null) && (splits != null) && (currentSplitIndex >= 0)
+          // If the split index is equivalent to the length
+          // of the splits list, data must be processed
+          // from the last split through the buffer's end
+          && (currentSplitIndex <= splits.remaining());
     }
 
     @Override
@@ -54,7 +50,7 @@ public abstract class DataVectorParser<U, T extends DataVector<U>> {
       DataBuffer<U> dataBuffer = getDataBuffer();
       U parsedArray;
       T dataVector;
-      if(currentSplitIndex < splits.remaining()) {
+      if (currentSplitIndex < splits.remaining()) {
         int currSplit = splits.get(currentSplitIndex);
         parsedArray = dataBuffer.get(currSplit - prevSplit);
         prevSplit = currSplit;
@@ -66,5 +62,4 @@ public abstract class DataVectorParser<U, T extends DataVector<U>> {
       return dataVector;
     }
   }
-
 }

@@ -5,7 +5,6 @@ import java.nio.FloatBuffer;
 import java.nio.ByteOrder;
 
 public class FloatVector extends DataVector<FloatBuffer> {
-
   public FloatVector(FloatBuffer data) {
     super(data);
   }

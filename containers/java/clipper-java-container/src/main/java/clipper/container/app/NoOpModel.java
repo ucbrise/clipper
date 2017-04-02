@@ -8,13 +8,13 @@ import java.nio.Buffer;
 import java.nio.FloatBuffer;
 
 public class NoOpModel<T extends DataVector<Buffer>> extends Model<T> {
+  public NoOpModel(String name, int version, DataType inputType) {
+    super(name, version, inputType);
+  }
 
-    public NoOpModel(String name, int version, DataType inputType) {
-        super(name, version, inputType);
-    }
-
-    @Override
-    public FloatVector predict(T inputVector) {
-        return new FloatVector(FloatBuffer.wrap(new float[] {(float) inputVector.getData().remaining()}));
-    }
+  @Override
+  public FloatVector predict(T inputVector) {
+    return new FloatVector(
+        FloatBuffer.wrap(new float[] {(float) inputVector.getData().remaining()}));
+  }
 }

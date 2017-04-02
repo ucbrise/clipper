@@ -1,15 +1,13 @@
 package clipper.container.app.data;
 
 public abstract class DataVector<T> {
+  T data;
 
-    T data;
+  DataVector(T data) {
+    this.data = data;
+  }
 
-    DataVector(T data) {
-        this.data = data;
-    }
-
-    public T getData() {
-        return data;
-    }
-
+  public T getData() {
+    return data;
+  }
 }

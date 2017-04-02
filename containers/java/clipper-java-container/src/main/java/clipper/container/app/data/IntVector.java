@@ -5,7 +5,6 @@ import java.nio.IntBuffer;
 import java.nio.ByteOrder;
 
 public class IntVector extends DataVector<IntBuffer> {
-
   public IntVector(IntBuffer data) {
     super(data);
   }

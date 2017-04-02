@@ -3,7 +3,6 @@ package clipper.container.app.data;
 import java.nio.ByteBuffer;
 
 public class ByteVector extends DataVector<ByteBuffer> {
-
   public ByteVector(ByteBuffer data) {
     super(data);
   }

@@ -10,7 +10,6 @@ import java.nio.charset.Charset;
 import java.util.Iterator;
 
 public class SerializableString extends DataVector<String> {
-
   public SerializableString(String data) {
     super(data);
   }
@@ -43,7 +42,7 @@ public class SerializableString extends DataVector<String> {
         @Override
         public SerializableString next() {
           int stringLength = 0;
-          while(iterBuffer.get() != '\0') {
+          while (iterBuffer.get() != '\0') {
             stringLength++;
           }
           char[] stringChars = new char[stringLength];
