@@ -16,10 +16,15 @@ CLIPPER_ROOT=$DIR/..
 echo $CLIPPER_ROOT
 cd  $CLIPPER_ROOT
 
-# Run clang-format
+# Run clang-format on cpp/hpp files
 find ./src -not \( -path ./src/libs -prune \) -name '*pp' -print \
     | xargs clang-format -style=file -i
 
+# Run clang-format on Java files
+# find ./src -not \( -path ./src/libs -prune \) -name 'java' -print \
+#     | xargs clang-format -style=file -i
+
+find . -name '*.java' -print | xargs clang-format -style=file -i
 
 # Run Python formatter
 export PYTHONPATH=$CLIPPER_ROOT/bin/yapf

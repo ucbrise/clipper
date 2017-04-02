@@ -63,7 +63,8 @@ class ModelContainer<I extends DataVector<?>> {
     socket.send(String.valueOf(model.getInputType().getCode()));
   }
 
-  private void serveModel(ZMQ.Socket socket, Model<I> model) throws NoSuchFieldException, IllegalArgumentException {
+  private void serveModel(ZMQ.Socket socket, Model<I> model)
+      throws NoSuchFieldException, IllegalArgumentException {
     int inputHeaderBufferSize = 0;
     int inputBufferSize = 0;
     ByteBuffer inputHeaderBuffer = null;
@@ -88,12 +89,14 @@ class ModelContainer<I extends DataVector<?>> {
 
       if (requestType == RequestType.Predict) {
         byte[] inputHeaderSizeMessage = socket.recv();
-        List<Long> parsedInputHeaderSizeMessage = DataUtils.getLongsFromBytes(inputHeaderSizeMessage);
-        if(parsedInputHeaderSizeMessage.size() < 1) {
-          throw new NoSuchFieldException("Input header size is missing from RPC predict request message");
+        List<Long> parsedInputHeaderSizeMessage =
+            DataUtils.getLongsFromBytes(inputHeaderSizeMessage);
+        if (parsedInputHeaderSizeMessage.size() < 1) {
+          throw new NoSuchFieldException(
+              "Input header size is missing from RPC predict request message");
         }
         int inputHeaderSize = (int) ((long) parsedInputHeaderSizeMessage.get(0));
-        if(inputHeaderBuffer == null || inputHeaderBufferSize < inputHeaderSize) {
+        if (inputHeaderBuffer == null || inputHeaderBufferSize < inputHeaderSize) {
           inputHeaderBufferSize = inputHeaderSize * 2;
           inputHeaderBuffer = ByteBuffer.allocateDirect(inputHeaderBufferSize);
         }
@@ -103,16 +106,19 @@ class ModelContainer<I extends DataVector<?>> {
         inputHeaderBuffer.rewind();
         inputHeaderBuffer.limit(inputHeaderBytesRead);
 
-        IntBuffer inputHeader = inputHeaderBuffer.slice().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+        IntBuffer inputHeader =
+            inputHeaderBuffer.slice().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
 
         byte[] inputContentSizeMessage = socket.recv();
-        List<Long> parsedInputContentSizeMessage = DataUtils.getLongsFromBytes(inputContentSizeMessage);
-        if(parsedInputContentSizeMessage.size() < 1) {
-          throw new NoSuchFieldException("Input content size is missing from RPC predict request message");
+        List<Long> parsedInputContentSizeMessage =
+            DataUtils.getLongsFromBytes(inputContentSizeMessage);
+        if (parsedInputContentSizeMessage.size() < 1) {
+          throw new NoSuchFieldException(
+              "Input content size is missing from RPC predict request message");
         }
 
         int inputContentSize = (int) ((long) parsedInputContentSizeMessage.get(0));
-        if(inputBufferSize < inputContentSize) {
+        if (inputBufferSize < inputContentSize) {
           inputBufferSize = inputContentSize * 2;
           inputBuffer = ByteBuffer.allocateDirect(inputBufferSize);
         }
@@ -125,13 +131,15 @@ class ModelContainer<I extends DataVector<?>> {
         PerformanceTimer.logElapsed("Recv");
 
         if (inputHeader.remaining() < 2) {
-          throw new NoSuchFieldException("RPC message input header is missing or is of insufficient size");
+          throw new NoSuchFieldException(
+              "RPC message input header is missing or is of insufficient size");
         }
 
         DataType inputType = DataType.fromCode(inputHeader.get());
         int numInputs = inputHeader.get();
         validateRequestInputType(model, inputType);
-        Iterator<I> dataVectors = inputVectorParser.parseDataVectors(inputBuffer.slice(), inputHeader.slice());
+        Iterator<I> dataVectors =
+            inputVectorParser.parseDataVectors(inputBuffer.slice(), inputHeader.slice());
 
         PerformanceTimer.logElapsed("Parse");
 
@@ -149,20 +157,19 @@ class ModelContainer<I extends DataVector<?>> {
     }
   }
 
-  private void validateRequestInputType(Model<I> model, DataType inputType) throws IllegalArgumentException {
+  private void validateRequestInputType(Model<I> model, DataType inputType)
+      throws IllegalArgumentException {
     if (model.inputType != inputType) {
       throw new IllegalArgumentException(
-              String.format(
-                      "RPC message has input of incorrect type \"%s\". Expected type: \"%s\"",
-                      inputType.toString(),
-                      model.inputType.toString()));
+          String.format("RPC message has input of incorrect type \"%s\". Expected type: \"%s\"",
+              inputType.toString(), model.inputType.toString()));
     }
   }
 
   private void handlePredictRequest(
       long msgId, Iterator<I> dataVectors, Model<I> model, ZMQ.Socket socket) throws IOException {
     List<FloatVector> predictions = new ArrayList<>();
-    while(dataVectors.hasNext()) {
+    while (dataVectors.hasNext()) {
       I dataVector = dataVectors.next();
       FloatVector prediction = model.predict(dataVector);
       predictions.add(prediction);
@@ -172,7 +179,7 @@ class ModelContainer<I extends DataVector<?>> {
       outputLenBytes += p.getData().remaining();
     }
     outputLenBytes = outputLenBytes * 4;
-    if(responseBuffer == null || responseBufferSize < outputLenBytes) {
+    if (responseBuffer == null || responseBufferSize < outputLenBytes) {
       responseBufferSize = outputLenBytes * 2;
       responseBuffer = ByteBuffer.allocateDirect(responseBufferSize);
       responseBuffer.order(ByteOrder.LITTLE_ENDIAN);
@@ -180,7 +187,7 @@ class ModelContainer<I extends DataVector<?>> {
     responseBuffer.rewind();
     responseBuffer.limit(outputLenBytes);
     for (FloatVector preds : predictions) {
-      while(preds.getData().hasRemaining()) {
+      while (preds.getData().hasRemaining()) {
         responseBuffer.putFloat(preds.getData().get());
       }
     }

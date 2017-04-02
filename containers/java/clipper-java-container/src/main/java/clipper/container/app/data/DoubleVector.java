@@ -5,7 +5,6 @@ import java.nio.DoubleBuffer;
 import java.nio.ByteOrder;
 
 public class DoubleVector extends DataVector<DoubleBuffer> {
-
   public DoubleVector(DoubleBuffer data) {
     super(data);
   }
