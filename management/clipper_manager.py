@@ -376,7 +376,6 @@ class Clipper:
                     EXTERNALLY_MANAGED_MODEL,
                     EXTERNALLY_MANAGED_MODEL)
 
-
     def deploy_model(self,
                      name,
                      version,
