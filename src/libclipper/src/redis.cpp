@@ -54,6 +54,8 @@ std::string gen_versioned_model_key(const VersionedModelId& key) {
 }
 
 string labels_to_str(const vector<string>& labels) {
+  if (labels.empty()) return "";
+
   std::ostringstream ss;
   for (auto l = labels.begin(); l != labels.end() - 1; ++l) {
     ss << *l << ITEM_DELIMITER;
@@ -80,6 +82,8 @@ vector<string> str_to_labels(const string& label_str) {
 }
 
 std::string models_to_str(const std::vector<VersionedModelId>& models) {
+  if (models.empty()) return "";
+
   std::ostringstream ss;
   for (auto m = models.begin(); m != models.end() - 1; ++m) {
     ss << m->first << ITEM_PART_CONCATENATOR << m->second << ITEM_DELIMITER;
