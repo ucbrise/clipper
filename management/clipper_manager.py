@@ -70,6 +70,7 @@ LOCAL_HOST_NAMES = ["local", "localhost", "127.0.0.1"]
 
 EXTERNALLY_MANAGED_MODEL = "EXTERNAL"
 
+
 class Clipper:
     """
     Connection to a Clipper instance for administrative purposes.
@@ -368,13 +369,9 @@ class Clipper:
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
         """
-        return self._publish_new_model(
-                    name,
-                    version,
-                    labels,
-                    input_type,
-                    EXTERNALLY_MANAGED_MODEL,
-                    EXTERNALLY_MANAGED_MODEL)
+        return self._publish_new_model(name, version, labels, input_type,
+                                       EXTERNALLY_MANAGED_MODEL,
+                                       EXTERNALLY_MANAGED_MODEL)
 
     def deploy_model(self,
                      name,
