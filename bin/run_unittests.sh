@@ -57,6 +57,8 @@ fi
 
 randomize_redis_port
 
+set -e
+
 # start Redis on the test port if it's not already running
 redis-server --port $REDIS_PORT &> /dev/null &
 
