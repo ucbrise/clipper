@@ -71,9 +71,11 @@ TEST(InputSerializationTests, ByteSerialization) {
   clipper::ByteBuffer input_content_size = serialized_request[3];
   clipper::ByteBuffer input_content = serialized_request[4];
 
-  long* raw_input_header_size = reinterpret_cast<long*>(input_header_size.data());
+  long* raw_input_header_size =
+      reinterpret_cast<long*>(input_header_size.data());
   ASSERT_EQ(raw_input_header_size[0], input_header.size());
-  long* raw_input_content_size = reinterpret_cast<long*>(input_content_size.data());
+  long* raw_input_content_size =
+      reinterpret_cast<long*>(input_content_size.data());
   ASSERT_EQ(raw_input_content_size[0], input_content.size());
 
   uint32_t* raw_request_type =
@@ -128,9 +130,11 @@ TEST(InputSerializationTests, IntSerialization) {
   clipper::ByteBuffer input_content_size = serialized_request[3];
   clipper::ByteBuffer input_content = serialized_request[4];
 
-  long* raw_input_header_size = reinterpret_cast<long*>(input_header_size.data());
+  long* raw_input_header_size =
+      reinterpret_cast<long*>(input_header_size.data());
   ASSERT_EQ(raw_input_header_size[0], input_header.size());
-  long* raw_input_content_size = reinterpret_cast<long*>(input_content_size.data());
+  long* raw_input_content_size =
+      reinterpret_cast<long*>(input_content_size.data());
   ASSERT_EQ(raw_input_content_size[0], input_content.size());
 
   uint32_t* raw_request_type =
@@ -183,9 +187,11 @@ TEST(InputSerializationTests, FloatSerialization) {
   clipper::ByteBuffer input_content_size = serialized_request[3];
   clipper::ByteBuffer input_content = serialized_request[4];
 
-  long* raw_input_header_size = reinterpret_cast<long*>(input_header_size.data());
+  long* raw_input_header_size =
+      reinterpret_cast<long*>(input_header_size.data());
   ASSERT_EQ(raw_input_header_size[0], input_header.size());
-  long* raw_input_content_size = reinterpret_cast<long*>(input_content_size.data());
+  long* raw_input_content_size =
+      reinterpret_cast<long*>(input_content_size.data());
   ASSERT_EQ(raw_input_content_size[0], input_content.size());
 
   uint32_t* raw_request_type =
@@ -239,9 +245,11 @@ TEST(InputSerializationTests, DoubleSerialization) {
   clipper::ByteBuffer input_content_size = serialized_request[3];
   clipper::ByteBuffer input_content = serialized_request[4];
 
-  long* raw_input_header_size = reinterpret_cast<long*>(input_header_size.data());
+  long* raw_input_header_size =
+      reinterpret_cast<long*>(input_header_size.data());
   ASSERT_EQ(raw_input_header_size[0], input_header.size());
-  long* raw_input_content_size = reinterpret_cast<long*>(input_content_size.data());
+  long* raw_input_content_size =
+      reinterpret_cast<long*>(input_content_size.data());
   ASSERT_EQ(raw_input_content_size[0], input_content.size());
 
   uint32_t* raw_request_type =
@@ -295,9 +303,11 @@ TEST(InputSerializationTests, StringSerialization) {
   clipper::ByteBuffer input_content_size = serialized_request[3];
   clipper::ByteBuffer input_content = serialized_request[4];
 
-  long* raw_input_header_size = reinterpret_cast<long*>(input_header_size.data());
+  long* raw_input_header_size =
+      reinterpret_cast<long*>(input_header_size.data());
   ASSERT_EQ(raw_input_header_size[0], input_header.size());
-  long* raw_input_content_size = reinterpret_cast<long*>(input_content_size.data());
+  long* raw_input_content_size =
+      reinterpret_cast<long*>(input_content_size.data());
   ASSERT_EQ(raw_input_content_size[0], input_content.size());
 
   uint32_t* raw_request_type =
