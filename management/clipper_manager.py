@@ -369,6 +369,20 @@ class Clipper:
         r = requests.post(url, headers=headers, data=req_json)
         print(r.text)
 
+    def delete_application(self, name):
+        """Deletes an existing Clipper application.
+
+        Parameters
+        ----------
+        name : str
+            The name of the application.
+        """
+        url = "http://%s:1338/admin/delete_app" % self.host
+        req_json = json.dumps({"name": name})
+        headers = {'Content-type': 'application/json'}
+        r = requests.delete(url, headers=headers, data=req_json)
+        print(r.text)
+
     def get_all_apps(self, verbose=False):
         """Gets information about all applications registered with Clipper.
 
