@@ -9,7 +9,7 @@ using std::vector;
 
 namespace {
 
-const unsigned long SERIALIZED_REQUEST_SIZE = 3;
+const unsigned long SERIALIZED_REQUEST_SIZE = 5;
 const int NUM_PRIMITIVE_INPUTS = 500;
 const int NUM_STRING_INPUTS = 300;
 const uint8_t PRIMITIVE_INPUT_SIZE_ELEMS = 200;
@@ -66,8 +66,16 @@ TEST(InputSerializationTests, ByteSerialization) {
   std::vector<clipper::ByteBuffer> serialized_request = request.serialize();
   ASSERT_EQ(serialized_request.size(), SERIALIZED_REQUEST_SIZE);
   clipper::ByteBuffer request_header = serialized_request[0];
-  clipper::ByteBuffer input_header = serialized_request[1];
-  clipper::ByteBuffer raw_content = serialized_request[2];
+  clipper::ByteBuffer input_header_size = serialized_request[1];
+  clipper::ByteBuffer input_header = serialized_request[2];
+  clipper::ByteBuffer input_content_size = serialized_request[3];
+  clipper::ByteBuffer input_content = serialized_request[4];
+
+  long* raw_input_header_size = reinterpret_cast<long*>(input_header_size.data());
+  ASSERT_EQ(raw_input_header_size[0], input_header.size());
+  long* raw_input_content_size = reinterpret_cast<long*>(input_content_size.data());
+  ASSERT_EQ(raw_input_content_size[0], input_content.size());
+
   uint32_t* raw_request_type =
       reinterpret_cast<uint32_t*>(request_header.data());
   ASSERT_EQ(*raw_request_type,
@@ -81,7 +89,7 @@ TEST(InputSerializationTests, ByteSerialization) {
   ASSERT_EQ(num_inputs, static_cast<uint32_t>(data_vectors.size()));
   typed_input_header++;
 
-  uint8_t* content_ptr = raw_content.data();
+  uint8_t* content_ptr = input_content.data();
   uint32_t prev_index = 0;
   for (int i = 0; i < (int)num_inputs - 1; i++) {
     uint32_t split_index = typed_input_header[i];
@@ -98,7 +106,7 @@ TEST(InputSerializationTests, ByteSerialization) {
   // the total content length.
   std::vector<uint8_t> tail_vec(
       content_ptr + prev_index,
-      content_ptr + (raw_content.size() / sizeof(uint8_t)));
+      content_ptr + (input_content.size() / sizeof(uint8_t)));
   ASSERT_EQ(tail_vec, data_vectors[data_vectors.size() - 1]);
 }
 
@@ -113,9 +121,18 @@ TEST(InputSerializationTests, IntSerialization) {
   }
   std::vector<clipper::ByteBuffer> serialized_request = request.serialize();
   ASSERT_EQ(serialized_request.size(), SERIALIZED_REQUEST_SIZE);
+
   clipper::ByteBuffer request_header = serialized_request[0];
-  clipper::ByteBuffer input_header = serialized_request[1];
-  clipper::ByteBuffer raw_content = serialized_request[2];
+  clipper::ByteBuffer input_header_size = serialized_request[1];
+  clipper::ByteBuffer input_header = serialized_request[2];
+  clipper::ByteBuffer input_content_size = serialized_request[3];
+  clipper::ByteBuffer input_content = serialized_request[4];
+
+  long* raw_input_header_size = reinterpret_cast<long*>(input_header_size.data());
+  ASSERT_EQ(raw_input_header_size[0], input_header.size());
+  long* raw_input_content_size = reinterpret_cast<long*>(input_content_size.data());
+  ASSERT_EQ(raw_input_content_size[0], input_content.size());
+
   uint32_t* raw_request_type =
       reinterpret_cast<uint32_t*>(request_header.data());
   ASSERT_EQ(*raw_request_type,
@@ -129,7 +146,7 @@ TEST(InputSerializationTests, IntSerialization) {
   ASSERT_EQ(num_inputs, static_cast<uint32_t>(data_vectors.size()));
   typed_input_header++;
 
-  int* content_ptr = reinterpret_cast<int*>(raw_content.data());
+  int* content_ptr = reinterpret_cast<int*>(input_content.data());
   uint32_t prev_index = 0;
   for (int i = 0; i < (int)num_inputs - 1; i++) {
     uint32_t split_index = typed_input_header[i];
@@ -144,7 +161,7 @@ TEST(InputSerializationTests, IntSerialization) {
   // This vector is composed of the elements from the last split index through
   // the total content length.
   std::vector<int> tail_vec(content_ptr + prev_index,
-                            content_ptr + (raw_content.size() / sizeof(int)));
+                            content_ptr + (input_content.size() / sizeof(int)));
   ASSERT_EQ(tail_vec, data_vectors[data_vectors.size() - 1]);
 }
 
@@ -159,9 +176,18 @@ TEST(InputSerializationTests, FloatSerialization) {
   }
   std::vector<clipper::ByteBuffer> serialized_request = request.serialize();
   ASSERT_EQ(serialized_request.size(), SERIALIZED_REQUEST_SIZE);
+
   clipper::ByteBuffer request_header = serialized_request[0];
-  clipper::ByteBuffer input_header = serialized_request[1];
-  clipper::ByteBuffer raw_content = serialized_request[2];
+  clipper::ByteBuffer input_header_size = serialized_request[1];
+  clipper::ByteBuffer input_header = serialized_request[2];
+  clipper::ByteBuffer input_content_size = serialized_request[3];
+  clipper::ByteBuffer input_content = serialized_request[4];
+
+  long* raw_input_header_size = reinterpret_cast<long*>(input_header_size.data());
+  ASSERT_EQ(raw_input_header_size[0], input_header.size());
+  long* raw_input_content_size = reinterpret_cast<long*>(input_content_size.data());
+  ASSERT_EQ(raw_input_content_size[0], input_content.size());
+
   uint32_t* raw_request_type =
       reinterpret_cast<uint32_t*>(request_header.data());
   ASSERT_EQ(*raw_request_type,
@@ -175,7 +201,7 @@ TEST(InputSerializationTests, FloatSerialization) {
   ASSERT_EQ(num_inputs, static_cast<uint32_t>(data_vectors.size()));
   typed_input_header++;
 
-  float* content_ptr = reinterpret_cast<float*>(raw_content.data());
+  float* content_ptr = reinterpret_cast<float*>(input_content.data());
   uint32_t prev_index = 0;
   for (int i = 0; i < (int)num_inputs - 1; i++) {
     uint32_t split_index = typed_input_header[i];
@@ -191,7 +217,7 @@ TEST(InputSerializationTests, FloatSerialization) {
   // the total content length.
   std::vector<float> tail_vec(
       content_ptr + prev_index,
-      content_ptr + (raw_content.size() / sizeof(float)));
+      content_ptr + (input_content.size() / sizeof(float)));
   ASSERT_EQ(tail_vec, data_vectors[data_vectors.size() - 1]);
 }
 
@@ -206,9 +232,18 @@ TEST(InputSerializationTests, DoubleSerialization) {
   }
   std::vector<clipper::ByteBuffer> serialized_request = request.serialize();
   ASSERT_EQ(serialized_request.size(), SERIALIZED_REQUEST_SIZE);
+
   clipper::ByteBuffer request_header = serialized_request[0];
-  clipper::ByteBuffer input_header = serialized_request[1];
-  clipper::ByteBuffer raw_content = serialized_request[2];
+  clipper::ByteBuffer input_header_size = serialized_request[1];
+  clipper::ByteBuffer input_header = serialized_request[2];
+  clipper::ByteBuffer input_content_size = serialized_request[3];
+  clipper::ByteBuffer input_content = serialized_request[4];
+
+  long* raw_input_header_size = reinterpret_cast<long*>(input_header_size.data());
+  ASSERT_EQ(raw_input_header_size[0], input_header.size());
+  long* raw_input_content_size = reinterpret_cast<long*>(input_content_size.data());
+  ASSERT_EQ(raw_input_content_size[0], input_content.size());
+
   uint32_t* raw_request_type =
       reinterpret_cast<uint32_t*>(request_header.data());
   ASSERT_EQ(*raw_request_type,
@@ -222,7 +257,7 @@ TEST(InputSerializationTests, DoubleSerialization) {
   ASSERT_EQ(num_inputs, static_cast<uint32_t>(data_vectors.size()));
   typed_input_header++;
 
-  double* content_ptr = reinterpret_cast<double*>(raw_content.data());
+  double* content_ptr = reinterpret_cast<double*>(input_content.data());
   uint32_t prev_index = 0;
   for (int i = 0; i < (int)num_inputs - 1; i++) {
     uint32_t split_index = typed_input_header[i];
@@ -239,7 +274,7 @@ TEST(InputSerializationTests, DoubleSerialization) {
   // the total content length.
   std::vector<double> tail_vec(
       content_ptr + prev_index,
-      content_ptr + (raw_content.size() / sizeof(double)));
+      content_ptr + (input_content.size() / sizeof(double)));
   ASSERT_EQ(tail_vec, data_vectors[data_vectors.size() - 1]);
 }
 
@@ -255,8 +290,16 @@ TEST(InputSerializationTests, StringSerialization) {
   std::vector<clipper::ByteBuffer> serialized_request = request.serialize();
   ASSERT_EQ(serialized_request.size(), SERIALIZED_REQUEST_SIZE);
   clipper::ByteBuffer request_header = serialized_request[0];
-  clipper::ByteBuffer input_header = serialized_request[1];
-  clipper::ByteBuffer raw_content = serialized_request[2];
+  clipper::ByteBuffer input_header_size = serialized_request[1];
+  clipper::ByteBuffer input_header = serialized_request[2];
+  clipper::ByteBuffer input_content_size = serialized_request[3];
+  clipper::ByteBuffer input_content = serialized_request[4];
+
+  long* raw_input_header_size = reinterpret_cast<long*>(input_header_size.data());
+  ASSERT_EQ(raw_input_header_size[0], input_header.size());
+  long* raw_input_content_size = reinterpret_cast<long*>(input_content_size.data());
+  ASSERT_EQ(raw_input_content_size[0], input_content.size());
+
   uint32_t* raw_request_type =
       reinterpret_cast<uint32_t*>(request_header.data());
   ASSERT_EQ(*raw_request_type,
@@ -270,7 +313,7 @@ TEST(InputSerializationTests, StringSerialization) {
   ASSERT_EQ(num_inputs, static_cast<uint32_t>(string_vector.size()));
   typed_input_header++;
 
-  char* content_ptr = reinterpret_cast<char*>(raw_content.data());
+  char* content_ptr = reinterpret_cast<char*>(input_content.data());
   for (int i = 0; i < (int)num_inputs; i++) {
     std::string str(content_ptr);
     ASSERT_EQ(str, string_vector[i]);
