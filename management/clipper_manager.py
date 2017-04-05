@@ -153,10 +153,16 @@ class Clipper:
             return run(*args, **kwargs)
 
     def _execute_local(self, *args, **kwargs):
+        # local is not currently capable of simultaneously printing and
+        # capturing output, as run/sudo do. The capture kwarg allows you to
+        # switch between printing and capturing as necessary, and defaults to
+        # False. In this case, we need to capture the output and return it.
+        if "capture" not in kwargs:
+            kwargs["capture"] = True
         # fabric.local() does not accept the "warn_only"
         # key word argument, so we must remove it before
         # calling
-        if "warn_only" in kwargs.keys():
+        if "warn_only" in kwargs:
             del kwargs["warn_only"]
             # Forces execution to continue in the face of an error,
             # just like warn_only=True
