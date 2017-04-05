@@ -370,4 +370,25 @@ TEST_F(RedisTest, SubscriptionDetectApplicationDelete) {
   ASSERT_TRUE(result);
 }
 
+TEST_F(RedisTest, LabelsToStr) {
+  std::vector<std::string> labels{"ads", "images", "experimental", "other",
+                                  "labels"};
+  ASSERT_EQ(labels_to_str(labels), "ads,images,experimental,other,labels");
+
+  labels.clear();
+  ASSERT_EQ(labels_to_str(labels), "");
+}
+
+TEST_F(RedisTest, ModelsToStr) {
+  std::vector<VersionedModelId> models{
+      std::make_pair("music_random_features", 1),
+      std::make_pair("simple_svm", 2), std::make_pair("music_cnn", 4)};
+
+  ASSERT_EQ(models_to_str(models),
+            "music_random_features:1,simple_svm:2,music_cnn:4");
+
+  models.clear();
+  ASSERT_EQ(models_to_str(models), "");
+}
+
 }  // namespace
