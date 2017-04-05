@@ -68,6 +68,8 @@ DOCKER_COMPOSE_DICT = {
 
 LOCAL_HOST_NAMES = ["local", "localhost", "127.0.0.1"]
 
+EXTERNALLY_MANAGED_MODEL = "EXTERNAL"
+
 
 class Clipper:
     """
@@ -359,6 +361,24 @@ class Clipper:
         r = requests.post(url, headers=headers, data=req_json)
         return r.text
 
+    def register_external_model(self, name, version, labels, input_type):
+        """Registers a model with Clipper without deploying it in any containers.
+
+        Parameters
+        ----------
+        name : str
+            The name to assign this model.
+        version : int
+            The version to assign this model.
+        labels : list of str
+            A set of strings annotating the model
+        input_type : str
+            One of "integers", "floats", "doubles", "bytes", or "strings".
+        """
+        return self._publish_new_model(name, version, labels, input_type,
+                                       EXTERNALLY_MANAGED_MODEL,
+                                       EXTERNALLY_MANAGED_MODEL)
+
     def deploy_model(self,
                      name,
                      version,
@@ -367,7 +387,7 @@ class Clipper:
                      labels,
                      input_type,
                      num_containers=1):
-        """Add a model to Clipper.
+        """Registers a model with Clipper and deploys instances of it in containers.
 
         Parameters
         ----------
