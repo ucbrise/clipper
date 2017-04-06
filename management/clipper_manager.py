@@ -10,6 +10,8 @@ import subprocess32 as subprocess
 import shutil
 from sklearn import base
 from sklearn.externals import joblib
+from cStringIO import StringIO
+from pywrencloudpickle import CloudPickler
 
 MODEL_REPO = "/tmp/clipper-models"
 DOCKER_NW = "clipper_nw"
