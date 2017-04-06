@@ -152,7 +152,7 @@ class RequestHandler {
     redis_subscriber_.disconnect();
   }
 
-  void add_application(std::string name, std::vector<VersionedModelId> models,
+  void add_application(std::string name, std::vector<std::string> models,
                        InputType input_type, std::string policy,
                        long latency_slo_micros) {
     auto predict_fn = [this, name, input_type, policy, latency_slo_micros,
@@ -165,7 +165,7 @@ class RequestHandler {
           for (auto m : models) {
             auto version = current_model_versions_.find(m);
             if (version != current_model_versions_.end()) {
-              versioned_models.emplace_back(m, *version);
+              versioned_models.emplace_back(m, version->second);
             }
           }
         }
@@ -198,8 +198,19 @@ class RequestHandler {
         std::shared_ptr<HttpServer::Response> response,
         std::shared_ptr<HttpServer::Request> request) {
       try {
-        auto update = decode_and_handle_update(request->content.string(), name,
-                                               models, policy, input_type);
+        std::vector<VersionedModelId> versioned_models;
+        {
+          std::unique_lock<std::mutex> l(current_model_versions_mutex_);
+          for (auto m : models) {
+            auto version = current_model_versions_.find(m);
+            if (version != current_model_versions_.end()) {
+              versioned_models.emplace_back(m, version->second);
+            }
+          }
+        }
+        auto update =
+            decode_and_handle_update(request->content.string(), name,
+                                     versioned_models, policy, input_type);
         update.then([response](boost::future<FeedbackAck> f) {
           FeedbackAck ack = f.get();
           std::stringstream ss;
