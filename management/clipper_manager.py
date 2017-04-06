@@ -241,7 +241,7 @@ class Clipper:
 
     def register_application(self,
                              name,
-                             candidate_models,
+                             candidate_model_names,
                              input_type,
                              selection_policy,
                              slo_micros=20000):
@@ -251,14 +251,10 @@ class Clipper:
         ----------
         name : str
             The name of the application.
-        candidate_models : list of dict
-            The list of models this application will attempt to query.
-            Each candidate model is defined as a dict with keys `model_name`
-            and `model_version`. Example::
-                candidate_models = [
-                    {"model_name": "my_model", "model_version": 1},
-                    {"model_name": "other_model", "model_version": 1},
-                ]
+        candidate_model_names : list of str
+            The list of model names this application will attempt to query.
+            Example::
+                candidate_model_names = ["my_model", "other_model"]
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
         selection_policy : str
@@ -521,6 +517,8 @@ class Clipper:
             image_name = model_metadata["container_name"]
             model_data_path = model_metadata["model_data_path"]
             model_input_type = model_metadata["input_type"]
+            
+            # TODO: don't try to add container if it's an external container
 
             # Start container
             add_container_cmd = (
@@ -554,6 +552,37 @@ class Clipper:
         except TypeError:
             s = r.text
         return s
+
+    def set_model_version(model_name, model_version, num_containers=0):
+        """Changes the current model version to `model_version`.
+
+        This method can be used to do model rollback and rollforward to
+        any previously deployed version of the model. Note that model
+        versions automatically get updated when `deploy_model()` is
+        called, so there is no need to manually update the version as well.
+
+        Parameters
+        ----------
+        model_name : str
+            The name of the model
+        model_version : int
+            The version of the model. Note that `model_version`
+            must be a model version that has already been deployed.
+        num_containers : int
+            The number of new containers to start with the newly
+            selected model version.
+
+        """
+        url = "http://%s:1338/admin/set_model_version" % self.host
+        req_json = json.dumps({
+            "model_name": model_name,
+            "model_version": model_version
+        })
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
+        print(r.text)
+        for r in range(num_containers):
+            self.add_container(model_name, model_version)
 
     def stop_all(self):
         """Stops and removes all Docker containers on the host.
