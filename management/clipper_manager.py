@@ -8,11 +8,8 @@ import yaml
 import pprint
 import subprocess32 as subprocess
 import shutil
-import pip
 from sklearn import base
 from sklearn.externals import joblib
-from cStringIO import StringIO
-from pywrencloudpickle import CloudPickler
 
 MODEL_REPO = "/tmp/clipper-models"
 DOCKER_NW = "clipper_nw"
@@ -70,6 +67,8 @@ DOCKER_COMPOSE_DICT = {
 }
 
 LOCAL_HOST_NAMES = ["local", "localhost", "127.0.0.1"]
+
+EXTERNALLY_MANAGED_MODEL = "EXTERNAL"
 
 
 class Clipper:
@@ -154,10 +153,16 @@ class Clipper:
             return run(*args, **kwargs)
 
     def _execute_local(self, *args, **kwargs):
+        # local is not currently capable of simultaneously printing and
+        # capturing output, as run/sudo do. The capture kwarg allows you to
+        # switch between printing and capturing as necessary, and defaults to
+        # False. In this case, we need to capture the output and return it.
+        if "capture" not in kwargs:
+            kwargs["capture"] = True
         # fabric.local() does not accept the "warn_only"
         # key word argument, so we must remove it before
         # calling
-        if "warn_only" in kwargs.keys():
+        if "warn_only" in kwargs:
             del kwargs["warn_only"]
             # Forces execution to continue in the face of an error,
             # just like warn_only=True
@@ -356,6 +361,24 @@ class Clipper:
         r = requests.post(url, headers=headers, data=req_json)
         return r.text
 
+    def register_external_model(self, name, version, labels, input_type):
+        """Registers a model with Clipper without deploying it in any containers.
+
+        Parameters
+        ----------
+        name : str
+            The name to assign this model.
+        version : int
+            The version to assign this model.
+        labels : list of str
+            A set of strings annotating the model
+        input_type : str
+            One of "integers", "floats", "doubles", "bytes", or "strings".
+        """
+        return self._publish_new_model(name, version, labels, input_type,
+                                       EXTERNALLY_MANAGED_MODEL,
+                                       EXTERNALLY_MANAGED_MODEL)
+
     def deploy_predict_function(self,
                                 name,
                                 version,
@@ -364,6 +387,8 @@ class Clipper:
                                 input_type,
                                 num_containers=1):
         """Add a model that makes use of the provided `predict_function` to Clipper.
+        This function should be called within the Anaconda environment in which the
+        `predict_function` is expected to operate.
 
         Parameters
         ----------
@@ -437,7 +462,7 @@ class Clipper:
                      labels,
                      input_type,
                      num_containers=1):
-        """Add a model to Clipper.
+        """Registers a model with Clipper and deploys instances of it in containers.
 
         Parameters
         ----------
@@ -530,9 +555,7 @@ class Clipper:
                 return False
             else:
                 print("Published model to Clipper")
-                print("here")
                 # aggregate results of starting all containers
-                print(name, version, num_containers)
                 return all([
                     self.add_container(name, version)
                     for r in range(num_containers)
@@ -586,7 +609,6 @@ class Clipper:
                     mn=model_name,
                     mv=model_version,
                     mip=model_input_type))
-            print(add_container_cmd)
             result = self._execute_root(add_container_cmd)
             return result.return_code == 0
 
