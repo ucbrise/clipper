@@ -8,8 +8,11 @@ import yaml
 import pprint
 import subprocess32 as subprocess
 import shutil
+import pip
 from sklearn import base
 from sklearn.externals import joblib
+from cStringIO import StringIO
+from pywrencloudpickle import CloudPickler
 
 MODEL_REPO = "/tmp/clipper-models"
 DOCKER_NW = "clipper_nw"
@@ -67,8 +70,6 @@ DOCKER_COMPOSE_DICT = {
 }
 
 LOCAL_HOST_NAMES = ["local", "localhost", "127.0.0.1"]
-
-EXTERNALLY_MANAGED_MODEL = "EXTERNAL"
 
 
 class Clipper:
@@ -153,16 +154,10 @@ class Clipper:
             return run(*args, **kwargs)
 
     def _execute_local(self, *args, **kwargs):
-        # local is not currently capable of simultaneously printing and
-        # capturing output, as run/sudo do. The capture kwarg allows you to
-        # switch between printing and capturing as necessary, and defaults to
-        # False. In this case, we need to capture the output and return it.
-        if "capture" not in kwargs:
-            kwargs["capture"] = True
         # fabric.local() does not accept the "warn_only"
         # key word argument, so we must remove it before
         # calling
-        if "warn_only" in kwargs:
+        if "warn_only" in kwargs.keys():
             del kwargs["warn_only"]
             # Forces execution to continue in the face of an error,
             # just like warn_only=True
@@ -361,8 +356,14 @@ class Clipper:
         r = requests.post(url, headers=headers, data=req_json)
         return r.text
 
-    def register_external_model(self, name, version, labels, input_type):
-        """Registers a model with Clipper without deploying it in any containers.
+    def deploy_predict_function(self,
+                                name,
+                                version,
+                                predict_function,
+                                labels,
+                                input_type,
+                                num_containers=1):
+        """Add a model that makes use of the provided `predict_function` to Clipper.
 
         Parameters
         ----------
@@ -370,14 +371,63 @@ class Clipper:
             The name to assign this model.
         version : int
             The version to assign this model.
+        predict_function : function
+            The function that the model will use find predictions for queried datapoints.
+            This function should accept as input an array of datapoints with entries of
+            type `input_type` and should return a native Python or numpy array of
+            predictions.
         labels : list of str
             A set of strings annotating the model
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
+        num_containers : int, optional
+            The number of replicas of the model to create. More replicas can be
+            created later as well. Defaults to 1.
         """
-        return self._publish_new_model(name, version, labels, input_type,
-                                       EXTERNALLY_MANAGED_MODEL,
-                                       EXTERNALLY_MANAGED_MODEL)
+        # Constants
+        relative_base_serializations_dir = "predict_serializations"
+        default_python_container = "clipper/predict_func_container:latest"
+        predict_fname = "predict.txt"
+        environment_fname = "environment.yml"
+
+        # Get directory
+        base_serializations_dir = os.path.abspath(
+            relative_base_serializations_dir)
+
+        # Serialize function
+        s = StringIO()
+        c = CloudPickler(s, 2)
+        c.dump(predict_function)
+        serialized_prediction_function = s.getvalue()
+
+        # Set up serialization directory
+        serialization_dir = "{base}/{dir}".format(
+            base=base_serializations_dir, dir=name)
+        if not os.path.exists(serialization_dir):
+            os.makedirs(serialization_dir)
+
+        # Write out function serialization
+        func_file_path = "{dir}/{predict_fname}".format(
+            dir=serialization_dir, predict_fname=predict_fname)
+        serialized_function_file = open(func_file_path, "w")
+        serialized_function_file.write(serialized_prediction_function)
+        serialized_function_file.close()
+        print("Serialized and supplied predict function")
+
+        # Export Anaconda environment
+        subprocess.call(
+            "PIP_FORMAT=legacy conda env export >> {environment_fname}".format(
+                environment_fname=environment_fname),
+            shell=True)
+
+        # Give container environment details
+        shutil.copy(environment_fname, serialization_dir)
+        print("Supplied environment details")
+
+        # Deploy function
+        return self.deploy_model(name, version, serialization_dir,
+                                 default_python_container, labels, input_type,
+                                 num_containers)
 
     def deploy_model(self,
                      name,
@@ -387,7 +437,7 @@ class Clipper:
                      labels,
                      input_type,
                      num_containers=1):
-        """Registers a model with Clipper and deploys instances of it in containers.
+        """Add a model to Clipper.
 
         Parameters
         ----------
@@ -480,7 +530,9 @@ class Clipper:
                 return False
             else:
                 print("Published model to Clipper")
+                print("here")
                 # aggregate results of starting all containers
+                print(name, version, num_containers)
                 return all([
                     self.add_container(name, version)
                     for r in range(num_containers)
@@ -534,6 +586,7 @@ class Clipper:
                     mn=model_name,
                     mv=model_version,
                     mip=model_input_type))
+            print(add_container_cmd)
             result = self._execute_root(add_container_cmd)
             return result.return_code == 0
 
