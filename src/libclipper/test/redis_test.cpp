@@ -91,6 +91,19 @@ TEST_F(RedisTest, AddModel) {
   ASSERT_EQ(result["model_data_path"], model_path);
 }
 
+TEST_F(RedisTest, SetCurrentModelVersion) { ASSERT_TRUE(false); }
+
+TEST_F(RedisTest, GetModelVersions) {
+  std::vector<std::string> labels{"ads", "images", "experimental", "other",
+                                  "labels"};
+  VersionedModelId model = std::make_pair("m", 1);
+  std::string container_name = "clipper/test_container";
+  std::string model_path = "/tmp/models/m/1";
+  ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, labels, container_name,
+                        model_path));
+  ASSERT_TRUE(false);
+}
+
 TEST_F(RedisTest, DeleteModel) {
   std::vector<std::string> labels{"ads", "images", "experimental"};
   VersionedModelId model = std::make_pair("m", 1);
@@ -369,6 +382,10 @@ TEST_F(RedisTest, SubscriptionDetectApplicationDelete) {
                                            [&recv]() { return recv == true; });
   ASSERT_TRUE(result);
 }
+
+TEST_F(RedisTest, SubscriptionDetectModelVersionAdd) { ASSERT_TRUE(false); }
+
+TEST_F(RedisTest, SubscriptionDetectModelVersionChange) { ASSERT_TRUE(false); }
 
 TEST_F(RedisTest, LabelsToStr) {
   std::vector<std::string> labels{"ads", "images", "experimental", "other",

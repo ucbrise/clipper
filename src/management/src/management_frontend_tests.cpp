@@ -107,6 +107,10 @@ TEST_F(ManagementFrontendTest, TestAddModelCorrect) {
   // entries in it (see add_model() in redis.cpp for details on what the
   // fields are).
   ASSERT_EQ(result.size(), static_cast<size_t>(7));
+
+  // TODO: make sure that the current model version has been updated
+  // appropriately.
+  ASSERT_TRUE(false);
 }
 
 TEST_F(ManagementFrontendTest, TestAddModelMissingField) {
@@ -129,5 +133,7 @@ TEST_F(ManagementFrontendTest, TestAddModelMalformedJson) {
   )";
   ASSERT_THROW(rh_.add_model(add_model_json), json_parse_error);
 }
+
+TEST_F(ManagementFrontendTest, TestSetModelVersion) { ASSERT_TRUE(false); }
 
 }  // namespace

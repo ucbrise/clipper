@@ -112,14 +112,37 @@ class RequestHandler {
                                         "New application detected: {}", key);
             auto app_info =
                 clipper::redis::get_application_by_key(redis_connection_, key);
-            std::vector<VersionedModelId> candidate_models =
-                clipper::redis::str_to_models(app_info["candidate_models"]);
+            std::vector<std::string> candidate_model_names =
+                clipper::redis::str_to_model_names(
+                    app_info["candidate_model_names"]);
             InputType input_type =
                 clipper::parse_input_type(app_info["input_type"]);
             std::string policy = app_info["policy"];
             int latency_slo_micros = std::stoi(app_info["latency_slo_micros"]);
-            add_application(name, candidate_models, input_type, policy,
+            add_application(name, candidate_model_names, input_type, policy,
                             latency_slo_micros);
+          }
+        });
+
+    clipper::redis::subscribe_to_model_version_changes(
+        redis_subscriber_,
+        [this](const std::string& key, const std::string& event_type) {
+          clipper::log_info_formatted(
+              LOGGING_TAG_QUERY_FRONTEND,
+              "MODEL VERSION CHANGE DETECTED. Key: {}, event_type: {}", key,
+              event_type);
+          if (event_type == "set") {
+            std::string model_name = key;
+            int new_version = clipper::redis::get_current_model_version(
+                redis_connection_, key);
+            if (new_version >= 0) {
+              std::unique_lock<std::mutex> l(current_model_versions_mutex_);
+              current_model_versions_[key] = new_version;
+            } else {
+              clipper::log_error_formatted(
+                  LOGGING_TAG_QUERY_FRONTEND,
+                  "Model version change for model {} was invalid (-1).", key);
+            }
           }
         });
   }
@@ -136,9 +159,19 @@ class RequestHandler {
                        models](std::shared_ptr<HttpServer::Response> response,
                                std::shared_ptr<HttpServer::Request> request) {
       try {
-        auto prediction =
-            decode_and_handle_predict(request->content.string(), name, models,
-                                      policy, latency_slo_micros, input_type);
+        std::vector<VersionedModelId> versioned_models;
+        {
+          std::unique_lock<std::mutex> l(current_model_versions_mutex_);
+          for (auto m : models) {
+            auto version = current_model_versions_.find(m);
+            if (version != current_model_versions_.end()) {
+              versioned_models.emplace_back(m, *version);
+            }
+          }
+        }
+        auto prediction = decode_and_handle_predict(
+            request->content.string(), name, versioned_models, policy,
+            latency_slo_micros, input_type);
         prediction.then([response](boost::future<Response> f) {
           Response r = f.get();
           std::stringstream ss;
@@ -250,6 +283,8 @@ class RequestHandler {
   QP query_processor_;
   redox::Redox redis_connection_;
   redox::Subscriber redis_subscriber_;
+  std::mutex current_model_versions_mutex_;
+  std::unordered_map<std::string, int> current_model_versions_;
 };
 
 }  // namespace query_frontend

@@ -39,6 +39,7 @@ const std::string LOGGING_TAG_MANAGEMENT_FRONTEND = "MGMTFRNTD";
 const std::string ADMIN_PATH = "^/admin";
 const std::string ADD_APPLICATION = ADMIN_PATH + "/add_app$";
 const std::string ADD_MODEL = ADMIN_PATH + "/add_model$";
+const std::string SET_MODEL_VERSION = ADMIN_PATH + "/set_model_version$";
 
 // const std::string ADD_CONTAINER = ADMIN_PATH + "/add_container$";
 const std::string GET_METRICS = ADMIN_PATH + "/metrics$";
@@ -48,9 +49,7 @@ const std::string GET_APPLICATIONS = ADMIN_PATH + "/get_applications$";
 const std::string APPLICATION_JSON_SCHEMA = R"(
   {
    "name" := string,
-   "candidate_models" := [
-     {"model_name" := string, "model_version" := int}
-   ],
+   "candidate_model_names" := [string],
    "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
    "selection_policy" := string,
    "latency_slo_micros" := int
@@ -65,6 +64,13 @@ const std::string MODEL_JSON_SCHEMA = R"(
    "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
    "container_name" := string,
    "model_data_path" := string
+  }
+)";
+
+const std::string SET_VERSION_JSON_SCHEMA = R"(
+  {
+   "model_name" := string,
+   "model_version" := int,
   }
 )";
 
@@ -165,6 +171,37 @@ class RequestHandler {
           }
         });
     server_.add_endpoint(
+        SET_MODEL_VERSION, "POST",
+        [this](std::shared_ptr<HttpServer::Response> response,
+               std::shared_ptr<HttpServer::Request> request) {
+          try {
+            rapidjson::Document d;
+            parse_json(request->content.string(), d);
+            std::string model_name = get_string(d, "model_name");
+            int new_model_version = get_int(d, "model_version");
+
+            bool success = set_model_version(model_name, new_model_version);
+            if (success) {
+              respond_http("SUCCESS", "200 OK", response);
+            } else {
+              std::string err_msg = "ERROR: Version " +
+                                    std::to_string(new_model_version) +
+                                    " does not exist for model " + model_name;
+              respond_http(err_msg, "400 Bad Request", response);
+            }
+          } catch (const json_parse_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), SET_VERSION_JSON_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const json_semantic_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), SET_VERSION_JSON_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const std::invalid_argument& e) {
+            respond_http(e.what(), "400 Bad Request", response);
+          }
+        });
+    server_.add_endpoint(
         GET_SELECTION_STATE, "POST",
         [this](std::shared_ptr<HttpServer::Response> response,
                std::shared_ptr<HttpServer::Request> request) {
@@ -210,14 +247,16 @@ class RequestHandler {
     parse_json(json, d);
 
     std::string app_name = get_string(d, "name");
-    std::vector<VersionedModelId> candidate_models =
-        get_candidate_models(d, "candidate_models");
+    // std::vector<VersionedModelId> candidate_models =
+    //     get_candidate_models(d, "candidate_models");
+    std::vector<string> candidate_model_names =
+        get_string_array(d, "candidate_model_names");
     InputType input_type =
         clipper::parse_input_type(get_string(d, "input_type"));
     std::string selection_policy = get_string(d, "selection_policy");
     int latency_slo_micros = get_int(d, "latency_slo_micros");
     if (clipper::redis::add_application(redis_connection_, app_name,
-                                        candidate_models, input_type,
+                                        candidate_model_names, input_type,
                                         selection_policy, latency_slo_micros)) {
       return "Success!";
     } else {
@@ -252,10 +291,11 @@ class RequestHandler {
     std::string model_data_path = get_string(d, "model_data_path");
     if (clipper::redis::add_model(redis_connection_, model_id, input_type,
                                   labels, container_name, model_data_path)) {
-      return "Success!";
-    } else {
-      return "Error adding model to Redis.";
+      if (set_model_version(model_id.first, model_id.second)) {
+        return "Success!";
+      }
     }
+    return "Error adding model to Redis.";
   }
 
   /**
@@ -295,6 +335,29 @@ class RequestHandler {
     } else {
       return "ERROR: " + app_name +
              " does not support looking up selection policy state";
+    }
+  }
+
+  bool set_model_version(const string& model_name,
+                         const int new_model_version) {
+    auto versions =
+        clipper::redis::get_model_versions(redis_connection_, model_name);
+    bool version_exists = false;
+    for (auto v : versions) {
+      if (v == new_model_version) {
+        version_exists = true;
+        break;
+      }
+    }
+    if (version_exists) {
+      return clipper::redis::set_current_model_version(
+          redis_connection_, model_name, new_model_version);
+    } else {
+      clipper::log_error_formatted(
+          LOGGING_TAG_MANAGEMENT_FRONTEND,
+          "Cannot set non-existent version {} for model {}", new_model_version,
+          model_name);
+      return false;
     }
   }
 
