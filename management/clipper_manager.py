@@ -517,23 +517,27 @@ class Clipper:
             image_name = model_metadata["container_name"]
             model_data_path = model_metadata["model_data_path"]
             model_input_type = model_metadata["input_type"]
-            
-            # TODO: don't try to add container if it's an external container
 
-            # Start container
-            add_container_cmd = (
-                "docker run -d --network={nw} -v {path}:/model:ro "
-                "-e \"CLIPPER_MODEL_NAME={mn}\" -e \"CLIPPER_MODEL_VERSION={mv}\" "
-                "-e \"CLIPPER_IP=query_frontend\" -e \"CLIPPER_INPUT_TYPE={mip}\" "
-                "{image}".format(
-                    path=model_data_path,
-                    nw=DOCKER_NW,
-                    image=image_name,
-                    mn=model_name,
-                    mv=model_version,
-                    mip=model_input_type))
-            result = self._execute_root(add_container_cmd)
-            return result.return_code == 0
+            # TODO: don't try to add container if it's an external container
+            if image_name is not EXTERNALLY_MANAGED_MODEL:
+                # Start container
+                add_container_cmd = (
+                    "docker run -d --network={nw} -v {path}:/model:ro "
+                    "-e \"CLIPPER_MODEL_NAME={mn}\" -e \"CLIPPER_MODEL_VERSION={mv}\" "
+                    "-e \"CLIPPER_IP=query_frontend\" -e \"CLIPPER_INPUT_TYPE={mip}\" "
+                    "{image}".format(
+                        path=model_data_path,
+                        nw=DOCKER_NW,
+                        image=image_name,
+                        mn=model_name,
+                        mv=model_version,
+                        mip=model_input_type))
+                result = self._execute_root(add_container_cmd)
+                return result.return_code == 0
+            else:
+                print("Cannot start containers for externally managed model %s"
+                      % model_name)
+                return True
 
     def inspect_instance(self):
         """Fetches metrics from the running Clipper instance.
