@@ -44,7 +44,7 @@ DOCKER_COMPOSE_DICT = {
         'mgmt_frontend': {
             'command': ['--redis_ip=redis', '--redis_port=%d' % REDIS_PORT],
             'depends_on': ['redis'],
-            'image': 'clipper/management_frontend:latest',
+            'image': 'd3d4635a07d6',  #'clipper/management_frontend:latest',
             'ports':
             ['%d:%d' % (CLIPPER_MANAGEMENT_PORT, CLIPPER_MANAGEMENT_PORT)]
         },
@@ -52,14 +52,14 @@ DOCKER_COMPOSE_DICT = {
             'command': ['--redis_ip=redis', '--redis_port=%d' % REDIS_PORT],
             'depends_on': ['redis', 'mgmt_frontend'],
             'image':
-            'clipper/query_frontend:latest',
+            'acfb2112ae4e',  #'clipper/query_frontend:latest',
             'ports': [
                 '%d:%d' % (CLIPPER_RPC_PORT, CLIPPER_RPC_PORT),
                 '%d:%d' % (CLIPPER_QUERY_PORT, CLIPPER_QUERY_PORT)
             ]
         },
         'redis': {
-            'image': 'redis:alpine',
+            'image': '83638a6d3af2',  #'redis:alpine',
             'ports': ['%d:%d' % (REDIS_PORT, REDIS_PORT)]
         }
     },
@@ -280,26 +280,26 @@ class Clipper:
         r = requests.post(url, headers=headers, data=req_json)
         print(r.text)
 
-    def list_apps(self):
+    def list_apps(self, verbose=False):
         """List the names of all applications registered with Clipper.
 
         Returns
         -------
-        str
-            The string describing each registered application. If no
-            applications are found, an empty string is returned.
-        """
-        with hide("output", "running"):
-            result = local(
-                ("redis-cli -h {host} -p 6379 -n {db} keys \"*\"".format(
-                    host=self.host, db=REDIS_APPLICATION_DB_NUM)),
-                capture=True)
+        list
+            Returns a list of information about all apps registered to Clipper.
 
-            if len(result.stdout) > 0:
-                return result.stdout
-            else:
-                print("Clipper has no applications registered")
-                return ""
+            If `verbose` == False, the list contains the apps' names.
+            If `verbose` == True, the list contains application info dictionaries.
+            These dictionaries have the same attribute name-value pairs that were
+            provided to `register_application`.
+
+            If no apps are registered with Clipper, an empty list is returned.
+        """
+        url = "http://%s:1338/admin/get_applications" % self.host
+        req_json = json.dumps({"verbose": verbose})
+        headers = {'Content-type': 'application/json'}
+        r = requests.get(url, headers=headers, data=req_json)
+        return json.loads(r.text)
 
     def get_app_info(self, name):
         """Gets detailed information about a registered application.
@@ -312,25 +312,19 @@ class Clipper:
         Returns
         -------
         dict or None
-            Returns a dict with the application info if found. If the application
-            is not registered, None is returned.
+            Returns a dictionary with the specified application's info. This
+            will contain the attribute name-value pairs that were provided to
+            `register_application`. If no application with name `name` is
+            registered with Clipper, None is returned.
         """
-        with hide("output", "running"):
-            result = local(
-                "redis-cli -h {host} -p 6379 -n {db} hgetall {name}".format(
-                    host=self.host, name=name, db=REDIS_APPLICATION_DB_NUM),
-                capture=True)
-
-            if len(result.stdout) > 0:
-                splits = result.stdout.split("\n")
-                fmt_result = dict([(splits[i], splits[i + 1])
-                                   for i in range(0, len(splits), 2)])
-                pp = pprint.PrettyPrinter(indent=2)
-                pp.pprint(fmt_result)
-                return fmt_result
-            else:
-                warn("Application \"%s\" not found" % name)
-                return None
+        url = "http://%s:1338/admin/get_application" % self.host
+        req_json = json.dumps({"name": name})
+        headers = {'Content-type': 'application/json'}
+        r = requests.get(url, headers=headers, data=req_json)
+        app_info = json.loads(r.text)
+        if len(app_info) == 0:
+            return None
+        return app_info
 
     def inspect_selection_policy(self, app_name, uid):
         """Fetches a human-readable string with the current selection policy state.

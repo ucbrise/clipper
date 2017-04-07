@@ -89,6 +89,270 @@ TEST_F(ManagementFrontendTest, TestAddApplicationMalformedJson) {
   ASSERT_THROW(rh_.add_application(add_app_json), json_parse_error);
 }
 
+TEST_F(ManagementFrontendTest, TestGetApplicationCorrect) {
+  std::string add_app_json = R"(
+  {
+    "name": "myappname",
+    "candidate_models": [
+        {"model_name": "m", "model_version": 4},
+        {"model_name": "image_model", "model_version": 3}],
+    "input_type": "integers",
+    "selection_policy": "sample_policy",
+    "latency_slo_micros": 10000
+  }
+  )";
+  ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
+
+  std::string list_apps_json = R"(
+  {
+    "name": "myappname"
+  }
+  )";
+  std::string json_response = rh_.get_application(list_apps_json);
+
+  rapidjson::Document response_doc;
+  response_doc.SetObject();
+  parse_json(json_response, response_doc);
+
+  rapidjson::Document request_doc;
+  request_doc.SetObject();
+  parse_json(add_app_json, request_doc);
+
+  // The JSON provided for adding the app contains the same name-value
+  // attribute pairs that should be returned by `get_application`.
+  ASSERT_EQ(request_doc, response_doc);
+}
+
+TEST_F(ManagementFrontendTest, TestGetApplicationMalformedJson) {
+  std::string list_apps_json = R"(
+  {
+    "app": not a string
+  }
+  )";
+  ASSERT_THROW(rh_.get_application(list_apps_json), json_parse_error);
+}
+
+TEST_F(ManagementFrontendTest, TestRedisListApplicationDetailsCorrect) {
+  std::string add_app1_json = R"(
+  {
+    "name": "myappname1",
+    "candidate_models": [
+        {"model_name": "m", "model_version": 4},
+        {"model_name": "image_model", "model_version": 3}],
+    "input_type": "integers",
+    "selection_policy": "sample_policy",
+    "latency_slo_micros": 10000
+  }
+  )";
+  std::string add_app2_json = R"(
+  {
+    "name": "myappname2",
+    "candidate_models": [
+        {"model_name": "m", "model_version": 4},
+        {"model_name": "image_model", "model_version": 3}],
+    "input_type": "integers",
+    "selection_policy": "sample_policy",
+    "latency_slo_micros": 10000
+  }
+  )";
+  ASSERT_EQ(rh_.add_application(add_app1_json), "Success!");
+  ASSERT_EQ(rh_.add_application(add_app2_json), "Success!");
+  std::unordered_map<std::string, std::string> expected_result_app1 =
+      std::unordered_map<std::string, std::string>{
+          {"latency_slo_micros", "10000"},
+          {"policy", "sample_policy"},
+          {"input_type", "integers"},
+          {"candidate_models", "m:4,image_model:3"},
+          {"name", "myappname1"}};
+  std::unordered_map<std::string, std::string> expected_result_app2 =
+      std::unordered_map<std::string, std::string>{
+          {"latency_slo_micros", "10000"},
+          {"policy", "sample_policy"},
+          {"input_type", "integers"},
+          {"candidate_models", "m:4,image_model:3"},
+          {"name", "myappname2"}};
+
+  std::vector<std::unordered_map<std::string, std::string>> result =
+      list_application_details(*redis_);
+
+  // The app table has 2 entries, so we list_applications to give us
+  // a vector with 2 entries.
+  ASSERT_EQ(result.size(), static_cast<size_t>(2));
+
+  bool has_app_1 =
+      (result[0] == expected_result_app1 || result[1] == expected_result_app1);
+  bool has_app_2 =
+      (result[0] == expected_result_app2 || result[1] == expected_result_app2);
+
+  // After registering the two applications, we expect that
+  // `list_application_details` returns a vector with entries
+  // `expected_result_app1` and `expected_result_app2`.
+  ASSERT_TRUE(has_app_1 && has_app_2);
+}
+
+TEST_F(ManagementFrontendTest, TestGetApplicationsVerboseCorrect) {
+  std::string add_app1_json = R"(
+  {
+    "name": "myappname1",
+    "candidate_models": [
+        {"model_name": "m", "model_version": 4},
+        {"model_name": "image_model", "model_version": 3}],
+    "input_type": "integers",
+    "selection_policy": "sample_policy",
+    "latency_slo_micros": 10000
+  }
+  )";
+  std::string add_app2_json = R"(
+  {
+    "name": "myappname2",
+    "candidate_models": [
+        {"model_name": "m", "model_version": 4},
+        {"model_name": "image_model", "model_version": 3}],
+    "input_type": "integers",
+    "selection_policy": "sample_policy",
+    "latency_slo_micros": 10000
+  }
+  )";
+  ASSERT_EQ(rh_.add_application(add_app1_json), "Success!");
+  ASSERT_EQ(rh_.add_application(add_app2_json), "Success!");
+
+  std::string get_apps_verbose_json = R"(
+  {
+    "verbose": true
+  }
+  )";
+
+  std::string json_response = rh_.get_applications(get_apps_verbose_json);
+
+  rapidjson::Document response_doc;
+  response_doc.SetArray();
+  parse_json(json_response, response_doc);
+
+  rapidjson::Value app1_response_doc(response_doc[0].GetObject());
+  rapidjson::Value app2_response_doc(response_doc[1].GetObject());
+  rapidjson::Value temp;
+
+  // Assign app_1_response_doc and app_2_response_doc to documentes of
+  // apps with names "myappname1", "myappname2", respectively.
+  if (get_string(app2_response_doc, "name") == "myappname1") {
+    temp = app1_response_doc;
+    app1_response_doc = app2_response_doc;
+    app2_response_doc = temp;
+  }
+
+  // Confirm that the JSON response provided app info that
+  // corresponds to the two registered applications.
+  ASSERT_EQ(get_string(app1_response_doc, "name"), "myappname1");
+  ASSERT_EQ(get_string(app2_response_doc, "name"), "myappname2");
+
+  rapidjson::Document app1_request_doc;
+  app1_request_doc.SetObject();
+  parse_json(add_app1_json, app1_request_doc);
+  ASSERT_EQ(app1_request_doc, app1_response_doc);
+
+  rapidjson::Document app2_request_doc;
+  app2_request_doc.SetObject();
+  parse_json(add_app2_json, app2_request_doc);
+  ASSERT_EQ(app2_request_doc, app2_response_doc);
+}
+
+TEST_F(ManagementFrontendTest, TestRedisListApplicationNamesCorrect) {
+  std::string add_app1_json = R"(
+  {
+    "name": "myappname1",
+    "candidate_models": [
+        {"model_name": "m", "model_version": 4},
+        {"model_name": "image_model", "model_version": 3}],
+    "input_type": "integers",
+    "selection_policy": "sample_policy",
+    "latency_slo_micros": 10000
+  }
+  )";
+  std::string add_app2_json = R"(
+  {
+    "name": "myappname2",
+    "candidate_models": [
+        {"model_name": "m", "model_version": 4},
+        {"model_name": "image_model", "model_version": 3}],
+    "input_type": "integers",
+    "selection_policy": "sample_policy",
+    "latency_slo_micros": 10000
+  }
+  )";
+  ASSERT_EQ(rh_.add_application(add_app1_json), "Success!");
+  ASSERT_EQ(rh_.add_application(add_app2_json), "Success!");
+
+  std::vector<std::string> result = list_application_names(*redis_);
+
+  // The app table has 2 entries, so we list_applications to give us
+  // a vector with 2 entries.
+  ASSERT_EQ(result.size(), static_cast<size_t>(2));
+
+  bool has_name_1 =
+      std::find(result.begin(), result.end(), "myappname1") != result.end();
+  bool has_name_2 =
+      std::find(result.begin(), result.end(), "myappname2") != result.end();
+
+  // Those entries should be the names of the two existing applications.
+  ASSERT_TRUE(has_name_1 && has_name_2);
+}
+
+TEST_F(ManagementFrontendTest, TestGetApplicationsCorrect) {
+  std::string add_app1_json = R"(
+  {
+    "name": "myappname1",
+    "candidate_models": [
+        {"model_name": "m", "model_version": 4},
+        {"model_name": "image_model", "model_version": 3}],
+    "input_type": "integers",
+    "selection_policy": "sample_policy",
+    "latency_slo_micros": 10000
+  }
+  )";
+  std::string add_app2_json = R"(
+  {
+    "name": "myappname2",
+    "candidate_models": [
+        {"model_name": "m", "model_version": 4},
+        {"model_name": "image_model", "model_version": 3}],
+    "input_type": "integers",
+    "selection_policy": "sample_policy",
+    "latency_slo_micros": 10000
+  }
+  )";
+  ASSERT_EQ(rh_.add_application(add_app1_json), "Success!");
+  ASSERT_EQ(rh_.add_application(add_app2_json), "Success!");
+
+  std::string get_apps_json = R"(
+  {
+    "verbose": false
+  }
+  )";
+
+  std::string json_response = rh_.get_applications(get_apps_json);
+
+  rapidjson::Document d;
+  d.SetArray();
+  parse_json(json_response, d);
+  std::string el1 = d[0].GetString();
+  std::string el2 = d[1].GetString();
+  bool has_name_1 = (el1 == "myappname1" || el2 == "myappname1");
+  bool has_name_2 = (el1 == "myappname2" || el2 == "myappname2");
+
+  // The JSON response should contain the names of the two apps
+  // that were registered.
+  ASSERT_TRUE(has_name_1 && has_name_2);
+}
+
+TEST_F(ManagementFrontendTest, TestGetApplicationsMalformedJson) {
+  std::string get_apps_json = R"(
+   {
+     "verbose": flalse
+   }
+   )";
+  ASSERT_THROW(rh_.get_applications(get_apps_json), json_parse_error);
+}
+
 TEST_F(ManagementFrontendTest, TestAddModelCorrect) {
   std::string add_model_json = R"(
   {

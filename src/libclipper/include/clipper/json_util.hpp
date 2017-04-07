@@ -3,6 +3,10 @@
 
 #include <stdexcept>
 
+#include <boost/algorithm/string.hpp>
+
+#include <unordered_map>
+
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
 #include <rapidjson/stringbuffer.h>
@@ -45,22 +49,41 @@ class json_semantic_error : public std::runtime_error {
   ~json_semantic_error() throw(){};
 };
 
-/* Check for matching types else throw exception */
-rapidjson::Value& check_kv_type_and_return(rapidjson::Value& d,
-                                           const char* key_name,
-                                           Type expected_type) {
+void check_document_is_object_and_key_exists(rapidjson::Value& d,
+                                             const char* key_name) {
   if (!d.IsObject()) {
     throw json_semantic_error("Can only get key-value pair from an object");
   } else if (!d.HasMember(key_name)) {
     throw json_semantic_error("JSON object does not have required key: " +
                               std::string(key_name));
   }
+}
+
+/* Check for matching types else throw exception */
+rapidjson::Value& check_kv_type_and_return(rapidjson::Value& d,
+                                           const char* key_name,
+                                           Type expected_type) {
+  check_document_is_object_and_key_exists(d, key_name);
   rapidjson::Value& val = d[key_name];
   if (val.GetType() != expected_type) {
     throw json_semantic_error("Type mismatch! JSON key " +
                               std::string(key_name) + " expected type " +
                               kTypeNames[expected_type] + "but found type " +
                               kTypeNames[val.GetType()]);
+  }
+  return val;
+}
+
+/* Check for matching types else throw exception */
+rapidjson::Value& check_kv_type_is_bool_and_return(rapidjson::Value& d,
+                                                   const char* key_name) {
+  check_document_is_object_and_key_exists(d, key_name);
+  rapidjson::Value& val = d[key_name];
+  if (val.GetType() != rapidjson::kFalseType &&
+      val.GetType() != rapidjson::kTrueType) {
+    throw json_semantic_error(
+        "Type mismatch! JSON key " + std::string(key_name) +
+        " expected type bool but found type " + kTypeNames[val.GetType()]);
   }
   return val;
 }
@@ -114,6 +137,15 @@ std::string get_string(rapidjson::Value& d, const char* key_name) {
                               " is not of type string");
   }
   return std::string(v.GetString());
+}
+
+bool get_bool(rapidjson::Value& d, const char* key_name) {
+  rapidjson::Value& v = check_kv_type_is_bool_and_return(d, key_name);
+  if (!v.IsBool()) {
+    throw json_semantic_error("Input of type " + kTypeNames[v.GetType()] +
+                              " is not of type bool");
+  }
+  return v.GetBool();
 }
 
 /* Getters with error handling for arrays of double, float, int, string */
@@ -212,6 +244,12 @@ rapidjson::Value& get_object(rapidjson::Value& d, const char* key_name) {
   rapidjson::Value& object =
       check_kv_type_and_return(d, key_name, rapidjson::kObjectType);
   return object;
+}
+
+rapidjson::Value& get_array(rapidjson::Value& d, const char* key_name) {
+  rapidjson::Value& array =
+      check_kv_type_and_return(d, key_name, rapidjson::kArrayType);
+  return array;
 }
 
 void parse_json(const std::string& json_content, rapidjson::Document& d) {
@@ -333,6 +371,82 @@ void add_string(rapidjson::Document& d, const char* key_name,
 void add_object(rapidjson::Document& d, const char* key_name,
                 rapidjson::Document& to_add) {
   add_kv_pair(d, key_name, to_add);
+}
+
+/* Sets `d` to an array with the values in `string_vec` */
+void set_string_array_doc(std::vector<std::string>& string_vec,
+                          rapidjson::Document& d) {
+  d.SetArray();
+
+  size_t num_elements = string_vec.size();
+  for (size_t i = 0; i < num_elements; i++) {
+    rapidjson::Value v(rapidjson::StringRef(string_vec.at(i).c_str(),
+                                            string_vec.at(i).length()));
+    d.PushBack(v, d.GetAllocator());
+  }
+}
+
+/* Sets `d` to an array containing info from `candidate_models_redis_format`*/
+void set_candidate_models_doc(std::string& candidate_models_redis_format,
+                              rapidjson::Document& d) {
+  d.SetArray();
+
+  std::vector<std::string> candidate_model_strings;
+  boost::split(candidate_model_strings, candidate_models_redis_format,
+               boost::is_any_of(","));
+
+  std::vector<std::string> candidate_model_components;
+  for (auto candidate_model_str : candidate_model_strings) {
+    boost::split(candidate_model_components, candidate_model_str,
+                 boost::is_any_of(":"));
+    std::string model_name = candidate_model_components[0];
+    int model_version = atoi(candidate_model_components[1].c_str());
+
+    rapidjson::Document candidate_model_doc(&d.GetAllocator());
+    candidate_model_doc.SetObject();
+    clipper::json::add_string(candidate_model_doc, "model_name", model_name);
+    clipper::json::add_int(candidate_model_doc, "model_version", model_version);
+    d.PushBack(candidate_model_doc, d.GetAllocator());
+  }
+}
+
+/* Sets `d` to an object containing reformatted info from `app_info`*/
+void set_app_info_doc(std::unordered_map<std::string, std::string>& app_info,
+                      rapidjson::Document& d) {
+  d.SetObject();
+
+  for (auto item : app_info) {
+    std::string key = item.first;
+    std::string value = item.second;
+    if (key == "name" || key == "input_type" || key == "policy") {
+      if (key == "policy") {
+        // Converts the Redis storage key to the publicly facing label
+        key = "selection_policy";
+      }
+      clipper::json::add_string(d, key.c_str(), value);
+    } else if (key == "latency_slo_micros") {
+      clipper::json::add_int(d, key.c_str(), atoi(value.c_str()));
+    } else {
+      // `item` corresponds to app's candidate_models. Need to convert the
+      // Redis candidate_models storage format to the publicly facing format
+      rapidjson::Document candidate_models_doc(&d.GetAllocator());
+      set_candidate_models_doc(value, candidate_models_doc);
+      clipper::json::add_object(d, "candidate_models", candidate_models_doc);
+    }
+  }
+}
+
+/* Sets `arr_doc` to an array of objects with info from`app_details` */
+void set_app_info_array_doc(
+    std::vector<std::unordered_map<std::string, std::string>>& app_details,
+    rapidjson::Document& arr_doc) {
+  arr_doc.SetArray();
+
+  for (auto app_info : app_details) {
+    rapidjson::Document d(&arr_doc.GetAllocator());
+    set_app_info_doc(app_info, d);
+    arr_doc.PushBack(d, arr_doc.GetAllocator());
+  }
 }
 
 std::string to_json_string(rapidjson::Document& d) {
