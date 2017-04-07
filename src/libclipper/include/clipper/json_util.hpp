@@ -45,7 +45,12 @@ rapidjson::Value& check_kv_type_and_return(rapidjson::Value& d,
                                            const char* key_name,
                                            Type expected_type);
 
-/* Getters with error handling for double, float, long, int, string */
+rapidjson::Value& check_kv_type_is_bool_and_return(rapidjson::Value& d,
+                                                   const char* key_name);
+
+/* Getters with error handling for bool, double, float, long, int, string */
+bool get_bool(rapidjson::Value& d, const char* key_name);
+
 double get_double(rapidjson::Value& d, const char* key_name);
 
 float get_float(rapidjson::Value& d, const char* key_name);
@@ -70,6 +75,8 @@ std::vector<VersionedModelId> get_candidate_models(rapidjson::Value& d,
                                                    const char* key_name);
 
 rapidjson::Value& get_object(rapidjson::Value& d, const char* key_name);
+
+rapidjson::Value& get_array(rapidjson::Value& d, const char* key_name);
 
 void parse_json(const std::string& json_content, rapidjson::Document& d);
 
@@ -108,6 +115,23 @@ void add_object(rapidjson::Document& d, const char* key_name,
                 rapidjson::Document& to_add);
 
 std::string to_json_string(rapidjson::Document& d);
+
+/* Sets `d` to an array with the values in `string_vec` */
+void set_string_array_doc(std::vector<std::string>& string_vec,
+                          rapidjson::Document& d);
+
+/* Sets `d` to an array containing info from `candidate_models_redis_format`*/
+void set_candidate_models_doc(std::string& candidate_models_redis_format,
+                              rapidjson::Document& d);
+
+/* Sets `d` to an object containing reformatted info from `app_info`*/
+void set_app_info_doc(std::unordered_map<std::string, std::string>& app_info,
+                      rapidjson::Document& d);
+
+/* Sets `arr_doc` to an array of objects with info from`app_details` */
+void set_app_info_array_doc(
+    std::vector<std::unordered_map<std::string, std::string>>& app_details,
+    rapidjson::Document& arr_doc);
 
 }  // namespace json
 }  // namespace clipper
