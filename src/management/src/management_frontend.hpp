@@ -234,9 +234,7 @@ class RequestHandler {
    * JSON format:
    * {
    *  "name" := string,
-   *  "candidate_models" := [
-   *    {"model_name" := string, "model_version" := int}
-   *  ],
+   *  "candidate_model_names" := [string],
    *  "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
    *  "selection_policy" := string,
    *  "latency_slo_micros" := int
@@ -247,8 +245,6 @@ class RequestHandler {
     parse_json(json, d);
 
     std::string app_name = get_string(d, "name");
-    // std::vector<VersionedModelId> candidate_models =
-    //     get_candidate_models(d, "candidate_models");
     std::vector<string> candidate_model_names =
         get_string_array(d, "candidate_model_names");
     InputType input_type =
@@ -313,34 +309,18 @@ class RequestHandler {
     parse_json(json, d);
 
     std::string app_name = get_string(d, "app_name");
-    int uid = get_int(d, "uid");
     auto app_metadata =
         clipper::redis::get_application(redis_connection_, app_name);
-    std::vector<VersionedModelId> candidate_models =
-        clipper::redis::str_to_models(app_metadata["candidate_models"]);
-    std::string policy = app_metadata["policy"];
 
-    if (policy == "EXP3") {
-      return lookup_selection_state<clipper::Exp3Policy>(state_db_, app_name,
-                                                         uid, candidate_models);
-    } else if (policy == "EXP4") {
-      return lookup_selection_state<clipper::Exp4Policy>(state_db_, app_name,
-                                                         uid, candidate_models);
-    } else if (policy == "EpsilonGreedy") {
-      return lookup_selection_state<clipper::EpsilonGreedyPolicy>(
-          state_db_, app_name, uid, candidate_models);
-    } else if (policy == "UCB") {
-      return lookup_selection_state<clipper::UCBPolicy>(state_db_, app_name,
-                                                        uid, candidate_models);
-    } else {
-      return "ERROR: " + app_name +
-             " does not support looking up selection policy state";
-    }
+    std::string policy = app_metadata["policy"];
+    return "ERROR: " + policy +
+           " does not support looking up selection policy state (" + app_name +
+           ")";
   }
 
   bool set_model_version(const string& model_name,
                          const int new_model_version) {
-    auto versions =
+    std::vector<int> versions =
         clipper::redis::get_model_versions(redis_connection_, model_name);
     bool version_exists = false;
     for (auto v : versions) {

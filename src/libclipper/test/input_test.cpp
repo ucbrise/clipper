@@ -73,10 +73,10 @@ TEST(InputSerializationTests, ByteSerialization) {
 
   long* raw_input_header_size =
       reinterpret_cast<long*>(input_header_size.data());
-  ASSERT_EQ(raw_input_header_size[0], input_header.size());
+  ASSERT_EQ((size_t)raw_input_header_size[0], input_header.size());
   long* raw_input_content_size =
       reinterpret_cast<long*>(input_content_size.data());
-  ASSERT_EQ(raw_input_content_size[0], input_content.size());
+  ASSERT_EQ((size_t)raw_input_content_size[0], input_content.size());
 
   uint32_t* raw_request_type =
       reinterpret_cast<uint32_t*>(request_header.data());

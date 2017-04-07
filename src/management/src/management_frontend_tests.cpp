@@ -47,9 +47,7 @@ TEST_F(ManagementFrontendTest, TestAddApplicationCorrect) {
   std::string add_app_json = R"(
   {
     "name": "myappname",
-    "candidate_models": [
-        {"model_name": "m", "model_version": 4},
-        {"model_name": "image_model", "model_version": 3}],
+    "candidate_model_names": ["m", "image_model"],
     "input_type": "integers",
     "selection_policy": "sample_policy",
     "latency_slo_micros": 10000
@@ -102,15 +100,17 @@ TEST_F(ManagementFrontendTest, TestAddModelCorrect) {
   )";
 
   ASSERT_EQ(rh_.add_model(add_model_json), "Success!");
-  auto result = get_model(*redis_, std::make_pair("mymodelname", 4));
-  // The model table has 6 fields, so we expect to get back a map with 6
+  std::string model_name = "mymodelname";
+  int model_version = 4;
+  auto result = get_model(*redis_, std::make_pair(model_name, model_version));
+  // The model table has 7 fields, so we expect to get back a map with 7
   // entries in it (see add_model() in redis.cpp for details on what the
   // fields are).
   ASSERT_EQ(result.size(), static_cast<size_t>(7));
 
-  // TODO: make sure that the current model version has been updated
+  // Make sure that the current model version has been updated
   // appropriately.
-  ASSERT_TRUE(false);
+  ASSERT_EQ(get_current_model_version(*redis_, model_name), model_version);
 }
 
 TEST_F(ManagementFrontendTest, TestAddModelMissingField) {
@@ -134,6 +134,46 @@ TEST_F(ManagementFrontendTest, TestAddModelMalformedJson) {
   ASSERT_THROW(rh_.add_model(add_model_json), json_parse_error);
 }
 
-TEST_F(ManagementFrontendTest, TestSetModelVersion) { ASSERT_TRUE(false); }
+TEST_F(ManagementFrontendTest, TestSetModelVersionCorrect) {
+  std::vector<std::string> labels{"ads", "images", "experimental", "other",
+                                  "labels"};
+  VersionedModelId model1 = std::make_pair("m", 1);
+  std::string container_name = "clipper/test_container";
+  std::string model_path = "/tmp/models/m/1";
+  ASSERT_TRUE(add_model(*redis_, model1, InputType::Ints, labels,
+                        container_name, model_path));
+  VersionedModelId model2 = std::make_pair("m", 2);
+  std::string model_path2 = "/tmp/models/m/2";
+  ASSERT_TRUE(add_model(*redis_, model2, InputType::Ints, labels,
+                        container_name, model_path2));
+  VersionedModelId model4 = std::make_pair("m", 4);
+  std::string model_path4 = "/tmp/models/m/4";
+  ASSERT_TRUE(add_model(*redis_, model4, InputType::Ints, labels,
+                        container_name, model_path4));
+
+  ASSERT_TRUE(rh_.set_model_version("m", 2));
+  ASSERT_EQ(get_current_model_version(*redis_, "m"), 2);
+}
+
+TEST_F(ManagementFrontendTest, TestSetModelInvalidVersion) {
+  std::vector<std::string> labels{"ads", "images", "experimental", "other",
+                                  "labels"};
+  VersionedModelId model1 = std::make_pair("m", 1);
+  std::string container_name = "clipper/test_container";
+  std::string model_path = "/tmp/models/m/1";
+  ASSERT_TRUE(add_model(*redis_, model1, InputType::Ints, labels,
+                        container_name, model_path));
+  VersionedModelId model2 = std::make_pair("m", 2);
+  std::string model_path2 = "/tmp/models/m/2";
+  ASSERT_TRUE(add_model(*redis_, model2, InputType::Ints, labels,
+                        container_name, model_path2));
+  VersionedModelId model4 = std::make_pair("m", 4);
+  std::string model_path4 = "/tmp/models/m/4";
+  ASSERT_TRUE(add_model(*redis_, model4, InputType::Ints, labels,
+                        container_name, model_path4));
+
+  ASSERT_FALSE(rh_.set_model_version("m", 11));
+  ASSERT_EQ(get_current_model_version(*redis_, "m"), -1);
+}
 
 }  // namespace
