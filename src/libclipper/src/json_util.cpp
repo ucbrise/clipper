@@ -52,7 +52,7 @@ bool get_bool(rapidjson::Value& d, const char* key_name) {
       check_kv_type_and_return(d, key_name, rapidjson::kNumberType);
   if (!v.IsBool()) {
     throw json_semantic_error("Input of type " + kTypeNames[v.GetType()] +
-        " is not of type double");
+                              " is not of type double");
   }
   return v.GetBool();
 }

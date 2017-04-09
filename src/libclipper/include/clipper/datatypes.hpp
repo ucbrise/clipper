@@ -223,8 +223,9 @@ class Response {
  public:
   ~Response() = default;
 
-  Response(Query query, QueryId query_id, const long duration_micros, Output output,
-           const bool is_default, std::vector<VersionedModelId> models_used);
+  Response(Query query, QueryId query_id, const long duration_micros,
+           Output output, const bool is_default,
+           std::vector<VersionedModelId> models_used);
 
   // default copy constructors
   Response(const Response &) = default;

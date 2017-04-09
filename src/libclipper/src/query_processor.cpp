@@ -27,13 +27,12 @@ using std::tuple;
 namespace clipper {
 
 PredictError::PredictError(const long query_id, const std::string msg)
-    : std::runtime_error(msg), query_id_(query_id), msg_(msg) {
-
-}
+    : std::runtime_error(msg), query_id_(query_id), msg_(msg) {}
 
 const char* PredictError::what() const noexcept {
   std::stringstream ss;
-  ss << "Failed to render a prediction for query with id " << query_id_ << std::endl;
+  ss << "Failed to render a prediction for query with id " << query_id_
+     << std::endl;
   ss << "Explanation: " << msg_ << std::endl;
   return ss.str().data();
 }
@@ -54,7 +53,8 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   auto current_policy_iter = selection_policies_.find(query.selection_policy_);
   if (current_policy_iter == selection_policies_.end()) {
     std::stringstream err_msg_builder;
-    err_msg_builder << query.selection_policy_ << " " << "is an invalid selection_policy.";
+    err_msg_builder << query.selection_policy_ << " "
+                    << "is an invalid selection_policy.";
     const std::string err_msg = err_msg_builder.str();
     log_error(LOGGING_TAG_QUERY_PROCESSOR, err_msg);
     throw PredictError(query_id, err_msg);
@@ -64,8 +64,8 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   auto state_opt = state_db_->get(StateKey{query.label_, query.user_id_, 0});
   if (!state_opt) {
     std::stringstream err_msg_builder;
-    err_msg_builder << "No selection state found for query with user_id: " << query.user_id_
-            << " and label: " << query.label_;
+    err_msg_builder << "No selection state found for query with user_id: "
+                    << query.user_id_ << " and label: " << query.label_;
     const std::string err_msg = err_msg_builder.str();
     log_error(LOGGING_TAG_QUERY_PROCESSOR, err_msg);
     throw PredictError(query_id, err_msg);
@@ -129,8 +129,12 @@ boost::future<Response> QueryProcessor::predict(Query query) {
             end - query.create_time_)
             .count();
 
-    Response response{query, query_id, duration_micros, final_output.first,
-                      final_output.second, query.candidate_models_};
+    Response response{query,
+                      query_id,
+                      duration_micros,
+                      final_output.first,
+                      final_output.second,
+                      query.candidate_models_};
     response_promise.set_value(response);
   });
   return response_future;

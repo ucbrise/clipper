@@ -41,7 +41,8 @@ const char* PREDICTION_ERROR_RESPONSE_KEY_ERROR = "error";
 const char* PREDICTION_ERROR_RESPONSE_KEY_CAUSE = "cause";
 
 const std::string PREDICTION_ERROR_NAME_JSON = "Json error";
-const std::string PREDICTION_ERROR_NAME_QUERY_PROCESSING = "Query processing error";
+const std::string PREDICTION_ERROR_NAME_QUERY_PROCESSING =
+    "Query processing error";
 
 const std::string PREDICTION_JSON_SCHEMA = R"(
   {
@@ -182,22 +183,26 @@ class RequestHandler {
       } catch (const json_parse_error& e) {
         std::string error_msg =
             json_error_msg(e.what(), PREDICTION_JSON_SCHEMA);
-        std::string json_error_response = get_prediction_error_response_content(PREDICTION_ERROR_NAME_JSON, error_msg);
+        std::string json_error_response = get_prediction_error_response_content(
+            PREDICTION_ERROR_NAME_JSON, error_msg);
         respond_http(json_error_response, "400 Bad Request", response);
       } catch (const json_semantic_error& e) {
         std::string error_msg =
             json_error_msg(e.what(), PREDICTION_JSON_SCHEMA);
-        std::string json_error_response = get_prediction_error_response_content(PREDICTION_ERROR_NAME_JSON, error_msg);
+        std::string json_error_response = get_prediction_error_response_content(
+            PREDICTION_ERROR_NAME_JSON, error_msg);
         respond_http(json_error_response, "400 Bad Request", response);
       } catch (const std::invalid_argument& e) {
-        // This invalid argument exception is most likely the propagation of an exception thrown
+        // This invalid argument exception is most likely the propagation of an
+        // exception thrown
         // when Rapidjson attempts to parse an invalid json schema
-        std::string json_error_response = get_prediction_error_response_content(PREDICTION_ERROR_NAME_JSON, e.what());
+        std::string json_error_response = get_prediction_error_response_content(
+            PREDICTION_ERROR_NAME_JSON, e.what());
         respond_http(json_error_response, "400 Bad Request", response);
       } catch (const clipper::PredictError& e) {
         std::string error_msg = e.what();
-        std::string json_error_response =
-            get_prediction_error_response_content(PREDICTION_ERROR_NAME_QUERY_PROCESSING, error_msg);
+        std::string json_error_response = get_prediction_error_response_content(
+            PREDICTION_ERROR_NAME_QUERY_PROCESSING, error_msg);
         respond_http(json_error_response, "400 Bad Request", response);
       }
     };
@@ -252,12 +257,16 @@ class RequestHandler {
    *    "default" := boolean
    * }
    */
-  static const std::string get_prediction_response_content(Response& query_response) {
+  static const std::string get_prediction_response_content(
+      Response& query_response) {
     rapidjson::Document json_response;
     json_response.SetObject();
-    clipper::json::add_long(json_response, PREDICTION_RESPONSE_KEY_QUERY_ID, query_response.query_id_);
-    clipper::json::add_double(json_response, PREDICTION_RESPONSE_KEY_OUTPUT, query_response.output_.y_hat_);
-    clipper::json::add_bool(json_response, PREDICTION_RESPONSE_KEY_USED_DEFAULT, query_response.output_is_default_);
+    clipper::json::add_long(json_response, PREDICTION_RESPONSE_KEY_QUERY_ID,
+                            query_response.query_id_);
+    clipper::json::add_double(json_response, PREDICTION_RESPONSE_KEY_OUTPUT,
+                              query_response.output_.y_hat_);
+    clipper::json::add_bool(json_response, PREDICTION_RESPONSE_KEY_USED_DEFAULT,
+                            query_response.output_is_default_);
     std::string content = clipper::json::to_json_string(json_response);
     return content;
   }
@@ -276,8 +285,10 @@ class RequestHandler {
       const std::string error_name, const std::string error_msg) {
     rapidjson::Document error_response;
     error_response.SetObject();
-    clipper::json::add_string(error_response, PREDICTION_ERROR_RESPONSE_KEY_ERROR, error_name);
-    clipper::json::add_string(error_response, PREDICTION_ERROR_RESPONSE_KEY_CAUSE, error_msg);
+    clipper::json::add_string(error_response,
+                              PREDICTION_ERROR_RESPONSE_KEY_ERROR, error_name);
+    clipper::json::add_string(error_response,
+                              PREDICTION_ERROR_RESPONSE_KEY_CAUSE, error_msg);
     return clipper::json::to_json_string(error_response);
   }
 

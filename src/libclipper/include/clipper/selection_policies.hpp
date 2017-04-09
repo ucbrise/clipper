@@ -130,10 +130,9 @@ class DefaultOutputSelectionPolicy : public SelectionPolicy {
       std::shared_ptr<SelectionState> state, Query query,
       long query_id) const override;
 
-  const std::pair<Output, bool>
-  combine_predictions(const std::shared_ptr<SelectionState>& state,
-                      Query query,
-                      std::vector<Output> predictions) const override;
+  const std::pair<Output, bool> combine_predictions(
+      const std::shared_ptr<SelectionState>& state, Query query,
+      std::vector<Output> predictions) const override;
 
   std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
   select_feedback_tasks(const std::shared_ptr<SelectionState>& state,

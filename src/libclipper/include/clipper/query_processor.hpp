@@ -6,8 +6,8 @@
 #include <tuple>
 #include <utility>
 
-#include <boost/thread.hpp>
 #include <boost/optional.hpp>
+#include <boost/thread.hpp>
 
 #include "datatypes.hpp"
 #include "persistent_state.hpp"
