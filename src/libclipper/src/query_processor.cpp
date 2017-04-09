@@ -26,6 +26,18 @@ using std::tuple;
 
 namespace clipper {
 
+PredictError::PredictError(const long query_id, const std::string msg)
+    : std::runtime_error(msg), query_id_(query_id), msg_(msg) {
+
+}
+
+const char* PredictError::what() const noexcept {
+  std::stringstream ss;
+  ss << "Failed to render a prediction for query with id " << query_id_ << std::endl;
+  ss << "Explanation: " << msg_ << std::endl;
+  return ss.str().data();
+}
+
 QueryProcessor::QueryProcessor() : state_db_(std::make_shared<StateDB>()) {
   // Create selection policy instances
   selection_policies_.emplace(DefaultOutputSelectionPolicy::get_name(),
@@ -39,26 +51,21 @@ std::shared_ptr<StateDB> QueryProcessor::get_state_table() const {
 
 boost::future<Response> QueryProcessor::predict(Query query) {
   long query_id = query_counter_.fetch_add(1);
-  boost::future<Response> error_response =
-      boost::make_ready_future(Response{query, query_id, 20000, Output{1.0, {}},
-                                        false, std::vector<VersionedModelId>()});
   auto current_policy_iter = selection_policies_.find(query.selection_policy_);
   if (current_policy_iter == selection_policies_.end()) {
-    log_error_formatted(LOGGING_TAG_QUERY_PROCESSOR,
-                        "{} is an invalid selection policy",
-                        query.selection_policy_);
-    // TODO better error handling
-    return error_response;
+    std::stringstream err_msg;
+    err_msg << query.selection_policy_ << " " << "is an invalid selection_policy.";
+    log_error(LOGGING_TAG_QUERY_PROCESSOR, err_msg.str());
+    throw new PredictError(query_id, err_msg.str());
   }
   std::shared_ptr<SelectionPolicy> current_policy = current_policy_iter->second;
 
   auto state_opt = state_db_->get(StateKey{query.label_, query.user_id_, 0});
   if (!state_opt) {
-    log_error_formatted(LOGGING_TAG_QUERY_PROCESSOR,
-                        "No selection state found for query with label: {}",
-                        query.label_);
-    // TODO better error handling
-    return error_response;
+    std::stringstream err_msg;
+    err_msg << "No selection state found for query with label: " << query.label_;
+    log_error(LOGGING_TAG_QUERY_PROCESSOR, err_msg.str());
+    throw new PredictError(query_id, err_msg.str());
   }
   std::shared_ptr<SelectionState> selection_state =
       current_policy->deserialize(*state_opt);
