@@ -15,7 +15,7 @@ class MockQueryProcessor {
  public:
   MockQueryProcessor() = default;
   boost::future<Response> predict(Query query) {
-    Response response(query, 3, 5, Output(-1.0, {std::make_pair("m", 1)}), {});
+    Response response(query, 3, 5, Output(-1.0, {std::make_pair("m", 1)}), false, {});
     return boost::make_ready_future(response);
   }
   boost::future<FeedbackAck> update(FeedbackQuery /*feedback*/) {
@@ -171,6 +171,46 @@ TEST_F(QueryFrontendTest, TestAddManyApplications) {
 
   size_t apps = rh_.num_applications();
   EXPECT_EQ(apps, (size_t)500);
+}
+
+TEST_F(QueryFrontendTest, TestJsonResponseForSuccessfulPredictionFormattedCorrectly) {
+  std::string test_json =
+      "{\"uid\": 1, \"input\": [1,2,3]}";
+  Response response =
+      rh_.decode_and_handle_predict(test_json, "test", {},
+                                    "test_policy", 30000, InputType::Ints)
+          .get();
+  std::string json_response = rh_.get_prediction_response_content(response);
+  rapidjson::Document parsed_response;
+  json::parse_json(json_response, parsed_response);
+  ASSERT_TRUE(parsed_response.IsObject());
+  ASSERT_TRUE(parsed_response.GetObject().HasMember(PREDICTION_RESPONSE_KEY_QUERY_ID));
+  ASSERT_TRUE(parsed_response.GetObject().HasMember(PREDICTION_RESPONSE_KEY_OUTPUT));
+  ASSERT_TRUE(parsed_response.GetObject().HasMember(PREDICTION_RESPONSE_KEY_USED_DEFAULT));
+  ASSERT_TRUE(parsed_response.GetObject().FindMember(PREDICTION_RESPONSE_KEY_QUERY_ID)->value.IsInt());
+  ASSERT_TRUE(parsed_response.GetObject().FindMember(PREDICTION_RESPONSE_KEY_OUTPUT)->value.IsFloat());
+  ASSERT_TRUE(parsed_response.GetObject().FindMember(PREDICTION_RESPONSE_KEY_USED_DEFAULT)->value.IsBool());
+}
+
+TEST_F(QueryFrontendTest, TestJsonResponseForFailedPredictionFormattedCorrectly) {
+  std::string test_json =
+      "{\"uid\": 1, \"input\": [1,}";
+  try {
+    rh_.decode_and_handle_predict(test_json, "test", {},
+                                  "test_policy", 30000, InputType::Ints)
+        .get();
+    FAIL() << "Expected an error parsing malformed json: " << test_json;
+  } catch(json_parse_error& e) {
+    std::string json_error_response =
+        rh_.get_prediction_error_response_content(PREDICTION_ERROR_NAME_JSON, e.what());
+    rapidjson::Document parsed_error_response;
+    json::parse_json(json_error_response, parsed_error_response);
+    ASSERT_TRUE(parsed_error_response.IsObject());
+    ASSERT_TRUE(parsed_error_response.HasMember(PREDICTION_ERROR_RESPONSE_KEY_ERROR));
+    ASSERT_TRUE(parsed_error_response.HasMember(PREDICTION_ERROR_RESPONSE_KEY_CAUSE));
+    ASSERT_TRUE(parsed_error_response.FindMember(PREDICTION_ERROR_RESPONSE_KEY_ERROR)->value.IsString());
+    ASSERT_TRUE(parsed_error_response.FindMember(PREDICTION_ERROR_RESPONSE_KEY_CAUSE)->value.IsString());
+  }
 }
 
 }  // namespace

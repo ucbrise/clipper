@@ -53,19 +53,22 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   long query_id = query_counter_.fetch_add(1);
   auto current_policy_iter = selection_policies_.find(query.selection_policy_);
   if (current_policy_iter == selection_policies_.end()) {
-    std::stringstream err_msg;
-    err_msg << query.selection_policy_ << " " << "is an invalid selection_policy.";
-    log_error(LOGGING_TAG_QUERY_PROCESSOR, err_msg.str());
-    throw new PredictError(query_id, err_msg.str());
+    std::stringstream err_msg_builder;
+    err_msg_builder << query.selection_policy_ << " " << "is an invalid selection_policy.";
+    const std::string err_msg = err_msg_builder.str();
+    log_error(LOGGING_TAG_QUERY_PROCESSOR, err_msg);
+    throw PredictError(query_id, err_msg);
   }
   std::shared_ptr<SelectionPolicy> current_policy = current_policy_iter->second;
 
   auto state_opt = state_db_->get(StateKey{query.label_, query.user_id_, 0});
   if (!state_opt) {
-    std::stringstream err_msg;
-    err_msg << "No selection state found for query with label: " << query.label_;
-    log_error(LOGGING_TAG_QUERY_PROCESSOR, err_msg.str());
-    throw new PredictError(query_id, err_msg.str());
+    std::stringstream err_msg_builder;
+    err_msg_builder << "No selection state found for query with user_id: " << query.user_id_
+            << " and label: " << query.label_;
+    const std::string err_msg = err_msg_builder.str();
+    log_error(LOGGING_TAG_QUERY_PROCESSOR, err_msg);
+    throw PredictError(query_id, err_msg);
   }
   std::shared_ptr<SelectionState> selection_state =
       current_policy->deserialize(*state_opt);

@@ -34,14 +34,14 @@ namespace query_frontend {
 const std::string LOGGING_TAG_QUERY_FRONTEND = "QUERYFRONTEND";
 const std::string GET_METRICS = "^/metrics$";
 
-const char* RESPONSE_KEY_QUERY_ID = "query_id";
-const char* RESPONSE_KEY_OUTPUT = "output";
-const char* RESPONSE_KEY_USED_DEFAULT = "default";
-const char* ERROR_RESPONSE_KEY_ERROR = "error";
-const char* ERROR_RESPONSE_KEY_CAUSE = "cause";
+const char* PREDICTION_RESPONSE_KEY_QUERY_ID = "query_id";
+const char* PREDICTION_RESPONSE_KEY_OUTPUT = "output";
+const char* PREDICTION_RESPONSE_KEY_USED_DEFAULT = "default";
+const char* PREDICTION_ERROR_RESPONSE_KEY_ERROR = "error";
+const char* PREDICTION_ERROR_RESPONSE_KEY_CAUSE = "cause";
 
-const std::string PREDICTION_ERROR_NAME_JSON = "Json Error";
-const std::string PREDICTION_ERROR_NAME_QUERY_PROCESSING = "Query Processing Error";
+const std::string PREDICTION_ERROR_NAME_JSON = "Json error";
+const std::string PREDICTION_ERROR_NAME_QUERY_PROCESSING = "Query processing error";
 
 const std::string PREDICTION_JSON_SCHEMA = R"(
   {
@@ -176,33 +176,28 @@ class RequestHandler {
             latency_slo_micros, input_type);
         prediction.then([response](boost::future<Response> f) {
           Response r = f.get();
-          rapidjson::Document json_response;
-          json_response.SetObject();
-          clipper::json::add_long(json_response, RESPONSE_KEY_QUERY_ID, r.query_id_);
-          clipper::json::add_double(json_response, RESPONSE_KEY_OUTPUT, r.output_.y_hat_);
-          clipper::json::add_bool(json_response, RESPONSE_KEY_USED_DEFAULT, r.output_is_default_);
-          std::string content = clipper::json::to_json_string(json_response);
+          std::string content = get_prediction_response_content(r);
           respond_http(content, "200 OK", response);
         });
       } catch (const json_parse_error& e) {
         std::string error_msg =
             json_error_msg(e.what(), PREDICTION_JSON_SCHEMA);
-        std::string json_error_response = get_prediction_error_response(PREDICTION_ERROR_NAME_JSON, error_msg);
+        std::string json_error_response = get_prediction_error_response_content(PREDICTION_ERROR_NAME_JSON, error_msg);
         respond_http(json_error_response, "400 Bad Request", response);
       } catch (const json_semantic_error& e) {
         std::string error_msg =
             json_error_msg(e.what(), PREDICTION_JSON_SCHEMA);
-        std::string json_error_response = get_prediction_error_response(PREDICTION_ERROR_NAME_JSON, error_msg);
+        std::string json_error_response = get_prediction_error_response_content(PREDICTION_ERROR_NAME_JSON, error_msg);
         respond_http(json_error_response, "400 Bad Request", response);
       } catch (const std::invalid_argument& e) {
         // This invalid argument exception is most likely the propagation of an exception thrown
         // when Rapidjson attempts to parse an invalid json schema
-        std::string json_error_response = get_prediction_error_response(PREDICTION_ERROR_NAME_JSON, e.what());
+        std::string json_error_response = get_prediction_error_response_content(PREDICTION_ERROR_NAME_JSON, e.what());
         respond_http(json_error_response, "400 Bad Request", response);
       } catch (const clipper::PredictError& e) {
         std::string error_msg = e.what();
         std::string json_error_response =
-            get_prediction_error_response(PREDICTION_ERROR_NAME_QUERY_PROCESSING, error_msg);
+            get_prediction_error_response_content(PREDICTION_ERROR_NAME_QUERY_PROCESSING, error_msg);
         respond_http(json_error_response, "400 Bad Request", response);
       }
     };
@@ -247,11 +242,42 @@ class RequestHandler {
     server_.add_endpoint(update_endpoint, "POST", update_fn);
   }
 
-  const std::string get_prediction_error_response(const std::string error_name, const std::string error_msg) {
+  /**
+   * Obtains the json-formatted http response content for a successful query
+   *
+   * JSON format for prediction response:
+   * {
+   *    "query_id" := int,
+   *    "output" := float,
+   *    "default" := boolean
+   * }
+   */
+  static const std::string get_prediction_response_content(Response& query_response) {
+    rapidjson::Document json_response;
+    json_response.SetObject();
+    clipper::json::add_long(json_response, PREDICTION_RESPONSE_KEY_QUERY_ID, query_response.query_id_);
+    clipper::json::add_double(json_response, PREDICTION_RESPONSE_KEY_OUTPUT, query_response.output_.y_hat_);
+    clipper::json::add_bool(json_response, PREDICTION_RESPONSE_KEY_USED_DEFAULT, query_response.output_is_default_);
+    std::string content = clipper::json::to_json_string(json_response);
+    return content;
+  }
+
+  /**
+   * Obtains the json-formatted http response content for a query
+   * that could not be completed due to an error
+   *
+   * JSON format for error prediction response:
+   * {
+   *    "error" := string,
+   *    "cause" := string
+   * }
+   */
+  static const std::string get_prediction_error_response_content(
+      const std::string error_name, const std::string error_msg) {
     rapidjson::Document error_response;
     error_response.SetObject();
-    clipper::json::add_string(error_response, ERROR_RESPONSE_KEY_ERROR, error_name);
-    clipper::json::add_string(error_response, ERROR_RESPONSE_KEY_CAUSE, error_msg);
+    clipper::json::add_string(error_response, PREDICTION_ERROR_RESPONSE_KEY_ERROR, error_name);
+    clipper::json::add_string(error_response, PREDICTION_ERROR_RESPONSE_KEY_CAUSE, error_msg);
     return clipper::json::to_json_string(error_response);
   }
 
@@ -259,7 +285,7 @@ class RequestHandler {
    * JSON format for prediction query request:
    * {
    *  "uid" := string,
-   *  "input" := [double] | [int] | [string] | [byte] | [float],
+   *  "input" := [double] | [int] | [string] | [byte] | [float]
    * }
    */
   boost::future<Response> decode_and_handle_predict(
