@@ -15,18 +15,14 @@ def load_predict_func(file_path):
         return pywrencloudpickle.load(serialized_func_file)
 
 
-class PredictContainer(rpc.ModelContainerBase):
+class PythonContainer(rpc.ModelContainerBase):
     def __init__(self, path, input_type):
-        print("Initializing prediction container")
-
+        print("Initializing Python function container")
         self.input_type = rpc.string_to_input_type(input_type)
-
-        predict_fname = "predict.txt"
+        predict_fname = "predict_func.pkl"
         predict_path = "{dir}/{predict_fname}".format(
             dir=path, predict_fname=predict_fname)
-
         self.predict_func = load_predict_func(predict_path)
-
         print("Loaded prediction function")
 
     def predict_ints(self, inputs):
