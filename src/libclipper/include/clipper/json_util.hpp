@@ -45,9 +45,7 @@ rapidjson::Value& check_kv_type_and_return(rapidjson::Value& d,
                                            const char* key_name,
                                            Type expected_type);
 
-/* Getters with error handling for bool, double, float, long, int, string */
-bool get_bool(rapidjson::Value& d, const char* key_name);
-
+/* Getters with error handling for double, float, long, int, string */
 double get_double(rapidjson::Value& d, const char* key_name);
 
 float get_float(rapidjson::Value& d, const char* key_name);

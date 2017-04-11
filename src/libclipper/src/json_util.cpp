@@ -47,16 +47,6 @@ rapidjson::Value& check_kv_type_and_return(rapidjson::Value& d,
 }
 
 /* Getters with error handling for boolean, double, float, long, int, string */
-bool get_bool(rapidjson::Value& d, const char* key_name) {
-  rapidjson::Value& v =
-      check_kv_type_and_return(d, key_name, rapidjson::kNumberType);
-  if (!v.IsBool()) {
-    throw json_semantic_error("Input of type " + kTypeNames[v.GetType()] +
-                              " is not of type double");
-  }
-  return v.GetBool();
-}
-
 double get_double(rapidjson::Value& d, const char* key_name) {
   rapidjson::Value& v =
       check_kv_type_and_return(d, key_name, rapidjson::kNumberType);
