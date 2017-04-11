@@ -11,6 +11,8 @@ import shutil
 from sklearn import base
 from sklearn.externals import joblib
 from cStringIO import StringIO
+import sys
+sys.path.insert(0, os.path.abspath('../../containers/python/'))
 from pywrencloudpickle import CloudPickler
 
 MODEL_REPO = "/tmp/clipper-models"
@@ -388,9 +390,12 @@ class Clipper:
                                 labels,
                                 input_type,
                                 num_containers=1):
-        """Add a model that makes use of the provided `predict_function` to Clipper.
-        This function should be called within the Anaconda environment in which the
-        `predict_function` is expected to operate.
+        """Deploy an arbitrary Python function to Clipper.
+
+        The function should take a list of inputs of the type specified by `input_type` and
+        return a Python or numpy array of predictions. All dependencies for the function must
+        be installed with Anaconda or Pip and this function must be called from within an Anaconda
+        environment.
 
         Parameters
         ----------
@@ -399,10 +404,8 @@ class Clipper:
         version : int
             The version to assign this model.
         predict_function : function
-            The function that the model will use find predictions for queried datapoints.
-            This function should accept as input an array of datapoints with entries of
-            type `input_type` and should return a native Python or numpy array of
-            predictions.
+            The prediction function. Any state associated with the function should be
+            captured via closure capture.
         labels : list of str
             A set of strings annotating the model
         input_type : str
@@ -411,13 +414,12 @@ class Clipper:
             The number of replicas of the model to create. More replicas can be
             created later as well. Defaults to 1.
         """
-        # Constants
+
         relative_base_serializations_dir = "predict_serializations"
-        default_python_container = "clipper/predict_func_container:latest"
-        predict_fname = "predict.txt"
+        default_python_container = "clipper/python-container"
+        predict_fname = "predict_func.pkl"
         environment_fname = "environment.yml"
 
-        # Get directory
         base_serializations_dir = os.path.abspath(
             relative_base_serializations_dir)
 
@@ -436,9 +438,8 @@ class Clipper:
         # Write out function serialization
         func_file_path = "{dir}/{predict_fname}".format(
             dir=serialization_dir, predict_fname=predict_fname)
-        serialized_function_file = open(func_file_path, "w")
-        serialized_function_file.write(serialized_prediction_function)
-        serialized_function_file.close()
+        with open(func_file_path, "w") as serialized_function_file:
+            serialized_function_file.write(serialized_prediction_function)
         print("Serialized and supplied predict function")
 
         # Export Anaconda environment
