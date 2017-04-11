@@ -51,7 +51,7 @@ const std::string APPLICATION_JSON_SCHEMA = R"(
    "name" := string,
    "candidate_model_names" := [string],
    "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
-   "default_output" := number,
+   "default_output" := float,
    "latency_slo_micros" := int
   }
 )";

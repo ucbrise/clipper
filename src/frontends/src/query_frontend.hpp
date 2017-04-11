@@ -13,6 +13,7 @@
 #include <clipper/metrics.hpp>
 #include <clipper/query_processor.hpp>
 #include <clipper/redis.hpp>
+#include <clipper/exceptions.hpp>
 
 #include <server_http.hpp>
 

@@ -18,6 +18,7 @@
 #include <clipper/query_processor.hpp>
 #include <clipper/task_executor.hpp>
 #include <clipper/timers.hpp>
+#include <clipper/exceptions.hpp>
 
 #define UNREACHABLE() assert(false)
 
@@ -25,17 +26,6 @@ using std::vector;
 using std::tuple;
 
 namespace clipper {
-
-PredictError::PredictError(const long query_id, const std::string msg)
-    : std::runtime_error(msg), query_id_(query_id), msg_(msg) {}
-
-const char* PredictError::what() const noexcept {
-  std::stringstream ss;
-  ss << "Failed to render a prediction for query with id " << query_id_
-     << std::endl;
-  ss << "Explanation: " << msg_ << std::endl;
-  return ss.str().data();
-}
 
 QueryProcessor::QueryProcessor() : state_db_(std::make_shared<StateDB>()) {
   // Create selection policy instances
