@@ -7,8 +7,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/range/adaptor/map.hpp>
-#include <boost/range/algorithm/copy.hpp>
 #include <boost/thread.hpp>
 
 #include <redox.hpp>
@@ -52,8 +50,8 @@ const std::string ADD_MODEL = ADMIN_PATH + "/add_model$";
 // const std::string ADD_CONTAINER = ADMIN_PATH + "/add_container$";
 const std::string GET_METRICS = ADMIN_PATH + "/metrics$";
 const std::string GET_SELECTION_STATE = ADMIN_PATH + "/get_state$";
-const std::string GET_APPLICATIONS = ADMIN_PATH + "/get_applications";
-const std::string GET_APPLICATION = ADMIN_PATH + "/get_application";
+const std::string GET_APPLICATIONS = ADMIN_PATH + "/get_applications$";
+const std::string GET_APPLICATION = ADMIN_PATH + "/get_application$";
 
 const std::string APPLICATION_JSON_SCHEMA = R"(
   {
