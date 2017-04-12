@@ -310,12 +310,12 @@ class RequestHandler {
       std::stringstream ss;
       ss << "Error adding model " << model_id.first << ":" << model_id.second
          << " to Redis";
-      return ss.str();
+      throw std::invalid_argument(ss.str());
     } else {
       std::stringstream ss;
       ss << "Error model " << model_id.first << ":" << model_id.second
          << " already exists";
-      return ss.str();
+      throw std::invalid_argument(ss.str());
     }
   }
 

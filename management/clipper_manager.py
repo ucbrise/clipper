@@ -427,12 +427,20 @@ class Clipper:
                 warn("%s is invalid model format" % str(type(model_data)))
                 return False
 
+            vol = "{model_repo}/{name}/{version}".format(
+                model_repo=MODEL_REPO, name=name, version=version)
+            # publish model to Clipper and verify success before copying model
+            # parameters to Clipper and starting containers
+            if not self._publish_new_model(
+                    name, version, labels, input_type, container_name,
+                    os.path.join(vol, os.path.basename(model_data_path))):
+                return False
+            print("Published model to Clipper")
+
             if (not self._put_container_on_host(container_name)):
                 return False
 
             # Put model parameter data on host
-            vol = "{model_repo}/{name}/{version}".format(
-                model_repo=MODEL_REPO, name=name, version=version)
             with hide("warnings", "output", "running"):
                 self._execute_standard("mkdir -p {vol}".format(vol=vol))
 
@@ -470,17 +478,11 @@ class Clipper:
                             self._execute_put(model_data_path, vol)
 
             print("Copied model data to host")
-            if not self._publish_new_model(
-                    name, version, labels, input_type, container_name,
-                    os.path.join(vol, os.path.basename(model_data_path))):
-                return False
-            else:
-                print("Published model to Clipper")
-                # aggregate results of starting all containers
-                return all([
-                    self.add_container(name, version)
-                    for r in range(num_containers)
-                ])
+            # aggregate results of starting all containers
+            return all([
+                self.add_container(name, version)
+                for r in range(num_containers)
+            ])
 
     def add_container(self, model_name, model_version):
         """Create a new container for an existing model.
@@ -629,7 +631,7 @@ class Clipper:
         if r.status_code == requests.codes.ok:
             return True
         else:
-            warn("Error publishing model: %s" % r.text)
+            print("Error publishing model: %s" % r.text)
             return False
 
     def _put_container_on_host(self, container_name):
