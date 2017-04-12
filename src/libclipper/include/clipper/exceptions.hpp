@@ -2,23 +2,14 @@
 #define CLIPPER_EXCEPTIONS_HPP
 
 #include <stdexcept>
-#include <string>
-#include <sstream>
 
 namespace clipper {
 
 class PredictError : public std::runtime_error {
  public:
-  PredictError(const long query_id, const std::string msg)
-      : std::runtime_error(msg), query_id_(query_id), msg_(msg) {};
+  PredictError(const long query_id, const std::string msg);
 
-  const char *what() const noexcept {
-    std::stringstream ss;
-    ss << "Failed to render a prediction for query with id " << query_id_
-       << std::endl;
-    ss << "Explanation: " << msg_ << std::endl;
-    return ss.str().data();
-  }
+  const char *what() const noexcept;
 
  private:
   const long query_id_;
