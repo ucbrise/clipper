@@ -241,7 +241,7 @@ class Clipper:
 
     def register_application(self,
                              name,
-                             candidate_models,
+                             candidate_model_names,
                              input_type,
                              selection_policy,
                              slo_micros=20000):
@@ -251,14 +251,10 @@ class Clipper:
         ----------
         name : str
             The name of the application.
-        candidate_models : list of dict
-            The list of models this application will attempt to query.
-            Each candidate model is defined as a dict with keys `model_name`
-            and `model_version`. Example::
-                candidate_models = [
-                    {"model_name": "my_model", "model_version": 1},
-                    {"model_name": "other_model", "model_version": 1},
-                ]
+        candidate_model_names : list of str
+            The list of model names this application will attempt to query.
+            Example::
+                candidate_model_names = ["my_model", "other_model"]
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
         selection_policy : str
@@ -271,7 +267,7 @@ class Clipper:
         url = "http://%s:1338/admin/add_app" % self.host
         req_json = json.dumps({
             "name": name,
-            "candidate_models": candidate_models,
+            "candidate_model_names": candidate_model_names,
             "input_type": input_type,
             "selection_policy": selection_policy,
             "latency_slo_micros": slo_micros
@@ -431,12 +427,20 @@ class Clipper:
                 warn("%s is invalid model format" % str(type(model_data)))
                 return False
 
+            vol = "{model_repo}/{name}/{version}".format(
+                model_repo=MODEL_REPO, name=name, version=version)
+            # publish model to Clipper and verify success before copying model
+            # parameters to Clipper and starting containers
+            if not self._publish_new_model(
+                    name, version, labels, input_type, container_name,
+                    os.path.join(vol, os.path.basename(model_data_path))):
+                return False
+            print("Published model to Clipper")
+
             if (not self._put_container_on_host(container_name)):
                 return False
 
             # Put model parameter data on host
-            vol = "{model_repo}/{name}/{version}".format(
-                model_repo=MODEL_REPO, name=name, version=version)
             with hide("warnings", "output", "running"):
                 self._execute_standard("mkdir -p {vol}".format(vol=vol))
 
@@ -474,17 +478,11 @@ class Clipper:
                             self._execute_put(model_data_path, vol)
 
             print("Copied model data to host")
-            if not self._publish_new_model(
-                    name, version, labels, input_type, container_name,
-                    os.path.join(vol, os.path.basename(model_data_path))):
-                return False
-            else:
-                print("Published model to Clipper")
-                # aggregate results of starting all containers
-                return all([
-                    self.add_container(name, version)
-                    for r in range(num_containers)
-                ])
+            # aggregate results of starting all containers
+            return all([
+                self.add_container(name, version)
+                for r in range(num_containers)
+            ])
 
     def add_container(self, model_name, model_version):
         """Create a new container for an existing model.
@@ -492,7 +490,7 @@ class Clipper:
         Starts a new container for a model that has already been added to
         Clipper. Note that models are uniquely identified by both name
         and version, so this method will fail if you have not already called
-        `Clipper.add_model()` for the specified name and version.
+        `Clipper.deploy_model()` for the specified name and version.
 
         Parameters
         ----------
@@ -522,20 +520,26 @@ class Clipper:
             model_data_path = model_metadata["model_data_path"]
             model_input_type = model_metadata["input_type"]
 
-            # Start container
-            add_container_cmd = (
-                "docker run -d --network={nw} -v {path}:/model:ro "
-                "-e \"CLIPPER_MODEL_NAME={mn}\" -e \"CLIPPER_MODEL_VERSION={mv}\" "
-                "-e \"CLIPPER_IP=query_frontend\" -e \"CLIPPER_INPUT_TYPE={mip}\" "
-                "{image}".format(
-                    path=model_data_path,
-                    nw=DOCKER_NW,
-                    image=image_name,
-                    mn=model_name,
-                    mv=model_version,
-                    mip=model_input_type))
-            result = self._execute_root(add_container_cmd)
-            return result.return_code == 0
+            # TODO: don't try to add container if it's an external container
+            if image_name is not EXTERNALLY_MANAGED_MODEL:
+                # Start container
+                add_container_cmd = (
+                    "docker run -d --network={nw} -v {path}:/model:ro "
+                    "-e \"CLIPPER_MODEL_NAME={mn}\" -e \"CLIPPER_MODEL_VERSION={mv}\" "
+                    "-e \"CLIPPER_IP=query_frontend\" -e \"CLIPPER_INPUT_TYPE={mip}\" "
+                    "{image}".format(
+                        path=model_data_path,
+                        nw=DOCKER_NW,
+                        image=image_name,
+                        mn=model_name,
+                        mv=model_version,
+                        mip=model_input_type))
+                result = self._execute_root(add_container_cmd)
+                return result.return_code == 0
+            else:
+                print("Cannot start containers for externally managed model %s"
+                      % model_name)
+                return True
 
     def inspect_instance(self):
         """Fetches metrics from the running Clipper instance.
@@ -554,6 +558,37 @@ class Clipper:
         except TypeError:
             s = r.text
         return s
+
+    def set_model_version(self, model_name, model_version, num_containers=0):
+        """Changes the current model version to `model_version`.
+
+        This method can be used to do model rollback and rollforward to
+        any previously deployed version of the model. Note that model
+        versions automatically get updated when `deploy_model()` is
+        called, so there is no need to manually update the version as well.
+
+        Parameters
+        ----------
+        model_name : str
+            The name of the model
+        model_version : int
+            The version of the model. Note that `model_version`
+            must be a model version that has already been deployed.
+        num_containers : int
+            The number of new containers to start with the newly
+            selected model version.
+
+        """
+        url = "http://%s:1338/admin/set_model_version" % self.host
+        req_json = json.dumps({
+            "model_name": model_name,
+            "model_version": model_version
+        })
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
+        print(r.text)
+        for r in range(num_containers):
+            self.add_container(model_name, model_version)
 
     def stop_all(self):
         """Stops and removes all Docker containers on the host.
@@ -596,7 +631,7 @@ class Clipper:
         if r.status_code == requests.codes.ok:
             return True
         else:
-            warn("Error publishing model: %s" % r.text)
+            print("Error publishing model: %s" % r.text)
             return False
 
     def _put_container_on_host(self, container_name):

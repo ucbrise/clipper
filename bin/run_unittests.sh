@@ -34,7 +34,7 @@ function randomize_redis_port {
     echo "$REDIS_PORT"
 }
 
-trap clean_up SIGHUP SIGINT SIGTERM
+trap clean_up SIGHUP SIGINT SIGTERM EXIT
 
 unset CDPATH
 # one-liner from http://stackoverflow.com/a/246128
@@ -65,5 +65,3 @@ redis-server --port $REDIS_PORT &> /dev/null &
 ./src/libclipper/libclippertests --redis_port $REDIS_PORT
 ./src/frontends/frontendtests --redis_port $REDIS_PORT
 ./src/management/managementtests --redis_port $REDIS_PORT
-
-clean_up
