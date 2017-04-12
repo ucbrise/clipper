@@ -13,12 +13,12 @@
 
 #include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/exceptions.hpp>
 #include <clipper/future.hpp>
 #include <clipper/logging.hpp>
 #include <clipper/query_processor.hpp>
 #include <clipper/task_executor.hpp>
 #include <clipper/timers.hpp>
-#include <clipper/exceptions.hpp>
 
 #define UNREACHABLE() assert(false)
 

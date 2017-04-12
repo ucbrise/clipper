@@ -16,6 +16,6 @@ class PredictError : public std::runtime_error {
   const std::string msg_;
 };
 
-} // namespace clipper
+}  // namespace clipper
 
-#endif //CLIPPER_EXCEPTIONS_HPP
+#endif  // CLIPPER_EXCEPTIONS_HPP
