@@ -34,7 +34,7 @@ function randomize_redis_port {
     echo "$REDIS_PORT"
 }
 
-trap clean_up SIGHUP SIGINT SIGTERM
+trap clean_up SIGHUP SIGINT SIGTERM EXIT
 
 unset CDPATH
 # one-liner from http://stackoverflow.com/a/246128

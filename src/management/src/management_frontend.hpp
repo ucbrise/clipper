@@ -262,12 +262,12 @@ class RequestHandler {
       } else {
         std::stringstream ss;
         ss << "Error adding application " << app_name << " to Redis";
-        return ss.str();
+        throw std::invalid_argument(ss.str());
       }
     } else {
       std::stringstream ss;
       ss << "Error application " << app_name << " already exists";
-      return ss.str();
+      throw std::invalid_argument(ss.str());
     }
   }
 

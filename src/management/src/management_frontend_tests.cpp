@@ -90,8 +90,7 @@ TEST_F(ManagementFrontendTest, TestAddDuplicateApplication) {
   }
   )";
 
-  ASSERT_EQ(rh_.add_application(add_dup_app_json),
-            "Error application myappname already exists");
+  ASSERT_THROW(rh_.add_application(add_dup_app_json), std::invalid_argument);
 }
 
 TEST_F(ManagementFrontendTest, TestAddApplicationMissingField) {
@@ -181,8 +180,7 @@ TEST_F(ManagementFrontendTest, TestAddDuplicateModelVersion) {
   }
   )";
 
-  ASSERT_EQ(rh_.add_model(add_dup_model_json),
-            "Error model mymodelname:4 already exists");
+  ASSERT_THROW(rh_.add_model(add_dup_model_json), std::invalid_argument);
 }
 
 TEST_F(ManagementFrontendTest, TestAddModelMissingField) {
