@@ -62,6 +62,38 @@ TEST_F(ManagementFrontendTest, TestAddApplicationCorrect) {
   ASSERT_EQ(result.size(), static_cast<size_t>(4));
 }
 
+TEST_F(ManagementFrontendTest, TestAddDuplicateApplication) {
+  std::string add_app_json = R"(
+  {
+    "name": "myappname",
+    "candidate_model_names": ["m", "image_model"],
+    "input_type": "integers",
+    "selection_policy": "sample_policy",
+    "latency_slo_micros": 10000
+  }
+  )";
+
+  ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
+  auto result = get_application(*redis_, "myappname");
+  // The application table has 5 fields, so we expect to get back a map with 5
+  // entries in it (see add_application() in redis.cpp for details on what the
+  // fields are).
+  ASSERT_EQ(result.size(), static_cast<size_t>(4));
+
+  std::string add_dup_app_json = R"(
+  {
+    "name": "myappname",
+    "candidate_model_names": ["k", "m"],
+    "input_type": "integers",
+    "selection_policy": "sample_policy",
+    "latency_slo_micros": 120000
+  }
+  )";
+
+  ASSERT_EQ(rh_.add_application(add_dup_app_json),
+            "Error application myappname already exists");
+}
+
 TEST_F(ManagementFrontendTest, TestAddApplicationMissingField) {
   std::string add_app_json = R"(
   {
@@ -111,6 +143,46 @@ TEST_F(ManagementFrontendTest, TestAddModelCorrect) {
   // Make sure that the current model version has been updated
   // appropriately.
   ASSERT_EQ(get_current_model_version(*redis_, model_name), model_version);
+}
+
+TEST_F(ManagementFrontendTest, TestAddDuplicateModelVersion) {
+  std::string add_model_json = R"(
+  {
+    "model_name": "mymodelname",
+    "model_version": 4,
+    "labels": ["label1", "label2", "label3"],
+    "input_type": "integers",
+    "container_name": "clipper/sklearn_cifar",
+    "model_data_path": "/tmp/model/repo/m/4"
+  }
+  )";
+
+  ASSERT_EQ(rh_.add_model(add_model_json), "Success!");
+  std::string model_name = "mymodelname";
+  int model_version = 4;
+  auto result = get_model(*redis_, std::make_pair(model_name, model_version));
+  // The model table has 7 fields, so we expect to get back a map with 7
+  // entries in it (see add_model() in redis.cpp for details on what the
+  // fields are).
+  ASSERT_EQ(result.size(), static_cast<size_t>(7));
+
+  // Make sure that the current model version has been updated
+  // appropriately.
+  ASSERT_EQ(get_current_model_version(*redis_, model_name), model_version);
+
+  std::string add_dup_model_json = R"(
+  {
+    "model_name": "mymodelname",
+    "model_version": 4,
+    "labels": ["label1", "label5"],
+    "input_type": "doubles",
+    "container_name": "clipper/other_container",
+    "model_data_path": "/tmp/model/repo/m/4"
+  }
+  )";
+
+  ASSERT_EQ(rh_.add_model(add_dup_model_json),
+            "Error model mymodelname:4 already exists");
 }
 
 TEST_F(ManagementFrontendTest, TestAddModelMissingField) {

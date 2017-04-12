@@ -251,12 +251,23 @@ class RequestHandler {
         clipper::parse_input_type(get_string(d, "input_type"));
     std::string selection_policy = get_string(d, "selection_policy");
     int latency_slo_micros = get_int(d, "latency_slo_micros");
-    if (clipper::redis::add_application(redis_connection_, app_name,
-                                        candidate_model_names, input_type,
-                                        selection_policy, latency_slo_micros)) {
-      return "Success!";
+    // check if application already exists
+    std::unordered_map<std::string, std::string> existing_app_data =
+        clipper::redis::get_application(redis_connection_, app_name);
+    if (existing_app_data.empty()) {
+      if (clipper::redis::add_application(
+              redis_connection_, app_name, candidate_model_names, input_type,
+              selection_policy, latency_slo_micros)) {
+        return "Success!";
+      } else {
+        std::stringstream ss;
+        ss << "Error adding application " << app_name << " to Redis";
+        return ss.str();
+      }
     } else {
-      return "Error adding application to Redis.";
+      std::stringstream ss;
+      ss << "Error application " << app_name << " already exists";
+      return ss.str();
     }
   }
 
@@ -285,13 +296,27 @@ class RequestHandler {
         clipper::parse_input_type(get_string(d, "input_type"));
     std::string container_name = get_string(d, "container_name");
     std::string model_data_path = get_string(d, "model_data_path");
-    if (clipper::redis::add_model(redis_connection_, model_id, input_type,
-                                  labels, container_name, model_data_path)) {
-      if (set_model_version(model_id.first, model_id.second)) {
-        return "Success!";
+
+    // check if this version of the model has already been deployed
+    std::unordered_map<std::string, std::string> existing_model_data =
+        clipper::redis::get_model(redis_connection_, model_id);
+    if (existing_model_data.empty()) {
+      if (clipper::redis::add_model(redis_connection_, model_id, input_type,
+                                    labels, container_name, model_data_path)) {
+        if (set_model_version(model_id.first, model_id.second)) {
+          return "Success!";
+        }
       }
+      std::stringstream ss;
+      ss << "Error adding model " << model_id.first << ":" << model_id.second
+         << " to Redis";
+      return ss.str();
+    } else {
+      std::stringstream ss;
+      ss << "Error model " << model_id.first << ":" << model_id.second
+         << " already exists";
+      return ss.str();
     }
-    return "Error adding model to Redis.";
   }
 
   /**
