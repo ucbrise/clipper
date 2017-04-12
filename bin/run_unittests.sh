@@ -65,5 +65,3 @@ redis-server --port $REDIS_PORT &> /dev/null &
 ./src/libclipper/libclippertests --redis_port $REDIS_PORT
 ./src/frontends/frontendtests --redis_port $REDIS_PORT
 ./src/management/managementtests --redis_port $REDIS_PORT
-
-clean_up
