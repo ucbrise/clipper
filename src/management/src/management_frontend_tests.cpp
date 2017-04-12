@@ -135,45 +135,87 @@ TEST_F(ManagementFrontendTest, TestAddModelMalformedJson) {
 }
 
 TEST_F(ManagementFrontendTest, TestSetModelVersionCorrect) {
-  std::vector<std::string> labels{"ads", "images", "experimental", "other",
-                                  "labels"};
-  VersionedModelId model1 = std::make_pair("m", 1);
-  std::string container_name = "clipper/test_container";
-  std::string model_path = "/tmp/models/m/1";
-  ASSERT_TRUE(add_model(*redis_, model1, InputType::Ints, labels,
-                        container_name, model_path));
-  VersionedModelId model2 = std::make_pair("m", 2);
-  std::string model_path2 = "/tmp/models/m/2";
-  ASSERT_TRUE(add_model(*redis_, model2, InputType::Ints, labels,
-                        container_name, model_path2));
-  VersionedModelId model4 = std::make_pair("m", 4);
-  std::string model_path4 = "/tmp/models/m/4";
-  ASSERT_TRUE(add_model(*redis_, model4, InputType::Ints, labels,
-                        container_name, model_path4));
+  std::string v1_json = R"(
+  {
+    "model_name": "m",
+    "model_version": 1,
+    "labels": ["ads", "images"],
+    "input_type": "ints",
+    "container_name": "clipper/test_container",
+    "model_data_path": "/tmp/models/m/1"
+  }
+  )";
+  ASSERT_EQ(rh_.add_model(v1_json), "Success!");
 
+  std::string v2_json = R"(
+  {
+    "model_name": "m",
+    "model_version": 2,
+    "labels": ["ads", "images"],
+    "input_type": "ints",
+    "container_name": "clipper/test_container",
+    "model_data_path": "/tmp/models/m/2"
+  }
+  )";
+  ASSERT_EQ(rh_.add_model(v2_json), "Success!");
+
+  std::string v4_json = R"(
+  {
+    "model_name": "m",
+    "model_version": 4,
+    "labels": ["ads", "images"],
+    "input_type": "ints",
+    "container_name": "clipper/test_container",
+    "model_data_path": "/tmp/models/m/4"
+  }
+  )";
+  ASSERT_EQ(rh_.add_model(v4_json), "Success!");
+
+  ASSERT_EQ(get_current_model_version(*redis_, "m"), 4);
   ASSERT_TRUE(rh_.set_model_version("m", 2));
   ASSERT_EQ(get_current_model_version(*redis_, "m"), 2);
 }
 
 TEST_F(ManagementFrontendTest, TestSetModelInvalidVersion) {
-  std::vector<std::string> labels{"ads", "images", "experimental", "other",
-                                  "labels"};
-  VersionedModelId model1 = std::make_pair("m", 1);
-  std::string container_name = "clipper/test_container";
-  std::string model_path = "/tmp/models/m/1";
-  ASSERT_TRUE(add_model(*redis_, model1, InputType::Ints, labels,
-                        container_name, model_path));
-  VersionedModelId model2 = std::make_pair("m", 2);
-  std::string model_path2 = "/tmp/models/m/2";
-  ASSERT_TRUE(add_model(*redis_, model2, InputType::Ints, labels,
-                        container_name, model_path2));
-  VersionedModelId model4 = std::make_pair("m", 4);
-  std::string model_path4 = "/tmp/models/m/4";
-  ASSERT_TRUE(add_model(*redis_, model4, InputType::Ints, labels,
-                        container_name, model_path4));
+  std::string v1_json = R"(
+  {
+    "model_name": "m",
+    "model_version": 1,
+    "labels": ["ads", "images"],
+    "input_type": "ints",
+    "container_name": "clipper/test_container",
+    "model_data_path": "/tmp/models/m/1"
+  }
+  )";
+  ASSERT_EQ(rh_.add_model(v1_json), "Success!");
 
+  std::string v2_json = R"(
+  {
+    "model_name": "m",
+    "model_version": 2,
+    "labels": ["ads", "images"],
+    "input_type": "ints",
+    "container_name": "clipper/test_container",
+    "model_data_path": "/tmp/models/m/2"
+  }
+  )";
+  ASSERT_EQ(rh_.add_model(v2_json), "Success!");
+
+  std::string v4_json = R"(
+  {
+    "model_name": "m",
+    "model_version": 4,
+    "labels": ["ads", "images"],
+    "input_type": "ints",
+    "container_name": "clipper/test_container",
+    "model_data_path": "/tmp/models/m/4"
+  }
+  )";
+  ASSERT_EQ(rh_.add_model(v4_json), "Success!");
+
+  ASSERT_EQ(get_current_model_version(*redis_, "m"), 4);
   ASSERT_FALSE(rh_.set_model_version("m", 11));
-  ASSERT_EQ(get_current_model_version(*redis_, "m"), -1);
+  ASSERT_EQ(get_current_model_version(*redis_, "m"), 4);
 }
 
 }  // namespace

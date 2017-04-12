@@ -488,7 +488,7 @@ class Clipper:
         Starts a new container for a model that has already been added to
         Clipper. Note that models are uniquely identified by both name
         and version, so this method will fail if you have not already called
-        `Clipper.add_model()` for the specified name and version.
+        `Clipper.deploy_model()` for the specified name and version.
 
         Parameters
         ----------
@@ -557,7 +557,7 @@ class Clipper:
             s = r.text
         return s
 
-    def set_model_version(model_name, model_version, num_containers=0):
+    def set_model_version(self, model_name, model_version, num_containers=0):
         """Changes the current model version to `model_version`.
 
         This method can be used to do model rollback and rollforward to

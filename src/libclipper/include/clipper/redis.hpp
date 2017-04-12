@@ -301,8 +301,7 @@ void subscribe_to_application_changes(
 /**
 * Subscribes to changes in model versions.
 *
-* The
-* callback is called with the string key of the model
+* The callback is called with the string key of the model
 * that changed and the Redis event type. The key can
 * be used to look up the new value. The message type identifies
 * what type of change was detected. This allows subscribers

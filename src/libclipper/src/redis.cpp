@@ -161,7 +161,14 @@ int get_current_model_version(redox::Redox& redis,
     std::string key = gen_model_current_version_key(model_name);
     auto result = send_cmd_with_reply<string>(redis, {"GET", key});
     if (result) {
-      return std::stoi(*result);
+      int version = std::stoi(*result);
+      if (version < 0) {
+        log_error_formatted(
+            LOGGING_TAG_REDIS,
+            "Version numbers cannot be negative. Found version {}", version);
+      } else {
+        return version;
+      }
     }
   }
   log_error_formatted(LOGGING_TAG_REDIS, "No versions found for model {}",
@@ -384,21 +391,24 @@ void subscribe_to_keyspace_changes(
 void subscribe_to_model_changes(
     Subscriber& subscriber,
     std::function<void(const std::string&, const std::string&)> callback) {
-  subscribe_to_keyspace_changes(REDIS_MODEL_DB_NUM, "", subscriber,
+  std::string prefix = "";
+  subscribe_to_keyspace_changes(REDIS_MODEL_DB_NUM, prefix, subscriber,
                                 std::move(callback));
 }
 
 void subscribe_to_container_changes(
     Subscriber& subscriber,
     std::function<void(const std::string&, const std::string&)> callback) {
-  subscribe_to_keyspace_changes(REDIS_CONTAINER_DB_NUM, "", subscriber,
+  std::string prefix = "";
+  subscribe_to_keyspace_changes(REDIS_CONTAINER_DB_NUM, prefix, subscriber,
                                 std::move(callback));
 }
 
 void subscribe_to_application_changes(
     redox::Subscriber& subscriber,
     std::function<void(const std::string&, const std::string&)> callback) {
-  subscribe_to_keyspace_changes(REDIS_APPLICATION_DB_NUM, "", subscriber,
+  std::string prefix = "";
+  subscribe_to_keyspace_changes(REDIS_APPLICATION_DB_NUM, prefix, subscriber,
                                 std::move(callback));
 }
 
