@@ -413,6 +413,28 @@ class Clipper:
         num_containers : int, optional
             The number of replicas of the model to create. More replicas can be
             created later as well. Defaults to 1.
+
+        Example
+        -------
+            def center(xs):
+                means = np.mean(xs, axis=0)
+                return xs - means
+
+            centered_xs = center(xs)
+            model = sklearn.linear_model.LogisticRegression()
+            model.fit(centered_xs, ys)
+
+            def centered_predict(inputs):
+                centered_inputs = center(inputs)
+                return model.predict(centered_inputs)
+
+            clipper.deploy_predict_function(
+                "example_model",
+                1,
+                centered_predict,
+                ["example"],
+                "doubles",
+                num_containers=1)
         """
 
         relative_base_serializations_dir = "predict_serializations"

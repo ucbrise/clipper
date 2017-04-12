@@ -27,28 +27,43 @@ class PythonContainer(rpc.ModelContainerBase):
 
     def predict_ints(self, inputs):
         if self.input_type != rpc.INPUT_TYPE_INTS:
-            pass
+            self._log_incorrect_input_type(rpc.INPUT_TYPE_INTS)
+            return
         return np.asarray(self.predict_func(inputs)).astype(np.float32)
 
     def predict_floats(self, inputs):
         if self.input_type != rpc.INPUT_TYPE_FLOATS:
-            pass
+            self._log_incorrect_input_type(rpc.INPUT_TYPE_FLOATS)
+            return
         return np.asarray(self.predict_func(inputs)).astype(np.float32)
 
     def predict_doubles(self, inputs):
         if self.input_type != rpc.INPUT_TYPE_DOUBLES:
-            pass
+            self._log_incorrect_input_type(rpc.INPUT_TYPE_DOUBLES)
+            return
         return np.asarray(self.predict_func(inputs)).astype(np.float32)
 
     def predict_bytes(self, inputs):
         if self.input_type != rpc.INPUT_TYPE_BYTES:
-            pass
+            self._log_incorrect_input_type(rpc.INPUT_TYPE_BYTES)
+            return
         return np.asarray(self.predict_func(inputs)).astype(np.float32)
 
     def predict_strings(self, inputs):
         if self.input_type != rpc.INPUT_TYPE_STRINGS:
-            pass
+            self._log_incorrect_input_type(rpc.INPUT_TYPE_STRINGS)
+            return
         return np.asarray(self.predict_func(inputs)).astype(np.float32)
+
+    def _log_incorrect_input_type(self, input_type):
+        incorrect_input_type = rpc.input_type_to_string(input_type)
+        correct_input_type = rpc.input_type_to_string(self.input_type)
+        print(
+            "Attempted to use prediction function for input type {incorrect_input_type}.\
+            This model-container was configured accept data for input type {correct_input_type}"
+            .format(
+                incorrect_input_type=incorrect_input_type,
+                correct_input_type=correct_input_type))
 
 
 if __name__ == "__main__":
@@ -78,7 +93,8 @@ if __name__ == "__main__":
     if "CLIPPER_PORT" in os.environ:
         port = int(os.environ["CLIPPER_PORT"])
     else:
-        print("Connecting to Clipper with default port: 7000")
+        print("Connecting to Clipper with default port: {port}".format(
+            port=port))
 
     input_type = "doubles"
     if "CLIPPER_INPUT_TYPE" in os.environ:
