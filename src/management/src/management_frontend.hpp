@@ -237,7 +237,7 @@ class RequestHandler {
       ss << app_name << " provided " << candidate_model_names.size();
       std::string error_msg = ss.str();
       clipper::log_error(LOGGING_TAG_MANAGEMENT_FRONTEND, error_msg);
-      return error_msg;
+      throw std::invalid_argument(error_msg);
     }
     InputType input_type =
         clipper::parse_input_type(get_string(d, "input_type"));
