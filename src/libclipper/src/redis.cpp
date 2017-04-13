@@ -21,6 +21,8 @@ using std::unordered_map;
 namespace clipper {
 namespace redis {
 
+const std::string VERSION_METADATA_PREFIX = "CURRENT_MODEL_VERSION:";
+
 std::unordered_map<string, string> parse_redis_map(
     const std::vector<string>& redis_data) {
   std::unordered_map<string, string> parsed_map;
@@ -53,6 +55,13 @@ std::string gen_versioned_model_key(const VersionedModelId& key) {
   return ss.str();
 }
 
+std::string gen_model_current_version_key(const std::string& model_name) {
+  std::stringstream ss;
+  ss << VERSION_METADATA_PREFIX;
+  ss << model_name;
+  return ss.str();
+}
+
 string labels_to_str(const vector<string>& labels) {
   if (labels.empty()) return "";
 
@@ -63,6 +72,10 @@ string labels_to_str(const vector<string>& labels) {
   // don't forget to save the last label
   ss << *(labels.end() - 1);
   return ss.str();
+}
+
+string model_names_to_str(const vector<string>& names) {
+  return labels_to_str(names);
 }
 
 // String parsing taken from http://stackoverflow.com/a/14267455/814642
@@ -79,6 +92,10 @@ vector<string> str_to_labels(const string& label_str) {
   // don't forget to parse the last label
   labels.push_back(label_str.substr(start, end - start));
   return labels;
+}
+
+std::vector<std::string> str_to_model_names(const std::string& names_str) {
+  return str_to_labels(names_str);
 }
 
 std::string models_to_str(const std::vector<VersionedModelId>& models) {
@@ -122,6 +139,41 @@ std::vector<VersionedModelId> str_to_models(const std::string& model_str) {
   models.push_back(std::make_pair(model_name, version));
 
   return models;
+}
+
+bool set_current_model_version(redox::Redox& redis,
+                               const std::string& model_name, int version) {
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_METADATA_DB_NUM)})) {
+    std::string key = gen_model_current_version_key(model_name);
+    const vector<string> cmd_vec{"SET", key, std::to_string(version)};
+
+    return send_cmd_no_reply<string>(redis, cmd_vec);
+  } else {
+    return false;
+  }
+}
+
+int get_current_model_version(redox::Redox& redis,
+                              const std::string& model_name) {
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_METADATA_DB_NUM)})) {
+    std::string key = gen_model_current_version_key(model_name);
+    auto result = send_cmd_with_reply<string>(redis, {"GET", key});
+    if (result) {
+      int version = std::stoi(*result);
+      if (version < 0) {
+        log_error_formatted(
+            LOGGING_TAG_REDIS,
+            "Version numbers cannot be negative. Found version {}", version);
+      } else {
+        return version;
+      }
+    }
+  }
+  log_error_formatted(LOGGING_TAG_REDIS, "No versions found for model {}",
+                      model_name);
+  return -1;
 }
 
 bool add_model(Redox& redis, const VersionedModelId& model_id,
@@ -176,19 +228,27 @@ unordered_map<string, string> get_model(Redox& redis,
   }
 }
 
-unordered_map<string, string> get_model_by_key(Redox& redis,
-                                               const std::string& key) {
+std::vector<int> get_model_versions(redox::Redox& redis,
+                                    const std::string& model_name) {
+  std::vector<int> versions;
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
-    std::vector<std::string> model_data;
-    auto result = send_cmd_with_reply<vector<string>>(redis, {"HGETALL", key});
+    std::stringstream ss;
+    ss << model_name;
+    ss << ":*";
+    auto key_regex = ss.str();
+    auto result =
+        send_cmd_with_reply<vector<string>>(redis, {"KEYS", key_regex});
     if (result) {
-      model_data = *result;
+      std::vector<std::string> model_keys;
+      model_keys = *result;
+      for (auto model_str : model_keys) {
+        std::vector<VersionedModelId> parsed_model = str_to_models(model_str);
+        versions.push_back(parsed_model.front().second);
+      }
     }
-    return parse_redis_map(model_data);
-  } else {
-    return unordered_map<string, string>{};
   }
+  return versions;
 }
 
 bool add_container(Redox& redis, const VersionedModelId& model_id,
@@ -257,15 +317,15 @@ unordered_map<string, string> get_container_by_key(Redox& redis,
 }
 
 bool add_application(redox::Redox& redis, const std::string& appname,
-                     const std::vector<VersionedModelId>& models,
+                     const std::vector<std::string>& models,
                      const InputType& input_type, const std::string& policy,
                      const long latency_slo_micros) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_APPLICATION_DB_NUM)})) {
     const vector<string> cmd_vec{"HMSET",
                                  appname,
-                                 "candidate_models",
-                                 models_to_str(models),
+                                 "candidate_model_names",
+                                 model_names_to_str(models),
                                  "input_type",
                                  get_readable_input_type(input_type),
                                  "policy",
@@ -313,40 +373,50 @@ std::unordered_map<std::string, std::string> get_application_by_key(
 }
 
 void subscribe_to_keyspace_changes(
-    int db, Subscriber& subscriber,
+    int db, std::string prefix, Subscriber& subscriber,
     std::function<void(const std::string&, const std::string&)> callback) {
   std::ostringstream subscription;
-  subscription << "__keyspace@" << std::to_string(db) << "__:*";
+  subscription << "__keyspace@" << std::to_string(db) << "__:" << prefix << "*";
   std::string sub_str = subscription.str();
   log_info_formatted(LOGGING_TAG_REDIS, "SUBSCRIPTION STRING: {}", sub_str);
-  subscriber.psubscribe(
-      sub_str, [callback](const std::string& topic, const std::string& msg) {
-        size_t split_idx = topic.find_first_of(":");
-        std::string key = topic.substr(split_idx + 1);
-        log_info_formatted(LOGGING_TAG_REDIS, "MESSAGE: {}", msg);
-        callback(key, msg);
-      });
+  subscriber.psubscribe(sub_str, [callback, prefix](const std::string& topic,
+                                                    const std::string& msg) {
+    size_t split_idx = topic.find_first_of(":");
+    std::string key = topic.substr(split_idx + 1 + prefix.size());
+    log_info_formatted(LOGGING_TAG_REDIS, "MESSAGE: {}", msg);
+    callback(key, msg);
+  });
 }
 
 void subscribe_to_model_changes(
     Subscriber& subscriber,
     std::function<void(const std::string&, const std::string&)> callback) {
-  subscribe_to_keyspace_changes(REDIS_MODEL_DB_NUM, subscriber,
+  std::string prefix = "";
+  subscribe_to_keyspace_changes(REDIS_MODEL_DB_NUM, prefix, subscriber,
                                 std::move(callback));
 }
 
 void subscribe_to_container_changes(
     Subscriber& subscriber,
     std::function<void(const std::string&, const std::string&)> callback) {
-  subscribe_to_keyspace_changes(REDIS_CONTAINER_DB_NUM, subscriber,
+  std::string prefix = "";
+  subscribe_to_keyspace_changes(REDIS_CONTAINER_DB_NUM, prefix, subscriber,
                                 std::move(callback));
 }
 
 void subscribe_to_application_changes(
     redox::Subscriber& subscriber,
     std::function<void(const std::string&, const std::string&)> callback) {
-  subscribe_to_keyspace_changes(REDIS_APPLICATION_DB_NUM, subscriber,
+  std::string prefix = "";
+  subscribe_to_keyspace_changes(REDIS_APPLICATION_DB_NUM, prefix, subscriber,
                                 std::move(callback));
+}
+
+void subscribe_to_model_version_changes(
+    redox::Subscriber& subscriber,
+    std::function<void(const std::string&, const std::string&)> callback) {
+  subscribe_to_keyspace_changes(REDIS_METADATA_DB_NUM, VERSION_METADATA_PREFIX,
+                                subscriber, std::move(callback));
 }
 
 }  // namespace redis

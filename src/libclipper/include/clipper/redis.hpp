@@ -71,13 +71,25 @@ std::string gen_model_replica_key(const VersionedModelId& key,
  */
 std::string gen_versioned_model_key(const VersionedModelId& key);
 
+std::string gen_model_current_version_key(const std::string& model_name);
+
 std::string labels_to_str(const std::vector<std::string>& labels);
 
 std::vector<std::string> str_to_labels(const std::string& label_str);
 
+std::string model_names_to_str(const std::vector<std::string>& names);
+
+std::vector<std::string> str_to_model_names(const std::string& names_str);
+
 std::string models_to_str(const std::vector<VersionedModelId>& models);
 
 std::vector<VersionedModelId> str_to_models(const std::string& model_str);
+
+bool set_current_model_version(redox::Redox& redis,
+                               const std::string& model_name, int version);
+
+int get_current_model_version(redox::Redox& redis,
+                              const std::string& model_name);
 
 /**
  * Adds a model into the model table. This will
@@ -118,6 +130,15 @@ bool delete_model(redox::Redox& redis, const VersionedModelId& model_id);
  */
 std::unordered_map<std::string, std::string> get_model(
     redox::Redox& redis, const VersionedModelId& model_id);
+
+/**
+ * Looks up all available versions for a model.
+ *
+ * \return Returns a list of model versions. If the
+ * model was not found, an empty list will be returned.
+ */
+std::vector<int> get_model_versions(redox::Redox& redis,
+                                    const std::string& model_name);
 
 /**
  * Looks up an entry in the model table by the fully
@@ -198,7 +219,7 @@ std::unordered_map<std::string, std::string> get_container_by_key(
  * \return Returns true of the add was successful.
  */
 bool add_application(redox::Redox& redis, const std::string& appname,
-                     const std::vector<VersionedModelId>& models,
+                     const std::vector<std::string>& models,
                      const InputType& input_type, const std::string& policy,
                      const long latency_slo_micros);
 
@@ -274,6 +295,19 @@ void subscribe_to_container_changes(
  * to differentiate between adds, updates, and deletes if necessary.
 */
 void subscribe_to_application_changes(
+    redox::Subscriber& subscriber,
+    std::function<void(const std::string&, const std::string&)> callback);
+
+/**
+* Subscribes to changes in model versions.
+*
+* The callback is called with the string key of the model
+* that changed and the Redis event type. The key can
+* be used to look up the new value. The message type identifies
+* what type of change was detected. This allows subscribers
+* to differentiate between adds, updates, and deletes if necessary.
+*/
+void subscribe_to_model_version_changes(
     redox::Subscriber& subscriber,
     std::function<void(const std::string&, const std::string&)> callback);
 
