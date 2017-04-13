@@ -47,7 +47,7 @@ boost::future<Response> QueryProcessor::predict(Query query) {
                     << "is an invalid selection_policy.";
     const std::string err_msg = err_msg_builder.str();
     log_error(LOGGING_TAG_QUERY_PROCESSOR, err_msg);
-    throw PredictError(query_id, err_msg);
+    throw PredictError(err_msg);
   }
   std::shared_ptr<SelectionPolicy> current_policy = current_policy_iter->second;
 
@@ -58,7 +58,7 @@ boost::future<Response> QueryProcessor::predict(Query query) {
                     << query.user_id_ << " and label: " << query.label_;
     const std::string err_msg = err_msg_builder.str();
     log_error(LOGGING_TAG_QUERY_PROCESSOR, err_msg);
-    throw PredictError(query_id, err_msg);
+    throw PredictError(err_msg);
   }
   std::shared_ptr<SelectionState> selection_state =
       current_policy->deserialize(*state_opt);
