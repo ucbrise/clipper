@@ -8,11 +8,11 @@ import matplotlib.pyplot as plt
 
 DEMO_UID = 0
 
-PREDICTION_RESPONSE_KEY_QUERY_ID = "query_id";
-PREDICTION_RESPONSE_KEY_OUTPUT = "output";
-PREDICTION_RESPONSE_KEY_USED_DEFAULT = "default";
-PREDICTION_ERROR_RESPONSE_KEY_ERROR = "error";
-PREDICTION_ERROR_RESPONSE_KEY_CAUSE = "cause";
+PREDICTION_RESPONSE_KEY_QUERY_ID = "query_id"
+PREDICTION_RESPONSE_KEY_OUTPUT = "output"
+PREDICTION_RESPONSE_KEY_USED_DEFAULT = "default"
+PREDICTION_ERROR_RESPONSE_KEY_ERROR = "error"
+PREDICTION_ERROR_RESPONSE_KEY_CAUSE = "cause"
 
 classes = [
     'airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse',
