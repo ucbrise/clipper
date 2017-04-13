@@ -1,0 +1,9 @@
+numpy
+python
+python-dateutil
+pytz
+pandas
+scipy
+scikit-learn
+functools32
+setuptools

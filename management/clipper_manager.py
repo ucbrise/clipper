@@ -10,6 +10,10 @@ import subprocess32 as subprocess
 import shutil
 from sklearn import base
 from sklearn.externals import joblib
+from cStringIO import StringIO
+import sys
+sys.path.insert(0, os.path.abspath('../../containers/python/'))
+from pywrencloudpickle import CloudPickler
 
 MODEL_REPO = "/tmp/clipper-models"
 DOCKER_NW = "clipper_nw"
@@ -374,6 +378,102 @@ class Clipper:
         return self._publish_new_model(name, version, labels, input_type,
                                        EXTERNALLY_MANAGED_MODEL,
                                        EXTERNALLY_MANAGED_MODEL)
+
+    def deploy_predict_function(self,
+                                name,
+                                version,
+                                predict_function,
+                                labels,
+                                input_type,
+                                num_containers=1):
+        """Deploy an arbitrary Python function to Clipper.
+
+        The function should take a list of inputs of the type specified by `input_type` and
+        return a Python or numpy array of predictions. All dependencies for the function must
+        be installed with Anaconda or Pip and this function must be called from within an Anaconda
+        environment.
+
+        Parameters
+        ----------
+        name : str
+            The name to assign this model.
+        version : int
+            The version to assign this model.
+        predict_function : function
+            The prediction function. Any state associated with the function should be
+            captured via closure capture.
+        labels : list of str
+            A set of strings annotating the model
+        input_type : str
+            One of "integers", "floats", "doubles", "bytes", or "strings".
+        num_containers : int, optional
+            The number of replicas of the model to create. More replicas can be
+            created later as well. Defaults to 1.
+
+        Example
+        -------
+            def center(xs):
+                means = np.mean(xs, axis=0)
+                return xs - means
+
+            centered_xs = center(xs)
+            model = sklearn.linear_model.LogisticRegression()
+            model.fit(centered_xs, ys)
+
+            def centered_predict(inputs):
+                centered_inputs = center(inputs)
+                return model.predict(centered_inputs)
+
+            clipper.deploy_predict_function(
+                "example_model",
+                1,
+                centered_predict,
+                ["example"],
+                "doubles",
+                num_containers=1)
+        """
+
+        relative_base_serializations_dir = "predict_serializations"
+        default_python_container = "clipper/python-container"
+        predict_fname = "predict_func.pkl"
+        environment_fname = "environment.yml"
+
+        base_serializations_dir = os.path.abspath(
+            relative_base_serializations_dir)
+
+        # Serialize function
+        s = StringIO()
+        c = CloudPickler(s, 2)
+        c.dump(predict_function)
+        serialized_prediction_function = s.getvalue()
+
+        # Set up serialization directory
+        serialization_dir = "{base}/{dir}".format(
+            base=base_serializations_dir, dir=name)
+        if not os.path.exists(serialization_dir):
+            os.makedirs(serialization_dir)
+
+        # Write out function serialization
+        func_file_path = "{dir}/{predict_fname}".format(
+            dir=serialization_dir, predict_fname=predict_fname)
+        with open(func_file_path, "w") as serialized_function_file:
+            serialized_function_file.write(serialized_prediction_function)
+        print("Serialized and supplied predict function")
+
+        # Export Anaconda environment
+        subprocess.call(
+            "PIP_FORMAT=legacy conda env export >> {environment_fname}".format(
+                environment_fname=environment_fname),
+            shell=True)
+
+        # Give container environment details
+        shutil.copy(environment_fname, serialization_dir)
+        print("Supplied environment details")
+
+        # Deploy function
+        return self.deploy_model(name, version, serialization_dir,
+                                 default_python_container, labels, input_type,
+                                 num_containers)
 
     def deploy_model(self,
                      name,
