@@ -172,6 +172,8 @@ class Server(threading.Thread):
                 response = self.handle_feedback_request(received_msg)
                 response.send(self.socket)
                 print("recv: %f us" % ((t2 - t1).microseconds))
+            sys.stdout.flush()
+            sys.stderr.flush()
 
 
 class Message:
