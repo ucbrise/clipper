@@ -192,7 +192,7 @@ TEST_F(RedisTest, AddApplication) {
   // entries in it (see add_application() in redis.cpp for details on what the
   // fields are).
   EXPECT_EQ(result.size(), static_cast<size_t>(5));
-  EXPECT_EQ(str_to_models(result["candidate_models"]), model_names);
+  EXPECT_EQ(str_to_model_names(result["candidate_model_names"]), model_names);
   EXPECT_EQ(parse_input_type(result["input_type"]), input_type);
   EXPECT_EQ(result["policy"], policy);
   EXPECT_EQ(result["default_output"], default_output);

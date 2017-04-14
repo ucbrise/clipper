@@ -250,8 +250,8 @@ class RequestHandler {
         clipper::redis::get_application(redis_connection_, app_name);
     if (existing_app_data.empty()) {
       if (clipper::redis::add_application(
-          redis_connection_, app_name, candidate_model_names, input_type,
-          selection_policy, default_output, latency_slo_micros)) {
+              redis_connection_, app_name, candidate_model_names, input_type,
+              selection_policy, default_output, latency_slo_micros)) {
         return "Success!";
       } else {
         std::stringstream ss;

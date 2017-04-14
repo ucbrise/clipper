@@ -120,7 +120,7 @@ def parse_pred(p):
 
 def cifar_prediction(host, app, uid, x):
     url = "http://%s:1337/%s/predict" % (host, app)
-    req_json = json.dumps({'uid': 80, 'input': list(x)})
+    req_json = json.dumps({'uid': uid, 'input': list(x)})
     headers = {'Content-type': 'application/json'}
     start = datetime.now()
     r = requests.post(url, headers=headers, data=req_json)
