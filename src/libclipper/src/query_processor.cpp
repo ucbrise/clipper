@@ -119,10 +119,7 @@ boost::future<Response> QueryProcessor::predict(Query query) {
             end - query.create_time_)
             .count();
 
-    Response response{query,
-                      query_id,
-                      duration_micros,
-                      final_output.first,
+    Response response{query, query_id, duration_micros, final_output.first,
                       final_output.second};
     response_promise.set_value(response);
   });
