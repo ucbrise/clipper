@@ -123,8 +123,7 @@ boost::future<Response> QueryProcessor::predict(Query query) {
                       query_id,
                       duration_micros,
                       final_output.first,
-                      final_output.second,
-                      query.candidate_models_};
+                      final_output.second};
     response_promise.set_value(response);
   });
   return response_future;

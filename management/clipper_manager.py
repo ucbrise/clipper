@@ -48,7 +48,7 @@ DOCKER_COMPOSE_DICT = {
         'mgmt_frontend': {
             'command': ['--redis_ip=redis', '--redis_port=%d' % REDIS_PORT],
             'depends_on': ['redis'],
-            'image': 'clipper/management_frontend:latest',
+            'image': 'dcef5ad1dc4d',
             'ports':
             ['%d:%d' % (CLIPPER_MANAGEMENT_PORT, CLIPPER_MANAGEMENT_PORT)]
         },
@@ -56,7 +56,7 @@ DOCKER_COMPOSE_DICT = {
             'command': ['--redis_ip=redis', '--redis_port=%d' % REDIS_PORT],
             'depends_on': ['redis', 'mgmt_frontend'],
             'image':
-            'clipper/query_frontend:latest',
+            'c369160d6d83',
             'ports': [
                 '%d:%d' % (CLIPPER_RPC_PORT, CLIPPER_RPC_PORT),
                 '%d:%d' % (CLIPPER_QUERY_PORT, CLIPPER_QUERY_PORT)
