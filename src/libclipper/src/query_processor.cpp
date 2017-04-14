@@ -16,6 +16,7 @@
 #include <clipper/exceptions.hpp>
 #include <clipper/future.hpp>
 #include <clipper/logging.hpp>
+#include <clipper/metrics.hpp>
 #include <clipper/query_processor.hpp>
 #include <clipper/task_executor.hpp>
 #include <clipper/timers.hpp>
@@ -31,6 +32,9 @@ QueryProcessor::QueryProcessor() : state_db_(std::make_shared<StateDB>()) {
   // Create selection policy instances
   selection_policies_.emplace(DefaultOutputSelectionPolicy::get_name(),
                               std::make_shared<DefaultOutputSelectionPolicy>());
+  default_output_ratio_ =
+      metrics::MetricsRegistry::get_metrics().create_ratio_counter(
+          "default_output_ratio");
   log_info(LOGGING_TAG_QUERY_PROCESSOR, "Query Processor started");
 }
 
@@ -97,7 +101,7 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   // NOTE: We capture the num_completed and completed_flag variables
   // so that they outlive the composed_futures.
   response_ready_future.then([
-    query, query_id, response_promise = std::move(response_promise),
+    this, query, query_id, response_promise = std::move(response_promise),
     selection_state, current_policy, task_futures = std::move(task_futures),
     num_completed, completed_flag
   ](auto) mutable {
@@ -112,6 +116,11 @@ boost::future<Response> QueryProcessor::predict(Query query) {
 
     std::pair<Output, bool> final_output =
         current_policy->combine_predictions(selection_state, query, outputs);
+    if (final_output.second) {
+      default_output_ratio_->increment(1, 1);
+    } else {
+      default_output_ratio_->increment(0, 1);
+    }
     std::chrono::time_point<std::chrono::high_resolution_clock> end =
         std::chrono::high_resolution_clock::now();
     long duration_micros =
