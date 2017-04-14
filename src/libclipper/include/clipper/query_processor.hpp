@@ -54,7 +54,7 @@ class QueryProcessor {
   // for different applications or users.
   std::unordered_map<std::string, std::shared_ptr<SelectionPolicy>>
       selection_policies_;
-  std::shared_ptr<metrics::RatioCounter> default_output_ratio_;
+  std::shared_ptr<metrics::RatioCounter> default_prediction_ratio_;
 };
 
 }  // namespace clipper
