@@ -65,6 +65,14 @@ InputType parse_input_type(std::string type_string) {
 Output::Output(double y_hat, std::vector<VersionedModelId> models_used)
     : y_hat_(y_hat), models_used_(models_used) {}
 
+bool Output::operator==(const Output &rhs) const {
+  return (y_hat_ == rhs.y_hat_ && models_used_ == rhs.models_used_);
+}
+
+bool Output::operator!=(const Output &rhs) const {
+  return !(y_hat_ == rhs.y_hat_ && models_used_ == rhs.models_used_);
+}
+
 ByteVector::ByteVector(std::vector<uint8_t> data) : data_(std::move(data)) {}
 
 InputType ByteVector::type() const { return InputType::Bytes; }
@@ -253,12 +261,12 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
 }
 
 Query::Query(std::string label, long user_id, std::shared_ptr<Input> input,
-             long latency_micros, std::string selection_policy,
+             long latency_budget_micros, std::string selection_policy,
              std::vector<VersionedModelId> candidate_models)
     : label_(label),
       user_id_(user_id),
       input_(input),
-      latency_micros_(latency_micros),
+      latency_budget_micros_(latency_budget_micros),
       selection_policy_(selection_policy),
       candidate_models_(candidate_models),
       create_time_(std::chrono::high_resolution_clock::now()) {}

@@ -47,9 +47,9 @@ TEST_F(ManagementFrontendTest, TestAddApplicationCorrect) {
   std::string add_app_json = R"(
   {
     "name": "myappname",
-    "candidate_model_names": ["m", "image_model"],
+    "candidate_model_names": ["image_model"],
     "input_type": "integers",
-    "selection_policy": "sample_policy",
+    "default_output": "4.3",
     "latency_slo_micros": 10000
   }
   )";
@@ -59,16 +59,16 @@ TEST_F(ManagementFrontendTest, TestAddApplicationCorrect) {
   // The application table has 5 fields, so we expect to get back a map with 5
   // entries in it (see add_application() in redis.cpp for details on what the
   // fields are).
-  ASSERT_EQ(result.size(), static_cast<size_t>(4));
+  ASSERT_EQ(result.size(), static_cast<size_t>(5));
 }
 
 TEST_F(ManagementFrontendTest, TestAddDuplicateApplication) {
   std::string add_app_json = R"(
   {
     "name": "myappname",
-    "candidate_model_names": ["m", "image_model"],
+    "candidate_model_names": ["image_model"],
     "input_type": "integers",
-    "selection_policy": "sample_policy",
+    "default_output": "4.3",
     "latency_slo_micros": 10000
   }
   )";
@@ -78,14 +78,14 @@ TEST_F(ManagementFrontendTest, TestAddDuplicateApplication) {
   // The application table has 5 fields, so we expect to get back a map with 5
   // entries in it (see add_application() in redis.cpp for details on what the
   // fields are).
-  ASSERT_EQ(result.size(), static_cast<size_t>(4));
+  ASSERT_EQ(result.size(), static_cast<size_t>(5));
 
   std::string add_dup_app_json = R"(
   {
     "name": "myappname",
     "candidate_model_names": ["k", "m"],
     "input_type": "integers",
-    "selection_policy": "sample_policy",
+    "default_output": "4.3",
     "latency_slo_micros": 120000
   }
   )";
@@ -98,7 +98,6 @@ TEST_F(ManagementFrontendTest, TestAddApplicationMissingField) {
   {
     "name": "myappname",
     "input_type": "integers",
-    "selection_policy": "sample_policy",
     "latency_slo_micros": 10000
   }
   )";
@@ -110,7 +109,7 @@ TEST_F(ManagementFrontendTest, TestAddApplicationMalformedJson) {
   std::string add_app_json = R"(
   {
     "name": "myappname,
-    "input_type": "integers",
+    "input_type "integers",
     "selection_policy":,
     "latency_slo_micros": 10000
   )";
