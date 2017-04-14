@@ -131,7 +131,7 @@ class RequestHandler {
             std::string policy = app_info["policy"];
             std::string default_output = app_info["default_output"];
             int latency_slo_micros = std::stoi(app_info["latency_slo_micros"]);
-            add_application(name, candidate_models, input_type, policy,
+            add_application(name, candidate_model_names, input_type, policy,
                             default_output, latency_slo_micros);
           }
         });

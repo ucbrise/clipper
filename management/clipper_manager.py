@@ -255,11 +255,8 @@ class Clipper:
         ----------
         name : str
             The name of the application.
-        model : dict
-            The model this application will query.
-            The model is defined as a dict with keys `model_name`
-            and `model_version`. Example::
-                model = {"model_name": "my_model", "model_version": 1}
+        model : str
+            The name of the model this application will query.
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
         default_output : float
@@ -272,9 +269,9 @@ class Clipper:
         url = "http://%s:1338/admin/add_app" % self.host
         req_json = json.dumps({
             "name": name,
-            "candidate_models": list(model),
+            "candidate_models": model,
             "input_type": input_type,
-            "default_output": default_output,
+            "default_output": str(default_output),
             "latency_slo_micros": slo_micros
         })
         headers = {'Content-type': 'application/json'}
