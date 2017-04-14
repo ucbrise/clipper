@@ -132,9 +132,8 @@ boost::future<Response> QueryProcessor::predict(Query query) {
                         "{} is an invalid selection policy",
                         query.selection_policy_);
     // TODO better error handling
-    return boost::make_ready_future(
-        Response{query, query_id, 20000, Output{1.0, {std::make_pair("m1", 1)}},
-                 std::vector<VersionedModelId>()});
+    return boost::make_ready_future(Response{
+        query, query_id, 20000, Output{1.0, {std::make_pair("m1", 1)}}});
   }
   log_info_formatted(LOGGING_TAG_QUERY_PROCESSOR, "Found {} tasks",
                      tasks.size());
@@ -206,8 +205,7 @@ boost::future<Response> QueryProcessor::predict(Query query) {
             end - query.create_time_)
             .count();
 
-    Response response{query, query_id, duration_micros, final_output,
-                      query.candidate_models_};
+    Response response{query, query_id, duration_micros, final_output};
     response_promise.set_value(response);
 
   });
