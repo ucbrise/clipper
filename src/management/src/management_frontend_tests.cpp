@@ -47,10 +47,8 @@ TEST_F(ManagementFrontendTest, TestAddApplicationCorrect) {
   std::string add_app_json = R"(
   {
     "name": "myappname",
-    "candidate_models": [
-        {"model_name": "image_model", "model_version": 3}],
+    "candidate_model_names": ["image_model"],
     "input_type": "integers",
-    "selection_policy": "sample_policy",
     "default_output": "4.3",
     "latency_slo_micros": 10000
   }
@@ -62,6 +60,37 @@ TEST_F(ManagementFrontendTest, TestAddApplicationCorrect) {
   // entries in it (see add_application() in redis.cpp for details on what the
   // fields are).
   ASSERT_EQ(result.size(), static_cast<size_t>(5));
+}
+
+TEST_F(ManagementFrontendTest, TestAddDuplicateApplication) {
+  std::string add_app_json = R"(
+  {
+    "name": "myappname",
+    "candidate_model_names": ["image_model"],
+    "input_type": "integers",
+    "default_output": "4.3",
+    "latency_slo_micros": 10000
+  }
+  )";
+
+  ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
+  auto result = get_application(*redis_, "myappname");
+  // The application table has 5 fields, so we expect to get back a map with 5
+  // entries in it (see add_application() in redis.cpp for details on what the
+  // fields are).
+  ASSERT_EQ(result.size(), static_cast<size_t>(5));
+
+  std::string add_dup_app_json = R"(
+  {
+    "name": "myappname",
+    "candidate_model_names": ["k", "m"],
+    "input_type": "integers",
+    "default_output": "4.3",
+    "latency_slo_micros": 120000
+  }
+  )";
+
+  ASSERT_THROW(rh_.add_application(add_dup_app_json), std::invalid_argument);
 }
 
 TEST_F(ManagementFrontendTest, TestAddApplicationMissingField) {

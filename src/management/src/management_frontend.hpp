@@ -229,17 +229,15 @@ class RequestHandler {
     parse_json(json, d);
 
     std::string app_name = get_string(d, "name");
-    // TODO(CLIPPER-111): Applications should specify the name but not
-    // version of the model. The versioning will be handled by Clipper.
-    std::vector<VersionedModelId> candidate_models =
-        get_candidate_models(d, "candidate_models");
-    if (candidate_models.size() != 1) {
+    std::vector<string> candidate_model_names =
+        get_string_array(d, "candidate_model_names");
+    if (candidate_model_names.size() != 1) {
       std::stringstream ss;
       ss << "Applications must provide exactly 1 candidate model. ";
-      ss << app_name << " provided " << candidate_models.size();
+      ss << app_name << " provided " << candidate_model_names.size();
       std::string error_msg = ss.str();
       clipper::log_error(LOGGING_TAG_MANAGEMENT_FRONTEND, error_msg);
-      return error_msg;
+      throw std::invalid_argument(error_msg);
     }
     InputType input_type =
         clipper::parse_input_type(get_string(d, "input_type"));
@@ -247,10 +245,19 @@ class RequestHandler {
     std::string selection_policy =
         clipper::DefaultOutputSelectionPolicy::get_name();
     int latency_slo_micros = get_int(d, "latency_slo_micros");
-    if (clipper::redis::add_application(
-            redis_connection_, app_name, candidate_models, input_type,
-            selection_policy, default_output, latency_slo_micros)) {
-      return "Success!";
+    // check if application already exists
+    std::unordered_map<std::string, std::string> existing_app_data =
+        clipper::redis::get_application(redis_connection_, app_name);
+    if (existing_app_data.empty()) {
+      if (clipper::redis::add_application(
+          redis_connection_, app_name, candidate_model_names, input_type,
+          selection_policy, default_output, latency_slo_micros)) {
+        return "Success!";
+      } else {
+        std::stringstream ss;
+        ss << "Error adding application " << app_name << " to Redis";
+        throw std::invalid_argument(ss.str());
+      }
     } else {
       std::stringstream ss;
       ss << "Error application " << app_name << " already exists";
@@ -333,6 +340,29 @@ class RequestHandler {
     auto app_metadata =
         clipper::redis::get_application(redis_connection_, app_name);
     return app_metadata["default_output"];
+  }
+
+  bool set_model_version(const string& model_name,
+                         const int new_model_version) {
+    std::vector<int> versions =
+        clipper::redis::get_model_versions(redis_connection_, model_name);
+    bool version_exists = false;
+    for (auto v : versions) {
+      if (v == new_model_version) {
+        version_exists = true;
+        break;
+      }
+    }
+    if (version_exists) {
+      return clipper::redis::set_current_model_version(
+          redis_connection_, model_name, new_model_version);
+    } else {
+      clipper::log_error_formatted(
+          LOGGING_TAG_MANAGEMENT_FRONTEND,
+          "Cannot set non-existent version {} for model {}", new_model_version,
+          model_name);
+      return false;
+    }
   }
 
   void start_listening() { server_.start(); }
