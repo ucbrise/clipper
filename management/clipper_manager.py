@@ -265,9 +265,9 @@ class Clipper:
         url = "http://%s:1338/admin/add_app" % self.host
         req_json = json.dumps({
             "name": name,
-            "candidate_model_names": list(model),
+            "candidate_model_names": [model],
             "input_type": input_type,
-            "default_output": default_output,
+            "default_output": str(default_output),
             "latency_slo_micros": slo_micros
         })
         headers = {'Content-type': 'application/json'}
