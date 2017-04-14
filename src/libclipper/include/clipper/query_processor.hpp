@@ -6,7 +6,6 @@
 #include <tuple>
 #include <utility>
 
-#include <boost/optional.hpp>
 #include <boost/thread.hpp>
 
 #include "datatypes.hpp"
