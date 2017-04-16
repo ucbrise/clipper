@@ -33,6 +33,17 @@ using RPCRequest =
     std::tuple<const int, const int, const std::vector<std::vector<uint8_t>>,
                const long>;
 
+enum class MessageType {
+  NewContainer = 0,
+  ContainerContent = 1,
+  Heartbeat = 2
+};
+
+enum class HeartbeatType {
+  KeepAlive = 0,
+  RequestContainerMetadata = 1
+};
+
 class RPCService {
  public:
   explicit RPCService();
@@ -68,10 +79,6 @@ class RPCService {
 
  private:
   void manage_service(const string address);
-  /**
-   * \return The id of the sent message, used for match the correct response
-   * If the service is active, this id is non-negative. Otherwise, it is -1.
-   */
   void send_messages(socket_t &socket,
                      boost::bimap<int, vector<uint8_t>> &connections);
 
@@ -85,6 +92,12 @@ class RPCService {
                          std::function<size_t(const std::vector<uint8_t> &vec)>>
           &connections_containers_map,
       int &zmq_connection_id, std::shared_ptr<redox::Redox> redis_connection);
+
+  void send_heartbeat_response(
+      socket_t& socket,
+      const vector<uint8_t>& connection_id,
+      bool request_container_metadata);
+
   void shutdown_service(socket_t &socket);
   std::thread rpc_thread_;
   shared_ptr<Queue<RPCRequest>> request_queue_;

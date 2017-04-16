@@ -173,11 +173,16 @@ void RPCService::send_messages(
                           std::get<0>(request));
       continue;
     }
+
+    message_t type_message(sizeof(int));
+    static_cast<int*>(type_message.data())[0] = static_cast<int>(MessageType::ContainerContent);
     message_t id_message(sizeof(int));
     memcpy(id_message.data(), &std::get<1>(request), sizeof(int));
     vector<uint8_t> routing_identity = connection->second;
+
     socket.send(routing_identity.data(), routing_identity.size(), ZMQ_SNDMORE);
     socket.send("", 0, ZMQ_SNDMORE);
+    socket.send(type_message, ZMQ_SNDMORE);
     socket.send(id_message, ZMQ_SNDMORE);
     int cur_msg_num = 0;
     // subtract 1 because we start counting at 0
@@ -200,73 +205,105 @@ void RPCService::receive_message(
                        std::function<size_t(const std::vector<uint8_t> &vec)>>
         &connections_containers_map,
     int &zmq_connection_id, std::shared_ptr<redox::Redox> redis_connection) {
-  message_t msg_identity;
+  message_t msg_routing_identity;
   message_t msg_delimiter;
-  socket.recv(&msg_identity, 0);
+  message_t msg_type;
+  socket.recv(&msg_routing_identity, 0);
   socket.recv(&msg_delimiter, 0);
+  socket.recv(&msg_type, 0);
 
   const vector<uint8_t> connection_id(
-      (uint8_t *)msg_identity.data(),
-      (uint8_t *)msg_identity.data() + msg_identity.size());
-  boost::bimap<int, vector<uint8_t>>::right_const_iterator connection =
-      connections.right.find(connection_id);
-  if (connection == connections.right.end()) {
-    // We have a new connection, process it accordingly
-    connections.insert(boost::bimap<int, vector<uint8_t>>::value_type(
-        zmq_connection_id, connection_id));
-    log_info(LOGGING_TAG_RPC, "New container connected");
-    message_t model_name;
-    message_t model_version;
-    message_t model_input_type;
-    socket.recv(&model_name, 0);
-    socket.recv(&model_version, 0);
-    socket.recv(&model_input_type, 0);
-    std::string name(static_cast<char *>(model_name.data()), model_name.size());
-    std::string version_str(static_cast<char *>(model_version.data()),
-                            model_version.size());
-    std::string input_type_str(static_cast<char *>(model_input_type.data()),
-                               model_input_type.size());
+      (uint8_t *)msg_routing_identity.data(),
+      (uint8_t *)msg_routing_identity.data() + msg_routing_identity.size());
 
-    InputType input_type = static_cast<InputType>(std::stoi(input_type_str));
-    int version = std::stoi(version_str);
-    VersionedModelId model = std::make_pair(name, version);
-    log_info(LOGGING_TAG_RPC, "Container added");
+  MessageType type = static_cast<MessageType>(static_cast<int*>(msg_type.data())[0]);
 
-    // Note that if the map does not have an entry for this model,
-    // a new entry will be created with the default value (0).
-    // This use of operator[] avoids the boilerplate of having to
-    // check if the key is present in the map.
-    int cur_replica_id = replica_ids_[model];
-    replica_ids_[model] = cur_replica_id + 1;
-    redis::add_container(*redis_connection, model, cur_replica_id,
-                         zmq_connection_id, input_type);
-    connections_containers_map.emplace(
-        connection_id, std::pair<VersionedModelId, int>(model, cur_replica_id));
-    zmq_connection_id += 1;
-  } else {
-    message_t msg_id;
-    message_t msg_content;
-    socket.recv(&msg_id, 0);
-    socket.recv(&msg_content, 0);
-    int id = static_cast<int *>(msg_id.data())[0];
-    vector<uint8_t> content((uint8_t *)msg_content.data(),
-                            (uint8_t *)msg_content.data() + msg_content.size());
-    RPCResponse response(id, content);
+  boost::bimap<int, vector<uint8_t>>::right_const_iterator connection =  connections.right.find(connection_id);
+  switch(type) {
+    case MessageType::NewContainer:
+      {
+        message_t model_name;
+        message_t model_version;
+        message_t model_input_type;
+        socket.recv(&model_name, 0);
+        socket.recv(&model_version, 0);
+        socket.recv(&model_input_type, 0);
+        if (connection == connections.right.end()) {
+          // We have a new connection with container metadata, process it accordingly
+          connections.insert(boost::bimap<int, vector<uint8_t>>::value_type(
+              zmq_connection_id, connection_id));
+          log_info(LOGGING_TAG_RPC, "New container connected");
+          std::string name(static_cast<char *>(model_name.data()), model_name.size());
+          std::string version_str(static_cast<char *>(model_version.data()),
+                                  model_version.size());
+          std::string input_type_str(static_cast<char *>(model_input_type.data()),
+                                     model_input_type.size());
 
-    auto container_info_entry = connections_containers_map.find(connection_id);
-    if (container_info_entry == connections_containers_map.end()) {
-      throw std::runtime_error(
-          "Failed to find container that was previously registered via RPC");
-    }
-    std::pair<VersionedModelId, int> container_info =
-        container_info_entry->second;
+          InputType input_type = static_cast<InputType>(std::stoi(input_type_str));
+          int version = std::stoi(version_str);
+          VersionedModelId model = std::make_pair(name, version);
+          log_info(LOGGING_TAG_RPC, "Container added");
 
-    TaskExecutionThreadPool::submit_job(new_response_callback_, response);
-    TaskExecutionThreadPool::submit_job(
-        container_ready_callback_, container_info.first, container_info.second);
+          // Note that if the map does not have an entry for this model,
+          // a new entry will be created with the default value (0).
+          // This use of operator[] avoids the boilerplate of having to
+          // check if the key is present in the map.
+          int cur_replica_id = replica_ids_[model];
+          replica_ids_[model] = cur_replica_id + 1;
+          redis::add_container(*redis_connection, model, cur_replica_id,
+                               zmq_connection_id, input_type);
+          connections_containers_map.emplace(
+              connection_id, std::pair<VersionedModelId, int>(model, cur_replica_id));
+          zmq_connection_id += 1;
+        }
+      }
+      break;
+    case MessageType::ContainerContent:
+      if(connection != connections.right.end()) {
+        // This message is a response to a container query
+        message_t msg_id;
+        message_t msg_content;
+        socket.recv(&msg_id, 0);
+        socket.recv(&msg_content, 0);
+        int id = static_cast<int *>(msg_id.data())[0];
+        vector<uint8_t> content((uint8_t *) msg_content.data(),
+                                (uint8_t *) msg_content.data() + msg_content.size());
+        RPCResponse response(id, content);
 
-    response_queue_->push(response);
+        auto container_info_entry = connections_containers_map.find(connection_id);
+        if (container_info_entry == connections_containers_map.end()) {
+          throw std::runtime_error(
+              "Failed to find container that was previously registered via RPC");
+        }
+        std::pair<VersionedModelId, int> container_info =
+            container_info_entry->second;
+
+        TaskExecutionThreadPool::submit_job(new_response_callback_, response);
+        TaskExecutionThreadPool::submit_job(
+            container_ready_callback_, container_info.first, container_info.second);
+
+        response_queue_->push(response);
+      }
+      break;
+    case MessageType::Heartbeat:
+      send_heartbeat_response(socket, connection_id, connection == connections.right.end());
+      break;
   }
+}
+
+void RPCService::send_heartbeat_response(
+    socket_t& socket,
+    const vector<uint8_t>& connection_id,
+    bool request_container_metadata) {
+  message_t type_message(sizeof(int));
+  message_t heartbeat_type_message(sizeof(int));
+  static_cast<int*>(type_message.data())[0] = static_cast<int>(MessageType::Heartbeat);
+  static_cast<int*>(heartbeat_type_message.data())[0] = static_cast<int>(
+      request_container_metadata ? HeartbeatType::RequestContainerMetadata : HeartbeatType::KeepAlive);
+  socket.send(connection_id.data(), connection_id.size(), ZMQ_SNDMORE);
+  socket.send("", 0, ZMQ_SNDMORE);
+  socket.send(type_message, ZMQ_SNDMORE);
+  socket.send(heartbeat_type_message);
 }
 
 }  // namespace rpc
