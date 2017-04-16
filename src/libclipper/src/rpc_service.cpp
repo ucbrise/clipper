@@ -219,6 +219,7 @@ void RPCService::receive_message(
   MessageType type = static_cast<MessageType>(static_cast<int*>(msg_type.data())[0]);
 
   boost::bimap<int, vector<uint8_t>>::right_const_iterator connection =  connections.right.find(connection_id);
+  bool new_connection = (connection == connections.right.end());
   switch(type) {
     case MessageType::NewContainer:
       {
@@ -228,7 +229,7 @@ void RPCService::receive_message(
         socket.recv(&model_name, 0);
         socket.recv(&model_version, 0);
         socket.recv(&model_input_type, 0);
-        if (connection == connections.right.end()) {
+        if (new_connection) {
           // We have a new connection with container metadata, process it accordingly
           connections.insert(boost::bimap<int, vector<uint8_t>>::value_type(
               zmq_connection_id, connection_id));
@@ -259,7 +260,7 @@ void RPCService::receive_message(
       }
       break;
     case MessageType::ContainerContent:
-      if(connection != connections.right.end()) {
+      if(!new_connection) {
         // This message is a response to a container query
         message_t msg_id;
         message_t msg_content;
@@ -286,7 +287,7 @@ void RPCService::receive_message(
       }
       break;
     case MessageType::Heartbeat:
-      send_heartbeat_response(socket, connection_id, connection == connections.right.end());
+      send_heartbeat_response(socket, connection_id, new_connection);
       break;
   }
 }
