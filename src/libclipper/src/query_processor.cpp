@@ -13,8 +13,10 @@
 
 #include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/exceptions.hpp>
 #include <clipper/future.hpp>
 #include <clipper/logging.hpp>
+#include <clipper/metrics.hpp>
 #include <clipper/query_processor.hpp>
 #include <clipper/task_executor.hpp>
 #include <clipper/timers.hpp>
@@ -30,6 +32,9 @@ QueryProcessor::QueryProcessor() : state_db_(std::make_shared<StateDB>()) {
   // Create selection policy instances
   selection_policies_.emplace(DefaultOutputSelectionPolicy::get_name(),
                               std::make_shared<DefaultOutputSelectionPolicy>());
+  default_prediction_ratio_ =
+      metrics::MetricsRegistry::get_metrics().create_ratio_counter(
+          "default_prediction_ratio");
   log_info(LOGGING_TAG_QUERY_PROCESSOR, "Query Processor started");
 }
 
@@ -39,26 +44,25 @@ std::shared_ptr<StateDB> QueryProcessor::get_state_table() const {
 
 boost::future<Response> QueryProcessor::predict(Query query) {
   long query_id = query_counter_.fetch_add(1);
-  boost::future<Response> error_response =
-      boost::make_ready_future(Response{query, query_id, 20000, Output{1.0, {}},
-                                        std::vector<VersionedModelId>()});
   auto current_policy_iter = selection_policies_.find(query.selection_policy_);
   if (current_policy_iter == selection_policies_.end()) {
-    log_error_formatted(LOGGING_TAG_QUERY_PROCESSOR,
-                        "{} is an invalid selection policy",
-                        query.selection_policy_);
-    // TODO better error handling
-    return error_response;
+    std::stringstream err_msg_builder;
+    err_msg_builder << query.selection_policy_ << " "
+                    << "is an invalid selection_policy.";
+    const std::string err_msg = err_msg_builder.str();
+    log_error(LOGGING_TAG_QUERY_PROCESSOR, err_msg);
+    throw PredictError(err_msg);
   }
   std::shared_ptr<SelectionPolicy> current_policy = current_policy_iter->second;
 
   auto state_opt = state_db_->get(StateKey{query.label_, query.user_id_, 0});
   if (!state_opt) {
-    log_error_formatted(LOGGING_TAG_QUERY_PROCESSOR,
-                        "No selection state found for query with label: {}",
-                        query.label_);
-    // TODO better error handling
-    return error_response;
+    std::stringstream err_msg_builder;
+    err_msg_builder << "No selection state found for query with user_id: "
+                    << query.user_id_ << " and label: " << query.label_;
+    const std::string err_msg = err_msg_builder.str();
+    log_error(LOGGING_TAG_QUERY_PROCESSOR, err_msg);
+    throw PredictError(err_msg);
   }
   std::shared_ptr<SelectionState> selection_state =
       current_policy->deserialize(*state_opt);
@@ -97,7 +101,7 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   // NOTE: We capture the num_completed and completed_flag variables
   // so that they outlive the composed_futures.
   response_ready_future.then([
-    query, query_id, response_promise = std::move(response_promise),
+    this, query, query_id, response_promise = std::move(response_promise),
     selection_state, current_policy, task_futures = std::move(task_futures),
     num_completed, completed_flag
   ](auto) mutable {
@@ -110,8 +114,13 @@ boost::future<Response> QueryProcessor::predict(Query query) {
       }
     }
 
-    Output final_output =
+    std::pair<Output, bool> final_output =
         current_policy->combine_predictions(selection_state, query, outputs);
+    if (final_output.second) {
+      default_prediction_ratio_->increment(1, 1);
+    } else {
+      default_prediction_ratio_->increment(0, 1);
+    }
     std::chrono::time_point<std::chrono::high_resolution_clock> end =
         std::chrono::high_resolution_clock::now();
     long duration_micros =
@@ -119,8 +128,8 @@ boost::future<Response> QueryProcessor::predict(Query query) {
             end - query.create_time_)
             .count();
 
-    Response response{query, query_id, duration_micros, final_output,
-                      query.candidate_models_};
+    Response response{query, query_id, duration_micros, final_output.first,
+                      final_output.second};
     response_promise.set_value(response);
   });
   return response_future;

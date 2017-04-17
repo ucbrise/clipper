@@ -9,6 +9,7 @@
 #include <boost/thread.hpp>
 
 #include "datatypes.hpp"
+#include "metrics.hpp"
 #include "persistent_state.hpp"
 #include "rpc_service.hpp"
 #include "selection_policies.hpp"
@@ -53,6 +54,7 @@ class QueryProcessor {
   // for different applications or users.
   std::unordered_map<std::string, std::shared_ptr<SelectionPolicy>>
       selection_policies_;
+  std::shared_ptr<metrics::RatioCounter> default_prediction_ratio_;
 };
 
 }  // namespace clipper

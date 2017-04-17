@@ -79,7 +79,7 @@ TEST_F(DefaultOutputSelectionPolicyTest,
                                   DefaultOutputSelectionPolicy::get_name(),
                                   {m1}};
   auto zero_preds_output =
-      policy_.combine_predictions(state_, one_candidate_model_query, {});
+      policy_.combine_predictions(state_, one_candidate_model_query, {}).first;
   ASSERT_EQ(zero_preds_output, state_->default_output_);
 }
 
@@ -93,8 +93,11 @@ TEST_F(DefaultOutputSelectionPolicyTest, TestCombinePredictionsOnePrediction) {
                                   {m1}};
 
   Output first_output = Output{1.1, {m1}};
-  auto one_pred_output = policy_.combine_predictions(
-      state_, one_candidate_model_query, {first_output});
+  auto one_pred_output =
+      policy_
+          .combine_predictions(state_, one_candidate_model_query,
+                               {first_output})
+          .first;
   ASSERT_EQ(one_pred_output, first_output);
   ASSERT_NE(one_pred_output, state_->default_output_);
 }
@@ -110,8 +113,11 @@ TEST_F(DefaultOutputSelectionPolicyTest, TestCombinePredictionsTwoPredictions) {
                                    {m1, m2}};
   Output first_output = Output{1.1, {m1}};
   Output second_output = Output{2.2, {m2}};
-  auto two_preds_output = policy_.combine_predictions(
-      state_, two_candidate_models_query, {first_output, second_output});
+  auto two_preds_output =
+      policy_
+          .combine_predictions(state_, two_candidate_models_query,
+                               {first_output, second_output})
+          .first;
   ASSERT_EQ(two_preds_output, first_output);
   ASSERT_NE(two_preds_output, state_->default_output_);
 }

@@ -244,6 +244,12 @@ void add_kv_pair(rapidjson::Document& d, const char* key_name,
   d.AddMember(key, value_to_add, allocator);
 }
 
+void add_bool(rapidjson::Document& d, const char* key_name, bool value_to_add) {
+  rapidjson::Document boolean_doc;
+  boolean_doc.SetBool(value_to_add);
+  add_kv_pair(d, key_name, boolean_doc);
+}
+
 void add_double_array(rapidjson::Document& d, const char* key_name,
                       std::vector<double>& values_to_add) {
   rapidjson::Value double_array(rapidjson::kArrayType);
