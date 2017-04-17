@@ -253,8 +253,8 @@ TEST_F(RedisTest, GetAllApplicationNames) {
   InputType input_type2 = InputType::Doubles;
   std::string policy2 = "exp4_policy";
   int latency_slo_micros2 = 50000;
-  ASSERT_TRUE(add_application(*redis_, name2, model_names2, input_type2, policy2,
-                              latency_slo_micros2));
+  ASSERT_TRUE(add_application(*redis_, name2, model_names2, input_type2,
+                              policy2, latency_slo_micros2));
 
   std::vector<std::string> app_names = get_all_application_names(*redis_);
   ASSERT_EQ(app_names.size(), static_cast<size_t>(2));

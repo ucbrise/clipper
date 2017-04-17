@@ -149,16 +149,14 @@ class RequestHandler {
     // Read from Redis configuration tables and update models/applications
     // (1) Iterate through applications and set up predict/update endpoints.
     for (std::string app_name :
-            clipper::redis::get_all_application_names(redis_connection_)) {
+         clipper::redis::get_all_application_names(redis_connection_)) {
       // Is there a way/need to not repeat these function calls? (from above)
       auto app_info =
           clipper::redis::get_application_by_key(redis_connection_, app_name);
 
       std::vector<std::string> candidate_model_names =
-          clipper::redis::str_to_model_names(
-              app_info["candidate_model_names"]);
-      InputType input_type =
-          clipper::parse_input_type(app_info["input_type"]);
+          clipper::redis::str_to_model_names(app_info["candidate_model_names"]);
+      InputType input_type = clipper::parse_input_type(app_info["input_type"]);
       std::string policy = app_info["policy"];
       int latency_slo_micros = std::stoi(app_info["latency_slo_micros"]);
 
@@ -167,10 +165,9 @@ class RequestHandler {
     }
     // (2) Update current_model_versions_ with (model, version) pairs.
     for (std::string model_name :
-            clipper::redis::get_all_model_names(redis_connection_)) {
-      auto model_version =
-          clipper::redis::get_current_model_version(redis_connection_,
-                                                    model_name);
+         clipper::redis::get_all_model_names(redis_connection_)) {
+      auto model_version = clipper::redis::get_current_model_version(
+          redis_connection_, model_name);
       // Error handle model_version being < 0?
       std::unique_lock<std::mutex> l(current_model_versions_mutex_);
       current_model_versions_[model_name] = model_version;
