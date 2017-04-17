@@ -127,6 +127,31 @@ TEST_F(RedisTest, GetModelVersions) {
   ASSERT_EQ(versions, std::vector<int>({1, 2, 4}));
 }
 
+TEST_F(RedisTest, GetAllModelNames) {
+  // Add multiple models (some with multiple versions)
+  std::vector<std::string> labels{"ads", "images", "experimental", "other",
+                                  "labels"};
+  VersionedModelId model1 = std::make_pair("m", 1);
+  std::string container_name = "clipper/test_container";
+  std::string model_path = "/tmp/models/m/1";
+  ASSERT_TRUE(add_model(*redis_, model1, InputType::Ints, labels,
+                        container_name, model_path));
+  VersionedModelId model2 = std::make_pair("m", 2);
+  std::string model_path2 = "/tmp/models/m/2";
+  ASSERT_TRUE(add_model(*redis_, model2, InputType::Ints, labels,
+                        container_name, model_path2));
+  VersionedModelId model3 = std::make_pair("n", 3);
+  std::string model_path3 = "/tmp/models/n/3";
+  ASSERT_TRUE(add_model(*redis_, model3, InputType::Ints, labels,
+                        container_name, model_path3));
+
+  // get_all_model_names() should return the de-duplicated model names
+  std::vector<std::string> names = get_all_model_names(*redis_);
+  ASSERT_EQ(names.size(), static_cast<size_t>(2));
+  std::sort(names.begin(), names.end());
+  ASSERT_EQ(names, std::vector<std::string>({"m", "n"}));
+}
+
 TEST_F(RedisTest, DeleteModel) {
   std::vector<std::string> labels{"ads", "images", "experimental"};
   VersionedModelId model = std::make_pair("m", 1);
@@ -210,6 +235,31 @@ TEST_F(RedisTest, DeleteApplication) {
   ASSERT_TRUE(delete_application(*redis_, name));
   auto delete_result = get_application(*redis_, name);
   EXPECT_EQ(delete_result.size(), static_cast<size_t>(0));
+}
+
+TEST_F(RedisTest, GetAllApplicationNames) {
+  // Add a few applications, get should return all of their names.
+  std::string name = "my_app_name";
+  std::vector<std::string> model_names{"music_random_features", "simple_svm",
+                                       "music_cnn"};
+  InputType input_type = InputType::Doubles;
+  std::string policy = "exp3_policy";
+  int latency_slo_micros = 10000;
+  ASSERT_TRUE(add_application(*redis_, name, model_names, input_type, policy,
+                              latency_slo_micros));
+  std::string name2 = "my_app_name_2";
+  std::vector<std::string> model_names2{"img_random_features", "simple_svm",
+                                        "img_cnn"};
+  InputType input_type2 = InputType::Doubles;
+  std::string policy2 = "exp4_policy";
+  int latency_slo_micros2 = 50000;
+  ASSERT_TRUE(add_application(*redis_, name2, model_names2, input_type2, policy2,
+                              latency_slo_micros2));
+
+  std::vector<std::string> app_names = get_all_application_names(*redis_);
+  ASSERT_EQ(app_names.size(), static_cast<size_t>(2));
+  std::sort(app_names.begin(), app_names.end());
+  ASSERT_EQ(app_names, std::vector<std::string>({name, name2}));
 }
 
 TEST_F(RedisTest, SubscriptionDetectModelAdd) {
