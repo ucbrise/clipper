@@ -24,8 +24,8 @@ def add_example_app(host):
         "name": "example_app",
         "candidate_model_names": ["example_model"],
         "input_type": "doubles",
-        "default_output": -1.0,
-        "latency_slo_micros": 20000
+        "default_output": "-1.0",
+        "latency_slo_micros": 40000
     })
     headers = {'Content-type': 'application/json'}
     r = requests.post(url, headers=headers, data=req_json)
