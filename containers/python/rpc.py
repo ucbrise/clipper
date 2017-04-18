@@ -114,26 +114,27 @@ class Server(threading.Thread):
             self.send_heartbeat(socket)
             while True:
                 receivable_sockets = dict(poller.poll(SOCKET_POLLING_TIMEOUT_MILLIS))
-                if connected and (socket not in receivable_sockets or receivable_sockets[socket] != zmq.POLLIN):
-                    # Check for socket inactivity and disconnect if inactive
-                    curr_time = datetime.now()
-                    time_delta = curr_time - last_activity_time_millis
-                    time_delta_millis = (time_delta.seconds * 1000) + (time_delta.microseconds / 1000)
-                    if time_delta_millis >= SOCKET_ACTIVITY_TIMEOUT_MILLIS:
-                        print("Connection timed out, reconnecting...")
-                        connected = False
-                        poller.unregister(socket)
-                        socket.close()
-                        break
-                    else:
-                        self.send_heartbeat(socket)
-                        continue
+                if socket not in receivable_sockets or receivable_sockets[socket] != zmq.POLLIN:
+                    if connected:
+                        curr_time = datetime.now()
+                        time_delta = curr_time - last_activity_time_millis
+                        time_delta_millis = (time_delta.seconds * 1000) + (time_delta.microseconds / 1000)
+                        if time_delta_millis >= SOCKET_ACTIVITY_TIMEOUT_MILLIS:
+                            print("Connection timed out, reconnecting...")
+                            connected = False
+                            poller.unregister(socket)
+                            socket.close()
+                            break
+                        else:
+                            self.send_heartbeat(socket)
+                    continue
 
                 if not connected:
                     connected = True
                 last_activity_time_millis = datetime.now()
 
-                # Receive delimiter between identity and content
+                t1 = datetime.now()
+                # Receive delimiter between routing identity and content
                 socket.recv()
                 msg_type_bytes = socket.recv()
                 msg_type = struct.unpack("<I", msg_type_bytes)[0]
@@ -144,65 +145,67 @@ class Server(threading.Thread):
                     if heartbeat_type == HEARTBEAT_TYPE_REQUEST_CONTAINER_METADATA:
                         self.send_container_metadata(socket)
                     continue
+                elif msg_type == MESSAGE_TYPE_NEW_CONTAINER:
+                    # This is an error, log it
+                    continue
+                elif msg_type == MESSAGE_TYPE_CONTAINER_CONTENT:
+                    msg_id_bytes = socket.recv()
+                    msg_id = int(struct.unpack("<I", msg_id_bytes)[0])
 
-                t1 = datetime.now()
-                msg_id_bytes = socket.recv()
-                msg_id = int(struct.unpack("<I", msg_id_bytes)[0])
+                    print("Got start of message %d " % msg_id)
+                    # list of byte arrays
+                    request_header = socket.recv()
+                    request_type = struct.unpack("<I", request_header)[0]
 
-                print("Got start of message %d " % msg_id)
-                # list of byte arrays
-                request_header = socket.recv()
-                request_type = struct.unpack("<I", request_header)[0]
+                    if request_type == REQUEST_TYPE_PREDICT:
+                        input_header_size = socket.recv()
+                        input_header = socket.recv()
+                        raw_content_size = socket.recv()
+                        raw_content = socket.recv()
 
-                if request_type == REQUEST_TYPE_PREDICT:
-                    input_header_size = socket.recv()
-                    input_header = socket.recv()
-                    raw_content_size = socket.recv()
-                    raw_content = socket.recv()
+                        t2 = datetime.now()
 
-                    t2 = datetime.now()
+                        parsed_input_header = np.frombuffer(
+                            input_header, dtype=np.int32)
+                        input_type, input_size, splits = parsed_input_header[
+                            0], parsed_input_header[1], parsed_input_header[2:]
 
-                    parsed_input_header = np.frombuffer(
-                        input_header, dtype=np.int32)
-                    input_type, input_size, splits = parsed_input_header[
-                        0], parsed_input_header[1], parsed_input_header[2:]
+                        if int(input_type) != int(self.model_input_type):
+                            print(("Received incorrect input. Expected {expected}, "
+                                   "received {received}").format(
+                                       expected=input_type_to_string(
+                                           int(self.model_input_type)),
+                                       received=input_type_to_string(int(input_type))))
+                            raise
 
-                    if int(input_type) != int(self.model_input_type):
-                        print(("Received incorrect input. Expected {expected}, "
-                               "received {received}").format(
-                                   expected=input_type_to_string(
-                                       int(self.model_input_type)),
-                                   received=input_type_to_string(int(input_type))))
-                        raise
+                        if input_type == INPUT_TYPE_STRINGS:
+                            # If we're processing string inputs, we delimit them using
+                            # the null terminator included in their serialized representation,
+                            # ignoring the extraneous final null terminator by
+                            # using a -1 slice
+                            inputs = np.array(
+                                raw_content.split('\0')[:-1],
+                                dtype=input_type_to_dtype(input_type))
+                        else:
+                            inputs = np.array(
+                                np.split(
+                                    np.frombuffer(
+                                        raw_content,
+                                        dtype=input_type_to_dtype(input_type)),
+                                    splits))
 
-                    if input_type == INPUT_TYPE_STRINGS:
-                        # If we're processing string inputs, we delimit them using
-                        # the null terminator included in their serialized representation,
-                        # ignoring the extraneous final null terminator by
-                        # using a -1 slice
-                        inputs = np.array(
-                            raw_content.split('\0')[:-1],
-                            dtype=input_type_to_dtype(input_type))
-                    else:
-                        inputs = np.array(
-                            np.split(
-                                np.frombuffer(
-                                    raw_content,
-                                    dtype=input_type_to_dtype(input_type)),
-                                splits))
+                        t3 = datetime.now()
 
-                    t3 = datetime.now()
+                        received_msg = Message(msg_id_bytes, inputs)
+                        response = self.handle_predict_request(received_msg)
 
-                    received_msg = Message(msg_id_bytes, inputs)
-                    response = self.handle_predict_request(received_msg)
+                        t4 = datetime.now()
 
-                    t4 = datetime.now()
+                        response.send(socket)
 
-                    response.send(socket)
-
-                    print("recv: %f us, parse: %f us, handle: %f us" %
-                          ((t2 - t1).microseconds, (t3 - t2).microseconds,
-                           (t4 - t3).microseconds))
+                        print("recv: %f us, parse: %f us, handle: %f us" %
+                              ((t2 - t1).microseconds, (t3 - t2).microseconds,
+                               (t4 - t3).microseconds))
 
                 else:
                     received_msg = Message(msg_id_bytes, [])

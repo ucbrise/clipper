@@ -23,7 +23,6 @@ public class ContainerTest {
     } catch (UnknownHostException e) {
       e.printStackTrace();
     }
-    while (true)
-      ;
+    while (true);
   }
 }
