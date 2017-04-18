@@ -1,10 +1,13 @@
 from __future__ import print_function
+import sys
+import os
+sys.path.append(os.path.abspath('../../management/'))
+import clipper_manager as cm
 import json
 import requests
 from datetime import datetime
 import time
 import numpy as np
-import sys
 
 
 def predict(host, uid, x):
@@ -18,43 +21,13 @@ def predict(host, uid, x):
     print("'%s', %f ms" % (r.text, latency))
 
 
-def add_example_app(host):
-    url = "http://%s:1338/admin/add_app" % host
-    req_json = json.dumps({
-        "name": "example_app",
-        "candidate_model_names": ["example_model"],
-        "input_type": "doubles",
-        "default_output": "-1.0",
-        "latency_slo_micros": 40000
-    })
-    headers = {'Content-type': 'application/json'}
-    r = requests.post(url, headers=headers, data=req_json)
-    if r.status_code != requests.codes.ok:
-        print(r.text)
-        sys.exit(1)
-
-
-def add_example_model(host):
-    url = "http://%s:1338/admin/add_model" % host
-    req_json = json.dumps({
-        "model_name": "example_model",
-        "model_version": 1,
-        "labels": ["l1", "l2"],
-        "input_type": "doubles",
-        "container_name": "EXTERNAL",
-        "model_data_path": "EXTERNAL"
-    })
-    headers = {'Content-type': 'application/json'}
-    r = requests.post(url, headers=headers, data=req_json)
-    if r.status_code != requests.codes.ok:
-        print(r.text)
-        sys.exit(1)
-
-
 if __name__ == '__main__':
     host = "localhost"
-    add_example_app(host)
-    add_example_model(host)
+    clipper = cm.Clipper(host, check_for_docker=False)
+    clipper.register_application("example_app", "example_model", "doubles",
+                                 "-1.0", 40000)
+    clipper.register_external_model("example_model", 1, ["l1", "l2"],
+                                    "doubles")
     time.sleep(1.0)
     uid = 0
     while True:
