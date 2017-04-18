@@ -199,7 +199,12 @@ class RequestHandler {
             respond_http(err_msg, "400 Bad Request", response);
           } catch (const json_semantic_error& e) {
             std::string err_msg =
-                json_error_msg(e.what(), SET_VERSION_JSON_SCHEMA);
+                    json_error_msg(e.what(), SET_VERSION_JSON_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const std::invalid_argument& e) {
+            respond_http(e.what(), "400 Bad Request", response);
+          }
+        });
     server_.add_endpoint(
         GET_APPLICATIONS, "GET",
         [this](std::shared_ptr<HttpServer::Response> response,

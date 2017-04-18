@@ -1,6 +1,12 @@
 #ifndef CLIPPER_LIB_JSON_UTIL_H
 #define CLIPPER_LIB_JSON_UTIL_H
 
+#include <stdexcept>
+
+#include <boost/algorithm/string.hpp>
+
+#include <unordered_map>
+
 #include <rapidjson/document.h>
 
 #include <clipper/datatypes.hpp>
