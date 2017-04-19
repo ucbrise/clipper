@@ -220,8 +220,8 @@ void RPCService::receive_message(
   MessageType type =
       static_cast<MessageType>(static_cast<int *>(msg_type.data())[0]);
 
-  boost::bimap<int, vector<uint8_t>>::right_const_iterator
-      connection =  connections.right.find(connection_id);
+  boost::bimap<int, vector<uint8_t>>::right_const_iterator connection =
+      connections.right.find(connection_id);
   bool new_connection = (connection == connections.right.end());
   switch (type) {
     case MessageType::NewContainer: {
