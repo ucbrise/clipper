@@ -216,6 +216,44 @@ TEST_F(RedisTest, DeleteApplication) {
   EXPECT_EQ(delete_result.size(), static_cast<size_t>(0));
 }
 
+TEST_F(RedisTest, ListApplicationNames) {
+  std::string name1 = "my_app_name1";
+  std::string name2 = "my_app_name2";
+  std::vector<std::string> model_names{"music_random_features", "simple_svm",
+                                       "music_cnn"};
+  InputType input_type = InputType::Doubles;
+  std::string policy = "exp3_policy";
+  std::string default_output = "1.0";
+  int latency_slo_micros = 10000;
+
+  ASSERT_TRUE(add_application(*redis_, name1, model_names, input_type, policy,
+                              default_output, latency_slo_micros));
+  ASSERT_TRUE(add_application(*redis_, name2, model_names, input_type, policy,
+                              default_output, latency_slo_micros));
+
+  std::vector<std::string> result = list_application_names(*redis_);
+
+  // Two apps have been registered, so we list_application_names to give us
+  // a vector with 2 entries.
+  ASSERT_EQ(result.size(), static_cast<size_t>(2));
+
+  bool has_name_1 =
+      std::find(result.begin(), result.end(), name1) != result.end();
+  bool has_name_2 =
+      std::find(result.begin(), result.end(), name2) != result.end();
+
+  // Those entries should be the names of the two existing applications.
+  ASSERT_TRUE(has_name_1 && has_name_2);
+}
+
+TEST_F(RedisTest, ListApplicationNamesNoneRegistered) {
+  std::vector<std::string> result = list_application_names(*redis_);
+
+  // No apps have been registered, so we list_application_names to give us
+  // an empty vector
+  ASSERT_EQ(result.size(), static_cast<size_t>(0));
+}
+
 TEST_F(RedisTest, SubscriptionDetectModelAdd) {
   std::vector<std::string> labels{"ads", "images", "experimental"};
   VersionedModelId model = std::make_pair("m", 1);
@@ -258,8 +296,8 @@ TEST_F(RedisTest, SubscriptionDetectModelDelete) {
   subscribe_to_model_changes(
       *subscriber_, [&notification_recv, &notification_mutex, &recv, model](
                         const std::string& key, const std::string& event_type) {
-        log_info_formatted(LOGGING_TAG_REDIS_TEST, "MODEL CHANGE DETECTED: ",
-                           event_type);
+        log_info_formatted(LOGGING_TAG_REDIS_TEST,
+                           "MODEL CHANGE DETECTED: ", event_type);
         ASSERT_TRUE(event_type == "hdel" || event_type == "del");
         std::unique_lock<std::mutex> l(notification_mutex);
         recv = true;
@@ -326,9 +364,9 @@ TEST_F(RedisTest, SubscriptionDetectContainerDelete) {
       *subscriber_,
       [&notification_recv, &notification_mutex, &recv, replica_key](
           const std::string& key, const std::string& event_type) {
-        log_info_formatted(LOGGING_TAG_REDIS_TEST,
-                           "CONTAINER DELETED CALLBACK. EVENT TYPE: ",
-                           event_type);
+        log_info_formatted(
+            LOGGING_TAG_REDIS_TEST,
+            "CONTAINER DELETED CALLBACK. EVENT TYPE: ", event_type);
         ASSERT_TRUE(event_type == "hdel" || event_type == "del");
         std::unique_lock<std::mutex> l(notification_mutex);
         recv = true;

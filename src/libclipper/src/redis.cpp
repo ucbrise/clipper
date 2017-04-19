@@ -36,17 +36,6 @@ std::unordered_map<string, string> parse_redis_map(
   return parsed_map;
 }
 
-std::vector<string> parse_redis_vector(
-        const std::vector<string>& redis_data) {
-  return redis_data;
-  std::vector<string> parsed_vector;
-  for (auto m = redis_data.begin(); m != redis_data.end(); ++m) {
-    auto key = *m;
-    parsed_vector.push_back(key);
-  }
-  return parsed_vector;
-}
-
 std::string gen_model_replica_key(const VersionedModelId& key,
                                   int model_replica_id) {
   std::stringstream ss;
@@ -371,26 +360,10 @@ std::vector<std::string> list_application_names(Redox& redis) {
       application_names_data = *result;
     }
 
-    return parse_redis_vector(application_names_data);
+    return application_names_data;
   } else {
     return std::vector<std::string>{};
   }
-}
-
-std::vector<std::unordered_map<std::string, std::string>>
-list_application_details(redox::Redox& redis) {
-  std::vector<std::unordered_map<std::string, std::string>> application_details;
-  std::vector<std::string> application_names = list_application_names(redis);
-  if (application_names.size() == 0) {
-    return std::vector<std::unordered_map<std::string, std::string>>{};
-  }
-  for (const string& appname : application_names) {
-    std::unordered_map<std::string, std::string> app_info =
-        get_application(redis, appname);
-    app_info["name"] = appname;
-    application_details.push_back(app_info);
-  }
-  return application_details;
 }
 
 std::unordered_map<std::string, std::string> get_application(

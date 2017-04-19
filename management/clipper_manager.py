@@ -278,22 +278,24 @@ class Clipper:
         r = requests.post(url, headers=headers, data=req_json)
         print(r.text)
 
-    def list_apps(self, verbose=False):
-        """List the names of all applications registered with Clipper.
+    def get_all_apps(self, verbose=False):
+        """Gets information about all applications registered with Clipper.
+
+        Parameters
+        ----------
+        verbose : bool
+            If set to False, the returned list contains the apps' names.
+            If set to True, the list contains application info dictionaries.
+            These dictionaries have the same attribute name-value pairs that were
+            provided to `register_application`.
 
         Returns
         -------
         list
             Returns a list of information about all apps registered to Clipper.
-
-            If `verbose` == False, the list contains the apps' names.
-            If `verbose` == True, the list contains application info dictionaries.
-            These dictionaries have the same attribute name-value pairs that were
-            provided to `register_application`.
-
             If no apps are registered with Clipper, an empty list is returned.
         """
-        url = "http://%s:1338/admin/get_applications" % self.host
+        url = "http://%s:1338/admin/get_all_applications$" % self.host
         req_json = json.dumps({"verbose": verbose})
         headers = {'Content-type': 'application/json'}
         r = requests.get(url, headers=headers, data=req_json)
@@ -309,7 +311,7 @@ class Clipper:
 
         Returns
         -------
-        dict or None
+        dict
             Returns a dictionary with the specified application's info. This
             will contain the attribute name-value pairs that were provided to
             `register_application`. If no application with name `name` is

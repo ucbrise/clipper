@@ -7,8 +7,8 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
-#include <unordered_map>
 #include <boost/algorithm/string.hpp>
+#include <unordered_map>
 
 #include <clipper/datatypes.hpp>
 #include <clipper/json_util.hpp>
@@ -30,7 +30,7 @@ json_semantic_error::json_semantic_error(const std::string& what)
     : std::runtime_error(what) {}
 json_semantic_error::~json_semantic_error() throw() {}
 
-void _check_document_is_object_and_key_exists(rapidjson::Value& d,
+void check_document_is_object_and_key_exists(rapidjson::Value& d,
                                              const char* key_name) {
   if (!d.IsObject()) {
     throw json_semantic_error("Can only get key-value pair from an object");
@@ -43,7 +43,7 @@ void _check_document_is_object_and_key_exists(rapidjson::Value& d,
 rapidjson::Value& check_kv_type_and_return(rapidjson::Value& d,
                                            const char* key_name,
                                            Type expected_type) {
-  _check_document_is_object_and_key_exists(d, key_name);
+  check_document_is_object_and_key_exists(d, key_name);
   rapidjson::Value& val = d[key_name];
   if (val.GetType() != expected_type) {
     throw json_semantic_error("Type mismatch! JSON key " +
@@ -56,13 +56,13 @@ rapidjson::Value& check_kv_type_and_return(rapidjson::Value& d,
 
 rapidjson::Value& check_kv_type_is_bool_and_return(rapidjson::Value& d,
                                                    const char* key_name) {
-  _check_document_is_object_and_key_exists(d, key_name);
+  check_document_is_object_and_key_exists(d, key_name);
   rapidjson::Value& val = d[key_name];
   if (val.GetType() != rapidjson::kFalseType &&
       val.GetType() != rapidjson::kTrueType) {
     throw json_semantic_error(
-            "Type mismatch! JSON key " + std::string(key_name) +
-            " expected type bool but found type " + kTypeNames[val.GetType()]);
+        "Type mismatch! JSON key " + std::string(key_name) +
+        " expected type bool but found type " + kTypeNames[val.GetType()]);
   }
   return val;
 }
@@ -226,12 +226,6 @@ rapidjson::Value& get_object(rapidjson::Value& d, const char* key_name) {
   return object;
 }
 
-rapidjson::Value& get_array(rapidjson::Value& d, const char* key_name) {
-  rapidjson::Value& array =
-          check_kv_type_and_return(d, key_name, rapidjson::kArrayType);
-  return array;
-}
-
 void parse_json(const std::string& json_content, rapidjson::Document& d) {
   rapidjson::ParseResult ok = d.Parse(json_content.c_str());
   if (!ok) {
@@ -366,76 +360,76 @@ std::string to_json_string(rapidjson::Document& d) {
   return buffer.GetString();
 }
 
-void set_string_array_doc(std::vector<std::string>& string_vec,
-                          rapidjson::Document& d) {
-  d.SetArray();
-
-  size_t num_elements = string_vec.size();
-  for (size_t i = 0; i < num_elements; i++) {
-    rapidjson::Value v(rapidjson::StringRef(string_vec.at(i).c_str(),
-                                            string_vec.at(i).length()));
-    d.PushBack(v, d.GetAllocator());
+void check_key_exists_in_map(
+    std::string& key, std::unordered_map<std::string, std::string>& map) {
+  if (map.find(key) == map.end()) {
+    throw std::invalid_argument("key `" + key + "` does not exist in map");
   }
 }
 
-void set_candidate_models_doc(std::string& candidate_models_redis_format,
-                              rapidjson::Document& d) {
-  d.SetArray();
-
-  std::vector<std::string> candidate_model_strings;
-  boost::split(candidate_model_strings, candidate_models_redis_format,
-               boost::is_any_of(","));
-
-  std::vector<std::string> candidate_model_components;
-  for (auto candidate_model_str : candidate_model_strings) {
-    boost::split(candidate_model_components, candidate_model_str,
-                 boost::is_any_of(":"));
-    std::string model_name = candidate_model_components[0];
-    int model_version = atoi(candidate_model_components[1].c_str());
-
-    rapidjson::Document candidate_model_doc(&d.GetAllocator());
-    candidate_model_doc.SetObject();
-    clipper::json::add_string(candidate_model_doc, "model_name", model_name);
-    clipper::json::add_int(candidate_model_doc, "model_version", model_version);
-    d.PushBack(candidate_model_doc, d.GetAllocator());
-  }
+void add_app_input_type_from_redis(
+    std::unordered_map<std::string, std::string>& app_metadata,
+    rapidjson::Document& d) {
+  std::string key = "input_type";
+  check_key_exists_in_map(key, app_metadata);
+  add_string(d, key.c_str(), app_metadata[key]);
 }
 
-void set_app_info_doc(std::unordered_map<std::string, std::string>& app_info,
-                      rapidjson::Document& d) {
+void add_app_selection_policy_from_redis(
+    std::unordered_map<std::string, std::string>& app_metadata,
+    rapidjson::Document& d) {
+  // selection_policy is stored under the column `policy` in the app table in
+  // redis
+  std::string redis_selection_policy_key = "policy";
+  check_key_exists_in_map(redis_selection_policy_key, app_metadata);
+  add_string(d, "selection_policy", app_metadata[redis_selection_policy_key]);
+}
+
+void add_app_default_output_from_redis(
+    std::unordered_map<std::string, std::string>& app_metadata,
+    rapidjson::Document& d) {
+  std::string key = "default_output";
+  check_key_exists_in_map(key, app_metadata);
+  add_string(d, key.c_str(), app_metadata[key]);
+}
+
+void add_app_latency_slo_micros_from_redis(
+    std::unordered_map<std::string, std::string>& app_metadata,
+    rapidjson::Document& d) {
+  // latency_slo_micros is stored as a string in redis
+  std::string key = "latency_slo_micros";
+  check_key_exists_in_map(key, app_metadata);
+  add_int(d, key.c_str(), atoi(app_metadata[key].c_str()));
+}
+
+void add_app_candidate_model_names_from_redis(
+    std::unordered_map<std::string, std::string>& app_metadata,
+    rapidjson::Document& d) {
+  std::string key = "candidate_model_names";
+  check_key_exists_in_map(key, app_metadata);
+  // Clipper currently only accepts a single candidate_model_name. It is stored
+  // as a string in redis
+  std::string model_name = app_metadata[key];
+
+  // Our external interface should put this candidate_model_name in an array
+  rapidjson::Document candidate_model_names_doc(&d.GetAllocator());
+  candidate_model_names_doc.SetArray();
+  rapidjson::Value string_val(
+      rapidjson::StringRef(model_name.c_str(), model_name.length()),
+      d.GetAllocator());
+  candidate_model_names_doc.PushBack(string_val, d.GetAllocator());
+  add_object(d, key.c_str(), candidate_model_names_doc);
+}
+
+void set_json_doc_from_redis_app_metadata(
+    rapidjson::Document& d,
+    std::unordered_map<std::string, std::string>& app_metadata) {
   d.SetObject();
-
-  for (auto item : app_info) {
-    std::string key = item.first;
-    std::string value = item.second;
-    if (key == "name" || key == "input_type" || key == "policy") {
-      if (key == "policy") {
-        // Converts the Redis storage key to the publicly facing label
-        key = "selection_policy";
-      }
-      clipper::json::add_string(d, key.c_str(), value);
-    } else if (key == "latency_slo_micros") {
-      clipper::json::add_int(d, key.c_str(), atoi(value.c_str()));
-    } else {
-      // `item` corresponds to app's candidate_models. Need to convert the
-      // Redis candidate_models storage format to the publicly facing format
-      rapidjson::Document candidate_models_doc(&d.GetAllocator());
-      set_candidate_models_doc(value, candidate_models_doc);
-      clipper::json::add_object(d, "candidate_models", candidate_models_doc);
-    }
-  }
-}
-
-void set_app_info_array_doc(
-        std::vector<std::unordered_map<std::string, std::string>>& app_details,
-        rapidjson::Document& arr_doc) {
-  arr_doc.SetArray();
-
-  for (auto app_info : app_details) {
-    rapidjson::Document d(&arr_doc.GetAllocator());
-    set_app_info_doc(app_info, d);
-    arr_doc.PushBack(d, arr_doc.GetAllocator());
-  }
+  add_app_input_type_from_redis(app_metadata, d);
+  add_app_selection_policy_from_redis(app_metadata, d);
+  add_app_default_output_from_redis(app_metadata, d);
+  add_app_latency_slo_micros_from_redis(app_metadata, d);
+  add_app_candidate_model_names_from_redis(app_metadata, d);
 }
 
 }  // namespace json

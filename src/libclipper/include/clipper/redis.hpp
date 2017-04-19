@@ -242,21 +242,6 @@ bool delete_application(redox::Redox& redis, const std::string& appname);
 std::vector<std::string> list_application_names(redox::Redox& redis);
 
 /**
- * Lists the full details of all applications registered with Clipper
- *
- *
- * \return Returns a vector of maps for each application. Each such
- * application map stores attribute name-value pairs as
- * strings. Any parsing of the attribute values from their string
- * format (e.g. to a numerical representation) must be done by the
- * caller of this function. The set of attributes stored for a
- * application can be found in the source for `add_application()`. If
- * no applications were found, an empty vector will be returned.
- */
-std::vector<std::unordered_map<std::string, std::string>>
-list_application_details(redox::Redox& redis);
-
-/**
  * Looks up an application based on its name.
  *
  * \return Returns a map of application attribute name-value pairs as
@@ -323,14 +308,14 @@ void subscribe_to_application_changes(
     std::function<void(const std::string&, const std::string&)> callback);
 
 /**
-* Subscribes to changes in model versions.
-*
-* The callback is called with the string key of the model
-* that changed and the Redis event type. The key can
-* be used to look up the new value. The message type identifies
-* what type of change was detected. This allows subscribers
-* to differentiate between adds, updates, and deletes if necessary.
-*/
+ * Subscribes to changes in model versions.
+ *
+ * The callback is called with the string key of the model
+ * that changed and the Redis event type. The key can
+ * be used to look up the new value. The message type identifies
+ * what type of change was detected. This allows subscribers
+ * to differentiate between adds, updates, and deletes if necessary.
+ */
 void subscribe_to_model_version_changes(
     redox::Subscriber& subscriber,
     std::function<void(const std::string&, const std::string&)> callback);
