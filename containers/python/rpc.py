@@ -105,7 +105,8 @@ class Server(threading.Thread):
         print("Serving predictions for {0} input type.".format(
             input_type_to_string(self.model_input_type)))
         connected = False
-        clipper_address = "tcp://{0}:{1}".format(self.clipper_ip, self.clipper_port)
+        clipper_address = "tcp://{0}:{1}".format(self.clipper_ip,
+                                                 self.clipper_port)
         poller = zmq.Poller()
         while True:
             socket = self.context.socket(zmq.DEALER)
@@ -113,12 +114,14 @@ class Server(threading.Thread):
             socket.connect(clipper_address)
             self.send_heartbeat(socket)
             while True:
-                receivable_sockets = dict(poller.poll(SOCKET_POLLING_TIMEOUT_MILLIS))
+                receivable_sockets = dict(
+                    poller.poll(SOCKET_POLLING_TIMEOUT_MILLIS))
                 if socket not in receivable_sockets or receivable_sockets[socket] != zmq.POLLIN:
                     if connected:
                         curr_time = datetime.now()
                         time_delta = curr_time - last_activity_time_millis
-                        time_delta_millis = (time_delta.seconds * 1000) + (time_delta.microseconds / 1000)
+                        time_delta_millis = (time_delta.seconds * 1000) + (
+                            time_delta.microseconds / 1000)
                         if time_delta_millis >= SOCKET_ACTIVITY_TIMEOUT_MILLIS:
                             print("Connection timed out, reconnecting...")
                             connected = False
@@ -141,7 +144,8 @@ class Server(threading.Thread):
                 if msg_type == MESSAGE_TYPE_HEARTBEAT:
                     print("Received heartbeat!")
                     heartbeat_type_bytes = socket.recv()
-                    heartbeat_type = struct.unpack("<I", heartbeat_type_bytes)[0]
+                    heartbeat_type = struct.unpack("<I",
+                                                   heartbeat_type_bytes)[0]
                     if heartbeat_type == HEARTBEAT_TYPE_REQUEST_CONTAINER_METADATA:
                         self.send_container_metadata(socket)
                     continue
@@ -171,11 +175,13 @@ class Server(threading.Thread):
                             0], parsed_input_header[1], parsed_input_header[2:]
 
                         if int(input_type) != int(self.model_input_type):
-                            print(("Received incorrect input. Expected {expected}, "
-                                   "received {received}").format(
-                                       expected=input_type_to_string(
-                                           int(self.model_input_type)),
-                                       received=input_type_to_string(int(input_type))))
+                            print((
+                                "Received incorrect input. Expected {expected}, "
+                                "received {received}").format(
+                                    expected=input_type_to_string(
+                                        int(self.model_input_type)),
+                                    received=input_type_to_string(
+                                        int(input_type))))
                             raise
 
                         if input_type == INPUT_TYPE_STRINGS:
@@ -243,7 +249,8 @@ class Message:
 
     def send(self, socket):
         socket.send("", zmq.SNDMORE)
-        socket.send(struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT), zmq.SNDMORE)
+        socket.send(
+            struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT), zmq.SNDMORE)
         socket.send(self.msg_id, zmq.SNDMORE)
         socket.send(self.content)
 

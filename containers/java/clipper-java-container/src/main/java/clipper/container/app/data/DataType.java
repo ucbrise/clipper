@@ -31,7 +31,8 @@ public enum DataType implements ClipperEnum {
     return name;
   }
 
-  private static final Map<Integer, DataType> typeResolutionMap = EnumUtil.getTypeResolutionMap(DataType.values());
+  private static final Map<Integer, DataType> typeResolutionMap =
+      EnumUtil.getTypeResolutionMap(DataType.values());
 
   public static DataType fromCode(int code) throws IllegalArgumentException {
     return EnumUtil.getEnumFromCodeOrThrow(code, enumName, typeResolutionMap);

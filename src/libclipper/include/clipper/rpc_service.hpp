@@ -39,10 +39,7 @@ enum class MessageType {
   Heartbeat = 2
 };
 
-enum class HeartbeatType {
-  KeepAlive = 0,
-  RequestContainerMetadata = 1
-};
+enum class HeartbeatType { KeepAlive = 0, RequestContainerMetadata = 1 };
 
 class RPCService {
  public:
@@ -93,10 +90,9 @@ class RPCService {
           &connections_containers_map,
       int &zmq_connection_id, std::shared_ptr<redox::Redox> redis_connection);
 
-  void send_heartbeat_response(
-      socket_t& socket,
-      const vector<uint8_t>& connection_id,
-      bool request_container_metadata);
+  void send_heartbeat_response(socket_t &socket,
+                               const vector<uint8_t> &connection_id,
+                               bool request_container_metadata);
 
   void shutdown_service(socket_t &socket);
   std::thread rpc_thread_;
