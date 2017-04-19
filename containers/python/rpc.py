@@ -213,11 +213,11 @@ class Server(threading.Thread):
                               ((t2 - t1).microseconds, (t3 - t2).microseconds,
                                (t4 - t3).microseconds))
 
-                else:
-                    received_msg = Message(msg_id_bytes, [])
-                    response = self.handle_feedback_request(received_msg)
-                    response.send(socket)
-                    print("recv: %f us" % ((t2 - t1).microseconds))
+                    else:
+                        received_msg = Message(msg_id_bytes, [])
+                        response = self.handle_feedback_request(received_msg)
+                        response.send(socket)
+                        print("recv: %f us" % ((t2 - t1).microseconds))
 
         sys.stdout.flush()
         sys.stderr.flush()
