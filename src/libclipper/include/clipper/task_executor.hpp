@@ -134,6 +134,8 @@ class ModelQueue {
   std::mutex queue_mutex_;
 };
 
+using InflightMessage = std::tuple<const long, const int, VersionedModelId, std::shared_ptr<Input>>;
+
 class TaskExecutor {
  public:
   ~TaskExecutor() { active_->store(false); };
@@ -277,8 +279,7 @@ class TaskExecutor {
   redox::Redox redis_connection_;
   redox::Subscriber redis_subscriber_;
   std::mutex inflight_messages_mutex_;
-  std::unordered_map<int, std::vector<std::tuple<const long, VersionedModelId,
-                                                 std::shared_ptr<Input>>>>
+  std::unordered_map<int, std::vector<InflightMessage>>
       inflight_messages_;
   std::shared_ptr<metrics::Counter> predictions_counter;
   std::shared_ptr<metrics::Meter> throughput_meter;
@@ -323,13 +324,11 @@ class TaskExecutor {
         // map between the time a message is sent and when it gets inserted
         // into the map
         std::unique_lock<std::mutex> l(inflight_messages_mutex_);
-        std::vector<
-            std::tuple<const long, VersionedModelId, std::shared_ptr<Input>>>
-            cur_batch;
+        std::vector<InflightMessage> cur_batch;
         rpc::PredictionRequest prediction_request(container->input_type_);
         for (auto b : batch) {
           prediction_request.add_input(b.input_);
-          cur_batch.emplace_back(b.send_time_micros_, b.model_, b.input_);
+          cur_batch.emplace_back(b.send_time_micros_, container->container_id_, b.model_, b.input_);
         }
         int message_id = rpc_->send_message(prediction_request.serialize(),
                                             container->container_id_);
@@ -365,11 +364,18 @@ class TaskExecutor {
                             std::chrono::system_clock::now().time_since_epoch())
                             .count();
     for (int batch_num = 0; batch_num < batch_size; ++batch_num) {
-      long send_time = std::get<0>(keys[batch_num]);
+      InflightMessage completed_msg = keys[batch_num];
+      long send_time = std::get<0>(completed_msg);
+      int container_id = std::get<1>(completed_msg);
+      VersionedModelId model = std::get<2>(completed_msg);
+      std::shared_ptr<Input> input = std::get<3>(completed_msg);
+      std::shared_ptr<ModelContainer> completing_container =
+          active_containers_->get_model_replica(model, container_id);
+      completing_container->throughput_meter_->mark(1);
       latency_hist->insert(static_cast<int64_t>(current_time - send_time));
-      cache_.put(std::get<1>(keys[batch_num]), std::get<2>(keys[batch_num]),
+      cache_.put(model, input,
                  Output{deserialized_outputs[batch_num],
-                        {std::get<1>(keys[batch_num])}});
+                        {model}});
     }
   }
 };

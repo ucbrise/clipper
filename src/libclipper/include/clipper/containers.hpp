@@ -9,6 +9,7 @@
 
 #include <clipper/datatypes.hpp>
 #include <clipper/util.hpp>
+#include <clipper/metrics.hpp>
 
 namespace clipper {
 
@@ -25,16 +26,13 @@ class ModelContainer {
   ModelContainer(ModelContainer &&) = default;
   ModelContainer &operator=(ModelContainer &&) = default;
 
-  size_t get_batch_size(Deadline /*deadline*/) {
-    // TODO: Replace the statically configured batch size with dynamic batching
-    return max_batch_size_;
-  }
-
+  size_t get_batch_size(Deadline /*deadline*/);
   void send_feedback(PredictTask task);
 
   VersionedModelId model_;
   int container_id_;
   InputType input_type_;
+  std::shared_ptr<metrics::Meter> throughput_meter_;
 
  private:
   const int max_batch_size_ = 5;
