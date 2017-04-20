@@ -40,8 +40,8 @@ The following is an example construction of a *new container message* in Python:
 #### Container Content Messages
 Once Clipper has registered a container, these content messages are exchanged between the container and Clipper in order to serve prediction requests. These messages contain serialized queries (from Clipper) or serialized responses (from the container). For more information on query-response serialization, see the "Serializing Prediction Requests" and "Serializing Prediction Responses" sections below. Beyond the required empty frame and **Message Type** field, *container content messages* contain the following strictly-ordered fields:
 
-  * ** Message Id**: A unique identifier, encoded as an unsigned integer, corresponding to the container content message. When handling a prediction request sent via a *contaner content message* from Clipper, the response *container content message* must specify the same **message id** as the request message. Clipper will use this identifier to correctly construct request-response pairs in order to return a query result.
-  * ** Message Content**: Byte content representing either a serialized prediction request (in the case of inbound messages from Clipper) or a serialized prediction response (in the case of outbound messages from the container).
+  * **Message Id**: A unique identifier, encoded as an unsigned integer, corresponding to the container content message. When handling a prediction request sent via a *contaner content message* from Clipper, the response *container content message* must specify the same **message id** as the request message. Clipper will use this identifier to correctly construct request-response pairs in order to return a query result.
+  * **Message Content**: Byte content representing either a serialized prediction request (in the case of inbound messages from Clipper) or a serialized prediction response (in the case of outbound messages from the container).
 
 The following is an example construction of a *container content message* corresponding to a prediction response in Python:
 
@@ -54,7 +54,7 @@ The following is an example construction of a *container content message* corres
 #### Heartbeat Messages
 These messages are used for session initialization as well as maintenance. By sending and receiving heartbeats, containers are able to determine whether or not Clipper is still active and respond accordingly. Beyond the required empty frame and **Message Type** field, *heartbeat messages* contain the following strictly-ordered fields:
 
-  * ** Heartbeat Type (INBOUND ONLY) **: This field contains a binary, unsigned integer and is only present in **inbound** messages received from Clipper. The value meanings are as follows:
+  * **Heartbeat Type (INBOUND ONLY)**: This field contains a binary, unsigned integer and is only present in **inbound** messages received from Clipper. The value meanings are as follows:
     * 1: This indicates that Clipper does not have any metadata for the recipient container. This serves as an indication that the container should send a *new container message* so that Clipper can register it.
     * 0: This indicates that the message is a simple heartbeat response from Clipper requiring no further action.
     
@@ -159,7 +159,7 @@ Python example:
    ```
 The container should then attempt to start a new session.
 
-For additional container lifecycle references, see:
+### For additional container lifecycle references, see:
 - [clipper/containers/python/rpc.py](https://github.com/ucbrise/clipper/blob/develop/containers/python/rpc.py)
 - [/clipper/containers/java/.../ModelContainer.java](https://github.com/ucbrise/clipper/blob/develop/containers/java/clipper-java-container/src/main/java/clipper/container/app/ModelContainer.java)
 
