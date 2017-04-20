@@ -153,7 +153,9 @@ class Server(threading.Thread):
                         self.send_container_metadata(socket)
                     continue
                 elif msg_type == MESSAGE_TYPE_NEW_CONTAINER:
-                    print("Received erroneous new container message from Clipper!")
+                    print(
+                        "Received erroneous new container message from Clipper!"
+                    )
                     continue
                 elif msg_type == MESSAGE_TYPE_CONTAINER_CONTENT:
                     msg_id_bytes = socket.recv()
