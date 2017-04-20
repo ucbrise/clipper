@@ -307,11 +307,13 @@ TEST_F(QueryFrontendTest, TestReadModelsAtStartup) {
 TEST_F(QueryFrontendTest, TestReadInvalidModelVersionAtStartup) {
   std::vector<std::string> labels{"ads", "images", "experimental", "other",
                                   "labels"};
-  VersionedModelId model1 = std::make_pair("m", -10 /* invalid version */);
+  VersionedModelId model1 = std::make_pair("m", 1);
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
   ASSERT_TRUE(add_model(*redis_, model1, InputType::Ints, labels,
                         container_name, model_path));
+  // Not setting the version number will cause get_current_model_version()
+  // to return -1, and the RequestHandler should then throw a runtime_error.
   ASSERT_THROW(RequestHandler<QueryProcessor>("127.0.0.1", 1337, 8),
                std::runtime_error);
 }
