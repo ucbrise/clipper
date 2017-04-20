@@ -9,7 +9,7 @@ The connection lifecycle defines the socket construction, destruction, and state
 - Sessions are initiated and sustained by a heartbeating process. The initial detection of a two-way heartbeat between Clipper and a container marks the creation of a successful connection, and the loss of heartbeat indicates that a connection is broken.
     
 ### RPC Message Types 
-Model containers communicate with Clipper using RPC messages of several types. Each RPC message is a [multi-part ZeroMQ message](http://zguide.zeromq.org/php:chapter2#toc11) beginning with an [empty ZeroMQ frame](http://zguide.zeromq.org/php:chapter3#The-Simple-Reply-Envelope). Each message contains a "Message Type" field, encoded as an **unsigned integer**, that specifies one of the following types:
+Model containers communicate with Clipper using RPC messages of several types. Each RPC message is a [multi-part ZeroMQ message](http://zguide.zeromq.org/php:chapter2#toc11) beginning with an [empty ZeroMQ frame](http://zguide.zeromq.org/php:chapter3#The-Simple-Reply-Envelope). Each message contains a **Message Type** field, encoded as an **unsigned integer**, that specifies one of the following types:
 
 * 0: *New container message*
 * 1: *Container content message*  
