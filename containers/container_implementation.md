@@ -5,7 +5,7 @@ Model containers must implement functionality consistent with this information.
 ## Connection Lifecycle
 The connection lifecycle defines the socket construction, destruction, and state-based behavior for a single Clipper session. We define a session as a sustained connection between a container and Clipper. Key points:
 
-- Every session requires a distinct socket. When a session ends, a container must create a new socket in order to reconnect to Clipper
+- Every session requires a distinct socket. When a session ends, a container must create a new socket in order to reconnect to Clipper.
 - Sessions are initiated and sustained by a heartbeating process. The initial detection of a two-way heartbeat between Clipper and a container marks the creation of a successful connection, and the loss of heartbeat indicates that a connection is broken.
     
 ### RPC Message Types 
@@ -30,13 +30,12 @@ This type of message is sent to Clipper by a container at the beginning of a ses
     
 The following is an example construction of a *new container message* in Python:
 
-    ```
+   
     socket.send("", zmq.SNDMORE) # Sends an empty frame and indicates that more content will follow
-    socket.send(struct.pack("<I", 0), zmq.SNDMORE) # Indicates that this is a new container message by sending `0` as a uint 
+    socket.send(struct.pack("<I", 0), zmq.SNDMORE) # Indicates that this is a new container message
     socket.send(<MODEL_NAME>, zmq.SNDMORE)
     socket.send(str(<MODEL_VERSION>), zmq.SNDMORE)
     socket.send(str(<MODEL_INPUT_TYPE>))
-    ```
     
 #### Container Content Messages
 Once Clipper has registered a container, these content messages are exchanged between the container and Clipper in order to serve prediction requests. These messages contain serialized queries (from Clipper) or serialized responses (from the container). For more information on query-response serialization, see the "Serializing Prediction Requests" and "Serializing Prediction Responses" sections below. Beyond the required empty frame and **Message Type** fields, *container content messages* contain the following strictly-ordered fields:
@@ -46,12 +45,11 @@ Once Clipper has registered a container, these content messages are exchanged be
 
 The following is an example construction of a *container content message* corresponding to a prediction response in Python:
 
-    ```
+    
     socket.send("", zmq.SNDMORE) # Sends an empty frame and indicates that more content will follow
-    socket.send(struct.pack("<I", 1), zmq.SNDMORE) # Indicates that this is a new container message by sending `1` as a uint 
+    socket.send(struct.pack("<I", 1), zmq.SNDMORE) # Indicates that this is a container content message
     socket.send(struct.pack("<I", <MESSAGE_ID>), zmq.SNDMORE)
     socket.send(<SERIALIZED_MESSAGE_CONTENT_AS_BYTES>)
-    ```
     
 #### Heartbeat Messages
 These messages are used for session initialization as well as maintenance. By sending and receiving heartbeats, containers are able to determine whether or not Clipper is still active and respond accordingly. Beyond the required empty frame and **Message Type** fields, *heartbeat messages* contain the following strictly-ordered fields:
@@ -62,11 +60,10 @@ These messages are used for session initialization as well as maintenance. By se
     
 The following is an example construction of an **outbound** *heartbeat message* in Python:
  
-    ```
+    
     socket.send("", zmq.SNDMORE) # Sends an empty frame and indicates that more content will follow
-    socket.send(struct.pack("<I", 2), zmq.SNDMORE) # Indicates that this is a new container message by sending `2` as a uint 
-    ```
-
+    socket.send(struct.pack("<I", 2), zmq.SNDMORE) # Indicates that this is a heartbeat message
+    
 ### Starting a new session
 Now that we are familiar with the different types of RPC messages, we will see how a model container can use them to start a session with Clipper. The steps are as follows:
 
