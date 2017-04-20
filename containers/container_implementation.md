@@ -96,7 +96,7 @@ Now that we are familiar with the different types of RPC messages, we will see h
            socket.recv()
            msg_type_bytes = socket.recv()
            msg_type = struct.unpack("<I", msg_type_bytes)[0]
-           assert msg_type == MESSAGE_TYPE_HEARTBEAT:
+           assert msg_type == MESSAGE_TYPE_HEARTBEAT
            heartbeat_type_bytes = socket.recv()
            heartbeat_type = struct.unpack("<I", heartbeat_type_bytes)[0]
            assert heartbeat_type == 1
