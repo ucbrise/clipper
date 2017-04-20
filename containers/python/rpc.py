@@ -117,7 +117,7 @@ class Server(threading.Thread):
                 receivable_sockets = dict(
                     poller.poll(SOCKET_POLLING_TIMEOUT_MILLIS))
                 if socket not in receivable_sockets or receivable_sockets[socket] != zmq.POLLIN:
-                    # We failed to receive a message before the specified polling timeout
+                    # Failed to receive a message before the specified polling timeout
                     if connected:
                         curr_time = datetime.now()
                         time_delta = curr_time - last_activity_time_millis
@@ -134,7 +134,7 @@ class Server(threading.Thread):
                             self.send_heartbeat(socket)
                     continue
 
-                # We received a message before the polling timeout
+                # Received a message before the polling timeout
                 if not connected:
                     connected = True
                 last_activity_time_millis = datetime.now()
@@ -153,7 +153,7 @@ class Server(threading.Thread):
                         self.send_container_metadata(socket)
                     continue
                 elif msg_type == MESSAGE_TYPE_NEW_CONTAINER:
-                    # This is an error, log it
+                    print("Received erroneous new container message from Clipper!")
                     continue
                 elif msg_type == MESSAGE_TYPE_CONTAINER_CONTENT:
                     msg_id_bytes = socket.recv()

@@ -71,9 +71,11 @@ class ModelContainer<I extends DataVector<?>> {
       while (true) {
         poller.poll(SOCKET_POLLING_TIMEOUT_MILLIS);
         if (!poller.pollin(0)) {
+          // Failed to receive a message prior to the polling timeout
           if (connected) {
             if (System.currentTimeMillis() - lastActivityTimeMillis
                 >= SOCKET_ACTIVITY_TIMEOUT_MILLIS) {
+              // Terminate the session
               System.out.println("Connection timed out. Reconnecting...");
               connected = false;
               poller.unregister(socket);
@@ -86,6 +88,7 @@ class ModelContainer<I extends DataVector<?>> {
           continue;
         }
 
+        // Received a message prior to the polling timeout
         if (!connected) {
           connected = true;
         }
@@ -196,7 +199,7 @@ class ModelContainer<I extends DataVector<?>> {
             break;
           case NewContainer:
             // We should never receive a new container message from Clipper
-            // TODO: Log this
+            System.out.println("Received erroneous new container message from Clipper!");
             break;
           default:
             break;
