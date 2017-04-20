@@ -248,17 +248,19 @@ TEST_F(RedisTest, GetAllApplicationNames) {
                                        "music_cnn"};
   InputType input_type = InputType::Doubles;
   std::string policy = "exp3_policy";
+  std::string default_output = "1.0";
   int latency_slo_micros = 10000;
   ASSERT_TRUE(add_application(*redis_, name, model_names, input_type, policy,
-                              latency_slo_micros));
+                              default_output, latency_slo_micros));
   std::string name2 = "my_app_name_2";
   std::vector<std::string> model_names2{"img_random_features", "simple_svm",
                                         "img_cnn"};
   InputType input_type2 = InputType::Doubles;
   std::string policy2 = "exp4_policy";
   int latency_slo_micros2 = 50000;
+  std::string default_output2 = "1.0";
   ASSERT_TRUE(add_application(*redis_, name2, model_names2, input_type2,
-                              policy2, latency_slo_micros2));
+                              policy2, default_output2, latency_slo_micros2));
 
   std::vector<std::string> app_names = get_all_application_names(*redis_);
   ASSERT_EQ(app_names.size(), static_cast<size_t>(2));

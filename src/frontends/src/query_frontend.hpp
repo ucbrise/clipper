@@ -28,6 +28,7 @@ using clipper::Feedback;
 using clipper::FeedbackQuery;
 using clipper::json::json_parse_error;
 using clipper::json::json_semantic_error;
+using clipper::redis::labels_to_str;
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 
 namespace query_frontend {
@@ -158,11 +159,11 @@ class RequestHandler {
           }
         });
 
-    // Read from Redis configuration tables and update models/applications
+    // Read from Redis configuration tables and update models/applications.
     // (1) Iterate through applications and set up predict/update endpoints.
-    for (std::string app_name :
-         clipper::redis::get_all_application_names(redis_connection_)) {
-      // Is there a way/need to not repeat these function calls? (from above)
+    std::vector<std::string> app_names =
+        clipper::redis::get_all_application_names(redis_connection_);
+    for (std::string app_name : app_names) {
       auto app_info =
           clipper::redis::get_application_by_key(redis_connection_, app_name);
 
@@ -170,19 +171,44 @@ class RequestHandler {
           clipper::redis::str_to_model_names(app_info["candidate_model_names"]);
       InputType input_type = clipper::parse_input_type(app_info["input_type"]);
       std::string policy = app_info["policy"];
+      std::string default_output = app_info["default_output"];
       int latency_slo_micros = std::stoi(app_info["latency_slo_micros"]);
 
       add_application(app_name, candidate_model_names, input_type, policy,
-                      latency_slo_micros);
+                      default_output, latency_slo_micros);
+    }
+    if (app_names.size() > 0) {
+      clipper::log_info_formatted(
+          LOGGING_TAG_QUERY_FRONTEND,
+          "Found {} existing applications registered in Clipper: {}.",
+          app_names.size(), labels_to_str(app_names));
     }
     // (2) Update current_model_versions_ with (model, version) pairs.
-    for (std::string model_name :
-         clipper::redis::get_all_model_names(redis_connection_)) {
+    std::vector<std::string> model_names =
+        clipper::redis::get_all_model_names(redis_connection_);
+    // Record human-readable model names for logging
+    std::vector<std::string> model_names_with_version;
+    for (std::string model_name : model_names) {
       auto model_version = clipper::redis::get_current_model_version(
           redis_connection_, model_name);
-      // Error handle model_version being < 0?
-      std::unique_lock<std::mutex> l(current_model_versions_mutex_);
-      current_model_versions_[model_name] = model_version;
+      if (model_version >= 0) {
+        std::unique_lock<std::mutex> l(current_model_versions_mutex_);
+        current_model_versions_[model_name] = model_version;
+      } else {
+        clipper::log_error_formatted(
+            LOGGING_TAG_QUERY_FRONTEND,
+            "Found model {} with invalid version number {}.", model_name,
+            model_version);
+        throw std::runtime_error("Invalid model version number");
+      }
+      model_names_with_version.push_back(model_name + "@v" +
+                                         std::to_string(model_version));
+    }
+    if (model_names.size() > 0) {
+      clipper::log_info_formatted(LOGGING_TAG_QUERY_FRONTEND,
+                                  "Found {} models deployed to Clipper: {}.",
+                                  model_names.size(),
+                                  labels_to_str(model_names_with_version));
     }
   }
 
@@ -397,6 +423,13 @@ class RequestHandler {
     size_t count = server_.num_endpoints() - 1;
     assert(count % 2 == 0);
     return count / 2;
+  }
+
+  /**
+   * Returns a copy of the map containing current model names and versions.
+   */
+  std::unordered_map<std::string, int> get_current_model_versions() {
+    return current_model_versions_;
   }
 
  private:
