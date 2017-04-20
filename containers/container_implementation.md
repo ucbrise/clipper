@@ -159,6 +159,8 @@ Python example:
    ```
 The container should then attempt to start a new session.
 
+For additional container lifecycle references, see [clipper/containers/python/rpc.py](rpc.py) and [/clipper/containers/java/.../ModelContainer.java](ModelContainer.java)
+
 ## Serialization Formats
 RPC requests sent from Clipper to model containers are divided into two categories: **Prediction Requests** and **Feedback Requests**. Each request type has a specific serialization format that defines the container deserialization procedure.
 
@@ -202,4 +204,4 @@ RPC requests sent from Clipper to model containers are divided into two categori
 ### Serializing Prediction Responses
 Prediction responses are float values. These should be serializd via byte encoding in little endian format.
 
-#### For additional deserialization references, see `clipper/containers/python/rpc.py`
+#### For additional deserialization references, see [clipper/containers/python/rpc.py](rpc.py)
