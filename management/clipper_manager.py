@@ -286,26 +286,28 @@ class Clipper:
         r = requests.post(url, headers=headers, data=req_json)
         print(r.text)
 
-    def list_apps(self):
-        """List the names of all applications registered with Clipper.
+    def get_all_apps(self, verbose=False):
+        """Gets information about all applications registered with Clipper.
+
+        Parameters
+        ----------
+        verbose : bool
+            If set to False, the returned list contains the apps' names.
+            If set to True, the list contains application info dictionaries.
+            These dictionaries have the same attribute name-value pairs that were
+            provided to `register_application`.
 
         Returns
         -------
-        str
-            The string describing each registered application. If no
-            applications are found, an empty string is returned.
+        list
+            Returns a list of information about all apps registered to Clipper.
+            If no apps are registered with Clipper, an empty list is returned.
         """
-        with hide("output", "running"):
-            result = local(
-                ("redis-cli -h {host} -p 6379 -n {db} keys \"*\"".format(
-                    host=self.host, db=REDIS_APPLICATION_DB_NUM)),
-                capture=True)
-
-            if len(result.stdout) > 0:
-                return result.stdout
-            else:
-                print("Clipper has no applications registered")
-                return ""
+        url = "http://%s:1338/admin/get_all_applications$" % self.host
+        req_json = json.dumps({"verbose": verbose})
+        headers = {'Content-type': 'application/json'}
+        r = requests.get(url, headers=headers, data=req_json)
+        return json.loads(r.text)
 
     def get_app_info(self, name):
         """Gets detailed information about a registered application.
@@ -317,26 +319,20 @@ class Clipper:
 
         Returns
         -------
-        dict or None
-            Returns a dict with the application info if found. If the application
-            is not registered, None is returned.
+        dict
+            Returns a dictionary with the specified application's info. This
+            will contain the attribute name-value pairs that were provided to
+            `register_application`. If no application with name `name` is
+            registered with Clipper, None is returned.
         """
-        with hide("output", "running"):
-            result = local(
-                "redis-cli -h {host} -p 6379 -n {db} hgetall {name}".format(
-                    host=self.host, name=name, db=REDIS_APPLICATION_DB_NUM),
-                capture=True)
-
-            if len(result.stdout) > 0:
-                splits = result.stdout.split("\n")
-                fmt_result = dict([(splits[i], splits[i + 1])
-                                   for i in range(0, len(splits), 2)])
-                pp = pprint.PrettyPrinter(indent=2)
-                pp.pprint(fmt_result)
-                return fmt_result
-            else:
-                warn("Application \"%s\" not found" % name)
-                return None
+        url = "http://%s:1338/admin/get_application" % self.host
+        req_json = json.dumps({"name": name})
+        headers = {'Content-type': 'application/json'}
+        r = requests.get(url, headers=headers, data=req_json)
+        app_info = json.loads(r.text)
+        if len(app_info) == 0:
+            return None
+        return app_info
 
     def inspect_selection_policy(self, app_name, uid):
         """Fetches a human-readable string with the current selection policy state.

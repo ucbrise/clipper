@@ -264,7 +264,6 @@ bool add_container(Redox& redis, const VersionedModelId& model_id,
         "model_replica_id", std::to_string(model_replica_id),
         "zmq_connection_id", std::to_string(zmq_connection_id), "batch_size",
         std::to_string(1), "input_type", get_readable_input_type(input_type)
-
     };
     return send_cmd_no_reply<string>(redis, cmd_vec);
   } else {
@@ -347,6 +346,23 @@ bool delete_application(redox::Redox& redis, const std::string& appname) {
     return send_cmd_no_reply<int>(redis, {"DEL", appname});
   } else {
     return false;
+  }
+}
+
+std::vector<std::string> list_application_names(Redox& redis) {
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_APPLICATION_DB_NUM)})) {
+    const vector<string> cmd_vec{"KEYS", "*"};
+
+    std::vector<std::string> application_names_data;
+    auto result = send_cmd_with_reply<std::vector<std::string>>(redis, cmd_vec);
+    if (result) {
+      application_names_data = *result;
+    }
+
+    return application_names_data;
+  } else {
+    return std::vector<std::string>{};
   }
 }
 

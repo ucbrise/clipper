@@ -12,6 +12,8 @@
 #include <redox.hpp>
 #include <server_http.hpp>
 
+#include "rapidjson/document.h"
+
 #include <clipper/config.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/json_util.hpp>
@@ -24,6 +26,8 @@
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 using clipper::VersionedModelId;
 using clipper::InputType;
+using clipper::json::add_string;
+using clipper::json::get_bool;
 using clipper::json::get_candidate_models;
 using clipper::json::get_int;
 using clipper::json::get_string;
@@ -31,6 +35,8 @@ using clipper::json::get_string_array;
 using clipper::json::json_parse_error;
 using clipper::json::json_semantic_error;
 using clipper::json::parse_json;
+using clipper::json::set_json_doc_from_redis_app_metadata;
+using clipper::json::to_json_string;
 
 namespace management {
 
@@ -44,7 +50,8 @@ const std::string SET_MODEL_VERSION = ADMIN_PATH + "/set_model_version$";
 // const std::string ADD_CONTAINER = ADMIN_PATH + "/add_container$";
 const std::string GET_METRICS = ADMIN_PATH + "/metrics$";
 const std::string GET_SELECTION_STATE = ADMIN_PATH + "/get_state$";
-const std::string GET_APPLICATIONS = ADMIN_PATH + "/get_applications$";
+const std::string GET_ALL_APPLICATIONS = ADMIN_PATH + "/get_all_applications$";
+const std::string GET_APPLICATION = ADMIN_PATH + "/get_application$";
 
 const std::string APPLICATION_JSON_SCHEMA = R"(
   {
@@ -53,6 +60,18 @@ const std::string APPLICATION_JSON_SCHEMA = R"(
    "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
    "default_output" := float,
    "latency_slo_micros" := int
+  }
+)";
+
+const std::string GET_ALL_APPLICATIONS_REQUESTS_SCHEMA = R"(
+  {
+    "verbose" := bool
+  }
+)";
+
+const std::string GET_APPLICATION_REQUESTS_SCHEMA = R"(
+  {
+    "name" := string
   }
 )";
 
@@ -186,6 +205,45 @@ class RequestHandler {
           }
         });
     server_.add_endpoint(
+        GET_ALL_APPLICATIONS, "GET",
+        [this](std::shared_ptr<HttpServer::Response> response,
+               std::shared_ptr<HttpServer::Request> request) {
+          try {
+            std::string result =
+                get_all_applications(request->content.string());
+            respond_http(result, "200 OK", response);
+          } catch (const json_parse_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), GET_ALL_APPLICATIONS_REQUESTS_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const json_semantic_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), GET_ALL_APPLICATIONS_REQUESTS_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const std::invalid_argument& e) {
+            respond_http(e.what(), "400 Bad Request", response);
+          }
+        });
+    server_.add_endpoint(
+        GET_APPLICATION, "GET",
+        [this](std::shared_ptr<HttpServer::Response> response,
+               std::shared_ptr<HttpServer::Request> request) {
+          try {
+            std::string result = get_application(request->content.string());
+            respond_http(result, "200 OK", response);
+          } catch (const json_parse_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), GET_APPLICATION_REQUESTS_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const json_semantic_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), GET_APPLICATION_REQUESTS_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const std::invalid_argument& e) {
+            respond_http(e.what(), "400 Bad Request", response);
+          }
+        });
+    server_.add_endpoint(
         GET_SELECTION_STATE, "POST",
         [this](std::shared_ptr<HttpServer::Response> response,
                std::shared_ptr<HttpServer::Request> request) {
@@ -311,6 +369,88 @@ class RequestHandler {
          << " already exists";
       throw std::invalid_argument(ss.str());
     }
+  }
+
+  /**
+   * Creates an endpoint that listens for requests to retrieve info about
+   * registered Clipper applications.
+   *
+   * JSON format:
+   * {
+   *  "verbose" := bool
+   * }
+   *
+   * \return Returns a JSON string that encodes a list with info about
+   * registered apps. If `verbose` == False, the encoded list has all registered
+   * apps' names. Else, the encoded map contains objects with full app
+   * information.
+   *
+   */
+  std::string get_all_applications(const std::string& json) {
+    rapidjson::Document d;
+    parse_json(json, d);
+
+    bool verbose = get_bool(d, "verbose");
+
+    std::vector<std::string> app_names =
+        clipper::redis::list_application_names(redis_connection_);
+
+    rapidjson::Document response_doc;
+    response_doc.SetArray();
+
+    if (verbose) {
+      for (const string& app_name : app_names) {
+        std::unordered_map<std::string, std::string> app_metadata =
+            clipper::redis::get_application(redis_connection_, app_name);
+        rapidjson::Document app_doc(&response_doc.GetAllocator());
+        set_json_doc_from_redis_app_metadata(app_doc, app_metadata);
+        /* We need to add each app's name to its returned JSON object. */
+        add_string(app_doc, "name", app_name);
+        response_doc.PushBack(app_doc, response_doc.GetAllocator());
+      }
+    } else {
+      for (const string& app_name : app_names) {
+        rapidjson::Value v(
+            rapidjson::StringRef(app_name.c_str(), app_name.length()));
+        response_doc.PushBack(v, response_doc.GetAllocator());
+      }
+    }
+    return to_json_string(response_doc);
+  }
+
+  /**
+   * Creates an endpoint that listens for requests to retrieve info about
+   * a specified Clipper application.
+   *
+   * JSON format:
+   * {
+   *  "name" := string
+   * }
+   *
+   * \return Returns a JSON string encoding a map of the specified application's
+   * attribute name-value pairs.
+   *
+   */
+  std::string get_application(const std::string& json) {
+    rapidjson::Document d;
+    parse_json(json, d);
+
+    std::string app_name = get_string(d, "name");
+    std::unordered_map<std::string, std::string> app_metadata =
+        clipper::redis::get_application(redis_connection_, app_name);
+
+    rapidjson::Document response_doc;
+    response_doc.SetObject();
+
+    if (app_metadata.size() > 0) {
+      /* We assume that redis::get_application returns an empty map iff no app
+       * exists */
+      /* If an app does exist, we need to add its name to the map. */
+      set_json_doc_from_redis_app_metadata(response_doc, app_metadata);
+      add_string(response_doc, "name", app_name);
+    }
+
+    return to_json_string(response_doc);
   }
 
   /**

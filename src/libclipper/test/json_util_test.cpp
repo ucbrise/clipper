@@ -220,3 +220,60 @@ TEST(JsonUtilTests, TestParseNestedObject) {
       get_object(nested_object, "twice_nested_object");
   EXPECT_EQ(get_double(twice_nested_object, "double_val"), double_val);
 }
+
+TEST(JsonUtilTests, TestSetJsonDocFromRedisAppMetadata) {
+  // Application data in redis storage format
+  std::string input_type_redis_format = "doubles";
+  std::string selection_policy_redis_format = "my_selection_policy";
+  std::string default_output_redis_format = "1.0";
+  std::string latency_slo_micros_redis_format = "10000";
+  // For now, we only support adding one candidate model
+  std::string candidate_model_names_redis_format = "music_random_features";
+
+  // Application data in desired externally-facing format
+  std::string input_type_public_format = "doubles";
+  std::string selection_policy_public_format = "my_selection_policy";
+  std::string default_output_public_format = "1.0";
+  int latency_slo_micros_public_format = 10000;
+  std::vector<std::string> candidate_model_names_public_format{
+      "music_random_features"};
+
+  // Field keys in redis storage format
+  std::string input_type_key_redis_format = "input_type";
+  std::string selection_policy_key_redis_format = "policy";
+  std::string default_output_key_redis_format = "default_output";
+  std::string latency_slo_micros_key_redis_format = "latency_slo_micros";
+  std::string candidate_model_names_key_redis_format = "candidate_model_names";
+
+  // Field keys in externally-facing format
+  std::string input_type_key_public_format = "input_type";
+  std::string selection_policy_key_public_format = "selection_policy";
+  std::string default_output_key_public_format = "default_output";
+  std::string latency_slo_micros_key_public_format = "latency_slo_micros";
+  std::string candidate_model_names_key_public_format = "candidate_model_names";
+
+  std::unordered_map<std::string, std::string> app_metadata =
+      std::unordered_map<std::string, std::string>{
+          {input_type_key_redis_format, input_type_redis_format},
+          {selection_policy_key_redis_format, selection_policy_redis_format},
+          {default_output_key_redis_format, default_output_redis_format},
+          {latency_slo_micros_key_redis_format,
+           latency_slo_micros_redis_format},
+          {candidate_model_names_key_redis_format,
+           candidate_model_names_redis_format}};
+
+  rapidjson::Document d;
+  set_json_doc_from_redis_app_metadata(d, app_metadata);
+
+  EXPECT_EQ(get_string(d, input_type_key_public_format.c_str()),
+            input_type_public_format);
+  EXPECT_EQ(get_string(d, selection_policy_key_public_format.c_str()),
+            selection_policy_public_format);
+  EXPECT_EQ(get_string(d, default_output_key_public_format.c_str()),
+            default_output_public_format);
+  EXPECT_EQ(get_int(d, latency_slo_micros_key_public_format.c_str()),
+            latency_slo_micros_public_format);
+  EXPECT_EQ(
+      get_string_array(d, candidate_model_names_key_public_format.c_str()),
+      candidate_model_names_public_format);
+}
