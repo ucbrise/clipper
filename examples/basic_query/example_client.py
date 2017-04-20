@@ -1,26 +1,13 @@
 from __future__ import print_function
+import sys
+import os
+sys.path.append(os.path.abspath('../../management/'))
+import clipper_manager as cm
 import json
 import requests
 from datetime import datetime
 import time
 import numpy as np
-
-
-def update(host, uid, x, y):
-    url = "http://%s:1337/example_app/update" % host
-    req_json = json.dumps({
-        'uid': uid,
-        'input': list(x),
-        'label': float(y),
-        'model_name': 'example_model',
-        'model_version': 1
-    })
-    headers = {'Content-type': 'application/json'}
-    start = datetime.now()
-    r = requests.post(url, headers=headers, data=req_json)
-    end = datetime.now()
-    latency = (end - start).total_seconds() * 1000.0
-    print("'%s', %f ms" % (r.text, latency))
 
 
 def predict(host, uid, x):
@@ -34,37 +21,15 @@ def predict(host, uid, x):
     print("'%s', %f ms" % (r.text, latency))
 
 
-def add_mnist_app(host):
-    url = "http://%s:1338/admin/add_app" % host
-    req_json = json.dumps({
-        "name":
-        "example_app",
-        "candidate_models": [{
-            "model_name": "example_model",
-            "model_version": 1
-        }],
-        "input_type":
-        "doubles",
-        "output_type":
-        "double",
-        "selection_policy":
-        "simple_policy",
-        "latency_slo_micros":
-        20000
-    })
-    headers = {'Content-type': 'application/json'}
-    start = datetime.now()
-    r = requests.post(url, headers=headers, data=req_json)
-    end = datetime.now()
-    latency = (end - start).total_seconds() * 1000.0
-    print("'%s', %f ms" % (r.text, latency))
-
-
 if __name__ == '__main__':
-    add_mnist_app("localhost")
+    host = "localhost"
+    clipper = cm.Clipper(host, check_for_docker=False)
+    clipper.register_application("example_app", "example_model", "doubles",
+                                 "-1.0", 40000)
+    clipper.register_external_model("example_model", 1, ["l1", "l2"],
+                                    "doubles")
     time.sleep(1.0)
-    uid = 4
+    uid = 0
     while True:
-        # mnist_update(uid, x[example_num], float(y[example_num]))
-        predict("localhost", uid, np.random.random(1000))
+        predict(host, uid, np.random.random(200))
         time.sleep(0.2)

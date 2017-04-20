@@ -92,6 +92,8 @@ class Clipper:
         Specifies level of execution for docker commands (sudo if true, standard if false).
     ssh_port : int, optional
         The SSH port to use. Default is port 22.
+    check_for_docker : bool, optional
+        If True, checks that Docker is running on the host machine. Default is True.
 
     Sets up the machine for running Clipper. This includes verifying
     SSH credentials and initializing Docker.
@@ -100,8 +102,13 @@ class Clipper:
     before connecting to a machine.
     """
 
-    def __init__(self, host, user=None, key_path=None, sudo=False,
-                 ssh_port=22):
+    def __init__(self,
+                 host,
+                 user=None,
+                 key_path=None,
+                 sudo=False,
+                 ssh_port=22,
+                 check_for_docker=True):
         self.sudo = sudo
         self.host = host
         if self._host_is_local():
@@ -116,8 +123,9 @@ class Clipper:
             env.user = user
             env.key_filename = key_path
             env.host_string = "%s:%d" % (host, ssh_port)
-        # Make sure docker is running on cluster
-        self._start_docker_if_necessary()
+        if check_for_docker:
+            # Make sure docker is running on cluster
+            self._start_docker_if_necessary()
 
     def _host_is_local(self):
         return self.host in LOCAL_HOST_NAMES
