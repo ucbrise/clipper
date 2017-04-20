@@ -9,7 +9,7 @@ The connection lifecycle defines the socket construction, destruction, and state
 - Sessions are initiated and sustained by a heartbeating process. The initial detection of a two-way heartbeat between Clipper and a container marks the creation of a successful connection, and the loss of heartbeat indicates that a connection is broken.
     
 ### RPC Message Types 
-Model containers communicate with Clipper using RPC messages of several types. Each RPC message is a [multi-part ZeroMQ message](http://zguide.zeromq.org/php:chapter2#toc11) beginning with an [empty ZeroMQ frame](http://zguide.zeromq.org/php:chapter3#The-Simple-Reply-Envelope). Each message contains a "Message Type" field, encoded as an **unsigned integer** that specifies one of the following types:
+Model containers communicate with Clipper using RPC messages of several types. Each RPC message is a [multi-part ZeroMQ message](http://zguide.zeromq.org/php:chapter2#toc11) beginning with an [empty ZeroMQ frame](http://zguide.zeromq.org/php:chapter3#The-Simple-Reply-Envelope). Each message contains a "Message Type" field, encoded as an **unsigned integer**, that specifies one of the following types:
 
 * 0: *New container message*
 * 1: *Container content message*  
@@ -98,7 +98,7 @@ Now that we are familiar with the different types of RPC messages, we will see h
            msg_type = struct.unpack("<I", msg_type_bytes)[0]
            assert msg_type == MESSAGE_TYPE_HEARTBEAT:
            heartbeat_type_bytes = socket.recv()
-           heartbeat_type = struct.unpack("<I",heartbeat_type_bytes)[0]
+           heartbeat_type = struct.unpack("<I", heartbeat_type_bytes)[0]
            assert heartbeat_type == 1
            break
    ```
@@ -112,11 +112,9 @@ In order to maintain a session, the container should frequently request heartbea
 
 2. Poll the container socket for new messages for a predefined duration `D`. If a message is received before `D` elapses, process the message according to its type (*heartbeat* or *container content*) and set `last_activity` to the current time.
 
-3. If `D` elapses, send a heartbeat message to Clipper.
+3. If `D` elapses, check the time elapsed since `last_activity`. If this exceeds the **socket activity timeout** `TO`, end the session. Otherwise, send a heartbeat message to Clipper.
 
-4. Check the time elapsed since `last_activity`. If this exceeds the **socket activity timeout** `TO`, end the session.
-
-5. Repeat steps 1-4. 
+4. Repeat steps 1-3. 
 
 Python example:
 
