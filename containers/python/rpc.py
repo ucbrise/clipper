@@ -117,12 +117,14 @@ class Server(threading.Thread):
                 receivable_sockets = dict(
                     poller.poll(SOCKET_POLLING_TIMEOUT_MILLIS))
                 if socket not in receivable_sockets or receivable_sockets[socket] != zmq.POLLIN:
+                    # We failed to receive a message before the specified polling timeout
                     if connected:
                         curr_time = datetime.now()
                         time_delta = curr_time - last_activity_time_millis
                         time_delta_millis = (time_delta.seconds * 1000) + (
                             time_delta.microseconds / 1000)
                         if time_delta_millis >= SOCKET_ACTIVITY_TIMEOUT_MILLIS:
+                            # Terminate the session
                             print("Connection timed out, reconnecting...")
                             connected = False
                             poller.unregister(socket)
@@ -132,6 +134,7 @@ class Server(threading.Thread):
                             self.send_heartbeat(socket)
                     continue
 
+                # We received a message before the polling timeout
                 if not connected:
                     connected = True
                 last_activity_time_millis = datetime.now()
