@@ -161,7 +161,7 @@ The container should then attempt to start a new session.
 
 ### For additional container lifecycle references, see:
 - [clipper/containers/python/rpc.py](https://github.com/ucbrise/clipper/blob/develop/containers/python/rpc.py)
-- [/clipper/containers/java/.../ModelContainer.java](https://github.com/ucbrise/clipper/blob/develop/containers/java/clipper-java-container/src/main/java/clipper/container/app/ModelContainer.java)
+- [clipper/containers/java/.../ModelContainer.java](https://github.com/ucbrise/clipper/blob/develop/containers/java/clipper-java-container/src/main/java/clipper/container/app/ModelContainer.java)
 
 ## Serialization Formats
 RPC requests sent from Clipper to model containers are divided into two categories: **Prediction Requests** and **Feedback Requests**. Each request type has a specific serialization format that defines the container deserialization procedure.
