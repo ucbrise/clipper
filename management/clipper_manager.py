@@ -266,7 +266,8 @@ class Clipper:
             The query latency objective for the application in microseconds.
             Default is 20,000 (20 ms).
         """
-        url = "http://%s:1338/admin/add_app" % self.host
+        url = "http://%s:%d/admin/add_app" % (self.host,
+                                              CLIPPER_MANAGEMENT_PORT)
         req_json = json.dumps({
             "name": name,
             "candidate_model_names": [model],
@@ -299,7 +300,12 @@ class Clipper:
         req_json = json.dumps({"verbose": verbose})
         headers = {'Content-type': 'application/json'}
         r = requests.get(url, headers=headers, data=req_json)
-        return json.loads(r.text)
+
+        if r.status_code == requests.codes.ok:
+            return r.json()
+        else:
+            print(r.text)
+            return None
 
     def get_app_info(self, name):
         """Gets detailed information about a registered application.
@@ -321,10 +327,15 @@ class Clipper:
         req_json = json.dumps({"name": name})
         headers = {'Content-type': 'application/json'}
         r = requests.get(url, headers=headers, data=req_json)
-        app_info = json.loads(r.text)
-        if len(app_info) == 0:
+
+        if r.status_code == requests.codes.ok:
+            app_info = r.json()
+            if len(app_info) == 0:
+                return None
+            return app_info
+        else:
+            print(r.text)
             return None
-        return app_info
 
     def inspect_selection_policy(self, app_name, uid):
         """Fetches a human-readable string with the current selection policy state.
@@ -346,7 +357,8 @@ class Clipper:
             message from Clipper describing the problem.
         """
 
-        url = "http://%s:1338/admin/get_state" % self.host
+        url = "http://%s:%d/admin/get_state" % (self.host,
+                                                CLIPPER_MANAGEMENT_PORT)
         req_json = json.dumps({
             "app_name": app_name,
             "uid": uid,
@@ -645,7 +657,7 @@ class Clipper:
             for this instance. On error, the string will be an error message
             (not JSON formatted).
         """
-        url = "http://%s:1337/metrics" % self.host
+        url = "http://%s:%d/metrics" % (self.host, CLIPPER_QUERY_PORT)
         r = requests.get(url)
         try:
             s = r.json()
@@ -673,7 +685,8 @@ class Clipper:
             selected model version.
 
         """
-        url = "http://%s:1338/admin/set_model_version" % self.host
+        url = "http://%s:%d/admin/set_model_version" % (
+            self.host, CLIPPER_MANAGEMENT_PORT)
         req_json = json.dumps({
             "model_name": model_name,
             "model_version": model_version
@@ -711,7 +724,8 @@ class Clipper:
 
     def _publish_new_model(self, name, version, labels, input_type,
                            container_name, model_data_path):
-        url = "http://%s:1338/admin/add_model" % self.host
+        url = "http://%s:%d/admin/add_model" % (self.host,
+                                                CLIPPER_MANAGEMENT_PORT)
         req_json = json.dumps({
             "model_name": name,
             "model_version": version,

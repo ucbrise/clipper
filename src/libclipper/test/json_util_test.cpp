@@ -1,9 +1,13 @@
 #include <gtest/gtest.h>
-
+#include <clipper/config.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/json_util.hpp>
+#include <clipper/redis.hpp>
+#include <clipper/selection_policies.hpp>
 
+using namespace clipper;
 using namespace clipper::json;
+using namespace clipper::redis;
 
 /* Test JSON serialization utilities
  * Note:
@@ -221,59 +225,42 @@ TEST(JsonUtilTests, TestParseNestedObject) {
   EXPECT_EQ(get_double(twice_nested_object, "double_val"), double_val);
 }
 
-TEST(JsonUtilTests, TestSetJsonDocFromRedisAppMetadata) {
+class SetJsonDocTest : public ::testing::Test {
+ public:
+  SetJsonDocTest() : redis_(std::make_shared<redox::Redox>()) {
+    Config& conf = get_config();
+    redis_->connect(conf.get_redis_address(), conf.get_redis_port());
+
+    // delete all keys
+    send_cmd_no_reply<std::string>(*redis_, {"FLUSHALL"});
+  }
+
+  virtual ~SetJsonDocTest() { redis_->disconnect(); }
+
+  std::shared_ptr<redox::Redox> redis_;
+};
+
+TEST_F(SetJsonDocTest, TestSetJsonDocFromRedisAppMetadata) {
   // Application data in redis storage format
-  std::string input_type_redis_format = "doubles";
-  std::string selection_policy_redis_format = "my_selection_policy";
-  std::string default_output_redis_format = "1.0";
-  std::string latency_slo_micros_redis_format = "10000";
-  // For now, we only support adding one candidate model
-  std::string candidate_model_names_redis_format = "music_random_features";
+  std::string input_type = "doubles";
+  std::string default_output = "1.0";
+  int latency_slo_micros = 10000;
+  std::string selection_policy = DefaultOutputSelectionPolicy::get_name();
+  std::vector<std::string> candidate_model_names =
+      std::vector<std::string>{"m", "k"};
 
-  // Application data in desired externally-facing format
-  std::string input_type_public_format = "doubles";
-  std::string selection_policy_public_format = "my_selection_policy";
-  std::string default_output_public_format = "1.0";
-  int latency_slo_micros_public_format = 10000;
-  std::vector<std::string> candidate_model_names_public_format{
-      "music_random_features"};
-
-  // Field keys in redis storage format
-  std::string input_type_key_redis_format = "input_type";
-  std::string selection_policy_key_redis_format = "policy";
-  std::string default_output_key_redis_format = "default_output";
-  std::string latency_slo_micros_key_redis_format = "latency_slo_micros";
-  std::string candidate_model_names_key_redis_format = "candidate_model_names";
-
-  // Field keys in externally-facing format
-  std::string input_type_key_public_format = "input_type";
-  std::string selection_policy_key_public_format = "selection_policy";
-  std::string default_output_key_public_format = "default_output";
-  std::string latency_slo_micros_key_public_format = "latency_slo_micros";
-  std::string candidate_model_names_key_public_format = "candidate_model_names";
-
+  add_application(*redis_, "myappname", candidate_model_names,
+                  parse_input_type(input_type), selection_policy,
+                  default_output, latency_slo_micros);
   std::unordered_map<std::string, std::string> app_metadata =
-      std::unordered_map<std::string, std::string>{
-          {input_type_key_redis_format, input_type_redis_format},
-          {selection_policy_key_redis_format, selection_policy_redis_format},
-          {default_output_key_redis_format, default_output_redis_format},
-          {latency_slo_micros_key_redis_format,
-           latency_slo_micros_redis_format},
-          {candidate_model_names_key_redis_format,
-           candidate_model_names_redis_format}};
+      get_application(*redis_, "myappname");
 
   rapidjson::Document d;
   set_json_doc_from_redis_app_metadata(d, app_metadata);
 
-  EXPECT_EQ(get_string(d, input_type_key_public_format.c_str()),
-            input_type_public_format);
-  EXPECT_EQ(get_string(d, selection_policy_key_public_format.c_str()),
-            selection_policy_public_format);
-  EXPECT_EQ(get_string(d, default_output_key_public_format.c_str()),
-            default_output_public_format);
-  EXPECT_EQ(get_int(d, latency_slo_micros_key_public_format.c_str()),
-            latency_slo_micros_public_format);
-  EXPECT_EQ(
-      get_string_array(d, candidate_model_names_key_public_format.c_str()),
-      candidate_model_names_public_format);
+  EXPECT_EQ(get_string(d, "input_type"), input_type);
+  EXPECT_EQ(get_string(d, "default_output"), default_output);
+  EXPECT_EQ(get_int(d, "latency_slo_micros"), latency_slo_micros);
+  EXPECT_EQ(get_string_array(d, "candidate_model_names"),
+            candidate_model_names);
 }

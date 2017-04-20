@@ -361,72 +361,66 @@ std::string to_json_string(rapidjson::Document& d) {
 }
 
 void check_key_exists_in_map(
-    std::string& key, std::unordered_map<std::string, std::string>& map) {
+    std::string& key, const std::unordered_map<std::string, std::string>& map) {
   if (map.find(key) == map.end()) {
     throw std::invalid_argument("key `" + key + "` does not exist in map");
   }
 }
 
 void add_app_input_type_from_redis(
-    std::unordered_map<std::string, std::string>& app_metadata,
+    const std::unordered_map<std::string, std::string>& app_metadata,
     rapidjson::Document& d) {
   std::string key = "input_type";
   check_key_exists_in_map(key, app_metadata);
-  add_string(d, key.c_str(), app_metadata[key]);
-}
-
-void add_app_selection_policy_from_redis(
-    std::unordered_map<std::string, std::string>& app_metadata,
-    rapidjson::Document& d) {
-  // selection_policy is stored under the column `policy` in the app table in
-  // redis
-  std::string redis_selection_policy_key = "policy";
-  check_key_exists_in_map(redis_selection_policy_key, app_metadata);
-  add_string(d, "selection_policy", app_metadata[redis_selection_policy_key]);
+  add_string(d, key.c_str(), app_metadata.at(key));
 }
 
 void add_app_default_output_from_redis(
-    std::unordered_map<std::string, std::string>& app_metadata,
+    const std::unordered_map<std::string, std::string>& app_metadata,
     rapidjson::Document& d) {
   std::string key = "default_output";
   check_key_exists_in_map(key, app_metadata);
-  add_string(d, key.c_str(), app_metadata[key]);
+  add_string(d, key.c_str(), app_metadata.at(key));
 }
 
 void add_app_latency_slo_micros_from_redis(
-    std::unordered_map<std::string, std::string>& app_metadata,
+    const std::unordered_map<std::string, std::string>& app_metadata,
     rapidjson::Document& d) {
   // latency_slo_micros is stored as a string in redis
   std::string key = "latency_slo_micros";
   check_key_exists_in_map(key, app_metadata);
-  add_int(d, key.c_str(), atoi(app_metadata[key].c_str()));
+  add_int(d, key.c_str(), atoi(app_metadata.at(key).c_str()));
 }
 
 void add_app_candidate_model_names_from_redis(
-    std::unordered_map<std::string, std::string>& app_metadata,
+    const std::unordered_map<std::string, std::string>& app_metadata,
     rapidjson::Document& d) {
   std::string key = "candidate_model_names";
   check_key_exists_in_map(key, app_metadata);
-  // Clipper currently only accepts a single candidate_model_name. It is stored
-  // as a string in redis
-  std::string model_name = app_metadata[key];
 
-  // Our external interface should put this candidate_model_name in an array
+  // candidate model names are stored in a comma-separated string in redis
+  std::string model_names_redis_format = app_metadata.at(key);
+  std::vector<std::string> model_names;
+  boost::split(model_names, model_names_redis_format, boost::is_any_of(","));
+
+  // Our external interface should put these names in an array
   rapidjson::Document candidate_model_names_doc(&d.GetAllocator());
   candidate_model_names_doc.SetArray();
-  rapidjson::Value string_val(
-      rapidjson::StringRef(model_name.c_str(), model_name.length()),
-      d.GetAllocator());
-  candidate_model_names_doc.PushBack(string_val, d.GetAllocator());
+  for (auto model_name : model_names) {
+    rapidjson::Value string_val(
+            rapidjson::StringRef(model_name.c_str(), model_name.length()),
+            d.GetAllocator());
+    candidate_model_names_doc.PushBack(string_val, d.GetAllocator());
+  }
+
   add_object(d, key.c_str(), candidate_model_names_doc);
 }
 
 void set_json_doc_from_redis_app_metadata(
     rapidjson::Document& d,
-    std::unordered_map<std::string, std::string>& app_metadata) {
+    const std::unordered_map<std::string, std::string>& app_metadata) {
   d.SetObject();
   add_app_input_type_from_redis(app_metadata, d);
-  add_app_selection_policy_from_redis(app_metadata, d);
   add_app_default_output_from_redis(app_metadata, d);
   add_app_latency_slo_micros_from_redis(app_metadata, d);
   add_app_candidate_model_names_from_redis(app_metadata, d);

@@ -1,15 +1,10 @@
 #ifndef CLIPPER_LIB_JSON_UTIL_H
 #define CLIPPER_LIB_JSON_UTIL_H
 
-#include <stdexcept>
-
-#include <boost/algorithm/string.hpp>
-
-#include <unordered_map>
-
 #include <rapidjson/document.h>
-
 #include <clipper/datatypes.hpp>
+#include <stdexcept>
+#include <unordered_map>
 
 using clipper::Input;
 using clipper::InputType;
@@ -131,7 +126,7 @@ std::string to_json_string(rapidjson::Document& d);
  */
 void set_json_doc_from_redis_app_metadata(
     rapidjson::Document& d,
-    std::unordered_map<std::string, std::string>& app_metadata);
+    const std::unordered_map<std::string, std::string>& app_metadata);
 
 }  // namespace json
 }  // namespace clipper

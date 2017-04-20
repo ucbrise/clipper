@@ -296,8 +296,8 @@ TEST_F(RedisTest, SubscriptionDetectModelDelete) {
   subscribe_to_model_changes(
       *subscriber_, [&notification_recv, &notification_mutex, &recv, model](
                         const std::string& key, const std::string& event_type) {
-        log_info_formatted(LOGGING_TAG_REDIS_TEST,
-                           "MODEL CHANGE DETECTED: ", event_type);
+        log_info_formatted(LOGGING_TAG_REDIS_TEST, "MODEL CHANGE DETECTED: ",
+                           event_type);
         ASSERT_TRUE(event_type == "hdel" || event_type == "del");
         std::unique_lock<std::mutex> l(notification_mutex);
         recv = true;
@@ -364,9 +364,9 @@ TEST_F(RedisTest, SubscriptionDetectContainerDelete) {
       *subscriber_,
       [&notification_recv, &notification_mutex, &recv, replica_key](
           const std::string& key, const std::string& event_type) {
-        log_info_formatted(
-            LOGGING_TAG_REDIS_TEST,
-            "CONTAINER DELETED CALLBACK. EVENT TYPE: ", event_type);
+        log_info_formatted(LOGGING_TAG_REDIS_TEST,
+                           "CONTAINER DELETED CALLBACK. EVENT TYPE: ",
+                           event_type);
         ASSERT_TRUE(event_type == "hdel" || event_type == "del");
         std::unique_lock<std::mutex> l(notification_mutex);
         recv = true;

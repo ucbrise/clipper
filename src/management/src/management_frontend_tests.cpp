@@ -43,12 +43,10 @@ class ManagementFrontendTest : public ::testing::Test {
   void set_add_app_request_doc(rapidjson::Document& d, std::string& name,
                                std::vector<std::string>& candidate_model_names,
                                std::string& input_type,
-                               std::string& selection_policy,
                                std::string& default_output,
                                int latency_slo_micros) {
     d.SetObject();
     add_string(d, "name", name);
-    add_string(d, "selection_policy", selection_policy);
     add_string_array(d, "candidate_model_names", candidate_model_names);
     add_string(d, "input_type", input_type);
     add_string(d, "default_output", default_output);
@@ -144,7 +142,6 @@ TEST_F(ManagementFrontendTest, TestAddApplicationMalformedJson) {
 TEST_F(ManagementFrontendTest, TestGetApplicationCorrect) {
   std::string name = "my_app_name";
   std::string input_type = "doubles";
-  std::string selection_policy = DefaultOutputSelectionPolicy::get_name();
   std::string default_output = "1.0";
   int latency_slo_micros = 10000;
   // For now, we only support adding one candidate model
@@ -152,8 +149,7 @@ TEST_F(ManagementFrontendTest, TestGetApplicationCorrect) {
 
   rapidjson::Document add_app_json_document;
   set_add_app_request_doc(add_app_json_document, name, candidate_model_names,
-                          input_type, selection_policy, default_output,
-                          latency_slo_micros);
+                          input_type, default_output, latency_slo_micros);
   std::string add_app_json_string = to_json_string(add_app_json_document);
 
   ASSERT_EQ(rh_.add_application(add_app_json_string), "Success!");
@@ -171,10 +167,10 @@ TEST_F(ManagementFrontendTest, TestGetApplicationCorrect) {
   ASSERT_EQ(add_app_json_document, response_doc);
 }
 
-TEST_F(ManagementFrontendTest, TestGetNonexistantApplicationCorrect) {
+TEST_F(ManagementFrontendTest, TestGetNonexistentApplicationCorrect) {
   std::string list_apps_json = R"(
   {
-    "name": "nonexistant_app"
+    "name": "nonexistent_app"
   }
   )";
   std::string json_response = rh_.get_application(list_apps_json);
@@ -195,7 +191,6 @@ TEST_F(ManagementFrontendTest, TestGetAllApplicationsVerboseCorrect) {
   std::string name1 = "my_app_name1";
   std::string name2 = "my_app_name2";
   std::string input_type = "doubles";
-  std::string selection_policy = DefaultOutputSelectionPolicy::get_name();
   std::string default_output = "1.0";
   int latency_slo_micros = 10000;
   // For now, we only support adding one candidate model
@@ -203,14 +198,12 @@ TEST_F(ManagementFrontendTest, TestGetAllApplicationsVerboseCorrect) {
 
   rapidjson::Document add_app1_json_document;
   set_add_app_request_doc(add_app1_json_document, name1, candidate_model_names,
-                          input_type, selection_policy, default_output,
-                          latency_slo_micros);
+                          input_type, default_output, latency_slo_micros);
   std::string add_app1_json_string = to_json_string(add_app1_json_document);
 
   rapidjson::Document add_app2_json_document;
   set_add_app_request_doc(add_app2_json_document, name2, candidate_model_names,
-                          input_type, selection_policy, default_output,
-                          latency_slo_micros);
+                          input_type, default_output, latency_slo_micros);
   std::string add_app2_json_string = to_json_string(add_app2_json_document);
 
   ASSERT_EQ(rh_.add_application(add_app1_json_string), "Success!");
@@ -274,7 +267,6 @@ TEST_F(ManagementFrontendTest, TestGetAllApplicationsNotVerboseCorrect) {
   std::string name1 = "my_app_name1";
   std::string name2 = "my_app_name2";
   std::string input_type = "doubles";
-  std::string selection_policy = DefaultOutputSelectionPolicy::get_name();
   std::string default_output = "1.0";
   int latency_slo_micros = 10000;
   // For now, we only support adding one candidate model
@@ -282,14 +274,12 @@ TEST_F(ManagementFrontendTest, TestGetAllApplicationsNotVerboseCorrect) {
 
   rapidjson::Document add_app1_json_document;
   set_add_app_request_doc(add_app1_json_document, name1, candidate_model_names,
-                          input_type, selection_policy, default_output,
-                          latency_slo_micros);
+                          input_type, default_output, latency_slo_micros);
   std::string add_app1_json_string = to_json_string(add_app1_json_document);
 
   rapidjson::Document add_app2_json_document;
   set_add_app_request_doc(add_app2_json_document, name2, candidate_model_names,
-                          input_type, selection_policy, default_output,
-                          latency_slo_micros);
+                          input_type, default_output, latency_slo_micros);
   std::string add_app2_json_string = to_json_string(add_app2_json_document);
 
   ASSERT_EQ(rh_.add_application(add_app1_json_string), "Success!");
