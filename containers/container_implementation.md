@@ -18,7 +18,7 @@ Model containers communicate with Clipper using RPC messages of several types. E
 The following subsections explain the function and structure of each type of message.
 
 #### New Container Message
-This type of message is sent to Clipper by a container at the beginning of a session. It carries container metadata (name, version, etc) that Clipper uses to register the container with the system. Beyond the required empty frame and **Message Type** fields, *new container messages* contain the following strictly-ordered fields:
+This type of message is sent to Clipper by a container at the beginning of a session. It carries container metadata (name, version, etc) that Clipper uses to register the container with the system. Beyond the required empty frame and **Message Type** field, *new container messages* contain the following strictly-ordered fields:
   * **Model Name**: The user-defined name of the model, as a string
   * **Model Version**: The **integer** model version. **This should be sent as a string**.
   * **Input Type**: The type of input that the model should accept. This must be one of the following **integer** values, sent as a **string**:
@@ -38,7 +38,7 @@ The following is an example construction of a *new container message* in Python:
     socket.send(str(<MODEL_INPUT_TYPE>))
     
 #### Container Content Messages
-Once Clipper has registered a container, these content messages are exchanged between the container and Clipper in order to serve prediction requests. These messages contain serialized queries (from Clipper) or serialized responses (from the container). For more information on query-response serialization, see the "Serializing Prediction Requests" and "Serializing Prediction Responses" sections below. Beyond the required empty frame and **Message Type** fields, *container content messages* contain the following strictly-ordered fields:
+Once Clipper has registered a container, these content messages are exchanged between the container and Clipper in order to serve prediction requests. These messages contain serialized queries (from Clipper) or serialized responses (from the container). For more information on query-response serialization, see the "Serializing Prediction Requests" and "Serializing Prediction Responses" sections below. Beyond the required empty frame and **Message Type** field, *container content messages* contain the following strictly-ordered fields:
 
   * ** Message Id**: A unique identifier, encoded as an unsigned integer, corresponding to the container content message. When handling a prediction request sent via a *contaner content message* from Clipper, the response *container content message* must specify the same **message id** as the request message. Clipper will use this identifier to correctly construct request-response pairs in order to return a query result.
   * ** Message Content**: Byte content representing either a serialized prediction request (in the case of inbound messages from Clipper) or a serialized prediction response (in the case of outbound messages from the container).
@@ -52,7 +52,7 @@ The following is an example construction of a *container content message* corres
     socket.send(<SERIALIZED_MESSAGE_CONTENT_AS_BYTES>)
     
 #### Heartbeat Messages
-These messages are used for session initialization as well as maintenance. By sending and receiving heartbeats, containers are able to determine whether or not Clipper is still active and respond accordingly. Beyond the required empty frame and **Message Type** fields, *heartbeat messages* contain the following strictly-ordered fields:
+These messages are used for session initialization as well as maintenance. By sending and receiving heartbeats, containers are able to determine whether or not Clipper is still active and respond accordingly. Beyond the required empty frame and **Message Type** field, *heartbeat messages* contain the following strictly-ordered fields:
 
   * ** Heartbeat Type (INBOUND ONLY) **: This field contains a binary, unsigned integer and is only present in **inbound** messages received from Clipper. The value meanings are as follows:
     * 1: This indicates that Clipper does not have any metadata for the recipient container. This serves as an indication that the container should send a *new container message* so that Clipper can register it.
@@ -198,5 +198,8 @@ RPC requests sent from Clipper to model containers are divided into two categori
      # Ignore the extraneous final null terminator by using a -1 slice
      inputs = np.array(raw_concatenated_content.split('\0')[:-1], dtype=np.string_)
      ```
+
+### Serializing Prediction Responses
+Prediction responses are float values. These should be serializd via byte encoding in little endian format.
 
 #### For additional deserialization references, see `clipper/containers/python/rpc.py`
