@@ -8,6 +8,7 @@
 #include <clipper/config.hpp>
 #include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/exceptions.hpp>
 #include <clipper/json_util.hpp>
 #include <clipper/logging.hpp>
 #include <clipper/metrics.hpp>
@@ -33,6 +34,16 @@ namespace query_frontend {
 
 const std::string LOGGING_TAG_QUERY_FRONTEND = "QUERYFRONTEND";
 const std::string GET_METRICS = "^/metrics$";
+
+const char* PREDICTION_RESPONSE_KEY_QUERY_ID = "query_id";
+const char* PREDICTION_RESPONSE_KEY_OUTPUT = "output";
+const char* PREDICTION_RESPONSE_KEY_USED_DEFAULT = "default";
+const char* PREDICTION_ERROR_RESPONSE_KEY_ERROR = "error";
+const char* PREDICTION_ERROR_RESPONSE_KEY_CAUSE = "cause";
+
+const std::string PREDICTION_ERROR_NAME_JSON = "Json error";
+const std::string PREDICTION_ERROR_NAME_QUERY_PROCESSING =
+    "Query processing error";
 
 const std::string PREDICTION_JSON_SCHEMA = R"(
   {
@@ -118,9 +129,10 @@ class RequestHandler {
             InputType input_type =
                 clipper::parse_input_type(app_info["input_type"]);
             std::string policy = app_info["policy"];
+            std::string default_output = app_info["default_output"];
             int latency_slo_micros = std::stoi(app_info["latency_slo_micros"]);
             add_application(name, candidate_model_names, input_type, policy,
-                            latency_slo_micros);
+                            default_output, latency_slo_micros);
           }
         });
 
@@ -181,7 +193,21 @@ class RequestHandler {
 
   void add_application(std::string name, std::vector<std::string> models,
                        InputType input_type, std::string policy,
-                       long latency_slo_micros) {
+                       std::string default_output, long latency_slo_micros) {
+    // TODO: QueryProcessor should handle this. We need to decide how the
+    // default output fits into the generic selection policy API. Do all
+    // selection policies have a default output?
+    //
+    // Initialize selection state for this application
+    if (policy == clipper::DefaultOutputSelectionPolicy::get_name()) {
+      clipper::DefaultOutputSelectionPolicy p;
+      clipper::Output parsed_default_output(std::stod(default_output), {});
+      auto init_state = p.init_state(parsed_default_output);
+      clipper::StateKey state_key{name, clipper::DEFAULT_USER_ID, 0};
+      query_processor_.get_state_table()->put(state_key,
+                                              p.serialize(init_state));
+    }
+
     auto predict_fn = [this, name, input_type, policy, latency_slo_micros,
                        models](std::shared_ptr<HttpServer::Response> response,
                                std::shared_ptr<HttpServer::Request> request) {
@@ -201,21 +227,33 @@ class RequestHandler {
             latency_slo_micros, input_type);
         prediction.then([response](boost::future<Response> f) {
           Response r = f.get();
-          std::stringstream ss;
-          ss << "qid:" << r.query_id_ << ", predict:" << r.output_.y_hat_;
-          std::string content = ss.str();
+          std::string content = get_prediction_response_content(r);
           respond_http(content, "200 OK", response);
         });
       } catch (const json_parse_error& e) {
         std::string error_msg =
             json_error_msg(e.what(), PREDICTION_JSON_SCHEMA);
-        respond_http(error_msg, "400 Bad Request", response);
+        std::string json_error_response = get_prediction_error_response_content(
+            PREDICTION_ERROR_NAME_JSON, error_msg);
+        respond_http(json_error_response, "400 Bad Request", response);
       } catch (const json_semantic_error& e) {
         std::string error_msg =
             json_error_msg(e.what(), PREDICTION_JSON_SCHEMA);
-        respond_http(error_msg, "400 Bad Request", response);
+        std::string json_error_response = get_prediction_error_response_content(
+            PREDICTION_ERROR_NAME_JSON, error_msg);
+        respond_http(json_error_response, "400 Bad Request", response);
       } catch (const std::invalid_argument& e) {
-        respond_http(e.what(), "400 Bad Request", response);
+        // This invalid argument exception is most likely the propagation of an
+        // exception thrown
+        // when Rapidjson attempts to parse an invalid json schema
+        std::string json_error_response = get_prediction_error_response_content(
+            PREDICTION_ERROR_NAME_JSON, e.what());
+        respond_http(json_error_response, "400 Bad Request", response);
+      } catch (const clipper::PredictError& e) {
+        std::string error_msg = e.what();
+        std::string json_error_response = get_prediction_error_response_content(
+            PREDICTION_ERROR_NAME_QUERY_PROCESSING, error_msg);
+        respond_http(json_error_response, "400 Bad Request", response);
       }
     };
     std::string predict_endpoint = "^/" + name + "/predict$";
@@ -259,11 +297,56 @@ class RequestHandler {
     server_.add_endpoint(update_endpoint, "POST", update_fn);
   }
 
+  /**
+   * Obtains the json-formatted http response content for a successful query
+   *
+   * JSON format for prediction response:
+   * {
+   *    "query_id" := int,
+   *    "output" := float,
+   *    "default" := boolean
+   * }
+   */
+  static const std::string get_prediction_response_content(
+      Response& query_response) {
+    rapidjson::Document json_response;
+    json_response.SetObject();
+    clipper::json::add_long(json_response, PREDICTION_RESPONSE_KEY_QUERY_ID,
+                            query_response.query_id_);
+    clipper::json::add_double(json_response, PREDICTION_RESPONSE_KEY_OUTPUT,
+                              query_response.output_.y_hat_);
+    clipper::json::add_bool(json_response, PREDICTION_RESPONSE_KEY_USED_DEFAULT,
+                            query_response.output_is_default_);
+    std::string content = clipper::json::to_json_string(json_response);
+    return content;
+  }
+
+  /**
+   * Obtains the json-formatted http response content for a query
+   * that could not be completed due to an error
+   *
+   * JSON format for error prediction response:
+   * {
+   *    "error" := string,
+   *    "cause" := string
+   * }
+   */
+  static const std::string get_prediction_error_response_content(
+      const std::string error_name, const std::string error_msg) {
+    rapidjson::Document error_response;
+    error_response.SetObject();
+    clipper::json::add_string(error_response,
+                              PREDICTION_ERROR_RESPONSE_KEY_ERROR, error_name);
+    clipper::json::add_string(error_response,
+                              PREDICTION_ERROR_RESPONSE_KEY_CAUSE, error_msg);
+    return clipper::json::to_json_string(error_response);
+  }
+
   /*
    * JSON format for prediction query request:
    * {
    *  "uid" := string,
-   *  "input" := [double] | [int] | [string] | [byte] | [float],
+   *  "input" := [double] | [int] | [string] | [byte] | [float]
    * }
    */
   boost::future<Response> decode_and_handle_predict(

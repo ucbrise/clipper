@@ -40,6 +40,8 @@ class Output {
   Output(Output &&) = default;
   Output &operator=(Output &&) = default;
   Output(double y_hat, std::vector<VersionedModelId> models_used);
+  bool operator==(const Output &rhs) const;
+  bool operator!=(const Output &rhs) const;
   double y_hat_;
   std::vector<VersionedModelId> models_used_;
 };
@@ -191,7 +193,7 @@ class Query {
   ~Query() = default;
 
   Query(std::string label, long user_id, std::shared_ptr<Input> input,
-        long latency_micros, std::string selection_policy,
+        long latency_budget_micros, std::string selection_policy,
         std::vector<VersionedModelId> candidate_models);
 
   // Note that it should be relatively cheap to copy queries because
@@ -210,7 +212,8 @@ class Query {
   std::string label_;
   long user_id_;
   std::shared_ptr<Input> input_;
-  long latency_micros_;
+  // TODO change this to a deadline instead of a duration
+  long latency_budget_micros_;
   std::string selection_policy_;
   std::vector<VersionedModelId> candidate_models_;
   std::chrono::time_point<std::chrono::high_resolution_clock> create_time_;
@@ -220,8 +223,8 @@ class Response {
  public:
   ~Response() = default;
 
-  Response(Query query, QueryId query_id, long duration_micros, Output output,
-           std::vector<VersionedModelId> models_used);
+  Response(Query query, QueryId query_id, const long duration_micros,
+           Output output, const bool is_default);
 
   // default copy constructors
   Response(const Response &) = default;
@@ -237,7 +240,7 @@ class Response {
   QueryId query_id_;
   long duration_micros_;
   Output output_;
-  std::vector<VersionedModelId> models_used_;
+  bool output_is_default_;
 };
 
 class Feedback {

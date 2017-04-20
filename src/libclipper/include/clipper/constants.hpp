@@ -28,5 +28,7 @@ const std::string ITEM_PART_CONCATENATOR = ":";
 
 const std::string LOGGING_TAG_CLIPPER = "Clipper";
 
+constexpr int DEFAULT_USER_ID = 0;
+
 }  // namespace clipper
 #endif

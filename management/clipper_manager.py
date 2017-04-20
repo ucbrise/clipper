@@ -245,9 +245,9 @@ class Clipper:
 
     def register_application(self,
                              name,
-                             candidate_model_names,
+                             model,
                              input_type,
-                             selection_policy,
+                             default_output,
                              slo_micros=20000):
         """Register a new Clipper application.
 
@@ -255,15 +255,13 @@ class Clipper:
         ----------
         name : str
             The name of the application.
-        candidate_model_names : list of str
-            The list of model names this application will attempt to query.
-            Example::
-                candidate_model_names = ["my_model", "other_model"]
+        model : str
+            The name of the model this application will query.
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
-        selection_policy : str
-            The name of the model selection policy to be used for the
-            application.
+        default_output : float
+            The default prediction to use if the model does not return a prediction
+            by the end of the latency objective.
         slo_micros : int, optional
             The query latency objective for the application in microseconds.
             Default is 20,000 (20 ms).
@@ -271,9 +269,9 @@ class Clipper:
         url = "http://%s:1338/admin/add_app" % self.host
         req_json = json.dumps({
             "name": name,
-            "candidate_model_names": candidate_model_names,
+            "candidate_model_names": [model],
             "input_type": input_type,
-            "selection_policy": selection_policy,
+            "default_output": str(default_output),
             "latency_slo_micros": slo_micros
         })
         headers = {'Content-type': 'application/json'}

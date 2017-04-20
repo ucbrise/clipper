@@ -51,7 +51,7 @@ const std::string APPLICATION_JSON_SCHEMA = R"(
    "name" := string,
    "candidate_model_names" := [string],
    "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
-   "selection_policy" := string,
+   "default_output" := float,
    "latency_slo_micros" := int
   }
 )";
@@ -80,22 +80,6 @@ const std::string SELECTION_JSON_SCHEMA = R"(
    "uid" := int,
   }
 )";
-
-template <typename Policy>
-std::string lookup_selection_state(
-    clipper::StateDB& state_db, const std::string& appname, const int uid,
-    const std::vector<VersionedModelId> candidate_models) {
-  auto hashkey = Policy::hash_models(candidate_models);
-  typename Policy::state_type state;
-  std::string serialized_state;
-  if (auto state_opt = state_db.get(clipper::StateKey{appname, uid, hashkey})) {
-    serialized_state = *state_opt;
-    state = Policy::deserialize_state(serialized_state);
-  } else {
-    state = Policy::initialize(candidate_models);
-  }
-  return Policy::state_debug_string(state);
-}
 
 void respond_http(std::string content, std::string message,
                   std::shared_ptr<HttpServer::Response> response) {
@@ -236,7 +220,7 @@ class RequestHandler {
    *  "name" := string,
    *  "candidate_model_names" := [string],
    *  "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
-   *  "selection_policy" := string,
+   *  "default_output" := float,
    *  "latency_slo_micros" := int
    * }
    */
@@ -247,9 +231,19 @@ class RequestHandler {
     std::string app_name = get_string(d, "name");
     std::vector<string> candidate_model_names =
         get_string_array(d, "candidate_model_names");
+    if (candidate_model_names.size() != 1) {
+      std::stringstream ss;
+      ss << "Applications must provide exactly 1 candidate model. ";
+      ss << app_name << " provided " << candidate_model_names.size();
+      std::string error_msg = ss.str();
+      clipper::log_error(LOGGING_TAG_MANAGEMENT_FRONTEND, error_msg);
+      throw std::invalid_argument(error_msg);
+    }
     InputType input_type =
         clipper::parse_input_type(get_string(d, "input_type"));
-    std::string selection_policy = get_string(d, "selection_policy");
+    std::string default_output = get_string(d, "default_output");
+    std::string selection_policy =
+        clipper::DefaultOutputSelectionPolicy::get_name();
     int latency_slo_micros = get_int(d, "latency_slo_micros");
     // check if application already exists
     std::unordered_map<std::string, std::string> existing_app_data =
@@ -257,7 +251,7 @@ class RequestHandler {
     if (existing_app_data.empty()) {
       if (clipper::redis::add_application(
               redis_connection_, app_name, candidate_model_names, input_type,
-              selection_policy, latency_slo_micros)) {
+              selection_policy, default_output, latency_slo_micros)) {
         return "Success!";
       } else {
         std::stringstream ss;
@@ -334,13 +328,18 @@ class RequestHandler {
     parse_json(json, d);
 
     std::string app_name = get_string(d, "app_name");
+    int uid = get_int(d, "uid");
+    if (uid != clipper::DEFAULT_USER_ID) {
+      clipper::log_error_formatted(LOGGING_TAG_MANAGEMENT_FRONTEND,
+                                   "Personalized default outputs are not "
+                                   "currently supported. Using default UID {} "
+                                   "instead",
+                                   clipper::DEFAULT_USER_ID);
+      uid = clipper::DEFAULT_USER_ID;
+    }
     auto app_metadata =
         clipper::redis::get_application(redis_connection_, app_name);
-
-    std::string policy = app_metadata["policy"];
-    return "ERROR: " + policy +
-           " does not support looking up selection policy state (" + app_name +
-           ")";
+    return app_metadata["default_output"];
   }
 
   bool set_model_version(const string& model_name,

@@ -8,6 +8,12 @@ import matplotlib.pyplot as plt
 
 DEMO_UID = 0
 
+PREDICTION_RESPONSE_KEY_QUERY_ID = "query_id"
+PREDICTION_RESPONSE_KEY_OUTPUT = "output"
+PREDICTION_RESPONSE_KEY_USED_DEFAULT = "default"
+PREDICTION_ERROR_RESPONSE_KEY_ERROR = "error"
+PREDICTION_ERROR_RESPONSE_KEY_CAUSE = "cause"
+
 classes = [
     'airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse',
     'ship', 'truck'
@@ -95,10 +101,21 @@ def cifar_update(host, app, uid, x, y, print_result=False):
 
 
 def parse_pred(p):
-    splits = p.split(",")
-    qid = int(splits[0].strip().split(":")[1])
-    pred = float(splits[1].strip().split(":")[1])
-    return qid, pred
+    json_prediction = json.loads(p)
+    if PREDICTION_RESPONSE_KEY_OUTPUT in json_prediction:
+        # Prediction was successful, return parsed data
+        qid = int(json_prediction[PREDICTION_RESPONSE_KEY_QUERY_ID])
+        pred = int(json_prediction[PREDICTION_RESPONSE_KEY_OUTPUT])
+        return qid, pred
+
+    elif PREDICTION_ERROR_RESPONSE_KEY_ERROR in json_prediction:
+        # Prediction is an error, log the issue
+        error_name = str(json_prediction[PREDICTION_ERROR_RESPONSE_KEY_ERROR])
+        print(error_name)
+        error_cause = str(json_prediction[PREDICTION_ERROR_RESPONSE_KEY_CAUSE])
+        print("Error executing prediction!")
+        print("{}: {}".format(error_name, error_cause))
+        return None
 
 
 def cifar_prediction(host, app, uid, x):
@@ -109,11 +126,15 @@ def cifar_prediction(host, app, uid, x):
     r = requests.post(url, headers=headers, data=req_json)
     end = datetime.now()
     latency = (end - start).total_seconds() * 1000.0
-    qid, pred = parse_pred(r.text)
-    if pred == -1.0:
-        pred = 0.0
-    assert pred == 1.0 or pred == 0.0
-    return (pred, latency)
+    parsed_prediction = parse_pred(r.text)
+    if parsed_prediction:
+        qid, pred = parsed_prediction
+        if pred == -1.0:
+            pred = 0.0
+        assert pred == 1.0 or pred == 0.0
+        return (pred, latency)
+    else:
+        return None
 
 
 def run_iteration(host, app, uid, test_x, test_y):
@@ -127,7 +148,10 @@ def run_iteration(host, app, uid, test_x, test_y):
     for i in range(total):
         example_num = np.random.randint(0, len(test_y))
         correct_y = float(test_y[example_num])
-        pred_y, latency = cifar_prediction(host, app, uid, test_x[example_num])
+        prediction = cifar_prediction(host, app, uid, test_x[example_num])
+        if not prediction:
+            continue
+        pred_y, latency = prediction
         if correct_y == pred_y:
             if correct_y == 0:
                 true_neg += 1

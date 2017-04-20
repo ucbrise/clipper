@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
 
 add_executable(end_to_end_bench src/end_to_end_bench.cpp)
 
-target_link_libraries(end_to_end_bench clipper boost)
+target_link_libraries(end_to_end_bench clipper boost cxxopts)
 
 
 ##################################
