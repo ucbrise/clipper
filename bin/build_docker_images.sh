@@ -18,6 +18,11 @@ time docker build -t clipper/query_frontend -f QueryFrontendDockerfile ./
 time docker build -t clipper/management_frontend -f ManagementFrontendDockerfile ./
 cd -
 
+# Build Spark JVM Container
+cd $DIR/../container/jvm
+time docker build -t clipper/spark-scala-container -f SparkScalaContainerDockerfile ./
+cd -
+
 # Build the Python model containers
 cd $DIR/../containers/python
 ./build_container_images.sh

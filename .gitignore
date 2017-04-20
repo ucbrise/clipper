@@ -14,3 +14,4 @@ target/
 
 # scala
 dependency-reduced-pom.xml
+*.iml

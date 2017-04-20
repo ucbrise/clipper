@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>ai.clipper</groupId>
+    <artifactId>clipper-parent</artifactId>
+    <version>0.1</version>
+  </parent>
+  <artifactId>clipper-container</artifactId>
+  <name>${project.artifactId}</name>
+
+  <dependencies>
+    <!-- <dependency> -->
+    <!--   <groupId>org.apache.spark</groupId> -->
+    <!--   <artifactId>spark&#45;core_${scala.binary.version}</artifactId> -->
+    <!--   <scope>provided</scope> -->
+    <!-- </dependency> -->
+    <!-- <dependency> -->
+    <!--   <groupId>org.apache.spark</groupId> -->
+    <!--   <artifactId>spark&#45;mllib_${scala.binary.version}</artifactId> -->
+    <!--   <scope>provided</scope> -->
+    <!-- </dependency> -->
+    <!-- <dependency> -->
+    <!--     <groupId>org.json4s</groupId> -->
+    <!--     <artifactId>json4s&#45;jackson_${scala.compat.version}</artifactId> -->
+    <!-- </dependency> -->
+    <dependency>
+      <groupId>org.scalatest</groupId>
+      <artifactId>scalatest_${scala.compat.version}</artifactId>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <outputDirectory>target/scala-${scala.binary.version}/classes</outputDirectory>
+    <testOutputDirectory>target/scala-${scala.binary.version}/test-classes</testOutputDirectory>
+    <plugins>
+      <plugin>
+        <groupId>org.scalatest</groupId>
+        <artifactId>scalatest-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>2.3</version>
+        <configuration>
+          <!-- <relocations> -->
+          <!--   <relocation> -->
+          <!--     <pattern>org.eclipse.jetty</pattern> -->
+          <!--     <shadedPattern>edu.berkeley.veloxms.jetty</shadedPattern> -->
+          <!--   </relocation> -->
+          <!-- </relocations> -->
+          <createDependencyReducedPom>true</createDependencyReducedPom>
+          <!-- <minimizeJar>true</minimizeJar> -->
+          <!-- <promoteTransitiveDependencies>true</promoteTransitiveDependencies> -->
+          <filters>
+            <filter>
+              <artifact>*:*</artifact>
+              <excludes>
+                <exclude>META-INF/*.SF</exclude>
+                <exclude>META-INF/*.DSA</exclude>
+              </excludes>
+            </filter>
+          </filters>
+        </configuration>
+        <executions>
+          <!-- <execution> -->
+          <!--   <phase>package</phase> -->
+          <!--   <goals> -->
+          <!--     <goal>shade</goal> -->
+          <!--   </goals> -->
+          <!--   <configuration> -->
+          <!--     <transformers> -->
+          <!--       <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/> -->
+          <!--       <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer"> -->
+          <!--       </transformer> -->
+          <!--       <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer"> -->
+          <!--         <resource>reference.conf</resource> -->
+          <!--       </transformer> -->
+          <!--     </transformers> -->
+          <!--   </configuration> -->
+          <!-- </execution> -->
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
