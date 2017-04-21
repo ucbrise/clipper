@@ -2,8 +2,9 @@
 #define CLIPPER_LIB_JSON_UTIL_H
 
 #include <rapidjson/document.h>
-
 #include <clipper/datatypes.hpp>
+#include <stdexcept>
+#include <unordered_map>
 
 using clipper::Input;
 using clipper::InputType;
@@ -44,8 +45,17 @@ class json_semantic_error : public std::runtime_error {
 rapidjson::Value& check_kv_type_and_return(rapidjson::Value& d,
                                            const char* key_name,
                                            Type expected_type);
+/**
+ * This method is needed because checking boolean fields requires
+ * matching against multiple types: rapidjson::kFalseType and
+ * rapidjson::kTrueType.
+ */
+rapidjson::Value& check_kv_type_is_bool_and_return(rapidjson::Value& d,
+                                                   const char* key_name);
 
-/* Getters with error handling for double, float, long, int, string */
+/* Getters with error handling for bool, double, float, long, int, string */
+bool get_bool(rapidjson::Value& d, const char* key_name);
+
 double get_double(rapidjson::Value& d, const char* key_name);
 
 float get_float(rapidjson::Value& d, const char* key_name);
@@ -108,6 +118,15 @@ void add_object(rapidjson::Document& d, const char* key_name,
                 rapidjson::Document& to_add);
 
 std::string to_json_string(rapidjson::Document& d);
+
+/**
+ * Sets `d` to the publicly-facing representation of a given Clipper app.
+ * App data, provided in `app_metadata`, is assumed to be pulled from redis
+ * and therefore may need to be transformed to comply with desired formatting.
+ */
+void set_json_doc_from_redis_app_metadata(
+    rapidjson::Document& d,
+    const std::unordered_map<std::string, std::string>& app_metadata);
 
 }  // namespace json
 }  // namespace clipper

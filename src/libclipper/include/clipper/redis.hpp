@@ -234,6 +234,14 @@ bool add_application(redox::Redox& redis, const std::string& appname,
 bool delete_application(redox::Redox& redis, const std::string& appname);
 
 /**
+ * Lists the names of all applications registered with Clipper.
+ *
+ * \return Returns a vector of application names as strings. If no
+ * applications were found, an empty vector will be returned.
+ */
+std::vector<std::string> list_application_names(redox::Redox& redis);
+
+/**
  * Looks up an application based on its name.
  *
  * \return Returns a map of application attribute name-value pairs as

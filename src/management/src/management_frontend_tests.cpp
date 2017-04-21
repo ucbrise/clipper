@@ -13,6 +13,7 @@
 
 using namespace clipper;
 using namespace clipper::redis;
+using namespace clipper::json;
 using namespace management;
 
 namespace {
@@ -38,6 +39,27 @@ class ManagementFrontendTest : public ::testing::Test {
     subscriber_->disconnect();
     redis_->disconnect();
   }
+
+  void set_add_app_request_doc(rapidjson::Document& d, std::string& name,
+                               std::vector<std::string>& candidate_model_names,
+                               std::string& input_type,
+                               std::string& default_output,
+                               int latency_slo_micros) {
+    d.SetObject();
+    add_string(d, "name", name);
+    add_string_array(d, "candidate_model_names", candidate_model_names);
+    add_string(d, "input_type", input_type);
+    add_string(d, "default_output", default_output);
+    add_int(d, "latency_slo_micros", latency_slo_micros);
+  }
+
+  std::string get_app_json_request_string(std::string& name) {
+    rapidjson::Document d;
+    d.SetObject();
+    add_string(d, "name", name);
+    return to_json_string(d);
+  }
+
   RequestHandler rh_;
   std::shared_ptr<redox::Redox> redis_;
   std::shared_ptr<redox::Subscriber> subscriber_;
@@ -115,6 +137,182 @@ TEST_F(ManagementFrontendTest, TestAddApplicationMalformedJson) {
   )";
 
   ASSERT_THROW(rh_.add_application(add_app_json), json_parse_error);
+}
+
+TEST_F(ManagementFrontendTest, TestGetApplicationCorrect) {
+  std::string name = "my_app_name";
+  std::string input_type = "doubles";
+  std::string default_output = "1.0";
+  int latency_slo_micros = 10000;
+  // For now, we only support adding one candidate model
+  std::vector<std::string> candidate_model_names{"music_random_features"};
+
+  rapidjson::Document add_app_json_document;
+  set_add_app_request_doc(add_app_json_document, name, candidate_model_names,
+                          input_type, default_output, latency_slo_micros);
+  std::string add_app_json_string = to_json_string(add_app_json_document);
+
+  ASSERT_EQ(rh_.add_application(add_app_json_string), "Success!");
+
+  std::string get_app_json = get_app_json_request_string(name);
+
+  std::string json_response = rh_.get_application(get_app_json);
+
+  rapidjson::Document response_doc;
+  response_doc.SetObject();
+  parse_json(json_response, response_doc);
+
+  // The JSON provided for adding the app contains the same name-value
+  // attribute pairs that should be returned by `get_application`.
+  ASSERT_EQ(add_app_json_document, response_doc);
+}
+
+TEST_F(ManagementFrontendTest, TestGetNonexistentApplicationCorrect) {
+  std::string list_apps_json = R"(
+  {
+    "name": "nonexistent_app"
+  }
+  )";
+  std::string json_response = rh_.get_application(list_apps_json);
+  std::string expected_response = "{}";
+  ASSERT_EQ(json_response, expected_response);
+}
+
+TEST_F(ManagementFrontendTest, TestGetApplicationMalformedJson) {
+  std::string list_apps_json = R"(
+  {
+    "app": not a string
+  }
+  )";
+  ASSERT_THROW(rh_.get_application(list_apps_json), json_parse_error);
+}
+
+TEST_F(ManagementFrontendTest, TestGetAllApplicationsVerboseCorrect) {
+  std::string name1 = "my_app_name1";
+  std::string name2 = "my_app_name2";
+  std::string input_type = "doubles";
+  std::string default_output = "1.0";
+  int latency_slo_micros = 10000;
+  // For now, we only support adding one candidate model
+  std::vector<std::string> candidate_model_names{"music_random_features"};
+
+  rapidjson::Document add_app1_json_document;
+  set_add_app_request_doc(add_app1_json_document, name1, candidate_model_names,
+                          input_type, default_output, latency_slo_micros);
+  std::string add_app1_json_string = to_json_string(add_app1_json_document);
+
+  rapidjson::Document add_app2_json_document;
+  set_add_app_request_doc(add_app2_json_document, name2, candidate_model_names,
+                          input_type, default_output, latency_slo_micros);
+  std::string add_app2_json_string = to_json_string(add_app2_json_document);
+
+  ASSERT_EQ(rh_.add_application(add_app1_json_string), "Success!");
+  ASSERT_EQ(rh_.add_application(add_app2_json_string), "Success!");
+
+  std::string get_apps_verbose_json = R"(
+  {
+    "verbose": true
+  }
+  )";
+
+  std::string json_response = rh_.get_all_applications(get_apps_verbose_json);
+
+  rapidjson::Document response_doc;
+  response_doc.SetArray();
+  parse_json(json_response, response_doc);
+
+  rapidjson::Value app1_response_doc(response_doc[0].GetObject());
+  rapidjson::Value app2_response_doc(response_doc[1].GetObject());
+  rapidjson::Value temp;
+
+  // Assign app_1_response_doc and app_2_response_doc to documentes of
+  // apps with names `name1`, `name2`, respectively.
+  if (get_string(app2_response_doc, "name") == name1) {
+    temp = app1_response_doc;
+    app1_response_doc = app2_response_doc;
+    app2_response_doc = temp;
+  }
+
+  // Confirm that the JSON response provided app metadata that
+  // matches the information provided upon their registration
+  ASSERT_EQ(add_app1_json_document, app1_response_doc);
+  ASSERT_EQ(add_app2_json_document, app2_response_doc);
+}
+
+TEST_F(ManagementFrontendTest,
+       TestGetAllApplicationsVerboseNoneRegisteredCorrect) {
+  std::string get_apps_verbose_json = R"(
+  {
+    "verbose": true
+  }
+  )";
+  std::string json_response = rh_.get_all_applications(get_apps_verbose_json);
+  std::string expected_response = "[]";
+  ASSERT_EQ(json_response, expected_response);
+}
+
+TEST_F(ManagementFrontendTest,
+       TestGetAllApplicationsNotVerboseNoneRegisteredCorrect) {
+  std::string get_apps_verbose_json = R"(
+  {
+    "verbose": false
+  }
+  )";
+  std::string json_response = rh_.get_all_applications(get_apps_verbose_json);
+  std::string expected_response = "[]";
+  ASSERT_EQ(json_response, expected_response);
+}
+
+TEST_F(ManagementFrontendTest, TestGetAllApplicationsNotVerboseCorrect) {
+  std::string name1 = "my_app_name1";
+  std::string name2 = "my_app_name2";
+  std::string input_type = "doubles";
+  std::string default_output = "1.0";
+  int latency_slo_micros = 10000;
+  // For now, we only support adding one candidate model
+  std::vector<std::string> candidate_model_names{"music_random_features"};
+
+  rapidjson::Document add_app1_json_document;
+  set_add_app_request_doc(add_app1_json_document, name1, candidate_model_names,
+                          input_type, default_output, latency_slo_micros);
+  std::string add_app1_json_string = to_json_string(add_app1_json_document);
+
+  rapidjson::Document add_app2_json_document;
+  set_add_app_request_doc(add_app2_json_document, name2, candidate_model_names,
+                          input_type, default_output, latency_slo_micros);
+  std::string add_app2_json_string = to_json_string(add_app2_json_document);
+
+  ASSERT_EQ(rh_.add_application(add_app1_json_string), "Success!");
+  ASSERT_EQ(rh_.add_application(add_app2_json_string), "Success!");
+
+  std::string get_apps_json = R"(
+  {
+    "verbose": false
+  }
+  )";
+
+  std::string json_response = rh_.get_all_applications(get_apps_json);
+
+  rapidjson::Document d;
+  d.SetArray();
+  parse_json(json_response, d);
+  std::string el1 = d[0].GetString();
+  std::string el2 = d[1].GetString();
+  bool has_name_1 = (el1 == name1 || el2 == name1);
+  bool has_name_2 = (el1 == name2 || el2 == name2);
+
+  // The JSON response should contain the names of the two apps
+  // that were registered.
+  ASSERT_TRUE(has_name_1 && has_name_2);
+}
+
+TEST_F(ManagementFrontendTest, TestGetAllApplicationsMalformedJson) {
+  std::string get_apps_json = R"(
+   {
+     "verbose": flalse
+   }
+   )";
+  ASSERT_THROW(rh_.get_all_applications(get_apps_json), json_parse_error);
 }
 
 TEST_F(ManagementFrontendTest, TestAddModelCorrect) {
