@@ -408,8 +408,8 @@ void add_app_candidate_model_names_from_redis(
   candidate_model_names_doc.SetArray();
   for (auto model_name : model_names) {
     rapidjson::Value string_val(
-            rapidjson::StringRef(model_name.c_str(), model_name.length()),
-            d.GetAllocator());
+        rapidjson::StringRef(model_name.c_str(), model_name.length()),
+        d.GetAllocator());
     candidate_model_names_doc.PushBack(string_val, d.GetAllocator());
   }
 
