@@ -136,22 +136,36 @@ class ModelQueue {
 
 class TaskExecutor {
  public:
-  ~TaskExecutor() { active_ = false; };
+  ~TaskExecutor() { active_->store(false); };
   explicit TaskExecutor()
-      : active_containers_(std::make_shared<ActiveContainers>()),
+      : active_(std::make_shared<std::atomic_bool>(true)),
+        active_containers_(std::make_shared<ActiveContainers>()),
         rpc_(std::make_unique<rpc::RPCService>()),
         model_queues_(std::unordered_map<const VersionedModelId, ModelQueue,
                                          decltype(&versioned_model_hash)>(
             INITIAL_MODEL_QUEUES_MAP_SIZE, &versioned_model_hash)) {
     log_info(LOGGING_TAG_TASK_EXECUTOR, "TaskExecutor started");
-    rpc_->start("*", RPC_SERVICE_PORT,
-                [this](VersionedModelId model, int replica_id) {
-                  on_container_ready(model, replica_id);
-                },
-                [this](rpc::RPCResponse response) {
-                  on_response_recv(std::move(response));
-                });
-    active_ = true;
+    rpc_->start(
+        "*", RPC_SERVICE_PORT, [ this, task_executor_valid = active_ ](
+                                   VersionedModelId model, int replica_id) {
+          if (*task_executor_valid) {
+            on_container_ready(model, replica_id);
+          } else {
+            log_info(LOGGING_TAG_TASK_EXECUTOR,
+                     "Not running on_container_ready callback because "
+                     "TaskExecutor has been destroyed.");
+          }
+        },
+        [ this, task_executor_valid = active_ ](rpc::RPCResponse response) {
+          if (*task_executor_valid) {
+            on_response_recv(std::move(response));
+          } else {
+            log_info(LOGGING_TAG_TASK_EXECUTOR,
+                     "Not running on_response_recv callback because "
+                     "TaskExecutor has been destroyed.");
+          }
+
+        });
     Config &conf = get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
@@ -173,8 +187,9 @@ class TaskExecutor {
         redis_subscriber_,
         // event_type corresponds to one of the Redis event types
         // documented in https://redis.io/topics/notifications.
-        [this](const std::string &key, const std::string &event_type) {
-          if (event_type == "hset") {
+        [ this, task_executor_valid = active_ ](const std::string &key,
+                                                const std::string &event_type) {
+          if (event_type == "hset" && *task_executor_valid) {
             auto container_info =
                 redis::get_container_by_key(redis_connection_, key);
             VersionedModelId vm =
@@ -194,6 +209,11 @@ class TaskExecutor {
                                  "Created queue for new model: {} : {}",
                                  vm.first, vm.second);
             }
+          } else if (!*task_executor_valid) {
+            log_info(LOGGING_TAG_TASK_EXECUTOR,
+                     "Not running TaskExecutor's "
+                     "subscribe_to_container_changes callback because "
+                     "TaskExecutor has been destroyed.");
           }
 
         });
@@ -250,12 +270,12 @@ class TaskExecutor {
  private:
   // active_containers_ is shared with the RPC service so it can add new
   // containers to the collection when they connect
+  std::shared_ptr<std::atomic_bool> active_;
   std::shared_ptr<ActiveContainers> active_containers_;
   std::unique_ptr<rpc::RPCService> rpc_;
   PredictionCache cache_;
   redox::Redox redis_connection_;
   redox::Subscriber redis_subscriber_;
-  bool active_ = false;
   std::mutex inflight_messages_mutex_;
   std::unordered_map<int, std::vector<std::tuple<const long, VersionedModelId,
                                                  std::shared_ptr<Input>>>>
@@ -318,9 +338,16 @@ class TaskExecutor {
       }
     }
 
-    TaskExecutionThreadPool::submit_job([this, model_id, replica_id]() {
-      on_container_ready(model_id, replica_id);
-    });
+    TaskExecutionThreadPool::submit_job(
+        [ this, model_id, replica_id, task_executor_valid = active_ ]() {
+          if (*task_executor_valid) {
+            on_container_ready(model_id, replica_id);
+          } else {
+            log_info(LOGGING_TAG_TASK_EXECUTOR,
+                     "Not running on_container_ready callback because "
+                     "TaskExecutor has been destroyed.");
+          }
+        });
   }
 
   void on_response_recv(rpc::RPCResponse response) {
