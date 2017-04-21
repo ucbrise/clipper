@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include <boost/thread.hpp>
+#include <boost/circular_buffer.hpp>
 
 #include <clipper/datatypes.hpp>
 #include <clipper/util.hpp>
@@ -27,16 +28,21 @@ class ModelContainer {
   ModelContainer &operator=(ModelContainer &&) = default;
 
   size_t get_batch_size(Deadline deadline);
+  double get_average_throughput_per_millisecond();
+  void update_throughput(size_t batch_size, long total_latency);
   void send_feedback(PredictTask task);
 
   VersionedModelId model_;
   int container_id_;
   InputType input_type_;
-  std::shared_ptr<metrics::Meter> throughput_meter_;
 
  private:
   bool connected_{true};
   Queue<FeedbackTask> feedback_queue_;
+  boost::shared_mutex throughput_mutex_;
+  double avg_throughput_per_milli_;
+  boost::circular_buffer<double> throughput_buffer_;
+  static const size_t THROUGHPUT_BUFFER_CAPACITY = 100;
 };
 
 /// This is a lightweight wrapper around the map of active containers
