@@ -3,6 +3,7 @@ import os
 import errno
 sys.path.append(os.path.abspath("../management"))
 sys.path.append(os.path.abspath("../examples"))
+sys.path.insert(0, os.path.abspath('../containers/python/'))
 
 import clipper_manager
 from tutorial import cifar_utils
