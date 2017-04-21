@@ -159,6 +159,16 @@ std::unordered_map<std::string, std::string> get_model_by_key(
     redox::Redox& redis, const std::string& key);
 
 /**
+ * Looks up model names listed in the model table. Since a call to KEYS may
+ * return multiple version values associated with each model key, this method
+ * de-duplicates the model names before returning.
+ *
+ * \return Returns a vector of model names as strings. If no model names
+ * were found, then an empty vector will be returned.
+ */
+std::vector<std::string> get_all_model_names(redox::Redox& redis);
+
+/**
  * Adds a container into the container table. This will
  * overwrite any existing entry with the same key.
  *
@@ -234,14 +244,6 @@ bool add_application(redox::Redox& redis, const std::string& appname,
 bool delete_application(redox::Redox& redis, const std::string& appname);
 
 /**
- * Lists the names of all applications registered with Clipper.
- *
- * \return Returns a vector of application names as strings. If no
- * applications were found, an empty vector will be returned.
- */
-std::vector<std::string> list_application_names(redox::Redox& redis);
-
-/**
  * Looks up an application based on its name.
  *
  * \return Returns a map of application attribute name-value pairs as
@@ -271,6 +273,14 @@ std::unordered_map<std::string, std::string> get_application(
  */
 std::unordered_map<std::string, std::string> get_application_by_key(
     redox::Redox& redis, const std::string& key);
+
+/**
+ * \return Returns a vector of application names as strings.
+ * The returned application names can subsequently be used as keys in
+ * the application table. If no applications are found in the table,
+ * an empty vector will be returned.
+ */
+std::vector<std::string> get_all_application_names(redox::Redox& redis);
 
 /**
 * Subscribes to changes in the model table. The

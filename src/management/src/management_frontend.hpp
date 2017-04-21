@@ -393,7 +393,7 @@ class RequestHandler {
     bool verbose = get_bool(d, "verbose");
 
     std::vector<std::string> app_names =
-        clipper::redis::list_application_names(redis_connection_);
+        clipper::redis::get_all_application_names(redis_connection_);
 
     rapidjson::Document response_doc;
     response_doc.SetArray();

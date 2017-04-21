@@ -1,12 +1,14 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <clipper/config.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
 
 #include "query_frontend.hpp"
 
 using namespace clipper;
+using namespace clipper::redis;
 using namespace query_frontend;
 
 namespace {
@@ -32,8 +34,28 @@ class QueryFrontendTest : public ::testing::Test {
  public:
   RequestHandler<MockQueryProcessor> rh_;
   // MockQueryProcessor qp_;
+  std::shared_ptr<redox::Redox> redis_;
+  std::shared_ptr<redox::Subscriber> subscriber_;
 
-  QueryFrontendTest() : rh_("0.0.0.0", 1337, 8) {}
+  QueryFrontendTest()
+      : rh_("0.0.0.0", 1337, 8),
+        redis_(std::make_shared<redox::Redox>()),
+        subscriber_(std::make_shared<redox::Subscriber>()) {
+    Config& conf = get_config();
+    redis_->connect(conf.get_redis_address(), conf.get_redis_port());
+    subscriber_->connect(conf.get_redis_address(), conf.get_redis_port());
+
+    // delete all keys
+    send_cmd_no_reply<std::string>(*redis_, {"FLUSHALL"});
+
+    send_cmd_no_reply<std::string>(
+        *redis_, {"CONFIG", "SET", "notify-keyspace-events", "AKE"});
+  }
+
+  virtual ~QueryFrontendTest() {
+    subscriber_->disconnect();
+    redis_->disconnect();
+  }
 };
 
 TEST_F(QueryFrontendTest, TestDecodeCorrectInputInts) {
@@ -227,6 +249,73 @@ TEST_F(QueryFrontendTest,
         parsed_error_response.FindMember(PREDICTION_ERROR_RESPONSE_KEY_CAUSE)
             ->value.IsString());
   }
+}
+
+TEST_F(QueryFrontendTest, TestReadApplicationsAtStartup) {
+  // Add a few applications
+  std::string name = "my_app_name";
+  std::vector<std::string> model_names{"music_random_features", "simple_svm",
+                                       "music_cnn"};
+  InputType input_type = InputType::Doubles;
+  std::string policy = "exp3_policy";
+  std::string default_output = "1.0";
+  int latency_slo_micros = 10000;
+  ASSERT_TRUE(add_application(*redis_, name, model_names, input_type, policy,
+                              default_output, latency_slo_micros));
+  std::string name2 = "my_app_name_2";
+  std::vector<std::string> model_names2{"img_random_features", "simple_svm",
+                                        "img_cnn"};
+  InputType input_type2 = InputType::Doubles;
+  std::string policy2 = "exp4_policy";
+  int latency_slo_micros2 = 50000;
+  std::string default_output2 = "1.0";
+  ASSERT_TRUE(add_application(*redis_, name2, model_names2, input_type2,
+                              policy2, default_output2, latency_slo_micros2));
+
+  RequestHandler<MockQueryProcessor> rh2_("127.0.0.1", 1337, 8);
+  size_t two_apps = rh2_.num_applications();
+  EXPECT_EQ(two_apps, (size_t)2);
+}
+
+TEST_F(QueryFrontendTest, TestReadModelsAtStartup) {
+  // Add multiple models (some with multiple versions)
+  std::vector<std::string> labels{"ads", "images", "experimental", "other",
+                                  "labels"};
+  VersionedModelId model1 = std::make_pair("m", 1);
+  std::string container_name = "clipper/test_container";
+  std::string model_path = "/tmp/models/m/1";
+  ASSERT_TRUE(add_model(*redis_, model1, InputType::Ints, labels,
+                        container_name, model_path));
+  VersionedModelId model2 = std::make_pair("m", 2);
+  std::string model_path2 = "/tmp/models/m/2";
+  ASSERT_TRUE(add_model(*redis_, model2, InputType::Ints, labels,
+                        container_name, model_path2));
+  VersionedModelId model3 = std::make_pair("n", 3);
+  std::string model_path3 = "/tmp/models/n/3";
+  ASSERT_TRUE(add_model(*redis_, model3, InputType::Ints, labels,
+                        container_name, model_path3));
+
+  // Set m@v2 and n@v3 as current model versions
+  set_current_model_version(*redis_, "m", 2);
+  set_current_model_version(*redis_, "n", 3);
+  std::unordered_map<std::string, int> expected_models = {{"m", 2}, {"n", 3}};
+
+  RequestHandler<MockQueryProcessor> rh2_("127.0.0.1", 1337, 8);
+  EXPECT_EQ(rh2_.get_current_model_versions(), expected_models);
+}
+
+TEST_F(QueryFrontendTest, TestReadInvalidModelVersionAtStartup) {
+  std::vector<std::string> labels{"ads", "images", "experimental", "other",
+                                  "labels"};
+  VersionedModelId model1 = std::make_pair("m", 1);
+  std::string container_name = "clipper/test_container";
+  std::string model_path = "/tmp/models/m/1";
+  ASSERT_TRUE(add_model(*redis_, model1, InputType::Ints, labels,
+                        container_name, model_path));
+  // Not setting the version number will cause get_current_model_version()
+  // to return -1, and the RequestHandler should then throw a runtime_error.
+  ASSERT_THROW(RequestHandler<QueryProcessor>("127.0.0.1", 1337, 8),
+               std::runtime_error);
 }
 
 }  // namespace

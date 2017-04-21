@@ -63,5 +63,7 @@ set -e
 redis-server --port $REDIS_PORT &> /dev/null &
 
 ./src/libclipper/libclippertests --redis_port $REDIS_PORT
+redis-cli -p $REDIS_PORT "flushall"
 ./src/frontends/frontendtests --redis_port $REDIS_PORT
+redis-cli -p $REDIS_PORT "flushall"
 ./src/management/managementtests --redis_port $REDIS_PORT

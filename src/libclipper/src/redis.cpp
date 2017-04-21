@@ -251,6 +251,27 @@ std::vector<int> get_model_versions(redox::Redox& redis,
   return versions;
 }
 
+std::vector<std::string> get_all_model_names(redox::Redox& redis) {
+  std::vector<std::string> model_names;
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
+    // Use wildcard argument for KEYS command to get all key names.
+    // The number of keys is assumed to be within reasonable limits.
+    auto result = send_cmd_with_reply<vector<string>>(redis, {"KEYS", "*"});
+    if (result) {
+      // De-duplicate and return the key names.
+      std::set<std::string> model_name_set;
+      for (auto model_str : *result) {
+        std::vector<VersionedModelId> parsed_model = str_to_models(model_str);
+        model_name_set.insert(parsed_model.front().first);
+      }
+      model_names.insert(model_names.end(), model_name_set.begin(),
+                         model_name_set.end());
+    }
+  }
+  return model_names;
+}
+
 bool add_container(Redox& redis, const VersionedModelId& model_id,
                    const int model_replica_id, const int zmq_connection_id,
                    const InputType& input_type) {
@@ -358,23 +379,6 @@ bool delete_application(redox::Redox& redis, const std::string& appname) {
   }
 }
 
-std::vector<std::string> list_application_names(Redox& redis) {
-  if (send_cmd_no_reply<string>(
-          redis, {"SELECT", std::to_string(REDIS_APPLICATION_DB_NUM)})) {
-    const vector<string> cmd_vec{"KEYS", "*"};
-
-    std::vector<std::string> application_names_data;
-    auto result = send_cmd_with_reply<std::vector<std::string>>(redis, cmd_vec);
-    if (result) {
-      application_names_data = *result;
-    }
-
-    return application_names_data;
-  } else {
-    return std::vector<std::string>{};
-  }
-}
-
 std::unordered_map<std::string, std::string> get_application(
     redox::Redox& redis, const std::string& appname) {
   if (send_cmd_no_reply<string>(
@@ -398,6 +402,22 @@ std::unordered_map<std::string, std::string> get_application_by_key(
   // We keep the get_*_by_key() to preserve the symmetry of the
   // API.
   return get_application(redis, key);
+}
+
+std::vector<string> get_all_application_names(redox::Redox& redis) {
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_APPLICATION_DB_NUM)})) {
+    std::vector<std::string> app_names;
+    // Use wildcard argument for KEYS command to get all key names.
+    // The number of keys is assumed to be within reasonable limits.
+    auto result = send_cmd_with_reply<vector<string>>(redis, {"KEYS", "*"});
+    if (result) {
+      app_names = *result;
+    }
+    return app_names;
+  } else {
+    return std::vector<string>{};
+  }
 }
 
 void subscribe_to_keyspace_changes(
