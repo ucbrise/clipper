@@ -82,7 +82,7 @@ class ModelQueue {
 
   void add_task(PredictTask task) {
     std::unique_lock<std::mutex> l(queue_mutex_);
-    Deadline deadline = std::chrono::high_resolution_clock::now() +
+    Deadline deadline = std::chrono::system_clock::now() +
                         std::chrono::microseconds(task.latency_slo_micros_);
     queue_.emplace(deadline, std::move(task));
   }
@@ -317,6 +317,7 @@ class TaskExecutor {
         model_queue_entry->second.get_earliest_deadline();
     if (earliest_deadline) {
       size_t batch_size = container->get_batch_size(earliest_deadline.get());
+      log_info_formatted(LOGGING_TAG_TASK_EXECUTOR, "BATCH SIZE: {}", batch_size);
       auto batch = model_queue_entry->second.get_batch(batch_size);
       if (batch.size() > 0) {
         // move the lock up here, so that nothing can pull from the

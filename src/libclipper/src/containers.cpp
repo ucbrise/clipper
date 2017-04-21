@@ -25,12 +25,14 @@ ModelContainer::ModelContainer(VersionedModelId model, int container_id,
 }
 
 size_t ModelContainer::get_batch_size(Deadline deadline) {
-  double container_throughput_rate_millis = throughput_meter_->get_one_minute_rate_seconds() / 1000;
-  std::chrono::time_point<std::chrono::system_clock> current_time =
-      std::chrono::system_clock::now();
-  double remaining_time_millis =
+  double container_throughput_rate_millis = throughput_meter_->get_rate_seconds() / 1000;
+  double current_time_millis =
       std::chrono::duration_cast<std::chrono::milliseconds>(
-          deadline.time_since_epoch() - current_time.time_since_epoch()).count();
+          std::chrono::system_clock::now().time_since_epoch())
+          .count();
+  double deadline_millis =
+      std::chrono::duration_cast<std::chrono::milliseconds>(deadline.time_since_epoch()).count();
+  double remaining_time_millis = deadline_millis - current_time_millis;
   int batch_size = static_cast<int>(container_throughput_rate_millis * remaining_time_millis);
   if(batch_size < 1) {
     batch_size = 1;

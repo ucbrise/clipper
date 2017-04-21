@@ -13,7 +13,7 @@
 
 namespace clipper {
 
-using Deadline = std::chrono::time_point<std::chrono::high_resolution_clock>;
+using Deadline = std::chrono::time_point<std::chrono::system_clock>;
 
 class ModelContainer {
  public:
@@ -26,7 +26,7 @@ class ModelContainer {
   ModelContainer(ModelContainer &&) = default;
   ModelContainer &operator=(ModelContainer &&) = default;
 
-  size_t get_batch_size(Deadline /*deadline*/);
+  size_t get_batch_size(Deadline deadline);
   void send_feedback(PredictTask task);
 
   VersionedModelId model_;
@@ -35,7 +35,6 @@ class ModelContainer {
   std::shared_ptr<metrics::Meter> throughput_meter_;
 
  private:
-  const int max_batch_size_ = 5;
   bool connected_{true};
   Queue<FeedbackTask> feedback_queue_;
 };
