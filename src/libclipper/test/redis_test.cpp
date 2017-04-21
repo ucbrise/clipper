@@ -268,6 +268,14 @@ TEST_F(RedisTest, GetAllApplicationNames) {
   ASSERT_EQ(app_names, std::vector<std::string>({name, name2}));
 }
 
+TEST_F(RedisTest, GetAllApplicationNamesNoneRegistered) {
+  std::vector<std::string> result = get_all_application_names(*redis_);
+
+  // No apps have been registered, so get_all_application_names should
+  // return an empty vector
+  ASSERT_EQ(result.size(), static_cast<size_t>(0));
+}
+
 TEST_F(RedisTest, SubscriptionDetectModelAdd) {
   std::vector<std::string> labels{"ads", "images", "experimental"};
   VersionedModelId model = std::make_pair("m", 1);

@@ -7,6 +7,9 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
+#include <boost/algorithm/string.hpp>
+#include <unordered_map>
+
 #include <clipper/datatypes.hpp>
 #include <clipper/json_util.hpp>
 
@@ -27,15 +30,20 @@ json_semantic_error::json_semantic_error(const std::string& what)
     : std::runtime_error(what) {}
 json_semantic_error::~json_semantic_error() throw() {}
 
-rapidjson::Value& check_kv_type_and_return(rapidjson::Value& d,
-                                           const char* key_name,
-                                           Type expected_type) {
+void check_document_is_object_and_key_exists(rapidjson::Value& d,
+                                             const char* key_name) {
   if (!d.IsObject()) {
     throw json_semantic_error("Can only get key-value pair from an object");
   } else if (!d.HasMember(key_name)) {
     throw json_semantic_error("JSON object does not have required key: " +
                               std::string(key_name));
   }
+}
+
+rapidjson::Value& check_kv_type_and_return(rapidjson::Value& d,
+                                           const char* key_name,
+                                           Type expected_type) {
+  check_document_is_object_and_key_exists(d, key_name);
   rapidjson::Value& val = d[key_name];
   if (val.GetType() != expected_type) {
     throw json_semantic_error("Type mismatch! JSON key " +
@@ -46,7 +54,30 @@ rapidjson::Value& check_kv_type_and_return(rapidjson::Value& d,
   return val;
 }
 
-/* Getters with error handling for double, float, long, int, string */
+rapidjson::Value& check_kv_type_is_bool_and_return(rapidjson::Value& d,
+                                                   const char* key_name) {
+  check_document_is_object_and_key_exists(d, key_name);
+  rapidjson::Value& val = d[key_name];
+  if (val.GetType() != rapidjson::kFalseType &&
+      val.GetType() != rapidjson::kTrueType) {
+    throw json_semantic_error(
+        "Type mismatch! JSON key " + std::string(key_name) +
+        " expected type bool but found type " + kTypeNames[val.GetType()]);
+  }
+  return val;
+}
+
+/* Getters with error handling for bool, double, float, long, int, string */
+
+bool get_bool(rapidjson::Value& d, const char* key_name) {
+  rapidjson::Value& v = check_kv_type_is_bool_and_return(d, key_name);
+  if (!v.IsBool()) {
+    throw json_semantic_error("Input of type " + kTypeNames[v.GetType()] +
+                              " is not of type bool");
+  }
+  return v.GetBool();
+}
+
 double get_double(rapidjson::Value& d, const char* key_name) {
   rapidjson::Value& v =
       check_kv_type_and_return(d, key_name, rapidjson::kNumberType);
@@ -327,6 +358,72 @@ std::string to_json_string(rapidjson::Document& d) {
   rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
   d.Accept(writer);
   return buffer.GetString();
+}
+
+void check_key_exists_in_map(
+    std::string& key, const std::unordered_map<std::string, std::string>& map) {
+  if (map.find(key) == map.end()) {
+    throw std::invalid_argument("key `" + key + "` does not exist in map");
+  }
+}
+
+void add_app_input_type_from_redis(
+    const std::unordered_map<std::string, std::string>& app_metadata,
+    rapidjson::Document& d) {
+  std::string key = "input_type";
+  check_key_exists_in_map(key, app_metadata);
+  add_string(d, key.c_str(), app_metadata.at(key));
+}
+
+void add_app_default_output_from_redis(
+    const std::unordered_map<std::string, std::string>& app_metadata,
+    rapidjson::Document& d) {
+  std::string key = "default_output";
+  check_key_exists_in_map(key, app_metadata);
+  add_string(d, key.c_str(), app_metadata.at(key));
+}
+
+void add_app_latency_slo_micros_from_redis(
+    const std::unordered_map<std::string, std::string>& app_metadata,
+    rapidjson::Document& d) {
+  // latency_slo_micros is stored as a string in redis
+  std::string key = "latency_slo_micros";
+  check_key_exists_in_map(key, app_metadata);
+  add_int(d, key.c_str(), atoi(app_metadata.at(key).c_str()));
+}
+
+void add_app_candidate_model_names_from_redis(
+    const std::unordered_map<std::string, std::string>& app_metadata,
+    rapidjson::Document& d) {
+  std::string key = "candidate_model_names";
+  check_key_exists_in_map(key, app_metadata);
+
+  // candidate model names are stored in a comma-separated string in redis
+  std::string model_names_redis_format = app_metadata.at(key);
+  std::vector<std::string> model_names;
+  boost::split(model_names, model_names_redis_format, boost::is_any_of(","));
+
+  // Our external interface should put these names in an array
+  rapidjson::Document candidate_model_names_doc(&d.GetAllocator());
+  candidate_model_names_doc.SetArray();
+  for (auto model_name : model_names) {
+    rapidjson::Value string_val(
+        rapidjson::StringRef(model_name.c_str(), model_name.length()),
+        d.GetAllocator());
+    candidate_model_names_doc.PushBack(string_val, d.GetAllocator());
+  }
+
+  add_object(d, key.c_str(), candidate_model_names_doc);
+}
+
+void set_json_doc_from_redis_app_metadata(
+    rapidjson::Document& d,
+    const std::unordered_map<std::string, std::string>& app_metadata) {
+  d.SetObject();
+  add_app_input_type_from_redis(app_metadata, d);
+  add_app_default_output_from_redis(app_metadata, d);
+  add_app_latency_slo_micros_from_redis(app_metadata, d);
+  add_app_candidate_model_names_from_redis(app_metadata, d);
 }
 
 }  // namespace json

@@ -35,7 +35,8 @@ target_link_libraries(clipper boost zmqcpp redox pthread rapidjson spdlog)
 export(TARGETS clipper FILE ClipperConfig.cmake)
 
 
-
+# config_test resets the value of the config so it should always
+# be last in the list
 add_executable(libclippertests EXCLUDE_FROM_ALL
     test/test_main.cpp
     test/metrics_test.cpp
@@ -44,13 +45,13 @@ add_executable(libclippertests EXCLUDE_FROM_ALL
     test/input_test.cpp
     test/persistent_state_test.cpp
     test/redis_test.cpp
-    test/config_test.cpp
     test/selection_policies_test.cpp
     test/json_util_test.cpp
     test/logging_test.cpp
     test/future_test.cpp
     test/threadpool_test.cpp
-    test/task_executor_test.cpp )
+    test/task_executor_test.cpp
+    test/config_test.cpp )
 target_link_libraries(libclippertests clipper gtest gmock_main cxxopts)
 add_dependencies(unittests libclippertests)
 
