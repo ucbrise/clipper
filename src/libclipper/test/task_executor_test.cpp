@@ -120,7 +120,8 @@ TEST(TaskExecutorTests, ModelQueueGetBatchRemovesTasksWithElapsedDeadlines) {
   ASSERT_EQ(tasks[0].query_id_, task_c.query_id_);
 }
 
-TEST(TaskExecutorTests, ModelQueueGetEarliestDeadlineRemovesTasksWithElapsedDeadlines) {
+TEST(TaskExecutorTests,
+     ModelQueueGetEarliestDeadlineRemovesTasksWithElapsedDeadlines) {
   PredictTask task_a = create_predict_task(1, 0);
   PredictTask task_b = create_predict_task(2, 0);
   PredictTask task_c = create_predict_task(3, 100000);
@@ -132,7 +133,8 @@ TEST(TaskExecutorTests, ModelQueueGetEarliestDeadlineRemovesTasksWithElapsedDead
 
   // Tasks A and B have elapsed deadlines, so the model queue
   // should indicate that there is no earliest deadline
-  boost::optional<Deadline> earliest_deadline = model_queue.get_earliest_deadline();
+  boost::optional<Deadline> earliest_deadline =
+      model_queue.get_earliest_deadline();
   ASSERT_FALSE(earliest_deadline);
 
   model_queue.add_task(task_c);
@@ -141,5 +143,4 @@ TEST(TaskExecutorTests, ModelQueueGetEarliestDeadlineRemovesTasksWithElapsedDead
   // should return an earliest deadline
   ASSERT_TRUE(earliest_deadline);
 }
-
 }

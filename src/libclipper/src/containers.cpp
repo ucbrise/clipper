@@ -1,8 +1,8 @@
 
+#include <chrono>
 #include <iostream>
 #include <memory>
 #include <random>
-#include <chrono>
 // uncomment to disable assert()
 // #define NDEBUG
 #include <cassert>
@@ -10,33 +10,43 @@
 #include <clipper/constants.hpp>
 #include <clipper/containers.hpp>
 #include <clipper/logging.hpp>
-#include <clipper/util.hpp>
 #include <clipper/metrics.hpp>
+#include <clipper/util.hpp>
 
-#include <boost/thread.hpp>
 #include <boost/circular_buffer.hpp>
+#include <boost/thread.hpp>
 
 namespace clipper {
 
 ModelContainer::ModelContainer(VersionedModelId model, int container_id,
                                InputType input_type)
-    : model_(model), container_id_(container_id), input_type_(input_type), avg_throughput_per_milli_(0),
-      throughput_buffer_(THROUGHPUT_BUFFER_CAPACITY){}
+    : model_(model),
+      container_id_(container_id),
+      input_type_(input_type),
+      avg_throughput_per_milli_(0),
+      throughput_buffer_(THROUGHPUT_BUFFER_CAPACITY) {}
 
-void ModelContainer::update_throughput(size_t batch_size, long total_latency_micros) {
-  if(batch_size <= 0 || total_latency_micros <= 0) {
-    throw std::invalid_argument("Batch size and latency must be positive for throughput updates!");
+void ModelContainer::update_throughput(size_t batch_size,
+                                       long total_latency_micros) {
+  if (batch_size <= 0 || total_latency_micros <= 0) {
+    throw std::invalid_argument(
+        "Batch size and latency must be positive for throughput updates!");
   }
   boost::unique_lock<boost::shared_mutex> lock(throughput_mutex_);
-  double new_throughput = 1000 * (static_cast<double>(batch_size) / static_cast<double>(total_latency_micros));
-  double old_total_throughput = avg_throughput_per_milli_ * throughput_buffer_.size();
-  if(throughput_buffer_.size() == throughput_buffer_.capacity()) {
+  double new_throughput = 1000 * (static_cast<double>(batch_size) /
+                                  static_cast<double>(total_latency_micros));
+  double old_total_throughput =
+      avg_throughput_per_milli_ * throughput_buffer_.size();
+  if (throughput_buffer_.size() == throughput_buffer_.capacity()) {
     double oldest_throughput = throughput_buffer_.front();
-    double new_total_throughput = (old_total_throughput - oldest_throughput + new_throughput);
-    avg_throughput_per_milli_ = new_total_throughput / static_cast<double>(throughput_buffer_.size());
+    double new_total_throughput =
+        (old_total_throughput - oldest_throughput + new_throughput);
+    avg_throughput_per_milli_ =
+        new_total_throughput / static_cast<double>(throughput_buffer_.size());
   } else {
     avg_throughput_per_milli_ =
-        (old_total_throughput + new_throughput) / static_cast<double>(throughput_buffer_.size() + 1);
+        (old_total_throughput + new_throughput) /
+        static_cast<double>(throughput_buffer_.size() + 1);
   }
   throughput_buffer_.push_back(new_throughput);
 }
@@ -52,11 +62,14 @@ size_t ModelContainer::get_batch_size(Deadline deadline) {
           std::chrono::system_clock::now().time_since_epoch())
           .count();
   double deadline_millis =
-      std::chrono::duration_cast<std::chrono::milliseconds>(deadline.time_since_epoch()).count();
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          deadline.time_since_epoch())
+          .count();
   double remaining_time_millis = deadline_millis - current_time_millis;
   boost::shared_lock<boost::shared_mutex> lock(throughput_mutex_);
-  int batch_size = static_cast<int>(avg_throughput_per_milli_ * remaining_time_millis);
-  if(batch_size < 1) {
+  int batch_size =
+      static_cast<int>(avg_throughput_per_milli_ * remaining_time_millis);
+  if (batch_size < 1) {
     batch_size = 1;
   }
   return batch_size;

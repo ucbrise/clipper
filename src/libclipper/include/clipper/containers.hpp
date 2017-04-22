@@ -5,12 +5,12 @@
 #include <memory>
 #include <unordered_map>
 
-#include <boost/thread.hpp>
 #include <boost/circular_buffer.hpp>
+#include <boost/thread.hpp>
 
 #include <clipper/datatypes.hpp>
-#include <clipper/util.hpp>
 #include <clipper/metrics.hpp>
+#include <clipper/util.hpp>
 
 namespace clipper {
 
