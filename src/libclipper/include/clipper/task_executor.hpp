@@ -30,17 +30,19 @@ class ModelMetrics {
   explicit ModelMetrics(VersionedModelId model)
       : model_(model),
         latency_(metrics::MetricsRegistry::get_metrics().create_histogram(
-            versioned_model_to_str(model) + ":prediction_latency",
+            "model:" + versioned_model_to_str(model) + ":prediction_latency",
             "microseconds", 4096)),
         throughput_(metrics::MetricsRegistry::get_metrics().create_meter(
-            versioned_model_to_str(model) + ":prediction_throughput")),
+            "model:" + versioned_model_to_str(model) +
+            ":prediction_throughput")),
         num_predictions_(metrics::MetricsRegistry::get_metrics().create_counter(
-            versioned_model_to_str(model) + ":num_predictions")),
+            "model:" + versioned_model_to_str(model) + ":num_predictions")),
         cache_hit_ratio_(
             metrics::MetricsRegistry::get_metrics().create_ratio_counter(
-                versioned_model_to_str(model) + ":cache_hit_ratio")),
+                "model:" + versioned_model_to_str(model) + ":cache_hit_ratio")),
         batch_size_(metrics::MetricsRegistry::get_metrics().create_histogram(
-            versioned_model_to_str(model) + ":batch_size", "queries", 4096)) {}
+            "model:" + versioned_model_to_str(model) + ":batch_size", "queries",
+            4096)) {}
   ~ModelMetrics() = default;
   ModelMetrics(const ModelMetrics &) = default;
   ModelMetrics &operator=(const ModelMetrics &) = default;

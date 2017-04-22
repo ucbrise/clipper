@@ -142,6 +142,8 @@ class RequestHandler {
         [this](std::shared_ptr<HttpServer::Response> response,
                std::shared_ptr<HttpServer::Request> request) {
           try {
+            clipper::log_info(LOGGING_TAG_MANAGEMENT_FRONTEND,
+                              "Add application POST request");
             std::string result = add_application(request->content.string());
             respond_http(result, "200 OK", response);
           } catch (const json_parse_error& e) {
@@ -161,6 +163,8 @@ class RequestHandler {
         [this](std::shared_ptr<HttpServer::Response> response,
                std::shared_ptr<HttpServer::Request> request) {
           try {
+            clipper::log_info(LOGGING_TAG_MANAGEMENT_FRONTEND,
+                              "Add model POST request");
             std::string result = add_model(request->content.string());
             respond_http(result, "200 OK", response);
           } catch (const json_parse_error& e) {
@@ -205,10 +209,12 @@ class RequestHandler {
           }
         });
     server_.add_endpoint(
-        GET_ALL_APPLICATIONS, "GET",
+        GET_ALL_APPLICATIONS, "POST",
         [this](std::shared_ptr<HttpServer::Response> response,
                std::shared_ptr<HttpServer::Request> request) {
           try {
+            clipper::log_info(LOGGING_TAG_MANAGEMENT_FRONTEND,
+                              "Get all applications POST request");
             std::string result =
                 get_all_applications(request->content.string());
             respond_http(result, "200 OK", response);
@@ -225,10 +231,12 @@ class RequestHandler {
           }
         });
     server_.add_endpoint(
-        GET_APPLICATION, "GET",
+        GET_APPLICATION, "POST",
         [this](std::shared_ptr<HttpServer::Response> response,
                std::shared_ptr<HttpServer::Request> request) {
           try {
+            clipper::log_info(LOGGING_TAG_MANAGEMENT_FRONTEND,
+                              "Get application info POST request");
             std::string result = get_application(request->content.string());
             respond_http(result, "200 OK", response);
           } catch (const json_parse_error& e) {

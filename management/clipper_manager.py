@@ -304,7 +304,7 @@ class Clipper:
             Returns a list of information about all apps registered to Clipper.
             If no apps are registered with Clipper, an empty list is returned.
         """
-        url = "http://%s:1338/admin/get_all_applications$" % self.host
+        url = "http://%s:1338/admin/get_all_applications" % self.host
         req_json = json.dumps({"verbose": verbose})
         headers = {'Content-type': 'application/json'}
         r = requests.get(url, headers=headers, data=req_json)
@@ -312,7 +312,6 @@ class Clipper:
         if r.status_code == requests.codes.ok:
             return r.json()
         else:
-            print(r.text)
             return None
 
     def get_app_info(self, name):
@@ -334,7 +333,7 @@ class Clipper:
         url = "http://%s:1338/admin/get_application" % self.host
         req_json = json.dumps({"name": name})
         headers = {'Content-type': 'application/json'}
-        r = requests.get(url, headers=headers, data=req_json)
+        r = requests.post(url, headers=headers, data=req_json)
 
         if r.status_code == requests.codes.ok:
             app_info = r.json()

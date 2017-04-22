@@ -84,17 +84,18 @@ class AppMetrics {
       : app_name_(app_name),
         latency_(
             clipper::metrics::MetricsRegistry::get_metrics().create_histogram(
-                app_name + ":prediction_latency", "microseconds", 4096)),
+                "app:" + app_name + ":prediction_latency", "microseconds",
+                4096)),
         throughput_(
             clipper::metrics::MetricsRegistry::get_metrics().create_meter(
-                app_name + ":prediction_throughput")),
+                "app:" + app_name + ":prediction_throughput")),
         num_predictions_(
             clipper::metrics::MetricsRegistry::get_metrics().create_counter(
-                app_name + ":num_predictions")),
+                "app:" + app_name + ":num_predictions")),
         default_pred_ratio_(
             clipper::metrics::MetricsRegistry::get_metrics()
-                .create_ratio_counter(app_name + ":default_prediction_ratio")) {
-  }
+                .create_ratio_counter("app:" + app_name +
+                                      ":default_prediction_ratio")) {}
   ~AppMetrics() = default;
   AppMetrics(const AppMetrics&) = default;
   AppMetrics& operator=(const AppMetrics&) = default;
@@ -254,7 +255,7 @@ class RequestHandler {
     // TODO: QueryProcessor should handle this. We need to decide how the
     // default output fits into the generic selection policy API. Do all
     // selection policies have a default output?
-    //
+
     // Initialize selection state for this application
     if (policy == clipper::DefaultOutputSelectionPolicy::get_name()) {
       clipper::DefaultOutputSelectionPolicy p;
@@ -266,25 +267,6 @@ class RequestHandler {
     }
 
     AppMetrics app_metrics(name);
-
-    // // Create per-application metrics
-    // auto current_app_default_pred_ratio =
-    //     clipper::metrics::MetricsRegistry::get_metrics().create_ratio_counter(
-    //         name + ":default_prediction_ratio");
-    //
-    // auto current_app_pred_latency_hist =
-    //     clipper::metrics::MetricsRegistry::get_metrics().create_histogram(
-    //         name + ":prediction_latency", "microseconds", 4096);
-    //
-    // auto current_app_prediction_count =
-    //     clipper::metrics::MetricsRegistry::get_metrics().create_counter(
-    //         name + ":num_predictions");
-    //
-    // auto current_app_pred_thruput_meter =
-    //     clipper::metrics::MetricsRegistry::get_metrics().create_meter(
-    //         name + ":prediction_throughput");
-
-    std::cout << "Registering Application metrics for " << name << std::endl;
 
     auto predict_fn = [this, name, input_type, policy, latency_slo_micros,
                        models, app_metrics](
