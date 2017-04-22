@@ -279,11 +279,19 @@ class TaskExecutor {
           model_queue_entry->second.add_task(t);
           boost::shared_lock<boost::shared_mutex> model_metrics_lock(
               model_metrics_mutex_);
-          model_metrics_[t.model_].cache_hit_ratio_->increment(0, 1);
+          auto cur_model_metric_entry = model_metrics_.find(t.model_);
+          if (cur_model_metric_entry != model_metrics_.end()) {
+            auto cur_model_metric = cur_model_metric_entry->second;
+            cur_model_metric.cache_hit_ratio_->increment(0, 1);
+          }
         } else {
           boost::shared_lock<boost::shared_mutex> model_metrics_lock(
               model_metrics_mutex_);
-          model_metrics_[t.model_].cache_hit_ratio_->increment(1, 1);
+          auto cur_model_metric_entry = model_metrics_.find(t.model_);
+          if (cur_model_metric_entry != model_metrics_.end()) {
+            auto cur_model_metric = cur_model_metric_entry->second;
+            cur_model_metric.cache_hit_ratio_->increment(1, 1);
+          }
         }
       } else {
         log_error_formatted(LOGGING_TAG_TASK_EXECUTOR,
@@ -415,14 +423,20 @@ class TaskExecutor {
                             .count();
     if (keys.size() > 0) {
       const VersionedModelId &cur_model = std::get<1>(keys[0]);
-      auto cur_model_metric = model_metrics_[cur_model];
-      cur_model_metric.throughput_->mark(keys.size());
-      cur_model_metric.num_predictions_->increment(keys.size());
-      cur_model_metric.batch_size_->insert(keys.size());
+      auto cur_model_metric_entry = model_metrics_.find(cur_model);
+      if (cur_model_metric_entry != model_metrics_.end()) {
+        auto cur_model_metric = cur_model_metric_entry->second;
+        cur_model_metric.throughput_->mark(keys.size());
+        cur_model_metric.num_predictions_->increment(keys.size());
+        cur_model_metric.batch_size_->insert(keys.size());
+      }
       for (int batch_num = 0; batch_num < batch_size; ++batch_num) {
         long send_time = std::get<0>(keys[batch_num]);
-        cur_model_metric.latency_->insert(
-            static_cast<int64_t>(current_time - send_time));
+        if (cur_model_metric_entry != model_metrics_.end()) {
+          auto cur_model_metric = cur_model_metric_entry->second;
+          cur_model_metric.latency_->insert(
+              static_cast<int64_t>(current_time - send_time));
+        }
         cache_.put(std::get<1>(keys[batch_num]), std::get<2>(keys[batch_num]),
                    Output{deserialized_outputs[batch_num],
                           {std::get<1>(keys[batch_num])}});
