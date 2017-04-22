@@ -24,6 +24,9 @@ ModelContainer::ModelContainer(VersionedModelId model, int container_id,
       throughput_buffer_(THROUGHPUT_BUFFER_CAPACITY){}
 
 void ModelContainer::update_throughput(size_t batch_size, long total_latency_micros) {
+  if(batch_size <= 0 || total_latency_micros <= 0) {
+    throw std::invalid_argument("Batch size and latency must be positive for throughput updates!");
+  }
   boost::unique_lock<boost::shared_mutex> lock(throughput_mutex_);
   double new_throughput = 1000 * (static_cast<double>(batch_size) / static_cast<double>(total_latency_micros));
   double old_total_throughput = avg_throughput_per_milli_ * throughput_buffer_.size();
