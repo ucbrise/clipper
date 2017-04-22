@@ -334,7 +334,7 @@ class Clipper:
         url = "http://%s:1338/admin/get_application" % self.host
         req_json = json.dumps({"name": name})
         headers = {'Content-type': 'application/json'}
-        r = requests.get(url, headers=headers, data=req_json)
+        r = requests.post(url, headers=headers, data=req_json)
 
         if r.status_code == requests.codes.ok:
             app_info = r.json()
