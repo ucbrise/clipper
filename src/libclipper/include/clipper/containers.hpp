@@ -9,7 +9,6 @@
 #include <boost/thread.hpp>
 
 #include <clipper/datatypes.hpp>
-#include <clipper/metrics.hpp>
 #include <clipper/util.hpp>
 
 namespace clipper {
