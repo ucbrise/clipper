@@ -41,7 +41,7 @@ RPCService::RPCService()
                                       decltype(&versioned_model_hash)>(
           INITIAL_REPLICA_ID_SIZE, &versioned_model_hash)) {
   msg_queueing_hist_ = metrics::MetricsRegistry::get_metrics().create_histogram(
-      "rpc_request_queueing_delay", "microseconds", 2056);
+      "internal:rpc_request_queueing_delay", "microseconds", 2056);
 }
 
 RPCService::~RPCService() { stop(); }

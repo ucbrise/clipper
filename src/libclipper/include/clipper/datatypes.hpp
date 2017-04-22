@@ -27,6 +27,7 @@ enum class RequestType {
 };
 
 size_t versioned_model_hash(const VersionedModelId &key);
+std::string versioned_model_to_str(const VersionedModelId &model);
 std::string get_readable_input_type(InputType type);
 InputType parse_input_type(std::string type_string);
 

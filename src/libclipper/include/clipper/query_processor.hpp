@@ -45,16 +45,12 @@ class QueryProcessor {
   TaskExecutor task_executor_;
   TimerSystem<HighPrecisionClock> timer_system_{HighPrecisionClock()};
   // This is a heteregenous container of different instances of selection
-  // policy.
-  // The key is the name of the specific selection policy, the value is an
-  // instance
-  // of that policy. All SelectionPolicy implementations (derived classes)
-  // should
-  // be stateless so there should be no issues with re-using the same instance
-  // for different applications or users.
+  // policy. The key is the name of the specific selection policy, the value is
+  // an instance of that policy. All SelectionPolicy implementations (derived
+  // classes) should be stateless so there should be no issues with re-using the
+  // same instance for different applications or users.
   std::unordered_map<std::string, std::shared_ptr<SelectionPolicy>>
       selection_policies_;
-  std::shared_ptr<metrics::RatioCounter> default_prediction_ratio_;
 };
 
 }  // namespace clipper
