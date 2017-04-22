@@ -268,27 +268,25 @@ class RequestHandler {
         auto prediction = decode_and_handle_predict(
             request->content.string(), name, versioned_models, policy,
             latency_slo_micros, input_type);
-        prediction.then([response, current_app_default_pred_ratio,
-                         current_app_pred_latency_hist,
-                         current_app_prediction_count,
-                         current_app_pred_thruput_meter
+        prediction.then(
+            [response, current_app_default_pred_ratio,
+             current_app_pred_latency_hist, current_app_prediction_count,
+             current_app_pred_thruput_meter](boost::future<Response> f) {
+              Response r = f.get();
 
-        ](boost::future<Response> f) {
-          Response r = f.get();
+              // Update metrics
+              if (r.output_is_default_) {
+                current_app_default_pred_ratio->increment(1, 1);
+              } else {
+                current_app_default_pred_ratio->increment(0, 1);
+              }
+              current_app_pred_latency_hist->insert(r.duration_micros_);
+              current_app_prediction_count->increment(1);
+              current_app_pred_thruput_meter->mark(1);
 
-          // Update metrics
-          if (r.output_is_default_) {
-            current_app_default_pred_ratio->increment(1, 1);
-          } else {
-            current_app_default_pred_ratio->increment(0, 1);
-          }
-          current_app_pred_latency_hist->insert(r.duration_micros_);
-          current_app_prediction_count->increment(1);
-          current_app_pred_thruput_meter->mark(1);
-
-          std::string content = get_prediction_response_content(r);
-          respond_http(content, "200 OK", response);
-        });
+              std::string content = get_prediction_response_content(r);
+              respond_http(content, "200 OK", response);
+            });
       } catch (const json_parse_error& e) {
         std::string error_msg =
             json_error_msg(e.what(), PREDICTION_JSON_SCHEMA);

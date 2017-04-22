@@ -174,6 +174,9 @@ class TaskExecutor {
         rpc_(std::make_unique<rpc::RPCService>()),
         model_queues_(std::unordered_map<const VersionedModelId, ModelQueue,
                                          decltype(&versioned_model_hash)>(
+            INITIAL_MODEL_QUEUES_MAP_SIZE, &versioned_model_hash)),
+        model_metrics_(std::unordered_map<const VersionedModelId, ModelMetrics,
+                                          decltype(&versioned_model_hash)>(
             INITIAL_MODEL_QUEUES_MAP_SIZE, &versioned_model_hash)) {
     log_info(LOGGING_TAG_TASK_EXECUTOR, "TaskExecutor started");
     rpc_->start(
@@ -345,9 +348,10 @@ class TaskExecutor {
     bool queue_created = queue_added.second;
     if (queue_created) {
       boost::unique_lock<boost::shared_mutex> l(model_metrics_mutex_);
-      model_metrics_.emplace(std::piecewise_construct,
-                             std::forward_as_tuple(model_id),
-                             std::forward_as_tuple(model_id));
+      model_metrics_.insert(std::make_pair(model_id, ModelMetrics(model_id)));
+      // model_metrics_.emplace(std::piecewise_construct,
+      //                        std::forward_as_tuple(model_id),
+      //                        std::forward_as_tuple(model_id));
     }
     return queue_created;
   }
