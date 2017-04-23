@@ -566,7 +566,10 @@ class RequestHandler {
         response_doc.PushBack(v, response_doc.GetAllocator());
       }
     }
-    return to_json_string(response_doc);
+    std::string result = to_json_string(response_doc);
+    clipper::log_info_formatted(LOGGING_TAG_MANAGEMENT_FRONTEND,
+                                "get_all_models response: {}", result);
+    return result;
   }
 
   /**

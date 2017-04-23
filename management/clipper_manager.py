@@ -307,7 +307,7 @@ class Clipper:
         url = "http://%s:1338/admin/get_all_applications" % self.host
         req_json = json.dumps({"verbose": verbose})
         headers = {'Content-type': 'application/json'}
-        r = requests.get(url, headers=headers, data=req_json)
+        r = requests.post(url, headers=headers, data=req_json)
 
         if r.status_code == requests.codes.ok:
             return r.json()
@@ -363,7 +363,7 @@ class Clipper:
         url = "http://%s:1338/admin/get_all_models" % self.host
         req_json = json.dumps({"verbose": verbose})
         headers = {'Content-type': 'application/json'}
-        r = requests.get(url, headers=headers, data=req_json)
+        r = requests.post(url, headers=headers, data=req_json)
 
         if r.status_code == requests.codes.ok:
             return r.json()

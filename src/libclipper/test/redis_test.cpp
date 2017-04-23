@@ -153,6 +153,33 @@ TEST_F(RedisTest, GetAllModelNames) {
   ASSERT_EQ(names, std::vector<std::string>({"m", "n"}));
 }
 
+TEST_F(RedisTest, GetAllModels) {
+  // Add multiple models (some with multiple versions)
+  std::vector<std::string> labels{"ads", "images", "experimental", "other",
+                                  "labels"};
+  VersionedModelId model1 = std::make_pair("m", 1);
+  std::string container_name = "clipper/test_container";
+  std::string model_path = "/tmp/models/m/1";
+  ASSERT_TRUE(add_model(*redis_, model1, InputType::Ints, labels,
+                        container_name, model_path));
+  VersionedModelId model2 = std::make_pair("m", 2);
+  std::string model_path2 = "/tmp/models/m/2";
+  ASSERT_TRUE(add_model(*redis_, model2, InputType::Ints, labels,
+                        container_name, model_path2));
+  VersionedModelId model3 = std::make_pair("n", 3);
+  std::string model_path3 = "/tmp/models/n/3";
+  ASSERT_TRUE(add_model(*redis_, model3, InputType::Ints, labels,
+                        container_name, model_path3));
+
+  // get_all_model_names() should return the de-duplicated model names
+  std::vector<VersionedModelId> models = get_all_models(*redis_);
+  ASSERT_EQ(models.size(), static_cast<size_t>(3));
+  std::sort(models.begin(), models.end());
+  std::vector<VersionedModelId> expected_models({model1, model2, model3});
+  std::sort(expected_models.begin(), expected_models.end());
+  ASSERT_EQ(models, expected_models);
+}
+
 TEST_F(RedisTest, DeleteModel) {
   std::vector<std::string> labels{"ads", "images", "experimental"};
   VersionedModelId model = std::make_pair("m", 1);
