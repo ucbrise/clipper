@@ -27,14 +27,14 @@ HEARTBEAT_TYPE_REQUEST_CONTAINER_METADATA = 1
 SOCKET_POLLING_TIMEOUT_MILLIS = 5000
 SOCKET_ACTIVITY_TIMEOUT_MILLIS = 60000
 
-MESSAGE_HISTORY_BUFFER_SIZE = 30
+EVENT_HISTORY_BUFFER_SIZE = 30
 
-MESSAGE_HISTORY_SENT_HEARTBEAT = 1
-MESSAGE_HISTORY_RECEIVED_HEARTBEAT = 2
-MESSAGE_HISTORY_SENT_CONTAINER_METADATA = 3
-MESSAGE_HISTORY_RECEIVED_CONTAINER_METADATA = 4
-MESSAGE_HISTORY_SENT_CONTAINER_CONTENT = 5
-MESSAGE_HISTORY_RECEIVED_CONTAINER_CONTENT = 6
+EVENT_HISTORY_SENT_HEARTBEAT = 1
+EVENT_HISTORY_RECEIVED_HEARTBEAT = 2
+EVENT_HISTORY_SENT_CONTAINER_METADATA = 3
+EVENT_HISTORY_RECEIVED_CONTAINER_METADATA = 4
+EVENT_HISTORY_SENT_CONTAINER_CONTENT = 5
+EVENT_HISTORY_RECEIVED_CONTAINER_CONTENT = 6
 
 
 def string_to_input_type(input_str):
@@ -84,7 +84,7 @@ def input_type_to_string(input_type):
     elif input_type == INPUT_TYPE_STRINGS:
         return "string"
 
-class MessageHistory:
+class EventHistory:
 
     def __init__(self, size):
         self.history_buffer = deque(maxlen=size)
@@ -92,9 +92,8 @@ class MessageHistory:
     def insert(self, msg_type):
         self.history_buffer.append(msg_type)
 
-    def get_messages(self):
+    def get_events(self):
         return self.history_buffer
-
 
 class Server(threading.Thread):
     def __init__(self, context, clipper_ip, clipper_port):
@@ -102,7 +101,7 @@ class Server(threading.Thread):
         self.context = context
         self.clipper_ip = clipper_ip
         self.clipper_port = clipper_port
-        self.msg_history = MessageHistory(MESSAGE_HISTORY_BUFFER_SIZE)
+        self.event_history = EventHistory(EVENT_HISTORY_BUFFER_SIZE)
 
     def handle_feedback_request(self, msg):
         msg.set_content("ACK")
@@ -123,8 +122,8 @@ class Server(threading.Thread):
         msg.set_content(preds.tobytes())
         return msg
 
-    def get_message_history(self):
-        return self.msg_history.get_messages()
+    def get_event_history(self):
+        return self.event_history.get_events()
 
 
     def run(self):
@@ -171,7 +170,7 @@ class Server(threading.Thread):
                 msg_type_bytes = socket.recv()
                 msg_type = struct.unpack("<I", msg_type_bytes)[0]
                 if msg_type == MESSAGE_TYPE_HEARTBEAT:
-                    self.msg_history.insert(MESSAGE_HISTORY_RECEIVED_HEARTBEAT)
+                    self.event_history.insert(EVENT_HISTORY_RECEIVED_HEARTBEAT)
                     print("Received heartbeat!")
                     heartbeat_type_bytes = socket.recv()
                     heartbeat_type = struct.unpack("<I",
@@ -180,13 +179,13 @@ class Server(threading.Thread):
                         self.send_container_metadata(socket)
                     continue
                 elif msg_type == MESSAGE_TYPE_NEW_CONTAINER:
-                    self.msg_history.insert(MESSAGE_HISTORY_RECEIVED_CONTAINER_METADATA)
+                    self.event_history.insert(EVENT_HISTORY_RECEIVED_CONTAINER_METADATA)
                     print(
                         "Received erroneous new container message from Clipper!"
                     )
                     continue
                 elif msg_type == MESSAGE_TYPE_CONTAINER_CONTENT:
-                    self.msg_history.insert(MESSAGE_HISTORY_RECEIVED_CONTAINER_CONTENT)
+                    self.event_history.insert(EVENT_HISTORY_RECEIVED_CONTAINER_CONTENT)
                     msg_id_bytes = socket.recv()
                     msg_id = int(struct.unpack("<I", msg_id_bytes)[0])
 
@@ -242,7 +241,7 @@ class Server(threading.Thread):
                         t4 = datetime.now()
 
                         response.send(socket)
-                        self.msg_history.insert(MESSAGE_HISTORY_SENT_CONTAINER_CONTENT)
+                        self.event_history.insert(EVENT_HISTORY_SENT_CONTAINER_CONTENT)
 
                         print("recv: %f us, parse: %f us, handle: %f us" %
                               ((t2 - t1).microseconds, (t3 - t2).microseconds,
@@ -263,13 +262,13 @@ class Server(threading.Thread):
         socket.send_string(self.model_name, zmq.SNDMORE)
         socket.send_string(str(self.model_version), zmq.SNDMORE)
         socket.send_string(str(self.model_input_type))
-        self.msg_history.insert(MESSAGE_HISTORY_SENT_CONTAINER_METADATA)
+        self.event_history.insert(EVENT_HISTORY_SENT_CONTAINER_METADATA)
         print("Sent container metadata!")
 
     def send_heartbeat(self, socket):
         socket.send("", zmq.SNDMORE)
         socket.send(struct.pack("<I", MESSAGE_TYPE_HEARTBEAT))
-        self.msg_history.insert(MESSAGE_HISTORY_SENT_HEARTBEAT)
+        self.event_history.insert(EVENT_HISTORY_SENT_HEARTBEAT)
         print("Sent heartbeat!")
 
 
@@ -313,9 +312,9 @@ class RPCService:
     def __init__(self):
         pass
 
-    def get_message_history(self):
+    def get_event_history(self):
         if self.server:
-            return self.server.get_message_history()
+            return self.server.get_event_history()
         else:
             print("Cannot retrieve message history for inactive RPC service!")
             raise 

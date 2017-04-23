@@ -16,21 +16,23 @@ using namespace clipper;
 
 const std::string LOGGING_TAG_RPC_TEST = "RPCTEST";
 
-constexpr int MESSAGE_HISTORY_SENT_HEARTBEAT = 1;
-constexpr int MESSAGE_HISTORY_RECEIVED_HEARTBEAT = 2;
-constexpr int MESSAGE_HISTORY_SENT_CONTAINER_METADATA = 3;
-constexpr int MESSAGE_HISTORY_RECEIVED_CONTAINER_METADATA = 4;
-constexpr int MESSAGE_HISTORY_SENT_CONTAINER_CONTENT = 5;
-constexpr int MESSAGE_HISTORY_RECEIVED_CONTAINER_CONTENT = 6;
-
 // From the container's perspective, we expect at least the following activity:
 // 1. Send a heartbeat message to Clipper
 // 2. Receive a heartbeat response from Clipper requesting container metadata
 // 3. Send container metadata to Clipper
 // 4. Receive a container content message from Clipper
-constexpr int MESSAGE_HISTORY_MINIMUM_LENGTH = 4;
+constexpr int EVENT_HISTORY_MINIMUM_LENGTH = 4;
 
 using RPCValidationResult = std::pair<bool, std::string>;
+
+enum class RPCEvent {
+  SentHeartbeat = 1,
+  ReceivedHeartbeat = 2,
+  SentContainerMetadata = 3,
+  ReceivedContainerMetadata = 4,
+  SentContainerContent = 5,
+  ReceivedContainerContent = 6
+};
 
 class Tester {
  public:
@@ -147,15 +149,15 @@ class Tester {
     RPCValidationResult container_rpc_protocol_valid;
     if(container_valid_entry == container_validation_map_.end()) {
       // Container has not yet been validated
-      std::vector<uint8_t> msg_history_bytes = response.second;
-      size_t message_history_size = static_cast<size_t>(msg_history_bytes.size() / sizeof(int));
-      std::vector<int> parsed_message_history;
-      float* msg_history_floats = reinterpret_cast<float*>(msg_history_bytes.data());
-      for(int i = 0; static_cast<size_t>(i) < message_history_size; i++) {
+      std::vector<uint8_t> event_history_bytes = response.second;
+      size_t event_history_size = static_cast<size_t>(event_history_bytes.size() / sizeof(int));
+      std::vector<int> parsed_event_history;
+      float* msg_history_floats = reinterpret_cast<float*>(event_history_bytes.data());
+      for(int i = 0; static_cast<size_t>(i) < event_history_size; i++) {
         int value = static_cast<int>(msg_history_floats[i]);
-        parsed_message_history.push_back(value);
+        parsed_event_history.push_back(value);
       }
-      container_rpc_protocol_valid = validate_rpc_protocol(parsed_message_history);
+      container_rpc_protocol_valid = validate_rpc_protocol(parsed_event_history);
       container_validation_map_[container_id] = container_rpc_protocol_valid;
       containers_validated_ += 1;
       if(containers_validated_ == num_containers_) {
@@ -170,23 +172,23 @@ class Tester {
     log_validation_result(container_id, container_rpc_protocol_valid);
   }
 
-  RPCValidationResult validate_rpc_protocol(std::vector<int>& rpc_message_history) {
-    if(rpc_message_history.size() < MESSAGE_HISTORY_MINIMUM_LENGTH) {
+  RPCValidationResult validate_rpc_protocol(std::vector<int>& event_history) {
+    if(event_history.size() < EVENT_HISTORY_MINIMUM_LENGTH) {
       return RPCValidationResult(false, "Protocol failed to exchange minimally required messages!");
     }
     bool initial_messages_correct =
-        (rpc_message_history[0] == MESSAGE_HISTORY_SENT_HEARTBEAT)
-            && (rpc_message_history[1] == MESSAGE_HISTORY_RECEIVED_HEARTBEAT)
-            && (rpc_message_history[2] == MESSAGE_HISTORY_SENT_CONTAINER_METADATA);
+        (static_cast<RPCEvent>(event_history[0]) == RPCEvent::SentHeartbeat)
+        && (static_cast<RPCEvent>(event_history[1]) == RPCEvent::ReceivedHeartbeat)
+        && (static_cast<RPCEvent>(event_history[2]) == RPCEvent::SentContainerMetadata);
     if(!initial_messages_correct) {
       return RPCValidationResult(false, "Initial protocol messages are of incorrect types!");
     }
     int received_container_content_count = 0;
-    for(int i = 3; i < static_cast<int>(rpc_message_history.size()); i++) {
-      if(rpc_message_history[i] == MESSAGE_HISTORY_RECEIVED_CONTAINER_CONTENT) {
+    for(int i = 3; i < static_cast<int>(event_history.size()); i++) {
+      if(static_cast<RPCEvent>(event_history[i]) == RPCEvent::ReceivedContainerContent) {
         received_container_content_count++;
       }
-      if(rpc_message_history[i] == MESSAGE_HISTORY_RECEIVED_CONTAINER_METADATA) {
+      if(static_cast<RPCEvent>(event_history[i]) == RPCEvent::ReceivedContainerMetadata) {
         // The container should never receive container metadata from Clipper
         return RPCValidationResult(false, "Clipper sent an erroneous container metadata message!");
       }
