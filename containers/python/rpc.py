@@ -6,6 +6,7 @@ import struct
 from datetime import datetime
 import socket
 import sys
+from collections import deque
 
 INPUT_TYPE_BYTES = 0
 INPUT_TYPE_INTS = 1
@@ -25,6 +26,15 @@ HEARTBEAT_TYPE_REQUEST_CONTAINER_METADATA = 1
 
 SOCKET_POLLING_TIMEOUT_MILLIS = 5000
 SOCKET_ACTIVITY_TIMEOUT_MILLIS = 60000
+
+MESSAGE_HISTORY_BUFFER_SIZE = 30
+
+MESSAGE_HISTORY_SENT_HEARTBEAT = 1
+MESSAGE_HISTORY_RECEIVED_HEARTBEAT = 2
+MESSAGE_HISTORY_SENT_CONTAINER_METADATA = 3
+MESSAGE_HISTORY_RECEIVED_CONTAINER_METADATA = 4
+MESSAGE_HISTORY_SENT_CONTAINER_CONTENT = 5
+MESSAGE_HISTORY_RECEIVED_CONTAINER_CONTENT = 6
 
 
 def string_to_input_type(input_str):
@@ -74,6 +84,17 @@ def input_type_to_string(input_type):
     elif input_type == INPUT_TYPE_STRINGS:
         return "string"
 
+class MessageHistory:
+
+    def __init__(self, size):
+        self.history_buffer = deque(maxlen=size)
+
+    def insert(self, msg_type):
+        self.history_buffer.append(msg_type)
+
+    def get_messages(self):
+        return self.history_buffer
+
 
 class Server(threading.Thread):
     def __init__(self, context, clipper_ip, clipper_port):
@@ -81,6 +102,7 @@ class Server(threading.Thread):
         self.context = context
         self.clipper_ip = clipper_ip
         self.clipper_port = clipper_port
+        self.msg_history = MessageHistory(MESSAGE_HISTORY_BUFFER_SIZE)
 
     def handle_feedback_request(self, msg):
         msg.set_content("ACK")
@@ -100,6 +122,10 @@ class Server(threading.Thread):
         assert preds.dtype == np.dtype("float32")
         msg.set_content(preds.tobytes())
         return msg
+
+    def get_message_history(self):
+        return self.msg_history.get_messages()
+
 
     def run(self):
         print("Serving predictions for {0} input type.".format(
@@ -145,6 +171,7 @@ class Server(threading.Thread):
                 msg_type_bytes = socket.recv()
                 msg_type = struct.unpack("<I", msg_type_bytes)[0]
                 if msg_type == MESSAGE_TYPE_HEARTBEAT:
+                    self.msg_history.insert(MESSAGE_HISTORY_RECEIVED_HEARTBEAT)
                     print("Received heartbeat!")
                     heartbeat_type_bytes = socket.recv()
                     heartbeat_type = struct.unpack("<I",
@@ -153,11 +180,13 @@ class Server(threading.Thread):
                         self.send_container_metadata(socket)
                     continue
                 elif msg_type == MESSAGE_TYPE_NEW_CONTAINER:
+                    self.msg_history.insert(MESSAGE_HISTORY_RECEIVED_CONTAINER_METADATA)
                     print(
                         "Received erroneous new container message from Clipper!"
                     )
                     continue
                 elif msg_type == MESSAGE_TYPE_CONTAINER_CONTENT:
+                    self.msg_history.insert(MESSAGE_HISTORY_RECEIVED_CONTAINER_CONTENT)
                     msg_id_bytes = socket.recv()
                     msg_id = int(struct.unpack("<I", msg_id_bytes)[0])
 
@@ -213,6 +242,7 @@ class Server(threading.Thread):
                         t4 = datetime.now()
 
                         response.send(socket)
+                        self.msg_history.insert(MESSAGE_HISTORY_SENT_CONTAINER_CONTENT)
 
                         print("recv: %f us, parse: %f us, handle: %f us" %
                               ((t2 - t1).microseconds, (t3 - t2).microseconds,
@@ -233,11 +263,13 @@ class Server(threading.Thread):
         socket.send_string(self.model_name, zmq.SNDMORE)
         socket.send_string(str(self.model_version), zmq.SNDMORE)
         socket.send_string(str(self.model_input_type))
+        self.msg_history.insert(MESSAGE_HISTORY_SENT_CONTAINER_METADATA)
         print("Sent container metadata!")
 
     def send_heartbeat(self, socket):
         socket.send("", zmq.SNDMORE)
         socket.send(struct.pack("<I", MESSAGE_TYPE_HEARTBEAT))
+        self.msg_history.insert(MESSAGE_HISTORY_SENT_HEARTBEAT)
         print("Sent heartbeat!")
 
 
@@ -276,28 +308,39 @@ class ModelContainerBase(object):
     def predict_strings(self, inputs):
         pass
 
+class RPCService:
 
-def start(model, host, port, model_name, model_version, input_type):
-    """
-    Args:
-        model (object): The loaded model object ready to make predictions.
-        host (str): The Clipper RPC hostname or IP address.
-        port (int): The Clipper RPC port.
-        model_name (str): The name of the model.
-        model_version (int): The version of the model
-        input_type (str): One of ints, doubles, floats, bytes, strings.
-    """
+    def __init__(self):
+        pass
 
-    try:
-        ip = socket.gethostbyname(host)
-    except socket.error as e:
-        print("Error resolving %s: %s" % (host, e))
-        sys.exit(1)
-    context = zmq.Context()
-    server = Server(context, ip, port)
-    model_input_type = string_to_input_type(input_type)
-    server.model_name = model_name
-    server.model_version = model_version
-    server.model_input_type = model_input_type
-    server.model = model
-    server.run()
+    def get_message_history(self):
+        if self.server:
+            return self.server.get_message_history()
+        else:
+            print("Cannot retrieve message history for inactive RPC service!")
+            raise 
+
+    def start(self, model, host, port, model_name, model_version, input_type):
+        """
+        Args:
+            model (object): The loaded model object ready to make predictions.
+            host (str): The Clipper RPC hostname or IP address.
+            port (int): The Clipper RPC port.
+            model_name (str): The name of the model.
+            model_version (int): The version of the model
+            input_type (str): One of ints, doubles, floats, bytes, strings.
+        """
+
+        try:
+            ip = socket.gethostbyname(host)
+        except socket.error as e:
+            print("Error resolving %s: %s" % (host, e))
+            sys.exit(1)
+        context = zmq.Context()
+        self.server = Server(context, ip, port)
+        model_input_type = string_to_input_type(input_type)
+        self.server.model_name = model_name
+        self.server.model_version = model_version
+        self.server.model_input_type = model_input_type
+        self.server.model = model
+        self.server.run()
