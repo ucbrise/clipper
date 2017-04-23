@@ -225,9 +225,9 @@ TEST(JsonUtilTests, TestParseNestedObject) {
   EXPECT_EQ(get_double(twice_nested_object, "double_val"), double_val);
 }
 
-class SetJsonDocTest : public ::testing::Test {
+class RedisToJsonTest : public ::testing::Test {
  public:
-  SetJsonDocTest() : redis_(std::make_shared<redox::Redox>()) {
+  RedisToJsonTest() : redis_(std::make_shared<redox::Redox>()) {
     Config& conf = get_config();
     redis_->connect(conf.get_redis_address(), conf.get_redis_port());
 
@@ -235,12 +235,12 @@ class SetJsonDocTest : public ::testing::Test {
     send_cmd_no_reply<std::string>(*redis_, {"FLUSHALL"});
   }
 
-  virtual ~SetJsonDocTest() { redis_->disconnect(); }
+  virtual ~RedisToJsonTest() { redis_->disconnect(); }
 
   std::shared_ptr<redox::Redox> redis_;
 };
 
-TEST_F(SetJsonDocTest, TestSetJsonDocFromRedisAppMetadata) {
+TEST_F(RedisToJsonTest, TestRedisAppMetadataToJson) {
   // Application data in redis storage format
   std::string input_type = "doubles";
   std::string default_output = "1.0";
@@ -249,18 +249,44 @@ TEST_F(SetJsonDocTest, TestSetJsonDocFromRedisAppMetadata) {
   std::vector<std::string> candidate_model_names =
       std::vector<std::string>{"m", "k"};
 
-  add_application(*redis_, "myappname", candidate_model_names,
-                  parse_input_type(input_type), selection_policy,
-                  default_output, latency_slo_micros);
+  ASSERT_TRUE(add_application(*redis_, "myappname", candidate_model_names,
+                              parse_input_type(input_type), selection_policy,
+                              default_output, latency_slo_micros));
   std::unordered_map<std::string, std::string> app_metadata =
       get_application(*redis_, "myappname");
 
   rapidjson::Document d;
-  set_json_doc_from_redis_app_metadata(d, app_metadata);
+  redis_app_metadata_to_json(d, app_metadata);
 
-  EXPECT_EQ(get_string(d, "input_type"), input_type);
-  EXPECT_EQ(get_string(d, "default_output"), default_output);
-  EXPECT_EQ(get_int(d, "latency_slo_micros"), latency_slo_micros);
-  EXPECT_EQ(get_string_array(d, "candidate_model_names"),
+  ASSERT_EQ(get_string(d, "input_type"), input_type);
+  ASSERT_EQ(get_string(d, "default_output"), default_output);
+  ASSERT_EQ(get_int(d, "latency_slo_micros"), latency_slo_micros);
+  ASSERT_EQ(get_string_array(d, "candidate_model_names"),
             candidate_model_names);
+}
+
+TEST_F(RedisToJsonTest, TestRedisModelMetadataToJson) {
+  std::vector<std::string> labels{"ads", "images", "experimental", "other",
+                                  "labels"};
+  VersionedModelId model = std::make_pair("m", 1);
+  std::string input_type = "doubles";
+  std::string container_name = "clipper/test_container";
+  std::string model_path = "/tmp/models/m/1";
+  ASSERT_TRUE(add_model(*redis_, model, parse_input_type(input_type), labels,
+                        container_name, model_path));
+
+  std::unordered_map<std::string, std::string> model_metadata =
+      get_model(*redis_, model);
+
+  rapidjson::Document d;
+  redis_model_metadata_to_json(d, model_metadata);
+
+  ASSERT_EQ(get_string(d, "input_type"), input_type);
+
+  ASSERT_EQ(get_string(d, "model_name"), model.first);
+  ASSERT_EQ(get_int(d, "model_version"), model.second);
+  ASSERT_EQ(get_string(d, "input_type"), input_type);
+  ASSERT_EQ(get_string_array(d, "labels"), labels);
+  ASSERT_EQ(get_string(d, "container_name"), container_name);
+  ASSERT_EQ(get_string(d, "model_data_path"), model_path);
 }

@@ -272,6 +272,23 @@ std::vector<std::string> get_all_model_names(redox::Redox& redis) {
   return model_names;
 }
 
+std::vector<VersionedModelId> get_all_models(redox::Redox& redis) {
+  std::vector<VersionedModelId> models;
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
+    // Use wildcard argument for KEYS command to get all key names.
+    // The number of keys is assumed to be within reasonable limits.
+    auto result = send_cmd_with_reply<vector<string>>(redis, {"KEYS", "*"});
+    if (result) {
+      for (auto model_str : *result) {
+        std::vector<VersionedModelId> parsed_model = str_to_models(model_str);
+        models.push_back(parsed_model.front());
+      }
+    }
+  }
+  return models;
+}
+
 bool add_container(Redox& redis, const VersionedModelId& model_id,
                    const int model_replica_id, const int zmq_connection_id,
                    const InputType& input_type) {

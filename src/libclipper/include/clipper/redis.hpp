@@ -141,24 +141,6 @@ std::vector<int> get_model_versions(redox::Redox& redis,
                                     const std::string& model_name);
 
 /**
- * Looks up an entry in the model table by the fully
- * specified Redis key.
- *
- * This function is primarily used for looking up a model
- * entry after a subscriber detects a change to the model
- * with the given key.
- *
- * \return Returns a map of model attribute name-value pairs as
- * strings. Any parsing of the attribute values from their string
- * format (e.g. to a numerical representation) must be done by the
- * caller of this function. The set of attributes stored for a
- * model can be found in the source for `add_model()`. If the
- * model was not found, an empty map will be returned.
- */
-std::unordered_map<std::string, std::string> get_model_by_key(
-    redox::Redox& redis, const std::string& key);
-
-/**
  * Looks up model names listed in the model table. Since a call to KEYS may
  * return multiple version values associated with each model key, this method
  * de-duplicates the model names before returning.
@@ -167,6 +149,14 @@ std::unordered_map<std::string, std::string> get_model_by_key(
  * were found, then an empty vector will be returned.
  */
 std::vector<std::string> get_all_model_names(redox::Redox& redis);
+
+/**
+ * Looks up models listed in the model table.
+ *
+ * \return Returns a vector of models and versions. If no models
+ * were found, then an empty vector will be returned.
+ */
+std::vector<VersionedModelId> get_all_models(redox::Redox& redis);
 
 /**
  * Adds a container into the container table. This will

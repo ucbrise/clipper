@@ -27,6 +27,7 @@ using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
 using clipper::VersionedModelId;
 using clipper::InputType;
 using clipper::json::add_string;
+using clipper::json::add_bool;
 using clipper::json::get_bool;
 using clipper::json::get_candidate_models;
 using clipper::json::get_int;
@@ -35,7 +36,8 @@ using clipper::json::get_string_array;
 using clipper::json::json_parse_error;
 using clipper::json::json_semantic_error;
 using clipper::json::parse_json;
-using clipper::json::set_json_doc_from_redis_app_metadata;
+using clipper::json::redis_app_metadata_to_json;
+using clipper::json::redis_model_metadata_to_json;
 using clipper::json::to_json_string;
 
 namespace management {
@@ -52,6 +54,10 @@ const std::string GET_METRICS = ADMIN_PATH + "/metrics$";
 const std::string GET_SELECTION_STATE = ADMIN_PATH + "/get_state$";
 const std::string GET_ALL_APPLICATIONS = ADMIN_PATH + "/get_all_applications$";
 const std::string GET_APPLICATION = ADMIN_PATH + "/get_application$";
+const std::string GET_ALL_MODELS = ADMIN_PATH + "/get_all_models$";
+const std::string GET_MODEL = ADMIN_PATH + "/get_model$";
+const std::string GET_ALL_CONTAINERS = ADMIN_PATH + "/get_all_containers$";
+const std::string GET_CONTAINER = ADMIN_PATH + "/get_container$";
 
 const std::string APPLICATION_JSON_SCHEMA = R"(
   {
@@ -63,7 +69,7 @@ const std::string APPLICATION_JSON_SCHEMA = R"(
   }
 )";
 
-const std::string GET_ALL_APPLICATIONS_REQUESTS_SCHEMA = R"(
+const std::string VERBOSE_OPTION_JSON_SCHEMA = R"(
   {
     "verbose" := bool
   }
@@ -72,6 +78,13 @@ const std::string GET_ALL_APPLICATIONS_REQUESTS_SCHEMA = R"(
 const std::string GET_APPLICATION_REQUESTS_SCHEMA = R"(
   {
     "name" := string
+  }
+)";
+
+const std::string GET_MODEL_REQUESTS_SCHEMA = R"(
+  {
+    "model_name" := string,
+    "model_version" := int
   }
 )";
 
@@ -220,11 +233,11 @@ class RequestHandler {
             respond_http(result, "200 OK", response);
           } catch (const json_parse_error& e) {
             std::string err_msg =
-                json_error_msg(e.what(), GET_ALL_APPLICATIONS_REQUESTS_SCHEMA);
+                json_error_msg(e.what(), VERBOSE_OPTION_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
           } catch (const json_semantic_error& e) {
             std::string err_msg =
-                json_error_msg(e.what(), GET_ALL_APPLICATIONS_REQUESTS_SCHEMA);
+                json_error_msg(e.what(), VERBOSE_OPTION_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
           } catch (const std::invalid_argument& e) {
             respond_http(e.what(), "400 Bad Request", response);
@@ -246,6 +259,48 @@ class RequestHandler {
           } catch (const json_semantic_error& e) {
             std::string err_msg =
                 json_error_msg(e.what(), GET_APPLICATION_REQUESTS_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const std::invalid_argument& e) {
+            respond_http(e.what(), "400 Bad Request", response);
+          }
+        });
+    server_.add_endpoint(
+        GET_ALL_MODELS, "POST",
+        [this](std::shared_ptr<HttpServer::Response> response,
+               std::shared_ptr<HttpServer::Request> request) {
+          try {
+            clipper::log_info(LOGGING_TAG_MANAGEMENT_FRONTEND,
+                              "Get all models POST request");
+            std::string result = get_all_models(request->content.string());
+            respond_http(result, "200 OK", response);
+          } catch (const json_parse_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), VERBOSE_OPTION_JSON_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const json_semantic_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), VERBOSE_OPTION_JSON_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const std::invalid_argument& e) {
+            respond_http(e.what(), "400 Bad Request", response);
+          }
+        });
+    server_.add_endpoint(
+        GET_MODEL, "POST",
+        [this](std::shared_ptr<HttpServer::Response> response,
+               std::shared_ptr<HttpServer::Request> request) {
+          try {
+            clipper::log_info(LOGGING_TAG_MANAGEMENT_FRONTEND,
+                              "Get model info POST request");
+            std::string result = get_model(request->content.string());
+            respond_http(result, "200 OK", response);
+          } catch (const json_parse_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), GET_MODEL_REQUESTS_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const json_semantic_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), GET_MODEL_REQUESTS_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
           } catch (const std::invalid_argument& e) {
             respond_http(e.what(), "400 Bad Request", response);
@@ -411,7 +466,7 @@ class RequestHandler {
         std::unordered_map<std::string, std::string> app_metadata =
             clipper::redis::get_application(redis_connection_, app_name);
         rapidjson::Document app_doc(&response_doc.GetAllocator());
-        set_json_doc_from_redis_app_metadata(app_doc, app_metadata);
+        redis_app_metadata_to_json(app_doc, app_metadata);
         /* We need to add each app's name to its returned JSON object. */
         add_string(app_doc, "name", app_name);
         response_doc.PushBack(app_doc, response_doc.GetAllocator());
@@ -454,12 +509,109 @@ class RequestHandler {
       /* We assume that redis::get_application returns an empty map iff no app
        * exists */
       /* If an app does exist, we need to add its name to the map. */
-      set_json_doc_from_redis_app_metadata(response_doc, app_metadata);
+      redis_app_metadata_to_json(response_doc, app_metadata);
       add_string(response_doc, "name", app_name);
     }
 
     return to_json_string(response_doc);
   }
+
+  //////////////////////////////////////////////////
+
+  /**
+   * Creates an endpoint that listens for requests to retrieve info about
+   * registered Clipper models.
+   *
+   * JSON format:
+   * {
+   *  "verbose" := bool
+   * }
+   *
+   * \return Returns a JSON string that encodes a list with info about
+   * registered models. If `verbose` == False, the encoded list has all
+   * registered
+   * models' names. Else, the encoded map contains objects with full model
+   * information.
+   *
+   */
+  std::string get_all_models(const std::string& json) {
+    rapidjson::Document d;
+    parse_json(json, d);
+
+    bool verbose = get_bool(d, "verbose");
+
+    std::vector<VersionedModelId> models =
+        clipper::redis::get_all_models(redis_connection_);
+
+    rapidjson::Document response_doc;
+    response_doc.SetArray();
+
+    if (verbose) {
+      for (auto model : models) {
+        std::unordered_map<std::string, std::string> model_metadata =
+            clipper::redis::get_model(redis_connection_, model);
+        rapidjson::Document model_doc(&response_doc.GetAllocator());
+        redis_model_metadata_to_json(model_doc, model_metadata);
+        bool is_current_version =
+            clipper::redis::get_current_model_version(
+                redis_connection_, model.first) == model.second;
+        add_bool(model_doc, "is_current_version", is_current_version);
+        response_doc.PushBack(model_doc, response_doc.GetAllocator());
+      }
+    } else {
+      for (auto model : models) {
+        std::string model_str = clipper::versioned_model_to_str(model);
+        rapidjson::Value v(
+            rapidjson::StringRef(model_str.c_str(), model_str.length()));
+        response_doc.PushBack(v, response_doc.GetAllocator());
+      }
+    }
+    return to_json_string(response_doc);
+  }
+
+  /**
+   * Creates an endpoint that listens for requests to retrieve info about
+   * a specified Clipper model.
+   *
+   * JSON format:
+   * {
+   *  "model_name" := string,
+   *  "model_version" := int,
+   * }
+   *
+   * \return Returns a JSON string encoding a map of the specified model's
+   * attribute name-value pairs, including whether it is the currently deployed
+   * version of the model.
+   *
+   */
+  std::string get_model(const std::string& json) {
+    rapidjson::Document d;
+    parse_json(json, d);
+
+    std::string model_name = get_string(d, "model_name");
+    int model_version = get_int(d, "model_version");
+    VersionedModelId model = std::make_pair(model_name, model_version);
+
+    std::unordered_map<std::string, std::string> model_metadata =
+        clipper::redis::get_model(redis_connection_, model);
+
+    rapidjson::Document response_doc;
+    response_doc.SetObject();
+
+    if (model_metadata.size() > 0) {
+      /* We assume that redis::get_model returns an empty map iff no model
+       * exists */
+      redis_model_metadata_to_json(response_doc, model_metadata);
+      bool is_current_version =
+          clipper::redis::get_current_model_version(
+              redis_connection_, model.first) == model.second;
+      add_bool(response_doc, "is_current_version", is_current_version);
+    }
+
+    return to_json_string(response_doc);
+  }
+
+  /////////////////////////////////////////////////
 
   /**
    * Creates an endpoint that looks up the debug string

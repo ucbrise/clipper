@@ -345,6 +345,60 @@ class Clipper:
             print(r.text)
             return None
 
+    def get_all_models(self, verbose=False):
+        """Gets information about all models registered with Clipper.
+
+        Parameters
+        ----------
+        verbose : bool
+            If set to False, the returned list contains the apps' names.
+            If set to True, the list contains model info dictionaries.
+
+        Returns
+        -------
+        list
+            Returns a list of information about all apps registered to Clipper.
+            If no modelss are registered with Clipper, an empty list is returned.
+        """
+        url = "http://%s:1338/admin/get_all_models" % self.host
+        req_json = json.dumps({"verbose": verbose})
+        headers = {'Content-type': 'application/json'}
+        r = requests.get(url, headers=headers, data=req_json)
+
+        if r.status_code == requests.codes.ok:
+            return r.json()
+        else:
+            print(r.text)
+            return None
+
+    def get_model_info(self, name):
+        """Gets detailed information about a registered model.
+
+        Parameters
+        ----------
+        name : str
+            The name of the model to look up
+
+        Returns
+        -------
+        dict
+            Returns a dictionary with the specified model's info.
+            If no model with name `name` is registered with Clipper, None is returned.
+        """
+        url = "http://%s:1338/admin/get_model" % self.host
+        req_json = json.dumps({"name": name})
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
+
+        if r.status_code == requests.codes.ok:
+            app_info = r.json()
+            if len(app_info) == 0:
+                return None
+            return app_info
+        else:
+            print(r.text)
+            return None
+
     def inspect_selection_policy(self, app_name, uid):
         """Fetches a human-readable string with the current selection policy state.
 
