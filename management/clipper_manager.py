@@ -14,6 +14,11 @@ from cStringIO import StringIO
 import sys
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath('%s../../containers/python/' % cur_dir))
+from conda.api import get_index
+from conda.base.context import context
+from conda.exceptions import UnsatisfiableError
+import conda.resolve
+import conda_env.specs as specs
 from pywrencloudpickle import CloudPickler
 
 MODEL_REPO = "/tmp/clipper-models"
@@ -594,6 +599,19 @@ class Clipper:
         if not os.path.exists(serialization_dir):
             os.makedirs(serialization_dir)
 
+        # Export Anaconda environment
+        subprocess.call(
+            "PIP_FORMAT=legacy conda env export >> {environment_fname}".format(
+                environment_fname=environment_fname),
+            shell=True)
+
+        # Confirm that packages installed through conda are solvable
+        self._check_for_conda_package_solvability(environment_fname)
+
+        # Give container environment details
+        shutil.copy(environment_fname, serialization_dir)
+        print("Supplied environment details")
+
         # Write out function serialization
         func_file_path = "{dir}/{predict_fname}".format(
             dir=serialization_dir, predict_fname=predict_fname)
@@ -601,20 +619,27 @@ class Clipper:
             serialized_function_file.write(serialized_prediction_function)
         print("Serialized and supplied predict function")
 
-        # Export Anaconda environment
-        subprocess.call(
-            "PIP_FORMAT=legacy conda env export >> {environment_fname}".format(
-                environment_fname=environment_fname),
-            shell=True)
-
-        # Give container environment details
-        shutil.copy(environment_fname, serialization_dir)
-        print("Supplied environment details")
-
         # Deploy function
         return self.deploy_model(name, version, serialization_dir,
                                  default_python_container, labels, input_type,
                                  num_containers)
+
+    def _check_for_conda_package_solvability(self, environment_fname):
+        try:
+            index = get_index(channel_urls=context.channels)
+            r = conda.resolve.Resolve(index)
+
+            spec = specs.detect(filename=environment_fname, directory=os.getcwd())
+            dependency_details = spec.environment.dependencies.items()
+
+            for distribution, dependencies in dependency_details:
+                if distribution == 'conda':
+                    # This call doesn't actually install anything; it checks the solvability of package dependencies. Source:
+                    # https://github.com/conda/conda/blob/00a05b89973b96aebb023b11f2c672e0425984d8/conda/cli/install.py
+                    r.install(dependencies)
+        except UnsatisfiableError as e:
+            print("Your conda dependencies are unsatisfiable (see error text below). Please resolve these issues and call `deploy_predict_func` again.")
+            print(e)
 
     def deploy_model(self,
                      name,
