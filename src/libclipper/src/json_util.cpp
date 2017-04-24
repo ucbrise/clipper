@@ -487,5 +487,34 @@ void redis_model_metadata_to_json(
   add_model_data_path_from_redis(d, model_metadata);
 }
 
+void add_model_id_key_from_redis(
+    rapidjson::Document& d,
+    const std::unordered_map<std::string, std::string>& container_metadata) {
+  std::string key = "model_id";
+  check_key_exists_in_map(key, container_metadata);
+  add_string(d, key.c_str(), container_metadata.at(key));
+}
+
+void add_model_replica_id_from_redis(
+    rapidjson::Document& d,
+    const std::unordered_map<std::string, std::string>& container_metadata) {
+  std::string key = "model_replica_id";
+  check_key_exists_in_map(key, container_metadata);
+  add_int(d, key.c_str(), std::stoi(container_metadata.at(key)));
+}
+
+void redis_container_metadata_to_json(
+    rapidjson::Document& d,
+    const std::unordered_map<std::string, std::string>& container_metadata) {
+  d.SetObject();
+  add_model_id_key_from_redis(d, container_metadata);
+  add_model_name_from_redis(d, container_metadata);
+  add_model_version_from_redis(d, container_metadata);
+  add_model_replica_id_from_redis(d, container_metadata);
+  // TODO: uncomment this when we start tracking batch size in Redis.
+  // add_container_batch_size_from_redis(d, container_metadata);
+  add_input_type_from_redis(d, container_metadata);
+}
+
 }  // namespace json
 }  // namespace clipper

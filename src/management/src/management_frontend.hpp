@@ -38,6 +38,7 @@ using clipper::json::json_semantic_error;
 using clipper::json::parse_json;
 using clipper::json::redis_app_metadata_to_json;
 using clipper::json::redis_model_metadata_to_json;
+using clipper::json::redis_container_metadata_to_json;
 using clipper::json::to_json_string;
 
 namespace management {
@@ -59,7 +60,7 @@ const std::string GET_MODEL = ADMIN_PATH + "/get_model$";
 const std::string GET_ALL_CONTAINERS = ADMIN_PATH + "/get_all_containers$";
 const std::string GET_CONTAINER = ADMIN_PATH + "/get_container$";
 
-const std::string APPLICATION_JSON_SCHEMA = R"(
+const std::string ADD_APPLICATION_JSON_SCHEMA = R"(
   {
    "name" := string,
    "candidate_model_names" := [string],
@@ -88,7 +89,15 @@ const std::string GET_MODEL_REQUESTS_SCHEMA = R"(
   }
 )";
 
-const std::string MODEL_JSON_SCHEMA = R"(
+const std::string GET_CONTAINER_REQUESTS_SCHEMA = R"(
+  {
+    "model_name" := string,
+    "model_version" := int,
+    "replica_id" := int
+  }
+)";
+
+const std::string ADD_MODEL_JSON_SCHEMA = R"(
   {
    "model_name" := string,
    "model_version" := int,
@@ -161,11 +170,11 @@ class RequestHandler {
             respond_http(result, "200 OK", response);
           } catch (const json_parse_error& e) {
             std::string err_msg =
-                json_error_msg(e.what(), APPLICATION_JSON_SCHEMA);
+                json_error_msg(e.what(), ADD_APPLICATION_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
           } catch (const json_semantic_error& e) {
             std::string err_msg =
-                json_error_msg(e.what(), APPLICATION_JSON_SCHEMA);
+                json_error_msg(e.what(), ADD_APPLICATION_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
           } catch (const std::invalid_argument& e) {
             respond_http(e.what(), "400 Bad Request", response);
@@ -181,10 +190,12 @@ class RequestHandler {
             std::string result = add_model(request->content.string());
             respond_http(result, "200 OK", response);
           } catch (const json_parse_error& e) {
-            std::string err_msg = json_error_msg(e.what(), MODEL_JSON_SCHEMA);
+            std::string err_msg =
+                json_error_msg(e.what(), ADD_MODEL_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
           } catch (const json_semantic_error& e) {
-            std::string err_msg = json_error_msg(e.what(), MODEL_JSON_SCHEMA);
+            std::string err_msg =
+                json_error_msg(e.what(), ADD_MODEL_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
           } catch (const std::invalid_argument& e) {
             respond_http(e.what(), "400 Bad Request", response);
@@ -293,6 +304,48 @@ class RequestHandler {
             clipper::log_info(LOGGING_TAG_MANAGEMENT_FRONTEND,
                               "Get model info POST request");
             std::string result = get_model(request->content.string());
+            respond_http(result, "200 OK", response);
+          } catch (const json_parse_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), GET_MODEL_REQUESTS_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const json_semantic_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), GET_MODEL_REQUESTS_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const std::invalid_argument& e) {
+            respond_http(e.what(), "400 Bad Request", response);
+          }
+        });
+    server_.add_endpoint(
+        GET_ALL_CONTAINERS, "POST",
+        [this](std::shared_ptr<HttpServer::Response> response,
+               std::shared_ptr<HttpServer::Request> request) {
+          try {
+            clipper::log_info(LOGGING_TAG_MANAGEMENT_FRONTEND,
+                              "Get all containers POST request");
+            std::string result = get_all_containers(request->content.string());
+            respond_http(result, "200 OK", response);
+          } catch (const json_parse_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), VERBOSE_OPTION_JSON_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const json_semantic_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), VERBOSE_OPTION_JSON_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const std::invalid_argument& e) {
+            respond_http(e.what(), "400 Bad Request", response);
+          }
+        });
+    server_.add_endpoint(
+        GET_CONTAINER, "POST",
+        [this](std::shared_ptr<HttpServer::Response> response,
+               std::shared_ptr<HttpServer::Request> request) {
+          try {
+            clipper::log_info(LOGGING_TAG_MANAGEMENT_FRONTEND,
+                              "Get model info POST request");
+            std::string result = get_container(request->content.string());
             respond_http(result, "200 OK", response);
           } catch (const json_parse_error& e) {
             std::string err_msg =
@@ -473,8 +526,9 @@ class RequestHandler {
       }
     } else {
       for (const string& app_name : app_names) {
-        rapidjson::Value v(
-            rapidjson::StringRef(app_name.c_str(), app_name.length()));
+        rapidjson::Value v;
+        v.SetString(app_name.c_str(), app_name.length(),
+                    response_doc.GetAllocator());
         response_doc.PushBack(v, response_doc.GetAllocator());
       }
     }
@@ -516,8 +570,6 @@ class RequestHandler {
     return to_json_string(response_doc);
   }
 
-  //////////////////////////////////////////////////
-
   /**
    * Creates an endpoint that listens for requests to retrieve info about
    * registered Clipper models.
@@ -545,6 +597,8 @@ class RequestHandler {
 
     rapidjson::Document response_doc;
     response_doc.SetArray();
+    // need to maintain references
+    std::vector<std::string> model_strs;
 
     if (verbose) {
       for (auto model : models) {
@@ -561,8 +615,9 @@ class RequestHandler {
     } else {
       for (auto model : models) {
         std::string model_str = clipper::versioned_model_to_str(model);
-        rapidjson::Value v(
-            rapidjson::StringRef(model_str.c_str(), model_str.length()));
+        rapidjson::Value v;
+        v.SetString(model_str.c_str(), model_str.length(),
+                    response_doc.GetAllocator());
         response_doc.PushBack(v, response_doc.GetAllocator());
       }
     }
@@ -614,7 +669,100 @@ class RequestHandler {
     return to_json_string(response_doc);
   }
 
-  /////////////////////////////////////////////////
+  /**
+   * Creates an endpoint that listens for requests to retrieve info about
+   * Clipper containers.
+   *
+   * JSON format:
+   * {
+   *  "verbose" := bool
+   * }
+   *
+   * \return Returns a JSON string that encodes a list with info about
+   * containers.
+   * If `verbose` == False, the encoded list has all containers' names (model
+   * name, model version, container ID).
+   * Else, the encoded map contains objects with full container information.
+   *
+   */
+  std::string get_all_containers(const std::string& json) {
+    rapidjson::Document d;
+    parse_json(json, d);
+
+    bool verbose = get_bool(d, "verbose");
+
+    std::vector<std::pair<VersionedModelId, int>> containers =
+        clipper::redis::get_all_containers(redis_connection_);
+
+    rapidjson::Document response_doc;
+    response_doc.SetArray();
+
+    if (verbose) {
+      for (auto container : containers) {
+        std::unordered_map<std::string, std::string> container_metadata =
+            clipper::redis::get_container(redis_connection_, container.first,
+                                          container.second);
+        rapidjson::Document container_doc(&response_doc.GetAllocator());
+        redis_container_metadata_to_json(container_doc, container_metadata);
+        response_doc.PushBack(container_doc, response_doc.GetAllocator());
+      }
+    } else {
+      for (auto container : containers) {
+        std::stringstream ss;
+        ss << clipper::versioned_model_to_str(container.first);
+        ss << ":";
+        ss << container.second;
+        std::string container_str = ss.str();
+        rapidjson::Value v;
+        v.SetString(container_str.c_str(), container_str.length(),
+                    response_doc.GetAllocator());
+        response_doc.PushBack(v, response_doc.GetAllocator());
+      }
+    }
+    std::string result = to_json_string(response_doc);
+    clipper::log_info_formatted(LOGGING_TAG_MANAGEMENT_FRONTEND,
+                                "get_all_containers response: {}", result);
+    return result;
+  }
+
+  /**
+   * Creates an endpoint that listens for requests to retrieve info about
+   * a specified Clipper container.
+   *
+   * JSON format:
+   * {
+   *  "model_name" := string,
+   *  "model_version" := int,
+   *  "replica_id" := int
+   * }
+   *
+   * \return Returns a JSON string encoding a map of the specified container's
+   * attribute name-value pairs.
+   *
+   */
+  std::string get_container(const std::string& json) {
+    rapidjson::Document d;
+    parse_json(json, d);
+
+    std::string model_name = get_string(d, "model_name");
+    int model_version = get_int(d, "model_version");
+    int replica_id = get_int(d, "replica_id");
+    VersionedModelId model = std::make_pair(model_name, model_version);
+
+    std::unordered_map<std::string, std::string> container_metadata =
+        clipper::redis::get_container(redis_connection_, model, replica_id);
+
+    rapidjson::Document response_doc;
+    response_doc.SetObject();
+
+    if (container_metadata.size() > 0) {
+      /* We assume that redis::get_container returns an empty map iff no
+       * container exists */
+      redis_container_metadata_to_json(response_doc, container_metadata);
+    }
+
+    return to_json_string(response_doc);
+  }
 
   /**
    * Creates an endpoint that looks up the debug string
