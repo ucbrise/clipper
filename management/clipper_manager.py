@@ -608,30 +608,9 @@ class Clipper:
             shell=True)
 
         # Confirm that packages installed through conda are solvable
-<<<<<<< 4b7bd80f7fd19641df5162849e7c22b0ea1e480b
         if not (self._conda_env_solvable(environment_fname, os.getcwd())):
             return
-=======
         self._check_for_conda_package_solvability(environment_fname)
->>>>>>> Unsatisfiability of conda packages check
-
-        # Give container environment details
-        shutil.copy(environment_fname, serialization_dir)
-        print("Supplied environment details")
-
-        # Write out function serialization
-        func_file_path = "{dir}/{predict_fname}".format(
-            dir=serialization_dir, predict_fname=predict_fname)
-        with open(func_file_path, "w") as serialized_function_file:
-            serialized_function_file.write(serialized_prediction_function)
-        print("Serialized and supplied predict function")
-
-        # Deploy function
-        return self.deploy_model(name, version, serialization_dir,
-                                 default_python_container, labels, input_type,
-                                 num_containers)
-
-<<<<<<< 4b7bd80f7fd19641df5162849e7c22b0ea1e480b
     def _conda_env_solvable(self, environment_fname, directory):
         """Returns true if the provided conda environment is compatible with the container os.
 
@@ -665,22 +644,45 @@ class Clipper:
         return child.returncode
 =======
     def _check_for_conda_package_solvability(self, environment_fname):
+        index = get_index(platform=CONTAINER_CONDA_PLATFORM)
+        r = conda.resolve.Resolve(index)
+
+        spec = specs.detect(filename='environment.yml', directory=os.getcwd())
+        dependency_details = spec.environment.dependencies.items()
+
         try:
-            index = get_index(channel_urls=context.channels)
-            r = conda.resolve.Resolve(index)
-
-            spec = specs.detect(filename=environment_fname, directory=os.getcwd())
-            dependency_details = spec.environment.dependencies.items()
-
             for distribution, dependencies in dependency_details:
+                missing_packages = []
+
+                # Only necessary to check for package existence/satisfiability on the linux-64 platform for packages installed through conda
                 if distribution == 'conda':
-                    # This call doesn't actually install anything; it checks the solvability of package dependencies. Source:
-                    # https://github.com/conda/conda/blob/00a05b89973b96aebb023b11f2c672e0425984d8/conda/cli/install.py
-                    r.install(dependencies)
-        except UnsatisfiableError as e:
+                    try:
+                        # This call doesn't actually install anything; it checks the solvability of package dependencies. Source:
+                        # https://github.com/conda/conda/blob/00a05b89973b96aebb023b11f2c672e0425984d8/conda/cli/install.py
+                        r.install(dependencies)
+                    except NoPackagesFoundError as missing_packages_error:
+                        missing_packages = missing_packages_error.pkgs
+                        for package in missing_packages:
+                            dependencies.remove(package)
+
+                        # Need to check that the dependencies that are not missing are satisfiable
+                        r.install(dependencies)
+
+                if missing_packages:
+                    print("The following packages in your conda environment aren't available in the linux-64 conda channel the container will use:")
+                    print(", ".join(str(package) for package in missing_packages))
+                    print("We will skip their installation when deploying your function. If you need these packages for your function, the container will experience a runtime error when queried.")
+
+                    # To skip during creating the conda environment, we can modify the source code here:
+                    # https://github.com/conda/conda/blob/00a05b89973b96aebb023b11f2c672e0425984d8/conda/cli/install.py#L255
+                    # So that it skips when we want it to (would have to do some argument parsing code changes as well)
+
+                    # Alternatively, we can create a new environment.yml without these packages included and not modify the source
+
+
+        except UnsatisfiableError as unsat_e:
             print("Your conda dependencies are unsatisfiable (see error text below). Please resolve these issues and call `deploy_predict_func` again.")
-            print(e)
->>>>>>> Unsatisfiability of conda packages check
+            print(unsat_e)
 
     def deploy_model(self,
                      name,
