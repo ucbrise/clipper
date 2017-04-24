@@ -5,7 +5,7 @@ import org.junit.Test;
 
 import java.net.UnknownHostException;
 
-public class RPCTest {
+public class RPCProtocolTest {
 
     @Test
     public void testRPCProtocolCorrect() {
