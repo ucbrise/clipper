@@ -54,6 +54,15 @@ class RedisTest : public ::testing::Test {
   }
 };
 
+TEST_F(RedisTest, ParseModelReplicaKey) {
+  VersionedModelId model = std::make_pair("model1", 4);
+  int replica_id = 7;
+  std::string key = gen_model_replica_key(model, replica_id);
+  std::pair<VersionedModelId, int> parse_result = parse_model_replica_key(key);
+  ASSERT_EQ(parse_result.first, model);
+  ASSERT_EQ(parse_result.second, replica_id);
+}
+
 TEST_F(RedisTest, RedisConnectionRetryLoop) {
   redox::Redox no_connect_redis;
   int attempts = 0;
@@ -213,6 +222,31 @@ TEST_F(RedisTest, AddContainer) {
   EXPECT_EQ(std::stoi(result["zmq_connection_id"]), zmq_connection_id);
   EXPECT_EQ(std::stoi(result["batch_size"]), 1);
   EXPECT_EQ(parse_input_type(result["input_type"]), input_type);
+}
+
+TEST_F(RedisTest, GetAllContainers) {
+  VersionedModelId model = std::make_pair("m", 1);
+  int zmq_connection_id = 0;
+  InputType input_type = InputType::Doubles;
+  ASSERT_TRUE(add_container(*redis_, model, 0, zmq_connection_id, input_type));
+
+  ASSERT_TRUE(
+      add_container(*redis_, model, 1, zmq_connection_id + 1, input_type));
+
+  VersionedModelId model2 = std::make_pair("other_model", 3);
+  ASSERT_TRUE(
+      add_container(*redis_, model2, 0, zmq_connection_id + 2, input_type));
+
+  std::vector<std::pair<VersionedModelId, int>> containers =
+      get_all_containers(*redis_);
+
+  ASSERT_EQ(containers.size(), static_cast<size_t>(3));
+  std::sort(containers.begin(), containers.end());
+  std::vector<std::pair<VersionedModelId, int>> expected_containers(
+      {std::make_pair(model, 0), std::make_pair(model, 1),
+       std::make_pair(model2, 0)});
+  std::sort(expected_containers.begin(), expected_containers.end());
+  ASSERT_EQ(containers, expected_containers);
 }
 
 TEST_F(RedisTest, DeleteContainer) {

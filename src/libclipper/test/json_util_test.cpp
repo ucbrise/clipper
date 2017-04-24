@@ -290,3 +290,23 @@ TEST_F(RedisToJsonTest, TestRedisModelMetadataToJson) {
   ASSERT_EQ(get_string(d, "container_name"), container_name);
   ASSERT_EQ(get_string(d, "model_data_path"), model_path);
 }
+
+TEST_F(RedisToJsonTest, TestRedisContainerMetadataToJson) {
+  VersionedModelId model = std::make_pair("m", 1);
+  int replica_id = 4;
+  int zmq_connection_id = 12;
+  std::string input_type = "doubles";
+  ASSERT_TRUE(add_container(*redis_, model, replica_id, zmq_connection_id,
+                            parse_input_type(input_type)));
+  std::unordered_map<std::string, std::string> container_metadata =
+      get_container(*redis_, model, replica_id);
+
+  rapidjson::Document d;
+  redis_container_metadata_to_json(d, container_metadata);
+
+  ASSERT_EQ(get_string(d, "model_name"), model.first);
+  ASSERT_EQ(get_int(d, "model_version"), model.second);
+  ASSERT_EQ(get_string(d, "input_type"), input_type);
+  ASSERT_EQ(get_int(d, "model_replica_id"), replica_id);
+  ASSERT_EQ(get_string(d, "model_id"), gen_versioned_model_key(model));
+}
