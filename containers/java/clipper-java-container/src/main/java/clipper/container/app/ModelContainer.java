@@ -17,7 +17,7 @@ import org.zeromq.ZMQ;
 class ModelContainer<I extends DataVector<?>> {
   private static final String CONNECTION_ADDRESS = "tcp://%s:%s";
   private static final long SOCKET_POLLING_TIMEOUT_MILLIS = 5000;
-  private static final long SOCKET_ACTIVITY_TIMEOUT_MILLIS = 60000;
+  private static final long SOCKET_ACTIVITY_TIMEOUT_MILLIS = 30000;
   private static final int EVENT_HISTORY_BUFFER_SIZE = 30;
 
   private final DataVectorParser<?, I> inputVectorParser;
