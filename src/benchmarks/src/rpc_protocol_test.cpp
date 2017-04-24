@@ -184,7 +184,8 @@ class Tester {
     std::unique_lock<std::mutex> lock(container_maps_mutex);
     auto container_id_entry = msg_id_to_container_map_.find(msg_id);
     if(container_id_entry == msg_id_to_container_map_.end()) {
-      // TODO: Throw error
+      throw std::runtime_error(
+          "Failed to find container associated with previously sent message!");
     }
     int container_id = container_id_entry->second;
     auto container_valid_entry = container_validation_map_.find(container_id);
