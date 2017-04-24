@@ -602,15 +602,32 @@ class Clipper:
             os.makedirs(serialization_dir)
 
         # Export Anaconda environment
-        subprocess.call(
+        process = subprocess.Popen(
             "PIP_FORMAT=legacy conda env export >> {environment_fname}".format(
                 environment_fname=environment_fname),
             shell=True)
+        process.wait()
 
         # Confirm that packages installed through conda are solvable
         if not (self._conda_env_solvable(environment_fname, os.getcwd())):
             return
-        self._check_for_conda_package_solvability(environment_fname)
+
+        # Give container environment details
+        shutil.copy(environment_fname, serialization_dir)
+        print("Supplied environment details")
+
+        # Write out function serialization
+        func_file_path = "{dir}/{predict_fname}".format(
+            dir=serialization_dir, predict_fname=predict_fname)
+        with open(func_file_path, "w") as serialized_function_file:
+            serialized_function_file.write(serialized_prediction_function)
+        print("Serialized and supplied predict function")
+        
+        # Deploy function
+        return self.deploy_model(name, version, serialization_dir,
+                               default_python_container, labels, input_type,
+                               num_containers)
+
     def _conda_env_solvable(self, environment_fname, directory):
         """Returns true if the provided conda environment is compatible with the container os.
 
@@ -641,53 +658,7 @@ class Clipper:
             stderr=subprocess.PIPE,
             shell=True)
         child.communicate()
-        return child.returncode
-=======
-    def _check_for_conda_package_solvability(self, environment_fname):
-        index = get_index(platform=CONTAINER_CONDA_PLATFORM)
-        r = conda.resolve.Resolve(index)
-
-        spec = specs.detect(filename=environment_fname, directory=os.getcwd())
-        env = spec.environment
-        dependency_details = env.dependencies.items()
-
-        try:
-            missing_packages = None
-            for distribution, dependencies in dependency_details:
-                if distribution == 'conda':
-                    try:
-                        # This call doesn't install anything; it checks the solvability of package dependencies.
-                        r.install(dependencies)
-                    except NoPackagesFoundError as missing_packages_error:
-                        missing_packages = missing_packages_error.pkgs
-                        for package in missing_packages:
-                            dependencies.remove(package)
-
-                        # Check that the dependencies that are not missing are satisfiable
-                        r.install(dependencies)
-                    if missing_packages:
-                        print(
-                            "The following packages in your conda environment aren't available in the linux-64 conda channel the container will use:"
-                        )
-                        print(", ".join(str(package) for package in missing_packages))
-                        print(
-                            "We will skip their installation when deploying your function. If your function uses these packages, the container will experience a runtime error when queried."
-                        )
-
-                        missing_packages_raw = [
-                            '='.join(package.split()) for package in missing_packages
-                        ]
-                        for missing_package_raw in missing_packages_raw:
-                            print("Removing %s from supplied environment specifications" % missing_package_raw)
-                            env.dependencies.raw.remove(missing_package_raw)
-                        env.dependencies.parse()
-                        env.save()
-
-        except UnsatisfiableError as unsat_e:
-            print(
-                "Your conda dependencies are unsatisfiable (see error text below). Please resolve these issues and call `deploy_predict_func` again."
-            )
-            print(unsat_e)
+        return child.returncode == 0
 
     def deploy_model(self,
                      name,
