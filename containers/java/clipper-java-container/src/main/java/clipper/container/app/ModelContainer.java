@@ -15,8 +15,10 @@ class ModelContainer<I extends DataVector<?>> {
   private static final String CONNECTION_ADDRESS = "tcp://%s:%s";
   private static final long SOCKET_POLLING_TIMEOUT_MILLIS = 5000;
   private static final long SOCKET_ACTIVITY_TIMEOUT_MILLIS = 60000;
+  private static final int EVENT_HISTORY_BUFFER_SIZE = 30;
 
   private final DataVectorParser<?, I> inputVectorParser;
+  private final RPCEventHistory eventHistory;
 
   private Thread servingThread;
   private ByteBuffer responseBuffer;
@@ -24,6 +26,7 @@ class ModelContainer<I extends DataVector<?>> {
 
   ModelContainer(DataVectorParser<?, I> inputVectorParser) {
     this.inputVectorParser = inputVectorParser;
+    this.eventHistory = new RPCEventHistory(EVENT_HISTORY_BUFFER_SIZE);
   }
 
   public void start(final Model<I> model, final String host, final int port)
@@ -51,6 +54,10 @@ class ModelContainer<I extends DataVector<?>> {
       servingThread.interrupt();
       servingThread = null;
     }
+  }
+
+  public RPCEvent[] getEventHistory() {
+    return eventHistory.getEvents();
   }
 
   private void serveModel(Model<I> model, final ZMQ.Context context, String ip, int port)
@@ -103,6 +110,7 @@ class ModelContainer<I extends DataVector<?>> {
         switch (messageType) {
           case Heartbeat:
             System.out.println("Received heartbeat!");
+            eventHistory.insert(RPCEvent.ReceivedHeartbeat);
             byte[] heartbeatTypeMessage = socket.recv();
             List<Long> parsedHeartbeatTypeMessage =
                 DataUtils.getUnsignedIntsFromBytes(heartbeatTypeMessage);
@@ -113,6 +121,7 @@ class ModelContainer<I extends DataVector<?>> {
             }
             break;
           case ContainerContent:
+            eventHistory.insert(RPCEvent.ReceivedContainerContent);
             byte[] idMessage = socket.recv();
             List<Long> parsedIdMessage = DataUtils.getUnsignedIntsFromBytes(idMessage);
             if (parsedIdMessage.size() < 1) {
@@ -199,6 +208,7 @@ class ModelContainer<I extends DataVector<?>> {
             break;
           case NewContainer:
             // We should never receive a new container message from Clipper
+            eventHistory.insert(RPCEvent.ReceivedContainerMetadata);
             System.out.println("Received erroneous new container message from Clipper!");
             break;
           default:
@@ -243,6 +253,7 @@ class ModelContainer<I extends DataVector<?>> {
       }
     }
     socket.send("", ZMQ.SNDMORE);
+    socket.send(DataUtils.getBytesFromInts(ContainerMessageType.ContainerContent.getCode()), ZMQ.SNDMORE);
     ByteBuffer b = ByteBuffer.allocate(8);
     b.order(ByteOrder.LITTLE_ENDIAN);
     b.putLong(msgId);
@@ -250,11 +261,13 @@ class ModelContainer<I extends DataVector<?>> {
     byte[] msgIdByteArr = b.slice().array();
     socket.send(msgIdByteArr, ZMQ.SNDMORE);
     socket.sendZeroCopy(responseBuffer, responseBuffer.position(), 0);
+    eventHistory.insert(RPCEvent.SentContainerContent);
   }
 
   private void sendHeartbeat(ZMQ.Socket socket) {
     socket.send("", ZMQ.SNDMORE);
     socket.send(DataUtils.getBytesFromInts(ContainerMessageType.Heartbeat.getCode()), 0);
+    eventHistory.insert(RPCEvent.SentHeartbeat);
     System.out.println("Sent heartbeat!");
   }
 
@@ -265,6 +278,7 @@ class ModelContainer<I extends DataVector<?>> {
     socket.send(model.getName(), ZMQ.SNDMORE);
     socket.send(String.valueOf(model.getVersion()), ZMQ.SNDMORE);
     socket.send(String.valueOf(model.getInputType().getCode()));
+    eventHistory.insert(RPCEvent.SentContainerMetadata);
     System.out.println("Sent container metadata!");
   }
 }
