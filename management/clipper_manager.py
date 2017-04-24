@@ -635,39 +635,41 @@ class Clipper:
         dependency_details = env.dependencies.items()
 
         try:
-            missing_packages = []
+            missing_packages = None
             for distribution, dependencies in dependency_details:
-
-                # Only necessary to check for package existence/satisfiability on the linux-64 platform for packages installed through conda
                 if distribution == 'conda':
                     try:
-                        # This call doesn't actually install anything; it checks the solvability of package dependencies. Source:
-                        # https://github.com/conda/conda/blob/00a05b89973b96aebb023b11f2c672e0425984d8/conda/cli/install.py
+                        # This call doesn't install anything; it checks the solvability of package dependencies.
                         r.install(dependencies)
                     except NoPackagesFoundError as missing_packages_error:
-                        missing_packages.extend(missing_packages_error.pkgs)
+                        missing_packages = missing_packages_error.pkgs
                         for package in missing_packages:
                             dependencies.remove(package)
 
-                        # Need to check that the dependencies that are not missing are satisfiable
+                        # Check that the dependencies that are not missing are satisfiable
                         r.install(dependencies)
+                    if missing_packages:
+                        print(
+                            "The following packages in your conda environment aren't available in the linux-64 conda channel the container will use:"
+                        )
+                        print(", ".join(str(package) for package in missing_packages))
+                        print(
+                            "We will skip their installation when deploying your function. If your function uses these packages, the container will experience a runtime error when queried."
+                        )
 
-            if missing_packages:
-                print("The following packages in your conda environment aren't available in the linux-64 conda channel the container will use:")
-                print(", ".join(str(package) for package in missing_packages))
-                print("We will skip their installation when deploying your function. If you need these packages for your function, the container will experience a runtime error when queried.")
-
-                # Raw package strings are kept in the following format
-                missing_packages_raw = ['='.join(package.split()) for package in missing_packages]
-
-                for missing_package_raw in missing_packages_raw:
-                    print("Removing %s" % missing_package_raw)
-                    env.dependencies.raw.remove(missing_package_raw)
-                env.dependencies.parse()
-                env.save()
+                        missing_packages_raw = [
+                            '='.join(package.split()) for package in missing_packages
+                        ]
+                        for missing_package_raw in missing_packages_raw:
+                            print("Removing %s from supplied environment specifications" % missing_package_raw)
+                            env.dependencies.raw.remove(missing_package_raw)
+                        env.dependencies.parse()
+                        env.save()
 
         except UnsatisfiableError as unsat_e:
-            print("Your conda dependencies are unsatisfiable (see error text below). Please resolve these issues and call `deploy_predict_func` again.")
+            print(
+                "Your conda dependencies are unsatisfiable (see error text below). Please resolve these issues and call `deploy_predict_func` again."
+            )
             print(unsat_e)
 
     def deploy_model(self,
