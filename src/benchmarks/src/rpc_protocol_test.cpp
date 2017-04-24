@@ -80,16 +80,19 @@ class Tester {
         [this](const std::string &key, const std::string &event_type) {
           if (event_type == "hset") {
             // Detected a new container
-            auto container_info =
-                redis::get_container_by_key(redis_connection_, key);
-            int container_id = std::stoi(container_info["zmq_connection_id"]);
-            std::string model_name = container_info["model_name"];
-            // Add a validation entry for the new connected container
-            // indicating that it has not yet been validated
-            std::unique_lock<std::mutex> lock(container_maps_mutex);
-            container_names_map_.emplace(container_id, model_name);
-            const int validation_msg_id = send_validation_message(container_id);
-            msg_id_to_container_map_.emplace(validation_msg_id, container_id);
+            if(containers_connected_ < num_containers_) {
+              containers_connected_++;
+              auto container_info =
+                  redis::get_container_by_key(redis_connection_, key);
+              int container_id = std::stoi(container_info["zmq_connection_id"]);
+              std::string model_name = container_info["model_name"];
+              // Add a validation entry for the new connected container
+              // indicating that it has not yet been validated
+              std::unique_lock<std::mutex> lock(container_maps_mutex);
+              container_names_map_.emplace(container_id, model_name);
+              const int validation_msg_id = send_validation_message(container_id);
+              msg_id_to_container_map_.emplace(validation_msg_id, container_id);
+            }
           }
         });
     start_timeout_thread(timeout_seconds);
@@ -132,6 +135,7 @@ class Tester {
   redox::Subscriber redis_subscriber_;
   redox::Redox redis_connection_;
   std::thread timeout_thread_;
+  std::atomic<int> containers_connected_{0};
   std::atomic<int> containers_validated_{0};
   std::atomic<bool> timeout_thread_interrupted_{false};
   int num_containers_;
