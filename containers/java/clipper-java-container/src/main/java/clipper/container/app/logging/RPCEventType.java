@@ -1,8 +1,11 @@
-package clipper.container.app;
+package clipper.container.app.logging;
+
+import clipper.container.app.ClipperEnum;
+import clipper.container.app.EnumUtil;
 
 import java.util.Map;
 
-public enum RPCEvent implements ClipperEnum {
+public enum RPCEventType implements ClipperEnum {
     SentHeartbeat(1),
     ReceivedHeartbeat(2),
     SentContainerMetadata(3),
@@ -12,7 +15,7 @@ public enum RPCEvent implements ClipperEnum {
 
     private final int code;
 
-    RPCEvent(int code) {
+    RPCEventType(int code) {
         this.code = code;
     }
 
@@ -21,10 +24,10 @@ public enum RPCEvent implements ClipperEnum {
         return code;
     }
 
-    private static final Map<Integer, RPCEvent> typeResolutionMap =
-            EnumUtil.getTypeResolutionMap(RPCEvent.values());
+    private static final Map<Integer, RPCEventType> typeResolutionMap =
+            EnumUtil.getTypeResolutionMap(RPCEventType.values());
 
-    public static RPCEvent fromCode(int code) throws IllegalArgumentException {
+    public static RPCEventType fromCode(int code) throws IllegalArgumentException {
         return EnumUtil.getEnumFromCodeOrThrow(code, "rpc event", typeResolutionMap);
     }
 }

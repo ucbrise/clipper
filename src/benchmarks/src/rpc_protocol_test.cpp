@@ -5,12 +5,14 @@
 #include <mutex>
 #include <vector>
 #include <sstream>
+#include <chrono>
 
 #include <clipper/rpc_service.hpp>
 #include <clipper/config.hpp>
 #include <clipper/constants.hpp>
 #include <clipper/redis.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/logging.hpp>
 
 using namespace clipper;
 
@@ -45,11 +47,12 @@ class Tester {
   Tester(Tester &&other) = default;
   Tester &operator=(Tester &&other) = default;
   ~Tester() {
+    stop_timeout_thread();
     std::unique_lock<std::mutex> l(test_completed_cv_mutex_);
     test_completed_cv_.wait(l, [this]() { return test_completed_ == true; });
   }
 
-  void start() {
+  void start(long timeout_seconds) {
     rpc_->start("127.0.0.1",
                RPC_SERVICE_PORT,
                [](VersionedModelId /*model*/, int /*container_id*/) {},
@@ -89,22 +92,29 @@ class Tester {
             msg_id_to_container_map_.emplace(validation_msg_id, container_id);
           }
         });
+    start_timeout_thread(timeout_seconds);
   }
 
   bool succeeded() {
     std::unique_lock<std::mutex> lock(container_maps_mutex);
+    int valid_containers = 0;
     for(auto const& container_entry : container_validation_map_) {
       bool rpc_valid = container_entry.second.first;
-      if(!rpc_valid) {
-        return false;
+      if(rpc_valid) {
+        valid_containers++;
       }
     }
-    return true;
+    return (valid_containers == num_containers_);
   }
 
+  // Sends a message requesting the container's log of all
+  // RPC events since several milliseconds before the current time
   int send_validation_message(int container_id) {
+    auto log_start_time = std::chrono::system_clock::now() - std::chrono::milliseconds(50);
+    double log_start_time_millis = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(
+        log_start_time.time_since_epoch()).count()) / 1000;
     std::vector<double> data;
-    data.push_back(1);
+    data.push_back(log_start_time_millis);
     std::shared_ptr<Input> input = std::make_shared<DoubleVector>(data);
     rpc::PredictionRequest request(InputType::Doubles);
     request.add_input(input);
@@ -115,13 +125,15 @@ class Tester {
 
   std::condition_variable_any test_completed_cv_;
   std::mutex test_completed_cv_mutex_;
-  std::atomic<bool> test_completed_;
+  std::atomic<bool> test_completed_{false};
 
  private:
   std::unique_ptr<rpc::RPCService> rpc_;
   redox::Subscriber redis_subscriber_;
   redox::Redox redis_connection_;
+  std::thread timeout_thread_;
   std::atomic<int> containers_validated_{0};
+  std::atomic<bool> timeout_thread_interrupted_{false};
   int num_containers_;
 
   // Mutex used to ensure stability of container-related
@@ -136,6 +148,32 @@ class Tester {
   // Mapping of message id to the connection id of its
   // corresponding container
   std::unordered_map<int, int> msg_id_to_container_map_;
+
+  void start_timeout_thread(long timeout_seconds) {
+    timeout_thread_ = std::thread([this, timeout_seconds]() {
+      int num_iters = 30;
+      long sleep_interval_millis = (timeout_seconds * 1000) / num_iters;
+      for(int i = 0; i < num_iters; i++) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleep_interval_millis));
+        if(timeout_thread_interrupted_) {
+          return;
+        }
+      }
+      // Failed to validate containers after 30 seconds
+      // End the test with a failed exit code
+      log_error(LOGGING_TAG_RPC_TEST, "Failed to validate containers - test timed out!");
+      timeout_thread_interrupted_ = true;
+      test_completed_ = true;
+      test_completed_cv_.notify_all();
+    });
+  }
+
+  void stop_timeout_thread() {
+    if(!timeout_thread_interrupted_) {
+      timeout_thread_interrupted_ = true;
+      timeout_thread_.join();
+    }
+  }
 
   void on_response_received(rpc::RPCResponse response) {
     int msg_id = response.first;
@@ -161,6 +199,7 @@ class Tester {
       container_validation_map_[container_id] = container_rpc_protocol_valid;
       containers_validated_ += 1;
       if(containers_validated_ == num_containers_) {
+        stop_timeout_thread();
         test_completed_ = true;
         test_completed_cv_.notify_all();
       }
@@ -176,10 +215,22 @@ class Tester {
     if(event_history.size() < EVENT_HISTORY_MINIMUM_LENGTH) {
       return RPCValidationResult(false, "Protocol failed to exchange minimally required messages!");
     }
+    int recv_heartbeat_index = 0;
+    for(int i = 0; static_cast<size_t>(i) < event_history.size(); i++) {
+      RPCEvent curr_event = static_cast<RPCEvent>(event_history[i]);
+      if(curr_event == RPCEvent::ReceivedHeartbeat) {
+        recv_heartbeat_index = i;
+        break;
+      }
+    }
+    if(recv_heartbeat_index < 1) {
+      // The container definitely sent a heartbeat message to Clipper,
+      // but it's missing from the log
+      return RPCValidationResult(false, "Container log is missing sending of heartbeat message!");
+    }
     bool initial_messages_correct =
-        (static_cast<RPCEvent>(event_history[0]) == RPCEvent::SentHeartbeat)
-        && (static_cast<RPCEvent>(event_history[1]) == RPCEvent::ReceivedHeartbeat)
-        && (static_cast<RPCEvent>(event_history[2]) == RPCEvent::SentContainerMetadata);
+        (static_cast<RPCEvent>(event_history[recv_heartbeat_index - 1]) == RPCEvent::SentHeartbeat)
+        && (static_cast<RPCEvent>(event_history[recv_heartbeat_index + 1]) == RPCEvent::SentContainerMetadata);
     if(!initial_messages_correct) {
       return RPCValidationResult(false, "Initial protocol messages are of incorrect types!");
     }
@@ -226,7 +277,9 @@ int main(int argc, char *argv[]) {
       ("redis_port", "Redis port",
        cxxopts::value<int>()->default_value("6379"))
       ("num_containers", "Number of containers to validate",
-       cxxopts::value<int>()->default_value("1"));
+       cxxopts::value<int>()->default_value("1"))
+      ("timeout_seconds", "Timeout in seconds",
+       cxxopts::value<long>()->default_value("30"));
   // clang-format on
   options.parse(argc, argv);
 
@@ -235,7 +288,7 @@ int main(int argc, char *argv[]) {
   get_config().ready();
 
   Tester tester(options["num_containers"].as<int>());
-  tester.start();
+  tester.start(options["timeout_seconds"].as<long>());
 
   std::unique_lock<std::mutex> l(tester.test_completed_cv_mutex_);
   tester.test_completed_cv_.wait(

@@ -3,6 +3,7 @@ import zmq
 import threading
 import numpy as np
 import struct
+import time
 from datetime import datetime
 import socket
 import sys
@@ -90,7 +91,8 @@ class EventHistory:
         self.history_buffer = deque(maxlen=size)
 
     def insert(self, msg_type):
-        self.history_buffer.append(msg_type)
+        curr_time_millis = time.time() * 1000
+        self.history_buffer.append((curr_time_millis, msg_type))
 
     def get_events(self):
         return self.history_buffer

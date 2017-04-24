@@ -1,5 +1,7 @@
 package clipper.container.app;
 
+import clipper.container.app.logging.RPCEventHistory;
+import clipper.container.app.logging.RPCEventType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -11,10 +13,10 @@ public class RPCEventHistoryTest {
     @Test
     public void testEventHistoryCorrectShort() {
         RPCEventHistory eventHistory = new RPCEventHistory(10);
-        RPCEvent[] correctEvents = new RPCEvent[5];
+        RPCEventType[] correctEvents = new RPCEventType[5];
         for(int i = 1; i < 6; i++) {
-            RPCEvent event = RPCEvent.fromCode(i);
-            eventHistory.insert(RPCEvent.fromCode(i));
+            RPCEventType event = RPCEventType.fromCode(i);
+            eventHistory.insert(RPCEventType.fromCode(i));
             correctEvents[i - 1] = event;
         }
         Assert.assertArrayEquals(eventHistory.getEvents(), correctEvents);
@@ -25,10 +27,10 @@ public class RPCEventHistoryTest {
         int numIterations = 60;
         int correctEventsLength = 12;
         RPCEventHistory eventHistory = new RPCEventHistory(12);
-        List<RPCEvent> correctEvents = new ArrayList<>();
+        List<RPCEventType> correctEvents = new ArrayList<>();
         for(int i = 0; i < numIterations; i++) {
             int code = (i % 6) + 1;
-            RPCEvent event = RPCEvent.fromCode(code);
+            RPCEventType event = RPCEventType.fromCode(code);
             eventHistory.insert(event);
             if(numIterations - i <= correctEventsLength) {
                 correctEvents.add(event);
