@@ -6,7 +6,7 @@ Model containers must implement functionality consistent with this information.
 The connection lifecycle defines the socket construction, destruction, and state-based behavior for a single Clipper session. We define a session as a sustained connection between a container and Clipper. Key points:
 
 - Every session requires a distinct socket. When a session ends, a container must create a new socket in order to reconnect to Clipper.
-- Sessions are initiated and sustained by a heartbeating process. The initial detection of a two-way heartbeat between Clipper and a container marks the creation of a successful connection, and the loss of heartbeat indicates that a connection is broken.
+- Sessions are initiated and sustained by a heartbeating process. Containers send the first heartbeat message and wait until they receive a response from Clipper. The initial detection of a heartbeat response from Clipper marks the creation of a successful connection, and the loss of a heartbeat indicates that a connection is broken.
     
 ### RPC Message Types 
 Model containers communicate with Clipper using RPC messages of several types. Each RPC message is a [multi-part ZeroMQ message](http://zguide.zeromq.org/php:chapter2#toc11) beginning with an [empty ZeroMQ frame](http://zguide.zeromq.org/php:chapter3#The-Simple-Reply-Envelope). Each message contains a **Message Type** field, encoded as an **unsigned integer**, that specifies one of the following types:
@@ -30,27 +30,28 @@ This type of message is sent to Clipper by a container at the beginning of a ses
     
 The following is an example construction of a *new container message* in Python:
 
-   
+  ```py
     socket.send("", zmq.SNDMORE) # Sends an empty frame and indicates that more content will follow
     socket.send(struct.pack("<I", 0), zmq.SNDMORE) # Indicates that this is a new container message
     socket.send(<MODEL_NAME>, zmq.SNDMORE)
     socket.send(str(<MODEL_VERSION>), zmq.SNDMORE)
     socket.send(str(<MODEL_INPUT_TYPE>))
+  ```
     
 #### Container Content Messages
 Once Clipper has registered a container, these content messages are exchanged between the container and Clipper in order to serve prediction requests. These messages contain serialized queries (from Clipper) or serialized responses (from the container). For more information on query-response serialization, see the "Serializing Prediction Requests" and "Serializing Prediction Responses" sections below. Beyond the required empty frame and **Message Type** field, *container content messages* contain the following strictly-ordered fields:
 
-  * **Message Id**: A unique identifier, encoded as an unsigned integer, corresponding to the container content message. When handling a prediction request sent via a *contaner content message* from Clipper, the response *container content message* must specify the same **Message Id** as the request message. Clipper will use this identifier to correctly construct request-response pairs in order to return a query result.
+  * **Message Id**: A unique identifier, encoded as an unsigned integer, corresponding to the container content message. When handling a prediction request sent via a *container content message* from Clipper, the response *container content message* must specify the same **Message Id** as the request message. Clipper will use this identifier to correctly construct request-response pairs in order to return a query result.
   * **Message Content**: Byte content representing either a serialized prediction request (in the case of inbound messages from Clipper) or a serialized prediction response (in the case of outbound messages from the container).
 
 The following is an example construction of a *container content message* corresponding to a prediction response in Python:
 
-    
+  ```py  
     socket.send("", zmq.SNDMORE) # Sends an empty frame and indicates that more content will follow
     socket.send(struct.pack("<I", 1), zmq.SNDMORE) # Indicates that this is a container content message
     socket.send(struct.pack("<I", <MESSAGE_ID>), zmq.SNDMORE)
     socket.send(<SERIALIZED_MESSAGE_CONTENT_AS_BYTES>)
-    
+  ```    
 #### Heartbeat Messages
 These messages are used for session initialization as well as maintenance. By sending and receiving heartbeats, containers are able to determine whether or not Clipper is still active and respond accordingly. Beyond the required empty frame and **Message Type** field, *heartbeat messages* contain the following strictly-ordered fields:
 
@@ -60,33 +61,34 @@ These messages are used for session initialization as well as maintenance. By se
     
 The following is an example construction of an **outbound** *heartbeat message* in Python:
  
-    
+  ```py      
     socket.send("", zmq.SNDMORE) # Sends an empty frame and indicates that more content will follow
     socket.send(struct.pack("<I", 2), zmq.SNDMORE) # Indicates that this is a heartbeat message
-    
+  ```
+  
 ### Starting a new session
 Now that we are familiar with the different types of RPC messages, we will see how a model container can use them to start a session with Clipper. The steps are as follows:
 
 1. **Socket Creation**: Every Clipper session requires a distinct ZeroMQ socket. Create a [ZeroMQ Dealer socket](http://api.zeromq.org/3-2:zmq-socket) object. This socket can receive requests and send responses asynchronously.
   * Python example:
   
-    ```
+  ```py  
     import zmq
     context = zmq.Context();
     socket = context.socket(zmq.DEALER)
-    ```
+  ```
     
 2. Once a ZeroMQ Dealer socket has been created, use it to connect to Clipper. In Python, this can be accomplished as follows:
 
-    ```
+  ```py  
     socket.connect(<CLIPPER_TCP_ADDRESS>, <CLIPPER_PORT>)
-    ```
+  ```
 
 3. Then, send a *heartbeat message* to Clipper.
 
 4. Continuously poll the socket for a *heartbeat message* response from Clipper. Because the container is connecting to Clipper via a fresh socket, this message should be of **heartbeat type** `1`. Python example:
 
-   ```
+  ```py  
    poller = zmq.Poller()
    poller.register(socket, zmq.POLLIN) # Register the socket for polling
    while(True):
@@ -118,7 +120,7 @@ In order to maintain a session, the container should frequently request heartbea
 
 Python example:
 
-   ```
+  ```py  
    from datetime import datetime
    last_activity_time = datetime.now()
    while(True):
@@ -140,7 +142,7 @@ Python example:
                send_heartbeat_message(socket)
    ```
 
-The current implementation uses the values `D = 5 seconds` and `TO = 60 seconds`. 
+The current implementation uses the values `D = 5 seconds` and `TO = 30 seconds`. 
 
 ### Ending a session
 If the container fails to receive a message from Clipper within the time limit specified by the **socket activity timeout**, the session should be terminated by executing the following steps:
@@ -151,10 +153,10 @@ If the container fails to receive a message from Clipper within the time limit s
 
 Python example:
 
-   ```
+  ```py  
    poller.unregister(socket)
    socket.close()
-   ```
+  ```
 The container should then attempt to start a new session.
 
 ### For additional container lifecycle references, see:
@@ -185,21 +187,21 @@ RPC requests sent from Clipper to model containers are divided into two categori
  * In the case of primitive inputs (types 0-3), deserialized inputs can then be obtained by splitting the typed array at the offsets specified in the input header.
    * Python example:
    
-     ```
+  ```py  
      raw_concatenated_content = socket.recv()
      typed_inputs = np.frombuffer(raw_concatenated_content, dtype=<PRIMITIVE_INPUT_TYPE>)
      inputs = np.split(typed_inputs, <OFFSETS_LIST>)
-     ```
+  ```
  
  * In the case of string inputs (type 4), all strings are sent with trailing null terminators. Therefore, deserialized inputs can be obtaining by splitting the typed array along the null terminator character, `\0`.
    * Python example:
    
-     ```
+  ```py  
      raw_concatenated_content = socket.recv()
      # Split content based on trailing null terminators
      # Ignore the extraneous final null terminator by using a -1 slice
      inputs = np.array(raw_concatenated_content.split('\0')[:-1], dtype=np.string_)
-     ```
+  ```
 
 ### Serializing Prediction Responses
 Prediction responses are float values. These should be serializd via byte encoding in little endian format.
