@@ -23,6 +23,8 @@ from pywrencloudpickle import CloudPickler
 MODEL_REPO = "/tmp/clipper-models"
 DOCKER_NW = "clipper_nw"
 
+CONTAINER_CONDA_PLATFORM = 'linux-64'
+
 REDIS_STATE_DB_NUM = 1
 REDIS_MODEL_DB_NUM = 2
 REDIS_CONTAINER_DB_NUM = 3
@@ -498,21 +500,45 @@ class Clipper:
                                  num_containers)
 
     def _check_for_conda_package_solvability(self, environment_fname):
+        index = get_index(platform=CONTAINER_CONDA_PLATFORM)
+        r = conda.resolve.Resolve(index)
+
+        spec = specs.detect(filename='environment.yml', directory=os.getcwd())
+        dependency_details = spec.environment.dependencies.items()
+
         try:
-            index = get_index(channel_urls=context.channels)
-            r = conda.resolve.Resolve(index)
-
-            spec = specs.detect(filename=environment_fname, directory=os.getcwd())
-            dependency_details = spec.environment.dependencies.items()
-
             for distribution, dependencies in dependency_details:
+                missing_packages = []
+
+                # Only necessary to check for package existence/satisfiability on the linux-64 platform for packages installed through conda
                 if distribution == 'conda':
-                    # This call doesn't actually install anything; it checks the solvability of package dependencies. Source:
-                    # https://github.com/conda/conda/blob/00a05b89973b96aebb023b11f2c672e0425984d8/conda/cli/install.py
-                    r.install(dependencies)
-        except UnsatisfiableError as e:
+                    try:
+                        # This call doesn't actually install anything; it checks the solvability of package dependencies. Source:
+                        # https://github.com/conda/conda/blob/00a05b89973b96aebb023b11f2c672e0425984d8/conda/cli/install.py
+                        r.install(dependencies)
+                    except NoPackagesFoundError as missing_packages_error:
+                        missing_packages = missing_packages_error.pkgs
+                        for package in missing_packages:
+                            dependencies.remove(package)
+
+                        # Need to check that the dependencies that are not missing are satisfiable
+                        r.install(dependencies)
+
+                if missing_packages:
+                    print("The following packages in your conda environment aren't available in the linux-64 conda channel the container will use:")
+                    print(", ".join(str(package) for package in missing_packages))
+                    print("We will skip their installation when deploying your function. If you need these packages for your function, the container will experience a runtime error when queried.")
+
+                    # To skip during creating the conda environment, we can modify the source code here:
+                    # https://github.com/conda/conda/blob/00a05b89973b96aebb023b11f2c672e0425984d8/conda/cli/install.py#L255
+                    # So that it skips when we want it to (would have to do some argument parsing code changes as well)
+
+                    # Alternatively, we can create a new environment.yml without these packages included and not modify the source
+
+
+        except UnsatisfiableError as unsat_e:
             print("Your conda dependencies are unsatisfiable (see error text below). Please resolve these issues and call `deploy_predict_func` again.")
-            print(e)
+            print(unsat_e)
 
     def deploy_model(self,
                      name,
