@@ -16,20 +16,28 @@ import org.zeromq.ZMQ;
 
 class ModelContainer<I extends DataVector<?>> {
   private static final String CONNECTION_ADDRESS = "tcp://%s:%s";
-  private static final long SOCKET_POLLING_TIMEOUT_MILLIS = 5000;
-  private static final long SOCKET_ACTIVITY_TIMEOUT_MILLIS = 30000;
+  private static final long DEFAULT_SOCKET_POLLING_TIMEOUT_MILLIS = 5000;
+  private static final long DEFAULT_SOCKET_ACTIVITY_TIMEOUT_MILLIS = 30000;
   private static final int EVENT_HISTORY_BUFFER_SIZE = 30;
 
   private final DataVectorParser<?, I> inputVectorParser;
   private final RPCEventHistory eventHistory;
+  private final long socketPollingTOMillis;
+  private final long socketActivityTOMillis;
 
   private Thread servingThread;
   private ByteBuffer responseBuffer;
   private int responseBufferSize;
 
   ModelContainer(DataVectorParser<?, I> inputVectorParser) {
+    this(inputVectorParser, DEFAULT_SOCKET_POLLING_TIMEOUT_MILLIS, DEFAULT_SOCKET_ACTIVITY_TIMEOUT_MILLIS);
+  }
+
+  ModelContainer(DataVectorParser<?, I> inputVectorParser, long socketPollingTOMillis, long socketActivityTOMillis) {
     this.inputVectorParser = inputVectorParser;
     this.eventHistory = new RPCEventHistory(EVENT_HISTORY_BUFFER_SIZE);
+    this.socketPollingTOMillis = socketPollingTOMillis;
+    this.socketActivityTOMillis = socketActivityTOMillis;
   }
 
   public void start(final Model<I> model, final String host, final int port)
@@ -79,12 +87,12 @@ class ModelContainer<I extends DataVector<?>> {
       socket.connect(clipperAddress);
       sendHeartbeat(socket);
       while (true) {
-        poller.poll(SOCKET_POLLING_TIMEOUT_MILLIS);
+        poller.poll(socketPollingTOMillis);
         if (!poller.pollin(0)) {
           // Failed to receive a message prior to the polling timeout
           if (connected) {
             if (System.currentTimeMillis() - lastActivityTimeMillis
-                >= SOCKET_ACTIVITY_TIMEOUT_MILLIS) {
+                >= socketActivityTOMillis) {
               // Terminate the session
               System.out.println("Connection timed out. Reconnecting...");
               connected = false;
