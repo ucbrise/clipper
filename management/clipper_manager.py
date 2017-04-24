@@ -608,8 +608,12 @@ class Clipper:
             shell=True)
 
         # Confirm that packages installed through conda are solvable
+<<<<<<< 4b7bd80f7fd19641df5162849e7c22b0ea1e480b
         if not (self._conda_env_solvable(environment_fname, os.getcwd())):
             return
+=======
+        self._check_for_conda_package_solvability(environment_fname)
+>>>>>>> Unsatisfiability of conda packages check
 
         # Give container environment details
         shutil.copy(environment_fname, serialization_dir)
@@ -627,6 +631,7 @@ class Clipper:
                                  default_python_container, labels, input_type,
                                  num_containers)
 
+<<<<<<< 4b7bd80f7fd19641df5162849e7c22b0ea1e480b
     def _conda_env_solvable(self, environment_fname, directory):
         """Returns true if the provided conda environment is compatible with the container os.
 
@@ -658,6 +663,24 @@ class Clipper:
             shell=True)
         child.communicate()
         return child.returncode
+=======
+    def _check_for_conda_package_solvability(self, environment_fname):
+        try:
+            index = get_index(channel_urls=context.channels)
+            r = conda.resolve.Resolve(index)
+
+            spec = specs.detect(filename=environment_fname, directory=os.getcwd())
+            dependency_details = spec.environment.dependencies.items()
+
+            for distribution, dependencies in dependency_details:
+                if distribution == 'conda':
+                    # This call doesn't actually install anything; it checks the solvability of package dependencies. Source:
+                    # https://github.com/conda/conda/blob/00a05b89973b96aebb023b11f2c672e0425984d8/conda/cli/install.py
+                    r.install(dependencies)
+        except UnsatisfiableError as e:
+            print("Your conda dependencies are unsatisfiable (see error text below). Please resolve these issues and call `deploy_predict_func` again.")
+            print(e)
+>>>>>>> Unsatisfiability of conda packages check
 
     def deploy_model(self,
                      name,
