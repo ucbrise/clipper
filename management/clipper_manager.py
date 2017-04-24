@@ -14,7 +14,7 @@ from cStringIO import StringIO
 import sys
 from conda.api import get_index
 from conda.base.context import context
-from conda.exceptions import UnsatisfiableError
+from conda.exceptions import UnsatisfiableError, NoPackagesFoundError
 import conda.resolve
 import conda_env.specs as specs
 sys.path.insert(0, os.path.abspath('../../containers/python/'))
@@ -481,7 +481,8 @@ class Clipper:
             shell=True)
 
         # Confirm that packages installed through conda are solvable
-        self._check_for_conda_package_solvability(environment_fname)
+        if not (self._conda_env_solvable(environment_fname, os.getcwd())):
+            return
 
         # Give container environment details
         shutil.copy(environment_fname, serialization_dir)
@@ -499,11 +500,31 @@ class Clipper:
                                  default_python_container, labels, input_type,
                                  num_containers)
 
-    def _check_for_conda_package_solvability(self, environment_fname):
+    def _conda_env_solvable(self, environment_fname, directory):
+        """Returns if the current conda environment is compatibile with container os.
+
+        If packages listed in specified conda environment file have conflicting dependencies,
+        this function will warn the user and return False. If packages don't exist in the
+        container's conda channel, this function will warn the user and remove those packages.
+
+        Parameters
+        ----------
+        environment_fname : str
+            The file name of the exported conda environment file
+        directory : str
+            The path to the diretory containing the environment file
+
+        Returns
+        -------
+        bool
+            Whether or not the (possibly modified) environment file is compatibile
+            with conda on the container os.
+        """
+
         index = get_index(platform=CONTAINER_CONDA_PLATFORM)
         r = conda.resolve.Resolve(index)
 
-        spec = specs.detect(filename=environment_fname, directory=os.getcwd())
+        spec = specs.detect(filename=environment_fname, directory=directory)
         env = spec.environment
         dependency_details = env.dependencies.items()
 
@@ -538,12 +559,13 @@ class Clipper:
                             env.dependencies.raw.remove(missing_package_raw)
                         env.dependencies.parse()
                         env.save()
-
+            return True
         except UnsatisfiableError as unsat_e:
             print(
                 "Your conda dependencies are unsatisfiable (see error text below). Please resolve these issues and call `deploy_predict_func` again."
             )
             print(unsat_e)
+            return False
 
     def deploy_model(self,
                      name,
