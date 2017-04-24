@@ -444,7 +444,7 @@ class Clipper:
             "model_name": model_name,
             "model_version": model_version,
             "replica_id": replica_id,
-            })
+        })
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
 
