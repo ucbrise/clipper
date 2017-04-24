@@ -1,18 +1,18 @@
 #include <cxxopts.hpp>
 #include <redox.hpp>
 
-#include <unordered_map>
-#include <mutex>
-#include <vector>
-#include <sstream>
 #include <chrono>
+#include <mutex>
+#include <sstream>
+#include <unordered_map>
+#include <vector>
 
-#include <clipper/rpc_service.hpp>
 #include <clipper/config.hpp>
 #include <clipper/constants.hpp>
-#include <clipper/redis.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/logging.hpp>
+#include <clipper/redis.hpp>
+#include <clipper/rpc_service.hpp>
 
 using namespace clipper;
 
@@ -38,8 +38,9 @@ enum class RPCEvent {
 
 class Tester {
  public:
-  explicit Tester(const int num_containers) : rpc_(std::make_unique<rpc::RPCService>()),
-                                              num_containers_(num_containers) {}
+  explicit Tester(const int num_containers)
+      : rpc_(std::make_unique<rpc::RPCService>()),
+        num_containers_(num_containers) {}
 
   Tester(const Tester &other) = delete;
   Tester &operator=(const Tester &other) = delete;
@@ -53,13 +54,11 @@ class Tester {
   }
 
   void start(long timeout_seconds) {
-    rpc_->start("127.0.0.1",
-               RPC_SERVICE_PORT,
-               [](VersionedModelId /*model*/, int /*container_id*/) {},
-               [this](rpc::RPCResponse response) {
-                 on_response_received(response);
-               });
-    Config& conf = get_config();
+    rpc_->start(
+        "127.0.0.1", RPC_SERVICE_PORT,
+        [](VersionedModelId /*model*/, int /*container_id*/) {},
+        [this](rpc::RPCResponse response) { on_response_received(response); });
+    Config &conf = get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
       log_error(LOGGING_TAG_RPC_TEST, "RPCTest failed to connect to redis",
@@ -80,7 +79,7 @@ class Tester {
         [this](const std::string &key, const std::string &event_type) {
           if (event_type == "hset") {
             // Detected a new container
-            if(containers_connected_ < num_containers_) {
+            if (containers_connected_ < num_containers_) {
               containers_connected_++;
               auto container_info =
                   redis::get_container_by_key(redis_connection_, key);
@@ -90,7 +89,8 @@ class Tester {
               // indicating that it has not yet been validated
               std::unique_lock<std::mutex> lock(container_maps_mutex);
               container_names_map_.emplace(container_id, model_name);
-              const int validation_msg_id = send_validation_message(container_id);
+              const int validation_msg_id =
+                  send_validation_message(container_id);
               msg_id_to_container_map_.emplace(validation_msg_id, container_id);
             }
           }
@@ -101,9 +101,9 @@ class Tester {
   bool succeeded() {
     std::unique_lock<std::mutex> lock(container_maps_mutex);
     int valid_containers = 0;
-    for(auto const& container_entry : container_validation_map_) {
+    for (auto const &container_entry : container_validation_map_) {
       bool rpc_valid = container_entry.second.first;
-      if(rpc_valid) {
+      if (rpc_valid) {
         valid_containers++;
       }
     }
@@ -113,9 +113,14 @@ class Tester {
   // Sends a message requesting the container's log of all
   // RPC events since several milliseconds before the current time
   int send_validation_message(int container_id) {
-    auto log_start_time = std::chrono::system_clock::now() - std::chrono::milliseconds(50);
-    double log_start_time_millis = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(
-        log_start_time.time_since_epoch()).count()) / 1000;
+    auto log_start_time =
+        std::chrono::system_clock::now() - std::chrono::milliseconds(50);
+    double log_start_time_millis =
+        static_cast<double>(
+            std::chrono::duration_cast<std::chrono::microseconds>(
+                log_start_time.time_since_epoch())
+                .count()) /
+        1000;
     std::vector<double> data;
     data.push_back(log_start_time_millis);
     std::shared_ptr<Input> input = std::make_shared<DoubleVector>(data);
@@ -157,15 +162,17 @@ class Tester {
     timeout_thread_ = std::thread([this, timeout_seconds]() {
       int num_iters = 30;
       long sleep_interval_millis = (timeout_seconds * 1000) / num_iters;
-      for(int i = 0; i < num_iters; i++) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(sleep_interval_millis));
-        if(timeout_thread_interrupted_) {
+      for (int i = 0; i < num_iters; i++) {
+        std::this_thread::sleep_for(
+            std::chrono::milliseconds(sleep_interval_millis));
+        if (timeout_thread_interrupted_) {
           return;
         }
       }
       // Failed to validate containers after 30 seconds
       // End the test with a failed exit code
-      log_error(LOGGING_TAG_RPC_TEST, "Failed to validate containers - test timed out!");
+      log_error(LOGGING_TAG_RPC_TEST,
+                "Failed to validate containers - test timed out!");
       timeout_thread_interrupted_ = true;
       test_completed_ = true;
       test_completed_cv_.notify_all();
@@ -173,7 +180,7 @@ class Tester {
   }
 
   void stop_timeout_thread() {
-    if(!timeout_thread_interrupted_) {
+    if (!timeout_thread_interrupted_) {
       timeout_thread_interrupted_ = true;
       timeout_thread_.join();
     }
@@ -183,92 +190,110 @@ class Tester {
     int msg_id = response.first;
     std::unique_lock<std::mutex> lock(container_maps_mutex);
     auto container_id_entry = msg_id_to_container_map_.find(msg_id);
-    if(container_id_entry == msg_id_to_container_map_.end()) {
+    if (container_id_entry == msg_id_to_container_map_.end()) {
       throw std::runtime_error(
           "Failed to find container associated with previously sent message!");
     }
     int container_id = container_id_entry->second;
     auto container_valid_entry = container_validation_map_.find(container_id);
     RPCValidationResult container_rpc_protocol_valid;
-    if(container_valid_entry == container_validation_map_.end()) {
+    if (container_valid_entry == container_validation_map_.end()) {
       // Container has not yet been validated
       std::vector<uint8_t> event_history_bytes = response.second;
-      size_t event_history_size = static_cast<size_t>(event_history_bytes.size() / sizeof(int));
+      size_t event_history_size =
+          static_cast<size_t>(event_history_bytes.size() / sizeof(int));
       std::vector<int> parsed_event_history;
-      float* msg_history_floats = reinterpret_cast<float*>(event_history_bytes.data());
-      for(int i = 0; static_cast<size_t>(i) < event_history_size; i++) {
+      float *msg_history_floats =
+          reinterpret_cast<float *>(event_history_bytes.data());
+      for (int i = 0; static_cast<size_t>(i) < event_history_size; i++) {
         int value = static_cast<int>(msg_history_floats[i]);
         parsed_event_history.push_back(value);
       }
-      container_rpc_protocol_valid = validate_rpc_protocol(parsed_event_history);
+      container_rpc_protocol_valid =
+          validate_rpc_protocol(parsed_event_history);
       container_validation_map_[container_id] = container_rpc_protocol_valid;
       containers_validated_ += 1;
-      if(containers_validated_ == num_containers_) {
+      if (containers_validated_ == num_containers_) {
         stop_timeout_thread();
         test_completed_ = true;
         test_completed_cv_.notify_all();
       }
     } else {
-      container_rpc_protocol_valid =
-          RPCValidationResult(false, "Container sent excessive container content messages (expected 1)");
+      container_rpc_protocol_valid = RPCValidationResult(
+          false,
+          "Container sent excessive container content messages (expected 1)");
       container_validation_map_[container_id] = container_rpc_protocol_valid;
     }
     log_validation_result(container_id, container_rpc_protocol_valid);
   }
 
-  RPCValidationResult validate_rpc_protocol(std::vector<int>& event_history) {
-    if(event_history.size() < EVENT_HISTORY_MINIMUM_LENGTH) {
-      return RPCValidationResult(false, "Protocol failed to exchange minimally required messages!");
+  RPCValidationResult validate_rpc_protocol(std::vector<int> &event_history) {
+    if (event_history.size() < EVENT_HISTORY_MINIMUM_LENGTH) {
+      return RPCValidationResult(
+          false, "Protocol failed to exchange minimally required messages!");
     }
     int recv_heartbeat_index = 0;
-    for(int i = 0; static_cast<size_t>(i) < event_history.size(); i++) {
+    for (int i = 0; static_cast<size_t>(i) < event_history.size(); i++) {
       RPCEvent curr_event = static_cast<RPCEvent>(event_history[i]);
-      if(curr_event == RPCEvent::ReceivedHeartbeat) {
+      if (curr_event == RPCEvent::ReceivedHeartbeat) {
         recv_heartbeat_index = i;
         break;
       }
     }
-    if(recv_heartbeat_index < 1) {
+    if (recv_heartbeat_index < 1) {
       // The container definitely sent a heartbeat message to Clipper,
       // but it's missing from the log
-      return RPCValidationResult(false, "Container log is missing sending of heartbeat message!");
+      return RPCValidationResult(
+          false, "Container log is missing sending of heartbeat message!");
     }
     bool initial_messages_correct =
-        (static_cast<RPCEvent>(event_history[recv_heartbeat_index - 1]) == RPCEvent::SentHeartbeat)
-        && (static_cast<RPCEvent>(event_history[recv_heartbeat_index + 1]) == RPCEvent::SentContainerMetadata);
-    if(!initial_messages_correct) {
-      return RPCValidationResult(false, "Initial protocol messages are of incorrect types!");
+        (static_cast<RPCEvent>(event_history[recv_heartbeat_index - 1]) ==
+         RPCEvent::SentHeartbeat) &&
+        (static_cast<RPCEvent>(event_history[recv_heartbeat_index + 1]) ==
+         RPCEvent::SentContainerMetadata);
+    if (!initial_messages_correct) {
+      return RPCValidationResult(
+          false, "Initial protocol messages are of incorrect types!");
     }
     int received_container_content_count = 0;
-    for(int i = 3; i < static_cast<int>(event_history.size()); i++) {
-      if(static_cast<RPCEvent>(event_history[i]) == RPCEvent::ReceivedContainerContent) {
+    for (int i = 3; i < static_cast<int>(event_history.size()); i++) {
+      if (static_cast<RPCEvent>(event_history[i]) ==
+          RPCEvent::ReceivedContainerContent) {
         received_container_content_count++;
       }
-      if(static_cast<RPCEvent>(event_history[i]) == RPCEvent::ReceivedContainerMetadata) {
+      if (static_cast<RPCEvent>(event_history[i]) ==
+          RPCEvent::ReceivedContainerMetadata) {
         // The container should never receive container metadata from Clipper
-        return RPCValidationResult(false, "Clipper sent an erroneous container metadata message!");
+        return RPCValidationResult(
+            false, "Clipper sent an erroneous container metadata message!");
       }
     }
-    if(received_container_content_count > 1) {
+    if (received_container_content_count > 1) {
       std::stringstream ss;
       ss << "Clipper sent excessive container content messages! " << std::endl;
       ss << "Expected: 1, Sent: " << received_container_content_count;
       return RPCValidationResult(false, ss.str());
-    } else if(received_container_content_count < 1) {
+    } else if (received_container_content_count < 1) {
       // The container definitely received a container content message,
       // but its missing from the log
-      return RPCValidationResult(false, "Container log is missing reception of container content message!");
+      return RPCValidationResult(
+          false,
+          "Container log is missing reception of container content message!");
     }
     return RPCValidationResult(true, "");
   }
 
-  void log_validation_result(int container_id, RPCValidationResult& result) {
-    std::string container_name = container_names_map_.find(container_id)->second;
-    if(result.first) {
-      log_info_formatted(LOGGING_TAG_RPC_TEST, "Successfully validated container: \"{}\"", container_name);
+  void log_validation_result(int container_id, RPCValidationResult &result) {
+    std::string container_name =
+        container_names_map_.find(container_id)->second;
+    if (result.first) {
+      log_info_formatted(LOGGING_TAG_RPC_TEST,
+                         "Successfully validated container: \"{}\"",
+                         container_name);
     } else {
-      log_error_formatted(
-          LOGGING_TAG_RPC_TEST, "Failed to validate container: \"{}\". Error: {}", container_name, result.second);
+      log_error_formatted(LOGGING_TAG_RPC_TEST,
+                          "Failed to validate container: \"{}\". Error: {}",
+                          container_name, result.second);
     }
   }
 };

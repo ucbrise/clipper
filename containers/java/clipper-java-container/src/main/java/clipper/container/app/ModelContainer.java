@@ -256,7 +256,8 @@ class ModelContainer<I extends DataVector<?>> {
       }
     }
     socket.send("", ZMQ.SNDMORE);
-    socket.send(DataUtils.getBytesFromInts(ContainerMessageType.ContainerContent.getCode()), ZMQ.SNDMORE);
+    socket.send(
+        DataUtils.getBytesFromInts(ContainerMessageType.ContainerContent.getCode()), ZMQ.SNDMORE);
     ByteBuffer b = ByteBuffer.allocate(8);
     b.order(ByteOrder.LITTLE_ENDIAN);
     b.putLong(msgId);

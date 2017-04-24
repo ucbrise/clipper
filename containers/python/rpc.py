@@ -85,8 +85,8 @@ def input_type_to_string(input_type):
     elif input_type == INPUT_TYPE_STRINGS:
         return "string"
 
-class EventHistory:
 
+class EventHistory:
     def __init__(self, size):
         self.history_buffer = deque(maxlen=size)
 
@@ -96,6 +96,7 @@ class EventHistory:
 
     def get_events(self):
         return self.history_buffer
+
 
 class Server(threading.Thread):
     def __init__(self, context, clipper_ip, clipper_port):
@@ -126,7 +127,6 @@ class Server(threading.Thread):
 
     def get_event_history(self):
         return self.event_history.get_events()
-
 
     def run(self):
         print("Serving predictions for {0} input type.".format(
@@ -181,13 +181,15 @@ class Server(threading.Thread):
                         self.send_container_metadata(socket)
                     continue
                 elif msg_type == MESSAGE_TYPE_NEW_CONTAINER:
-                    self.event_history.insert(EVENT_HISTORY_RECEIVED_CONTAINER_METADATA)
+                    self.event_history.insert(
+                        EVENT_HISTORY_RECEIVED_CONTAINER_METADATA)
                     print(
                         "Received erroneous new container message from Clipper!"
                     )
                     continue
                 elif msg_type == MESSAGE_TYPE_CONTAINER_CONTENT:
-                    self.event_history.insert(EVENT_HISTORY_RECEIVED_CONTAINER_CONTENT)
+                    self.event_history.insert(
+                        EVENT_HISTORY_RECEIVED_CONTAINER_CONTENT)
                     msg_id_bytes = socket.recv()
                     msg_id = int(struct.unpack("<I", msg_id_bytes)[0])
 
@@ -243,7 +245,8 @@ class Server(threading.Thread):
                         t4 = datetime.now()
 
                         response.send(socket)
-                        self.event_history.insert(EVENT_HISTORY_SENT_CONTAINER_CONTENT)
+                        self.event_history.insert(
+                            EVENT_HISTORY_SENT_CONTAINER_CONTENT)
 
                         print("recv: %f us, parse: %f us, handle: %f us" %
                               ((t2 - t1).microseconds, (t3 - t2).microseconds,
@@ -309,8 +312,8 @@ class ModelContainerBase(object):
     def predict_strings(self, inputs):
         pass
 
-class RPCService:
 
+class RPCService:
     def __init__(self):
         pass
 
@@ -319,7 +322,7 @@ class RPCService:
             return self.server.get_event_history()
         else:
             print("Cannot retrieve message history for inactive RPC service!")
-            raise 
+            raise
 
     def start(self, model, host, port, model_name, model_version, input_type):
         """
