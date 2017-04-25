@@ -12,11 +12,6 @@ from sklearn import base
 from sklearn.externals import joblib
 from cStringIO import StringIO
 import sys
-from conda.api import get_index
-from conda.base.context import context
-from conda.exceptions import UnsatisfiableError, NoPackagesFoundError
-import conda.resolve
-import conda_env.specs as specs
 sys.path.insert(0, os.path.abspath('../../containers/python/'))
 from pywrencloudpickle import CloudPickler
 
@@ -501,7 +496,7 @@ class Clipper:
                                  num_containers)
 
     def _conda_env_solvable(self, environment_fname, directory):
-        """Returns if the current conda environment is compatibile with container os.
+        """Returns true if the provided conda environment is compatible with the container os.
 
         If packages listed in specified conda environment file have conflicting dependencies,
         this function will warn the user and return False. If packages don't exist in the
@@ -517,59 +512,20 @@ class Clipper:
         Returns
         -------
         bool
-            Whether or not the (possibly modified) environment file is compatibile
-            with conda on the container os.
+            Returns True if the (possibly modified) environment file is compatible with conda
+            on the container os. Otherwise returns False.
         """
 
-        index = get_index(platform=CONTAINER_CONDA_PLATFORM)
-        r = conda.resolve.Resolve(index)
-
-        spec = specs.detect(filename=environment_fname, directory=directory)
-        env = spec.environment
-        dependency_details = env.dependencies.items()
-
-        try:
-            missing_packages = None
-            for distribution, dependencies in dependency_details:
-                if distribution == 'conda':
-                    try:
-                        # This call doesn't install anything; it checks the solvability of package dependencies.
-                        r.install(dependencies)
-                    except NoPackagesFoundError as missing_packages_error:
-                        missing_packages = missing_packages_error.pkgs
-                        for package in missing_packages:
-                            dependencies.remove(package)
-
-                        # Check that the dependencies that are not missing are satisfiable
-                        r.install(dependencies)
-                    if missing_packages:
-                        print(
-                            "The following packages in your conda environment aren't available in the linux-64 conda channel the container will use:"
-                        )
-                        print(", ".join(
-                            str(package) for package in missing_packages))
-                        print(
-                            "We will skip their installation when deploying your function. If your function uses these packages, the container will experience a runtime error when queried."
-                        )
-
-                        missing_packages_raw = [
-                            '='.join(package.split())
-                            for package in missing_packages
-                        ]
-                        for missing_package_raw in missing_packages_raw:
-                            print(
-                                "Removing %s from supplied environment specifications"
-                                % missing_package_raw)
-                            env.dependencies.raw.remove(missing_package_raw)
-                        env.dependencies.parse()
-                        env.save()
-            return True
-        except UnsatisfiableError as unsat_e:
-            print(
-                "Your conda dependencies are unsatisfiable (see error text below). Please resolve these issues and call `deploy_predict_func` again."
-            )
-            print(unsat_e)
-            return False
+        child = subprocess.Popen(
+            "source deactivate && python check_env.py {environment_fname} {directory} {platform}".
+            format(
+                environment_fname=environment_fname,
+                directory=directory,
+                platform=CONTAINER_CONDA_PLATFORM),
+            stderr=subprocess.PIPE,
+            shell=True)
+        child.communicate()
+        return child.returncode
 
     def deploy_model(self,
                      name,
