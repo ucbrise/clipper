@@ -164,8 +164,13 @@ class InflightMessage {
         model_(model),
         input_(input) {}
 
+  // Default copy and move constructors
   InflightMessage(const InflightMessage &) = default;
   InflightMessage(InflightMessage &&) = default;
+  
+  // Default assignment operators
+  InflightMessage &operator=(const InflightMessage &) = default
+  InflightMessage &operator=(InflightMessage &&) = default;
 
   std::chrono::time_point<std::chrono::system_clock> send_time_;
   int container_id_;
