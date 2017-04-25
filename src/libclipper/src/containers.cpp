@@ -38,12 +38,18 @@ void ModelContainer::update_throughput(size_t batch_size,
   double old_total_throughput =
       avg_throughput_per_milli_ * throughput_buffer_.size();
   if (throughput_buffer_.size() == throughput_buffer_.capacity()) {
+    // If the throughput buffer is already at maximum capacity,
+    // we replace the oldest throughput sample with
+    // the latest throughput and recalculate the average
     double oldest_throughput = throughput_buffer_.front();
     double new_total_throughput =
         (old_total_throughput - oldest_throughput + new_throughput);
     avg_throughput_per_milli_ =
         new_total_throughput / static_cast<double>(throughput_buffer_.size());
   } else {
+    // If the throughput buffer is not yet at capacity,
+    // we add the latest throughput sample to the buffer
+    // and incorporate it into the average
     avg_throughput_per_milli_ =
         (old_total_throughput + new_throughput) /
         static_cast<double>(throughput_buffer_.size() + 1);
