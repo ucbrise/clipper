@@ -21,6 +21,6 @@ public class NoOpModel<T extends DataVector<Buffer>> extends Model<T> {
     //Map<String, Float> jsonKeys = new HashMap<>();
     //jsonKeys.put("data_size", (float) inputVector.getData().remaining());
     //String jsonResponse = JSONUtil.toJSON(jsonKeys);
-    return new SerializableString("COWHAX");
+    return new SerializableString("isfsdi\0n");
   }
 }

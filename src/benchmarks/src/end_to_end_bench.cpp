@@ -110,7 +110,7 @@ void send_predictions(
     for (int i = 0; i < static_cast<int>(results.second.size()); i++) {
       boost::future<Response> &future = results.second[i];
       double label = static_cast<double>(binary_labels[i]);
-      double pred = future.get().output_.y_hat_;
+      double pred = std::stod(future.get().output_.y_hat_);
       if (pred == label) {
         accuracy_ratio->increment(1, 1);
       } else {

@@ -344,7 +344,9 @@ void add_long(rapidjson::Document& d, const char* key_name, long val) {
 
 void add_string(rapidjson::Document& d, const char* key_name,
                 const std::string& val) {
-  rapidjson::Value val_to_add(val.c_str(), d.GetAllocator());
+  // We specify the string length in the second parameter to prevent
+  // strings containing null terminators from being prematurely truncated
+  rapidjson::Value val_to_add(val.c_str(), static_cast<int>(val.length()), d.GetAllocator());
   add_kv_pair(d, key_name, val_to_add);
 }
 
