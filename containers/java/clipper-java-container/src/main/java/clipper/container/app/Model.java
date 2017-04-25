@@ -2,7 +2,7 @@ package clipper.container.app;
 
 import clipper.container.app.data.DataType;
 import clipper.container.app.data.DataVector;
-import clipper.container.app.data.FloatVector;
+import clipper.container.app.data.SerializableString;
 
 abstract class Model<I extends DataVector> {
   private String name;
@@ -28,8 +28,12 @@ abstract class Model<I extends DataVector> {
   }
 
   public DataType getOutputType() {
-    return DataType.Floats;
+    return DataType.Strings;
   }
 
-  public abstract FloatVector predict(I inputVector);
+  /**
+   * @return A JSON-formatted serializable string to be
+   * returned to Clipper as a prediction result
+   */
+  public abstract SerializableString predict(I inputVector);
 }

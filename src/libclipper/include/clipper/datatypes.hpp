@@ -355,6 +355,20 @@ class PredictionRequest {
   size_t input_data_size_ = 0;
 };
 
+class PredictionResponse {
+ public:
+  explicit PredictionRequest(std::vector<uin8_t> raw_bytes);
+  }
+
+  // Disallow copy
+  PredictionResponse(PredictionResponse &other) = delete;
+  PredictionResponse &operator=(PredictionResponse &other) = delete;
+
+  // move constructors
+  PredictionResponse(PredictionRequest &&other) = default;
+  PredictionResponse &operator=(PredictionRequest &&other) = default;
+};
+
 }  // namespace rpc
 
 }  // namespace clipper

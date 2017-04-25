@@ -24,7 +24,7 @@ namespace clipper {
 
 const std::string LOGGING_TAG_TASK_EXECUTOR = "TASKEXECUTOR";
 
-std::vector<float> deserialize_outputs(std::vector<uint8_t> bytes);
+std::vector<std::string> deserialize_outputs(std::vector<uint8_t> bytes);
 
 class ModelMetrics {
  public:
