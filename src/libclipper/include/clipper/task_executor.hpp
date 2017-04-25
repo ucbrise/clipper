@@ -24,8 +24,6 @@ namespace clipper {
 
 const std::string LOGGING_TAG_TASK_EXECUTOR = "TASKEXECUTOR";
 
-std::vector<std::string> deserialize_outputs(std::vector<uint8_t> bytes);
-
 class ModelMetrics {
  public:
   explicit ModelMetrics(VersionedModelId model)
@@ -455,9 +453,9 @@ class TaskExecutor {
     boost::shared_lock<boost::shared_mutex> metrics_lock(model_metrics_mutex_);
 
     inflight_messages_.erase(response.first);
-    std::vector<float> deserialized_outputs =
-        deserialize_outputs(response.second);
-    assert(deserialized_outputs.size() == keys.size());
+    rpc::PredictionResponse parsed_response =
+        rpc::PredictionResponse::deserialize_prediction_request(response.second);
+    assert(parsed_response.outputs_.size() == keys.size());
     int batch_size = keys.size();
     throughput_meter_->mark(batch_size);
     std::chrono::time_point<std::chrono::system_clock> current_time =
@@ -477,14 +475,14 @@ class TaskExecutor {
       for (int batch_num = 0; batch_num < batch_size; ++batch_num) {
         InflightMessage completed_msg = keys[batch_num];
         float deserialized_output = deserialized_outputs[batch_num];
-        process_completed_message(completed_msg, deserialized_output,
+        process_completed_message(completed_msg, parsed_response.outputs_[batch_num],
                                   current_time, cur_model_metric);
       }
     }
   }
 
   void process_completed_message(
-      InflightMessage &completed_msg, float deserialized_output,
+      InflightMessage &completed_msg, const std::string& deserialized_output,
       std::chrono::time_point<std::chrono::system_clock> &current_time,
       boost::optional<ModelMetrics> cur_model_metric) {
     std::shared_ptr<ModelContainer> processing_container =

@@ -33,17 +33,21 @@ InputType parse_input_type(std::string type_string);
 
 class Output {
  public:
+  Output(const std::string y_hat, const std::vector<VersionedModelId> models_used);
+
   ~Output() = default;
+
   explicit Output() = default;
   Output(const Output &) = default;
   Output &operator=(const Output &) = default;
 
   Output(Output &&) = default;
   Output &operator=(Output &&) = default;
-  Output(double y_hat, std::vector<VersionedModelId> models_used);
+
   bool operator==(const Output &rhs) const;
   bool operator!=(const Output &rhs) const;
-  double y_hat_;
+
+  std::string y_hat_;
   std::vector<VersionedModelId> models_used_;
 };
 
@@ -357,8 +361,7 @@ class PredictionRequest {
 
 class PredictionResponse {
  public:
-  explicit PredictionRequest(std::vector<uin8_t> raw_bytes);
-  }
+  PredictionResponse(const std::vector<std::string> outputs);
 
   // Disallow copy
   PredictionResponse(PredictionResponse &other) = delete;
@@ -367,6 +370,10 @@ class PredictionResponse {
   // move constructors
   PredictionResponse(PredictionRequest &&other) = default;
   PredictionResponse &operator=(PredictionRequest &&other) = default;
+
+  static const PredictionResponse deserialize_prediction_request(ByteBuffer bytes);
+
+  std::vector<std::string> outputs_;
 };
 
 }  // namespace rpc

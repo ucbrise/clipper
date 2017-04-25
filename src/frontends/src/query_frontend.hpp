@@ -386,6 +386,12 @@ class RequestHandler {
     json_response.SetObject();
     clipper::json::add_long(json_response, PREDICTION_RESPONSE_KEY_QUERY_ID,
                             query_response.query_id_);
+    rapidjson::Document json_output;
+    try {
+      clipper::json::parse_json(query_response.output_.y_hat_, json_output);
+
+    } catch(clipper::json::json_parse_error)
+
     clipper::json::add_double(json_response, PREDICTION_RESPONSE_KEY_OUTPUT,
                               query_response.output_.y_hat_);
     clipper::json::add_bool(json_response, PREDICTION_RESPONSE_KEY_USED_DEFAULT,

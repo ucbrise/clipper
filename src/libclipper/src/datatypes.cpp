@@ -70,7 +70,7 @@ InputType parse_input_type(std::string type_string) {
   }
 }
 
-Output::Output(double y_hat, std::vector<VersionedModelId> models_used)
+Output::Output(const std::string y_hat, const std::vector<VersionedModelId> models_used)
     : y_hat_(y_hat), models_used_(models_used) {}
 
 bool Output::operator==(const Output &rhs) const {
@@ -266,6 +266,20 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
   serialized_request.push_back(serialized_inputs);
 
   return serialized_request;
+}
+
+rpc::PredictionResponse::PredictionResponse(const std::vector<std::string> outputs) : outputs_(outputs) {}
+
+const PredictionResponse rpc::PredictionResponse::deserialize_prediction_request(ByteBuffer bytes) {
+  std::vector<std::string> outputs;
+  uint32_t num_outputs = reinterpret_cast<uint32_t*>(bytes.data())[0];
+  char* output_string_data = reinterpret_cast<char*>(bytes.data() + 4);
+  for(int i = 0; i < num_outputs; i++) {
+    std::string output(output_string_data);
+    outputs.push_back(std::move(output));
+    output_string_data += output.length() + 1;
+  }
+  return PredictionResponse(outputs);
 }
 
 Query::Query(std::string label, long user_id, std::shared_ptr<Input> input,
