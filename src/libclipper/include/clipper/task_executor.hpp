@@ -268,7 +268,7 @@ class TaskExecutor {
       if (model_queue_entry != model_queues_.end()) {
         output_futures.push_back(cache_.fetch(t.model_, t.input_));
         if (!output_futures.back().is_ready()) {
-          t.send_time_ = std::chrono::system_clock::now();
+          t.recv_time_ = std::chrono::system_clock::now();
           model_queue_entry->second.add_task(t);
         }
       } else {
@@ -345,7 +345,7 @@ class TaskExecutor {
         rpc::PredictionRequest prediction_request(container->input_type_);
         for (auto b : batch) {
           prediction_request.add_input(b.input_);
-          cur_batch.emplace_back(b.send_time_, container->container_id_,
+          cur_batch.emplace_back(b.recv_time_, container->container_id_,
                                  b.model_, b.input_);
         }
         int message_id = rpc_->send_message(prediction_request.serialize(),
