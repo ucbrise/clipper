@@ -13,6 +13,8 @@
 
 namespace clipper {
 
+// We use the system clock for the deadline time point
+// due to its cross-platform consistency (consistent epoch, resolution)
 using Deadline = std::chrono::time_point<std::chrono::system_clock>;
 
 class ModelContainer {
