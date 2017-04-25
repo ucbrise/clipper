@@ -157,20 +157,17 @@ class InflightMessage {
  public:
   explicit InflightMessage(
       const std::chrono::time_point<std::chrono::system_clock> send_time,
-      const int container_id,
-      const VersionedModelId model,
-      const std::shared_ptr<Input> input) : send_time_(send_time),
-                                            container_id_(container_id),
-                                            model_(model),
-                                            input_(input) {}
-
+      const int container_id, const VersionedModelId model,
+      const std::shared_ptr<Input> input)
+      : send_time_(send_time),
+        container_id_(container_id),
+        model_(model),
+        input_(input) {}
 
   std::chrono::time_point<std::chrono::system_clock> send_time_;
   int container_id_;
   VersionedModelId model_;
   std::shared_ptr<Input> input_;
-
-
 };
 
 class TaskExecutor {
@@ -408,7 +405,8 @@ class TaskExecutor {
       InflightMessage &completed_msg, float deserialized_output,
       std::chrono::time_point<std::chrono::system_clock> &current_time) {
     std::shared_ptr<ModelContainer> processing_container =
-        active_containers_->get_model_replica(completed_msg.model_, completed_msg.container_id_);
+        active_containers_->get_model_replica(completed_msg.model_,
+                                              completed_msg.container_id_);
     auto task_latency = current_time - completed_msg.send_time_;
     long task_latency_micros =
         std::chrono::duration_cast<std::chrono::microseconds>(task_latency)
@@ -418,7 +416,8 @@ class TaskExecutor {
             .count();
     processing_container->update_throughput(1, task_latency_micros);
     latency_hist->insert(static_cast<int64_t>(task_latency_millis));
-    cache_.put(completed_msg.model_, completed_msg.input_, Output{deserialized_output, {completed_msg.model_}});
+    cache_.put(completed_msg.model_, completed_msg.input_,
+               Output{deserialized_output, {completed_msg.model_}});
   }
 };
 
