@@ -50,6 +50,11 @@ class ModelContainer<I extends DataVector<?>> {
       }
     });
     servingThread.start();
+    try {
+      servingThread.join();
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
   }
 
   public void stop() {
