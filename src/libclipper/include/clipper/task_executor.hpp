@@ -278,7 +278,7 @@ class TaskExecutor {
         output_futures.push_back(cache_.fetch(t.model_, t.input_));
         if (!output_futures.back().is_ready()) {
           t.send_time_micros_ =
-              std::chrono::duration_cast<std::chrono::milliseconds>(
+              std::chrono::duration_cast<std::chrono::microseconds>(
                   std::chrono::system_clock::now().time_since_epoch())
                   .count();
           model_queue_entry->second.add_task(t);
@@ -424,24 +424,26 @@ class TaskExecutor {
     int batch_size = keys.size();
     predictions_counter->increment(batch_size);
     throughput_meter_->mark(batch_size);
-    long current_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+    long current_time = std::chrono::duration_cast<std::chrono::microseconds>(
                             std::chrono::system_clock::now().time_since_epoch())
                             .count();
-    if (keys.size() > 0) {
+    if (batch_size > 0) {
       const VersionedModelId &cur_model = std::get<1>(keys[0]);
+      boost::optional<ModelMetrics> cur_model_metric;
       auto cur_model_metric_entry = model_metrics_.find(cur_model);
       if (cur_model_metric_entry != model_metrics_.end()) {
-        auto cur_model_metric = cur_model_metric_entry->second;
-        cur_model_metric.throughput_->mark(keys.size());
-        cur_model_metric.num_predictions_->increment(keys.size());
-        cur_model_metric.batch_size_->insert(keys.size());
+        cur_model_metric = cur_model_metric_entry->second;
+      }
+      if (cur_model_metric) {
+        (*cur_model_metric).throughput_->mark(keys.size());
+        (*cur_model_metric).num_predictions_->increment(keys.size());
+        (*cur_model_metric).batch_size_->insert(keys.size());
       }
       for (int batch_num = 0; batch_num < batch_size; ++batch_num) {
         long send_time = std::get<0>(keys[batch_num]);
-        if (cur_model_metric_entry != model_metrics_.end()) {
-          auto cur_model_metric = cur_model_metric_entry->second;
-          cur_model_metric.latency_->insert(
-              static_cast<int64_t>(current_time - send_time));
+        if (cur_model_metric) {
+          (*cur_model_metric)
+              .latency_->insert(static_cast<int64_t>(current_time - send_time));
         }
         cache_.put(std::get<1>(keys[batch_num]), std::get<2>(keys[batch_num]),
                    Output{deserialized_outputs[batch_num],
