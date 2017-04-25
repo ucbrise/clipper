@@ -302,7 +302,7 @@ class PredictTask {
   float utility_;
   QueryId query_id_;
   long latency_slo_micros_;
-  long send_time_micros_;
+  std::chrono::time_point<std::chrono::system_clock> recv_time_;
 };
 
 /// NOTE: If a feedback task is scheduled, the task scheduler

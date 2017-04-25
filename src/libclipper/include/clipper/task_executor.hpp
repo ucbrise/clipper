@@ -1,6 +1,7 @@
 #ifndef CLIPPER_LIB_TASK_EXECUTOR_H
 #define CLIPPER_LIB_TASK_EXECUTOR_H
 
+#include <chrono>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
@@ -115,7 +116,7 @@ class ModelQueue {
 
   void add_task(PredictTask task) {
     std::unique_lock<std::mutex> l(queue_mutex_);
-    Deadline deadline = std::chrono::high_resolution_clock::now() +
+    Deadline deadline = std::chrono::system_clock::now() +
                         std::chrono::microseconds(task.latency_slo_micros_);
     queue_.emplace(deadline, std::move(task));
   }
@@ -132,11 +133,11 @@ class ModelQueue {
   // correct behavior here should be.
   boost::optional<Deadline> get_earliest_deadline() {
     std::unique_lock<std::mutex> l(queue_mutex_);
-    if (queue_.size() == 0) {
-      return boost::optional<Deadline>{};
+    remove_tasks_with_elapsed_deadlines();
+    if (!queue_.empty()) {
+      return boost::optional<Deadline>(queue_.top().first);
     } else {
-      Deadline earliest_deadline = queue_.top().first;
-      return boost::optional<Deadline>(earliest_deadline);
+      return boost::optional<Deadline>{};
     }
   }
 
@@ -146,8 +147,8 @@ class ModelQueue {
     // call to get_earliest_deadline() (which blocks until the queue is
     // not empty) and the call to this method, it's possible for the queue
     // to be empty, in which case the returned vector will have size 0.
-
     std::unique_lock<std::mutex> l(queue_mutex_);
+    remove_tasks_with_elapsed_deadlines();
     std::vector<PredictTask> batch;
     while (batch.size() < (size_t)max_batch_size && queue_.size() > 0) {
       batch.push_back(queue_.top().second);
@@ -165,6 +166,49 @@ class ModelQueue {
                           DeadlineCompare>;
   ModelPQueue queue_;
   std::mutex queue_mutex_;
+
+  // Deletes tasks with deadlines prior or equivalent to the
+  // current system time. This method should only be called
+  // when a unique lock on the queue_mutex is held.
+  void remove_tasks_with_elapsed_deadlines() {
+    std::chrono::time_point<std::chrono::system_clock> current_time =
+        std::chrono::system_clock::now();
+    while (!queue_.empty()) {
+      Deadline first_deadline = queue_.top().first;
+      if (first_deadline <= current_time) {
+        // If a task's deadline has already elapsed,
+        // we should not process it
+        queue_.pop();
+      } else {
+        break;
+      }
+    }
+  }
+};
+
+class InflightMessage {
+ public:
+  InflightMessage(
+      const std::chrono::time_point<std::chrono::system_clock> send_time,
+      const int container_id, const VersionedModelId model,
+      const std::shared_ptr<Input> input)
+      : send_time_(send_time),
+        container_id_(container_id),
+        model_(model),
+        input_(input) {}
+
+  // Default copy and move constructors
+  InflightMessage(const InflightMessage &) = default;
+  InflightMessage(InflightMessage &&) = default;
+
+  // Default assignment operators
+  InflightMessage &operator=(const InflightMessage &) = default;
+  InflightMessage &operator=(InflightMessage &&) = default;
+
+  std::chrono::time_point<std::chrono::system_clock> send_time_;
+  int container_id_;
+  VersionedModelId model_;
+  std::shared_ptr<Input> input_;
 };
 
 class TaskExecutor {
@@ -277,10 +321,14 @@ class TaskExecutor {
       if (model_queue_entry != model_queues_.end()) {
         output_futures.push_back(cache_.fetch(t.model_, t.input_));
         if (!output_futures.back().is_ready()) {
+<<<<<<< HEAD
           t.send_time_micros_ =
               std::chrono::duration_cast<std::chrono::microseconds>(
                   std::chrono::system_clock::now().time_since_epoch())
                   .count();
+=======
+          t.recv_time_ = std::chrono::system_clock::now();
+>>>>>>> develop
           model_queue_entry->second.add_task(t);
           boost::shared_lock<boost::shared_mutex> model_metrics_lock(
               model_metrics_mutex_);
@@ -324,10 +372,7 @@ class TaskExecutor {
   redox::Redox redis_connection_;
   redox::Subscriber redis_subscriber_;
   std::mutex inflight_messages_mutex_;
-  // inflight_messages_ value is vector of <message_id, model, input>
-  std::unordered_map<int, std::vector<std::tuple<const long, VersionedModelId,
-                                                 std::shared_ptr<Input>>>>
-      inflight_messages_;
+  std::unordered_map<int, std::vector<InflightMessage>> inflight_messages_;
   std::shared_ptr<metrics::Counter> predictions_counter;
   std::shared_ptr<metrics::Meter> throughput_meter_;
   boost::shared_mutex model_queues_mutex_;
@@ -385,13 +430,12 @@ class TaskExecutor {
         // map between the time a message is sent and when it gets inserted
         // into the map
         std::unique_lock<std::mutex> l(inflight_messages_mutex_);
-        std::vector<
-            std::tuple<const long, VersionedModelId, std::shared_ptr<Input>>>
-            cur_batch;
+        std::vector<InflightMessage> cur_batch;
         rpc::PredictionRequest prediction_request(container->input_type_);
         for (auto b : batch) {
           prediction_request.add_input(b.input_);
-          cur_batch.emplace_back(b.send_time_micros_, b.model_, b.input_);
+          cur_batch.emplace_back(b.recv_time_, container->container_id_,
+                                 b.model_, b.input_);
         }
         int message_id = rpc_->send_message(prediction_request.serialize(),
                                             container->container_id_);
@@ -424,32 +468,50 @@ class TaskExecutor {
     int batch_size = keys.size();
     predictions_counter->increment(batch_size);
     throughput_meter_->mark(batch_size);
-    long current_time = std::chrono::duration_cast<std::chrono::microseconds>(
-                            std::chrono::system_clock::now().time_since_epoch())
-                            .count();
+    std::chrono::time_point<std::chrono::system_clock> current_time =
+        std::chrono::system_clock::now();
     if (batch_size > 0) {
-      const VersionedModelId &cur_model = std::get<1>(keys[0]);
+      const VersionedModelId &cur_model = keys[0].model_;
       boost::optional<ModelMetrics> cur_model_metric;
       auto cur_model_metric_entry = model_metrics_.find(cur_model);
       if (cur_model_metric_entry != model_metrics_.end()) {
         cur_model_metric = cur_model_metric_entry->second;
       }
       if (cur_model_metric) {
-        (*cur_model_metric).throughput_->mark(keys.size());
-        (*cur_model_metric).num_predictions_->increment(keys.size());
-        (*cur_model_metric).batch_size_->insert(keys.size());
+        (*cur_model_metric).throughput_->mark(batch_size);
+        (*cur_model_metric).num_predictions_->increment(batch_size);
+        (*cur_model_metric).batch_size_->insert(batch_size);
       }
       for (int batch_num = 0; batch_num < batch_size; ++batch_num) {
-        long send_time = std::get<0>(keys[batch_num]);
-        if (cur_model_metric) {
-          (*cur_model_metric)
-              .latency_->insert(static_cast<int64_t>(current_time - send_time));
-        }
-        cache_.put(std::get<1>(keys[batch_num]), std::get<2>(keys[batch_num]),
-                   Output{deserialized_outputs[batch_num],
-                          {std::get<1>(keys[batch_num])}});
+        InflightMessage completed_msg = keys[batch_num];
+        float deserialized_output = deserialized_outputs[batch_num];
+        process_completed_message(completed_msg, deserialized_output,
+                                  current_time, cur_model_metric);
       }
     }
+  }
+
+  void process_completed_message(
+      InflightMessage &completed_msg, float deserialized_output,
+      std::chrono::time_point<std::chrono::system_clock> &current_time,
+      boost::optional<ModelMetrics> cur_model_metric) {
+    std::shared_ptr<ModelContainer> processing_container =
+        active_containers_->get_model_replica(completed_msg.model_,
+                                              completed_msg.container_id_);
+    auto task_latency = current_time - completed_msg.send_time_;
+    long task_latency_micros =
+        std::chrono::duration_cast<std::chrono::microseconds>(task_latency)
+            .count();
+    long task_latency_millis =
+        std::chrono::duration_cast<std::chrono::milliseconds>(task_latency)
+            .count();
+    processing_container->update_throughput(1, task_latency_micros);
+    if (cur_model_metric) {
+      (*cur_model_metric)
+          .latency_->insert(static_cast<int64_t>(task_latency_millis));
+    }
+    cache_.put(completed_msg.model_, completed_msg.input_,
+               Output{deserialized_output, {completed_msg.model_}});
   }
 };
 

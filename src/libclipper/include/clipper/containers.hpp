@@ -5,6 +5,7 @@
 #include <memory>
 #include <unordered_map>
 
+#include <boost/circular_buffer.hpp>
 #include <boost/thread.hpp>
 
 #include <clipper/datatypes.hpp>
@@ -12,7 +13,9 @@
 
 namespace clipper {
 
-using Deadline = std::chrono::time_point<std::chrono::high_resolution_clock>;
+// We use the system clock for the deadline time point
+// due to its cross-platform consistency (consistent epoch, resolution)
+using Deadline = std::chrono::time_point<std::chrono::system_clock>;
 
 class ModelContainer {
  public:
@@ -25,11 +28,9 @@ class ModelContainer {
   ModelContainer(ModelContainer &&) = default;
   ModelContainer &operator=(ModelContainer &&) = default;
 
-  size_t get_batch_size(Deadline /*deadline*/) {
-    // TODO: Replace the statically configured batch size with dynamic batching
-    return max_batch_size_;
-  }
-
+  size_t get_batch_size(Deadline deadline);
+  double get_average_throughput_per_millisecond();
+  void update_throughput(size_t batch_size, long total_latency);
   void send_feedback(PredictTask task);
 
   VersionedModelId model_;
@@ -37,9 +38,12 @@ class ModelContainer {
   InputType input_type_;
 
  private:
-  const int max_batch_size_ = 5;
   bool connected_{true};
   Queue<FeedbackTask> feedback_queue_;
+  boost::shared_mutex throughput_mutex_;
+  double avg_throughput_per_milli_;
+  boost::circular_buffer<double> throughput_buffer_;
+  static const size_t THROUGHPUT_BUFFER_CAPACITY = 100;
 };
 
 /// This is a lightweight wrapper around the map of active containers
