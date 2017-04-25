@@ -321,14 +321,7 @@ class TaskExecutor {
       if (model_queue_entry != model_queues_.end()) {
         output_futures.push_back(cache_.fetch(t.model_, t.input_));
         if (!output_futures.back().is_ready()) {
-<<<<<<< HEAD
-          t.send_time_micros_ =
-              std::chrono::duration_cast<std::chrono::microseconds>(
-                  std::chrono::system_clock::now().time_since_epoch())
-                  .count();
-=======
           t.recv_time_ = std::chrono::system_clock::now();
->>>>>>> develop
           model_queue_entry->second.add_task(t);
           boost::shared_lock<boost::shared_mutex> model_metrics_lock(
               model_metrics_mutex_);
