@@ -30,8 +30,10 @@ public class SerializableString extends DataVector<String> {
     CharBuffer stringContent = CharBuffer.wrap(data);
     Charset UTFCharset = StandardCharsets.UTF_8;
     CharsetEncoder encoder = UTFCharset.newEncoder();
-    CoderResult result = encoder.encode(stringContent, buffer, true);
-    return result.length();
+    int startPosition = buffer.position();
+    encoder.encode(stringContent, buffer, true);
+    int endPosition = buffer.position();
+    return (endPosition - startPosition);
   }
 
   /**

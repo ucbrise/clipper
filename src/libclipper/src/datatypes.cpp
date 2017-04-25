@@ -277,7 +277,7 @@ rpc::PredictionResponse rpc::PredictionResponse::deserialize_prediction_request(
   output_lengths_data++;
   char* output_string_data = reinterpret_cast<char*>(
       bytes.data() + sizeof(uint32_t) + (num_outputs * sizeof(uint32_t)));
-  for(int i = 0; i < num_outputs; i++) {
+  for(uint32_t i = 0; i < num_outputs; i++) {
     uint32_t output_length = output_lengths_data[i];
     std::string output(output_string_data, output_length);
     outputs.push_back(std::move(output));

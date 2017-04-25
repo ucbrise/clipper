@@ -198,10 +198,28 @@ class ModelContainer<I extends DataVector<?>> {
     }
     responseBuffer.rewind();
 
-    responseBuffer.put(DataUtils.getBytesFromInts(predictions.size()));
-    for (SerializableString p : predictions) {
-      int bytesWritten = p.toBytes(responseBuffer);
-      outputLenBytes += bytesWritten;
+    int numOutputs = predictions.size();
+    // Write the number of outputs to the buffer
+    responseBuffer.putInt(numOutputs);
+    int baseStringLengthsPosition = responseBuffer.position();
+    // We will begin writing data after the segment allocated
+    // for storing string lengths. Advance past this segment
+    // for now
+    responseBuffer.position(baseStringLengthsPosition + (4 * numOutputs));
+    for(int i = 0; i < predictions.size(); i++) {
+      SerializableString prediction = predictions.get(i);
+      // Serialize the prediction and write it to the output buffer
+      int serializedSize = prediction.toBytes(responseBuffer);
+      outputLenBytes += serializedSize;
+      int currPosition = responseBuffer.position();
+      // Navigate to the buffer segment allocated for storing
+      // the length of the serialized string and write the length
+      // in this location
+      responseBuffer.position(baseStringLengthsPosition + (4 * i));
+      responseBuffer.putInt(serializedSize);
+      // Return to the position in the buffer where the next string
+      // should be written
+      responseBuffer.position(currPosition);
     }
     responseBuffer.limit(outputLenBytes);
 

@@ -18,9 +18,9 @@ public class NoOpModel<T extends DataVector<Buffer>> extends Model<T> {
 
   @Override
   public SerializableString predict(T inputVector) {
-    Map<String, Float> jsonKeys = new HashMap<>();
-    jsonKeys.put("data_size", (float) inputVector.getData().remaining());
-    String jsonResponse = JSONUtil.toJSON(jsonKeys);
-    return new SerializableString(jsonResponse);
+    //Map<String, Float> jsonKeys = new HashMap<>();
+    //jsonKeys.put("data_size", (float) inputVector.getData().remaining());
+    //String jsonResponse = JSONUtil.toJSON(jsonKeys);
+    return new SerializableString("COWHAX");
   }
 }
