@@ -270,14 +270,18 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
 
 rpc::PredictionResponse::PredictionResponse(const std::vector<std::string> outputs) : outputs_(outputs) {}
 
-const PredictionResponse rpc::PredictionResponse::deserialize_prediction_request(ByteBuffer bytes) {
+rpc::PredictionResponse rpc::PredictionResponse::deserialize_prediction_request(ByteBuffer bytes) {
   std::vector<std::string> outputs;
-  uint32_t num_outputs = reinterpret_cast<uint32_t*>(bytes.data())[0];
-  char* output_string_data = reinterpret_cast<char*>(bytes.data() + 4);
+  uint32_t* output_lengths_data = reinterpret_cast<uint32_t*>(bytes.data());
+  uint32_t num_outputs = output_lengths_data[0];
+  output_lengths_data++;
+  char* output_string_data = reinterpret_cast<char*>(
+      bytes.data() + sizeof(uint32_t) + (num_outputs * sizeof(uint32_t)));
   for(int i = 0; i < num_outputs; i++) {
-    std::string output(output_string_data);
+    uint32_t output_length = output_lengths_data[i];
+    std::string output(output_string_data, output_length);
     outputs.push_back(std::move(output));
-    output_string_data += output.length() + 1;
+    output_string_data += output_length;
   }
   return PredictionResponse(outputs);
 }
@@ -306,7 +310,7 @@ std::string Response::debug_string() const noexcept {
   debug.append("Query id: ");
   debug.append(std::to_string(query_id_));
   debug.append(" Output: ");
-  debug.append(std::to_string(output_.y_hat_));
+  debug.append(output_.y_hat_);
   return debug;
 }
 

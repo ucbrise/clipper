@@ -368,10 +368,10 @@ class PredictionResponse {
   PredictionResponse &operator=(PredictionResponse &other) = delete;
 
   // move constructors
-  PredictionResponse(PredictionRequest &&other) = default;
-  PredictionResponse &operator=(PredictionRequest &&other) = default;
+  PredictionResponse(PredictionResponse &&other) = default;
+  PredictionResponse &operator=(PredictionResponse &&other) = default;
 
-  static const PredictionResponse deserialize_prediction_request(ByteBuffer bytes);
+  static PredictionResponse deserialize_prediction_request(ByteBuffer bytes);
 
   std::vector<std::string> outputs_;
 };

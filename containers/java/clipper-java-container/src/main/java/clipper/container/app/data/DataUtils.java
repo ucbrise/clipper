@@ -13,7 +13,7 @@ public class DataUtils {
     return buffer;
   }
 
-  public static byte[] getBytesFromInts(int[] data) {
+  public static byte[] getBytesFromInts(int... data) {
     ByteBuffer byteBuffer = ByteBuffer.allocate(data.length * 4);
     for (int item : data) {
       byteBuffer.putInt(item);
@@ -21,7 +21,7 @@ public class DataUtils {
     return byteBuffer.array();
   }
 
-  public static byte[] getBytesFromLongs(long[] data) {
+  public static byte[] getBytesFromLongs(long... data) {
     ByteBuffer byteBuffer = ByteBuffer.allocate(data.length * 8);
     for (long item : data) {
       byteBuffer.putLong(item);
@@ -29,7 +29,7 @@ public class DataUtils {
     return byteBuffer.array();
   }
 
-  public static byte[] getBytesFromFloats(float[] data) {
+  public static byte[] getBytesFromFloats(float... data) {
     ByteBuffer byteBuffer = ByteBuffer.allocate(data.length * 4);
     for (float item : data) {
       byteBuffer.putFloat(item);
@@ -37,7 +37,7 @@ public class DataUtils {
     return byteBuffer.array();
   }
 
-  public static byte[] getBytesFromDoubles(double[] data) {
+  public static byte[] getBytesFromDoubles(double... data) {
     ByteBuffer byteBuffer = ByteBuffer.allocate(data.length * 8);
     for (double item : data) {
       byteBuffer.putDouble(item);

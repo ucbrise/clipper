@@ -168,29 +168,43 @@ class ModelContainer<I extends DataVector<?>> {
 
   private void handlePredictRequest(
       long msgId, Iterator<I> dataVectors, Model<I> model, ZMQ.Socket socket) throws IOException {
-    List<FloatVector> predictions = new ArrayList<>();
+    List<SerializableString> predictions = new ArrayList<>();
     while (dataVectors.hasNext()) {
       I dataVector = dataVectors.next();
-      FloatVector prediction = model.predict(dataVector);
+      SerializableString prediction = model.predict(dataVector);
       predictions.add(prediction);
     }
-    int outputLenBytes = 0;
-    for (FloatVector p : predictions) {
-      outputLenBytes += p.getData().remaining();
+    // At minimum, the output contains an unsigned
+    // integer specifying the number of string
+    // outputs
+    int outputLenBytes = 4;
+    int maxBufferSizeBytes = 4;
+    for(SerializableString p : predictions) {
+      // Add byte length corresponding to an
+      // integer containing the string's size
+      outputLenBytes += 4;
+      maxBufferSizeBytes += 4;
+      // Add the maximum size of the string
+      // with utf-8 encoding to the maximum buffer size.
+      // The actual output length will be determined
+      // when the string predictions are serialized
+      maxBufferSizeBytes += p.maxSizeBytes();
     }
-    outputLenBytes = outputLenBytes * 4;
-    if (responseBuffer == null || responseBufferSize < outputLenBytes) {
-      responseBufferSize = outputLenBytes * 2;
+
+    if (responseBuffer == null || responseBufferSize < maxBufferSizeBytes) {
+      responseBufferSize = maxBufferSizeBytes * 2;
       responseBuffer = ByteBuffer.allocateDirect(responseBufferSize);
       responseBuffer.order(ByteOrder.LITTLE_ENDIAN);
     }
     responseBuffer.rewind();
-    responseBuffer.limit(outputLenBytes);
-    for (FloatVector preds : predictions) {
-      while (preds.getData().hasRemaining()) {
-        responseBuffer.putFloat(preds.getData().get());
-      }
+
+    responseBuffer.put(DataUtils.getBytesFromInts(predictions.size()));
+    for (SerializableString p : predictions) {
+      int bytesWritten = p.toBytes(responseBuffer);
+      outputLenBytes += bytesWritten;
     }
+    responseBuffer.limit(outputLenBytes);
+
     socket.send("", ZMQ.SNDMORE);
     ByteBuffer b = ByteBuffer.allocate(8);
     b.order(ByteOrder.LITTLE_ENDIAN);
