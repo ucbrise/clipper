@@ -546,16 +546,20 @@ class Clipper:
                         print(
                             "The following packages in your conda environment aren't available in the linux-64 conda channel the container will use:"
                         )
-                        print(", ".join(str(package) for package in missing_packages))
+                        print(", ".join(
+                            str(package) for package in missing_packages))
                         print(
                             "We will skip their installation when deploying your function. If your function uses these packages, the container will experience a runtime error when queried."
                         )
 
                         missing_packages_raw = [
-                            '='.join(package.split()) for package in missing_packages
+                            '='.join(package.split())
+                            for package in missing_packages
                         ]
                         for missing_package_raw in missing_packages_raw:
-                            print("Removing %s from supplied environment specifications" % missing_package_raw)
+                            print(
+                                "Removing %s from supplied environment specifications"
+                                % missing_package_raw)
                             env.dependencies.raw.remove(missing_package_raw)
                         env.dependencies.parse()
                         env.save()
