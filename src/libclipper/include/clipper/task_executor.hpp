@@ -155,7 +155,7 @@ class ModelQueue {
 
 class InflightMessage {
  public:
-  explicit InflightMessage(
+  InflightMessage(
       const std::chrono::time_point<std::chrono::system_clock> send_time,
       const int container_id, const VersionedModelId model,
       const std::shared_ptr<Input> input)
@@ -163,6 +163,9 @@ class InflightMessage {
         container_id_(container_id),
         model_(model),
         input_(input) {}
+
+  InflightMessage(const InflightMessage &) = default;
+  InflightMessage(InflightMessage &&) = default;
 
   std::chrono::time_point<std::chrono::system_clock> send_time_;
   int container_id_;
