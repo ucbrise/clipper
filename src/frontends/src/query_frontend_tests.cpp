@@ -17,7 +17,7 @@ class MockQueryProcessor {
  public:
   MockQueryProcessor() = default;
   boost::future<Response> predict(Query query) {
-    Response response(query, 3, 5, Output(-1.0, {std::make_pair("m", 1)}),
+    Response response(query, 3, 5, Output("-1.0", {std::make_pair("m", 1)}),
                       false);
     return boost::make_ready_future(response);
   }
