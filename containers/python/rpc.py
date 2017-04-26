@@ -222,7 +222,7 @@ class PredictionRequest:
         The raw message id associated with the RPC 
         prediction request message
     inputs : 
-        One of [[byte]], [[int]], [[float]], [[doubles]], [strings]
+        One of [[byte]], [[int]], [[float]], [[double]], [string]
     """
 
     def __init__(self, msg_id, inputs):
