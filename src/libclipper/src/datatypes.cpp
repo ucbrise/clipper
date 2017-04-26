@@ -273,8 +273,8 @@ rpc::PredictionResponse::PredictionResponse(
     const std::vector<std::string> outputs)
     : outputs_(outputs) {}
 
-rpc::PredictionResponse rpc::PredictionResponse::deserialize_prediction_response(
-    ByteBuffer bytes) {
+rpc::PredictionResponse
+rpc::PredictionResponse::deserialize_prediction_response(ByteBuffer bytes) {
   std::vector<std::string> outputs;
   uint32_t *output_lengths_data = reinterpret_cast<uint32_t *>(bytes.data());
   uint32_t num_outputs = output_lengths_data[0];

@@ -475,14 +475,15 @@ class TaskExecutor {
       }
       for (int batch_num = 0; batch_num < batch_size; ++batch_num) {
         InflightMessage completed_msg = keys[batch_num];
-        process_completed_message(completed_msg, parsed_response.outputs_[batch_num],
+        process_completed_message(completed_msg,
+                                  parsed_response.outputs_[batch_num],
                                   current_time, cur_model_metric);
       }
     }
   }
 
   void process_completed_message(
-      InflightMessage &completed_msg, std::string& deserialized_output,
+      InflightMessage &completed_msg, std::string &deserialized_output,
       std::chrono::time_point<std::chrono::system_clock> &current_time,
       boost::optional<ModelMetrics> cur_model_metric) {
     std::shared_ptr<ModelContainer> processing_container =
