@@ -256,7 +256,7 @@ class Clipper:
                              model,
                              input_type,
                              default_output,
-                             slo_micros=20000):
+                             slo_micros):
         """Register a new Clipper application.
 
         Parameters
@@ -270,9 +270,13 @@ class Clipper:
         default_output : float
             The default prediction to use if the model does not return a prediction
             by the end of the latency objective.
-        slo_micros : int, optional
+        slo_micros : int
             The query latency objective for the application in microseconds.
-            Default is 20,000 (20 ms).
+            If Clipper cannot process a query within the latency objective,
+            the default output is returned. Therefore, we don't recommend
+            setting the objective aggressively low unless absolutely necessary.
+            For example, 40000 (40 ms) is a good starting point for testing,
+            but the optimal latency depends on the application.
         """
         url = "http://%s:%d/admin/add_app" % (self.host,
                                               CLIPPER_MANAGEMENT_PORT)
