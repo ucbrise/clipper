@@ -179,7 +179,7 @@ class ModelContainer<I extends DataVector<?>> {
     // outputs
     int outputLenBytes = 4;
     int maxBufferSizeBytes = 4;
-    for(SerializableString p : predictions) {
+    for (SerializableString p : predictions) {
       // Add byte length corresponding to an
       // integer containing the string's size
       outputLenBytes += 4;
@@ -206,7 +206,7 @@ class ModelContainer<I extends DataVector<?>> {
     // for storing string lengths. Advance past this segment
     // for now
     responseBuffer.position(baseStringLengthsPosition + (4 * numOutputs));
-    for(int i = 0; i < predictions.size(); i++) {
+    for (int i = 0; i < predictions.size(); i++) {
       SerializableString prediction = predictions.get(i);
       // Serialize the prediction and write it to the output buffer
       int serializedSize = prediction.toBytes(responseBuffer);

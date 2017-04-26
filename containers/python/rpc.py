@@ -87,6 +87,7 @@ class Server(threading.Thread):
         for each input included in the specified
         predict response
     """
+
     def handle_prediction_request(self, prediction_request):
         predict_fn = self.get_prediction_function()
         outputs = []
@@ -96,7 +97,9 @@ class Server(threading.Thread):
             outputs.append(output)
             total_length += len(output)
 
-        response = PredictionResponse(prediction_request.msg_id, len(prediction_request.inputs), total_length)
+        response = PredictionResponse(prediction_request.msg_id,
+                                      len(prediction_request.inputs),
+                                      total_length)
         for output in outputs:
             response.add_output(output)
 
@@ -109,6 +112,7 @@ class Server(threading.Thread):
         A feedback response corresponding
         to the specified feedback request
     """
+
     def handle_feedback_request(self, feedback_request):
         response = FeedbackResponse(feedback_request.msg_id, "ACK")
         return response
@@ -125,7 +129,9 @@ class Server(threading.Thread):
         elif self.model_input_type == INPUT_TYPE_STRINGS:
             return self.model.predict_string
         else:
-            print("Attempted to get predict function for invalid model input type!")
+            print(
+                "Attempted to get predict function for invalid model input type!"
+            )
             raise
 
     def run(self):
@@ -218,6 +224,7 @@ class PredictionRequest:
     inputs : 
         One of [[byte]], [[int]], [[float]], [[doubles]], [strings]
     """
+
     def __init__(self, msg_id, inputs):
         self.msg_id = msg_id
         self.inputs = inputs
@@ -225,9 +232,9 @@ class PredictionRequest:
     def __str__(self):
         return self.inputs
 
+
 class PredictionResponse():
     output_buffer = bytearray(1024)
-
     """
     Parameters
     ----------
@@ -239,11 +246,13 @@ class PredictionResponse():
     max_outputs_size_bytes:
         The total length of the string content
     """
+
     def __init__(self, msg_id, num_outputs, total_string_length):
         self.msg_id = msg_id
         self.num_outputs = num_outputs
         print(len(self.output_buffer))
-        self.expand_buffer_if_necessary(total_string_length * MAXIMUM_UTF_8_CHAR_LENGTH_BYTES)
+        self.expand_buffer_if_necessary(
+            total_string_length * MAXIMUM_UTF_8_CHAR_LENGTH_BYTES)
         self.memview = memoryview(self.output_buffer)
         struct.pack_into("<I", self.output_buffer, 0, num_outputs)
         self.string_content_end_position = 4 + (4 * num_outputs)
@@ -254,12 +263,15 @@ class PredictionResponse():
     ----------
     output : string
     """
+
     def add_output(self, output):
         output = unicode(output, "utf-8").encode("utf-8")
         output_len = len(output)
-        struct.pack_into("<I", self.output_buffer, self.current_output_sizes_position, output_len)
+        struct.pack_into("<I", self.output_buffer,
+                         self.current_output_sizes_position, output_len)
         self.current_output_sizes_position += 4
-        self.memview[self.string_content_end_position : self.string_content_end_position + output_len] = output
+        self.memview[self.string_content_end_position:
+                     self.string_content_end_position + output_len] = output
         self.string_content_end_position += output_len
 
     def send(self, socket):
@@ -279,6 +291,7 @@ class FeedbackRequest():
 
     def __str__(self):
         return self.content
+
 
 class FeedbackResponse():
     def __init__(self, msg_id, content):

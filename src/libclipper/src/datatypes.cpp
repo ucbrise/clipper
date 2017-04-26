@@ -70,7 +70,8 @@ InputType parse_input_type(std::string type_string) {
   }
 }
 
-Output::Output(const std::string y_hat, const std::vector<VersionedModelId> models_used)
+Output::Output(const std::string y_hat,
+               const std::vector<VersionedModelId> models_used)
     : y_hat_(y_hat), models_used_(models_used) {}
 
 bool Output::operator==(const Output &rhs) const {
@@ -268,16 +269,19 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
   return serialized_request;
 }
 
-rpc::PredictionResponse::PredictionResponse(const std::vector<std::string> outputs) : outputs_(outputs) {}
+rpc::PredictionResponse::PredictionResponse(
+    const std::vector<std::string> outputs)
+    : outputs_(outputs) {}
 
-rpc::PredictionResponse rpc::PredictionResponse::deserialize_prediction_request(ByteBuffer bytes) {
+rpc::PredictionResponse rpc::PredictionResponse::deserialize_prediction_request(
+    ByteBuffer bytes) {
   std::vector<std::string> outputs;
-  uint32_t* output_lengths_data = reinterpret_cast<uint32_t*>(bytes.data());
+  uint32_t *output_lengths_data = reinterpret_cast<uint32_t *>(bytes.data());
   uint32_t num_outputs = output_lengths_data[0];
   output_lengths_data++;
-  char* output_string_data = reinterpret_cast<char*>(
+  char *output_string_data = reinterpret_cast<char *>(
       bytes.data() + sizeof(uint32_t) + (num_outputs * sizeof(uint32_t)));
-  for(uint32_t i = 0; i < num_outputs; i++) {
+  for (uint32_t i = 0; i < num_outputs; i++) {
     uint32_t output_length = output_lengths_data[i];
     std::string output(output_string_data, output_length);
     outputs.push_back(std::move(output));

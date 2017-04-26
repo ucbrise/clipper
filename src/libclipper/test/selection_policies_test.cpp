@@ -17,8 +17,8 @@ namespace {
 class DefaultOutputSelectionPolicyTest : public ::testing::Test {
  public:
   DefaultOutputSelectionPolicyTest()
-      : state_(std::make_shared<DefaultOutputSelectionState>(Output{"4.3", {}})) {
-  }
+      : state_(
+            std::make_shared<DefaultOutputSelectionState>(Output{"4.3", {}})) {}
   DefaultOutputSelectionPolicy policy_;
   std::shared_ptr<DefaultOutputSelectionState> state_;
 };

@@ -13,7 +13,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 
 public class SerializableString extends DataVector<String> {
-
   private static int MAXIMUM_UTF_8_CHAR_LENGTH_BYTES = 4;
 
   public SerializableString(String data) {

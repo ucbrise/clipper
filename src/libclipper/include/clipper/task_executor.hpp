@@ -454,7 +454,8 @@ class TaskExecutor {
 
     inflight_messages_.erase(response.first);
     rpc::PredictionResponse parsed_response =
-        rpc::PredictionResponse::deserialize_prediction_request(response.second);
+        rpc::PredictionResponse::deserialize_prediction_request(
+            response.second);
     assert(parsed_response.outputs_.size() == keys.size());
     int batch_size = keys.size();
     throughput_meter_->mark(batch_size);
@@ -482,7 +483,7 @@ class TaskExecutor {
   }
 
   void process_completed_message(
-      InflightMessage &completed_msg, const std::string& deserialized_output,
+      InflightMessage &completed_msg, std::string& deserialized_output,
       std::chrono::time_point<std::chrono::system_clock> &current_time,
       boost::optional<ModelMetrics> cur_model_metric) {
     std::shared_ptr<ModelContainer> processing_container =

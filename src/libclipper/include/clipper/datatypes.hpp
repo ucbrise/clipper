@@ -33,7 +33,8 @@ InputType parse_input_type(std::string type_string);
 
 class Output {
  public:
-  Output(const std::string y_hat, const std::vector<VersionedModelId> models_used);
+  Output(const std::string y_hat,
+         const std::vector<VersionedModelId> models_used);
 
   ~Output() = default;
 

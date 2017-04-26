@@ -389,9 +389,11 @@ class RequestHandler {
     try {
       rapidjson::Document json_y_hat;
       clipper::json::parse_json(query_response.output_.y_hat_, json_y_hat);
-      clipper::json::add_object(json_response, PREDICTION_RESPONSE_KEY_OUTPUT, json_y_hat);
-    } catch(const clipper::json::json_parse_error& e) {
-      clipper::json::add_string(json_response, PREDICTION_RESPONSE_KEY_OUTPUT, query_response.output_.y_hat_);
+      clipper::json::add_object(json_response, PREDICTION_RESPONSE_KEY_OUTPUT,
+                                json_y_hat);
+    } catch (const clipper::json::json_parse_error& e) {
+      clipper::json::add_string(json_response, PREDICTION_RESPONSE_KEY_OUTPUT,
+                                query_response.output_.y_hat_);
     }
     clipper::json::add_bool(json_response, PREDICTION_RESPONSE_KEY_USED_DEFAULT,
                             query_response.output_is_default_);
