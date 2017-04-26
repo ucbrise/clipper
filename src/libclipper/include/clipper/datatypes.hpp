@@ -372,7 +372,7 @@ class PredictionResponse {
   PredictionResponse(PredictionResponse &&other) = default;
   PredictionResponse &operator=(PredictionResponse &&other) = default;
 
-  static PredictionResponse deserialize_prediction_request(ByteBuffer bytes);
+  static PredictionResponse deserialize_prediction_response(ByteBuffer bytes);
 
   std::vector<std::string> outputs_;
 };

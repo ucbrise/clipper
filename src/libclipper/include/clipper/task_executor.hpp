@@ -454,7 +454,7 @@ class TaskExecutor {
 
     inflight_messages_.erase(response.first);
     rpc::PredictionResponse parsed_response =
-        rpc::PredictionResponse::deserialize_prediction_request(
+        rpc::PredictionResponse::deserialize_prediction_response(
             response.second);
     assert(parsed_response.outputs_.size() == keys.size());
     int batch_size = keys.size();
@@ -475,7 +475,6 @@ class TaskExecutor {
       }
       for (int batch_num = 0; batch_num < batch_size; ++batch_num) {
         InflightMessage completed_msg = keys[batch_num];
-        float deserialized_output = deserialized_outputs[batch_num];
         process_completed_message(completed_msg, parsed_response.outputs_[batch_num],
                                   current_time, cur_model_metric);
       }
