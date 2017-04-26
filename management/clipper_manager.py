@@ -251,11 +251,7 @@ class Clipper:
             self._execute_root("docker-compose up -d query_frontend")
             print("Clipper is running")
 
-    def register_application(self,
-                             name,
-                             model,
-                             input_type,
-                             default_output,
+    def register_application(self, name, model, input_type, default_output,
                              slo_micros):
         """Register a new Clipper application.
 
