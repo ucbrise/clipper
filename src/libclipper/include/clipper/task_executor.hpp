@@ -299,7 +299,7 @@ class TaskExecutor {
         });
     throughput_meter_ = metrics::MetricsRegistry::get_metrics().create_meter(
         "internal:aggregate_model_throughput");
-    predictions_counter =
+    predictions_counter_ =
         metrics::MetricsRegistry::get_metrics().create_counter(
             "internal:aggregate_num_predictions");
   }
@@ -313,7 +313,7 @@ class TaskExecutor {
 
   std::vector<boost::future<Output>> schedule_predictions(
       std::vector<PredictTask> tasks) {
-    predictions_counter->increment(tasks.size());
+    predictions_counter_->increment(tasks.size());
     std::vector<boost::future<Output>> output_futures;
     for (auto t : tasks) {
       // add each task to the queue corresponding to its associated model
@@ -366,7 +366,7 @@ class TaskExecutor {
   redox::Subscriber redis_subscriber_;
   std::mutex inflight_messages_mutex_;
   std::unordered_map<int, std::vector<InflightMessage>> inflight_messages_;
-  std::shared_ptr<metrics::Counter> predictions_counter;
+  std::shared_ptr<metrics::Counter> predictions_counter_;
   std::shared_ptr<metrics::Meter> throughput_meter_;
   boost::shared_mutex model_queues_mutex_;
   std::unordered_map<const VersionedModelId, ModelQueue,
@@ -459,7 +459,6 @@ class TaskExecutor {
         deserialize_outputs(response.second);
     assert(deserialized_outputs.size() == keys.size());
     int batch_size = keys.size();
-    predictions_counter->increment(batch_size);
     throughput_meter_->mark(batch_size);
     std::chrono::time_point<std::chrono::system_clock> current_time =
         std::chrono::system_clock::now();
@@ -495,13 +494,10 @@ class TaskExecutor {
     long task_latency_micros =
         std::chrono::duration_cast<std::chrono::microseconds>(task_latency)
             .count();
-    long task_latency_millis =
-        std::chrono::duration_cast<std::chrono::milliseconds>(task_latency)
-            .count();
     processing_container->update_throughput(1, task_latency_micros);
     if (cur_model_metric) {
       (*cur_model_metric)
-          .latency_->insert(static_cast<int64_t>(task_latency_millis));
+          .latency_->insert(static_cast<int64_t>(task_latency_micros));
     }
     cache_.put(completed_msg.model_, completed_msg.input_,
                Output{deserialized_output, {completed_msg.model_}});
