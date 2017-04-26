@@ -268,11 +268,15 @@ class Clipper:
             by the end of the latency objective.
         slo_micros : int
             The query latency objective for the application in microseconds.
+            This is the processing latency between Clipper receiving a request 
+            and sending a response. It does not account for network latencies 
+            before a request is received or after a response is sent.
+
             If Clipper cannot process a query within the latency objective,
             the default output is returned. Therefore, it is recommended that
             the objective not be set aggressively low unless absolutely necessary.
             Starting at 40000 (40 ms) is a good for testing, but the optimal
-            the optimal latnecy objective will vary depending on the application.
+            the optimal latency objective will vary depending on the application.
         """
         url = "http://%s:%d/admin/add_app" % (self.host,
                                               CLIPPER_MANAGEMENT_PORT)
