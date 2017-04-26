@@ -28,7 +28,7 @@ function clean_up {
     # echo Background jobs: $(jobs -l)
     # echo
     # echo Killing jobs
-    echo Exiting...
+    echo Exiting RPC test...
     if [ "$success" = false ] ; then
       echo 'Error in RPC test'
     fi
