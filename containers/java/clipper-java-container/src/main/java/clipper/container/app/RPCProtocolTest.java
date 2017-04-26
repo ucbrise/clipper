@@ -1,12 +1,10 @@
 package clipper.container.app;
 
 import clipper.container.app.data.DoubleVector;
-// import org.junit.Test;
 
 import java.net.UnknownHostException;
 
 public class RPCProtocolTest {
-  // @Test
   public static void main(String[] args) {
     ModelContainer<DoubleVector> container =
         new ModelContainer<DoubleVector>(new DoubleVector.Parser());
