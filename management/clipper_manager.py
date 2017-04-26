@@ -275,8 +275,8 @@ class Clipper:
             If Clipper cannot process a query within the latency objective,
             the default output is returned. Therefore, it is recommended that
             the objective not be set aggressively low unless absolutely necessary.
-            Starting at 40000 (40 ms) is a good for testing, but the optimal
-            the optimal latency objective will vary depending on the application.
+            40000 (40ms) is a good starting value, but the optimal latency objective
+            will vary depending on the application.
         """
         url = "http://%s:%d/admin/add_app" % (self.host,
                                               CLIPPER_MANAGEMENT_PORT)
