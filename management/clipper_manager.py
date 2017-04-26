@@ -649,16 +649,17 @@ class Clipper:
             on the container os. Otherwise returns False.
         """
 
-        child = subprocess.Popen(
+        process = subprocess.Popen(
             "source deactivate && python check_env.py {environment_fname} {directory} {platform}".
             format(
                 environment_fname=environment_fname,
                 directory=directory,
                 platform=CONTAINER_CONDA_PLATFORM),
-            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE,
             shell=True)
-        child.communicate()
-        return child.returncode == 0
+        out, _ = process.communicate()
+        print(out)
+        return process.returncode == 0
 
     def deploy_model(self,
                      name,
