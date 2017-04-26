@@ -12,7 +12,8 @@ from sklearn import base
 from sklearn.externals import joblib
 from cStringIO import StringIO
 import sys
-sys.path.insert(0, os.path.abspath('../../containers/python/'))
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.abspath('%s../../containers/python/' % cur_dir))
 from pywrencloudpickle import CloudPickler
 
 MODEL_REPO = "/tmp/clipper-models"
@@ -358,7 +359,7 @@ class Clipper:
         -------
         list
             Returns a list of information about all apps registered to Clipper.
-            If no modelss are registered with Clipper, an empty list is returned.
+            If no models are registered with Clipper, an empty list is returned.
         """
         url = "http://%s:1338/admin/get_all_models" % self.host
         req_json = json.dumps({"verbose": verbose})
@@ -371,22 +372,25 @@ class Clipper:
             print(r.text)
             return None
 
-    def get_model_info(self, name):
+    def get_model_info(self, model_name, model_version):
         """Gets detailed information about a registered model.
 
         Parameters
         ----------
-        name : str
+        model_name : str
             The name of the model to look up
+        model_version : int
+            The version of the model to look up
 
         Returns
         -------
         dict
             Returns a dictionary with the specified model's info.
-            If no model with name `name` is registered with Clipper, None is returned.
+            If no model with name `model_name@model_version` is
+            registered with Clipper, None is returned.
         """
         url = "http://%s:1338/admin/get_model" % self.host
-        req_json = json.dumps({"name": name})
+        req_json = json.dumps({"model_name": name, "model_version": model_version})
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
 
@@ -430,14 +434,18 @@ class Clipper:
 
         Parameters
         ----------
-        name : str
+        model_name : str
             The name of the container to look up
+        model_version : int
+            The version of the container to look up
+        replica_id : int
+            The container replica to look up
 
         Returns
         -------
         dict
-            Returns a dictionary with the specified container's info.
-            If no container with name `name` is registered with Clipper, None is returned.
+            A dictionary with the specified container's info.
+            If no corresponding container is registered with Clipper, None is returned.
         """
         url = "http://%s:1338/admin/get_container" % self.host
         req_json = json.dumps({

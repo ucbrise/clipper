@@ -349,11 +349,11 @@ class RequestHandler {
             respond_http(result, "200 OK", response);
           } catch (const json_parse_error& e) {
             std::string err_msg =
-                json_error_msg(e.what(), GET_MODEL_REQUESTS_SCHEMA);
+                json_error_msg(e.what(), GET_CONTAINER_REQUESTS_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
           } catch (const json_semantic_error& e) {
             std::string err_msg =
-                json_error_msg(e.what(), GET_MODEL_REQUESTS_SCHEMA);
+                json_error_msg(e.what(), GET_CONTAINER_REQUESTS_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
           } catch (const std::invalid_argument& e) {
             respond_http(e.what(), "400 Bad Request", response);

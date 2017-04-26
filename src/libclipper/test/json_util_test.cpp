@@ -282,7 +282,6 @@ TEST_F(RedisToJsonTest, TestRedisModelMetadataToJson) {
   redis_model_metadata_to_json(d, model_metadata);
 
   ASSERT_EQ(get_string(d, "input_type"), input_type);
-
   ASSERT_EQ(get_string(d, "model_name"), model.first);
   ASSERT_EQ(get_int(d, "model_version"), model.second);
   ASSERT_EQ(get_string(d, "input_type"), input_type);

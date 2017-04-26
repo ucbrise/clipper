@@ -159,7 +159,7 @@ std::vector<std::string> get_all_model_names(redox::Redox& redis);
  * Looks up models listed in the model table.
  *
  * \return Returns a vector of models and versions. If no models
- * were found, then an empty vector will be returned.
+ * are found, then an empty vector will be returned.
  */
 std::vector<VersionedModelId> get_all_models(redox::Redox& redis);
 
