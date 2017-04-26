@@ -26,6 +26,39 @@ const std::string LOGGING_TAG_TASK_EXECUTOR = "TASKEXECUTOR";
 
 std::vector<float> deserialize_outputs(std::vector<uint8_t> bytes);
 
+class ModelMetrics {
+ public:
+  explicit ModelMetrics(VersionedModelId model)
+      : model_(model),
+        latency_(metrics::MetricsRegistry::get_metrics().create_histogram(
+            "model:" + versioned_model_to_str(model) + ":prediction_latency",
+            "microseconds", 4096)),
+        throughput_(metrics::MetricsRegistry::get_metrics().create_meter(
+            "model:" + versioned_model_to_str(model) +
+            ":prediction_throughput")),
+        num_predictions_(metrics::MetricsRegistry::get_metrics().create_counter(
+            "model:" + versioned_model_to_str(model) + ":num_predictions")),
+        cache_hit_ratio_(
+            metrics::MetricsRegistry::get_metrics().create_ratio_counter(
+                "model:" + versioned_model_to_str(model) + ":cache_hit_ratio")),
+        batch_size_(metrics::MetricsRegistry::get_metrics().create_histogram(
+            "model:" + versioned_model_to_str(model) + ":batch_size", "queries",
+            4096)) {}
+  ~ModelMetrics() = default;
+  ModelMetrics(const ModelMetrics &) = default;
+  ModelMetrics &operator=(const ModelMetrics &) = default;
+
+  ModelMetrics(ModelMetrics &&) = default;
+  ModelMetrics &operator=(ModelMetrics &&) = default;
+
+  VersionedModelId model_;
+  std::shared_ptr<metrics::Histogram> latency_;
+  std::shared_ptr<metrics::Meter> throughput_;
+  std::shared_ptr<metrics::Counter> num_predictions_;
+  std::shared_ptr<metrics::RatioCounter> cache_hit_ratio_;
+  std::shared_ptr<metrics::Histogram> batch_size_;
+};
+
 class CacheEntry {
  public:
   CacheEntry();
@@ -187,6 +220,9 @@ class TaskExecutor {
         rpc_(std::make_unique<rpc::RPCService>()),
         model_queues_(std::unordered_map<const VersionedModelId, ModelQueue,
                                          decltype(&versioned_model_hash)>(
+            INITIAL_MODEL_QUEUES_MAP_SIZE, &versioned_model_hash)),
+        model_metrics_(std::unordered_map<const VersionedModelId, ModelMetrics,
+                                          decltype(&versioned_model_hash)>(
             INITIAL_MODEL_QUEUES_MAP_SIZE, &versioned_model_hash)) {
     log_info(LOGGING_TAG_TASK_EXECUTOR, "TaskExecutor started");
     rpc_->start(
@@ -261,15 +297,11 @@ class TaskExecutor {
           }
 
         });
-    throughput_meter = metrics::MetricsRegistry::get_metrics().create_meter(
-        "model_throughput");
-    predictions_counter =
+    throughput_meter_ = metrics::MetricsRegistry::get_metrics().create_meter(
+        "internal:aggregate_model_throughput");
+    predictions_counter_ =
         metrics::MetricsRegistry::get_metrics().create_counter(
-            "num_predictions");
-    throughput_meter = metrics::MetricsRegistry::get_metrics().create_meter(
-        "prediction_throughput");
-    latency_hist = metrics::MetricsRegistry::get_metrics().create_histogram(
-        "prediction_latency", "milliseconds", 2056);
+            "internal:aggregate_num_predictions");
   }
 
   // Disallow copy
@@ -281,7 +313,7 @@ class TaskExecutor {
 
   std::vector<boost::future<Output>> schedule_predictions(
       std::vector<PredictTask> tasks) {
-    predictions_counter->increment(tasks.size());
+    predictions_counter_->increment(tasks.size());
     std::vector<boost::future<Output>> output_futures;
     for (auto t : tasks) {
       // add each task to the queue corresponding to its associated model
@@ -291,6 +323,21 @@ class TaskExecutor {
         if (!output_futures.back().is_ready()) {
           t.recv_time_ = std::chrono::system_clock::now();
           model_queue_entry->second.add_task(t);
+          boost::shared_lock<boost::shared_mutex> model_metrics_lock(
+              model_metrics_mutex_);
+          auto cur_model_metric_entry = model_metrics_.find(t.model_);
+          if (cur_model_metric_entry != model_metrics_.end()) {
+            auto cur_model_metric = cur_model_metric_entry->second;
+            cur_model_metric.cache_hit_ratio_->increment(0, 1);
+          }
+        } else {
+          boost::shared_lock<boost::shared_mutex> model_metrics_lock(
+              model_metrics_mutex_);
+          auto cur_model_metric_entry = model_metrics_.find(t.model_);
+          if (cur_model_metric_entry != model_metrics_.end()) {
+            auto cur_model_metric = cur_model_metric_entry->second;
+            cur_model_metric.cache_hit_ratio_->increment(1, 1);
+          }
         }
       } else {
         log_error_formatted(LOGGING_TAG_TASK_EXECUTOR,
@@ -319,21 +366,34 @@ class TaskExecutor {
   redox::Subscriber redis_subscriber_;
   std::mutex inflight_messages_mutex_;
   std::unordered_map<int, std::vector<InflightMessage>> inflight_messages_;
-  std::shared_ptr<metrics::Counter> predictions_counter;
-  std::shared_ptr<metrics::Meter> throughput_meter;
-  std::shared_ptr<metrics::Histogram> latency_hist;
+  std::shared_ptr<metrics::Counter> predictions_counter_;
+  std::shared_ptr<metrics::Meter> throughput_meter_;
+  boost::shared_mutex model_queues_mutex_;
   std::unordered_map<const VersionedModelId, ModelQueue,
                      decltype(&versioned_model_hash)>
       model_queues_;
+  boost::shared_mutex model_metrics_mutex_;
+  std::unordered_map<const VersionedModelId, ModelMetrics,
+                     decltype(&versioned_model_hash)>
+      model_metrics_;
   static constexpr int INITIAL_MODEL_QUEUES_MAP_SIZE = 100;
 
   bool create_model_queue_if_necessary(const VersionedModelId &model_id) {
     // Adds a new <model_id, task_queue> entry to the queues map, if one
     // does not already exist
+    boost::unique_lock<boost::shared_mutex> l(model_queues_mutex_);
     auto queue_added = model_queues_.emplace(std::piecewise_construct,
                                              std::forward_as_tuple(model_id),
                                              std::forward_as_tuple());
-    return queue_added.second;
+    bool queue_created = queue_added.second;
+    if (queue_created) {
+      boost::unique_lock<boost::shared_mutex> l(model_metrics_mutex_);
+      model_metrics_.insert(std::make_pair(model_id, ModelMetrics(model_id)));
+      // model_metrics_.emplace(std::piecewise_construct,
+      //                        std::forward_as_tuple(model_id),
+      //                        std::forward_as_tuple(model_id));
+    }
+    return queue_created;
   }
 
   void on_container_ready(VersionedModelId model_id, int replica_id) {
@@ -344,6 +404,7 @@ class TaskExecutor {
           "TaskExecutor failed to find previously registered active "
           "container!");
     }
+    boost::shared_lock<boost::shared_mutex> l(model_queues_mutex_);
     auto model_queue_entry = model_queues_.find(container->model_);
     if (model_queue_entry == model_queues_.end()) {
       throw std::runtime_error(
@@ -391,27 +452,41 @@ class TaskExecutor {
   void on_response_recv(rpc::RPCResponse response) {
     std::unique_lock<std::mutex> l(inflight_messages_mutex_);
     auto keys = inflight_messages_[response.first];
+    boost::shared_lock<boost::shared_mutex> metrics_lock(model_metrics_mutex_);
 
     inflight_messages_.erase(response.first);
     std::vector<float> deserialized_outputs =
         deserialize_outputs(response.second);
     assert(deserialized_outputs.size() == keys.size());
     int batch_size = keys.size();
-    predictions_counter->increment(batch_size);
-    throughput_meter->mark(batch_size);
+    throughput_meter_->mark(batch_size);
     std::chrono::time_point<std::chrono::system_clock> current_time =
         std::chrono::system_clock::now();
-    for (int batch_num = 0; batch_num < batch_size; ++batch_num) {
-      InflightMessage completed_msg = keys[batch_num];
-      float deserialized_output = deserialized_outputs[batch_num];
-      process_completed_message(completed_msg, deserialized_output,
-                                current_time);
+    if (batch_size > 0) {
+      const VersionedModelId &cur_model = keys[0].model_;
+      boost::optional<ModelMetrics> cur_model_metric;
+      auto cur_model_metric_entry = model_metrics_.find(cur_model);
+      if (cur_model_metric_entry != model_metrics_.end()) {
+        cur_model_metric = cur_model_metric_entry->second;
+      }
+      if (cur_model_metric) {
+        (*cur_model_metric).throughput_->mark(batch_size);
+        (*cur_model_metric).num_predictions_->increment(batch_size);
+        (*cur_model_metric).batch_size_->insert(batch_size);
+      }
+      for (int batch_num = 0; batch_num < batch_size; ++batch_num) {
+        InflightMessage completed_msg = keys[batch_num];
+        float deserialized_output = deserialized_outputs[batch_num];
+        process_completed_message(completed_msg, deserialized_output,
+                                  current_time, cur_model_metric);
+      }
     }
   }
 
   void process_completed_message(
       InflightMessage &completed_msg, float deserialized_output,
-      std::chrono::time_point<std::chrono::system_clock> &current_time) {
+      std::chrono::time_point<std::chrono::system_clock> &current_time,
+      boost::optional<ModelMetrics> cur_model_metric) {
     std::shared_ptr<ModelContainer> processing_container =
         active_containers_->get_model_replica(completed_msg.model_,
                                               completed_msg.container_id_);
@@ -419,11 +494,11 @@ class TaskExecutor {
     long task_latency_micros =
         std::chrono::duration_cast<std::chrono::microseconds>(task_latency)
             .count();
-    long task_latency_millis =
-        std::chrono::duration_cast<std::chrono::milliseconds>(task_latency)
-            .count();
     processing_container->update_throughput(1, task_latency_micros);
-    latency_hist->insert(static_cast<int64_t>(task_latency_millis));
+    if (cur_model_metric) {
+      (*cur_model_metric)
+          .latency_->insert(static_cast<int64_t>(task_latency_micros));
+    }
     cache_.put(completed_msg.model_, completed_msg.input_,
                Output{deserialized_output, {completed_msg.model_}});
   }

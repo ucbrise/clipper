@@ -16,9 +16,9 @@ CacheEntry::CacheEntry() {}
 
 PredictionCache::PredictionCache() {
   lookups_counter_ = metrics::MetricsRegistry::get_metrics().create_counter(
-      "prediction_cache_lookups");
+      "internal:prediction_cache_lookups");
   hit_ratio_ = metrics::MetricsRegistry::get_metrics().create_ratio_counter(
-      "prediction_cache_hit_ratio");
+      "internal:prediction_cache_hit_ratio");
 }
 
 boost::future<Output> PredictionCache::fetch(

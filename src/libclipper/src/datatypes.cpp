@@ -14,6 +14,14 @@ size_t versioned_model_hash(const VersionedModelId &key) {
   return std::hash<std::string>()(key.first) ^ std::hash<int>()(key.second);
 }
 
+std::string versioned_model_to_str(const VersionedModelId &model) {
+  std::stringstream ss;
+  ss << model.first;
+  ss << ":";
+  ss << model.second;
+  return ss.str();
+}
+
 template <typename T>
 ByteBuffer get_byte_buffer(std::vector<T> vector) {
   uint8_t *data = reinterpret_cast<uint8_t *>(vector.data());
