@@ -9,20 +9,20 @@ class NoopContainer(rpc.ModelContainerBase):
     def __init__(self):
         pass
 
-    def predict_ints(self, inputs):
-        return np.array([np.sum(x) for x in inputs], dtype='float32')
+    def predict_ints(self, input_item):
+        return str(sum(input_item))
 
-    def predict_floats(self, inputs):
-        return np.array([np.sum(x) for x in inputs], dtype='float32')
+    def predict_floats(self, input_item):
+        return str(sum(input_item))
 
-    def predict_doubles(self, inputs):
-        return np.array([np.sum(x) for x in inputs], dtype='float32')
+    def predict_doubles(self, input_item):
+        return str(sum(input_item))
 
-    def predict_bytes(self, inputs):
-        return np.array([len(x) for x in inputs], dtype='float32')
+    def predict_bytes(self, input_item):
+        return str(sum(input_item))
 
-    def predict_strings(self, inputs):
-        return np.array([len(x) for x in inputs], dtype='float32')
+    def predict_string(self, input_item):
+        return input_item
 
 
 if __name__ == "__main__":
