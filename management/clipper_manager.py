@@ -470,10 +470,11 @@ class Clipper:
             os.makedirs(serialization_dir)
 
         # Export Anaconda environment
-        subprocess.call(
+        process = subprocess.Popen(
             "PIP_FORMAT=legacy conda env export >> {environment_fname}".format(
                 environment_fname=environment_fname),
             shell=True)
+        process.wait()
 
         # Confirm that packages installed through conda are solvable
         if not (self._conda_env_solvable(environment_fname, os.getcwd())):
@@ -516,16 +517,17 @@ class Clipper:
             on the container os. Otherwise returns False.
         """
 
-        child = subprocess.Popen(
+        process = subprocess.Popen(
             "source deactivate && python check_env.py {environment_fname} {directory} {platform}".
             format(
                 environment_fname=environment_fname,
                 directory=directory,
                 platform=CONTAINER_CONDA_PLATFORM),
-            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE,
             shell=True)
-        child.communicate()
-        return child.returncode
+        out, _ = process.communicate()
+        print(out)
+        return process.returncode == 0
 
     def deploy_model(self,
                      name,
