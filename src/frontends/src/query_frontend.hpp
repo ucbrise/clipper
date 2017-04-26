@@ -387,11 +387,16 @@ class RequestHandler {
     clipper::json::add_long(json_response, PREDICTION_RESPONSE_KEY_QUERY_ID,
                             query_response.query_id_);
     try {
+      // Attempt to parse the string output as JSON
+      // and, if possible, nest it in object form within the
+      // query response
       rapidjson::Document json_y_hat;
       clipper::json::parse_json(query_response.output_.y_hat_, json_y_hat);
       clipper::json::add_object(json_response, PREDICTION_RESPONSE_KEY_OUTPUT,
                                 json_y_hat);
     } catch (const clipper::json::json_parse_error& e) {
+      // If the string output is not JSON-formatted, include
+      // it as a raw string in the query response
       clipper::json::add_string(json_response, PREDICTION_RESPONSE_KEY_OUTPUT,
                                 query_response.output_.y_hat_);
     }
