@@ -287,7 +287,7 @@ class PredictionResponse():
 class FeedbackRequest():
     def __init__(self, msg_id, content):
         self.msg_id = msg_id
-        self.content - content
+        self.content = content
 
     def __str__(self):
         return self.content
