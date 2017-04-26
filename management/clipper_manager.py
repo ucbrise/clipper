@@ -273,8 +273,8 @@ class Clipper:
         slo_micros : int
             The query latency objective for the application in microseconds.
             If Clipper cannot process a query within the latency objective,
-            the default output is returned. Therefore, we don't recommend
-            setting the objective aggressively low unless absolutely necessary.
+            the default output is returned. Therefore, it is recommended that
+            the objective not be set aggressively low unless absolutely necessary.
             Starting at 40000 (40 ms) is a good for testing, but the optimal
             the optimal latnecy objective will vary depending on the application.
         """
