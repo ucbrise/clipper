@@ -67,3 +67,8 @@ redis-cli -p $REDIS_PORT "flushall"
 ./src/frontends/frontendtests --redis_port $REDIS_PORT
 redis-cli -p $REDIS_PORT "flushall"
 ./src/management/managementtests --redis_port $REDIS_PORT
+
+echo "Running Java container tests..."
+cd $DIR
+cd ../containers/java/clipper-java-container
+mvn test
