@@ -63,7 +63,9 @@ def check_for_conflicts_and_existence(env_fname, directory, platform):
                     ]
                     for missing_package_raw in missing_packages_raw:
                         env.dependencies.raw.remove(missing_package_raw)
-                    print("Removed unavailable packages from supplied environment specifications")
+                    print(
+                        "Removed unavailable packages from supplied environment specifications"
+                    )
                     env.dependencies.parse()
                     env.save()
         return True
