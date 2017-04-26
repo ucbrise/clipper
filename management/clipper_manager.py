@@ -390,7 +390,10 @@ class Clipper:
             registered with Clipper, None is returned.
         """
         url = "http://%s:1338/admin/get_model" % self.host
-        req_json = json.dumps({"model_name": name, "model_version": model_version})
+        req_json = json.dumps({
+            "model_name": name,
+            "model_version": model_version
+        })
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
 
