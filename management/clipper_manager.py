@@ -480,6 +480,10 @@ class Clipper:
         if not (self._conda_env_solvable(environment_fname, os.getcwd())):
             return
 
+        # Confirm that packages installed through conda are solvable
+        if not (self._conda_env_solvable(environment_fname, os.getcwd())):
+            return
+
         # Give container environment details
         shutil.copy(environment_fname, serialization_dir)
         print("Supplied environment details")
