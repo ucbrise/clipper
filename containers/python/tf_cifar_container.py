@@ -20,11 +20,11 @@ class TfCifarContainer(rpc.ModelContainerBase):
             saver = tf.train.import_meta_graph(path + '.meta')
             saver.restore(self.sess, path)
 
-    def predict_doubles(self, inputs):
-        logits = self.sess.run('softmax_logits:0', feed_dict={'x:0': inputs})
+    def predict_doubles(self, input_item):
+        logits = self.sess.run('softmax_logits:0', feed_dict={'x:0': input_item})
         relevant_activations = logits[:, [negative_class, positive_class]]
-        preds = np.argmax(relevant_activations, axis=1)
-        return preds.astype(np.float32)
+        pred = np.argmax(relevant_activations, axis=1)
+        return str(pred[0])
 
 
 if __name__ == "__main__":
