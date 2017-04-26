@@ -391,7 +391,7 @@ class Clipper:
         """
         url = "http://%s:1338/admin/get_model" % self.host
         req_json = json.dumps({
-            "model_name": name,
+            "model_name": model_name,
             "model_version": model_version
         })
         headers = {'Content-type': 'application/json'}
