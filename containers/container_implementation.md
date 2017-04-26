@@ -56,7 +56,7 @@ Model containers must implement functionality consistent with this information.
 
 
 ## Serialization Formats
-RPC requests sent from Clipper to model containers are divided into two categories: **Prediction Requests** and **Feedback Requests**. Each request type has a specific serialization format that defines the container deserialization procedure.
+RPC requests sent from Clipper to model containers are divided into two categories: **Prediction Requests** and **Feedback Requests**. Additionally, responses are divided into two corresponding categories: **Prediction Responses** and **Feedback Responses**. Each request type has a specific serialization format that defines the container deserialization procedure.
 
 ### Serializing Prediction Requests
 1. All requests begin with a 32-bit integer header, sent as a single ZeroMQ message. The value of this integer will be 0, indicating that the request is a prediction request.
@@ -94,5 +94,31 @@ RPC requests sent from Clipper to model containers are divided into two categori
      # Ignore the extraneous final null terminator by using a -1 slice
      inputs = np.array(raw_concatenated_content.split('\0')[:-1], dtype=np.string_)
      ```
+     
+### Serializing Prediction Responses
+1. A response is a single ZeroMQ message that is parsed into subfields
 
-#### For additional deserialization references, see `clipper/containers/python/rpc.py`
+2. The message begins with a 32-bit unsigned integer indicating the number of serialized string outputs contained in the response. Denote this quantity by `N`.
+
+3. Next, there are 'N' ordered 32-bit unsigned integers. The `i`th integer specifies the length of the `i`th string output.
+
+4. The remainder of the message contains the `N` string outputs, encoded in [UTF-8](https://en.wikipedia.org/wiki/UTF-8) format. 
+
+The following is an example of **Prediction Response** serialization in Python:
+
+  ```py
+     import struct
+     str1 = unicode("test1", "utf-8").encode("utf-8")
+     str2 = unicode("test2", "utf-8").encode("utf-8")
+     output_length_size_bytes = 4
+     num_output_size_bytes = 4
+     buf = bytearray(len(str1) + len(str2) + (2 * output_length_size_bytes) + num_output_size_bytes)
+     memview = memoryview(buf)
+     struct.pack_into("<I", buf, 0, 2) # Store the number of outputs in the buffer
+     struct.pack_into("<I", buf, 4, len(str1)) # Store the length of the first output
+     struct.pack_into("<I", buf, 8, len(str2)) # Store the length of the second output
+     memview[12:12 + len(str1)] = str1 # Store the first output
+     memview[12 + len(str1): 12 + len(str1) + len(str2)] = str2 # Store the second output
+  ```
+
+#### For additional serialization and deserialization references, see `clipper/containers/python/rpc.py`
