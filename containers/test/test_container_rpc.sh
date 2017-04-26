@@ -15,6 +15,12 @@ set -e
 set -u
 set -o pipefail
 
+if [ $# -eq 0 ]
+then
+    echo "The redis port must be supplied as an argument!"
+    exit
+fi
+
 success=false
 
 function clean_up {
@@ -60,11 +66,14 @@ cd $DIR/../../
 cd src/benchmarks
 make rpctest
 echo "Executing RPC test (first iteration)..."
-./rpctest --num_containers=2 --timeout_seconds=20
+REDIS_PORT=$1
+./rpctest --num_containers=2 --timeout_seconds=20 --redis_port $REDIS_PORT
+redis-cli -p $REDIS_PORT "flushall"
 echo "Sleeping for 5 seconds..."
 sleep 5s
 echo "Executing RPC test (second iteration)..."
-./rpctest --num_containers=2 --timeout_seconds=20
+./rpctest --num_containers=2 --timeout_seconds=20 --redis_port $REDIS_PORT
+redis-cli -p $REDIS_PORT "flushall"
 echo "TEST PASSED!"
 success=true
 exit 0

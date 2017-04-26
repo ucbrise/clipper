@@ -72,3 +72,7 @@ echo "Running Java container tests..."
 cd $DIR
 cd ../containers/java/clipper-java-container
 mvn test
+
+echo "Testing container RPC protocol correctness..."
+cd ../../test/
+./test_container_rpc.sh $REDIS_PORT
