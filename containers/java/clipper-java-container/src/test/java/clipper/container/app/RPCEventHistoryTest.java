@@ -21,7 +21,7 @@ public class RPCEventHistoryTest {
     }
     RPCEvent[] events = eventHistory.getEvents();
     Assert.assertEquals(events.length, correctEventTypes.length);
-    for(int i = 0; i < correctEventTypes.length; i++) {
+    for (int i = 0; i < correctEventTypes.length; i++) {
       Assert.assertEquals(events[i].getEventType(), correctEventTypes[i]);
     }
   }
@@ -42,7 +42,7 @@ public class RPCEventHistoryTest {
     }
     RPCEvent[] events = eventHistory.getEvents();
     Assert.assertEquals(events.length, correctEventTypes.size());
-    for(int i = 0; i < correctEventTypes.size(); i++) {
+    for (int i = 0; i < correctEventTypes.size(); i++) {
       Assert.assertEquals(events[i].getEventType(), correctEventTypes.get(i));
     }
   }
@@ -50,13 +50,13 @@ public class RPCEventHistoryTest {
   @Test
   public void testEventHistoryTimestampsAreAscending() {
     RPCEventHistory eventHistory = new RPCEventHistory(10);
-    for(int i = 0; i < 10; i++) {
+    for (int i = 0; i < 10; i++) {
       int code = (i % 6) + 1;
       RPCEventType eventType = RPCEventType.fromCode(code);
       eventHistory.insert(eventType);
     }
     long prevTimestamp = 0;
-    for(RPCEvent event : eventHistory.getEvents()) {
+    for (RPCEvent event : eventHistory.getEvents()) {
       long currTimestamp = event.getTimestamp();
       Assert.assertTrue(prevTimestamp <= currTimestamp);
       prevTimestamp = currTimestamp;
