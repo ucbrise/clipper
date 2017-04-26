@@ -6,7 +6,7 @@ Model containers must implement functionality consistent with this information.
 - Create a [ZeroMQ Dealer socket](http://api.zeromq.org/3-2:zmq-socket). This socket can receive requests and send responses asynchronously.
   * Python example:
   
-    ```
+    ```py
     import zmq
     context = zmq.Context();
     socket = context.socket(zmq.DEALER)
@@ -15,7 +15,7 @@ Model containers must implement functionality consistent with this information.
 ## Initializing a Connection
 1. Once a ZeroMQ Dealer socket has been created, use it to connect to Clipper. In Python, this can be accomplished as follows:
 
-    ```
+    ```py
     socket.connect(<CLIPPER_TCP_ADDRESS>, <CLIPPER_PORT>)
     ```
 2. Then, send a series of ordered messages providing information about the model. This message should be preceded by an 
@@ -31,7 +31,7 @@ Model containers must implement functionality consistent with this information.
     
   * Python example:
   
-    ```
+    ```py
     socket.send("", zmq.SNDMORE); # Sends an empty frame and indicates that more content will follow
     socket.send(<MODEL_NAME>, zmq.SNDMORE);
     socket.send(str(<MODEL_VERSION>), zmq.SNDMORE);
@@ -41,7 +41,7 @@ Model containers must implement functionality consistent with this information.
 3. The socket should then be continually polled for requests from Clipper.
   * Python example:
   
-  ```
+  ```py
   while True:
     # Receive empty frame that Clipper sends before every request
     socket.recv()
@@ -79,7 +79,7 @@ RPC requests sent from Clipper to model containers are divided into two categori
  * In the case of primitive inputs (types 0-3), deserialized inputs can then be obtained by splitting the typed array at the offsets specified in the input header.
    * Python example:
    
-     ```
+     ```py
      raw_concatenated_content = socket.recv()
      typed_inputs = np.frombuffer(raw_concatenated_content, dtype=<PRIMITIVE_INPUT_TYPE>)
      inputs = np.split(typed_inputs, <OFFSETS_LIST>)
@@ -88,7 +88,7 @@ RPC requests sent from Clipper to model containers are divided into two categori
  * In the case of string inputs (type 4), all strings are sent with trailing null terminators. Therefore, deserialized inputs can be obtaining by splitting the typed array along the null terminator character, `\0`.
    * Python example:
    
-     ```
+     ```py
      raw_concatenated_content = socket.recv()
      # Split content based on trailing null terminators
      # Ignore the extraneous final null terminator by using a -1 slice
