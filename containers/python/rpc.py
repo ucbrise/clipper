@@ -16,6 +16,8 @@ INPUT_TYPE_STRINGS = 4
 REQUEST_TYPE_PREDICT = 0
 REQUEST_TYPE_FEEDBACK = 1
 
+MAXIMUM_UTF_8_CHAR_LENGTH_BYTES = 4
+
 
 def string_to_input_type(input_str):
     input_str = input_str.strip().lower()
@@ -81,20 +83,46 @@ class Server(threading.Thread):
         msg.set_content("ACK")
         return msg
 
-    def handle_predict_request(self, msg):
-        if self.model_input_type == INPUT_TYPE_INTS:
-            preds = self.model.predict_ints(msg.content)
-        elif self.model_input_type == INPUT_TYPE_FLOATS:
-            preds = self.model.predict_floats(msg.content)
-        elif self.model_input_type == INPUT_TYPE_DOUBLES:
-            preds = self.model.predict_doubles(msg.content)
-        elif self.model_input_type == INPUT_TYPE_BYTES:
-            preds = self.model.predict_bytes(msg.content)
-        elif self.model_input_type == INPUT_TYPE_STRINGS:
-            preds = self.model.predict_strings(msg.content)
+    def get_output_buffer():
+
+
+    def handle_predict_request(self, predict_request, predict_fn):
+        response = PredictResponse(predict_request.inputs)
+        memview = memoryview(buf)
+        for request_input in predict_request.inputs:
+            output = unicode(output, "utf-8").encode("utf-8")
+
+
+
+
+
+            output = predict_fn(request_input)
+
+
+
+
+
+
+
+
         assert preds.dtype == np.dtype("float32")
         msg.set_content(preds.tobytes())
         return msg
+
+    def get_predict_function():
+        if self.model_input_type == INPUT_TYPE_INTS:
+            return self.model.predict_ints
+        elif self.model_input_type == INPUT_TYPE_FLOATS:
+            return self.model.predict_floats
+        elif self.model_input_type == INPUT_TYPE_DOUBLES:
+            return self.model.predict_doubles
+        elif self.model_input_type == INPUT_TYPE_BYTES:
+            return self.model.predict_bytes
+        elif self.model_input_type == INPUT_TYPE_STRINGS:
+            return self.model.predict_string
+        else:
+            print("Attempted to get predict function for invalid model input type!")
+            raise
 
     def run(self):
         self.socket.connect(
@@ -157,6 +185,17 @@ class Server(threading.Thread):
                 t3 = datetime.now()
 
                 received_msg = Message(msg_id_bytes, inputs)
+
+                        if self.model_input_type == INPUT_TYPE_INTS:
+            preds = self.model.predict_ints(msg.content)
+        elif self.model_input_type == INPUT_TYPE_FLOATS:
+            preds = self.model.predict_floats(msg.content)
+        elif self.model_input_type == INPUT_TYPE_DOUBLES:
+            preds = self.model.predict_doubles(msg.content)
+        elif self.model_input_type == INPUT_TYPE_BYTES:
+            preds = self.model.predict_bytes(msg.content)
+        elif self.model_input_type == INPUT_TYPE_STRINGS:
+            preds = self.model.predict_strings(msg.content)
                 response = self.handle_predict_request(received_msg)
 
                 t4 = datetime.now()
@@ -176,37 +215,90 @@ class Server(threading.Thread):
             sys.stderr.flush()
 
 
-class Message:
-    def __init__(self, msg_id, content):
+class PredictRequest:
+    """
+    Parameters
+    ----------
+    msg_id : bytes
+        The raw message id associated with the RPC 
+        predict request message
+    inputs : 
+        One of [[byte]], [[int]], [[float]], [[doubles]], [strings]
+    """
+    def __init__(self, msg_id, inputs):
         self.msg_id = msg_id
-        self.content = content
+        self.inputs = content
 
     def __str__(self):
         return self.content
-
-    def set_content(self, content):
-        self.content = content
 
     def send(self, socket):
         socket.send("", flags=zmq.SNDMORE)
         socket.send(self.msg_id, flags=zmq.SNDMORE)
         socket.send(self.content)
 
+class PredictResponse():
+    output_buffer = bytearray(16)
+
+    """
+    Parameters
+    ----------
+    msg_id : bytes
+        The message id associated with the PredictRequest
+        for which this is a response
+    num_outputs : int
+        The number of outputs to be included in the prediction response
+    max_outputs_size_bytes:
+        The total length of the string content
+    """
+    def __init__(self, msg_id, num_outputs, total_string_length):
+        self.msg_id = msg_id
+        self.outputs = outputs
+        self.num_outputs = num_outputs
+        self.expand_buffer_if_necessary(max_outputs_size_bytes)
+
+        self.memview = memoryview(output_buffer)
+        self.memview[0:3] = bytes(num_outputs)
+        self.string_content_end_position = 4 + (4 * num_outputs)
+        self.current_output_sizes_position = 4
+
+    """
+    Parameters
+    ----------
+    output : string
+    """
+    def add_output(self, output):
+        memview = memoryview(buf)
+        output = unicode(output, "utf-8").encode("utf-8")
+        buf[]
+        pass
+
+    def expand_buffer_if_necessary(self, size):
+        pass
+
+class FeedbackRequest():
+    def __init__(self, msg_id, content):
+        self.msg_id = msg_id
+        self.content - content
+
+    def __str__(self):
+        return self.content
+
 
 class ModelContainerBase(object):
-    def predict_ints(self, inputs):
+    def predict_ints(self, input):
         pass
 
-    def predict_floats(self, inputs):
+    def predict_floats(self, input):
         pass
 
-    def predict_doubles(self, inputs):
+    def predict_doubles(self, input):
         pass
 
-    def predict_bytes(self, inputs):
+    def predict_bytes(self, input):
         pass
 
-    def predict_strings(self, inputs):
+    def predict_string(self, input):
         pass
 
 

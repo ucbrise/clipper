@@ -14,7 +14,7 @@ import java.util.Iterator;
 
 public class SerializableString extends DataVector<String> {
 
-  private static int MAXIMUM_UTF_CHAR_LENGTH_BYTES = 4;
+  private static int MAXIMUM_UTF_8_CHAR_LENGTH_BYTES = 4;
 
   public SerializableString(String data) {
     super(data);
@@ -42,7 +42,7 @@ public class SerializableString extends DataVector<String> {
    * may vary depending on its character content.
    */
   public int maxSizeBytes() {
-    return data.length() * MAXIMUM_UTF_CHAR_LENGTH_BYTES;
+    return data.length() * MAXIMUM_UTF_8_CHAR_LENGTH_BYTES;
   }
 
   public static class Parser extends DataVectorParser<String, SerializableString> {
