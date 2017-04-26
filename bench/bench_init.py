@@ -1,9 +1,10 @@
 import sys
 import os
 import errno
-sys.path.append(os.path.abspath("../management"))
-sys.path.append(os.path.abspath("../examples"))
-sys.path.insert(0, os.path.abspath('../containers/python/'))
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.abspath("%s/../management" % cur_dir))
+sys.path.append(os.path.abspath("%s/../examples" % cur_dir))
+# sys.path.insert(0, os.path.abspath('%s/../containers/python/' % cur_dir))
 
 import clipper_manager
 from tutorial import cifar_utils

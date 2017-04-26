@@ -12,7 +12,8 @@ from sklearn import base
 from sklearn.externals import joblib
 from cStringIO import StringIO
 import sys
-sys.path.insert(0, os.path.abspath('../../containers/python/'))
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.abspath('%s../../containers/python/' % cur_dir))
 from pywrencloudpickle import CloudPickler
 
 MODEL_REPO = "/tmp/clipper-models"
@@ -307,7 +308,7 @@ class Clipper:
         url = "http://%s:1338/admin/get_all_applications" % self.host
         req_json = json.dumps({"verbose": verbose})
         headers = {'Content-type': 'application/json'}
-        r = requests.get(url, headers=headers, data=req_json)
+        r = requests.post(url, headers=headers, data=req_json)
 
         if r.status_code == requests.codes.ok:
             return r.json()
@@ -334,7 +335,129 @@ class Clipper:
         url = "http://%s:1338/admin/get_application" % self.host
         req_json = json.dumps({"name": name})
         headers = {'Content-type': 'application/json'}
-        r = requests.get(url, headers=headers, data=req_json)
+        r = requests.post(url, headers=headers, data=req_json)
+
+        if r.status_code == requests.codes.ok:
+            app_info = r.json()
+            if len(app_info) == 0:
+                return None
+            return app_info
+        else:
+            print(r.text)
+            return None
+
+    def get_all_models(self, verbose=False):
+        """Gets information about all models registered with Clipper.
+
+        Parameters
+        ----------
+        verbose : bool
+            If set to False, the returned list contains the apps' names.
+            If set to True, the list contains model info dictionaries.
+
+        Returns
+        -------
+        list
+            Returns a list of information about all apps registered to Clipper.
+            If no models are registered with Clipper, an empty list is returned.
+        """
+        url = "http://%s:1338/admin/get_all_models" % self.host
+        req_json = json.dumps({"verbose": verbose})
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
+
+        if r.status_code == requests.codes.ok:
+            return r.json()
+        else:
+            print(r.text)
+            return None
+
+    def get_model_info(self, model_name, model_version):
+        """Gets detailed information about a registered model.
+
+        Parameters
+        ----------
+        model_name : str
+            The name of the model to look up
+        model_version : int
+            The version of the model to look up
+
+        Returns
+        -------
+        dict
+            Returns a dictionary with the specified model's info.
+            If no model with name `model_name@model_version` is
+            registered with Clipper, None is returned.
+        """
+        url = "http://%s:1338/admin/get_model" % self.host
+        req_json = json.dumps({
+            "model_name": model_name,
+            "model_version": model_version
+        })
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
+
+        if r.status_code == requests.codes.ok:
+            app_info = r.json()
+            if len(app_info) == 0:
+                return None
+            return app_info
+        else:
+            print(r.text)
+            return None
+
+    def get_all_containers(self, verbose=False):
+        """Gets information about all containers registered with Clipper.
+
+        Parameters
+        ----------
+        verbose : bool
+            If set to False, the returned list contains the apps' names.
+            If set to True, the list contains container info dictionaries.
+
+        Returns
+        -------
+        list
+            Returns a list of information about all apps registered to Clipper.
+            If no containerss are registered with Clipper, an empty list is returned.
+        """
+        url = "http://%s:1338/admin/get_all_containers" % self.host
+        req_json = json.dumps({"verbose": verbose})
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
+
+        if r.status_code == requests.codes.ok:
+            return r.json()
+        else:
+            print(r.text)
+            return None
+
+    def get_container_info(self, model_name, model_version, replica_id):
+        """Gets detailed information about a registered container.
+
+        Parameters
+        ----------
+        model_name : str
+            The name of the container to look up
+        model_version : int
+            The version of the container to look up
+        replica_id : int
+            The container replica to look up
+
+        Returns
+        -------
+        dict
+            A dictionary with the specified container's info.
+            If no corresponding container is registered with Clipper, None is returned.
+        """
+        url = "http://%s:1338/admin/get_container" % self.host
+        req_json = json.dumps({
+            "model_name": model_name,
+            "model_version": model_version,
+            "replica_id": replica_id,
+        })
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
 
         if r.status_code == requests.codes.ok:
             app_info = r.json()

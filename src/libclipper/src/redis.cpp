@@ -40,18 +40,41 @@ std::string gen_model_replica_key(const VersionedModelId& key,
                                   int model_replica_id) {
   std::stringstream ss;
   ss << key.first;
-  ss << ":";
-  ss << key.second;
-  ss << ":";
-  ss << model_replica_id;
+  ss << ITEM_DELIMITER;
+  ss << std::to_string(key.second);
+  ss << ITEM_DELIMITER;
+  ss << std::to_string(model_replica_id);
   return ss.str();
+}
+
+// Expects keys of format "model_name:model_version:replica_id"
+std::pair<VersionedModelId, int> parse_model_replica_key(std::string key) {
+  size_t pos = key.find(ITEM_DELIMITER);
+  if (pos == std::string::npos) {
+    throw std::invalid_argument("Couldn't parse model replica key \"" + key +
+                                "\"");
+  }
+  std::string model_name = key.substr(0, pos);
+  key.erase(0, pos + ITEM_DELIMITER.length());
+
+  pos = key.find(ITEM_DELIMITER);
+  if (pos == std::string::npos) {
+    throw std::invalid_argument("Couldn't parse model replica key \"" + key +
+                                "\"");
+  }
+  int model_version = std::stoi(key.substr(0, pos));
+  key.erase(0, pos + ITEM_DELIMITER.length());
+  int replica_id = std::stoi(key);
+  VersionedModelId model = std::make_pair(model_name, model_version);
+
+  return std::make_pair(model, replica_id);
 }
 
 std::string gen_versioned_model_key(const VersionedModelId& key) {
   std::stringstream ss;
   ss << key.first;
   ss << ":";
-  ss << key.second;
+  ss << std::to_string(key.second);
   return ss.str();
 }
 
@@ -272,6 +295,23 @@ std::vector<std::string> get_all_model_names(redox::Redox& redis) {
   return model_names;
 }
 
+std::vector<VersionedModelId> get_all_models(redox::Redox& redis) {
+  std::vector<VersionedModelId> models;
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
+    // Use wildcard argument for KEYS command to get all key names.
+    // The number of keys is assumed to be within reasonable limits.
+    auto result = send_cmd_with_reply<vector<string>>(redis, {"KEYS", "*"});
+    if (result) {
+      for (auto model_str : *result) {
+        std::vector<VersionedModelId> parsed_model = str_to_models(model_str);
+        models.push_back(parsed_model.front());
+      }
+    }
+  }
+  return models;
+}
+
 bool add_container(Redox& redis, const VersionedModelId& model_id,
                    const int model_replica_id, const int zmq_connection_id,
                    const InputType& input_type) {
@@ -345,6 +385,24 @@ unordered_map<string, string> get_container_by_key(Redox& redis,
   }
 }
 
+std::vector<std::pair<VersionedModelId, int>> get_all_containers(
+    redox::Redox& redis) {
+  std::vector<std::pair<VersionedModelId, int>> containers;
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_CONTAINER_DB_NUM)})) {
+    // Use wildcard argument for KEYS command to get all key names.
+    // The number of keys is assumed to be within reasonable limits.
+    auto result = send_cmd_with_reply<vector<string>>(redis, {"KEYS", "*"});
+    if (result) {
+      auto container_keys = *result;
+      for (auto c : container_keys) {
+        containers.push_back(parse_model_replica_key(c));
+      }
+    }
+  }
+  return containers;
+}
+
 bool add_application(redox::Redox& redis, const std::string& appname,
                      const std::vector<std::string>& models,
                      const InputType& input_type, const std::string& policy,
@@ -405,19 +463,17 @@ std::unordered_map<std::string, std::string> get_application_by_key(
 }
 
 std::vector<string> get_all_application_names(redox::Redox& redis) {
+  std::vector<std::string> app_names;
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_APPLICATION_DB_NUM)})) {
-    std::vector<std::string> app_names;
     // Use wildcard argument for KEYS command to get all key names.
     // The number of keys is assumed to be within reasonable limits.
     auto result = send_cmd_with_reply<vector<string>>(redis, {"KEYS", "*"});
     if (result) {
       app_names = *result;
     }
-    return app_names;
-  } else {
-    return std::vector<string>{};
   }
+  return app_names;
 }
 
 void subscribe_to_keyspace_changes(

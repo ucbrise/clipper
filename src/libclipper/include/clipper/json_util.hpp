@@ -124,9 +124,28 @@ std::string to_json_string(rapidjson::Document& d);
  * App data, provided in `app_metadata`, is assumed to be pulled from redis
  * and therefore may need to be transformed to comply with desired formatting.
  */
-void set_json_doc_from_redis_app_metadata(
+void redis_app_metadata_to_json(
     rapidjson::Document& d,
     const std::unordered_map<std::string, std::string>& app_metadata);
+
+/**
+ * Sets `d` to the publicly-facing representation of a given Clipper model.
+ * Model data, provided in `model_metadata`, is assumed to be pulled from redis
+ * and therefore may need to be transformed to comply with desired formatting.
+ */
+void redis_model_metadata_to_json(
+    rapidjson::Document& d,
+    const std::unordered_map<std::string, std::string>& model_metadata);
+
+/**
+ * Sets `d` to the publicly-facing representation of a given Clipper container.
+ * Container data, provided in `container_metadata`, is assumed to be pulled
+ * from redis and therefore may need to be transformed to comply with desired
+ * formatting.
+ */
+void redis_container_metadata_to_json(
+    rapidjson::Document& d,
+    const std::unordered_map<std::string, std::string>& container_metadata);
 
 }  // namespace json
 }  // namespace clipper
