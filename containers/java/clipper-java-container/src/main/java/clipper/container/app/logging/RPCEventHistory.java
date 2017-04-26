@@ -3,11 +3,24 @@ package clipper.container.app.logging;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * A circular buffer containing the most
+ * recent RPC events noted by the container.
+ * See {@link RPCEventType} for the different
+ * event types
+ */
 public class RPCEventHistory {
   private final List<RPCEvent> events;
   private final int maxSize;
   private int currIndex = 0;
 
+  /**
+   * @param maxSize Specifies the size of the
+   * circular buffer. Only maxSize events can
+   * be stored at one time. When at capacity,
+   * the oldest events are replaced by new ones
+   * upon calls to insert
+   */
   public RPCEventHistory(int maxSize) {
     if (maxSize <= 0) {
       throw new IllegalArgumentException("Event history must have a positive size!");
