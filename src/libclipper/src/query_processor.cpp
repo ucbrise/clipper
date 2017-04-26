@@ -6,7 +6,6 @@
 #include <thread>
 #include <unordered_map>
 
-#define BOOST_THREAD_PROVIDES_FUTURE_CONTINUATION
 #define PROVIDES_EXECUTORS
 #include <boost/thread.hpp>
 #include <boost/thread/executors/basic_thread_pool.hpp>
@@ -32,9 +31,6 @@ QueryProcessor::QueryProcessor() : state_db_(std::make_shared<StateDB>()) {
   // Create selection policy instances
   selection_policies_.emplace(DefaultOutputSelectionPolicy::get_name(),
                               std::make_shared<DefaultOutputSelectionPolicy>());
-  default_prediction_ratio_ =
-      metrics::MetricsRegistry::get_metrics().create_ratio_counter(
-          "default_prediction_ratio");
   log_info(LOGGING_TAG_QUERY_PROCESSOR, "Query Processor started");
 }
 
@@ -116,11 +112,7 @@ boost::future<Response> QueryProcessor::predict(Query query) {
 
     std::pair<Output, bool> final_output =
         current_policy->combine_predictions(selection_state, query, outputs);
-    if (final_output.second) {
-      default_prediction_ratio_->increment(1, 1);
-    } else {
-      default_prediction_ratio_->increment(0, 1);
-    }
+
     std::chrono::time_point<std::chrono::high_resolution_clock> end =
         std::chrono::high_resolution_clock::now();
     long duration_micros =

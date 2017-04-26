@@ -78,6 +78,38 @@ std::string json_error_msg(const std::string& exception_msg,
   return ss.str();
 }
 
+class AppMetrics {
+ public:
+  explicit AppMetrics(std::string app_name)
+      : app_name_(app_name),
+        latency_(
+            clipper::metrics::MetricsRegistry::get_metrics().create_histogram(
+                "app:" + app_name + ":prediction_latency", "microseconds",
+                4096)),
+        throughput_(
+            clipper::metrics::MetricsRegistry::get_metrics().create_meter(
+                "app:" + app_name + ":prediction_throughput")),
+        num_predictions_(
+            clipper::metrics::MetricsRegistry::get_metrics().create_counter(
+                "app:" + app_name + ":num_predictions")),
+        default_pred_ratio_(
+            clipper::metrics::MetricsRegistry::get_metrics()
+                .create_ratio_counter("app:" + app_name +
+                                      ":default_prediction_ratio")) {}
+  ~AppMetrics() = default;
+  AppMetrics(const AppMetrics&) = default;
+  AppMetrics& operator=(const AppMetrics&) = default;
+
+  AppMetrics(AppMetrics&&) = default;
+  AppMetrics& operator=(AppMetrics&&) = default;
+
+  std::string app_name_;
+  std::shared_ptr<clipper::metrics::Histogram> latency_;
+  std::shared_ptr<clipper::metrics::Meter> throughput_;
+  std::shared_ptr<clipper::metrics::Counter> num_predictions_;
+  std::shared_ptr<clipper::metrics::RatioCounter> default_pred_ratio_;
+};
+
 template <class QP>
 class RequestHandler {
  public:
@@ -223,7 +255,7 @@ class RequestHandler {
     // TODO: QueryProcessor should handle this. We need to decide how the
     // default output fits into the generic selection policy API. Do all
     // selection policies have a default output?
-    //
+
     // Initialize selection state for this application
     if (policy == clipper::DefaultOutputSelectionPolicy::get_name()) {
       clipper::DefaultOutputSelectionPolicy p;
@@ -234,9 +266,12 @@ class RequestHandler {
                                               p.serialize(init_state));
     }
 
+    AppMetrics app_metrics(name);
+
     auto predict_fn = [this, name, input_type, policy, latency_slo_micros,
-                       models](std::shared_ptr<HttpServer::Response> response,
-                               std::shared_ptr<HttpServer::Request> request) {
+                       models, app_metrics](
+        std::shared_ptr<HttpServer::Response> response,
+        std::shared_ptr<HttpServer::Request> request) {
       try {
         std::vector<VersionedModelId> versioned_models;
         {
@@ -248,11 +283,23 @@ class RequestHandler {
             }
           }
         }
+
         auto prediction = decode_and_handle_predict(
             request->content.string(), name, versioned_models, policy,
             latency_slo_micros, input_type);
-        prediction.then([response](boost::future<Response> f) {
+        prediction.then([response, app_metrics](boost::future<Response> f) {
           Response r = f.get();
+
+          // Update metrics
+          if (r.output_is_default_) {
+            app_metrics.default_pred_ratio_->increment(1, 1);
+          } else {
+            app_metrics.default_pred_ratio_->increment(0, 1);
+          }
+          app_metrics.latency_->insert(r.duration_micros_);
+          app_metrics.num_predictions_->increment(1);
+          app_metrics.throughput_->mark(1);
+
           std::string content = get_prediction_response_content(r);
           respond_http(content, "200 OK", response);
         });

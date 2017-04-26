@@ -132,7 +132,7 @@ TEST(InputSerializationTests, IntSerialization) {
 
   long* raw_input_header_size =
       reinterpret_cast<long*>(input_header_size.data());
-  ASSERT_EQ(raw_input_header_size[0], input_header.size());
+  ASSERT_EQ(static_cast<size_t>(raw_input_header_size[0]), input_header.size());
   long* raw_input_content_size =
       reinterpret_cast<long*>(input_content_size.data());
   ASSERT_EQ(raw_input_content_size[0], input_content.size());
