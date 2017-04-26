@@ -16,7 +16,7 @@ class NoopContainer(rpc.ModelContainerBase):
         return str(sum(input_item))
 
     def predict_doubles(self, input_item):
-        return str(sum(input_item))
+        return str(len(input_item))
 
     def predict_bytes(self, input_item):
         return str(sum(input_item))

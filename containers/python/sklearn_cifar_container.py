@@ -13,9 +13,10 @@ class SklearnCifarContainer(rpc.ModelContainerBase):
         print("Loaded %s model" % type(self.model), file=sys.stderr)
         self.path = path
 
-    def predict_doubles(self, inputs):
-        preds = self.model.predict(inputs).astype(np.float32)
-        return preds
+    def predict_doubles(self, input_item):
+        result = str(self.model.predict(input_item)[0])
+        print(result)
+        return result
 
     # def predict_ints(self, inputs):
     #     mean, sigma = np.mean(inputs, axis=1), np.std(inputs, axis=1)

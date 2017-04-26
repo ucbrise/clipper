@@ -259,7 +259,7 @@ class PredictionResponse():
         output_len = len(output)
         struct.pack_into("<I", self.output_buffer, self.current_output_sizes_position, output_len)
         self.current_output_sizes_position += 4
-        self.memview[self.string_content_end_position : self.current_output_sizes_position + output_len] = output
+        self.memview[self.string_content_end_position : self.string_content_end_position + output_len] = output
         self.string_content_end_position += output_len
 
     def send(self, socket):

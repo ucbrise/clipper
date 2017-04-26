@@ -25,35 +25,35 @@ class PythonContainer(rpc.ModelContainerBase):
         self.predict_func = load_predict_func(predict_path)
         print("Loaded prediction function")
 
-    def predict_ints(self, inputs):
+    def predict_ints(self, input_item):
         if self.input_type != rpc.INPUT_TYPE_INTS:
             self._log_incorrect_input_type(rpc.INPUT_TYPE_INTS)
             return
-        return np.asarray(self.predict_func(inputs)).astype(np.float32)
+        return str(self.predict_func(input_item))
 
-    def predict_floats(self, inputs):
+    def predict_floats(self, input_item):
         if self.input_type != rpc.INPUT_TYPE_FLOATS:
             self._log_incorrect_input_type(rpc.INPUT_TYPE_FLOATS)
             return
-        return np.asarray(self.predict_func(inputs)).astype(np.float32)
+        return str(self.predict_func(input_item))
 
-    def predict_doubles(self, inputs):
+    def predict_doubles(self, input_item):
         if self.input_type != rpc.INPUT_TYPE_DOUBLES:
             self._log_incorrect_input_type(rpc.INPUT_TYPE_DOUBLES)
             return
-        return np.asarray(self.predict_func(inputs)).astype(np.float32)
+        return str(self.predict_func(input_item))
 
-    def predict_bytes(self, inputs):
+    def predict_bytes(self, input_item):
         if self.input_type != rpc.INPUT_TYPE_BYTES:
             self._log_incorrect_input_type(rpc.INPUT_TYPE_BYTES)
             return
-        return np.asarray(self.predict_func(inputs)).astype(np.float32)
+        return str(self.predict_func(input_item))
 
-    def predict_strings(self, inputs):
+    def predict_string(self, input_item):
         if self.input_type != rpc.INPUT_TYPE_STRINGS:
             self._log_incorrect_input_type(rpc.INPUT_TYPE_STRINGS)
             return
-        return np.asarray(self.predict_func(inputs)).astype(np.float32)
+        return str(self.predict_func(input_item))
 
     def _log_incorrect_input_type(self, input_type):
         incorrect_input_type = rpc.input_type_to_string(input_type)
