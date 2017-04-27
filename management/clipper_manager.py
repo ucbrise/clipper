@@ -252,12 +252,8 @@ class Clipper:
             self._execute_root("docker-compose up -d query_frontend")
             print("Clipper is running")
 
-    def register_application(self,
-                             name,
-                             model,
-                             input_type,
-                             default_output,
-                             slo_micros=20000):
+    def register_application(self, name, model, input_type, default_output,
+                             slo_micros):
         """Register a new Clipper application.
 
         Parameters
@@ -271,9 +267,17 @@ class Clipper:
         default_output : float
             The default prediction to use if the model does not return a prediction
             by the end of the latency objective.
-        slo_micros : int, optional
+        slo_micros : int
             The query latency objective for the application in microseconds.
-            Default is 20,000 (20 ms).
+            This is the processing latency between Clipper receiving a request 
+            and sending a response. It does not account for network latencies 
+            before a request is received or after a response is sent.
+
+            If Clipper cannot process a query within the latency objective,
+            the default output is returned. Therefore, it is recommended that
+            the objective not be set aggressively low unless absolutely necessary.
+            40000 (40ms) is a good starting value, but the optimal latency objective
+            will vary depending on the application.
         """
         url = "http://%s:%d/admin/add_app" % (self.host,
                                               CLIPPER_MANAGEMENT_PORT)
