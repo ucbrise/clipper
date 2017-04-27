@@ -105,4 +105,5 @@ if __name__ == "__main__":
     model_path = os.environ["CLIPPER_MODEL_PATH"]
 
     model = PythonContainer(model_path, input_type)
-    rpc.start(model, ip, port, model_name, model_version, input_type)
+    rpc_service = rpc.RPCService()
+    rpc_service.start(model, ip, port, model_name, model_version, input_type)

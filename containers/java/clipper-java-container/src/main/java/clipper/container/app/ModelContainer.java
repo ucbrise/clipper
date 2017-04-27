@@ -6,23 +6,30 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 import clipper.container.app.data.*;
+import clipper.container.app.logging.RPCEvent;
+import clipper.container.app.logging.RPCEventHistory;
+import clipper.container.app.logging.RPCEventType;
 import org.zeromq.ZMQ;
 
 class ModelContainer<I extends DataVector<?>> {
-  private static String CONNECTION_ADDRESS = "tcp://%s:%s";
+  private static final String CONNECTION_ADDRESS = "tcp://%s:%s";
+  private static final long SOCKET_POLLING_TIMEOUT_MILLIS = 5000;
+  private static final long SOCKET_ACTIVITY_TIMEOUT_MILLIS = 30000;
+  private static final int EVENT_HISTORY_BUFFER_SIZE = 30;
 
-  private DataVectorParser<?, I> inputVectorParser;
+  private final DataVectorParser<?, I> inputVectorParser;
+  private final RPCEventHistory eventHistory;
+
   private Thread servingThread;
   private ByteBuffer responseBuffer;
   private int responseBufferSize;
 
   ModelContainer(DataVectorParser<?, I> inputVectorParser) {
     this.inputVectorParser = inputVectorParser;
+    this.eventHistory = new RPCEventHistory(EVENT_HISTORY_BUFFER_SIZE);
   }
 
   public void start(final Model<I> model, final String host, final int port)
@@ -35,16 +42,19 @@ class ModelContainer<I extends DataVector<?>> {
       @Override
       public void run() {
         // Initialize ZMQ
-        ZMQ.Socket socket = context.socket(ZMQ.DEALER);
-        createConnection(socket, model, ip, port);
         try {
-          serveModel(socket, model);
+          serveModel(model, context, ip, port);
         } catch (NoSuchFieldException | IllegalArgumentException e) {
           e.printStackTrace();
         }
       }
     });
     servingThread.start();
+    try {
+      servingThread.join();
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
   }
 
   public void stop() {
@@ -54,105 +64,164 @@ class ModelContainer<I extends DataVector<?>> {
     }
   }
 
-  private void createConnection(ZMQ.Socket socket, Model<I> model, String ip, int port) {
-    String address = String.format(CONNECTION_ADDRESS, ip, port);
-    socket.connect(address);
-    socket.send("", ZMQ.SNDMORE);
-    socket.send(model.getName(), ZMQ.SNDMORE);
-    socket.send(String.valueOf(model.getVersion()), ZMQ.SNDMORE);
-    socket.send(String.valueOf(model.getInputType().getCode()));
+  public RPCEvent[] getEventHistory() {
+    return eventHistory.getEvents();
   }
 
-  private void serveModel(ZMQ.Socket socket, Model<I> model)
+  private void serveModel(Model<I> model, final ZMQ.Context context, String ip, int port)
       throws NoSuchFieldException, IllegalArgumentException {
     int inputHeaderBufferSize = 0;
     int inputBufferSize = 0;
     ByteBuffer inputHeaderBuffer = null;
     ByteBuffer inputBuffer = null;
+    boolean connected = false;
+    long lastActivityTimeMillis = 0;
+    String clipperAddress = String.format(CONNECTION_ADDRESS, ip, port);
+    ZMQ.Poller poller = new ZMQ.Poller(1);
     while (true) {
-      socket.recv();
-      PerformanceTimer.startTiming();
-      byte[] idMessage = socket.recv();
-      List<Long> parsedIdMessage = DataUtils.getUnsignedIntsFromBytes(idMessage);
-      if (parsedIdMessage.size() < 1) {
-        throw new NoSuchFieldException("Field \"message_id\" is missing from RPC message");
-      }
-      long msgId = parsedIdMessage.get(0);
-      System.out.println("Message ID: " + msgId);
-
-      byte[] requestHeaderMessage = socket.recv();
-      List<Integer> requestHeader = DataUtils.getSignedIntsFromBytes(requestHeaderMessage);
-      if (requestHeader.size() < 1) {
-        throw new NoSuchFieldException("Request header is missing from RPC message");
-      }
-      RequestType requestType = RequestType.fromCode(requestHeader.get(0));
-
-      if (requestType == RequestType.Predict) {
-        byte[] inputHeaderSizeMessage = socket.recv();
-        List<Long> parsedInputHeaderSizeMessage =
-            DataUtils.getLongsFromBytes(inputHeaderSizeMessage);
-        if (parsedInputHeaderSizeMessage.size() < 1) {
-          throw new NoSuchFieldException(
-              "Input header size is missing from RPC predict request message");
-        }
-        int inputHeaderSize = (int) ((long) parsedInputHeaderSizeMessage.get(0));
-        if (inputHeaderBuffer == null || inputHeaderBufferSize < inputHeaderSize) {
-          inputHeaderBufferSize = inputHeaderSize * 2;
-          inputHeaderBuffer = ByteBuffer.allocateDirect(inputHeaderBufferSize);
-        }
-        inputHeaderBuffer.rewind();
-        inputHeaderBuffer.limit(inputHeaderBufferSize);
-        int inputHeaderBytesRead = socket.recvZeroCopy(inputHeaderBuffer, inputHeaderSize, -1);
-        inputHeaderBuffer.rewind();
-        inputHeaderBuffer.limit(inputHeaderBytesRead);
-
-        IntBuffer inputHeader =
-            inputHeaderBuffer.slice().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
-
-        byte[] inputContentSizeMessage = socket.recv();
-        List<Long> parsedInputContentSizeMessage =
-            DataUtils.getLongsFromBytes(inputContentSizeMessage);
-        if (parsedInputContentSizeMessage.size() < 1) {
-          throw new NoSuchFieldException(
-              "Input content size is missing from RPC predict request message");
+      ZMQ.Socket socket = context.socket(ZMQ.DEALER);
+      poller.register(socket, ZMQ.Poller.POLLIN);
+      socket.connect(clipperAddress);
+      sendHeartbeat(socket);
+      while (true) {
+        poller.poll(SOCKET_POLLING_TIMEOUT_MILLIS);
+        if (!poller.pollin(0)) {
+          // Failed to receive a message prior to the polling timeout
+          if (connected) {
+            if (System.currentTimeMillis() - lastActivityTimeMillis
+                >= SOCKET_ACTIVITY_TIMEOUT_MILLIS) {
+              // Terminate the session
+              System.out.println("Connection timed out. Reconnecting...");
+              connected = false;
+              poller.unregister(socket);
+              socket.close();
+              break;
+            } else {
+              sendHeartbeat(socket);
+            }
+          }
+          continue;
         }
 
-        int inputContentSize = (int) ((long) parsedInputContentSizeMessage.get(0));
-        if (inputBufferSize < inputContentSize) {
-          inputBufferSize = inputContentSize * 2;
-          inputBuffer = ByteBuffer.allocateDirect(inputBufferSize);
+        // Received a message prior to the polling timeout
+        if (!connected) {
+          connected = true;
         }
-        inputBuffer.rewind();
-        inputBuffer.limit(inputBufferSize);
-        int inputBytesRead = socket.recvZeroCopy(inputBuffer, inputContentSize, -1);
-        inputBuffer.rewind();
-        inputBuffer.limit(inputBytesRead);
+        lastActivityTimeMillis = System.currentTimeMillis();
+        PerformanceTimer.startTiming();
+        // Receive delimiter between routing identity and content
+        socket.recv();
+        byte[] typeMessage = socket.recv();
+        List<Long> parsedTypeMessage = DataUtils.getUnsignedIntsFromBytes(typeMessage);
+        ContainerMessageType messageType =
+            ContainerMessageType.fromCode(parsedTypeMessage.get(0).intValue());
+        switch (messageType) {
+          case Heartbeat:
+            System.out.println("Received heartbeat!");
+            eventHistory.insert(RPCEventType.ReceivedHeartbeat);
+            byte[] heartbeatTypeMessage = socket.recv();
+            List<Long> parsedHeartbeatTypeMessage =
+                DataUtils.getUnsignedIntsFromBytes(heartbeatTypeMessage);
+            HeartbeatType heartbeatType =
+                HeartbeatType.fromCode(parsedHeartbeatTypeMessage.get(0).intValue());
+            if (heartbeatType == HeartbeatType.RequestContainerMetadata) {
+              sendContainerMetadata(socket, model);
+            }
+            break;
+          case ContainerContent:
+            eventHistory.insert(RPCEventType.ReceivedContainerContent);
+            byte[] idMessage = socket.recv();
+            List<Long> parsedIdMessage = DataUtils.getUnsignedIntsFromBytes(idMessage);
+            if (parsedIdMessage.size() < 1) {
+              throw new NoSuchFieldException("Field \"message_id\" is missing from RPC message");
+            }
+            long msgId = parsedIdMessage.get(0);
+            System.out.println("Message ID: " + msgId);
 
-        PerformanceTimer.logElapsed("Recv");
+            byte[] requestHeaderMessage = socket.recv();
+            List<Integer> requestHeader = DataUtils.getSignedIntsFromBytes(requestHeaderMessage);
+            if (requestHeader.size() < 1) {
+              throw new NoSuchFieldException("Request header is missing from RPC message");
+            }
+            RequestType requestType = RequestType.fromCode(requestHeader.get(0));
 
-        if (inputHeader.remaining() < 2) {
-          throw new NoSuchFieldException(
-              "RPC message input header is missing or is of insufficient size");
+            if (requestType == RequestType.Predict) {
+              byte[] inputHeaderSizeMessage = socket.recv();
+              List<Long> parsedInputHeaderSizeMessage =
+                  DataUtils.getLongsFromBytes(inputHeaderSizeMessage);
+              if (parsedInputHeaderSizeMessage.size() < 1) {
+                throw new NoSuchFieldException(
+                    "Input header size is missing from RPC predict request message");
+              }
+              int inputHeaderSize = (int) ((long) parsedInputHeaderSizeMessage.get(0));
+              if (inputHeaderBuffer == null || inputHeaderBufferSize < inputHeaderSize) {
+                inputHeaderBufferSize = inputHeaderSize * 2;
+                inputHeaderBuffer = ByteBuffer.allocateDirect(inputHeaderBufferSize);
+              }
+              inputHeaderBuffer.rewind();
+              inputHeaderBuffer.limit(inputHeaderBufferSize);
+              int inputHeaderBytesRead =
+                  socket.recvZeroCopy(inputHeaderBuffer, inputHeaderSize, -1);
+              inputHeaderBuffer.rewind();
+              inputHeaderBuffer.limit(inputHeaderBytesRead);
+
+              IntBuffer inputHeader =
+                  inputHeaderBuffer.slice().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+
+              byte[] inputContentSizeMessage = socket.recv();
+              List<Long> parsedInputContentSizeMessage =
+                  DataUtils.getLongsFromBytes(inputContentSizeMessage);
+              if (parsedInputContentSizeMessage.size() < 1) {
+                throw new NoSuchFieldException(
+                    "Input content size is missing from RPC predict request message");
+              }
+
+              int inputContentSize = (int) ((long) parsedInputContentSizeMessage.get(0));
+              if (inputBufferSize < inputContentSize) {
+                inputBufferSize = inputContentSize * 2;
+                inputBuffer = ByteBuffer.allocateDirect(inputBufferSize);
+              }
+              inputBuffer.rewind();
+              inputBuffer.limit(inputBufferSize);
+              int inputBytesRead = socket.recvZeroCopy(inputBuffer, inputContentSize, -1);
+              inputBuffer.rewind();
+              inputBuffer.limit(inputBytesRead);
+
+              PerformanceTimer.logElapsed("Recv");
+
+              if (inputHeader.remaining() < 2) {
+                throw new NoSuchFieldException(
+                    "RPC message input header is missing or is of insufficient size");
+              }
+
+              DataType inputType = DataType.fromCode(inputHeader.get());
+              int numInputs = inputHeader.get();
+              validateRequestInputType(model, inputType);
+              Iterator<I> dataVectors =
+                  inputVectorParser.parseDataVectors(inputBuffer.slice(), inputHeader.slice());
+
+              PerformanceTimer.logElapsed("Parse");
+
+              try {
+                handlePredictRequest(msgId, dataVectors, model, socket);
+              } catch (IOException e) {
+                e.printStackTrace();
+              }
+
+              PerformanceTimer.logElapsed("Handle");
+              System.out.println(PerformanceTimer.getLog());
+            } else {
+              // Handle Feedback request
+            }
+            break;
+          case NewContainer:
+            // We should never receive a new container message from Clipper
+            eventHistory.insert(RPCEventType.ReceivedContainerMetadata);
+            System.out.println("Received erroneous new container message from Clipper!");
+            break;
+          default:
+            break;
         }
-
-        DataType inputType = DataType.fromCode(inputHeader.get());
-        int numInputs = inputHeader.get();
-        validateRequestInputType(model, inputType);
-        Iterator<I> dataVectors =
-            inputVectorParser.parseDataVectors(inputBuffer.slice(), inputHeader.slice());
-
-        PerformanceTimer.logElapsed("Parse");
-
-        try {
-          handlePredictRequest(msgId, dataVectors, model, socket);
-        } catch (IOException e) {
-          e.printStackTrace();
-        }
-
-        PerformanceTimer.logElapsed("Handle");
-        System.out.println(PerformanceTimer.getLog());
-      } else {
-        // Handle Feedback request
       }
     }
   }
@@ -192,6 +261,8 @@ class ModelContainer<I extends DataVector<?>> {
       }
     }
     socket.send("", ZMQ.SNDMORE);
+    socket.send(
+        DataUtils.getBytesFromInts(ContainerMessageType.ContainerContent.getCode()), ZMQ.SNDMORE);
     ByteBuffer b = ByteBuffer.allocate(8);
     b.order(ByteOrder.LITTLE_ENDIAN);
     b.putLong(msgId);
@@ -199,5 +270,24 @@ class ModelContainer<I extends DataVector<?>> {
     byte[] msgIdByteArr = b.slice().array();
     socket.send(msgIdByteArr, ZMQ.SNDMORE);
     socket.sendZeroCopy(responseBuffer, responseBuffer.position(), 0);
+    eventHistory.insert(RPCEventType.SentContainerContent);
+  }
+
+  private void sendHeartbeat(ZMQ.Socket socket) {
+    socket.send("", ZMQ.SNDMORE);
+    socket.send(DataUtils.getBytesFromInts(ContainerMessageType.Heartbeat.getCode()), 0);
+    eventHistory.insert(RPCEventType.SentHeartbeat);
+    System.out.println("Sent heartbeat!");
+  }
+
+  private void sendContainerMetadata(ZMQ.Socket socket, Model<I> model) {
+    socket.send("", ZMQ.SNDMORE);
+    socket.send(
+        DataUtils.getBytesFromInts(ContainerMessageType.NewContainer.getCode()), ZMQ.SNDMORE);
+    socket.send(model.getName(), ZMQ.SNDMORE);
+    socket.send(String.valueOf(model.getVersion()), ZMQ.SNDMORE);
+    socket.send(String.valueOf(model.getInputType().getCode()));
+    eventHistory.insert(RPCEventType.SentContainerMetadata);
+    System.out.println("Sent container metadata!");
   }
 }
