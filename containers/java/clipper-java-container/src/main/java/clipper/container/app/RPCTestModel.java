@@ -22,6 +22,7 @@ class RPCTestModel extends Model<DoubleVector> {
   public SerializableString predict(DoubleVector inputVector) {
     double clipperTimestamp = inputVector.getData().get();
     RPCEvent[] eventHistory = container.getEventHistory();
+    // Begin building a JSON array
     StringBuilder eventCodeJson = new StringBuilder("[");
     boolean addedEvent = false;
     for (int i = 0; i < eventHistory.length; ++i) {
@@ -40,11 +41,12 @@ class RPCTestModel extends Model<DoubleVector> {
         }
       }
     }
-    // Remove trailing comma forom JSO
+    // Remove trailing comma from JSON and close
+    // the array
     int jsonLength = eventCodeJson.length();
     eventCodeJson.delete(jsonLength - 2, jsonLength);
-
     eventCodeJson.append("]");
+
     return new SerializableString(eventCodeJson.toString());
   }
 }
