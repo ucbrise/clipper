@@ -237,10 +237,10 @@ class Server(threading.Thread):
                     request_type = struct.unpack("<I", request_header)[0]
 
                     if request_type == REQUEST_TYPE_PREDICT:
-                        input_header_size = self.socket.recv()
-                        input_header = self.socket.recv()
-                        raw_content_size = self.socket.recv()
-                        raw_content = self.socket.recv()
+                        input_header_size = socket.recv()
+                        input_header = socket.recv()
+                        raw_content_size = socket.recv()
+                        raw_content = socket.recv()
 
                         t2 = datetime.now()
 
@@ -284,7 +284,7 @@ class Server(threading.Thread):
 
                         t4 = datetime.now()
 
-                        response.send(self.socket)
+                        response.send(socket)
 
                         print("recv: %f us, parse: %f us, handle: %f us" %
                               ((t2 - t1).microseconds, (t3 - t2).microseconds,
@@ -293,7 +293,7 @@ class Server(threading.Thread):
                     else:
                         feedback_request = FeedbackRequest(msg_id_bytes, [])
                         response = self.handle_feedback_request(received_msg)
-                        response.send(self.socket)
+                        response.send(socket)
                         print("recv: %f us" % ((t2 - t1).microseconds))
 
                 sys.stdout.flush()
@@ -351,7 +351,6 @@ class PredictionResponse():
     def __init__(self, msg_id, num_outputs, total_string_length):
         self.msg_id = msg_id
         self.num_outputs = num_outputs
-        print(len(self.output_buffer))
         self.expand_buffer_if_necessary(
             total_string_length * MAXIMUM_UTF_8_CHAR_LENGTH_BYTES)
         self.memview = memoryview(self.output_buffer)
@@ -376,8 +375,9 @@ class PredictionResponse():
         self.string_content_end_position += output_len
 
     def send(self, socket):
-        socket.send(self.msg_id, flags=zmq.SNDMORE)
         socket.send("", flags=zmq.SNDMORE)
+        socket.send(struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT), flags=zmq.SNDMORE)
+        socket.send(self.msg_id, flags=zmq.SNDMORE)
         socket.send(self.output_buffer[0:self.string_content_end_position])
 
     def expand_buffer_if_necessary(self, size):
@@ -400,10 +400,10 @@ class FeedbackResponse():
         self.content = content
 
     def send(self, socket):
-        socket.send("", zmq.SNDMORE)
+        socket.send("", flags=zmq.SNDMORE)
         socket.send(
-            struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT), zmq.SNDMORE)
-        socket.send(self.msg_id, zmq.SNDMORE)
+            struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT), flags=zmq.SNDMORE)
+        socket.send(self.msg_id, flags=zmq.SNDMORE)
         socket.send(self.content)
 
 
