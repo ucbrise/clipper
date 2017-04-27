@@ -8,13 +8,14 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public class DataUtils {
-  private static ByteBuffer getByteBuffer(byte[] bytes) {
+  private static ByteBuffer getByteBuffer(byte... bytes) {
     ByteBuffer buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
     return buffer;
   }
 
   public static byte[] getBytesFromInts(int... data) {
     ByteBuffer byteBuffer = ByteBuffer.allocate(data.length * 4);
+    byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
     for (int item : data) {
       byteBuffer.putInt(item);
     }
@@ -23,6 +24,7 @@ public class DataUtils {
 
   public static byte[] getBytesFromLongs(long... data) {
     ByteBuffer byteBuffer = ByteBuffer.allocate(data.length * 8);
+    byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
     for (long item : data) {
       byteBuffer.putLong(item);
     }
@@ -31,6 +33,7 @@ public class DataUtils {
 
   public static byte[] getBytesFromFloats(float... data) {
     ByteBuffer byteBuffer = ByteBuffer.allocate(data.length * 4);
+    byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
     for (float item : data) {
       byteBuffer.putFloat(item);
     }
@@ -39,6 +42,7 @@ public class DataUtils {
 
   public static byte[] getBytesFromDoubles(double... data) {
     ByteBuffer byteBuffer = ByteBuffer.allocate(data.length * 8);
+    byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
     for (double item : data) {
       byteBuffer.putDouble(item);
     }

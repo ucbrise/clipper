@@ -65,4 +65,5 @@ if __name__ == "__main__":
     pkl_path = os.path.join(model_path, pkl_names[0])
     print(pkl_path, file=sys.stdout)
     model = SklearnCifarContainer(pkl_path)
-    rpc.start(model, ip, port, model_name, model_version, input_type)
+    rpc_service = rpc.RPCService()
+    rpc_service.start(model, ip, port, model_name, model_version, input_type)

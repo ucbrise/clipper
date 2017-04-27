@@ -9,7 +9,7 @@ function clean_up {
     # echo Background jobs: $(jobs -l)
     # echo
     # echo Killing jobs
-    echo Exiting...
+    echo Exiting unit tests...
     kill $(jobs -p) &> /dev/null
     echo
     sleep 2
@@ -67,3 +67,12 @@ redis-cli -p $REDIS_PORT "flushall"
 ./src/frontends/frontendtests --redis_port $REDIS_PORT
 redis-cli -p $REDIS_PORT "flushall"
 ./src/management/managementtests --redis_port $REDIS_PORT
+
+echo "Running Java container tests..."
+cd $DIR
+cd ../containers/java/clipper-java-container
+mvn test
+
+echo "Testing container RPC protocol correctness..."
+cd ../../test/
+./test_container_rpc.sh $REDIS_PORT

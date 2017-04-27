@@ -68,4 +68,5 @@ if __name__ == "__main__":
     full_fname = os.path.join(model_dir_path, fname)
     print(full_fname)
     model = TfCifarContainer(full_fname)
-    rpc.start(model, ip, port, model_name, model_version, input_type)
+    rpc_service = rpc.RPCService()
+    rpc_service.start(model, ip, port, model_name, model_version, input_type)

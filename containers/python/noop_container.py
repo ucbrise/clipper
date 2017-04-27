@@ -59,4 +59,5 @@ if __name__ == "__main__":
     else:
         print("Using default input type: doubles")
     model = NoopContainer()
-    rpc.start(model, ip, port, model_name, model_version, input_type)
+    rpc_service = rpc.RPCService()
+    rpc_service.start(model, ip, port, model_name, model_version, input_type)

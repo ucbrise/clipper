@@ -67,7 +67,7 @@ class PythonContainer(rpc.ModelContainerBase):
 
 
 if __name__ == "__main__":
-    print("Starting PredictContainer container")
+    print("Starting PythonContainer container")
     try:
         model_name = os.environ["CLIPPER_MODEL_NAME"]
     except KeyError:
@@ -104,5 +104,6 @@ if __name__ == "__main__":
 
     model_path = os.environ["CLIPPER_MODEL_PATH"]
 
-    model = PredictContainer(model_path, input_type)
-    rpc.start(model, ip, port, model_name, model_version, input_type)
+    model = PythonContainer(model_path, input_type)
+    rpc_service = rpc.RPCService()
+    rpc_service.start(model, ip, port, model_name, model_version, input_type)
