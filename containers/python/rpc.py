@@ -250,11 +250,13 @@ class Server(threading.Thread):
                             0], parsed_input_header[1], parsed_input_header[2:]
 
                         if int(input_type) != int(self.model_input_type):
-                            print(("Received incorrect input. Expected {expected}, "
-                                   "received {received}").format(
-                                       expected=input_type_to_string(
-                                           int(self.model_input_type)),
-                                       received=input_type_to_string(int(input_type))))
+                            print((
+                                "Received incorrect input. Expected {expected}, "
+                                "received {received}").format(
+                                    expected=input_type_to_string(
+                                        int(self.model_input_type)),
+                                    received=input_type_to_string(
+                                        int(input_type))))
                             raise
 
                         if input_type == INPUT_TYPE_STRINGS:
@@ -275,8 +277,10 @@ class Server(threading.Thread):
 
                         t3 = datetime.now()
 
-                        prediction_request = PredictionRequest(msg_id_bytes, inputs)
-                        response = self.handle_prediction_request(prediction_request)
+                        prediction_request = PredictionRequest(
+                            msg_id_bytes, inputs)
+                        response = self.handle_prediction_request(
+                            prediction_request)
 
                         t4 = datetime.now()
 
@@ -309,6 +313,7 @@ class Server(threading.Thread):
         socket.send(struct.pack("<I", MESSAGE_TYPE_HEARTBEAT))
         self.event_history.insert(EVENT_HISTORY_SENT_HEARTBEAT)
         print("Sent heartbeat!")
+
 
 class PredictionRequest:
     """
