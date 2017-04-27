@@ -9,9 +9,15 @@ target_link_libraries(end_to_end_bench clipper boost cxxopts)
 
 
 ##################################
-# RPC Layer Testing executable
+# RPC Layer Benchmarking executable
 
 add_executable(rpcbench src/rpc_service_bench.cpp)
 
 target_link_libraries(rpcbench clipper cxxopts)
 
+
+##################################
+# RPC Layer Protocol Testing executable
+
+add_executable(rpctest src/rpc_protocol_test.cpp)
+target_link_libraries(rpctest clipper cxxopts)
