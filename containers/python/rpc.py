@@ -356,7 +356,8 @@ class PredictionResponse():
             total_string_length * MAXIMUM_UTF_8_CHAR_LENGTH_BYTES)
         self.memview = memoryview(self.output_buffer)
         struct.pack_into("<I", self.output_buffer, 0, num_outputs)
-        self.string_content_end_position = BYTES_PER_INT + (BYTES_PER_INT * num_outputs)
+        self.string_content_end_position = BYTES_PER_INT + (
+            BYTES_PER_INT * num_outputs)
         self.current_output_sizes_position = BYTES_PER_INT
 
     """
@@ -377,7 +378,9 @@ class PredictionResponse():
 
     def send(self, socket):
         socket.send("", flags=zmq.SNDMORE)
-        socket.send(struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT), flags=zmq.SNDMORE)
+        socket.send(
+            struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT),
+            flags=zmq.SNDMORE)
         socket.send(self.msg_id, flags=zmq.SNDMORE)
         socket.send(self.output_buffer[0:self.string_content_end_position])
 
@@ -403,7 +406,8 @@ class FeedbackResponse():
     def send(self, socket):
         socket.send("", flags=zmq.SNDMORE)
         socket.send(
-            struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT), flags=zmq.SNDMORE)
+            struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT),
+            flags=zmq.SNDMORE)
         socket.send(self.msg_id, flags=zmq.SNDMORE)
         socket.send(self.content)
 

@@ -10,10 +10,10 @@
 #include <clipper/config.hpp>
 #include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/json_util.hpp>
 #include <clipper/logging.hpp>
 #include <clipper/redis.hpp>
 #include <clipper/rpc_service.hpp>
-#include <clipper/json_util.hpp>
 
 using namespace clipper;
 
@@ -203,7 +203,8 @@ class Tester {
     if (container_valid_entry == container_validation_map_.end()) {
       // Container has not yet been validated
       rpc::PredictionResponse prediction_response =
-          rpc::PredictionResponse::deserialize_prediction_response(response.second);
+          rpc::PredictionResponse::deserialize_prediction_response(
+              response.second);
       std::string event_history_str = prediction_response.outputs_[0];
       rapidjson::Document d;
       auto events = d.GetArray();
