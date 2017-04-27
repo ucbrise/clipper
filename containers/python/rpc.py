@@ -38,6 +38,7 @@ EVENT_HISTORY_SENT_CONTAINER_CONTENT = 5
 EVENT_HISTORY_RECEIVED_CONTAINER_CONTENT = 6
 
 MAXIMUM_UTF_8_CHAR_LENGTH_BYTES = 4
+BYTES_PER_INT = 4
 
 
 def string_to_input_type(input_str):
@@ -355,8 +356,8 @@ class PredictionResponse():
             total_string_length * MAXIMUM_UTF_8_CHAR_LENGTH_BYTES)
         self.memview = memoryview(self.output_buffer)
         struct.pack_into("<I", self.output_buffer, 0, num_outputs)
-        self.string_content_end_position = 4 + (4 * num_outputs)
-        self.current_output_sizes_position = 4
+        self.string_content_end_position = BYTES_PER_INT + (BYTES_PER_INT * num_outputs)
+        self.current_output_sizes_position = BYTES_PER_INT
 
     """
     Parameters
@@ -369,7 +370,7 @@ class PredictionResponse():
         output_len = len(output)
         struct.pack_into("<I", self.output_buffer,
                          self.current_output_sizes_position, output_len)
-        self.current_output_sizes_position += 4
+        self.current_output_sizes_position += BYTES_PER_INT
         self.memview[self.string_content_end_position:
                      self.string_content_end_position + output_len] = output
         self.string_content_end_position += output_len

@@ -25,7 +25,7 @@ public class SerializableString extends DataVector<String> {
    *
    * @return The number of bytes written to the buffer
    */
-  public int toBytes(ByteBuffer buffer) {
+  public int encodeUTF8ToBuffer(ByteBuffer buffer) {
     CharBuffer stringContent = CharBuffer.wrap(data);
     Charset UTFCharset = StandardCharsets.UTF_8;
     CharsetEncoder encoder = UTFCharset.newEncoder();

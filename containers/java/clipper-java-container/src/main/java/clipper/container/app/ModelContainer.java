@@ -19,6 +19,7 @@ class ModelContainer<I extends DataVector<?>> {
   private static final long SOCKET_POLLING_TIMEOUT_MILLIS = 5000;
   private static final long SOCKET_ACTIVITY_TIMEOUT_MILLIS = 30000;
   private static final int EVENT_HISTORY_BUFFER_SIZE = 30;
+  private static final int BYTES_PER_INT = 4;
 
   private final DataVectorParser<?, I> inputVectorParser;
   private final RPCEventHistory eventHistory;
@@ -246,13 +247,13 @@ class ModelContainer<I extends DataVector<?>> {
     // At minimum, the output contains an unsigned
     // integer specifying the number of string
     // outputs
-    int outputLenBytes = 4;
-    int maxBufferSizeBytes = 4;
+    int outputLenBytes = BYTES_PER_INT;
+    int maxBufferSizeBytes = BYTES_PER_INT;
     for (SerializableString p : predictions) {
       // Add byte length corresponding to an
       // integer containing the string's size
-      outputLenBytes += 4;
-      maxBufferSizeBytes += 4;
+      outputLenBytes += BYTES_PER_INT;
+      maxBufferSizeBytes += BYTES_PER_INT;
       // Add the maximum size of the string
       // with utf-8 encoding to the maximum buffer size.
       // The actual output length will be determined
@@ -274,8 +275,8 @@ class ModelContainer<I extends DataVector<?>> {
     // We will begin writing data after the segment allocated
     // for storing string lengths. Advance past this segment
     // for now
-    responseBuffer.position(baseStringLengthsPosition + (4 * numOutputs));
-    for (int i = 0; i < predictions.size(); i++) {
+    responseBuffer.position(baseStringLengthsPosition + (BYTES_PER_INT * numOutputs));
+    for (int i = 0; i < predictions.size(); ++i) {
       SerializableString prediction = predictions.get(i);
       // Serialize the prediction and write it to the output buffer
       int serializedSize = prediction.toBytes(responseBuffer);
@@ -284,7 +285,7 @@ class ModelContainer<I extends DataVector<?>> {
       // Navigate to the buffer segment allocated for storing
       // the length of the serialized string and write the length
       // in this location
-      responseBuffer.position(baseStringLengthsPosition + (4 * i));
+      responseBuffer.position(baseStringLengthsPosition + (BYTES_PER_INT * i));
       responseBuffer.putInt(serializedSize);
       // Return to the position in the buffer where the next string
       // should be written
@@ -295,10 +296,10 @@ class ModelContainer<I extends DataVector<?>> {
     socket.send("", ZMQ.SNDMORE);
     socket.send(
         DataUtils.getBytesFromInts(ContainerMessageType.ContainerContent.getCode()), ZMQ.SNDMORE);
-    ByteBuffer b = ByteBuffer.allocate(8);
+    ByteBuffer b = ByteBuffer.allocate(2 * BYTES_PER_INT);
     b.order(ByteOrder.LITTLE_ENDIAN);
     b.putLong(msgId);
-    b.position(4);
+    b.position(BYTES_PER_INT);
     byte[] msgIdByteArr = b.slice().array();
     socket.send(msgIdByteArr, ZMQ.SNDMORE);
     socket.sendZeroCopy(responseBuffer, responseBuffer.position(), 0);

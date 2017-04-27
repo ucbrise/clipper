@@ -396,7 +396,7 @@ class RequestHandler {
                                 json_y_hat);
     } catch (const clipper::json::json_parse_error& e) {
       // If the string output is not JSON-formatted, include
-      // it as a raw string in the query response
+      // it as a JSON-safe string value in the query response
       clipper::json::add_string(json_response, PREDICTION_RESPONSE_KEY_OUTPUT,
                                 query_response.output_.y_hat_);
     }
