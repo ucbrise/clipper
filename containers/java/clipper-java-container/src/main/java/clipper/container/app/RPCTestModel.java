@@ -35,7 +35,7 @@ class RPCTestModel extends Model<DoubleVector> {
         }
         eventCodeJson.append(currEvent.getEventType().getCode());
         eventCodeJson.append(", ");
-        if(!addedEvent) {
+        if (!addedEvent) {
           addedEvent = true;
         }
       }
