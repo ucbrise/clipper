@@ -205,6 +205,7 @@ class Tester {
               response.second);
       std::string event_history_str = prediction_response.outputs_[0];
       rapidjson::Document d;
+      json::parse_json(event_history_str, d);
       auto events = d.GetArray();
       std::vector<int> parsed_event_history;
       for (int i = 0; static_cast<size_t>(i) < events.Size(); i++) {
