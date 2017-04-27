@@ -188,12 +188,10 @@ class Tester {
   }
 
   void on_response_received(rpc::RPCResponse response) {
-    log_info_formatted(LOGGING_TAG_RPC_TEST, "RECEIVED RESPONSE");
     int msg_id = response.first;
     std::unique_lock<std::mutex> lock(container_maps_mutex);
     auto container_id_entry = msg_id_to_container_map_.find(msg_id);
     if (container_id_entry == msg_id_to_container_map_.end()) {
-      log_info_formatted("FAIL", "YOU FAIL SON");
       throw std::runtime_error(
           "Failed to find container associated with previously sent message!");
     }
@@ -222,7 +220,6 @@ class Tester {
         test_completed_cv_.notify_all();
       }
     } else {
-      log_info_formatted("TAG", "COWWWWWWWWWWWOOOOOOOOooOOO");
       container_rpc_protocol_valid = RPCValidationResult(
           false,
           "Container sent excessive container content messages (expected 1)");

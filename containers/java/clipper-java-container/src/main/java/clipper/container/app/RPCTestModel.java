@@ -3,6 +3,7 @@ package clipper.container.app;
 import clipper.container.app.data.DataType;
 import clipper.container.app.data.DoubleVector;
 import clipper.container.app.data.FloatVector;
+import clipper.container.app.data.SerializableString;
 import clipper.container.app.logging.RPCEvent;
 
 import java.nio.FloatBuffer;
@@ -18,26 +19,32 @@ class RPCTestModel extends Model<DoubleVector> {
   }
 
   @Override
-  public FloatVector predict(DoubleVector inputVector) {
+  public SerializableString predict(DoubleVector inputVector) {
     double clipperTimestamp = inputVector.getData().get();
     RPCEvent[] eventHistory = container.getEventHistory();
-    List<Float> eventCodes = new ArrayList<>();
-    for (int i = 0; i < eventHistory.length; i++) {
+    StringBuilder eventCodeJson = new StringBuilder("[");
+    boolean addedEvent = false;
+    for (int i = 0; i < eventHistory.length; ++i) {
       RPCEvent currEvent = eventHistory[i];
       if (currEvent.getTimestamp() >= clipperTimestamp) {
-        if (i > 0 && eventCodes.size() == 0) {
+        if (i > 0 && !addedEvent) {
           // Capture the heartbeat message
           // sent before Clipper came online
-          eventCodes.add((float) eventHistory[i - 1].getEventType().getCode());
+          eventCodeJson.append(String.valueOf(eventHistory[i - 1].getEventType().getCode()));
+          eventCodeJson.append(", ");
         }
-        eventCodes.add((float) currEvent.getEventType().getCode());
+        eventCodeJson.append(currEvent.getEventType().getCode());
+        eventCodeJson.append(", ");
+        if(!addedEvent) {
+          addedEvent = true;
+        }
       }
     }
-    FloatBuffer buffer = FloatBuffer.allocate(eventCodes.size());
-    for (float code : eventCodes) {
-      buffer.put(code);
-    }
-    buffer.rewind();
-    return new FloatVector(buffer);
+    // Remove trailing comma forom JSO
+    int jsonLength = eventCodeJson.length();
+    eventCodeJson.delete(jsonLength - 2, jsonLength);
+
+    eventCodeJson.append("]");
+    return new SerializableString(eventCodeJson.toString());
   }
 }

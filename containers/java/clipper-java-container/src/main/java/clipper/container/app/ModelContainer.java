@@ -279,7 +279,7 @@ class ModelContainer<I extends DataVector<?>> {
     for (int i = 0; i < predictions.size(); ++i) {
       SerializableString prediction = predictions.get(i);
       // Serialize the prediction and write it to the output buffer
-      int serializedSize = prediction.toBytes(responseBuffer);
+      int serializedSize = prediction.encodeUTF8ToBuffer(responseBuffer);
       outputLenBytes += serializedSize;
       int currPosition = responseBuffer.position();
       // Navigate to the buffer segment allocated for storing
