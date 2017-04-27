@@ -1,6 +1,7 @@
 import urllib
 import sys
 import os
+import tarfile
 
 
 def download_cifar(loc):
@@ -11,9 +12,14 @@ def download_cifar(loc):
         print("CIFAR10 dataset not found, downloading...")
         # http://stackoverflow.com/a/19602990
         testfile = urllib.URLopener()
+        tar_file_path = os.path.join(loc, 'cifar-10-python.tar.gz')
         testfile.retrieve(
             'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
-            os.path.join(loc, 'cifar-10-python.tar.gz'))
+            tar_file_path)
+        tar = tarfile.open(tar_file_path)
+        for member in tar.getmembers():
+            tar.extract(member, path=loc)
+        tar.close()
         print("Finished downloading")
     else:
         print(
