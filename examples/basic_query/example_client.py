@@ -1,7 +1,8 @@
 from __future__ import print_function
 import sys
 import os
-sys.path.append(os.path.abspath('../../management/'))
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.abspath('%s/../../management/' % cur_dir))
 import clipper_manager as cm
 import json
 import requests

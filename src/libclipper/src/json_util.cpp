@@ -12,6 +12,7 @@
 
 #include <clipper/datatypes.hpp>
 #include <clipper/json_util.hpp>
+#include <clipper/redis.hpp>
 
 using clipper::Input;
 using clipper::InputType;
@@ -367,25 +368,25 @@ void check_key_exists_in_map(
   }
 }
 
-void add_app_input_type_from_redis(
-    const std::unordered_map<std::string, std::string>& app_metadata,
-    rapidjson::Document& d) {
+void add_input_type_from_redis(
+    rapidjson::Document& d,
+    const std::unordered_map<std::string, std::string>& app_metadata) {
   std::string key = "input_type";
   check_key_exists_in_map(key, app_metadata);
   add_string(d, key.c_str(), app_metadata.at(key));
 }
 
 void add_app_default_output_from_redis(
-    const std::unordered_map<std::string, std::string>& app_metadata,
-    rapidjson::Document& d) {
+    rapidjson::Document& d,
+    const std::unordered_map<std::string, std::string>& app_metadata) {
   std::string key = "default_output";
   check_key_exists_in_map(key, app_metadata);
   add_string(d, key.c_str(), app_metadata.at(key));
 }
 
 void add_app_latency_slo_micros_from_redis(
-    const std::unordered_map<std::string, std::string>& app_metadata,
-    rapidjson::Document& d) {
+    rapidjson::Document& d,
+    const std::unordered_map<std::string, std::string>& app_metadata) {
   // latency_slo_micros is stored as a string in redis
   std::string key = "latency_slo_micros";
   check_key_exists_in_map(key, app_metadata);
@@ -393,8 +394,8 @@ void add_app_latency_slo_micros_from_redis(
 }
 
 void add_app_candidate_model_names_from_redis(
-    const std::unordered_map<std::string, std::string>& app_metadata,
-    rapidjson::Document& d) {
+    rapidjson::Document& d,
+    const std::unordered_map<std::string, std::string>& app_metadata) {
   std::string key = "candidate_model_names";
   check_key_exists_in_map(key, app_metadata);
 
@@ -416,14 +417,103 @@ void add_app_candidate_model_names_from_redis(
   add_object(d, key.c_str(), candidate_model_names_doc);
 }
 
-void set_json_doc_from_redis_app_metadata(
+void redis_app_metadata_to_json(
     rapidjson::Document& d,
     const std::unordered_map<std::string, std::string>& app_metadata) {
   d.SetObject();
-  add_app_input_type_from_redis(app_metadata, d);
-  add_app_default_output_from_redis(app_metadata, d);
-  add_app_latency_slo_micros_from_redis(app_metadata, d);
-  add_app_candidate_model_names_from_redis(app_metadata, d);
+  add_input_type_from_redis(d, app_metadata);
+  add_app_default_output_from_redis(d, app_metadata);
+  add_app_latency_slo_micros_from_redis(d, app_metadata);
+  add_app_candidate_model_names_from_redis(d, app_metadata);
+}
+
+void add_model_name_from_redis(
+    rapidjson::Document& d,
+    const std::unordered_map<std::string, std::string>& model_metadata) {
+  std::string key = "model_name";
+  check_key_exists_in_map(key, model_metadata);
+  add_string(d, key.c_str(), model_metadata.at(key));
+}
+
+void add_model_version_from_redis(
+    rapidjson::Document& d,
+    const std::unordered_map<std::string, std::string>& model_metadata) {
+  std::string key = "model_version";
+  check_key_exists_in_map(key, model_metadata);
+  add_int(d, key.c_str(), std::stoi(model_metadata.at(key)));
+}
+
+void add_model_labels_from_redis(
+    rapidjson::Document& d,
+    const std::unordered_map<std::string, std::string>& model_metadata) {
+  std::string key = "labels";
+  check_key_exists_in_map(key, model_metadata);
+  std::vector<std::string> labels_vec =
+      clipper::redis::str_to_labels(model_metadata.at(key));
+  add_string_array(d, key.c_str(), labels_vec);
+}
+
+void add_container_name_from_redis(
+    rapidjson::Document& d,
+    const std::unordered_map<std::string, std::string>& model_metadata) {
+  std::string key = "container_name";
+  check_key_exists_in_map(key, model_metadata);
+  add_string(d, key.c_str(), model_metadata.at(key));
+}
+
+void add_model_data_path_from_redis(
+    rapidjson::Document& d,
+    const std::unordered_map<std::string, std::string>& model_metadata) {
+  std::string key = "model_data_path";
+  check_key_exists_in_map(key, model_metadata);
+  add_string(d, key.c_str(), model_metadata.at(key));
+}
+
+void redis_model_metadata_to_json(
+    rapidjson::Document& d,
+    const std::unordered_map<std::string, std::string>& model_metadata) {
+  d.SetObject();
+  add_model_name_from_redis(d, model_metadata);
+  add_model_version_from_redis(d, model_metadata);
+
+  // TODO: include load in returned value when we start tracking
+  // model load. Currently load is not tracked so returning it
+  // to the user will just confuse them (it's always 0).
+  // add_model_load_from_redis(d, model_data);
+
+  add_input_type_from_redis(d, model_metadata);
+  add_model_labels_from_redis(d, model_metadata);
+  add_container_name_from_redis(d, model_metadata);
+  add_model_data_path_from_redis(d, model_metadata);
+}
+
+void add_model_id_key_from_redis(
+    rapidjson::Document& d,
+    const std::unordered_map<std::string, std::string>& container_metadata) {
+  std::string key = "model_id";
+  check_key_exists_in_map(key, container_metadata);
+  add_string(d, key.c_str(), container_metadata.at(key));
+}
+
+void add_model_replica_id_from_redis(
+    rapidjson::Document& d,
+    const std::unordered_map<std::string, std::string>& container_metadata) {
+  std::string key = "model_replica_id";
+  check_key_exists_in_map(key, container_metadata);
+  add_int(d, key.c_str(), std::stoi(container_metadata.at(key)));
+}
+
+void redis_container_metadata_to_json(
+    rapidjson::Document& d,
+    const std::unordered_map<std::string, std::string>& container_metadata) {
+  d.SetObject();
+  add_model_id_key_from_redis(d, container_metadata);
+  add_model_name_from_redis(d, container_metadata);
+  add_model_version_from_redis(d, container_metadata);
+  add_model_replica_id_from_redis(d, container_metadata);
+  // TODO: uncomment this when we start tracking batch size in Redis.
+  // add_container_batch_size_from_redis(d, container_metadata);
+  add_input_type_from_redis(d, container_metadata);
 }
 
 }  // namespace json
