@@ -541,11 +541,15 @@ TEST(OutputDeserializationTests, PredictionResponseDeserialization) {
 
   memcpy(buf.data(), num_outputs_bytes, sizeof(uint32_t));
   memcpy(buf.data() + sizeof(uint32_t), first_length_bytes, sizeof(uint32_t));
-  memcpy(buf.data() + (2 * sizeof(uint32_t)), second_length_bytes, sizeof(uint32_t));
-  memcpy(buf.data() + metadata_length, first_string.data(), first_string.length());
-  memcpy(buf.data() + metadata_length + first_string.length(), second_string.data(), second_string.length());
+  memcpy(buf.data() + (2 * sizeof(uint32_t)), second_length_bytes,
+         sizeof(uint32_t));
+  memcpy(buf.data() + metadata_length, first_string.data(),
+         first_string.length());
+  memcpy(buf.data() + metadata_length + first_string.length(),
+         second_string.data(), second_string.length());
 
-  rpc::PredictionResponse response = rpc::PredictionResponse::deserialize_prediction_response(buf);
+  rpc::PredictionResponse response =
+      rpc::PredictionResponse::deserialize_prediction_response(buf);
   ASSERT_EQ(response.outputs_.size(), 2);
   ASSERT_EQ(response.outputs_[0], first_string);
   ASSERT_EQ(response.outputs_[1], second_string);
