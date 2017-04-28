@@ -545,6 +545,10 @@ TEST(OutputDeserializationTests, PredictionResponseDeserialization) {
   memcpy(buf.data() + metadata_length, first_string.data(), first_string.length());
   memcpy(buf.data() + metadata_length + first_string.length(), second_string.data(), second_string.length());
 
+  rpc::PredictionResponse response = rpc::PredictionResponse::deserialize_prediction_response(buf);
+  ASSERT_EQ(response.outputs_.size(), 2);
+  ASSERT_EQ(response.outputs_[0], first_string);
+  ASSERT_EQ(response.outputs_[1], second_string);
 }
 
 }  // namespace

@@ -227,7 +227,7 @@ TEST(JsonUtilTests, TestParseNestedObject) {
 
 TEST(JsonUtilTests, TestAddStringPreservesJsonIntegrity) {
   rapidjson::Document d;
-  d.SetArray();
+  d.SetObject();
   // If these strings are not escaped, they will invalidate
   // the JSON format
   json::add_string(d, "}}}}", "[[[[[");
