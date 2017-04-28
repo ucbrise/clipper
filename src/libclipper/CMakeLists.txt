@@ -42,7 +42,7 @@ add_executable(libclippertests EXCLUDE_FROM_ALL
     test/metrics_test.cpp
     test/rpc_service_test.cpp
     test/timers_test.cpp
-    test/input_test.cpp
+        test/data_serialization_tests.cpp
     test/persistent_state_test.cpp
     test/redis_test.cpp
     test/selection_policies_test.cpp

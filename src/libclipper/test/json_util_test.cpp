@@ -225,6 +225,18 @@ TEST(JsonUtilTests, TestParseNestedObject) {
   EXPECT_EQ(get_double(twice_nested_object, "double_val"), double_val);
 }
 
+TEST(JsonUtilTests, TestAddStringPreservesJsonIntegrity) {
+  rapidjson::Document d;
+  d.SetArray();
+  // If these strings are not escaped, they will invalidate
+  // the JSON format
+  json::add_string(d, "}}}}", "[[[[[");
+  std::string json_content = json::to_json_string(d);
+  // Attempt to parse the output string. We should see that
+  // it is still a valid JSON object
+  ASSERT_NO_THROW(json::parse_json(json_content, d));
+}
+
 class RedisToJsonTest : public ::testing::Test {
  public:
   RedisToJsonTest() : redis_(std::make_shared<redox::Redox>()) {
