@@ -5,12 +5,21 @@ import os
 import requests
 import json
 import yaml
-import pprint
-import subprocess32 as subprocess
+
+try:
+    import subprocess
+except:
+    import subprocess32 as subprocess
+
 import shutil
 from sklearn import base
 from sklearn.externals import joblib
-from cStringIO import StringIO
+
+try:
+    from cStringIO import StringIO
+except:
+    from io import StringIO
+
 import sys
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath('%s../../containers/python/' % cur_dir))

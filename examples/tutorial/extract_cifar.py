@@ -1,19 +1,26 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-import cPickle
-import sys
+
+try:
+    import cPickle as pickle
+except:
+    import pickle
+
 import numpy as np
 import os
 import tarfile
+import sys
 
 
 # Taken from https://www.cs.toronto.edu/~kriz/cifar.html
-def unpickle(file):
-    fo = open(file, 'rb')
-    dict = cPickle.load(fo)
-    fo.close()
-    return dict
+def unpickle(pickle_file):
+    with open(pickle_file, 'rb') as fo:
+        if sys.version_info >= (3, 0):
+            pickle_dict = pickle.load(fo, encoding='bytes')
+        else:
+            pickle_dict = pickle.load(fo)
+    return pickle_dict
 
 
 def extract_cifar(loc):
@@ -26,13 +33,13 @@ def extract_cifar(loc):
         if 'data_batch' in filename:
             print(file_path)
             batch_dict = unpickle(file_path)
-            data.append(batch_dict['data'])
-            labels.append(batch_dict['labels'])
+            data.append(batch_dict[b'data'])
+            labels.append(batch_dict[b'labels'])
         elif filename == 'test_batch':
             print(file_path)
             batch_dict = unpickle(file_path)
-            test_data = batch_dict['data']
-            test_labels = np.array(batch_dict['labels'])
+            test_data = batch_dict[b'data']
+            test_labels = np.array(batch_dict[b'labels'])
 
     data = np.vstack(data)
     labels = np.hstack(labels)

@@ -1,7 +1,11 @@
-import urllib
-import sys
 import os
 import tarfile
+import sys
+
+if sys.version_info >= (3, 0):
+    import urllib.request as url
+else:
+    import urllib as url
 
 
 def download_cifar(loc):
@@ -10,10 +14,8 @@ def download_cifar(loc):
         os.makedirs(loc)
     if not os.path.exists(os.path.join(loc, 'cifar-10-python.tar.gz')):
         print("CIFAR10 dataset not found, downloading...")
-        # http://stackoverflow.com/a/19602990
-        testfile = urllib.URLopener()
         tar_file_path = os.path.join(loc, 'cifar-10-python.tar.gz')
-        testfile.retrieve(
+        url.urlretrieve(
             'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
             tar_file_path)
         tar = tarfile.open(tar_file_path)
