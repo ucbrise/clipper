@@ -109,7 +109,6 @@ class Server(threading.Thread):
         self.clipper_port = clipper_port
         self.event_history = EventHistory(EVENT_HISTORY_BUFFER_SIZE)
 
-
     def handle_prediction_request(self, prediction_request):
         """
         Returns
@@ -133,7 +132,6 @@ class Server(threading.Thread):
             response.add_output(output)
 
         return response
-
 
     def handle_feedback_request(self, feedback_request):
         """
@@ -358,7 +356,6 @@ class PredictionResponse():
         self.string_content_end_position = BYTES_PER_INT + (
             BYTES_PER_INT * num_outputs)
         self.current_output_sizes_position = BYTES_PER_INT
-
 
     def add_output(self, output):
         """

@@ -21,8 +21,7 @@ class TfCifarContainer(rpc.ModelContainerBase):
             saver.restore(self.sess, path)
 
     def predict_doubles(self, inputs):
-        logits = self.sess.run(
-            'softmax_logits:0', feed_dict={'x:0': inputs})
+        logits = self.sess.run('softmax_logits:0', feed_dict={'x:0': inputs})
         relevant_activations = logits[:, [negative_class, positive_class]]
         preds = np.argmax(relevant_activations, axis=1)
         return preds.astype(np.str).tolist()
