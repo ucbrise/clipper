@@ -15,25 +15,25 @@ class NoopContainer(rpc.ModelContainerBase):
             outputs.append(str(sum(input_item)))
         return outputs
 
-    def predict_floats(self, input_item):
+    def predict_floats(self, inputs):
         outputs = []
         for input_item in inputs:
             outputs.append(str(sum(input_item)))
         return outputs
 
-    def predict_doubles(self, input_item):
+    def predict_doubles(self, inputs):
         outputs = []
         for input_item in inputs:
             outputs.append(str(sum(input_item)))
         return outputs
 
-    def predict_bytes(self, input_item):
+    def predict_bytes(self, inputs):
         outputs = []
         for input_item in inputs:
             outputs.append(str(sum(input_item)))
         return outputs
 
-    def predict_string(self, input_item):
+    def predict_strings(self, inputs):
         outputs = []
         for input_item in inputs:
             outputs.append(str(len(input_item)))

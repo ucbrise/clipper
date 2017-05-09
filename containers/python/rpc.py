@@ -154,7 +154,7 @@ class Server(threading.Thread):
         elif self.model_input_type == INPUT_TYPE_BYTES:
             return self.model.predict_bytes
         elif self.model_input_type == INPUT_TYPE_STRINGS:
-            return self.model.predict_string
+            return self.model.predict_strings
         else:
             print(
                 "Attempted to get predict function for invalid model input type!"
@@ -409,19 +409,19 @@ class FeedbackResponse():
 
 
 class ModelContainerBase(object):
-    def predict_ints(self, input_item):
+    def predict_ints(self, inputs):
         pass
 
-    def predict_floats(self, input_item):
+    def predict_floats(self, inputs):
         pass
 
-    def predict_doubles(self, input_item):
+    def predict_doubles(self, inputs):
         pass
 
-    def predict_bytes(self, input_item):
+    def predict_bytes(self, inputs):
         pass
 
-    def predict_string(self, input_item):
+    def predict_strings(self, inputs):
         pass
 
 

@@ -32,28 +32,28 @@ class PythonContainer(rpc.ModelContainerBase):
         preds = self.predict_func(inputs)
         return [str(p) for p in preds]
 
-    def predict_floats(self, input_item):
+    def predict_floats(self, inputs):
         if self.input_type != rpc.INPUT_TYPE_FLOATS:
             self._log_incorrect_input_type(rpc.INPUT_TYPE_FLOATS)
             return
         preds = self.predict_func(inputs)
         return [str(p) for p in preds]
 
-    def predict_doubles(self, input_item):
+    def predict_doubles(self, inputs):
         if self.input_type != rpc.INPUT_TYPE_DOUBLES:
             self._log_incorrect_input_type(rpc.INPUT_TYPE_DOUBLES)
             return
         preds = self.predict_func(inputs)
         return [str(p) for p in preds]
 
-    def predict_bytes(self, input_item):
+    def predict_bytes(self, inputs):
         if self.input_type != rpc.INPUT_TYPE_BYTES:
             self._log_incorrect_input_type(rpc.INPUT_TYPE_BYTES)
             return
         preds = self.predict_func(inputs)
         return [str(p) for p in preds]
 
-    def predict_string(self, input_item):
+    def predict_strings(self, inputs):
         if self.input_type != rpc.INPUT_TYPE_STRINGS:
             self._log_incorrect_input_type(rpc.INPUT_TYPE_STRINGS)
             return
