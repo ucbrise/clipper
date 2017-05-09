@@ -44,7 +44,7 @@ where `<path_to_cifar_python_dataset>` is the path to the **directory** containi
 
 2. Execute the following:
   ```sh
-  ../configure --release && cd ../release
+  cd .. && ./configure --release && cd release
   make end_to_end_bench
   ```
   
