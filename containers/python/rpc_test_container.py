@@ -10,20 +10,22 @@ class RPCTestContainer(rpc.ModelContainerBase):
         self.rpc_service = rpc_service
 
     def predict_doubles(self, inputs):
-        assert len(inputs) == 1
-        input_item = inputs[0]
-        clipper_time = input_item[0]
-        event_history = self.rpc_service.get_event_history()
-        recent_events = []
-        for i in range(0, len(event_history)):
-            curr_event = event_history[i]
-            if curr_event[0] >= clipper_time:
-                if i > 0 and len(recent_events) == 0:
-                    # Capture the heartbeat message
-                    # sent before Clipper came online
-                    recent_events.append(event_history[i - 1][1])
-                recent_events.append(event_history[i][1])
-        return json.dumps(recent_events)
+        outputs = []
+        for input_item in inputs:
+            input_item = inputs[0]
+            clipper_time = input_item[0]
+            event_history = self.rpc_service.get_event_history()
+            recent_events = []
+            for i in range(0, len(event_history)):
+                curr_event = event_history[i]
+                if curr_event[0] >= clipper_time:
+                    if i > 0 and len(recent_events) == 0:
+                        # Capture the heartbeat message
+                        # sent before Clipper came online
+                        recent_events.append(event_history[i - 1][1])
+                    recent_events.append(event_history[i][1])
+            outputs.append(json.dumps(recent_events))
+        return outputs
 
 
 if __name__ == "__main__":
