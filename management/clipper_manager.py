@@ -617,7 +617,7 @@ class Clipper:
         with open(func_file_path, "w") as serialized_function_file:
             serialized_function_file.write(serialized_prediction_function)
         print("Serialized and supplied predict function")
-        
+
         # Deploy function
         return self.deploy_model(name, version, serialization_dir,
                                default_python_container, labels, input_type,
