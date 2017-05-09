@@ -21,8 +21,8 @@ Prediction functions should take a list of inputs of and return a Python or nump
       centered_inputs = center(inputs)
       return model.predict(centered_inputs)
       
-## Deploying your prediction function
-Deploying this function to Clipper doesn't require writing any container code. All that's needed is a call to `deploy_predict_function` from within an Anaconda environment that has all necessary conda and pip packages to run the function.
+## Requesting deployment of  your Python function
+Deploying this function to Clipper doesn't require writing any container code. All that's needed is a call to `deploy_predict_function` from within an Anaconda environment that has necessary conda and pip packages to run the function.
 
     clipper.deploy_predict_function(
       "example_model",
@@ -32,22 +32,24 @@ Deploying this function to Clipper doesn't require writing any container code. A
       "doubles",
       num_containers=1)
 
-The management library will do some dependency checks from your client before deploying the function.
+The management library will do some dependency checks from your client before deploying the function:
 
-It will first ensure that no packages have conflicting dependencies in the container's linux-64 conda channel. If they do, you will see a message like:
+###1. Checking for conflicting package dependencies
 
-  Fetching package metadata .........
-  Solving package specifications: ..........
-  Your conda dependencies are unsatisfiable (see error text below). Please resolve these issues and call `deploy_predict_func` again.
-  UnsatisfiableError: The following specifications were found to be in conflict:
-    - appnope 0.1.0 py27_0
-    - scikit-learn 0.17.1 np110py27_0 -> mkl 11.3.1
+The management library will first ensure that no packages have conflicting dependencies in the container's linux-64 conda channel. If they do, you will see a message like:
+
+    Fetching package metadata .........
+    Solving package specifications: ..........
+    Your conda dependencies are unsatisfiable (see error text below). Please resolve these issues and call `deploy_predict_func` again.
+    UnsatisfiableError: The following specifications were found to be in conflict:
+      - appnope 0.1.0 py27_0
+      - scikit-learn 0.17.1 np110py27_0 -> mkl 11.3.1
       - scikit-learn 0.17.1 np110py27_0 -> numpy 1.10*
 
 
+###2. Checking for package existence in linux channels
 
-
-If none of your packages have conflicting dependencies, the management library will check for the existence of your packages in the linux-64 conda channel. The deployment will skip any that do not. You should see a message like this:
+If none of your packages have conflicting dependencies, the management library will check for the existence of your packages in the linux-64 conda channel (the channel the container will use). If any such packages exist, they will be skipped during package installation on the container. You should see a message like this:
 
 ```
 Fetching package metadata .........
@@ -59,23 +61,26 @@ We will skip their installation when deploying your function. If your function u
 Removed unavailable packages from supplied environment specifications
 ```
 
-A successful call to `deploy_prediction_function` will output
+###3. Deploying the function in a container
 
-  Supplied environment details
-  Serialized and supplied predict function
-  Published model to Clipper
-  Found clipper/python-container in Docker hub
-  Copied model data to host
-  True
+A successful call to `deploy_prediction_function` will output:
 
-## Confirming that your model-container is ready
+    Supplied environment details
+    Serialized and supplied predict function
+    Published model to Clipper
+    Found clipper/python-container in Docker hub
+    Copied model data to host
+    True
+
+## Initializing your model-container
 Calling `deploy_prediction_func` spins up a container and loads it with the necessary info to create your model. However, it may take some time before the model-container is ready to serve predictions: it still has to install and load dependencies and deserialize your prediction function.
 
+### How you can check container logs
 You can read the container's logs to keep track of its initialization progress. Run `docker ps` and find the container instance for the image `clipper/python-container `. Grab its container id and run `docker logs <container_id>`.
 
 There are several stages in the model-container's initialization.
 
-**1. Loading Anaconda packages**
+#### 1. Loading Anaconda packages
 
 If you still have conda packages to install, the output of `docker logs` should show progress like so:
 
@@ -90,7 +95,7 @@ blaze-0.10.1-p 100% |###############################| Time: 0:00:00   4.79 MB/s
 ...
 ```
 
-**2. Loading pip packages**
+### 2. Loading pip packages
 
 If you still have pip packages to install, the output of `docker logs` should show progress like so:
 
@@ -103,23 +108,24 @@ Collecting path-and-address==2.0.1
 ...
 ```
 
-**3. Starting up the model in the newly created Anaconda environment.**
+### 3. Starting up the model in the newly created Anaconda environment
 
-In this stage, the container attempts to load in the parameters you have provided it and connect to Clipper accordingly. If all is correct, the output of `docker logs` should show:
+In this stage, the container attempts to load in the parameters you have provided it and connect to Clipper accordingly. The output of `docker logs` should show:
 
 ```
 Starting PythonContainer container
 Connecting to Clipper with <port information>
 ```
 
-**4. Loading your prediction function.**
-In this stage, the container deserializes your prediction function and embeds in the model so it can be queried. The start of this process is indicated by
+### 4. Loading your prediction function
+In this stage, the container deserializes your prediction function and embeds in the model so it can be queried. The start of this process is indicated by:
 
 ```
 Loading provided Python prediction function
 ```
 
-and if it completes without errors, you should see
+### 5. Ready to query!
+After your prediction function has been loaded, you should see:
 
 ```
 Serving predictions for <input_type> input type.
@@ -129,4 +135,50 @@ At this point, your prediction function and its environment have successfully be
 
 ## Errors you can encounter
 
-TODO
+There are several problems you can encounter in deploying your Python function to Clipper. This section will walk you through how you can identify and resolve them.
+
+If you run into issues not listed here, please file an issue and we will attempt to find a generalizable approach to diagnosing and solving it.
+
+### Remote during container initialization
+**Some pip packages weren't installed**
+
+This is possible if conda is not tracking your pip packages. Make sure that you install your pip packages through a conda-installed `pip`. This way, conda can keep track of which pip packages you are using in your environment. You can see which pip packages conda is keeping track of by writing your environment to a file with `conda env export >> <filename>`
+
+**Logs indicate that some pip packages don't exist in the container's pip distribution library**
+
+If this occurs, `docker logs` should output something like the following during the 'Loading pip packages' phase:
+    
+  Collecting nb-conda-kernels==2.1.0
+    Could not find a version that satisfies the requirement nb-conda-kernels==2.1.0 (from versions: )
+  No matching distribution found for nb-conda-kernels==2.1.0
+
+  CondaValueError: Value error: pip returned an error.
+  
+This will not stop container startup; the pip package's installation will be skipped. If your Python function needs the package, you can run into runtime errors upon querying the container. The best way to avoid this issue is to ensure that all of your pip packages exist on linux-64 pip distribution library.
+
+### Errors at query time
+Runtime errors that occur within the container will crash it. You can diagnose what caused the issue by looking at the out put of `docker logs <container_id>` (where `<container_id>` is the id of the container in which your Python function was deployed)
+
+**Container crash: module not found**
+
+This can occur if:
+ 
+* Your function makes use of a pip package that your conda environment wasn't tracking. See the "Some pip packages weren't installed" section above.
+* Your function makes use of a conda package that doesn't exist in the container's conda channel and whose installation was skipped. If any packages in your local conda environment were skipped for installation on the container, you should have been notified of them in a warning message after calling `deploy_predict_function`.
+* Conda and pip both don’t have a dependency being used by the function. Unfortunately, Clipper's Python function deployment feature only supports conda and pip packages for now. Usage of modules not within these distributions is incompatible with this deployment process.
+
+**Container crash: prediction function has some other runtime error (index out of bounds, divide by zero, incorrect operand types for a function, etc**
+
+Make sure that you test your function locally before deploying it. Remember that it should take as input a list of datapoints (numpy arrays or native Python lists) with entries of type <input_type> and shoud output a list with a classification for each datapoint.
+
+**Container crash: function makes use of something that’s not captured in the function closure**
+
+Your function can't use objects or connections whose states aren't captured in the function closure. An example of this would be a database connection that is configured/initialized outside of the function.
+
+**Container logs indicate no issues but the Python function's predictions aren't getting served**
+First, make sure that your Python function is actually getting called. One way to do this is to check the container's logs for print statements in your Python function.
+
+If you can confirm that your function is indeed getting called, then thereare a couple of things that could prevent its prediction from getting served:
+
+* Prediction function returns items of the wrong shape
+* Prediction function takes too long (longer than the `latency_slo_micros` parameter of the app) and so its results are never considered
