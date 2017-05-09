@@ -19,6 +19,8 @@ from pywrencloudpickle import CloudPickler
 MODEL_REPO = "/tmp/clipper-models"
 DOCKER_NW = "clipper_nw"
 
+CONTAINER_CONDA_PLATFORM = 'linux-64'
+
 REDIS_STATE_DB_NUM = 1
 REDIS_MODEL_DB_NUM = 2
 REDIS_CONTAINER_DB_NUM = 3
@@ -594,6 +596,21 @@ class Clipper:
         if not os.path.exists(serialization_dir):
             os.makedirs(serialization_dir)
 
+        # Export Anaconda environment
+        process = subprocess.Popen(
+            "PIP_FORMAT=legacy conda env export >> {environment_fname}".format(
+                environment_fname=environment_fname),
+            shell=True)
+        process.wait()
+
+        # Confirm that packages installed through conda are solvable
+        if not (self._conda_env_solvable(environment_fname, os.getcwd())):
+            return False
+
+        # Give container environment details
+        shutil.copy(environment_fname, serialization_dir)
+        print("Supplied environment details")
+
         # Write out function serialization
         func_file_path = "{dir}/{predict_fname}".format(
             dir=serialization_dir, predict_fname=predict_fname)
@@ -601,20 +618,44 @@ class Clipper:
             serialized_function_file.write(serialized_prediction_function)
         print("Serialized and supplied predict function")
 
-        # Export Anaconda environment
-        subprocess.call(
-            "PIP_FORMAT=legacy conda env export >> {environment_fname}".format(
-                environment_fname=environment_fname),
-            shell=True)
-
-        # Give container environment details
-        shutil.copy(environment_fname, serialization_dir)
-        print("Supplied environment details")
-
         # Deploy function
         return self.deploy_model(name, version, serialization_dir,
                                  default_python_container, labels, input_type,
                                  num_containers)
+
+    def _conda_env_solvable(self, environment_fname, directory):
+        """Returns true if the provided conda environment is compatible with the container os.
+
+        If packages listed in specified conda environment file have conflicting dependencies,
+        this function will warn the user and return False. If packages don't exist in the
+        container's conda channel, this function will warn the user and remove those packages.
+
+        Parameters
+        ----------
+        environment_fname : str
+            The file name of the exported conda environment file
+        directory : str
+            The path to the diretory containing the environment file
+
+        Returns
+        -------
+        bool
+            Returns True if the (possibly modified) environment file is compatible with conda
+            on the container os. Otherwise returns False.
+        """
+
+        process = subprocess.Popen(
+            "source deactivate && python {cur_dir}/check_env.py {environment_fname} {directory} {platform}".
+            format(
+                cur_dir=cur_dir,
+                environment_fname=environment_fname,
+                directory=directory,
+                platform=CONTAINER_CONDA_PLATFORM),
+            stdout=subprocess.PIPE,
+            shell=True)
+        out, _ = process.communicate()
+        print(out)
+        return process.returncode == 0
 
     def deploy_model(self,
                      name,
