@@ -25,7 +25,7 @@ namespace json {
 
 json_parse_error::json_parse_error(const std::string& what)
     : std::runtime_error(what) {}
-json_parse_error::~json_parse_error() throw(){};
+json_parse_error::~json_parse_error() throw() {}
 
 json_semantic_error::json_semantic_error(const std::string& what)
     : std::runtime_error(what) {}
