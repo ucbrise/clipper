@@ -264,7 +264,7 @@ class Clipper:
             The name of the model this application will query.
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
-        default_output : float
+        default_output : string
             The default prediction to use if the model does not return a prediction
             by the end of the latency objective.
         slo_micros : int
@@ -285,7 +285,7 @@ class Clipper:
             "name": name,
             "candidate_model_names": [model],
             "input_type": input_type,
-            "default_output": str(default_output),
+            "default_output": default_output,
             "latency_slo_micros": slo_micros
         })
         headers = {'Content-type': 'application/json'}

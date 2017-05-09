@@ -259,7 +259,7 @@ class RequestHandler {
     // Initialize selection state for this application
     if (policy == clipper::DefaultOutputSelectionPolicy::get_name()) {
       clipper::DefaultOutputSelectionPolicy p;
-      clipper::Output parsed_default_output(std::stod(default_output), {});
+      clipper::Output parsed_default_output(default_output, {});
       auto init_state = p.init_state(parsed_default_output);
       clipper::StateKey state_key{name, clipper::DEFAULT_USER_ID, 0};
       query_processor_.get_state_table()->put(state_key,
@@ -386,8 +386,20 @@ class RequestHandler {
     json_response.SetObject();
     clipper::json::add_long(json_response, PREDICTION_RESPONSE_KEY_QUERY_ID,
                             query_response.query_id_);
-    clipper::json::add_double(json_response, PREDICTION_RESPONSE_KEY_OUTPUT,
-                              query_response.output_.y_hat_);
+    try {
+      // Attempt to parse the string output as JSON
+      // and, if possible, nest it in object form within the
+      // query response
+      rapidjson::Document json_y_hat;
+      clipper::json::parse_json(query_response.output_.y_hat_, json_y_hat);
+      clipper::json::add_object(json_response, PREDICTION_RESPONSE_KEY_OUTPUT,
+                                json_y_hat);
+    } catch (const clipper::json::json_parse_error& e) {
+      // If the string output is not JSON-formatted, include
+      // it as a JSON-safe string value in the query response
+      clipper::json::add_string(json_response, PREDICTION_RESPONSE_KEY_OUTPUT,
+                                query_response.output_.y_hat_);
+    }
     clipper::json::add_bool(json_response, PREDICTION_RESPONSE_KEY_USED_DEFAULT,
                             query_response.output_is_default_);
     std::string content = clipper::json::to_json_string(json_response);

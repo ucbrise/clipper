@@ -19,6 +19,7 @@ The following subsections explain the function and structure of each type of mes
 
 #### New Container Message
 This type of message is sent to Clipper by a container at the beginning of a session. It carries container metadata (name, version, etc) that Clipper uses to register the container with the system. Beyond the required empty frame and **Message Type** field, *new container messages* contain the following strictly-ordered fields:
+
   * **Model Name**: The user-defined name of the model, as a string
   * **Model Version**: The **integer** model version. **This should be sent as a string**.
   * **Input Type**: The type of input that the model should accept. This must be one of the following **integer** values, sent as a **string**:
@@ -164,7 +165,7 @@ The container should then attempt to start a new session.
 - [clipper/containers/java/.../ModelContainer.java](https://github.com/ucbrise/clipper/blob/develop/containers/java/clipper-java-container/src/main/java/clipper/container/app/ModelContainer.java)
 
 ## Serialization Formats
-RPC requests sent from Clipper to model containers are divided into two categories: **Prediction Requests** and **Feedback Requests**. Each request type has a specific serialization format that defines the container deserialization procedure.
+RPC requests sent from Clipper to model containers are divided into two categories: **Prediction Requests** and **Feedback Requests**. Additionally, responses are divided into two corresponding categories: **Prediction Responses** and **Feedback Responses**. Each request type has a specific serialization format that defines the container deserialization procedure.
 
 ### Serializing Prediction Requests
 1. All requests begin with a 32-bit integer header, sent as a single ZeroMQ message. The value of this integer will be 0, indicating that the request is a prediction request.
@@ -196,14 +197,37 @@ RPC requests sent from Clipper to model containers are divided into two categori
  * In the case of string inputs (type 4), all strings are sent with trailing null terminators. Therefore, deserialized inputs can be obtaining by splitting the typed array along the null terminator character, `\0`.
    * Python example:
    
-  ```py  
+  ```py
      raw_concatenated_content = socket.recv()
      # Split content based on trailing null terminators
      # Ignore the extraneous final null terminator by using a -1 slice
      inputs = np.array(raw_concatenated_content.split('\0')[:-1], dtype=np.string_)
   ```
-
+     
 ### Serializing Prediction Responses
-Prediction responses are float values. These should be serializd via byte encoding in little endian format.
+1. A response is a single ZeroMQ message that is parsed into subfields
 
-#### For additional deserialization references, see [clipper/containers/python/rpc.py](https://github.com/ucbrise/clipper/blob/develop/containers/python/rpc.py)
+2. The message begins with a 32-bit unsigned integer indicating the number of serialized string outputs contained in the response. Denote this quantity by `N`.
+
+3. Next, there are 'N' ordered 32-bit unsigned integers. The `i`th integer specifies the length of the `i`th string output.
+
+4. The remainder of the message contains the `N` string outputs, encoded in [UTF-8](https://en.wikipedia.org/wiki/UTF-8) format. 
+
+The following is an example of **Prediction Response** serialization in Python:
+
+  ```py
+     import struct
+     str1 = unicode("test1", "utf-8").encode("utf-8")
+     str2 = unicode("test2", "utf-8").encode("utf-8")
+     output_length_size_bytes = 4
+     num_output_size_bytes = 4
+     buf = bytearray(len(str1) + len(str2) + (2 * output_length_size_bytes) + num_output_size_bytes)
+     memview = memoryview(buf)
+     struct.pack_into("<I", buf, 0, 2) # Store the number of outputs in the buffer
+     struct.pack_into("<I", buf, 4, len(str1)) # Store the length of the first output
+     struct.pack_into("<I", buf, 8, len(str2)) # Store the length of the second output
+     memview[12:12 + len(str1)] = str1 # Store the first output
+     memview[12 + len(str1): 12 + len(str1) + len(str2)] = str2 # Store the second output
+  ```
+
+### For additional deserialization references, see [clipper/containers/python/rpc.py](https://github.com/ucbrise/clipper/blob/develop/containers/python/rpc.py)

@@ -10,6 +10,7 @@
 #include <clipper/config.hpp>
 #include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/json_util.hpp>
 #include <clipper/logging.hpp>
 #include <clipper/redis.hpp>
 #include <clipper/rpc_service.hpp>
@@ -199,15 +200,16 @@ class Tester {
     RPCValidationResult container_rpc_protocol_valid;
     if (container_valid_entry == container_validation_map_.end()) {
       // Container has not yet been validated
-      std::vector<uint8_t> event_history_bytes = response.second;
-      size_t event_history_size =
-          static_cast<size_t>(event_history_bytes.size() / sizeof(int));
+      rpc::PredictionResponse prediction_response =
+          rpc::PredictionResponse::deserialize_prediction_response(
+              response.second);
+      std::string event_history_str = prediction_response.outputs_[0];
+      rapidjson::Document d;
+      json::parse_json(event_history_str, d);
+      auto events = d.GetArray();
       std::vector<int> parsed_event_history;
-      float *msg_history_floats =
-          reinterpret_cast<float *>(event_history_bytes.data());
-      for (int i = 0; static_cast<size_t>(i) < event_history_size; i++) {
-        int value = static_cast<int>(msg_history_floats[i]);
-        parsed_event_history.push_back(value);
+      for (int i = 0; static_cast<size_t>(i) < events.Size(); i++) {
+        parsed_event_history.push_back(events[i].GetInt());
       }
       container_rpc_protocol_valid =
           validate_rpc_protocol(parsed_event_history);

@@ -65,7 +65,7 @@ const std::string ADD_APPLICATION_JSON_SCHEMA = R"(
    "name" := string,
    "candidate_model_names" := [string],
    "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
-   "default_output" := float,
+   "default_output" := string,
    "latency_slo_micros" := int
   }
 )";
@@ -394,7 +394,7 @@ class RequestHandler {
    *  "name" := string,
    *  "candidate_model_names" := [string],
    *  "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
-   *  "default_output" := float,
+   *  "default_output" := string,
    *  "latency_slo_micros" := int
    * }
    */
