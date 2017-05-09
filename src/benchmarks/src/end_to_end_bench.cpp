@@ -110,7 +110,7 @@ void send_predictions(
     for (int i = 0; i < static_cast<int>(results.second.size()); i++) {
       boost::future<Response> &future = results.second[i];
       double label = static_cast<double>(binary_labels[i]);
-      double pred = future.get().output_.y_hat_;
+      double pred = std::stod(future.get().output_.y_hat_);
       if (pred == label) {
         accuracy_ratio->increment(1, 1);
       } else {
@@ -197,7 +197,7 @@ int main(int argc, char *argv[]) {
   std::this_thread::sleep_for(std::chrono::seconds(3));
 
   clipper::DefaultOutputSelectionPolicy p;
-  clipper::Output parsed_default_output(0.0, {});
+  clipper::Output parsed_default_output("0", {});
   auto init_state = p.init_state(parsed_default_output);
   clipper::StateKey state_key{TEST_APPLICATION_LABEL, clipper::DEFAULT_USER_ID,
                               0};

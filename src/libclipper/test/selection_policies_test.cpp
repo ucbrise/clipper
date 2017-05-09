@@ -17,8 +17,8 @@ namespace {
 class DefaultOutputSelectionPolicyTest : public ::testing::Test {
  public:
   DefaultOutputSelectionPolicyTest()
-      : state_(std::make_shared<DefaultOutputSelectionState>(Output{4.3, {}})) {
-  }
+      : state_(
+            std::make_shared<DefaultOutputSelectionState>(Output{"4.3", {}})) {}
   DefaultOutputSelectionPolicy policy_;
   std::shared_ptr<DefaultOutputSelectionState> state_;
 };
@@ -92,7 +92,7 @@ TEST_F(DefaultOutputSelectionPolicyTest, TestCombinePredictionsOnePrediction) {
                                   DefaultOutputSelectionPolicy::get_name(),
                                   {m1}};
 
-  Output first_output = Output{1.1, {m1}};
+  Output first_output = Output{"1.1", {m1}};
   auto one_pred_output =
       policy_
           .combine_predictions(state_, one_candidate_model_query,
@@ -111,8 +111,8 @@ TEST_F(DefaultOutputSelectionPolicyTest, TestCombinePredictionsTwoPredictions) {
                                    1000,
                                    DefaultOutputSelectionPolicy::get_name(),
                                    {m1, m2}};
-  Output first_output = Output{1.1, {m1}};
-  Output second_output = Output{2.2, {m2}};
+  Output first_output = Output{"1.1", {m1}};
+  Output second_output = Output{"2.2", {m2}};
   auto two_preds_output =
       policy_
           .combine_predictions(state_, two_candidate_models_query,
@@ -123,7 +123,7 @@ TEST_F(DefaultOutputSelectionPolicyTest, TestCombinePredictionsTwoPredictions) {
 }
 
 TEST(DefaultOutputSelectionStateTest, Serialization) {
-  Output output{4.3, {}};
+  Output output{"4.3", {}};
   DefaultOutputSelectionState state{output};
   std::string serialized_output = state.serialize();
   DefaultOutputSelectionState deserialized_state{serialized_output};

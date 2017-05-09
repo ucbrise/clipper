@@ -70,7 +70,8 @@ InputType parse_input_type(std::string type_string) {
   }
 }
 
-Output::Output(double y_hat, std::vector<VersionedModelId> models_used)
+Output::Output(const std::string y_hat,
+               const std::vector<VersionedModelId> models_used)
     : y_hat_(y_hat), models_used_(models_used) {}
 
 bool Output::operator==(const Output &rhs) const {
@@ -268,6 +269,27 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
   return serialized_request;
 }
 
+rpc::PredictionResponse::PredictionResponse(
+    const std::vector<std::string> outputs)
+    : outputs_(outputs) {}
+
+rpc::PredictionResponse
+rpc::PredictionResponse::deserialize_prediction_response(ByteBuffer bytes) {
+  std::vector<std::string> outputs;
+  uint32_t *output_lengths_data = reinterpret_cast<uint32_t *>(bytes.data());
+  uint32_t num_outputs = output_lengths_data[0];
+  output_lengths_data++;
+  char *output_string_data = reinterpret_cast<char *>(
+      bytes.data() + sizeof(uint32_t) + (num_outputs * sizeof(uint32_t)));
+  for (uint32_t i = 0; i < num_outputs; i++) {
+    uint32_t output_length = output_lengths_data[i];
+    std::string output(output_string_data, output_length);
+    outputs.push_back(std::move(output));
+    output_string_data += output_length;
+  }
+  return PredictionResponse(outputs);
+}
+
 Query::Query(std::string label, long user_id, std::shared_ptr<Input> input,
              long latency_budget_micros, std::string selection_policy,
              std::vector<VersionedModelId> candidate_models)
@@ -292,7 +314,7 @@ std::string Response::debug_string() const noexcept {
   debug.append("Query id: ");
   debug.append(std::to_string(query_id_));
   debug.append(" Output: ");
-  debug.append(std::to_string(output_.y_hat_));
+  debug.append(output_.y_hat_);
   return debug;
 }
 

@@ -37,6 +37,9 @@ EVENT_HISTORY_RECEIVED_CONTAINER_METADATA = 4
 EVENT_HISTORY_SENT_CONTAINER_CONTENT = 5
 EVENT_HISTORY_RECEIVED_CONTAINER_CONTENT = 6
 
+MAXIMUM_UTF_8_CHAR_LENGTH_BYTES = 4
+BYTES_PER_INT = 4
+
 
 def string_to_input_type(input_str):
     input_str = input_str.strip().lower()
@@ -106,24 +109,57 @@ class Server(threading.Thread):
         self.clipper_port = clipper_port
         self.event_history = EventHistory(EVENT_HISTORY_BUFFER_SIZE)
 
-    def handle_feedback_request(self, msg):
-        msg.set_content("ACK")
-        return msg
+    def handle_prediction_request(self, prediction_request):
+        """
+        Returns
+        -------
+        PredictionResponse
+            A prediction response containing an output
+            for each input included in the specified
+            predict response
+        """
+        predict_fn = self.get_prediction_function()
+        # outputs = []
+        total_length = 0
+        outputs = predict_fn(prediction_request.inputs)
+        for o in outputs:
+            total_length += len(o)
 
-    def handle_predict_request(self, msg):
+        response = PredictionResponse(prediction_request.msg_id,
+                                      len(prediction_request.inputs),
+                                      total_length)
+        for output in outputs:
+            response.add_output(output)
+
+        return response
+
+    def handle_feedback_request(self, feedback_request):
+        """
+        Returns
+        -------
+        FeedbackResponse
+            A feedback response corresponding
+            to the specified feedback request
+        """
+        response = FeedbackResponse(feedback_request.msg_id, "ACK")
+        return response
+
+    def get_prediction_function(self):
         if self.model_input_type == INPUT_TYPE_INTS:
-            preds = self.model.predict_ints(msg.content)
+            return self.model.predict_ints
         elif self.model_input_type == INPUT_TYPE_FLOATS:
-            preds = self.model.predict_floats(msg.content)
+            return self.model.predict_floats
         elif self.model_input_type == INPUT_TYPE_DOUBLES:
-            preds = self.model.predict_doubles(msg.content)
+            return self.model.predict_doubles
         elif self.model_input_type == INPUT_TYPE_BYTES:
-            preds = self.model.predict_bytes(msg.content)
+            return self.model.predict_bytes
         elif self.model_input_type == INPUT_TYPE_STRINGS:
-            preds = self.model.predict_strings(msg.content)
-        assert preds.dtype == np.dtype("float32")
-        msg.set_content(preds.tobytes())
-        return msg
+            return self.model.predict_strings
+        else:
+            print(
+                "Attempted to get predict function for invalid model input type!"
+            )
+            raise
 
     def get_event_history(self):
         return self.event_history.get_events()
@@ -239,27 +275,27 @@ class Server(threading.Thread):
 
                         t3 = datetime.now()
 
-                        received_msg = Message(msg_id_bytes, inputs)
-                        response = self.handle_predict_request(received_msg)
+                        prediction_request = PredictionRequest(
+                            msg_id_bytes, inputs)
+                        response = self.handle_prediction_request(
+                            prediction_request)
 
                         t4 = datetime.now()
 
                         response.send(socket)
-                        self.event_history.insert(
-                            EVENT_HISTORY_SENT_CONTAINER_CONTENT)
 
                         print("recv: %f us, parse: %f us, handle: %f us" %
                               ((t2 - t1).microseconds, (t3 - t2).microseconds,
                                (t4 - t3).microseconds))
 
                     else:
-                        received_msg = Message(msg_id_bytes, [])
+                        feedback_request = FeedbackRequest(msg_id_bytes, [])
                         response = self.handle_feedback_request(received_msg)
                         response.send(socket)
                         print("recv: %f us" % ((t2 - t1).microseconds))
 
-        sys.stdout.flush()
-        sys.stderr.flush()
+                sys.stdout.flush()
+                sys.stderr.flush()
 
     def send_container_metadata(self, socket):
         socket.send("", zmq.SNDMORE)
@@ -277,7 +313,79 @@ class Server(threading.Thread):
         print("Sent heartbeat!")
 
 
-class Message:
+class PredictionRequest:
+    """
+    Parameters
+    ----------
+    msg_id : bytes
+        The raw message id associated with the RPC 
+        prediction request message
+    inputs : 
+        One of [[byte]], [[int]], [[float]], [[double]], [string]
+    """
+
+    def __init__(self, msg_id, inputs):
+        self.msg_id = msg_id
+        self.inputs = inputs
+
+    def __str__(self):
+        return self.inputs
+
+
+class PredictionResponse():
+    output_buffer = bytearray(1024)
+
+    def __init__(self, msg_id, num_outputs, total_string_length):
+        """
+        Parameters
+        ----------
+        msg_id : bytes
+            The message id associated with the PredictRequest
+            for which this is a response
+        num_outputs : int
+            The number of outputs to be included in the prediction response
+        max_outputs_size_bytes:
+            The total length of the string content
+        """
+        self.msg_id = msg_id
+        self.num_outputs = num_outputs
+        self.expand_buffer_if_necessary(
+            total_string_length * MAXIMUM_UTF_8_CHAR_LENGTH_BYTES)
+        self.memview = memoryview(self.output_buffer)
+        struct.pack_into("<I", self.output_buffer, 0, num_outputs)
+        self.string_content_end_position = BYTES_PER_INT + (
+            BYTES_PER_INT * num_outputs)
+        self.current_output_sizes_position = BYTES_PER_INT
+
+    def add_output(self, output):
+        """
+        Parameters
+        ----------
+        output : string
+        """
+        output = unicode(output, "utf-8").encode("utf-8")
+        output_len = len(output)
+        struct.pack_into("<I", self.output_buffer,
+                         self.current_output_sizes_position, output_len)
+        self.current_output_sizes_position += BYTES_PER_INT
+        self.memview[self.string_content_end_position:
+                     self.string_content_end_position + output_len] = output
+        self.string_content_end_position += output_len
+
+    def send(self, socket):
+        socket.send("", flags=zmq.SNDMORE)
+        socket.send(
+            struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT),
+            flags=zmq.SNDMORE)
+        socket.send(self.msg_id, flags=zmq.SNDMORE)
+        socket.send(self.output_buffer[0:self.string_content_end_position])
+
+    def expand_buffer_if_necessary(self, size):
+        if len(self.output_buffer) < size:
+            self.output_buffer = bytearray(size * 2)
+
+
+class FeedbackRequest():
     def __init__(self, msg_id, content):
         self.msg_id = msg_id
         self.content = content
@@ -285,14 +393,18 @@ class Message:
     def __str__(self):
         return self.content
 
-    def set_content(self, content):
+
+class FeedbackResponse():
+    def __init__(self, msg_id, content):
+        self.msg_id = msg_id
         self.content = content
 
     def send(self, socket):
-        socket.send("", zmq.SNDMORE)
+        socket.send("", flags=zmq.SNDMORE)
         socket.send(
-            struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT), zmq.SNDMORE)
-        socket.send(self.msg_id, zmq.SNDMORE)
+            struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT),
+            flags=zmq.SNDMORE)
+        socket.send(self.msg_id, flags=zmq.SNDMORE)
         socket.send(self.content)
 
 

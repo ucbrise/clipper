@@ -523,4 +523,36 @@ TEST(InputHashTests, SerializableStringsHashCorrectly) {
             SerializableString(tac_string).hash());
 }
 
+TEST(OutputDeserializationTests, PredictionResponseDeserialization) {
+  std::string first_string("first_string");
+  std::string second_string("second_string");
+  uint32_t first_length = static_cast<uint32_t>(first_string.length());
+  uint32_t second_length = static_cast<uint32_t>(second_string.length());
+  uint32_t num_outputs = 2;
+  uint8_t* first_length_bytes = reinterpret_cast<uint8_t*>(&first_length);
+  uint8_t* second_length_bytes = reinterpret_cast<uint8_t*>(&second_length);
+  uint8_t* num_outputs_bytes = reinterpret_cast<uint8_t*>(&num_outputs);
+
+  // Initialize a buffer to accomodate both strings, in addition to
+  // metadata containing the number of outputs and the length of each
+  // string as unsigned integers
+  int metadata_length = 3 * sizeof(uint32_t);
+  std::vector<uint8_t> buf(first_length + second_length + metadata_length);
+
+  memcpy(buf.data(), num_outputs_bytes, sizeof(uint32_t));
+  memcpy(buf.data() + sizeof(uint32_t), first_length_bytes, sizeof(uint32_t));
+  memcpy(buf.data() + (2 * sizeof(uint32_t)), second_length_bytes,
+         sizeof(uint32_t));
+  memcpy(buf.data() + metadata_length, first_string.data(),
+         first_string.length());
+  memcpy(buf.data() + metadata_length + first_string.length(),
+         second_string.data(), second_string.length());
+
+  rpc::PredictionResponse response =
+      rpc::PredictionResponse::deserialize_prediction_response(buf);
+  ASSERT_EQ(response.outputs_.size(), 2);
+  ASSERT_EQ(response.outputs_[0], first_string);
+  ASSERT_EQ(response.outputs_[1], second_string);
+}
+
 }  // namespace
