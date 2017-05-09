@@ -109,23 +109,22 @@ class Server(threading.Thread):
         self.clipper_port = clipper_port
         self.event_history = EventHistory(EVENT_HISTORY_BUFFER_SIZE)
 
-    """
-    Returns
-    -------
-    PredictionResponse
-        A prediction response containing an output
-        for each input included in the specified
-        predict response
-    """
 
     def handle_prediction_request(self, prediction_request):
+        """
+        Returns
+        -------
+        PredictionResponse
+            A prediction response containing an output
+            for each input included in the specified
+            predict response
+        """
         predict_fn = self.get_prediction_function()
-        outputs = []
+        # outputs = []
         total_length = 0
-        for request_input in prediction_request.inputs:
-            output = predict_fn(request_input)
-            outputs.append(output)
-            total_length += len(output)
+        outputs = predict_fn(prediction_request.inputs)
+        for o in outputs:
+            total_length += len(o)
 
         response = PredictionResponse(prediction_request.msg_id,
                                       len(prediction_request.inputs),
@@ -135,15 +134,15 @@ class Server(threading.Thread):
 
         return response
 
-    """
-    Returns
-    -------
-    FeedbackResponse
-        A feedback response corresponding
-        to the specified feedback request
-    """
 
     def handle_feedback_request(self, feedback_request):
+        """
+        Returns
+        -------
+        FeedbackResponse
+            A feedback response corresponding
+            to the specified feedback request
+        """
         response = FeedbackResponse(feedback_request.msg_id, "ACK")
         return response
 
@@ -337,19 +336,19 @@ class PredictionRequest:
 
 class PredictionResponse():
     output_buffer = bytearray(1024)
-    """
-    Parameters
-    ----------
-    msg_id : bytes
-        The message id associated with the PredictRequest
-        for which this is a response
-    num_outputs : int
-        The number of outputs to be included in the prediction response
-    max_outputs_size_bytes:
-        The total length of the string content
-    """
 
     def __init__(self, msg_id, num_outputs, total_string_length):
+        """
+        Parameters
+        ----------
+        msg_id : bytes
+            The message id associated with the PredictRequest
+            for which this is a response
+        num_outputs : int
+            The number of outputs to be included in the prediction response
+        max_outputs_size_bytes:
+            The total length of the string content
+        """
         self.msg_id = msg_id
         self.num_outputs = num_outputs
         self.expand_buffer_if_necessary(
@@ -360,13 +359,13 @@ class PredictionResponse():
             BYTES_PER_INT * num_outputs)
         self.current_output_sizes_position = BYTES_PER_INT
 
-    """
-    Parameters
-    ----------
-    output : string
-    """
 
     def add_output(self, output):
+        """
+        Parameters
+        ----------
+        output : string
+        """
         output = unicode(output, "utf-8").encode("utf-8")
         output_len = len(output)
         struct.pack_into("<I", self.output_buffer,

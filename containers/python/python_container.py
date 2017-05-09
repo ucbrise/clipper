@@ -25,35 +25,40 @@ class PythonContainer(rpc.ModelContainerBase):
         self.predict_func = load_predict_func(predict_path)
         print("Loaded prediction function")
 
-    def predict_ints(self, input_item):
+    def predict_ints(self, inputs):
         if self.input_type != rpc.INPUT_TYPE_INTS:
             self._log_incorrect_input_type(rpc.INPUT_TYPE_INTS)
             return
-        return str(self.predict_func(input_item))
+        preds = self.predict_func(inputs)
+        return [str(p) for p in preds]
 
     def predict_floats(self, input_item):
         if self.input_type != rpc.INPUT_TYPE_FLOATS:
             self._log_incorrect_input_type(rpc.INPUT_TYPE_FLOATS)
             return
-        return str(self.predict_func(input_item))
+        preds = self.predict_func(inputs)
+        return [str(p) for p in preds]
 
     def predict_doubles(self, input_item):
         if self.input_type != rpc.INPUT_TYPE_DOUBLES:
             self._log_incorrect_input_type(rpc.INPUT_TYPE_DOUBLES)
             return
-        return str(self.predict_func(input_item))
+        preds = self.predict_func(inputs)
+        return [str(p) for p in preds]
 
     def predict_bytes(self, input_item):
         if self.input_type != rpc.INPUT_TYPE_BYTES:
             self._log_incorrect_input_type(rpc.INPUT_TYPE_BYTES)
             return
-        return str(self.predict_func(input_item))
+        preds = self.predict_func(inputs)
+        return [str(p) for p in preds]
 
     def predict_string(self, input_item):
         if self.input_type != rpc.INPUT_TYPE_STRINGS:
             self._log_incorrect_input_type(rpc.INPUT_TYPE_STRINGS)
             return
-        return str(self.predict_func(input_item))
+        preds = self.predict_func(inputs)
+        return [str(p) for p in preds]
 
     def _log_incorrect_input_type(self, input_type):
         incorrect_input_type = rpc.input_type_to_string(input_type)

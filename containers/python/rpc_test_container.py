@@ -9,7 +9,9 @@ class RPCTestContainer(rpc.ModelContainerBase):
     def __init__(self, rpc_service):
         self.rpc_service = rpc_service
 
-    def predict_doubles(self, input_item):
+    def predict_doubles(self, inputs):
+        assert len(inputs) == 1
+        input_item = inputs[0]
         clipper_time = input_item[0]
         event_history = self.rpc_service.get_event_history()
         recent_events = []

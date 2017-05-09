@@ -2,7 +2,7 @@ FROM clipper/py-rpc:latest
 
 MAINTAINER Dan Crankshaw <dscrankshaw@gmail.com>
 
-RUN pip install tensorflow
+RUN pip install tensorflow==1.0
 
 COPY tf_cifar_container.py /container/
 
