@@ -14,11 +14,6 @@ from cStringIO import StringIO
 import sys
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath('%s../../containers/python/' % cur_dir))
-from conda.api import get_index
-from conda.base.context import context
-from conda.exceptions import UnsatisfiableError, NoPackagesFoundError
-import conda.resolve
-import conda_env.specs as specs
 from pywrencloudpickle import CloudPickler
 
 MODEL_REPO = "/tmp/clipper-models"
@@ -610,7 +605,7 @@ class Clipper:
 
         # Confirm that packages installed through conda are solvable
         if not (self._conda_env_solvable(environment_fname, os.getcwd())):
-            return
+            return False
 
         # Give container environment details
         shutil.copy(environment_fname, serialization_dir)
@@ -650,8 +645,9 @@ class Clipper:
         """
 
         process = subprocess.Popen(
-            "source deactivate && python check_env.py {environment_fname} {directory} {platform}".
+            "source deactivate && python {cur_dir}/check_env.py {environment_fname} {directory} {platform}".
             format(
+                cur_dir=cur_dir,
                 environment_fname=environment_fname,
                 directory=directory,
                 platform=CONTAINER_CONDA_PLATFORM),
