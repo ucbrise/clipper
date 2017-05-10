@@ -10,7 +10,6 @@ import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-
 public class NoOpStringModel extends ClipperModel<SerializableString> {
   public NoOpStringModel() {}
 

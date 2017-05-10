@@ -8,7 +8,6 @@ import ai.clipper.container.data.SerializableString;
 import ai.clipper.rpc.RPC;
 import ai.clipper.rpc.logging.RPCEvent;
 
-
 import java.util.ArrayList;
 
 class RPCTestModel extends ClipperModel<DoubleVector> {

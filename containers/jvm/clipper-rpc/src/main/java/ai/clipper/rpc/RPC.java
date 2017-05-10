@@ -311,7 +311,8 @@ public class RPC<I extends DataVector<?>> {
     System.out.println("Sent heartbeat!");
   }
 
-  private void sendContainerMetadata(ZMQ.Socket socket, ClipperModel<I> model, String modelName, int modelVersion) {
+  private void sendContainerMetadata(
+      ZMQ.Socket socket, ClipperModel<I> model, String modelName, int modelVersion) {
     socket.send("", ZMQ.SNDMORE);
     socket.send(
         DataUtils.getBytesFromInts(ContainerMessageType.NewContainer.getCode()), ZMQ.SNDMORE);

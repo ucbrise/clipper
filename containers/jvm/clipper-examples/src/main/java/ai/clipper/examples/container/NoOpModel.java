@@ -19,7 +19,7 @@ public class NoOpModel<T extends DataVector<Buffer>> extends ClipperModel<T> {
   @Override
   public ArrayList<SerializableString> predict(ArrayList<T> inputVectors) {
     ArrayList<SerializableString> outputs = new ArrayList<>();
-    for (T input: inputVectors) {
+    for (T input : inputVectors) {
       String jsonContent = String.format("{ \"data_size\": %d }", input.getData().remaining());
       outputs.add(new SerializableString(jsonContent));
     }
@@ -30,5 +30,4 @@ public class NoOpModel<T extends DataVector<Buffer>> extends ClipperModel<T> {
   public DataType getInputType() {
     return inputType;
   }
-
 }
