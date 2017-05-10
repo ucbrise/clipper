@@ -16,7 +16,7 @@ function usage {
     -a, --all                   Run all tests
     -l, --libclipper            Run tests only for libclipper folder.
     -m, --management            Run tests only for management folder.
-    -f, --frontend              Run tests only for frotend folder.
+    -f, --frontend              Run tests only for frontend folder.
     -j, --java-container        Run tests only for java container folder.
     -r, --rpc-container         Run tests only for rpc container folder.
 
@@ -77,6 +77,8 @@ function set_test_environment {
   fi
 
   randomize_redis_port
+  
+  set -e # turn back on exit on command fail
 
   # start Redis on the test port if it's not already running
   redis-server --port $REDIS_PORT &> /dev/null &
