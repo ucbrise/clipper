@@ -1,9 +1,8 @@
 package ai.clipper.container.data;
 
-import clipper.container.app.ClipperEnum;
-import clipper.container.app.EnumUtil;
+import ai.clipper.container.util.ClipperEnum;
+import ai.clipper.container.util.EnumUtil;
 
-import java.util.HashMap;
 import java.util.Map;
 
 public enum DataType implements ClipperEnum {

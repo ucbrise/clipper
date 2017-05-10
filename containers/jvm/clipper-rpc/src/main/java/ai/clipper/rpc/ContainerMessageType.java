@@ -1,6 +1,9 @@
-package clipper.container.app;
+package ai.clipper.rpc;
 
 import java.util.Map;
+import ai.clipper.container.util.ClipperEnum;
+import ai.clipper.container.util.EnumUtil;
+
 
 enum ContainerMessageType implements ClipperEnum {
   NewContainer(0),

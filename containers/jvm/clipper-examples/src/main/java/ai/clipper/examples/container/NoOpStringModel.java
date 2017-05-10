@@ -5,21 +5,23 @@ import ai.clipper.container.data.DataType;
 import ai.clipper.container.data.FloatVector;
 import ai.clipper.container.data.SerializableString;
 
+import javax.xml.soap.SAAJResult;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
+
 
 public class NoOpStringModel extends ClipperModel<SerializableString> {
   public NoOpStringModel() {}
 
   @Override
-  public FloatVector predict(ArrayList<SerializableString> inputVector) {
-    float[] responses = new float[inputVector.size()];
-    int index = 0;
-    for (SerializableString s : inputVector) {
-      responses[index] = s.getData().length();
+  public ArrayList<SerializableString> predict(ArrayList<SerializableString> inputs) {
+    ArrayList<SerializableString> outputs = new ArrayList<>();
+    for (SerializableString input : inputs) {
+      String jsonContent = String.format("{ \"data_size\": %d }", input.getData().length());
+      outputs.add(new SerializableString(jsonContent));
     }
-    return new FloatVector(FloatBuffer.wrap(responses));
+    return outputs;
   }
 
   @Override

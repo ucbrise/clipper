@@ -1,4 +1,4 @@
-package clipper.container.app.logging;
+package ai.clipper.rpc.logging;
 
 public class RPCEvent {
   private final long timestamp;

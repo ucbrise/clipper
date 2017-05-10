@@ -4,9 +4,9 @@ import ai.clipper.container.data.DataType;
 import ai.clipper.container.data.DataVector;
 import ai.clipper.container.data.FloatVector;
 import ai.clipper.container.ClipperModel;
+import ai.clipper.container.data.SerializableString;
 
 import java.nio.Buffer;
-import java.nio.FloatBuffer;
 import java.util.ArrayList;
 
 public class NoOpModel<T extends DataVector<Buffer>> extends ClipperModel<T> {
@@ -17,13 +17,13 @@ public class NoOpModel<T extends DataVector<Buffer>> extends ClipperModel<T> {
   }
 
   @Override
-  public FloatVector predict(ArrayList<T> inputVector) {
-    float[] responses = new float[inputVector.size()];
-    int index = 0;
-    for (T input : inputVector) {
-      responses[index] = input.getData().remaining();
+  public ArrayList<SerializableString> predict(ArrayList<T> inputVectors) {
+    ArrayList<SerializableString> outputs = new ArrayList<>();
+    for (T input: inputVectors) {
+      String jsonContent = String.format("{ \"data_size\": %d }", input.getData().remaining());
+      outputs.add(new SerializableString(jsonContent));
     }
-    return new FloatVector(FloatBuffer.wrap(responses));
+    return outputs;
   }
 
   @Override
@@ -31,8 +31,4 @@ public class NoOpModel<T extends DataVector<Buffer>> extends ClipperModel<T> {
     return inputType;
   }
 
-  @Override
-  public DataType getOutputType() {
-    return DataType.Floats;
-  }
 }

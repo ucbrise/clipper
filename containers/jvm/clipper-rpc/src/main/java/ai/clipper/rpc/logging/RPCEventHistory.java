@@ -1,4 +1,4 @@
-package clipper.container.app.logging;
+package ai.clipper.rpc.logging;
 
 import java.util.ArrayList;
 import java.util.List;

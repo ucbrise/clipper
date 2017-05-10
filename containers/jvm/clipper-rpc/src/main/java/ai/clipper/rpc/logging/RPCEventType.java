@@ -1,7 +1,7 @@
-package clipper.container.app.logging;
+package ai.clipper.rpc.logging;
 
-import clipper.container.app.ClipperEnum;
-import clipper.container.app.EnumUtil;
+import ai.clipper.container.util.ClipperEnum;
+import ai.clipper.container.util.EnumUtil;
 
 import java.util.Map;
 

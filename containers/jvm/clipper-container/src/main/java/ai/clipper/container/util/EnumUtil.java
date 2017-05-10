@@ -1,4 +1,4 @@
-package clipper.container.app;
+package ai.clipper.container.util;
 
 import java.util.HashMap;
 import java.util.Map;

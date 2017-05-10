@@ -1,7 +1,6 @@
 package ai.clipper.rpc;
 
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -11,6 +10,7 @@ import java.util.*;
 
 import ai.clipper.container.data.*;
 import ai.clipper.container.ClipperModel;
+import ai.clipper.rpc.logging.*;
 import org.zeromq.ZMQ;
 
 public class RPC<I extends DataVector<?>> {
@@ -126,7 +126,7 @@ public class RPC<I extends DataVector<?>> {
             HeartbeatType heartbeatType =
                 HeartbeatType.fromCode(parsedHeartbeatTypeMessage.get(0).intValue());
             if (heartbeatType == HeartbeatType.RequestContainerMetadata) {
-              sendContainerMetadata(socket, model);
+              sendContainerMetadata(socket, model, modelName, modelVersion);
             }
             break;
           case ContainerContent:
@@ -311,12 +311,12 @@ public class RPC<I extends DataVector<?>> {
     System.out.println("Sent heartbeat!");
   }
 
-  private void sendContainerMetadata(ZMQ.Socket socket, Model<I> model) {
+  private void sendContainerMetadata(ZMQ.Socket socket, ClipperModel<I> model, String modelName, int modelVersion) {
     socket.send("", ZMQ.SNDMORE);
     socket.send(
         DataUtils.getBytesFromInts(ContainerMessageType.NewContainer.getCode()), ZMQ.SNDMORE);
-    socket.send(model.getName(), ZMQ.SNDMORE);
-    socket.send(String.valueOf(model.getVersion()), ZMQ.SNDMORE);
+    socket.send(modelName, ZMQ.SNDMORE);
+    socket.send(String.valueOf(modelVersion), ZMQ.SNDMORE);
     socket.send(String.valueOf(model.getInputType().getCode()));
     eventHistory.insert(RPCEventType.SentContainerMetadata);
     System.out.println("Sent container metadata!");
