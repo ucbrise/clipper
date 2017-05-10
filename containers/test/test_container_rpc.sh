@@ -51,14 +51,14 @@ echo "Starting python RPC test container..."
 python ../python/rpc_test_container.py & 
 
 
-cd ../java/clipper-java-container/
+cd ../jvm
 mvn clean package -DskipTests &> /dev/null
 #Start java rpc test container
 echo "Starting java RPC test container..."
 # && mvn -Dtest=RPCProtocolTest test &> /dev/null &
 java -Djava.library.path=$JZMQ_HOME \
-   -cp target/clipper-java-container-1.0-SNAPSHOT.jar \
-   clipper.container.app.RPCProtocolTest &
+   -cp rpc-test/target/rpc-test-0.1.jar \
+   ai.clipper.rpctest.RPCProtocolTest &
 
 sleep 10
 cd $DIR/../../

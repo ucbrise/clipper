@@ -35,6 +35,7 @@
     <module>clipper-spark</module>
     <!-- The Docker container implementation to serve Spark models -->
     <module>spark-container-impl</module>
+    <module>rpc-test</module>
   </modules>
 
   <properties>
