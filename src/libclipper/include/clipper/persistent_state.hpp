@@ -20,8 +20,6 @@ const std::string LOGGING_TAG_STATE_DB = "STATEDB";
 // The entries in the key are query_label, user_id, model_hash
 using StateKey = std::tuple<std::string, long, long>;
 
-size_t state_key_hash(const StateKey& key);
-
 // Threadsafe, non-copyable state storage
 class StateDB {
  public:
