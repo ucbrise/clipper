@@ -100,6 +100,11 @@ class EventHistory:
     def get_events(self):
         return self.history_buffer
 
+class PredictionError(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)
 
 class Server(threading.Thread):
     def __init__(self, context, clipper_ip, clipper_port):
@@ -119,12 +124,17 @@ class Server(threading.Thread):
             predict response
         """
         predict_fn = self.get_prediction_function()
-        # outputs = []
         total_length = 0
         outputs = predict_fn(prediction_request.inputs)
+        # Type check the outputs:
+        if not type(outputs) == list:
+            raise PredictionError("Model did not return a list")
+        if not type(outputs[0]) == str:
+            raise PredictionError("Model must return a list of strs. Found %s" % type(outputs[0]))
+        if len(outputs) != len(prediction_request.inputs):
+            raise PredictionError("Expected model to return %d outputs, found %d outputs" % (len(prediction_request.inputs), len(outputs)))
         for o in outputs:
             total_length += len(o)
-
         response = PredictionResponse(prediction_request.msg_id,
                                       len(prediction_request.inputs),
                                       total_length)
