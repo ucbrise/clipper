@@ -1,36 +1,40 @@
 # Python prediction function deployment
 Clipper supports a simplified process for deploying arbitrary Python prediction functions as model-containers. 
 
-The Clipper management library supports this functionality through `deploy_prediction_func`, which consumes a the function you want to deploy. All dependencies for the function must be installed with Anaconda or Pip. `deploy_prediction_func` must be called from within an [Anaconda environment](https://conda.io/docs/using/envs.html) that tracks all such dependencies.
+The Clipper management library supports this functionality through `deploy_prediction_func`, which consumes a function you want to deploy. All dependencies for the function must be installed with Anaconda or Pip. `deploy_prediction_func` must be called from within an [Anaconda environment](https://conda.io/docs/using/envs.html) that tracks all such dependencies.
 
 ## Defining your prediction function
-Prediction functions should take a list of inputs of and return a Python or numpy array of predictions. Internally, the function is free to do anything so long as the function's closure captures its full state.
+Prediction functions should take a list of inputs of type `<input-type>` and return a Python list of strings (often JSON strings, but JSON is not required). Internally, the function is free to do anything so long as the function's closure captures its full state.
 
-  
-    from sklearn import linear_model
+```py
+from sklearn import linear_model
 
-    def center(xs):
-      means = np.mean(xs, axis=0)
-      return xs - means
+def center(xs):
+  means = np.mean(xs, axis=0)
+  return xs - means
 
-    centered_xs = center(xs)
-    model = sklearn.linear_model.LogisticRegression()
-    model.fit(centered_xs, ys)
+centered_xs = center(xs)
+model = sklearn.linear_model.LogisticRegression()
+model.fit(centered_xs, ys)
 
-    def centered_predict(inputs):
-      centered_inputs = center(inputs)
-      return model.predict(centered_inputs)
+def centered_predict(inputs):
+  centered_inputs = center(inputs)
+  return model.predict(centered_inputs)
+
+```
       
 ## Requesting deployment of  your Python function
-Deploying this function to Clipper doesn't require writing any container code. All that's needed is a call to `deploy_predict_function` from within an Anaconda environment that has necessary conda and pip packages to run the function.
+Deploying this function to Clipper doesn't require writing any container code. All that's needed is a call to `deploy_predict_function()` from within an Anaconda environment that has necessary conda and pip packages to run the function.
 
-    clipper.deploy_predict_function(
-      "example_model",
-      1,
-      centered_predict,
-      ["example"],
-      "doubles",
-      num_containers=1)
+```py
+clipper.deploy_predict_function(
+  "example_model",
+  1,
+  centered_predict,
+  ["example"],
+  "doubles",
+  num_containers=1)
+```
 
 The management library will do some dependency checks from your client before deploying the function:
 
@@ -49,7 +53,7 @@ The management library will first ensure that no packages have conflicting depen
 
 ###2. Checking for package existence in linux channels
 
-If none of your packages have conflicting dependencies, the management library will check for the existence of your packages in the linux-64 conda channel (the channel the container will use). If any such packages exist, they will be skipped during package installation on the container. You should see a message like this:
+If none of your packages have conflicting dependencies, the management library will check for the existence of your packages in the linux-64 conda channel (the channel the container will use). If any packages cannot be found, they will be skipped during package installation on the container. You should see a message like this:
 
 ```
 Fetching package metadata .........
@@ -63,7 +67,7 @@ Removed unavailable packages from supplied environment specifications
 
 ###3. Deploying the function in a container
 
-A successful call to `deploy_prediction_function` will output:
+A successful call to `deploy_prediction_function()` will output:
 
     Supplied environment details
     Serialized and supplied predict function
@@ -73,7 +77,7 @@ A successful call to `deploy_prediction_function` will output:
     True
 
 ## Initializing your model-container
-Calling `deploy_prediction_func` spins up a container and loads it with the necessary info to create your model. However, it may take some time before the model-container is ready to serve predictions: it still has to install and load dependencies and deserialize your prediction function.
+Calling `deploy_prediction_func()` starts a Docker container and loads it with the necessary info to create your model. However, it may take some time (up to several minutes) before the model-container is ready to serve predictions: it still has to install and load dependencies and deserialize your prediction function.
 
 ### How you can check container logs
 You can read the container's logs to keep track of its initialization progress. Run `docker ps` and find the container instance for the image `clipper/python-container `. Grab its container id and run `docker logs <container_id>`.
@@ -137,9 +141,9 @@ At this point, your prediction function and its environment have successfully be
 
 There are several problems you can encounter in deploying your Python function to Clipper. This section will walk you through how you can identify and resolve them.
 
-If you run into issues not listed here, please file an issue and we will attempt to find a generalizable approach to diagnosing and solving it.
+If you run into issues not listed here, please file a GitHub issue and we will try to help you diagnose and solve the problem.
 
-### Remote during container initialization
+### Errors during container initialization
 **Some pip packages weren't installed**
 
 This is possible if conda is not tracking your pip packages. Make sure that you install your pip packages through a conda-installed `pip`. This way, conda can keep track of which pip packages you are using in your environment. You can see which pip packages conda is keeping track of by writing your environment to a file with `conda env export >> <filename>`
@@ -169,7 +173,7 @@ This can occur if:
 
 **Container crash: prediction function has some other runtime error (index out of bounds, divide by zero, incorrect operand types for a function, etc**
 
-Make sure that you test your function locally before deploying it. Remember that it should take as input a list of datapoints (numpy arrays or native Python lists) with entries of type <input_type> and shoud output a list with a classification for each datapoint.
+Make sure that you test your function locally before deploying it. Remember that it should take as input a list of datapoints (numpy arrays or native Python lists) with entries of type <input_type> and should output a list of strings with a prediction for each datapoint.
 
 **Container crash: function makes use of something that’s not captured in the function closure**
 

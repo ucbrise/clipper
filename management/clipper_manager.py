@@ -643,19 +643,28 @@ class Clipper:
             Returns True if the (possibly modified) environment file is compatible with conda
             on the container os. Otherwise returns False.
         """
-
+        if "CONDA_PREFIX" not in os.environ:
+            print("No Anaconda environment found")
+            return False
+        
+        root_prefix = os.environ["CONDA_PREFIX"].split("envs")[0]
+        py_path = os.path.join(root_prefix, "bin", "python")
         process = subprocess.Popen(
-            "source deactivate && python {cur_dir}/check_env.py {environment_fname} {directory} {platform}".
+            "{py_path} {cur_dir}/check_env.py {environment_fname} {directory} {platform}".
             format(
+                py_path=py_path,
                 cur_dir=cur_dir,
                 environment_fname=environment_fname,
                 directory=directory,
                 platform=CONTAINER_CONDA_PLATFORM),
             stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             shell=True)
-        out, _ = process.communicate()
+        out, err = process.communicate()
         print(out)
+        print(err)
         return process.returncode == 0
+
 
     def deploy_model(self,
                      name,
