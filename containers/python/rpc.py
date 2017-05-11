@@ -191,6 +191,8 @@ class Server(threading.Thread):
                         if time_delta_millis >= SOCKET_ACTIVITY_TIMEOUT_MILLIS:
                             # Terminate the session
                             print("Connection timed out, reconnecting...")
+                            sys.stdout.flush()
+                            sys.stderr.flush()
                             connected = False
                             poller.unregister(socket)
                             socket.close()
@@ -289,6 +291,8 @@ class Server(threading.Thread):
                         print("recv: %f us, parse: %f us, handle: %f us" %
                               ((t2 - t1).microseconds, (t3 - t2).microseconds,
                                (t4 - t3).microseconds))
+                        sys.stdout.flush()
+                        sys.stderr.flush()
 
                     else:
                         feedback_request = FeedbackRequest(msg_id_bytes, [])
