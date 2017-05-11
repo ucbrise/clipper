@@ -646,7 +646,7 @@ class Clipper:
         if "CONDA_PREFIX" not in os.environ:
             print("No Anaconda environment found")
             return False
-        
+
         root_prefix = os.environ["CONDA_PREFIX"].split("envs")[0]
         py_path = os.path.join(root_prefix, "bin", "python")
         process = subprocess.Popen(
@@ -664,7 +664,6 @@ class Clipper:
         print(out)
         print(err)
         return process.returncode == 0
-
 
     def deploy_model(self,
                      name,
