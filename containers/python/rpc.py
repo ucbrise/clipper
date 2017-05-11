@@ -171,6 +171,8 @@ class Server(threading.Thread):
         clipper_address = "tcp://{0}:{1}".format(self.clipper_ip,
                                                  self.clipper_port)
         poller = zmq.Poller()
+        sys.stdout.flush()
+        sys.stderr.flush()
         while True:
             socket = self.context.socket(zmq.DEALER)
             poller.register(socket, zmq.POLLIN)
