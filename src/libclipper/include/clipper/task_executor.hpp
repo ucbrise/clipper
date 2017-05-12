@@ -400,8 +400,7 @@ class TaskExecutor {
     return queue_created;
   }
 
-  void on_container_ready(VersionedModelId model_id, int replica_id,
-                          int iteration_count = 0) {
+  void on_container_ready(VersionedModelId model_id, int replica_id) {
     std::shared_ptr<ModelContainer> container =
         active_containers_->get_model_replica(model_id, replica_id);
     if (!container) {
@@ -455,7 +454,7 @@ class TaskExecutor {
     TaskExecutionThreadPool::submit_job(
         [ this, model_id, replica_id, task_executor_valid = active_ ]() {
           if (*task_executor_valid) {
-            on_container_ready(model_id, replica_id, iteration_count + 1);
+            on_container_ready(model_id, replica_id);
           } else {
             log_info(LOGGING_TAG_TASK_EXECUTOR,
                      "Not running on_container_ready callback because "
