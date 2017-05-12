@@ -323,6 +323,10 @@ class TaskExecutor {
         if (!output_futures.back().is_ready()) {
           t.recv_time_ = std::chrono::system_clock::now();
           model_queue_entry->second.add_task(t);
+          // TODO TODO TODO: This is gettinc called
+          log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
+                             "Adding task to queue. QueryID: {}, model: {}",
+                             t.query_id_, versioned_model_to_str(t.model_));
           boost::shared_lock<boost::shared_mutex> model_metrics_lock(
               model_metrics_mutex_);
           auto cur_model_metric_entry = model_metrics_.find(t.model_);
@@ -396,7 +400,8 @@ class TaskExecutor {
     return queue_created;
   }
 
-  void on_container_ready(VersionedModelId model_id, int replica_id) {
+  void on_container_ready(VersionedModelId model_id, int replica_id,
+                          int iteration_count = 0) {
     std::shared_ptr<ModelContainer> container =
         active_containers_->get_model_replica(model_id, replica_id);
     if (!container) {
@@ -425,13 +430,23 @@ class TaskExecutor {
         std::unique_lock<std::mutex> l(inflight_messages_mutex_);
         std::vector<InflightMessage> cur_batch;
         rpc::PredictionRequest prediction_request(container->input_type_);
+        std::stringstream query_ids_in_batch;
         for (auto b : batch) {
           prediction_request.add_input(b.input_);
           cur_batch.emplace_back(b.recv_time_, container->container_id_,
                                  b.model_, container->replica_id_, b.input_);
+          query_ids_in_batch << b.query_id_ << " ";
         }
         int message_id = rpc_->send_message(prediction_request.serialize(),
                                             container->container_id_);
+        // TODO TODO TODO: but this isn't!!
+        // I wonder if on_container_ready isn't being called?
+        log_info_formatted(
+            LOGGING_TAG_TASK_EXECUTOR,
+            "Sending batch to model: {} replica {}."
+            "Batch size: {}. Query IDs: {}",
+            versioned_model_to_str(model_id), std::to_string(replica_id),
+            std::to_string(batch.size()), query_ids_in_batch.str());
         inflight_messages_.emplace(message_id, std::move(cur_batch));
         return;
       }
@@ -440,7 +455,7 @@ class TaskExecutor {
     TaskExecutionThreadPool::submit_job(
         [ this, model_id, replica_id, task_executor_valid = active_ ]() {
           if (*task_executor_valid) {
-            on_container_ready(model_id, replica_id);
+            on_container_ready(model_id, replica_id, iteration_count + 1);
           } else {
             log_info(LOGGING_TAG_TASK_EXECUTOR,
                      "Not running on_container_ready callback because "
