@@ -18,13 +18,21 @@
 
 namespace clipper {
 
+const std::string LOGGING_TAG_CONTAINERS = "CONTAINERS";
+
 ModelContainer::ModelContainer(VersionedModelId model, int container_id,
-                               InputType input_type)
+                               int replica_id, InputType input_type)
     : model_(model),
       container_id_(container_id),
+      replica_id_(replica_id),
       input_type_(input_type),
       avg_throughput_per_milli_(0),
-      throughput_buffer_(THROUGHPUT_BUFFER_CAPACITY) {}
+      throughput_buffer_(THROUGHPUT_BUFFER_CAPACITY) {
+  std::string model_str = versioned_model_to_str(model);
+  log_info_formatted(LOGGING_TAG_CONTAINERS,
+                     "Creating new ModelContainer for model {}, id: {}",
+                     model_str, std::to_string(container_id));
+}
 
 void ModelContainer::update_throughput(size_t batch_size,
                                        long total_latency_micros) {
@@ -90,24 +98,39 @@ ActiveContainers::ActiveContainers()
 
 void ActiveContainers::add_container(VersionedModelId model, int connection_id,
                                      int replica_id, InputType input_type) {
-  log_info_formatted(
-      LOGGING_TAG_CLIPPER,
-      "Adding new container - model: {}, version: {}, ID: {}, input_type: {}",
-      model.first, model.second, connection_id,
-      get_readable_input_type(input_type));
+  log_info_formatted(LOGGING_TAG_CONTAINERS,
+                     "Adding new container - model: {}, version: {}, "
+                     "connection ID: {}, replica ID: {}, input_type: {}",
+                     model.first, model.second, connection_id, replica_id,
+                     get_readable_input_type(input_type));
   boost::unique_lock<boost::shared_mutex> l{m_};
-  auto new_container =
-      std::make_shared<ModelContainer>(model, connection_id, input_type);
+  auto new_container = std::make_shared<ModelContainer>(model, connection_id,
+                                                        replica_id, input_type);
   auto entry = containers_[new_container->model_];
   entry.emplace(replica_id, new_container);
   containers_[new_container->model_] = entry;
   assert(containers_[new_container->model_].size() > 0);
+  std::stringstream log_msg;
+  log_msg << "\nActive containers:\n";
+  for (auto model : containers_) {
+    log_msg << "\tModel: " << versioned_model_to_str(model.first) << "\n";
+    for (auto r : model.second) {
+      log_msg << "\t\trep_id: " << r.first
+              << ", container_id: " << r.second->container_id_ << "\n";
+    }
+  }
+  log_info(LOGGING_TAG_CONTAINERS, log_msg.str());
 }
 
 std::shared_ptr<ModelContainer> ActiveContainers::get_model_replica(
     const VersionedModelId &model, const int replica_id) {
+  boost::shared_lock<boost::shared_mutex> l{m_};
+
   auto replicas_map_entry = containers_.find(model);
   if (replicas_map_entry == containers_.end()) {
+    log_error_formatted(LOGGING_TAG_CONTAINERS,
+                        "Requested replica {} for model {} NOT FOUND",
+                        replica_id, versioned_model_to_str(model));
     return nullptr;
   }
 
@@ -117,6 +140,9 @@ std::shared_ptr<ModelContainer> ActiveContainers::get_model_replica(
   if (replica_entry != replicas_map.end()) {
     return replica_entry->second;
   } else {
+    log_error_formatted(LOGGING_TAG_CONTAINERS,
+                        "Requested replica {} for model {} NOT FOUND",
+                        replica_id, versioned_model_to_str(model));
     return nullptr;
   }
 }

@@ -20,7 +20,8 @@ using Deadline = std::chrono::time_point<std::chrono::system_clock>;
 class ModelContainer {
  public:
   ~ModelContainer() = default;
-  ModelContainer(VersionedModelId model, int id, InputType input_type);
+  ModelContainer(VersionedModelId model, int container_id, int replica_id,
+                 InputType input_type);
   // disallow copy
   ModelContainer(const ModelContainer &) = delete;
   ModelContainer &operator=(const ModelContainer &) = delete;
@@ -35,6 +36,7 @@ class ModelContainer {
 
   VersionedModelId model_;
   int container_id_;
+  int replica_id_;
   InputType input_type_;
 
  private:

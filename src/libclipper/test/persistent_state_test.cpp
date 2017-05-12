@@ -2,16 +2,27 @@
 
 #include <clipper/config.hpp>
 #include <clipper/persistent_state.hpp>
+#include <clipper/redis.hpp>
+#include <redox.hpp>
 
 using namespace clipper;
+using namespace clipper::redis;
 
 namespace {
 
 class StateDBTest : public ::testing::Test {
  public:
-  StateDBTest() {}
+  StateDBTest() : redis_(std::make_shared<redox::Redox>()) {
+    Config& conf = get_config();
+    redis_->connect(conf.get_redis_address(), conf.get_redis_port());
+    // delete all keys
+    send_cmd_no_reply<std::string>(*redis_, {"FLUSHALL"});
+  }
 
   StateDB db_;
+  std::shared_ptr<redox::Redox> redis_;
+
+  virtual ~StateDBTest() { redis_->disconnect(); }
 };
 
 TEST_F(StateDBTest, TestSinglePutGet) {
