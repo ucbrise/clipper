@@ -141,16 +141,14 @@ TEST_F(ManagementFrontendTest, TestAddApplicationMalformedJson) {
 
 TEST_F(ManagementFrontendTest, TestDeleteApplicationCorrect) {
   std::string add_app_json = R"(
-    {
-      "name": "myappname",
-      "candidate_models": [
-          {"model_name": "m", "model_version": 4},
-          {"model_name": "image_model", "model_version": 3}],
-      "input_type": "integers",
-      "selection_policy": "sample_policy",
-      "latency_slo_micros": 10000
-    }
-   )";
+  {
+    "name": "myappname",
+    "candidate_model_names": ["image_model"],
+    "input_type": "integers",
+    "default_output": "4.3",
+    "latency_slo_micros": 10000
+  }
+  )";
 
   ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
 
@@ -170,13 +168,12 @@ TEST_F(ManagementFrontendTest, TestDeleteApplicationCorrect) {
 TEST_F(ManagementFrontendTest, TestDeleteApplicationMalformedJson) {
   std::string delete_app_json = R"(
     {
-      "name": "myappname"
+      "name": myappname"
     }
   )";
 
   ASSERT_THROW(rh_.delete_application(delete_app_json), json_parse_error);
 }
-
 
 TEST_F(ManagementFrontendTest, TestGetApplicationCorrect) {
   std::string name = "my_app_name";

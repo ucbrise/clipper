@@ -292,6 +292,33 @@ class ServerBase {
     it->second.emplace_back(REGEX_NS::regex(res_name), res_fn);
   }
 
+  /// Use this function to delete existing endpoints while the service is running
+  void delete_endpoint(
+      std::string res_name, std::string res_method) {
+    std::unique_lock<std::mutex> l(mu);
+    auto app_res = resource[res_name];
+    app_res.erase(res_method);
+    if (app_res.size() == 0) {
+      resource.erase(res_name);
+    }
+    for (auto opt_it = opt_resource.begin(); opt_it != opt_resource.end();
+         opt_it++) {
+      if (res_method == opt_it->first) {
+        auto endpoint_pairs = opt_it->second;
+        for (auto pair = endpoint_pairs.begin(); pair != endpoint_pairs.end();
+          pair++) {
+          if (REGEX_NS::regex_match(res_name, pair->first)) {
+            endpoint_pairs.erase(pair);
+            if (endpoint_pairs.size() == 0) {
+              opt_resource.erase(opt_it);
+            }
+            return;
+          }
+        }
+      }
+    }
+  }
+
   size_t num_endpoints() {
     size_t count = 0;
     std::unique_lock<std::mutex> l(mu);
