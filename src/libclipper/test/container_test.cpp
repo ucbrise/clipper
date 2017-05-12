@@ -8,7 +8,7 @@ namespace {
 
 TEST(ModelContainerTests, AverageThroughputUpdatesCorrectlyFewSamples) {
   VersionedModelId model("test", 1);
-  ModelContainer container(model, 0, InputType::Doubles);
+  ModelContainer container(model, 0, 0, InputType::Doubles);
   std::array<long, 4> single_task_latencies_micros = {{500, 2000, 3000, 5000}};
   long avg_latency = 0;
   double avg_throughput_millis = 0;
@@ -25,7 +25,7 @@ TEST(ModelContainerTests, AverageThroughputUpdatesCorrectlyFewSamples) {
 
 TEST(ModelContainerTests, AverageThroughputUpdatesCorrectlyManySamples) {
   VersionedModelId model("test", 1);
-  ModelContainer container(model, 0, InputType::Doubles);
+  ModelContainer container(model, 0, 0, InputType::Doubles);
   double avg_throughput_millis = 0;
   for (int i = 3; i < 103; i++) {
     double throughput_millis = 1 / static_cast<double>(1000 * i);
