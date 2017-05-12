@@ -112,7 +112,6 @@ void ActiveContainers::add_container(VersionedModelId model, int connection_id,
   assert(containers_[new_container->model_].size() > 0);
   std::stringstream log_msg;
   log_msg << "\nActive containers:\n";
-  // log_info(LOGGING_TAG_CONTAINERS, "All active containers:");
   for (auto model : containers_) {
     log_msg << "\tModel: " << versioned_model_to_str(model.first) << "\n";
     for (auto r : model.second) {
