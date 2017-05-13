@@ -113,10 +113,12 @@ class ModelQueue {
   ~ModelQueue() = default;
 
   void add_task(PredictTask task) {
-    std::unique_lock<std::mutex> l(queue_mutex_);
+    std::lock_guard<std::mutex> lock(queue_mutex_);
     Deadline deadline = std::chrono::system_clock::now() +
                         std::chrono::microseconds(task.latency_slo_micros_);
     queue_.emplace(deadline, std::move(task));
+    // TODO: is there a good reason to prefer notify_one or notify_all?
+    condition_.notify_one();
   }
 
   int get_size() {
@@ -124,29 +126,35 @@ class ModelQueue {
     return queue_.size();
   }
 
-  // TODO: If we implement the scheduler so that it calls
-  // get_earliest_deadline(), then uses that to compute the batch size,
-  // then calls dequeue with that batch size, it's possible for a new
-  // task with an earlier deadline to be submitted. I'm not sure what the
-  // correct behavior here should be.
-  boost::optional<Deadline> get_earliest_deadline() {
-    std::unique_lock<std::mutex> l(queue_mutex_);
-    remove_tasks_with_elapsed_deadlines();
-    if (!queue_.empty()) {
-      return boost::optional<Deadline>(queue_.top().first);
-    } else {
-      return boost::optional<Deadline>{};
-    }
-  }
+  // // TODO: If we implement the scheduler so that it calls
+  // // get_earliest_deadline(), then uses that to compute the batch size,
+  // // then calls dequeue with that batch size, it's possible for a new
+  // // task with an earlier deadline to be submitted. I'm not sure what the
+  // // correct behavior here should be.
+  // //
+  // //
+  // #<{(|*
+  //  * Blocks until the queue is non-empty
+  //  |)}>#
+  // Deadline get_earliest_deadline() {
+  //   std::unique_lock<std::mutex> lock(queue_mutex_);
+  //   remove_tasks_with_elapsed_deadlines();
+  //   condition_.wait(lock, [this]() { return !queue_.empty(); });
+  //   return queue_.top().first;
+  //   // if (!queue_.empty()) {
+  //   //   return boost::optional<Deadline>(queue_.top().first);
+  //   // } else {
+  //   //   return boost::optional<Deadline>{};
+  //   // }
+  // }
 
-  // Dequeues up to max_batch_size tasks from the queue without blocking
-  std::vector<PredictTask> get_batch(int max_batch_size) {
-    // NOTE: Because the queue lock is released and reacquired between a
-    // call to get_earliest_deadline() (which blocks until the queue is
-    // not empty) and the call to this method, it's possible for the queue
-    // to be empty, in which case the returned vector will have size 0.
-    std::unique_lock<std::mutex> l(queue_mutex_);
+  std::vector<PredictTask> get_batch(
+      std::function<int(Deadline)> &&get_batch_size) {
+    std::unique_lock<std::mutex> lock(queue_mutex_);
     remove_tasks_with_elapsed_deadlines();
+    condition_.wait(lock, [this]() { return !queue_.empty(); });
+    Deadline deadline = queue_.top().first;
+    int max_batch_size = get_batch_size(deadline);
     std::vector<PredictTask> batch;
     while (batch.size() < (size_t)max_batch_size && queue_.size() > 0) {
       batch.push_back(queue_.top().second);
@@ -154,6 +162,22 @@ class ModelQueue {
     }
     return batch;
   }
+
+  // // Dequeues up to max_batch_size tasks from the queue without blocking
+  // std::vector<PredictTask> get_batch(int max_batch_size) {
+  //   // NOTE: Because the queue lock is released and reacquired between a
+  //   // call to get_earliest_deadline() (which blocks until the queue is
+  //   // not empty) and the call to this method, it's possible for the queue
+  //   // to be empty, in which case the returned vector will have size 0.
+  //   std::unique_lock<std::mutex> l(queue_mutex_);
+  //   remove_tasks_with_elapsed_deadlines();
+  //   std::vector<PredictTask> batch;
+  //   while (batch.size() < (size_t)max_batch_size && queue_.size() > 0) {
+  //     batch.push_back(queue_.top().second);
+  //     queue_.pop();
+  //   }
+  //   return batch;
+  // }
 
  private:
   // Min PriorityQueue so that the task with the earliest
@@ -164,6 +188,7 @@ class ModelQueue {
                           DeadlineCompare>;
   ModelPQueue queue_;
   std::mutex queue_mutex_;
+  std::condition_variable condition_;
 
   // Deletes tasks with deadlines prior or equivalent to the
   // current system time. This method should only be called
@@ -409,6 +434,10 @@ class TaskExecutor {
           "TaskExecutor failed to find previously registered active "
           "container!");
     }
+
+    // TODO TODO TODO: we acquire this lock then potentially block. Can we
+    // unlock it?
+    // I think we can get a deadlock otherwise.
     boost::shared_lock<boost::shared_mutex> l(model_queues_mutex_);
     auto model_queue_entry = model_queues_.find(container->model_);
     if (model_queue_entry == model_queues_.end()) {
@@ -417,52 +446,89 @@ class TaskExecutor {
           "container!");
     }
 
-    boost::optional<Deadline> earliest_deadline =
-        model_queue_entry->second.get_earliest_deadline();
-    if (earliest_deadline) {
-      size_t batch_size = container->get_batch_size(earliest_deadline.get());
-      auto batch = model_queue_entry->second.get_batch(batch_size);
-      if (batch.size() > 0) {
-        // move the lock up here, so that nothing can pull from the
-        // inflight_messages_
-        // map between the time a message is sent and when it gets inserted
-        // into the map
-        std::unique_lock<std::mutex> l(inflight_messages_mutex_);
-        std::vector<InflightMessage> cur_batch;
-        rpc::PredictionRequest prediction_request(container->input_type_);
-        std::stringstream query_ids_in_batch;
-        for (auto b : batch) {
-          prediction_request.add_input(b.input_);
-          cur_batch.emplace_back(b.recv_time_, container->container_id_,
-                                 b.model_, container->replica_id_, b.input_);
-          query_ids_in_batch << b.query_id_ << " ";
-        }
-        int message_id = rpc_->send_message(prediction_request.serialize(),
-                                            container->container_id_);
-        // TODO TODO TODO: but this isn't!!
-        // I wonder if on_container_ready isn't being called?
-        log_info_formatted(
-            LOGGING_TAG_TASK_EXECUTOR,
-            "Sending batch to model: {} replica {}."
-            "Batch size: {}. Query IDs: {}",
-            versioned_model_to_str(model_id), std::to_string(replica_id),
-            std::to_string(batch.size()), query_ids_in_batch.str());
-        inflight_messages_.emplace(message_id, std::move(cur_batch));
-        return;
+    std::vector<PredictTask> batch =
+        model_queue_entry->second.get_batch([container](Deadline deadline) {
+          return container->get_batch_size(deadline);
+        });
+
+    if (batch.size() > 0) {
+      // move the lock up here, so that nothing can pull from the
+      // inflight_messages_
+      // map between the time a message is sent and when it gets inserted
+      // into the map
+      std::unique_lock<std::mutex> l(inflight_messages_mutex_);
+      std::vector<InflightMessage> cur_batch;
+      rpc::PredictionRequest prediction_request(container->input_type_);
+      std::stringstream query_ids_in_batch;
+      for (auto b : batch) {
+        prediction_request.add_input(b.input_);
+        cur_batch.emplace_back(b.recv_time_, container->container_id_, b.model_,
+                               container->replica_id_, b.input_);
+        query_ids_in_batch << b.query_id_ << " ";
       }
+      int message_id = rpc_->send_message(prediction_request.serialize(),
+                                          container->container_id_);
+      log_info_formatted(
+          LOGGING_TAG_TASK_EXECUTOR,
+          "Sending batch to model: {} replica {}."
+          "Batch size: {}. Query IDs: {}",
+          versioned_model_to_str(model_id), std::to_string(replica_id),
+          std::to_string(batch.size()), query_ids_in_batch.str());
+      inflight_messages_.emplace(message_id, std::move(cur_batch));
+
+    } else {
+      log_error_formatted(
+          LOGGING_TAG_TASK_EXECUTOR,
+          "ModelQueue returned empty batch for model {}, replica {}",
+          versioned_model_to_str(model_id), std::to_string(replica_id));
     }
 
-    TaskExecutionThreadPool::submit_job(
-        model_id, replica_id,
-        [ this, model_id, replica_id, task_executor_valid = active_ ]() {
-          if (*task_executor_valid) {
-            on_container_ready(model_id, replica_id);
-          } else {
-            log_info(LOGGING_TAG_TASK_EXECUTOR,
-                     "Not running on_container_ready callback because "
-                     "TaskExecutor has been destroyed.");
-          }
-        });
+    // boost::optional<Deadline> earliest_deadline =
+    //     model_queue_entry->second.get_earliest_deadline();
+
+    // if (earliest_deadline) {
+    //   size_t batch_size = container->get_batch_size(earliest_deadline.get());
+    //   auto batch = model_queue_entry->second.get_batch(batch_size);
+    //   if (batch.size() > 0) {
+    //     // move the lock up here, so that nothing can pull from the
+    //     // inflight_messages_
+    //     // map between the time a message is sent and when it gets inserted
+    //     // into the map
+    //     std::unique_lock<std::mutex> l(inflight_messages_mutex_);
+    //     std::vector<InflightMessage> cur_batch;
+    //     rpc::PredictionRequest prediction_request(container->input_type_);
+    //     std::stringstream query_ids_in_batch;
+    //     for (auto b : batch) {
+    //       prediction_request.add_input(b.input_);
+    //       cur_batch.emplace_back(b.recv_time_, container->container_id_,
+    //                              b.model_, container->replica_id_, b.input_);
+    //       query_ids_in_batch << b.query_id_ << " ";
+    //     }
+    //     int message_id = rpc_->send_message(prediction_request.serialize(),
+    //                                         container->container_id_);
+    //     log_info_formatted(
+    //         LOGGING_TAG_TASK_EXECUTOR,
+    //         "Sending batch to model: {} replica {}."
+    //         "Batch size: {}. Query IDs: {}",
+    //         versioned_model_to_str(model_id), std::to_string(replica_id),
+    //         std::to_string(batch.size()), query_ids_in_batch.str());
+    //     inflight_messages_.emplace(message_id, std::move(cur_batch));
+    //     return;
+    //   }
+    // }
+    //
+    // // TODO TODO TODO: need to block on condition variable
+    // TaskExecutionThreadPool::submit_job(
+    //     model_id, replica_id,
+    //     [ this, model_id, replica_id, task_executor_valid = active_ ]() {
+    //       if (*task_executor_valid) {
+    //         on_container_ready(model_id, replica_id);
+    //       } else {
+    //         log_info(LOGGING_TAG_TASK_EXECUTOR,
+    //                  "Not running on_container_ready callback because "
+    //                  "TaskExecutor has been destroyed.");
+    //       }
+    //     });
   }
 
   void on_response_recv(rpc::RPCResponse response) {
