@@ -188,9 +188,10 @@ class ThreadPool {
     } else {
       queues_.emplace(std::piecewise_construct, std::forward_as_tuple(queue_id),
                       std::forward_as_tuple());
-      threads_.emplace(std::piecewise_construct,
-                       std::forward_as_tuple(queue_id),
-                       std::forward_as_tuple(&ThreadPool::worker, this));
+      // std::thread t([this]() {worker();});
+      threads_.emplace(
+          std::piecewise_construct, std::forward_as_tuple(queue_id),
+          std::forward_as_tuple(&ThreadPool::worker, this, queue_id));
     }
   }
 
