@@ -4,12 +4,16 @@
 #include <mutex>
 #include <queue>
 #include <thread>
+#include <unordered_map>
 
 #include <boost/thread.hpp>
 
-#include "config.hpp"
+#include "datatypes.hpp"
+#include "logging.hpp"
 
 namespace clipper {
+
+const std::string LOGGING_TAG_THREADPOOL = "THREADPOOL";
 
 /// Implementation adapted from
 /// https://goo.gl/Iav87R
@@ -155,32 +159,7 @@ class ThreadPool {
   };
 
  public:
-  /**
-   * Constructor.
-   */
-  ThreadPool(void)
-      : ThreadPool{std::max(std::thread::hardware_concurrency(), 2u) - 1u} {
-    /*
-     * Always create at least one thread.  If hardware_concurrency() returns 0,
-     * subtracting one would turn it to UINT_MAX, so get the maximum of
-     * hardware_concurrency() and 2 before subtracting 1.
-     */
-  }
-
-  /**
-   * Constructor.
-   */
-  explicit ThreadPool(const std::uint32_t numThreads)
-      : done_{false}, work_queue_{}, threads_{} {
-    try {
-      for (std::uint32_t i = 0u; i < numThreads; ++i) {
-        threads_.emplace_back(&ThreadPool::worker, this);
-      }
-    } catch (...) {
-      destroy();
-      throw;
-    }
-  }
+  ThreadPool(void) : done_{false}, queues_{}, threads_{} {}
 
   /**
    * Non-copyable.
@@ -197,11 +176,30 @@ class ThreadPool {
    */
   ~ThreadPool(void) { destroy(); }
 
+  void create_queue(VersionedModelId vm, int replica_id) {
+    boost::unique_lock<boost::shared_mutex> l(queues_mutex_);
+    size_t queue_id = get_queue_id(vm, replica_id);
+    auto queue = queues_.find(queue_id);
+    if (queue != queues_.end()) {
+      log_error_formatted(LOGGING_TAG_THREADPOOL,
+                          "Work queue already exists for model {}, replica {}",
+                          versioned_model_to_str(vm),
+                          std::to_string(replica_id));
+    } else {
+      queues_.emplace(std::piecewise_construct, std::forward_as_tuple(queue_id),
+                      std::forward_as_tuple());
+      threads_.emplace(std::piecewise_construct,
+                       std::forward_as_tuple(queue_id),
+                       std::forward_as_tuple(&ThreadPool::worker, this));
+    }
+  }
+
   /**
    * Submit a job to be run by the thread pool.
    */
   template <typename Func, typename... Args>
-  auto submit(Func&& func, Args&&... args) {
+  auto submit(VersionedModelId vm, int replica_id, Func&& func,
+              Args&&... args) {
     auto boundTask =
         std::bind(std::forward<Func>(func), std::forward<Args>(args)...);
     using ResultType = std::result_of_t<decltype(boundTask)()>;
@@ -210,7 +208,17 @@ class ThreadPool {
     PackagedTask task{std::move(boundTask)};
     auto result_future = task.get_future();
 
-    work_queue_.push(std::make_unique<TaskType>(std::move(task)));
+    size_t queue_id = get_queue_id(vm, replica_id);
+    boost::shared_lock<boost::shared_mutex> l(queues_mutex_);
+    auto queue = queues_.find(queue_id);
+    if (queue != queues_.end()) {
+      queue->second.push(std::make_unique<TaskType>(std::move(task)));
+    } else {
+      log_error_formatted(
+          LOGGING_TAG_THREADPOOL, "No work queue for model {}, replica {}",
+          versioned_model_to_str(vm), std::to_string(replica_id));
+    }
+    // work_queue_.push(std::make_unique<TaskType>(std::move(task)));
     return result_future;
   }
 
@@ -219,10 +227,18 @@ class ThreadPool {
    * Constantly running function each thread uses to acquire work items from the
    * queue.
    */
-  void worker(void) {
+  void worker(size_t worker_id) {
     while (!done_) {
       std::unique_ptr<IThreadTask> pTask{nullptr};
-      if (work_queue_.wait_pop(pTask)) {
+      bool work_to_do = false;
+      {
+        boost::shared_lock<boost::shared_mutex> l(queues_mutex_);
+        // NOTE: The use of try_pop here means the worker will spin instead of
+        // block while waiting for work. This is intentional. We defer to the
+        // submitted tasks to block when no work is available.
+        work_to_do = queues_[worker_id].try_pop(pTask);
+      }
+      if (work_to_do) {
         pTask->execute();
       }
     }
@@ -233,18 +249,30 @@ class ThreadPool {
    */
   void destroy(void) {
     done_ = true;
-    work_queue_.invalidate();
+    auto queue = queues_.begin();
+    while (queue != queues_.end()) {
+      queue->second.invalidate();
+    }
+
     for (auto& thread : threads_) {
-      if (thread.joinable()) {
-        thread.join();
+      if (thread.second.joinable()) {
+        thread.second.join();
       }
     }
   }
 
+  size_t get_queue_id(VersionedModelId vm, int replica_id) {
+    return std::hash<std::string>()(vm.first) ^ std::hash<int>()(vm.second) ^
+           std::hash<int>()(replica_id);
+  }
+
  private:
   std::atomic_bool done_;
-  ThreadSafeQueue<std::unique_ptr<IThreadTask>> work_queue_;
-  std::vector<std::thread> threads_;
+  boost::shared_mutex queues_mutex_;
+  std::unordered_map<size_t, ThreadSafeQueue<std::unique_ptr<IThreadTask>>>
+      queues_;
+  // ThreadSafeQueue<std::unique_ptr<IThreadTask>> work_queue_;
+  std::unordered_map<size_t, std::thread> threads_;
 };
 
 namespace TaskExecutionThreadPool {
@@ -253,8 +281,7 @@ namespace TaskExecutionThreadPool {
  * Convenience method to get the task execution thread pool for the application.
  */
 inline ThreadPool& get_thread_pool(void) {
-  static ThreadPool taskExecutionPool(
-      get_config().get_task_execution_threadpool_size());
+  static ThreadPool taskExecutionPool;
   return taskExecutionPool;
 }
 
@@ -262,10 +289,16 @@ inline ThreadPool& get_thread_pool(void) {
  * Submit a job to the task execution thread pool.
  */
 template <typename Func, typename... Args>
-inline auto submit_job(Func&& func, Args&&... args) {
-  return get_thread_pool().submit(std::forward<Func>(func),
+inline auto submit_job(VersionedModelId vm, int replica_id, Func&& func,
+                       Args&&... args) {
+  return get_thread_pool().submit(vm, replica_id, std::forward<Func>(func),
                                   std::forward<Args>(args)...);
 }
+
+inline void create_queue(VersionedModelId vm, int replica_id) {
+  get_thread_pool().create_queue(vm, replica_id);
+}
+
 }  // namespace DefaultThreadPool
 }
 

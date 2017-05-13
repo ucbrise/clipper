@@ -280,9 +280,11 @@ class TaskExecutor {
                 vm, std::stoi(container_info["zmq_connection_id"]), replica_id,
                 parse_input_type(container_info["input_type"]));
 
-            TaskExecutionThreadPool::submit_job([this, vm, replica_id]() {
-              on_container_ready(vm, replica_id);
-            });
+            TaskExecutionThreadPool::create_queue(vm, replica_id);
+            TaskExecutionThreadPool::submit_job(
+                vm, replica_id, [this, vm, replica_id]() {
+                  on_container_ready(vm, replica_id);
+                });
             bool created_queue = create_model_queue_if_necessary(vm);
             if (created_queue) {
               log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
@@ -323,7 +325,6 @@ class TaskExecutor {
         if (!output_futures.back().is_ready()) {
           t.recv_time_ = std::chrono::system_clock::now();
           model_queue_entry->second.add_task(t);
-          // TODO TODO TODO: This is gettinc called
           log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
                              "Adding task to queue. QueryID: {}, model: {}",
                              t.query_id_, versioned_model_to_str(t.model_));
@@ -452,6 +453,7 @@ class TaskExecutor {
     }
 
     TaskExecutionThreadPool::submit_job(
+        model_id, replica_id,
         [ this, model_id, replica_id, task_executor_valid = active_ ]() {
           if (*task_executor_valid) {
             on_container_ready(model_id, replica_id);

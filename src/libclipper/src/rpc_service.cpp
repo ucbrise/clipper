@@ -287,10 +287,12 @@ void RPCService::receive_message(
         std::pair<VersionedModelId, int> container_info =
             container_info_entry->second;
 
-        TaskExecutionThreadPool::submit_job(new_response_callback_, response);
-        TaskExecutionThreadPool::submit_job(container_ready_callback_,
-                                            container_info.first,
-                                            container_info.second);
+        VersionedModelId vm = container_info.first;
+        int replica_id = container_info.second;
+        TaskExecutionThreadPool::submit_job(vm, replica_id,
+                                            new_response_callback_, response);
+        TaskExecutionThreadPool::submit_job(
+            vm, replica_id, container_ready_callback_, vm, replica_id);
 
         response_queue_->push(response);
       }
