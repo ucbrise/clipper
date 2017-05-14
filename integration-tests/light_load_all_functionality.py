@@ -18,17 +18,21 @@ try:
 except OSError:
     pass
 
+
 class BenchmarkException(Exception):
     def __init__(self, value):
         self.parameter = value
+
     def __str__(self):
         return repr(self.parameter)
+
 
 def init_clipper():
     clipper = cm.Clipper("localhost")
     clipper.start()
     time.sleep(1)
     return clipper
+
 
 def print_clipper_state(clipper):
     pp = pprint.PrettyPrinter(indent=4)
@@ -39,33 +43,52 @@ def print_clipper_state(clipper):
     print("\nCONTAINERS")
     pp.pprint(clipper.get_all_containers(verbose=True))
 
+
 def deploy_model(clipper, name, version):
     app_name = "%s_app" % name
     model_name = "%s_model" % name
-    clipper.deploy_model(model_name, version, fake_model_data, "clipper/noop-container", [name], "doubles", num_containers=1)
+    clipper.deploy_model(
+        model_name,
+        version,
+        fake_model_data,
+        "clipper/noop-container", [name],
+        "doubles",
+        num_containers=1)
     time.sleep(20)
     num_preds = 25
     num_defaults = 0
     for i in range(num_preds):
-        response = requests.post("http://localhost:1337/%s/predict" % app_name,
-                headers=headers,
-                data=json.dumps({'uid': 0, 'input': list(np.random.random(30))}))
+        response = requests.post(
+            "http://localhost:1337/%s/predict" % app_name,
+            headers=headers,
+            data=json.dumps({
+                'uid': 0,
+                'input': list(np.random.random(30))
+            }))
         result = response.json()
         if response.status_code == requests.codes.ok and result["default"] == True:
             num_defaults += 1
     if num_defaults > 0:
-        print("Error: %d/%d predictions were default" % (num_defaults, num_preds))
+        print("Error: %d/%d predictions were default" % (num_defaults,
+                                                         num_preds))
     if num_defaults > num_preds / 2:
-        raise BenchmarkException("Error querying APP %s, MODEL %s:%d" % (app_name, model_name, version))
+        raise BenchmarkException("Error querying APP %s, MODEL %s:%d" %
+                                 (app_name, model_name, version))
+
 
 def create_and_test_app(clipper, name):
     app_name = "%s_app" % name
     model_name = "%s_model" % name
-    clipper.register_application(app_name, model_name, "doubles", "default_pred", 50000)
+    clipper.register_application(app_name, model_name, "doubles",
+                                 "default_pred", 50000)
     time.sleep(1)
-    response = requests.post("http://localhost:1337/%s/predict" % app_name,
-            headers=headers,
-            data=json.dumps({'uid': 0, 'input': list(np.random.random(30))}))
+    response = requests.post(
+        "http://localhost:1337/%s/predict" % app_name,
+        headers=headers,
+        data=json.dumps({
+            'uid': 0,
+            'input': list(np.random.random(30))
+        }))
     result = response.json()
     if response.status_code != requests.codes.ok:
         print("Error: %s" % response.text)
@@ -77,9 +100,12 @@ def create_and_test_app(clipper, name):
 
 
 def cleanup():
-    subprocess.call("docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q)", shell=True)
+    subprocess.call(
+        "docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q)",
+        shell=True)
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     clipper = init_clipper()
     try:
         create_and_test_app(clipper, "aa")
@@ -97,4 +123,3 @@ if __name__=="__main__":
         sys.exit(1)
     else:
         cleanup()
-
