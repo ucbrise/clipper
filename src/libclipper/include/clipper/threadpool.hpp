@@ -192,6 +192,9 @@ class ThreadPool {
       threads_.emplace(
           std::piecewise_construct, std::forward_as_tuple(queue_id),
           std::forward_as_tuple(&ThreadPool::worker, this, queue_id));
+      log_info_formatted(
+          LOGGING_TAG_THREADPOOL, "Work queue created for model {}, replica {}",
+          versioned_model_to_str(vm), std::to_string(replica_id));
       return true;
     }
   }
@@ -251,18 +254,23 @@ class ThreadPool {
         pTask->execute();
       }
     }
+    auto thread_id = std::this_thread::get_id();
+    std::stringstream ss;
+    ss << thread_id;
+    log_info_formatted(LOGGING_TAG_THREADPOOL,
+                       "Worker {}, thread {} is shutting down",
+                       std::to_string(worker_id), ss.str());
   }
 
   /**
    * Invalidates the queue and joins all running threads.
    */
   void destroy(void) {
+    log_info(LOGGING_TAG_THREADPOOL, "Destroying threadpool");
     done_ = true;
-    auto queue = queues_.begin();
-    while (queue != queues_.end()) {
-      queue->second.invalidate();
+    for (auto& queue : queues_) {
+      queue.second.invalidate();
     }
-
     for (auto& thread : threads_) {
       if (thread.second.joinable()) {
         thread.second.join();

@@ -114,11 +114,11 @@ function run_frontend_tests {
 }
 
 function run_all_tests {
-  run_management_tests
-  redis-cli -p $REDIS_PORT "flushall"
   run_libclipper_tests
   redis-cli -p $REDIS_PORT "flushall"
   run_frontend_tests
+  redis-cli -p $REDIS_PORT "flushall"
+  run_management_tests
   redis-cli -p $REDIS_PORT "flushall"
   run_jvm_container_tests
   redis-cli -p $REDIS_PORT "flushall"

@@ -135,7 +135,8 @@ TEST(InputSerializationTests, IntSerialization) {
   ASSERT_EQ(static_cast<size_t>(raw_input_header_size[0]), input_header.size());
   long* raw_input_content_size =
       reinterpret_cast<long*>(input_content_size.data());
-  ASSERT_EQ(raw_input_content_size[0], input_content.size());
+  ASSERT_EQ(static_cast<size_t>(raw_input_content_size[0]),
+            input_content.size());
 
   uint32_t* raw_request_type =
       reinterpret_cast<uint32_t*>(request_header.data());
@@ -189,10 +190,11 @@ TEST(InputSerializationTests, FloatSerialization) {
 
   long* raw_input_header_size =
       reinterpret_cast<long*>(input_header_size.data());
-  ASSERT_EQ(raw_input_header_size[0], input_header.size());
+  ASSERT_EQ(static_cast<size_t>(raw_input_header_size[0]), input_header.size());
   long* raw_input_content_size =
       reinterpret_cast<long*>(input_content_size.data());
-  ASSERT_EQ(raw_input_content_size[0], input_content.size());
+  ASSERT_EQ(static_cast<size_t>(raw_input_content_size[0]),
+            input_content.size());
 
   uint32_t* raw_request_type =
       reinterpret_cast<uint32_t*>(request_header.data());
@@ -247,10 +249,11 @@ TEST(InputSerializationTests, DoubleSerialization) {
 
   long* raw_input_header_size =
       reinterpret_cast<long*>(input_header_size.data());
-  ASSERT_EQ(raw_input_header_size[0], input_header.size());
+  ASSERT_EQ(static_cast<size_t>(raw_input_header_size[0]), input_header.size());
   long* raw_input_content_size =
       reinterpret_cast<long*>(input_content_size.data());
-  ASSERT_EQ(raw_input_content_size[0], input_content.size());
+  ASSERT_EQ(static_cast<size_t>(raw_input_content_size[0]),
+            input_content.size());
 
   uint32_t* raw_request_type =
       reinterpret_cast<uint32_t*>(request_header.data());
@@ -305,10 +308,11 @@ TEST(InputSerializationTests, StringSerialization) {
 
   long* raw_input_header_size =
       reinterpret_cast<long*>(input_header_size.data());
-  ASSERT_EQ(raw_input_header_size[0], input_header.size());
+  ASSERT_EQ(static_cast<size_t>(raw_input_header_size[0]), input_header.size());
   long* raw_input_content_size =
       reinterpret_cast<long*>(input_content_size.data());
-  ASSERT_EQ(raw_input_content_size[0], input_content.size());
+  ASSERT_EQ(static_cast<size_t>(raw_input_content_size[0]),
+            input_content.size());
 
   uint32_t* raw_request_type =
       reinterpret_cast<uint32_t*>(request_header.data());
@@ -550,7 +554,7 @@ TEST(OutputDeserializationTests, PredictionResponseDeserialization) {
 
   rpc::PredictionResponse response =
       rpc::PredictionResponse::deserialize_prediction_response(buf);
-  ASSERT_EQ(response.outputs_.size(), 2);
+  ASSERT_EQ(response.outputs_.size(), static_cast<size_t>(2));
   ASSERT_EQ(response.outputs_[0], first_string);
   ASSERT_EQ(response.outputs_[1], second_string);
 }
