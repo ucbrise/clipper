@@ -80,13 +80,6 @@ def cleanup():
     subprocess.call("docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q)", shell=True)
 
 if __name__=="__main__":
-    # app_name = "aa_app"
-    # response = requests.post("http://localhost:1337/%s/predict" % app_name,
-    #         headers=headers,
-    #         data=json.dumps({'uid': 0, 'input': list(np.random.random(30))}))
-    # result = response.json()
-    # print(response.text)
-
     clipper = init_clipper()
     try:
         create_and_test_app(clipper, "aa")
@@ -100,7 +93,8 @@ if __name__=="__main__":
     except BenchmarkException as e:
         print_clipper_state(clipper)
         print(e)
+        cleanup()
+        sys.exit(1)
     else:
-        print_clipper_state(clipper)
         cleanup()
 

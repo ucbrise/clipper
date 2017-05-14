@@ -61,6 +61,22 @@ TEST(TaskExecutorTests, TestDeadlineComparisonsWorkCorrectly) {
   ASSERT_TRUE(later_greater_than_earlier);
 }
 
+TEST(ModelQueueTests, TestGetBatchQueueNotEmpty) {
+  // TODO
+}
+
+TEST(ModelQueueTests, TestGetBatchQueueEmpty) {
+  // TODO
+}
+
+TEST(ModelQueueTests, TestGetBatchOrdersOnEarliestDeadline) {
+  // TODO
+}
+
+TEST(ModelQueueTests, TestGetBatchRemovesTasksWithElapsedDeadline) {
+  // TODO
+}
+
 // TEST(TaskExecutorTests, ModelQueueOrdersElementsOnEarliestDeadline) {
 //   PredictTask task_a = create_predict_task(1, 10000);
 //   PredictTask task_b = create_predict_task(2, 10000);
