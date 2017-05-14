@@ -261,6 +261,8 @@ void RPCService::receive_message(
         connections_containers_map.emplace(
             connection_id,
             std::pair<VersionedModelId, int>(model, cur_replica_id));
+
+        TaskExecutionThreadPool::create_queue(model, cur_replica_id);
         zmq_connection_id += 1;
       }
     } break;
