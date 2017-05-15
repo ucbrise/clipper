@@ -1,3 +1,9 @@
+#!/usr/bin/env bash
+
+set -e
+set -u
+set -o pipefail
+
 trap "exit" INT TERM
 trap "kill 0" EXIT
 
