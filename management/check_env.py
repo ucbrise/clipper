@@ -34,40 +34,56 @@ def check_for_conflicts_and_existence(env_fname, directory, platform):
     env = spec.environment
     dependency_details = env.dependencies.items()
     try:
-        missing_packages = None
+        conda_deps = []
+        conda_deps_with_channel = []
         for distribution, dependencies in dependency_details:
             if distribution == 'conda':
-                try:
-                    # This call doesn't install anything; it checks the solvability of package dependencies.
-                    r.install(dependencies)
-                except NoPackagesFoundError as missing_packages_error:
-                    missing_packages = missing_packages_error.pkgs
-                    for package in missing_packages:
-                        dependencies.remove(package)
+                for dependency in dependencies:
+                    if "::" in dependency:
+                        conda_deps_with_channel.append(dependency)
+                    else:
+                        conda_deps.append(dependency)
 
-                    # Check that the dependencies that are not missing are satisfiable
-                    r.install(dependencies)
-                if missing_packages:
-                    print(
-                        "The following packages in your conda environment aren't available in the linux-64 conda channel the container will use:"
-                    )
-                    print(", ".join(
-                        str(package) for package in missing_packages))
-                    print(
-                        "We will skip their installation when deploying your function. If your function uses these packages, the container will experience a runtime error when queried."
-                    )
+        for p in conda_deps_with_channel:
+            raw_p = '='.join(p.split())
+            env.dependencies.raw.remove(raw_p)
 
-                    missing_packages_raw = [
-                        '='.join(package.split())
-                        for package in missing_packages
-                    ]
-                    for missing_package_raw in missing_packages_raw:
-                        env.dependencies.raw.remove(missing_package_raw)
-                    print(
-                        "Removed unavailable packages from supplied environment specifications"
-                    )
-                    env.dependencies.parse()
-                    env.save()
+            p_no_channel = p.split("::")[1]
+            p_no_channel_raw = '='.join(p_no_channel.split())
+            env.dependencies.raw.append(p_no_channel_raw)
+            conda_deps.append(p_no_channel)
+
+        missing_packages = None
+        try:
+            # This call doesn't install anything; it checks the solvability of package dependencies.
+            r.install(conda_deps)
+        except NoPackagesFoundError as missing_packages_error:
+            missing_packages = missing_packages_error.pkgs
+            for package in missing_packages:
+                conda_deps.remove(package)
+
+            # Check that the dependencies that are not missing are satisfiable
+            r.install(conda_deps)
+        if missing_packages:
+            print(
+                "The following packages in your conda environment aren't available in the linux-64 conda channel the container will use:"
+            )
+            print(", ".join(str(package) for package in missing_packages))
+            print(
+                "We will skip their installation when deploying your function. If your function uses these packages, the container will experience a runtime error when queried."
+            )
+
+            missing_packages_raw = [
+                '='.join(package.split()) for package in missing_packages
+            ]
+            for missing_package_raw in missing_packages_raw:
+                env.dependencies.raw.remove(missing_package_raw)
+            print(
+                "Removed unavailable packages from supplied environment specifications"
+            )
+            env.dependencies.parse()
+            env.save()
+
         return True
     except UnsatisfiableError as unsat_e:
         print(
