@@ -1,4 +1,5 @@
 #!/usr/bin/env sh
 
-conda env create -f=/model/environment.yml -n container-env
-/bin/bash -c "source activate container-env && exec python /container/python_container.py"
+conda install -y --file /model/conda_dependencies.txt
+pip install -r /model/pip_dependencies.txt
+/bin/bash -c "exec python /container/python_container.py"

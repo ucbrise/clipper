@@ -652,9 +652,11 @@ class Clipper:
         """
 
         relative_base_serializations_dir = "predict_serializations"
-        default_python_container = "clipper/python-container"
+        default_python_container = "nishadsingh/predict_func_container:latest"
         predict_fname = "predict_func.pkl"
         environment_fname = "environment.yml"
+        conda_dep_fname = "conda_dependencies.txt"
+        pip_dep_fname = "pip_dependencies.txt"
 
         base_serializations_dir = os.path.abspath(
             relative_base_serializations_dir)
@@ -679,11 +681,13 @@ class Clipper:
         process.wait()
 
         # Confirm that packages installed through conda are solvable
-        if not (self._conda_env_solvable(environment_fname, os.getcwd())):
+        # Write out conda and pip dependency files to be supplied to container
+        if not (self._conda_env_solvable(environment_fname, os.getcwd(), conda_dep_fname, pip_dep_fname)):
             return False
 
         # Give container environment details
-        shutil.copy(environment_fname, serialization_dir)
+        shutil.copy(conda_dep_fname, serialization_dir)
+        shutil.copy(pip_dep_fname, serialization_dir)
         print("Supplied environment details")
 
         # Write out function serialization
@@ -698,24 +702,29 @@ class Clipper:
                                  default_python_container, labels, input_type,
                                  num_containers)
 
-    def _conda_env_solvable(self, environment_fname, directory):
+    def _conda_env_solvable(self, environment_fname, directory, conda_dep_fname, pip_dep_fname):
         """Returns true if the provided conda environment is compatible with the container os.
 
         If packages listed in specified conda environment file have conflicting dependencies,
         this function will warn the user and return False. If packages don't exist in the
-        container's conda channel, this function will warn the user and remove those packages.
+        container's conda channel, this function will warn the user and create files listing
+        the existing conda and all pip packages.
 
         Parameters
         ----------
         environment_fname : str
-            The file name of the exported conda environment file
+            The name of the input exported conda environment file
         directory : str
             The path to the diretory containing the environment file
+        conda_dep_fname : str
+            The name of the output conda dependency file
+        pip_dep_fname : str
+            The name of the output pip dependency file
 
         Returns
         -------
         bool
-            Returns True if the (possibly modified) environment file is compatible with conda
+            Returns True if the packages specified in `environment_fname` are compatible with conda
             on the container os. Otherwise returns False.
         """
         if "CONDA_PREFIX" not in os.environ:
@@ -725,13 +734,15 @@ class Clipper:
         root_prefix = os.environ["CONDA_PREFIX"].split("envs")[0]
         py_path = os.path.join(root_prefix, "bin", "python")
         process = subprocess.Popen(
-            "{py_path} {cur_dir}/check_env.py {environment_fname} {directory} {platform}".
+            "{py_path} {cur_dir}/check_env.py {environment_fname} {directory} {platform} {conda_dep_fname} {pip_dep_fname}".
             format(
                 py_path=py_path,
                 cur_dir=cur_dir,
                 environment_fname=environment_fname,
                 directory=directory,
-                platform=CONTAINER_CONDA_PLATFORM),
+                platform=CONTAINER_CONDA_PLATFORM,
+                conda_dep_fname=conda_dep_fname,
+                pip_dep_fname=pip_dep_fname),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             shell=True)
