@@ -17,13 +17,11 @@ def load_predict_func(file_path):
 
 class PythonContainer(rpc.ModelContainerBase):
     def __init__(self, path, input_type):
-        print("Initializing Python function container")
         self.input_type = rpc.string_to_input_type(input_type)
         predict_fname = "predict_func.pkl"
         predict_path = "{dir}/{predict_fname}".format(
             dir=path, predict_fname=predict_fname)
         self.predict_func = load_predict_func(predict_path)
-        print("Loaded prediction function")
 
     def predict_ints(self, inputs):
         if self.input_type != rpc.INPUT_TYPE_INTS:
@@ -108,6 +106,10 @@ if __name__ == "__main__":
         print("Using default input type: doubles")
 
     model_path = os.environ["CLIPPER_MODEL_PATH"]
+
+    print("Initializing Python function container")
+    sys.stdout.flush()
+    sys.stderr.flush()
 
     model = PythonContainer(model_path, input_type)
     rpc_service = rpc.RPCService()

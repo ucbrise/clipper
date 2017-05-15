@@ -101,6 +101,14 @@ class EventHistory:
         return self.history_buffer
 
 
+class PredictionError(Exception):
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value)
+
+
 class Server(threading.Thread):
     def __init__(self, context, clipper_ip, clipper_port):
         threading.Thread.__init__(self)
@@ -119,12 +127,20 @@ class Server(threading.Thread):
             predict response
         """
         predict_fn = self.get_prediction_function()
-        # outputs = []
         total_length = 0
         outputs = predict_fn(prediction_request.inputs)
+        # Type check the outputs:
+        if not type(outputs) == list:
+            raise PredictionError("Model did not return a list")
+        if len(outputs) != len(prediction_request.inputs):
+            raise PredictionError(
+                "Expected model to return %d outputs, found %d outputs" %
+                (len(prediction_request.inputs), len(outputs)))
+        if not type(outputs[0]) == str:
+            raise PredictionError("Model must return a list of strs. Found %s"
+                                  % type(outputs[0]))
         for o in outputs:
             total_length += len(o)
-
         response = PredictionResponse(prediction_request.msg_id,
                                       len(prediction_request.inputs),
                                       total_length)
@@ -171,6 +187,8 @@ class Server(threading.Thread):
         clipper_address = "tcp://{0}:{1}".format(self.clipper_ip,
                                                  self.clipper_port)
         poller = zmq.Poller()
+        sys.stdout.flush()
+        sys.stderr.flush()
         while True:
             socket = self.context.socket(zmq.DEALER)
             poller.register(socket, zmq.POLLIN)
@@ -189,6 +207,8 @@ class Server(threading.Thread):
                         if time_delta_millis >= SOCKET_ACTIVITY_TIMEOUT_MILLIS:
                             # Terminate the session
                             print("Connection timed out, reconnecting...")
+                            sys.stdout.flush()
+                            sys.stderr.flush()
                             connected = False
                             poller.unregister(socket)
                             socket.close()
@@ -287,6 +307,8 @@ class Server(threading.Thread):
                         print("recv: %f us, parse: %f us, handle: %f us" %
                               ((t2 - t1).microseconds, (t3 - t2).microseconds,
                                (t4 - t3).microseconds))
+                        sys.stdout.flush()
+                        sys.stderr.flush()
 
                     else:
                         feedback_request = FeedbackRequest(msg_id_bytes, [])

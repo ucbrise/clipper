@@ -189,10 +189,11 @@ class InflightMessage {
   InflightMessage(
       const std::chrono::time_point<std::chrono::system_clock> send_time,
       const int container_id, const VersionedModelId model,
-      const std::shared_ptr<Input> input)
+      const int replica_id, const std::shared_ptr<Input> input)
       : send_time_(send_time),
         container_id_(container_id),
         model_(model),
+        replica_id_(replica_id),
         input_(input) {}
 
   // Default copy and move constructors
@@ -206,6 +207,7 @@ class InflightMessage {
   std::chrono::time_point<std::chrono::system_clock> send_time_;
   int container_id_;
   VersionedModelId model_;
+  int replica_id_;
   std::shared_ptr<Input> input_;
 };
 
@@ -426,7 +428,7 @@ class TaskExecutor {
         for (auto b : batch) {
           prediction_request.add_input(b.input_);
           cur_batch.emplace_back(b.recv_time_, container->container_id_,
-                                 b.model_, b.input_);
+                                 b.model_, container->replica_id_, b.input_);
         }
         int message_id = rpc_->send_message(prediction_request.serialize(),
                                             container->container_id_);
@@ -488,12 +490,18 @@ class TaskExecutor {
       boost::optional<ModelMetrics> cur_model_metric) {
     std::shared_ptr<ModelContainer> processing_container =
         active_containers_->get_model_replica(completed_msg.model_,
-                                              completed_msg.container_id_);
+                                              completed_msg.replica_id_);
+
     auto task_latency = current_time - completed_msg.send_time_;
     long task_latency_micros =
         std::chrono::duration_cast<std::chrono::microseconds>(task_latency)
             .count();
-    processing_container->update_throughput(1, task_latency_micros);
+    if (processing_container != nullptr) {
+      processing_container->update_throughput(1, task_latency_micros);
+    } else {
+      log_error(LOGGING_TAG_TASK_EXECUTOR,
+                "Could not find processing container. Something is wrong.");
+    }
     if (cur_model_metric) {
       (*cur_model_metric)
           .latency_->insert(static_cast<int64_t>(task_latency_micros));
