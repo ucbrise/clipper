@@ -2,6 +2,7 @@ version: '2'
 
 services:
   redis:
+    restart: always
     image: redis:alpine
     cpuset: "0"
     ports:
@@ -11,6 +12,7 @@ services:
 
 
   query_frontend:
+    restart: always
     image: "clipper/query_frontend"
     depends_on:
       - redis
@@ -25,6 +27,7 @@ services:
       - "ai.clipper.container.label"
 
   mgmt_frontend:
+    restart: always
     image: "clipper/management_frontend"
     depends_on:
       - redis
