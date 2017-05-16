@@ -10,6 +10,8 @@ import clipper_manager as cm
 import time
 import subprocess32 as subprocess
 import pprint
+import random
+import socket
 
 headers = {'Content-type': 'application/json'}
 fake_model_data = "/tmp/test123456"
@@ -26,9 +28,23 @@ class BenchmarkException(Exception):
     def __str__(self):
         return repr(self.parameter)
 
+# range of ports where available ports can be found
+PORT_RANGE = [34256,40000]
+
+def find_unbound_port():
+    """
+    Returns an unbound port number on 127.0.0.1.
+    """
+    port = random.randint(*PORT_RANGE)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.bind(("127.0.0.1", port))
+    except socket.error:
+        port = get_port()
+    return port
 
 def init_clipper():
-    clipper = cm.Clipper("localhost")
+    clipper = cm.Clipper("localhost", redis_port=find_unbound_port())
     clipper.start()
     time.sleep(1)
     return clipper
@@ -80,7 +96,7 @@ def create_and_test_app(clipper, name):
     app_name = "%s_app" % name
     model_name = "%s_model" % name
     clipper.register_application(app_name, model_name, "doubles",
-                                 "default_pred", 50000)
+                                 "default_pred", 100000)
     time.sleep(1)
     response = requests.post(
         "http://localhost:1337/%s/predict" % app_name,
@@ -100,8 +116,14 @@ def create_and_test_app(clipper, name):
 
 
 def cleanup():
+    # stop docker
     subprocess.call(
-        "docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q)",
+        "docker stop $(docker ps -aqf name=clipper_) && docker rm $(docker ps -aqf name=clipper_)",
+        shell=True)
+
+    # stop model containers
+    subprocess.call(
+        "docker stop $(docker ps -aqf ancestor=clipper/noop-container) && docker rm $(docker ps -aqf ancestor=clipper/noop-container)",
         shell=True)
 
 
