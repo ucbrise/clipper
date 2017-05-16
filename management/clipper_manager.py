@@ -138,7 +138,6 @@ class Clipper:
             },
             'version': '2'
         }
-
         self.sudo = sudo
         self.host = host
         if self._host_is_local():
