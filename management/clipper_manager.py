@@ -39,7 +39,6 @@ aws_access_key_id = {access_key}
 aws_secret_access_key = {secret_key}
 """
 
-
 LOCAL_HOST_NAMES = ["local", "localhost", "127.0.0.1"]
 
 EXTERNALLY_MANAGED_MODEL = "EXTERNAL"
@@ -83,40 +82,44 @@ class Clipper:
 
         self.redis_port = redis_port
         self.docker_compost_dict = {
-                'networks': {
-                    'default': {
-                        'external': {
-                            'name': DOCKER_NW
-                            }
-                        }
-                    },
-                'services': {
-                    'mgmt_frontend': {
-                        'command': ['--redis_ip=redis', '--redis_port=%d' % self.redis_port],
-                        'depends_on': ['redis'],
-                        'image': 'clipper/management_frontend:latest',
-                        'ports':
-                        ['%d:%d' % (CLIPPER_MANAGEMENT_PORT, CLIPPER_MANAGEMENT_PORT)]
-                        },
-                    'query_frontend': {
-                        'command': ['--redis_ip=redis', '--redis_port=%d' % self.redis_port],
-                        'depends_on': ['redis', 'mgmt_frontend'],
-                        'image':
-                        'clipper/query_frontend:latest',
-                        'ports': [
-                            '%d:%d' % (CLIPPER_RPC_PORT, CLIPPER_RPC_PORT),
-                            '%d:%d' % (CLIPPER_QUERY_PORT, CLIPPER_QUERY_PORT)
-                            ]
-                        },
-                    'redis': {
-                        'image': 'redis:alpine',
-                        'ports': ['%d:%d' % (self.redis_port, self.redis_port)],
-                        'command': "redis-server --port %d" % self.redis_port
-                        }
-                    },
-                'version': '2'
+            'networks': {
+                'default': {
+                    'external': {
+                        'name': DOCKER_NW
+                    }
                 }
-
+            },
+            'services': {
+                'mgmt_frontend': {
+                    'command':
+                    ['--redis_ip=redis', '--redis_port=%d' % self.redis_port],
+                    'depends_on': ['redis'],
+                    'image':
+                    'clipper/management_frontend:latest',
+                    'ports': [
+                        '%d:%d' % (CLIPPER_MANAGEMENT_PORT,
+                                   CLIPPER_MANAGEMENT_PORT)
+                    ]
+                },
+                'query_frontend': {
+                    'command':
+                    ['--redis_ip=redis', '--redis_port=%d' % self.redis_port],
+                    'depends_on': ['redis', 'mgmt_frontend'],
+                    'image':
+                    'clipper/query_frontend:latest',
+                    'ports': [
+                        '%d:%d' % (CLIPPER_RPC_PORT, CLIPPER_RPC_PORT),
+                        '%d:%d' % (CLIPPER_QUERY_PORT, CLIPPER_QUERY_PORT)
+                    ]
+                },
+                'redis': {
+                    'image': 'redis:alpine',
+                    'ports': ['%d:%d' % (self.redis_port, self.redis_port)],
+                    'command': "redis-server --port %d" % self.redis_port
+                }
+            },
+            'version': '2'
+        }
 
         self.sudo = sudo
         self.host = host
@@ -147,7 +150,7 @@ class Clipper:
                 "docker-compose --version", warn_only=True)
             if dc_installed.return_code != 0:
                 print("docker-compose not installed on host.")
-                raise # TODO raise real exception
+                raise  # TODO raise real exception
             nw_create_command = ("docker network create --driver bridge {nw}"
                                  .format(nw=DOCKER_NW))
             self._execute_root(nw_create_command, warn_only=True)
@@ -794,8 +797,12 @@ class Clipper:
             # Look up model info in Redis
             model_key = "{mn}:{mv}".format(mn=model_name, mv=model_version)
             result = local(
-                "redis-cli -h {host} -p {redis_port} -n {db} hgetall {key}".format(
-                    host=self.host, redis_port=self.redis_port, key=model_key, db=REDIS_MODEL_DB_NUM),
+                "redis-cli -h {host} -p {redis_port} -n {db} hgetall {key}".
+                format(
+                    host=self.host,
+                    redis_port=self.redis_port,
+                    key=model_key,
+                    db=REDIS_MODEL_DB_NUM),
                 capture=True)
 
             if "nil" in result.stdout:

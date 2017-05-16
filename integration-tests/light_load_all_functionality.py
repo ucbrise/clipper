@@ -28,8 +28,10 @@ class BenchmarkException(Exception):
     def __str__(self):
         return repr(self.parameter)
 
+
 # range of ports where available ports can be found
-PORT_RANGE = [34256,40000]
+PORT_RANGE = [34256, 40000]
+
 
 def find_unbound_port():
     """
@@ -42,6 +44,7 @@ def find_unbound_port():
     except socket.error:
         port = get_port()
     return port
+
 
 def init_clipper():
     clipper = cm.Clipper("localhost", redis_port=find_unbound_port())
