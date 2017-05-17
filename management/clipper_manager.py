@@ -652,7 +652,7 @@ class Clipper:
         """
 
         relative_base_serializations_dir = "predict_serializations"
-        default_python_container = "nishadsingh/predict_func_container:latest"
+        default_python_container = "clipper/python-container"
         predict_fname = "predict_func.pkl"
         environment_fname = "environment.yml"
         conda_dep_fname = "conda_dependencies.txt"
