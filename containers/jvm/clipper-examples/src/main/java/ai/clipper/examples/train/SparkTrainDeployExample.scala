@@ -29,6 +29,26 @@ class LogisticRegressionContainer extends MLlibContainer {
 
 object Train {
 
+  /**
+    *
+    * This example can be run with the following spark-submit command when run with
+    * Spark 2.1.
+    * 1. Define the following environment variables:
+    *   + CLIPPER_MODEL_NAME=<name>
+    *   + CLIPPER_MODEL_VERSION<version>
+    *   + CLIPPER_HOST=<host>
+    *   + SSH_USER=<user> # only needed if CLIPPER_HOST isn't localhost
+    *   + SSH_KEY_PATH=<key_path> # only needed if CLIPPER_HOST isn't localhost
+    *   + SPARK_HOME=<path-to-spark>
+    *   + CLIPPER_HOME=<path-to-clipper>
+    * 2. Build the application:
+    *   + `cd $CLIPPER_HOME/containers/jvm && mvn clean package`
+    *
+    * 3. Run with Spark
+    *   + `$SPARK_HOME/bin/spark-submit --master "local[2]" --class ai.clipper.examples.train.Train --name <spark-app-name> \
+    *        $CLIPPER_HOME/containers/jvm/clipper-examples/target/clipper-examples-0.1.jar`
+    *
+    */
   def main(args: Array[String]): Unit = {
     val conf = new SparkConf().setAppName("ClipperTest").setMaster("local[2]")
     val sc = new SparkContext(conf)
@@ -56,6 +76,7 @@ object Train {
       new LogisticRegressionWithLBFGS()
         .setNumClasses(numClasses)
         .run(trainingData))
+    println(s"Trained model with ${model.model.numFeatures} features\n")
 
     val clipperHost = sys.env.getOrElse("CLIPPER_HOST", "localhost")
     val clipperVersion = sys.env.getOrElse("CLIPPER_MODEL_VERSION", "1").toInt
