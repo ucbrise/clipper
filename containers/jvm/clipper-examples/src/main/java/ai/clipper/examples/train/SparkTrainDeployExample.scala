@@ -1,20 +1,21 @@
 package ai.clipper.examples.train
 
-
 import org.apache.spark.mllib.classification.LogisticRegressionWithLBFGS
 import org.apache.spark.mllib.linalg.Vector
 import org.apache.spark.mllib.util.MLUtils
 import org.apache.spark.{SparkConf, SparkContext}
-import ai.clipper.spark.{Clipper, MLlibContainer, MLlibLogisticRegressionModel, MLlibModel}
-
+import ai.clipper.spark.{
+  Clipper,
+  MLlibContainer,
+  MLlibLogisticRegressionModel,
+  MLlibModel
+}
 
 class LogisticRegressionContainer extends MLlibContainer {
 
-  // var model: Option[MLlibLogisticRegressionModel] = None
   var model: Option[MLlibModel] = None
 
   override def init(sc: SparkContext, m: MLlibModel) {
-    // model = Some(model.asInstanceOf[MLlibLogisticRegressionModel)
     println("Initializing container")
     model = Some(m)
   }
@@ -23,8 +24,6 @@ class LogisticRegressionContainer extends MLlibContainer {
     println("making prediction")
     val m = model.get
     xs.map(x => m.predict(x).toFloat)
-//    m.predict(x)
-    // xs.map(m.predict(_))
   }
 }
 
@@ -33,13 +32,14 @@ object Train {
   def main(args: Array[String]): Unit = {
     val conf = new SparkConf().setAppName("ClipperTest").setMaster("local[2]")
     val sc = new SparkContext(conf)
-    sc.parallelize(Seq("")).foreachPartition(x => {
-      import org.apache.commons.logging.LogFactory
-      import org.apache.log4j.{Level, LogManager}
-      LogManager.getRootLogger().setLevel(Level.WARN)
-      val log = LogFactory.getLog("EXECUTOR-LOG:")
-      log.warn("START EXECUTOR WARN LOG LEVEL")
-    })
+    sc.parallelize(Seq(""))
+      .foreachPartition(x => {
+        import org.apache.commons.logging.LogFactory
+        import org.apache.log4j.{Level, LogManager}
+        LogManager.getRootLogger().setLevel(Level.WARN)
+        val log = LogFactory.getLog("EXECUTOR-LOG:")
+        log.warn("START EXECUTOR WARN LOG LEVEL")
+      })
 
     val sparkHome = sys.env.get("SPARK_HOME").get
     // Load and parse the data file.
@@ -53,15 +53,9 @@ object Train {
     val numClasses = 2
 
     val model = MLlibLogisticRegressionModel(
-      new LogisticRegressionWithLBFGS().setNumClasses(numClasses).run(trainingData))
-
-    // val model = MLlibLogisticRegressionModel(LogisticRegressionModelWithSGD.train(trainingData,
-    //                                          numClasses,
-    //                                          categoricalFeaturesInfo,
-    //                                          impurity,
-    //                                          maxDepth,
-    //                                          maxBins))
-
+      new LogisticRegressionWithLBFGS()
+        .setNumClasses(numClasses)
+        .run(trainingData))
 
     val clipperHost = sys.env.getOrElse("CLIPPER_HOST", "localhost")
     val clipperVersion = sys.env.getOrElse("CLIPPER_MODEL_VERSION", "1").toInt
@@ -77,27 +71,15 @@ object Train {
     println(s"Num wrong: $numWrong")
     println("Learned logistic regression model:\n" + model.toString)
 
-    // Clipper.deployModel(sc, "test", 1, model, "ai.clipper.example.LogisticRegressionContainer")
-    Clipper.deploySparkModel(sc, sys.env("CLIPPER_MODEL_NAME"), clipperVersion, model, classOf[LogisticRegressionContainer], clipperHost, List("a"), sshUser, sshKeyPath )
-//    Clipper.deployModel(sc, "test", 1, model, classOf[LogisticRegressionContainer])
+    Clipper.deploySparkModel(sc,
+                             sys.env("CLIPPER_MODEL_NAME"),
+                             clipperVersion,
+                             model,
+                             classOf[LogisticRegressionContainer],
+                             clipperHost,
+                             List("a"),
+                             sshUser,
+                             sshKeyPath)
     sc.stop()
   }
 }
-
-
-// GaussianMixtureModel
-// KMeansModel
-// LDAModel
-// PowerIterationClusteringModel
-// ChiSqSelectorModel
-// Word2VecModel
-// FPGrowthModel
-// PrefixSpanModel
-// MatrixFactorizationModel
-// IsotonicRegressionModel
-// LassoModel
-// LinearRegressionModel
-// RidgeRegressionModel
-// DecisionTreeModel
-// RandomForestModel
-// GradientBoostedTreesModel

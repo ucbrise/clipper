@@ -238,7 +238,7 @@ public class RPC<I extends DataVector<?>> {
 
   private void handlePredictRequest(long msgId, Iterator<I> dataVectors, ClipperModel<I> model,
       ZMQ.Socket socket) throws IOException {
-    ArrayList<I> inputs = new ArrayList<I>();
+    ArrayList<I> inputs = new ArrayList<>();
     dataVectors.forEachRemaining(inputs::add);
     List<SerializableString> predictions = model.predict(inputs);
 

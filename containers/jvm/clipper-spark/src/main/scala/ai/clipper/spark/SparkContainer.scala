@@ -1,9 +1,9 @@
 package ai.clipper.spark
 
-import java.nio.FloatBuffer
+import java.util.ArrayList
 
 import ai.clipper.container.ClipperModel
-import ai.clipper.container.data.{DataType, DoubleVector, FloatVector, SerializableString}
+import ai.clipper.container.data.{DataType, DoubleVector, SerializableString}
 import org.apache.spark.SparkContext
 import org.apache.spark.ml.PipelineModel
 import org.apache.spark.mllib.classification.{LogisticRegressionModel, NaiveBayesModel, SVMModel}
@@ -17,7 +17,6 @@ import org.json4s.jackson.JsonMethods._
 
 import scala.collection.JavaConversions._
 import scala.reflect.runtime.universe
-import java.util.ArrayList
 
 abstract class SparkModelContainer extends ClipperModel[DoubleVector] {
 
@@ -28,7 +27,6 @@ abstract class SparkModelContainer extends ClipperModel[DoubleVector] {
   final override def predict(inputVectors: ArrayList[DoubleVector]): ArrayList[SerializableString] = {
     val inputs = inputVectors.map(x => Vectors.dense(new Array[Double](x.getData.remaining()))).toList
     new ArrayList(predict(inputs).map(x => new SerializableString(x.toString)))
-//    new FloatVector(FloatBuffer.wrap(predict(inputs).toArray))
   }
 
   def predict(x: List[Vector]): List[Float]

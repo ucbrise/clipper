@@ -2,13 +2,9 @@ package ai.clipper.examples.container;
 
 import ai.clipper.container.ClipperModel;
 import ai.clipper.container.data.DataType;
-import ai.clipper.container.data.FloatVector;
 import ai.clipper.container.data.SerializableString;
 
-import javax.xml.soap.SAAJResult;
-import java.nio.FloatBuffer;
 import java.util.ArrayList;
-import java.util.Iterator;
 
 public class NoOpStringModel extends ClipperModel<SerializableString> {
   public NoOpStringModel() {}

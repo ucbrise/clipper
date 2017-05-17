@@ -24,10 +24,6 @@
         <groupId>org.json4s</groupId>
         <artifactId>json4s-jackson_${scala.compat.version}</artifactId>
     </dependency>
-    <!-- <dependency> -->
-    <!--   <groupId>org.apache.xbean</groupId> -->
-    <!--   <artifactId>xbean&#45;asm5&#45;shaded</artifactId> -->
-    <!-- </dependency> -->
     <dependency>
         <groupId>commons-io</groupId>
         <artifactId>commons-io</artifactId>
@@ -36,14 +32,6 @@
       <groupId>org.scalaj</groupId>
       <artifactId>scalaj-http_${scala.compat.version}</artifactId>
     </dependency>
-    <!-- <dependency> -->
-    <!--     <groupId>org.ow2.asm</groupId> -->
-    <!--     <artifactId>asm</artifactId> -->
-    <!-- </dependency> -->
-    <!-- <dependency> -->
-    <!--   <groupId>org.apache.bcel</groupId> -->
-    <!--   <artifactId>bcel</artifactId> -->
-    <!-- </dependency> -->
     <dependency>
       <groupId>ai.clipper</groupId>
       <artifactId>clipper-container</artifactId>
@@ -72,12 +60,6 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
         <configuration>
-          <!-- <relocations> -->
-          <!--   <relocation> -->
-          <!--     <pattern>org.eclipse.jetty</pattern> -->
-          <!--     <shadedPattern>edu.berkeley.veloxms.jetty</shadedPattern> -->
-          <!--   </relocation> -->
-          <!-- </relocations> -->
           <createDependencyReducedPom>true</createDependencyReducedPom>
           <!-- <minimizeJar>true</minimizeJar> -->
           <!-- <promoteTransitiveDependencies>true</promoteTransitiveDependencies> -->

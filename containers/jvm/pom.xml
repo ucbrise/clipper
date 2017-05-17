@@ -116,12 +116,6 @@
       <artifactId>jzmq</artifactId>
        <version>3.1.0</version>
     </dependency>
-      <!-- https://mvnrepository.com/artifact/org.ow2.asm/asm -->
-      <!-- <dependency> -->
-      <!--     <groupId>org.ow2.asm</groupId> -->
-      <!--     <artifactId>asm</artifactId> -->
-      <!--     <version>4.0</version> -->
-      <!-- </dependency> -->
 
       <!-- This artifact is a shaded version of ASM 5.0.4. The POM that was used to produce this
            is at https://github.com/apache/geronimo-xbean/tree/xbean-4.4/xbean-asm5-shaded
@@ -137,11 +131,6 @@
           <artifactId>commons-io</artifactId>
           <version>2.5</version>
       </dependency>
-      <!-- <dependency> -->
-      <!--     <groupId>org.apache.bcel</groupId> -->
-      <!--     <artifactId>bcel</artifactId> -->
-      <!--     <version>6.0</version> -->
-      <!-- </dependency> -->
       <dependency>
           <groupId>ai.clipper</groupId>
           <artifactId>clipper-container</artifactId>

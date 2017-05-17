@@ -2,11 +2,10 @@ package ai.clipper.spark.container.impl
 
 import java.net.UnknownHostException
 
-import org.apache.spark.{SparkConf, SparkContext}
-import ai.clipper.container.ClipperModel
-import ai.clipper.container.data.{DataType, DoubleVector}
+import ai.clipper.container.data.DoubleVector
 import ai.clipper.rpc.RPC
-import ai.clipper.spark.{Clipper, SparkModelContainer, container}
+import ai.clipper.spark.{Clipper, SparkModelContainer}
+import org.apache.spark.{SparkConf, SparkContext}
 
 object ContainerMain {
 

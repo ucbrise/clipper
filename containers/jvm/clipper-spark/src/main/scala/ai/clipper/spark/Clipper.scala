@@ -6,7 +6,6 @@ import java.nio.file.StandardOpenOption.CREATE
 import java.nio.file.{Files, Paths}
 import java.nio.charset.Charset
 
-import org.apache.commons.io.FileUtils
 import org.apache.spark.SparkContext
 import org.apache.spark.ml.PipelineModel
 import org.json4s._
@@ -25,7 +24,7 @@ case object PipelineModelType extends ModelType
 
 object ModelTypeSerializer
     extends CustomSerializer[ModelType](
-      format =>
+      _ =>
         (
           {
             case JString("MLlibModelType") => MLlibModelType
@@ -52,17 +51,41 @@ object Clipper {
   val CONTAINER_JAR_FILE: String = "container_source.jar"
   val MODEL_DIRECTORY: String = "model"
   val REPL_CLASS_DIR: String = "repl_classes"
-  // TODO: Uncomment before committing
-//    val CLIPPER_SPARK_CONTAINER_NAME = "clipper/spark-scala-container"
-  val CLIPPER_SPARK_CONTAINER_NAME = "dcrankshaw/spark-scala-container"
+  val CLIPPER_SPARK_CONTAINER_NAME = "clipper/spark-scala-container"
 
   val DOCKER_NW: String = "clipper_nw"
   val CLIPPER_MANAGEMENT_PORT: Int = 1338
 
 
+  // Imports the json serialization library as an implicit and adds our custom serializer
+  // for the ModelType case classes
   implicit val json4sFormats = Serialization.formats(NoTypeHints) + ModelTypeSerializer
 
 
+  /**
+    *
+    * @param sc Spark context
+    * @param name The name to assign the model when deploying to Clipper
+    * @param version The model version
+    * @param model The trained Spark model. Note that this _must_ be an instance of either
+    *              ai.clipper.spark.MLlibModel or org.apache.spark.ml.PipelineModel
+    * @param containerClass This model container which specifies how to use the trained
+    *                       model to make predictions. This can include any pre-processing
+    *                       or post-processing code (including any featurization). This class
+    *                       must either extend ai.clipper.spark.MLlibContainer or
+    *                       ai.clipper.spark.PipelineModelContainer.
+    * @param clipperHost The IP address or hostname of a running Clipper instance. This can be either localhost
+    *                    or a remote machine that you have SSH access to. SSH access is required to copy the model and
+    *                    launch a Docker container on the remote machine.
+    * @param labels A list of labels to be associated with the model.
+    * @param sshUserName If deploying to a remote machine, the username associated with the SSH credentials.
+    * @param sshKeyPath If deploying to a remote machine, the path to an SSH key authorized to log in to the remote
+    *                   machine.
+    * @param dockerRequiresSudo True if the Docker daemon on the machine hosting Clipper requires sudo to access. If
+    *                           set to true, the ssh user you specify must have passwordless sudo access.
+    * @tparam M The type of the model. This _must_ be an instance of either
+    *              ai.clipper.spark.MLlibModel or org.apache.spark.ml.PipelineModel
+    */
   def deploySparkModel[M](sc: SparkContext,
                           name: String,
                           version: Int,
@@ -73,7 +96,6 @@ object Clipper {
                           sshUserName: Option[String] = None,
                           sshKeyPath: Option[String] = None,
                           dockerRequiresSudo: Boolean = true): Unit = {
-
     val basePath = Paths.get("/tmp", name, version.toString).toString
     // Use the same directory scheme of /tmp/<name>/<version> on host
     val hostDataPath = basePath
@@ -82,7 +104,6 @@ object Clipper {
 
     try {
       saveSparkModel[M](sc, name, version, model, containerClass, basePath)
-      publishModelToClipper(clipperHost, name, version, labels, hostDataPath)
       if (!islocalHost) {
         // Make sure that ssh credentials were supplied
         val (user, key) = try {
@@ -98,6 +119,7 @@ object Clipper {
           }
         }
         copyModelDataToHost(clipperHost, basePath, hostDataPath, user, key)
+        publishModelToClipper(clipperHost, name, version, labels, hostDataPath)
         startSparkContainerRemote(name,
                                   version,
                                   clipperHost,
@@ -106,6 +128,7 @@ object Clipper {
                                   key,
                                   dockerRequiresSudo)
       } else {
+        publishModelToClipper(clipperHost, name, version, labels, hostDataPath)
         startSparkContainerLocal(name, version, basePath)
       }
     } catch {
@@ -125,7 +148,6 @@ object Clipper {
       "run",
       "-d",
       s"--network=$DOCKER_NW",
-      // "-m", "8g",
       "-v", s"$modelDataPath:/model:ro",
       "-e", s"CLIPPER_MODEL_NAME=$name",
       "-e", s"CLIPPER_MODEL_VERSION=$version",
@@ -146,8 +168,6 @@ object Clipper {
                                         sshKeyPath: String,
                                         dockerRequiresSudo: Boolean): Unit = {
 
-
-    // TODO: test this
     val sudoCommand = if (dockerRequiresSudo) Seq("sudo") else Seq()
     val getDockerIPCommand = sudoCommand ++ Seq(
       "docker",
@@ -256,7 +276,7 @@ object Clipper {
         m.save(sc, modelPath)
         // Because I'm not sure how to do it in the type system, check that
         // the container is of the right type
-        // TODO: this test doesn't work from the REPL
+        // NOTE: this test doesn't work from the REPL
         try {
           containerClass.newInstance.asInstanceOf[MLlibContainer]
         } catch {
@@ -295,14 +315,16 @@ object Clipper {
       ClipperContainerConf(containerClass.getName, copiedJarName, modelType)
     getReplOutputDir(sc) match {
       case Some(classSourceDir) => {
-        // TODO: throw unsupportedoperation exception
-        println(
-          "deployModel called from Spark REPL. Saving classes defined in REPL.")
-        conf.fromRepl = true
-        conf.replClassDir = Some(REPL_CLASS_DIR)
-        val classDestDir = Paths.get(basePath, REPL_CLASS_DIR)
-        FileUtils.copyDirectory(Paths.get(classSourceDir).toFile,
-                                classDestDir.toFile)
+        throw new UnsupportedOperationException("Clipper does not support deploying models directly from the Spark REPL")
+        // NOTE: This commented out code is intentionally committed. We hope to support
+        // model deployment in the future.
+//        println(
+//          "deployModel called from Spark REPL. Saving classes defined in REPL.")
+//        conf.fromRepl = true
+//        conf.replClassDir = Some(REPL_CLASS_DIR)
+//        val classDestDir = Paths.get(basePath, REPL_CLASS_DIR)
+//        FileUtils.copyDirectory(Paths.get(classSourceDir).toFile,
+//                                classDestDir.toFile)
       }
       case None =>
         println(
