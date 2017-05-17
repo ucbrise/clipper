@@ -225,13 +225,15 @@ class ThreadPool {
       log_error(LOGGING_TAG_THREADPOOL, error_msg.str());
       throw std::runtime_error(error_msg.str());
     }
-    // work_queue_.push(std::make_unique<TaskType>(std::move(task)));
     return result_future;
   }
 
   static size_t get_queue_id(const VersionedModelId& vm, const int replica_id) {
-    return std::hash<std::string>()(vm.first) ^ std::hash<int>()(vm.second) ^
-           std::hash<int>()(replica_id);
+    std::size_t seed = 0;
+    boost::hash_combine(seed, vm.first);
+    boost::hash_combine(seed, vm.second);
+    boost::hash_combine(seed, replica_id);
+    return seed;
   }
 
  private:
@@ -283,7 +285,6 @@ class ThreadPool {
   boost::shared_mutex queues_mutex_;
   std::unordered_map<size_t, ThreadSafeQueue<std::unique_ptr<IThreadTask>>>
       queues_;
-  // ThreadSafeQueue<std::unique_ptr<IThreadTask>> work_queue_;
   std::unordered_map<size_t, std::thread> threads_;
 };
 
@@ -312,6 +313,6 @@ inline void create_queue(VersionedModelId vm, int replica_id) {
 }
 
 }  // namespace DefaultThreadPool
-}
+}  // namespace clipper
 
 #endif  // CLIPPER_LIB_THREADPOOL_HPP

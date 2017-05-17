@@ -44,6 +44,10 @@ LOCAL_HOST_NAMES = ["local", "localhost", "127.0.0.1"]
 EXTERNALLY_MANAGED_MODEL = "EXTERNAL"
 
 
+class ClipperManagerException(Exception):
+    pass
+
+
 class Clipper:
     """
     Connection to a Clipper instance for administrative purposes.
@@ -131,7 +135,9 @@ class Clipper:
                 print(
                     "user and key_path must be specified when instantiating Clipper with a nonlocal host"
                 )
-                raise
+                raise ClipperManagerException(
+                    "user and key_path must be specified when instantiating Clipper with a nonlocal host"
+                )
             env.user = user
             env.key_filename = key_path
             env.host_string = "%s:%d" % (host, ssh_port)
@@ -150,7 +156,8 @@ class Clipper:
                 "docker-compose --version", warn_only=True)
             if dc_installed.return_code != 0:
                 print("docker-compose not installed on host.")
-                raise  # TODO raise real exception
+                raise ClipperManagerException(
+                    "docker-compose not installed on host.")
             nw_create_command = ("docker network create --driver bridge {nw}"
                                  .format(nw=DOCKER_NW))
             self._execute_root(nw_create_command, warn_only=True)

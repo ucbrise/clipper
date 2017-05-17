@@ -37,13 +37,14 @@ def find_unbound_port():
     """
     Returns an unbound port number on 127.0.0.1.
     """
-    port = random.randint(*PORT_RANGE)
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        sock.bind(("127.0.0.1", port))
-    except socket.error:
-        port = get_port()
-    return port
+    while True:
+        port = random.randint(*PORT_RANGE)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            sock.bind(("127.0.0.1", port))
+            return port
+        except socket.error:
+            print("randomly generated port %d is bound. Trying again." % port)
 
 
 def init_clipper():
@@ -73,7 +74,7 @@ def deploy_model(clipper, name, version):
         "clipper/noop-container", [name],
         "doubles",
         num_containers=1)
-    time.sleep(20)
+    time.sleep(10)
     num_preds = 25
     num_defaults = 0
     for i in range(num_preds):

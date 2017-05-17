@@ -117,7 +117,7 @@ class ModelQueue {
     Deadline deadline = std::chrono::system_clock::now() +
                         std::chrono::microseconds(task.latency_slo_micros_);
     queue_.emplace(deadline, std::move(task));
-    condition_.notify_one();
+    queue_not_empty_condition_.notify_one();
   }
 
   int get_size() {
@@ -129,7 +129,8 @@ class ModelQueue {
       std::function<int(Deadline)> &&get_batch_size) {
     std::unique_lock<std::mutex> lock(queue_mutex_);
     remove_tasks_with_elapsed_deadlines();
-    condition_.wait(lock, [this]() { return !queue_.empty(); });
+    queue_not_empty_condition_.wait(lock, [this]() { return !queue_.empty(); });
+    remove_tasks_with_elapsed_deadlines();
     Deadline deadline = queue_.top().first;
     int max_batch_size = get_batch_size(deadline);
     std::vector<PredictTask> batch;
@@ -149,7 +150,7 @@ class ModelQueue {
                           DeadlineCompare>;
   ModelPQueue queue_;
   std::mutex queue_mutex_;
-  std::condition_variable condition_;
+  std::condition_variable queue_not_empty_condition_;
 
   // Deletes tasks with deadlines prior or equivalent to the
   // current system time. This method should only be called
@@ -396,7 +397,6 @@ class TaskExecutor {
           "TaskExecutor failed to find previously registered active "
           "container!");
     }
-
     boost::shared_lock<boost::shared_mutex> l(model_queues_mutex_);
     auto model_queue_entry = model_queues_.find(container->model_);
     if (model_queue_entry == model_queues_.end()) {

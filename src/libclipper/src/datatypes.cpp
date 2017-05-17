@@ -11,7 +11,10 @@
 namespace clipper {
 
 size_t versioned_model_hash(const VersionedModelId &key) {
-  return std::hash<std::string>()(key.first) ^ std::hash<int>()(key.second);
+  std::size_t seed = 0;
+  boost::hash_combine(seed, key.first);
+  boost::hash_combine(seed, key.second);
+  return seed;
 }
 
 std::string versioned_model_to_str(const VersionedModelId &model) {
