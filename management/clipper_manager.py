@@ -32,6 +32,8 @@ CLIPPER_QUERY_PORT = 1337
 CLIPPER_MANAGEMENT_PORT = 1338
 CLIPPER_RPC_PORT = 7000
 
+CLIPPER_LOGS_PATH = "/tmp/clipper-logs"
+
 aws_cli_config = """
 [default]
 region = us-east-1
@@ -846,6 +848,61 @@ class Clipper:
                       % model_name)
                 return True
 
+    def get_clipper_logs(self, additional_image_names=None):
+        """Returns true if the provided conda environment is compatible with the container os.
+
+        If packages listed in specified conda environment file have conflicting dependencies,
+        this function will warn the user and return False. If packages don't exist in the
+        container's conda channel, this function will warn the user and remove those packages.
+
+        Parameters
+        ----------
+        additional_image_names : list(str), optional
+            Any additional Docker container image names whose logs should
+            be retrieved. This should only be necessary if you are using model containers
+            that don't use a standard clipper RPC container (clipper/py-rpc, clipper/java-rpc)
+            as a base image.
+
+        Returns
+        -------
+        list(str)
+            Returns a list of local filenames containing the Docker container log snapshots.
+        """
+        container_ids = self._get_clipper_container_ids()
+        if additional_image_names is not None:
+            for image in additional_image_names:
+                container_ids.extend(self._get_docker_container_id_from_image(image))
+        try:
+            os.mkdir(CLIPPER_LOGS_PATH)
+        except OSError:
+            pass
+        log_file_names = []
+        for container in container_ids:
+            output = self._execute_root("docker logs {container}".format(container=container))
+            cur_log_fname = os.path.join(CLIPPER_LOGS_PATH, "%s-container.log" % container)
+            with open(cur_log_fname, "w") as f:
+                f.write(output)
+            log_file_names.append(cur_log_fname)
+        return log_file_names
+
+    def _get_clipper_container_ids(self):
+        # NOTE: clipper/java-rpc doesn't exist yet but it will soon (see CLIPPER-137)
+        clipper_images = ["clipper/management_frontend", "clipper/query_frontend", "clipper/py-rpc", "clipper/java-rpc"]
+        ids = []
+        for image in clipper_images:
+            ids.extend(self._get_docker_container_id_from_image(image))
+        return ids
+
+    def _get_docker_container_id_from_image(self, image):
+        """
+        Uses docker ps filters to search for containers by ancestor image.
+        """
+        ids = []
+        containers = self._execute_root("docker ps -aqf ancestor={image}".format(image=image))
+        for l in containers.split("\n"):
+            ids.append(l.strip())
+        return ids
+
     def inspect_instance(self):
         """Fetches metrics from the running Clipper instance.
 
@@ -896,16 +953,23 @@ class Clipper:
         for r in range(num_containers):
             self.add_container(model_name, model_version)
 
+    def stop_model_containers(self):
+        """Stops and removes all Docker model containers running on the host
+
+        """
+
     def stop_all(self):
-        """Stops and removes all Docker containers on the host.
+        """Stops and removes all Clipper Docker containers on the host.
 
         """
         print("Stopping Clipper and all running models...")
         with hide("output", "warnings", "running"):
-            self._execute_root("docker-compose stop", warn_only=True)
+            # self._execute_root("docker-compose stop", warn_only=True)
+            container_ids = self._get_clipper_container_ids()
+            container_id_str = " ".join(container_ids)
             self._execute_root(
-                "docker stop $(docker ps -a -q)", warn_only=True)
-            self._execute_root("docker rm $(docker ps -a -q)", warn_only=True)
+                "docker stop {ids}".format(ids=container_id_str), warn_only=True)
+            self._execute_root("docker rm {ids}".format(ids=container_id_str), warn_only=True)
 
     def cleanup(self):
         """Cleans up all Docker artifacts.
@@ -917,8 +981,9 @@ class Clipper:
             self.stop_all()
             self._execute_standard(
                 "rm -rf {model_repo}".format(model_repo=MODEL_REPO))
+            # Remove all images from the Clipper repository
             self._execute_root(
-                "docker rmi --force $(docker images -q)", warn_only=True)
+                "docker rmi --force $(docker images -aq -f reference=clipper/*)", warn_only=True)
             self._execute_root("docker network rm clipper_nw", warn_only=True)
 
     def _publish_new_model(self, name, version, labels, input_type,
