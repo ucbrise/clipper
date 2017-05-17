@@ -304,12 +304,22 @@ case class MLlibGradientBoostedTreesModel(model: GradientBoostedTreesModel)
 object MLlibLoader {
   def metadataPath(path: String): String = s"$path/metadata"
 
-  def getModelClassName(sc: SparkContext, path: String) = {
-    val str = sc.textFile(metadataPath(path)).take(1)(0)
-    println(s"JSON STRING: $str")
-    val json = parse(str)
+  def getModelClassName(sc: SparkContext, path: String): String = {
+//    val str = sc.textFile(metadataPath(path)).take(1)(0)
+    val str = sc.textFile(metadataPath(path)).collect()
+    println(s"ALL METADATA:")
+    str.foreach(println(_))
+    val jsonStr = str.take(1)(0)
+    println(s"JSON STRING: $jsonStr")
+    val json = parse(jsonStr)
     val JString(className) = (json \ "class")
-    className
+    // Spark hardcoded the class name for DecisionTreeModel for some reason,
+    // then changed the package. We substitute the correct class name.
+    if (className == "org.apache.spark.mllib.tree.DecisionTreeModel") {
+      "org.apache.spark.mllib.tree.model.DecisionTreeModel"
+    } else {
+      className
+    }
   }
 
   def load(sc: SparkContext, path: String): MLlibModel = {

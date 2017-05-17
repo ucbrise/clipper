@@ -53,7 +53,7 @@ object Clipper {
   val MODEL_DIRECTORY: String = "model"
   val REPL_CLASS_DIR: String = "repl_classes"
   // TODO: Uncomment before committing
-  //  val CLIPPER_SPARK_CONTAINER_NAME = "clipper/spark-scala-container"
+//    val CLIPPER_SPARK_CONTAINER_NAME = "clipper/spark-scala-container"
   val CLIPPER_SPARK_CONTAINER_NAME = "dcrankshaw/spark-scala-container"
 
   val DOCKER_NW: String = "clipper_nw"
@@ -145,23 +145,44 @@ object Clipper {
                                         sshUserName: String,
                                         sshKeyPath: String,
                                         dockerRequiresSudo: Boolean): Unit = {
+
+
+    // TODO: test this
     val sudoCommand = if (dockerRequiresSudo) Seq("sudo") else Seq()
+    val getDockerIPCommand = sudoCommand ++ Seq(
+      "docker",
+      "ps", "-aqf",
+      "ancestor=clipper/query_frontend",
+      "|", "xargs") ++ sudoCommand ++ Seq("docker",
+      "inspect",
+      "--format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'"
+    )
+
+
+
+    val sshCommand = Seq("ssh",
+      "-o", "StrictHostKeyChecking=no",
+      "-i", s"$sshKeyPath",
+      s"$sshUserName@$clipperHost")
+
+    val dockerIpCommand = sshCommand ++ getDockerIPCommand
+    val dockerIp = dockerIpCommand.!!.stripLineEnd
+    println(s"Docker IP: $dockerIp")
+
     val startContainerCmd = sudoCommand ++ Seq(
       "docker",
       "run",
       "-d",
       s"--network=$DOCKER_NW",
       "-v", s"$modelDataPath:/model:ro",
-      s"-e CLIPPER_MODEL_NAME=$name",
-      s"-e CLIPPER_MODEL_VERSION=$version",
-      "-e CLIPPER_IP=query_frontend",
-      "-e CLIPPER_INPUT_TYPE=doubles",
+      "-e", s"CLIPPER_MODEL_NAME=$name",
+      "-e", s"CLIPPER_MODEL_VERSION=$version",
+      "-e", s"CLIPPER_IP=$dockerIp",
+      "-e", "CLIPPER_INPUT_TYPE=doubles",
       CLIPPER_SPARK_CONTAINER_NAME
     )
-    val sshStartContainerCmd = Seq("ssh",
-                                   "-o", "StrictHostKeyChecking=no",
-                                   "-i", s"$sshKeyPath",
-                                   s"$sshUserName@$clipperHost") ++ startContainerCmd
+    val sshStartContainerCmd = sshCommand ++ startContainerCmd
+    println(sshStartContainerCmd)
     if (sshStartContainerCmd.! != 0) {
       throw new ModelDeploymentError("Error starting model container")
     }
@@ -274,6 +295,7 @@ object Clipper {
       ClipperContainerConf(containerClass.getName, copiedJarName, modelType)
     getReplOutputDir(sc) match {
       case Some(classSourceDir) => {
+        // TODO: throw unsupportedoperation exception
         println(
           "deployModel called from Spark REPL. Saving classes defined in REPL.")
         conf.fromRepl = true
@@ -328,12 +350,19 @@ object Clipper {
       }
       case PipelineModelType => {
         val model = PipelineModel.load(modelPath)
+        try {
         val container = classLoader
           .loadClass(conf.className)
           .newInstance()
           .asInstanceOf[PipelineModelContainer]
         container.init(sc, model)
         container.asInstanceOf[SparkModelContainer]
+        } catch {
+          case e: Throwable => {
+            e.printStackTrace
+            throw e
+          }
+        }
       }
     }
   }

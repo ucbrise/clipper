@@ -242,6 +242,8 @@ public class RPC<I extends DataVector<?>> {
     dataVectors.forEachRemaining(inputs::add);
     List<SerializableString> predictions = model.predict(inputs);
 
+    // TODO: check length of input and output lists match
+
     // At minimum, the output contains an unsigned
     // integer specifying the number of string
     // outputs

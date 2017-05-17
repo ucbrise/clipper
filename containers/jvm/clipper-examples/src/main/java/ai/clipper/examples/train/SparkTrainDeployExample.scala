@@ -1,7 +1,6 @@
 package ai.clipper.examples.train
 
 
-// import scala.reflect.runtime.universe._
 import org.apache.spark.mllib.classification.LogisticRegressionWithLBFGS
 import org.apache.spark.mllib.linalg.Vector
 import org.apache.spark.mllib.util.MLUtils
@@ -42,20 +41,16 @@ object Train {
       log.warn("START EXECUTOR WARN LOG LEVEL")
     })
 
+    val sparkHome = sys.env.get("SPARK_HOME").get
     // Load and parse the data file.
     val data = MLUtils.loadLibSVMFile(
       sc,
-      "/Users/crankshaw/model-serving/spark_serialization_project/spark_binary/data/mllib/sample_libsvm_data.txt")
+      s"${sparkHome}/data/mllib/sample_libsvm_data.txt")
     // Split the data into training and test sets (30% held out for testing)
     val splits = data.randomSplit(Array(0.7, 0.3))
     val (trainingData, testData) = (splits(0), splits(1))
 
     val numClasses = 2
-    //  Empty categoricalFeaturesInfo indicates all features are continuous.
-    // val categoricalFeaturesInfo = Map[Int, Int]()
-    // val impurity = "gini"
-    // val maxDepth = 5
-    // val maxBins = 32
 
     val model = MLlibLogisticRegressionModel(
       new LogisticRegressionWithLBFGS().setNumClasses(numClasses).run(trainingData))

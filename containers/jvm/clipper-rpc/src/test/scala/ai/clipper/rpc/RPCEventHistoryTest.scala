@@ -4,15 +4,6 @@ import java.util.ArrayList
 
 import ai.clipper.rpc.logging.{RPCEventHistory, RPCEventType}
 import org.scalatest.FunSuite
-//
-//import clipper.container.app.logging.RPCEvent;
-//import clipper.container.app.logging.RPCEventHistory;
-//import clipper.container.app.logging.RPCEventType;
-//import org.junit.Assert;
-//import org.junit.Test;
-//
-//import java.util.ArrayList;
-//import java.util.List;
 
 
 
