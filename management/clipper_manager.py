@@ -87,7 +87,8 @@ class Clipper:
                  sudo=False,
                  ssh_port=22,
                  check_for_docker=True,
-                 redis_port=REDIS_PORT):
+                 redis_port=REDIS_PORT,
+                 restart_containers=False):
 
         self.redis_port = redis_port
         self.docker_compost_dict = {
@@ -138,6 +139,9 @@ class Clipper:
             },
             'version': '2'
         }
+        if restart_containers:
+            self.docker_compost_dict['services']['mgmt_frontend']['restart'] = 'always'
+
         self.sudo = sudo
         self.host = host
         if self._host_is_local():
