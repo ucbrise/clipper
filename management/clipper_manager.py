@@ -252,7 +252,12 @@ class Clipper:
             else:
                 if not os.path.exists(
                         d) or os.stat(s).st_mtime - os.stat(d).st_mtime > 1:
-                    shutil.copy2(s, d)
+                    try:
+                        shutil.copy2(s, d)
+                    except Exception as e:
+                        print(
+                            "Error copying {source} to {dest}: {error}. File will be skipped.".
+                            format(source=s, dest=d, error=e))
 
     def start(self):
         """Start a Clipper instance.
@@ -871,15 +876,18 @@ class Clipper:
         container_ids = self._get_clipper_container_ids()
         if additional_image_names is not None:
             for image in additional_image_names:
-                container_ids.extend(self._get_docker_container_id_from_image(image))
+                container_ids.extend(
+                    self._get_docker_container_id_from_image(image))
         try:
             os.mkdir(CLIPPER_LOGS_PATH)
         except OSError:
             pass
         log_file_names = []
         for container in container_ids:
-            output = self._execute_root("docker logs {container}".format(container=container))
-            cur_log_fname = os.path.join(CLIPPER_LOGS_PATH, "%s-container.log" % container)
+            output = self._execute_root(
+                "docker logs {container}".format(container=container))
+            cur_log_fname = os.path.join(CLIPPER_LOGS_PATH,
+                                         "%s-container.log" % container)
             with open(cur_log_fname, "w") as f:
                 f.write(output)
             log_file_names.append(cur_log_fname)
@@ -887,7 +895,10 @@ class Clipper:
 
     def _get_clipper_container_ids(self):
         # NOTE: clipper/java-rpc doesn't exist yet but it will soon (see CLIPPER-137)
-        clipper_images = ["clipper/management_frontend", "clipper/query_frontend", "clipper/py-rpc", "clipper/java-rpc"]
+        clipper_images = [
+            "clipper/management_frontend", "clipper/query_frontend",
+            "clipper/py-rpc", "clipper/java-rpc"
+        ]
         ids = []
         for image in clipper_images:
             ids.extend(self._get_docker_container_id_from_image(image))
@@ -898,7 +909,8 @@ class Clipper:
         Uses docker ps filters to search for containers by ancestor image.
         """
         ids = []
-        containers = self._execute_root("docker ps -aqf ancestor={image}".format(image=image))
+        containers = self._execute_root(
+            "docker ps -aqf ancestor={image}".format(image=image))
         for l in containers.split("\n"):
             ids.append(l.strip())
         return ids
@@ -968,8 +980,10 @@ class Clipper:
             container_ids = self._get_clipper_container_ids()
             container_id_str = " ".join(container_ids)
             self._execute_root(
-                "docker stop {ids}".format(ids=container_id_str), warn_only=True)
-            self._execute_root("docker rm {ids}".format(ids=container_id_str), warn_only=True)
+                "docker stop {ids}".format(ids=container_id_str),
+                warn_only=True)
+            self._execute_root(
+                "docker rm {ids}".format(ids=container_id_str), warn_only=True)
 
     def cleanup(self):
         """Cleans up all Docker artifacts.
@@ -983,7 +997,8 @@ class Clipper:
                 "rm -rf {model_repo}".format(model_repo=MODEL_REPO))
             # Remove all images from the Clipper repository
             self._execute_root(
-                "docker rmi --force $(docker images -aq -f reference=clipper/*)", warn_only=True)
+                "docker rmi --force $(docker images -aq -f reference=clipper/*)",
+                warn_only=True)
             self._execute_root("docker network rm clipper_nw", warn_only=True)
 
     def _publish_new_model(self, name, version, labels, input_type,
