@@ -17,8 +17,9 @@ function usage {
     -l, --libclipper            Run tests only for libclipper folder.
     -m, --management            Run tests only for management folder.
     -f, --frontend              Run tests only for frontend folder.
-    -j, --java-container        Run tests only for java container folder.
+    -j, --jvm-container         Run tests only for jvm container folder.
     -r, --rpc-container         Run tests only for rpc container folder.
+    -h, --help                  Display this message and exit.
 
 $@
 EOF
@@ -77,17 +78,16 @@ function set_test_environment {
   fi
 
   randomize_redis_port
-  
   set -e # turn back on exit on command fail
 
   # start Redis on the test port if it's not already running
   redis-server --port $REDIS_PORT &> /dev/null &
 }
 
-function run_java_container_tests {
-  echo "Running Java container tests..."
+function run_jvm_container_tests {
+  echo "Running JVM container tests..."
   cd $DIR
-  cd ../containers/java/clipper-java-container
+  cd ../containers/jvm
   mvn test
 }
 
@@ -120,7 +120,7 @@ function run_all_tests {
   redis-cli -p $REDIS_PORT "flushall"
   run_frontend_tests
   redis-cli -p $REDIS_PORT "flushall"
-  run_java_container_tests
+  run_jvm_container_tests
   redis-cli -p $REDIS_PORT "flushall"
   run_rpc_container_tests
 }
@@ -145,8 +145,8 @@ case $args in
     -f | --frontend )       set_test_environment
                             run_frontend_tests
                             ;;
-    -j | --java-container ) set_test_environment
-                            run_java_container_tests
+    -j | --jvm-container )  set_test_environment
+                            run_jvm_container_tests
                             ;;
     -r | --rpc-container )  set_test_environment
                             run_rpc_container_tests

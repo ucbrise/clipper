@@ -11,3 +11,7 @@ debug/
 .idea/
 config.log
 target/
+
+# scala
+dependency-reduced-pom.xml
+*.iml

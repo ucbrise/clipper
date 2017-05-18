@@ -1,0 +1,463 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>ai.clipper</groupId>
+  <artifactId>clipper-parent</artifactId>
+  <version>0.1</version>
+  <packaging>pom</packaging>
+
+  <name>${project.artifactId}</name>
+  <inceptionYear>2017</inceptionYear>
+  <licenses>
+    <license>
+      <name>Apache 2</name>
+      <url>https://opensource.org/licenses/Apache-2.0</url>
+    </license>
+  </licenses>
+
+  <prerequisites>
+    <maven>3.0.4</maven>
+  </prerequisites>
+  
+  <modules>
+    <!-- Contains the Clipper model container interface for Java. An implementation
+         of this interface must be provided to the RPC system to be served. -->
+    <!--    TODO: rename this module      -->
+    <module>clipper-container</module>
+    <!-- Some example container implementations and some example model train + deploy workflows. -->
+    <module>clipper-examples</module>
+    <!-- The Clipper Java RPC client. Should be included in any projects that want to write
+         their own Docker container implementation. -->
+    <module>clipper-rpc</module>
+    <!-- Spark specific functionality to be included in Spark programs. This includes
+         Spark-specific Clipper model containers and some utilities to deploy Spark
+         models to Clipper directly from a Spark program without needing to create or
+         start Docker containers manually. -->
+    <module>clipper-spark</module>
+    <!-- The Docker container implementation to serve Spark models -->
+    <module>spark-container-impl</module>
+    <module>rpc-test</module>
+  </modules>
+
+  <properties>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+    <encoding>UTF-8</encoding>
+    <scala.version>2.11.8</scala.version>
+    <java.version>1.8</java.version>
+    <scala.compat.version>2.11</scala.compat.version>
+    <scala.binary.version>2.11</scala.binary.version>
+    <spark.version>2.1.0</spark.version>
+  </properties>
+
+  <repositories>
+    <repository>
+      <id>central</id>
+      <!-- This should be at top, it makes maven try the central repo first and then others and hence faster dep resolution -->
+      <name>Maven Repository</name>
+      <url>https://repo1.maven.org/maven2</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+    <repository>
+      <id>apache-repo</id>
+      <name>Apache Repository</name>
+      <url>https://repository.apache.org/content/repositories/releases</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+  <pluginRepositories>
+    <pluginRepository>
+      <id>central</id>
+      <url>https://repo1.maven.org/maven2</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </pluginRepository>
+  </pluginRepositories>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.scala-lang</groupId>
+        <artifactId>scala-library</artifactId>
+        <version>${scala.version}</version>
+      </dependency>
+      <dependency>
+          <groupId>org.apache.spark</groupId>
+          <artifactId>spark-core_${scala.compat.version}</artifactId>
+          <version>${spark.version}</version>
+      </dependency>
+      <dependency>
+          <groupId>org.apache.spark</groupId>
+          <artifactId>spark-mllib_${scala.compat.version}</artifactId>
+          <version>${spark.version}</version>
+      </dependency>
+      <dependency>
+          <groupId>org.json4s</groupId>
+          <artifactId>json4s-jackson_${scala.compat.version}</artifactId>
+          <version>3.2.11</version>
+      </dependency>
+
+
+    <dependency>
+      <groupId>org.zeromq</groupId>
+      <artifactId>jzmq</artifactId>
+       <version>3.1.0</version>
+    </dependency>
+
+      <!-- This artifact is a shaded version of ASM 5.0.4. The POM that was used to produce this
+           is at https://github.com/apache/geronimo-xbean/tree/xbean-4.4/xbean-asm5-shaded
+           For context on why we shade ASM, see SPARK-782 and SPARK-6152. -->
+      <dependency>
+        <groupId>org.apache.xbean</groupId>
+        <artifactId>xbean-asm5-shaded</artifactId>
+        <version>4.4</version>
+      </dependency>
+      <!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
+      <dependency>
+          <groupId>commons-io</groupId>
+          <artifactId>commons-io</artifactId>
+          <version>2.5</version>
+      </dependency>
+      <dependency>
+          <groupId>ai.clipper</groupId>
+          <artifactId>clipper-container</artifactId>
+          <version>0.1</version>
+      </dependency>
+      <dependency>
+          <groupId>ai.clipper</groupId>
+          <artifactId>clipper-rpc</artifactId>
+          <version>0.1</version>
+      </dependency>
+      <dependency>
+          <groupId>ai.clipper</groupId>
+          <artifactId>clipper-spark</artifactId>
+          <version>0.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.scalaj</groupId>
+        <artifactId>scalaj-http_${scala.compat.version}</artifactId>
+        <version>2.3.0</version>
+      </dependency>
+
+      <!-- Test -->
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>4.11</version>
+        <scope>test</scope>
+      </dependency>
+      <!--<dependency>-->
+        <!--<groupId>org.specs2</groupId>-->
+        <!--<artifactId>specs2-core_${scala.compat.version}</artifactId>-->
+        <!--<version>2.4.16</version>-->
+        <!--<scope>test</scope>-->
+      <!--</dependency>-->
+      <dependency>
+        <groupId>org.scalactic</groupId>
+        <artifactId>scalactic_${scala.compat.version}</artifactId>
+        <version>3.0.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.scalatest</groupId>
+        <artifactId>scalatest_${scala.compat.version}</artifactId>
+        <version>3.0.1</version>
+        <scope>test</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+   <!--<build>-->
+     <!--&lt;!&ndash;<sourceDirectory>src/main/scala</sourceDirectory>&ndash;&gt;-->
+     <!--&lt;!&ndash;<testSourceDirectory>src/test/scala</testSourceDirectory>&ndash;&gt;-->
+     <!--<plugins>-->
+       <!--<plugin>-->
+         <!--&lt;!&ndash; see http://davidb.github.com/scala&#45;maven&#45;plugin &ndash;&gt;-->
+         <!--<groupId>net.alchim31.maven</groupId>-->
+         <!--<artifactId>scala&#45;maven&#45;plugin</artifactId>-->
+         <!--<version>3.2.0</version>-->
+         <!--<executions>-->
+           <!--<execution>-->
+             <!--<goals>-->
+               <!--<goal>compile</goal>-->
+               <!--<goal>testCompile</goal>-->
+             <!--</goals>-->
+             <!--<configuration>-->
+               <!--<args>-->
+                 <!--&lt;!&ndash; <arg>&#38;#45;make:transitive</arg> &ndash;&gt;-->
+                 <!--<arg>&#45;dependencyfile</arg>-->
+                 <!--<arg>${project.build.directory}/.scala_dependencies</arg>-->
+               <!--</args>-->
+             <!--</configuration>-->
+           <!--</execution>-->
+         <!--</executions>-->
+       <!--</plugin>-->
+       <!--<plugin>-->
+         <!--<groupId>org.apache.maven.plugins</groupId>-->
+         <!--<artifactId>maven&#45;surefire&#45;plugin</artifactId>-->
+         <!--<version>2.18.1</version>-->
+         <!--<configuration>-->
+           <!--<useFile>false</useFile>-->
+           <!--<disableXmlReport>true</disableXmlReport>-->
+           <!--&lt;!&ndash; If you have classpath issue like NoDefClassError,... &ndash;&gt;-->
+           <!--&lt;!&ndash; useManifestOnlyJar>false</useManifestOnlyJar &ndash;&gt;-->
+           <!--<includes>-->
+             <!--<include>**/*Test.*</include>-->
+             <!--<include>**/*Suite.*</include>-->
+           <!--</includes>-->
+         <!--</configuration>-->
+       <!--</plugin>-->
+     <!--</plugins>-->
+   <!--</build>-->
+
+<build>
+  <pluginManagement>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>1.3.1</version>
+        <executions>
+          <execution>
+            <id>enforce-versions</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireMavenVersion>
+                  <version>3.0.4</version>
+                </requireMavenVersion>
+                <requireJavaVersion>
+                  <version>${java.version}</version>
+                </requireJavaVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>1.8</version>
+      </plugin>
+      <plugin>
+        <groupId>net.alchim31.maven</groupId>
+        <artifactId>scala-maven-plugin</artifactId>
+        <version>3.2.0</version>
+        <executions>
+          <execution>
+            <id>scala-compile-first</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>scala-test-compile-first</id>
+            <phase>process-test-resources</phase>
+            <goals>
+              <goal>testCompile</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <scalaVersion>${scala.version}</scalaVersion>
+          <recompileMode>incremental</recompileMode>
+          <useZincServer>true</useZincServer>
+          <args>
+            <arg>-unchecked</arg>
+            <arg>-deprecation</arg>
+            <arg>-feature</arg>
+          </args>
+
+          <javacArgs>
+            <javacArg>-source</javacArg>
+            <javacArg>${java.version}</javacArg>
+            <javacArg>-target</javacArg>
+            <javacArg>${java.version}</javacArg>
+          </javacArgs>
+          <!-- The following plugin is required to use quasiquotes in Scala 2.10 and is used
+                 by Spark SQL for code generation. -->
+            <!-- <compilerPlugins> -->
+              <!--   <compilerPlugin> -->
+                <!--       <groupId>org.scalamacros</groupId> -->
+                <!--       <artifactId>paradise_${scala.version}</artifactId> -->
+                <!--       <version>${scala.macros.version}</version> -->
+                <!--   </compilerPlugin> -->
+              <!-- </compilerPlugins> -->
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.1</version>
+          <configuration>
+            <source>${java.version}</source>
+            <target>${java.version}</target>
+            <encoding>UTF-8</encoding>
+            <maxmem>1024m</maxmem>
+            <fork>true</fork>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>2.17</version>
+          <configuration>
+            <forkMode>once</forkMode>
+            <workingDirectory>target</workingDirectory>
+            <argLine>-Djava.library.path=/usr/local/lib</argLine>
+            <!-- Uses scalatest instead -->
+            <skipTests>true</skipTests>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.scalatest</groupId>
+          <artifactId>scalatest-maven-plugin</artifactId>
+          <version>1.0</version>
+          <configuration>
+            <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+            <junitxml>.</junitxml>
+            <filereports>ClipperTestSuite.txt</filereports>
+            <argLine>-server -Xms512M -Xmx3000M -Xss1M  -XX:+UseConcMarkSweepGC -XX:NewRatio=8</argLine>
+            <stderr/>
+            <systemProperties>
+              <java.awt.headless>true</java.awt.headless>
+            </systemProperties>
+          </configuration>
+          <executions>
+            <execution>
+              <id>test</id>
+              <goals>
+                <goal>test</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>2.4</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-antrun-plugin</artifactId>
+          <version>1.7</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-source-plugin</artifactId>
+          <version>2.2.1</version>
+          <configuration>
+            <attach>true</attach>
+          </configuration>
+          <executions>
+            <execution>
+              <id>create-source-jar</id>
+              <goals>
+                <goal>jar-no-fork</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-clean-plugin</artifactId>
+          <version>2.5</version>
+          <configuration>
+            <filesets>
+              <fileset>
+                <directory>work</directory>
+              </fileset>
+              <fileset>
+                <directory>checkpoint</directory>
+              </fileset>
+            </filesets>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>add-scala-sources</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>src/main/scala</source>
+              </sources>
+            </configuration>
+          </execution>
+          <execution>
+            <id>add-scala-test-sources</id>
+            <phase>generate-test-sources</phase>
+            <goals>
+              <goal>add-test-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>src/test/scala</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>net.alchim31.maven</groupId>
+        <artifactId>scala-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+      </plugin>
+       <!-- <plugin> -->
+       <!--   <groupId>org.scalastyle</groupId> -->
+       <!--   <artifactId>scalastyle&#45;maven&#45;plugin</artifactId> -->
+       <!--   <version>0.8.0</version> -->
+       <!--   <configuration> -->
+       <!--     <verbose>false</verbose> -->
+       <!--     <failOnViolation>false</failOnViolation> -->
+       <!--     <includeTestSourceDirectory>false</includeTestSourceDirectory> -->
+       <!--     <failOnWarning>false</failOnWarning> -->
+       <!--     <sourceDirectory>${basedir}/src/main/scala</sourceDirectory> -->
+       <!--     <testSourceDirectory>${basedir}/src/test/scala</testSourceDirectory> -->
+       <!--     <configLocation>scalastyle&#45;config.xml</configLocation> -->
+       <!--     <outputFile>scalastyle&#45;output.xml</outputFile> -->
+       <!--     <outputEncoding>UTF&#45;8</outputEncoding> -->
+       <!--   </configuration> -->
+       <!--   <executions> -->
+       <!--     <execution> -->
+       <!--       <phase>package</phase> -->
+       <!--       <goals> -->
+       <!--         <goal>check</goal> -->
+       <!--       </goals> -->
+       <!--     </execution> -->
+       <!--   </executions> -->
+       <!-- </plugin> -->
+    </plugins>
+  </build>
+</project>

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>ai.clipper</groupId>
+    <artifactId>clipper-parent</artifactId>
+    <version>0.1</version>
+  </parent>
+  <artifactId>clipper-rpc</artifactId>
+  <name>${project.artifactId}</name>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.zeromq</groupId>
+      <artifactId>jzmq</artifactId>
+    </dependency>
+      <dependency>
+          <groupId>ai.clipper</groupId>
+          <artifactId>clipper-container</artifactId>
+      </dependency>
+    <dependency>
+      <groupId>org.scalatest</groupId>
+      <artifactId>scalatest_${scala.compat.version}</artifactId>
+    </dependency>
+    <!-- <dependency> -->
+    <!--   <groupId>org.apache.spark</groupId> -->
+    <!--   <artifactId>spark&#45;core_${scala.binary.version}</artifactId> -->
+    <!--   <scope>provided</scope> -->
+    <!-- </dependency> -->
+    <!-- <dependency> -->
+    <!--   <groupId>org.apache.spark</groupId> -->
+    <!--   <artifactId>spark&#45;mllib_${scala.binary.version}</artifactId> -->
+    <!--   <scope>provided</scope> -->
+    <!-- </dependency> -->
+    <!-- <dependency> -->
+    <!--     <groupId>org.json4s</groupId> -->
+    <!--     <artifactId>json4s&#45;jackson_${scala.compat.version}</artifactId> -->
+    <!-- </dependency> -->
+  </dependencies>
+
+  <build>
+    <!--<outputDirectory>target/scala-${scala.binary.version}/classes</outputDirectory>-->
+    <!--<testOutputDirectory>target/scala-${scala.binary.version}/test-classes</testOutputDirectory>-->
+    <plugins>
+      <plugin>
+        <groupId>org.scalatest</groupId>
+        <artifactId>scalatest-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <forkMode>once</forkMode>
+          <workingDirectory>target</workingDirectory>
+          <argLine>-Djava.library.path=/usr/local/lib</argLine>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
