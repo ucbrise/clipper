@@ -22,13 +22,15 @@ void task_completes(std::atomic<int>& counter) {
   counter.fetch_add(1);
 }
 
-// Tests whether a single task successfully finishes
-TEST(ThreadPoolTests, TestSuccessfulJobCompletion) {
-  ThreadPool threadpool(1);
+TEST(ThreadPoolTests, TestSingleQueueSingleJob) {
+  ThreadPool threadpool;
+  VersionedModelId vm = std::make_pair("m", 1);
+  int replica_id = 17;
+  ASSERT_TRUE(threadpool.create_queue(vm, replica_id));
   std::atomic<int> counter(0);
   std::condition_variable_any notification_counter;
   std::mutex notification_mutex;
-  threadpool.submit([&counter] { task_completes(counter); });
+  threadpool.submit(vm, replica_id, [&counter] { task_completes(counter); });
   std::unique_lock<std::mutex> l(notification_mutex);
   bool result =
       notification_counter.wait_for(l, std::chrono::milliseconds(2000),
@@ -36,16 +38,17 @@ TEST(ThreadPoolTests, TestSuccessfulJobCompletion) {
   ASSERT_TRUE(result);
 }
 
-// Tests whether many tasks submitted to a threadpool with 4 threads
-// all complete successfully.
-TEST(ThreadPoolTests, TestManyJobsComplete) {
+TEST(ThreadPoolTests, TestSingleQueueManyJobs) {
   int num_tasks = 500;
-  ThreadPool threadpool(4);
+  ThreadPool threadpool;
+  VersionedModelId vm = std::make_pair("m", 1);
+  int replica_id = 17;
+  ASSERT_TRUE(threadpool.create_queue(vm, replica_id));
   std::atomic<int> counter(0);
   std::condition_variable_any notification_counter;
   std::mutex notification_mutex;
   for (int i = 0; i < num_tasks; ++i) {
-    threadpool.submit([&counter] { task_completes(counter); });
+    threadpool.submit(vm, replica_id, [&counter] { task_completes(counter); });
   }
   std::unique_lock<std::mutex> l(notification_mutex);
   bool result = notification_counter.wait_for(
@@ -54,17 +57,18 @@ TEST(ThreadPoolTests, TestManyJobsComplete) {
   ASSERT_TRUE(result);
 }
 
-// Tests that a single long-running task blocks all subsequent tasks
-// in a threadpool with 1 thread.
-TEST(ThreadPoolTests, TestHangingTaskOneThread) {
+TEST(ThreadPoolTests, TestSingleQueueJobHangs) {
   int num_tasks = 500;
-  ThreadPool threadpool(1);
+  ThreadPool threadpool;
+  VersionedModelId vm = std::make_pair("m", 1);
+  int replica_id = 17;
+  ASSERT_TRUE(threadpool.create_queue(vm, replica_id));
   std::atomic<int> counter(0);
   std::condition_variable_any notification_counter;
   std::mutex notification_mutex;
-  threadpool.submit([&counter] { task_hangs(counter); });
+  threadpool.submit(vm, replica_id, [&counter] { task_hangs(counter); });
   for (int i = 0; i < num_tasks; ++i) {
-    threadpool.submit([&counter] { task_completes(counter); });
+    threadpool.submit(vm, replica_id, [&counter] { task_completes(counter); });
   }
   std::unique_lock<std::mutex> l(notification_mutex);
   bool result = notification_counter.wait_for(
@@ -74,22 +78,82 @@ TEST(ThreadPoolTests, TestHangingTaskOneThread) {
   ASSERT_EQ(counter, 0);
 }
 
-// Tests that a single long-running task does not block subsequent tasks
-// in a threadpool with more than one thread.
-TEST(ThreadPoolTests, TestHangingTaskManyThreads) {
+// Tests to make sure a blocked task in one queue doesn't block
+// other queues
+TEST(ThreadPoolTests, TestMultipleQueuesOneQueueHangs) {
   int num_tasks = 500;
-  ThreadPool threadpool(4);
-  std::atomic<int> counter(0);
+  ThreadPool threadpool;
+  VersionedModelId vm_one = std::make_pair("m", 1);
+  int replica_id_one = 17;
+  VersionedModelId vm_two = std::make_pair("j", 3);
+  int replica_id_two = 3;
+  ASSERT_TRUE(threadpool.create_queue(vm_one, replica_id_one));
+  ASSERT_TRUE(threadpool.create_queue(vm_two, replica_id_two));
+
+  std::atomic<int> counter_one(0);
+  std::atomic<int> counter_two(0);
   std::condition_variable_any notification_counter;
   std::mutex notification_mutex;
-  threadpool.submit([&counter] { task_hangs(counter); });
+  threadpool.submit(vm_two, replica_id_two,
+                    [&counter_two] { task_hangs(counter_two); });
   for (int i = 0; i < num_tasks; ++i) {
-    threadpool.submit([&counter] { task_completes(counter); });
+    threadpool.submit(vm_two, replica_id_two,
+                      [&counter_two] { task_completes(counter_two); });
+  }
+  for (int i = 0; i < num_tasks; ++i) {
+    threadpool.submit(vm_one, replica_id_one,
+                      [&counter_one] { task_completes(counter_one); });
   }
   std::unique_lock<std::mutex> l(notification_mutex);
   bool result = notification_counter.wait_for(
       l, std::chrono::milliseconds(2000),
-      [&counter, &num_tasks]() { return counter == num_tasks; });
+      [&counter_one, &counter_two, &num_tasks]() {
+        return counter_one == num_tasks && counter_two == num_tasks;
+      });
+  ASSERT_FALSE(result);
+  ASSERT_EQ(counter_two, 0);
+  ASSERT_EQ(counter_one, num_tasks);
+}
+
+TEST(ThreadPoolTests, TestCreateDuplicateQueue) {
+  ThreadPool threadpool;
+  VersionedModelId vm = std::make_pair("m", 1);
+  int replica_id = 17;
+  ASSERT_TRUE(threadpool.create_queue(vm, replica_id));
+  ASSERT_FALSE(threadpool.create_queue(vm, replica_id));
+}
+
+TEST(ThreadPoolTests, TestSubmitToNonexistentQueue) {
+  ThreadPool threadpool;
+  VersionedModelId vm_one = std::make_pair("m", 1);
+  int replica_id_one = 17;
+  std::atomic<int> counter(0);
+  std::condition_variable_any notification_counter;
+  std::mutex notification_mutex;
+  ASSERT_THROW(threadpool.submit(vm_one, replica_id_one,
+                                 [&counter] { task_completes(counter); }),
+               std::runtime_error);
+  ASSERT_TRUE(threadpool.create_queue(vm_one, replica_id_one));
+  threadpool.submit(vm_one, replica_id_one,
+                    [&counter] { task_completes(counter); });
+  std::unique_lock<std::mutex> l(notification_mutex);
+  bool result =
+      notification_counter.wait_for(l, std::chrono::milliseconds(2000),
+                                    [&counter]() { return counter == 1; });
   ASSERT_TRUE(result);
+}
+
+TEST(ThreadPoolTests, TestQueueIdHash) {
+  // Same model name and version, different replica
+  ASSERT_NE(ThreadPool::get_queue_id(std::make_pair("m", 1), 1),
+            ThreadPool::get_queue_id(std::make_pair("m", 1), 2));
+
+  // Same model name, different version, same replica
+  ASSERT_NE(ThreadPool::get_queue_id(std::make_pair("m", 1), 1),
+            ThreadPool::get_queue_id(std::make_pair("m", 2), 1));
+
+  // Different model name, same version, same replica
+  ASSERT_NE(ThreadPool::get_queue_id(std::make_pair("m", 1), 1),
+            ThreadPool::get_queue_id(std::make_pair("j", 1), 1));
 }
 }

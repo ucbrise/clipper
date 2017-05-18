@@ -61,7 +61,7 @@ TEST(TaskExecutorTests, TestDeadlineComparisonsWorkCorrectly) {
   ASSERT_TRUE(later_greater_than_earlier);
 }
 
-TEST(TaskExecutorTests, ModelQueueOrdersElementsOnEarliestDeadline) {
+TEST(ModelQueueTests, TestGetBatchQueueNotEmpty) {
   PredictTask task_a = create_predict_task(1, 10000);
   PredictTask task_b = create_predict_task(2, 10000);
   PredictTask task_c = create_predict_task(3, 10000);
@@ -72,40 +72,43 @@ TEST(TaskExecutorTests, ModelQueueOrdersElementsOnEarliestDeadline) {
   model_queue.add_task(task_b);
   model_queue.add_task(task_c);
 
-  PredictTask first_task = model_queue.get_batch(1)[0];
-  PredictTask second_task = model_queue.get_batch(1)[0];
-  PredictTask third_task = model_queue.get_batch(1)[0];
+  std::vector<PredictTask> tasks =
+      model_queue.get_batch([](Deadline) { return 3; });
 
   // Because we added tasks a through c in alphabetical
   // order with the same latency slos, we expect the model
   // queue's get_batch() function to return them in the same order
-  ASSERT_EQ(first_task.query_id_, task_a.query_id_);
-  ASSERT_EQ(second_task.query_id_, task_b.query_id_);
-  ASSERT_EQ(third_task.query_id_, task_c.query_id_);
+  ASSERT_EQ(tasks[0].query_id_, task_a.query_id_);
+  ASSERT_EQ(tasks[1].query_id_, task_b.query_id_);
+  ASSERT_EQ(tasks[2].query_id_, task_c.query_id_);
+}
 
-  std::vector<PredictTask> curr_batch = model_queue.get_batch(1);
-  ASSERT_TRUE(curr_batch.empty());
+TEST(ModelQueueTests, TestGetBatchOrdersByEarliestDeadline) {
+  PredictTask task_a = create_predict_task(1, 20000);
+  PredictTask task_b = create_predict_task(2, 10000);
+  PredictTask task_c = create_predict_task(3, 30000);
 
-  model_queue.add_task(task_c);
-  model_queue.add_task(task_b);
+  ModelQueue model_queue;
+
   model_queue.add_task(task_a);
+  model_queue.add_task(task_b);
+  model_queue.add_task(task_c);
 
-  first_task = model_queue.get_batch(1)[0];
-  second_task = model_queue.get_batch(1)[0];
-  third_task = model_queue.get_batch(1)[0];
+  std::vector<PredictTask> tasks =
+      model_queue.get_batch([](Deadline) { return 3; });
 
-  // Because we added tasks a through c in reverse alphabetical
+  // Because we added tasks a through c in alphabetical
   // order with the same latency slos, we expect the model
-  // queue's get_batch() function to return them in reverse alphabetical order
-  ASSERT_EQ(first_task.query_id_, task_c.query_id_);
-  ASSERT_EQ(second_task.query_id_, task_b.query_id_);
-  ASSERT_EQ(third_task.query_id_, task_a.query_id_);
+  // queue's get_batch() function to return them in the same order
+  ASSERT_EQ(tasks[0].query_id_, task_b.query_id_);
+  ASSERT_EQ(tasks[1].query_id_, task_a.query_id_);
+  ASSERT_EQ(tasks[2].query_id_, task_c.query_id_);
 }
 
-TEST(TaskExecutorTests, ModelQueueGetBatchRemovesTasksWithElapsedDeadlines) {
+TEST(ModelQueueTests, TestGetBatchRemovesTasksWithElapsedDeadline) {
   PredictTask task_a = create_predict_task(1, 0);
   PredictTask task_b = create_predict_task(2, 0);
-  PredictTask task_c = create_predict_task(3, 100000);
+  PredictTask task_c = create_predict_task(3, 10000);
 
   ModelQueue model_queue;
 
@@ -113,34 +116,10 @@ TEST(TaskExecutorTests, ModelQueueGetBatchRemovesTasksWithElapsedDeadlines) {
   model_queue.add_task(task_b);
   model_queue.add_task(task_c);
 
-  std::vector<PredictTask> tasks = model_queue.get_batch(3);
-  // Tasks A and B have elapsed deadlines, so the model queue
-  // should return a batch containing only Task C
-  ASSERT_EQ(tasks.size(), 1);
+  std::vector<PredictTask> tasks =
+      model_queue.get_batch([](Deadline) { return 3; });
+
+  ASSERT_EQ(tasks.size(), (size_t)1);
   ASSERT_EQ(tasks[0].query_id_, task_c.query_id_);
-}
-
-TEST(TaskExecutorTests,
-     ModelQueueGetEarliestDeadlineRemovesTasksWithElapsedDeadlines) {
-  PredictTask task_a = create_predict_task(1, 0);
-  PredictTask task_b = create_predict_task(2, 0);
-  PredictTask task_c = create_predict_task(3, 100000);
-
-  ModelQueue model_queue;
-
-  model_queue.add_task(task_a);
-  model_queue.add_task(task_b);
-
-  // Tasks A and B have elapsed deadlines, so the model queue
-  // should indicate that there is no earliest deadline
-  boost::optional<Deadline> earliest_deadline =
-      model_queue.get_earliest_deadline();
-  ASSERT_FALSE(earliest_deadline);
-
-  model_queue.add_task(task_c);
-  earliest_deadline = model_queue.get_earliest_deadline();
-  // Task C's deadline has not elapsed, so the model queue
-  // should return an earliest deadline
-  ASSERT_TRUE(earliest_deadline);
 }
 }

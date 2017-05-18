@@ -19,6 +19,7 @@ function usage {
     -f, --frontend              Run tests only for frontend folder.
     -j, --jvm-container         Run tests only for jvm container folder.
     -r, --rpc-container         Run tests only for rpc container folder.
+    -i, --integration_tests     Run integration tests.
     -h, --help                  Display this message and exit.
 
 $@
@@ -113,16 +114,24 @@ function run_frontend_tests {
   ./src/frontends/frontendtests --redis_port $REDIS_PORT
 }
 
+function run_integration_tests {
+  echo -e "\nRunning integration tests\n\n"
+  cd $DIR
+  python ../integration-tests/light_load_all_functionality.py
+}
+
 function run_all_tests {
-  run_management_tests
-  redis-cli -p $REDIS_PORT "flushall"
   run_libclipper_tests
   redis-cli -p $REDIS_PORT "flushall"
   run_frontend_tests
   redis-cli -p $REDIS_PORT "flushall"
+  run_management_tests
+  redis-cli -p $REDIS_PORT "flushall"
   run_jvm_container_tests
   redis-cli -p $REDIS_PORT "flushall"
   run_rpc_container_tests
+  redis-cli -p $REDIS_PORT "flushall"
+  run_integration_tests
 }
 
 if [ "$#" == 0 ]
@@ -150,6 +159,9 @@ case $args in
                             ;;
     -r | --rpc-container )  set_test_environment
                             run_rpc_container_tests
+                            ;;
+    -i | --integration_tests )  set_test_environment
+                            run_integration_tests
                             ;;
     -h | --help )           usage
                             ;;
