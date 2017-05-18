@@ -69,7 +69,7 @@ object Clipper {
     * @param version The model version
     * @param model The trained Spark model. Note that this _must_ be an instance of either
     *              ai.clipper.spark.MLlibModel or org.apache.spark.ml.PipelineModel
-    * @param containerClass This model container which specifies how to use the trained
+    * @param containerClass The model container which specifies how to use the trained
     *                       model to make predictions. This can include any pre-processing
     *                       or post-processing code (including any featurization). This class
     *                       must either extend ai.clipper.spark.MLlibContainer or
