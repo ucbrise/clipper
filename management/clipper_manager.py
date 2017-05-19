@@ -80,9 +80,8 @@ class Clipper:
         If unspecified, a docker container running redis will be started
         on `host` at the port specified by `redis_port`.
     redis_persistence_path : string, optional
-        The directory path to which redis data should be persisted. If the
-        directory does not already exist, it will be created. If unspecified,
-        redis will not persist data to disk. 
+        The directory path to which redis data should be persisted. The directory
+        should not already exist. If unspecified, redis will not persist data to disk. 
     restart_containers : bool, optional
         If true, containers will restart on failure. If false, containers
         will not restart automatically.
@@ -159,9 +158,16 @@ class Clipper:
             self.docker_compost_dict['services']['query_frontend'][
                 'depends_on'].append('redis')
             if redis_persistence_path:
-                self.docker_compost_dict['services']['redis']['volumes'] = [
-                    '%s:/data' % redis_persistence_path
-                ]
+                if not os.path.exists(redis_persistence_path):
+                    self.docker_compost_dict['services']['redis'][
+                        'volumes'] = ['%s:/data' % redis_persistence_path]
+                else:
+                    print(
+                        "The directory specified by the redis persistence path already exists"
+                    )
+                    raise ClipperManagerException(
+                        "The directory specified by the redis persistence path already exists"
+                    )
 
         if restart_containers:
             self.docker_compost_dict['services']['mgmt_frontend'][
