@@ -64,6 +64,7 @@ const std::string UPDATE_JSON_SCHEMA = R"(
 void respond_http(std::string content, std::string message,
                   std::shared_ptr<HttpServer::Response> response) {
   *response << "HTTP/1.1 " << message
+            << "\r\nContent-Type: application/json"
             << "\r\nContent-Length: " << content.length() << "\r\n\r\n"
             << content << "\n";
 }
