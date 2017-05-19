@@ -116,8 +116,10 @@ class Clipper:
             },
             'services': {
                 'mgmt_frontend': {
-                    'command':
-                    ['--redis_ip=%s' % self.redis_ip, '--redis_port=%d' % self.redis_port],
+                    'command': [
+                        '--redis_ip=%s' % self.redis_ip,
+                        '--redis_port=%d' % self.redis_port
+                    ],
                     'image':
                     'clipper/management_frontend:latest',
                     'ports': [
@@ -129,8 +131,10 @@ class Clipper:
                     }
                 },
                 'query_frontend': {
-                    'command':
-                    ['--redis_ip=%s' % self.redis_ip, '--redis_port=%d' % self.redis_port],
+                    'command': [
+                        '--redis_ip=%s' % self.redis_ip,
+                        '--redis_port=%d' % self.redis_port
+                    ],
                     'depends_on': ['mgmt_frontend'],
                     'image':
                     'clipper/query_frontend:latest',
@@ -145,20 +149,27 @@ class Clipper:
         start_redis = (self.redis_ip == DEFAULT_REDIS_IP)
         if start_redis:
             self.docker_compost_dict['services']['redis'] = {
-                    'image': 'redis:alpine',
-                    'ports': ['%d:%d' % (self.redis_port, self.redis_port)],
-                    'command': "redis-server --port %d" % self.redis_port
-                }
-            self.docker_compost_dict['services']['mgmt_frontend']['depends_on'] = ['redis']
-            self.docker_compost_dict['services']['query_frontend']['depends_on'].append('redis')
+                'image': 'redis:alpine',
+                'ports': ['%d:%d' % (self.redis_port, self.redis_port)],
+                'command': "redis-server --port %d" % self.redis_port
+            }
+            self.docker_compost_dict['services']['mgmt_frontend'][
+                'depends_on'] = ['redis']
+            self.docker_compost_dict['services']['query_frontend'][
+                'depends_on'].append('redis')
             if redis_persistence_path:
-                self.docker_compost_dict['services']['redis']['volumes'] = ['%s:/data' % redis_persistence_path]
+                self.docker_compost_dict['services']['redis']['volumes'] = [
+                    '%s:/data' % redis_persistence_path
+                ]
 
         if restart_containers:
-            self.docker_compost_dict['services']['mgmt_frontend']['restart'] = 'always'
-            self.docker_compost_dict['services']['query_frontend']['restart'] = 'always'
+            self.docker_compost_dict['services']['mgmt_frontend'][
+                'restart'] = 'always'
+            self.docker_compost_dict['services']['query_frontend'][
+                'restart'] = 'always'
             if start_redis:
-                self.docker_compost_dict['services']['redis']['restart'] = 'always'
+                self.docker_compost_dict['services']['redis'][
+                    'restart'] = 'always'
 
         self.sudo = sudo
         self.host = host
