@@ -80,8 +80,9 @@ class Clipper:
         If unspecified, a docker container running redis will be started
         on `host` at the port specified by `redis_port`.
     redis_persistence_path : string, optional
-        The path to which redis data should be persisted. If unspecified,
-        redis will not persist data to disk.
+        The directory path to which redis data should be persisted. If the
+        directory does not already exist, it will be created. If unspecified,
+        redis will not persist data to disk. 
     restart_containers : bool, optional
         If true, containers will restart on failure. If false, containers
         will not restart automatically.
@@ -100,10 +101,10 @@ class Clipper:
                  sudo=False,
                  ssh_port=22,
                  check_for_docker=True,
-                 redis_port=DEFAULT_REDIS_PORT,
                  redis_ip=DEFAULT_REDIS_IP,
+                 redis_port=DEFAULT_REDIS_PORT,
                  redis_persistence_path=None,
-                 restart_containers=False):
+                 restart_containers=True):
         self.redis_ip = redis_ip
         self.redis_port = redis_port
         self.docker_compost_dict = {
@@ -854,7 +855,8 @@ class Clipper:
         Returns
         ----------
         bool
-            Whether or not the container was added successfully
+            True if the container was added successfully and False
+            if the container could not be added.
         """
         with hide("warnings", "output", "running"):
             # Look up model info in Redis
