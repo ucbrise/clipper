@@ -78,10 +78,10 @@ class Clipper:
     redis_ip : string, optional
         The ip address of the redis instance that Clipper should use.
         If unspecified, a docker container running redis will be started
-        on `host` at the port specified by `redis_port`
+        on `host` at the port specified by `redis_port`.
     redis_persistence_path : string, optional
         The path to which redis data should be persisted. If unspecified,
-        redis will not persist data to disk
+        redis will not persist data to disk.
     restart_containers : bool, optional
         If true, containers will restart on failure. If false, containers
         will not restart automatically.
