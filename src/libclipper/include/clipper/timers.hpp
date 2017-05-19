@@ -2,7 +2,9 @@
 #define CLIPPER_LIB_TIMERS_H
 
 #include <atomic>
+#include <cassert>
 #include <chrono>
+#include <condition_variable>
 #include <mutex>
 #include <queue>
 #include <thread>
@@ -117,17 +119,21 @@ class TimerSystem {
   TimerSystem &operator=(TimerSystem &&) = default;
 
   void start() {
-    manager_thread_ = boost::thread(&TimerSystem::manage_timers, this);
+    manager_thread_ = std::thread(&TimerSystem::manage_timers, this);
     initialized_ = true;
   }
 
   void manage_timers() {
-    log_info(LOGGING_TAG_TIMERS, "In timer event loop");
+    log_info(LOGGING_TAG_TIMERS, "Starting timer event loop");
     while (!shutdown_) {
-      // wait for next timer to expire
-      //    auto cur_time = high_resolution_clock::now();
       auto cur_time = clock_.now();
-      std::unique_lock<std::mutex> l(queue_mutex_);
+      std::unique_lock<std::mutex> lock(queue_mutex_);
+
+      if (queue_.empty()) {
+        queue_not_empty_condition_.wait_for(
+            lock, std::chrono::milliseconds(100),
+            [this]() { return !queue_.empty(); });
+      }
       if (queue_.size() > 0) {
         auto earliest_timer = queue_.top();
         auto duration_ms =
@@ -156,6 +162,7 @@ class TimerSystem {
     //  Timer timer{tp, promise};
     std::unique_lock<std::mutex> l(queue_mutex_);
     queue_.emplace(std::make_shared<Timer>(tp, std::move(promise)));
+    queue_not_empty_condition_.notify_all();
     return f;
   }
 
@@ -169,9 +176,10 @@ class TimerSystem {
  private:
   std::atomic<bool> shutdown_{false};
   std::atomic<bool> initialized_{false};
-  boost::thread manager_thread_;
+  std::thread manager_thread_;
 
   std::mutex queue_mutex_;
+  std::condition_variable queue_not_empty_condition_;
   TimerPQueue queue_;
 };
 
