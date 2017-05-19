@@ -877,7 +877,8 @@ class Clipper:
             Returns a list of local filenames containing the Docker container log snapshots.
         """
         container_ids = self._get_clipper_container_ids()
-        cur_time_logs_path = os.path.join(CLIPPER_LOGS_PATH, time.strftime("%Y%m%d-%H%M%S"))
+        cur_time_logs_path = os.path.join(CLIPPER_LOGS_PATH,
+                                          time.strftime("%Y%m%d-%H%M%S"))
         if not os.path.exists(cur_time_logs_path):
             os.makedirs(directory)
         log_file_names = []
