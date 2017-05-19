@@ -89,13 +89,10 @@ class Clipper:
                  ssh_port=22,
                  check_for_docker=True,
                  redis_port=DEFAULT_REDIS_PORT,
-                 redis_ip=None,
+                 redis_ip=DEFAULT_REDIS_IP,
                  redis_persistence_path=None,
                  restart_containers=False):
-        if redis_ip:
-            self.redis_ip = redis_ip
-        else:
-            self.redis_ip = DEFAULT_REDIS_IP
+        self.redis_ip = redis_ip
         self.redis_port = redis_port
         self.docker_compost_dict = {
             'networks': {
@@ -108,8 +105,7 @@ class Clipper:
             'services': {
                 'mgmt_frontend': {
                     'command':
-                    ['--redis_ip=%s', '--redis_port=%d' % (self.redis_ip, self.redis_port)],
-                    'depends_on': ['redis'],
+                    ['--redis_ip=%s' % self.redis_ip, '--redis_port=%d' % self.redis_port],
                     'image':
                     'clipper/management_frontend:latest',
                     'ports': [
@@ -122,8 +118,8 @@ class Clipper:
                 },
                 'query_frontend': {
                     'command':
-                    ['--redis_ip=%s', '--redis_port=%d' % (self.redis_ip, self.redis_port)],
-                    'depends_on': ['redis', 'mgmt_frontend'],
+                    ['--redis_ip=%s' % self.redis_ip, '--redis_port=%d' % self.redis_port],
+                    'depends_on': ['mgmt_frontend'],
                     'image':
                     'clipper/query_frontend:latest',
                     'ports': [
@@ -136,23 +132,21 @@ class Clipper:
         }
         start_redis = (self.redis_ip == DEFAULT_REDIS_IP)
         if start_redis:
-            self.docker_compost_dict['redis'] = 
-                {
+            self.docker_compost_dict['services']['redis'] = {
                     'image': 'redis:alpine',
                     'ports': ['%d:%d' % (self.redis_port, self.redis_port)],
                     'command': "redis-server --port %d" % self.redis_port
                 }
+            self.docker_compost_dict['services']['mgmt_frontend']['depends_on'] = ['redis']
+            self.docker_compost_dict['services']['query_frontend']['depends_on'].append('redis')
+            if redis_persistence_path:
+                self.docker_compost_dict['services']['redis']['volumes'] = ['%s:/data' % redis_persistence_path]
 
         if restart_containers:
             self.docker_compost_dict['services']['mgmt_frontend']['restart'] = 'always'
             self.docker_compost_dict['services']['query_frontend']['restart'] = 'always'
             if start_redis:
                 self.docker_compost_dict['services']['redis']['restart'] = 'always'
-
-        if redis_persistence_path:
-            self.docker_compost_dict['volumes'] = ['%s:/data'.format(redis_persistence_path)]
-
-        print(self.docker_compost_dict)
 
         self.sudo = sudo
         self.host = host
@@ -833,6 +827,11 @@ class Clipper:
             The name of the model
         model_version : int
             The version of the model
+
+        Returns
+        ----------
+        bool
+            Whether or not the container was added successfully
         """
         with hide("warnings", "output", "running"):
             # Look up model info in Redis
@@ -863,8 +862,7 @@ class Clipper:
             model_data_path = model_metadata["model_data_path"]
             model_input_type = model_metadata["input_type"]
 
-            # TODO: don't try to add container if it's an external container
-            if image_name is not EXTERNALLY_MANAGED_MODEL:
+            if image_name != EXTERNALLY_MANAGED_MODEL:
                 # Start container
                 add_container_cmd = (
                     "docker run -d --network={nw} -v {path}:/model:ro "
@@ -883,7 +881,7 @@ class Clipper:
             else:
                 print("Cannot start containers for externally managed model %s"
                       % model_name)
-                return True
+                return False
 
     def get_clipper_logs(self):
         """Copies the logs from all Docker containers running on the host machine
