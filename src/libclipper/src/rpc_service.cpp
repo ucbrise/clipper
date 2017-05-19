@@ -131,7 +131,14 @@ void RPCService::manage_service(const string address) {
   }
 
   while (active_) {
-    zmq_poll(items, 1, 0);
+    // Set poll timeout based on whether there are outgoing messages to
+    // send. If there are messages to send, don't let the poll block at all.
+    // If there no messages to send, let the poll block for 1 ms.
+    int poll_timeout = 0;
+    if (request_queue_->size() == 0) {
+      poll_timeout = 1;
+    }
+    zmq_poll(items, 1, poll_timeout);
     if (items[0].revents & ZMQ_POLLIN) {
       // TODO: Balance message sending and receiving fairly
       // Note: We only receive one message per event loop iteration
