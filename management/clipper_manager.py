@@ -909,8 +909,9 @@ class Clipper:
         """
         Gets the container IDs of all containers labeled with the clipper label
         """
-        containers = self._execute_root("docker ps -aq --filter label={clipper_label}".
-                           format(clipper_label=CLIPPER_DOCKER_LABEL))
+        containers = self._execute_root(
+            "docker ps -aq --filter label={clipper_label}".format(
+                clipper_label=CLIPPER_DOCKER_LABEL))
         ids = [l.strip() for l in containers.split("\n")]
         print("Clipper container IDS found: %s" % str(ids))
         return ids
