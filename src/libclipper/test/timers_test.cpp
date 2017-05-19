@@ -85,11 +85,8 @@ TEST_F(TimerSystemTests, ManyTimers) {
   int num_timers = 10000;
   for (int i = 0; i < num_timers; ++i) {
     int expiration_time = dist(generator);
-    // std::cout << expiration_time << ", ";
     created_timers.emplace(expiration_time, ts_.set_timer(expiration_time));
   }
-  // std::this_thread::sleep_for(10ms);
-  // std::cout << std::endl;
   int time_increment = 10;
   for (int cur_time = 0; cur_time <= max_time; cur_time += time_increment) {
     ts_.clock_.increment(time_increment);
@@ -107,8 +104,3 @@ TEST_F(TimerSystemTests, ManyTimers) {
 }
 
 }  // namespace
-
-// int main(int argc, char** argv) {
-//   ::testing::InitGoogleTest(&argc, argv);
-//   return RUN_ALL_TESTS();
-// }
