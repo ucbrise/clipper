@@ -7,6 +7,7 @@
 #include <mutex>
 #include <queue>
 #include <thread>
+#include <condition_variable>
 
 #include <boost/thread.hpp>
 
@@ -125,19 +126,15 @@ class TimerSystem {
   void manage_timers() {
     log_info(LOGGING_TAG_TIMERS, "Starting timer event loop");
     while (!shutdown_) {
-      // wait for next timer to expire
-      //    auto cur_time = high_resolution_clock::now();
       auto cur_time = clock_.now();
       std::unique_lock<std::mutex> lock(queue_mutex_);
 
       if (queue_.empty()) {
-        log_info(LOGGING_TAG_TIMERS, "Timer queue empty");
         queue_not_empty_condition_.wait_for(
             lock, std::chrono::milliseconds(100),
             [this]() { return !queue_.empty(); });
       }
       if (queue_.size() > 0) {
-        // log_info(LOGGING_TAG_TIMERS, "Timer found");
         auto earliest_timer = queue_.top();
         auto duration_ms =
             std::chrono::duration_cast<std::chrono::milliseconds>(
