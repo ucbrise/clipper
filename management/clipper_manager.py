@@ -73,6 +73,18 @@ class Clipper:
         The SSH port to use. Default is port 22.
     check_for_docker : bool, optional
         If True, checks that Docker is running on the host machine. Default is True.
+    redis_port : int, optional
+        The port to use for connecting to redis. Default is port 6379.
+    redis_ip : string, optional
+        The ip address of the redis instance that Clipper should use.
+        If unspecified, a docker container running redis will be started
+        on `host` at the port specified by `redis_port`
+    redis_persistence_path : string, optional
+        The path to which redis data should be persisted. If unspecified,
+        redis will not persist data to disk
+    restart_containers : bool, optional
+        If true, containers will restart on failure. If false, containers
+        will not restart automatically.
 
     Sets up the machine for running Clipper. This includes verifying
     SSH credentials and initializing Docker.
