@@ -28,7 +28,8 @@ REDIS_CONTAINER_DB_NUM = 3
 REDIS_RESOURCE_DB_NUM = 4
 REDIS_APPLICATION_DB_NUM = 5
 
-REDIS_PORT = 6379
+DEFAULT_REDIS_IP = "redis"
+DEFAULT_REDIS_PORT = 6379
 CLIPPER_QUERY_PORT = 1337
 CLIPPER_MANAGEMENT_PORT = 1338
 CLIPPER_RPC_PORT = 7000
@@ -87,9 +88,14 @@ class Clipper:
                  sudo=False,
                  ssh_port=22,
                  check_for_docker=True,
-                 redis_port=REDIS_PORT,
+                 redis_port=DEFAULT_REDIS_PORT,
+                 redis_ip=None,
+                 redis_persistence_path=None,
                  restart_containers=False):
-
+        if redis_ip:
+            self.redis_ip = redis_ip
+        else:
+            self.redis_ip = DEFAULT_REDIS_IP
         self.redis_port = redis_port
         self.docker_compost_dict = {
             'networks': {
@@ -102,7 +108,7 @@ class Clipper:
             'services': {
                 'mgmt_frontend': {
                     'command':
-                    ['--redis_ip=redis', '--redis_port=%d' % self.redis_port],
+                    ['--redis_ip=%s', '--redis_port=%d' % (self.redis_ip, self.redis_port)],
                     'depends_on': ['redis'],
                     'image':
                     'clipper/management_frontend:latest',
@@ -116,31 +122,37 @@ class Clipper:
                 },
                 'query_frontend': {
                     'command':
-                    ['--redis_ip=redis', '--redis_port=%d' % self.redis_port],
+                    ['--redis_ip=%s', '--redis_port=%d' % (self.redis_ip, self.redis_port)],
                     'depends_on': ['redis', 'mgmt_frontend'],
                     'image':
                     'clipper/query_frontend:latest',
                     'ports': [
                         '%d:%d' % (CLIPPER_RPC_PORT, CLIPPER_RPC_PORT),
                         '%d:%d' % (CLIPPER_QUERY_PORT, CLIPPER_QUERY_PORT)
-                    ],
-                    'labels': {
-                        CLIPPER_DOCKER_LABEL: ""
-                    }
-                },
-                'redis': {
-                    'image': 'redis:alpine',
-                    'ports': ['%d:%d' % (self.redis_port, self.redis_port)],
-                    'command': "redis-server --port %d" % self.redis_port,
-                    'labels': {
-                        CLIPPER_DOCKER_LABEL: ""
-                    }
+                    ]
                 }
             },
             'version': '2'
         }
+        start_redis = (self.redis_ip == DEFAULT_REDIS_IP)
+        if start_redis:
+            self.docker_compost_dict['redis'] = 
+                {
+                    'image': 'redis:alpine',
+                    'ports': ['%d:%d' % (self.redis_port, self.redis_port)],
+                    'command': "redis-server --port %d" % self.redis_port
+                }
+
         if restart_containers:
             self.docker_compost_dict['services']['mgmt_frontend']['restart'] = 'always'
+            self.docker_compost_dict['services']['query_frontend']['restart'] = 'always'
+            if start_redis:
+                self.docker_compost_dict['services']['redis']['restart'] = 'always'
+
+        if redis_persistence_path:
+            self.docker_compost_dict['volumes'] = ['%s:/data'.format(redis_persistence_path)]
+
+        print(self.docker_compost_dict)
 
         self.sudo = sudo
         self.host = host
@@ -824,11 +836,15 @@ class Clipper:
         """
         with hide("warnings", "output", "running"):
             # Look up model info in Redis
+            if self.redis_ip == DEFAULT_REDIS_IP:
+                redis_host = self.host
+            else:
+                redis_host = self.redis_ip
             model_key = "{mn}:{mv}".format(mn=model_name, mv=model_version)
             result = local(
                 "redis-cli -h {host} -p {redis_port} -n {db} hgetall {key}".
                 format(
-                    host=self.host,
+                    host=redis_host,
                     redis_port=self.redis_port,
                     key=model_key,
                     db=REDIS_MODEL_DB_NUM),
