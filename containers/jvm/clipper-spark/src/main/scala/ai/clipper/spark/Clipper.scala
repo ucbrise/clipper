@@ -56,6 +56,8 @@ object Clipper {
   val DOCKER_NW: String = "clipper_nw"
   val CLIPPER_MANAGEMENT_PORT: Int = 1338
 
+  val CLIPPER_DOCKER_LABEL: String = "ai.clipper.container.label";
+
 
   // Imports the json serialization library as an implicit and adds our custom serializer
   // for the ModelType case classes
@@ -153,6 +155,7 @@ object Clipper {
       "-e", s"CLIPPER_MODEL_VERSION=$version",
       "-e", "CLIPPER_IP=query_frontend",
       "-e", "CLIPPER_INPUT_TYPE=doubles",
+      "-l", s"$CLIPPER_DOCKER_LABEL",
       CLIPPER_SPARK_CONTAINER_NAME
     )
     if (startContainerCmd.! != 0) {
@@ -199,6 +202,7 @@ object Clipper {
       "-e", s"CLIPPER_MODEL_VERSION=$version",
       "-e", s"CLIPPER_IP=$dockerIp",
       "-e", "CLIPPER_INPUT_TYPE=doubles",
+      "-l", s"$CLIPPER_DOCKER_LABEL",
       CLIPPER_SPARK_CONTAINER_NAME
     )
     val sshStartContainerCmd = sshCommand ++ startContainerCmd

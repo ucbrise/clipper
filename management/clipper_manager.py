@@ -34,6 +34,8 @@ CLIPPER_RPC_PORT = 7000
 
 CLIPPER_LOGS_PATH = "/tmp/clipper-logs"
 
+CLIPPER_DOCKER_LABEL = "ai.clipper.container.label"
+
 aws_cli_config = """
 [default]
 region = us-east-1
@@ -105,7 +107,10 @@ class Clipper:
                     'ports': [
                         '%d:%d' % (CLIPPER_MANAGEMENT_PORT,
                                    CLIPPER_MANAGEMENT_PORT)
-                    ]
+                    ],
+                    'labels': {
+                        CLIPPER_DOCKER_LABEL: ""
+                    }
                 },
                 'query_frontend': {
                     'command':
@@ -116,12 +121,18 @@ class Clipper:
                     'ports': [
                         '%d:%d' % (CLIPPER_RPC_PORT, CLIPPER_RPC_PORT),
                         '%d:%d' % (CLIPPER_QUERY_PORT, CLIPPER_QUERY_PORT)
-                    ]
+                    ],
+                    'labels': {
+                        CLIPPER_DOCKER_LABEL: ""
+                    }
                 },
                 'redis': {
                     'image': 'redis:alpine',
                     'ports': ['%d:%d' % (self.redis_port, self.redis_port)],
-                    'command': "redis-server --port %d" % self.redis_port
+                    'command': "redis-server --port %d" % self.redis_port,
+                    'labels': {
+                        CLIPPER_DOCKER_LABEL: ""
+                    }
                 }
             },
             'version': '2'
@@ -838,14 +849,15 @@ class Clipper:
                 add_container_cmd = (
                     "docker run -d --network={nw} -v {path}:/model:ro "
                     "-e \"CLIPPER_MODEL_NAME={mn}\" -e \"CLIPPER_MODEL_VERSION={mv}\" "
-                    "-e \"CLIPPER_IP=query_frontend\" -e \"CLIPPER_INPUT_TYPE={mip}\" "
+                    "-e \"CLIPPER_IP=query_frontend\" -e \"CLIPPER_INPUT_TYPE={mip}\" -l \"{clipper_label}\" "
                     "{image}".format(
                         path=model_data_path,
                         nw=DOCKER_NW,
                         image=image_name,
                         mn=model_name,
                         mv=model_version,
-                        mip=model_input_type))
+                        mip=model_input_type,
+                        clipper_label=CLIPPER_DOCKER_LABEL))
                 result = self._execute_root(add_container_cmd)
                 return result.return_code == 0
             else:
@@ -894,26 +906,39 @@ class Clipper:
         return log_file_names
 
     def _get_clipper_container_ids(self):
-        # NOTE: clipper/java-rpc doesn't exist yet but it will soon (see CLIPPER-137)
-        clipper_images = [
-            "clipper/management_frontend", "clipper/query_frontend",
-            "clipper/py-rpc", "clipper/java-rpc"
-        ]
-        ids = []
-        for image in clipper_images:
-            ids.extend(self._get_docker_container_id_from_image(image))
+        """
+        Gets the container IDs of all containers labeled with the clipper label
+        """
+        containers = self._execute_root("docker ps -aq --filter label={clipper_label}".
+                           format(clipper_label=CLIPPER_DOCKER_LABEL))
+        ids = [l.strip() for l in containers.split("\n")]
+        print("Clipper container IDS found: %s" % str(ids))
         return ids
 
-    def _get_docker_container_id_from_image(self, image):
-        """
-        Uses docker ps filters to search for containers by ancestor image.
-        """
-        ids = []
-        containers = self._execute_root(
-            "docker ps -aqf ancestor={image}".format(image=image))
-        for l in containers.split("\n"):
-            ids.append(l.strip())
-        return ids
+    #
+    #     for l in containers.split("\n"):
+    #         ids.append(l.strip())
+    #
+    #     # NOTE: clipper/java-rpc doesn't exist yet but it will soon (see CLIPPER-137)
+    #     clipper_images = [
+    #         "clipper/management_frontend", "clipper/query_frontend",
+    #         "clipper/py-rpc", "clipper/java-rpc"
+    #     ]
+    #     ids = []
+    #     for image in clipper_images:
+    #         ids.extend(self._get_docker_container_id_from_image(image))
+    #     return ids
+    #
+    # def _get_docker_container_id_from_image(self, image):
+    #     """
+    #     Uses docker ps filters to search for containers by ancestor image.
+    #     """
+    #     ids = []
+    #     containers = self._execute_root(
+    #         "docker ps -aqf ancestor={image}".format(image=image))
+    #     for l in containers.split("\n"):
+    #         ids.append(l.strip())
+    #     return ids
 
     def inspect_instance(self):
         """Fetches metrics from the running Clipper instance.
@@ -985,21 +1010,21 @@ class Clipper:
             self._execute_root(
                 "docker rm {ids}".format(ids=container_id_str), warn_only=True)
 
-    def cleanup(self):
-        """Cleans up all Docker artifacts.
-
-        This will stop and remove all Docker containers and images
-        from the host and destroy the Docker network Clipper uses.
-        """
-        with hide("output", "warnings", "running"):
-            self.stop_all()
-            self._execute_standard(
-                "rm -rf {model_repo}".format(model_repo=MODEL_REPO))
-            # Remove all images from the Clipper repository
-            self._execute_root(
-                "docker rmi --force $(docker images -aq -f reference=clipper/*)",
-                warn_only=True)
-            self._execute_root("docker network rm clipper_nw", warn_only=True)
+    # def cleanup(self):
+    #     """Cleans up all Docker artifacts.
+    #
+    #     This will stop and remove all Docker containers and images
+    #     from the host and destroy the Docker network Clipper uses.
+    #     """
+    #     with hide("output", "warnings", "running"):
+    #         self.stop_all()
+    #         self._execute_standard(
+    #             "rm -rf {model_repo}".format(model_repo=MODEL_REPO))
+    #         # Remove all images from the Clipper repository
+    #         self._execute_root(
+    #             "docker rmi --force $(docker images -aq -f reference=clipper/*)",
+    #             warn_only=True)
+    #         self._execute_root("docker network rm clipper_nw", warn_only=True)
 
     def _publish_new_model(self, name, version, labels, input_type,
                            container_name, model_data_path):
