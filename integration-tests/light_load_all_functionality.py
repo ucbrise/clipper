@@ -121,14 +121,15 @@ def create_and_test_app(clipper, name):
 
 def cleanup():
     # stop docker
-    subprocess.call(
-        "docker stop $(docker ps -aqf name=clipper_) && docker rm $(docker ps -aqf name=clipper_)",
-        shell=True)
-
-    # stop model containers
-    subprocess.call(
-        "docker stop $(docker ps -aqf ancestor=clipper/noop-container) && docker rm $(docker ps -aqf ancestor=clipper/noop-container)",
-        shell=True)
+    images = [
+        "clipper/query_frontend", "clipper/management_frontend",
+        "clipper/noop-container"
+    ]
+    for image in images:
+        subprocess.call(
+            "docker stop $(docker ps -aqf ancestor={image}) && docker rm $(docker ps -aqf ancestor={image})".
+            format(image=image),
+            shell=True)
 
 
 if __name__ == "__main__":
