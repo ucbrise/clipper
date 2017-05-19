@@ -136,9 +136,9 @@ if __name__ == "__main__":
             print_clipper_state(clipper)
             print(e)
             clipper.stop_all()
+            sys.exit(1)
         else:
             clipper.stop_all()
-            sys.exit(1)
     except:
         clipper = cm.Clipper("localhost")
         clipper.stop_all()
