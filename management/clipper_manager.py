@@ -880,7 +880,7 @@ class Clipper:
         cur_time_logs_path = os.path.join(CLIPPER_LOGS_PATH,
                                           time.strftime("%Y%m%d-%H%M%S"))
         if not os.path.exists(cur_time_logs_path):
-            os.makedirs(directory)
+            os.makedirs(cur_time_logs_path)
         log_file_names = []
         for container in container_ids:
             output = self._execute_root(
