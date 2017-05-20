@@ -902,7 +902,7 @@ class Clipper:
             if image_name != EXTERNALLY_MANAGED_MODEL:
                 # Start container
                 add_container_cmd = (
-                    "docker run -d --network={nw} -v {path}:/model:ro "
+                    "docker run -d --network={nw} --restart=always -v {path}:/model:ro "
                     "-e \"CLIPPER_MODEL_NAME={mn}\" -e \"CLIPPER_MODEL_VERSION={mv}\" "
                     "-e \"CLIPPER_IP=query_frontend\" -e \"CLIPPER_INPUT_TYPE={mip}\" -l \"{clipper_label}\" "
                     "{image}".format(
