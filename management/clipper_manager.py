@@ -157,7 +157,7 @@ class Clipper:
                 'command': "redis-server --port %d" % self.redis_port,
                 'labels': {
                     CLIPPER_DOCKER_LABEL: ""
-                    }
+                }
             }
             self.docker_compost_dict['services']['mgmt_frontend'][
                 'depends_on'] = ['redis']

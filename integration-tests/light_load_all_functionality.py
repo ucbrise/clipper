@@ -134,7 +134,8 @@ if __name__ == "__main__":
     try:
         clipper = init_clipper()
         try:
-            print("Running integration test with %d apps and %d models" % (num_apps, num_models))
+            print("Running integration test with %d apps and %d models" %
+                  (num_apps, num_models))
             for a in range(num_apps):
                 create_and_test_app(clipper, "app_%s" % a, num_models)
             print(clipper.get_clipper_logs())
