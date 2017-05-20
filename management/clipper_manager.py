@@ -28,7 +28,8 @@ REDIS_CONTAINER_DB_NUM = 3
 REDIS_RESOURCE_DB_NUM = 4
 REDIS_APPLICATION_DB_NUM = 5
 
-REDIS_PORT = 6379
+DEFAULT_REDIS_IP = "redis"
+DEFAULT_REDIS_PORT = 6379
 CLIPPER_QUERY_PORT = 1337
 CLIPPER_MANAGEMENT_PORT = 1338
 CLIPPER_RPC_PORT = 7000
@@ -72,6 +73,18 @@ class Clipper:
         The SSH port to use. Default is port 22.
     check_for_docker : bool, optional
         If True, checks that Docker is running on the host machine. Default is True.
+    redis_port : int, optional
+        The port to use for connecting to redis. Default is port 6379.
+    redis_ip : string, optional
+        The ip address of the redis instance that Clipper should use.
+        If unspecified, a docker container running redis will be started
+        on `host` at the port specified by `redis_port`.
+    redis_persistence_path : string, optional
+        The directory path to which redis data should be persisted. The directory
+        should not already exist. If unspecified, redis will not persist data to disk. 
+    restart_containers : bool, optional
+        If true, containers will restart on failure. If false, containers
+        will not restart automatically.
 
     Sets up the machine for running Clipper. This includes verifying
     SSH credentials and initializing Docker.
@@ -87,8 +100,11 @@ class Clipper:
                  sudo=False,
                  ssh_port=22,
                  check_for_docker=True,
-                 redis_port=REDIS_PORT):
-
+                 redis_ip=DEFAULT_REDIS_IP,
+                 redis_port=DEFAULT_REDIS_PORT,
+                 redis_persistence_path=None,
+                 restart_containers=True):
+        self.redis_ip = redis_ip
         self.redis_port = redis_port
         self.docker_compost_dict = {
             'networks': {
@@ -100,9 +116,10 @@ class Clipper:
             },
             'services': {
                 'mgmt_frontend': {
-                    'command':
-                    ['--redis_ip=redis', '--redis_port=%d' % self.redis_port],
-                    'depends_on': ['redis'],
+                    'command': [
+                        '--redis_ip=%s' % self.redis_ip,
+                        '--redis_port=%d' % self.redis_port
+                    ],
                     'image':
                     'clipper/management_frontend:latest',
                     'ports': [
@@ -114,30 +131,52 @@ class Clipper:
                     }
                 },
                 'query_frontend': {
-                    'command':
-                    ['--redis_ip=redis', '--redis_port=%d' % self.redis_port],
-                    'depends_on': ['redis', 'mgmt_frontend'],
+                    'command': [
+                        '--redis_ip=%s' % self.redis_ip,
+                        '--redis_port=%d' % self.redis_port
+                    ],
+                    'depends_on': ['mgmt_frontend'],
                     'image':
                     'clipper/query_frontend:latest',
                     'ports': [
                         '%d:%d' % (CLIPPER_RPC_PORT, CLIPPER_RPC_PORT),
                         '%d:%d' % (CLIPPER_QUERY_PORT, CLIPPER_QUERY_PORT)
-                    ],
-                    'labels': {
-                        CLIPPER_DOCKER_LABEL: ""
-                    }
-                },
-                'redis': {
-                    'image': 'redis:alpine',
-                    'ports': ['%d:%d' % (self.redis_port, self.redis_port)],
-                    'command': "redis-server --port %d" % self.redis_port,
-                    'labels': {
-                        CLIPPER_DOCKER_LABEL: ""
-                    }
+                    ]
                 }
             },
             'version': '2'
         }
+        start_redis = (self.redis_ip == DEFAULT_REDIS_IP)
+        if start_redis:
+            self.docker_compost_dict['services']['redis'] = {
+                'image': 'redis:alpine',
+                'ports': ['%d:%d' % (self.redis_port, self.redis_port)],
+                'command': "redis-server --port %d" % self.redis_port
+            }
+            self.docker_compost_dict['services']['mgmt_frontend'][
+                'depends_on'] = ['redis']
+            self.docker_compost_dict['services']['query_frontend'][
+                'depends_on'].append('redis')
+            if redis_persistence_path:
+                if not os.path.exists(redis_persistence_path):
+                    self.docker_compost_dict['services']['redis'][
+                        'volumes'] = ['%s:/data' % redis_persistence_path]
+                else:
+                    print(
+                        "The directory specified by the redis persistence path already exists"
+                    )
+                    raise ClipperManagerException(
+                        "The directory specified by the redis persistence path already exists"
+                    )
+
+        if restart_containers:
+            self.docker_compost_dict['services']['mgmt_frontend'][
+                'restart'] = 'always'
+            self.docker_compost_dict['services']['query_frontend'][
+                'restart'] = 'always'
+            if start_redis:
+                self.docker_compost_dict['services']['redis'][
+                    'restart'] = 'always'
 
         self.sudo = sudo
         self.host = host
@@ -818,14 +857,24 @@ class Clipper:
             The name of the model
         model_version : int
             The version of the model
+
+        Returns
+        ----------
+        bool
+            True if the container was added successfully and False
+            if the container could not be added.
         """
         with hide("warnings", "output", "running"):
             # Look up model info in Redis
+            if self.redis_ip == DEFAULT_REDIS_IP:
+                redis_host = self.host
+            else:
+                redis_host = self.redis_ip
             model_key = "{mn}:{mv}".format(mn=model_name, mv=model_version)
             result = local(
                 "redis-cli -h {host} -p {redis_port} -n {db} hgetall {key}".
                 format(
-                    host=self.host,
+                    host=redis_host,
                     redis_port=self.redis_port,
                     key=model_key,
                     db=REDIS_MODEL_DB_NUM),
@@ -844,8 +893,7 @@ class Clipper:
             model_data_path = model_metadata["model_data_path"]
             model_input_type = model_metadata["input_type"]
 
-            # TODO: don't try to add container if it's an external container
-            if image_name is not EXTERNALLY_MANAGED_MODEL:
+            if image_name != EXTERNALLY_MANAGED_MODEL:
                 # Start container
                 add_container_cmd = (
                     "docker run -d --network={nw} -v {path}:/model:ro "
@@ -864,7 +912,7 @@ class Clipper:
             else:
                 print("Cannot start containers for externally managed model %s"
                       % model_name)
-                return True
+                return False
 
     def get_clipper_logs(self):
         """Copies the logs from all Docker containers running on the host machine
