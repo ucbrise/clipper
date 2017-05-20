@@ -898,11 +898,12 @@ class Clipper:
             image_name = model_metadata["container_name"]
             model_data_path = model_metadata["model_data_path"]
             model_input_type = model_metadata["input_type"]
+            restart_policy = 'always' if restart_containers else 'no'
 
             if image_name != EXTERNALLY_MANAGED_MODEL:
                 # Start container
                 add_container_cmd = (
-                    "docker run -d --network={nw} --restart=always -v {path}:/model:ro "
+                    "docker run -d --network={nw} --restart={restart_policy} -v {path}:/model:ro "
                     "-e \"CLIPPER_MODEL_NAME={mn}\" -e \"CLIPPER_MODEL_VERSION={mv}\" "
                     "-e \"CLIPPER_IP=query_frontend\" -e \"CLIPPER_INPUT_TYPE={mip}\" -l \"{clipper_label}\" "
                     "{image}".format(
@@ -912,7 +913,8 @@ class Clipper:
                         mn=model_name,
                         mv=model_version,
                         mip=model_input_type,
-                        clipper_label=CLIPPER_DOCKER_LABEL))
+                        clipper_label=CLIPPER_DOCKER_LABEL,
+                        restart_policy=restart_policy))
                 result = self._execute_root(add_container_cmd)
                 return result.return_code == 0
             else:
