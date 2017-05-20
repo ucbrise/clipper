@@ -141,7 +141,10 @@ class Clipper:
                     'ports': [
                         '%d:%d' % (CLIPPER_RPC_PORT, CLIPPER_RPC_PORT),
                         '%d:%d' % (CLIPPER_QUERY_PORT, CLIPPER_QUERY_PORT)
-                    ]
+                    ],
+                    'labels': {
+                        CLIPPER_DOCKER_LABEL: ""
+                    }
                 }
             },
             'version': '2'
@@ -151,7 +154,10 @@ class Clipper:
             self.docker_compost_dict['services']['redis'] = {
                 'image': 'redis:alpine',
                 'ports': ['%d:%d' % (self.redis_port, self.redis_port)],
-                'command': "redis-server --port %d" % self.redis_port
+                'command': "redis-server --port %d" % self.redis_port,
+                'labels': {
+                    CLIPPER_DOCKER_LABEL: ""
+                    }
             }
             self.docker_compost_dict['services']['mgmt_frontend'][
                 'depends_on'] = ['redis']
