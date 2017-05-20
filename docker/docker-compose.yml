@@ -6,6 +6,9 @@ services:
     cpuset: "0"
     ports:
       - "6379:6379"
+    labels:
+      - "ai.clipper.container.label"
+
 
   query_frontend:
     image: "clipper/query_frontend"
@@ -18,6 +21,8 @@ services:
     command: 
       - "--redis_ip=redis"
       - "--redis_port=6379"
+    labels:
+      - "ai.clipper.container.label"
 
   mgmt_frontend:
     image: "clipper/management_frontend"
@@ -28,3 +33,5 @@ services:
     command: 
       - "--redis_ip=redis"
       - "--redis_port=6379"
+    labels:
+      - "ai.clipper.container.label"
