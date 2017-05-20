@@ -174,8 +174,8 @@ class Clipper:
                     raise ClipperManagerException(
                         "The directory specified by the redis persistence path already exists"
                     )
-
-        if restart_containers:
+        self.restart_containers = restart_containers
+        if self.restart_containers:
             self.docker_compost_dict['services']['mgmt_frontend'][
                 'restart'] = 'always'
             self.docker_compost_dict['services']['query_frontend'][
@@ -898,7 +898,7 @@ class Clipper:
             image_name = model_metadata["container_name"]
             model_data_path = model_metadata["model_data_path"]
             model_input_type = model_metadata["input_type"]
-            restart_policy = 'always' if restart_containers else 'no'
+            restart_policy = 'always' if self.restart_containers else 'no'
 
             if image_name != EXTERNALLY_MANAGED_MODEL:
                 # Start container
