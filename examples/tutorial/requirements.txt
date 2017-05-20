@@ -13,3 +13,4 @@ scipy==0.18.1
 seaborn==0.7.1
 subprocess32==3.2.7
 tensorflow==0.12.1
+clipper_admin

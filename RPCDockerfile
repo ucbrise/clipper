@@ -10,7 +10,7 @@ RUN mkdir -p /model \
 
 WORKDIR /container
 
-COPY containers/python/__init__.py rpc.py /container/
+COPY containers/python/__init__.py containers/python/rpc.py /container/
 
 ENV CLIPPER_MODEL_PATH=/model
 
