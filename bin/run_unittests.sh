@@ -117,7 +117,7 @@ function run_frontend_tests {
 function run_integration_tests {
   echo -e "\nRunning integration tests\n\n"
   cd $DIR
-  python ../integration-tests/light_load_all_functionality.py
+  python ../integration-tests/light_load_all_functionality.py 2 3
 }
 
 function run_all_tests {

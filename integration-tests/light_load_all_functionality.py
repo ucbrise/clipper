@@ -96,7 +96,7 @@ def deploy_model(clipper, name, version):
                                  (app_name, model_name, version))
 
 
-def create_and_test_app(clipper, name):
+def create_and_test_app(clipper, name, num_models):
     app_name = "%s_app" % name
     model_name = "%s_model" % name
     clipper.register_application(app_name, model_name, "doubles",
@@ -114,22 +114,30 @@ def create_and_test_app(clipper, name):
         print("Error: %s" % response.text)
         raise BenchmarkException("Error creating app %s" % app_name)
 
-    for i in range(8):
+    for i in range(num_models):
         deploy_model(clipper, name, i)
         time.sleep(1)
 
 
 if __name__ == "__main__":
+    num_apps = 6
+    num_models = 8
+    try:
+        if len(sys.argv) > 1:
+            num_apps = int(sys.argv[1])
+        if len(sys.argv) > 2:
+            num_models = int(sys.argv[2])
+    except:
+        # it's okay to pass here, just use the default values
+        # for num_apps and num_models
+        pass
     try:
         clipper = init_clipper()
         try:
-            create_and_test_app(clipper, "aa")
-            create_and_test_app(clipper, "bb")
-            create_and_test_app(clipper, "cc")
-            create_and_test_app(clipper, "dd")
-            create_and_test_app(clipper, "ee")
-            create_and_test_app(clipper, "ff")
-            create_and_test_app(clipper, "gg")
+            print("Running integration test with %d apps and %d models" %
+                  (num_apps, num_models))
+            for a in range(num_apps):
+                create_and_test_app(clipper, "app_%s" % a, num_models)
             print(clipper.get_clipper_logs())
             print("SUCCESS")
         except BenchmarkException as e:
