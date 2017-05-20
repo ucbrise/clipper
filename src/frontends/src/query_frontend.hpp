@@ -253,10 +253,10 @@ class RequestHandler {
   }
 
   void delete_application(std::string name) {
-    std::string predict_endpoint = _get_endpoint_address(name, "predict");
-    std::string update_endpoint = _get_endpoint_address(name, "update");
-    server_.delete_endpoint(predict_endpoint, "POST");
-    server_.delete_endpoint(update_endpoint, "POST");
+    std::string predict_endpoint_addr = _get_endpoint_address(name, "predict");
+    std::string update_endpoint_addr = _get_endpoint_address(name, "update");
+    server_.delete_endpoint(predict_endpoint_addr, "POST");
+    server_.delete_endpoint(update_endpoint_addr, "POST");
   }
 
   std::string _get_endpoint_regex_str(std::string resource,
