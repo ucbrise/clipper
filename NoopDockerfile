@@ -2,7 +2,7 @@ FROM clipper/py-rpc:latest
 
 MAINTAINER Dan Crankshaw <dscrankshaw@gmail.com>
 
-COPY noop_container.py /container/
+COPY containers/python/noop_container.py /container/
 
 CMD ["python", "/container/noop_container.py"]
 
