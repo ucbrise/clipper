@@ -119,34 +119,27 @@ def create_and_test_app(clipper, name):
         time.sleep(1)
 
 
-def cleanup():
-    # stop docker
-    images = [
-        "clipper/query_frontend", "clipper/management_frontend",
-        "clipper/noop-container"
-    ]
-    for image in images:
-        subprocess.call(
-            "docker stop $(docker ps -aqf ancestor={image}) && docker rm $(docker ps -aqf ancestor={image})".
-            format(image=image),
-            shell=True)
-
-
 if __name__ == "__main__":
-    clipper = init_clipper()
     try:
-        create_and_test_app(clipper, "aa")
-        create_and_test_app(clipper, "bb")
-        create_and_test_app(clipper, "cc")
-        create_and_test_app(clipper, "dd")
-        create_and_test_app(clipper, "ee")
-        create_and_test_app(clipper, "ff")
-        create_and_test_app(clipper, "gg")
-        print("SUCCESS")
-    except BenchmarkException as e:
-        print_clipper_state(clipper)
-        print(e)
-        cleanup()
+        clipper = init_clipper()
+        try:
+            create_and_test_app(clipper, "aa")
+            create_and_test_app(clipper, "bb")
+            create_and_test_app(clipper, "cc")
+            create_and_test_app(clipper, "dd")
+            create_and_test_app(clipper, "ee")
+            create_and_test_app(clipper, "ff")
+            create_and_test_app(clipper, "gg")
+            print(clipper.get_clipper_logs())
+            print("SUCCESS")
+        except BenchmarkException as e:
+            print_clipper_state(clipper)
+            print(e)
+            clipper.stop_all()
+            sys.exit(1)
+        else:
+            clipper.stop_all()
+    except:
+        clipper = cm.Clipper("localhost")
+        clipper.stop_all()
         sys.exit(1)
-    else:
-        cleanup()

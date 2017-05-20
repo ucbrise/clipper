@@ -15,6 +15,7 @@ import sys
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath('%s../../containers/python/' % cur_dir))
 from pywrencloudpickle import CloudPickler
+import time
 
 MODEL_REPO = "/tmp/clipper-models"
 DOCKER_NW = "clipper_nw"
@@ -31,6 +32,10 @@ REDIS_PORT = 6379
 CLIPPER_QUERY_PORT = 1337
 CLIPPER_MANAGEMENT_PORT = 1338
 CLIPPER_RPC_PORT = 7000
+
+CLIPPER_LOGS_PATH = "/tmp/clipper-logs"
+
+CLIPPER_DOCKER_LABEL = "ai.clipper.container.label"
 
 aws_cli_config = """
 [default]
@@ -103,7 +108,10 @@ class Clipper:
                     'ports': [
                         '%d:%d' % (CLIPPER_MANAGEMENT_PORT,
                                    CLIPPER_MANAGEMENT_PORT)
-                    ]
+                    ],
+                    'labels': {
+                        CLIPPER_DOCKER_LABEL: ""
+                    }
                 },
                 'query_frontend': {
                     'command':
@@ -114,12 +122,18 @@ class Clipper:
                     'ports': [
                         '%d:%d' % (CLIPPER_RPC_PORT, CLIPPER_RPC_PORT),
                         '%d:%d' % (CLIPPER_QUERY_PORT, CLIPPER_QUERY_PORT)
-                    ]
+                    ],
+                    'labels': {
+                        CLIPPER_DOCKER_LABEL: ""
+                    }
                 },
                 'redis': {
                     'image': 'redis:alpine',
                     'ports': ['%d:%d' % (self.redis_port, self.redis_port)],
-                    'command': "redis-server --port %d" % self.redis_port
+                    'command': "redis-server --port %d" % self.redis_port,
+                    'labels': {
+                        CLIPPER_DOCKER_LABEL: ""
+                    }
                 }
             },
             'version': '2'
@@ -250,7 +264,12 @@ class Clipper:
             else:
                 if not os.path.exists(
                         d) or os.stat(s).st_mtime - os.stat(d).st_mtime > 1:
-                    shutil.copy2(s, d)
+                    try:
+                        shutil.copy2(s, d)
+                    except Exception as e:
+                        print(
+                            "Error copying {source} to {dest}: {error}. File will be skipped.".
+                            format(source=s, dest=d, error=e))
 
     def start(self):
         """Start a Clipper instance.
@@ -831,20 +850,58 @@ class Clipper:
                 add_container_cmd = (
                     "docker run -d --network={nw} -v {path}:/model:ro "
                     "-e \"CLIPPER_MODEL_NAME={mn}\" -e \"CLIPPER_MODEL_VERSION={mv}\" "
-                    "-e \"CLIPPER_IP=query_frontend\" -e \"CLIPPER_INPUT_TYPE={mip}\" "
+                    "-e \"CLIPPER_IP=query_frontend\" -e \"CLIPPER_INPUT_TYPE={mip}\" -l \"{clipper_label}\" "
                     "{image}".format(
                         path=model_data_path,
                         nw=DOCKER_NW,
                         image=image_name,
                         mn=model_name,
                         mv=model_version,
-                        mip=model_input_type))
+                        mip=model_input_type,
+                        clipper_label=CLIPPER_DOCKER_LABEL))
                 result = self._execute_root(add_container_cmd)
                 return result.return_code == 0
             else:
                 print("Cannot start containers for externally managed model %s"
                       % model_name)
                 return True
+
+    def get_clipper_logs(self):
+        """Copies the logs from all Docker containers running on the host machine
+        that have been tagged with the Clipper label (ai.clipper.container.label) into
+        the local filesystem.
+
+        Returns
+        -------
+        list(str)
+            Returns a list of local filenames containing the Docker container log snapshots.
+        """
+        container_ids = self._get_clipper_container_ids()
+        cur_time_logs_path = os.path.join(CLIPPER_LOGS_PATH,
+                                          time.strftime("%Y%m%d-%H%M%S"))
+        if not os.path.exists(cur_time_logs_path):
+            os.makedirs(cur_time_logs_path)
+        log_file_names = []
+        for container in container_ids:
+            output = self._execute_root(
+                "docker logs {container}".format(container=container))
+            cur_log_fname = os.path.join(cur_time_logs_path,
+                                         "%s-container.log" % container)
+            with open(cur_log_fname, "w") as f:
+                f.write(output)
+            log_file_names.append(cur_log_fname)
+        return log_file_names
+
+    def _get_clipper_container_ids(self):
+        """
+        Gets the container IDs of all containers labeled with the clipper label
+        """
+        containers = self._execute_root(
+            "docker ps -aq --filter label={clipper_label}".format(
+                clipper_label=CLIPPER_DOCKER_LABEL))
+        ids = [l.strip() for l in containers.split("\n")]
+        print("Clipper container IDS found: %s" % str(ids))
+        return ids
 
     def inspect_instance(self):
         """Fetches metrics from the running Clipper instance.
@@ -897,29 +954,18 @@ class Clipper:
             self.add_container(model_name, model_version)
 
     def stop_all(self):
-        """Stops and removes all Docker containers on the host.
+        """Stops and removes all Clipper Docker containers on the host.
 
         """
         print("Stopping Clipper and all running models...")
         with hide("output", "warnings", "running"):
-            self._execute_root("docker-compose stop", warn_only=True)
+            container_ids = self._get_clipper_container_ids()
+            container_id_str = " ".join(container_ids)
             self._execute_root(
-                "docker stop $(docker ps -a -q)", warn_only=True)
-            self._execute_root("docker rm $(docker ps -a -q)", warn_only=True)
-
-    def cleanup(self):
-        """Cleans up all Docker artifacts.
-
-        This will stop and remove all Docker containers and images
-        from the host and destroy the Docker network Clipper uses.
-        """
-        with hide("output", "warnings", "running"):
-            self.stop_all()
-            self._execute_standard(
-                "rm -rf {model_repo}".format(model_repo=MODEL_REPO))
+                "docker stop {ids}".format(ids=container_id_str),
+                warn_only=True)
             self._execute_root(
-                "docker rmi --force $(docker images -q)", warn_only=True)
-            self._execute_root("docker network rm clipper_nw", warn_only=True)
+                "docker rm {ids}".format(ids=container_id_str), warn_only=True)
 
     def _publish_new_model(self, name, version, labels, input_type,
                            container_name, model_data_path):
