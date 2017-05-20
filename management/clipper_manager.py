@@ -695,8 +695,42 @@ class Clipper:
 
         # Deploy function
         return self.deploy_model(name, version, serialization_dir,
-                                 default_python_container, labels, input_type,
-                                 num_containers)
+                               default_python_container, labels, input_type,
+                               num_containers)
+
+    def _conda_env_solvable(self, environment_fname, directory):
+        """Returns true if the provided conda environment is compatible with the container os.
+
+        If packages listed in specified conda environment file have conflicting dependencies,
+        this function will warn the user and return False. If packages don't exist in the
+        container's conda channel, this function will warn the user and remove those packages.
+
+        Parameters
+        ----------
+        environment_fname : str
+            The file name of the exported conda environment file
+        directory : str
+            The path to the diretory containing the environment file
+
+        Returns
+        -------
+        bool
+            Returns True if the (possibly modified) environment file is compatible with conda
+            on the container os. Otherwise returns False.
+        """
+
+        process = subprocess.Popen(
+            "source deactivate && python {cur_dir}/check_env.py {environment_fname} {directory} {platform}".
+            format(
+                cur_dir=cur_dir,
+                environment_fname=environment_fname,
+                directory=directory,
+                platform=CONTAINER_CONDA_PLATFORM),
+            stdout=subprocess.PIPE,
+            shell=True)
+        out, _ = process.communicate()
+        print(out)
+        return process.returncode == 0
 
     def _conda_env_solvable(self, environment_fname, directory):
         """Returns true if the provided conda environment is compatible with the container os.
