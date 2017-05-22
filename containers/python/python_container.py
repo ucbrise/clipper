@@ -11,6 +11,7 @@ import pywrencloudpickle
 
 IMPORT_ERROR_RETURN_CODE = 3
 
+
 def load_predict_func(file_path):
     with open(file_path, 'r') as serialized_func_file:
         return pywrencloudpickle.load(serialized_func_file)
@@ -115,6 +116,7 @@ if __name__ == "__main__":
     try:
         model = PythonContainer(model_path, input_type)
         rpc_service = rpc.RPCService()
-        rpc_service.start(model, ip, port, model_name, model_version, input_type)
+        rpc_service.start(model, ip, port, model_name, model_version,
+                          input_type)
     except ImportError:
         sys.exit(IMPORT_ERROR_RETURN_CODE)
