@@ -9,6 +9,8 @@ np.set_printoptions(threshold=np.nan)
 sys.path.append(os.path.abspath("/lib/"))
 import pywrencloudpickle
 
+IMPORT_ERROR_RETURN_CODE = 3
+
 
 def load_predict_func(file_path):
     with open(file_path, 'r') as serialized_func_file:
@@ -111,6 +113,10 @@ if __name__ == "__main__":
     sys.stdout.flush()
     sys.stderr.flush()
 
-    model = PythonContainer(model_path, input_type)
-    rpc_service = rpc.RPCService()
-    rpc_service.start(model, ip, port, model_name, model_version, input_type)
+    try:
+        model = PythonContainer(model_path, input_type)
+        rpc_service = rpc.RPCService()
+        rpc_service.start(model, ip, port, model_name, model_version,
+                          input_type)
+    except ImportError:
+        sys.exit(IMPORT_ERROR_RETURN_CODE)

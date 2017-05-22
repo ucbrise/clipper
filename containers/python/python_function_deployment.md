@@ -79,10 +79,30 @@ A successful call to `deploy_prediction_function()` will output:
 ## Initializing your model-container
 Calling `deploy_prediction_func()` starts a Docker container and loads it with the necessary info to create your model. However, it may take some time (up to several minutes) before the model-container is ready to serve predictions: it still has to install and load dependencies and deserialize your prediction function.
 
-### How you can check container logs
+#### How you can check container logs
 You can read the container's logs to keep track of its initialization progress. Run `docker ps` and find the container instance for the image `clipper/python-container `. Grab its container id and run `docker logs <container_id>`.
 
 There are several stages in the model-container's initialization.
+#### 0. Optimistic Startup
+The container will attempt to start up the model without downloading any packages. The start of this process is reflected in the output of `docker logs` as:
+
+  Attempting to run Python container without installing dependencies
+  
+If this attempt is successful, the logs should show the following when the container is ready to be queried:
+
+  Starting PythonContainer container
+  Connecting to Clipper with <port information>
+  Initializing Python function container
+  Serving predictions for <input_type> input type.
+
+**If an ImportError is reached** either at startup or upon being queried, the logs will show:
+  
+  Running Python container without installing dependencies fails
+  Will install dependencies and try again
+
+and the process will continue on to the steps detailed below.
+
+**If any other error is reached** the logs will show the error and the process will not continue (installing dependencies could only possibly resolve ImportErrors).  
 
 #### 1. Loading Anaconda packages
 
@@ -112,7 +132,7 @@ Collecting path-and-address==2.0.1
 ...
 ```
 
-### 3. Starting up the model in the newly created Anaconda environment
+### 3. Starting up the model
 
 In this stage, the container attempts to load in the parameters you have provided it and connect to Clipper accordingly. The output of `docker logs` should show:
 

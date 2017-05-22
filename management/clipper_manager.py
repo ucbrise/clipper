@@ -655,9 +655,8 @@ class Clipper:
         default_python_container = "clipper/python-container"
         predict_fname = "predict_func.pkl"
         environment_fname = "environment.yml"
-
-        base_serializations_dir = os.path.abspath(
-            relative_base_serializations_dir)
+        conda_dep_fname = "conda_dependencies.txt"
+        pip_dep_fname = "pip_dependencies.txt"
 
         # Serialize function
         s = StringIO()
@@ -666,29 +665,32 @@ class Clipper:
         serialized_prediction_function = s.getvalue()
 
         # Set up serialization directory
-        serialization_dir = "{base}/{dir}".format(
-            base=base_serializations_dir, dir=name)
+        serialization_dir = os.path.join(
+            '/tmp', relative_base_serializations_dir, name)
         if not os.path.exists(serialization_dir):
             os.makedirs(serialization_dir)
 
         # Export Anaconda environment
+        environment_file_abs_path = os.path.join(serialization_dir,
+                                                 environment_fname)
         process = subprocess.Popen(
-            "PIP_FORMAT=legacy conda env export >> {environment_fname}".format(
-                environment_fname=environment_fname),
+            "PIP_FORMAT=legacy conda env export >> {environment_file_abs_path}".
+            format(environment_file_abs_path=environment_file_abs_path),
             shell=True)
         process.wait()
 
         # Confirm that packages installed through conda are solvable
-        if not (self._conda_env_solvable(environment_fname, os.getcwd())):
+        # Write out conda and pip dependency files to be supplied to container
+        if not (self._check_and_write_dependencies(
+                environment_file_abs_path, serialization_dir, conda_dep_fname,
+                pip_dep_fname)):
             return False
 
-        # Give container environment details
-        shutil.copy(environment_fname, serialization_dir)
+        os.remove(environment_file_abs_path)
         print("Supplied environment details")
 
         # Write out function serialization
-        func_file_path = "{dir}/{predict_fname}".format(
-            dir=serialization_dir, predict_fname=predict_fname)
+        func_file_path = os.path.join(serialization_dir, predict_fname)
         with open(func_file_path, "w") as serialized_function_file:
             serialized_function_file.write(serialized_prediction_function)
         print("Serialized and supplied predict function")
@@ -698,24 +700,33 @@ class Clipper:
                                  default_python_container, labels, input_type,
                                  num_containers)
 
-    def _conda_env_solvable(self, environment_fname, directory):
+    def _check_and_write_dependencies(self, environment_path, directory,
+                                      conda_dep_fname, pip_dep_fname):
         """Returns true if the provided conda environment is compatible with the container os.
 
         If packages listed in specified conda environment file have conflicting dependencies,
-        this function will warn the user and return False. If packages don't exist in the
-        container's conda channel, this function will warn the user and remove those packages.
+        this function will warn the user and return False.
+
+        If there are no conflicting package dependencies, existence of the packages in the 
+        container conda channel is tested. The user is warned about any missing packages.
+        All existing conda packages are written out to `conda_dep_fname` and pip packages
+        to `pip_dep_fname` in the given `directory`. This function then returns True.
 
         Parameters
         ----------
-        environment_fname : str
-            The file name of the exported conda environment file
+        environment_path : str
+            The path to the input conda environment file
         directory : str
             The path to the diretory containing the environment file
+        conda_dep_fname : str
+            The name of the output conda dependency file
+        pip_dep_fname : str
+            The name of the output pip dependency file
 
         Returns
         -------
         bool
-            Returns True if the (possibly modified) environment file is compatible with conda
+            Returns True if the packages specified in `environment_fname` are compatible with conda
             on the container os. Otherwise returns False.
         """
         if "CONDA_PREFIX" not in os.environ:
@@ -725,13 +736,15 @@ class Clipper:
         root_prefix = os.environ["CONDA_PREFIX"].split("envs")[0]
         py_path = os.path.join(root_prefix, "bin", "python")
         process = subprocess.Popen(
-            "{py_path} {cur_dir}/check_env.py {environment_fname} {directory} {platform}".
+            "{py_path} {cur_dir}/check_and_write_deps.py {environment_path} {directory} {platform} {conda_dep_fname} {pip_dep_fname}".
             format(
                 py_path=py_path,
                 cur_dir=cur_dir,
-                environment_fname=environment_fname,
+                environment_path=environment_path,
                 directory=directory,
-                platform=CONTAINER_CONDA_PLATFORM),
+                platform=CONTAINER_CONDA_PLATFORM,
+                conda_dep_fname=conda_dep_fname,
+                pip_dep_fname=pip_dep_fname),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             shell=True)
