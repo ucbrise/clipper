@@ -81,6 +81,7 @@ def check_solvability_write_deps(env_path, directory, platform,
             pip_deps = dependencies
 
     # Check for conflicts and existence of packages
+    missing_packages = None
     try:
         try:
             # This call doesn't install anything; it checks the solvability of package dependencies.
@@ -99,7 +100,7 @@ def check_solvability_write_deps(env_path, directory, platform,
         print(unsat_e)
         return False
 
-    if missing_packages:
+    if missing_packages is not None:
         print(
             "The following packages in your conda environment aren't available in the linux-64 conda channel the container will use:"
         )
