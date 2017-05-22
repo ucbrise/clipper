@@ -3,7 +3,7 @@ from setuptools import find_packages
 
 setup(
     name='clipper_admin',
-    version='0.1',
+    version='0.1.1',
     description='Admin commands for the Clipper prediction-serving system',
     author='Dan Crankshaw',
     author_email='crankshaw@cs.berkeley.edu',

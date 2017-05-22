@@ -14,6 +14,7 @@ from cStringIO import StringIO
 import sys
 from pywrencloudpickle import CloudPickler
 import time
+cur_dir = os.path.dirname(os.path.abspath(__file__))
 
 MODEL_REPO = "/tmp/clipper-models"
 DOCKER_NW = "clipper_nw"
