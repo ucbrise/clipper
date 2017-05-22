@@ -12,10 +12,9 @@ from sklearn import base
 from sklearn.externals import joblib
 from cStringIO import StringIO
 import sys
-cur_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.abspath('%s../../containers/python/' % cur_dir))
 from pywrencloudpickle import CloudPickler
 import time
+cur_dir = os.path.dirname(os.path.abspath(__file__))
 
 MODEL_REPO = "/tmp/clipper-models"
 DOCKER_NW = "clipper_nw"
