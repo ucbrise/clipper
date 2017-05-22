@@ -292,6 +292,81 @@ class ServerBase {
     it->second.emplace_back(REGEX_NS::regex(res_name), res_fn);
   }
 
+  /// Use this function to delete existing endpoints while the service is running
+  void delete_endpoint(
+      std::string res_name, std::string res_method) {
+    std::unique_lock<std::mutex> l(mu);
+    auto app_res = resource[res_name];
+    app_res.erase(res_method);
+    if (app_res.size() == 0) {
+      resource.erase(res_name);
+    }
+
+    // How num_endpoints calculates the number of endpoints
+    size_t count = 0;
+    for (auto e : opt_resource) {
+      count += e.second.size();
+    }
+
+    // Alternative but equivalent method for sanity check
+    size_t count2 = 0;
+    for (auto opt_it = opt_resource.begin(); opt_it != opt_resource.end();
+     opt_it++) {
+      auto endpoint_pairs = opt_it->second;
+      count2 += endpoint_pairs.size();
+    }
+
+    // Sanity check
+    assert(count == count2);
+
+    for (auto opt_it = opt_resource.begin(); opt_it != opt_resource.end();
+         opt_it++) {
+      if (res_method == opt_it->first) {
+        auto endpoint_pairs = opt_it->second;
+        for (auto pair = endpoint_pairs.begin(); pair != endpoint_pairs.end();
+          pair++) {
+          if (REGEX_NS::regex_match(res_name, pair->first)) {
+            size_t initial_ep_size = endpoint_pairs.size();
+
+            endpoint_pairs.erase(pair);
+            if (endpoint_pairs.size() == 0) {
+              opt_resource.erase(opt_it);
+            }
+            size_t final_ep_size = endpoint_pairs.size();
+
+            // After deletion, size should decrease by 1
+            assert(initial_ep_size - 1 == final_ep_size);
+
+            // How num_endpoints calculates the number of endpoints
+            size_t count3 = 0;
+            for (auto e : opt_resource) {
+              count3 += e.second.size();
+            }
+
+            // Alternative but equivalent method for sanity check
+            size_t count4 = 0;
+            for (auto opt_it2 = opt_resource.begin(); opt_it2 != opt_resource.end();
+             opt_it2++) {
+              auto endpoint_pairs2 = opt_it2->second;
+              count4 += endpoint_pairs2.size();
+            }
+
+            // Sanity check
+            assert(count3 == count4);
+
+            // After deletion of an endpoint, number of endpionts should decrease by 1
+            // This is the assert that is failing
+            assert(count - 1 == count3);
+            return;
+          }
+        }
+      }
+    }
+
+    // Shouldn't get here if we are deleting an existing endpoint
+    assert(false);
+  }
+
   size_t num_endpoints() {
     size_t count = 0;
     std::unique_lock<std::mutex> l(mu);

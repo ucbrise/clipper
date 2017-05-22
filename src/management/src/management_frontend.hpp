@@ -47,6 +47,7 @@ const std::string LOGGING_TAG_MANAGEMENT_FRONTEND = "MGMTFRNTD";
 
 const std::string ADMIN_PATH = "^/admin";
 const std::string ADD_APPLICATION = ADMIN_PATH + "/add_app$";
+const std::string DELETE_APPLICATION = ADMIN_PATH + "/delete_app$";
 const std::string ADD_MODEL = ADMIN_PATH + "/add_model$";
 const std::string SET_MODEL_VERSION = ADMIN_PATH + "/set_model_version$";
 
@@ -60,8 +61,13 @@ const std::string GET_MODEL = ADMIN_PATH + "/get_model$";
 const std::string GET_ALL_CONTAINERS = ADMIN_PATH + "/get_all_containers$";
 const std::string GET_CONTAINER = ADMIN_PATH + "/get_container$";
 
-const std::string ADD_APPLICATION_JSON_SCHEMA = R"(
+const std::string APPLICATION_ID_JSON_SCHEMA = R"(
   {
+    "name" := string
+  }
+)";
+
+const std::string ADD_APPLICATION_JSON_SCHEMA = R"(  {
    "name" := string,
    "candidate_model_names" := [string],
    "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
@@ -175,6 +181,25 @@ class RequestHandler {
           } catch (const json_semantic_error& e) {
             std::string err_msg =
                 json_error_msg(e.what(), ADD_APPLICATION_JSON_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const std::invalid_argument& e) {
+            respond_http(e.what(), "400 Bad Request", response);
+          }
+        });
+    server_.add_endpoint(
+        DELETE_APPLICATION, "DELETE",
+        [this](std::shared_ptr<HttpServer::Response> response,
+               std::shared_ptr<HttpServer::Request> request) {
+          try {
+            std::string result = delete_application(request->content.string());
+            respond_http(result, "200 OK", response);
+          } catch (const json_parse_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), APPLICATION_ID_JSON_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const json_semantic_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), APPLICATION_ID_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
           } catch (const std::invalid_argument& e) {
             respond_http(e.what(), "400 Bad Request", response);
@@ -436,6 +461,27 @@ class RequestHandler {
       std::stringstream ss;
       ss << "Error application " << app_name << " already exists";
       throw std::invalid_argument(ss.str());
+    }
+  }
+
+  /**
+   * Creates an endpoint that listens for requests to delete existing prediction
+   * applications to Clipper.
+   *
+   * JSON format:
+   * {
+   *  "name" := string
+   * }
+   */
+  std::string delete_application(const std::string& json) {
+    rapidjson::Document d;
+    parse_json(json, d);
+
+    std::string app_name = get_string(d, "name");
+    if (clipper::redis::delete_application(redis_connection_, app_name)) {
+      return "Success!";
+    } else {
+      return "Error deleting application from Redis.";
     }
   }
 

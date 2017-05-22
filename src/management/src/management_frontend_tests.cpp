@@ -139,6 +139,42 @@ TEST_F(ManagementFrontendTest, TestAddApplicationMalformedJson) {
   ASSERT_THROW(rh_.add_application(add_app_json), json_parse_error);
 }
 
+TEST_F(ManagementFrontendTest, TestDeleteApplicationCorrect) {
+  std::string add_app_json = R"(
+  {
+    "name": "myappname",
+    "candidate_model_names": ["image_model"],
+    "input_type": "integers",
+    "default_output": "4.3",
+    "latency_slo_micros": 10000
+  }
+  )";
+
+  ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
+
+  std::string delete_app_json = R"(
+    {
+      "name": "myappname"
+    }
+  )";
+
+  ASSERT_EQ(rh_.delete_application(delete_app_json), "Success!");
+  auto result = get_application(*redis_, "myappname");
+  // Because the app should not exist in redis, an empty map should be
+  // returned.
+  ASSERT_EQ(result.size(), static_cast<size_t>(0));
+}
+
+TEST_F(ManagementFrontendTest, TestDeleteApplicationMalformedJson) {
+  std::string delete_app_json = R"(
+    {
+      "name": myappname"
+    }
+  )";
+
+  ASSERT_THROW(rh_.delete_application(delete_app_json), json_parse_error);
+}
+
 TEST_F(ManagementFrontendTest, TestGetApplicationCorrect) {
   std::string name = "my_app_name";
   std::string input_type = "doubles";

@@ -166,6 +166,9 @@ class RequestHandler {
             int latency_slo_micros = std::stoi(app_info["latency_slo_micros"]);
             add_application(name, candidate_model_names, input_type, policy,
                             default_output, latency_slo_micros);
+          } else if (event_type == "del") {
+            std::string name = key;
+            delete_application(name);
           }
         });
 
@@ -249,6 +252,22 @@ class RequestHandler {
     redis_subscriber_.disconnect();
   }
 
+  void delete_application(std::string name) {
+    std::string predict_endpoint_addr = _get_endpoint_address(name, "predict");
+    std::string update_endpoint_addr = _get_endpoint_address(name, "update");
+    server_.delete_endpoint(predict_endpoint_addr, "POST");
+    server_.delete_endpoint(update_endpoint_addr, "POST");
+  }
+
+  std::string _get_endpoint_regex_str(std::string resource,
+                                      std::string action) {
+    return "^" + _get_endpoint_address(resource, action) + "$";
+  }
+
+  std::string _get_endpoint_address(std::string resource, std::string action) {
+    return "/" + resource + "/" + action;
+  }
+
   void add_application(std::string name, std::vector<std::string> models,
                        InputType input_type, std::string policy,
                        std::string default_output, long latency_slo_micros) {
@@ -329,8 +348,9 @@ class RequestHandler {
         respond_http(json_error_response, "400 Bad Request", response);
       }
     };
-    std::string predict_endpoint = "^/" + name + "/predict$";
-    server_.add_endpoint(predict_endpoint, "POST", predict_fn);
+    std::string predict_endpoint_regex_str =
+        _get_endpoint_regex_str(name, "predict");
+    server_.add_endpoint(predict_endpoint_regex_str, "POST", predict_fn);
 
     auto update_fn = [this, name, input_type, policy, models](
         std::shared_ptr<HttpServer::Response> response,
@@ -366,8 +386,9 @@ class RequestHandler {
         respond_http(e.what(), "400 Bad Request", response);
       }
     };
-    std::string update_endpoint = "^/" + name + "/update$";
-    server_.add_endpoint(update_endpoint, "POST", update_fn);
+    std::string update_endpoint_regex_str =
+        _get_endpoint_regex_str(name, "update");
+    server_.add_endpoint(update_endpoint_regex_str, "POST", update_fn);
   }
 
   /**
