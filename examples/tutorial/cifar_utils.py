@@ -39,7 +39,7 @@ def show_example_images(images, labels, num_rows):
     for i, idx in enumerate(idxs):
         image = recover_pixels(images[idx])
         label = labels[idx]
-        cur_ax = axes[i / imgs_per_row][i % imgs_per_row]
+        cur_ax = axes[int(i / imgs_per_row)][i % imgs_per_row]
         cur_ax.imshow(image.astype(np.ubyte), interpolation="nearest")
         cur_ax.axis('off')
         if label == 0:
@@ -54,7 +54,7 @@ def load_cifar(cifar_location, cifar_filename="cifar_train.data", norm=True):
     # print("Source file: %s" % cifar_path)
     df = pd.read_csv(cifar_path, sep=",", header=None)
     data = df.values
-    print("Number of image files: %d" % len(data))
+    print("Number of image files: {}".format(len(data)))
     y = data[:, 0]
     X = data[:, 1:]
     Z = X
@@ -97,7 +97,7 @@ def cifar_update(host, app, uid, x, y, print_result=False):
     end = datetime.now()
     latency = (end - start).total_seconds() * 1000.0
     if print_result:
-        print("'%s', %f ms" % (r.text, latency))
+        print("'{}', {} ms".format(r.text, latency))
 
 
 def parse_pred(p):
@@ -163,7 +163,7 @@ def run_iteration(host, app, uid, test_x, test_y):
         elif correct_y == 1 and pred_y == 0:
             false_neg += 1
         else:
-            print "predicted: {p}, correct: {c}".format(p=pred_y, c=correct_y)
+            print("predicted: {p}, correct: {c}".format(p=pred_y, c=correct_y))
         latencies.append(latency)
     total = float(total)
     return (float(correct) / total, float(false_pos) / total,

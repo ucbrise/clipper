@@ -1,5 +1,6 @@
 cloudpickle==0.2.2
-Fabric==1.13.1
+Fabric==1.13.1; python_version <= '2.7'
+Fabric3==1.13.1.post1; python_version >='3.0'
 ipython==5.1.0
 jupyter==1.0.0
 matplotlib==2.0.0
@@ -11,5 +12,5 @@ requests==2.12.4
 scikit-learn==0.18.1
 scipy==0.18.1
 seaborn==0.7.1
-subprocess32==3.2.7
+subprocess32==3.2.7; python_version <= '2.7'
 tensorflow==0.12.1
