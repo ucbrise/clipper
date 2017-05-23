@@ -9,7 +9,7 @@ services:
     labels:
       - "ai.clipper.container.label"
     volumes:
-      - /tmp/clipper_redis_data:/data
+      - redisdata:/data
 
   query_frontend:
     image: "clipper/query_frontend"
@@ -36,3 +36,6 @@ services:
       - "--redis_port=6379"
     labels:
       - "ai.clipper.container.label"
+
+volumes:
+  redisdata:
