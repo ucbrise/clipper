@@ -3,7 +3,7 @@ from setuptools import find_packages
 
 setup(
     name='clipper_admin',
-    version='0.1.1',
+    version='0.1.2',
     description='Admin commands for the Clipper prediction-serving system',
     author='Dan Crankshaw',
     author_email='crankshaw@cs.berkeley.edu',
@@ -12,5 +12,5 @@ setup(
     keywords=['clipper', 'prediction', 'model', 'management'],
     install_requires=[
         'requests', 'pyparsing', 'appdirs', 'pprint', 'subprocess32',
-        'sklearn', 'numpy', 'scipy', 'fabric', 'conda', 'pyyaml'
+        'sklearn', 'numpy', 'scipy', 'fabric', 'pyyaml'
     ])
