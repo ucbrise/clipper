@@ -160,6 +160,22 @@ cd /vagrant
 ./bin/run_unittests.sh
 ```
 
+__Contributing:__
+
+Before sending a patch, verify if your code follows the project coding
+standards. This should be done to both C++ and Python code.
+
+In order to do so, first install the [ClangFormat](https://clang.llvm.org/docs/ClangFormat.html)
+application. After that, you can follow these steps to prepare your patch:
+
+```sh
+# Check if the code is not in the appropriate format
+./bin/check_format.sh
+
+# If that is the case, apply the necessary changes
+./bin/format_code.sh
+```
+
 Clipper has been tested on OSX 10.11, 10.12, and on Debian stretch/sid and Ubuntu 12.04 and 16.04. It does not support Windows.
 
 ## Status and Roadmap
