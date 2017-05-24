@@ -63,8 +63,13 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   std::shared_ptr<SelectionState> selection_state =
       current_policy->deserialize(*state_opt);
 
-  std::vector<PredictTask> tasks =
-      current_policy->select_predict_tasks(selection_state, query, query_id);
+  boost::optional<std::string> default_explanation;
+  std::vector<PredictTask> tasks;
+  try {
+    tasks = current_policy->select_predict_tasks(selection_state, query, query_id);
+  } catch(const NoModelsFoundError& e) {
+    default_explanation = "No models found for query";
+  }
 
   log_info_formatted(LOGGING_TAG_QUERY_PROCESSOR, "Found {} tasks",
                      tasks.size());
@@ -94,12 +99,12 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   boost::promise<Response> response_promise;
   auto response_future = response_promise.get_future();
 
-  // NOTE: We capture the num_completed and completed_flag variables
+  // NOTE: We capture the num_completed, completed_flag, and default_explanation variables
   // so that they outlive the composed_futures.
   response_ready_future.then([
     this, query, query_id, response_promise = std::move(response_promise),
     selection_state, current_policy, task_futures = std::move(task_futures),
-    num_completed, completed_flag
+    num_completed, completed_flag, default_explanation
   ](auto) mutable {
 
     vector<Output> outputs;
