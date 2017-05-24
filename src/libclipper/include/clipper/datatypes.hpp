@@ -230,7 +230,7 @@ class Response {
   ~Response() = default;
 
   Response(Query query, QueryId query_id, const long duration_micros,
-           Output output, const bool is_default);
+           Output output, const bool is_default, const std::string default_explanation);
 
   // default copy constructors
   Response(const Response &) = default;
@@ -247,6 +247,7 @@ class Response {
   long duration_micros_;
   Output output_;
   bool output_is_default_;
+  std::string default_explanation_;
 };
 
 class Feedback {

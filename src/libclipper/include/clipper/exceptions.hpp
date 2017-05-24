@@ -15,6 +15,15 @@ class PredictError : public std::runtime_error {
   const std::string msg_;
 };
 
+class NoModelsFoundError : public std::runtime_error {
+ public:
+  NoModelsFoundError();
+  const char* what() const noexcept;
+
+ private:
+  std::string msg_;
+};
+
 }  // namespace clipper
 
 #endif  // CLIPPER_EXCEPTIONS_HPP

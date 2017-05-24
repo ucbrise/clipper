@@ -11,6 +11,7 @@
 #include <clipper/logging.hpp>
 #include <clipper/selection_policies.hpp>
 #include <clipper/util.hpp>
+#include <clipper/exceptions.hpp>
 
 namespace clipper {
 
@@ -60,6 +61,7 @@ std::vector<PredictTask> DefaultOutputSelectionPolicy::select_predict_tasks(
     log_error_formatted(LOGGING_TAG_SELECTION_POLICY,
                         "No candidate models for query with label {}",
                         query.label_);
+    throw NoModelsFoundError();
   } else {
     if (num_candidate_models > 1) {
       log_error_formatted(LOGGING_TAG_SELECTION_POLICY,
