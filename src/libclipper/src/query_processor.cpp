@@ -9,6 +9,7 @@
 #define PROVIDES_EXECUTORS
 #include <boost/thread.hpp>
 #include <boost/thread/executors/basic_thread_pool.hpp>
+#include <boost/optional.hpp>
 
 #include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
@@ -68,7 +69,7 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   try {
     tasks = current_policy->select_predict_tasks(selection_state, query, query_id);
   } catch(const NoModelsFoundError& e) {
-    default_explanation = "No models found for query";
+    default_explanation = "No registered models found for query";
   }
 
   log_info_formatted(LOGGING_TAG_QUERY_PROCESSOR, "Found {} tasks",
@@ -126,7 +127,7 @@ boost::future<Response> QueryProcessor::predict(Query query) {
             .count();
 
     Response response{query, query_id, duration_micros, final_output.first,
-                      final_output.second};
+                      final_output.second, default_explanation};
     response_promise.set_value(response);
   });
   return response_future;
