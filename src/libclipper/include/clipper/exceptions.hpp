@@ -19,9 +19,6 @@ class NoModelsFoundError : public std::runtime_error {
  public:
   NoModelsFoundError();
   const char* what() const noexcept;
-
- private:
-  std::string msg_;
 };
 
 }  // namespace clipper
