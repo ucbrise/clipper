@@ -237,6 +237,10 @@ class Clipper:
             return run(*args, **kwargs)
 
     def _execute_local(self, *args, **kwargs):
+        if self.sudo:
+            root_args = list(args)
+            root_args[0] = "sudo %s" % root_args[0]
+            args = tuple(root_args)
         # local is not currently capable of simultaneously printing and
         # capturing output, as run/sudo do. The capture kwarg allows you to
         # switch between printing and capturing as necessary, and defaults to
