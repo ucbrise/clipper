@@ -379,6 +379,7 @@ class RequestHandler {
    *    "query_id" := int,
    *    "output" := float,
    *    "default" := boolean
+   *    "default_explanation" := string (optional)
    * }
    */
   static const std::string get_prediction_response_content(
