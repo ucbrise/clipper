@@ -9,7 +9,7 @@ class PredictError : public std::runtime_error {
  public:
   PredictError(const std::string msg);
 
-  const char *what() const noexcept;
+  const char* what() const noexcept;
 
  private:
   const std::string msg_;

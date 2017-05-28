@@ -312,7 +312,7 @@ Response::Response(Query query, QueryId query_id, const long duration_micros,
       duration_micros_(duration_micros),
       output_(std::move(output)),
       output_is_default_(output_is_default),
-      default_explanation_(default_explanation){}
+      default_explanation_(default_explanation) {}
 
 std::string Response::debug_string() const noexcept {
   std::string debug;
