@@ -226,18 +226,18 @@ class Clipper:
         if not self.sudo:
             return self._execute_standard(*args, **kwargs)
         elif self._host_is_local():
-            return self._execute_local(*args, **kwargs)
+            return self._execute_local(True, *args, **kwargs)
         else:
             return sudo(*args, **kwargs)
 
     def _execute_standard(self, *args, **kwargs):
         if self._host_is_local():
-            return self._execute_local(*args, **kwargs)
+            return self._execute_local(False, *args, **kwargs)
         else:
             return run(*args, **kwargs)
 
-    def _execute_local(self, *args, **kwargs):
-        if self.sudo:
+    def _execute_local(self, as_root, *args, **kwargs):
+        if self.sudo and as_root:
             root_args = list(args)
             root_args[0] = "sudo %s" % root_args[0]
             args = tuple(root_args)
