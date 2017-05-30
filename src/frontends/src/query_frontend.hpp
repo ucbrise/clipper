@@ -403,8 +403,7 @@ class RequestHandler {
     }
     clipper::json::add_bool(json_response, PREDICTION_RESPONSE_KEY_USED_DEFAULT,
                             query_response.output_is_default_);
-    if (query_response.output_is_default_ &&
-        query_response.default_explanation_) {
+    if(query_response.output_is_default_ && query_response.default_explanation_) {
       clipper::json::add_string(json_response,
                                 PREDICTION_RESPONSE_KEY_DEFAULT_EXPLANATION,
                                 query_response.default_explanation_.get());

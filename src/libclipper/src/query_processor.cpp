@@ -7,9 +7,9 @@
 #include <unordered_map>
 
 #define PROVIDES_EXECUTORS
-#include <boost/optional.hpp>
 #include <boost/thread.hpp>
 #include <boost/thread/executors/basic_thread_pool.hpp>
+#include <boost/optional.hpp>
 
 #include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
@@ -67,9 +67,8 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   boost::optional<std::string> default_explanation;
   std::vector<PredictTask> tasks;
   try {
-    tasks =
-        current_policy->select_predict_tasks(selection_state, query, query_id);
-  } catch (const NoModelsFoundError& e) {
+    tasks = current_policy->select_predict_tasks(selection_state, query, query_id);
+  } catch(const NoModelsFoundError& e) {
     default_explanation = "No registered models found for query";
   }
 
@@ -101,8 +100,7 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   boost::promise<Response> response_promise;
   auto response_future = response_promise.get_future();
 
-  // NOTE: We capture the num_completed, completed_flag, and default_explanation
-  // variables
+  // NOTE: We capture the num_completed, completed_flag, and default_explanation variables
   // so that they outlive the composed_futures.
   response_ready_future.then([
     this, query, query_id, response_promise = std::move(response_promise),
@@ -128,12 +126,8 @@ boost::future<Response> QueryProcessor::predict(Query query) {
             end - query.create_time_)
             .count();
 
-    Response response{query,
-                      query_id,
-                      duration_micros,
-                      final_output.first,
-                      final_output.second,
-                      default_explanation};
+    Response response{query, query_id, duration_micros, final_output.first,
+                      final_output.second, default_explanation};
     response_promise.set_value(response);
   });
   return response_future;

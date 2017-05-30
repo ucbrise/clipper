@@ -232,8 +232,7 @@ class Response {
   ~Response() = default;
 
   Response(Query query, QueryId query_id, const long duration_micros,
-           Output output, const bool is_default,
-           const boost::optional<std::string> default_explanation);
+           Output output, const bool is_default, const boost::optional<std::string> default_explanation);
 
   // default copy constructors
   Response(const Response &) = default;
