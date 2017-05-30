@@ -6,8 +6,6 @@
 #include <string>
 #include <vector>
 
-#include <boost/optional.hpp>
-
 namespace clipper {
 
 using ByteBuffer = std::vector<uint8_t>;
@@ -232,7 +230,7 @@ class Response {
   ~Response() = default;
 
   Response(Query query, QueryId query_id, const long duration_micros,
-           Output output, const bool is_default, const boost::optional<std::string> default_explanation);
+           Output output, const bool is_default, const std::string default_explanation);
 
   // default copy constructors
   Response(const Response &) = default;
@@ -249,7 +247,7 @@ class Response {
   long duration_micros_;
   Output output_;
   bool output_is_default_;
-  boost::optional<std::string> default_explanation_;
+  std::string default_explanation_;
 };
 
 class Feedback {
