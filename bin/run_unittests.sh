@@ -107,10 +107,13 @@ function run_libclipper_tests {
 function run_management_tests {
   echo -e "\nRunning management tests\n\n"
   ./src/management/managementtests --redis_port $REDIS_PORT
+  cd $DIR
+  python ../management/test/clipper_manager_test.py short
 }
 
 function run_frontend_tests {
   echo -e "\nRunning frontend tests\n\n"
+  cd $DIR
   ./src/frontends/frontendtests --redis_port $REDIS_PORT
 }
 
