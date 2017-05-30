@@ -1,3 +1,5 @@
+"""Clipper Management Utilities"""
+
 from __future__ import print_function, with_statement
 from fabric.api import *
 from fabric.contrib.files import append
@@ -14,6 +16,11 @@ from cStringIO import StringIO
 import sys
 from pywrencloudpickle import CloudPickler
 import time
+
+
+__all__ = ['Clipper']
+
+
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
 MODEL_REPO = "/tmp/clipper-models"

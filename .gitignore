@@ -11,6 +11,7 @@ debug/
 .idea/
 config.log
 target/
+_build/
 
 # scala
 dependency-reduced-pom.xml
