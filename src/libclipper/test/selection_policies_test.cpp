@@ -7,7 +7,6 @@
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_real_distribution.hpp>
 #include <clipper/datatypes.hpp>
-#include <clipper/exceptions.hpp>
 #include <clipper/selection_policies.hpp>
 
 using namespace clipper;
@@ -32,9 +31,9 @@ TEST_F(DefaultOutputSelectionPolicyTest,
                                     1000,
                                     DefaultOutputSelectionPolicy::get_name(),
                                     {}};
-  ASSERT_THROW(
-      policy_.select_predict_tasks(nullptr, zero_candidate_models_query, 0),
-      NoModelsFoundError);
+  auto zero_models_tasks =
+      policy_.select_predict_tasks(nullptr, zero_candidate_models_query, 0);
+  EXPECT_EQ(zero_models_tasks.size(), (size_t)0);
 }
 
 TEST_F(DefaultOutputSelectionPolicyTest,
