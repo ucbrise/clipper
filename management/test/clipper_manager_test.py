@@ -15,6 +15,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
 	def setUpClass(self):
 		self.clipper_inst = clipper_manager.Clipper("localhost")
 		self.clipper_inst.start()
+		self.app_name = "app1"
 		self.model_name = "m1"
 		self.model_version_1 = 1
 		self.model_version_2 = 2
@@ -42,14 +43,22 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
 		self.assertIsNotNone(registered_model_info)
 
 	def test_application_registers_correctly(self):
-		app_name = "app1"
 		input_type = "doubles"
 		default_output = "DEFAULT"
 		slo_micros = 30000
-		self.clipper_inst.register_application(app_name, self.model_name, input_type, default_output, slo_micros)
+		self.clipper_inst.register_application(self.app_name, self.model_name, input_type, default_output, slo_micros)
 		registered_applications = self.clipper_inst.get_all_apps()
 		self.assertGreaterEqual(len(registered_applications), 1)
-		self.assertTrue(app_name in registered_applications)
+		self.assertTrue(self.app_name in registered_applications)
+
+	def get_app_info_for_registered_app_returns_info_dictionary(self):
+		result = self.clipper_inst.get_app_info(self.app_name)
+		self.assertIsNotNone(result)
+		self.assertEqual(type(result), dict)
+
+	def get_app_info_for_nonexistent_app_returns_none(self):
+		result = self.clipper_inst.get_app_info("fake_app")
+		self.assertIsNone(result)
 
 	def test_add_container_for_external_model_fails(self):
 		result = self.clipper_inst.add_container(self.model_name, self.model_version_1)
@@ -189,7 +198,8 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 SHORT_ARGS = ['s', 'short']
 LONG_ARGS = ['l', 'long']
 
-SHORT_TEST_ORDERING = ['test_external_models_register_correctly', 'test_application_registers_correctly', 
+SHORT_TEST_ORDERING = ['test_external_models_register_correctly', 'test_application_registers_correctly',
+		'get_app_info_for_registered_app_returns_info_dictionary', 'get_app_info_for_nonexistent_app_returns_none',
 		'test_add_container_for_external_model_fails', 'test_model_version_sets_correctly', 'test_get_logs_creates_log_files',
 		'test_inspect_instance_returns_json_dict', 'test_model_deploys_successfully', 'test_add_container_for_deployed_model_succeeds',
 		'test_predict_function_deploys_successfully']

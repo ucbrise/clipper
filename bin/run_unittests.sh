@@ -108,7 +108,7 @@ function run_management_tests {
   echo -e "\nRunning management tests\n\n"
   ./src/management/managementtests --redis_port $REDIS_PORT
   cd $DIR
-  python ../management/test/clipper_manager_test.py short
+  python ../management/test/clipper_manager_test.py
 }
 
 function run_frontend_tests {
