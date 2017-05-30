@@ -113,7 +113,6 @@ function run_management_tests {
 
 function run_frontend_tests {
   echo -e "\nRunning frontend tests\n\n"
-  cd $DIR
   ./src/frontends/frontendtests --redis_port $REDIS_PORT
 }
 
