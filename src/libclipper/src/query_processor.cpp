@@ -112,17 +112,10 @@ boost::future<Response> QueryProcessor::predict(Query query) {
 
     vector<Output> outputs;
     vector<VersionedModelId> used_models;
-    bool all_tasks_timed_out = true;
     for (auto r = task_futures.begin(); r != task_futures.end(); ++r) {
       if ((*r).is_ready()) {
         outputs.push_back((*r).get());
-        all_tasks_timed_out = false;
       }
-    }
-    if (all_tasks_timed_out && !task_futures.empty() && !default_explanation) {
-      default_explanation =
-          "Failed to retrieve a prediction response within the specified "
-          "latency SLO";
     }
 
     std::pair<Output, bool> final_output =
