@@ -1,8 +1,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include <boost/optional.hpp>
-
 #include <clipper/config.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
@@ -20,7 +18,7 @@ class MockQueryProcessor {
   MockQueryProcessor() = default;
   boost::future<Response> predict(Query query) {
     Response response(query, 3, 5, Output("-1.0", {std::make_pair("m", 1)}),
-                      false, boost::optional<std::string>{});
+                      false);
     return boost::make_ready_future(response);
   }
   boost::future<FeedbackAck> update(FeedbackQuery /*feedback*/) {
