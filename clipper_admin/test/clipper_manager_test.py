@@ -220,6 +220,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
 SHORT_ARGS = ['s', 'short']
 LONG_ARGS = ['l', 'long']
+ALL_ARGS = ['a', 'all']
 
 SHORT_TEST_ORDERING = [
     'test_external_models_register_correctly',
@@ -242,16 +243,22 @@ LONG_TEST_ORDERING = [
 if __name__ == '__main__':
     run_short = True
     run_long = True
+    args_invalid = False
     if len(sys.argv) > 1:
         if sys.argv[1] in SHORT_ARGS:
             run_long = False
         elif sys.argv[1] in LONG_ARGS:
             run_short = False
-        else:
-            print(
-                "Correct parameter values are either 's'/'short' or 'l'/'long' indicating which subset of tests should be executed!"
-            )
-            raise
+        elif sys.argv[1] not in ALL_ARGS:
+            args_invalid = True
+    else:
+        args_invalid = True
+
+    if args_invalid:
+        print(
+            "Missing a parameter with value 's'/'short', 'l'/'long', or 'a'/'all' indicating which subset of tests should be executed!"
+        )
+        raise
 
     suite = unittest.TestSuite()
 
