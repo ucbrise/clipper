@@ -78,8 +78,6 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   boost::future<void> timer_future =
       timer_system_.set_timer(query.latency_budget_micros_);
 
-  // vector<boost::future<Output>> task_completion_futures;
-
   boost::future<void> all_tasks_completed;
   auto num_completed = std::make_shared<std::atomic<int>>(0);
   std::tie(all_tasks_completed, task_futures) =
