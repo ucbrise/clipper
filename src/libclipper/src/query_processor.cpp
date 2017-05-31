@@ -67,6 +67,7 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   boost::optional<std::string> default_explanation;
   std::vector<PredictTask> tasks =
       current_policy->select_predict_tasks(selection_state, query, query_id);
+  
   log_info_formatted(LOGGING_TAG_QUERY_PROCESSOR, "Found {} tasks",
                      tasks.size());
 
