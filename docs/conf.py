@@ -20,13 +20,11 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
-
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
 # needs_sphinx = '1.0'
-
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -46,23 +44,18 @@ import recommonmark
 from recommonmark.parser import CommonMarkParser
 from recommonmark.transform import AutoStructify
 
-source_parsers = {
-    '.md': CommonMarkParser
-}
+source_parsers = {'.md': CommonMarkParser}
 
 source_suffix = ['.rst', '.md']
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc',
-    'sphinx.ext.doctest',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.todo',
-    'sphinx.ext.mathjax',
-    'sphinx.ext.viewcode',
+extensions = [
+    'sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.intersphinx',
+    'sphinx.ext.todo', 'sphinx.ext.mathjax', 'sphinx.ext.viewcode',
     'sphinx.ext.napoleon'
-    ]
+]
 
 autodoc_member_order = 'bysource'
 
@@ -101,7 +94,6 @@ pygments_style = 'sphinx'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
 
-
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
@@ -120,12 +112,10 @@ html_theme = 'alabaster'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-
 # -- Options for HTMLHelp output ------------------------------------------
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'Clipperdoc'
-
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -151,20 +141,15 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'Clipper.tex', u'Clipper Documentation',
-     u'Dan Crankshaw', 'manual'),
+    (master_doc, 'Clipper.tex', u'Clipper Documentation', u'Dan Crankshaw',
+     'manual'),
 ]
-
 
 # -- Options for manual page output ---------------------------------------
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [
-    (master_doc, 'clipper', u'Clipper Documentation',
-     [author], 1)
-]
-
+man_pages = [(master_doc, 'clipper', u'Clipper Documentation', [author], 1)]
 
 # -- Options for Texinfo output -------------------------------------------
 
@@ -172,17 +157,15 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'Clipper', u'Clipper Documentation',
-     author, 'Clipper', 'One line description of project.',
-     'Miscellaneous'),
+    (master_doc, 'Clipper', u'Clipper Documentation', author, 'Clipper',
+     'One line description of project.', 'Miscellaneous'),
 ]
-
-
-
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
 github_doc_root = 'https://github.com/ucbrise/clipper/tree/develop/docs/'
+
+
 # app setup hook
 def setup(app):
     app.add_config_value('recommonmark_config', {
