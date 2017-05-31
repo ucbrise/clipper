@@ -8,6 +8,12 @@ from sklearn import svm
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath('%s/../' % cur_dir))
 import clipper_manager
+"""
+Executes a test suite consisting of two separate cases: short tests and long tests.
+Before each case, an instance of clipper_manager.Clipper is created. Tests
+are then performed by invoking methods on this instance, often resulting
+in the execution of docker commands.
+"""
 
 
 class ClipperManagerTestCaseShort(unittest.TestCase):
