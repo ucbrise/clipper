@@ -148,10 +148,10 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
     def setUpClass(self):
         self.clipper_inst = clipper_manager.Clipper("localhost")
         self.clipper_inst.start()
-        self.app_name_1 = "app1"
-        self.app_name_2 = "app2"
-        self.model_name_1 = "m1"
-        self.model_name_2 = "m2"
+        self.app_name_1 = "app3"
+        self.app_name_2 = "app4"
+        self.model_name_1 = "m4"
+        self.model_name_2 = "m5"
         self.input_type = "doubles"
         self.default_output = "DEFAULT"
         self.latency_slo_micros = 30000
@@ -200,11 +200,11 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         time.sleep(60)
 
         received_non_default_prediction = False
+        url = "http://localhost:1337/{}/predict".format(self.app_name_1)
+        test_input = [101.1, 99.5, 107.2]
+        req_json = json.dumps({'uid': 0, 'input': test_input})
+        headers = {'Content-type': 'application/json'}
         for i in range(0, 40):
-            url = "http://localhost:1337/{}/predict".format(self.app_name_1)
-            test_input = [101.1, 99.5, 107.2]
-            req_json = json.dumps({'uid': 0, 'input': test_input})
-            headers = {'Content-type': 'application/json'}
             response = requests.post(url, headers=headers, data=req_json)
             parsed_response = json.loads(response.text)
             output = parsed_response["output"]
