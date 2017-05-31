@@ -32,9 +32,7 @@ TEST_F(DefaultOutputSelectionPolicyTest,
                                     1000,
                                     DefaultOutputSelectionPolicy::get_name(),
                                     {}};
-  ASSERT_THROW(
-      policy_.select_predict_tasks(nullptr, zero_candidate_models_query, 0),
-      NoModelsFoundError);
+  EXPECT_EQ(zero_models_tasks.size(), (size_t)0);
 }
 
 TEST_F(DefaultOutputSelectionPolicyTest,

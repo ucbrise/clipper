@@ -65,19 +65,16 @@ boost::future<Response> QueryProcessor::predict(Query query) {
       current_policy->deserialize(*state_opt);
 
   boost::optional<std::string> default_explanation;
-  std::vector<PredictTask> tasks;
-  try {
-    tasks =
-        current_policy->select_predict_tasks(selection_state, query, query_id);
-  } catch (const NoModelsFoundError& e) {
-    default_explanation = "No registered models found for query";
-  }
-
+  std::vector<PredictTask> tasks =
+      current_policy->select_predict_tasks(selection_state, query, query_id);
   log_info_formatted(LOGGING_TAG_QUERY_PROCESSOR, "Found {} tasks",
                      tasks.size());
 
   vector<boost::future<Output>> task_futures =
       task_executor_.schedule_predictions(tasks);
+  if (task_futures.empty()) {
+    default_explanation = "No connected models found for query";
+  }
   boost::future<void> timer_future =
       timer_system_.set_timer(query.latency_budget_micros_);
 
