@@ -7,7 +7,6 @@
 #include <vector>
 
 #include <clipper/datatypes.hpp>
-#include <clipper/exceptions.hpp>
 #include <clipper/json_util.hpp>
 #include <clipper/logging.hpp>
 #include <clipper/selection_policies.hpp>
