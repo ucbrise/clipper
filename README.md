@@ -94,6 +94,16 @@ From a Python REPL:
 To file a bug or request a feature, please file a GitHub issue. Pull requests are welcome. Additional help and instructions
 for contributors can be found on our website at <http://clipper.ai/contributing>.
 
+## The Team
+
++ Dan Crankshaw (@dcrankshaw)
++ Joey Gonzalez (@jegonzal)
++ Corey Zumar (@Corey-Zumar)
++ Nishad Singh (@nishadsingh1)
++ Alexey Tumanov (@atumanov)
+
+You can contact us at <clipper-dev@googlegroups.com>
+
 ## Acknowledgements
 
 This research is supported in part by DHS Award HSHQDC-16-3-00083, DOE Award SN10040 DE-SC0012463, NSF CISE Expeditions Award CCF-1139158, and gifts from Ant Financial, Amazon Web Services, CapitalOne, Ericsson, GE, Google, Huawei, Intel, IBM, Microsoft and VMware.
