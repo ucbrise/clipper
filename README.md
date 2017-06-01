@@ -2,6 +2,10 @@
 
 [![Build Status](https://amplab.cs.berkeley.edu/jenkins/buildStatus/icon?job=Clipper)](https://amplab.cs.berkeley.edu/jenkins/job/Clipper/) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
+
+<img src="images/clipper-logo.png" width="200">
+
+
 ## What is Clipper?
 
 Clipper is a prediction serving system that sits between user-facing applications and a wide range of commonly used machine learning models and frameworks. Learn more about Clipper and view documentation at our website <http://clipper.ai>.
