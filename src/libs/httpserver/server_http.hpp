@@ -328,14 +328,16 @@ class ServerBase {
           if (REGEX_NS::regex_match(res_name, pair->first)) {
             size_t initial_ep_size = endpoint_pairs.size();
 
-            endpoint_pairs.erase(pair);
+            pair = endpoint_pairs.erase(pair); // Not actually necessary to assign `pair` here because we won't use it again
             if (endpoint_pairs.size() == 0) {
-              opt_resource.erase(opt_it);
-            }
-            size_t final_ep_size = endpoint_pairs.size();
+              opt_it = opt_resource.erase(opt_it); // Not actually necessary to assign `opt_it` here because we won't use it again
+            } else {
+              // This else case gets run by QueryFrontendTest.TestDeleteApplication and passes
+              size_t final_ep_size = endpoint_pairs.size();
 
-            // After deletion, size should decrease by 1
-            assert(initial_ep_size - 1 == final_ep_size);
+              // After deletion, size should decrease by 1
+              assert(initial_ep_size - 1 == final_ep_size);
+            }
 
             // How num_endpoints calculates the number of endpoints
             size_t count3 = 0;
@@ -354,9 +356,10 @@ class ServerBase {
             // Sanity check
             assert(count3 == count4);
 
+
             // After deletion of an endpoint, number of endpionts should decrease by 1
-            // This is the assert that is failing
-            assert(count - 1 == count3);
+            assert(count == count3); // I want this to fail, but it doesn't
+            assert(count - 1 == count3); // I want this to pass, but it doesn't
             return;
           }
         }
