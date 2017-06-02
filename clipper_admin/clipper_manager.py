@@ -12,14 +12,28 @@ from sklearn import base
 from sklearn.externals import joblib
 from cStringIO import StringIO
 import sys
-from pywrencloudpickle import CloudPickler
-import time
 cur_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.abspath('%s../../containers/python/' % cur_dir))
+from pywrencloudpickle import CloudPickler
+
+
+
+from numpy import *
+import scipy as sp
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
+from pandas import *
+import pandas.rpy.common as com
+from rpy2.robjects.packages import importr
+import rpy2.robjects as ro
+from rpy2.robjects.packages import importr
+stats = importr('stats')
+base = importr('base')
+
+
 
 MODEL_REPO = "/tmp/clipper-models"
 DOCKER_NW = "clipper_nw"
-
-CONTAINER_CONDA_PLATFORM = 'linux-64'
 
 REDIS_STATE_DB_NUM = 1
 REDIS_MODEL_DB_NUM = 2
@@ -27,15 +41,10 @@ REDIS_CONTAINER_DB_NUM = 3
 REDIS_RESOURCE_DB_NUM = 4
 REDIS_APPLICATION_DB_NUM = 5
 
-DEFAULT_REDIS_IP = "redis"
-DEFAULT_REDIS_PORT = 6379
+REDIS_PORT = 6379
 CLIPPER_QUERY_PORT = 1337
 CLIPPER_MANAGEMENT_PORT = 1338
 CLIPPER_RPC_PORT = 7000
-
-CLIPPER_LOGS_PATH = "/tmp/clipper-logs"
-
-CLIPPER_DOCKER_LABEL = "ai.clipper.container.label"
 
 aws_cli_config = """
 [default]
@@ -44,13 +53,43 @@ aws_access_key_id = {access_key}
 aws_secret_access_key = {secret_key}
 """
 
+DOCKER_COMPOSE_DICT = {
+    'networks': {
+        'default': {
+            'external': {
+                'name': DOCKER_NW
+            }
+        }
+    },
+    'services': {
+        'mgmt_frontend': {
+            'command': ['--redis_ip=redis', '--redis_port=%d' % REDIS_PORT],
+            'depends_on': ['redis'],
+            'image': 'clipper/management_frontend:latest',
+            'ports':
+            ['%d:%d' % (CLIPPER_MANAGEMENT_PORT, CLIPPER_MANAGEMENT_PORT)]
+        },
+        'query_frontend': {
+            'command': ['--redis_ip=redis', '--redis_port=%d' % REDIS_PORT],
+            'depends_on': ['redis', 'mgmt_frontend'],
+            'image':
+            'clipper/query_frontend:latest',
+            'ports': [
+                '%d:%d' % (CLIPPER_RPC_PORT, CLIPPER_RPC_PORT),
+                '%d:%d' % (CLIPPER_QUERY_PORT, CLIPPER_QUERY_PORT)
+            ]
+        },
+        'redis': {
+            'image': 'redis:alpine',
+            'ports': ['%d:%d' % (REDIS_PORT, REDIS_PORT)]
+        }
+    },
+    'version': '2'
+}
+
 LOCAL_HOST_NAMES = ["local", "localhost", "127.0.0.1"]
 
 EXTERNALLY_MANAGED_MODEL = "EXTERNAL"
-
-
-class ClipperManagerException(Exception):
-    pass
 
 
 class Clipper:
@@ -72,18 +111,6 @@ class Clipper:
         The SSH port to use. Default is port 22.
     check_for_docker : bool, optional
         If True, checks that Docker is running on the host machine. Default is True.
-    redis_port : int, optional
-        The port to use for connecting to redis. Default is port 6379.
-    redis_ip : string, optional
-        The ip address of the redis instance that Clipper should use.
-        If unspecified, a docker container running redis will be started
-        on `host` at the port specified by `redis_port`.
-    redis_persistence_path : string, optional
-        The directory path to which redis data should be persisted. The directory
-        should not already exist. If unspecified, redis will not persist data to disk. 
-    restart_containers : bool, optional
-        If true, containers will restart on failure. If false, containers
-        will not restart automatically.
 
     Sets up the machine for running Clipper. This includes verifying
     SSH credentials and initializing Docker.
@@ -98,91 +125,7 @@ class Clipper:
                  key_path=None,
                  sudo=False,
                  ssh_port=22,
-                 check_for_docker=True,
-                 redis_ip=DEFAULT_REDIS_IP,
-                 redis_port=DEFAULT_REDIS_PORT,
-                 redis_persistence_path=None,
-                 restart_containers=True):
-        self.redis_ip = redis_ip
-        self.redis_port = redis_port
-        self.docker_compost_dict = {
-            'networks': {
-                'default': {
-                    'external': {
-                        'name': DOCKER_NW
-                    }
-                }
-            },
-            'services': {
-                'mgmt_frontend': {
-                    'command': [
-                        '--redis_ip=%s' % self.redis_ip,
-                        '--redis_port=%d' % self.redis_port
-                    ],
-                    'image':
-                    'clipper/management_frontend:latest',
-                    'ports': [
-                        '%d:%d' % (CLIPPER_MANAGEMENT_PORT,
-                                   CLIPPER_MANAGEMENT_PORT)
-                    ],
-                    'labels': {
-                        CLIPPER_DOCKER_LABEL: ""
-                    }
-                },
-                'query_frontend': {
-                    'command': [
-                        '--redis_ip=%s' % self.redis_ip,
-                        '--redis_port=%d' % self.redis_port
-                    ],
-                    'depends_on': ['mgmt_frontend'],
-                    'image':
-                    'clipper/query_frontend:latest',
-                    'ports': [
-                        '%d:%d' % (CLIPPER_RPC_PORT, CLIPPER_RPC_PORT),
-                        '%d:%d' % (CLIPPER_QUERY_PORT, CLIPPER_QUERY_PORT)
-                    ],
-                    'labels': {
-                        CLIPPER_DOCKER_LABEL: ""
-                    }
-                }
-            },
-            'version': '2'
-        }
-        start_redis = (self.redis_ip == DEFAULT_REDIS_IP)
-        if start_redis:
-            self.docker_compost_dict['services']['redis'] = {
-                'image': 'redis:alpine',
-                'ports': ['%d:%d' % (self.redis_port, self.redis_port)],
-                'command': "redis-server --port %d" % self.redis_port,
-                'labels': {
-                    CLIPPER_DOCKER_LABEL: ""
-                }
-            }
-            self.docker_compost_dict['services']['mgmt_frontend'][
-                'depends_on'] = ['redis']
-            self.docker_compost_dict['services']['query_frontend'][
-                'depends_on'].append('redis')
-            if redis_persistence_path:
-                if not os.path.exists(redis_persistence_path):
-                    self.docker_compost_dict['services']['redis'][
-                        'volumes'] = ['%s:/data' % redis_persistence_path]
-                else:
-                    print(
-                        "The directory specified by the redis persistence path already exists"
-                    )
-                    raise ClipperManagerException(
-                        "The directory specified by the redis persistence path already exists"
-                    )
-        self.restart_containers = restart_containers
-        if self.restart_containers:
-            self.docker_compost_dict['services']['mgmt_frontend'][
-                'restart'] = 'always'
-            self.docker_compost_dict['services']['query_frontend'][
-                'restart'] = 'always'
-            if start_redis:
-                self.docker_compost_dict['services']['redis'][
-                    'restart'] = 'always'
-
+                 check_for_docker=True):
         self.sudo = sudo
         self.host = host
         if self._host_is_local():
@@ -193,9 +136,7 @@ class Clipper:
                 print(
                     "user and key_path must be specified when instantiating Clipper with a nonlocal host"
                 )
-                raise ClipperManagerException(
-                    "user and key_path must be specified when instantiating Clipper with a nonlocal host"
-                )
+                raise
             env.user = user
             env.key_filename = key_path
             env.host_string = "%s:%d" % (host, ssh_port)
@@ -214,8 +155,12 @@ class Clipper:
                 "docker-compose --version", warn_only=True)
             if dc_installed.return_code != 0:
                 print("docker-compose not installed on host.")
-                raise ClipperManagerException(
-                    "docker-compose not installed on host.")
+                print("attempting to install it")
+                self._execute_root(
+                    "curl -L https://github.com/docker/compose/releases/"
+                    "download/1.10.0-rc1/docker-compose-`uname -s`-`uname -m` "
+                    "> /usr/local/bin/docker-compose")
+                self._execute_root("chmod +x /usr/local/bin/docker-compose")
             nw_create_command = ("docker network create --driver bridge {nw}"
                                  .format(nw=DOCKER_NW))
             self._execute_root(nw_create_command, warn_only=True)
@@ -308,12 +253,7 @@ class Clipper:
             else:
                 if not os.path.exists(
                         d) or os.stat(s).st_mtime - os.stat(d).st_mtime > 1:
-                    try:
-                        shutil.copy2(s, d)
-                    except Exception as e:
-                        print(
-                            "Error copying {source} to {dest}: {error}. File will be skipped.".
-                            format(source=s, dest=d, error=e))
+                    shutil.copy2(s, d)
 
     def start(self):
         """Start a Clipper instance.
@@ -323,7 +263,7 @@ class Clipper:
             self._execute_standard("rm -f docker-compose.yml")
             self._execute_append("docker-compose.yml",
                                  yaml.dump(
-                                     self.docker_compost_dict,
+                                     DOCKER_COMPOSE_DICT,
                                      default_flow_style=False))
             self._execute_root("docker-compose up -d query_frontend")
             print("Clipper is running")
@@ -366,7 +306,8 @@ class Clipper:
         })
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
-        print(r.text)
+        
+
 
     def get_all_apps(self, verbose=False):
         """Gets information about all applications registered with Clipper.
@@ -654,8 +595,9 @@ class Clipper:
         default_python_container = "clipper/python-container"
         predict_fname = "predict_func.pkl"
         environment_fname = "environment.yml"
-        conda_dep_fname = "conda_dependencies.txt"
-        pip_dep_fname = "pip_dependencies.txt"
+
+        base_serializations_dir = os.path.abspath(
+            relative_base_serializations_dir)
 
         # Serialize function
         s = StringIO()
@@ -664,93 +606,32 @@ class Clipper:
         serialized_prediction_function = s.getvalue()
 
         # Set up serialization directory
-        serialization_dir = os.path.join(
-            '/tmp', relative_base_serializations_dir, name)
+        serialization_dir = "{base}/{dir}".format(
+            base=base_serializations_dir, dir=name)
         if not os.path.exists(serialization_dir):
             os.makedirs(serialization_dir)
 
-        # Export Anaconda environment
-        environment_file_abs_path = os.path.join(serialization_dir,
-                                                 environment_fname)
-        process = subprocess.Popen(
-            "PIP_FORMAT=legacy conda env export >> {environment_file_abs_path}".
-            format(environment_file_abs_path=environment_file_abs_path),
-            shell=True)
-        process.wait()
-
-        # Confirm that packages installed through conda are solvable
-        # Write out conda and pip dependency files to be supplied to container
-        if not (self._check_and_write_dependencies(
-                environment_file_abs_path, serialization_dir, conda_dep_fname,
-                pip_dep_fname)):
-            return False
-
-        os.remove(environment_file_abs_path)
-        print("Supplied environment details")
-
         # Write out function serialization
-        func_file_path = os.path.join(serialization_dir, predict_fname)
+        func_file_path = "{dir}/{predict_fname}".format(
+            dir=serialization_dir, predict_fname=predict_fname)
         with open(func_file_path, "w") as serialized_function_file:
             serialized_function_file.write(serialized_prediction_function)
         print("Serialized and supplied predict function")
+
+        # Export Anaconda environment
+        subprocess.call(
+            "PIP_FORMAT=legacy conda env export >> {environment_fname}".format(
+                environment_fname=environment_fname),
+            shell=True)
+
+        # Give container environment details
+        shutil.copy(environment_fname, serialization_dir)
+        print("Supplied environment details")
 
         # Deploy function
         return self.deploy_model(name, version, serialization_dir,
                                  default_python_container, labels, input_type,
                                  num_containers)
-
-    def _check_and_write_dependencies(self, environment_path, directory,
-                                      conda_dep_fname, pip_dep_fname):
-        """Returns true if the provided conda environment is compatible with the container os.
-
-        If packages listed in specified conda environment file have conflicting dependencies,
-        this function will warn the user and return False.
-
-        If there are no conflicting package dependencies, existence of the packages in the 
-        container conda channel is tested. The user is warned about any missing packages.
-        All existing conda packages are written out to `conda_dep_fname` and pip packages
-        to `pip_dep_fname` in the given `directory`. This function then returns True.
-
-        Parameters
-        ----------
-        environment_path : str
-            The path to the input conda environment file
-        directory : str
-            The path to the diretory containing the environment file
-        conda_dep_fname : str
-            The name of the output conda dependency file
-        pip_dep_fname : str
-            The name of the output pip dependency file
-
-        Returns
-        -------
-        bool
-            Returns True if the packages specified in `environment_fname` are compatible with conda
-            on the container os. Otherwise returns False.
-        """
-        if "CONDA_PREFIX" not in os.environ:
-            print("No Anaconda environment found")
-            return False
-
-        root_prefix = os.environ["CONDA_PREFIX"].split("envs")[0]
-        py_path = os.path.join(root_prefix, "bin", "python")
-        process = subprocess.Popen(
-            "{py_path} {cur_dir}/check_and_write_deps.py {environment_path} {directory} {platform} {conda_dep_fname} {pip_dep_fname}".
-            format(
-                py_path=py_path,
-                cur_dir=cur_dir,
-                environment_path=environment_path,
-                directory=directory,
-                platform=CONTAINER_CONDA_PLATFORM,
-                conda_dep_fname=conda_dep_fname,
-                pip_dep_fname=pip_dep_fname),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            shell=True)
-        out, err = process.communicate()
-        print(out)
-        print(err)
-        return process.returncode == 0
 
     def deploy_model(self,
                      name,
@@ -861,6 +742,133 @@ class Clipper:
                 for r in range(num_containers)
             ])
 
+
+
+
+
+
+
+
+
+
+
+
+
+    def deploy_R_model(self,
+                     name,
+                     version,
+                     model_data,
+                     container_name,
+                     labels,
+                     input_type,
+                     num_containers=1):
+        """Registers a model with Clipper and deploys instances of it in containers.
+
+        Parameters
+        ----------
+        name : str
+            The name to assign this model.
+        version : int
+            The version to assign this model.
+        model_data : str or BaseEstimator
+            The trained model to add to Clipper. This can either be a
+            Scikit-Learn trained model object (an instance of BaseEstimator),
+            or a path to a serialized model. Note that many model serialization
+            formats split the model across multiple files (e.g. definition file
+            and weights file or files). If this is the case, `model_data` must be a path
+            to the root of a directory tree containing ALL the needed files.
+            Depending on the model serialization library you use, this may or may not
+            be the path you provided to the serialize method call.
+        container_name : str
+            The Docker container image to use to run this model container.
+        labels : list of str
+            A set of strings annotating the model
+        input_type : str
+            One of "integers", "floats", "doubles", "bytes", or "strings".
+        num_containers : int, optional
+            The number of replicas of the model to create. More replicas can be
+            created later as well. Defaults to 1.
+        """
+        with hide("warnings", "output", "running"):
+            
+            fname = name.replace("/", "_")
+            rds_path = '/tmp/%s/%s.rds' % (fname, fname)
+            model_data_path = "/tmp/%s" % fname
+            try:
+                os.mkdir(model_data_path)
+            except OSError:
+                pass
+            base.saveRDS(model_data,rds_path)           
+            """elif isinstance(model_data, str):
+                # assume that model_data is a path to the serialized model
+                model_data_path = model_data
+            else:
+                warn("%s is invalid model format" % str(type(model_data)))
+                return False"""
+
+            vol = "{model_repo}/{name}/{version}".format(
+                 model_repo=MODEL_REPO, name=name, version=version)
+            # publish model to Clipper and verify success before copying model
+            # parameters to Clipper and starting containers
+            if not self._publish_new_model(
+                    name, version, labels, input_type, container_name,
+                    os.path.join(vol, os.path.basename(model_data_path))):
+                return False
+            print("Published model to Clipper")
+
+            #if (not self._put_container_on_host(container_name)):
+             #   return False
+
+            # Put model parameter data on host
+            with hide("warnings", "output", "running"):
+                self._execute_standard("mkdir -p {vol}".format(vol=vol))
+
+            with cd(vol):
+                with hide("warnings", "output", "running"):
+                    if model_data_path.startswith("s3://"):
+                        with hide("warnings", "output", "running"):
+                            aws_cli_installed = self._execute_standard(
+                                "dpkg-query -Wf'${db:Status-abbrev}' awscli 2>/dev/null | grep -q '^i'",
+                                warn_only=True).return_code == 0
+                            if not aws_cli_installed:
+                                self._execute_root("apt-get update -qq")
+                                self._execute_root(
+                                    "apt-get install -yqq awscli")
+                            if self._execute_root(
+                                    "stat ~/.aws/config",
+                                    warn_only=True).return_code != 0:
+                                self._execute_standard("mkdir -p ~/.aws")
+                                self._execute_append(
+                                    "~/.aws/config",
+                                    aws_cli_config.format(
+                                        access_key=os.environ[
+                                            "AWS_ACCESS_KEY_ID"],
+                                        secret_key=os.environ[
+                                            "AWS_SECRET_ACCESS_KEY"]))
+
+                        self._execute_standard(
+                            "aws s3 cp {model_data_path} {dl_path} --recursive".
+                            format(
+                                model_data_path=model_data_path,
+                                dl_path=os.path.join(
+                                    vol, os.path.basename(model_data_path))))
+                    else:
+                        with hide("output", "running"):
+                            self._execute_put(model_data_path, vol)     
+
+            print("Copied model data to host")
+            # aggregate results of starting all containers
+            return all([
+                self.add_container(name, version)
+                for r in range(num_containers)
+            ])
+
+
+
+
+
+
+
     def add_container(self, model_name, model_version):
         """Create a new container for an existing model.
 
@@ -875,28 +883,15 @@ class Clipper:
             The name of the model
         model_version : int
             The version of the model
-
-        Returns
-        ----------
-        bool
-            True if the container was added successfully and False
-            if the container could not be added.
         """
         with hide("warnings", "output", "running"):
             # Look up model info in Redis
-            if self.redis_ip == DEFAULT_REDIS_IP:
-                redis_host = self.host
-            else:
-                redis_host = self.redis_ip
             model_key = "{mn}:{mv}".format(mn=model_name, mv=model_version)
             result = local(
-                "redis-cli -h {host} -p {redis_port} -n {db} hgetall {key}".
-                format(
-                    host=redis_host,
-                    redis_port=self.redis_port,
-                    key=model_key,
-                    db=REDIS_MODEL_DB_NUM),
+                "redis-cli -h {host} -p 6379 -n {db} hgetall {key}".format(
+                    host=self.host, key=model_key, db=REDIS_MODEL_DB_NUM),
                 capture=True)
+
 
             if "nil" in result.stdout:
                 # Model not found
@@ -910,66 +905,29 @@ class Clipper:
             image_name = model_metadata["container_name"]
             model_data_path = model_metadata["model_data_path"]
             model_input_type = model_metadata["input_type"]
-            restart_policy = 'always' if self.restart_containers else 'no'
 
-            if image_name != EXTERNALLY_MANAGED_MODEL:
+
+            # TODO: don't try to add container if it's an external container
+            if image_name is not EXTERNALLY_MANAGED_MODEL:
                 # Start container
                 add_container_cmd = (
-                    "docker run -d --network={nw} --restart={restart_policy} -v {path}:/model:ro "
+                    "docker run -d --network={nw} -v {path}:/model:ro "
                     "-e \"CLIPPER_MODEL_NAME={mn}\" -e \"CLIPPER_MODEL_VERSION={mv}\" "
-                    "-e \"CLIPPER_IP=query_frontend\" -e \"CLIPPER_INPUT_TYPE={mip}\" -l \"{clipper_label}\" "
+                    "-e \"CLIPPER_IP=query_frontend\" -e \"CLIPPER_INPUT_TYPE={mip}\" "
                     "{image}".format(
                         path=model_data_path,
                         nw=DOCKER_NW,
                         image=image_name,
                         mn=model_name,
                         mv=model_version,
-                        mip=model_input_type,
-                        clipper_label=CLIPPER_DOCKER_LABEL,
-                        restart_policy=restart_policy))
+                        mip=model_input_type))
+
                 result = self._execute_root(add_container_cmd)
                 return result.return_code == 0
             else:
                 print("Cannot start containers for externally managed model %s"
                       % model_name)
-                return False
-
-    def get_clipper_logs(self):
-        """Copies the logs from all Docker containers running on the host machine
-        that have been tagged with the Clipper label (ai.clipper.container.label) into
-        the local filesystem.
-
-        Returns
-        -------
-        list(str)
-            Returns a list of local filenames containing the Docker container log snapshots.
-        """
-        container_ids = self._get_clipper_container_ids()
-        cur_time_logs_path = os.path.join(CLIPPER_LOGS_PATH,
-                                          time.strftime("%Y%m%d-%H%M%S"))
-        if not os.path.exists(cur_time_logs_path):
-            os.makedirs(cur_time_logs_path)
-        log_file_names = []
-        for container in container_ids:
-            output = self._execute_root(
-                "docker logs {container}".format(container=container))
-            cur_log_fname = os.path.join(cur_time_logs_path,
-                                         "%s-container.log" % container)
-            with open(cur_log_fname, "w") as f:
-                f.write(output)
-            log_file_names.append(cur_log_fname)
-        return log_file_names
-
-    def _get_clipper_container_ids(self):
-        """
-        Gets the container IDs of all containers labeled with the clipper label
-        """
-        containers = self._execute_root(
-            "docker ps -aq --filter label={clipper_label}".format(
-                clipper_label=CLIPPER_DOCKER_LABEL))
-        ids = [l.strip() for l in containers.split("\n")]
-        print("Clipper container IDS found: %s" % str(ids))
-        return ids
+                return True
 
     def inspect_instance(self):
         """Fetches metrics from the running Clipper instance.
@@ -1022,18 +980,29 @@ class Clipper:
             self.add_container(model_name, model_version)
 
     def stop_all(self):
-        """Stops and removes all Clipper Docker containers on the host.
+        """Stops and removes all Docker containers on the host.
 
         """
         print("Stopping Clipper and all running models...")
         with hide("output", "warnings", "running"):
-            container_ids = self._get_clipper_container_ids()
-            container_id_str = " ".join(container_ids)
+            self._execute_root("docker-compose stop", warn_only=True)
             self._execute_root(
-                "docker stop {ids}".format(ids=container_id_str),
-                warn_only=True)
+                "docker stop $(docker ps -a -q)", warn_only=True)
+            self._execute_root("docker rm $(docker ps -a -q)", warn_only=True)
+
+    def cleanup(self):
+        """Cleans up all Docker artifacts.
+
+        This will stop and remove all Docker containers and images
+        from the host and destroy the Docker network Clipper uses.
+        """
+        with hide("output", "warnings", "running"):
+            self.stop_all()
+            self._execute_standard(
+                "rm -rf {model_repo}".format(model_repo=MODEL_REPO))
             self._execute_root(
-                "docker rm {ids}".format(ids=container_id_str), warn_only=True)
+                "docker rmi --force $(docker images -q)", warn_only=True)
+            self._execute_root("docker network rm clipper_nw", warn_only=True)
 
     def _publish_new_model(self, name, version, labels, input_type,
                            container_name, model_data_path):
@@ -1052,7 +1021,7 @@ class Clipper:
         if r.status_code == requests.codes.ok:
             return True
         else:
-            print("Error publishing model: %s" % r.text)
+            print("Error publishing model ! : %s" % r.text)
             return False
 
     def _put_container_on_host(self, container_name):
