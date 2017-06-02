@@ -338,6 +338,9 @@ class Clipper:
                                  yaml.dump(
                                      self.docker_compost_dict,
                                      default_flow_style=False))
+            print(
+                "Note: Docker must download the Clipper Docker images if they are not already cached. This may take awhile."
+            )
             self._execute_root("docker-compose up -d query_frontend")
             print("Clipper is running")
 
@@ -548,7 +551,11 @@ class Clipper:
                 for r in range(num_containers)
             ])
 
-    def register_external_model(self, name, version, input_type, labels = [DEFAULT_LABEL]):
+    def register_external_model(self,
+                                name,
+                                version,
+                                input_type,
+                                labels=[DEFAULT_LABEL]):
         """Registers a model with Clipper without deploying it in any containers.
 
         Parameters
@@ -571,7 +578,7 @@ class Clipper:
                                 version,
                                 predict_function,
                                 input_type,
-                                labels = [DEFAULT_LABEL],
+                                labels=[DEFAULT_LABEL],
                                 num_containers=1):
         """Deploy an arbitrary Python function to Clipper.
 
