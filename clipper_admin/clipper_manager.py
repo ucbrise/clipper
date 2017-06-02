@@ -41,6 +41,7 @@ CLIPPER_RPC_PORT = 7000
 CLIPPER_LOGS_PATH = "/tmp/clipper-logs"
 
 CLIPPER_DOCKER_LABEL = "ai.clipper.container.label"
+CLIPPER_MODEL_CONTAINER_LABEL = "ai.clipper.model_container.model_version"
 
 aws_cli_config = """
 [default]
@@ -126,7 +127,7 @@ class Clipper:
                         '--redis_port=%d' % self.redis_port
                     ],
                     'image':
-                    'clipper/management_frontend:latest',
+                    'clipper/management_frontend:0.1',
                     'ports': [
                         '%d:%d' % (CLIPPER_MANAGEMENT_PORT,
                                    CLIPPER_MANAGEMENT_PORT)
@@ -142,7 +143,7 @@ class Clipper:
                     ],
                     'depends_on': ['mgmt_frontend'],
                     'image':
-                    'clipper/query_frontend:latest',
+                    'clipper/query_frontend:0.1',
                     'ports': [
                         '%d:%d' % (CLIPPER_RPC_PORT, CLIPPER_RPC_PORT),
                         '%d:%d' % (CLIPPER_QUERY_PORT, CLIPPER_QUERY_PORT)
@@ -954,7 +955,7 @@ class Clipper:
                 add_container_cmd = (
                     "docker run -d --network={nw} --restart={restart_policy} -v {path}:/model:ro "
                     "-e \"CLIPPER_MODEL_NAME={mn}\" -e \"CLIPPER_MODEL_VERSION={mv}\" "
-                    "-e \"CLIPPER_IP=query_frontend\" -e \"CLIPPER_INPUT_TYPE={mip}\" -l \"{clipper_label}\" "
+                    "-e \"CLIPPER_IP=query_frontend\" -e \"CLIPPER_INPUT_TYPE={mip}\" -l \"{clipper_label}\" -l \"{mv_label}\" "
                     "{image}".format(
                         path=model_data_path,
                         nw=DOCKER_NW,
@@ -963,6 +964,8 @@ class Clipper:
                         mv=model_version,
                         mip=model_input_type,
                         clipper_label=CLIPPER_DOCKER_LABEL,
+                        mv_label="%s=%s:%d" % (CLIPPER_MODEL_CONTAINER_LABEL,
+                                               model_name, model_version),
                         restart_policy=restart_policy))
                 result = self._execute_root(add_container_cmd)
                 return result.return_code == 0
@@ -1058,6 +1061,44 @@ class Clipper:
         for r in range(num_containers):
             self.add_container(model_name, model_version)
 
+    def remove_inactive_containers(self, model_name):
+        # TODO: Test this function
+        """Removes all containers serving stale versions of the specified model.
+
+        Parameters
+        ----------
+        model_name : str
+            The name of the model whose old containers you want to clean.
+
+        """
+        # Get all Docker containers tagged as model containers
+        num_containers_removed = 0
+        with hide("output", "warnings", "running"):
+            containers = self._execute_root(
+                "docker ps -aq --filter label={model_container_label}".format(
+                    model_container_label=CLIPPER_MODEL_CONTAINER_LABEL))
+            container_ids = [l.strip() for l in containers.split("\n")]
+            for container in container_ids:
+                # returns a string formatted as "<model_name>:<model_version>"
+                container_model_name_and_version = self._execute_root(
+                    "docker inspect --format \"{{ index .Config.Labels \\\"%s\\\"}}\" %s"
+                    % (CLIPPER_MODEL_CONTAINER_LABEL, container))
+                splits = container_model_name_and_version.split(":")
+                container_model_name = splits[0]
+                container_model_version = int(splits[1])
+                if container_model_name == model_name:
+                    # check if container_model_version is the currently deployed version
+                    model_info = self.get_model_info(container_model_name,
+                                                     container_model_version)
+                    if model_info == None or not model_info["is_current_version"]:
+                        self._execute_root("docker stop {container}".format(
+                            container=container))
+                        self._execute_root("docker rm {container}".format(
+                            container=container))
+                        num_containers_removed += 1
+        print("Removed %d inactive containers for model %s" %
+              (num_containers_removed, model_name))
+
     def stop_all(self):
         """Stops and removes all Clipper Docker containers on the host.
 
@@ -1130,10 +1171,6 @@ class Clipper:
                 "docker images -q {cn}".format(cn=container_name))
 
             if len(local_result.stdout) > 0:
-                saved_fname = container_name.replace("/", "_")
-                subprocess.call("docker save -o /tmp/{fn}.tar {cn}".format(
-                    fn=saved_fname, cn=container_name))
-                tar_loc = "/tmp/{fn}.tar".format(fn=saved_fname)
                 self._execute_put(tar_loc, tar_loc)
                 self._execute_root("docker load -i {loc}".format(loc=tar_loc))
                 # self._execute_root("docker tag {image_id} {cn}".format(
