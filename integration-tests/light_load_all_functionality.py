@@ -71,7 +71,7 @@ def deploy_model(clipper, name, version):
         model_name,
         version,
         fake_model_data,
-        "clipper/noop-container", [name],
+        "clipper/noop-container",
         "doubles",
         num_containers=1)
     time.sleep(10)
