@@ -35,9 +35,9 @@ Clipper is a prediction serving system that sits between user-facing application
 ```
 $ pip install clipper_admin
 $ python
->>> import clipper_admin.clipper_manager as cm, numpy as np
+>>> from clipper_admin import Clipper, numpy as np
 # Start a Clipper instance on localhost
->>> clipper = cm.Clipper("localhost")
+>>> clipper = Clipper("localhost")
 Checking if Docker is running...
 
 # Start Clipper. Running this command for the first time will

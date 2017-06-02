@@ -2,7 +2,7 @@
 Clipper Manager API Reference
 ==============================
 
-.. automodule:: clipper_admin.clipper_manager
+.. autoclass:: clipper_admin.Clipper
     :members:
     :undoc-members:
     :show-inheritance:
