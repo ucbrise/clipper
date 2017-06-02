@@ -26,11 +26,11 @@ def _write_out_dependencies(directory, conda_dep_fname, pip_dep_fname,
     conda_dep_abs_path = os.path.join(directory, conda_dep_fname)
     pip_dep_abs_path = os.path.join(directory, pip_dep_fname)
 
-    with open(conda_dep_abs_path, 'wb') as f:
+    with open(conda_dep_abs_path, 'w') as f:
         for item in conda_deps:
             f.write("%s\n" % '='.join(item.split()))
 
-    with open(pip_dep_abs_path, 'wb') as f:
+    with open(pip_dep_abs_path, 'w') as f:
         for item in pip_deps:
             f.write("%s\n" % item)
 

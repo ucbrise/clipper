@@ -14,20 +14,6 @@ from sklearn import base
 from sklearn.externals import joblib
 from cStringIO import StringIO
 import sys
-
-from numpy import *
-import scipy as sp
-import warnings
-warnings.filterwarnings("ignore", category=FutureWarning)
-from pandas import *
-import pandas.rpy.common as com
-from rpy2.robjects.packages import importr
-import rpy2.robjects as ro
-from rpy2.robjects.packages import importr
-stats = importr('stats')
-base = importr('base')
-
-
 from pywrencloudpickle import CloudPickler
 import time
 
@@ -63,14 +49,29 @@ aws_access_key_id = {access_key}
 aws_secret_access_key = {secret_key}
 """
 
-
 LOCAL_HOST_NAMES = ["local", "localhost", "127.0.0.1"]
 
 EXTERNALLY_MANAGED_MODEL = "EXTERNAL"
 
 
+from numpy import *
+import scipy as sp
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
+from pandas import *
+import pandas.rpy.common as com
+from rpy2.robjects.packages import importr
+import rpy2.robjects as ro
+from rpy2.robjects.packages import importr
+stats = importr('stats')
+base = importr('base')
+
+
+
+
 class ClipperManagerException(Exception):
     pass
+
 
 class Clipper:
     """
@@ -548,7 +549,13 @@ class Clipper:
             ])
 
 
+
+
+
     
+
+
+
     def deploy_R_model(self,
                      name,
                      version,
@@ -658,7 +665,7 @@ class Clipper:
                 for r in range(num_containers)
             ]) 
 
-                   
+
 
     def register_external_model(self, name, version, labels, input_type):
         """Registers a model with Clipper without deploying it in any containers.
