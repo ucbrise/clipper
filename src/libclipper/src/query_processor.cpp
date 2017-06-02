@@ -76,8 +76,8 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   if (task_futures.empty()) {
     default_explanation = "No connected models found for query";
     log_error_formatted(LOGGING_TAG_QUERY_PROCESSOR,
-                       "No connected models found for query with id: {}",
-                       query_id);
+                        "No connected models found for query with id: {}",
+                        query_id);
   }
   boost::future<void> timer_future =
       timer_system_.set_timer(query.latency_budget_micros_);
