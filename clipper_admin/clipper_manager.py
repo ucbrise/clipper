@@ -43,6 +43,8 @@ CLIPPER_LOGS_PATH = "/tmp/clipper-logs"
 CLIPPER_DOCKER_LABEL = "ai.clipper.container.label"
 CLIPPER_MODEL_CONTAINER_LABEL = "ai.clipper.model_container.model_version"
 
+DEFAULT_LABEL = "default"
+
 aws_cli_config = """
 [default]
 region = us-east-1
@@ -442,8 +444,8 @@ class Clipper:
                      version,
                      model_data,
                      container_name,
-                     labels,
                      input_type,
+                     labels=[DEFAULT_LABEL],
                      num_containers=1):
         """Registers a model with Clipper and deploys instances of it in containers.
 
@@ -464,10 +466,10 @@ class Clipper:
             be the path you provided to the serialize method call.
         container_name : str
             The Docker container image to use to run this model container.
-        labels : list of str
-            A set of strings annotating the model
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
+        labels : list of str, optional
+            A list of strings annotating the model
         num_containers : int, optional
             The number of replicas of the model to create. More replicas can be
             created later as well. Defaults to 1.
@@ -546,7 +548,7 @@ class Clipper:
                 for r in range(num_containers)
             ])
 
-    def register_external_model(self, name, version, labels, input_type):
+    def register_external_model(self, name, version, input_type, labels = [DEFAULT_LABEL]):
         """Registers a model with Clipper without deploying it in any containers.
 
         Parameters
@@ -555,10 +557,10 @@ class Clipper:
             The name to assign this model.
         version : int
             The version to assign this model.
-        labels : list of str
-            A set of strings annotating the model
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
+        labels : list of str, optional
+            A list of strings annotating the model.
         """
         return self._publish_new_model(name, version, labels, input_type,
                                        EXTERNALLY_MANAGED_MODEL,
@@ -568,8 +570,8 @@ class Clipper:
                                 name,
                                 version,
                                 predict_function,
-                                labels,
                                 input_type,
+                                labels = [DEFAULT_LABEL],
                                 num_containers=1):
         """Deploy an arbitrary Python function to Clipper.
 
@@ -587,16 +589,18 @@ class Clipper:
         predict_function : function
             The prediction function. Any state associated with the function should be
             captured via closure capture.
-        labels : list of str
-            A set of strings annotating the model
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
+        labels : list of str, optional
+            A list of strings annotating the model
         num_containers : int, optional
             The number of replicas of the model to create. More replicas can be
             created later as well. Defaults to 1.
 
         Example
         -------
+        Define a feature function ``center()`` and train a model on the featurized input::
+
             def center(xs):
                 means = np.mean(xs, axis=0)
                 return xs - means
