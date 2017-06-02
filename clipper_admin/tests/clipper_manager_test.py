@@ -251,20 +251,36 @@ LONG_TEST_ORDERING = [
 if __name__ == '__main__':
     usage = "%prog [options] (default option is '-a/--all')"
     parser = OptionParser(usage=usage)
-    parser.add_option("-s", "--short", action="store_true", dest="run_short", help="Run the short suite of test cases")
-    parser.add_option("-l", "--long", action="store_true", dest="run_long", help="Run the long suite of test cases")
-    parser.add_option("-a", "--all", action="store_true", dest="run_all", help="Run all test cases")
+    parser.add_option(
+        "-s",
+        "--short",
+        action="store_true",
+        dest="run_short",
+        help="Run the short suite of test cases")
+    parser.add_option(
+        "-l",
+        "--long",
+        action="store_true",
+        dest="run_long",
+        help="Run the long suite of test cases")
+    parser.add_option(
+        "-a",
+        "--all",
+        action="store_true",
+        dest="run_all",
+        help="Run all test cases")
     (options, args) = parser.parse_args()
 
     # If neither the short nor the long option is specified,
     # we will run all tests
-    options.run_all = options.run_all or ((not options.run_short) and (not options.run_long))
+    options.run_all = options.run_all or ((not options.run_short) and
+                                          (not options.run_long))
 
     suite = unittest.TestSuite()
 
     if options.run_short or options.run_all:
         for test in SHORT_TEST_ORDERING:
-            suite.addTest(ClipperManagerTestCaseShort(test))    
+            suite.addTest(ClipperManagerTestCaseShort(test))
 
     if options.run_long or options.run_all:
         for test in LONG_TEST_ORDERING:
