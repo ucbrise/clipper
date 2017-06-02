@@ -5,6 +5,7 @@ import json
 import time
 import requests
 from sklearn import svm
+from optparse import OptionParser
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath('%s/../' % cur_dir))
 import clipper_manager
@@ -193,6 +194,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         response = requests.post(url, headers=headers, data=req_json)
         parsed_response = json.loads(response.text)
         self.assertNotEqual(parsed_response["output"], self.default_output)
+        self.assertFalse(parsed_response["default"])
 
     def test_deployed_predict_function_queried_successfully(self):
         model_version = 1
@@ -247,32 +249,24 @@ LONG_TEST_ORDERING = [
 ]
 
 if __name__ == '__main__':
-    run_short = True
-    run_long = True
-    args_invalid = False
-    if len(sys.argv) > 1:
-        if sys.argv[1] in SHORT_ARGS:
-            run_long = False
-        elif sys.argv[1] in LONG_ARGS:
-            run_short = False
-        elif sys.argv[1] not in ALL_ARGS:
-            args_invalid = True
-    else:
-        args_invalid = True
+    usage = "%prog [options] (default option is '-a/--all')"
+    parser = OptionParser(usage=usage)
+    parser.add_option("-s", "--short", action="store_true", dest="run_short", help="Run the short suite of test cases")
+    parser.add_option("-l", "--long", action="store_true", dest="run_long", help="Run the long suite of test cases")
+    parser.add_option("-a", "--all", action="store_true", dest="run_all", help="Run all test cases")
+    (options, args) = parser.parse_args()
 
-    if args_invalid:
-        print(
-            "Missing a parameter with value 's'/'short', 'l'/'long', or 'a'/'all' indicating which subset of tests should be executed!"
-        )
-        raise
+    # If neither the short nor the long option is specified,
+    # we will run all tests
+    options.run_all = options.run_all or ((not options.run_short) and (not options.run_long))
 
     suite = unittest.TestSuite()
 
-    if run_short:
+    if options.run_short or options.run_all:
         for test in SHORT_TEST_ORDERING:
-            suite.addTest(ClipperManagerTestCaseShort(test))
+            suite.addTest(ClipperManagerTestCaseShort(test))    
 
-    if run_long:
+    if options.run_long or options.run_all:
         for test in LONG_TEST_ORDERING:
             suite.addTest(ClipperManagerTestCaseLong(test))
 

@@ -107,8 +107,12 @@ function run_libclipper_tests {
 function run_management_tests {
   echo -e "\nRunning management tests\n\n"
   ./src/management/managementtests --redis_port $REDIS_PORT
+}
+
+function run_clipper_admin_tests {
+  echo -e "Running clipper admin tests"
   cd $DIR
-  python ../clipper_admin/test/clipper_manager_test.py all
+  python ../clipper_admin/tests/clipper_manager_test.py all
 }
 
 function run_frontend_tests {
@@ -128,6 +132,9 @@ function run_all_tests {
   run_frontend_tests
   redis-cli -p $REDIS_PORT "flushall"
   run_management_tests
+  redis-cli -p $REDIS_PORT "flushall"
+  sleep 5
+  run_clipper_admin_tests
   redis-cli -p $REDIS_PORT "flushall"
   run_jvm_container_tests
   redis-cli -p $REDIS_PORT "flushall"
@@ -152,6 +159,9 @@ case $args in
                             ;;
     -m | --management )     set_test_environment
                             run_management_tests
+                            ;;
+    -c | --clipperadmin )   set_test_environment
+                            run_clipper_admin_tests
                             ;;
     -f | --frontend )       set_test_environment
                             run_frontend_tests
