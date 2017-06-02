@@ -75,7 +75,8 @@ REST endpoint that clipper created for your application:
 
 With curl:
 
-```sh
+
+```console
 $ curl -X POST --header "Content-Type:application/json" -d '{"uid": 0, "input": [1.1, 2.2, 3.3]}' 127.0.0.1:1337/hello_world/predict
 ```
 
@@ -83,9 +84,8 @@ From a Python REPL:
 
 ```py
 >>> import requests, json, numpy as np
->>> headers = json.dumps({"Content-type": "application/json"})
->>> pred = requests.post("http://localhost:1337/hello_world/predict", headers=headers, data=list(np.random.random(10)))
->>> pred.json()
+>>> headers = {"Content-type": "application/json"}
+>>> requests.post("http://localhost:1337/hello_world/predict", headers=headers, data=json.dumps({"uid": 0, "input": list(np.random.random(10))})).json()
 ```
 
 
