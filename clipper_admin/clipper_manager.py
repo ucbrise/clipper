@@ -802,7 +802,9 @@ class Clipper:
             print(r.text)
             return None
 
-    def inspect_selection_policy(self, app_name, uid):
+    def _inspect_selection_policy(self, app_name, uid):
+        # NOTE: This method is private (it's still functional, but it won't be documented)
+        # until Clipper supports different selection policies
         """Fetches a human-readable string with the current selection policy state.
 
         Parameters
