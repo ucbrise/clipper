@@ -636,24 +636,29 @@ class Clipper:
         if not os.path.exists(serialization_dir):
             os.makedirs(serialization_dir)
 
-        # Export Anaconda environment
+        # Attempt to export Anaconda environment
         environment_file_abs_path = os.path.join(serialization_dir,
                                                  environment_fname)
-        process = subprocess.Popen(
-            "PIP_FORMAT=legacy conda env export >> {environment_file_abs_path}".
-            format(environment_file_abs_path=environment_file_abs_path),
-            shell=True)
-        process.wait()
+        conda_env_exported = self._export_conda_env(environment_file_abs_path)
 
-        # Confirm that packages installed through conda are solvable
-        # Write out conda and pip dependency files to be supplied to container
-        if not (self._check_and_write_dependencies(
-                environment_file_abs_path, serialization_dir, conda_dep_fname,
-                pip_dep_fname)):
-            return False
+        if conda_env_exported:
+            print("Anaconda environment found. Verifying packages.")
 
-        os.remove(environment_file_abs_path)
-        print("Supplied environment details")
+            # Confirm that packages installed through conda are solvable
+            # Write out conda and pip dependency files to be supplied to container
+            if not (self._check_and_write_dependencies(
+                    environment_file_abs_path, serialization_dir,
+                    conda_dep_fname, pip_dep_fname)):
+                return False
+
+            print("Supplied environment details")
+        else:
+            print(
+                "Anaconda environment was either not found or failed being exported"
+            )
+            print(
+                "Your local environment details will not be supplied to and loaded in the container in which your model is deployed."
+            )
 
         # Write out function serialization
         func_file_path = os.path.join(serialization_dir, predict_fname)
@@ -662,9 +667,13 @@ class Clipper:
         print("Serialized and supplied predict function")
 
         # Deploy function
-        return self.deploy_model(name, version, serialization_dir,
-                                 default_python_container, labels, input_type,
-                                 num_containers)
+        deploy_result = self.deploy_model(name, version, serialization_dir,
+                                          default_python_container, labels,
+                                          input_type, num_containers)
+        # Remove temp files
+        shutil.rmtree(serialization_dir)
+
+        return deploy_result
 
     def get_all_models(self, verbose=False):
         """Gets information about all models registered with Clipper.
@@ -818,134 +827,6 @@ class Clipper:
         r = requests.post(url, headers=headers, data=req_json)
         return r.text
 
-    def register_external_model(self, name, version, labels, input_type):
-        """Registers a model with Clipper without deploying it in any containers.
-
-        Parameters
-        ----------
-        name : str
-            The name to assign this model.
-        version : int
-            The version to assign this model.
-        labels : list of str
-            A set of strings annotating the model
-        input_type : str
-            One of "integers", "floats", "doubles", "bytes", or "strings".
-        """
-        return self._publish_new_model(name, version, labels, input_type,
-                                       EXTERNALLY_MANAGED_MODEL,
-                                       EXTERNALLY_MANAGED_MODEL)
-
-    def deploy_predict_function(self,
-                                name,
-                                version,
-                                predict_function,
-                                labels,
-                                input_type,
-                                num_containers=1):
-        """Deploy an arbitrary Python function to Clipper.
-
-        The function should take a list of inputs of the type specified by `input_type` and
-        return a Python or numpy array of predictions. All dependencies for the function must
-        be installed with Anaconda or Pip and this function must be called from within an Anaconda
-        environment.
-
-        Parameters
-        ----------
-        name : str
-            The name to assign this model.
-        version : int
-            The version to assign this model.
-        predict_function : function
-            The prediction function. Any state associated with the function should be
-            captured via closure capture.
-        labels : list of str
-            A set of strings annotating the model
-        input_type : str
-            One of "integers", "floats", "doubles", "bytes", or "strings".
-        num_containers : int, optional
-            The number of replicas of the model to create. More replicas can be
-            created later as well. Defaults to 1.
-
-        Example
-        -------
-            def center(xs):
-                means = np.mean(xs, axis=0)
-                return xs - means
-
-            centered_xs = center(xs)
-            model = sklearn.linear_model.LogisticRegression()
-            model.fit(centered_xs, ys)
-
-            def centered_predict(inputs):
-                centered_inputs = center(inputs)
-                return model.predict(centered_inputs)
-
-            clipper.deploy_predict_function(
-                "example_model",
-                1,
-                centered_predict,
-                ["example"],
-                "doubles",
-                num_containers=1)
-        """
-
-        relative_base_serializations_dir = "predict_serializations"
-        default_python_container = "clipper/python-container"
-        predict_fname = "predict_func.pkl"
-        environment_fname = "environment.yml"
-        conda_dep_fname = "conda_dependencies.txt"
-        pip_dep_fname = "pip_dependencies.txt"
-
-        # Serialize function
-        s = StringIO()
-        c = CloudPickler(s, 2)
-        c.dump(predict_function)
-        serialized_prediction_function = s.getvalue()
-
-        # Set up serialization directory
-        serialization_dir = os.path.join(
-            '/tmp', relative_base_serializations_dir, name)
-        if not os.path.exists(serialization_dir):
-            os.makedirs(serialization_dir)
-
-        # Attempt to export Anaconda environment
-        environment_file_abs_path = os.path.join(serialization_dir,
-                                                     environment_fname)
-        conda_env_exported = self._export_conda_env(environment_file_abs_path)
-
-        if conda_env_exported:
-            print("Anaconda environment found. Verifying packages.")
-
-            # Confirm that packages installed through conda are solvable
-            # Write out conda and pip dependency files to be supplied to container
-            if not (self._check_and_write_dependencies(
-                    environment_file_abs_path, serialization_dir, conda_dep_fname,
-                    pip_dep_fname)):
-                return False
-
-            print("Supplied environment details")
-        else:
-            print("Anaconda environment was either not found or failed being exported")
-            print(
-                "Your local environment details will not be supplied to and loaded in the container in which your model is deployed."
-            )
-
-        # Write out function serialization
-        func_file_path = os.path.join(serialization_dir, predict_fname)
-        with open(func_file_path, "w") as serialized_function_file:
-            serialized_function_file.write(serialized_prediction_function)
-        print("Serialized and supplied predict function")
-
-        # Deploy function
-        deploy_result = self.deploy_model(name, version, serialization_dir,
-                                 default_python_container, labels, input_type,
-                                 num_containers)
-        # Remove temp files
-        shutil.rmtree(serialization_dir)
-
-        return deploy_result
-
     def _export_conda_env(self, environment_file_abs_path):
         """Returns true if attempt to export the current conda environment is successful
 
@@ -957,7 +838,7 @@ class Clipper:
 
         process = subprocess.Popen(
             "PIP_FORMAT=legacy conda env export >> {environment_file_abs_path}".
-                format(environment_file_abs_path=environment_file_abs_path),
+            format(environment_file_abs_path=environment_file_abs_path),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             shell=True)
