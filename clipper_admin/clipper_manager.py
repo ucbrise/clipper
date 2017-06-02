@@ -1102,11 +1102,11 @@ class Clipper:
                     container_model_version = int(splits[1])
                     if container_model_name == model_name:
                         # check if container_model_version is the currently deployed version
-                        model_info = self.get_model_info(container_model_name,
-                                                         container_model_version)
+                        model_info = self.get_model_info(
+                            container_model_name, container_model_version)
                         if model_info == None or not model_info["is_current_version"]:
-                            self._execute_root("docker stop {container}".format(
-                                container=container))
+                            self._execute_root("docker stop {container}".
+                                               format(container=container))
                             self._execute_root("docker rm {container}".format(
                                 container=container))
                             num_containers_removed += 1
