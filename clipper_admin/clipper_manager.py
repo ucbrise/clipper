@@ -1090,25 +1090,26 @@ class Clipper:
             containers = self._execute_root(
                 "docker ps -aq --filter label={model_container_label}".format(
                     model_container_label=CLIPPER_MODEL_CONTAINER_LABEL))
-            container_ids = [l.strip() for l in containers.split("\n")]
-            for container in container_ids:
-                # returns a string formatted as "<model_name>:<model_version>"
-                container_model_name_and_version = self._execute_root(
-                    "docker inspect --format \"{{ index .Config.Labels \\\"%s\\\"}}\" %s"
-                    % (CLIPPER_MODEL_CONTAINER_LABEL, container))
-                splits = container_model_name_and_version.split(":")
-                container_model_name = splits[0]
-                container_model_version = int(splits[1])
-                if container_model_name == model_name:
-                    # check if container_model_version is the currently deployed version
-                    model_info = self.get_model_info(container_model_name,
-                                                     container_model_version)
-                    if model_info == None or not model_info["is_current_version"]:
-                        self._execute_root("docker stop {container}".format(
-                            container=container))
-                        self._execute_root("docker rm {container}".format(
-                            container=container))
-                        num_containers_removed += 1
+            if len(containers) > 0:
+                container_ids = [l.strip() for l in containers.split("\n")]
+                for container in container_ids:
+                    # returns a string formatted as "<model_name>:<model_version>"
+                    container_model_name_and_version = self._execute_root(
+                        "docker inspect --format \"{{ index .Config.Labels \\\"%s\\\"}}\" %s"
+                        % (CLIPPER_MODEL_CONTAINER_LABEL, container))
+                    splits = container_model_name_and_version.split(":")
+                    container_model_name = splits[0]
+                    container_model_version = int(splits[1])
+                    if container_model_name == model_name:
+                        # check if container_model_version is the currently deployed version
+                        model_info = self.get_model_info(container_model_name,
+                                                         container_model_version)
+                        if model_info == None or not model_info["is_current_version"]:
+                            self._execute_root("docker stop {container}".format(
+                                container=container))
+                            self._execute_root("docker rm {container}".format(
+                                container=container))
+                            num_containers_removed += 1
         print("Removed %d inactive containers for model %s" %
               (num_containers_removed, model_name))
 
@@ -1184,6 +1185,10 @@ class Clipper:
                 "docker images -q {cn}".format(cn=container_name))
 
             if len(local_result.stdout) > 0:
+                saved_fname = container_name.replace("/", "_")
+                subprocess.call("docker save -o /tmp/{fn}.tar {cn}".format(
+                    fn=saved_fname, cn=container_name))
+                tar_loc = "/tmp/{fn}.tar".format(fn=saved_fname)
                 self._execute_put(tar_loc, tar_loc)
                 self._execute_root("docker load -i {loc}".format(loc=tar_loc))
                 # self._execute_root("docker tag {image_id} {cn}".format(
