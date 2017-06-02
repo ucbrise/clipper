@@ -7,6 +7,7 @@
 #include <unordered_map>
 
 #define PROVIDES_EXECUTORS
+#include <boost/optional.hpp>
 #include <boost/thread.hpp>
 #include <boost/thread/executors/basic_thread_pool.hpp>
 
@@ -63,6 +64,7 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   std::shared_ptr<SelectionState> selection_state =
       current_policy->deserialize(*state_opt);
 
+  boost::optional<std::string> default_explanation;
   std::vector<PredictTask> tasks =
       current_policy->select_predict_tasks(selection_state, query, query_id);
 
@@ -71,10 +73,14 @@ boost::future<Response> QueryProcessor::predict(Query query) {
 
   vector<boost::future<Output>> task_futures =
       task_executor_.schedule_predictions(tasks);
+  if (task_futures.empty()) {
+    default_explanation = "No connected models found for query";
+    log_error_formatted(LOGGING_TAG_QUERY_PROCESSOR,
+                        "No connected models found for query with id: {}",
+                        query_id);
+  }
   boost::future<void> timer_future =
       timer_system_.set_timer(query.latency_budget_micros_);
-
-  // vector<boost::future<Output>> task_completion_futures;
 
   boost::future<void> all_tasks_completed;
   auto num_completed = std::make_shared<std::atomic<int>>(0);
@@ -94,20 +100,28 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   boost::promise<Response> response_promise;
   auto response_future = response_promise.get_future();
 
-  // NOTE: We capture the num_completed and completed_flag variables
+  // NOTE: We capture the num_completed, completed_flag, and default_explanation
+  // variables
   // so that they outlive the composed_futures.
   response_ready_future.then([
     this, query, query_id, response_promise = std::move(response_promise),
     selection_state, current_policy, task_futures = std::move(task_futures),
-    num_completed, completed_flag
+    num_completed, completed_flag, default_explanation
   ](auto) mutable {
 
     vector<Output> outputs;
     vector<VersionedModelId> used_models;
+    bool all_tasks_timed_out = true;
     for (auto r = task_futures.begin(); r != task_futures.end(); ++r) {
       if ((*r).is_ready()) {
         outputs.push_back((*r).get());
+        all_tasks_timed_out = false;
       }
+    }
+    if (all_tasks_timed_out && !task_futures.empty() && !default_explanation) {
+      default_explanation =
+          "Failed to retrieve a prediction response within the specified "
+          "latency SLO";
     }
 
     std::pair<Output, bool> final_output =
@@ -120,8 +134,12 @@ boost::future<Response> QueryProcessor::predict(Query query) {
             end - query.create_time_)
             .count();
 
-    Response response{query, query_id, duration_micros, final_output.first,
-                      final_output.second};
+    Response response{query,
+                      query_id,
+                      duration_micros,
+                      final_output.first,
+                      final_output.second,
+                      default_explanation};
     response_promise.set_value(response);
   });
   return response_future;
