@@ -636,9 +636,9 @@ class Clipper:
         spark_model_save_loc = os.path.join(serialization_dir, "pyspark_model_data")
         try:
             pyspark_model.save(sc, spark_model_save_loc)
-        except:
-            # TODO: figure out what exceptions to catch
-            print("Error saving spark model")
+        except Exception as e:
+            print("Error saving spark model: %s" % e)
+            raise e
         
         pyspark_container = "clipper/pyspark-container"
         
@@ -647,13 +647,17 @@ class Clipper:
         with open(os.path.join(serialization_dir, "metadata.json"), "w") as metadata_file:
             json.dump({"model_class": model_class}, metadata_file)
 
-        # DEBUGGING
         print("Spark model saved")
 
         # Deploy model
-        return self.deploy_model(name, version, serialization_dir,
+        deploy_result = self.deploy_model(name, version, serialization_dir,
                                  pyspark_container, labels, input_type,
                                  num_containers)
+
+        # Remove temp files
+        shutil.rmtree(serialization_dir)
+
+        return deploy_result
 
 
     def deploy_predict_function(self,

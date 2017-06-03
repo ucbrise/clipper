@@ -124,6 +124,7 @@ function run_integration_tests {
   echo -e "\nRunning integration tests\n\n"
   cd $DIR
   python ../integration-tests/light_load_all_functionality.py 2 3
+  python ../integration-tests/deploy_pyspark_models.py
 }
 
 function run_all_tests {
