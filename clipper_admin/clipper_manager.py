@@ -654,10 +654,10 @@ class Clipper:
             print("Supplied environment details")
         else:
             print(
-                "Anaconda environment was either not found or failed being exported"
-            )
-            print(
-                "Your local environment details will not be supplied to and loaded in the container in which your model is deployed."
+                "Warning: Anaconda environment was either not found or exporting the environment "
+                "failed. Your function will still be serialized deployed, but may fail due to "
+                "missing dependencies. In this case, please re-run inside an Anaconda environment. "
+                "See http://clipper.ai/documentation/python_model_deployment/ for more information."
             )
 
         # Write out function serialization

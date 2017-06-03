@@ -10,7 +10,7 @@ test -f $CONDA_DEPS_PATH
 dependency_check_returncode=$?
 
 if [ $dependency_check_returncode -eq 0 ]; then
-	echo "Attempting to run Python container without installing without supplied dependencies."
+	echo "First attempting to run Python container without installing supplied dependencies."
 else
 	echo "No dependencies supplied. Attempting to run Python container."
 fi
@@ -37,5 +37,5 @@ if [ $? -eq $IMPORT_ERROR_RETURN_CODE ]; then
 	fi
 fi
 
-echo "Encountered error not related to missing packages. Please refer to the above logs to diagnose."
+echo "Encountered error not related to missing packages. Please refer to the container log to diagnose."
 exit 1
