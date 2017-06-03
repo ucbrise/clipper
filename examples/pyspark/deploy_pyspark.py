@@ -3,7 +3,9 @@ from __future__ import absolute_import, print_function
 import sys
 import os
 import numpy as np
-from clipper_admin.clipper_manager import Clipper
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.abspath("%s/../.." % cur_dir))
+from clipper_admin import Clipper
 
 
 
@@ -71,7 +73,9 @@ def train_logistic_regression(pos_label):
 
     print('Fitting model')
 
-    model = LogisticRegressionWithSGD.train(trainRDD, iterations=100)
+    model = LogisticRegressionWithSGD.train(trainRDD, iterations=10)
+    clipper = Clipper("localhost")
+    clipper.deploy_pyspark_model("pyspark_test", 1, predict, model, sc, ["a"], "ints")
 
     print(predict(sc, model, test_data[:10]))
 

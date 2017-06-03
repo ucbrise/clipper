@@ -14,7 +14,7 @@ from sklearn import base
 from sklearn.externals import joblib
 from cStringIO import StringIO
 import sys
-from cloudpickle import CloudPickler
+from .cloudpickle import CloudPickler
 import time
 import re
 
