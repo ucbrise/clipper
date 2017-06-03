@@ -273,7 +273,8 @@ if __name__ == '__main__':
 
     # If neither the short nor the long argument is specified,
     # we will run all tests
-    args.run_all = args.run_all or ((not args.run_short) and (not args.run_long))
+    args.run_all = args.run_all or ((not args.run_short) and
+                                    (not args.run_long))
 
     suite = unittest.TestSuite()
 
