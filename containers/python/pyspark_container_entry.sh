@@ -3,6 +3,8 @@
 IMPORT_ERROR_RETURN_CODE=3
 
 echo "Attempting to run PySpark container without installing dependencies"
+echo "Contents of /model"
+ls /model/
 /bin/bash -c "exec python /container/pyspark_container.py"
 if [ $? -eq $IMPORT_ERROR_RETURN_CODE ]; then
 	echo "Running PySpark container without installing dependencies fails"

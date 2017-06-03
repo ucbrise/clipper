@@ -75,6 +75,8 @@ def train_logistic_regression(pos_label):
 
     model = LogisticRegressionWithSGD.train(trainRDD, iterations=10)
     clipper = Clipper("localhost")
+    clipper.stop_all()
+    clipper.start()
     clipper.deploy_pyspark_model("pyspark_test", 1, predict, model, sc, ["a"], "ints")
 
     print(predict(sc, model, test_data[:10]))

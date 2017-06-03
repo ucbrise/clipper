@@ -284,7 +284,13 @@ class Clipper:
             # We should only copy data if the paths are different
             if local_path != remote_path:
                 if os.path.isdir(local_path):
-                    self._copytree(local_path, remote_path)
+                    # self._copytree(local_path, remote_path)
+                    remote_path = os.path.join(remote_path, os.path.basename(local_path))
+                    # if remote_path exists, delete it because shutil.copytree requires
+                    # that the dst path doesn't exist
+                    if os.path.exists(remote_path):
+                        shutil.rmtree(remote_path)
+                    shutil.copytree(local_path, remote_path)
                 else:
                     shutil.copy2(local_path, remote_path)
         else:
@@ -293,38 +299,6 @@ class Clipper:
                 remote_path=remote_path,
                 *args,
                 **kwargs)
-
-    # Taken from http://stackoverflow.com/a/12514470
-    # Recursively copies a directory from src to dst,
-    # where dst may or may not exist. We cannot use
-    # shutil.copytree() alone because it stipulates that
-    # dst cannot already exist
-    def _copytree(self, src, dst, symlinks=False, ignore=None):
-        # Appends the final directory in the tree specified by "src" to
-        # the tree specified by "dst". This is consistent with fabric's
-        # put() behavior
-        final_dst_char = dst[len(dst) - 1]
-        if final_dst_char != "/":
-            dst = dst + "/"
-        nested_dir_names = src.split("/")
-        dst = dst + nested_dir_names[len(nested_dir_names) - 1]
-
-        if not os.path.exists(dst):
-            os.makedirs(dst)
-        for item in os.listdir(src):
-            s = os.path.join(src, item)
-            d = os.path.join(dst, item)
-            if os.path.isdir(s):
-                self._copytree(s, d, symlinks, ignore)
-            else:
-                if not os.path.exists(
-                        d) or os.stat(s).st_mtime - os.stat(d).st_mtime > 1:
-                    try:
-                        shutil.copy2(s, d)
-                    except Exception as e:
-                        print(
-                            "Error copying {source} to {dest}: {error}. File will be skipped.".
-                            format(source=s, dest=d, error=e))
 
     def start(self):
         """Start a Clipper instance.
@@ -485,12 +459,14 @@ class Clipper:
             elif isinstance(model_data, str):
                 # assume that model_data is a path to the serialized model
                 model_data_path = model_data
+                print("model_data_path is: %s" % model_data_path)
             else:
                 warn("%s is invalid model format" % str(type(model_data)))
                 return False
 
             vol = "{model_repo}/{name}/{version}".format(
                 model_repo=MODEL_REPO, name=name, version=version)
+            print("Vol is: %s" % vol)
             # publish model to Clipper and verify success before copying model
             # parameters to Clipper and starting containers
             if not self._publish_new_model(
@@ -508,36 +484,7 @@ class Clipper:
 
             with cd(vol):
                 with hide("warnings", "output", "running"):
-                    if model_data_path.startswith("s3://"):
-                        with hide("warnings", "output", "running"):
-                            aws_cli_installed = self._execute_standard(
-                                "dpkg-query -Wf'${db:Status-abbrev}' awscli 2>/dev/null | grep -q '^i'",
-                                warn_only=True).return_code == 0
-                            if not aws_cli_installed:
-                                self._execute_root("apt-get update -qq")
-                                self._execute_root(
-                                    "apt-get install -yqq awscli")
-                            if self._execute_root(
-                                    "stat ~/.aws/config",
-                                    warn_only=True).return_code != 0:
-                                self._execute_standard("mkdir -p ~/.aws")
-                                self._execute_append(
-                                    "~/.aws/config",
-                                    aws_cli_config.format(
-                                        access_key=os.environ[
-                                            "AWS_ACCESS_KEY_ID"],
-                                        secret_key=os.environ[
-                                            "AWS_SECRET_ACCESS_KEY"]))
-
-                        self._execute_standard(
-                            "aws s3 cp {model_data_path} {dl_path} --recursive".
-                            format(
-                                model_data_path=model_data_path,
-                                dl_path=os.path.join(
-                                    vol, os.path.basename(model_data_path))))
-                    else:
-                        with hide("output", "running"):
-                            self._execute_put(model_data_path, vol)
+                    self._execute_put(model_data_path, vol)
 
             print("Copied model data to host")
             # aggregate results of starting all containers
@@ -702,7 +649,6 @@ class Clipper:
 
         # DEBUGGING
         print("Spark model saved")
-        return
 
         # Deploy model
         return self.deploy_model(name, version, serialization_dir,

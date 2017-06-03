@@ -2,6 +2,7 @@ from __future__ import print_function
 import rpc
 import os
 import sys
+import json
 
 import numpy as np
 np.set_printoptions(threshold=np.nan)
@@ -29,11 +30,13 @@ def load_pyspark_model(metadata_path, sc, model_path):
             print("Malformed metadata file.")
             sys.exit(1)
         model_class = metadata["model_class"]
+
+        print("Loading %s model from %s" % (model_class, model_path))
         splits = model_class.split(".")
         module = ".".join(splits[:-1])
         class_name = splits[-1]
         ModelClass = getattr(importlib.import_module(module), class_name)
-        model = ModelClass.load(sc, path)
+        model = ModelClass.load(sc, model_path)
     return model
 
 
@@ -138,13 +141,14 @@ if __name__ == "__main__":
         print("Using default input type: doubles")
 
     model_path = os.environ["CLIPPER_MODEL_PATH"]
+    print(model_path)
 
-    print("Initializing Python function container")
+    print("Initializing PySpark function container")
     sys.stdout.flush()
     sys.stderr.flush()
 
     try:
-        model = PythonContainer(model_path, input_type)
+        model = PySparkContainer(model_path, input_type)
         rpc_service = rpc.RPCService()
         rpc_service.start(model, ip, port, model_name, model_version,
                           input_type)
