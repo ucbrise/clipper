@@ -636,24 +636,29 @@ class Clipper:
         if not os.path.exists(serialization_dir):
             os.makedirs(serialization_dir)
 
-        # Export Anaconda environment
+        # Attempt to export Anaconda environment
         environment_file_abs_path = os.path.join(serialization_dir,
                                                  environment_fname)
-        process = subprocess.Popen(
-            "PIP_FORMAT=legacy conda env export >> {environment_file_abs_path}".
-            format(environment_file_abs_path=environment_file_abs_path),
-            shell=True)
-        process.wait()
+        conda_env_exported = self._export_conda_env(environment_file_abs_path)
 
-        # Confirm that packages installed through conda are solvable
-        # Write out conda and pip dependency files to be supplied to container
-        if not (self._check_and_write_dependencies(
-                environment_file_abs_path, serialization_dir, conda_dep_fname,
-                pip_dep_fname)):
-            return False
+        if conda_env_exported:
+            print("Anaconda environment found. Verifying packages.")
 
-        os.remove(environment_file_abs_path)
-        print("Supplied environment details")
+            # Confirm that packages installed through conda are solvable
+            # Write out conda and pip dependency files to be supplied to container
+            if not (self._check_and_write_dependencies(
+                    environment_file_abs_path, serialization_dir,
+                    conda_dep_fname, pip_dep_fname)):
+                return False
+
+            print("Supplied environment details")
+        else:
+            print(
+                "Warning: Anaconda environment was either not found or exporting the environment "
+                "failed. Your function will still be serialized deployed, but may fail due to "
+                "missing dependencies. In this case, please re-run inside an Anaconda environment. "
+                "See http://clipper.ai/documentation/python_model_deployment/ for more information."
+            )
 
         # Write out function serialization
         func_file_path = os.path.join(serialization_dir, predict_fname)
@@ -662,9 +667,13 @@ class Clipper:
         print("Serialized and supplied predict function")
 
         # Deploy function
-        return self.deploy_model(name, version, serialization_dir,
-                                 default_python_container, labels, input_type,
-                                 num_containers)
+        deploy_result = self.deploy_model(name, version, serialization_dir,
+                                          default_python_container, labels,
+                                          input_type, num_containers)
+        # Remove temp files
+        shutil.rmtree(serialization_dir)
+
+        return deploy_result
 
     def get_all_models(self, verbose=False):
         """Gets information about all models registered with Clipper.
@@ -817,6 +826,24 @@ class Clipper:
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
         return r.text
+
+    def _export_conda_env(self, environment_file_abs_path):
+        """Returns true if attempt to export the current conda environment is successful
+
+        Parameters
+        ----------
+        environment_file_abs_path : str
+            The desired absolute path for the exported conda environment file
+        """
+
+        process = subprocess.Popen(
+            "PIP_FORMAT=legacy conda env export >> {environment_file_abs_path}".
+            format(environment_file_abs_path=environment_file_abs_path),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True)
+        process.wait()
+        return process.returncode == 0
 
     def _check_and_write_dependencies(self, environment_path, directory,
                                       conda_dep_fname, pip_dep_fname):
