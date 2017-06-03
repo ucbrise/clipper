@@ -6,7 +6,9 @@ import time
 import requests
 from sklearn import svm
 from argparse import ArgumentParser
-from clipper_admin import clipper_manager
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.abspath('%s/../' % cur_dir))
+import clipper_manager
 """
 Executes a test suite consisting of two separate cases: short tests and long tests.
 Before each case, an instance of clipper_manager.Clipper is created. Tests
