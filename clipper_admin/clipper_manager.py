@@ -1,6 +1,6 @@
 """Clipper Management Utilities"""
 
-from __future__ import print_function, with_statement
+from __future__ import print_function, with_statement, absolute_import
 from fabric.api import *
 from fabric.contrib.files import append
 import os
@@ -14,8 +14,9 @@ from sklearn import base
 from sklearn.externals import joblib
 from cStringIO import StringIO
 import sys
-from pywrencloudpickle import CloudPickler
+from cloudpickle import CloudPickler
 import time
+import re
 
 __all__ = ['Clipper']
 
@@ -678,6 +679,10 @@ class Clipper:
                 num_containers=1)
         """
 
+        model_class = re.search("pyspark.*'", str(type(pyspark_model))).group(0).strip("'")
+        if model_class is None:
+            raise ClipperManagerException( "pyspark_model argument was not a pyspark object")
+
         # save predict function
         serialization_dir = self._save_python_function(name, predict_function)
         # save Spark model
@@ -689,6 +694,11 @@ class Clipper:
             print("Error saving spark model")
         
         pyspark_container = "clipper/pyspark-container"
+        
+        # extract the pyspark class name. This will be something like
+        # pyspark.mllib.classification.LogisticRegressionModel
+        with open(os.path.join(serialization_dir, "metadata.json"), "w") as metadata_file:
+            json.dump({"model_class": model_class}, metadata_file)
 
         # DEBUGGING
         print("Spark model saved")
