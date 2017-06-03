@@ -6,9 +6,7 @@ import time
 import requests
 from sklearn import svm
 from argparse import ArgumentParser
-cur_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.abspath('%s/../' % cur_dir))
-import clipper_manager
+from clipper_admin import clipper_manager
 """
 Executes a test suite consisting of two separate cases: short tests and long tests.
 Before each case, an instance of clipper_manager.Clipper is created. Tests
@@ -132,22 +130,22 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         split_output = running_containers_output.split("\n")
         self.assertGreaterEqual(len(split_output), 2)
 
-    def test_predict_function_deploys_successfully(self):
-        model_name = "m2"
-        model_version = 1
-        predict_func = lambda inputs: ["0" for x in inputs]
-        labels = ["test"]
-        input_type = "doubles"
-        result = self.clipper_inst.deploy_predict_function(
-            model_name, model_version, predict_func, labels, input_type)
-        self.assertTrue(result)
-        model_info = self.clipper_inst.get_model_info(model_name,
-                                                      model_version)
-        self.assertIsNotNone(model_info)
-        running_containers_output = self.clipper_inst._execute_standard(
-            "docker ps -q --filter \"ancestor=clipper/python-container\"")
-        self.assertIsNotNone(running_containers_output)
-        self.assertGreaterEqual(len(running_containers_output), 1)
+    # def test_predict_function_deploys_successfully(self):
+    #     model_name = "m2"
+    #     model_version = 1
+    #     predict_func = lambda inputs: ["0" for x in inputs]
+    #     labels = ["test"]
+    #     input_type = "doubles"
+    #     result = self.clipper_inst.deploy_predict_function(
+    #         model_name, model_version, predict_func, labels, input_type)
+    #     self.assertTrue(result)
+    #     model_info = self.clipper_inst.get_model_info(model_name,
+    #                                                   model_version)
+    #     self.assertIsNotNone(model_info)
+    #     running_containers_output = self.clipper_inst._execute_standard(
+    #         "docker ps -q --filter \"ancestor=clipper/python-container\"")
+    #     self.assertIsNotNone(running_containers_output)
+    #     self.assertGreaterEqual(len(running_containers_output), 1)
 
 
 class ClipperManagerTestCaseLong(unittest.TestCase):
@@ -196,39 +194,35 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         self.assertNotEqual(parsed_response["output"], self.default_output)
         self.assertFalse(parsed_response["default"])
 
-    def test_deployed_predict_function_queried_successfully(self):
-        model_version = 1
-        predict_func = lambda inputs: [str(len(x)) for x in inputs]
-        labels = ["test"]
-        input_type = "doubles"
-        result = self.clipper_inst.deploy_predict_function(
-            self.model_name_1, model_version, predict_func, labels, input_type)
-        self.assertTrue(result)
+    # def test_deployed_predict_function_queried_successfully(self):
+    #     model_version = 1
+    #     predict_func = lambda inputs: [str(len(x)) for x in inputs]
+    #     labels = ["test"]
+    #     input_type = "doubles"
+    #     result = self.clipper_inst.deploy_predict_function(
+    #         self.model_name_1, model_version, predict_func, labels, input_type)
+    #     self.assertTrue(result)
+    #
+    #     time.sleep(60)
+    #
+    #     received_non_default_prediction = False
+    #     url = "http://localhost:1337/{}/predict".format(self.app_name_1)
+    #     test_input = [101.1, 99.5, 107.2]
+    #     req_json = json.dumps({'uid': 0, 'input': test_input})
+    #     headers = {'Content-type': 'application/json'}
+    #     for i in range(0, 40):
+    #         response = requests.post(url, headers=headers, data=req_json)
+    #         parsed_response = json.loads(response.text)
+    #         output = parsed_response["output"]
+    #         if output == self.default_output:
+    #             time.sleep(20)
+    #         else:
+    #             received_non_default_prediction = True
+    #             self.assertEqual(int(output), len(test_input))
+    #             break
+    #
+    #     self.assertTrue(received_non_default_prediction)
 
-        time.sleep(60)
-
-        received_non_default_prediction = False
-        url = "http://localhost:1337/{}/predict".format(self.app_name_1)
-        test_input = [101.1, 99.5, 107.2]
-        req_json = json.dumps({'uid': 0, 'input': test_input})
-        headers = {'Content-type': 'application/json'}
-        for i in range(0, 40):
-            response = requests.post(url, headers=headers, data=req_json)
-            parsed_response = json.loads(response.text)
-            output = parsed_response["output"]
-            if output == self.default_output:
-                time.sleep(20)
-            else:
-                received_non_default_prediction = True
-                self.assertEqual(int(output), len(test_input))
-                break
-
-        self.assertTrue(received_non_default_prediction)
-
-
-SHORT_ARGS = ['s', 'short']
-LONG_ARGS = ['l', 'long']
-ALL_ARGS = ['a', 'all']
 
 SHORT_TEST_ORDERING = [
     'test_external_models_register_correctly',
@@ -240,12 +234,12 @@ SHORT_TEST_ORDERING = [
     'test_inspect_instance_returns_json_dict',
     'test_model_deploys_successfully',
     'test_add_container_for_deployed_model_succeeds',
-    'test_predict_function_deploys_successfully'
+    # 'test_predict_function_deploys_successfully'
 ]
 
 LONG_TEST_ORDERING = [
     'test_deployed_model_queried_successfully',
-    'test_deployed_predict_function_queried_successfully'
+    # 'test_deployed_predict_function_queried_successfully'
 ]
 
 if __name__ == '__main__':
