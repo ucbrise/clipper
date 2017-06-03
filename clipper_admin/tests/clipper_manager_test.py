@@ -11,7 +11,6 @@ sys.path.insert(0, os.path.abspath('%s/../' % cur_dir))
 import clipper_manager
 import random
 import socket
-
 """
 Executes a test suite consisting of two separate cases: short tests and long tests.
 Before each case, an instance of clipper_manager.Clipper is created. Tests
@@ -21,6 +20,7 @@ in the execution of docker commands.
 
 # range of ports where available ports can be found
 PORT_RANGE = [34256, 40000]
+
 
 def find_unbound_port():
     """
@@ -35,10 +35,12 @@ def find_unbound_port():
         except socket.error:
             print("randomly generated port %d is bound. Trying again." % port)
 
+
 class ClipperManagerTestCaseShort(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        self.clipper_inst = clipper_manager.Clipper("localhost", redis_port=find_unbound_port())
+        self.clipper_inst = clipper_manager.Clipper(
+            "localhost", redis_port=find_unbound_port())
         self.clipper_inst.start()
         self.app_name = "app1"
         self.model_name = "m1"
@@ -171,7 +173,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
 class ClipperManagerTestCaseLong(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        self.clipper_inst = clipper_manager.Clipper("localhost", redis_port=find_unbound_port())
+        self.clipper_inst = clipper_manager.Clipper(
+            "localhost", redis_port=find_unbound_port())
         self.clipper_inst.start()
         self.app_name_1 = "app3"
         self.app_name_2 = "app4"
