@@ -679,8 +679,8 @@ class Clipper:
 
         # Deploy function
         deploy_result = self.deploy_model(name, version, serialization_dir,
-                                          default_python_container, 
-                                          input_type, labels, num_containers)
+                                          default_python_container, input_type,
+                                          labels, num_containers)
         # Remove temp files
         shutil.rmtree(serialization_dir)
 
