@@ -5,7 +5,7 @@ import json
 import time
 import requests
 from sklearn import svm
-from optparse import OptionParser
+from argparse import ArgumentParser
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath('%s/../' % cur_dir))
 import clipper_manager
@@ -249,40 +249,39 @@ LONG_TEST_ORDERING = [
 ]
 
 if __name__ == '__main__':
-    usage = "%prog [options] (default option is '-a/--all')"
-    parser = OptionParser(usage=usage)
-    parser.add_option(
+    description = "Runs clipper manager tests. If no arguments are specified, all tests are executed."
+    parser = ArgumentParser(description)
+    parser.add_argument(
         "-s",
         "--short",
         action="store_true",
         dest="run_short",
         help="Run the short suite of test cases")
-    parser.add_option(
+    parser.add_argument(
         "-l",
         "--long",
         action="store_true",
         dest="run_long",
         help="Run the long suite of test cases")
-    parser.add_option(
+    parser.add_argument(
         "-a",
         "--all",
         action="store_true",
         dest="run_all",
         help="Run all test cases")
-    (options, args) = parser.parse_args()
+    args = parser.parse_args()
 
-    # If neither the short nor the long option is specified,
+    # If neither the short nor the long argument is specified,
     # we will run all tests
-    options.run_all = options.run_all or ((not options.run_short) and
-                                          (not options.run_long))
+    args.run_all = args.run_all or ((not args.run_short) and (not args.run_long))
 
     suite = unittest.TestSuite()
 
-    if options.run_short or options.run_all:
+    if args.run_short or args.run_all:
         for test in SHORT_TEST_ORDERING:
             suite.addTest(ClipperManagerTestCaseShort(test))
 
-    if options.run_long or options.run_all:
+    if args.run_long or args.run_all:
         for test in LONG_TEST_ORDERING:
             suite.addTest(ClipperManagerTestCaseLong(test))
 
