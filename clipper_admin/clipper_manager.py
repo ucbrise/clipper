@@ -672,7 +672,7 @@ class Clipper:
         Parameters
         ----------
         verbose : bool
-            If set to False, the returned list contains the apps' names.
+            If set to False, the returned list contains the models' names.
             If set to True, the list contains model info dictionaries.
 
         Returns
