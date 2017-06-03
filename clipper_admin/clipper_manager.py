@@ -1075,7 +1075,6 @@ class Clipper:
             self.add_container(model_name, model_version)
 
     def remove_inactive_containers(self, model_name):
-        # TODO: Test this function
         """Removes all containers serving stale versions of the specified model.
 
         Parameters
@@ -1112,6 +1111,7 @@ class Clipper:
                             num_containers_removed += 1
         print("Removed %d inactive containers for model %s" %
               (num_containers_removed, model_name))
+        return num_containers_removed
 
     def stop_all(self):
         """Stops and removes all Clipper Docker containers on the host.

@@ -128,11 +128,10 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         # that will be deployed to a no-op container
         model_data = svm.SVC()
         container_name = "clipper/noop-container"
-        labels = ["test"]
         input_type = "doubles"
         result = self.clipper_inst.deploy_model(
             self.deploy_model_name, self.deploy_model_version, model_data,
-            container_name, labels, input_type)
+            container_name, input_type)
         self.assertTrue(result)
         model_info = self.clipper_inst.get_model_info(
             self.deploy_model_name, self.deploy_model_version)
@@ -152,14 +151,53 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         split_output = running_containers_output.split("\n")
         self.assertGreaterEqual(len(split_output), 2)
 
+    def test_remove_inactive_containers_succeeds(self):
+        # Initialize a support vector classifier 
+        # that will be deployed to a no-op container
+        model_data = svm.SVC()
+        container_name = "clipper/noop-container"
+        input_type = "doubles"
+        result = self.clipper_inst.deploy_model(
+            self.deploy_model_name,
+            1,
+            model_data,
+            container_name,
+            input_type,
+            num_containers=2)
+        self.assertTrue(result)
+        running_containers_output = self.clipper_inst._execute_standard(
+            "docker ps -q --filter \"ancestor=clipper/noop-container\"")
+        self.assertIsNotNone(running_containers_output)
+        self.assertEqual(len(running_containers_output), 2)
+
+        result = self.clipper_inst.deploy_model(
+            self.deploy_model_name,
+            2,
+            model_data,
+            container_name,
+            input_type,
+            num_containers=3)
+        self.assertTrue(result)
+        running_containers_output = self.clipper_inst._execute_standard(
+            "docker ps -q --filter \"ancestor=clipper/noop-container\"")
+        self.assertIsNotNone(running_containers_output)
+        self.assertEqual(len(running_containers_output), 5)
+
+        num_containers_removed = self.clipper_inst.remove_inactive_containers(
+            self.deploy_model_name)
+        self.assertEqual(num_containers_removed, 2)
+        running_containers_output = self.clipper_inst._execute_standard(
+            "docker ps -q --filter \"ancestor=clipper/noop-container\"")
+        self.assertIsNotNone(running_containers_output)
+        self.assertEqual(len(running_containers_output), 3)
+
     def test_predict_function_deploys_successfully(self):
         model_name = "m2"
         model_version = 1
         predict_func = lambda inputs: ["0" for x in inputs]
-        labels = ["test"]
         input_type = "doubles"
         result = self.clipper_inst.deploy_predict_function(
-            model_name, model_version, predict_func, labels, input_type)
+            model_name, model_version, predict_func, input_type)
         self.assertTrue(result)
         model_info = self.clipper_inst.get_model_info(model_name,
                                                       model_version)
@@ -200,17 +238,16 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         # that will be deployed to a no-op container
         model_data = svm.SVC()
         container_name = "clipper/noop-container"
-        labels = ["test"]
         result = self.clipper_inst.deploy_model(
             self.model_name_2, model_version, model_data, container_name,
-            labels, self.input_type)
+            self.input_type)
         self.assertTrue(result)
 
         time.sleep(30)
 
         url = "http://localhost:1337/{}/predict".format(self.app_name_2)
         test_input = [99.3, 18.9, 67.2, 34.2]
-        req_json = json.dumps({'uid': 0, 'input': test_input})
+        req_json = json.dumps({'input': test_input})
         headers = {'Content-type': 'application/json'}
         response = requests.post(url, headers=headers, data=req_json)
         parsed_response = json.loads(response.text)
@@ -220,10 +257,9 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
     def test_deployed_predict_function_queried_successfully(self):
         model_version = 1
         predict_func = lambda inputs: [str(len(x)) for x in inputs]
-        labels = ["test"]
         input_type = "doubles"
         result = self.clipper_inst.deploy_predict_function(
-            self.model_name_1, model_version, predict_func, labels, input_type)
+            self.model_name_1, model_version, predict_func, input_type)
         self.assertTrue(result)
 
         time.sleep(60)
@@ -231,7 +267,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         received_non_default_prediction = False
         url = "http://localhost:1337/{}/predict".format(self.app_name_1)
         test_input = [101.1, 99.5, 107.2]
-        req_json = json.dumps({'uid': 0, 'input': test_input})
+        req_json = json.dumps({'input': test_input})
         headers = {'Content-type': 'application/json'}
         for i in range(0, 40):
             response = requests.post(url, headers=headers, data=req_json)
@@ -253,17 +289,17 @@ SHORT_TEST_ORDERING = [
     'get_app_info_for_registered_app_returns_info_dictionary',
     'get_app_info_for_nonexistent_app_returns_none',
     'test_add_container_for_external_model_fails',
-    'test_model_version_sets_correctly',
-    'test_get_logs_creates_log_files',
+    'test_model_version_sets_correctly', 'test_get_logs_creates_log_files',
     'test_inspect_instance_returns_json_dict',
     'test_model_deploys_successfully',
     'test_add_container_for_deployed_model_succeeds',
-    # 'test_predict_function_deploys_successfully'
+    'test_remove_inactive_containers_succeeds',
+    'test_predict_function_deploys_successfully'
 ]
 
 LONG_TEST_ORDERING = [
     'test_deployed_model_queried_successfully',
-    # 'test_deployed_predict_function_queried_successfully'
+    'test_deployed_predict_function_queried_successfully'
 ]
 
 if __name__ == '__main__':
