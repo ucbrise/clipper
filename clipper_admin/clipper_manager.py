@@ -563,6 +563,143 @@ class Clipper:
                                        EXTERNALLY_MANAGED_MODEL,
                                        EXTERNALLY_MANAGED_MODEL)
 
+    def _save_python_function(self, name, predict_function):
+        relative_base_serializations_dir = "predict_serializations"
+        predict_fname = "predict_func.pkl"
+        environment_fname = "environment.yml"
+        conda_dep_fname = "conda_dependencies.txt"
+        pip_dep_fname = "pip_dependencies.txt"
+
+        # Serialize function
+        s = StringIO()
+        c = CloudPickler(s, 2)
+        c.dump(predict_function)
+        serialized_prediction_function = s.getvalue()
+
+        # Set up serialization directory
+        serialization_dir = os.path.join(
+            '/tmp', relative_base_serializations_dir, name)
+        if not os.path.exists(serialization_dir):
+            os.makedirs(serialization_dir)
+
+        # Export Anaconda environment
+        environment_file_abs_path = os.path.join(serialization_dir,
+                                                 environment_fname)
+
+        conda_env_exported = self._export_conda_env(environment_file_abs_path)
+
+        if conda_env_exported:
+            print("Anaconda environment found. Verifying packages.")
+
+            # Confirm that packages installed through conda are solvable
+            # Write out conda and pip dependency files to be supplied to container
+            if not (self._check_and_write_dependencies(
+                    environment_file_abs_path, serialization_dir,
+                    conda_dep_fname, pip_dep_fname)):
+                return False
+
+            print("Supplied environment details")
+        else:
+            print(
+                "Warning: Anaconda environment was either not found or exporting the environment "
+                "failed. Your function will still be serialized deployed, but may fail due to "
+                "missing dependencies. In this case, please re-run inside an Anaconda environment. "
+                "See http://clipper.ai/documentation/python_model_deployment/ for more information."
+            )
+
+
+        # Write out function serialization
+        func_file_path = os.path.join(serialization_dir, predict_fname)
+        with open(func_file_path, "w") as serialized_function_file:
+            serialized_function_file.write(serialized_prediction_function)
+        print("Serialized and supplied predict function")
+        return serialization_dir
+
+    def deploy_pyspark_model(self,
+                             name,
+                             version,
+                             predict_function,
+                             pyspark_model,
+                             sc,
+                             labels,
+                             input_type,
+                             num_containers=1):
+        """Deploy a Spark MLLib model to Clipper.
+
+        Parameters
+        ----------
+        name : str
+            The name to assign this model.
+        version : int
+            The version to assign this model.
+        predict_function : function
+            A function that takes three arguments, a SparkContext, the ``model`` parameter and
+            a list of inputs of the type specified by the ``input_type`` argument.
+            Any state associated with the function other than the Spark model should
+            be captured via closure capture. Note that the function must not capture
+            the SparkContext or the model implicitly, as these objects are not pickleable
+            and therefore will prevent the ``predict_function`` from being serialized.
+        pyspark_model : pyspark.mllib.util.Saveable
+            An object that mixes in the pyspark Saveable mixin. Generally this
+            is either an mllib model or transformer. This model will be loaded
+            into the Clipper model container and provided as an argument to the
+            predict function each time it is called.
+        sc : SparkContext
+            The SparkContext associated with the model. This is needed
+            to save the model.
+        labels : list of str
+            A set of strings annotating the model
+        input_type : str
+            One of "integers", "floats", "doubles", "bytes", or "strings".
+        num_containers : int, optional
+            The number of replicas of the model to create. More replicas can be
+            created later as well. Defaults to 1.
+
+        Example
+        -------
+            def center(xs):
+                means = np.mean(xs, axis=0)
+                return xs - means
+
+            centered_xs = center(xs)
+            model = sklearn.linear_model.LogisticRegression()
+            model.fit(centered_xs, ys)
+
+            def centered_predict(inputs):
+                centered_inputs = center(inputs)
+                return model.predict(centered_inputs)
+
+            clipper.deploy_predict_function(
+                "example_model",
+                1,
+                centered_predict,
+                ["example"],
+                "doubles",
+                num_containers=1)
+        """
+
+        # save predict function
+        serialization_dir = self._save_python_function(name, predict_function)
+        # save Spark model
+        spark_model_save_loc = os.path.join(serialization_dir, "pyspark_model_data")
+        try:
+            pyspark_model.save(sc, spark_model_save_loc)
+        except:
+            # TODO: figure out what exceptions to catch
+            print("Error saving spark model")
+        
+        pyspark_container = "clipper/pyspark-container"
+
+        # DEBUGGING
+        print("Spark model saved")
+        return
+
+        # Deploy model
+        return self.deploy_model(name, version, serialization_dir,
+                                 pyspark_container, labels, input_type,
+                                 num_containers)
+
+
     def deploy_predict_function(self,
                                 name,
                                 version,
@@ -573,8 +710,8 @@ class Clipper:
         """Deploy an arbitrary Python function to Clipper.
 
         The function should take a list of inputs of the type specified by `input_type` and
-        return a Python or numpy array of predictions. All dependencies for the function must
-        be installed with Anaconda or Pip and this function must be called from within an Anaconda
+        return a Python or numpy array of predictions as strings. All dependencies for the function
+        must be installed with Anaconda or Pip and this function must be called from within an Anaconda
         environment.
 
         Parameters
@@ -617,54 +754,8 @@ class Clipper:
                 num_containers=1)
         """
 
-        relative_base_serializations_dir = "predict_serializations"
         default_python_container = "clipper/python-container"
-        predict_fname = "predict_func.pkl"
-        environment_fname = "environment.yml"
-        conda_dep_fname = "conda_dependencies.txt"
-        pip_dep_fname = "pip_dependencies.txt"
-
-        # Serialize function
-        s = StringIO()
-        c = CloudPickler(s, 2)
-        c.dump(predict_function)
-        serialized_prediction_function = s.getvalue()
-
-        # Set up serialization directory
-        serialization_dir = os.path.join(
-            '/tmp', relative_base_serializations_dir, name)
-        if not os.path.exists(serialization_dir):
-            os.makedirs(serialization_dir)
-
-        # Attempt to export Anaconda environment
-        environment_file_abs_path = os.path.join(serialization_dir,
-                                                 environment_fname)
-        conda_env_exported = self._export_conda_env(environment_file_abs_path)
-
-        if conda_env_exported:
-            print("Anaconda environment found. Verifying packages.")
-
-            # Confirm that packages installed through conda are solvable
-            # Write out conda and pip dependency files to be supplied to container
-            if not (self._check_and_write_dependencies(
-                    environment_file_abs_path, serialization_dir,
-                    conda_dep_fname, pip_dep_fname)):
-                return False
-
-            print("Supplied environment details")
-        else:
-            print(
-                "Warning: Anaconda environment was either not found or exporting the environment "
-                "failed. Your function will still be serialized deployed, but may fail due to "
-                "missing dependencies. In this case, please re-run inside an Anaconda environment. "
-                "See http://clipper.ai/documentation/python_model_deployment/ for more information."
-            )
-
-        # Write out function serialization
-        func_file_path = os.path.join(serialization_dir, predict_fname)
-        with open(func_file_path, "w") as serialized_function_file:
-            serialized_function_file.write(serialized_prediction_function)
-        print("Serialized and supplied predict function")
+        serialization_dir = self._save_python_function(name, predict_function)
 
         # Deploy function
         deploy_result = self.deploy_model(name, version, serialization_dir,
