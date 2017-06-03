@@ -56,10 +56,9 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
     def test_external_models_register_correctly(self):
         name = "m1"
         version1 = 1
-        tags = ["test"]
         input_type = "doubles"
         result = self.clipper_inst.register_external_model(
-            self.model_name, self.model_version_1, tags, input_type)
+            self.model_name, self.model_version_1, input_type)
         self.assertTrue(result)
         registered_model_info = self.clipper_inst.get_model_info(
             self.model_name, self.model_version_1)
@@ -67,7 +66,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
 
         version2 = 2
         result = self.clipper_inst.register_external_model(
-            self.model_name, self.model_version_2, tags, input_type)
+            self.model_name, self.model_version_2, input_type)
         self.assertTrue(result)
         registered_model_info = self.clipper_inst.get_model_info(
             self.model_name, self.model_version_2)
