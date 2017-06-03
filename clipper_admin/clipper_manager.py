@@ -1,3 +1,5 @@
+"""Clipper Management Utilities"""
+
 from __future__ import print_function, with_statement
 from fabric.api import *
 from fabric.contrib.files import append
@@ -14,6 +16,9 @@ from cStringIO import StringIO
 import sys
 from pywrencloudpickle import CloudPickler
 import time
+
+__all__ = ['Clipper']
+
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
 MODEL_REPO = "/tmp/clipper-models"
@@ -57,6 +62,12 @@ class Clipper:
     """
     Connection to a Clipper instance for administrative purposes.
 
+    Sets up the machine for running Clipper. This includes verifying
+    SSH credentials and initializing Docker.
+
+    Docker and docker-compose must already by installed on the machine
+    before connecting to a machine.
+
     Parameters
     ----------
     host : str
@@ -85,11 +96,6 @@ class Clipper:
         If true, containers will restart on failure. If false, containers
         will not restart automatically.
 
-    Sets up the machine for running Clipper. This includes verifying
-    SSH credentials and initializing Docker.
-
-    Docker and docker-compose must already by installed on the machine
-    before connecting to a machine.
     """
 
     def __init__(self,
@@ -226,17 +232,21 @@ class Clipper:
         if not self.sudo:
             return self._execute_standard(*args, **kwargs)
         elif self._host_is_local():
-            return self._execute_local(*args, **kwargs)
+            return self._execute_local(True, *args, **kwargs)
         else:
             return sudo(*args, **kwargs)
 
     def _execute_standard(self, *args, **kwargs):
         if self._host_is_local():
-            return self._execute_local(*args, **kwargs)
+            return self._execute_local(False, *args, **kwargs)
         else:
             return run(*args, **kwargs)
 
-    def _execute_local(self, *args, **kwargs):
+    def _execute_local(self, as_root, *args, **kwargs):
+        if self.sudo and as_root:
+            root_args = list(args)
+            root_args[0] = "sudo %s" % root_args[0]
+            args = tuple(root_args)
         # local is not currently capable of simultaneously printing and
         # capturing output, as run/sudo do. The capture kwarg allows you to
         # switch between printing and capturing as necessary, and defaults to
@@ -426,6 +436,236 @@ class Clipper:
             print(r.text)
             return None
 
+    def deploy_model(self,
+                     name,
+                     version,
+                     model_data,
+                     container_name,
+                     labels,
+                     input_type,
+                     num_containers=1):
+        """Registers a model with Clipper and deploys instances of it in containers.
+
+        Parameters
+        ----------
+        name : str
+            The name to assign this model.
+        version : int
+            The version to assign this model.
+        model_data : str or BaseEstimator
+            The trained model to add to Clipper. This can either be a
+            Scikit-Learn trained model object (an instance of BaseEstimator),
+            or a path to a serialized model. Note that many model serialization
+            formats split the model across multiple files (e.g. definition file
+            and weights file or files). If this is the case, `model_data` must be a path
+            to the root of a directory tree containing ALL the needed files.
+            Depending on the model serialization library you use, this may or may not
+            be the path you provided to the serialize method call.
+        container_name : str
+            The Docker container image to use to run this model container.
+        labels : list of str
+            A set of strings annotating the model
+        input_type : str
+            One of "integers", "floats", "doubles", "bytes", or "strings".
+        num_containers : int, optional
+            The number of replicas of the model to create. More replicas can be
+            created later as well. Defaults to 1.
+        """
+        with hide("warnings", "output", "running"):
+            if isinstance(model_data, base.BaseEstimator):
+                fname = name.replace("/", "_")
+                pkl_path = '/tmp/%s/%s.pkl' % (fname, fname)
+                model_data_path = "/tmp/%s" % fname
+                try:
+                    os.mkdir(model_data_path)
+                except OSError:
+                    pass
+                joblib.dump(model_data, pkl_path)
+            elif isinstance(model_data, str):
+                # assume that model_data is a path to the serialized model
+                model_data_path = model_data
+            else:
+                warn("%s is invalid model format" % str(type(model_data)))
+                return False
+
+            vol = "{model_repo}/{name}/{version}".format(
+                model_repo=MODEL_REPO, name=name, version=version)
+            # publish model to Clipper and verify success before copying model
+            # parameters to Clipper and starting containers
+            if not self._publish_new_model(
+                    name, version, labels, input_type, container_name,
+                    os.path.join(vol, os.path.basename(model_data_path))):
+                return False
+            print("Published model to Clipper")
+
+            if (not self._put_container_on_host(container_name)):
+                return False
+
+            # Put model parameter data on host
+            with hide("warnings", "output", "running"):
+                self._execute_standard("mkdir -p {vol}".format(vol=vol))
+
+            with cd(vol):
+                with hide("warnings", "output", "running"):
+                    if model_data_path.startswith("s3://"):
+                        with hide("warnings", "output", "running"):
+                            aws_cli_installed = self._execute_standard(
+                                "dpkg-query -Wf'${db:Status-abbrev}' awscli 2>/dev/null | grep -q '^i'",
+                                warn_only=True).return_code == 0
+                            if not aws_cli_installed:
+                                self._execute_root("apt-get update -qq")
+                                self._execute_root(
+                                    "apt-get install -yqq awscli")
+                            if self._execute_root(
+                                    "stat ~/.aws/config",
+                                    warn_only=True).return_code != 0:
+                                self._execute_standard("mkdir -p ~/.aws")
+                                self._execute_append(
+                                    "~/.aws/config",
+                                    aws_cli_config.format(
+                                        access_key=os.environ[
+                                            "AWS_ACCESS_KEY_ID"],
+                                        secret_key=os.environ[
+                                            "AWS_SECRET_ACCESS_KEY"]))
+
+                        self._execute_standard(
+                            "aws s3 cp {model_data_path} {dl_path} --recursive".
+                            format(
+                                model_data_path=model_data_path,
+                                dl_path=os.path.join(
+                                    vol, os.path.basename(model_data_path))))
+                    else:
+                        with hide("output", "running"):
+                            self._execute_put(model_data_path, vol)
+
+            print("Copied model data to host")
+            # aggregate results of starting all containers
+            return all([
+                self.add_container(name, version)
+                for r in range(num_containers)
+            ])
+
+    def register_external_model(self, name, version, labels, input_type):
+        """Registers a model with Clipper without deploying it in any containers.
+
+        Parameters
+        ----------
+        name : str
+            The name to assign this model.
+        version : int
+            The version to assign this model.
+        labels : list of str
+            A set of strings annotating the model
+        input_type : str
+            One of "integers", "floats", "doubles", "bytes", or "strings".
+        """
+        return self._publish_new_model(name, version, labels, input_type,
+                                       EXTERNALLY_MANAGED_MODEL,
+                                       EXTERNALLY_MANAGED_MODEL)
+
+    def deploy_predict_function(self,
+                                name,
+                                version,
+                                predict_function,
+                                labels,
+                                input_type,
+                                num_containers=1):
+        """Deploy an arbitrary Python function to Clipper.
+
+        The function should take a list of inputs of the type specified by `input_type` and
+        return a Python or numpy array of predictions. All dependencies for the function must
+        be installed with Anaconda or Pip and this function must be called from within an Anaconda
+        environment.
+
+        Parameters
+        ----------
+        name : str
+            The name to assign this model.
+        version : int
+            The version to assign this model.
+        predict_function : function
+            The prediction function. Any state associated with the function should be
+            captured via closure capture.
+        labels : list of str
+            A set of strings annotating the model
+        input_type : str
+            One of "integers", "floats", "doubles", "bytes", or "strings".
+        num_containers : int, optional
+            The number of replicas of the model to create. More replicas can be
+            created later as well. Defaults to 1.
+
+        Example
+        -------
+            def center(xs):
+                means = np.mean(xs, axis=0)
+                return xs - means
+
+            centered_xs = center(xs)
+            model = sklearn.linear_model.LogisticRegression()
+            model.fit(centered_xs, ys)
+
+            def centered_predict(inputs):
+                centered_inputs = center(inputs)
+                return model.predict(centered_inputs)
+
+            clipper.deploy_predict_function(
+                "example_model",
+                1,
+                centered_predict,
+                ["example"],
+                "doubles",
+                num_containers=1)
+        """
+
+        relative_base_serializations_dir = "predict_serializations"
+        default_python_container = "clipper/python-container"
+        predict_fname = "predict_func.pkl"
+        environment_fname = "environment.yml"
+        conda_dep_fname = "conda_dependencies.txt"
+        pip_dep_fname = "pip_dependencies.txt"
+
+        # Serialize function
+        s = StringIO()
+        c = CloudPickler(s, 2)
+        c.dump(predict_function)
+        serialized_prediction_function = s.getvalue()
+
+        # Set up serialization directory
+        serialization_dir = os.path.join(
+            '/tmp', relative_base_serializations_dir, name)
+        if not os.path.exists(serialization_dir):
+            os.makedirs(serialization_dir)
+
+        # Export Anaconda environment
+        environment_file_abs_path = os.path.join(serialization_dir,
+                                                 environment_fname)
+        process = subprocess.Popen(
+            "PIP_FORMAT=legacy conda env export >> {environment_file_abs_path}".
+            format(environment_file_abs_path=environment_file_abs_path),
+            shell=True)
+        process.wait()
+
+        # Confirm that packages installed through conda are solvable
+        # Write out conda and pip dependency files to be supplied to container
+        if not (self._check_and_write_dependencies(
+                environment_file_abs_path, serialization_dir, conda_dep_fname,
+                pip_dep_fname)):
+            return False
+
+        os.remove(environment_file_abs_path)
+        print("Supplied environment details")
+
+        # Write out function serialization
+        func_file_path = os.path.join(serialization_dir, predict_fname)
+        with open(func_file_path, "w") as serialized_function_file:
+            serialized_function_file.write(serialized_prediction_function)
+        print("Serialized and supplied predict function")
+
+        # Deploy function
+        return self.deploy_model(name, version, serialization_dir,
+                                 default_python_container, labels, input_type,
+                                 num_containers)
+
     def get_all_models(self, verbose=False):
         """Gets information about all models registered with Clipper.
 
@@ -578,127 +818,6 @@ class Clipper:
         r = requests.post(url, headers=headers, data=req_json)
         return r.text
 
-    def register_external_model(self, name, version, labels, input_type):
-        """Registers a model with Clipper without deploying it in any containers.
-
-        Parameters
-        ----------
-        name : str
-            The name to assign this model.
-        version : int
-            The version to assign this model.
-        labels : list of str
-            A set of strings annotating the model
-        input_type : str
-            One of "integers", "floats", "doubles", "bytes", or "strings".
-        """
-        return self._publish_new_model(name, version, labels, input_type,
-                                       EXTERNALLY_MANAGED_MODEL,
-                                       EXTERNALLY_MANAGED_MODEL)
-
-    def deploy_predict_function(self,
-                                name,
-                                version,
-                                predict_function,
-                                labels,
-                                input_type,
-                                num_containers=1):
-        """Deploy an arbitrary Python function to Clipper.
-
-        The function should take a list of inputs of the type specified by `input_type` and
-        return a Python or numpy array of predictions. All dependencies for the function must
-        be installed with Anaconda or Pip and this function must be called from within an Anaconda
-        environment.
-
-        Parameters
-        ----------
-        name : str
-            The name to assign this model.
-        version : int
-            The version to assign this model.
-        predict_function : function
-            The prediction function. Any state associated with the function should be
-            captured via closure capture.
-        labels : list of str
-            A set of strings annotating the model
-        input_type : str
-            One of "integers", "floats", "doubles", "bytes", or "strings".
-        num_containers : int, optional
-            The number of replicas of the model to create. More replicas can be
-            created later as well. Defaults to 1.
-
-        Example
-        -------
-            def center(xs):
-                means = np.mean(xs, axis=0)
-                return xs - means
-
-            centered_xs = center(xs)
-            model = sklearn.linear_model.LogisticRegression()
-            model.fit(centered_xs, ys)
-
-            def centered_predict(inputs):
-                centered_inputs = center(inputs)
-                return model.predict(centered_inputs)
-
-            clipper.deploy_predict_function(
-                "example_model",
-                1,
-                centered_predict,
-                ["example"],
-                "doubles",
-                num_containers=1)
-        """
-
-        relative_base_serializations_dir = "predict_serializations"
-        default_python_container = "clipper/python-container"
-        predict_fname = "predict_func.pkl"
-        environment_fname = "environment.yml"
-        conda_dep_fname = "conda_dependencies.txt"
-        pip_dep_fname = "pip_dependencies.txt"
-
-        # Serialize function
-        s = StringIO()
-        c = CloudPickler(s, 2)
-        c.dump(predict_function)
-        serialized_prediction_function = s.getvalue()
-
-        # Set up serialization directory
-        serialization_dir = os.path.join(
-            '/tmp', relative_base_serializations_dir, name)
-        if not os.path.exists(serialization_dir):
-            os.makedirs(serialization_dir)
-
-        # Export Anaconda environment
-        environment_file_abs_path = os.path.join(serialization_dir,
-                                                 environment_fname)
-        process = subprocess.Popen(
-            "PIP_FORMAT=legacy conda env export >> {environment_file_abs_path}".
-            format(environment_file_abs_path=environment_file_abs_path),
-            shell=True)
-        process.wait()
-
-        # Confirm that packages installed through conda are solvable
-        # Write out conda and pip dependency files to be supplied to container
-        if not (self._check_and_write_dependencies(
-                environment_file_abs_path, serialization_dir, conda_dep_fname,
-                pip_dep_fname)):
-            return False
-
-        os.remove(environment_file_abs_path)
-        print("Supplied environment details")
-
-        # Write out function serialization
-        func_file_path = os.path.join(serialization_dir, predict_fname)
-        with open(func_file_path, "w") as serialized_function_file:
-            serialized_function_file.write(serialized_prediction_function)
-        print("Serialized and supplied predict function")
-
-        # Deploy function
-        return self.deploy_model(name, version, serialization_dir,
-                                 default_python_container, labels, input_type,
-                                 num_containers)
-
     def _check_and_write_dependencies(self, environment_path, directory,
                                       conda_dep_fname, pip_dep_fname):
         """Returns true if the provided conda environment is compatible with the container os.
@@ -751,115 +870,6 @@ class Clipper:
         print(out)
         print(err)
         return process.returncode == 0
-
-    def deploy_model(self,
-                     name,
-                     version,
-                     model_data,
-                     container_name,
-                     labels,
-                     input_type,
-                     num_containers=1):
-        """Registers a model with Clipper and deploys instances of it in containers.
-
-        Parameters
-        ----------
-        name : str
-            The name to assign this model.
-        version : int
-            The version to assign this model.
-        model_data : str or BaseEstimator
-            The trained model to add to Clipper. This can either be a
-            Scikit-Learn trained model object (an instance of BaseEstimator),
-            or a path to a serialized model. Note that many model serialization
-            formats split the model across multiple files (e.g. definition file
-            and weights file or files). If this is the case, `model_data` must be a path
-            to the root of a directory tree containing ALL the needed files.
-            Depending on the model serialization library you use, this may or may not
-            be the path you provided to the serialize method call.
-        container_name : str
-            The Docker container image to use to run this model container.
-        labels : list of str
-            A set of strings annotating the model
-        input_type : str
-            One of "integers", "floats", "doubles", "bytes", or "strings".
-        num_containers : int, optional
-            The number of replicas of the model to create. More replicas can be
-            created later as well. Defaults to 1.
-        """
-        with hide("warnings", "output", "running"):
-            if isinstance(model_data, base.BaseEstimator):
-                fname = name.replace("/", "_")
-                pkl_path = '/tmp/%s/%s.pkl' % (fname, fname)
-                model_data_path = "/tmp/%s" % fname
-                try:
-                    os.mkdir(model_data_path)
-                except OSError:
-                    pass
-                joblib.dump(model_data, pkl_path)
-            elif isinstance(model_data, str):
-                # assume that model_data is a path to the serialized model
-                model_data_path = model_data
-            else:
-                warn("%s is invalid model format" % str(type(model_data)))
-                return False
-
-            vol = "{model_repo}/{name}/{version}".format(
-                model_repo=MODEL_REPO, name=name, version=version)
-            # publish model to Clipper and verify success before copying model
-            # parameters to Clipper and starting containers
-            if not self._publish_new_model(
-                    name, version, labels, input_type, container_name,
-                    os.path.join(vol, os.path.basename(model_data_path))):
-                return False
-            print("Published model to Clipper")
-
-            if (not self._put_container_on_host(container_name)):
-                return False
-
-            # Put model parameter data on host
-            with hide("warnings", "output", "running"):
-                self._execute_standard("mkdir -p {vol}".format(vol=vol))
-
-            with cd(vol):
-                with hide("warnings", "output", "running"):
-                    if model_data_path.startswith("s3://"):
-                        with hide("warnings", "output", "running"):
-                            aws_cli_installed = self._execute_standard(
-                                "dpkg-query -Wf'${db:Status-abbrev}' awscli 2>/dev/null | grep -q '^i'",
-                                warn_only=True).return_code == 0
-                            if not aws_cli_installed:
-                                self._execute_root("apt-get update -qq")
-                                self._execute_root(
-                                    "apt-get install -yqq awscli")
-                            if self._execute_root(
-                                    "stat ~/.aws/config",
-                                    warn_only=True).return_code != 0:
-                                self._execute_standard("mkdir -p ~/.aws")
-                                self._execute_append(
-                                    "~/.aws/config",
-                                    aws_cli_config.format(
-                                        access_key=os.environ[
-                                            "AWS_ACCESS_KEY_ID"],
-                                        secret_key=os.environ[
-                                            "AWS_SECRET_ACCESS_KEY"]))
-
-                        self._execute_standard(
-                            "aws s3 cp {model_data_path} {dl_path} --recursive".
-                            format(
-                                model_data_path=model_data_path,
-                                dl_path=os.path.join(
-                                    vol, os.path.basename(model_data_path))))
-                    else:
-                        with hide("output", "running"):
-                            self._execute_put(model_data_path, vol)
-
-            print("Copied model data to host")
-            # aggregate results of starting all containers
-            return all([
-                self.add_container(name, version)
-                for r in range(num_containers)
-            ])
 
     def add_container(self, model_name, model_version):
         """Create a new container for an existing model.

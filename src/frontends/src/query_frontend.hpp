@@ -39,6 +39,7 @@ const std::string GET_METRICS = "^/metrics$";
 const char* PREDICTION_RESPONSE_KEY_QUERY_ID = "query_id";
 const char* PREDICTION_RESPONSE_KEY_OUTPUT = "output";
 const char* PREDICTION_RESPONSE_KEY_USED_DEFAULT = "default";
+const char* PREDICTION_RESPONSE_KEY_DEFAULT_EXPLANATION = "default_explanation";
 const char* PREDICTION_ERROR_RESPONSE_KEY_ERROR = "error";
 const char* PREDICTION_ERROR_RESPONSE_KEY_CAUSE = "cause";
 
@@ -378,6 +379,7 @@ class RequestHandler {
    *    "query_id" := int,
    *    "output" := float,
    *    "default" := boolean
+   *    "default_explanation" := string (optional)
    * }
    */
   static const std::string get_prediction_response_content(
@@ -402,6 +404,12 @@ class RequestHandler {
     }
     clipper::json::add_bool(json_response, PREDICTION_RESPONSE_KEY_USED_DEFAULT,
                             query_response.output_is_default_);
+    if (query_response.output_is_default_ &&
+        query_response.default_explanation_) {
+      clipper::json::add_string(json_response,
+                                PREDICTION_RESPONSE_KEY_DEFAULT_EXPLANATION,
+                                query_response.default_explanation_.get());
+    }
     std::string content = clipper::json::to_json_string(json_response);
     return content;
   }
