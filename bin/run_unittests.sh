@@ -112,7 +112,7 @@ function run_management_tests {
 function run_clipper_admin_tests {
   echo -e "Running clipper admin tests"
   cd $DIR
-  python ../clipper_admin/tests/clipper_manager_test.py all
+  python ../clipper_admin/tests/clipper_manager_test.py
 }
 
 function run_frontend_tests {
