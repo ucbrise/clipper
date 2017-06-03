@@ -98,7 +98,7 @@ void send_predictions(
                       cifar_input,
                       100000,
                       clipper::DefaultOutputSelectionPolicy::get_name(),
-                      {std::make_pair(SKLEARN_MODEL_NAME, 1)}});
+                      {std::make_pair(SKLEARN_MODEL_NAME, "1")}});
       futures.push_back(std::move(future));
     }
 

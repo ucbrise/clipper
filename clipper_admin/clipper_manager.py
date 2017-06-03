@@ -450,7 +450,7 @@ class Clipper:
         ----------
         name : str
             The name to assign this model.
-        version : int
+        version : int |  str
             The version to assign this model.
         model_data : str or BaseEstimator
             The trained model to add to Clipper. This can either be a
@@ -488,6 +488,7 @@ class Clipper:
                 warn("%s is invalid model format" % str(type(model_data)))
                 return False
 
+            version = str(version)
             vol = "{model_repo}/{name}/{version}".format(
                 model_repo=MODEL_REPO, name=name, version=version)
             # publish model to Clipper and verify success before copying model
@@ -552,13 +553,14 @@ class Clipper:
         ----------
         name : str
             The name to assign this model.
-        version : int
+        version : int | str
             The version to assign this model.
         labels : list of str
             A set of strings annotating the model
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
         """
+        version = str(version)
         return self._publish_new_model(name, version, labels, input_type,
                                        EXTERNALLY_MANAGED_MODEL,
                                        EXTERNALLY_MANAGED_MODEL)
@@ -581,7 +583,7 @@ class Clipper:
         ----------
         name : str
             The name to assign this model.
-        version : int
+        version : int | str
             The version to assign this model.
         predict_function : function
             The prediction function. Any state associated with the function should be
@@ -910,7 +912,7 @@ class Clipper:
         ----------
         model_name : str
             The name of the model
-        model_version : int
+        model_version : str
             The version of the model
 
         Returns
@@ -1038,7 +1040,7 @@ class Clipper:
         ----------
         model_name : str
             The name of the model
-        model_version : int
+        model_version : int | str
             The version of the model. Note that `model_version`
             must be a model version that has already been deployed.
         num_containers : int
@@ -1046,6 +1048,8 @@ class Clipper:
             selected model version.
 
         """
+        model_version = str(model_version)
+
         url = "http://%s:%d/admin/set_model_version" % (
             self.host, CLIPPER_MANAGEMENT_PORT)
         req_json = json.dumps({

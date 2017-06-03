@@ -21,7 +21,7 @@ std::string versioned_model_to_str(const VersionedModelId &model) {
   std::stringstream ss;
   ss << model.first;
   ss << ":";
-  ss << std::to_string(model.second);
+  ss << model.second;
   return ss.str();
 }
 

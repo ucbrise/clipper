@@ -55,7 +55,7 @@ class RedisTest : public ::testing::Test {
 };
 
 TEST_F(RedisTest, ParseModelReplicaKey) {
-  VersionedModelId model = std::make_pair("model1", 4);
+  VersionedModelId model = std::make_pair("model1", "4");
   int replica_id = 7;
   std::string key = gen_model_replica_key(model, replica_id);
   std::pair<VersionedModelId, int> parse_result = parse_model_replica_key(key);
@@ -83,7 +83,7 @@ TEST_F(RedisTest, RedisConnectionRetryLoop) {
 TEST_F(RedisTest, AddModel) {
   std::vector<std::string> labels{"ads", "images", "experimental", "other",
                                   "labels"};
-  VersionedModelId model = std::make_pair("m", 1);
+  VersionedModelId model = std::make_pair("m", "1");
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
   ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, labels, container_name,
@@ -94,7 +94,7 @@ TEST_F(RedisTest, AddModel) {
   // (see add_model() in redis.cpp for details on what the fields are).
   EXPECT_EQ(result.size(), static_cast<size_t>(7));
   ASSERT_EQ(result["model_name"], model.first);
-  ASSERT_EQ(std::stoi(result["model_version"]), model.second);
+  ASSERT_EQ(result["model_version"], model.second);
   ASSERT_FLOAT_EQ(std::stof(result["load"]), 0.0);
   ASSERT_EQ(str_to_labels(result["labels"]), labels);
   ASSERT_EQ(parse_input_type(result["input_type"]), InputType::Ints);
@@ -104,53 +104,53 @@ TEST_F(RedisTest, AddModel) {
 
 TEST_F(RedisTest, SetCurrentModelVersion) {
   std::string model_name = "mymodel";
-  ASSERT_TRUE(set_current_model_version(*redis_, model_name, 2));
-  ASSERT_EQ(get_current_model_version(*redis_, model_name), 2);
+  ASSERT_TRUE(set_current_model_version(*redis_, model_name, "2"));
+  ASSERT_EQ(get_current_model_version(*redis_, model_name), "2");
 
-  ASSERT_TRUE(set_current_model_version(*redis_, model_name, 5));
-  ASSERT_EQ(get_current_model_version(*redis_, model_name), 5);
+  ASSERT_TRUE(set_current_model_version(*redis_, model_name, "5"));
+  ASSERT_EQ(get_current_model_version(*redis_, model_name), "5");
 
-  ASSERT_TRUE(set_current_model_version(*redis_, model_name, 3));
-  ASSERT_EQ(get_current_model_version(*redis_, model_name), 3);
+  ASSERT_TRUE(set_current_model_version(*redis_, model_name, "3"));
+  ASSERT_EQ(get_current_model_version(*redis_, model_name), "3");
 }
 
 TEST_F(RedisTest, GetModelVersions) {
   std::vector<std::string> labels{"ads", "images", "experimental", "other",
                                   "labels"};
-  VersionedModelId model1 = std::make_pair("m", 1);
+  VersionedModelId model1 = std::make_pair("m", "1");
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
   ASSERT_TRUE(add_model(*redis_, model1, InputType::Ints, labels,
                         container_name, model_path));
-  VersionedModelId model2 = std::make_pair("m", 2);
+  VersionedModelId model2 = std::make_pair("m", "2");
   std::string model_path2 = "/tmp/models/m/2";
   ASSERT_TRUE(add_model(*redis_, model2, InputType::Ints, labels,
                         container_name, model_path2));
-  VersionedModelId model4 = std::make_pair("m", 4);
+  VersionedModelId model4 = std::make_pair("m", "4");
   std::string model_path4 = "/tmp/models/m/4";
   ASSERT_TRUE(add_model(*redis_, model4, InputType::Ints, labels,
                         container_name, model_path4));
 
-  std::vector<int> versions = get_model_versions(*redis_, "m");
+  std::vector<std::string> versions = get_model_versions(*redis_, "m");
   ASSERT_EQ(versions.size(), (size_t)3);
   std::sort(versions.begin(), versions.end());
-  ASSERT_EQ(versions, std::vector<int>({1, 2, 4}));
+  ASSERT_EQ(versions, std::vector<std::string>({"1", "2", "4"}));
 }
 
 TEST_F(RedisTest, GetAllModelNames) {
   // Add multiple models (some with multiple versions)
   std::vector<std::string> labels{"ads", "images", "experimental", "other",
                                   "labels"};
-  VersionedModelId model1 = std::make_pair("m", 1);
+  VersionedModelId model1 = std::make_pair("m", "1");
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
   ASSERT_TRUE(add_model(*redis_, model1, InputType::Ints, labels,
                         container_name, model_path));
-  VersionedModelId model2 = std::make_pair("m", 2);
+  VersionedModelId model2 = std::make_pair("m", "2");
   std::string model_path2 = "/tmp/models/m/2";
   ASSERT_TRUE(add_model(*redis_, model2, InputType::Ints, labels,
                         container_name, model_path2));
-  VersionedModelId model3 = std::make_pair("n", 3);
+  VersionedModelId model3 = std::make_pair("n", "3");
   std::string model_path3 = "/tmp/models/n/3";
   ASSERT_TRUE(add_model(*redis_, model3, InputType::Ints, labels,
                         container_name, model_path3));
@@ -166,16 +166,16 @@ TEST_F(RedisTest, GetAllModels) {
   // Add multiple models (some with multiple versions)
   std::vector<std::string> labels{"ads", "images", "experimental", "other",
                                   "labels"};
-  VersionedModelId model1 = std::make_pair("m", 1);
+  VersionedModelId model1 = std::make_pair("m", "1");
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
   ASSERT_TRUE(add_model(*redis_, model1, InputType::Ints, labels,
                         container_name, model_path));
-  VersionedModelId model2 = std::make_pair("m", 2);
+  VersionedModelId model2 = std::make_pair("m", "2");
   std::string model_path2 = "/tmp/models/m/2";
   ASSERT_TRUE(add_model(*redis_, model2, InputType::Ints, labels,
                         container_name, model_path2));
-  VersionedModelId model3 = std::make_pair("n", 3);
+  VersionedModelId model3 = std::make_pair("n", "3");
   std::string model_path3 = "/tmp/models/n/3";
   ASSERT_TRUE(add_model(*redis_, model3, InputType::Ints, labels,
                         container_name, model_path3));
@@ -191,7 +191,7 @@ TEST_F(RedisTest, GetAllModels) {
 
 TEST_F(RedisTest, DeleteModel) {
   std::vector<std::string> labels{"ads", "images", "experimental"};
-  VersionedModelId model = std::make_pair("m", 1);
+  VersionedModelId model = std::make_pair("m", "1");
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
   ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, labels, container_name,
@@ -204,7 +204,7 @@ TEST_F(RedisTest, DeleteModel) {
 }
 
 TEST_F(RedisTest, AddContainer) {
-  VersionedModelId model = std::make_pair("m", 1);
+  VersionedModelId model = std::make_pair("m", "1");
   int replica_id = 4;
   int zmq_connection_id = 12;
   InputType input_type = InputType::Doubles;
@@ -216,7 +216,7 @@ TEST_F(RedisTest, AddContainer) {
   // fields are).
   EXPECT_EQ(result.size(), static_cast<size_t>(7));
   EXPECT_EQ(result["model_name"], model.first);
-  EXPECT_EQ(std::stoi(result["model_version"]), model.second);
+  EXPECT_EQ(result["model_version"], model.second);
   EXPECT_EQ(result["model_id"], gen_versioned_model_key(model));
   EXPECT_EQ(std::stoi(result["model_replica_id"]), replica_id);
   EXPECT_EQ(std::stoi(result["zmq_connection_id"]), zmq_connection_id);
@@ -225,7 +225,7 @@ TEST_F(RedisTest, AddContainer) {
 }
 
 TEST_F(RedisTest, GetAllContainers) {
-  VersionedModelId model = std::make_pair("m", 1);
+  VersionedModelId model = std::make_pair("m", "1");
   int zmq_connection_id = 0;
   InputType input_type = InputType::Doubles;
   ASSERT_TRUE(add_container(*redis_, model, 0, zmq_connection_id, input_type));
@@ -233,7 +233,7 @@ TEST_F(RedisTest, GetAllContainers) {
   ASSERT_TRUE(
       add_container(*redis_, model, 1, zmq_connection_id + 1, input_type));
 
-  VersionedModelId model2 = std::make_pair("other_model", 3);
+  VersionedModelId model2 = std::make_pair("other_model", "3");
   ASSERT_TRUE(
       add_container(*redis_, model2, 0, zmq_connection_id + 2, input_type));
 
@@ -250,7 +250,7 @@ TEST_F(RedisTest, GetAllContainers) {
 }
 
 TEST_F(RedisTest, DeleteContainer) {
-  VersionedModelId model = std::make_pair("m", 1);
+  VersionedModelId model = std::make_pair("m", "1");
   int replica_id = 4;
   int zmq_connection_id = 12;
   InputType input_type = InputType::Strings;
@@ -339,7 +339,7 @@ TEST_F(RedisTest, GetAllApplicationNamesNoneRegistered) {
 
 TEST_F(RedisTest, SubscriptionDetectModelAdd) {
   std::vector<std::string> labels{"ads", "images", "experimental"};
-  VersionedModelId model = std::make_pair("m", 1);
+  VersionedModelId model = std::make_pair("m", "1");
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
   std::condition_variable_any notification_recv;
@@ -368,7 +368,7 @@ TEST_F(RedisTest, SubscriptionDetectModelAdd) {
 
 TEST_F(RedisTest, SubscriptionDetectModelDelete) {
   std::vector<std::string> labels{"ads", "images", "experimental"};
-  VersionedModelId model = std::make_pair("m", 1);
+  VersionedModelId model = std::make_pair("m", "1");
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
   ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, labels, container_name,
@@ -399,7 +399,7 @@ TEST_F(RedisTest, SubscriptionDetectModelDelete) {
 
 TEST_F(RedisTest, SubscriptionDetectContainerAdd) {
   std::vector<std::string> labels{"ads", "images", "experimental"};
-  VersionedModelId model_id = std::make_pair("m", 1);
+  VersionedModelId model_id = std::make_pair("m", "1");
   int model_replica_id = 0;
   int zmq_connection_id = 7;
   std::string replica_key = gen_model_replica_key(model_id, model_replica_id);
@@ -433,7 +433,7 @@ TEST_F(RedisTest, SubscriptionDetectContainerAdd) {
 
 TEST_F(RedisTest, SubscriptionDetectContainerDelete) {
   std::vector<std::string> labels{"ads", "images", "experimental"};
-  VersionedModelId model_id = std::make_pair("m", 1);
+  VersionedModelId model_id = std::make_pair("m", "1");
   int model_replica_id = 0;
   int zmq_connection_id = 7;
   std::string replica_key = gen_model_replica_key(model_id, model_replica_id);
@@ -547,7 +547,7 @@ TEST_F(RedisTest, SubscriptionDetectModelVersionAdd) {
   // give Redis some time to register the subscription
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-  ASSERT_TRUE(set_current_model_version(*redis_, model_name, 1));
+  ASSERT_TRUE(set_current_model_version(*redis_, model_name, "1"));
 
   std::unique_lock<std::mutex> l(notification_mutex);
   bool result = notification_recv.wait_for(l, std::chrono::milliseconds(1000),
@@ -558,7 +558,7 @@ TEST_F(RedisTest, SubscriptionDetectModelVersionAdd) {
 TEST_F(RedisTest, SubscriptionDetectModelVersionChange) {
   std::string model_name = "mymodel";
 
-  ASSERT_TRUE(set_current_model_version(*redis_, model_name, 1));
+  ASSERT_TRUE(set_current_model_version(*redis_, model_name, "1"));
 
   std::condition_variable_any notification_recv;
   std::mutex notification_mutex;
@@ -576,7 +576,7 @@ TEST_F(RedisTest, SubscriptionDetectModelVersionChange) {
   // give Redis some time to register the subscription
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-  ASSERT_TRUE(set_current_model_version(*redis_, model_name, 2));
+  ASSERT_TRUE(set_current_model_version(*redis_, model_name, "2"));
 
   std::unique_lock<std::mutex> l(notification_mutex);
   bool result = notification_recv.wait_for(l, std::chrono::milliseconds(1000),
@@ -595,8 +595,8 @@ TEST_F(RedisTest, LabelsToStr) {
 
 TEST_F(RedisTest, ModelsToStr) {
   std::vector<VersionedModelId> models{
-      std::make_pair("music_random_features", 1),
-      std::make_pair("simple_svm", 2), std::make_pair("music_cnn", 4)};
+      std::make_pair("music_random_features", "1"),
+      std::make_pair("simple_svm", "2"), std::make_pair("music_cnn", "4")};
 
   ASSERT_EQ(models_to_str(models),
             "music_random_features:1,simple_svm:2,music_cnn:4");

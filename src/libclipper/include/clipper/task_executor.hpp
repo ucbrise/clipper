@@ -262,7 +262,7 @@ class TaskExecutor {
                 redis::get_container_by_key(redis_connection_, key);
             VersionedModelId vm =
                 std::make_pair(container_info["model_name"],
-                               std::stoi(container_info["model_version"]));
+                               container_info["model_version"]);
             int replica_id = std::stoi(container_info["model_replica_id"]);
             active_containers_->add_container(
                 vm, std::stoi(container_info["zmq_connection_id"]), replica_id,

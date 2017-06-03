@@ -179,15 +179,15 @@ class RequestHandler {
               event_type);
           if (event_type == "set") {
             std::string model_name = key;
-            int new_version = clipper::redis::get_current_model_version(
+            std::string new_version = clipper::redis::get_current_model_version(
                 redis_connection_, key);
-            if (new_version >= 0) {
+            if (new_version.size() > 0) {
               std::unique_lock<std::mutex> l(current_model_versions_mutex_);
               current_model_versions_[key] = new_version;
             } else {
               clipper::log_error_formatted(
                   LOGGING_TAG_QUERY_FRONTEND,
-                  "Model version change for model {} was invalid (-1).", key);
+                  "Model version change for model {} was invalid.", key);
             }
           }
         });
@@ -224,18 +224,17 @@ class RequestHandler {
     for (std::string model_name : model_names) {
       auto model_version = clipper::redis::get_current_model_version(
           redis_connection_, model_name);
-      if (model_version >= 0) {
+      if (model_version.size() > 0) {
         std::unique_lock<std::mutex> l(current_model_versions_mutex_);
         current_model_versions_[model_name] = model_version;
       } else {
         clipper::log_error_formatted(
             LOGGING_TAG_QUERY_FRONTEND,
-            "Found model {} with invalid version number {}.", model_name,
+            "Found model {} with invalid version {}.", model_name,
             model_version);
         throw std::runtime_error("Invalid model version number");
       }
-      model_names_with_version.push_back(model_name + "@v" +
-                                         std::to_string(model_version));
+      model_names_with_version.push_back(model_name + "@v" + model_version);
     }
     if (model_names.size() > 0) {
       clipper::log_info_formatted(LOGGING_TAG_QUERY_FRONTEND,
@@ -495,7 +494,7 @@ class RequestHandler {
   /**
    * Returns a copy of the map containing current model names and versions.
    */
-  std::unordered_map<std::string, int> get_current_model_versions() {
+  std::unordered_map<std::string, std::string> get_current_model_versions() {
     return current_model_versions_;
   }
 
@@ -505,7 +504,7 @@ class RequestHandler {
   redox::Redox redis_connection_;
   redox::Subscriber redis_subscriber_;
   std::mutex current_model_versions_mutex_;
-  std::unordered_map<std::string, int> current_model_versions_;
+  std::unordered_map<std::string, std::string> current_model_versions_;
 };
 
 }  // namespace query_frontend

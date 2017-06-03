@@ -85,14 +85,14 @@ const std::string GET_APPLICATION_REQUESTS_SCHEMA = R"(
 const std::string GET_MODEL_REQUESTS_SCHEMA = R"(
   {
     "model_name" := string,
-    "model_version" := int
+    "model_version" := string
   }
 )";
 
 const std::string GET_CONTAINER_REQUESTS_SCHEMA = R"(
   {
     "model_name" := string,
-    "model_version" := int,
+    "model_version" := string,
     "replica_id" := int
   }
 )";
@@ -100,7 +100,7 @@ const std::string GET_CONTAINER_REQUESTS_SCHEMA = R"(
 const std::string ADD_MODEL_JSON_SCHEMA = R"(
   {
    "model_name" := string,
-   "model_version" := int,
+   "model_version" := string,
    "labels" := [string],
    "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
    "container_name" := string,
@@ -111,7 +111,7 @@ const std::string ADD_MODEL_JSON_SCHEMA = R"(
 const std::string SET_VERSION_JSON_SCHEMA = R"(
   {
    "model_name" := string,
-   "model_version" := int,
+   "model_version" := string,
   }
 )";
 
@@ -209,14 +209,14 @@ class RequestHandler {
             rapidjson::Document d;
             parse_json(request->content.string(), d);
             std::string model_name = get_string(d, "model_name");
-            int new_model_version = get_int(d, "model_version");
+            std::string new_model_version = get_string(d, "model_version");
 
             bool success = set_model_version(model_name, new_model_version);
             if (success) {
               respond_http("SUCCESS", "200 OK", response);
             } else {
               std::string err_msg = "ERROR: Version " +
-                                    std::to_string(new_model_version) +
+                                    new_model_version +
                                     " does not exist for model " + model_name;
               respond_http(err_msg, "400 Bad Request", response);
             }
@@ -446,7 +446,7 @@ class RequestHandler {
    * JSON format:
    * {
    *  "model_name" := string,
-   *  "model_version" := int,
+   *  "model_version" := string,
    *  "labels" := [string]
    *  "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
    *  "container_name" := string,
@@ -458,7 +458,7 @@ class RequestHandler {
     parse_json(json, d);
 
     VersionedModelId model_id = std::make_pair(get_string(d, "model_name"),
-                                               get_int(d, "model_version"));
+                                               get_string(d, "model_version"));
     std::vector<std::string> labels = get_string_array(d, "labels");
     InputType input_type =
         clipper::parse_input_type(get_string(d, "input_type"));
@@ -634,7 +634,7 @@ class RequestHandler {
    * JSON format:
    * {
    *  "model_name" := string,
-   *  "model_version" := int,
+   *  "model_version" := string,
    * }
    *
    * \return Returns a JSON string encoding a map of the specified model's
@@ -647,7 +647,7 @@ class RequestHandler {
     parse_json(json, d);
 
     std::string model_name = get_string(d, "model_name");
-    int model_version = get_int(d, "model_version");
+    std::string model_version = get_string(d, "model_version");
     VersionedModelId model = std::make_pair(model_name, model_version);
 
     std::unordered_map<std::string, std::string> model_metadata =
@@ -732,7 +732,7 @@ class RequestHandler {
    * JSON format:
    * {
    *  "model_name" := string,
-   *  "model_version" := int,
+   *  "model_version" := string,
    *  "replica_id" := int
    * }
    *
@@ -745,7 +745,7 @@ class RequestHandler {
     parse_json(json, d);
 
     std::string model_name = get_string(d, "model_name");
-    int model_version = get_int(d, "model_version");
+    std::string model_version = get_string(d, "model_version");
     int replica_id = get_int(d, "replica_id");
     VersionedModelId model = std::make_pair(model_name, model_version);
 
@@ -794,8 +794,8 @@ class RequestHandler {
   }
 
   bool set_model_version(const string& model_name,
-                         const int new_model_version) {
-    std::vector<int> versions =
+                         const string& new_model_version) {
+    std::vector<std::string> versions =
         clipper::redis::get_model_versions(redis_connection_, model_name);
     bool version_exists = false;
     for (auto v : versions) {

@@ -91,9 +91,9 @@ std::string models_to_str(const std::vector<VersionedModelId>& models);
 std::vector<VersionedModelId> str_to_models(const std::string& model_str);
 
 bool set_current_model_version(redox::Redox& redis,
-                               const std::string& model_name, int version);
+                               const std::string& model_name, const std::string& version);
 
-int get_current_model_version(redox::Redox& redis,
+std::string get_current_model_version(redox::Redox& redis,
                               const std::string& model_name);
 
 /**
@@ -142,7 +142,7 @@ std::unordered_map<std::string, std::string> get_model(
  * \return Returns a list of model versions. If the
  * model was not found, an empty list will be returned.
  */
-std::vector<int> get_model_versions(redox::Redox& redis,
+std::vector<std::string> get_model_versions(redox::Redox& redis,
                                     const std::string& model_name);
 
 /**

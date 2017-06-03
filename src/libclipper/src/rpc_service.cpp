@@ -246,14 +246,14 @@ void RPCService::receive_message(
         log_info(LOGGING_TAG_RPC, "New container connected");
         std::string name(static_cast<char *>(model_name.data()),
                          model_name.size());
-        std::string version_str(static_cast<char *>(model_version.data()),
+        std::string version(static_cast<char *>(model_version.data()),
                                 model_version.size());
         std::string input_type_str(static_cast<char *>(model_input_type.data()),
                                    model_input_type.size());
 
         InputType input_type =
             static_cast<InputType>(std::stoi(input_type_str));
-        int version = std::stoi(version_str);
+
         VersionedModelId model = std::make_pair(name, version);
         log_info(LOGGING_TAG_RPC, "Container added");
 

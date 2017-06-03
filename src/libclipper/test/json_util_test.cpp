@@ -182,7 +182,7 @@ TEST(JsonUtilTests, TestParseCandidateModels) {
   }
   )";
   std::vector<clipper::VersionedModelId> expected_models = {
-      {"sklearn_svm", 1}, {"sklearn_svm", 2}, {"network", 3}};
+      {"sklearn_svm", "1"}, {"sklearn_svm", "2"}, {"network", "3"}};
 
   rapidjson::Document d;
   parse_json(correct_json, d);
@@ -280,7 +280,7 @@ TEST_F(RedisToJsonTest, TestRedisAppMetadataToJson) {
 TEST_F(RedisToJsonTest, TestRedisModelMetadataToJson) {
   std::vector<std::string> labels{"ads", "images", "experimental", "other",
                                   "labels"};
-  VersionedModelId model = std::make_pair("m", 1);
+  VersionedModelId model = std::make_pair("m", "1");
   std::string input_type = "doubles";
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
@@ -295,7 +295,7 @@ TEST_F(RedisToJsonTest, TestRedisModelMetadataToJson) {
 
   ASSERT_EQ(get_string(d, "input_type"), input_type);
   ASSERT_EQ(get_string(d, "model_name"), model.first);
-  ASSERT_EQ(get_int(d, "model_version"), model.second);
+  ASSERT_EQ(get_string(d, "model_version"), model.second);
   ASSERT_EQ(get_string(d, "input_type"), input_type);
   ASSERT_EQ(get_string_array(d, "labels"), labels);
   ASSERT_EQ(get_string(d, "container_name"), container_name);
@@ -303,7 +303,7 @@ TEST_F(RedisToJsonTest, TestRedisModelMetadataToJson) {
 }
 
 TEST_F(RedisToJsonTest, TestRedisContainerMetadataToJson) {
-  VersionedModelId model = std::make_pair("m", 1);
+  VersionedModelId model = std::make_pair("m", "1");
   int replica_id = 4;
   int zmq_connection_id = 12;
   std::string input_type = "doubles";
@@ -316,7 +316,7 @@ TEST_F(RedisToJsonTest, TestRedisContainerMetadataToJson) {
   redis_container_metadata_to_json(d, container_metadata);
 
   ASSERT_EQ(get_string(d, "model_name"), model.first);
-  ASSERT_EQ(get_int(d, "model_version"), model.second);
+  ASSERT_EQ(get_string(d, "model_version"), model.second);
   ASSERT_EQ(get_string(d, "input_type"), input_type);
   ASSERT_EQ(get_int(d, "model_replica_id"), replica_id);
   ASSERT_EQ(get_string(d, "model_id"), gen_versioned_model_key(model));

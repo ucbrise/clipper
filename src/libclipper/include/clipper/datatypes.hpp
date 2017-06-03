@@ -11,7 +11,7 @@
 namespace clipper {
 
 using ByteBuffer = std::vector<uint8_t>;
-using VersionedModelId = std::pair<std::string, int>;
+using VersionedModelId = std::pair<std::string, std::string>;
 using QueryId = long;
 using FeedbackAck = bool;
 
