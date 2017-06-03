@@ -129,7 +129,7 @@ class Clipper:
                         '--redis_port=%d' % self.redis_port
                     ],
                     'image':
-                    'clipper/management_frontend:0.1',
+                    'clipper/management_frontend:latest',
                     'ports': [
                         '%d:%d' % (CLIPPER_MANAGEMENT_PORT,
                                    CLIPPER_MANAGEMENT_PORT)
@@ -145,7 +145,7 @@ class Clipper:
                     ],
                     'depends_on': ['mgmt_frontend'],
                     'image':
-                    'clipper/query_frontend:0.1',
+                    'clipper/query_frontend:latest',
                     'ports': [
                         '%d:%d' % (CLIPPER_RPC_PORT, CLIPPER_RPC_PORT),
                         '%d:%d' % (CLIPPER_QUERY_PORT, CLIPPER_QUERY_PORT)
@@ -624,7 +624,6 @@ class Clipper:
                 "example_model",
                 1,
                 centered_predict,
-                ["example"],
                 "doubles",
                 num_containers=1)
         """
@@ -680,8 +679,8 @@ class Clipper:
 
         # Deploy function
         deploy_result = self.deploy_model(name, version, serialization_dir,
-                                          default_python_container, labels,
-                                          input_type, num_containers)
+                                          default_python_container, 
+                                          input_type, labels, num_containers)
         # Remove temp files
         shutil.rmtree(serialization_dir)
 

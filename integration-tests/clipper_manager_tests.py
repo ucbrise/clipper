@@ -8,7 +8,7 @@ from sklearn import svm
 from argparse import ArgumentParser
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath('%s/../' % cur_dir))
-import clipper_manager
+from clipper_admin import clipper_manager
 import random
 import socket
 """
@@ -41,6 +41,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
     def setUpClass(self):
         self.clipper_inst = clipper_manager.Clipper(
             "localhost", redis_port=find_unbound_port())
+        self.clipper_inst.stop_all()
         self.clipper_inst.start()
         self.app_name = "app1"
         self.model_name = "m1"
@@ -153,11 +154,14 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
     def test_remove_inactive_containers_succeeds(self):
         # Initialize a support vector classifier 
         # that will be deployed to a no-op container
+        self.clipper_inst.stop_all()
+        self.clipper_inst.start()
         model_data = svm.SVC()
         container_name = "clipper/noop-container"
         input_type = "doubles"
+        model_name = "remove_inactive_test_model"
         result = self.clipper_inst.deploy_model(
-            self.deploy_model_name,
+            model_name,
             1,
             model_data,
             container_name,
@@ -167,10 +171,12 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         running_containers_output = self.clipper_inst._execute_standard(
             "docker ps -q --filter \"ancestor=clipper/noop-container\"")
         self.assertIsNotNone(running_containers_output)
-        self.assertEqual(len(running_containers_output), 2)
+        num_running_containers = running_containers_output.split("\n")
+        print("RUNNING CONTAINERS: %s" % str(num_running_containers))
+        self.assertEqual(len(num_running_containers), 2)
 
         result = self.clipper_inst.deploy_model(
-            self.deploy_model_name,
+            model_name,
             2,
             model_data,
             container_name,
@@ -180,15 +186,17 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         running_containers_output = self.clipper_inst._execute_standard(
             "docker ps -q --filter \"ancestor=clipper/noop-container\"")
         self.assertIsNotNone(running_containers_output)
-        self.assertEqual(len(running_containers_output), 5)
+        num_running_containers = running_containers_output.split("\n")
+        self.assertEqual(len(num_running_containers), 5)
 
         num_containers_removed = self.clipper_inst.remove_inactive_containers(
-            self.deploy_model_name)
+            model_name)
         self.assertEqual(num_containers_removed, 2)
         running_containers_output = self.clipper_inst._execute_standard(
             "docker ps -q --filter \"ancestor=clipper/noop-container\"")
         self.assertIsNotNone(running_containers_output)
-        self.assertEqual(len(running_containers_output), 3)
+        num_running_containers = running_containers_output.split("\n")
+        self.assertEqual(len(num_running_containers), 3)
 
     def test_predict_function_deploys_successfully(self):
         model_name = "m2"
@@ -212,6 +220,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
     def setUpClass(self):
         self.clipper_inst = clipper_manager.Clipper(
             "localhost", redis_port=find_unbound_port())
+        self.clipper_inst.stop_all()
         self.clipper_inst.start()
         self.app_name_1 = "app3"
         self.app_name_2 = "app4"
@@ -249,7 +258,8 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         req_json = json.dumps({'input': test_input})
         headers = {'Content-type': 'application/json'}
         response = requests.post(url, headers=headers, data=req_json)
-        parsed_response = json.loads(response.text)
+        parsed_response = response.json()
+        print(parsed_response)
         self.assertNotEqual(parsed_response["output"], self.default_output)
         self.assertFalse(parsed_response["default"])
 
@@ -270,7 +280,8 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         headers = {'Content-type': 'application/json'}
         for i in range(0, 40):
             response = requests.post(url, headers=headers, data=req_json)
-            parsed_response = json.loads(response.text)
+            parsed_response = response.json()
+            print(parsed_response)
             output = parsed_response["output"]
             if output == self.default_output:
                 time.sleep(20)

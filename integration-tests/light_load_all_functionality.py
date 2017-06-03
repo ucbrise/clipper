@@ -5,8 +5,8 @@ import requests
 import json
 import numpy as np
 cur_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.abspath('%s/../clipper_admin/' % cur_dir))
-import clipper_manager as cm
+sys.path.insert(0, os.path.abspath('%s/../' % cur_dir))
+from clipper_admin import clipper_manager as cm
 import time
 import subprocess32 as subprocess
 import pprint
