@@ -5,8 +5,8 @@ import requests
 import json
 import numpy as np
 cur_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.abspath('%s/../clipper_admin/' % cur_dir))
-import clipper_manager as cm
+sys.path.insert(0, os.path.abspath("%s/.." % cur_dir))
+from clipper_admin import Clipper
 import time
 import subprocess32 as subprocess
 import pprint
@@ -48,7 +48,7 @@ def find_unbound_port():
 
 
 def init_clipper():
-    clipper = cm.Clipper("localhost", redis_port=find_unbound_port())
+    clipper = Clipper("localhost", redis_port=find_unbound_port())
     clipper.start()
     time.sleep(1)
     return clipper
@@ -148,6 +148,6 @@ if __name__ == "__main__":
         else:
             clipper.stop_all()
     except:
-        clipper = cm.Clipper("localhost")
+        clipper = Clipper("localhost")
         clipper.stop_all()
         sys.exit(1)

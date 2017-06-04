@@ -123,15 +123,18 @@ function run_frontend_tests {
 function run_integration_tests {
   echo -e "\nRunning integration tests\n\n"
   cd $DIR
-  python ../integration-tests/light_load_all_functionality.py 2 3
-  if [ -z "$SPARK_HOME" ] then
+  if [ -z ${SPARK_HOME+x} ]; then
+    echo "Downloading Spark"
     curl -o spark.tgz https://d3kbcqa49mib13.cloudfront.net/spark-2.1.1-bin-hadoop2.7.tgz
     tar zxf spark.tgz && mv spark-2.1.1-bin-hadoop2.7 spark
     export SPARK_HOME=`pwd`/spark
+  else
+    echo "Found Spark at $SPARK_HOME"
   fi
   pip install findspark
   python ../integration-tests/deploy_pyspark_models.py
   python ../integration-tests/deploy_pyspark_pipeline_models.py
+  python ../integration-tests/light_load_all_functionality.py 2 3
 }
 
 function run_all_tests {
