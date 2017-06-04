@@ -88,7 +88,7 @@ def predict(spark, model, xs):
 def deploy_and_test_model(sc, clipper, model, version):
     clipper.deploy_pyspark_model(model_name, version, predict, model, sc,
                                  ["a"], "ints")
-    time.sleep(10)
+    time.sleep(25)
     num_preds = 25
     num_defaults = 0
     for i in range(num_preds):
@@ -172,7 +172,7 @@ if __name__ == "__main__":
             deploy_and_test_model(sc, clipper, svm_model, version)
         except BenchmarkException as e:
             print(e)
-            # clipper.stop_all()
+            clipper.stop_all()
             spark.stop()
             sys.exit(1)
         else:
