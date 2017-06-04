@@ -8,12 +8,12 @@ from sklearn import svm
 from argparse import ArgumentParser
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath('%s/../' % cur_dir))
-from clipper_admin import clipper_manager
+from clipper_admin.clipper_manager import Clipper
 import random
 import socket
 """
 Executes a test suite consisting of two separate cases: short tests and long tests.
-Before each case, an instance of clipper_manager.Clipper is created. Tests
+Before each case, an instance of Clipper is created. Tests
 are then performed by invoking methods on this instance, often resulting
 in the execution of docker commands.
 """
@@ -39,7 +39,7 @@ def find_unbound_port():
 class ClipperManagerTestCaseShort(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        self.clipper_inst = clipper_manager.Clipper(
+        self.clipper_inst = Clipper(
             "localhost", redis_port=find_unbound_port())
         self.clipper_inst.stop_all()
         self.clipper_inst.start()
@@ -218,7 +218,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
 class ClipperManagerTestCaseLong(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        self.clipper_inst = clipper_manager.Clipper(
+        self.clipper_inst = Clipper(
             "localhost", redis_port=find_unbound_port())
         self.clipper_inst.stop_all()
         self.clipper_inst.start()
