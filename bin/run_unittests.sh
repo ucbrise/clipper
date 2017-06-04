@@ -144,14 +144,13 @@ function run_all_tests {
   redis-cli -p $REDIS_PORT "flushall"
   run_management_tests
   redis-cli -p $REDIS_PORT "flushall"
-  sleep 5
-  run_clipper_admin_tests
+  run_integration_tests
   redis-cli -p $REDIS_PORT "flushall"
   run_jvm_container_tests
   redis-cli -p $REDIS_PORT "flushall"
   run_rpc_container_tests
   redis-cli -p $REDIS_PORT "flushall"
-  run_integration_tests
+  run_clipper_admin_tests
 }
 
 if [ "$#" == 0 ]
