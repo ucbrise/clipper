@@ -549,11 +549,7 @@ class Clipper:
                 for r in range(num_containers)
             ])
 
-    def register_external_model(self,
-                                name,
-                                version,
-                                input_type,
-                                labels=[]):
+    def register_external_model(self, name, version, input_type, labels=[]):
         """Registers a model with Clipper without deploying it in any containers.
 
         Parameters
