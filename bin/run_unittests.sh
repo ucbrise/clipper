@@ -125,6 +125,7 @@ function run_integration_tests {
   cd $DIR
   python ../integration-tests/light_load_all_functionality.py 2 3
   python ../integration-tests/deploy_pyspark_models.py
+  python ../integration-tests/deploy_pyspark_pipeline_models.py
 }
 
 function run_all_tests {

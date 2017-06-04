@@ -20,8 +20,9 @@ import pyspark
 from pyspark import SparkConf, SparkContext
 from pyspark.mllib.classification import LogisticRegressionWithSGD
 from pyspark.mllib.classification import SVMWithSGD
-from pyspark.mllib.tree import RandomForestModel
+from pyspark.mllib.tree import RandomForest
 from pyspark.mllib.regression import LabeledPoint
+from pyspark.sql import SparkSession
 
 
 headers = {'Content-type': 'application/json'}
@@ -79,7 +80,7 @@ def parseData(line, obj, pos_label):
     # return LabeledPoint(obj(int(fields[0]), pos_label), [float(v)/255.0 for v in fields[1:]])
     return LabeledPoint(obj(int(fields[0]), pos_label), normalize(np.array(fields[1:])))
 
-def predict(sc, model, xs):
+def predict(spark, model, xs):
     return [str(model.predict(normalize(x))) for x in xs]
 
 
@@ -111,16 +112,16 @@ def train_svm(trainRDD):
 
 
 def train_random_forest(trainRDD, num_trees, max_depth):
-    return RandomForest.trainClassifier(trainRDD, 2, {}, num_trees, maxDepth=depth)
+    return RandomForest.trainClassifier(trainRDD, 2, {}, num_trees, maxDepth=max_depth)
 
 if __name__ == "__main__":
     pos_label = 3
-    conf = SparkConf() \
-        .setAppName("crankshaw-pyspark") \
-        .set("spark.executor.memory", "2g") \
-        .set("master", "local")
     try:
-        sc = SparkContext(conf=conf, batchSize=10)
+        spark = SparkSession\
+                .builder\
+                .appName("clipper-pyspark")\
+                .getOrCreate()
+        sc = spark.sparkContext
         clipper = init_clipper()
 
         train_path = "/Users/crankshaw/code/amplab/model-serving/data/mnist_data/train.data"
@@ -156,12 +157,14 @@ if __name__ == "__main__":
         except BenchmarkException as e:
             print(e)
             clipper.stop_all()
-            sc.stop()
+            spark.stop()
             sys.exit(1)
         else:
-            sc.stop()
+            spark.stop()
             clipper.stop_all()
-    except:
+            print("ALL TESTS PASSED")
+    except Exception as e:
+        print(e)
         clipper = Clipper("localhost")
         clipper.stop_all()
         sys.exit(1)

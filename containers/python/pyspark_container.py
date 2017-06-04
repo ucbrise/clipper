@@ -14,6 +14,7 @@ import findspark
 findspark.init()
 import pyspark
 from pyspark import SparkConf, SparkContext
+from pyspark.sql import SparkSession
 import importlib
 
 IMPORT_ERROR_RETURN_CODE = 3
@@ -23,7 +24,7 @@ def load_predict_func(file_path):
     with open(file_path, 'r') as serialized_func_file:
         return cloudpickle.load(serialized_func_file)
 
-def load_pyspark_model(metadata_path, sc, model_path):
+def load_pyspark_model(metadata_path, spark, model_path):
     with open(metadata_path, "r") as metadata:
         metadata = json.load(metadata)
         if "model_class" not in metadata:
@@ -36,7 +37,10 @@ def load_pyspark_model(metadata_path, sc, model_path):
         module = ".".join(splits[:-1])
         class_name = splits[-1]
         ModelClass = getattr(importlib.import_module(module), class_name)
-        model = ModelClass.load(sc, model_path)
+        if type(ModelClass) is pyspark.ml.Pipeline:
+            model = modelClass.load(model_path)
+        else:
+            model = ModelClass.load(spark.sparkContext, model_path)
     return model
 
 
@@ -47,50 +51,48 @@ class PySparkContainer(rpc.ModelContainerBase):
         predict_path = "{dir}/{predict_fname}".format(
             dir=path, predict_fname=predict_fname)
         self.predict_func = load_predict_func(predict_path)
-
-        conf = SparkConf() \
-            .setAppName("clipper-pyspark-container") \
-            .set("master", "local")
-            # .set("spark.executor.memory", "2g") \
-        self.sc = SparkContext(conf=conf)
+        self.spark = SparkSession\
+            .builder\
+            .appName("clipper-pyspark")\
+            .getOrCreate()
         metadata_path = os.path.join(path, "metadata.json")
         spark_model_path = os.path.join(path, "pyspark_model_data")
-        self.model = load_pyspark_model(metadata_path, self.sc, spark_model_path)
+        self.model = load_pyspark_model(metadata_path, self.spark, spark_model_path)
 
 
     def predict_ints(self, inputs):
         if self.input_type != rpc.INPUT_TYPE_INTS:
             self._log_incorrect_input_type(rpc.INPUT_TYPE_INTS)
             return
-        preds = self.predict_func(self.sc, self.model, inputs)
+        preds = self.predict_func(self.spark, self.model, inputs)
         return [str(p) for p in preds]
 
     def predict_floats(self, inputs):
         if self.input_type != rpc.INPUT_TYPE_FLOATS:
             self._log_incorrect_input_type(rpc.INPUT_TYPE_FLOATS)
             return
-        preds = self.predict_func(self.sc, self.model, inputs)
+        preds = self.predict_func(self.spark, self.model, inputs)
         return [str(p) for p in preds]
 
     def predict_doubles(self, inputs):
         if self.input_type != rpc.INPUT_TYPE_DOUBLES:
             self._log_incorrect_input_type(rpc.INPUT_TYPE_DOUBLES)
             return
-        preds = self.predict_func(self.sc, self.model, inputs)
+        preds = self.predict_func(self.spark, self.model, inputs)
         return [str(p) for p in preds]
 
     def predict_bytes(self, inputs):
         if self.input_type != rpc.INPUT_TYPE_BYTES:
             self._log_incorrect_input_type(rpc.INPUT_TYPE_BYTES)
             return
-        preds = self.predict_func(self.sc, self.model, inputs)
+        preds = self.predict_func(self.spark, self.model, inputs)
         return [str(p) for p in preds]
 
     def predict_strings(self, inputs):
         if self.input_type != rpc.INPUT_TYPE_STRINGS:
             self._log_incorrect_input_type(rpc.INPUT_TYPE_STRINGS)
             return
-        preds = self.predict_func(self.sc, self.model, inputs)
+        preds = self.predict_func(self.spark, self.model, inputs)
         return [str(p) for p in preds]
 
     def _log_incorrect_input_type(self, input_type):

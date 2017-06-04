@@ -594,7 +594,7 @@ class Clipper:
             predict function each time it is called.
         sc : SparkContext
             The SparkContext associated with the model. This is needed
-            to save the model.
+            to save the model for pyspark.mllib models.
         labels : list of str
             A set of strings annotating the model
         input_type : str
@@ -635,7 +635,14 @@ class Clipper:
         # save Spark model
         spark_model_save_loc = os.path.join(serialization_dir, "pyspark_model_data")
         try:
-            pyspark_model.save(sc, spark_model_save_loc)
+            # we only import pyspark here so that if the caller of the library does
+            # not want to use this function, clipper_manager does not have a dependency
+            # on pyspark
+            import pyspark
+            if isinstance(pyspark_model, pyspark.ml.Pipeline):
+                pyspark_model.save(spark_model_save_loc)
+            else:
+                pyspark_model.save(sc, spark_model_save_loc)
         except Exception as e:
             print("Error saving spark model: %s" % e)
             raise e
