@@ -125,8 +125,10 @@ def train_random_forest(trainRDD, num_trees, max_depth):
     return RandomForest.trainClassifier(
         trainRDD, 2, {}, num_trees, maxDepth=max_depth)
 
+
 def get_test_point():
     return [np.random.randint(255) for _ in range(784)]
+
 
 if __name__ == "__main__":
     pos_label = 3
