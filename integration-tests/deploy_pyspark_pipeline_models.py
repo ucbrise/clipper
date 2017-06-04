@@ -70,13 +70,13 @@ def json_to_dataframe(spark_session, xs):
 
 
 def predict(spark, pipeline, xs):
-    df = json_to_dataframe(xs)
+    df = json_to_dataframe(spark, xs)
     preds = pipeline.transform(df)
     selected = preds.select("probability", "prediction")
     outputs = []
     for row in selected.collect():
         prob, prediction = row
-        outputs.append(json.dumps({"prob": prob, "prediction": prediction}))
+        outputs.append(json.dumps({"prob": str(prob), "prediction": prediction}))
     return outputs
 
 
@@ -117,11 +117,14 @@ if __name__ == "__main__":
         rid, text, prob, prediction = row
         print("(%d, %s) --> prob=%s, prediction=%f" % (rid, text, str(prob), prediction))
 
+    # test predict function
+    print(predict(spark, model, [json.dumps((np.random.randint(1000), "spark abcd"))]))
+
     try:
         clipper = init_clipper()
 
         try:
-            clipper.register_application(app_name, model_name, "strings", "default_pred", 100000)
+            clipper.register_application(app_name, model_name, "strings", "default_pred", 10000000)
             time.sleep(1)
             response = requests.post(
                 "http://localhost:1337/%s/predict" % app_name,
@@ -141,7 +144,7 @@ if __name__ == "__main__":
                 response = requests.post(
                     "http://localhost:1337/%s/predict" % app_name,
                     headers=headers,
-                    data=json.dumps({'input': list(test_data[np.random.randint(len(test_data))])}))
+                    data=json.dumps({'input': json.dumps((np.random.randint(1000), "spark abcd"))}))
                 result = response.json()
                 if response.status_code == requests.codes.ok and result["default"] == True:
                     num_defaults += 1
@@ -161,7 +164,7 @@ if __name__ == "__main__":
                 response = requests.post(
                     "http://localhost:1337/%s/predict" % app_name,
                     headers=headers,
-                    data=json.dumps({'input': list(test_data[np.random.randint(len(test_data))])}))
+                    data=json.dumps({'input': json.dumps((np.random.randint(1000), "spark abcd"))}))
                 result = response.json()
                 if response.status_code == requests.codes.ok and result["default"] == True:
                     num_defaults += 1
@@ -175,10 +178,10 @@ if __name__ == "__main__":
         except BenchmarkException as e:
             print(e)
             clipper.stop_all()
-            sc.stop()
+            spark.stop()
             sys.exit(1)
         else:
-            sc.stop()
+            spark.stop()
             clipper.stop_all()
             print("ALL TESTS PASSED")
 

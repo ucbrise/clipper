@@ -37,8 +37,8 @@ def load_pyspark_model(metadata_path, spark, model_path):
         module = ".".join(splits[:-1])
         class_name = splits[-1]
         ModelClass = getattr(importlib.import_module(module), class_name)
-        if type(ModelClass) is pyspark.ml.Pipeline:
-            model = modelClass.load(model_path)
+        if model_class == "pyspark.ml.pipeline.PipelineModel":
+            model = ModelClass.load(model_path)
         else:
             model = ModelClass.load(spark.sparkContext, model_path)
     return model

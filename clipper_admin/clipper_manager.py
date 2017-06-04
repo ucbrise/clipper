@@ -639,7 +639,7 @@ class Clipper:
             # not want to use this function, clipper_manager does not have a dependency
             # on pyspark
             import pyspark
-            if isinstance(pyspark_model, pyspark.ml.Pipeline):
+            if isinstance(pyspark_model, pyspark.ml.pipeline.PipelineModel):
                 pyspark_model.save(spark_model_save_loc)
             else:
                 pyspark_model.save(sc, spark_model_save_loc)
