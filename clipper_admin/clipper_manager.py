@@ -556,7 +556,6 @@ class Clipper:
                 "See http://clipper.ai/documentation/python_model_deployment/ for more information."
             )
 
-
         # Write out function serialization
         func_file_path = os.path.join(serialization_dir, predict_fname)
         with open(func_file_path, "w") as serialized_function_file:
