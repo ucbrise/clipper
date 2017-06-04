@@ -24,6 +24,7 @@ def load_predict_func(file_path):
     with open(file_path, 'r') as serialized_func_file:
         return cloudpickle.load(serialized_func_file)
 
+
 def load_pyspark_model(metadata_path, spark, model_path):
     with open(metadata_path, "r") as metadata:
         metadata = json.load(metadata)
@@ -57,8 +58,8 @@ class PySparkContainer(rpc.ModelContainerBase):
             .getOrCreate()
         metadata_path = os.path.join(path, "metadata.json")
         spark_model_path = os.path.join(path, "pyspark_model_data")
-        self.model = load_pyspark_model(metadata_path, self.spark, spark_model_path)
-
+        self.model = load_pyspark_model(metadata_path, self.spark,
+                                        spark_model_path)
 
     def predict_ints(self, inputs):
         if self.input_type != rpc.INPUT_TYPE_INTS:

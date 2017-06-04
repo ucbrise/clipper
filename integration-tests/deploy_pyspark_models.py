@@ -13,7 +13,6 @@ import pprint
 import random
 import socket
 
-
 import findspark
 findspark.init()
 import pyspark
@@ -23,7 +22,6 @@ from pyspark.mllib.classification import SVMWithSGD
 from pyspark.mllib.tree import RandomForest
 from pyspark.mllib.regression import LabeledPoint
 from pyspark.sql import SparkSession
-
 
 headers = {'Content-type': 'application/json'}
 app_name = "pyspark_test"
@@ -75,17 +73,21 @@ def objective(y, pos_label):
     else:
         return 0
 
+
 def parseData(line, obj, pos_label):
     fields = line.strip().split(',')
     # return LabeledPoint(obj(int(fields[0]), pos_label), [float(v)/255.0 for v in fields[1:]])
-    return LabeledPoint(obj(int(fields[0]), pos_label), normalize(np.array(fields[1:])))
+    return LabeledPoint(
+        obj(int(fields[0]), pos_label), normalize(np.array(fields[1:])))
+
 
 def predict(spark, model, xs):
     return [str(model.predict(normalize(x))) for x in xs]
 
 
 def deploy_and_test_model(sc, clipper, model, version, test_data):
-    clipper.deploy_pyspark_model(model_name, version, predict, model, sc, ["a"], "ints")
+    clipper.deploy_pyspark_model(model_name, version, predict, model, sc,
+                                 ["a"], "ints")
     time.sleep(10)
     num_preds = 25
     num_defaults = 0
@@ -93,7 +95,10 @@ def deploy_and_test_model(sc, clipper, model, version, test_data):
         response = requests.post(
             "http://localhost:1337/%s/predict" % app_name,
             headers=headers,
-            data=json.dumps({'input': list(test_data[np.random.randint(len(test_data))])}))
+            data=json.dumps({
+                'input':
+                list(test_data[np.random.randint(len(test_data))])
+            }))
         result = response.json()
         if response.status_code == requests.codes.ok and result["default"] == True:
             num_defaults += 1
@@ -104,15 +109,19 @@ def deploy_and_test_model(sc, clipper, model, version, test_data):
         raise BenchmarkException("Error querying APP %s, MODEL %s:%d" %
                                  (app_name, model_name, version))
 
+
 def train_logistic_regression(trainRDD):
     return LogisticRegressionWithSGD.train(trainRDD, iterations=10)
+
 
 def train_svm(trainRDD):
     return SVMWithSGD.train(trainRDD)
 
 
 def train_random_forest(trainRDD, num_trees, max_depth):
-    return RandomForest.trainClassifier(trainRDD, 2, {}, num_trees, maxDepth=max_depth)
+    return RandomForest.trainClassifier(
+        trainRDD, 2, {}, num_trees, maxDepth=max_depth)
+
 
 if __name__ == "__main__":
     pos_label = 3
@@ -125,19 +134,27 @@ if __name__ == "__main__":
         clipper = init_clipper()
 
         train_path = "/Users/crankshaw/code/amplab/model-serving/data/mnist_data/train.data"
-        trainRDD = sc.textFile(train_path).map(lambda line: parseData(line, objective, pos_label)).cache()
+        trainRDD = sc.textFile(train_path).map(
+            lambda line: parseData(line, objective, pos_label)).cache()
 
         test_path = "/Users/crankshaw/code/amplab/model-serving/data/mnist_data/test.data"
         with open(test_path, "r") as test_file:
-            test_data = [np.array(l.strip().split(",")[1:]).astype(np.int) for l in test_file]
+            test_data = [
+                np.array(l.strip().split(",")[1:]).astype(np.int)
+                for l in test_file
+            ]
 
         try:
-            clipper.register_application(app_name, model_name, "ints", "default_pred", 100000)
+            clipper.register_application(app_name, model_name, "ints",
+                                         "default_pred", 100000)
             time.sleep(1)
             response = requests.post(
                 "http://localhost:1337/%s/predict" % app_name,
                 headers=headers,
-                data=json.dumps({'input': list(test_data[np.random.randint(len(test_data))])}))
+                data=json.dumps({
+                    'input':
+                    list(test_data[np.random.randint(len(test_data))])
+                }))
             result = response.json()
             if response.status_code != requests.codes.ok:
                 print("Error: %s" % response.text)
@@ -168,4 +185,3 @@ if __name__ == "__main__":
         clipper = Clipper("localhost")
         clipper.stop_all()
         sys.exit(1)
-

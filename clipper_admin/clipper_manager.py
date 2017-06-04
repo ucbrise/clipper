@@ -285,7 +285,8 @@ class Clipper:
             if local_path != remote_path:
                 if os.path.isdir(local_path):
                     # self._copytree(local_path, remote_path)
-                    remote_path = os.path.join(remote_path, os.path.basename(local_path))
+                    remote_path = os.path.join(remote_path,
+                                               os.path.basename(local_path))
                     # if remote_path exists, delete it because shutil.copytree requires
                     # that the dst path doesn't exist
                     if os.path.exists(remote_path):
@@ -626,14 +627,17 @@ class Clipper:
                 num_containers=1)
         """
 
-        model_class = re.search("pyspark.*'", str(type(pyspark_model))).group(0).strip("'")
+        model_class = re.search("pyspark.*'",
+                                str(type(pyspark_model))).group(0).strip("'")
         if model_class is None:
-            raise ClipperManagerException( "pyspark_model argument was not a pyspark object")
+            raise ClipperManagerException(
+                "pyspark_model argument was not a pyspark object")
 
         # save predict function
         serialization_dir = self._save_python_function(name, predict_function)
         # save Spark model
-        spark_model_save_loc = os.path.join(serialization_dir, "pyspark_model_data")
+        spark_model_save_loc = os.path.join(serialization_dir,
+                                            "pyspark_model_data")
         try:
             # we only import pyspark here so that if the caller of the library does
             # not want to use this function, clipper_manager does not have a dependency
@@ -646,26 +650,26 @@ class Clipper:
         except Exception as e:
             print("Error saving spark model: %s" % e)
             raise e
-        
+
         pyspark_container = "clipper/pyspark-container"
-        
+
         # extract the pyspark class name. This will be something like
         # pyspark.mllib.classification.LogisticRegressionModel
-        with open(os.path.join(serialization_dir, "metadata.json"), "w") as metadata_file:
+        with open(os.path.join(serialization_dir, "metadata.json"),
+                  "w") as metadata_file:
             json.dump({"model_class": model_class}, metadata_file)
 
         print("Spark model saved")
 
         # Deploy model
         deploy_result = self.deploy_model(name, version, serialization_dir,
-                                 pyspark_container, labels, input_type,
-                                 num_containers)
+                                          pyspark_container, labels,
+                                          input_type, num_containers)
 
         # Remove temp files
         shutil.rmtree(serialization_dir)
 
         return deploy_result
-
 
     def deploy_predict_function(self,
                                 name,
