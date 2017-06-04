@@ -85,7 +85,7 @@ def predict(spark, model, xs):
     return [str(model.predict(normalize(x))) for x in xs]
 
 
-def deploy_and_test_model(sc, clipper, model, version, test_data):
+def deploy_and_test_model(sc, clipper, model, version):
     clipper.deploy_pyspark_model(model_name, version, predict, model, sc,
                                  ["a"], "ints")
     time.sleep(10)
@@ -96,12 +96,15 @@ def deploy_and_test_model(sc, clipper, model, version, test_data):
             "http://localhost:1337/%s/predict" % app_name,
             headers=headers,
             data=json.dumps({
-                'input':
-                list(test_data[np.random.randint(len(test_data))])
+                'input': get_test_point()
             }))
         result = response.json()
         if response.status_code == requests.codes.ok and result["default"] == True:
             num_defaults += 1
+        elif response.status_code != requests.codes.ok:
+            print(result)
+            raise BenchmarkException(response.text)
+
     if num_defaults > 0:
         print("Error: %d/%d predictions were default" % (num_defaults,
                                                          num_preds))
@@ -122,6 +125,8 @@ def train_random_forest(trainRDD, num_trees, max_depth):
     return RandomForest.trainClassifier(
         trainRDD, 2, {}, num_trees, maxDepth=max_depth)
 
+def get_test_point():
+    return [np.random.randint(255) for _ in range(784)]
 
 if __name__ == "__main__":
     pos_label = 3
@@ -133,16 +138,9 @@ if __name__ == "__main__":
         sc = spark.sparkContext
         clipper = init_clipper()
 
-        train_path = "/Users/crankshaw/code/amplab/model-serving/data/mnist_data/train.data"
+        train_path = os.path.join(cur_dir, "data/train.data")
         trainRDD = sc.textFile(train_path).map(
             lambda line: parseData(line, objective, pos_label)).cache()
-
-        test_path = "/Users/crankshaw/code/amplab/model-serving/data/mnist_data/test.data"
-        with open(test_path, "r") as test_file:
-            test_data = [
-                np.array(l.strip().split(",")[1:]).astype(np.int)
-                for l in test_file
-            ]
 
         try:
             clipper.register_application(app_name, model_name, "ints",
@@ -152,8 +150,7 @@ if __name__ == "__main__":
                 "http://localhost:1337/%s/predict" % app_name,
                 headers=headers,
                 data=json.dumps({
-                    'input':
-                    list(test_data[np.random.randint(len(test_data))])
+                    'input': get_test_point()
                 }))
             result = response.json()
             if response.status_code != requests.codes.ok:
@@ -162,18 +159,18 @@ if __name__ == "__main__":
 
             version = 1
             lr_model = train_logistic_regression(trainRDD)
-            deploy_and_test_model(sc, clipper, lr_model, version, test_data)
+            deploy_and_test_model(sc, clipper, lr_model, version)
 
             version += 1
             svm_model = train_svm(trainRDD)
-            deploy_and_test_model(sc, clipper, svm_model, version, test_data)
+            deploy_and_test_model(sc, clipper, svm_model, version)
 
             version += 1
             rf_model = train_random_forest(trainRDD, 20, 16)
-            deploy_and_test_model(sc, clipper, svm_model, version, test_data)
+            deploy_and_test_model(sc, clipper, svm_model, version)
         except BenchmarkException as e:
             print(e)
-            clipper.stop_all()
+            # clipper.stop_all()
             spark.stop()
             sys.exit(1)
         else:
