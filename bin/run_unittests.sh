@@ -124,6 +124,12 @@ function run_integration_tests {
   echo -e "\nRunning integration tests\n\n"
   cd $DIR
   python ../integration-tests/light_load_all_functionality.py 2 3
+  if [ -z "$SPARK_HOME" ] then
+    curl -o spark.tgz https://d3kbcqa49mib13.cloudfront.net/spark-2.1.1-bin-hadoop2.7.tgz
+    tar zxf spark.tgz && mv spark-2.1.1-bin-hadoop2.7 spark
+    export SPARK_HOME=`pwd`/spark
+  fi
+  pip install findspark
   python ../integration-tests/deploy_pyspark_models.py
   python ../integration-tests/deploy_pyspark_pipeline_models.py
 }
