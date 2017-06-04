@@ -215,8 +215,7 @@ class RequestHandler {
             if (success) {
               respond_http("SUCCESS", "200 OK", response);
             } else {
-              std::string err_msg = "ERROR: Version " +
-                                    new_model_version +
+              std::string err_msg = "ERROR: Version " + new_model_version +
                                     " does not exist for model " + model_name;
               respond_http(err_msg, "400 Bad Request", response);
             }

@@ -145,8 +145,7 @@ std::vector<VersionedModelId> str_to_models(const std::string& model_str) {
         start +
         model_str.substr(start, end - start).find(ITEM_PART_CONCATENATOR);
     std::string model_name = model_str.substr(start, split - start);
-    std::string model_version =
-        model_str.substr(split + 1, end - split - 1);
+    std::string model_version = model_str.substr(split + 1, end - split - 1);
     models.push_back(std::make_pair(model_name, model_version));
     start = end + ITEM_DELIMITER.length();
     end = model_str.find(ITEM_DELIMITER, start);
@@ -163,7 +162,8 @@ std::vector<VersionedModelId> str_to_models(const std::string& model_str) {
 }
 
 bool set_current_model_version(redox::Redox& redis,
-                               const std::string& model_name, const std::string& version) {
+                               const std::string& model_name,
+                               const std::string& version) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_METADATA_DB_NUM)})) {
     std::string key = gen_model_current_version_key(model_name);
@@ -176,7 +176,7 @@ bool set_current_model_version(redox::Redox& redis,
 }
 
 std::string get_current_model_version(redox::Redox& redis,
-                              const std::string& model_name) {
+                                      const std::string& model_name) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_METADATA_DB_NUM)})) {
     std::string key = gen_model_current_version_key(model_name);
@@ -184,9 +184,9 @@ std::string get_current_model_version(redox::Redox& redis,
     if (result) {
       std::string version = *result;
       if (version.size() == 0) {
-        log_error_formatted(
-            LOGGING_TAG_REDIS,
-            "Versions cannot be empty string. Found version {}", version);
+        log_error_formatted(LOGGING_TAG_REDIS,
+                            "Versions cannot be empty string. Found version {}",
+                            version);
       } else {
         return version;
       }
@@ -250,7 +250,7 @@ unordered_map<string, string> get_model(Redox& redis,
 }
 
 std::vector<std::string> get_model_versions(redox::Redox& redis,
-                                    const std::string& model_name) {
+                                            const std::string& model_name) {
   std::vector<std::string> versions;
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {

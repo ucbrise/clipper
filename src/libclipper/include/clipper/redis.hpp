@@ -91,10 +91,11 @@ std::string models_to_str(const std::vector<VersionedModelId>& models);
 std::vector<VersionedModelId> str_to_models(const std::string& model_str);
 
 bool set_current_model_version(redox::Redox& redis,
-                               const std::string& model_name, const std::string& version);
+                               const std::string& model_name,
+                               const std::string& version);
 
 std::string get_current_model_version(redox::Redox& redis,
-                              const std::string& model_name);
+                                      const std::string& model_name);
 
 /**
  * Adds a model into the model table. This will
@@ -143,7 +144,7 @@ std::unordered_map<std::string, std::string> get_model(
  * model was not found, an empty list will be returned.
  */
 std::vector<std::string> get_model_versions(redox::Redox& redis,
-                                    const std::string& model_name);
+                                            const std::string& model_name);
 
 /**
  * Looks up model names listed in the model table. Since a call to KEYS may

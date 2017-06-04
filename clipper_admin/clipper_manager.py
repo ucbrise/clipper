@@ -450,7 +450,7 @@ class Clipper:
         ----------
         name : str
             The name to assign this model.
-        version : int |  str
+        version : int | str
             The version to assign this model.
         model_data : str or BaseEstimator
             The trained model to add to Clipper. This can either be a

@@ -300,7 +300,8 @@ TEST_F(QueryFrontendTest, TestReadModelsAtStartup) {
   // Set m@v2 and n@v3 as current model versions
   set_current_model_version(*redis_, "m", "2");
   set_current_model_version(*redis_, "n", "3");
-  std::unordered_map<std::string, std::string> expected_models = {{"m", "2"}, {"n", "3"}};
+  std::unordered_map<std::string, std::string> expected_models = {{"m", "2"},
+                                                                  {"n", "3"}};
 
   RequestHandler<MockQueryProcessor> rh2_("127.0.0.1", 1337, 8);
   EXPECT_EQ(rh2_.get_current_model_versions(), expected_models);

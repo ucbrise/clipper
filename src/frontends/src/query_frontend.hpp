@@ -228,10 +228,9 @@ class RequestHandler {
         std::unique_lock<std::mutex> l(current_model_versions_mutex_);
         current_model_versions_[model_name] = model_version;
       } else {
-        clipper::log_error_formatted(
-            LOGGING_TAG_QUERY_FRONTEND,
-            "Found model {} with invalid version {}.", model_name,
-            model_version);
+        clipper::log_error_formatted(LOGGING_TAG_QUERY_FRONTEND,
+                                     "Found model {} with invalid version {}.",
+                                     model_name, model_version);
         throw std::runtime_error("Invalid model version number");
       }
       model_names_with_version.push_back(model_name + "@v" + model_version);

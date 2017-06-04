@@ -260,9 +260,8 @@ class TaskExecutor {
           if (event_type == "hset" && *task_executor_valid) {
             auto container_info =
                 redis::get_container_by_key(redis_connection_, key);
-            VersionedModelId vm =
-                std::make_pair(container_info["model_name"],
-                               container_info["model_version"]);
+            VersionedModelId vm = std::make_pair(
+                container_info["model_name"], container_info["model_version"]);
             int replica_id = std::stoi(container_info["model_replica_id"]);
             active_containers_->add_container(
                 vm, std::stoi(container_info["zmq_connection_id"]), replica_id,

@@ -105,8 +105,8 @@ vector<RPCResponse> RPCService::try_get_responses(const int max_num_responses) {
 void RPCService::manage_service(const string address) {
   // Map from container id to unique routing id for zeromq
   // Note that zeromq socket id is a byte vector
-  log_info_formatted(LOGGING_TAG_RPC, "RPC thread started at address: ",
-                     address);
+  log_info_formatted(LOGGING_TAG_RPC,
+                     "RPC thread started at address: ", address);
   boost::bimap<int, vector<uint8_t>> connections;
   // Initializes a map to associate the ZMQ connection IDs
   // of connected containers with their metadata, including
@@ -247,7 +247,7 @@ void RPCService::receive_message(
         std::string name(static_cast<char *>(model_name.data()),
                          model_name.size());
         std::string version(static_cast<char *>(model_version.data()),
-                                model_version.size());
+                            model_version.size());
         std::string input_type_str(static_cast<char *>(model_input_type.data()),
                                    model_input_type.size());
 
