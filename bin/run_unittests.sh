@@ -100,22 +100,19 @@ function run_rpc_container_tests {
 }
 
 function run_libclipper_tests {
+  cd $DIR/../debug
   echo -e "\nRunning libclipper tests\n\n"
   ./src/libclipper/libclippertests --redis_port $REDIS_PORT
 }
 
 function run_management_tests {
+  cd $DIR/../debug
   echo -e "\nRunning management tests\n\n"
   ./src/management/managementtests --redis_port $REDIS_PORT
 }
 
-function run_clipper_admin_tests {
-  echo -e "Running clipper admin tests"
-  cd $DIR
-  python ../clipper_admin/tests/clipper_manager_test.py
-}
-
 function run_frontend_tests {
+  cd $DIR/../debug
   echo -e "\nRunning frontend tests\n\n"
   ./src/frontends/frontendtests --redis_port $REDIS_PORT
 }
@@ -132,9 +129,10 @@ function run_integration_tests {
     echo "Found Spark at $SPARK_HOME"
   fi
   pip install findspark
+  python ../integration-tests/clipper_manager_tests.py
   python ../integration-tests/deploy_pyspark_models.py
   python ../integration-tests/deploy_pyspark_pipeline_models.py
-  python ../integration-tests/light_load_all_functionality.py 2 3
+  python ../integration-tests/many_apps_many_models.py 2 3
 }
 
 function run_all_tests {
@@ -150,7 +148,6 @@ function run_all_tests {
   redis-cli -p $REDIS_PORT "flushall"
   run_rpc_container_tests
   redis-cli -p $REDIS_PORT "flushall"
-  run_clipper_admin_tests
 }
 
 if [ "$#" == 0 ]
@@ -169,9 +166,6 @@ case $args in
                             ;;
     -m | --management )     set_test_environment
                             run_management_tests
-                            ;;
-    -c | --clipperadmin )   set_test_environment
-                            run_clipper_admin_tests
                             ;;
     -f | --frontend )       set_test_environment
                             run_frontend_tests

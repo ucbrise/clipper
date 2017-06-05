@@ -71,7 +71,7 @@ def deploy_model(clipper, name, version):
         model_name,
         version,
         fake_model_data,
-        "clipper/noop-container", [name],
+        "clipper/noop-container",
         "doubles",
         num_containers=1)
     time.sleep(10)
@@ -82,7 +82,6 @@ def deploy_model(clipper, name, version):
             "http://localhost:1337/%s/predict" % app_name,
             headers=headers,
             data=json.dumps({
-                'uid': 0,
                 'input': list(np.random.random(30))
             }))
         result = response.json()
@@ -106,7 +105,6 @@ def create_and_test_app(clipper, name, num_models):
         "http://localhost:1337/%s/predict" % app_name,
         headers=headers,
         data=json.dumps({
-            'uid': 0,
             'input': list(np.random.random(30))
         }))
     result = response.json()
