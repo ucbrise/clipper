@@ -100,16 +100,19 @@ function run_rpc_container_tests {
 }
 
 function run_libclipper_tests {
+  cd $DIR/../debug
   echo -e "\nRunning libclipper tests\n\n"
   ./src/libclipper/libclippertests --redis_port $REDIS_PORT
 }
 
 function run_management_tests {
+  cd $DIR/../debug
   echo -e "\nRunning management tests\n\n"
   ./src/management/managementtests --redis_port $REDIS_PORT
 }
 
 function run_frontend_tests {
+  cd $DIR/../debug
   echo -e "\nRunning frontend tests\n\n"
   ./src/frontends/frontendtests --redis_port $REDIS_PORT
 }
@@ -122,7 +125,6 @@ function run_integration_tests {
 }
 
 function run_all_tests {
-  run_integration_tests
   run_libclipper_tests
   redis-cli -p $REDIS_PORT "flushall"
   run_frontend_tests
@@ -133,6 +135,7 @@ function run_all_tests {
   redis-cli -p $REDIS_PORT "flushall"
   run_rpc_container_tests
   redis-cli -p $REDIS_PORT "flushall"
+  run_integration_tests
 }
 
 if [ "$#" == 0 ]
