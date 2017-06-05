@@ -39,6 +39,7 @@ const std::string GET_METRICS = "^/metrics$";
 const char* PREDICTION_RESPONSE_KEY_QUERY_ID = "query_id";
 const char* PREDICTION_RESPONSE_KEY_OUTPUT = "output";
 const char* PREDICTION_RESPONSE_KEY_USED_DEFAULT = "default";
+const char* PREDICTION_RESPONSE_KEY_DEFAULT_EXPLANATION = "default_explanation";
 const char* PREDICTION_ERROR_RESPONSE_KEY_ERROR = "error";
 const char* PREDICTION_ERROR_RESPONSE_KEY_CAUSE = "cause";
 
@@ -48,7 +49,6 @@ const std::string PREDICTION_ERROR_NAME_QUERY_PROCESSING =
 
 const std::string PREDICTION_JSON_SCHEMA = R"(
   {
-   "uid" := string,
    "input" := [double] | [int] | [string] | [byte] | [float],
   }
 )";
@@ -378,6 +378,7 @@ class RequestHandler {
    *    "query_id" := int,
    *    "output" := float,
    *    "default" := boolean
+   *    "default_explanation" := string (optional)
    * }
    */
   static const std::string get_prediction_response_content(
@@ -402,6 +403,12 @@ class RequestHandler {
     }
     clipper::json::add_bool(json_response, PREDICTION_RESPONSE_KEY_USED_DEFAULT,
                             query_response.output_is_default_);
+    if (query_response.output_is_default_ &&
+        query_response.default_explanation_) {
+      clipper::json::add_string(json_response,
+                                PREDICTION_RESPONSE_KEY_DEFAULT_EXPLANATION,
+                                query_response.default_explanation_.get());
+    }
     std::string content = clipper::json::to_json_string(json_response);
     return content;
   }
@@ -430,7 +437,6 @@ class RequestHandler {
   /*
    * JSON format for prediction query request:
    * {
-   *  "uid" := string,
    *  "input" := [double] | [int] | [string] | [byte] | [float]
    * }
    */
@@ -440,7 +446,10 @@ class RequestHandler {
       long latency_slo_micros, InputType input_type) {
     rapidjson::Document d;
     clipper::json::parse_json(json_content, d);
-    long uid = clipper::json::get_long(d, "uid");
+    long uid = 0;
+    // NOTE: We will eventually support personalization again so this commented
+    // out code is intentionally left in as a placeholder.
+    // long uid = clipper::json::get_long(d, "uid");
     std::shared_ptr<Input> input = clipper::json::parse_input(input_type, d);
     auto prediction = query_processor_.predict(
         Query{name, uid, input, latency_slo_micros, policy, models});

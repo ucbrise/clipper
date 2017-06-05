@@ -1,6 +1,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <boost/optional.hpp>
+
 #include <clipper/config.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
@@ -18,7 +20,7 @@ class MockQueryProcessor {
   MockQueryProcessor() = default;
   boost::future<Response> predict(Query query) {
     Response response(query, 3, 5, Output("-1.0", {std::make_pair("m", 1)}),
-                      false);
+                      false, boost::optional<std::string>{});
     return boost::make_ready_future(response);
   }
   boost::future<FeedbackAck> update(FeedbackQuery /*feedback*/) {
@@ -59,7 +61,7 @@ class QueryFrontendTest : public ::testing::Test {
 };
 
 TEST_F(QueryFrontendTest, TestDecodeCorrectInputInts) {
-  std::string test_json_ints = "{\"uid\": 23, \"input\": [1,2,3,4]}";
+  std::string test_json_ints = "{\"input\": [1,2,3,4]}";
   Response response =
       rh_.decode_and_handle_predict(test_json_ints, "test", {}, "test_policy",
                                     30000, InputType::Ints)
@@ -67,7 +69,6 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputInts) {
 
   Query parsed_query = response.query_;
 
-  EXPECT_EQ(parsed_query.user_id_, 23);
   const std::vector<int>& parsed_input =
       std::static_pointer_cast<IntVector>(parsed_query.input_)->get_data();
   std::vector<int> expected_input{1, 2, 3, 4};
@@ -78,8 +79,7 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputInts) {
 }
 
 TEST_F(QueryFrontendTest, TestDecodeCorrectInputDoubles) {
-  std::string test_json_doubles =
-      "{\"uid\": 23, \"input\": [1.4,2.23,3.243242,0.3223424]}";
+  std::string test_json_doubles = "{\"input\": [1.4,2.23,3.243242,0.3223424]}";
   Response response =
       rh_.decode_and_handle_predict(test_json_doubles, "test", {},
                                     "test_policy", 30000, InputType::Doubles)
@@ -87,7 +87,6 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputDoubles) {
 
   Query parsed_query = response.query_;
 
-  EXPECT_EQ(parsed_query.user_id_, 23);
   const std::vector<double>& parsed_input =
       std::static_pointer_cast<DoubleVector>(parsed_query.input_)->get_data();
   std::vector<double> expected_input{1.4, 2.23, 3.243242, 0.3223424};
@@ -99,7 +98,7 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputDoubles) {
 
 TEST_F(QueryFrontendTest, TestDecodeCorrectInputString) {
   std::string test_json_string =
-      "{\"uid\": 23, \"input\": \"hello world. This is a test string with "
+      "{\"input\": \"hello world. This is a test string with "
       "punctionation!@#$Y#;}#\"}";
   Response response =
       rh_.decode_and_handle_predict(test_json_string, "test", {}, "test_policy",
@@ -108,7 +107,6 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputString) {
 
   Query parsed_query = response.query_;
 
-  EXPECT_EQ(parsed_query.user_id_, 23);
   const std::string& parsed_input =
       std::static_pointer_cast<SerializableString>(parsed_query.input_)
           ->get_data();
@@ -138,7 +136,8 @@ TEST_F(QueryFrontendTest, TestDecodeMalformedJSON) {
 }
 
 TEST_F(QueryFrontendTest, TestDecodeMissingJsonField) {
-  std::string json_missing_field = "{\"input\": [1.4,2.23,3.243242,0.3223424]}";
+  std::string json_missing_field =
+      "{\"other_field\": [1.4,2.23,3.243242,0.3223424]}";
   ASSERT_THROW(
       rh_.decode_and_handle_predict(json_missing_field, "test", {},
                                     "test_policy", 30000, InputType::Doubles),

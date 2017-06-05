@@ -7,7 +7,7 @@ import numpy as np
 np.set_printoptions(threshold=np.nan)
 
 sys.path.append(os.path.abspath("/lib/"))
-import pywrencloudpickle
+from clipper_admin import pywrencloudpickle
 
 IMPORT_ERROR_RETURN_CODE = 3
 
@@ -118,5 +118,6 @@ if __name__ == "__main__":
         rpc_service = rpc.RPCService()
         rpc_service.start(model, ip, port, model_name, model_version,
                           input_type)
-    except ImportError:
+    except ImportError as e:
+        print(e)
         sys.exit(IMPORT_ERROR_RETURN_CODE)

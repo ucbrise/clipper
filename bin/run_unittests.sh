@@ -100,16 +100,19 @@ function run_rpc_container_tests {
 }
 
 function run_libclipper_tests {
+  cd $DIR/../debug
   echo -e "\nRunning libclipper tests\n\n"
   ./src/libclipper/libclippertests --redis_port $REDIS_PORT
 }
 
 function run_management_tests {
+  cd $DIR/../debug
   echo -e "\nRunning management tests\n\n"
   ./src/management/managementtests --redis_port $REDIS_PORT
 }
 
 function run_frontend_tests {
+  cd $DIR/../debug
   echo -e "\nRunning frontend tests\n\n"
   ./src/frontends/frontendtests --redis_port $REDIS_PORT
 }
@@ -117,7 +120,8 @@ function run_frontend_tests {
 function run_integration_tests {
   echo -e "\nRunning integration tests\n\n"
   cd $DIR
-  python ../integration-tests/light_load_all_functionality.py 2 3
+  python ../integration-tests/clipper_manager_tests.py
+  python ../integration-tests/many_apps_many_models.py 2 3
 }
 
 function run_all_tests {
