@@ -1,12 +1,13 @@
 
 # Basic Query Example Requirements
 
-The examples in this directory depend on a few Python packages.
+The examples in this directory assume you have the `clipper_admin` pip package installed:
+
+```sh
+pip install clipper_admin
+```
 We recommend using [Anaconda](https://www.continuum.io/downloads)
 to install Python packages.
-
-+ [`requests`](http://docs.python-requests.org/en/master/)
-+ [`numpy`](http://www.numpy.org/)
 
 # Running the example query
 

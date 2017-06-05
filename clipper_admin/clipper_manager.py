@@ -41,6 +41,9 @@ CLIPPER_RPC_PORT = 7000
 CLIPPER_LOGS_PATH = "/tmp/clipper-logs"
 
 CLIPPER_DOCKER_LABEL = "ai.clipper.container.label"
+CLIPPER_MODEL_CONTAINER_LABEL = "ai.clipper.model_container.model_version"
+
+DEFAULT_LABEL = ["DEFAULT"]
 
 aws_cli_config = """
 [default]
@@ -335,6 +338,9 @@ class Clipper:
                                  yaml.dump(
                                      self.docker_compost_dict,
                                      default_flow_style=False))
+            print(
+                "Note: Docker must download the Clipper Docker images if they are not already cached. This may take awhile."
+            )
             self._execute_root("docker-compose up -d query_frontend")
             print("Clipper is running")
 
@@ -441,8 +447,8 @@ class Clipper:
                      version,
                      model_data,
                      container_name,
-                     labels,
                      input_type,
+                     labels=DEFAULT_LABEL,
                      num_containers=1):
         """Registers a model with Clipper and deploys instances of it in containers.
 
@@ -463,10 +469,10 @@ class Clipper:
             be the path you provided to the serialize method call.
         container_name : str
             The Docker container image to use to run this model container.
-        labels : list of str
-            A set of strings annotating the model
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
+        labels : list of str, optional
+            A list of strings annotating the model
         num_containers : int, optional
             The number of replicas of the model to create. More replicas can be
             created later as well. Defaults to 1.
@@ -545,7 +551,11 @@ class Clipper:
                 for r in range(num_containers)
             ])
 
-    def register_external_model(self, name, version, labels, input_type):
+    def register_external_model(self,
+                                name,
+                                version,
+                                input_type,
+                                labels=DEFAULT_LABEL):
         """Registers a model with Clipper without deploying it in any containers.
 
         Parameters
@@ -554,10 +564,10 @@ class Clipper:
             The name to assign this model.
         version : int
             The version to assign this model.
-        labels : list of str
-            A set of strings annotating the model
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
+        labels : list of str, optional
+            A list of strings annotating the model.
         """
         return self._publish_new_model(name, version, labels, input_type,
                                        EXTERNALLY_MANAGED_MODEL,
@@ -567,8 +577,8 @@ class Clipper:
                                 name,
                                 version,
                                 predict_function,
-                                labels,
                                 input_type,
+                                labels=DEFAULT_LABEL,
                                 num_containers=1):
         """Deploy an arbitrary Python function to Clipper.
 
@@ -586,16 +596,18 @@ class Clipper:
         predict_function : function
             The prediction function. Any state associated with the function should be
             captured via closure capture.
-        labels : list of str
-            A set of strings annotating the model
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
+        labels : list of str, optional
+            A list of strings annotating the model
         num_containers : int, optional
             The number of replicas of the model to create. More replicas can be
             created later as well. Defaults to 1.
 
         Example
         -------
+        Define a feature function ``center()`` and train a model on the featurized input::
+
             def center(xs):
                 means = np.mean(xs, axis=0)
                 return xs - means
@@ -612,7 +624,6 @@ class Clipper:
                 "example_model",
                 1,
                 centered_predict,
-                ["example"],
                 "doubles",
                 num_containers=1)
         """
@@ -668,8 +679,8 @@ class Clipper:
 
         # Deploy function
         deploy_result = self.deploy_model(name, version, serialization_dir,
-                                          default_python_container, labels,
-                                          input_type, num_containers)
+                                          default_python_container, input_type,
+                                          labels, num_containers)
         # Remove temp files
         shutil.rmtree(serialization_dir)
 
@@ -797,7 +808,9 @@ class Clipper:
             print(r.text)
             return None
 
-    def inspect_selection_policy(self, app_name, uid):
+    def _inspect_selection_policy(self, app_name, uid):
+        # NOTE: This method is private (it's still functional, but it won't be documented)
+        # until Clipper supports different selection policies
         """Fetches a human-readable string with the current selection policy state.
 
         Parameters
@@ -934,8 +947,9 @@ class Clipper:
                     key=model_key,
                     db=REDIS_MODEL_DB_NUM),
                 capture=True)
+            print(result)
 
-            if "nil" in result.stdout:
+            if "empty list or set" in result.stdout:
                 # Model not found
                 warn("Trying to add container but model {mn}:{mv} not in "
                      "Redis".format(mn=model_name, mv=model_version))
@@ -954,7 +968,7 @@ class Clipper:
                 add_container_cmd = (
                     "docker run -d --network={nw} --restart={restart_policy} -v {path}:/model:ro "
                     "-e \"CLIPPER_MODEL_NAME={mn}\" -e \"CLIPPER_MODEL_VERSION={mv}\" "
-                    "-e \"CLIPPER_IP=query_frontend\" -e \"CLIPPER_INPUT_TYPE={mip}\" -l \"{clipper_label}\" "
+                    "-e \"CLIPPER_IP=query_frontend\" -e \"CLIPPER_INPUT_TYPE={mip}\" -l \"{clipper_label}\" -l \"{mv_label}\" "
                     "{image}".format(
                         path=model_data_path,
                         nw=DOCKER_NW,
@@ -963,6 +977,8 @@ class Clipper:
                         mv=model_version,
                         mip=model_input_type,
                         clipper_label=CLIPPER_DOCKER_LABEL,
+                        mv_label="%s=%s:%d" % (CLIPPER_MODEL_CONTAINER_LABEL,
+                                               model_name, model_version),
                         restart_policy=restart_policy))
                 result = self._execute_root(add_container_cmd)
                 return result.return_code == 0
@@ -1057,6 +1073,45 @@ class Clipper:
         print(r.text)
         for r in range(num_containers):
             self.add_container(model_name, model_version)
+
+    def remove_inactive_containers(self, model_name):
+        """Removes all containers serving stale versions of the specified model.
+
+        Parameters
+        ----------
+        model_name : str
+            The name of the model whose old containers you want to clean.
+
+        """
+        # Get all Docker containers tagged as model containers
+        num_containers_removed = 0
+        with hide("output", "warnings", "running"):
+            containers = self._execute_root(
+                "docker ps -aq --filter label={model_container_label}".format(
+                    model_container_label=CLIPPER_MODEL_CONTAINER_LABEL))
+            if len(containers) > 0:
+                container_ids = [l.strip() for l in containers.split("\n")]
+                for container in container_ids:
+                    # returns a string formatted as "<model_name>:<model_version>"
+                    container_model_name_and_version = self._execute_root(
+                        "docker inspect --format \"{{ index .Config.Labels \\\"%s\\\"}}\" %s"
+                        % (CLIPPER_MODEL_CONTAINER_LABEL, container))
+                    splits = container_model_name_and_version.split(":")
+                    container_model_name = splits[0]
+                    container_model_version = int(splits[1])
+                    if container_model_name == model_name:
+                        # check if container_model_version is the currently deployed version
+                        model_info = self.get_model_info(
+                            container_model_name, container_model_version)
+                        if model_info == None or not model_info["is_current_version"]:
+                            self._execute_root("docker stop {container}".
+                                               format(container=container))
+                            self._execute_root("docker rm {container}".format(
+                                container=container))
+                            num_containers_removed += 1
+        print("Removed %d inactive containers for model %s" %
+              (num_containers_removed, model_name))
+        return num_containers_removed
 
     def stop_all(self):
         """Stops and removes all Clipper Docker containers on the host.

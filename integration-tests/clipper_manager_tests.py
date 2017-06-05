@@ -8,12 +8,12 @@ from sklearn import svm
 from argparse import ArgumentParser
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath('%s/../' % cur_dir))
-import clipper_manager
+from clipper_admin.clipper_manager import Clipper
 import random
 import socket
 """
 Executes a test suite consisting of two separate cases: short tests and long tests.
-Before each case, an instance of clipper_manager.Clipper is created. Tests
+Before each case, an instance of Clipper is created. Tests
 are then performed by invoking methods on this instance, often resulting
 in the execution of docker commands.
 """
@@ -39,8 +39,9 @@ def find_unbound_port():
 class ClipperManagerTestCaseShort(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        self.clipper_inst = clipper_manager.Clipper(
+        self.clipper_inst = Clipper(
             "localhost", redis_port=find_unbound_port())
+        self.clipper_inst.stop_all()
         self.clipper_inst.start()
         self.app_name = "app1"
         self.model_name = "m1"
@@ -56,10 +57,9 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
     def test_external_models_register_correctly(self):
         name = "m1"
         version1 = 1
-        tags = ["test"]
         input_type = "doubles"
         result = self.clipper_inst.register_external_model(
-            self.model_name, self.model_version_1, tags, input_type)
+            self.model_name, self.model_version_1, input_type)
         self.assertTrue(result)
         registered_model_info = self.clipper_inst.get_model_info(
             self.model_name, self.model_version_1)
@@ -67,7 +67,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
 
         version2 = 2
         result = self.clipper_inst.register_external_model(
-            self.model_name, self.model_version_2, tags, input_type)
+            self.model_name, self.model_version_2, input_type)
         self.assertTrue(result)
         registered_model_info = self.clipper_inst.get_model_info(
             self.model_name, self.model_version_2)
@@ -128,11 +128,10 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         # that will be deployed to a no-op container
         model_data = svm.SVC()
         container_name = "clipper/noop-container"
-        labels = ["test"]
         input_type = "doubles"
         result = self.clipper_inst.deploy_model(
             self.deploy_model_name, self.deploy_model_version, model_data,
-            container_name, labels, input_type)
+            container_name, input_type)
         self.assertTrue(result)
         model_info = self.clipper_inst.get_model_info(
             self.deploy_model_name, self.deploy_model_version)
@@ -152,14 +151,60 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         split_output = running_containers_output.split("\n")
         self.assertGreaterEqual(len(split_output), 2)
 
+    def test_remove_inactive_containers_succeeds(self):
+        # Initialize a support vector classifier 
+        # that will be deployed to a no-op container
+        self.clipper_inst.stop_all()
+        self.clipper_inst.start()
+        model_data = svm.SVC()
+        container_name = "clipper/noop-container"
+        input_type = "doubles"
+        model_name = "remove_inactive_test_model"
+        result = self.clipper_inst.deploy_model(
+            model_name,
+            1,
+            model_data,
+            container_name,
+            input_type,
+            num_containers=2)
+        self.assertTrue(result)
+        running_containers_output = self.clipper_inst._execute_standard(
+            "docker ps -q --filter \"ancestor=clipper/noop-container\"")
+        self.assertIsNotNone(running_containers_output)
+        num_running_containers = running_containers_output.split("\n")
+        print("RUNNING CONTAINERS: %s" % str(num_running_containers))
+        self.assertEqual(len(num_running_containers), 2)
+
+        result = self.clipper_inst.deploy_model(
+            model_name,
+            2,
+            model_data,
+            container_name,
+            input_type,
+            num_containers=3)
+        self.assertTrue(result)
+        running_containers_output = self.clipper_inst._execute_standard(
+            "docker ps -q --filter \"ancestor=clipper/noop-container\"")
+        self.assertIsNotNone(running_containers_output)
+        num_running_containers = running_containers_output.split("\n")
+        self.assertEqual(len(num_running_containers), 5)
+
+        num_containers_removed = self.clipper_inst.remove_inactive_containers(
+            model_name)
+        self.assertEqual(num_containers_removed, 2)
+        running_containers_output = self.clipper_inst._execute_standard(
+            "docker ps -q --filter \"ancestor=clipper/noop-container\"")
+        self.assertIsNotNone(running_containers_output)
+        num_running_containers = running_containers_output.split("\n")
+        self.assertEqual(len(num_running_containers), 3)
+
     def test_predict_function_deploys_successfully(self):
         model_name = "m2"
         model_version = 1
         predict_func = lambda inputs: ["0" for x in inputs]
-        labels = ["test"]
         input_type = "doubles"
         result = self.clipper_inst.deploy_predict_function(
-            model_name, model_version, predict_func, labels, input_type)
+            model_name, model_version, predict_func, input_type)
         self.assertTrue(result)
         model_info = self.clipper_inst.get_model_info(model_name,
                                                       model_version)
@@ -173,8 +218,9 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
 class ClipperManagerTestCaseLong(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        self.clipper_inst = clipper_manager.Clipper(
+        self.clipper_inst = Clipper(
             "localhost", redis_port=find_unbound_port())
+        self.clipper_inst.stop_all()
         self.clipper_inst.start()
         self.app_name_1 = "app3"
         self.app_name_2 = "app4"
@@ -200,30 +246,29 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         # that will be deployed to a no-op container
         model_data = svm.SVC()
         container_name = "clipper/noop-container"
-        labels = ["test"]
         result = self.clipper_inst.deploy_model(
             self.model_name_2, model_version, model_data, container_name,
-            labels, self.input_type)
+            self.input_type)
         self.assertTrue(result)
 
         time.sleep(30)
 
         url = "http://localhost:1337/{}/predict".format(self.app_name_2)
         test_input = [99.3, 18.9, 67.2, 34.2]
-        req_json = json.dumps({'uid': 0, 'input': test_input})
+        req_json = json.dumps({'input': test_input})
         headers = {'Content-type': 'application/json'}
         response = requests.post(url, headers=headers, data=req_json)
-        parsed_response = json.loads(response.text)
+        parsed_response = response.json()
+        print(parsed_response)
         self.assertNotEqual(parsed_response["output"], self.default_output)
         self.assertFalse(parsed_response["default"])
 
     def test_deployed_predict_function_queried_successfully(self):
         model_version = 1
         predict_func = lambda inputs: [str(len(x)) for x in inputs]
-        labels = ["test"]
         input_type = "doubles"
         result = self.clipper_inst.deploy_predict_function(
-            self.model_name_1, model_version, predict_func, labels, input_type)
+            self.model_name_1, model_version, predict_func, input_type)
         self.assertTrue(result)
 
         time.sleep(60)
@@ -231,11 +276,12 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         received_non_default_prediction = False
         url = "http://localhost:1337/{}/predict".format(self.app_name_1)
         test_input = [101.1, 99.5, 107.2]
-        req_json = json.dumps({'uid': 0, 'input': test_input})
+        req_json = json.dumps({'input': test_input})
         headers = {'Content-type': 'application/json'}
         for i in range(0, 40):
             response = requests.post(url, headers=headers, data=req_json)
-            parsed_response = json.loads(response.text)
+            parsed_response = response.json()
+            print(parsed_response)
             output = parsed_response["output"]
             if output == self.default_output:
                 time.sleep(20)
@@ -253,17 +299,17 @@ SHORT_TEST_ORDERING = [
     'get_app_info_for_registered_app_returns_info_dictionary',
     'get_app_info_for_nonexistent_app_returns_none',
     'test_add_container_for_external_model_fails',
-    'test_model_version_sets_correctly',
-    'test_get_logs_creates_log_files',
+    'test_model_version_sets_correctly', 'test_get_logs_creates_log_files',
     'test_inspect_instance_returns_json_dict',
     'test_model_deploys_successfully',
     'test_add_container_for_deployed_model_succeeds',
-    # 'test_predict_function_deploys_successfully'
+    'test_remove_inactive_containers_succeeds',
+    'test_predict_function_deploys_successfully'
 ]
 
 LONG_TEST_ORDERING = [
     'test_deployed_model_queried_successfully',
-    # 'test_deployed_predict_function_queried_successfully'
+    'test_deployed_predict_function_queried_successfully'
 ]
 
 if __name__ == '__main__':
