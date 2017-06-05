@@ -43,6 +43,8 @@ CLIPPER_LOGS_PATH = "/tmp/clipper-logs"
 CLIPPER_DOCKER_LABEL = "ai.clipper.container.label"
 CLIPPER_MODEL_CONTAINER_LABEL = "ai.clipper.model_container.model_version"
 
+DEFAULT_LABEL=["DEFAULT"]
+
 aws_cli_config = """
 [default]
 region = us-east-1
@@ -446,7 +448,7 @@ class Clipper:
                      model_data,
                      container_name,
                      input_type,
-                     labels=[],
+                     labels=DEFAULT_LABEL,
                      num_containers=1):
         """Registers a model with Clipper and deploys instances of it in containers.
 
@@ -549,7 +551,7 @@ class Clipper:
                 for r in range(num_containers)
             ])
 
-    def register_external_model(self, name, version, input_type, labels=[]):
+    def register_external_model(self, name, version, input_type, labels=DEFAULT_LABEL):
         """Registers a model with Clipper without deploying it in any containers.
 
         Parameters
@@ -572,7 +574,7 @@ class Clipper:
                                 version,
                                 predict_function,
                                 input_type,
-                                labels=[],
+                                labels=DEFAULT_LABEL,
                                 num_containers=1):
         """Deploy an arbitrary Python function to Clipper.
 
