@@ -159,25 +159,25 @@ TEST(JsonUtilTests, TestParseCandidateModels) {
   std::string correct_json = R"(
   {
     "correct_candidate_models": [
-      {"model_name": "sklearn_svm", "model_version": 1},
-      {"model_name": "sklearn_svm", "model_version": 2},
-      {"model_name": "network", "model_version": 3}
+      {"model_name": "sklearn_svm", "model_version": "1"},
+      {"model_name": "sklearn_svm", "model_version": "2"},
+      {"model_name": "network", "model_version": "3"}
     ]
   }
   )";
   std::string missing_name_json = R"(
-      {"missing_name": [{"model_version": 3}]}
+      {"missing_name": [{"model_version": "3"}]}
   )";
   std::string missing_version_json = R"(
       {"missing_version": [{"model_name": "m"}]}
   )";
   std::string wrong_name_type_json = R"(
-      {"wrong_name_type": [{"model_name": 123, "model_version": 1}]}
+      {"wrong_name_type": [{"model_name": 123, "model_version": "1"}]}
   )";
   std::string wrong_version_type_json = R"(
   {
     "wrong_version_type": [
-      {"model_name": "g", "model_version": "123"}
+      {"model_name": "g", "model_version": 123}
     ]
   }
   )";

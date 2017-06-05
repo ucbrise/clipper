@@ -443,7 +443,7 @@ void add_model_version_from_redis(
     const std::unordered_map<std::string, std::string>& model_metadata) {
   std::string key = "model_version";
   check_key_exists_in_map(key, model_metadata);
-  add_int(d, key.c_str(), std::stoi(model_metadata.at(key)));
+  add_string(d, key.c_str(), model_metadata.at(key));
 }
 
 void add_model_labels_from_redis(
