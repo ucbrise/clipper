@@ -602,12 +602,6 @@ class Clipper:
             except OSError:
                 pass
             base.saveRDS(model_data,rds_path)           
-            """elif isinstance(model_data, str):
-                # assume that model_data is a path to the serialized model
-                model_data_path = model_data
-            else:
-                warn("%s is invalid model format" % str(type(model_data)))
-                return False"""
 
             vol = "{model_repo}/{name}/{version}".format(
                  model_repo=MODEL_REPO, name=name, version=version)
@@ -618,9 +612,6 @@ class Clipper:
                     os.path.join(vol, os.path.basename(model_data_path))):
                 return False
             print("Published model to Clipper")
-
-            if (not self._put_container_on_host(container_name)):
-                return False
 
             # Put model parameter data on host
             with hide("warnings", "output", "running"):
