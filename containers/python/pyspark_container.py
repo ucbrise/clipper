@@ -62,49 +62,24 @@ class PySparkContainer(rpc.ModelContainerBase):
                                         spark_model_path)
 
     def predict_ints(self, inputs):
-        if self.input_type != rpc.INPUT_TYPE_INTS:
-            self._log_incorrect_input_type(rpc.INPUT_TYPE_INTS)
-            return
         preds = self.predict_func(self.spark, self.model, inputs)
         return [str(p) for p in preds]
 
     def predict_floats(self, inputs):
-        if self.input_type != rpc.INPUT_TYPE_FLOATS:
-            self._log_incorrect_input_type(rpc.INPUT_TYPE_FLOATS)
-            return
         preds = self.predict_func(self.spark, self.model, inputs)
         return [str(p) for p in preds]
 
     def predict_doubles(self, inputs):
-        if self.input_type != rpc.INPUT_TYPE_DOUBLES:
-            self._log_incorrect_input_type(rpc.INPUT_TYPE_DOUBLES)
-            return
         preds = self.predict_func(self.spark, self.model, inputs)
         return [str(p) for p in preds]
 
     def predict_bytes(self, inputs):
-        if self.input_type != rpc.INPUT_TYPE_BYTES:
-            self._log_incorrect_input_type(rpc.INPUT_TYPE_BYTES)
-            return
         preds = self.predict_func(self.spark, self.model, inputs)
         return [str(p) for p in preds]
 
     def predict_strings(self, inputs):
-        if self.input_type != rpc.INPUT_TYPE_STRINGS:
-            self._log_incorrect_input_type(rpc.INPUT_TYPE_STRINGS)
-            return
         preds = self.predict_func(self.spark, self.model, inputs)
         return [str(p) for p in preds]
-
-    def _log_incorrect_input_type(self, input_type):
-        incorrect_input_type = rpc.input_type_to_string(input_type)
-        correct_input_type = rpc.input_type_to_string(self.input_type)
-        print(
-            "Attempted to use prediction function for input type {incorrect_input_type}.\
-            This model-container was configured accept data for input type {correct_input_type}"
-            .format(
-                incorrect_input_type=incorrect_input_type,
-                correct_input_type=correct_input_type))
 
 
 if __name__ == "__main__":

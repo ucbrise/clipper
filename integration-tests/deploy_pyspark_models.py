@@ -16,7 +16,7 @@ import socket
 import findspark
 findspark.init()
 import pyspark
-from pyspark import SparkConf, SparkContext
+# from pyspark import SparkConf, SparkContext
 from pyspark.mllib.classification import LogisticRegressionWithSGD
 from pyspark.mllib.classification import SVMWithSGD
 from pyspark.mllib.tree import RandomForest
@@ -76,7 +76,6 @@ def objective(y, pos_label):
 
 def parseData(line, obj, pos_label):
     fields = line.strip().split(',')
-    # return LabeledPoint(obj(int(fields[0]), pos_label), [float(v)/255.0 for v in fields[1:]])
     return LabeledPoint(
         obj(int(fields[0]), pos_label), normalize(np.array(fields[1:])))
 

@@ -287,7 +287,6 @@ class Clipper:
             # We should only copy data if the paths are different
             if local_path != remote_path:
                 if os.path.isdir(local_path):
-                    # self._copytree(local_path, remote_path)
                     remote_path = os.path.join(remote_path,
                                                os.path.basename(local_path))
                     # if remote_path exists, delete it because shutil.copytree requires
@@ -473,7 +472,6 @@ class Clipper:
 
             vol = "{model_repo}/{name}/{version}".format(
                 model_repo=MODEL_REPO, name=name, version=version)
-            print("Vol is: %s" % vol)
             # publish model to Clipper and verify success before copying model
             # parameters to Clipper and starting containers
             if not self._publish_new_model(
@@ -561,7 +559,7 @@ class Clipper:
         else:
             print(
                 "Warning: Anaconda environment was either not found or exporting the environment "
-                "failed. Your function will still be serialized deployed, but may fail due to "
+                "failed. Your function will still be serialized and deployed, but may fail due to "
                 "missing dependencies. In this case, please re-run inside an Anaconda environment. "
                 "See http://clipper.ai/documentation/python_model_deployment/ for more information."
             )
@@ -613,27 +611,10 @@ class Clipper:
             The number of replicas of the model to create. More replicas can be
             created later as well. Defaults to 1.
 
-        Example
+        Returns
         -------
-            def center(xs):
-                means = np.mean(xs, axis=0)
-                return xs - means
-
-            centered_xs = center(xs)
-            model = sklearn.linear_model.LogisticRegression()
-            model.fit(centered_xs, ys)
-
-            def centered_predict(inputs):
-                centered_inputs = center(inputs)
-                return model.predict(centered_inputs)
-
-            clipper.deploy_predict_function(
-                "example_model",
-                1,
-                centered_predict,
-                ["example"],
-                "doubles",
-                num_containers=1)
+        bool
+            True if the model was successfully deployed. False otherwise.
         """
 
         model_class = re.search("pyspark.*'",
@@ -710,6 +691,11 @@ class Clipper:
         num_containers : int, optional
             The number of replicas of the model to create. More replicas can be
             created later as well. Defaults to 1.
+
+        Returns
+        -------
+        bool
+            True if the model was successfully deployed. False otherwise.
 
         Example
         -------
