@@ -653,8 +653,8 @@ class Clipper:
 
         # Deploy model
         deploy_result = self.deploy_model(name, version, serialization_dir,
-                                          pyspark_container, labels,
-                                          input_type, num_containers)
+                                          pyspark_container, input_type,
+                                          labels, num_containers)
 
         # Remove temp files
         shutil.rmtree(serialization_dir)
