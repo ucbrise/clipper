@@ -942,7 +942,7 @@ class Clipper:
                     db=REDIS_MODEL_DB_NUM),
                 capture=True)
 
-            if "nil" in result.stdout:
+            if "empty list or set" in result.stdout:
                 # Model not found
                 warn("Trying to add container but model {mn}:{mv} not in "
                      "Redis".format(mn=model_name, mv=model_version))
