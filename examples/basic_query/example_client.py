@@ -11,7 +11,7 @@ import numpy as np
 
 def predict(host, uid, x):
     url = "http://%s:1337/example_app/predict" % host
-    req_json = json.dumps({'uid': uid, 'input': list(x)})
+    req_json = json.dumps({'input': list(x)})
     headers = {'Content-type': 'application/json'}
     start = datetime.now()
     r = requests.post(url, headers=headers, data=req_json)

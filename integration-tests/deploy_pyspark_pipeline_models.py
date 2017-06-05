@@ -141,7 +141,7 @@ if __name__ == "__main__":
 
             version = 1
             clipper.deploy_pyspark_model(model_name, version, predict, model,
-                                         spark.sparkContext, ["a"], "strings")
+                                         spark.sparkContext, "strings")
             time.sleep(10)
             num_preds = 25
             num_defaults = 0
@@ -165,7 +165,7 @@ if __name__ == "__main__":
 
             version += 1
             clipper.deploy_pyspark_model(model_name, version, predict, model,
-                                         spark.sparkContext, ["a"], "strings")
+                                         spark.sparkContext, "strings")
             time.sleep(10)
             num_preds = 25
             num_defaults = 0

@@ -86,7 +86,7 @@ def predict(spark, model, xs):
 
 def deploy_and_test_model(sc, clipper, model, version):
     clipper.deploy_pyspark_model(model_name, version, predict, model, sc,
-                                 ["a"], "ints")
+                                 "ints")
     time.sleep(25)
     num_preds = 25
     num_defaults = 0
