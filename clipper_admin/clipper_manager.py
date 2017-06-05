@@ -941,6 +941,7 @@ class Clipper:
                     key=model_key,
                     db=REDIS_MODEL_DB_NUM),
                 capture=True)
+            print(result)
 
             if "empty list or set" in result.stdout:
                 # Model not found

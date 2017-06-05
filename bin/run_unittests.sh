@@ -122,6 +122,7 @@ function run_integration_tests {
 }
 
 function run_all_tests {
+  run_integration_tests
   run_libclipper_tests
   redis-cli -p $REDIS_PORT "flushall"
   run_frontend_tests
@@ -132,7 +133,6 @@ function run_all_tests {
   redis-cli -p $REDIS_PORT "flushall"
   run_rpc_container_tests
   redis-cli -p $REDIS_PORT "flushall"
-  run_integration_tests
 }
 
 if [ "$#" == 0 ]
