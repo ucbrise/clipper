@@ -577,8 +577,8 @@ class Clipper:
                              predict_function,
                              pyspark_model,
                              sc,
-                             labels,
                              input_type,
+                             labels=DEFAULT_LABEL,
                              num_containers=1):
         """Deploy a Spark MLLib model to Clipper.
 
@@ -603,10 +603,10 @@ class Clipper:
         sc : SparkContext
             The SparkContext associated with the model. This is needed
             to save the model for pyspark.mllib models.
-        labels : list of str
-            A set of strings annotating the model
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
+        labels : list of str, optional
+            A set of strings annotating the model
         num_containers : int, optional
             The number of replicas of the model to create. More replicas can be
             created later as well. Defaults to 1.
