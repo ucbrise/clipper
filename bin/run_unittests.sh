@@ -120,10 +120,14 @@ function run_frontend_tests {
 function run_integration_tests {
   echo -e "\nRunning integration tests\n\n"
   cd $DIR
+  # Check if SPARK_HOME is set
   if [ -z ${SPARK_HOME+x} ]; then
-    echo "Downloading Spark"
-    curl -o spark.tgz https://d3kbcqa49mib13.cloudfront.net/spark-2.1.1-bin-hadoop2.7.tgz
-    tar zxf spark.tgz && mv spark-2.1.1-bin-hadoop2.7 spark
+    # Check if this script has downloaded spark previously
+    if [ ! -d "spark" ]; then
+      echo "Downloading Spark"
+      curl -o spark.tgz https://d3kbcqa49mib13.cloudfront.net/spark-2.1.1-bin-hadoop2.7.tgz
+      tar zxf spark.tgz && mv spark-2.1.1-bin-hadoop2.7 spark
+    fi
     export SPARK_HOME=`pwd`/spark
   else
     echo "Found Spark at $SPARK_HOME"
