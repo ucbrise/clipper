@@ -291,6 +291,7 @@ class Histogram : public Metric {
   void insert(const int64_t value);
   const HistogramStats compute_stats();
   static double percentile(std::vector<int64_t> snapshot, double rank);
+  double percentile(double rank);
 
   // Metric implementation
   MetricType type() const override;

@@ -1,6 +1,7 @@
 
 #include <cxxopts.hpp>
 
+#include <clipper/app_metrics.hpp>
 #include <clipper/config.hpp>
 #include <clipper/constants.hpp>
 #include <clipper/query_processor.hpp>

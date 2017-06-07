@@ -1,15 +1,11 @@
 #include <time.h>
 #include <functional>
 #include <iostream>
-#include <memory>
-#include <string>
-#include <utility>
 #include <vector>
 
 #include <boost/thread.hpp>
 #include <cxxopts.hpp>
 
-#include <rapidjson/document.h>
 #include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/future.hpp>
@@ -18,48 +14,17 @@
 #include <clipper/query_processor.hpp>
 #include <fstream>
 
+#include "include/bench_utils.hpp"
+
 using namespace clipper;
+using namespace bench_utils;
 
 const std::string SKLEARN_MODEL_NAME = "bench_sklearn_cifar";
-const std::string CONFIG_KEY_PATH = "path";
-const std::string CONFIG_KEY_NUM_THREADS = "num_threads";
-const std::string CONFIG_KEY_NUM_BATCHES = "num_batches";
-const std::string CONFIG_KEY_BATCH_SIZE = "batch_size";
-const std::string CONFIG_KEY_BATCH_DELAY = "batch_delay";
 
 constexpr double SKLEARN_PLANE_LABEL = 1;
 constexpr double SKLEARN_BIRD_LABEL = 0;
 
 const std::string TEST_APPLICATION_LABEL = "test";
-
-std::unordered_map<int, std::vector<std::vector<double>>> load_cifar(
-    std::unordered_map<std::string, std::string> &config) {
-  std::ifstream cifar_file(config.find(CONFIG_KEY_PATH)->second,
-                           std::ios::binary);
-  std::istreambuf_iterator<char> cifar_data(cifar_file);
-  std::unordered_map<int, std::vector<std::vector<double>>> vecs_map;
-  for (int i = 0; i < 10000; i++) {
-    int label = static_cast<int>(*cifar_data);
-    cifar_data++;
-    std::vector<uint8_t> cifar_byte_vec;
-    cifar_byte_vec.reserve(3072);
-    std::copy_n(cifar_data, 3072, std::back_inserter(cifar_byte_vec));
-    cifar_data++;
-    std::vector<double> cifar_double_vec(cifar_byte_vec.begin(),
-                                         cifar_byte_vec.end());
-
-    std::unordered_map<int, std::vector<std::vector<double>>>::iterator
-        label_vecs = vecs_map.find(label);
-    if (label_vecs != vecs_map.end()) {
-      label_vecs->second.push_back(cifar_double_vec);
-    } else {
-      std::vector<std::vector<double>> new_label_vecs;
-      new_label_vecs.push_back(cifar_double_vec);
-      vecs_map.emplace(label, new_label_vecs);
-    }
-  }
-  return vecs_map;
-}
 
 void send_predictions(
     std::unordered_map<std::string, std::string> &config, QueryProcessor &qp,
@@ -68,10 +33,9 @@ void send_predictions(
   std::vector<std::vector<double>> planes_vecs = cifar_data.find(0)->second;
   std::vector<std::vector<double>> birds_vecs = cifar_data.find(2)->second;
 
-  int num_batches = std::stoi(config.find(CONFIG_KEY_NUM_BATCHES)->second);
-  int batch_size = std::stoi(config.find(CONFIG_KEY_BATCH_SIZE)->second);
-  long batch_delay_millis =
-      static_cast<long>(std::stoi(config.find(CONFIG_KEY_BATCH_DELAY)->second));
+  int num_batches = get_int(NUM_BATCHES, config);
+  int batch_size = get_int(BATCH_SIZE, config);
+  long batch_delay_millis = get_long(BATCH_DELAY_MILLIS, config);
   for (int j = 0; j < num_batches; j++) {
     std::vector<boost::future<Response>> futures;
     std::vector<int> binary_labels;
@@ -121,60 +85,6 @@ void send_predictions(
   }
 }
 
-std::unordered_map<std::string, std::string> create_config(
-    std::string path, std::string num_threads, std::string num_batches,
-    std::string batch_size, std::string batch_delay) {
-  std::unordered_map<std::string, std::string> config;
-  config.emplace(CONFIG_KEY_PATH, path);
-  config.emplace(CONFIG_KEY_NUM_THREADS, num_threads);
-  config.emplace(CONFIG_KEY_NUM_BATCHES, num_batches);
-  config.emplace(CONFIG_KEY_BATCH_SIZE, batch_size);
-  config.emplace(CONFIG_KEY_BATCH_DELAY, batch_delay);
-  return config;
-};
-
-std::unordered_map<std::string, std::string> get_config_from_prompt() {
-  std::string path;
-  std::string num_threads;
-  std::string num_batches;
-  std::string batch_size;
-  std::string batch_delay;
-
-  std::cout << "Before proceeding, run bench/setup_bench.sh from clipper's "
-               "root directory."
-            << std::endl;
-  std::cout << "Enter a path to the CIFAR10 binary data set: ";
-  std::cin >> path;
-  std::cout << "Enter the number of threads of execution: ";
-  std::cin >> num_threads;
-  std::cout
-      << "Enter the number of request batches to be sent by each thread: ";
-  std::cin >> num_batches;
-  std::cout << "Enter the number of requests per batch: ";
-  std::cin >> batch_size;
-  std::cout << "Enter the delay between batches, in milliseconds: ";
-  std::cin >> batch_delay;
-
-  return create_config(path, num_threads, num_batches, batch_size, batch_delay);
-};
-
-std::unordered_map<std::string, std::string> get_config_from_json(
-    std::string json_path) {
-  std::ifstream json_file(json_path);
-  std::stringstream buffer;
-  buffer << json_file.rdbuf();
-  std::string json_text = buffer.str();
-  rapidjson::Document d;
-  json::parse_json(json_text, d);
-  std::string cifar_path = json::get_string(d, "cifar_data_path");
-  std::string num_threads = json::get_string(d, "num_threads");
-  std::string num_batches = json::get_string(d, "num_batches");
-  std::string batch_size = json::get_string(d, "batch_size");
-  std::string batch_delay = json::get_string(d, "batch_delay_millis");
-  return create_config(cifar_path, num_threads, num_batches, batch_size,
-                       batch_delay);
-};
-
 int main(int argc, char *argv[]) {
   cxxopts::Options options("performance_bench",
                            "Clipper performance benchmarking");
@@ -186,11 +96,19 @@ int main(int argc, char *argv[]) {
   bool json_specified = (options.count("filename") > 0);
   std::unordered_map<std::string, std::string> test_config;
 
+  std::vector<std::string> desired_vars = {CIFAR_DATA_PATH, NUM_THREADS,
+                                           NUM_BATCHES, BATCH_SIZE,
+                                           BATCH_DELAY_MILLIS};
+
   if (json_specified) {
     std::string json_path = options["filename"].as<std::string>();
-    test_config = get_config_from_json(json_path);
+    test_config = get_config_from_json(json_path, desired_vars);
   } else {
-    test_config = get_config_from_prompt();
+    std::string setup_message =
+        "Before proceeding, run bench/setup_sklearn_bench.sh from clipper's "
+        "root "
+        "directory";
+    test_config = get_config_from_prompt(setup_message, desired_vars);
   }
   get_config().ready();
   QueryProcessor qp;
@@ -210,7 +128,7 @@ int main(int argc, char *argv[]) {
   // Seed the random number generator that will be used to randomly select
   // query input vectors from the CIFAR dataset
   std::srand(time(NULL));
-  int num_threads = std::stoi(test_config.find(CONFIG_KEY_NUM_THREADS)->second);
+  int num_threads = get_int(NUM_THREADS, test_config);
   std::vector<std::thread> threads;
   for (int i = 0; i < num_threads; i++) {
     std::thread thread([&]() {

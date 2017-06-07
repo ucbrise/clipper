@@ -26,6 +26,8 @@ ModelContainer::ModelContainer(VersionedModelId model, int container_id,
       container_id_(container_id),
       replica_id_(replica_id),
       input_type_(input_type),
+      latency_hist_("container_prediction_latency", "microseconds",
+                    HISTOGRAM_SAMPLE_SIZE),
       avg_throughput_per_milli_(0),
       throughput_buffer_(THROUGHPUT_BUFFER_CAPACITY) {
   std::string model_str = model.serialize();
@@ -34,13 +36,18 @@ ModelContainer::ModelContainer(VersionedModelId model, int container_id,
                      model_str, std::to_string(container_id));
 }
 
-void ModelContainer::update_throughput(size_t batch_size,
-                                       long total_latency_micros) {
+void ModelContainer::update_container_stats(size_t batch_size,
+                                            long total_latency_micros) {
   if (batch_size <= 0 || total_latency_micros <= 0) {
     throw std::invalid_argument(
         "Batch size and latency must be positive for throughput updates!");
   }
+
+  latency_hist_.insert(total_latency_micros);
+
   boost::unique_lock<boost::shared_mutex> lock(throughput_mutex_);
+
+  // 1000 us/ms, so new_throughput is #requests/ms
   double new_throughput = 1000 * (static_cast<double>(batch_size) /
                                   static_cast<double>(total_latency_micros));
   double old_total_throughput =
@@ -79,10 +86,13 @@ size_t ModelContainer::get_batch_size(Deadline deadline) {
       std::chrono::duration_cast<std::chrono::milliseconds>(
           deadline.time_since_epoch())
           .count();
+
   double remaining_time_millis = deadline_millis - current_time_millis;
+
   boost::shared_lock<boost::shared_mutex> lock(throughput_mutex_);
   int batch_size =
       static_cast<int>(avg_throughput_per_milli_ * remaining_time_millis);
+
   if (batch_size < 1) {
     batch_size = 1;
   }

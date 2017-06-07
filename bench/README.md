@@ -9,11 +9,13 @@ This benchmark serves an SKLearn model that depends on the CIFAR10 Python datase
 ```
 
 ### CIFAR10 Binary Dataset for Query Execution
-The C++ benchmark works by sending CIFAR10 query vectors to the container serving the trained SKLearn model. To achieve this, the **binary dataset** is required. It can also be obtained from [https://www.cs.toronto.edu/~kriz/cifar.html](https://www.cs.toronto.edu/~kriz/cifar.html).
+The C++ benchmark works by sending CIFAR10 query vectors to the container serving the trained SKLearn model. To achieve this, the **binary dataset** is required. It can also be obtained from [https://www.cs.toronto.edu/~kriz/cifar.html](https://www.cs.toronto.edu/~kriz/cifar.html). You can click [here](https://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz) to download directly.
+
+You'll want to unzip the .tar.gz file manually.
 
 ## Optional Configuration Files
 The following benchmark attributes can be loaded via a JSON configuration file:
-- **cifar_data_path**: The path to a **specific binary data file** within the CIFAR10 binary dataset with a name of the form `data_batch_<n>.bin`. (`data_batch_1.bin`, for example)
+- **cifar_data_path**: The path to a **specific binary data file** within the CIFAR10 binary dataset with a name of the form `data_batch_<n>.bin`. (`/Users/.../cifar-100-binary/data_batch_1.bin`, for example)
 - **num_threads**: The number of threads of execution
 - **num_batches**: The number of batches of requests to be sent by each thread
 - **batch_size**: The number of requests to be sent in each batch

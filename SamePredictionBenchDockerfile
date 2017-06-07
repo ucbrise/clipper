@@ -1,0 +1,11 @@
+FROM clipper/py-rpc:latest
+
+MAINTAINER Dan Crankshaw <dscrankshaw@gmail.com>
+
+COPY containers/python/rpc.py /containers/python/
+COPY containers/python/same_prediction_container.py /containers/python/
+COPY /bench/setup_same_prediction_bench_docker.sh /bench/
+
+CMD ["/bench/setup_same_prediction_bench_docker.sh"]
+
+# vim: set filetype=dockerfile:
