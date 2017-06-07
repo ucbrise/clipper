@@ -20,8 +20,8 @@ std::unordered_map<std::string, std::string> get_config_from_prompt();
  * Loads a configuration from the json file at the specified path
  */
 std::unordered_map<std::string, std::string> get_config_from_json(
-        std::string json_path);
+    std::string json_path);
 
-} // namespace bench_utils
+}  // namespace bench_utils
 
 //#endif  // BENCH_UTILS_HPP

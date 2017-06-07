@@ -29,20 +29,18 @@ const int RANDOM_VEC_UPPERBOUND = 10;
 
 std::vector<double> gen_random_vector(int length, int upper_bound) {
   std::vector<double> vec(length);
-  for (size_t i = 0; i< vec.size(); i++) {
+  for (size_t i = 0; i < vec.size(); i++) {
     vec[i] = std::rand() % upper_bound;
   }
   return vec;
 }
 
-void send_predictions(
-    std::unordered_map<std::string, std::string> &config,
-    QueryProcessor &qp) {
-
+void send_predictions(std::unordered_map<std::string, std::string> &config,
+                      QueryProcessor &qp) {
   int num_batches = std::stoi(config.find(CONFIG_KEY_NUM_BATCHES)->second);
   int batch_size = std::stoi(config.find(CONFIG_KEY_BATCH_SIZE)->second);
   long batch_delay_millis =
-          static_cast<long>(std::stoi(config.find(CONFIG_KEY_BATCH_DELAY)->second));
+      static_cast<long>(std::stoi(config.find(CONFIG_KEY_BATCH_DELAY)->second));
 
   clipper::app_metrics::AppMetrics app_metrics(TEST_APPLICATION_LABEL);
   std::vector<double> query_vec;
@@ -61,17 +59,17 @@ void send_predictions(
                     {std::make_pair(NOOP_MODEL_NAME, 1)}});
 
     prediction.then([app_metrics](boost::future<Response> f) {
-        Response r = f.get();
+      Response r = f.get();
 
-        // Update metrics
-        if (r.output_is_default_) {
-          app_metrics.default_pred_ratio_->increment(1, 1);
-        } else {
-          app_metrics.default_pred_ratio_->increment(0, 1);
-        }
-        app_metrics.latency_->insert(r.duration_micros_);
-        app_metrics.num_predictions_->increment(1);
-        app_metrics.throughput_->mark(1);
+      // Update metrics
+      if (r.output_is_default_) {
+        app_metrics.default_pred_ratio_->increment(1, 1);
+      } else {
+        app_metrics.default_pred_ratio_->increment(0, 1);
+      }
+      app_metrics.latency_->insert(r.duration_micros_);
+      app_metrics.num_predictions_->increment(1);
+      app_metrics.throughput_->mark(1);
     });
 
     std::this_thread::sleep_for(std::chrono::milliseconds(batch_delay_millis));
@@ -82,7 +80,8 @@ int main(int argc, char *argv[]) {
   cxxopts::Options options("noop_bench",
                            "Clipper noop performance benchmarking");
 
-  std::unordered_map<std::string, std::string> test_config = bench_utils::get_config_from_prompt();
+  std::unordered_map<std::string, std::string> test_config =
+      bench_utils::get_config_from_prompt();
 
   get_config().ready();
   QueryProcessor qp;
@@ -95,14 +94,13 @@ int main(int argc, char *argv[]) {
                               0};
   qp.get_state_table()->put(state_key, p.serialize(init_state));
 
-  // Seed the random number generator that will be used to randomly generate datapoints
+  // Seed the random number generator that will be used to randomly generate
+  // datapoints
   std::srand(time(NULL));
   int num_threads = std::stoi(test_config.find(CONFIG_KEY_NUM_THREADS)->second);
   std::vector<std::thread> threads;
   for (int i = 0; i < num_threads; i++) {
-    std::thread thread([&]() {
-        send_predictions(test_config, qp);
-    });
+    std::thread thread([&]() { send_predictions(test_config, qp); });
     threads.push_back(std::move(thread));
   }
   for (auto &thread : threads) {
