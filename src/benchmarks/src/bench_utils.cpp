@@ -1,4 +1,5 @@
 #include <clipper/json_util.hpp>
+#include <clipper/logging.hpp>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -28,16 +29,15 @@ std::unordered_map<std::string, std::string> create_config_(
   return config;
 };
 
-std::unordered_map<std::string, std::string> get_config_from_prompt() {
+std::unordered_map<std::string, std::string> get_cifar_config_from_prompt(
+    std::string setup_message) {
   std::string path;
   std::string num_threads;
   std::string num_batches;
   std::string batch_size;
   std::string batch_delay;
 
-  std::cout << "Before proceeding, run bench/setup_bench.sh from clipper's "
-               "root directory."
-            << std::endl;
+  std::cout << setup_message << std::endl;
   std::cout << "Enter a path to the CIFAR10 binary data set: ";
   std::cin >> path;
   std::cout << "Enter the number of threads of execution: ";
@@ -54,7 +54,7 @@ std::unordered_map<std::string, std::string> get_config_from_prompt() {
                         batch_delay);
 };
 
-std::unordered_map<std::string, std::string> get_config_from_json(
+std::unordered_map<std::string, std::string> get_cifar_config_from_json(
     std::string json_path) {
   std::ifstream json_file(json_path);
   std::stringstream buffer;
@@ -73,8 +73,18 @@ std::unordered_map<std::string, std::string> get_config_from_json(
 
 std::unordered_map<int, std::vector<std::vector<double>>> load_cifar(
     std::unordered_map<std::string, std::string> &config) {
-  std::ifstream cifar_file(config.find(CONFIG_KEY_PATH)->second,
-                           std::ios::binary);
+  std::string cifar_data_path = config.find(CONFIG_KEY_PATH)->second;
+
+  // A loose check to ensure that the binary dataset (not the python-compatible
+  // dataset) is being used
+  if (cifar_data_path.find(".bin") == std::string::npos) {
+    log_error(
+        "BENCH",
+        "Please specify the full path of the binary CIFAR-100 data file.");
+    exit(1);  // doesn't seem to actually exit the script
+  }
+
+  std::ifstream cifar_file(cifar_data_path, std::ios::binary);
   std::istreambuf_iterator<char> cifar_data(cifar_file);
   std::unordered_map<int, std::vector<std::vector<double>>> vecs_map;
   for (int i = 0; i < 10000; i++) {

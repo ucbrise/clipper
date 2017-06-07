@@ -14,12 +14,13 @@ static std::string CONFIG_KEY_BATCH_DELAY = "batch_delay";
 /**
  * Creates a configuration from data received through the command prompt
  */
-std::unordered_map<std::string, std::string> get_config_from_prompt();
+std::unordered_map<std::string, std::string> get_cifar_config_from_prompt(
+    std::string setup_message);
 
 /**
  * Loads a configuration from the json file at the specified path
  */
-std::unordered_map<std::string, std::string> get_config_from_json(
+std::unordered_map<std::string, std::string> get_cifar_config_from_json(
     std::string json_path);
 
 /**

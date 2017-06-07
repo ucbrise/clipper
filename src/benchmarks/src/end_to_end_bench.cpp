@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
                            "Clipper performance benchmarking");
   // clang-format off
   options.add_options()
-          ("f,filename", "Config file name", cxxopts::value<std::string>());
+      ("f,filename", "Config file name", cxxopts::value<std::string>());
   // clang-format on
   options.parse(argc, argv);
   bool json_specified = (options.count("filename") > 0);
@@ -99,9 +99,12 @@ int main(int argc, char *argv[]) {
 
   if (json_specified) {
     std::string json_path = options["filename"].as<std::string>();
-    test_config = get_config_from_json(json_path);
+    test_config = get_cifar_config_from_json(json_path);
   } else {
-    test_config = get_config_from_prompt();
+    std::string setup_message =
+        "Before proceeding, run bench/setup_bench.sh from clipper's root "
+        "directory";
+    test_config = get_cifar_config_from_prompt(setup_message);
   }
   get_config().ready();
   QueryProcessor qp;

@@ -22,7 +22,10 @@ using namespace bench_utils;
 
 const std::string DEFAULT_OUTPUT = "-1";
 const std::string TEST_APPLICATION_LABEL = "throughput_testing_app";
-const std::string NOOP_MODEL_NAME = "bench_noop";
+
+// These should match the values in setup_throughput_bench.sh
+const std::string MODEL_NAME = "bench_noop";
+const int MODEL_VERISON = 1;
 
 void send_predictions(std::unordered_map<std::string, std::string> &config,
                       QueryProcessor &qp,
@@ -31,18 +34,20 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
   long batch_delay_millis =
       static_cast<long>(std::stoi(config.find(CONFIG_KEY_BATCH_DELAY)->second));
 
-  size_t num_datapoints = data.size();
+  int num_datapoints;
+  num_datapoints = static_cast<int>(data.size());  // assume that data.size()
+                                                   // doesn't exceed int
+                                                   // representation bounds
 
   clipper::app_metrics::AppMetrics app_metrics(TEST_APPLICATION_LABEL);
   std::vector<double> query_vec;
 
-  for (size_t j = 0; j < num_batches; j++) {
-
+  for (int j = 0; j < num_batches; j++) {
     // Select datapoint and modify it to be epoch-specific (to avoid cache hits)
     // Will modify when batch sizes are allowed to be > 1
-    size_t index = j % num_datapoints;
+    int index = j % num_datapoints;
     query_vec = data[index];
-    query_vec[1] += j / num_datapoints;
+    query_vec[0] += j / num_datapoints;
     std::shared_ptr<Input> input = std::make_shared<DoubleVector>(query_vec);
 
     boost::future<Response> prediction =
@@ -51,7 +56,7 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
                     input,
                     100000,
                     clipper::DefaultOutputSelectionPolicy::get_name(),
-                    {std::make_pair(NOOP_MODEL_NAME, 1)}});
+                    {std::make_pair(MODEL_NAME, MODEL_VERISON)}});
 
     prediction.then([app_metrics](boost::future<Response> f) {
       Response r = f.get();
@@ -71,21 +76,26 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
   }
 }
 
-// Assumes that modifying data won't drastically affect model performance
-void modify_data_for_thread(std::vector<std::vector<double>> data,
-                            int thread_id) {
-  for (size_t i = 0; i < data.size(); i++) {
-    data[i][0] += thread_id;
-  }
-}
-
 int main(int argc, char *argv[]) {
   cxxopts::Options options("noop_bench",
                            "Clipper noop performance benchmarking");
+  // clang-format off
+  options.add_options()
+          ("f,filename", "Config file name", cxxopts::value<std::string>());
+  // clang-format on
+  options.parse(argc, argv);
+  bool json_specified = (options.count("filename") > 0);
+  std::unordered_map<std::string, std::string> test_config;
 
-  std::unordered_map<std::string, std::string> test_config =
-      bench_utils::get_config_from_prompt();
-
+  if (json_specified) {
+    std::string json_path = options["filename"].as<std::string>();
+    test_config = get_cifar_config_from_json(json_path);
+  } else {
+    std::string setup_message =
+        "Before proceeding, run bench/setup_noop_bench.sh from clipper's root "
+        "directory";
+    test_config = get_cifar_config_from_prompt(setup_message);
+  }
   get_config().ready();
   QueryProcessor qp;
   std::this_thread::sleep_for(std::chrono::seconds(3));
@@ -101,8 +111,6 @@ int main(int argc, char *argv[]) {
   // datapoints
   std::srand(time(NULL));
 
-  int num_threads = std::stoi(test_config.find(CONFIG_KEY_NUM_THREADS)->second);
-
   // Prepare data for threads.
   // We concatenate because we only need the datapoints – not their labels.
   // We modify datapoints to be thread-specific to avoid cache hits
@@ -111,25 +119,7 @@ int main(int argc, char *argv[]) {
   std::vector<std::vector<double>> concatendated_datapoints =
       concatenate_cifar_datapoints(cifar_data);
 
-  std::unordered_map<int, std::vector<std::vector<double>>> data_for_thread;
-  std::vector<std::vector<double>> thread_specific_data;
-  for (int i = 0; i < num_threads; i++) {
-    // According to http://en.cppreference.com/w/cpp/container/vector/operator=,
-    // this should copy `concatenated_datapoints`
-    thread_specific_data = concatendated_datapoints;
-    modify_data_for_thread(thread_specific_data, i);
-    data_for_thread[i] = thread_specific_data;
-  }
-
-  std::vector<std::thread> threads;
-  for (int i = 0; i < num_threads; i++) {
-    std::thread thread(
-        [&]() { send_predictions(test_config, qp, data_for_thread[i]); });
-    threads.push_back(std::move(thread));
-  }
-  for (auto &thread : threads) {
-    thread.join();
-  }
+  send_predictions(test_config, qp, concatendated_datapoints);
 
   std::string metrics =
       metrics::MetricsRegistry::get_metrics().report_metrics();
