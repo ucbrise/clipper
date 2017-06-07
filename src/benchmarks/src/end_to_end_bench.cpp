@@ -26,35 +26,6 @@ constexpr double SKLEARN_BIRD_LABEL = 0;
 
 const std::string TEST_APPLICATION_LABEL = "test";
 
-std::unordered_map<int, std::vector<std::vector<double>>> load_cifar(
-    std::unordered_map<std::string, std::string> &config) {
-  std::ifstream cifar_file(config.find(CONFIG_KEY_PATH)->second,
-                           std::ios::binary);
-  std::istreambuf_iterator<char> cifar_data(cifar_file);
-  std::unordered_map<int, std::vector<std::vector<double>>> vecs_map;
-  for (int i = 0; i < 10000; i++) {
-    int label = static_cast<int>(*cifar_data);
-    cifar_data++;
-    std::vector<uint8_t> cifar_byte_vec;
-    cifar_byte_vec.reserve(3072);
-    std::copy_n(cifar_data, 3072, std::back_inserter(cifar_byte_vec));
-    cifar_data++;
-    std::vector<double> cifar_double_vec(cifar_byte_vec.begin(),
-                                         cifar_byte_vec.end());
-
-    std::unordered_map<int, std::vector<std::vector<double>>>::iterator
-        label_vecs = vecs_map.find(label);
-    if (label_vecs != vecs_map.end()) {
-      label_vecs->second.push_back(cifar_double_vec);
-    } else {
-      std::vector<std::vector<double>> new_label_vecs;
-      new_label_vecs.push_back(cifar_double_vec);
-      vecs_map.emplace(label, new_label_vecs);
-    }
-  }
-  return vecs_map;
-}
-
 void send_predictions(
     std::unordered_map<std::string, std::string> &config, QueryProcessor &qp,
     std::unordered_map<int, std::vector<std::vector<double>>> &cifar_data,
