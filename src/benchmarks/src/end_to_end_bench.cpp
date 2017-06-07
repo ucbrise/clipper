@@ -1,15 +1,11 @@
 #include <time.h>
 #include <functional>
 #include <iostream>
-#include <memory>
-#include <string>
-#include <utility>
 #include <vector>
 
 #include <boost/thread.hpp>
 #include <cxxopts.hpp>
 
-#include <rapidjson/document.h>
 #include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/future.hpp>
@@ -18,14 +14,12 @@
 #include <clipper/query_processor.hpp>
 #include <fstream>
 
+#include "include/bench_utils.hpp"
+
 using namespace clipper;
+using namespace bench_utils;
 
 const std::string SKLEARN_MODEL_NAME = "bench_sklearn_cifar";
-const std::string CONFIG_KEY_PATH = "path";
-const std::string CONFIG_KEY_NUM_THREADS = "num_threads";
-const std::string CONFIG_KEY_NUM_BATCHES = "num_batches";
-const std::string CONFIG_KEY_BATCH_SIZE = "batch_size";
-const std::string CONFIG_KEY_BATCH_DELAY = "batch_delay";
 
 constexpr double SKLEARN_PLANE_LABEL = 1;
 constexpr double SKLEARN_BIRD_LABEL = 0;
@@ -121,66 +115,12 @@ void send_predictions(
   }
 }
 
-std::unordered_map<std::string, std::string> create_config(
-    std::string path, std::string num_threads, std::string num_batches,
-    std::string batch_size, std::string batch_delay) {
-  std::unordered_map<std::string, std::string> config;
-  config.emplace(CONFIG_KEY_PATH, path);
-  config.emplace(CONFIG_KEY_NUM_THREADS, num_threads);
-  config.emplace(CONFIG_KEY_NUM_BATCHES, num_batches);
-  config.emplace(CONFIG_KEY_BATCH_SIZE, batch_size);
-  config.emplace(CONFIG_KEY_BATCH_DELAY, batch_delay);
-  return config;
-};
-
-std::unordered_map<std::string, std::string> get_config_from_prompt() {
-  std::string path;
-  std::string num_threads;
-  std::string num_batches;
-  std::string batch_size;
-  std::string batch_delay;
-
-  std::cout << "Before proceeding, run bench/setup_bench.sh from clipper's "
-               "root directory."
-            << std::endl;
-  std::cout << "Enter a path to the CIFAR10 binary data set: ";
-  std::cin >> path;
-  std::cout << "Enter the number of threads of execution: ";
-  std::cin >> num_threads;
-  std::cout
-      << "Enter the number of request batches to be sent by each thread: ";
-  std::cin >> num_batches;
-  std::cout << "Enter the number of requests per batch: ";
-  std::cin >> batch_size;
-  std::cout << "Enter the delay between batches, in milliseconds: ";
-  std::cin >> batch_delay;
-
-  return create_config(path, num_threads, num_batches, batch_size, batch_delay);
-};
-
-std::unordered_map<std::string, std::string> get_config_from_json(
-    std::string json_path) {
-  std::ifstream json_file(json_path);
-  std::stringstream buffer;
-  buffer << json_file.rdbuf();
-  std::string json_text = buffer.str();
-  rapidjson::Document d;
-  json::parse_json(json_text, d);
-  std::string cifar_path = json::get_string(d, "cifar_data_path");
-  std::string num_threads = json::get_string(d, "num_threads");
-  std::string num_batches = json::get_string(d, "num_batches");
-  std::string batch_size = json::get_string(d, "batch_size");
-  std::string batch_delay = json::get_string(d, "batch_delay_millis");
-  return create_config(cifar_path, num_threads, num_batches, batch_size,
-                       batch_delay);
-};
-
 int main(int argc, char *argv[]) {
   cxxopts::Options options("performance_bench",
                            "Clipper performance benchmarking");
   // clang-format off
   options.add_options()
-      ("f,filename", "Config file name", cxxopts::value<std::string>());
+          ("f,filename", "Config file name", cxxopts::value<std::string>());
   // clang-format on
   options.parse(argc, argv);
   bool json_specified = (options.count("filename") > 0);
