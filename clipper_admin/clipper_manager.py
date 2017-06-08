@@ -989,7 +989,7 @@ class Clipper:
             True if the container was added successfully and False
             if the container could not be added.
         """
-        # TODO: this needs to abstract containers deployed on k8s vs those running on local docker
+        # TODO: this must abstract containers deployed on k8s vs those running on local docker, see ContainerManager
         with hide("warnings", "output", "running"):
             # Look up model info in Redis
             if self.redis_ip == DEFAULT_REDIS_IP:
@@ -1038,7 +1038,6 @@ class Clipper:
                         mv_label="%s=%s:%d" % (CLIPPER_MODEL_CONTAINER_LABEL,
                                                model_name, model_version),
                         restart_policy=restart_policy))
-                print(add_container_cmd)
                 result = self._execute_root(add_container_cmd)
                 return result.return_code == 0
             else:
