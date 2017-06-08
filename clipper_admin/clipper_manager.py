@@ -473,11 +473,11 @@ class Clipper:
 
             # publish model to Clipper and verify success before copying model
             # parameters to Clipper and starting containers
-            # if not self._publish_new_model(
-            #         name, version, labels, input_type, container_name,
-            #         os.path.join(vol, os.path.basename(model_data_path))):
-            #     return False
-            # print("Published model to Clipper")
+            if not self._publish_new_model(
+                    name, version, labels, input_type, container_name,
+                    os.path.join(vol, os.path.basename(model_data_path))):
+                return False
+            print("Published model to Clipper")
 
             import docker
             # prepare docker image build dir
