@@ -159,9 +159,9 @@ TEST(JsonUtilTests, TestParseCandidateModels) {
   std::string correct_json = R"(
   {
     "correct_candidate_models": [
-      {"model_name": "sklearn_svm", "model_version": "1"},
-      {"model_name": "sklearn_svm", "model_version": "2"},
-      {"model_name": "network", "model_version": "3"}
+      {"model_name": "sklearn_svm", "model_version": "92248e3"},
+      {"model_name": "sklearn_svm", "model_version": "1.2.4"},
+      {"model_name": "network", "model_version": "3--0"}
     ]
   }
   )";

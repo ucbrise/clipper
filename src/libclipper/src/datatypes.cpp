@@ -7,23 +7,9 @@
 #include <boost/functional/hash.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/util.hpp>
+#include <clipper/constants.hpp>
 
 namespace clipper {
-
-size_t versioned_model_hash(const VersionedModelId &key) {
-  std::size_t seed = 0;
-  boost::hash_combine(seed, key.first);
-  boost::hash_combine(seed, key.second);
-  return seed;
-}
-
-std::string versioned_model_to_str(const VersionedModelId &model) {
-  std::stringstream ss;
-  ss << model.first;
-  ss << ":";
-  ss << model.second;
-  return ss.str();
-}
 
 template <typename T>
 ByteBuffer get_byte_buffer(std::vector<T> vector) {
@@ -71,6 +57,31 @@ InputType parse_input_type(std::string type_string) {
   } else {
     throw std::invalid_argument(type_string + " is not a valid input string");
   }
+}
+
+VersionedModelId::VersionedModelId(const std::string name, const std::string id)
+      : name_(name), id_(id) {}
+
+std::string VersionedModelId::get_name() const { return name_;}
+std::string VersionedModelId::get_id() const { return id_;}
+std::size_t VersionedModelId::hash() const {
+  std::size_t seed = 0;
+  boost::hash_combine(seed, name_);
+  boost::hash_combine(seed, id_);
+  return seed;
+}
+std::string VersionedModelId::serialize() const {
+  std::stringstream ss;
+  ss << name_;
+  ss << ITEM_PART_CONCATENATOR;
+  ss << id_;
+  return ss.str();
+}
+    VersionedModelId VersionedModelId::deserialize(std::string str) {
+  auto split = str.find(ITEM_PART_CONCATENATOR);
+  std::string model_name = str.substr(0, split);
+  std::string model_version = str.substr(split + 1, str.size());
+  return VersionedModelId::VersionedModelId(model_name, model_version);
 }
 
 Output::Output(const std::string y_hat,

@@ -11,7 +11,6 @@
 namespace clipper {
 
 using ByteBuffer = std::vector<uint8_t>;
-using VersionedModelId = std::pair<std::string, std::string>;
 using QueryId = long;
 using FeedbackAck = bool;
 
@@ -28,10 +27,30 @@ enum class RequestType {
   FeedbackRequest = 1,
 };
 
-size_t versioned_model_hash(const VersionedModelId &key);
-std::string versioned_model_to_str(const VersionedModelId &model);
 std::string get_readable_input_type(InputType type);
 InputType parse_input_type(std::string type_string);
+
+class VersionedModelId {
+  public:
+
+    VersionedModelId(const std::string name, const std::string id);
+
+    std::string get_name() const;
+    std::string get_id() const;
+    std::size_t hash() const;
+    std::string serialize() const;
+    static VersionedModelId deserialize(std::string);
+
+    VersionedModelId(const VersionedModelId &) = default;
+    VersionedModelId &operator=(const VersionedModelId &) = default;
+
+    VersionedModelId(VersionedModelId &&) = default;
+    VersionedModelId &operator=(VersionedModelId &&) = default;
+
+  private:
+    std::string name_;
+    std::string id_;
+};
 
 class Output {
  public:
