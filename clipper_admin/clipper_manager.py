@@ -115,7 +115,7 @@ class Clipper:
                  restart_containers=True):
         self.redis_ip = redis_ip
         self.redis_port = redis_port
-        self.docker_compost_dict = {
+        self.docker_compose_dict = {
             'networks': {
                 'default': {
                     'external': {
@@ -160,37 +160,35 @@ class Clipper:
         }
         start_redis = (self.redis_ip == DEFAULT_REDIS_IP)
         if start_redis:
-            self.docker_compost_dict['services']['redis'] = {
-                'image': 'redis:alpine',
+            self.docker_compose_dict['services']['redis'] = {
+                'image':
+                'redis:alpine',
                 'ports': ['%d:%d' % (self.redis_port, self.redis_port)],
-                'command': "redis-server --port %d" % self.redis_port,
+                'command':
+                "redis-server --port %d --appendonly yes" % self.redis_port,
+                # Set the user id and group id to set command execution privileges
+                'user':
+                "%s:%s" % (str(os.getuid()), str(os.getgid())),
                 'labels': {
                     CLIPPER_DOCKER_LABEL: ""
                 }
             }
-            self.docker_compost_dict['services']['mgmt_frontend'][
+            self.docker_compose_dict['services']['mgmt_frontend'][
                 'depends_on'] = ['redis']
-            self.docker_compost_dict['services']['query_frontend'][
+            self.docker_compose_dict['services']['query_frontend'][
                 'depends_on'].append('redis')
             if redis_persistence_path:
-                if not os.path.exists(redis_persistence_path):
-                    self.docker_compost_dict['services']['redis'][
-                        'volumes'] = ['%s:/data' % redis_persistence_path]
-                else:
-                    print(
-                        "The directory specified by the redis persistence path already exists"
-                    )
-                    raise ClipperManagerException(
-                        "The directory specified by the redis persistence path already exists"
-                    )
+                self.docker_compose_dict['services']['redis']['volumes'] = [
+                    '%s:/data' % redis_persistence_path
+                ]
         self.restart_containers = restart_containers
         if self.restart_containers:
-            self.docker_compost_dict['services']['mgmt_frontend'][
+            self.docker_compose_dict['services']['mgmt_frontend'][
                 'restart'] = 'always'
-            self.docker_compost_dict['services']['query_frontend'][
+            self.docker_compose_dict['services']['query_frontend'][
                 'restart'] = 'always'
             if start_redis:
-                self.docker_compost_dict['services']['redis'][
+                self.docker_compose_dict['services']['redis'][
                     'restart'] = 'always'
 
         self.sudo = sudo
@@ -311,7 +309,7 @@ class Clipper:
             self._execute_standard("rm -f docker-compose.yml")
             self._execute_append("docker-compose.yml",
                                  yaml.dump(
-                                     self.docker_compost_dict,
+                                     self.docker_compose_dict,
                                      default_flow_style=False))
             print(
                 "Note: Docker must download the Clipper Docker images if they are not already cached. This may take awhile."
