@@ -8,6 +8,7 @@ from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 
 class ClipperK8s:
+    # TODO: subclass ContainerManager interface
     def __init__(self):
         config.load_kube_config()
         # self.initialize_clipper() # NOTE: this allows containers to discover query_manager by DNS rather than IP,
