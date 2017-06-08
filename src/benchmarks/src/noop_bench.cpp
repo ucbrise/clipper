@@ -30,9 +30,9 @@ const int MODEL_VERISON = 1;
 void send_predictions(std::unordered_map<std::string, std::string> &config,
                       QueryProcessor &qp,
                       std::vector<std::vector<double>> data) {
-  int num_batches = std::stoi(config.find(CONFIG_KEY_NUM_BATCHES)->second);
+  int num_batches = std::stoi(config.find(NUM_BATCHES)->second);
   long batch_delay_millis =
-      static_cast<long>(std::stoi(config.find(CONFIG_KEY_BATCH_DELAY)->second));
+      static_cast<long>(std::stoi(config.find(BATCH_DELAY_MILLIS)->second));
 
   int num_datapoints;
   num_datapoints = static_cast<int>(data.size());  // assume that data.size()
@@ -87,14 +87,17 @@ int main(int argc, char *argv[]) {
   bool json_specified = (options.count("filename") > 0);
   std::unordered_map<std::string, std::string> test_config;
 
+  // Need to update this when we allow for batch sizes > 1
+  std::vector<std::string> desired_vars = {CIFAR_DATA_PATH, NUM_BATCHES,
+                                           BATCH_DELAY_MILLIS};
   if (json_specified) {
     std::string json_path = options["filename"].as<std::string>();
-    test_config = get_cifar_config_from_json(json_path);
+    test_config = get_config_from_json(json_path, desired_vars);
   } else {
     std::string setup_message =
         "Before proceeding, run bench/setup_noop_bench.sh from clipper's root "
         "directory";
-    test_config = get_cifar_config_from_prompt(setup_message);
+    test_config = get_config_from_prompt(setup_message, desired_vars);
   }
   get_config().ready();
   QueryProcessor qp;

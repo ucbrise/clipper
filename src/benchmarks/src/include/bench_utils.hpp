@@ -5,23 +5,23 @@
 
 namespace bench_utils {
 
-static std::string CONFIG_KEY_PATH = "path";
-static std::string CONFIG_KEY_NUM_THREADS = "num_threads";
-static std::string CONFIG_KEY_NUM_BATCHES = "num_batches";
-static std::string CONFIG_KEY_BATCH_SIZE = "batch_size";
-static std::string CONFIG_KEY_BATCH_DELAY = "batch_delay";
+const std::string CIFAR_DATA_PATH = "cifar_data_path";
+const std::string NUM_THREADS = "num_threads";
+const std::string NUM_BATCHES = "num_batches";
+const std::string BATCH_SIZE = "batch_size";
+const std::string BATCH_DELAY_MILLIS = "batch_delay_millis";
 
 /**
  * Creates a configuration from data received through the command prompt
  */
-std::unordered_map<std::string, std::string> get_cifar_config_from_prompt(
-    std::string setup_message);
+std::unordered_map<std::string, std::string> get_config_from_prompt(
+    std::string setup_message, std::vector<std::string> desired_vars);
 
 /**
  * Loads a configuration from the json file at the specified path
  */
-std::unordered_map<std::string, std::string> get_cifar_config_from_json(
-    std::string json_path);
+std::unordered_map<std::string, std::string> get_config_from_json(
+    std::string json_path, std::vector<std::string> desired_vars);
 
 /**
  * Loads CIFAR data from the specified path

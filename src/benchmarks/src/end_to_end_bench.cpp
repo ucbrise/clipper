@@ -33,10 +33,10 @@ void send_predictions(
   std::vector<std::vector<double>> planes_vecs = cifar_data.find(0)->second;
   std::vector<std::vector<double>> birds_vecs = cifar_data.find(2)->second;
 
-  int num_batches = std::stoi(config.find(CONFIG_KEY_NUM_BATCHES)->second);
-  int batch_size = std::stoi(config.find(CONFIG_KEY_BATCH_SIZE)->second);
+  int num_batches = std::stoi(config.find(NUM_BATCHES)->second);
+  int batch_size = std::stoi(config.find(BATCH_SIZE)->second);
   long batch_delay_millis =
-      static_cast<long>(std::stoi(config.find(CONFIG_KEY_BATCH_DELAY)->second));
+      static_cast<long>(std::stoi(config.find(BATCH_DELAY_MILLIS)->second));
   for (int j = 0; j < num_batches; j++) {
     std::vector<boost::future<Response>> futures;
     std::vector<int> binary_labels;
@@ -97,14 +97,18 @@ int main(int argc, char *argv[]) {
   bool json_specified = (options.count("filename") > 0);
   std::unordered_map<std::string, std::string> test_config;
 
+  std::vector<std::string> desired_vars = {CIFAR_DATA_PATH, NUM_THREADS,
+                                           NUM_BATCHES, BATCH_SIZE,
+                                           BATCH_DELAY_MILLIS};
+
   if (json_specified) {
     std::string json_path = options["filename"].as<std::string>();
-    test_config = get_cifar_config_from_json(json_path);
+    test_config = get_config_from_json(json_path, desired_vars);
   } else {
     std::string setup_message =
         "Before proceeding, run bench/setup_bench.sh from clipper's root "
         "directory";
-    test_config = get_cifar_config_from_prompt(setup_message);
+    test_config = get_config_from_prompt(setup_message, desired_vars);
   }
   get_config().ready();
   QueryProcessor qp;
@@ -124,7 +128,7 @@ int main(int argc, char *argv[]) {
   // Seed the random number generator that will be used to randomly select
   // query input vectors from the CIFAR dataset
   std::srand(time(NULL));
-  int num_threads = std::stoi(test_config.find(CONFIG_KEY_NUM_THREADS)->second);
+  int num_threads = std::stoi(test_config.find(NUM_THREADS)->second);
   std::vector<std::thread> threads;
   for (int i = 0; i < num_threads; i++) {
     std::thread thread([&]() {
