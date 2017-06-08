@@ -1,0 +1,29 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  annotations:
+    ai.clipper.container.label: ""
+  creationTimestamp: null
+  labels:
+    io.kompose.service: mgmt-frontend
+  name: mgmt-frontend
+spec:
+  replicas: 1
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        io.kompose.service: mgmt-frontend
+    spec:
+      containers:
+      - args:
+        - --redis_ip=redis
+        - --redis_port=6379
+        image: clipper/management_frontend:latest
+        name: mgmt-frontend
+        ports:
+        - containerPort: 1338
+        resources: {}
+      restartPolicy: Always
+status: {}
