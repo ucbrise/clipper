@@ -739,7 +739,7 @@ class Clipper:
                                           default_python_container, input_type,
                                           labels, num_containers)
         # Remove temp files
-        # shutil.rmtree(serialization_dir)
+        shutil.rmtree(serialization_dir)
 
         return deploy_result
 
