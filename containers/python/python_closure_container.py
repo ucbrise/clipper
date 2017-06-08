@@ -3,10 +3,9 @@ import rpc
 import os
 import sys
 import numpy as np
-np.set_printoptions(threshold=np.nan)
 
-sys.path.append(os.path.abspath("/lib/"))
-from clipper_admin import cloudpickle
+# sys.path.append(os.path.abspath("/lib/"))
+from clipper_admin.deployers import cloudpickle
 
 IMPORT_ERROR_RETURN_CODE = 3
 
@@ -19,11 +18,9 @@ def load_predict_func(file_path):
 class PythonContainer(rpc.ModelContainerBase):
     def __init__(self, path, input_type):
         self.input_type = rpc.string_to_input_type(input_type)
-
         modules_folder_path = "{dir}/modules/".format(dir=path)
         sys.path.append(os.path.abspath(modules_folder_path))
-
-        predict_fname = "predict_func.pkl"
+        predict_fname = "func.pkl"
         predict_path = "{dir}/{predict_fname}".format(
             dir=path, predict_fname=predict_fname)
         self.predict_func = load_predict_func(predict_path)

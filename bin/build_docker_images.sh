@@ -32,10 +32,10 @@ cd -
 cd $DIR/..
 
 # first build base image
-docker build -t clipper/py-rpc:$tag -f ./RPCDockerfile ./
+time docker build -t clipper/py-rpc:$tag -f ./RPCDockerfile ./
 time docker build --build-arg CODE_VERSION=$tag -t clipper/sum-container:$tag -f ./SumDockerfile ./
 time docker build --build-arg CODE_VERSION=$tag -t clipper/noop-container:$tag -f ./NoopDockerfile ./
-time docker build --build-arg CODE_VERSION=$tag -t clipper/python-container:$tag -f ./PythonContainerDockerfile ./
+time docker build --build-arg CODE_VERSION=$tag -t clipper/python-closure-container:$tag -f ./PyClosureContainerDockerfile ./
 time docker build --build-arg CODE_VERSION=$tag -t clipper/pyspark-container:$tag -f ./PySparkContainerDockerfile ./
 time docker build --build-arg CODE_VERSION=$tag -t clipper/sklearn_cifar_container:$tag -f ./SklearnCifarDockerfile ./
 time docker build --build-arg CODE_VERSION=$tag -t clipper/tf_cifar_container:$tag -f ./TensorFlowCifarDockerfile ./
