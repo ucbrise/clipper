@@ -161,11 +161,14 @@ class Clipper:
         start_redis = (self.redis_ip == DEFAULT_REDIS_IP)
         if start_redis:
             self.docker_compose_dict['services']['redis'] = {
-                'image': 'redis:alpine',
+                'image':
+                'redis:alpine',
                 'ports': ['%d:%d' % (self.redis_port, self.redis_port)],
-                'command': "redis-server --port %d --appendonly yes" % self.redis_port,
+                'command':
+                "redis-server --port %d --appendonly yes" % self.redis_port,
                 # Set the user id and group id to set command execution privileges
-                'user': "%s:%s" % (str(os.getuid()), str(os.getgid())),
+                'user':
+                "%s:%s" % (str(os.getuid()), str(os.getgid())),
                 'labels': {
                     CLIPPER_DOCKER_LABEL: ""
                 }
@@ -175,8 +178,9 @@ class Clipper:
             self.docker_compose_dict['services']['query_frontend'][
                 'depends_on'].append('redis')
             if redis_persistence_path:
-                self.docker_compose_dict['services']['redis'][
-                    'volumes'] = ['%s:/data' % redis_persistence_path]
+                self.docker_compose_dict['services']['redis']['volumes'] = [
+                    '%s:/data' % redis_persistence_path
+                ]
         self.restart_containers = restart_containers
         if self.restart_containers:
             self.docker_compose_dict['services']['mgmt_frontend'][
