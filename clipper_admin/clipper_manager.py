@@ -122,6 +122,13 @@ class Clipper:
                 }
             },
             'services': {
+                'docker_registry': {
+                    'image':
+                    'registry:2.6.1',
+                    'ports': [
+                        '5000:5000'
+                    ]
+                },
                 'mgmt_frontend': {
                     'command': [
                         '--redis_ip=%s' % self.redis_ip,
@@ -167,9 +174,9 @@ class Clipper:
                 }
             }
             self.docker_compost_dict['services']['mgmt_frontend'][
-                'depends_on'] = ['redis']
+                'depends_on'] = ['docker_registry', 'redis']
             self.docker_compost_dict['services']['query_frontend'][
-                'depends_on'].append('redis')
+                'depends_on'].extend(['docker_registry', 'redis'])
             if redis_persistence_path:
                 if not os.path.exists(redis_persistence_path):
                     self.docker_compost_dict['services']['redis'][
@@ -453,8 +460,8 @@ class Clipper:
         with hide("warnings", "output", "running"):
             if isinstance(model_data, base.BaseEstimator):
                 fname = name.replace("/", "_")
-                pkl_path = '/tmp/%s/%s.pkl' % (fname, fname)
                 model_data_path = "/tmp/%s" % fname
+                pkl_path = '%s/%s.pkl' % (model_data_path, fname)
                 try:
                     os.mkdir(model_data_path)
                 except OSError:
@@ -470,31 +477,42 @@ class Clipper:
 
             vol = "{model_repo}/{name}/{version}".format(
                 model_repo=MODEL_REPO, name=name, version=version)
+            print(container_name)
+
+            with open(model_data_path + '/Dockerfile', 'w') as f:
+                f.write("FROM {container_name}\nCOPY . /model/.\n".format(container_name=container_name))
+
+            self._execute_root("docker build -t {name} {model_data_path}/.".format(
+                name=name, model_data_path=model_data_path))
+
+
+
+
             # publish model to Clipper and verify success before copying model
             # parameters to Clipper and starting containers
-            if not self._publish_new_model(
-                    name, version, labels, input_type, container_name,
-                    os.path.join(vol, os.path.basename(model_data_path))):
-                return False
-            print("Published model to Clipper")
+            # if not self._publish_new_model(
+            #         name, version, labels, input_type, container_name,
+            #         os.path.join(vol, os.path.basename(model_data_path))):
+            #     return False
+            # print("Published model to Clipper")
 
-            if (not self._put_container_on_host(container_name)):
-                return False
+            # if (not self._put_container_on_host(container_name)):
+            #     return False
 
-            # Put model parameter data on host
-            with hide("warnings", "output", "running"):
-                self._execute_standard("mkdir -p {vol}".format(vol=vol))
+            # # Put model parameter data on host
+            # with hide("warnings", "output", "running"):
+            #     self._execute_standard("mkdir -p {vol}".format(vol=vol))
 
-            with cd(vol):
-                with hide("warnings", "output", "running"):
-                    self._execute_put(model_data_path, vol)
+            # with cd(vol):
+            #     with hide("warnings", "output", "running"):
+            #         self._execute_put(model_data_path, vol)
 
-            print("Copied model data to host")
-            # aggregate results of starting all containers
-            return all([
-                self.add_container(name, version)
-                for r in range(num_containers)
-            ])
+            # print("Copied model data to host")
+            # # aggregate results of starting all containers
+            # return all([
+            #     self.add_container(name, version)
+            #     for r in range(num_containers)
+            # ])
 
     def register_external_model(self,
                                 name,
@@ -727,7 +745,7 @@ class Clipper:
                                           default_python_container, input_type,
                                           labels, num_containers)
         # Remove temp files
-        shutil.rmtree(serialization_dir)
+        # shutil.rmtree(serialization_dir)
 
         return deploy_result
 
