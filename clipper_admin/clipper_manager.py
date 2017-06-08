@@ -1,6 +1,7 @@
 """Clipper Management Utilities"""
 
 from __future__ import print_function, with_statement, absolute_import
+import docker
 from fabric.api import *
 from fabric.contrib.files import append
 import os
@@ -215,6 +216,7 @@ class Clipper:
         return self.host in LOCAL_HOST_NAMES
 
     def _start_docker_if_necessary(self):
+        # TODO: this should only run if we are running using local Docker daemon
         with hide("warnings", "output", "running"):
             print("Checking if Docker is running...")
             self._execute_root("docker ps")
@@ -471,6 +473,23 @@ class Clipper:
             vol = "{model_repo}/{name}/{version}".format(
                 model_repo=MODEL_REPO, name=name, version=version)
 
+            # prepare docker image build dir
+            with open(model_data_path + '/Dockerfile', 'w') as f:
+                f.write("FROM {container_name}\nCOPY . /model/.\n".format(container_name=container_name))
+
+            # build, tag, and push docker image to registry
+            # NOTE: DOCKER_API_VERSION (set by `minikube docker-env`) must be same version as docker registry server
+            docker_client = docker.from_env(version=os.environ["DOCKER_API_VERSION"])
+            repo = '{docker_registry}/{name}:{version}'.format(
+                    docker_registry='localhost:5000', # TODO: make configurable
+                    name=name,
+                    version=version)
+            docker_client.images.build(
+                    path=model_data_path,
+                    tag=repo)
+            docker_client.images.push(repository=repo)
+
+            # TODO: replace `model_data_path` in `_publish_new_model` with the docker repo
             # publish model to Clipper and verify success before copying model
             # parameters to Clipper and starting containers
             if not self._publish_new_model(
@@ -479,141 +498,11 @@ class Clipper:
                 return False
             print("Published model to Clipper")
 
-            import docker
-            # prepare docker image build dir
-            with open(model_data_path + '/Dockerfile', 'w') as f:
-                f.write("FROM {container_name}\nCOPY . /model/.\n".format(container_name=container_name))
+            # TODO: call this in `add_container` once `repo` is available from redis
+            clipper_k8s = ClipperK8s()
+            clipper_k8s.deploy_container(name, version, repo)
 
-            # build, tag, and push docker image to registry
-            docker_client = docker.from_env(version=os.environ["DOCKER_API_VERSION"])
-            # NOTE: this must be same version as docker registry server
-
-            repo = '{docker_registry}/{name}:{version}'.format(
-                    docker_registry='localhost:5000', # TODO: make configurable
-                    name=name,
-                    version=version)
-            # docker_client.images.build(
-            #         path=model_data_path,
-            #         tag=repo)
-            # docker_client.images.push(repository=repo)
-
-            import yaml
-            import kubernetes
-            from kubernetes.client.rest import ApiException
-            # TODO: check before creating k8s resources
-            kubernetes.config.load_kube_config()
-            k8s_v1 = kubernetes.client.CoreV1Api()
-            k8s_beta = kubernetes.client.ExtensionsV1beta1Api()
-            # TODO: initializing clipper
-            # for name in ['mgmt-frontend', 'query-frontend', 'redis']:
-            #     try:
-            #         k8s_beta.create_namespaced_deployment(
-            #                 body=yaml.load(open('k8s/clipper/{}-deployment.yaml'.format(name))), namespace='default')
-            #     except ApiException:
-            #         pass
-            #     try:
-            #         k8s_v1.create_namespaced_service(
-            #                 body=yaml.load(open('k8s/clipper/{}-service.yaml'.format(name))), namespace='default')
-            #     except ApiException:
-            #         pass
-            # TODO: initializing registry probably goes elsewhere
-            try:
-                k8s_v1.create_namespaced_replication_controller(
-                        body=yaml.load(open('k8s/minikube-registry/kube-registry-rc.yaml')), namespace='kube-system')
-            except ApiException: # already exists
-                pass
-            try:
-                k8s_v1.create_namespaced_service(
-                        body=yaml.load(open('k8s/minikube-registry/kube-registry-svc.yaml')), namespace='kube-system')
-            except ApiException: # already exists
-                pass
-            try:
-                k8s_beta.create_namespaced_daemon_set(
-                        body=yaml.load(open('k8s/minikube-registry/kube-registry-ds.yaml')), namespace='kube-system')
-            except ApiException: # already exists
-                pass
-            try:
-                k8s_beta.create_namespaced_deployment(
-                        body={
-                            'apiVersion': 'extensions/v1beta1',
-                            'kind': 'Deployment',
-                            'metadata': {
-                                'name': name + '-deployment' # NOTE: must satisfy RFC 1123 pathname conventions
-                            },
-                            'spec': {
-                                'replicas': 1,
-                                'template': {
-                                    'metadata': {
-                                        'labels': {
-                                            'model': name,
-                                            'version': str(version)
-                                        }
-                                    },
-                                    'spec': {
-                                        'containers': [
-                                            {
-                                                'name': name,
-                                                'image': repo,
-                                                'ports': [
-                                                    {
-                                                        'containerPort': 80
-                                                    }
-                                                ],
-                                                'env': [
-                                                    {
-                                                        'name': 'CLIPPER_MODEL_NAME',
-                                                        'value': 'feature-sum-model'
-                                                    },
-                                                    {
-                                                        'name': 'CLIPPER_MODEL_VERSION',
-                                                        'value': '1'
-                                                    },
-                                                    {
-                                                        'name': 'CLIPPER_IP',
-                                                        'value': '10.0.2.2' # TODO: WTF magic IP that goes to host
-                                                    }
-                                                ]
-                                            }
-                                        ]
-                                    }
-                                }
-                            }
-                        }, namespace='default')
-            except ApiException: # already exists
-                pass
-            try:
-                k8s_v1.create_namespaced_service(
-                        body={
-                            'apiVersion': 'v1',
-                            'kind': 'Service',
-                            'metadata': {
-                                'name': 'nginx'
-                            },
-                            'spec': {
-                                'ports': [
-                                    {
-                                        'nodePort': 32100, # TODO: remove when ClusterIP
-                                        'port': 80,
-                                        'protocol': 'TCP',
-                                        'targetPort': 80
-                                    }
-                                ],
-                                'selector': {
-                                    'app': 'nginx'
-                                },
-                                'type': 'NodePort' # TODO: use ClusterIP when query frontend is cluster-internal
-                            }
-                    }, namespace='default')
-            except ApiException: # already exists
-                pass
-            # TODO: better error handling
-
-            # to run built docker image on local docker daemon
-            # docker run -it --network=clipper_nw --restart=always -e "CLIPPER_MODEL_NAME=feature_sum_model" -e "CLIPPER_MODEL_VERSION=1" -e "CLIPPER_IP=query_frontend" -e "CLIPPER_INPUT_TYPE=doubles" -l "ai.clipper.container.label" -l "ai.clipper.model_container.model_version=feature_sum_model:1" feature_sum_model
-
-            # TODO: generate a k8s service and pod manifest, deploy to k8s
-
-            # # aggregate results of starting all containers
+            # aggregate results of starting all containers
             # return all([
             #     self.add_container(name, version)
             #     for r in range(num_containers)
@@ -1100,6 +989,7 @@ class Clipper:
             True if the container was added successfully and False
             if the container could not be added.
         """
+        # TODO: this needs to abstract containers deployed on k8s vs those running on local docker
         with hide("warnings", "output", "running"):
             # Look up model info in Redis
             if self.redis_ip == DEFAULT_REDIS_IP:
@@ -1231,6 +1121,7 @@ class Clipper:
             selected model version.
 
         """
+        # TODO: update to use k8s API
         url = "http://%s:%d/admin/set_model_version" % (
             self.host, CLIPPER_MANAGEMENT_PORT)
         req_json = json.dumps({
@@ -1255,11 +1146,8 @@ class Clipper:
         # Get all Docker containers tagged as model containers
         num_containers_removed = 0
         with hide("output", "warnings", "running"):
-            containers = self._execute_root(
-                "docker ps -aq --filter label={model_container_label}".format(
-                    model_container_label=CLIPPER_MODEL_CONTAINER_LABEL))
-            if len(containers) > 0:
-                container_ids = [l.strip() for l in containers.split("\n")]
+            container_ids = self._get_clipper_container_ids()
+            if len(container_ids) > 0:
                 for container in container_ids:
                     # returns a string formatted as "<model_name>:<model_version>"
                     container_model_name_and_version = self._execute_root(
@@ -1286,6 +1174,7 @@ class Clipper:
         """Stops and removes all Clipper Docker containers on the host.
 
         """
+        # TODO: stop containers in k8s if running on k8s
         print("Stopping Clipper and all running models...")
         with hide("output", "warnings", "running"):
             container_ids = self._get_clipper_container_ids()
@@ -1315,66 +1204,4 @@ class Clipper:
             return True
         else:
             print("Error publishing model: %s" % r.text)
-            return False
-
-    def _put_container_on_host(self, container_name):
-        """Puts the provided container on the host.
-
-        Parameters
-        __________
-        container_name : str
-            The name of the container.
-
-        Notes
-        -----
-        This method will first check the host, then Docker Hub, then the local
-        machine to find the container.
-
-        This method is safe to call multiple times with the same container name.
-        Subsequent calls will detect that the container is already present on
-        the host and do nothing.
-
-        """
-        with hide("output", "warnings", "running"):
-            # first see if container is already present on host
-            host_result = self._execute_root(
-                "docker images -q {cn}".format(cn=container_name))
-            if len(host_result.stdout) > 0:
-                print("Found %s on host" % container_name)
-                return True
-            # now try to pull from Docker Hub
-            hub_result = self._execute_root(
-                "docker pull {cn}".format(cn=container_name), warn_only=True)
-            if hub_result.return_code == 0:
-                print("Found %s in Docker hub" % container_name)
-                return True
-
-            # assume container_name refers to a local container and
-            # copy it to host
-            local_result = local(
-                "docker images -q {cn}".format(cn=container_name))
-
-            if len(local_result.stdout) > 0:
-                saved_fname = container_name.replace("/", "_")
-                subprocess.call("docker save -o /tmp/{fn}.tar {cn}".format(
-                    fn=saved_fname, cn=container_name))
-                tar_loc = "/tmp/{fn}.tar".format(fn=saved_fname)
-                self._execute_put(tar_loc, tar_loc)
-                self._execute_root("docker load -i {loc}".format(loc=tar_loc))
-                # self._execute_root("docker tag {image_id} {cn}".format(
-                #       image_id=image_id, cn=cn))
-                # now check to make sure we can access it
-                host_result = self._execute_root(
-                    "docker images -q {cn}".format(cn=container_name))
-                if len(host_result.stdout) > 0:
-                    print("Successfuly copied %s to host" % container_name)
-                    return True
-                else:
-                    warn("Problem copying container %s to host" %
-                         container_name)
-                    return False
-
-            # out of options
-            warn("Could not find %s, please try with a valid "
-                 "container docker image")
             return False
