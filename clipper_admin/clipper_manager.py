@@ -477,16 +477,6 @@ class Clipper:
 
             vol = "{model_repo}/{name}/{version}".format(
                 model_repo=MODEL_REPO, name=name, version=version)
-            print(container_name)
-
-            with open(model_data_path + '/Dockerfile', 'w') as f:
-                f.write("FROM {container_name}\nCOPY . /model/.\n".format(container_name=container_name))
-
-            self._execute_root("docker build -t {name} {model_data_path}/.".format(
-                name=name, model_data_path=model_data_path))
-
-
-
 
             # publish model to Clipper and verify success before copying model
             # parameters to Clipper and starting containers
@@ -496,18 +486,59 @@ class Clipper:
             #     return False
             # print("Published model to Clipper")
 
-            # if (not self._put_container_on_host(container_name)):
-            #     return False
+            # build and push docker registry image
+            with open(model_data_path + '/Dockerfile', 'w') as f:
+                f.write("FROM {container_name}\nCOPY . /model/.\n".format(container_name=container_name))
 
-            # # Put model parameter data on host
-            # with hide("warnings", "output", "running"):
-            #     self._execute_standard("mkdir -p {vol}".format(vol=vol))
+            self._execute_root("docker build -t {name} {model_data_path}/.".format(
+                name=name, model_data_path=model_data_path))
 
-            # with cd(vol):
-            #     with hide("warnings", "output", "running"):
-            #         self._execute_put(model_data_path, vol)
+            # TODO: push to docker registry
+            from kubernetes import client, config
+            config.load_kube_config()
+            k8s_beta = client.ExtensionsV1beta1Api()
+            k8s_beta.create_namespaced_deployment(
+                    body={
+                        'apiVersion': 'extensions/v1beta1',
+                        'kind': 'Deployment',
+                        'metadata': {
+                            'name': 'nginx-deployment'
+                        },
+                        'spec': {
+                            'replicas': 1,
+                            'template': {
+                                'metadata': {
+                                    'labels': {
+                                        'app': 'nginx'
+                                    }
+                                },
+                                'spec': {
+                                    'containers': [
+                                        {
+                                            'name': 'nginx',
+                                            'image': 'nginx:1.7.9',
+                                            'ports': [
+                                                {
+                                                    'containerPort': 80
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }, namespace='default')
+            k8s_bbeta.create_namespaced_service(
+                    {
 
-            # print("Copied model data to host")
+                    }, namespace='default')
+            # TODO: error handling (e.g. if k8s resourcesalready exists)
+
+            # to run built docker image on local docker daemon
+            # docker run -it --network=clipper_nw --restart=always -e "CLIPPER_MODEL_NAME=feature_sum_model" -e "CLIPPER_MODEL_VERSION=1" -e "CLIPPER_IP=query_frontend" -e "CLIPPER_INPUT_TYPE=doubles" -l "ai.clipper.container.label" -l "ai.clipper.model_container.model_version=feature_sum_model:1" feature_sum_model
+
+            # TODO: generate a k8s service and pod manifest, deploy to k8s
+
             # # aggregate results of starting all containers
             # return all([
             #     self.add_container(name, version)
@@ -1043,6 +1074,7 @@ class Clipper:
                         mv_label="%s=%s:%d" % (CLIPPER_MODEL_CONTAINER_LABEL,
                                                model_name, model_version),
                         restart_policy=restart_policy))
+                print(add_container_cmd)
                 result = self._execute_root(add_container_cmd)
                 return result.return_code == 0
             else:
@@ -1190,6 +1222,7 @@ class Clipper:
             self._execute_root(
                 "docker rm {ids}".format(ids=container_id_str), warn_only=True)
 
+    # TODO: provide registry image for k8s service instead of container_name and model_data_path
     def _publish_new_model(self, name, version, labels, input_type,
                            container_name, model_data_path):
         url = "http://%s:%d/admin/add_model" % (self.host,
