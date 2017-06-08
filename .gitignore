@@ -16,3 +16,5 @@ _build/
 # scala
 dependency-reduced-pom.xml
 *.iml
+
+docker-compose.yml
