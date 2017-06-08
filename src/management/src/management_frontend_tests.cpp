@@ -53,10 +53,25 @@ class ManagementFrontendTest : public ::testing::Test {
     add_int(d, "latency_slo_micros", latency_slo_micros);
   }
 
+  void set_add_model_request_doc(rapidjson::Document& d, std::string& model_name,
+                                 std::string& model_version,
+                                 std::string& input_type,
+                               std::vector<std::string>& labels,
+                               std::string& container_name,
+                               std::string& model_data_path) {
+    d.SetObject();
+    add_string(d, "model_name", model_name);
+    add_string(d, "model_version", model_version);
+    add_string_array(d, "labels", labels);
+    add_string(d, "input_type", input_type);
+    add_string(d, "container_name", container_name);
+    add_string(d, "model_data_path", model_data_path);
+  }
+
   std::string get_app_json_request_string(std::string& name) {
     rapidjson::Document d;
     d.SetObject();
-    add_string(d, "name", name);
+    add_string(d, "name", name); // WANT TO REMOVE THIS?
     return to_json_string(d);
   }
 
@@ -113,6 +128,28 @@ TEST_F(ManagementFrontendTest, TestAddDuplicateApplication) {
   )";
 
   ASSERT_THROW(rh_.add_application(add_dup_app_json), std::invalid_argument);
+}
+
+TEST_F(ManagementFrontendTest, TestAddApplicationProhibitedChars) {
+  // Valid input values
+  std::string name = "my_app_name";
+  std::vector<std::string> candidate_model_names = {"my_model"};
+  std::vector<std::string> bad_candidate_model_names = {ITEM_DELIMITER + "my_model"};
+  std::string input_type = "doubles";
+  std::string default_output = "my_default_output";
+  int latency_slo_micros = 10000;
+
+  // Test adding app with invalid candidate_model_names
+  rapidjson::Document doc;
+  set_add_app_request_doc(doc, name, bad_candidate_model_names,
+                          input_type, default_output, latency_slo_micros);
+  std::string add_app_json_string = to_json_string(doc);
+  ASSERT_THROW(rh_.add_application(add_app_json_string), std::invalid_argument);
+
+  // Confirm that without this invalid input, add_app succeeds
+  add_string_array(doc, "candidate_model_names", candidate_model_names);
+  add_app_json_string = to_json_string(doc);
+  ASSERT_EQ(rh_.add_application(add_app_json_string), "Success!");
 }
 
 TEST_F(ManagementFrontendTest, TestAddApplicationMissingField) {
@@ -390,6 +427,44 @@ TEST_F(ManagementFrontendTest, TestAddModelMissingField) {
   )";
 
   ASSERT_THROW(rh_.add_model(add_model_json), json_semantic_error);
+}
+
+TEST_F(ManagementFrontendTest, TestAddModelProhibitedChars) {
+  // Valid input values
+  std::string model_name = "my_app_name";
+  std::string model_version = "my_model_version";
+  std::string input_type = "doubles";
+  std::vector<std::string> labels = {"label1", "label2"};
+  std::string container_name = "example/container_name";
+  std::string model_data_path = "/example/model/data/path";
+
+  // Invalid input values
+  std::string bad_model_name = model_name + ITEM_PART_CONCATENATOR;
+  std::string bad_model_version = ITEM_DELIMITER + model_version;
+  std::vector<std::string> bad_labels = {"label1", ITEM_PART_CONCATENATOR + "label" + ITEM_DELIMITER};
+
+  // Test adding model with invalid model_name value
+  rapidjson::Document doc;
+  set_add_model_request_doc(doc, bad_model_name, model_version, input_type, labels, container_name, model_data_path);
+  std::string add_model_json_string = to_json_string(doc);
+  ASSERT_THROW(rh_.add_model(add_model_json_string), std::invalid_argument);
+  add_string(doc, "model_name", model_name);
+
+  // Test adding model with invalid model_version value
+  add_string(doc, "model_version", bad_model_version);
+  add_model_json_string = to_json_string(doc);
+  ASSERT_THROW(rh_.add_model(add_model_json_string), std::invalid_argument);
+  add_string(doc, "model_version", model_version);
+
+  // Test adding model with invalid labels value
+  add_string_array(doc, "labels", bad_labels);
+  add_model_json_string = to_json_string(doc);
+  ASSERT_THROW(rh_.add_model(add_model_json_string), std::invalid_argument);
+  add_string_array(doc, "labels", labels);
+
+  // Confirm that without these invalid inputs, add_model succeeds
+  add_model_json_string = to_json_string(doc);
+  ASSERT_EQ(rh_.add_model(add_model_json_string), "Success!");
 }
 
 TEST_F(ManagementFrontendTest, TestAddModelMalformedJson) {

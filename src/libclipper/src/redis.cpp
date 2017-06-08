@@ -23,6 +23,15 @@ namespace redis {
 
 const std::string VERSION_METADATA_PREFIX = "CURRENT_MODEL_VERSION:";
 
+bool contains_prohibited_chars_for_group(std::string value){
+  for (std::string prohibited_str : clipper::redis::prohibited_group_strings) {
+    if (value.find(prohibited_str) != std::string::npos) {
+      return true;
+    }
+  }
+  return false;
+}
+
 std::unordered_map<string, string> parse_redis_map(
     const std::vector<string>& redis_data) {
   std::unordered_map<string, string> parsed_map;
@@ -85,6 +94,7 @@ std::string gen_model_current_version_key(const std::string& model_name) {
   return ss.str();
 }
 
+// Update `prohibited_group_strings` when changing the set of delimeters and/or other generic substrings used
 string labels_to_str(const vector<string>& labels) {
   if (labels.empty()) return "";
 

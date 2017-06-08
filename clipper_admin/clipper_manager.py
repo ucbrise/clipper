@@ -450,7 +450,7 @@ class Clipper:
         ----------
         name : str
             The name to assign this model.
-        version : int | str
+        version : Any object with a string representation (with __str__ implementation)
             The version to assign this model.
         model_data : str or BaseEstimator
             The trained model to add to Clipper. This can either be a
@@ -553,7 +553,7 @@ class Clipper:
         ----------
         name : str
             The name to assign this model.
-        version : int | str
+        version : Any object with a string representation (with __str__ implementation)
             The version to assign this model.
         labels : list of str
             A set of strings annotating the model

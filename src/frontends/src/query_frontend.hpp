@@ -231,9 +231,9 @@ class RequestHandler {
         clipper::log_error_formatted(LOGGING_TAG_QUERY_FRONTEND,
                                      "Found model {} with invalid version {}.",
                                      model_name, model_version);
-        throw std::runtime_error("Invalid model version number");
+        throw std::runtime_error("Invalid model version");
       }
-      model_names_with_version.push_back(model_name + "@v" + model_version);
+      model_names_with_version.push_back(model_name + "@" + model_version);
     }
     if (model_names.size() > 0) {
       clipper::log_info_formatted(LOGGING_TAG_QUERY_FRONTEND,

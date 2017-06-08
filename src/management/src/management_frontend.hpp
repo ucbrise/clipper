@@ -40,6 +40,7 @@ using clipper::json::redis_app_metadata_to_json;
 using clipper::json::redis_model_metadata_to_json;
 using clipper::json::redis_container_metadata_to_json;
 using clipper::json::to_json_string;
+using clipper::redis::prohibited_group_strings;
 
 namespace management {
 
@@ -385,6 +386,30 @@ class RequestHandler {
   }
 
   /**
+   * Checks `value` for prohibited characters in strings that will be grouped. If it does, throws an error with message stating that input has an invalid `label`.
+   * @throws Throws a std::invalud_argument error if `value` contains prohibited characters.
+   */
+  void validate_group_str_for_redis(std::string& value, const char* label) {
+    if (clipper::redis::contains_prohibited_chars_for_group(value)) {
+      std::stringstream ss;
+
+      ss << "Invalid " << label << " supplied: " << value << ".";
+      ss << " Contains one of: ";
+
+      // Generate string representing list of invalid characters
+      std::string prohibited_str;
+      for (size_t i = 0; i != prohibited_group_strings.size() - 1; ++i) {
+        prohibited_str = *(prohibited_group_strings.begin() + i);
+        ss << "'" << prohibited_str << "', ";
+      }
+      // Add final element of `prohibited_group_strings`
+      ss << "'" << *(prohibited_group_strings.end() - 1) << "'";
+
+      throw std::invalid_argument(ss.str());
+    }
+  }
+
+  /**
    * Creates an endpoint that listens for requests to add new prediction
    * applications to Clipper.
    *
@@ -415,6 +440,12 @@ class RequestHandler {
     InputType input_type =
         clipper::parse_input_type(get_string(d, "input_type"));
     std::string default_output = get_string(d, "default_output");
+
+    // Validate strings that will be grouped before supplying to redis
+    for (auto candidate_model_name : candidate_model_names) {
+      validate_group_str_for_redis(candidate_model_name, "candidate model name");
+    }
+
     std::string selection_policy =
         clipper::DefaultOutputSelectionPolicy::get_name();
     int latency_slo_micros = get_int(d, "latency_slo_micros");
@@ -458,11 +489,19 @@ class RequestHandler {
 
     VersionedModelId model_id = std::make_pair(get_string(d, "model_name"),
                                                get_string(d, "model_version"));
+
     std::vector<std::string> labels = get_string_array(d, "labels");
     InputType input_type =
         clipper::parse_input_type(get_string(d, "input_type"));
     std::string container_name = get_string(d, "container_name");
     std::string model_data_path = get_string(d, "model_data_path");
+
+    // Validate strings that will be grouped before supplying to redis
+    validate_group_str_for_redis(model_id.first, "model name");
+    validate_group_str_for_redis(model_id.first, "model version");
+    for (auto label : labels) {
+      validate_group_str_for_redis(label, "label");
+    }
 
     // check if this version of the model has already been deployed
     std::unordered_map<std::string, std::string> existing_model_data =
