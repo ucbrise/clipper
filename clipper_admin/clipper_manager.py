@@ -122,13 +122,6 @@ class Clipper:
                 }
             },
             'services': {
-                'docker_registry': {
-                    'image':
-                    'registry:2.6.1',
-                    'ports': [
-                        '5000:5000'
-                    ]
-                },
                 'mgmt_frontend': {
                     'command': [
                         '--redis_ip=%s' % self.redis_ip,
@@ -174,9 +167,9 @@ class Clipper:
                 }
             }
             self.docker_compost_dict['services']['mgmt_frontend'][
-                'depends_on'] = ['docker_registry', 'redis']
+                'depends_on'] = ['redis']
             self.docker_compost_dict['services']['query_frontend'][
-                'depends_on'].extend(['docker_registry', 'redis'])
+                'depends_on'].append('redis')
             if redis_persistence_path:
                 if not os.path.exists(redis_persistence_path):
                     self.docker_compost_dict['services']['redis'][
@@ -486,53 +479,122 @@ class Clipper:
             #     return False
             # print("Published model to Clipper")
 
-            # build and push docker registry image
+            import docker
+            # prepare docker image build dir
             with open(model_data_path + '/Dockerfile', 'w') as f:
                 f.write("FROM {container_name}\nCOPY . /model/.\n".format(container_name=container_name))
 
-            self._execute_root("docker build -t {name} {model_data_path}/.".format(
-                name=name, model_data_path=model_data_path))
+            # build, tag, and push docker image to registry
+            docker_client = docker.from_env(version=os.environ["DOCKER_API_VERSION"])
+            # NOTE: this must be same version as docker registry server
 
-            # TODO: push to docker registry
-            from kubernetes import client, config
-            config.load_kube_config()
-            k8s_beta = client.ExtensionsV1beta1Api()
-            k8s_beta.create_namespaced_deployment(
-                    body={
-                        'apiVersion': 'extensions/v1beta1',
-                        'kind': 'Deployment',
-                        'metadata': {
-                            'name': 'nginx-deployment'
-                        },
-                        'spec': {
-                            'replicas': 1,
-                            'template': {
-                                'metadata': {
-                                    'labels': {
-                                        'app': 'nginx'
-                                    }
-                                },
-                                'spec': {
-                                    'containers': [
-                                        {
-                                            'name': 'nginx',
-                                            'image': 'nginx:1.7.9',
-                                            'ports': [
-                                                {
-                                                    'containerPort': 80
-                                                }
-                                            ]
+            repo = '{docker_registry}/{name}:{version}'.format(
+                    docker_registry='localhost:5000', # TODO: make configurable
+                    name=name,
+                    version=version)
+            docker_client.images.build(
+                    path=model_data_path,
+                    tag=repo)
+            docker_client.images.push(repository=repo)
+
+            import yaml
+            import kubernetes
+            from kubernetes.client.rest import ApiException
+            # TODO: check before creating k8s resources
+            kubernetes.config.load_kube_config()
+            k8s_v1 = kubernetes.client.CoreV1Api()
+            k8s_beta = kubernetes.client.ExtensionsV1beta1Api()
+            # TODO: initializing the registry probably goes elsewhere
+            try:
+                k8s_v1.create_namespaced_replication_controller(
+                        body=yaml.load(open('k8s/kube-registry-rc.yaml')), namespace='kube-system')
+            except ApiException: # already exists
+                pass
+            try:
+                k8s_v1.create_namespaced_service(
+                        body=yaml.load(open('k8s/kube-registry-svc.yaml')), namespace='kube-system')
+            except ApiException: # already exists
+                pass
+            try:
+                k8s_beta.create_namespaced_daemon_set(
+                        body=yaml.load(open('k8s/kube-registry-ds.yaml')), namespace='kube-system')
+            except ApiException: # already exists
+                pass
+            try:
+                k8s_beta.create_namespaced_deployment(
+                        body={
+                            'apiVersion': 'extensions/v1beta1',
+                            'kind': 'Deployment',
+                            'metadata': {
+                                'name': name + '-deployment' # NOTE: must satisfy RFC 1123 pathname conventions
+                            },
+                            'spec': {
+                                'replicas': 1,
+                                'template': {
+                                    'metadata': {
+                                        'labels': {
+                                            'model': name,
+                                            'version': str(version)
                                         }
-                                    ]
+                                    },
+                                    'spec': {
+                                        'containers': [
+                                            {
+                                                'name': name,
+                                                'image': repo,
+                                                'ports': [
+                                                    {
+                                                        'containerPort': 80
+                                                    }
+                                                ],
+                                                'env': [
+                                                    {
+                                                        'name': 'CLIPPER_MODEL_NAME',
+                                                        'value': 'feature-sum-model'
+                                                    },
+                                                    {
+                                                        'name': 'CLIPPER_MODEL_VERSION',
+                                                        'value': '1'
+                                                    },
+                                                    {
+                                                        'name': 'CLIPPER_IP',
+                                                        'value': '127.0.0.1'
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
                                 }
                             }
-                        }
+                        }, namespace='default')
+            except ApiException: # already exists
+                pass
+            try:
+                k8s_v1.create_namespaced_service(
+                        body={
+                            'apiVersion': 'v1',
+                            'kind': 'Service',
+                            'metadata': {
+                                'name': 'nginx'
+                            },
+                            'spec': {
+                                'ports': [
+                                    {
+                                        'nodePort': 32100, # TODO: remove when ClusterIP
+                                        'port': 80,
+                                        'protocol': 'TCP',
+                                        'targetPort': 80
+                                    }
+                                ],
+                                'selector': {
+                                    'app': 'nginx'
+                                },
+                                'type': 'NodePort' # TODO: use ClusterIP when query frontend is cluster-internal
+                            }
                     }, namespace='default')
-            k8s_bbeta.create_namespaced_service(
-                    {
-
-                    }, namespace='default')
-            # TODO: error handling (e.g. if k8s resourcesalready exists)
+            except ApiException: # already exists
+                pass
+            # TODO: better error handling
 
             # to run built docker image on local docker daemon
             # docker run -it --network=clipper_nw --restart=always -e "CLIPPER_MODEL_NAME=feature_sum_model" -e "CLIPPER_MODEL_VERSION=1" -e "CLIPPER_IP=query_frontend" -e "CLIPPER_INPUT_TYPE=doubles" -l "ai.clipper.container.label" -l "ai.clipper.model_container.model_version=feature_sum_model:1" feature_sum_model

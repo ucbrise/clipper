@@ -3,16 +3,11 @@ networks:
     external:
       name: clipper_nw
 services:
-  docker_registry:
-    image: registry:2.6.1
-    ports:
-    - 5000:5000
   mgmt_frontend:
     command:
     - --redis_ip=redis
     - --redis_port=6379
     depends_on:
-    - docker_registry
     - redis
     image: clipper/management_frontend:latest
     labels:
@@ -26,7 +21,6 @@ services:
     - --redis_port=6379
     depends_on:
     - mgmt_frontend
-    - docker_registry
     - redis
     image: clipper/query_frontend:latest
     labels:
