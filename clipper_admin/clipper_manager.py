@@ -7,13 +7,11 @@ import os
 import requests
 import json
 import yaml
-import pprint
 import subprocess32 as subprocess
 import shutil
 from sklearn import base
 from sklearn.externals import joblib
 from cStringIO import StringIO
-import sys
 from .cloudpickle import CloudPickler
 import time
 import re
@@ -95,7 +93,7 @@ class Clipper:
         on `host` at the port specified by `redis_port`.
     redis_persistence_path : string, optional
         The directory path to which redis data should be persisted. The directory
-        should not already exist. If unspecified, redis will not persist data to disk. 
+        should not already exist. If unspecified, redis will not persist data to disk.
     restart_containers : bool, optional
         If true, containers will restart on failure. If false, containers
         will not restart automatically.
@@ -336,8 +334,8 @@ class Clipper:
             by the end of the latency objective.
         slo_micros : int
             The query latency objective for the application in microseconds.
-            This is the processing latency between Clipper receiving a request 
-            and sending a response. It does not account for network latencies 
+            This is the processing latency between Clipper receiving a request
+            and sending a response. It does not account for network latencies
             before a request is received or after a response is sent.
 
             If Clipper cannot process a query within the latency objective,
@@ -912,7 +910,7 @@ class Clipper:
         If packages listed in specified conda environment file have conflicting dependencies,
         this function will warn the user and return False.
 
-        If there are no conflicting package dependencies, existence of the packages in the 
+        If there are no conflicting package dependencies, existence of the packages in the
         container conda channel is tested. The user is warned about any missing packages.
         All existing conda packages are written out to `conda_dep_fname` and pip packages
         to `pip_dep_fname` in the given `directory`. This function then returns True.
