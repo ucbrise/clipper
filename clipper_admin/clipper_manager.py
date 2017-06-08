@@ -492,10 +492,10 @@ class Clipper:
                     docker_registry='localhost:5000', # TODO: make configurable
                     name=name,
                     version=version)
-            docker_client.images.build(
-                    path=model_data_path,
-                    tag=repo)
-            docker_client.images.push(repository=repo)
+            # docker_client.images.build(
+            #         path=model_data_path,
+            #         tag=repo)
+            # docker_client.images.push(repository=repo)
 
             import yaml
             import kubernetes
@@ -504,20 +504,32 @@ class Clipper:
             kubernetes.config.load_kube_config()
             k8s_v1 = kubernetes.client.CoreV1Api()
             k8s_beta = kubernetes.client.ExtensionsV1beta1Api()
-            # TODO: initializing the registry probably goes elsewhere
+            # TODO: initializing clipper
+            # for name in ['mgmt-frontend', 'query-frontend', 'redis']:
+            #     try:
+            #         k8s_beta.create_namespaced_deployment(
+            #                 body=yaml.load(open('k8s/clipper/{}-deployment.yaml'.format(name))), namespace='default')
+            #     except ApiException:
+            #         pass
+            #     try:
+            #         k8s_v1.create_namespaced_service(
+            #                 body=yaml.load(open('k8s/clipper/{}-service.yaml'.format(name))), namespace='default')
+            #     except ApiException:
+            #         pass
+            # TODO: initializing registry probably goes elsewhere
             try:
                 k8s_v1.create_namespaced_replication_controller(
-                        body=yaml.load(open('k8s/kube-registry-rc.yaml')), namespace='kube-system')
+                        body=yaml.load(open('k8s/minikube-registry/kube-registry-rc.yaml')), namespace='kube-system')
             except ApiException: # already exists
                 pass
             try:
                 k8s_v1.create_namespaced_service(
-                        body=yaml.load(open('k8s/kube-registry-svc.yaml')), namespace='kube-system')
+                        body=yaml.load(open('k8s/minikube-registry/kube-registry-svc.yaml')), namespace='kube-system')
             except ApiException: # already exists
                 pass
             try:
                 k8s_beta.create_namespaced_daemon_set(
-                        body=yaml.load(open('k8s/kube-registry-ds.yaml')), namespace='kube-system')
+                        body=yaml.load(open('k8s/minikube-registry/kube-registry-ds.yaml')), namespace='kube-system')
             except ApiException: # already exists
                 pass
             try:
@@ -558,7 +570,7 @@ class Clipper:
                                                     },
                                                     {
                                                         'name': 'CLIPPER_IP',
-                                                        'value': '127.0.0.1'
+                                                        'value': '10.0.2.2' # TODO: WTF magic IP that goes to host
                                                     }
                                                 ]
                                             }
