@@ -47,6 +47,12 @@ class VersionedModelId {
     VersionedModelId(VersionedModelId &&) = default;
     VersionedModelId &operator=(VersionedModelId &&) = default;
 
+    // added these in blindly to see if they'd change anything
+    bool operator==(const VersionedModelId &rhs) const;
+    bool operator!=(const VersionedModelId &rhs) const;
+    ~VersionedModelId() = default;
+    explicit VersionedModelId() = default;
+
   private:
     std::string name_;
     std::string id_;

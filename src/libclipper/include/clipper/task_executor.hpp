@@ -29,18 +29,18 @@ class ModelMetrics {
   explicit ModelMetrics(VersionedModelId model)
       : model_(model),
         latency_(metrics::MetricsRegistry::get_metrics().create_histogram(
-            "model:" + versioned_model_to_str(model) + ":prediction_latency",
+            "model:" + model.serialize() + ":prediction_latency",
             "microseconds", 4096)),
         throughput_(metrics::MetricsRegistry::get_metrics().create_meter(
-            "model:" + versioned_model_to_str(model) +
+            "model:" + model.serialize() +
             ":prediction_throughput")),
         num_predictions_(metrics::MetricsRegistry::get_metrics().create_counter(
-            "model:" + versioned_model_to_str(model) + ":num_predictions")),
+            "model:" + model.serialize() + ":num_predictions")),
         cache_hit_ratio_(
             metrics::MetricsRegistry::get_metrics().create_ratio_counter(
-                "model:" + versioned_model_to_str(model) + ":cache_hit_ratio")),
+                "model:" + model.serialize() + ":cache_hit_ratio")),
         batch_size_(metrics::MetricsRegistry::get_metrics().create_histogram(
-            "model:" + versioned_model_to_str(model) + ":batch_size", "queries",
+            "model:" + model.serialize() + ":batch_size", "queries",
             4096)) {}
   ~ModelMetrics() = default;
   ModelMetrics(const ModelMetrics &) = default;
@@ -207,11 +207,11 @@ class TaskExecutor {
         rpc_(std::make_unique<rpc::RPCService>()),
         model_queues_(std::unordered_map<const VersionedModelId,
                                          std::shared_ptr<ModelQueue>,
-                                         decltype(&versioned_model_hash)>(
-            INITIAL_MODEL_QUEUES_MAP_SIZE, &versioned_model_hash)),
+                                         decltype(&VersionedModelId::hash)>(
+            INITIAL_MODEL_QUEUES_MAP_SIZE, &VersionedModelId::hash)),
         model_metrics_(std::unordered_map<const VersionedModelId, ModelMetrics,
-                                          decltype(&versioned_model_hash)>(
-            INITIAL_MODEL_QUEUES_MAP_SIZE, &versioned_model_hash)) {
+                                          decltype(&VersionedModelId::hash)>(
+            INITIAL_MODEL_QUEUES_MAP_SIZE, &VersionedModelId::hash)) {
     log_info(LOGGING_TAG_TASK_EXECUTOR, "TaskExecutor started");
     rpc_->start(
         "*", RPC_SERVICE_PORT, [ this, task_executor_valid = active_ ](
@@ -260,7 +260,7 @@ class TaskExecutor {
           if (event_type == "hset" && *task_executor_valid) {
             auto container_info =
                 redis::get_container_by_key(redis_connection_, key);
-            VersionedModelId vm = std::make_pair(
+            VersionedModelId vm = VersionedModelId(
                 container_info["model_name"], container_info["model_version"]);
             int replica_id = std::stoi(container_info["model_replica_id"]);
             active_containers_->add_container(
@@ -276,7 +276,7 @@ class TaskExecutor {
             if (created_queue) {
               log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
                                  "Created queue for new model: {} : {}",
-                                 vm.first, vm.second);
+                                 vm.get_name(), vm.get_id());
             }
           } else if (!*task_executor_valid) {
             log_info(LOGGING_TAG_TASK_EXECUTOR,
@@ -315,7 +315,7 @@ class TaskExecutor {
           model_queue_entry->second->add_task(t);
           log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
                              "Adding task to queue. QueryID: {}, model: {}",
-                             t.query_id_, versioned_model_to_str(t.model_));
+                             t.query_id_, t.model_.serialize());
           boost::shared_lock<boost::shared_mutex> model_metrics_lock(
               model_metrics_mutex_);
           auto cur_model_metric_entry = model_metrics_.find(t.model_);
@@ -335,7 +335,7 @@ class TaskExecutor {
       } else {
         log_error_formatted(LOGGING_TAG_TASK_EXECUTOR,
                             "Received task for unknown model: {} : {}",
-                            t.model_.first, t.model_.second);
+                            t.model_.get_name(), t.model_.get_id());
       }
     }
     return output_futures;
@@ -363,11 +363,11 @@ class TaskExecutor {
   std::shared_ptr<metrics::Meter> throughput_meter_;
   boost::shared_mutex model_queues_mutex_;
   std::unordered_map<const VersionedModelId, std::shared_ptr<ModelQueue>,
-                     decltype(&versioned_model_hash)>
+                     decltype(&VersionedModelId::hash)>
       model_queues_;
   boost::shared_mutex model_metrics_mutex_;
   std::unordered_map<const VersionedModelId, ModelMetrics,
-                     decltype(&versioned_model_hash)>
+                     decltype(&VersionedModelId::hash)>
       model_metrics_;
   static constexpr int INITIAL_MODEL_QUEUES_MAP_SIZE = 100;
 
@@ -434,7 +434,7 @@ class TaskExecutor {
           LOGGING_TAG_TASK_EXECUTOR,
           "Sending batch to model: {} replica {}."
           "Batch size: {}. Query IDs: {}",
-          versioned_model_to_str(model_id), std::to_string(replica_id),
+          model_id.serialize(), std::to_string(replica_id),
           std::to_string(batch.size()), query_ids_in_batch.str());
       inflight_messages_.emplace(message_id, std::move(cur_batch));
 
@@ -442,7 +442,7 @@ class TaskExecutor {
       log_error_formatted(
           LOGGING_TAG_TASK_EXECUTOR,
           "ModelQueue returned empty batch for model {}, replica {}",
-          versioned_model_to_str(model_id), std::to_string(replica_id));
+          model_id.serialize(), std::to_string(replica_id));
     }
   }
 

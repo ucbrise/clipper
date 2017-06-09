@@ -85,7 +85,7 @@ class ActiveContainers {
   // for each model are represented as a map keyed on replica id.
   std::unordered_map<VersionedModelId,
                      std::map<int, std::shared_ptr<ModelContainer>>,
-                     decltype(&versioned_model_hash)>
+                     decltype(&VersionedModelId::hash)>
       containers_;
 };
 }

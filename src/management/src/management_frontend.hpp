@@ -487,7 +487,7 @@ class RequestHandler {
     rapidjson::Document d;
     parse_json(json, d);
 
-    VersionedModelId model_id = std::make_pair(get_string(d, "model_name"),
+    VersionedModelId model_id = VersionedModelId(get_string(d, "model_name"),
                                                get_string(d, "model_version"));
 
     std::vector<std::string> labels = get_string_array(d, "labels");
@@ -686,7 +686,7 @@ class RequestHandler {
 
     std::string model_name = get_string(d, "model_name");
     std::string model_version = get_string(d, "model_version");
-    VersionedModelId model = std::make_pair(model_name, model_version);
+    VersionedModelId model = VersionedModelId(model_name, model_version);
 
     std::unordered_map<std::string, std::string> model_metadata =
         clipper::redis::get_model(redis_connection_, model);
@@ -785,9 +785,10 @@ class RequestHandler {
     std::string model_name = get_string(d, "model_name");
     std::string model_version = get_string(d, "model_version");
     int replica_id = get_int(d, "replica_id");
-    VersionedModelId model = std::make_pair(model_name, model_version);
+    VersionedModelId model = VersionedModelId(model_name, model_version);
 
-    std::unordered_map<std::string, std::string> container_metadata =
+    std::unordered_ma
+    p<std::string, std::string> container_metadata =
         clipper::redis::get_container(redis_connection_, model, replica_id);
 
     rapidjson::Document response_doc;

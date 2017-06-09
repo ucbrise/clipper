@@ -77,11 +77,19 @@ std::string VersionedModelId::serialize() const {
   ss << id_;
   return ss.str();
 }
-    VersionedModelId VersionedModelId::deserialize(std::string str) {
+VersionedModelId VersionedModelId::deserialize(std::string str) {
   auto split = str.find(ITEM_PART_CONCATENATOR);
   std::string model_name = str.substr(0, split);
   std::string model_version = str.substr(split + 1, str.size());
   return VersionedModelId::VersionedModelId(model_name, model_version);
+}
+
+bool VersionedModelId::operator==(const VersionedModelId &rhs) const {
+  return (name_ == rhs.name_ && id_ == rhs.id_);
+}
+
+bool VersionedModelId::operator!=(const VersionedModelId &rhs) const {
+  return !(name_ == rhs.name_ && id_ == rhs.id_);
 }
 
 Output::Output(const std::string y_hat,

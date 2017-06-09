@@ -102,7 +102,7 @@ class RPCService {
   std::atomic_bool active_;
   // The next available message id
   int message_id_ = 0;
-  std::unordered_map<VersionedModelId, int, decltype(&versioned_model_hash)>
+  std::unordered_map<VersionedModelId, int, decltype(&VersionedModelId::hash)>
       replica_ids_;
   std::shared_ptr<metrics::Histogram> msg_queueing_hist_;
 

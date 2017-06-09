@@ -254,7 +254,7 @@ void RPCService::receive_message(
         InputType input_type =
             static_cast<InputType>(std::stoi(input_type_str));
 
-        VersionedModelId model = std::make_pair(name, version);
+        VersionedModelId model = VersionedModelId(name, version);
         log_info(LOGGING_TAG_RPC, "Container added");
 
         // Note that if the map does not have an entry for this model,

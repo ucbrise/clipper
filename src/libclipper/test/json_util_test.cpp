@@ -280,7 +280,7 @@ TEST_F(RedisToJsonTest, TestRedisAppMetadataToJson) {
 TEST_F(RedisToJsonTest, TestRedisModelMetadataToJson) {
   std::vector<std::string> labels{"ads", "images", "experimental", "other",
                                   "labels"};
-  VersionedModelId model = std::make_pair("m", "1");
+  VersionedModelId model = VersionedModelId("m", "1");
   std::string input_type = "doubles";
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
@@ -303,7 +303,7 @@ TEST_F(RedisToJsonTest, TestRedisModelMetadataToJson) {
 }
 
 TEST_F(RedisToJsonTest, TestRedisContainerMetadataToJson) {
-  VersionedModelId model = std::make_pair("m", "1");
+  VersionedModelId model = VersionedModelId("m", "1");
   int replica_id = 4;
   int zmq_connection_id = 12;
   std::string input_type = "doubles";

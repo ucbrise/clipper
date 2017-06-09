@@ -19,7 +19,7 @@ class MockQueryProcessor {
  public:
   MockQueryProcessor() = default;
   boost::future<Response> predict(Query query) {
-    Response response(query, 3, 5, Output("-1.0", {std::make_pair("m", "1")}),
+    Response response(query, 3, 5, Output("-1.0", {VersionedModelId("m", "1")}),
                       false, boost::optional<std::string>{});
     return boost::make_ready_future(response);
   }
@@ -283,16 +283,16 @@ TEST_F(QueryFrontendTest, TestReadModelsAtStartup) {
   // Add multiple models (some with multiple versions)
   std::vector<std::string> labels{"ads", "images", "experimental", "other",
                                   "labels"};
-  VersionedModelId model1 = std::make_pair("m", "1");
+  VersionedModelId model1 = VersionedModelId("m", "1");
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
   ASSERT_TRUE(add_model(*redis_, model1, InputType::Ints, labels,
                         container_name, model_path));
-  VersionedModelId model2 = std::make_pair("m", "2");
+  VersionedModelId model2 = VersionedModelId("m", "2");
   std::string model_path2 = "/tmp/models/m/2";
   ASSERT_TRUE(add_model(*redis_, model2, InputType::Ints, labels,
                         container_name, model_path2));
-  VersionedModelId model3 = std::make_pair("n", "3");
+  VersionedModelId model3 = VersionedModelId("n", "3");
   std::string model_path3 = "/tmp/models/n/3";
   ASSERT_TRUE(add_model(*redis_, model3, InputType::Ints, labels,
                         container_name, model_path3));
@@ -310,7 +310,7 @@ TEST_F(QueryFrontendTest, TestReadModelsAtStartup) {
 TEST_F(QueryFrontendTest, TestReadInvalidModelVersionAtStartup) {
   std::vector<std::string> labels{"ads", "images", "experimental", "other",
                                   "labels"};
-  VersionedModelId model1 = std::make_pair("m", "1");
+  VersionedModelId model1 = VersionedModelId("m", "1");
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
   ASSERT_TRUE(add_model(*redis_, model1, InputType::Ints, labels,

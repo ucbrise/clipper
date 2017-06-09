@@ -367,7 +367,7 @@ TEST_F(ManagementFrontendTest, TestAddModelCorrect) {
   ASSERT_EQ(rh_.add_model(add_model_json), "Success!");
   std::string model_name = "mymodelname";
   std::string model_version = "4";
-  auto result = get_model(*redis_, std::make_pair(model_name, model_version));
+  auto result = get_model(*redis_, VersionedModelId(model_name, model_version));
   // The model table has 7 fields, so we expect to get back a map with 7
   // entries in it (see add_model() in redis.cpp for details on what the
   // fields are).
@@ -393,7 +393,7 @@ TEST_F(ManagementFrontendTest, TestAddDuplicateModelVersion) {
   ASSERT_EQ(rh_.add_model(add_model_json), "Success!");
   std::string model_name = "mymodelname";
   std::string model_version = "4";
-  auto result = get_model(*redis_, std::make_pair(model_name, model_version));
+  auto result = get_model(*redis_, VersionedModelId(model_name, model_version));
   // The model table has 7 fields, so we expect to get back a map with 7
   // entries in it (see add_model() in redis.cpp for details on what the
   // fields are).

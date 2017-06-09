@@ -216,7 +216,7 @@ std::vector<VersionedModelId> get_candidate_models(rapidjson::Value& d,
     }
     std::string model_name = get_string(elem, "model_name");
     std::string model_version = get_string(elem, "model_version");
-    candidate_models.push_back(std::make_pair(model_name, model_version));
+    candidate_models.push_back(VersionedModelId(model_name, model_version));
   }
   return candidate_models;
 }

@@ -39,8 +39,8 @@ TEST_F(DefaultOutputSelectionPolicyTest,
 TEST_F(DefaultOutputSelectionPolicyTest,
        TestSelectPredictTasksTwoCandidateModels) {
   std::vector<VersionedModelId> two_models{
-      std::make_pair("music_random_features", "1"),
-      std::make_pair("simple_svm", "2")};
+        VersionedModelId("music_random_features", "1"),
+        VersionedModelId("simple_svm", "2")};
   Query two_candidate_models_query{"label",
                                    clipper::DEFAULT_USER_ID,
                                    std::shared_ptr<DoubleVector>(),
@@ -56,7 +56,7 @@ TEST_F(DefaultOutputSelectionPolicyTest,
 TEST_F(DefaultOutputSelectionPolicyTest,
        TestSelectPredictTasksOneCandidateModel) {
   std::vector<VersionedModelId> one_model{
-      std::make_pair("music_random_features", "1")};
+        VersionedModelId("music_random_features", "1")};
   Query one_candidate_model_query{"label",
                                   clipper::DEFAULT_USER_ID,
                                   std::shared_ptr<DoubleVector>(),
@@ -71,7 +71,7 @@ TEST_F(DefaultOutputSelectionPolicyTest,
 
 TEST_F(DefaultOutputSelectionPolicyTest,
        TestCombinePredictionsZeroPredictions) {
-  VersionedModelId m1 = std::make_pair("music_random_features", "1");
+  VersionedModelId m1 = VersionedModelId("music_random_features", "1");
   Query one_candidate_model_query{"label",
                                   clipper::DEFAULT_USER_ID,
                                   std::shared_ptr<DoubleVector>(),
@@ -84,7 +84,7 @@ TEST_F(DefaultOutputSelectionPolicyTest,
 }
 
 TEST_F(DefaultOutputSelectionPolicyTest, TestCombinePredictionsOnePrediction) {
-  VersionedModelId m1 = std::make_pair("music_random_features", "1");
+  VersionedModelId m1 = VersionedModelId("music_random_features", "1");
   Query one_candidate_model_query{"label",
                                   clipper::DEFAULT_USER_ID,
                                   std::shared_ptr<DoubleVector>(),
@@ -103,8 +103,8 @@ TEST_F(DefaultOutputSelectionPolicyTest, TestCombinePredictionsOnePrediction) {
 }
 
 TEST_F(DefaultOutputSelectionPolicyTest, TestCombinePredictionsTwoPredictions) {
-  VersionedModelId m1 = std::make_pair("music_random_features", "1");
-  VersionedModelId m2 = std::make_pair("simple_svm", "2");
+  VersionedModelId m1 = VersionedModelId("music_random_features", "1");
+  VersionedModelId m2 = VersionedModelId("simple_svm", "2");
   Query two_candidate_models_query{"label",
                                    clipper::DEFAULT_USER_ID,
                                    std::shared_ptr<DoubleVector>(),

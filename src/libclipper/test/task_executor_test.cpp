@@ -18,8 +18,7 @@ namespace {
  */
 PredictTask create_predict_task(long query_id, long latency_slo_millis) {
   std::vector<double> data;
-  VersionedModelId model_id =
-      std::make_pair<std::string, std::string>("test", "1");
+  VersionedModelId model_id = VersionedModelId("test", "1");
   data.push_back(1.0);
   std::shared_ptr<Input> input = std::make_shared<DoubleVector>(data);
   PredictTask task(input, model_id, 1.0, query_id, latency_slo_millis);
