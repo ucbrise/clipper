@@ -975,25 +975,7 @@ class Clipper:
 
         Returns
         ----------
-        bool
-            True if the container was added successfully and False
-            if the container could not be added.
-        """
-        with hide("warnings", "output", "running"):
-            # Look up model info in Redis
-            if self.redis_ip == DEFAULT_REDIS_IP:
-                redis_host = self.host
-            else:
-                redis_host = self.redis_ip
-            model_key = "{mn}:{mv}".format(mn=model_name, mv=model_version)
-            result = local(
-                "redis-cli -h {host} -p {redis_port} -n {db} hgetall {key}".
-                format(
-                    host=redis_host,
-                    redis_port=self.redis_port,
-                    key=model_key,
-                    db=REDIS_MODEL_DB_NUM),
-                capture=True)
+
             print(result)
 
             if "empty list or set" in result.stdout:

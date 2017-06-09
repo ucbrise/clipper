@@ -87,7 +87,7 @@ def call_predictions(query_string,query):
 
 
 def deploy_and_test_model(clipper, model, version,test_data):
-    clipper.deploy_R_model(model_name, version, model,"clipper/r_python_container:latest",
+    clipper.deploy_R_model(model_name, version, model,"latest_r_python:latest",
                                  "string")
     time.sleep(25)
     num_defaults = 0
