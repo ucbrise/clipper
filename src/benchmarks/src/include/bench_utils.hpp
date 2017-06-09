@@ -13,6 +13,7 @@ const std::string BATCH_DELAY_MILLIS = "batch_delay_millis";
 const std::string LATENCY_OBJECTIVE = "latency_objective";
 const std::string REPORT_DELAY_SECONDS = "report_delay_seconds";
 const std::string REPORTS_PATH = "reports_path";
+const std::string REPORTS_PATH_VERBOSE = "reports_path_verbose";
 
 /**
  * Creates a configuration from data received through the command prompt

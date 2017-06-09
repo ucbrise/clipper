@@ -27,6 +27,8 @@ const std::string REPORT_DELAY_SECONDS_PROMPT =
     "Enter the delay between reporting metrics, in seconds: ";
 const std::string REPORTS_PATH_PROMPT =
     "Enter the path to the file for contain benchmark reports: ";
+const std::string REPORTS_PATH_VERBOSE_PROMPT =
+    "Enter the path to the file for contain verbose benchmark reports: ";
 
 std::string _get_prompt(std::string var) {
   if (var == CIFAR_DATA_PATH) {
@@ -45,6 +47,8 @@ std::string _get_prompt(std::string var) {
     return REPORT_DELAY_SECONDS_PROMPT;
   } else if (var == REPORTS_PATH) {
     return REPORTS_PATH_PROMPT;
+  } else if (var == REPORTS_PATH_VERBOSE) {
+    return REPORTS_PATH_VERBOSE_PROMPT;
   }
   return "";
 }

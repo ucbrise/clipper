@@ -518,6 +518,11 @@ const boost::property_tree::ptree Histogram::report_tree() {
   return report_tree;
 }
 
+double Histogram::get_p99() {
+  HistogramStats stats = compute_stats();
+  return stats.p99_;
+}
+
 const std::string Histogram::report_str() {
   std::ostringstream ss;
   boost::property_tree::ptree report = report_tree();

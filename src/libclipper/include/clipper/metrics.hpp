@@ -298,6 +298,7 @@ class Histogram : public Metric {
   const std::string report_str() override;
   const boost::property_tree::ptree report_tree() override;
   void clear() override;
+  double get_p99();
 
  private:
   std::string name_;
