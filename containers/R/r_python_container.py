@@ -3,14 +3,10 @@ from sklearn.externals import joblib
 import rpc
 import os
 import numpy as np
-import scipy as sp
-import warnings
-warnings.filterwarnings("ignore", category=FutureWarning)
 from pandas import *
-import pandas.rpy.common as com
+from rpy2.robjects import r, pandas2ri
 from rpy2.robjects.packages import importr
 import rpy2.robjects as ro
-from rpy2.robjects.packages import importr
 stats = importr('stats')
 base = importr('base')
 import sys
@@ -22,20 +18,21 @@ else:
 np.set_printoptions(threshold=np.nan)
 
 
-class MyRContainer(rpc.ModelContainerBase):
+class RContainer(rpc.ModelContainerBase):
     def __init__(self, path):
         print("initiating MyRContainer")
-        self.model = base.readRDS(path)  #ro.r('an_R_model <- readRDS(path)')
+        self.model = base.readRDS(path)  
         print("Loaded %s model" % type(self.model), file=sys.stderr)
         self.path = path
 
     def predict_strings(self, inputs):
-        #print(inputs)
+        #this method expects dataframe which is specific to model_name and is encoded as string
+        #The string is converted to a pandas dataframe and further to an R dataframe before passing to predict function as illustrated below. 
         TESTDATA=StringIO(inputs[0])
         df = pandas.read_csv(TESTDATA, sep=";")
-        rdf=com.convert_to_r_dataframe(df)
-        preds=stats.predict(self.model,rdf)
-        #print(preds)
+        pandas2ri.activate()
+        r_dataframe = pandas2ri.py2ri(df)
+        preds=stats.predict(self.model,r_dataframe)
         return [str(p) for p in preds]
 
 
@@ -77,8 +74,6 @@ if __name__ == "__main__":
     rds_names=[
            l for l in os.listdir(model_path) if os.path.splitext(l)[-1] == ".rds"
     ] 
-    print("these .rds files are Found")
-    print(rds_names)
 
     if len(rds_names) != 1:
         print("Found %d *.rds files. Expected 1" % len(rds_names))
@@ -86,6 +81,6 @@ if __name__ == "__main__":
     rds_path = os.path.join(model_path, rds_names[0])
     print(rds_path, file=sys.stdout)
     
-    model=MyRContainer(rds_path)
+    model=RContainer(rds_path)
     rpc_service = rpc.RPCService()
     rpc_service.start(model, ip, port, model_name, model_version, input_type)
