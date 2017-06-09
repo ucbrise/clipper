@@ -21,8 +21,13 @@ const std::string BATCH_SIZE_PROMPT =
     "Enter the number of requests per batch: ";
 const std::string BATCH_DELAY_MILLIS_PROMPT =
     "Enter the delay between batches, in milliseconds: ";
+const std::string LATENCY_OBJECTIVE_PROMPT =
+    "Enter the latency objective, in microseconds: ";
+const std::string REPORT_DELAY_SECONDS_PROMPT =
+    "Enter the delay between reporting metrics, in seconds: ";
+const std::string REPORTS_PATH_PROMPT =
+    "Enter the path to the file for contain benchmark reports: ";
 
-// Is there a more elegant way to do this?
 std::string _get_prompt(std::string var) {
   if (var == CIFAR_DATA_PATH) {
     return CIFAR_DATA_PATH_PROMPT;
@@ -34,6 +39,12 @@ std::string _get_prompt(std::string var) {
     return BATCH_SIZE_PROMPT;
   } else if (var == BATCH_DELAY_MILLIS) {
     return BATCH_DELAY_MILLIS_PROMPT;
+  } else if (var == LATENCY_OBJECTIVE) {
+    return LATENCY_OBJECTIVE_PROMPT;
+  } else if (var == REPORT_DELAY_SECONDS) {
+    return REPORT_DELAY_SECONDS_PROMPT;
+  } else if (var == REPORTS_PATH) {
+    return REPORTS_PATH_PROMPT;
   }
   return "";
 }

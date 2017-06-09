@@ -22,6 +22,7 @@ using namespace bench_utils;
 
 const std::string DEFAULT_OUTPUT = "-1";
 const std::string TEST_APPLICATION_LABEL = "throughput_testing_app";
+const int UID = 0;
 
 // These should match the values in setup_throughput_bench.sh
 const std::string MODEL_NAME = "bench_noop";
@@ -33,6 +34,7 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
   int num_batches = std::stoi(config.find(NUM_BATCHES)->second);
   long batch_delay_millis =
       static_cast<long>(std::stoi(config.find(BATCH_DELAY_MILLIS)->second));
+  int latency_objective = std::stoi(config.find(LATENCY_OBJECTIVE)->second);
 
   int num_datapoints;
   num_datapoints = static_cast<int>(data.size());  // assume that data.size()
@@ -52,9 +54,9 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
 
     boost::future<Response> prediction =
         qp.predict({TEST_APPLICATION_LABEL,
-                    0,
+                    UID,
                     input,
-                    100000,
+                    latency_objective,
                     clipper::DefaultOutputSelectionPolicy::get_name(),
                     {std::make_pair(MODEL_NAME, MODEL_VERISON)}});
 
@@ -76,6 +78,42 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
   }
 }
 
+void report_and_clear_metrics(
+    std::unordered_map<std::string, std::string> &config) {
+  bool clear = true;
+  int report_delay_seconds =
+      std::stoi(config.find(REPORT_DELAY_SECONDS)->second);
+  int num_iters = 1;
+  std::string reports_path = config.find(REPORTS_PATH)->second;
+
+  std::ofstream out(reports_path);
+  std::stringstream ss;
+  ss << "Hyperparams in this noop_bench run: ";
+  ss << "Latency (ms): " << config.find(LATENCY_OBJECTIVE)->second;
+  ss << ", Batch delay (ms): " << config.find(BATCH_DELAY_MILLIS)->second;
+  out << ss.str();
+
+  int window_lower;
+  int window_upper;
+  std::string window;
+  while (true) {
+    std::this_thread::sleep_for(std::chrono::seconds(report_delay_seconds));
+    std::string metrics =
+        metrics::MetricsRegistry::get_metrics().report_metrics(clear);
+    // maybe at some point write this to a file
+    window_lower = report_delay_seconds * (num_iters - 1);
+    window_upper = report_delay_seconds * num_iters;
+    window = std::to_string(window_lower) + "s – " +
+             std::to_string(window_upper) + "s";
+    std::string datapoint_tag = "METRICS at " + window;
+
+    log_info(datapoint_tag, metrics);
+    out << datapoint_tag;
+    out << metrics;
+    num_iters += 1;
+  }
+}
+
 int main(int argc, char *argv[]) {
   cxxopts::Options options("noop_bench",
                            "Clipper noop performance benchmarking");
@@ -88,8 +126,9 @@ int main(int argc, char *argv[]) {
   std::unordered_map<std::string, std::string> test_config;
 
   // Need to update this when we allow for batch sizes > 1
-  std::vector<std::string> desired_vars = {CIFAR_DATA_PATH, NUM_BATCHES,
-                                           BATCH_DELAY_MILLIS};
+  std::vector<std::string> desired_vars = {
+      CIFAR_DATA_PATH,   NUM_BATCHES,          BATCH_DELAY_MILLIS,
+      LATENCY_OBJECTIVE, REPORT_DELAY_SECONDS, REPORTS_PATH};
   if (json_specified) {
     std::string json_path = options["filename"].as<std::string>();
     test_config = get_config_from_json(json_path, desired_vars);
@@ -122,9 +161,20 @@ int main(int argc, char *argv[]) {
   std::vector<std::vector<double>> concatendated_datapoints =
       concatenate_cifar_datapoints(cifar_data);
 
-  send_predictions(test_config, qp, concatendated_datapoints);
+  std::thread prediction_thread(
+      [&]() { send_predictions(test_config, qp, concatendated_datapoints); });
 
+  std::thread metrics_thread([&]() { report_and_clear_metrics(test_config); });
+
+  prediction_thread.join();
+
+  // final report
   std::string metrics =
       metrics::MetricsRegistry::get_metrics().report_metrics();
   log_info("BENCH", metrics);
+
+  log_info("BENCH", "Terminating benchmarking script");
+
+  // Kills all threads. We don't care about the last report anyway.
+  std::terminate();
 }
