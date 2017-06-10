@@ -4,6 +4,7 @@
 #include <chrono>
 #include <memory>
 #include <mutex>
+#include <string>
 #include <unordered_map>
 
 #include <boost/optional.hpp>
@@ -205,13 +206,8 @@ class TaskExecutor {
       : active_(std::make_shared<std::atomic_bool>(true)),
         active_containers_(std::make_shared<ActiveContainers>()),
         rpc_(std::make_unique<rpc::RPCService>()),
-        model_queues_(std::unordered_map<const VersionedModelId,
-                                         std::shared_ptr<ModelQueue>,
-                                         decltype(&VersionedModelId::hash)>(
-            INITIAL_MODEL_QUEUES_MAP_SIZE, &VersionedModelId::hash)),
-        model_metrics_(std::unordered_map<const VersionedModelId, ModelMetrics,
-                                          decltype(&VersionedModelId::hash)>(
-            INITIAL_MODEL_QUEUES_MAP_SIZE, &VersionedModelId::hash)) {
+        model_queues_({}),
+        model_metrics_({}) {
     log_info(LOGGING_TAG_TASK_EXECUTOR, "TaskExecutor started");
     rpc_->start(
         "*", RPC_SERVICE_PORT, [ this, task_executor_valid = active_ ](
@@ -362,12 +358,10 @@ class TaskExecutor {
   std::shared_ptr<metrics::Counter> predictions_counter_;
   std::shared_ptr<metrics::Meter> throughput_meter_;
   boost::shared_mutex model_queues_mutex_;
-  std::unordered_map<const VersionedModelId, std::shared_ptr<ModelQueue>,
-                     decltype(&VersionedModelId::hash)>
+  std::unordered_map<const VersionedModelId, std::shared_ptr<ModelQueue>>
       model_queues_;
   boost::shared_mutex model_metrics_mutex_;
-  std::unordered_map<const VersionedModelId, ModelMetrics,
-                     decltype(&VersionedModelId::hash)>
+  std::unordered_map<const VersionedModelId, ModelMetrics>
       model_metrics_;
   static constexpr int INITIAL_MODEL_QUEUES_MAP_SIZE = 100;
 

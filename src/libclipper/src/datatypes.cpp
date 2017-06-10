@@ -64,12 +64,12 @@ VersionedModelId::VersionedModelId(const std::string name, const std::string id)
 
 std::string VersionedModelId::get_name() const { return name_;}
 std::string VersionedModelId::get_id() const { return id_;}
-std::size_t VersionedModelId::hash() const {
-  std::size_t seed = 0;
-  boost::hash_combine(seed, name_);
-  boost::hash_combine(seed, id_);
-  return seed;
-}
+//std::size_t VersionedModelId::hash() const {
+//  std::size_t seed = 0;
+//  boost::hash_combine(seed, name_);
+//  boost::hash_combine(seed, id_);
+//  return seed;
+//}
 std::string VersionedModelId::serialize() const {
   std::stringstream ss;
   ss << name_;

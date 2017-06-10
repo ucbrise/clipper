@@ -37,7 +37,7 @@ class VersionedModelId {
 
     std::string get_name() const;
     std::string get_id() const;
-    std::size_t hash() const;
+//    std::size_t hash() const;
     std::string serialize() const;
     static VersionedModelId deserialize(std::string);
 
@@ -409,5 +409,18 @@ class PredictionResponse {
 }  // namespace rpc
 
 }  // namespace clipper
-
+namespace std
+{
+    template<> struct hash<clipper::VersionedModelId>
+    {
+        typedef std::size_t result_type;
+        std::size_t operator()(const clipper::VersionedModelId& vm) const
+        {
+          std::size_t seed = 0;
+          boost::hash_combine(seed, vm.get_name());
+          boost::hash_combine(seed, vm.get_id());
+          return seed;
+        }
+    };
+}
 #endif  // CLIPPER_LIB_DATATYPES_H
