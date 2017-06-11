@@ -63,5 +63,5 @@ should be converted to list of string:["wt;cyl\n5.43;4.32","wt;cyl\n6.00;5.76","
 
 Then we can pass these strings through requests.post() method and get predictions for each string(i.e for each coloumn of dataframe).
 
-Illustration can be found in predict_R_model() method of 
+This is illustrated in predict_R_model() method of 
 <clipper-root>/integration-tests/deploy_R_containers.py

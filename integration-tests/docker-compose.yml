@@ -6,7 +6,7 @@ services:
   mgmt_frontend:
     command:
     - --redis_ip=redis
-    - --redis_port=36396
+    - --redis_port=35643
     depends_on:
     - redis
     image: clipper/management_frontend:latest
@@ -18,7 +18,7 @@ services:
   query_frontend:
     command:
     - --redis_ip=redis
-    - --redis_port=36396
+    - --redis_port=35643
     depends_on:
     - mgmt_frontend
     - redis
@@ -30,11 +30,11 @@ services:
     - 1337:1337
     restart: always
   redis:
-    command: redis-server --port 36396
+    command: redis-server --port 35643
     image: redis:alpine
     labels:
       ai.clipper.container.label: ''
     ports:
-    - 36396:36396
+    - 35643:35643
     restart: always
 version: '2'
