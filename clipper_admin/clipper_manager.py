@@ -65,10 +65,13 @@ class ClipperManagerException(Exception):
 class Clipper:
     """
     Connection to a Clipper instance for administrative purposes.
+
     Sets up the machine for running Clipper. This includes verifying
     SSH credentials and initializing Docker.
+
     Docker and docker-compose must already by installed on the machine
     before connecting to a machine.
+
     Parameters
     ----------
     host : str
@@ -96,6 +99,7 @@ class Clipper:
     restart_containers : bool, optional
         If true, containers will restart on failure. If false, containers
         will not restart automatically.
+
     """
 
     def __init__(self,
@@ -301,6 +305,7 @@ class Clipper:
 
     def start(self):
         """Start a Clipper instance.
+
         """
         with hide("output", "warnings", "running"):
             self._execute_standard("rm -f docker-compose.yml")
@@ -317,6 +322,7 @@ class Clipper:
     def register_application(self, name, model, input_type, default_output,
                              slo_micros):
         """Register a new Clipper application.
+
         Parameters
         ----------
         name : str
@@ -333,6 +339,7 @@ class Clipper:
             This is the processing latency between Clipper receiving a request 
             and sending a response. It does not account for network latencies 
             before a request is received or after a response is sent.
+
             If Clipper cannot process a query within the latency objective,
             the default output is returned. Therefore, it is recommended that
             the objective not be set aggressively low unless absolutely necessary.
@@ -354,6 +361,7 @@ class Clipper:
 
     def get_all_apps(self, verbose=False):
         """Gets information about all applications registered with Clipper.
+
         Parameters
         ----------
         verbose : bool
@@ -361,6 +369,7 @@ class Clipper:
             If set to True, the list contains application info dictionaries.
             These dictionaries have the same attribute name-value pairs that were
             provided to `register_application`.
+
         Returns
         -------
         list
@@ -380,10 +389,12 @@ class Clipper:
 
     def get_app_info(self, name):
         """Gets detailed information about a registered application.
+
         Parameters
         ----------
         name : str
             The name of the application to look up
+
         Returns
         -------
         dict
@@ -415,6 +426,7 @@ class Clipper:
                      labels=DEFAULT_LABEL,
                      num_containers=1):
         """Registers a model with Clipper and deploys instances of it in containers.
+
         Parameters
         ----------
         name : str
@@ -492,6 +504,7 @@ class Clipper:
                                 input_type,
                                 labels=DEFAULT_LABEL):
         """Registers a model with Clipper without deploying it in any containers.
+
         Parameters
         ----------
         name : str
@@ -568,6 +581,7 @@ class Clipper:
                              labels=DEFAULT_LABEL,
                              num_containers=1):
         """Deploy a Spark MLLib model to Clipper.
+
         Parameters
         ----------
         name : str
@@ -596,6 +610,7 @@ class Clipper:
         num_containers : int, optional
             The number of replicas of the model to create. More replicas can be
             created later as well. Defaults to 1.
+
         Returns
         -------
         bool
@@ -654,10 +669,12 @@ class Clipper:
                                 labels=DEFAULT_LABEL,
                                 num_containers=1):
         """Deploy an arbitrary Python function to Clipper.
+
         The function should take a list of inputs of the type specified by `input_type` and
         return a Python or numpy array of predictions as strings. All dependencies for the function
         must be installed with Anaconda or Pip and this function must be called from within an Anaconda
         environment.
+
         Parameters
         ----------
         name : str
@@ -674,22 +691,28 @@ class Clipper:
         num_containers : int, optional
             The number of replicas of the model to create. More replicas can be
             created later as well. Defaults to 1.
+
         Returns
         -------
         bool
             True if the model was successfully deployed. False otherwise.
+
         Example
         -------
         Define a feature function ``center()`` and train a model on the featurized input::
+
             def center(xs):
                 means = np.mean(xs, axis=0)
                 return xs - means
+
             centered_xs = center(xs)
             model = sklearn.linear_model.LogisticRegression()
             model.fit(centered_xs, ys)
+
             def centered_predict(inputs):
                 centered_inputs = center(inputs)
                 return model.predict(centered_inputs)
+
             clipper.deploy_predict_function(
                 "example_model",
                 1,
@@ -712,11 +735,13 @@ class Clipper:
 
     def get_all_models(self, verbose=False):
         """Gets information about all models registered with Clipper.
+
         Parameters
         ----------
         verbose : bool
             If set to False, the returned list contains the models' names.
             If set to True, the list contains model info dictionaries.
+
         Returns
         -------
         list
@@ -736,12 +761,14 @@ class Clipper:
 
     def get_model_info(self, model_name, model_version):
         """Gets detailed information about a registered model.
+
         Parameters
         ----------
         model_name : str
             The name of the model to look up
         model_version : int
             The version of the model to look up
+
         Returns
         -------
         dict
@@ -768,11 +795,13 @@ class Clipper:
 
     def get_all_containers(self, verbose=False):
         """Gets information about all containers registered with Clipper.
+
         Parameters
         ----------
         verbose : bool
             If set to False, the returned list contains the apps' names.
             If set to True, the list contains container info dictionaries.
+
         Returns
         -------
         list
@@ -792,6 +821,7 @@ class Clipper:
 
     def get_container_info(self, model_name, model_version, replica_id):
         """Gets detailed information about a registered container.
+
         Parameters
         ----------
         model_name : str
@@ -800,6 +830,7 @@ class Clipper:
             The version of the container to look up
         replica_id : int
             The container replica to look up
+
         Returns
         -------
         dict
@@ -828,6 +859,7 @@ class Clipper:
         # NOTE: This method is private (it's still functional, but it won't be documented)
         # until Clipper supports different selection policies
         """Fetches a human-readable string with the current selection policy state.
+
         Parameters
         ----------
         app_name : str
@@ -836,6 +868,7 @@ class Clipper:
             The user whose policy state should be inspected. The convention
             in Clipper is to use 0 as the default user ID, but this may be
             application specific.
+
         Returns
         -------
         str
@@ -856,6 +889,7 @@ class Clipper:
 
     def _export_conda_env(self, environment_file_abs_path):
         """Returns true if attempt to export the current conda environment is successful
+
         Parameters
         ----------
         environment_file_abs_path : str
@@ -874,12 +908,15 @@ class Clipper:
     def _check_and_write_dependencies(self, environment_path, directory,
                                       conda_dep_fname, pip_dep_fname):
         """Returns true if the provided conda environment is compatible with the container os.
+
         If packages listed in specified conda environment file have conflicting dependencies,
         this function will warn the user and return False.
+
         If there are no conflicting package dependencies, existence of the packages in the 
         container conda channel is tested. The user is warned about any missing packages.
         All existing conda packages are written out to `conda_dep_fname` and pip packages
         to `pip_dep_fname` in the given `directory`. This function then returns True.
+
         Parameters
         ----------
         environment_path : str
@@ -890,6 +927,7 @@ class Clipper:
             The name of the output conda dependency file
         pip_dep_fname : str
             The name of the output pip dependency file
+
         Returns
         -------
         bool
@@ -922,16 +960,19 @@ class Clipper:
 
     def add_container(self, model_name, model_version):
         """Create a new container for an existing model.
+
         Starts a new container for a model that has already been added to
         Clipper. Note that models are uniquely identified by both name
         and version, so this method will fail if you have not already called
         `Clipper.deploy_model()` for the specified name and version.
+
         Parameters
         ----------
         model_name : str
             The name of the model
         model_version : int
             The version of the model
+
         Returns
         ----------
         bool
@@ -997,6 +1038,7 @@ class Clipper:
         """Copies the logs from all Docker containers running on the host machine
         that have been tagged with the Clipper label (ai.clipper.container.label) into
         the local filesystem.
+
         Returns
         -------
         list(str)
@@ -1031,6 +1073,7 @@ class Clipper:
 
     def inspect_instance(self):
         """Fetches metrics from the running Clipper instance.
+
         Returns
         -------
         str
@@ -1048,10 +1091,12 @@ class Clipper:
 
     def set_model_version(self, model_name, model_version, num_containers=0):
         """Changes the current model version to `model_version`.
+
         This method can be used to do model rollback and rollforward to
         any previously deployed version of the model. Note that model
         versions automatically get updated when `deploy_model()` is
         called, so there is no need to manually update the version as well.
+
         Parameters
         ----------
         model_name : str
@@ -1062,6 +1107,7 @@ class Clipper:
         num_containers : int
             The number of new containers to start with the newly
             selected model version.
+
         """
         url = "http://%s:%d/admin/set_model_version" % (
             self.host, CLIPPER_MANAGEMENT_PORT)
@@ -1077,10 +1123,12 @@ class Clipper:
 
     def remove_inactive_containers(self, model_name):
         """Removes all containers serving stale versions of the specified model.
+
         Parameters
         ----------
         model_name : str
             The name of the model whose old containers you want to clean.
+
         """
         # Get all Docker containers tagged as model containers
         num_containers_removed = 0
@@ -1114,6 +1162,7 @@ class Clipper:
 
     def stop_all(self):
         """Stops and removes all Clipper Docker containers on the host.
+
         """
         print("Stopping Clipper and all running models...")
         with hide("output", "warnings", "running"):
@@ -1147,17 +1196,21 @@ class Clipper:
 
     def _put_container_on_host(self, container_name):
         """Puts the provided container on the host.
+
         Parameters
         __________
         container_name : str
             The name of the container.
+
         Notes
         -----
         This method will first check the host, then Docker Hub, then the local
         machine to find the container.
+
         This method is safe to call multiple times with the same container name.
         Subsequent calls will detect that the container is already present on
         the host and do nothing.
+
         """
         with hide("output", "warnings", "running"):
             # first see if container is already present on host
@@ -1204,6 +1257,8 @@ class Clipper:
             return False
 
 
+
+
     def deploy_R_model(self,
                      name,
                      version,
@@ -1213,7 +1268,6 @@ class Clipper:
                      labels=DEFAULT_LABEL,
                      num_containers=1):
         """Registers a model with Clipper and deploys instances of it in containers.
-
         Parameters
         ----------
         name : str
@@ -1276,5 +1330,9 @@ class Clipper:
                 self.add_container(name, version)
                 for r in range(num_containers)
             ]) 
+            
+
+
+
 
 
