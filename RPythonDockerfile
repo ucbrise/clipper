@@ -30,7 +30,7 @@ RUN apt-get update \
 
 RUN conda install rpy2
 
-COPY r_python_container.py /container/
+COPY containers/R/r_python_container.py /container/
 
 CMD ["python", "/container/r_python_container.py"]
 
