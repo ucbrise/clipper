@@ -89,14 +89,13 @@ void report_and_clear_metrics(
   // Set up output files
   std::ofstream out(config.find(REPORTS_PATH)->second);
   std::ofstream out_verbose(config.find(REPORTS_PATH_VERBOSE)->second);
-
   // Write out run details
   std::string latency_obj_string = config.find(LATENCY_OBJECTIVE)->second;
-  std::string batch_delay_string = config.find(BATCH_DELAY_MILLIS)->second;
+  std::string batch_delay_string = config.find(BATCH_DELAY_MICROS)->second;
   std::stringstream ss;
   ss << "Hyperparams in this noop_bench run: ";
-  ss << "Latency (ms): " << latency_obj_string;
-  ss << ", Batch delay (ms): " << batch_delay_string;
+  ss << "Latency (us): " << latency_obj_string;
+  ss << ", Batch delay (us): " << batch_delay_string;
   ss << std::endl;
   out_verbose << ss.str();
   out << batch_delay_string << REPORT_DELIMTER << latency_obj_string
@@ -198,9 +197,6 @@ int main(int argc, char *argv[]) {
   // final report
   std::string metrics =
       metrics::MetricsRegistry::get_metrics().report_metrics();
-  log_info("BENCH", metrics);
-
-  log_info("BENCH", "Terminating benchmarking script");
 
   // Kills all threads. We don't care about the last report anyway.
   std::terminate();
