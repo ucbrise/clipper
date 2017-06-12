@@ -21,6 +21,8 @@ const std::string BATCH_SIZE_PROMPT =
     "Enter the number of requests per batch: ";
 const std::string BATCH_DELAY_MILLIS_PROMPT =
     "Enter the delay between batches, in milliseconds: ";
+const std::string BATCH_DELAY_MICROS_PROMPT =
+    "Enter the delay between batches, in microseconds: ";
 const std::string LATENCY_OBJECTIVE_PROMPT =
     "Enter the latency objective, in microseconds: ";
 const std::string REPORT_DELAY_SECONDS_PROMPT =
@@ -49,6 +51,8 @@ std::string _get_prompt(std::string var) {
     return REPORTS_PATH_PROMPT;
   } else if (var == REPORTS_PATH_VERBOSE) {
     return REPORTS_PATH_VERBOSE_PROMPT;
+  } else if (var == BATCH_DELAY_MICROS) {
+    return BATCH_DELAY_MICROS_PROMPT;
   }
   return "";
 }

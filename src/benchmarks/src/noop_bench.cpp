@@ -33,8 +33,8 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
                       QueryProcessor &qp, std::vector<std::vector<double>> data,
                       clipper::app_metrics::AppMetrics &app_metrics) {
   int num_batches = std::stoi(config.find(NUM_BATCHES)->second);
-  long batch_delay_millis =
-      static_cast<long>(std::stoi(config.find(BATCH_DELAY_MILLIS)->second));
+  long batch_delay_micros =
+      static_cast<long>(std::stoi(config.find(BATCH_DELAY_MICROS)->second));
   int latency_objective = std::stoi(config.find(LATENCY_OBJECTIVE)->second);
 
   int num_datapoints;
@@ -74,7 +74,7 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
       app_metrics.throughput_->mark(1);
     });
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(batch_delay_millis));
+    std::this_thread::sleep_for(std::chrono::microseconds(batch_delay_micros));
   }
 }
 
@@ -150,7 +150,7 @@ int main(int argc, char *argv[]) {
 
   // Need to update this when we allow for batch sizes > 1
   std::vector<std::string> desired_vars = {
-      CIFAR_DATA_PATH,     NUM_BATCHES,          BATCH_DELAY_MILLIS,
+      CIFAR_DATA_PATH,     NUM_BATCHES,          BATCH_DELAY_MICROS,
       LATENCY_OBJECTIVE,   REPORT_DELAY_SECONDS, REPORTS_PATH,
       REPORTS_PATH_VERBOSE};
   if (json_specified) {

@@ -10,6 +10,7 @@ const std::string NUM_THREADS = "num_threads";
 const std::string NUM_BATCHES = "num_batches";
 const std::string BATCH_SIZE = "batch_size";
 const std::string BATCH_DELAY_MILLIS = "batch_delay_millis";
+const std::string BATCH_DELAY_MICROS = "batch_delay_micros";
 const std::string LATENCY_OBJECTIVE = "latency_objective";
 const std::string REPORT_DELAY_SECONDS = "report_delay_seconds";
 const std::string REPORTS_PATH = "reports_path";
