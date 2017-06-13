@@ -41,8 +41,11 @@ void ModelContainer::update_throughput(size_t batch_size,
         "Batch size and latency must be positive for throughput updates!");
   }
   boost::unique_lock<boost::shared_mutex> lock(throughput_mutex_);
+
+  // 1000 us/ms, so new_throughput is #requests/ms
   double new_throughput = 1000 * (static_cast<double>(batch_size) /
                                   static_cast<double>(total_latency_micros));
+  log_info("NISHAD", "new_throughput", new_throughput);
   double old_total_throughput =
       avg_throughput_per_milli_ * throughput_buffer_.size();
   if (throughput_buffer_.size() == throughput_buffer_.capacity()) {
@@ -79,10 +82,27 @@ size_t ModelContainer::get_batch_size(Deadline deadline) {
       std::chrono::duration_cast<std::chrono::milliseconds>(
           deadline.time_since_epoch())
           .count();
+
+  double deadline_micros =
+          std::chrono::duration_cast<std::chrono::microseconds>(
+                  deadline.time_since_epoch())
+                  .count();
+  double current_time_micros =
+          std::chrono::duration_cast<std::chrono::microseconds>(
+                  std::chrono::system_clock::now().time_since_epoch())
+                  .count();
+  double remaining_time_micros = deadline_micros - current_time_micros;
   double remaining_time_millis = deadline_millis - current_time_millis;
+
+
   boost::shared_lock<boost::shared_mutex> lock(throughput_mutex_);
   int batch_size =
       static_cast<int>(avg_throughput_per_milli_ * remaining_time_millis);
+  // log remaining time here
+  log_info("NISHAD", "remaining_time_micros: ", remaining_time_micros);
+  log_info("NISHAD", "remaining_time_millis: ", remaining_time_millis);
+  log_info("NISHAD", "avg_throughput_per_milli_: ", avg_throughput_per_milli_);
+  log_info("NISHAD", "batch_size: ", batch_size);
   if (batch_size < 1) {
     batch_size = 1;
   }

@@ -405,8 +405,8 @@ class TaskExecutor {
 
     std::vector<PredictTask> batch = current_model_queue->get_batch([container](
         Deadline deadline) {
-//        return container->get_batch_size(deadline);
-        return 5;
+        return container->get_batch_size(deadline);
+//        return 5;
     });
 
 
@@ -419,9 +419,15 @@ class TaskExecutor {
       std::vector<InflightMessage> cur_batch;
       rpc::PredictionRequest prediction_request(container->input_type_);
       std::stringstream query_ids_in_batch;
+      std::chrono::time_point<std::chrono::system_clock> current_time =
+              std::chrono::system_clock::now();
       for (auto b : batch) {
         prediction_request.add_input(b.input_);
-        cur_batch.emplace_back(b.recv_time_, container->container_id_, b.model_,
+        // pretty sure we don't want to be doing b.recv_time_ here.
+        // b.recv_time_ is set when we add tasks so the model queue  on line 317
+        // this means that the eventual timer for task_latency will account for queueing delay
+        // and I don't think we want that
+        cur_batch.emplace_back(current_time, container->container_id_, b.model_,
                                container->replica_id_, b.input_);
         query_ids_in_batch << b.query_id_ << " ";
       }
@@ -486,10 +492,12 @@ class TaskExecutor {
         active_containers_->get_model_replica(completed_msg.model_,
                                               completed_msg.replica_id_);
 
+    // this number seems to increase over time
     auto task_latency = current_time - completed_msg.send_time_;
     long task_latency_micros =
         std::chrono::duration_cast<std::chrono::microseconds>(task_latency)
             .count();
+    log_info("NISHAD", "task_latency_micros", task_latency_micros);
     if (processing_container != nullptr) {
       processing_container->update_throughput(1, task_latency_micros);
     } else {
