@@ -112,7 +112,7 @@ class Clipper:
                  redis_ip=DEFAULT_REDIS_IP,
                  redis_port=DEFAULT_REDIS_PORT,
                  redis_persistence_path=None,
-                 restart_containers=True):
+                 restart_containers=False):
         self.redis_ip = redis_ip
         self.redis_port = redis_port
         self.docker_compost_dict = {
