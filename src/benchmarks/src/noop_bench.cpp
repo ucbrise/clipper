@@ -14,6 +14,7 @@
 #include <clipper/logging.hpp>
 #include <clipper/query_processor.hpp>
 #include <fstream>
+#include <random>
 
 #include "include/bench_utils.hpp"
 
@@ -27,7 +28,7 @@ const std::string REPORT_DELIMTER = ":";
 
 // These should match the values in setup_throughput_bench.sh
 const std::string MODEL_NAME = "bench_noop";
-const int MODEL_VERISON = 1;
+const int MODEL_VERSION = 1;
 
 void send_predictions(std::unordered_map<std::string, std::string> &config,
                       QueryProcessor &qp, std::vector<std::vector<double>> data,
@@ -43,6 +44,12 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
                                                    // representation bounds
 
   std::vector<double> query_vec;
+  int poisson_delay = std::stoi(config.find(POISSON_DELAY)->second);
+  bool draw_from_poisson = (poisson_delay == 1);
+
+  std::default_random_engine generator;
+  std::poisson_distribution<int> distribution(batch_delay_micros);
+  long delay_micros;
 
   for (int j = 0; j < num_batches; j++) {
     // Select datapoint and modify it to be epoch-specific (to avoid cache hits)
@@ -58,7 +65,7 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
                     input,
                     latency_objective,
                     clipper::DefaultOutputSelectionPolicy::get_name(),
-                    {std::make_pair(MODEL_NAME, MODEL_VERISON)}});
+                    {std::make_pair(MODEL_NAME, MODEL_VERSION)}});
 
     prediction.then([app_metrics](boost::future<Response> f) {
       Response r = f.get();
@@ -74,7 +81,12 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
       app_metrics.throughput_->mark(1);
     });
 
-    std::this_thread::sleep_for(std::chrono::microseconds(batch_delay_micros));
+    if (draw_from_poisson) {
+      delay_micros = distribution(generator);
+    } else {
+      delay_micros = batch_delay_micros;
+    }
+    std::this_thread::sleep_for(std::chrono::microseconds(delay_micros));
   }
 }
 
@@ -86,20 +98,33 @@ void report_and_clear_metrics(
       std::stoi(config.find(REPORT_DELAY_SECONDS)->second);
   int num_iters = 1;
 
+  int poisson_delay = std::stoi(config.find(POISSON_DELAY)->second);
+  bool draw_from_poisson = (poisson_delay == 1);
+
   // Set up output files
   std::ofstream out(config.find(REPORTS_PATH)->second);
   std::ofstream out_verbose(config.find(REPORTS_PATH_VERBOSE)->second);
   // Write out run details
   std::string latency_obj_string = config.find(LATENCY_OBJECTIVE)->second;
   std::string batch_delay_string = config.find(BATCH_DELAY_MICROS)->second;
+  std::string delay_message;
+  if (draw_from_poisson) {
+    delay_message = "Delays between batches drawn from poisson distribution";
+  } else {
+    delay_message = "Uniform delays between batches";
+  }
+
   std::stringstream ss;
   ss << "Hyperparams in this noop_bench run: ";
   ss << "Latency (us): " << latency_obj_string;
-  ss << ", Batch delay (us): " << batch_delay_string;
+  ss << ", Batch delay (us): " << batch_delay_string << ".";
+  ss << delay_message;
   ss << std::endl;
-  out_verbose << ss.str();
+  std::string final_message = ss.str();
+  out_verbose << final_message;
   out << batch_delay_string << REPORT_DELIMTER << latency_obj_string
-      << std::endl;
+      << REPORT_DELIMTER << draw_from_poisson << std::endl;
+  log_info("BENCH", final_message);
 
   int window_lower;
   int window_upper;
@@ -147,11 +172,10 @@ int main(int argc, char *argv[]) {
   bool json_specified = (options.count("filename") > 0);
   std::unordered_map<std::string, std::string> test_config;
 
-  // Need to update this when we allow for batch sizes > 1
   std::vector<std::string> desired_vars = {
-      CIFAR_DATA_PATH,     NUM_BATCHES,          BATCH_DELAY_MICROS,
-      LATENCY_OBJECTIVE,   REPORT_DELAY_SECONDS, REPORTS_PATH,
-      REPORTS_PATH_VERBOSE};
+      CIFAR_DATA_PATH,      NUM_BATCHES,          BATCH_DELAY_MICROS,
+      LATENCY_OBJECTIVE,    REPORT_DELAY_SECONDS, REPORTS_PATH,
+      REPORTS_PATH_VERBOSE, POISSON_DELAY};
   if (json_specified) {
     std::string json_path = options["filename"].as<std::string>();
     test_config = get_config_from_json(json_path, desired_vars);
@@ -197,6 +221,8 @@ int main(int argc, char *argv[]) {
   // final report
   std::string metrics =
       metrics::MetricsRegistry::get_metrics().report_metrics();
+  log_info("BENCH", metrics);
+  log_info("BENCH", "Terminating benchmarking script");
 
   // Kills all threads. We don't care about the last report anyway.
   std::terminate();

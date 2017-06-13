@@ -31,6 +31,9 @@ const std::string REPORTS_PATH_PROMPT =
     "Enter the path to the file for contain benchmark reports: ";
 const std::string REPORTS_PATH_VERBOSE_PROMPT =
     "Enter the path to the file for contain verbose benchmark reports: ";
+const std::string POISSON_DELAY_PROMPT =
+    "Enter 1 if you want the delay between request batches to be drawn from a "
+    "poisson distribution: ";
 
 std::string _get_prompt(std::string var) {
   if (var == CIFAR_DATA_PATH) {
@@ -53,6 +56,8 @@ std::string _get_prompt(std::string var) {
     return REPORTS_PATH_VERBOSE_PROMPT;
   } else if (var == BATCH_DELAY_MICROS) {
     return BATCH_DELAY_MICROS_PROMPT;
+  } else if (var == POISSON_DELAY) {
+    return POISSON_DELAY_PROMPT;
   }
   return "";
 }

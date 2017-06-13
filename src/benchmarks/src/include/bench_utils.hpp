@@ -15,6 +15,7 @@ const std::string LATENCY_OBJECTIVE = "latency_objective";
 const std::string REPORT_DELAY_SECONDS = "report_delay_seconds";
 const std::string REPORTS_PATH = "reports_path";
 const std::string REPORTS_PATH_VERBOSE = "reports_path_verbose";
+const std::string POISSON_DELAY = "poisson_delay";
 
 /**
  * Creates a configuration from data received through the command prompt
