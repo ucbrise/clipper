@@ -63,13 +63,9 @@ VersionedModelId::VersionedModelId(const std::string name, const std::string id)
       : name_(name), id_(id) {}
 
 std::string VersionedModelId::get_name() const { return name_;}
+
 std::string VersionedModelId::get_id() const { return id_;}
-//std::size_t VersionedModelId::hash() const {
-//  std::size_t seed = 0;
-//  boost::hash_combine(seed, name_);
-//  boost::hash_combine(seed, id_);
-//  return seed;
-//}
+
 std::string VersionedModelId::serialize() const {
   std::stringstream ss;
   ss << name_;
@@ -77,6 +73,7 @@ std::string VersionedModelId::serialize() const {
   ss << id_;
   return ss.str();
 }
+
 VersionedModelId VersionedModelId::deserialize(std::string str) {
   auto split = str.find(ITEM_PART_CONCATENATOR);
   std::string model_name = str.substr(0, split);

@@ -37,9 +37,7 @@ RPCService::RPCService()
       // you to specify your own hash function also requires you
       // to provide the initial size of the map. We define the initial
       // size of the map somewhat arbitrarily as 100.
-      replica_ids_(std::unordered_map<VersionedModelId, int,
-                                      decltype(&versioned_model_hash)>(
-          INITIAL_REPLICA_ID_SIZE, &versioned_model_hash)) {
+      replica_ids_(std::unordered_map<VersionedModelId, int>({})) {
   msg_queueing_hist_ = metrics::MetricsRegistry::get_metrics().create_histogram(
       "internal:rpc_request_queueing_delay", "microseconds", 2056);
 }

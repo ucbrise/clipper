@@ -182,7 +182,7 @@ TEST(JsonUtilTests, TestParseCandidateModels) {
   }
   )";
   std::vector<clipper::VersionedModelId> expected_models = {
-      {"sklearn_svm", "1"}, {"sklearn_svm", "2"}, {"network", "3"}};
+      {"sklearn_svm", "92248e3"}, {"sklearn_svm", "1.2.4"}, {"network", "3--0"}};
 
   rapidjson::Document d;
   parse_json(correct_json, d);
@@ -294,8 +294,8 @@ TEST_F(RedisToJsonTest, TestRedisModelMetadataToJson) {
   redis_model_metadata_to_json(d, model_metadata);
 
   ASSERT_EQ(get_string(d, "input_type"), input_type);
-  ASSERT_EQ(get_string(d, "model_name"), model.first);
-  ASSERT_EQ(get_string(d, "model_version"), model.second);
+  ASSERT_EQ(get_string(d, "model_name"), model.get_name());
+  ASSERT_EQ(get_string(d, "model_version"), model.get_id());
   ASSERT_EQ(get_string(d, "input_type"), input_type);
   ASSERT_EQ(get_string_array(d, "labels"), labels);
   ASSERT_EQ(get_string(d, "container_name"), container_name);
@@ -315,8 +315,8 @@ TEST_F(RedisToJsonTest, TestRedisContainerMetadataToJson) {
   rapidjson::Document d;
   redis_container_metadata_to_json(d, container_metadata);
 
-  ASSERT_EQ(get_string(d, "model_name"), model.first);
-  ASSERT_EQ(get_string(d, "model_version"), model.second);
+  ASSERT_EQ(get_string(d, "model_name"), model.get_name());
+  ASSERT_EQ(get_string(d, "model_version"), model.get_id());
   ASSERT_EQ(get_string(d, "input_type"), input_type);
   ASSERT_EQ(get_int(d, "model_replica_id"), replica_id);
   ASSERT_EQ(get_string(d, "model_id"), gen_versioned_model_key(model));

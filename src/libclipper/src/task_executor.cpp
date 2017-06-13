@@ -79,7 +79,8 @@ void PredictionCache::put(const VersionedModelId &model,
 
 size_t PredictionCache::hash(const VersionedModelId &model,
                              size_t input_hash) const {
-  return versioned_model_hash(model) ^ input_hash;
+  size_t model_hash = std::hash<clipper::VersionedModelId>()(model);
+  return model_hash ^ input_hash;
 }
 
 }  // namespace clipper

@@ -389,7 +389,7 @@ class RequestHandler {
    * Checks `value` for prohibited characters in strings that will be grouped. If it does, throws an error with message stating that input has an invalid `label`.
    * @throws Throws a std::invalud_argument error if `value` contains prohibited characters.
    */
-  void validate_group_str_for_redis(std::string& value, const char* label) {
+  void validate_group_str_for_redis(const std::string& value, const char* label) {
     if (clipper::redis::contains_prohibited_chars_for_group(value)) {
       std::stringstream ss;
 
@@ -497,8 +497,8 @@ class RequestHandler {
     std::string model_data_path = get_string(d, "model_data_path");
 
     // Validate strings that will be grouped before supplying to redis
-    validate_group_str_for_redis(model_id.first, "model name");
-    validate_group_str_for_redis(model_id.first, "model version");
+    validate_group_str_for_redis(model_id.get_name(), "model name");
+    validate_group_str_for_redis(model_id.get_id(), "model version");
     for (auto label : labels) {
       validate_group_str_for_redis(label, "label");
     }
@@ -509,17 +509,17 @@ class RequestHandler {
     if (existing_model_data.empty()) {
       if (clipper::redis::add_model(redis_connection_, model_id, input_type,
                                     labels, container_name, model_data_path)) {
-        if (set_model_version(model_id.first, model_id.second)) {
+        if (set_model_version(model_id.get_name(), model_id.get_id())) {
           return "Success!";
         }
       }
       std::stringstream ss;
-      ss << "Error adding model " << model_id.first << ":" << model_id.second
+      ss << "Error adding model " << model_id.get_name() << ":" << model_id.get_id()
          << " to Redis";
       throw std::invalid_argument(ss.str());
     } else {
       std::stringstream ss;
-      ss << "Error model " << model_id.first << ":" << model_id.second
+      ss << "Error model " << model_id.get_name() << ":" << model_id.get_id()
          << " already exists";
       throw std::invalid_argument(ss.str());
     }
@@ -646,13 +646,13 @@ class RequestHandler {
         redis_model_metadata_to_json(model_doc, model_metadata);
         bool is_current_version =
             clipper::redis::get_current_model_version(
-                redis_connection_, model.first) == model.second;
+                redis_connection_, model.get_name()) == model.get_id();
         add_bool(model_doc, "is_current_version", is_current_version);
         response_doc.PushBack(model_doc, response_doc.GetAllocator());
       }
     } else {
       for (auto model : models) {
-        std::string model_str = clipper::versioned_model_to_str(model);
+        std::string model_str = model.serialize();
         rapidjson::Value v;
         v.SetString(model_str.c_str(), model_str.length(),
                     response_doc.GetAllocator());
@@ -700,7 +700,7 @@ class RequestHandler {
       redis_model_metadata_to_json(response_doc, model_metadata);
       bool is_current_version =
           clipper::redis::get_current_model_version(
-              redis_connection_, model.first) == model.second;
+              redis_connection_, model.get_name()) == model.get_id();
       add_bool(response_doc, "is_current_version", is_current_version);
     }
 
@@ -747,7 +747,7 @@ class RequestHandler {
     } else {
       for (auto container : containers) {
         std::stringstream ss;
-        ss << clipper::versioned_model_to_str(container.first);
+        ss << container.first.serialize();
         ss << ":";
         ss << container.second;
         std::string container_str = ss.str();
@@ -787,8 +787,7 @@ class RequestHandler {
     int replica_id = get_int(d, "replica_id");
     VersionedModelId model = VersionedModelId(model_name, model_version);
 
-    std::unordered_ma
-    p<std::string, std::string> container_metadata =
+    std::unordered_map<std::string, std::string> container_metadata =
         clipper::redis::get_container(redis_connection_, model, replica_id);
 
     rapidjson::Document response_doc;

@@ -7,6 +7,8 @@
 #include <vector>
 
 #include <boost/optional.hpp>
+#include <boost/thread.hpp>
+#include <boost/functional/hash.hpp>
 
 namespace clipper {
 
@@ -37,7 +39,6 @@ class VersionedModelId {
 
     std::string get_name() const;
     std::string get_id() const;
-//    std::size_t hash() const;
     std::string serialize() const;
     static VersionedModelId deserialize(std::string);
 
@@ -46,12 +47,9 @@ class VersionedModelId {
 
     VersionedModelId(VersionedModelId &&) = default;
     VersionedModelId &operator=(VersionedModelId &&) = default;
-
-    // added these in blindly to see if they'd change anything
+    
     bool operator==(const VersionedModelId &rhs) const;
     bool operator!=(const VersionedModelId &rhs) const;
-    ~VersionedModelId() = default;
-    explicit VersionedModelId() = default;
 
   private:
     std::string name_;

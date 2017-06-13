@@ -93,8 +93,8 @@ TEST_F(RedisTest, AddModel) {
   // to get back a map with 8 entries in it
   // (see add_model() in redis.cpp for details on what the fields are).
   EXPECT_EQ(result.size(), static_cast<size_t>(7));
-  ASSERT_EQ(result["model_name"], model.first);
-  ASSERT_EQ(result["model_version"], model.second);
+  ASSERT_EQ(result["model_name"], model.get_name());
+  ASSERT_EQ(result["model_version"], model.get_id());
   ASSERT_FLOAT_EQ(std::stof(result["load"]), 0.0);
   ASSERT_EQ(str_to_labels(result["labels"]), labels);
   ASSERT_EQ(parse_input_type(result["input_type"]), InputType::Ints);
@@ -183,10 +183,13 @@ TEST_F(RedisTest, GetAllModels) {
   // get_all_model_names() should return the de-duplicated model names
   std::vector<VersionedModelId> models = get_all_models(*redis_);
   ASSERT_EQ(models.size(), static_cast<size_t>(3));
-  std::sort(models.begin(), models.end());
+
+  bool model_found;
   std::vector<VersionedModelId> expected_models({model1, model2, model3});
-  std::sort(expected_models.begin(), expected_models.end());
-  ASSERT_EQ(models, expected_models);
+  for (auto expected_model : expected_models) {
+    model_found = std::find(models.begin(), models.end(), expected_model) != models.end();
+    ASSERT_TRUE(model_found);
+  }
 }
 
 TEST_F(RedisTest, DeleteModel) {
@@ -215,8 +218,8 @@ TEST_F(RedisTest, AddContainer) {
   // entries in it (see add_container() in redis.cpp for details on what the
   // fields are).
   EXPECT_EQ(result.size(), static_cast<size_t>(7));
-  EXPECT_EQ(result["model_name"], model.first);
-  EXPECT_EQ(result["model_version"], model.second);
+  EXPECT_EQ(result["model_name"], model.get_name());
+  EXPECT_EQ(result["model_version"], model.get_id());
   EXPECT_EQ(result["model_id"], gen_versioned_model_key(model));
   EXPECT_EQ(std::stoi(result["model_replica_id"]), replica_id);
   EXPECT_EQ(std::stoi(result["zmq_connection_id"]), zmq_connection_id);
@@ -241,12 +244,15 @@ TEST_F(RedisTest, GetAllContainers) {
       get_all_containers(*redis_);
 
   ASSERT_EQ(containers.size(), static_cast<size_t>(3));
-  std::sort(containers.begin(), containers.end());
   std::vector<std::pair<VersionedModelId, int>> expected_containers(
       {std::make_pair(model, 0), std::make_pair(model, 1),
        std::make_pair(model2, 0)});
-  std::sort(expected_containers.begin(), expected_containers.end());
-  ASSERT_EQ(containers, expected_containers);
+
+  bool container_found;
+  for (auto expected_container : expected_containers) {
+    container_found = std::find(containers.begin(), containers.end(), expected_container) != containers.end();
+    ASSERT_TRUE(container_found);
+  }
 }
 
 TEST_F(RedisTest, DeleteContainer) {

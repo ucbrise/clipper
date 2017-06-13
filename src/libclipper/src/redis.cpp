@@ -48,9 +48,9 @@ std::unordered_map<string, string> parse_redis_map(
 std::string gen_model_replica_key(const VersionedModelId& key,
                                   int model_replica_id) {
   std::stringstream ss;
-  ss << key.first;
+  ss << key.get_name();
   ss << ITEM_DELIMITER;
-  ss << key.second;
+  ss << key.get_id();
   ss << ITEM_DELIMITER;
   ss << std::to_string(model_replica_id);
   return ss.str();
@@ -74,16 +74,16 @@ std::pair<VersionedModelId, int> parse_model_replica_key(std::string key) {
   std::string model_version = key.substr(0, pos);
   key.erase(0, pos + ITEM_DELIMITER.length());
   int replica_id = std::stoi(key);
-  VersionedModelId model = std::make_pair(model_name, model_version);
+  VersionedModelId model = VersionedModelId(model_name, model_version);
 
   return std::make_pair(model, replica_id);
 }
 
 std::string gen_versioned_model_key(const VersionedModelId& key) {
   std::stringstream ss;
-  ss << key.first;
+  ss << key.get_name();
   ss << ":";
-  ss << key.second;
+  ss << key.get_id();
   return ss.str();
 }
 
@@ -136,11 +136,11 @@ std::string models_to_str(const std::vector<VersionedModelId>& models) {
 
   std::ostringstream ss;
   for (auto m = models.begin(); m != models.end() - 1; ++m) {
-    ss << m->first << ITEM_PART_CONCATENATOR << m->second << ITEM_DELIMITER;
+    ss << m->get_name() << ITEM_PART_CONCATENATOR << m->get_id() << ITEM_DELIMITER;
   }
   // don't forget to save the last label
-  ss << (models.end() - 1)->first << ITEM_PART_CONCATENATOR
-     << (models.end() - 1)->second;
+  ss << (models.end() - 1)->get_name() << ITEM_PART_CONCATENATOR
+     << (models.end() - 1)->get_id();
   log_info_formatted(LOGGING_TAG_REDIS, "models_to_str result: {}", ss.str());
   return ss.str();
 }
@@ -156,7 +156,7 @@ std::vector<VersionedModelId> str_to_models(const std::string& model_str) {
         model_str.substr(start, end - start).find(ITEM_PART_CONCATENATOR);
     std::string model_name = model_str.substr(start, split - start);
     std::string model_version = model_str.substr(split + 1, end - split - 1);
-    models.push_back(std::make_pair(model_name, model_version));
+    models.push_back(VersionedModelId(model_name, model_version));
     start = end + ITEM_DELIMITER.length();
     end = model_str.find(ITEM_DELIMITER, start);
   }
@@ -166,7 +166,7 @@ std::vector<VersionedModelId> str_to_models(const std::string& model_str) {
       start + model_str.substr(start, end - start).find(ITEM_PART_CONCATENATOR);
   std::string model_name = model_str.substr(start, split - start);
   std::string model_version = model_str.substr(split + 1, end - split - 1);
-  models.push_back(std::make_pair(model_name, model_version));
+  models.push_back(VersionedModelId(model_name, model_version));
 
   return models;
 }
@@ -217,8 +217,8 @@ bool add_model(Redox& redis, const VersionedModelId& model_id,
     // clang-format off
     const vector<string> cmd_vec{
       "HMSET",            model_id_key,
-      "model_name",       model_id.first,
-      "model_version",    model_id.second,
+      "model_name",       model_id.get_name(),
+      "model_version",    model_id.get_id(),
       "load",             std::to_string(0.0),
       "input_type",       get_readable_input_type(input_type),
       "labels",           labels_to_str(labels),
@@ -275,7 +275,7 @@ std::vector<std::string> get_model_versions(redox::Redox& redis,
       model_keys = *result;
       for (auto model_str : model_keys) {
         std::vector<VersionedModelId> parsed_model = str_to_models(model_str);
-        versions.push_back(parsed_model.front().second);
+        versions.push_back(parsed_model.front().get_id());
       }
     }
   }
@@ -294,7 +294,7 @@ std::vector<std::string> get_all_model_names(redox::Redox& redis) {
       std::set<std::string> model_name_set;
       for (auto model_str : *result) {
         std::vector<VersionedModelId> parsed_model = str_to_models(model_str);
-        model_name_set.insert(parsed_model.front().first);
+        model_name_set.insert(parsed_model.front().get_name());
       }
       model_names.insert(model_names.end(), model_name_set.begin(),
                          model_name_set.end());
@@ -332,9 +332,9 @@ bool add_container(Redox& redis, const VersionedModelId& model_id,
                                  "model_id",
                                  model_id_key,
                                  "model_name",
-                                 model_id.first,
+                                 model_id.get_name(),
                                  "model_version",
-                                 model_id.second,
+                                 model_id.get_id(),
                                  "model_replica_id",
                                  std::to_string(model_replica_id),
                                  "zmq_connection_id",
