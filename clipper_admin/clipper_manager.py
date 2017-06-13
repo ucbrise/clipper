@@ -1140,9 +1140,14 @@ class Clipper:
                 container_ids = [l.strip() for l in containers.split("\n")]
                 for container in container_ids:
                     # returns a string formatted as "<model_name>:<model_version>"
-                    container_model_name_and_version = self._execute_root(
-                        "docker inspect --format \"{{ index .Config.Labels \\\"%s\\\"}}\" %s"
-                        % (CLIPPER_MODEL_CONTAINER_LABEL, container))
+                    if self._host_is_local():
+                        container_model_name_and_version = self._execute_root(
+                            "docker inspect --format \"{{ index .Config.Labels \\\"%s\\\"}}\" %s"
+                            % (CLIPPER_MODEL_CONTAINER_LABEL, container))
+                    else:
+                        container_model_name_and_version = self._execute_root(
+                            "docker inspect --format \"{{ index .Config.Labels \\\\\"%s\\\\\"}}\" %s"
+                            % (CLIPPER_MODEL_CONTAINER_LABEL, container))
                     splits = container_model_name_and_version.split(":")
                     container_model_name = splits[0]
                     container_model_version = int(splits[1])
