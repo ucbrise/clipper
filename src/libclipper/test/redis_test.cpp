@@ -187,7 +187,8 @@ TEST_F(RedisTest, GetAllModels) {
   bool model_found;
   std::vector<VersionedModelId> expected_models({model1, model2, model3});
   for (auto expected_model : expected_models) {
-    model_found = std::find(models.begin(), models.end(), expected_model) != models.end();
+    model_found =
+        std::find(models.begin(), models.end(), expected_model) != models.end();
     ASSERT_TRUE(model_found);
   }
 }
@@ -250,7 +251,8 @@ TEST_F(RedisTest, GetAllContainers) {
 
   bool container_found;
   for (auto expected_container : expected_containers) {
-    container_found = std::find(containers.begin(), containers.end(), expected_container) != containers.end();
+    container_found = std::find(containers.begin(), containers.end(),
+                                expected_container) != containers.end();
     ASSERT_TRUE(container_found);
   }
 }
@@ -385,8 +387,8 @@ TEST_F(RedisTest, SubscriptionDetectModelDelete) {
   subscribe_to_model_changes(
       *subscriber_, [&notification_recv, &notification_mutex, &recv, model](
                         const std::string& key, const std::string& event_type) {
-        log_info_formatted(LOGGING_TAG_REDIS_TEST,
-                           "MODEL CHANGE DETECTED: ", event_type);
+        log_info_formatted(LOGGING_TAG_REDIS_TEST, "MODEL CHANGE DETECTED: ",
+                           event_type);
         ASSERT_TRUE(event_type == "hdel" || event_type == "del");
         std::unique_lock<std::mutex> l(notification_mutex);
         recv = true;
@@ -453,9 +455,9 @@ TEST_F(RedisTest, SubscriptionDetectContainerDelete) {
       *subscriber_,
       [&notification_recv, &notification_mutex, &recv, replica_key](
           const std::string& key, const std::string& event_type) {
-        log_info_formatted(
-            LOGGING_TAG_REDIS_TEST,
-            "CONTAINER DELETED CALLBACK. EVENT TYPE: ", event_type);
+        log_info_formatted(LOGGING_TAG_REDIS_TEST,
+                           "CONTAINER DELETED CALLBACK. EVENT TYPE: ",
+                           event_type);
         ASSERT_TRUE(event_type == "hdel" || event_type == "del");
         std::unique_lock<std::mutex> l(notification_mutex);
         recv = true;

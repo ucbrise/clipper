@@ -39,8 +39,8 @@ TEST_F(DefaultOutputSelectionPolicyTest,
 TEST_F(DefaultOutputSelectionPolicyTest,
        TestSelectPredictTasksTwoCandidateModels) {
   std::vector<VersionedModelId> two_models{
-        VersionedModelId("music_random_features", "1"),
-        VersionedModelId("simple_svm", "2")};
+      VersionedModelId("music_random_features", "1"),
+      VersionedModelId("simple_svm", "2")};
   Query two_candidate_models_query{"label",
                                    clipper::DEFAULT_USER_ID,
                                    std::shared_ptr<DoubleVector>(),
@@ -56,7 +56,7 @@ TEST_F(DefaultOutputSelectionPolicyTest,
 TEST_F(DefaultOutputSelectionPolicyTest,
        TestSelectPredictTasksOneCandidateModel) {
   std::vector<VersionedModelId> one_model{
-        VersionedModelId("music_random_features", "1")};
+      VersionedModelId("music_random_features", "1")};
   Query one_candidate_model_query{"label",
                                   clipper::DEFAULT_USER_ID,
                                   std::shared_ptr<DoubleVector>(),

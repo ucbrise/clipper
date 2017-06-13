@@ -23,7 +23,7 @@ namespace redis {
 
 const std::string VERSION_METADATA_PREFIX = "CURRENT_MODEL_VERSION:";
 
-bool contains_prohibited_chars_for_group(std::string value){
+bool contains_prohibited_chars_for_group(std::string value) {
   for (std::string prohibited_str : clipper::redis::prohibited_group_strings) {
     if (value.find(prohibited_str) != std::string::npos) {
       return true;
@@ -94,7 +94,8 @@ std::string gen_model_current_version_key(const std::string& model_name) {
   return ss.str();
 }
 
-// Update `prohibited_group_strings` when changing the set of delimeters and/or other generic substrings used
+// Update `prohibited_group_strings` when changing the set of delimeters and/or
+// other generic substrings used
 string labels_to_str(const vector<string>& labels) {
   if (labels.empty()) return "";
 
@@ -136,7 +137,8 @@ std::string models_to_str(const std::vector<VersionedModelId>& models) {
 
   std::ostringstream ss;
   for (auto m = models.begin(); m != models.end() - 1; ++m) {
-    ss << m->get_name() << ITEM_PART_CONCATENATOR << m->get_id() << ITEM_DELIMITER;
+    ss << m->get_name() << ITEM_PART_CONCATENATOR << m->get_id()
+       << ITEM_DELIMITER;
   }
   // don't forget to save the last label
   ss << (models.end() - 1)->get_name() << ITEM_PART_CONCATENATOR

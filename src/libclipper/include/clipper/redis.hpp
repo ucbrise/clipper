@@ -22,14 +22,19 @@ namespace redis {
 const std::string LOGGING_TAG_REDIS = "REDIS";
 
 /**
- * Elements of this vector should not appear as substrings of any input Clipper object value that will be grouped into one entry.
- * This list should be updated to reflect all delimiters and characters added in `labels_to_str` or `models_to_str`.
+ * Elements of this vector should not appear as substrings of any input Clipper
+ * object value that will be grouped into one entry.
+ * This list should be updated to reflect all delimiters and characters added in
+ * `labels_to_str` or `models_to_str`.
  */
-const std::vector<std::string> prohibited_group_strings = {ITEM_DELIMITER, ITEM_PART_CONCATENATOR};
+const std::vector<std::string> prohibited_group_strings = {
+    ITEM_DELIMITER, ITEM_PART_CONCATENATOR};
 
 /**
- * Use this function to validate inputs that will be grouped before submitting them to functions in this library.
- * @return Whether or not `value` contains any elements of `probhited_strings` as substrings.
+ * Use this function to validate inputs that will be grouped before submitting
+ * them to functions in this library.
+ * @return Whether or not `value` contains any elements of `probhited_strings`
+ * as substrings.
  */
 bool contains_prohibited_chars_for_group(std::string value);
 

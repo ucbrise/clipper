@@ -5,9 +5,9 @@
 #include <vector>
 
 #include <boost/functional/hash.hpp>
+#include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/util.hpp>
-#include <clipper/constants.hpp>
 
 namespace clipper {
 
@@ -60,11 +60,11 @@ InputType parse_input_type(std::string type_string) {
 }
 
 VersionedModelId::VersionedModelId(const std::string name, const std::string id)
-      : name_(name), id_(id) {}
+    : name_(name), id_(id) {}
 
-std::string VersionedModelId::get_name() const { return name_;}
+std::string VersionedModelId::get_name() const { return name_; }
 
-std::string VersionedModelId::get_id() const { return id_;}
+std::string VersionedModelId::get_id() const { return id_; }
 
 std::string VersionedModelId::serialize() const {
   std::stringstream ss;

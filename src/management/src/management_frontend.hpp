@@ -386,10 +386,14 @@ class RequestHandler {
   }
 
   /**
-   * Checks `value` for prohibited characters in strings that will be grouped. If it does, throws an error with message stating that input has an invalid `label`.
-   * @throws Throws a std::invalud_argument error if `value` contains prohibited characters.
+   * Checks `value` for prohibited characters in strings that will be grouped.
+   * If it does, throws an error with message stating that input has an invalid
+   * `label`.
+   * @throws Throws a std::invalud_argument error if `value` contains prohibited
+   * characters.
    */
-  void validate_group_str_for_redis(const std::string& value, const char* label) {
+  void validate_group_str_for_redis(const std::string& value,
+                                    const char* label) {
     if (clipper::redis::contains_prohibited_chars_for_group(value)) {
       std::stringstream ss;
 
@@ -443,7 +447,8 @@ class RequestHandler {
 
     // Validate strings that will be grouped before supplying to redis
     for (auto candidate_model_name : candidate_model_names) {
-      validate_group_str_for_redis(candidate_model_name, "candidate model name");
+      validate_group_str_for_redis(candidate_model_name,
+                                   "candidate model name");
     }
 
     std::string selection_policy =
@@ -487,8 +492,8 @@ class RequestHandler {
     rapidjson::Document d;
     parse_json(json, d);
 
-    VersionedModelId model_id = VersionedModelId(get_string(d, "model_name"),
-                                               get_string(d, "model_version"));
+    VersionedModelId model_id = VersionedModelId(
+        get_string(d, "model_name"), get_string(d, "model_version"));
 
     std::vector<std::string> labels = get_string_array(d, "labels");
     InputType input_type =
@@ -514,8 +519,8 @@ class RequestHandler {
         }
       }
       std::stringstream ss;
-      ss << "Error adding model " << model_id.get_name() << ":" << model_id.get_id()
-         << " to Redis";
+      ss << "Error adding model " << model_id.get_name() << ":"
+         << model_id.get_id() << " to Redis";
       throw std::invalid_argument(ss.str());
     } else {
       std::stringstream ss;

@@ -53,12 +53,13 @@ class ManagementFrontendTest : public ::testing::Test {
     add_int(d, "latency_slo_micros", latency_slo_micros);
   }
 
-  void set_add_model_request_doc(rapidjson::Document& d, std::string& model_name,
+  void set_add_model_request_doc(rapidjson::Document& d,
+                                 std::string& model_name,
                                  std::string& model_version,
                                  std::string& input_type,
-                               std::vector<std::string>& labels,
-                               std::string& container_name,
-                               std::string& model_data_path) {
+                                 std::vector<std::string>& labels,
+                                 std::string& container_name,
+                                 std::string& model_data_path) {
     d.SetObject();
     add_string(d, "model_name", model_name);
     add_string(d, "model_version", model_version);
@@ -71,7 +72,7 @@ class ManagementFrontendTest : public ::testing::Test {
   std::string get_app_json_request_string(std::string& name) {
     rapidjson::Document d;
     d.SetObject();
-    add_string(d, "name", name); // WANT TO REMOVE THIS?
+    add_string(d, "name", name);  // WANT TO REMOVE THIS?
     return to_json_string(d);
   }
 
@@ -134,15 +135,16 @@ TEST_F(ManagementFrontendTest, TestAddApplicationProhibitedChars) {
   // Valid input values
   std::string name = "my_app_name";
   std::vector<std::string> candidate_model_names = {"my_model"};
-  std::vector<std::string> bad_candidate_model_names = {ITEM_DELIMITER + "my_model"};
+  std::vector<std::string> bad_candidate_model_names = {ITEM_DELIMITER +
+                                                        "my_model"};
   std::string input_type = "doubles";
   std::string default_output = "my_default_output";
   int latency_slo_micros = 10000;
 
   // Test adding app with invalid candidate_model_names
   rapidjson::Document doc;
-  set_add_app_request_doc(doc, name, bad_candidate_model_names,
-                          input_type, default_output, latency_slo_micros);
+  set_add_app_request_doc(doc, name, bad_candidate_model_names, input_type,
+                          default_output, latency_slo_micros);
   std::string add_app_json_string = to_json_string(doc);
   ASSERT_THROW(rh_.add_application(add_app_json_string), std::invalid_argument);
 
@@ -441,11 +443,13 @@ TEST_F(ManagementFrontendTest, TestAddModelProhibitedChars) {
   // Invalid input values
   std::string bad_model_name = model_name + ITEM_PART_CONCATENATOR;
   std::string bad_model_version = ITEM_DELIMITER + model_version;
-  std::vector<std::string> bad_labels = {"label1", ITEM_PART_CONCATENATOR + "label" + ITEM_DELIMITER};
+  std::vector<std::string> bad_labels = {
+      "label1", ITEM_PART_CONCATENATOR + "label" + ITEM_DELIMITER};
 
   // Test adding model with invalid model_name value
   rapidjson::Document doc;
-  set_add_model_request_doc(doc, bad_model_name, model_version, input_type, labels, container_name, model_data_path);
+  set_add_model_request_doc(doc, bad_model_name, model_version, input_type,
+                            labels, container_name, model_data_path);
   std::string add_model_json_string = to_json_string(doc);
   ASSERT_THROW(rh_.add_model(add_model_json_string), std::invalid_argument);
   add_string(doc, "model_name", model_name);

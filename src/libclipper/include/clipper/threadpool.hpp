@@ -183,8 +183,7 @@ class ThreadPool {
     if (queue != queues_.end()) {
       log_error_formatted(LOGGING_TAG_THREADPOOL,
                           "Work queue already exists for model {}, replica {}",
-                          vm.serialize(),
-                          std::to_string(replica_id));
+                          vm.serialize(), std::to_string(replica_id));
       return false;
     } else {
       queues_.emplace(std::piecewise_construct, std::forward_as_tuple(queue_id),
@@ -192,9 +191,9 @@ class ThreadPool {
       threads_.emplace(
           std::piecewise_construct, std::forward_as_tuple(queue_id),
           std::forward_as_tuple(&ThreadPool::worker, this, queue_id));
-      log_info_formatted(
-          LOGGING_TAG_THREADPOOL, "Work queue created for model {}, replica {}",
-          vm.serialize(), std::to_string(replica_id));
+      log_info_formatted(LOGGING_TAG_THREADPOOL,
+                         "Work queue created for model {}, replica {}",
+                         vm.serialize(), std::to_string(replica_id));
       return true;
     }
   }
@@ -220,8 +219,8 @@ class ThreadPool {
       queue->second.push(std::make_unique<TaskType>(std::move(task)));
     } else {
       std::stringstream error_msg;
-      error_msg << "No work queue for model " << vm.serialize()
-                << ", replica " << std::to_string(replica_id);
+      error_msg << "No work queue for model " << vm.serialize() << ", replica "
+                << std::to_string(replica_id);
       log_error(LOGGING_TAG_THREADPOOL, error_msg.str());
       throw std::runtime_error(error_msg.str());
     }

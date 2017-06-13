@@ -182,7 +182,9 @@ TEST(JsonUtilTests, TestParseCandidateModels) {
   }
   )";
   std::vector<clipper::VersionedModelId> expected_models = {
-      {"sklearn_svm", "92248e3"}, {"sklearn_svm", "1.2.4"}, {"network", "3--0"}};
+      {"sklearn_svm", "92248e3"},
+      {"sklearn_svm", "1.2.4"},
+      {"network", "3--0"}};
 
   rapidjson::Document d;
   parse_json(correct_json, d);

@@ -92,15 +92,16 @@ size_t ModelContainer::get_batch_size(Deadline deadline) {
 ActiveContainers::ActiveContainers()
     : containers_(
           std::unordered_map<VersionedModelId,
-                             std::map<int, std::shared_ptr<ModelContainer>>>({})) {}
+                             std::map<int, std::shared_ptr<ModelContainer>>>(
+              {})) {}
 
 void ActiveContainers::add_container(VersionedModelId model, int connection_id,
                                      int replica_id, InputType input_type) {
   log_info_formatted(LOGGING_TAG_CONTAINERS,
                      "Adding new container - model: {}, version: {}, "
                      "connection ID: {}, replica ID: {}, input_type: {}",
-                     model.get_name(), model.get_id(), connection_id, replica_id,
-                     get_readable_input_type(input_type));
+                     model.get_name(), model.get_id(), connection_id,
+                     replica_id, get_readable_input_type(input_type));
   boost::unique_lock<boost::shared_mutex> l{m_};
   auto new_container = std::make_shared<ModelContainer>(model, connection_id,
                                                         replica_id, input_type);

@@ -33,16 +33,14 @@ class ModelMetrics {
             "model:" + model.serialize() + ":prediction_latency",
             "microseconds", 4096)),
         throughput_(metrics::MetricsRegistry::get_metrics().create_meter(
-            "model:" + model.serialize() +
-            ":prediction_throughput")),
+            "model:" + model.serialize() + ":prediction_throughput")),
         num_predictions_(metrics::MetricsRegistry::get_metrics().create_counter(
             "model:" + model.serialize() + ":num_predictions")),
         cache_hit_ratio_(
             metrics::MetricsRegistry::get_metrics().create_ratio_counter(
                 "model:" + model.serialize() + ":cache_hit_ratio")),
         batch_size_(metrics::MetricsRegistry::get_metrics().create_histogram(
-            "model:" + model.serialize() + ":batch_size", "queries",
-            4096)) {}
+            "model:" + model.serialize() + ":batch_size", "queries", 4096)) {}
   ~ModelMetrics() = default;
   ModelMetrics(const ModelMetrics &) = default;
   ModelMetrics &operator=(const ModelMetrics &) = default;
@@ -358,10 +356,12 @@ class TaskExecutor {
   std::shared_ptr<metrics::Counter> predictions_counter_;
   std::shared_ptr<metrics::Meter> throughput_meter_;
   boost::shared_mutex model_queues_mutex_;
-  std::unordered_map<const VersionedModelId, std::shared_ptr<ModelQueue>, std::hash<clipper::VersionedModelId>>
+  std::unordered_map<const VersionedModelId, std::shared_ptr<ModelQueue>,
+                     std::hash<clipper::VersionedModelId>>
       model_queues_;
   boost::shared_mutex model_metrics_mutex_;
-  std::unordered_map<const VersionedModelId, ModelMetrics, std::hash<clipper::VersionedModelId>>
+  std::unordered_map<const VersionedModelId, ModelMetrics,
+                     std::hash<clipper::VersionedModelId>>
       model_metrics_;
   static constexpr int INITIAL_MODEL_QUEUES_MAP_SIZE = 100;
 
@@ -424,12 +424,12 @@ class TaskExecutor {
       }
       int message_id = rpc_->send_message(prediction_request.serialize(),
                                           container->container_id_);
-      log_info_formatted(
-          LOGGING_TAG_TASK_EXECUTOR,
-          "Sending batch to model: {} replica {}."
-          "Batch size: {}. Query IDs: {}",
-          model_id.serialize(), std::to_string(replica_id),
-          std::to_string(batch.size()), query_ids_in_batch.str());
+      log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
+                         "Sending batch to model: {} replica {}."
+                         "Batch size: {}. Query IDs: {}",
+                         model_id.serialize(), std::to_string(replica_id),
+                         std::to_string(batch.size()),
+                         query_ids_in_batch.str());
       inflight_messages_.emplace(message_id, std::move(cur_batch));
 
     } else {
