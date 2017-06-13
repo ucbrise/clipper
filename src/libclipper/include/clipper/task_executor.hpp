@@ -132,11 +132,13 @@ class ModelQueue {
     remove_tasks_with_elapsed_deadlines();
     Deadline deadline = queue_.top().first;
     int max_batch_size = get_batch_size(deadline);
+    log_info("MAX BATCH SIZE", max_batch_size);
     std::vector<PredictTask> batch;
     while (batch.size() < (size_t)max_batch_size && queue_.size() > 0) {
       batch.push_back(queue_.top().second);
       queue_.pop();
     }
+    log_info("ACTUAL BATCH SIZE", batch.size());
     return batch;
   }
 
@@ -402,7 +404,11 @@ class TaskExecutor {
     l.unlock();
 
     std::vector<PredictTask> batch = current_model_queue->get_batch([container](
-        Deadline deadline) { return container->get_batch_size(deadline); });
+        Deadline deadline) {
+//        return container->get_batch_size(deadline);
+        return 5;
+    });
+
 
     if (batch.size() > 0) {
       // move the lock up here, so that nothing can pull from the
