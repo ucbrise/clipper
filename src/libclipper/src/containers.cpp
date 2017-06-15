@@ -27,6 +27,7 @@ ModelContainer::ModelContainer(VersionedModelId model, int container_id,
       replica_id_(replica_id),
       input_type_(input_type),
       avg_throughput_per_milli_(0),
+      latency_hist_("request latency", "microseconds", HISTOGRAM_SAMPLE_SIZE),
       throughput_buffer_(THROUGHPUT_BUFFER_CAPACITY) {
   std::string model_str = model.serialize();
   log_info_formatted(LOGGING_TAG_CONTAINERS,
@@ -40,6 +41,10 @@ void ModelContainer::update_throughput(size_t batch_size,
     throw std::invalid_argument(
         "Batch size and latency must be positive for throughput updates!");
   }
+
+  // maybe this shouldn't be done here
+  latency_hist_.insert(total_latency_micros);
+
   boost::unique_lock<boost::shared_mutex> lock(throughput_mutex_);
 
   // 1000 us/ms, so new_throughput is #requests/ms

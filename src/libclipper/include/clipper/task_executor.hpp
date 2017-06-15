@@ -125,11 +125,12 @@ class ModelQueue {
   }
 
   std::vector<PredictTask> get_batch(
-      std::function<int(Deadline)> &&get_batch_size) {
+      std::function<int(Deadline)> &&get_batch_size,
+      clipper::metrics::Histogram latency_histogram) {
     std::unique_lock<std::mutex> lock(queue_mutex_);
-    remove_tasks_with_elapsed_deadlines();
+    remove_tasks_with_elapsed_deadlines(latency_histogram);
     queue_not_empty_condition_.wait(lock, [this]() { return !queue_.empty(); });
-    remove_tasks_with_elapsed_deadlines();
+    remove_tasks_with_elapsed_deadlines(latency_histogram);
     Deadline deadline = queue_.top().first;
     int max_batch_size = get_batch_size(deadline);
     log_info("MAX BATCH SIZE", max_batch_size);
@@ -152,16 +153,23 @@ class ModelQueue {
   ModelPQueue queue_;
   std::mutex queue_mutex_;
   std::condition_variable queue_not_empty_condition_;
+  static double CUTOFF_LATENCY_PERCENTAGE = 0.3;
 
   // Deletes tasks with deadlines prior or equivalent to the
   // current system time. This method should only be called
   // when a unique lock on the queue_mutex is held.
-  void remove_tasks_with_elapsed_deadlines() {
+  void remove_tasks_with_elapsed_deadlines(clipper::metrics::Histogram latency_histogram) {
     std::chrono::time_point<std::chrono::system_clock> current_time =
         std::chrono::system_clock::now();
+
+    p_30_latency = latency_histogram.percentile(CUTOFF_LATENCY_PERCENTAGE);
+
+
     while (!queue_.empty()) {
       Deadline first_deadline = queue_.top().first;
-      if (first_deadline <= current_time) {
+      auto remaining_time = current_time - first_deadline;
+
+      if (remaining_time < p_30_latench) {
         // If a task's deadline has already elapsed,
         // we should not process it
         queue_.pop();
@@ -403,12 +411,13 @@ class TaskExecutor {
     // goes out of scope.
     l.unlock();
 
+    clipper::metrics::Histogram latency_histogram = container->latency_hist_;
+
     std::vector<PredictTask> batch = current_model_queue->get_batch([container](
         Deadline deadline) {
         return container->get_batch_size(deadline);
 //        return 5;
     });
-
 
     if (batch.size() > 0) {
       // move the lock up here, so that nothing can pull from the
