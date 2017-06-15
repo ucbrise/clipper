@@ -470,6 +470,17 @@ double Histogram::percentile(std::vector<int64_t> snapshot, double rank) {
   }
 }
 
+double Histogram::percentile(double rank) {
+  std::lock_guard<std::mutex> guard(sampler_lock_);
+  std::vector<int64_t> snapshot = sampler_.snapshot();
+  if (snapshot.size() == 0) {
+    return 0;
+  }
+  std::sort(snapshot.begin(), snapshot.end());
+
+  return Histogram::percentile(snapshot, rank);
+}
+
 const HistogramStats Histogram::compute_stats() {
   std::lock_guard<std::mutex> guard(sampler_lock_);
   std::vector<int64_t> snapshot = sampler_.snapshot();

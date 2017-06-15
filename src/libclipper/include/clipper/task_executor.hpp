@@ -20,6 +20,7 @@
 #include <clipper/rpc_service.hpp>
 #include <clipper/threadpool.hpp>
 #include <clipper/util.hpp>
+#include "../../../logging_constants.hpp"
 
 namespace clipper {
 
@@ -126,7 +127,7 @@ class ModelQueue {
 
   std::vector<PredictTask> get_batch(
       std::function<int(Deadline)> &&get_batch_size,
-      clipper::metrics::Histogram latency_histogram) {
+      clipper::metrics::Histogram &latency_histogram) {
     std::unique_lock<std::mutex> lock(queue_mutex_);
     remove_tasks_with_elapsed_deadlines(latency_histogram);
     queue_not_empty_condition_.wait(lock, [this]() { return !queue_.empty(); });
@@ -153,23 +154,32 @@ class ModelQueue {
   ModelPQueue queue_;
   std::mutex queue_mutex_;
   std::condition_variable queue_not_empty_condition_;
-  static double CUTOFF_LATENCY_PERCENTAGE = 0.3;
+  static constexpr double LATENCY_CUTOFF_PERCENTAGE = 0.8;
 
   // Deletes tasks with deadlines prior or equivalent to the
   // current system time. This method should only be called
   // when a unique lock on the queue_mutex is held.
-  void remove_tasks_with_elapsed_deadlines(clipper::metrics::Histogram latency_histogram) {
+  void remove_tasks_with_elapsed_deadlines(clipper::metrics::Histogram &latency_histogram) {
+    if (IGNORE_OVERDUE_TASKS) {
+      return;
+    }
     std::chrono::time_point<std::chrono::system_clock> current_time =
         std::chrono::system_clock::now();
 
-    p_30_latency = latency_histogram.percentile(CUTOFF_LATENCY_PERCENTAGE);
-
+    long cutoff_latency_micros = static_cast<long>(latency_histogram.percentile(LATENCY_CUTOFF_PERCENTAGE));
+    log_info("BENCH", "cutoff_latency_micros", cutoff_latency_micros);
 
     while (!queue_.empty()) {
       Deadline first_deadline = queue_.top().first;
-      auto remaining_time = current_time - first_deadline;
+      auto remaining_time = first_deadline - current_time;
 
-      if (remaining_time < p_30_latench) {
+      long remaining_time_micros =
+              std::chrono::duration_cast<std::chrono::microseconds>(remaining_time)
+                      .count();
+
+      if (remaining_time_micros <= cutoff_latency_micros) {
+//      if (first_deadline <= current_time) {
+
         // If a task's deadline has already elapsed,
         // we should not process it
         queue_.pop();
@@ -411,13 +421,13 @@ class TaskExecutor {
     // goes out of scope.
     l.unlock();
 
-    clipper::metrics::Histogram latency_histogram = container->latency_hist_;
-
     std::vector<PredictTask> batch = current_model_queue->get_batch([container](
         Deadline deadline) {
+        if (USE_FIXED_BATCH_SIZE) {
+          return FIXED_BATCH_SIZE;;
+        }
         return container->get_batch_size(deadline);
-//        return 5;
-    });
+    }, container->latency_hist_);
 
     if (batch.size() > 0) {
       // move the lock up here, so that nothing can pull from the
@@ -432,10 +442,6 @@ class TaskExecutor {
               std::chrono::system_clock::now();
       for (auto b : batch) {
         prediction_request.add_input(b.input_);
-        // pretty sure we don't want to be doing b.recv_time_ here.
-        // b.recv_time_ is set when we add tasks so the model queue  on line 317
-        // this means that the eventual timer for task_latency will account for queueing delay
-        // and I don't think we want that
         cur_batch.emplace_back(current_time, container->container_id_, b.model_,
                                container->replica_id_, b.input_);
         query_ids_in_batch << b.query_id_ << " ";
@@ -501,14 +507,13 @@ class TaskExecutor {
         active_containers_->get_model_replica(completed_msg.model_,
                                               completed_msg.replica_id_);
 
-    // this number seems to increase over time
     auto task_latency = current_time - completed_msg.send_time_;
     long task_latency_micros =
         std::chrono::duration_cast<std::chrono::microseconds>(task_latency)
             .count();
     log_info("NISHAD", "task_latency_micros", task_latency_micros);
     if (processing_container != nullptr) {
-      processing_container->update_throughput(1, task_latency_micros);
+      processing_container->update_container_stats(1, task_latency_micros);
     } else {
       log_error(LOGGING_TAG_TASK_EXECUTOR,
                 "Could not find processing container. Something is wrong.");
