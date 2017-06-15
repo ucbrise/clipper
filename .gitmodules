@@ -10,3 +10,6 @@
 [submodule "bin/yapf"]
 	path = bin/yapf
 	url = https://github.com/google/yapf.git
+[submodule "/src/libs/base64"]
+	path = src/libs/base64
+	url = https://github.com/tkislan/base64.git
