@@ -135,16 +135,16 @@ std::vector<uint8_t> get_base64_encoded_byte_array(rapidjson::Value& d,
                                                    const char* key_name) {
   rapidjson::Value& v =
       check_kv_type_and_return(d, key_name, rapidjson::kStringType);
-  if(!v.IsString()) {
+  if (!v.IsString()) {
     throw json_semantic_error("Input of type " + kTypeNames[v.GetType()] +
-        " is not of type base64-encoded string");
+                              " is not of type base64-encoded string");
   }
   Base64 decoder;
   std::string encoded_string = std::string(v.GetString());
   std::string decoded_string;
   decoder.Decode(encoded_string, &decoded_string);
-  std::vector<uint8_t> decoded_bytes =
-      std::vector<uint8_t>(decoded_string.data(), decoded_string.data() + decoded_string.length());
+  std::vector<uint8_t> decoded_bytes = std::vector<uint8_t>(
+      decoded_string.data(), decoded_string.data() + decoded_string.length());
   return decoded_bytes;
 }
 

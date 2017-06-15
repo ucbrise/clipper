@@ -249,7 +249,8 @@ TEST(JsonUtilTests, TestBase64DecodingYieldsOriginalString) {
   d.SetObject();
   std::string key_name = "test_key";
   json::add_string(d, key_name.data(), encoded_string);
-  std::vector<uint8_t> decoded_bytes = json::get_base64_encoded_byte_array(d, key_name.data());
+  std::vector<uint8_t> decoded_bytes =
+      json::get_base64_encoded_byte_array(d, key_name.data());
   std::string decoded_string(decoded_bytes.begin(), decoded_bytes.end());
   ASSERT_EQ(raw_string, decoded_string);
 }
