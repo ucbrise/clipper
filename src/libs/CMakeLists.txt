@@ -58,7 +58,6 @@ target_include_directories(base64 INTERFACE
         $<INSTALL_INTERFACE:base64>)
 export(TARGETS base64 FILE Base64Config.cmake)
 
-
 add_subdirectory(redox)
 
 add_subdirectory(rapidjson)
