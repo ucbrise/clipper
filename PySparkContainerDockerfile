@@ -1,0 +1,22 @@
+FROM clipper/py-rpc:latest
+
+MAINTAINER Dan Crankshaw <dscrankshaw@gmail.com>
+
+COPY containers/python/python_container_conda_deps.txt /lib/
+
+RUN curl -o /spark.tgz https://d3kbcqa49mib13.cloudfront.net/spark-2.1.1-bin-hadoop2.7.tgz \
+      && cd / && tar zxf /spark.tgz && mv /spark-2.1.1-bin-hadoop2.7 /spark \
+      && echo deb http://ftp.de.debian.org/debian jessie-backports main >> /etc/apt/sources.list \
+      && apt-get update --fix-missing \
+      && apt-get install -yqq -t jessie-backports openjdk-8-jdk \
+      && conda install -y --file /lib/python_container_conda_deps.txt \
+      && pip install findspark
+
+COPY containers/python/pyspark_container.py containers/python/pyspark_container_entry.sh /container/
+COPY clipper_admin/ /lib/clipper_admin/
+
+ENV SPARK_HOME="/spark"
+
+CMD ["/container/pyspark_container_entry.sh"]
+
+# vim: set filetype=dockerfile:

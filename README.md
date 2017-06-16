@@ -35,9 +35,10 @@ Clipper is a prediction serving system that sits between user-facing application
 ```
 $ pip install clipper_admin
 $ python
->>> import clipper_admin.clipper_manager as cm, numpy as np
+>>> from clipper_admin import Clipper
+>>> import numpy as np
 # Start a Clipper instance on localhost
->>> clipper = cm.Clipper("localhost")
+>>> clipper = Clipper("localhost")
 Checking if Docker is running...
 
 # Start Clipper. Running this command for the first time will
@@ -62,7 +63,7 @@ Success!
       return [str(np.sum(x)) for x in xs]
 
 # Deploy the model, naming it "feature_sum_model" and giving it version 1
->>> clipper.deploy_predict_function("feature_sum_model", 1, feature_sum_function, ["quickstart"], "doubles")
+>>> clipper.deploy_predict_function("feature_sum_model", 1, feature_sum_function, "doubles")
 
 ```
 

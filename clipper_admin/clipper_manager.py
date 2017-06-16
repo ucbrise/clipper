@@ -1,6 +1,6 @@
 """Clipper Management Utilities"""
 
-from __future__ import print_function, with_statement
+from __future__ import print_function, with_statement, absolute_import
 from fabric.api import *
 from fabric.contrib.files import append
 import os
@@ -14,8 +14,9 @@ from sklearn import base
 from sklearn.externals import joblib
 from cStringIO import StringIO
 import sys
-from pywrencloudpickle import CloudPickler
+from .cloudpickle import CloudPickler
 import time
+import re
 
 __all__ = ['Clipper']
 
@@ -41,6 +42,9 @@ CLIPPER_RPC_PORT = 7000
 CLIPPER_LOGS_PATH = "/tmp/clipper-logs"
 
 CLIPPER_DOCKER_LABEL = "ai.clipper.container.label"
+CLIPPER_MODEL_CONTAINER_LABEL = "ai.clipper.model_container.model_version"
+
+DEFAULT_LABEL = ["DEFAULT"]
 
 aws_cli_config = """
 [default]
@@ -108,7 +112,7 @@ class Clipper:
                  redis_ip=DEFAULT_REDIS_IP,
                  redis_port=DEFAULT_REDIS_PORT,
                  redis_persistence_path=None,
-                 restart_containers=True):
+                 restart_containers=False):
         self.redis_ip = redis_ip
         self.redis_port = redis_port
         self.docker_compost_dict = {
@@ -283,7 +287,13 @@ class Clipper:
             # We should only copy data if the paths are different
             if local_path != remote_path:
                 if os.path.isdir(local_path):
-                    self._copytree(local_path, remote_path)
+                    remote_path = os.path.join(remote_path,
+                                               os.path.basename(local_path))
+                    # if remote_path exists, delete it because shutil.copytree requires
+                    # that the dst path doesn't exist
+                    if os.path.exists(remote_path):
+                        shutil.rmtree(remote_path)
+                    shutil.copytree(local_path, remote_path)
                 else:
                     shutil.copy2(local_path, remote_path)
         else:
@@ -292,38 +302,6 @@ class Clipper:
                 remote_path=remote_path,
                 *args,
                 **kwargs)
-
-    # Taken from http://stackoverflow.com/a/12514470
-    # Recursively copies a directory from src to dst,
-    # where dst may or may not exist. We cannot use
-    # shutil.copytree() alone because it stipulates that
-    # dst cannot already exist
-    def _copytree(self, src, dst, symlinks=False, ignore=None):
-        # Appends the final directory in the tree specified by "src" to
-        # the tree specified by "dst". This is consistent with fabric's
-        # put() behavior
-        final_dst_char = dst[len(dst) - 1]
-        if final_dst_char != "/":
-            dst = dst + "/"
-        nested_dir_names = src.split("/")
-        dst = dst + nested_dir_names[len(nested_dir_names) - 1]
-
-        if not os.path.exists(dst):
-            os.makedirs(dst)
-        for item in os.listdir(src):
-            s = os.path.join(src, item)
-            d = os.path.join(dst, item)
-            if os.path.isdir(s):
-                self._copytree(s, d, symlinks, ignore)
-            else:
-                if not os.path.exists(
-                        d) or os.stat(s).st_mtime - os.stat(d).st_mtime > 1:
-                    try:
-                        shutil.copy2(s, d)
-                    except Exception as e:
-                        print(
-                            "Error copying {source} to {dest}: {error}. File will be skipped.".
-                            format(source=s, dest=d, error=e))
 
     def start(self):
         """Start a Clipper instance.
@@ -335,6 +313,9 @@ class Clipper:
                                  yaml.dump(
                                      self.docker_compost_dict,
                                      default_flow_style=False))
+            print(
+                "Note: Docker must download the Clipper Docker images if they are not already cached. This may take awhile."
+            )
             self._execute_root("docker-compose up -d query_frontend")
             print("Clipper is running")
 
@@ -441,8 +422,8 @@ class Clipper:
                      version,
                      model_data,
                      container_name,
-                     labels,
                      input_type,
+                     labels=DEFAULT_LABEL,
                      num_containers=1):
         """Registers a model with Clipper and deploys instances of it in containers.
 
@@ -463,10 +444,10 @@ class Clipper:
             be the path you provided to the serialize method call.
         container_name : str
             The Docker container image to use to run this model container.
-        labels : list of str
-            A set of strings annotating the model
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
+        labels : list of str, optional
+            A list of strings annotating the model
         num_containers : int, optional
             The number of replicas of the model to create. More replicas can be
             created later as well. Defaults to 1.
@@ -484,6 +465,7 @@ class Clipper:
             elif isinstance(model_data, str):
                 # assume that model_data is a path to the serialized model
                 model_data_path = model_data
+                print("model_data_path is: %s" % model_data_path)
             else:
                 warn("%s is invalid model format" % str(type(model_data)))
                 return False
@@ -508,36 +490,7 @@ class Clipper:
 
             with cd(vol):
                 with hide("warnings", "output", "running"):
-                    if model_data_path.startswith("s3://"):
-                        with hide("warnings", "output", "running"):
-                            aws_cli_installed = self._execute_standard(
-                                "dpkg-query -Wf'${db:Status-abbrev}' awscli 2>/dev/null | grep -q '^i'",
-                                warn_only=True).return_code == 0
-                            if not aws_cli_installed:
-                                self._execute_root("apt-get update -qq")
-                                self._execute_root(
-                                    "apt-get install -yqq awscli")
-                            if self._execute_root(
-                                    "stat ~/.aws/config",
-                                    warn_only=True).return_code != 0:
-                                self._execute_standard("mkdir -p ~/.aws")
-                                self._execute_append(
-                                    "~/.aws/config",
-                                    aws_cli_config.format(
-                                        access_key=os.environ[
-                                            "AWS_ACCESS_KEY_ID"],
-                                        secret_key=os.environ[
-                                            "AWS_SECRET_ACCESS_KEY"]))
-
-                        self._execute_standard(
-                            "aws s3 cp {model_data_path} {dl_path} --recursive".
-                            format(
-                                model_data_path=model_data_path,
-                                dl_path=os.path.join(
-                                    vol, os.path.basename(model_data_path))))
-                    else:
-                        with hide("output", "running"):
-                            self._execute_put(model_data_path, vol)
+                    self._execute_put(model_data_path, vol)
 
             print("Copied model data to host")
             # aggregate results of starting all containers
@@ -546,7 +499,11 @@ class Clipper:
                 for r in range(num_containers)
             ])
 
-    def register_external_model(self, name, version, labels, input_type):
+    def register_external_model(self,
+                                name,
+                                version,
+                                input_type,
+                                labels=DEFAULT_LABEL):
         """Registers a model with Clipper without deploying it in any containers.
 
         Parameters
@@ -555,72 +512,18 @@ class Clipper:
             The name to assign this model.
         version : Any object with a string representation (with __str__ implementation)
             The version to assign this model.
-        labels : list of str
-            A set of strings annotating the model
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
+        labels : list of str, optional
+            A list of strings annotating the model.
         """
         version = str(version)
         return self._publish_new_model(name, version, labels, input_type,
                                        EXTERNALLY_MANAGED_MODEL,
                                        EXTERNALLY_MANAGED_MODEL)
 
-    def deploy_predict_function(self,
-                                name,
-                                version,
-                                predict_function,
-                                labels,
-                                input_type,
-                                num_containers=1):
-        """Deploy an arbitrary Python function to Clipper.
-
-        The function should take a list of inputs of the type specified by `input_type` and
-        return a Python or numpy array of predictions. All dependencies for the function must
-        be installed with Anaconda or Pip and this function must be called from within an Anaconda
-        environment.
-
-        Parameters
-        ----------
-        name : str
-            The name to assign this model.
-        version : int | str
-            The version to assign this model.
-        predict_function : function
-            The prediction function. Any state associated with the function should be
-            captured via closure capture.
-        labels : list of str
-            A set of strings annotating the model
-        input_type : str
-            One of "integers", "floats", "doubles", "bytes", or "strings".
-        num_containers : int, optional
-            The number of replicas of the model to create. More replicas can be
-            created later as well. Defaults to 1.
-
-        Example
-        -------
-            def center(xs):
-                means = np.mean(xs, axis=0)
-                return xs - means
-
-            centered_xs = center(xs)
-            model = sklearn.linear_model.LogisticRegression()
-            model.fit(centered_xs, ys)
-
-            def centered_predict(inputs):
-                centered_inputs = center(inputs)
-                return model.predict(centered_inputs)
-
-            clipper.deploy_predict_function(
-                "example_model",
-                1,
-                centered_predict,
-                ["example"],
-                "doubles",
-                num_containers=1)
-        """
-
+    def _save_python_function(self, name, predict_function):
         relative_base_serializations_dir = "predict_serializations"
-        default_python_container = "clipper/python-container"
         predict_fname = "predict_func.pkl"
         environment_fname = "environment.yml"
         conda_dep_fname = "conda_dependencies.txt"
@@ -638,9 +541,10 @@ class Clipper:
         if not os.path.exists(serialization_dir):
             os.makedirs(serialization_dir)
 
-        # Attempt to export Anaconda environment
+        # Export Anaconda environment
         environment_file_abs_path = os.path.join(serialization_dir,
                                                  environment_fname)
+
         conda_env_exported = self._export_conda_env(environment_file_abs_path)
 
         if conda_env_exported:
@@ -657,7 +561,7 @@ class Clipper:
         else:
             print(
                 "Warning: Anaconda environment was either not found or exporting the environment "
-                "failed. Your function will still be serialized deployed, but may fail due to "
+                "failed. Your function will still be serialized and deployed, but may fail due to "
                 "missing dependencies. In this case, please re-run inside an Anaconda environment. "
                 "See http://clipper.ai/documentation/python_model_deployment/ for more information."
             )
@@ -667,11 +571,165 @@ class Clipper:
         with open(func_file_path, "w") as serialized_function_file:
             serialized_function_file.write(serialized_prediction_function)
         print("Serialized and supplied predict function")
+        return serialization_dir
+
+    def deploy_pyspark_model(self,
+                             name,
+                             version,
+                             predict_function,
+                             pyspark_model,
+                             sc,
+                             input_type,
+                             labels=DEFAULT_LABEL,
+                             num_containers=1):
+        """Deploy a Spark MLLib model to Clipper.
+
+        Parameters
+        ----------
+        name : str
+            The name to assign this model.
+        version : int
+            The version to assign this model.
+        predict_function : function
+            A function that takes three arguments, a SparkContext, the ``model`` parameter and
+            a list of inputs of the type specified by the ``input_type`` argument.
+            Any state associated with the function other than the Spark model should
+            be captured via closure capture. Note that the function must not capture
+            the SparkContext or the model implicitly, as these objects are not pickleable
+            and therefore will prevent the ``predict_function`` from being serialized.
+        pyspark_model : pyspark.mllib.util.Saveable
+            An object that mixes in the pyspark Saveable mixin. Generally this
+            is either an mllib model or transformer. This model will be loaded
+            into the Clipper model container and provided as an argument to the
+            predict function each time it is called.
+        sc : SparkContext
+            The SparkContext associated with the model. This is needed
+            to save the model for pyspark.mllib models.
+        input_type : str
+            One of "integers", "floats", "doubles", "bytes", or "strings".
+        labels : list of str, optional
+            A set of strings annotating the model
+        num_containers : int, optional
+            The number of replicas of the model to create. More replicas can be
+            created later as well. Defaults to 1.
+
+        Returns
+        -------
+        bool
+            True if the model was successfully deployed. False otherwise.
+        """
+
+        model_class = re.search("pyspark.*'",
+                                str(type(pyspark_model))).group(0).strip("'")
+        if model_class is None:
+            raise ClipperManagerException(
+                "pyspark_model argument was not a pyspark object")
+
+        # save predict function
+        serialization_dir = self._save_python_function(name, predict_function)
+        # save Spark model
+        spark_model_save_loc = os.path.join(serialization_dir,
+                                            "pyspark_model_data")
+        try:
+            # we only import pyspark here so that if the caller of the library does
+            # not want to use this function, clipper_manager does not have a dependency
+            # on pyspark
+            import pyspark
+            if isinstance(pyspark_model, pyspark.ml.pipeline.PipelineModel):
+                pyspark_model.save(spark_model_save_loc)
+            else:
+                pyspark_model.save(sc, spark_model_save_loc)
+        except Exception as e:
+            print("Error saving spark model: %s" % e)
+            raise e
+
+        pyspark_container = "clipper/pyspark-container"
+
+        # extract the pyspark class name. This will be something like
+        # pyspark.mllib.classification.LogisticRegressionModel
+        with open(os.path.join(serialization_dir, "metadata.json"),
+                  "w") as metadata_file:
+            json.dump({"model_class": model_class}, metadata_file)
+
+        print("Spark model saved")
+
+        # Deploy model
+        deploy_result = self.deploy_model(name, version, serialization_dir,
+                                          pyspark_container, input_type,
+                                          labels, num_containers)
+
+        # Remove temp files
+        shutil.rmtree(serialization_dir)
+
+        return deploy_result
+
+    def deploy_predict_function(self,
+                                name,
+                                version,
+                                predict_function,
+                                input_type,
+                                labels=DEFAULT_LABEL,
+                                num_containers=1):
+        """Deploy an arbitrary Python function to Clipper.
+
+        The function should take a list of inputs of the type specified by `input_type` and
+        return a Python or numpy array of predictions as strings. All dependencies for the function
+        must be installed with Anaconda or Pip and this function must be called from within an Anaconda
+        environment.
+
+        Parameters
+        ----------
+        name : str
+            The name to assign this model.
+        version : int | str
+            The version to assign this model.
+        predict_function : function
+            The prediction function. Any state associated with the function should be
+            captured via closure capture.
+        input_type : str
+            One of "integers", "floats", "doubles", "bytes", or "strings".
+        labels : list of str, optional
+            A list of strings annotating the model
+        num_containers : int, optional
+            The number of replicas of the model to create. More replicas can be
+            created later as well. Defaults to 1.
+
+        Returns
+        -------
+        bool
+            True if the model was successfully deployed. False otherwise.
+
+        Example
+        -------
+        Define a feature function ``center()`` and train a model on the featurized input::
+
+            def center(xs):
+                means = np.mean(xs, axis=0)
+                return xs - means
+
+            centered_xs = center(xs)
+            model = sklearn.linear_model.LogisticRegression()
+            model.fit(centered_xs, ys)
+
+            def centered_predict(inputs):
+                centered_inputs = center(inputs)
+                return model.predict(centered_inputs)
+
+            clipper.deploy_predict_function(
+                "example_model",
+                1,
+                centered_predict,
+                "doubles",
+                num_containers=1)
+        """
+
+        default_python_container = "clipper/python-container"
+        serialization_dir = self._save_python_function(name, predict_function)
 
         # Deploy function
         deploy_result = self.deploy_model(name, version, serialization_dir,
-                                          default_python_container, labels,
-                                          input_type, num_containers)
+                                          default_python_container, input_type,
+                                          labels, num_containers)
         # Remove temp files
         shutil.rmtree(serialization_dir)
 
@@ -799,7 +857,9 @@ class Clipper:
             print(r.text)
             return None
 
-    def inspect_selection_policy(self, app_name, uid):
+    def _inspect_selection_policy(self, app_name, uid):
+        # NOTE: This method is private (it's still functional, but it won't be documented)
+        # until Clipper supports different selection policies
         """Fetches a human-readable string with the current selection policy state.
 
         Parameters
@@ -936,8 +996,9 @@ class Clipper:
                     key=model_key,
                     db=REDIS_MODEL_DB_NUM),
                 capture=True)
+            print(result)
 
-            if "nil" in result.stdout:
+            if "empty list or set" in result.stdout:
                 # Model not found
                 warn("Trying to add container but model {mn}:{mv} not in "
                      "Redis".format(mn=model_name, mv=model_version))
@@ -956,7 +1017,7 @@ class Clipper:
                 add_container_cmd = (
                     "docker run -d --network={nw} --restart={restart_policy} -v {path}:/model:ro "
                     "-e \"CLIPPER_MODEL_NAME={mn}\" -e \"CLIPPER_MODEL_VERSION={mv}\" "
-                    "-e \"CLIPPER_IP=query_frontend\" -e \"CLIPPER_INPUT_TYPE={mip}\" -l \"{clipper_label}\" "
+                    "-e \"CLIPPER_IP=query_frontend\" -e \"CLIPPER_INPUT_TYPE={mip}\" -l \"{clipper_label}\" -l \"{mv_label}\" "
                     "{image}".format(
                         path=model_data_path,
                         nw=DOCKER_NW,
@@ -965,6 +1026,8 @@ class Clipper:
                         mv=model_version,
                         mip=model_input_type,
                         clipper_label=CLIPPER_DOCKER_LABEL,
+                        mv_label="%s=%s:%d" % (CLIPPER_MODEL_CONTAINER_LABEL,
+                                               model_name, model_version),
                         restart_policy=restart_policy))
                 result = self._execute_root(add_container_cmd)
                 return result.return_code == 0
@@ -1061,6 +1124,50 @@ class Clipper:
         print(r.text)
         for r in range(num_containers):
             self.add_container(model_name, model_version)
+
+    def remove_inactive_containers(self, model_name):
+        """Removes all containers serving stale versions of the specified model.
+
+        Parameters
+        ----------
+        model_name : str
+            The name of the model whose old containers you want to clean.
+
+        """
+        # Get all Docker containers tagged as model containers
+        num_containers_removed = 0
+        with hide("output", "warnings", "running"):
+            containers = self._execute_root(
+                "docker ps -aq --filter label={model_container_label}".format(
+                    model_container_label=CLIPPER_MODEL_CONTAINER_LABEL))
+            if len(containers) > 0:
+                container_ids = [l.strip() for l in containers.split("\n")]
+                for container in container_ids:
+                    # returns a string formatted as "<model_name>:<model_version>"
+                    if self._host_is_local():
+                        container_model_name_and_version = self._execute_root(
+                            "docker inspect --format \"{{ index .Config.Labels \\\"%s\\\"}}\" %s"
+                            % (CLIPPER_MODEL_CONTAINER_LABEL, container))
+                    else:
+                        container_model_name_and_version = self._execute_root(
+                            "docker inspect --format \"{{ index .Config.Labels \\\\\"%s\\\\\"}}\" %s"
+                            % (CLIPPER_MODEL_CONTAINER_LABEL, container))
+                    splits = container_model_name_and_version.split(":")
+                    container_model_name = splits[0]
+                    container_model_version = int(splits[1])
+                    if container_model_name == model_name:
+                        # check if container_model_version is the currently deployed version
+                        model_info = self.get_model_info(
+                            container_model_name, container_model_version)
+                        if model_info == None or not model_info["is_current_version"]:
+                            self._execute_root("docker stop {container}".
+                                               format(container=container))
+                            self._execute_root("docker rm {container}".format(
+                                container=container))
+                            num_containers_removed += 1
+        print("Removed %d inactive containers for model %s" %
+              (num_containers_removed, model_name))
+        return num_containers_removed
 
     def stop_all(self):
         """Stops and removes all Clipper Docker containers on the host.
