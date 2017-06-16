@@ -53,7 +53,7 @@ add_executable(libclippertests EXCLUDE_FROM_ALL
     test/future_test.cpp
     test/task_executor_test.cpp
     test/config_test.cpp
-    )
+    test/base64_test.cpp)
 
 target_link_libraries(libclippertests clipper gtest gmock_main cxxopts)
 add_dependencies(unittests libclippertests)
