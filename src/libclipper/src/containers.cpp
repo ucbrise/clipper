@@ -50,7 +50,7 @@ void ModelContainer::update_container_stats(size_t batch_size,
   // 1000 us/ms, so new_throughput is #requests/ms
   double new_throughput = 1000 * (static_cast<double>(batch_size) /
                                   static_cast<double>(total_latency_micros));
-  log_info("NISHAD", "new_throughput", new_throughput);
+  log_info("BENCH", "new_throughput", new_throughput);
   double old_total_throughput =
       avg_throughput_per_milli_ * throughput_buffer_.size();
   if (throughput_buffer_.size() == throughput_buffer_.capacity()) {
@@ -103,10 +103,10 @@ size_t ModelContainer::get_batch_size(Deadline deadline) {
   int batch_size =
       static_cast<int>(avg_throughput_per_milli_ * remaining_time_millis);
   // log remaining time here
-  log_info("NISHAD", "remaining_time_micros: ", remaining_time_micros);
-  log_info("NISHAD", "remaining_time_millis: ", remaining_time_millis);
-  log_info("NISHAD", "avg_throughput_per_milli_: ", avg_throughput_per_milli_);
-  log_info("NISHAD", "batch_size: ", batch_size);
+  log_info("BENCH", "remaining_time_micros: ", remaining_time_micros);
+  log_info("BENCH", "remaining_time_millis: ", remaining_time_millis);
+  log_info("BENCH", "avg_throughput_per_milli_: ", avg_throughput_per_milli_);
+  log_info("BENCH", "batch_size: ", batch_size);
   if (batch_size < 1) {
     batch_size = 1;
   }

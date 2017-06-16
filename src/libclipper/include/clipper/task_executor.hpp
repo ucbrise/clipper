@@ -515,7 +515,7 @@ class TaskExecutor {
     long task_latency_micros =
         std::chrono::duration_cast<std::chrono::microseconds>(task_latency)
             .count();
-    log_info("NISHAD", "task_latency_micros", task_latency_micros);
+    log_info("BENCH", "task_latency_micros", task_latency_micros);
     if (processing_container != nullptr) {
       processing_container->update_container_stats(1, task_latency_micros);
     } else {

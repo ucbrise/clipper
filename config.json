@@ -1,0 +1,13 @@
+{
+  "cifar_data_path":"/home/ubuntu/nishad_benchmarking/cifar-100-binary/test.bin",
+  "num_batches":"5000000",
+  "batch_delay_micros":"0",
+  "latency_objective":"20000",
+  "report_delay_seconds":"30",
+  "model_name":"bench_same_prediction",
+  "model_version":"1",
+  "reports_path":"/home/ubuntu/nishad_benchmarking/throughput_fixed_batch_release/batchsize15.txt",
+  "poisson_delay":"0",
+  "reports_path_verbose":"/home/ubuntu/nishad_benchmarking/throughput_fixed_batch_release/batchsize15_verbose.txt"
+}
+
