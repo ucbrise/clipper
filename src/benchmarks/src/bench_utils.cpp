@@ -32,8 +32,13 @@ const std::string REPORTS_PATH_PROMPT =
 const std::string REPORTS_PATH_VERBOSE_PROMPT =
     "Enter the path to the file for contain verbose benchmark reports: ";
 const std::string POISSON_DELAY_PROMPT =
-    "Enter 1 if you want the delay between request batches to be drawn from a "
+    "Enter \"true\" if you want the delay between request batches to be drawn "
+    "from a "
     "poisson distribution: ";
+const std::string MODEL_NAME_PROMPT =
+    "Enter the name of the model you want queried: ";
+const std::string MODEL_VERSION_PROMPT =
+    "Enter the version of the model you want queried: ";
 
 std::string _get_prompt(std::string var) {
   if (var == CIFAR_DATA_PATH) {
@@ -58,6 +63,10 @@ std::string _get_prompt(std::string var) {
     return BATCH_DELAY_MICROS_PROMPT;
   } else if (var == POISSON_DELAY) {
     return POISSON_DELAY_PROMPT;
+  } else if (var == MODEL_NAME) {
+    return MODEL_NAME_PROMPT;
+  } else if (var == MODEL_VERSION) {
+    return MODEL_VERSION_PROMPT;
   }
   return "";
 }
@@ -140,6 +149,26 @@ std::vector<std::vector<double>> concatenate_cifar_datapoints(
 
   planes_vecs.insert(planes_vecs.end(), birds_vecs.begin(), birds_vecs.end());
   return planes_vecs;
+}
+
+std::string get_str(const std::string &key,
+                    std::unordered_map<std::string, std::string> &config) {
+  return config.find(key)->second;
+}
+
+int get_int(const std::string &key,
+            std::unordered_map<std::string, std::string> &config) {
+  return std::stoi(get_str(key, config));
+}
+
+long get_long(const std::string &key,
+              std::unordered_map<std::string, std::string> &config) {
+  return static_cast<long>(get_int(key, config));
+}
+
+bool get_bool(const std::string &key,
+              std::unordered_map<std::string, std::string> &config) {
+  return get_str(key, config) == "true";
 }
 
 }  // namespace bench_utils

@@ -159,14 +159,16 @@ class ModelQueue {
   // Deletes tasks with deadlines prior or equivalent to the
   // current system time. This method should only be called
   // when a unique lock on the queue_mutex is held.
-  void remove_tasks_with_elapsed_deadlines(clipper::metrics::Histogram &latency_histogram) {
+  void remove_tasks_with_elapsed_deadlines(
+      clipper::metrics::Histogram &latency_histogram) {
     if (IGNORE_OVERDUE_TASKS) {
       return;
     }
     std::chrono::time_point<std::chrono::system_clock> current_time =
         std::chrono::system_clock::now();
 
-    long cutoff_latency_micros = static_cast<long>(latency_histogram.percentile(LATENCY_CUTOFF_PERCENTAGE));
+    long cutoff_latency_micros = static_cast<long>(
+        latency_histogram.percentile(LATENCY_CUTOFF_PERCENTAGE));
     log_info("BENCH", "cutoff_latency_micros", cutoff_latency_micros);
 
     while (!queue_.empty()) {
@@ -174,11 +176,11 @@ class ModelQueue {
       auto remaining_time = first_deadline - current_time;
 
       long remaining_time_micros =
-              std::chrono::duration_cast<std::chrono::microseconds>(remaining_time)
-                      .count();
+          std::chrono::duration_cast<std::chrono::microseconds>(remaining_time)
+              .count();
 
       if (remaining_time_micros <= cutoff_latency_micros) {
-//      if (first_deadline <= current_time) {
+        //      if (first_deadline <= current_time) {
 
         // If a task's deadline has already elapsed,
         // we should not process it
@@ -421,13 +423,15 @@ class TaskExecutor {
     // goes out of scope.
     l.unlock();
 
-    std::vector<PredictTask> batch = current_model_queue->get_batch([container](
-        Deadline deadline) {
-        if (USE_FIXED_BATCH_SIZE) {
-          return FIXED_BATCH_SIZE;;
-        }
-        return container->get_batch_size(deadline);
-    }, container->latency_hist_);
+    std::vector<PredictTask> batch = current_model_queue->get_batch(
+        [container](Deadline deadline) {
+          if (USE_FIXED_BATCH_SIZE) {
+            return FIXED_BATCH_SIZE;
+            ;
+          }
+          return container->get_batch_size(deadline);
+        },
+        container->latency_hist_);
 
     if (batch.size() > 0) {
       // move the lock up here, so that nothing can pull from the
@@ -439,7 +443,7 @@ class TaskExecutor {
       rpc::PredictionRequest prediction_request(container->input_type_);
       std::stringstream query_ids_in_batch;
       std::chrono::time_point<std::chrono::system_clock> current_time =
-              std::chrono::system_clock::now();
+          std::chrono::system_clock::now();
       for (auto b : batch) {
         prediction_request.add_input(b.input_);
         cur_batch.emplace_back(current_time, container->container_id_, b.model_,

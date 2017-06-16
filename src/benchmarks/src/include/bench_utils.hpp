@@ -1,10 +1,10 @@
-//#ifndef BENCH_UTILS_HPP
-//#define BENCH_UTILS_HPP
-
 #include <unordered_map>
 
 namespace bench_utils {
 
+/*
+ * Keys for config
+ */
 const std::string CIFAR_DATA_PATH = "cifar_data_path";
 const std::string NUM_THREADS = "num_threads";
 const std::string NUM_BATCHES = "num_batches";
@@ -16,6 +16,8 @@ const std::string REPORT_DELAY_SECONDS = "report_delay_seconds";
 const std::string REPORTS_PATH = "reports_path";
 const std::string REPORTS_PATH_VERBOSE = "reports_path_verbose";
 const std::string POISSON_DELAY = "poisson_delay";
+const std::string MODEL_NAME = "model_name";
+const std::string MODEL_VERSION = "model_version";
 
 /**
  * Creates a configuration from data received through the command prompt
@@ -42,6 +44,28 @@ std::unordered_map<int, std::vector<std::vector<double>>> load_cifar(
 std::vector<std::vector<double>> concatenate_cifar_datapoints(
     std::unordered_map<int, std::vector<std::vector<double>>> cifar_data);
 
-}  // namespace bench_utils
+/**
+ * Returns the value corresponding to `key` in `config` as a string
+ */
+std::string get_str(const std::string &key,
+                    std::unordered_map<std::string, std::string> &config);
 
-//#endif  // BENCH_UTILS_HPP
+/**
+ * Returns the value corresponding to `key` in `config` as an int
+ */
+int get_int(const std::string &key,
+            std::unordered_map<std::string, std::string> &config);
+
+/**
+* Returns the value corresponding to `key` in `config` as a long
+*/
+long get_long(const std::string &key,
+              std::unordered_map<std::string, std::string> &config);
+
+/**
+ * Returns true iff the value corresponding to `key` in `config` is "true"
+ */
+bool get_bool(const std::string &key,
+              std::unordered_map<std::string, std::string> &config);
+
+}  // namespace bench_utils

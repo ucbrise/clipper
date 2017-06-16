@@ -5,6 +5,7 @@
 
 namespace clipper {
 namespace app_metrics {
+
 class AppMetrics {
  public:
   explicit AppMetrics(std::string app_name)

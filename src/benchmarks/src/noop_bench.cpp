@@ -22,40 +22,35 @@ using namespace clipper;
 using namespace bench_utils;
 
 const std::string DEFAULT_OUTPUT = "-1";
-const std::string TEST_APPLICATION_LABEL = "throughput_testing_app";
+const std::string TEST_APPLICATION_LABEL = "cifar_bench";
 const int UID = 0;
-const std::string REPORT_DELIMTER = ":";
-
-// These should match the values in setup_throughput_bench.sh
-const std::string MODEL_NAME = "bench_noop";
-const int MODEL_VERSION = 1;
+const std::string REPORT_DELIMITER = ":";
+const double P99_PERCENT = 0.99;
 
 void send_predictions(std::unordered_map<std::string, std::string> &config,
                       QueryProcessor &qp, std::vector<std::vector<double>> data,
                       clipper::app_metrics::AppMetrics &app_metrics) {
-  int num_batches = std::stoi(config.find(NUM_BATCHES)->second);
-  long batch_delay_micros =
-      static_cast<long>(std::stoi(config.find(BATCH_DELAY_MICROS)->second));
-  int latency_objective = std::stoi(config.find(LATENCY_OBJECTIVE)->second);
+  int num_batches = get_int(NUM_BATCHES, config);
+  long batch_delay_micros = get_long(BATCH_DELAY_MICROS, config);
+  int latency_objective = get_int(LATENCY_OBJECTIVE, config);
+  std::string model_name = get_str(MODEL_NAME, config);
+  int model_version = get_int(MODEL_VERSION, config);
+  bool draw_from_poisson = get_bool(POISSON_DELAY, config);
 
-  int num_datapoints;
-  num_datapoints = static_cast<int>(data.size());  // assume that data.size()
-                                                   // doesn't exceed int
-                                                   // representation bounds
-
+  int num_datapoints =
+      static_cast<int>(data.size());  // assume that data.size()
+                                      // doesn't exceed int
+                                      // representation bounds
   std::vector<double> query_vec;
-  int poisson_delay = std::stoi(config.find(POISSON_DELAY)->second);
-  bool draw_from_poisson = (poisson_delay == 1);
-
   std::default_random_engine generator;
   std::poisson_distribution<int> distribution(batch_delay_micros);
   long delay_micros;
+  int data_index;
 
   for (int j = 0; j < num_batches; j++) {
     // Select datapoint and modify it to be epoch-specific (to avoid cache hits)
-    // Will modify when batch sizes are allowed to be > 1
-    int index = j % num_datapoints;
-    query_vec = data[index];
+    data_index = j % num_datapoints;
+    query_vec = data[data_index];
     query_vec[0] += j / num_datapoints;
     std::shared_ptr<Input> input = std::make_shared<DoubleVector>(query_vec);
 
@@ -65,7 +60,7 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
                     input,
                     latency_objective,
                     clipper::DefaultOutputSelectionPolicy::get_name(),
-                    {std::make_pair(MODEL_NAME, MODEL_VERSION)}});
+                    {std::make_pair(model_name, model_version)}});
 
     prediction.then([app_metrics](boost::future<Response> f) {
       Response r = f.get();
@@ -93,20 +88,16 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
 void report_and_clear_metrics(
     std::unordered_map<std::string, std::string> &config,
     clipper::app_metrics::AppMetrics &app_metrics) {
-  bool clear = true;
-  int report_delay_seconds =
-      std::stoi(config.find(REPORT_DELAY_SECONDS)->second);
-  int num_iters = 1;
+  int report_delay_seconds = get_int(REPORT_DELAY_SECONDS, config);
+  bool draw_from_poisson = get_bool(POISSON_DELAY, config);
+  std::string latency_obj_string = get_str(LATENCY_OBJECTIVE, config);
+  std::string batch_delay_string = get_str(BATCH_DELAY_MICROS, config);
+  std::string reports_path = get_str(REPORTS_PATH, config);
+  std::string reports_path_verbose = get_str(REPORTS_PATH_VERBOSE, config);
 
-  int poisson_delay = std::stoi(config.find(POISSON_DELAY)->second);
-  bool draw_from_poisson = (poisson_delay == 1);
-
-  // Set up output files
-  std::ofstream out(config.find(REPORTS_PATH)->second);
-  std::ofstream out_verbose(config.find(REPORTS_PATH_VERBOSE)->second);
   // Write out run details
-  std::string latency_obj_string = config.find(LATENCY_OBJECTIVE)->second;
-  std::string batch_delay_string = config.find(BATCH_DELAY_MICROS)->second;
+  std::ofstream out(reports_path);
+  std::ofstream out_verbose(reports_path_verbose);
   std::string delay_message;
   if (draw_from_poisson) {
     delay_message = "Delays between batches drawn from poisson distribution";
@@ -118,12 +109,11 @@ void report_and_clear_metrics(
   ss << "Hyperparams in this noop_bench run: ";
   ss << "Latency (us): " << latency_obj_string;
   ss << ", Batch delay (us): " << batch_delay_string << ".";
-  ss << delay_message;
-  ss << std::endl;
+  ss << delay_message << std::endl;
   std::string final_message = ss.str();
   out_verbose << final_message;
-  out << batch_delay_string << REPORT_DELIMTER << latency_obj_string
-      << REPORT_DELIMTER << draw_from_poisson << std::endl;
+  out << batch_delay_string << REPORT_DELIMITER << latency_obj_string
+      << REPORT_DELIMITER << draw_from_poisson << std::endl;
   log_info("BENCH", final_message);
 
   int window_lower;
@@ -131,6 +121,7 @@ void report_and_clear_metrics(
   std::string window;
   double throughput;
   double p99_latency;
+  int num_iters = 1;
 
   // This will get interrupted
   while (true) {
@@ -139,8 +130,8 @@ void report_and_clear_metrics(
 
     // Collect and write out specific datapoints
     throughput = app_metrics.throughput_->get_rate_seconds();
-    p99_latency = app_metrics.latency_->get_p99();
-    out << throughput << REPORT_DELIMTER << p99_latency << std::endl;
+    p99_latency = app_metrics.latency_->percentile(P99_PERCENT);
+    out << throughput << REPORT_DELIMITER << p99_latency << std::endl;
     out.flush();
 
     // Timestamp stuff
@@ -152,7 +143,7 @@ void report_and_clear_metrics(
 
     // Log and write out verbose metrics
     std::string metrics =
-        metrics::MetricsRegistry::get_metrics().report_metrics(clear);
+        metrics::MetricsRegistry::get_metrics().report_metrics(true);
     log_info("WINDOW", window);
     log_info("METRICS", metrics);
 
@@ -175,7 +166,8 @@ int main(int argc, char *argv[]) {
   std::vector<std::string> desired_vars = {
       CIFAR_DATA_PATH,      NUM_BATCHES,          BATCH_DELAY_MICROS,
       LATENCY_OBJECTIVE,    REPORT_DELAY_SECONDS, REPORTS_PATH,
-      REPORTS_PATH_VERBOSE, POISSON_DELAY};
+      REPORTS_PATH_VERBOSE, POISSON_DELAY,        MODEL_NAME,
+      MODEL_VERSION};
   if (json_specified) {
     std::string json_path = options["filename"].as<std::string>();
     test_config = get_config_from_json(json_path, desired_vars);
@@ -218,7 +210,7 @@ int main(int argc, char *argv[]) {
 
   prediction_thread.join();
 
-  // final report
+  // Final report
   std::string metrics =
       metrics::MetricsRegistry::get_metrics().report_metrics();
   log_info("BENCH", metrics);

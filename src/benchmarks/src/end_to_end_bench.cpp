@@ -33,10 +33,9 @@ void send_predictions(
   std::vector<std::vector<double>> planes_vecs = cifar_data.find(0)->second;
   std::vector<std::vector<double>> birds_vecs = cifar_data.find(2)->second;
 
-  int num_batches = std::stoi(config.find(NUM_BATCHES)->second);
-  int batch_size = std::stoi(config.find(BATCH_SIZE)->second);
-  long batch_delay_millis =
-      static_cast<long>(std::stoi(config.find(BATCH_DELAY_MILLIS)->second));
+  int num_batches = get_int(NUM_BATCHES, config);
+  int batch_size = get_int(BATCH_SIZE, config);
+  long batch_delay_millis = get_long(BATCH_DELAY_MILLIS, config);
   for (int j = 0; j < num_batches; j++) {
     std::vector<boost::future<Response>> futures;
     std::vector<int> binary_labels;
@@ -128,7 +127,7 @@ int main(int argc, char *argv[]) {
   // Seed the random number generator that will be used to randomly select
   // query input vectors from the CIFAR dataset
   std::srand(time(NULL));
-  int num_threads = std::stoi(test_config.find(NUM_THREADS)->second);
+  int num_threads = get_int(NUM_THREADS, test_config);
   std::vector<std::thread> threads;
   for (int i = 0; i < num_threads; i++) {
     std::thread thread([&]() {
