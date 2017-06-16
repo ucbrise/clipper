@@ -55,9 +55,7 @@ cd ../jvm
 mvn clean package -DskipTests &> /dev/null
 #Start java rpc test container
 echo "Starting java RPC test container..."
-# && mvn -Dtest=RPCProtocolTest test &> /dev/null &
-java -Djava.library.path=$JZMQ_HOME \
-   -cp rpc-test/target/rpc-test-0.1.jar \
+java -cp rpc-test/target/rpc-test-0.1.jar \
    ai.clipper.rpctest.RPCProtocolTest &
 
 sleep 10
