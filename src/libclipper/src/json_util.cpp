@@ -143,7 +143,8 @@ std::vector<uint8_t> get_base64_encoded_byte_array(rapidjson::Value& d,
   std::string encoded_string = std::string(v.GetString());
   std::string decoded_string;
   decoder.Decode(encoded_string, &decoded_string);
-  std::vector<uint8_t> decoded_bytes = std::vector<uint8_t>(decoded_string.begin(), decoded_string.end());
+  std::vector<uint8_t> decoded_bytes =
+      std::vector<uint8_t>(decoded_string.begin(), decoded_string.end());
   return decoded_bytes;
 }
 

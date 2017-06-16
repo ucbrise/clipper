@@ -1,14 +1,14 @@
 // THIS IS A GTEST PORT OF THE TESTS FROM https://github.com/tkislan/base64/
-#include <iostream>
 #include <gtest/gtest.h>
+#include <iostream>
 
-#include <ctime>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 
-#include <string>
-#include <base64.h>
 #include <assert.h>
+#include <base64.h>
+#include <string>
 
 #include <clipper/json_util.hpp>
 
@@ -22,9 +22,7 @@ namespace {
 
 class Base64Test : public ::testing::Test {
  public:
-  Base64Test() {
-    srand(time(NULL));
-  }
+  Base64Test() { srand(time(NULL)); }
 };
 
 void GenerateRandomString(std::string *string, size_t size) {
@@ -38,8 +36,8 @@ void GenerateRandomString(std::string *string, size_t size) {
 void GenerateRandomAlphaNumString(std::string *string, size_t size) {
   static const char kAlphaNum[] =
       "0123456789"
-          "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-          "abcdefghijklmnopqrstuvwxyz";
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+      "abcdefghijklmnopqrstuvwxyz";
 
   string->resize(size);
 
@@ -69,12 +67,14 @@ void TestCBase64(const std::string &input, bool strip_padding = false) {
   static std::string decoded;
 
   encoded.resize(Base64::EncodedLength(input));
-  ASSERT_TRUE(Base64::Encode(input.c_str(), input.size(), &encoded[0], encoded.size()));
+  ASSERT_TRUE(
+      Base64::Encode(input.c_str(), input.size(), &encoded[0], encoded.size()));
 
   if (strip_padding) Base64::StripPadding(&encoded);
   decoded.resize(Base64::DecodedLength(encoded));
 
-  ASSERT_TRUE(Base64::Decode(encoded.c_str(), encoded.size(), &decoded[0], decoded.size()));
+  ASSERT_TRUE(Base64::Decode(encoded.c_str(), encoded.size(), &decoded[0],
+                             decoded.size()));
   ASSERT_EQ(input, decoded);
 }
 
@@ -114,4 +114,4 @@ TEST_F(Base64Test, EncodingDecodingCorrectForRandomAsciiStringsNoPadding) {
   }
 }
 
-} // namespace
+}  // namespace
