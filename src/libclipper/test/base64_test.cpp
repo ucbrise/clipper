@@ -10,9 +10,15 @@
 #include <base64.h>
 #include <assert.h>
 
+#include <clipper/json_util.hpp>
+
 #ifndef TESTS
 #define TESTS 10000
 #endif
+
+using namespace clipper;
+
+namespace {
 
 class Base64Test : public ::testing::Test {
  public:
@@ -42,85 +48,70 @@ void GenerateRandomAlphaNumString(std::string *string, size_t size) {
   }
 }
 
-long GenerateRandomNumber(long max) {
-  return rand() % max;
-}
-
 long GenerateRandomNumber(long min, long max) {
   return rand() % (max - min) + min;
 }
 
-bool TestBase64(const std::string &input, bool strip_padding = false) {
+void TestBase64(const std::string &input, bool strip_padding = false) {
   static std::string encoded;
   static std::string decoded;
 
   ASSERT_TRUE(Base64::Encode(input, &encoded));
+
   if (strip_padding) Base64::StripPadding(&encoded);
   ASSERT_TRUE(Base64::Decode(encoded, &decoded));
 
   ASSERT_EQ(input, decoded);
-
-  return true;
 }
 
-bool TestCBase64(const std::string &input, bool strip_padding = false) {
+void TestCBase64(const std::string &input, bool strip_padding = false) {
   static std::string encoded;
   static std::string decoded;
 
   encoded.resize(Base64::EncodedLength(input));
-  if (!Base64::Encode(input.c_str(), input.size(), &encoded[0], encoded.size())) {
-    std::cout << "Failed to encode input string" << std::endl;
-    return false;
-  }
+  ASSERT_TRUE(Base64::Encode(input.c_str(), input.size(), &encoded[0], encoded.size()));
 
   if (strip_padding) Base64::StripPadding(&encoded);
-
   decoded.resize(Base64::DecodedLength(encoded));
-  if (!Base64::Decode(encoded.c_str(), encoded.size(), &decoded[0], decoded.size())) {
-    std::cout << "Failed to decode encoded string" << std::endl;
-    return false;
-  }
 
-  if (input != decoded) {
-    std::cout << "Input and decoded string differs" << std::endl;
-    return false;
-  }
-
-  return true;
+  ASSERT_TRUE(Base64::Decode(encoded.c_str(), encoded.size(), &decoded[0], decoded.size()));
+  ASSERT_EQ(input, decoded);
 }
 
-int main() {
-  srand(time(NULL));
-
+TEST_F(Base64Test, EncodingDecodingCorrectForAlphanumericStringsWithPadding) {
   std::string input;
-
   for (size_t i = 0; i < TESTS; ++i) {
     GenerateRandomAlphaNumString(&input, GenerateRandomNumber(100, 200));
-
-    if (!TestBase64(input)) return -1;
-    if (!TestCBase64(input)) return -1;
+    TestBase64(input);
+    TestCBase64(input);
   }
-
-  for (size_t i = 0; i < TESTS; ++i) {
-    GenerateRandomString(&input, GenerateRandomNumber(100, 200));
-
-    if (!TestBase64(input)) return -1;
-    if (!TestCBase64(input)) return -1;
-  }
-
-  for (size_t i = 0; i < TESTS; ++i) {
-    GenerateRandomAlphaNumString(&input, GenerateRandomNumber(100, 200));
-
-    if (!TestBase64(input, true)) return -1;
-    if (!TestCBase64(input, true)) return -1;
-  }
-
-  for (size_t i = 0; i < TESTS; ++i) {
-    GenerateRandomString(&input, GenerateRandomNumber(100, 200));
-
-    if (!TestBase64(input, true)) return -1;
-    if (!TestCBase64(input, true)) return -1;
-  }
-
-  return 0;
 }
+
+TEST_F(Base64Test, EncodingDecodingCorrectForRandomAsciiStringsWithPadding) {
+  std::string input;
+  for (size_t i = 0; i < TESTS; ++i) {
+    GenerateRandomString(&input, GenerateRandomNumber(100, 200));
+    TestBase64(input);
+    TestCBase64(input);
+  }
+}
+
+TEST_F(Base64Test, EncodingDecodingCorrectForAlphanumericStringsNoPadding) {
+  std::string input;
+  for (size_t i = 0; i < TESTS; ++i) {
+    GenerateRandomAlphaNumString(&input, GenerateRandomNumber(100, 200));
+    TestBase64(input, true);
+    TestCBase64(input, true);
+  }
+}
+
+TEST_F(Base64Test, EncodingDecodingCorrectForRandomAsciiStringsNoPadding) {
+  std::string input;
+  for (size_t i = 0; i < TESTS; ++i) {
+    GenerateRandomString(&input, GenerateRandomNumber(100, 200));
+    TestBase64(input, true);
+    TestCBase64(input, true);
+  }
+}
+
+} // namespace
