@@ -9,8 +9,8 @@ class SamePredictionContainer(rpc.ModelContainerBase):
     def __init__(self, prediction="1.0"):
         self.prediction = prediction
 
-    def _predict(self, input):
-        return self.prediction * len(inputs)
+    def _predict(self, inputs):
+        return [self.prediction] * len(inputs)
 
     def predict_ints(self, inputs):
         return self._predict(inputs)

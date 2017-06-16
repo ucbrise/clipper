@@ -14,7 +14,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $DIR/..
 
 # Build the Clipper Docker images
-# Assume local clipper/py-rpc base image (if exists) or pulled image is correct
-time docker build -t clipper/sampe-prediction-bench -f SamePredictionBenchDockerfile ./
+# Assume local (if exists) clipper/py-rpc base image or pulled image is correct
+time docker build -t clipper/same-prediction-bench -f SamePredictionBenchDockerfile ./
 time docker build  -t clipper/noop-bench -f NoopBenchDockerfile ./
 cd -

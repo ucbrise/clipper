@@ -83,7 +83,7 @@ std::unordered_map<std::string, std::string> get_config_from_prompt(
     std::cin >> responses[desired_var];
   }
   return responses;
-};
+}
 
 std::unordered_map<std::string, std::string> get_config_from_json(
     std::string json_path, std::vector<std::string> desired_vars) {
@@ -101,7 +101,7 @@ std::unordered_map<std::string, std::string> get_config_from_json(
     responses[desired_var] = response;
   }
   return responses;
-};
+}
 
 std::unordered_map<int, std::vector<std::vector<double>>> load_cifar(
     std::unordered_map<std::string, std::string> &config) {
