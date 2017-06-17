@@ -78,7 +78,7 @@ VersionedModelId VersionedModelId::deserialize(std::string str) {
   auto split = str.find(ITEM_PART_CONCATENATOR);
   std::string model_name = str.substr(0, split);
   std::string model_version = str.substr(split + 1, str.size());
-  return VersionedModelId::VersionedModelId(model_name, model_version);
+  return VersionedModelId(model_name, model_version);
 }
 
 bool VersionedModelId::operator==(const VersionedModelId &rhs) const {
