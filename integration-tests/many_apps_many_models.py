@@ -5,8 +5,8 @@ import requests
 import json
 import numpy as np
 cur_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.abspath('%s/../clipper_admin/' % cur_dir))
-import clipper_manager as cm
+sys.path.insert(0, os.path.abspath("%s/.." % cur_dir))
+from clipper_admin import Clipper
 import time
 import subprocess32 as subprocess
 import pprint
@@ -48,7 +48,7 @@ def find_unbound_port():
 
 
 def init_clipper():
-    clipper = cm.Clipper("localhost", redis_port=find_unbound_port())
+    clipper = Clipper("localhost", redis_port=find_unbound_port())
     clipper.start()
     time.sleep(1)
     return clipper
@@ -71,7 +71,7 @@ def deploy_model(clipper, name, version):
         model_name,
         version,
         fake_model_data,
-        "clipper/noop-container", [name],
+        "clipper/noop-container",
         "doubles",
         num_containers=1)
     time.sleep(10)
@@ -82,7 +82,6 @@ def deploy_model(clipper, name, version):
             "http://localhost:1337/%s/predict" % app_name,
             headers=headers,
             data=json.dumps({
-                'uid': 0,
                 'input': list(np.random.random(30))
             }))
         result = response.json()
@@ -106,7 +105,6 @@ def create_and_test_app(clipper, name, num_models):
         "http://localhost:1337/%s/predict" % app_name,
         headers=headers,
         data=json.dumps({
-            'uid': 0,
             'input': list(np.random.random(30))
         }))
     result = response.json()
@@ -148,6 +146,6 @@ if __name__ == "__main__":
         else:
             clipper.stop_all()
     except:
-        clipper = cm.Clipper("localhost")
+        clipper = Clipper("localhost")
         clipper.stop_all()
         sys.exit(1)

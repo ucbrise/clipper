@@ -49,7 +49,6 @@ const std::string PREDICTION_ERROR_NAME_QUERY_PROCESSING =
 
 const std::string PREDICTION_JSON_SCHEMA = R"(
   {
-   "uid" := string,
    "input" := [double] | [int] | [string] | [byte] | [float],
   }
 )";
@@ -436,7 +435,6 @@ class RequestHandler {
   /*
    * JSON format for prediction query request:
    * {
-   *  "uid" := string,
    *  "input" := [double] | [int] | [string] | [byte] | [float]
    * }
    */
@@ -446,7 +444,10 @@ class RequestHandler {
       long latency_slo_micros, InputType input_type) {
     rapidjson::Document d;
     clipper::json::parse_json(json_content, d);
-    long uid = clipper::json::get_long(d, "uid");
+    long uid = 0;
+    // NOTE: We will eventually support personalization again so this commented
+    // out code is intentionally left in as a placeholder.
+    // long uid = clipper::json::get_long(d, "uid");
     std::shared_ptr<Input> input = clipper::json::parse_input(input_type, d);
     auto prediction = query_processor_.predict(
         Query{name, uid, input, latency_slo_micros, policy, models});
