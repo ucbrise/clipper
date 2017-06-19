@@ -768,7 +768,7 @@ class Clipper:
         ----------
         model_name : str
             The name of the model to look up
-        model_version : int
+        model_version : Any object with a string representation (with __str__ implementation)
             The version of the model to look up
 
         Returns
@@ -778,6 +778,7 @@ class Clipper:
             If no model with name `model_name@model_version` is
             registered with Clipper, None is returned.
         """
+        model_version = str(model_version)
         url = "http://%s:1338/admin/get_model" % self.host
         req_json = json.dumps({
             "model_name": model_name,
@@ -972,7 +973,7 @@ class Clipper:
         ----------
         model_name : str
             The name of the model
-        model_version : str
+        model_version : Any object with a string representation (with __str__ implementation)
             The version of the model
 
         Returns
@@ -981,6 +982,7 @@ class Clipper:
             True if the container was added successfully and False
             if the container could not be added.
         """
+        model_version = str(model_version)
         with hide("warnings", "output", "running"):
             # Look up model info in Redis
             if self.redis_ip == DEFAULT_REDIS_IP:
@@ -1026,7 +1028,7 @@ class Clipper:
                         mv=model_version,
                         mip=model_input_type,
                         clipper_label=CLIPPER_DOCKER_LABEL,
-                        mv_label="%s=%s:%d" % (CLIPPER_MODEL_CONTAINER_LABEL,
+                        mv_label="%s=%s:%s" % (CLIPPER_MODEL_CONTAINER_LABEL,
                                                model_name, model_version),
                         restart_policy=restart_policy))
                 result = self._execute_root(add_container_cmd)
