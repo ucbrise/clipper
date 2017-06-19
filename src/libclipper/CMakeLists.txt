@@ -29,7 +29,7 @@ target_include_directories(clipper PUBLIC
     PRIVATE src)
 
 
-target_link_libraries(clipper boost zmqcpp redox pthread rapidjson spdlog)
+target_link_libraries(clipper boost zmqcpp redox pthread rapidjson spdlog base64)
 
 # This makes the project importable from the build directory
 export(TARGETS clipper FILE ClipperConfig.cmake)
@@ -53,7 +53,7 @@ add_executable(libclippertests EXCLUDE_FROM_ALL
     test/future_test.cpp
     test/task_executor_test.cpp
     test/config_test.cpp
-    )
+    test/base64_test.cpp)
 
 target_link_libraries(libclippertests clipper gtest gmock_main cxxopts)
 add_dependencies(unittests libclippertests)

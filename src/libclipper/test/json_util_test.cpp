@@ -1,4 +1,7 @@
 #include <gtest/gtest.h>
+
+#include <base64.h>
+
 #include <clipper/config.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/json_util.hpp>
@@ -235,6 +238,21 @@ TEST(JsonUtilTests, TestAddStringPreservesJsonIntegrity) {
   // Attempt to parse the output string. We should see that
   // it is still a valid JSON object
   ASSERT_NO_THROW(json::parse_json(json_content, d));
+}
+
+TEST(JsonUtilTests, TestBase64DecodingYieldsOriginalString) {
+  std::string raw_string = "base64 decoded";
+  std::string encoded_string;
+  Base64 encoder_decoder;
+  encoder_decoder.Encode(raw_string, &encoded_string);
+  rapidjson::Document d;
+  d.SetObject();
+  std::string key_name = "test_key";
+  json::add_string(d, key_name.data(), encoded_string);
+  std::vector<uint8_t> decoded_bytes =
+      json::get_base64_encoded_byte_array(d, key_name.data());
+  std::string decoded_string(decoded_bytes.begin(), decoded_bytes.end());
+  ASSERT_EQ(raw_string, decoded_string);
 }
 
 class RedisToJsonTest : public ::testing::Test {

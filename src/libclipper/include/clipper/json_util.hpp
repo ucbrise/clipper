@@ -66,7 +66,15 @@ int get_int(rapidjson::Value& d, const char* key_name);
 
 std::string get_string(rapidjson::Value& d, const char* key_name);
 
-/* Getters with error handling for arrays of double, float, int, string */
+/* Getters with error handling for arrays of byte, double, float, int, string */
+
+/**
+ * Obtains the decoded byte array corresponding to a base64-encoded string
+ * representation
+ */
+std::vector<uint8_t> get_base64_encoded_byte_array(rapidjson::Value& d,
+                                                   const char* key_name);
+
 std::vector<double> get_double_array(rapidjson::Value& d, const char* key_name);
 
 std::vector<float> get_float_array(rapidjson::Value& d, const char* key_name);
