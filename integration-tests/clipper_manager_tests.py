@@ -214,6 +214,49 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertIsNotNone(running_containers_output)
         self.assertGreaterEqual(len(running_containers_output), 1)
 
+    def test_register_app_and_deploy_predict_function_is_successful(self):
+        model_name = "m3"
+        model_version = 1
+        app_name = "app2"
+        predict_func = lambda inputs: ["0" for x in inputs]
+        input_type = "doubles"
+
+        result = self.clipper_inst.register_app_and_deploy_predict_function(
+            app_name, model_name, model_version, input_type, "1.0", 200000,
+            predict_func)
+
+        self.assertTrue(result)
+        model_info = self.clipper_inst.get_model_info(model_name,
+                                                      model_version)
+        self.assertIsNotNone(model_info)
+        running_containers_output = self.clipper_inst._execute_standard(
+            "docker ps -q --filter \"ancestor=clipper/python-container\"")
+        self.assertIsNotNone(running_containers_output)
+        self.assertGreaterEqual(len(running_containers_output), 2)
+
+    def test_register_app_and_deploy_model_is_successful(self):
+        self.clipper_inst.stop_all()
+        self.clipper_inst.start()
+
+        model_name = "m4"
+        model_version = 1
+        model_data = svm.SVC()
+        app_name = "app3"
+        container_name = "clipper/noop-container"
+        input_type = "doubles"
+        model_name = "remove_inactive_test_model"
+        result = self.clipper_inst.register_app_and_deploy_model(
+            app_name, model_name, model_version, input_type, "1.0", 200000,
+            model_data, container_name)
+
+        self.assertTrue(result)
+        running_containers_output = self.clipper_inst._execute_standard(
+            "docker ps -q --filter \"ancestor=clipper/noop-container\"")
+        self.assertIsNotNone(running_containers_output)
+        num_running_containers = running_containers_output.split("\n")
+        print("RUNNING CONTAINERS: %s" % str(num_running_containers))
+        self.assertEqual(len(num_running_containers), 1)
+
 
 class ClipperManagerTestCaseLong(unittest.TestCase):
     @classmethod
@@ -304,7 +347,9 @@ SHORT_TEST_ORDERING = [
     'test_model_deploys_successfully',
     'test_add_container_for_deployed_model_succeeds',
     'test_remove_inactive_containers_succeeds',
-    'test_predict_function_deploys_successfully'
+    'test_predict_function_deploys_successfully',
+    'test_register_app_and_deploy_predict_function_is_successful',
+    'test_register_app_and_deploy_model_is_successful'
 ]
 
 LONG_TEST_ORDERING = [

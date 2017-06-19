@@ -321,7 +321,7 @@ class Clipper:
 
     def register_application(self, name, model, input_type, default_output,
                              slo_micros):
-        """Register a new Clipper application.
+        """Register a new Clipper application and returns the response object.
 
         Parameters
         ----------
@@ -345,6 +345,12 @@ class Clipper:
             the objective not be set aggressively low unless absolutely necessary.
             40000 (40ms) is a good starting value, but the optimal latency objective
             will vary depending on the application.
+
+        Returns
+        -------
+        Requests object
+            The response object for the app registration request
+
         """
         url = "http://%s:%d/admin/add_app" % (self.host,
                                               CLIPPER_MANAGEMENT_PORT)
@@ -358,6 +364,7 @@ class Clipper:
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
         print(r.text)
+        return r
 
     def get_all_apps(self, verbose=False):
         """Gets information about all applications registered with Clipper.
@@ -734,6 +741,81 @@ class Clipper:
         shutil.rmtree(serialization_dir)
 
         return deploy_result
+
+    def _register_app_and_check_success(self, app_name, model_name, input_type,
+                                             default_output, slo_micros):
+        response = self.register_application(app_name, model_name, input_type,
+                                             default_output, slo_micros)
+        if response.status_code != 200:
+            print(
+                "Application registration unsuccessful. Will not deploy model.")
+            return False
+        print("Application registration sucessful! Deploying model.")
+        return True
+
+    def register_app_and_deploy_model(self,
+                                      app_name,
+                                      model_name,
+                                      model_version,
+                                      input_type,
+                                      default_output,
+                                      slo_micros,
+                                      model_data,
+                                      container_name,
+                                      labels=DEFAULT_LABEL,
+                                      num_containers=1):
+        if not self._register_app_and_check_success(app_name, model_name, input_type,
+                                             default_output, slo_micros):
+            return False
+        
+
+        return self.deploy_model(model_name, model_version, model_data,
+                                 container_name, input_type, labels,
+                                 num_containers)
+
+    def register_app_and_deploy_predict_function(self,
+                                                 app_name,
+                                                 model_name,
+                                                 model_version,
+                                                 input_type,
+                                                 default_output,
+                                                 slo_micros,
+                                                 predict_function,
+                                                 labels=DEFAULT_LABEL,
+                                                 num_containers=1):
+        if not self._register_app_and_check_success(app_name, model_name, input_type,
+                                             default_output, slo_micros):
+            return False
+
+        return self.deploy_predict_function(model_name, model_version,
+                                            predict_function, input_type,
+                                            labels, num_containers)
+
+    def register_app_and_deploy_pyspark_model(self,
+                                              app_name,
+                                              model_name,
+                                              model_version,
+                                              input_type,
+                                              default_output,
+                                              slo_micros,
+                                              predict_function,
+                                              pyspark_model,
+                                              sc,
+                                              labels=DEFAULT_LABEL,
+                                              num_containers=1):
+        if not self._register_app_and_check_success(app_name, model_name, input_type,
+                                             default_output, slo_micros):
+            return False
+
+        return self.deploy_pyspark_model(
+            model_name,
+            model_version,
+            predict_function,
+            pyspark_model,
+            sc,
+            input_type,
+            labels=DEFAULT_LABEL,
+            num_containers=1)
 
     def get_all_models(self, verbose=False):
         """Gets information about all models registered with Clipper.
