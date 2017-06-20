@@ -743,7 +743,7 @@ class Clipper:
         return deploy_result
 
     def _register_app_and_check_success(self, app_name, model_name, input_type,
-                                             default_output, slo_micros):
+                                        default_output, slo_micros):
         response = self.register_application(app_name, model_name, input_type,
                                              default_output, slo_micros)
         if response.status_code != 200:
@@ -764,10 +764,9 @@ class Clipper:
                                       container_name,
                                       labels=DEFAULT_LABEL,
                                       num_containers=1):
-        if not self._register_app_and_check_success(app_name, model_name, input_type,
-                                             default_output, slo_micros):
+        if not self._register_app_and_check_success(
+                app_name, model_name, input_type, default_output, slo_micros):
             return False
-        
 
         return self.deploy_model(model_name, model_version, model_data,
                                  container_name, input_type, labels,
@@ -783,8 +782,8 @@ class Clipper:
                                                  predict_function,
                                                  labels=DEFAULT_LABEL,
                                                  num_containers=1):
-        if not self._register_app_and_check_success(app_name, model_name, input_type,
-                                             default_output, slo_micros):
+        if not self._register_app_and_check_success(
+                app_name, model_name, input_type, default_output, slo_micros):
             return False
 
         return self.deploy_predict_function(model_name, model_version,
@@ -803,8 +802,8 @@ class Clipper:
                                               sc,
                                               labels=DEFAULT_LABEL,
                                               num_containers=1):
-        if not self._register_app_and_check_success(app_name, model_name, input_type,
-                                             default_output, slo_micros):
+        if not self._register_app_and_check_success(
+                app_name, model_name, input_type, default_output, slo_micros):
             return False
 
         return self.deploy_pyspark_model(
