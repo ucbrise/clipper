@@ -46,8 +46,6 @@ void ModelContainer::update_container_stats(size_t batch_size,
   latency_hist_.insert(total_latency_micros);
 
   boost::unique_lock<boost::shared_mutex> lock(throughput_mutex_);
-
-  // 1000 us/ms, so new_throughput is #requests/ms
   double new_throughput = 1000 * (static_cast<double>(batch_size) /
                                   static_cast<double>(total_latency_micros));
   double old_total_throughput =
@@ -86,13 +84,10 @@ size_t ModelContainer::get_batch_size(Deadline deadline) {
       std::chrono::duration_cast<std::chrono::milliseconds>(
           deadline.time_since_epoch())
           .count();
-
   double remaining_time_millis = deadline_millis - current_time_millis;
-
   boost::shared_lock<boost::shared_mutex> lock(throughput_mutex_);
   int batch_size =
       static_cast<int>(avg_throughput_per_milli_ * remaining_time_millis);
-
   if (batch_size < 1) {
     batch_size = 1;
   }

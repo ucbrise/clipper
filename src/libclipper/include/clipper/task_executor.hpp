@@ -161,7 +161,7 @@ class ModelQueue {
       Deadline first_deadline = queue_.top().first;
       if (first_deadline <= current_time) {
         // If a task's deadline has already elapsed,
-        // we should not process i
+        // we should not process it
         queue_.pop();
       } else {
         break;
