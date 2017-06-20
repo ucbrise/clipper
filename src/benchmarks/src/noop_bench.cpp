@@ -26,6 +26,18 @@ const std::string TEST_APPLICATION_LABEL = "cifar_bench";
 const int UID = 0;
 const std::string REPORT_DELIMITER = ":";
 const double P99_PERCENT = 0.99;
+const std::string DELAY_MESSAGE_POISSON =
+    "Delays between batches drawn from poisson distribution";
+const std::string DELAY_MESSAGE_UNIFORM = "Uniform delays between batches";
+
+std::string _get_window_str(int window_size, int num_iters) {
+  int window_lower = window_size * (num_iters - 1);
+  int window_upper = window_size * num_iters;
+  std::stringstream ss;
+  ss << std::to_string(window_lower) << "s - " << std::to_string(window_upper)
+     << "s";
+  return ss.str();
+}
 
 void send_predictions(std::unordered_map<std::string, std::string> &config,
                       QueryProcessor &qp, std::vector<std::vector<double>> data,
@@ -34,13 +46,10 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
   long batch_delay_micros = get_long(BATCH_DELAY_MICROS, config);
   int latency_objective = get_int(LATENCY_OBJECTIVE, config);
   std::string model_name = get_str(MODEL_NAME, config);
-  int model_version = get_int(MODEL_VERSION, config);
+  std::string model_version = get_str(MODEL_VERSION, config);
   bool draw_from_poisson = get_bool(POISSON_DELAY, config);
 
-  int num_datapoints =
-      static_cast<int>(data.size());  // assume that data.size()
-                                      // doesn't exceed int
-                                      // representation bounds
+  int num_datapoints = static_cast<int>(data.size());
   std::vector<double> query_vec;
   std::default_random_engine generator;
   std::poisson_distribution<int> distribution(batch_delay_micros);
@@ -60,7 +69,7 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
                     input,
                     latency_objective,
                     clipper::DefaultOutputSelectionPolicy::get_name(),
-                    {std::make_pair(model_name, model_version)}});
+                    {VersionedModelId(model_name, model_version)}});
 
     prediction.then([app_metrics](boost::future<Response> f) {
       Response r = f.get();
@@ -76,11 +85,8 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
       app_metrics.throughput_->mark(1);
     });
 
-    if (draw_from_poisson) {
-      delay_micros = distribution(generator);
-    } else {
-      delay_micros = batch_delay_micros;
-    }
+    delay_micros =
+        draw_from_poisson ? distribution(generator) : batch_delay_micros;
     std::this_thread::sleep_for(std::chrono::microseconds(delay_micros));
   }
 }
@@ -98,57 +104,42 @@ void report_and_clear_metrics(
   // Write out run details
   std::ofstream out(reports_path);
   std::ofstream out_verbose(reports_path_verbose);
-  std::string delay_message;
-  if (draw_from_poisson) {
-    delay_message = "Delays between batches drawn from poisson distribution";
-  } else {
-    delay_message = "Uniform delays between batches";
-  }
+  std::string delay_message =
+      draw_from_poisson ? DELAY_MESSAGE_POISSON : DELAY_MESSAGE_UNIFORM;
 
   std::stringstream ss;
-  ss << "Hyperparams in this noop_bench run: ";
-  ss << "Latency (us): " << latency_obj_string;
-  ss << ", Batch delay (us): " << batch_delay_string << ".";
-  ss << delay_message << std::endl;
+  ss << "Hyperparams: Latency (us): " << latency_obj_string
+     << ", Batch delay (us): " << batch_delay_string << "." << delay_message
+     << std::endl;
   std::string final_message = ss.str();
   out_verbose << final_message;
   out << batch_delay_string << REPORT_DELIMITER << latency_obj_string
       << REPORT_DELIMITER << draw_from_poisson << std::endl;
   log_info("BENCH", final_message);
 
-  int window_lower;
-  int window_upper;
-  std::string window;
-  double throughput;
-  double p99_latency;
-  int num_iters = 1;
+  std::string window, metrics;
+  double throughput, p99_latency;
+  int i = 1;
 
   // This will get interrupted
   while (true) {
     // Wait for reports to accumulate
     std::this_thread::sleep_for(std::chrono::seconds(report_delay_seconds));
 
-    // Collect and write out specific datapoints
     throughput = app_metrics.throughput_->get_rate_seconds();
     p99_latency = app_metrics.latency_->percentile(P99_PERCENT);
     out << throughput << REPORT_DELIMITER << p99_latency << std::endl;
     out.flush();
 
-    // Timestamp stuff
-    window_lower = report_delay_seconds * (num_iters - 1);
-    window_upper = report_delay_seconds * num_iters;
-    window = std::to_string(window_lower) + "s – " +
-             std::to_string(window_upper) + "s";
-    num_iters += 1;
-
-    // Log and write out verbose metrics
-    std::string metrics =
-        metrics::MetricsRegistry::get_metrics().report_metrics(true);
-    log_info("WINDOW", window);
-    log_info("METRICS", metrics);
+    metrics = metrics::MetricsRegistry::get_metrics().report_metrics(true);
+    window = _get_window_str(report_delay_seconds, i);
 
     out_verbose << window << ": " << metrics;
     out_verbose.flush();
+
+    log_info("WINDOW", window);
+    log_info("METRICS", metrics);
+    i += 1;
   }
 }
 
@@ -192,9 +183,7 @@ int main(int argc, char *argv[]) {
   // datapoints
   std::srand(time(NULL));
 
-  // Prepare data for threads.
-  // We concatenate because we only need the datapoints – not their labels.
-  // We modify datapoints to be thread-specific to avoid cache hits
+  // We only need the datapoints – not their labels.
   std::unordered_map<int, std::vector<std::vector<double>>> cifar_data =
       load_cifar(test_config);
   std::vector<std::vector<double>> concatendated_datapoints =

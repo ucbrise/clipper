@@ -134,13 +134,11 @@ class ModelQueue {
     remove_tasks_with_elapsed_deadlines(latency_histogram);
     Deadline deadline = queue_.top().first;
     int max_batch_size = get_batch_size(deadline);
-    log_info("MAX BATCH SIZE", max_batch_size);
     std::vector<PredictTask> batch;
     while (batch.size() < (size_t)max_batch_size && queue_.size() > 0) {
       batch.push_back(queue_.top().second);
       queue_.pop();
     }
-    log_info("ACTUAL BATCH SIZE", batch.size());
     return batch;
   }
 
@@ -154,7 +152,6 @@ class ModelQueue {
   ModelPQueue queue_;
   std::mutex queue_mutex_;
   std::condition_variable queue_not_empty_condition_;
-  static constexpr double LATENCY_CUTOFF_PERCENTAGE = 0.8;
 
   // Deletes tasks with deadlines prior or equivalent to the
   // current system time. This method should only be called
@@ -169,21 +166,18 @@ class ModelQueue {
 
     long cutoff_latency_micros = static_cast<long>(
         latency_histogram.percentile(LATENCY_CUTOFF_PERCENTAGE));
-    log_info("BENCH", "cutoff_latency_micros", cutoff_latency_micros);
 
     while (!queue_.empty()) {
       Deadline first_deadline = queue_.top().first;
       auto remaining_time = first_deadline - current_time;
-
       long remaining_time_micros =
           std::chrono::duration_cast<std::chrono::microseconds>(remaining_time)
               .count();
 
-      if (remaining_time_micros <= cutoff_latency_micros) {
-        //      if (first_deadline <= current_time) {
-
-        // If a task's deadline has already elapsed,
-        // we should not process it
+      if ((USE_LATENCY_CUTOFF &&
+           remaining_time_micros <= cutoff_latency_micros) ||
+          (!USE_LATENCY_CUTOFF && first_deadline <= current_time)) {
+        // If a task's deadline is too soon, we should not process it
         queue_.pop();
       } else {
         break;
@@ -515,7 +509,6 @@ class TaskExecutor {
     long task_latency_micros =
         std::chrono::duration_cast<std::chrono::microseconds>(task_latency)
             .count();
-    log_info("BENCH", "task_latency_micros", task_latency_micros);
     if (processing_container != nullptr) {
       processing_container->update_container_stats(1, task_latency_micros);
     } else {
