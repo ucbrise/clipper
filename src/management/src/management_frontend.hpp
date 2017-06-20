@@ -40,6 +40,7 @@ using clipper::json::redis_app_metadata_to_json;
 using clipper::json::redis_model_metadata_to_json;
 using clipper::json::redis_container_metadata_to_json;
 using clipper::json::to_json_string;
+using clipper::redis::prohibited_group_strings;
 
 namespace management {
 
@@ -85,14 +86,14 @@ const std::string GET_APPLICATION_REQUESTS_SCHEMA = R"(
 const std::string GET_MODEL_REQUESTS_SCHEMA = R"(
   {
     "model_name" := string,
-    "model_version" := int
+    "model_version" := string
   }
 )";
 
 const std::string GET_CONTAINER_REQUESTS_SCHEMA = R"(
   {
     "model_name" := string,
-    "model_version" := int,
+    "model_version" := string,
     "replica_id" := int
   }
 )";
@@ -100,7 +101,7 @@ const std::string GET_CONTAINER_REQUESTS_SCHEMA = R"(
 const std::string ADD_MODEL_JSON_SCHEMA = R"(
   {
    "model_name" := string,
-   "model_version" := int,
+   "model_version" := string,
    "labels" := [string],
    "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
    "container_name" := string,
@@ -111,7 +112,7 @@ const std::string ADD_MODEL_JSON_SCHEMA = R"(
 const std::string SET_VERSION_JSON_SCHEMA = R"(
   {
    "model_name" := string,
-   "model_version" := int,
+   "model_version" := string,
   }
 )";
 
@@ -209,14 +210,13 @@ class RequestHandler {
             rapidjson::Document d;
             parse_json(request->content.string(), d);
             std::string model_name = get_string(d, "model_name");
-            int new_model_version = get_int(d, "model_version");
+            std::string new_model_version = get_string(d, "model_version");
 
             bool success = set_model_version(model_name, new_model_version);
             if (success) {
               respond_http("SUCCESS", "200 OK", response);
             } else {
-              std::string err_msg = "ERROR: Version " +
-                                    std::to_string(new_model_version) +
+              std::string err_msg = "ERROR: Version " + new_model_version +
                                     " does not exist for model " + model_name;
               respond_http(err_msg, "400 Bad Request", response);
             }
@@ -386,6 +386,34 @@ class RequestHandler {
   }
 
   /**
+   * Checks `value` for prohibited characters in strings that will be grouped.
+   * If it does, throws an error with message stating that input has an invalid
+   * `label`.
+   * @throws Throws a std::invalud_argument error if `value` contains prohibited
+   * characters.
+   */
+  void validate_group_str_for_redis(const std::string& value,
+                                    const char* label) {
+    if (clipper::redis::contains_prohibited_chars_for_group(value)) {
+      std::stringstream ss;
+
+      ss << "Invalid " << label << " supplied: " << value << ".";
+      ss << " Contains one of: ";
+
+      // Generate string representing list of invalid characters
+      std::string prohibited_str;
+      for (size_t i = 0; i != prohibited_group_strings.size() - 1; ++i) {
+        prohibited_str = *(prohibited_group_strings.begin() + i);
+        ss << "'" << prohibited_str << "', ";
+      }
+      // Add final element of `prohibited_group_strings`
+      ss << "'" << *(prohibited_group_strings.end() - 1) << "'";
+
+      throw std::invalid_argument(ss.str());
+    }
+  }
+
+  /**
    * Creates an endpoint that listens for requests to add new prediction
    * applications to Clipper.
    *
@@ -416,6 +444,13 @@ class RequestHandler {
     InputType input_type =
         clipper::parse_input_type(get_string(d, "input_type"));
     std::string default_output = get_string(d, "default_output");
+
+    // Validate strings that will be grouped before supplying to redis
+    for (auto candidate_model_name : candidate_model_names) {
+      validate_group_str_for_redis(candidate_model_name,
+                                   "candidate model name");
+    }
+
     std::string selection_policy =
         clipper::DefaultOutputSelectionPolicy::get_name();
     int latency_slo_micros = get_int(d, "latency_slo_micros");
@@ -446,7 +481,7 @@ class RequestHandler {
    * JSON format:
    * {
    *  "model_name" := string,
-   *  "model_version" := int,
+   *  "model_version" := string,
    *  "labels" := [string]
    *  "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
    *  "container_name" := string,
@@ -457,13 +492,21 @@ class RequestHandler {
     rapidjson::Document d;
     parse_json(json, d);
 
-    VersionedModelId model_id = std::make_pair(get_string(d, "model_name"),
-                                               get_int(d, "model_version"));
+    VersionedModelId model_id = VersionedModelId(
+        get_string(d, "model_name"), get_string(d, "model_version"));
+
     std::vector<std::string> labels = get_string_array(d, "labels");
     InputType input_type =
         clipper::parse_input_type(get_string(d, "input_type"));
     std::string container_name = get_string(d, "container_name");
     std::string model_data_path = get_string(d, "model_data_path");
+
+    // Validate strings that will be grouped before supplying to redis
+    validate_group_str_for_redis(model_id.get_name(), "model name");
+    validate_group_str_for_redis(model_id.get_id(), "model version");
+    for (auto label : labels) {
+      validate_group_str_for_redis(label, "label");
+    }
 
     // check if this version of the model has already been deployed
     std::unordered_map<std::string, std::string> existing_model_data =
@@ -471,17 +514,17 @@ class RequestHandler {
     if (existing_model_data.empty()) {
       if (clipper::redis::add_model(redis_connection_, model_id, input_type,
                                     labels, container_name, model_data_path)) {
-        if (set_model_version(model_id.first, model_id.second)) {
+        if (set_model_version(model_id.get_name(), model_id.get_id())) {
           return "Success!";
         }
       }
       std::stringstream ss;
-      ss << "Error adding model " << model_id.first << ":" << model_id.second
-         << " to Redis";
+      ss << "Error adding model " << model_id.get_name() << ":"
+         << model_id.get_id() << " to Redis";
       throw std::invalid_argument(ss.str());
     } else {
       std::stringstream ss;
-      ss << "Error model " << model_id.first << ":" << model_id.second
+      ss << "Error model " << model_id.get_name() << ":" << model_id.get_id()
          << " already exists";
       throw std::invalid_argument(ss.str());
     }
@@ -608,13 +651,13 @@ class RequestHandler {
         redis_model_metadata_to_json(model_doc, model_metadata);
         bool is_current_version =
             clipper::redis::get_current_model_version(
-                redis_connection_, model.first) == model.second;
+                redis_connection_, model.get_name()) == model.get_id();
         add_bool(model_doc, "is_current_version", is_current_version);
         response_doc.PushBack(model_doc, response_doc.GetAllocator());
       }
     } else {
       for (auto model : models) {
-        std::string model_str = clipper::versioned_model_to_str(model);
+        std::string model_str = model.serialize();
         rapidjson::Value v;
         v.SetString(model_str.c_str(), model_str.length(),
                     response_doc.GetAllocator());
@@ -634,7 +677,7 @@ class RequestHandler {
    * JSON format:
    * {
    *  "model_name" := string,
-   *  "model_version" := int,
+   *  "model_version" := string,
    * }
    *
    * \return Returns a JSON string encoding a map of the specified model's
@@ -647,8 +690,8 @@ class RequestHandler {
     parse_json(json, d);
 
     std::string model_name = get_string(d, "model_name");
-    int model_version = get_int(d, "model_version");
-    VersionedModelId model = std::make_pair(model_name, model_version);
+    std::string model_version = get_string(d, "model_version");
+    VersionedModelId model = VersionedModelId(model_name, model_version);
 
     std::unordered_map<std::string, std::string> model_metadata =
         clipper::redis::get_model(redis_connection_, model);
@@ -662,7 +705,7 @@ class RequestHandler {
       redis_model_metadata_to_json(response_doc, model_metadata);
       bool is_current_version =
           clipper::redis::get_current_model_version(
-              redis_connection_, model.first) == model.second;
+              redis_connection_, model.get_name()) == model.get_id();
       add_bool(response_doc, "is_current_version", is_current_version);
     }
 
@@ -709,7 +752,7 @@ class RequestHandler {
     } else {
       for (auto container : containers) {
         std::stringstream ss;
-        ss << clipper::versioned_model_to_str(container.first);
+        ss << container.first.serialize();
         ss << ":";
         ss << container.second;
         std::string container_str = ss.str();
@@ -732,7 +775,7 @@ class RequestHandler {
    * JSON format:
    * {
    *  "model_name" := string,
-   *  "model_version" := int,
+   *  "model_version" := string,
    *  "replica_id" := int
    * }
    *
@@ -745,9 +788,9 @@ class RequestHandler {
     parse_json(json, d);
 
     std::string model_name = get_string(d, "model_name");
-    int model_version = get_int(d, "model_version");
+    std::string model_version = get_string(d, "model_version");
     int replica_id = get_int(d, "replica_id");
-    VersionedModelId model = std::make_pair(model_name, model_version);
+    VersionedModelId model = VersionedModelId(model_name, model_version);
 
     std::unordered_map<std::string, std::string> container_metadata =
         clipper::redis::get_container(redis_connection_, model, replica_id);
@@ -794,8 +837,8 @@ class RequestHandler {
   }
 
   bool set_model_version(const string& model_name,
-                         const int new_model_version) {
-    std::vector<int> versions =
+                         const string& new_model_version) {
+    std::vector<std::string> versions =
         clipper::redis::get_model_versions(redis_connection_, model_name);
     bool version_exists = false;
     for (auto v : versions) {

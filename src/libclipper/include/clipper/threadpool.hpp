@@ -183,8 +183,7 @@ class ThreadPool {
     if (queue != queues_.end()) {
       log_error_formatted(LOGGING_TAG_THREADPOOL,
                           "Work queue already exists for model {}, replica {}",
-                          versioned_model_to_str(vm),
-                          std::to_string(replica_id));
+                          vm.serialize(), std::to_string(replica_id));
       return false;
     } else {
       queues_.emplace(std::piecewise_construct, std::forward_as_tuple(queue_id),
@@ -192,9 +191,9 @@ class ThreadPool {
       threads_.emplace(
           std::piecewise_construct, std::forward_as_tuple(queue_id),
           std::forward_as_tuple(&ThreadPool::worker, this, queue_id));
-      log_info_formatted(
-          LOGGING_TAG_THREADPOOL, "Work queue created for model {}, replica {}",
-          versioned_model_to_str(vm), std::to_string(replica_id));
+      log_info_formatted(LOGGING_TAG_THREADPOOL,
+                         "Work queue created for model {}, replica {}",
+                         vm.serialize(), std::to_string(replica_id));
       return true;
     }
   }
@@ -220,8 +219,8 @@ class ThreadPool {
       queue->second.push(std::make_unique<TaskType>(std::move(task)));
     } else {
       std::stringstream error_msg;
-      error_msg << "No work queue for model " << versioned_model_to_str(vm)
-                << ", replica " << std::to_string(replica_id);
+      error_msg << "No work queue for model " << vm.serialize() << ", replica "
+                << std::to_string(replica_id);
       log_error(LOGGING_TAG_THREADPOOL, error_msg.str());
       throw std::runtime_error(error_msg.str());
     }
@@ -230,8 +229,8 @@ class ThreadPool {
 
   static size_t get_queue_id(const VersionedModelId& vm, const int replica_id) {
     std::size_t seed = 0;
-    boost::hash_combine(seed, vm.first);
-    boost::hash_combine(seed, vm.second);
+    boost::hash_combine(seed, vm.get_name());
+    boost::hash_combine(seed, vm.get_id());
     boost::hash_combine(seed, replica_id);
     return seed;
   }

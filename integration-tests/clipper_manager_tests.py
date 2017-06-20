@@ -105,7 +105,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         models_list_contains_correct_version = False
         for model_info in all_models:
             version = model_info["model_version"]
-            if version == self.model_version_1:
+            if version == str(self.model_version_1):
                 models_list_contains_correct_version = True
                 self.assertTrue(model_info["is_current_version"])
 
