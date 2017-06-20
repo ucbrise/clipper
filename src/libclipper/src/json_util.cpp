@@ -234,8 +234,8 @@ std::vector<VersionedModelId> get_candidate_models(rapidjson::Value& d,
           "Candidate model JSON object missing model_version.");
     }
     std::string model_name = get_string(elem, "model_name");
-    int model_version = get_int(elem, "model_version");
-    candidate_models.push_back(std::make_pair(model_name, model_version));
+    std::string model_version = get_string(elem, "model_version");
+    candidate_models.push_back(VersionedModelId(model_name, model_version));
   }
   return candidate_models;
 }
@@ -463,7 +463,7 @@ void add_model_version_from_redis(
     const std::unordered_map<std::string, std::string>& model_metadata) {
   std::string key = "model_version";
   check_key_exists_in_map(key, model_metadata);
-  add_int(d, key.c_str(), std::stoi(model_metadata.at(key)));
+  add_string(d, key.c_str(), model_metadata.at(key));
 }
 
 void add_model_labels_from_redis(

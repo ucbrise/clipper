@@ -6,12 +6,13 @@
 #include <string>
 #include <vector>
 
+#include <boost/functional/hash.hpp>
 #include <boost/optional.hpp>
+#include <boost/thread.hpp>
 
 namespace clipper {
 
 using ByteBuffer = std::vector<uint8_t>;
-using VersionedModelId = std::pair<std::string, int>;
 using QueryId = long;
 using FeedbackAck = bool;
 
@@ -28,10 +29,31 @@ enum class RequestType {
   FeedbackRequest = 1,
 };
 
-size_t versioned_model_hash(const VersionedModelId &key);
-std::string versioned_model_to_str(const VersionedModelId &model);
 std::string get_readable_input_type(InputType type);
 InputType parse_input_type(std::string type_string);
+
+class VersionedModelId {
+ public:
+  VersionedModelId(const std::string name, const std::string id);
+
+  std::string get_name() const;
+  std::string get_id() const;
+  std::string serialize() const;
+  static VersionedModelId deserialize(std::string);
+
+  VersionedModelId(const VersionedModelId &) = default;
+  VersionedModelId &operator=(const VersionedModelId &) = default;
+
+  VersionedModelId(VersionedModelId &&) = default;
+  VersionedModelId &operator=(VersionedModelId &&) = default;
+
+  bool operator==(const VersionedModelId &rhs) const;
+  bool operator!=(const VersionedModelId &rhs) const;
+
+ private:
+  std::string name_;
+  std::string id_;
+};
 
 class Output {
  public:
@@ -384,5 +406,16 @@ class PredictionResponse {
 }  // namespace rpc
 
 }  // namespace clipper
-
+namespace std {
+template <>
+struct hash<clipper::VersionedModelId> {
+  typedef std::size_t result_type;
+  std::size_t operator()(const clipper::VersionedModelId &vm) const {
+    std::size_t seed = 0;
+    boost::hash_combine(seed, vm.get_name());
+    boost::hash_combine(seed, vm.get_id());
+    return seed;
+  }
+};
+}
 #endif  // CLIPPER_LIB_DATATYPES_H
