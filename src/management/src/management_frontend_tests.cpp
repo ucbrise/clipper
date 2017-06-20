@@ -72,7 +72,7 @@ class ManagementFrontendTest : public ::testing::Test {
   std::string get_app_json_request_string(std::string& name) {
     rapidjson::Document d;
     d.SetObject();
-    add_string(d, "name", name);  // WANT TO REMOVE THIS?
+    add_string(d, "name", name);
     return to_json_string(d);
   }
 
@@ -207,11 +207,9 @@ TEST_F(ManagementFrontendTest, TestGetApplicationCorrect) {
 }
 
 TEST_F(ManagementFrontendTest, TestGetNonexistentApplicationCorrect) {
-  std::string list_apps_json = R"(
-  {
-    "name": "nonexistent_app"
-  }
-  )";
+  std::string nonexistent_app_name = "nonexistent_app";
+  std::string list_apps_json =
+      get_app_json_request_string(nonexistent_app_name);
   std::string json_response = rh_.get_application(list_apps_json);
   std::string expected_response = "{}";
   ASSERT_EQ(json_response, expected_response);
@@ -377,7 +375,7 @@ TEST_F(ManagementFrontendTest, TestAddModelCorrect) {
 
   // Make sure that the current model version has been updated
   // appropriately.
-  ASSERT_EQ(get_current_model_version(*redis_, model_name), model_version);
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version);
 }
 
 TEST_F(ManagementFrontendTest, TestAddDuplicateModelVersion) {
@@ -403,7 +401,7 @@ TEST_F(ManagementFrontendTest, TestAddDuplicateModelVersion) {
 
   // Make sure that the current model version has been updated
   // appropriately.
-  ASSERT_EQ(get_current_model_version(*redis_, model_name), model_version);
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version);
 
   std::string add_dup_model_json = R"(
   {
@@ -516,10 +514,9 @@ TEST_F(ManagementFrontendTest, TestSetModelVersionCorrect) {
   }
   )";
   ASSERT_EQ(rh_.add_model(v4_json), "Success!");
-
-  ASSERT_EQ(get_current_model_version(*redis_, "m"), "4");
+  ASSERT_EQ(*get_current_model_version(*redis_, "m"), "4");
   ASSERT_TRUE(rh_.set_model_version("m", "2"));
-  ASSERT_EQ(get_current_model_version(*redis_, "m"), "2");
+  ASSERT_EQ(*get_current_model_version(*redis_, "m"), "2");
 }
 
 TEST_F(ManagementFrontendTest, TestSetModelInvalidVersion) {
@@ -559,9 +556,9 @@ TEST_F(ManagementFrontendTest, TestSetModelInvalidVersion) {
   )";
   ASSERT_EQ(rh_.add_model(v4_json), "Success!");
 
-  ASSERT_EQ(get_current_model_version(*redis_, "m"), "4");
+  ASSERT_EQ(*get_current_model_version(*redis_, "m"), "4");
   ASSERT_FALSE(rh_.set_model_version("m", "11"));
-  ASSERT_EQ(get_current_model_version(*redis_, "m"), "4");
+  ASSERT_EQ(*get_current_model_version(*redis_, "m"), "4");
 }
 
 }  // namespace

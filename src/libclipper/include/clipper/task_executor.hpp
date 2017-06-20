@@ -356,13 +356,10 @@ class TaskExecutor {
   std::shared_ptr<metrics::Counter> predictions_counter_;
   std::shared_ptr<metrics::Meter> throughput_meter_;
   boost::shared_mutex model_queues_mutex_;
-  std::unordered_map<const VersionedModelId, std::shared_ptr<ModelQueue>,
-                     std::hash<clipper::VersionedModelId>>
+  std::unordered_map<VersionedModelId, std::shared_ptr<ModelQueue>>
       model_queues_;
   boost::shared_mutex model_metrics_mutex_;
-  std::unordered_map<const VersionedModelId, ModelMetrics,
-                     std::hash<clipper::VersionedModelId>>
-      model_metrics_;
+  std::unordered_map<VersionedModelId, ModelMetrics> model_metrics_;
   static constexpr int INITIAL_MODEL_QUEUES_MAP_SIZE = 100;
 
   bool create_model_queue_if_necessary(const VersionedModelId &model_id) {

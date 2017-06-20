@@ -178,11 +178,12 @@ class RequestHandler {
               event_type);
           if (event_type == "set") {
             std::string model_name = key;
-            std::string new_version = clipper::redis::get_current_model_version(
-                redis_connection_, key);
-            if (new_version.size() > 0) {
+            boost::optional<std::string> new_version =
+                clipper::redis::get_current_model_version(redis_connection_,
+                                                          key);
+            if (new_version) {
               std::unique_lock<std::mutex> l(current_model_versions_mutex_);
-              current_model_versions_[key] = new_version;
+              current_model_versions_[key] = *new_version;
             } else {
               clipper::log_error_formatted(
                   LOGGING_TAG_QUERY_FRONTEND,
@@ -223,16 +224,16 @@ class RequestHandler {
     for (std::string model_name : model_names) {
       auto model_version = clipper::redis::get_current_model_version(
           redis_connection_, model_name);
-      if (model_version.size() > 0) {
+      if (model_version) {
         std::unique_lock<std::mutex> l(current_model_versions_mutex_);
-        current_model_versions_[model_name] = model_version;
+        current_model_versions_[model_name] = *model_version;
+        model_names_with_version.push_back(model_name + "@" + *model_version);
       } else {
-        clipper::log_error_formatted(LOGGING_TAG_QUERY_FRONTEND,
-                                     "Found model {} with invalid version {}.",
-                                     model_name, model_version);
+        clipper::log_error_formatted(
+            LOGGING_TAG_QUERY_FRONTEND,
+            "Found model {} with missing current version.", model_name);
         throw std::runtime_error("Invalid model version");
       }
-      model_names_with_version.push_back(model_name + "@" + model_version);
     }
     if (model_names.size() > 0) {
       clipper::log_info_formatted(LOGGING_TAG_QUERY_FRONTEND,

@@ -105,13 +105,13 @@ TEST_F(RedisTest, AddModel) {
 TEST_F(RedisTest, SetCurrentModelVersion) {
   std::string model_name = "mymodel";
   ASSERT_TRUE(set_current_model_version(*redis_, model_name, "2"));
-  ASSERT_EQ(get_current_model_version(*redis_, model_name), "2");
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), "2");
 
   ASSERT_TRUE(set_current_model_version(*redis_, model_name, "5"));
-  ASSERT_EQ(get_current_model_version(*redis_, model_name), "5");
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), "5");
 
   ASSERT_TRUE(set_current_model_version(*redis_, model_name, "3"));
-  ASSERT_EQ(get_current_model_version(*redis_, model_name), "3");
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), "3");
 }
 
 TEST_F(RedisTest, GetModelVersions) {

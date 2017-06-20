@@ -111,8 +111,8 @@ bool set_current_model_version(redox::Redox& redis,
                                const std::string& model_name,
                                const std::string& version);
 
-std::string get_current_model_version(redox::Redox& redis,
-                                      const std::string& model_name);
+boost::optional<std::string> get_current_model_version(
+    redox::Redox& redis, const std::string& model_name);
 
 /**
  * Adds a model into the model table. This will

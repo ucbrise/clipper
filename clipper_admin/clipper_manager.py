@@ -588,7 +588,7 @@ class Clipper:
         ----------
         name : str
             The name to assign this model.
-        version : int
+        version : Any object with a string representation (with __str__ implementation)
             The version to assign this model.
         predict_function : function
             A function that takes three arguments, a SparkContext, the ``model`` parameter and
@@ -681,7 +681,7 @@ class Clipper:
         ----------
         name : str
             The name to assign this model.
-        version : int | str
+        version : Any object with a string representation (with __str__ implementation)
             The version to assign this model.
         predict_function : function
             The prediction function. Any state associated with the function should be
@@ -829,7 +829,7 @@ class Clipper:
         ----------
         model_name : str
             The name of the container to look up
-        model_version : int
+        model_version : Any object with a string representation (with __str__ implementation)
             The version of the container to look up
         replica_id : int
             The container replica to look up
@@ -840,6 +840,7 @@ class Clipper:
             A dictionary with the specified container's info.
             If no corresponding container is registered with Clipper, None is returned.
         """
+        model_version = str(model_version)
         url = "http://%s:1338/admin/get_container" % self.host
         req_json = json.dumps({
             "model_name": model_name,
@@ -1105,7 +1106,7 @@ class Clipper:
         ----------
         model_name : str
             The name of the model
-        model_version : int | str
+        model_version : Any object with a string representation (with __str__ implementation)
             The version of the model. Note that `model_version`
             must be a model version that has already been deployed.
         num_containers : int

@@ -187,8 +187,8 @@ bool set_current_model_version(redox::Redox& redis,
   }
 }
 
-std::string get_current_model_version(redox::Redox& redis,
-                                      const std::string& model_name) {
+boost::optional<std::string> get_current_model_version(
+    redox::Redox& redis, const std::string& model_name) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_METADATA_DB_NUM)})) {
     std::string key = gen_model_current_version_key(model_name);
@@ -206,7 +206,7 @@ std::string get_current_model_version(redox::Redox& redis,
   }
   log_error_formatted(LOGGING_TAG_REDIS, "No versions found for model {}",
                       model_name);
-  return "";
+  return boost::none;
 }
 
 bool add_model(Redox& redis, const VersionedModelId& model_id,
