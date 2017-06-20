@@ -177,7 +177,7 @@ if __name__ == "__main__":
             version += 1
             easy_register_app_name = "easy_register_app_name"
             clipper.register_app_and_deploy_pyspark_model(
-                easy_register_app_name, model_name, version, input_type,
+                easy_register_app_name, model_name, version, "ints",
                 "default_pred", 100000, predict, lr_model, sc)
             _test_deployed_model(easy_register_app_name, version)
 
