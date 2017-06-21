@@ -181,7 +181,7 @@ std::vector<std::string> get_all_model_names(redox::Redox& redis);
  */
 std::vector<VersionedModelId> get_all_models(redox::Redox& redis);
 
-boost::optional<std::vector<std::string>> get_candidate_models(
+std::vector<std::string> get_app_links(
         redox::Redox& redis, const std::string& app_name);
 
 /**
@@ -341,6 +341,10 @@ void subscribe_to_container_changes(
  * to differentiate between adds, updates, and deletes if necessary.
 */
 void subscribe_to_application_changes(
+    redox::Subscriber& subscriber,
+    std::function<void(const std::string&, const std::string&)> callback);
+
+void subscribe_to_app_links_changes(
     redox::Subscriber& subscriber,
     std::function<void(const std::string&, const std::string&)> callback);
 

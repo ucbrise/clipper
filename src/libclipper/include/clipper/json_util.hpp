@@ -127,6 +127,10 @@ void add_object(rapidjson::Document& d, const char* key_name,
 
 std::string to_json_string(rapidjson::Document& d);
 
+void set_string_array(rapidjson::Document &d,
+                      const std::vector<std::string> &str_array);
+std::vector<std::string> to_string_array(rapidjson::Document &d);
+
 /**
  * Sets `d` to the publicly-facing representation of a given Clipper app.
  * App data, provided in `app_metadata`, is assumed to be pulled from redis

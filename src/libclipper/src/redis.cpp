@@ -209,20 +209,19 @@ boost::optional<std::string> get_current_model_version(
   return boost::none;
 }
 
-boost::optional<std::vector<std::string>> get_candidate_models(
+std::vector<std::string> get_app_links(
         redox::Redox& redis, const std::string& app_name) {
+  std::vector<std::string> app_links;
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_APP_LINKS_DB_NUM)})) {
-    auto result = send_cmd_with_reply<std::vector<std::string>>(redis, {"GET", app_name});
-    if (result) {
-      auto model_data = *result;
-      auto map = parse_redis_map(model_data);
-      return str_to_model_names(map["model_names"]);
-    }
+    auto result = send_cmd_with_reply<std::vector<string>>(redis, {"SMEMBERS", app_name});
+    app_links = *result;
+  } else {
+    log_error_formatted(LOGGING_TAG_REDIS, "Redis encountered an error in searching for app links for {}",
+                        app_name);
   }
-  log_error_formatted(LOGGING_TAG_REDIS, "No candidate models found for app {}",
-                      app_name);
-  return boost::none;
+
+  return app_links;
 }
 
 bool add_model(Redox& redis, const VersionedModelId& model_id,
@@ -455,11 +454,9 @@ bool add_app_link(redox::Redox& redis, const std::string& appname,
                   const std::vector<std::string>& model_names) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_APP_LINKS_DB_NUM)})) {
-    const vector<string> cmd_vec{"HMSET",
-                                 appname,
-                                 "model_names",
-                                 model_names_to_str(model_names)};
-    return send_cmd_no_reply<string>(redis, cmd_vec);
+//    const vector<string> cmd_vec{"SET", appname, model_names_to_str(model_names)};
+    const vector<string> cmd_vec{"SADD", appname, model_names_to_str(model_names)};
+    return send_cmd_no_reply<int>(redis, cmd_vec);
   } else {
     return false;
   }
@@ -550,6 +547,14 @@ void subscribe_to_application_changes(
     std::function<void(const std::string&, const std::string&)> callback) {
   std::string prefix = "";
   subscribe_to_keyspace_changes(REDIS_APPLICATION_DB_NUM, prefix, subscriber,
+                                std::move(callback));
+}
+
+void subscribe_to_app_links_changes(
+        redox::Subscriber& subscriber,
+        std::function<void(const std::string&, const std::string&)> callback) {
+  std::string prefix = "";
+  subscribe_to_keyspace_changes(REDIS_APP_LINKS_DB_NUM, prefix, subscriber,
                                 std::move(callback));
 }
 

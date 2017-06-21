@@ -181,11 +181,11 @@ class RequestHandler {
              clipper::log_info_formatted(LOGGING_TAG_QUERY_FRONTEND,
                                          "New model link detected for app: {}", app_name);
 
-             boost::optional<std::string> new_candidate_models  =
-                     clipper::redis::get_candidate_models(redis_connection_,
+             boost::optional<std::vector<std::string>> new_candidate_models  =
+                     clipper::redis::get_app_links(redis_connection_,
                                                                key);
-             if (*new_candidate_models) {
-               set_candidate_models_for_app(app_name, new_candidate_models);
+             if (new_candidate_models) {
+               set_candidate_models_for_app(app_name, *new_candidate_models);
              }
            }
        });
@@ -221,14 +221,15 @@ class RequestHandler {
       auto app_info =
           clipper::redis::get_application_by_key(redis_connection_, app_name);
 
-      std::vector<std::string> candidate_model_names =
-          clipper::redis::str_to_model_names(app_info["candidate_model_names"]);
+      auto candidate_model_names = clipper::redis::get_app_links(redis_connection_, app_name);
+      set_candidate_models_for_app(app_name, candidate_model_names);
+
       InputType input_type = clipper::parse_input_type(app_info["input_type"]);
       std::string policy = app_info["policy"];
       std::string default_output = app_info["default_output"];
       int latency_slo_micros = std::stoi(app_info["latency_slo_micros"]);
 
-      add_application(app_name, candidate_model_names, input_type, policy,
+      add_application(app_name, input_type, policy,
                       default_output, latency_slo_micros);
     }
     if (app_names.size() > 0) {
@@ -304,7 +305,7 @@ class RequestHandler {
         std::shared_ptr<HttpServer::Response> response,
         std::shared_ptr<HttpServer::Request> request) {
       try {
-        std::vector<std::string> models_for_app = get_candidate_models_for_app(name);
+        std::vector<std::string> models = get_candidate_models_for_app(name);
         std::vector<VersionedModelId> versioned_models;
         {
           std::unique_lock<std::mutex> l(current_model_versions_mutex_);
@@ -376,10 +377,11 @@ class RequestHandler {
     std::string predict_endpoint = "^/" + name + "/predict$";
     server_.add_endpoint(predict_endpoint, "POST", predict_fn);
 
-    auto update_fn = [this, name, input_type, policy, models](
+    auto update_fn = [this, name, input_type, policy](
         std::shared_ptr<HttpServer::Response> response,
         std::shared_ptr<HttpServer::Request> request) {
       try {
+        std::vector<std::string> models = get_candidate_models_for_app(name);
         std::vector<VersionedModelId> versioned_models;
         {
           std::unique_lock<std::mutex> l(current_model_versions_mutex_);

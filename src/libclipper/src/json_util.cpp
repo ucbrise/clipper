@@ -384,6 +384,35 @@ std::string to_json_string(rapidjson::Document& d) {
   return buffer.GetString();
 }
 
+
+void set_string_array(rapidjson::Document &d,
+                      const std::vector<std::string> &str_array) {
+  d.SetArray();
+  for (auto str : str_array) {
+    rapidjson::Value string_val(
+            rapidjson::StringRef(str.c_str(), str.length()),
+            d.GetAllocator());
+    d.PushBack(string_val, d.GetAllocator());
+  }
+}
+
+std::vector<std::string> to_string_array(rapidjson::Document &d) {
+  if (!d.IsArray()) {
+    throw json_semantic_error("Document must be of array type");
+  }
+  std::vector<std::string> converted_array;
+
+  for (rapidjson::Value& elem : d.GetArray()) {
+    if (!elem.IsString()) {
+      throw json_semantic_error("Array element of type " +
+                                kTypeNames[elem.GetType()] +
+                                " is not of type string");
+    }
+    converted_array.push_back(elem.GetString());
+  }
+  return converted_array;
+}
+
 void check_key_exists_in_map(
     std::string& key, const std::unordered_map<std::string, std::string>& map) {
   if (map.find(key) == map.end()) {
@@ -416,30 +445,6 @@ void add_app_latency_slo_micros_from_redis(
   add_int(d, key.c_str(), atoi(app_metadata.at(key).c_str()));
 }
 
-void add_app_candidate_model_names_from_redis(
-    rapidjson::Document& d,
-    const std::unordered_map<std::string, std::string>& app_metadata) {
-  std::string key = "candidate_model_names";
-  check_key_exists_in_map(key, app_metadata);
-
-  // candidate model names are stored in a comma-separated string in redis
-  std::string model_names_redis_format = app_metadata.at(key);
-  std::vector<std::string> model_names;
-  boost::split(model_names, model_names_redis_format, boost::is_any_of(","));
-
-  // Our external interface should put these names in an array
-  rapidjson::Document candidate_model_names_doc(&d.GetAllocator());
-  candidate_model_names_doc.SetArray();
-  for (auto model_name : model_names) {
-    rapidjson::Value string_val(
-        rapidjson::StringRef(model_name.c_str(), model_name.length()),
-        d.GetAllocator());
-    candidate_model_names_doc.PushBack(string_val, d.GetAllocator());
-  }
-
-  add_object(d, key.c_str(), candidate_model_names_doc);
-}
-
 void redis_app_metadata_to_json(
     rapidjson::Document& d,
     const std::unordered_map<std::string, std::string>& app_metadata) {
@@ -447,7 +452,6 @@ void redis_app_metadata_to_json(
   add_input_type_from_redis(d, app_metadata);
   add_app_default_output_from_redis(d, app_metadata);
   add_app_latency_slo_micros_from_redis(d, app_metadata);
-  add_app_candidate_model_names_from_redis(d, app_metadata);
 }
 
 void add_model_name_from_redis(

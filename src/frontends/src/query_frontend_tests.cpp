@@ -175,7 +175,7 @@ TEST_F(QueryFrontendTest, TestDecodeUpdateMissingField) {
 TEST_F(QueryFrontendTest, TestAddOneApplication) {
   size_t no_apps = rh_.num_applications();
   EXPECT_EQ(no_apps, (size_t)0);
-  rh_.add_application("test_app_1", {}, InputType::Doubles, "test_policy",
+  rh_.add_application("test_app_1", InputType::Doubles, "test_policy",
                       "0.4", 30000);
   size_t one_app = rh_.num_applications();
   EXPECT_EQ(one_app, (size_t)1);
@@ -187,7 +187,7 @@ TEST_F(QueryFrontendTest, TestAddManyApplications) {
 
   for (int i = 0; i < 500; ++i) {
     std::string cur_name = "test_app_" + std::to_string(i);
-    rh_.add_application(cur_name, {}, InputType::Doubles, "test_policy", "0.4",
+    rh_.add_application(cur_name, InputType::Doubles, "test_policy", "0.4",
                         30000);
   }
 
