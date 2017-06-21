@@ -26,7 +26,11 @@ headers = {'Content-type': 'application/json'}
 app_name = "R_model_test"
 model_name = "R_model"
 
-
+import sys
+if sys.version_info[0] < 3: 
+    from StringIO import StringIO
+else:
+    from io import StringIO
 
 
 class BenchmarkException(Exception):
@@ -68,12 +72,16 @@ def train_R_model():
 
 
 
-def call_predictions(query_string,query):
+def call_predictions(query_string):
     default=0
     url= "http://localhost:1337/%s/predict" % app_name
     req_json = json.dumps({'uid': 0, 'input':query_string })
     response = requests.post(url, headers=headers, data=req_json)
     result=response.json()
+
+    x = pandas.read_csv(StringIO(result["output"]), sep=";", index_col=0)
+    print(x)
+
     if response.status_code == requests.codes.ok and result["default"] == True:
         default=1
     elif response.status_code != requests.codes.ok:
@@ -85,27 +93,10 @@ def call_predictions(query_string,query):
 def predict_R_model(df):
     #This function encodes pandas dataframe to strings,preserving its schema.
     #Moreover it calls for the actual predictions by invoking call_predictions() method.  
-    num_defaults=0
-    columns=len(df.columns.values)
-    rows=len(df)
-    num_preds=rows
-    head=""
-    for i in range(0,columns):
-        head=head+df.columns.values[i]+";"
-    head=head[:-1]
-    head=head+"\n"
-
-    for query in range(0,rows):
-        tail=""
-        for i in range(0,columns):
-            tail=tail+str(df.values[query][i])+";"
-        tail=tail[:-1]
-        tail=tail+"\n"
-        query_string=head+tail
-        num_defaults+=call_predictions(query_string,query)
+    num_defaults = 0
+    query_string = df.to_csv(sep=";")
+    num_defaults += call_predictions(query_string)
     return num_defaults
-
-
 
 def deploy_and_test_model(clipper, model, version,test_data):
     clipper.deploy_R_model(model_name, version, model,"clipper/r_python_container:latest",

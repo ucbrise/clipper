@@ -15,9 +15,6 @@ if sys.version_info[0] < 3:
 else:
     from io import StringIO
 
-np.set_printoptions(threshold=np.nan)
-
-
 class RContainer(rpc.ModelContainerBase):
     def __init__(self, path):
         print("initiating MyRContainer")
@@ -26,16 +23,20 @@ class RContainer(rpc.ModelContainerBase):
         self.path = path
 
     def predict_strings(self, inputs):
-        #this method expects dataframe which is specific to model_name and is encoded as string
-        #The string is converted to a pandas dataframe and further to an R dataframe before passing to predict function as illustrated below. 
-        TESTDATA=StringIO(inputs[0])
-        df = pandas.read_csv(TESTDATA, sep=";")
-        pandas2ri.activate()
-        r_dataframe = pandas2ri.py2ri(df)
-        preds=stats.predict(self.model,r_dataframe)
-        return [str(p) for p in preds]
-
-
+        outputs = []
+        for input_csv in inputs:
+            csv_handle = StringIO(input_csv)
+            pdf = pandas.read_csv(csv_handle, sep=";", index_col=0)
+            pandas2ri.activate()
+            rdf = pandas2ri.py2ri(pdf)
+            preds = stats.predict(self.model, rdf)
+            make_list = ro.r('as.list')
+            make_df = ro.r('data.frame')
+            rdf_preds = make_df(make_list(preds))
+            pdf_preds = pandas2ri.ri2py(rdf_preds)
+            response_csv = pdf_preds.to_csv(sep=";")
+            outputs.append(response_csv)
+        return outputs
 
 
 if __name__ == "__main__":
