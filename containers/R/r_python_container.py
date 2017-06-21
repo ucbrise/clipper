@@ -18,7 +18,6 @@ else:
 
 class RContainer(rpc.ModelContainerBase):
     def __init__(self, path):
-        print("initiating MyRContainer")
         self.model = base.readRDS(path)
         print("Loaded %s model" % type(self.model), file=sys.stderr)
         self.path = path
