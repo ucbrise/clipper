@@ -527,7 +527,7 @@ class RequestHandler {
       validate_group_str_for_redis(model_name, "model name");
     }
 
-    if (clipper::redis::add_app_link(redis_connection_, app_name,
+    if (clipper::redis::add_app_links(redis_connection_, app_name,
                                      model_names)) {
       return "Success!";
     } else {

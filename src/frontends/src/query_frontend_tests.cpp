@@ -303,6 +303,36 @@ TEST_F(QueryFrontendTest, TestReadModelsAtStartup) {
   EXPECT_EQ(rh2_.get_current_model_versions(), expected_models);
 }
 
+TEST_F(QueryFrontendTest, TestReadAppLinksAtStartup) {
+  // Add a few applications
+  std::string app_name_1 = "my_app_name";
+  std::string app_name_2 = "my_app_name_2";
+  InputType input_type = InputType::Doubles;
+  std::string policy = "exp3_policy";
+  std::string default_output = "1.0";
+  int latency_slo_micros = 10000;
+  ASSERT_TRUE(add_application(*redis_, app_name_1, input_type, policy, default_output,
+                              latency_slo_micros));
+  ASSERT_TRUE(add_application(*redis_, app_name_2, input_type, policy, default_output,
+                              latency_slo_micros));
+
+  // Give some candidate model names to app with `app_name_1`
+  add_app_links(*redis_, app_name_1, {"m1"});
+  add_app_links(*redis_, app_name_1, {"m2", "m3"});
+
+  std::vector<std::string> expected_app1_candidate_models = {"m1", "m2", "m3"};
+
+  RequestHandler<MockQueryProcessor> rh2_("127.0.0.1", 1337, 8);
+
+  std::vector<std::string> app1_candidate_models = rh2_.get_candidate_models_for_app(app_name_1);
+  std::sort(app1_candidate_models.begin(), app1_candidate_models.end());
+  std::sort(expected_app1_candidate_models.begin(), expected_app1_candidate_models.end());
+  EXPECT_EQ(expected_app1_candidate_models, app1_candidate_models);
+
+  // App with name `app_name_2` shouldn't have any linked models
+  EXPECT_EQ(rh2_.get_candidate_models_for_app(app_name_2), std::vector<std::string>{});
+}
+
 TEST_F(QueryFrontendTest, TestReadInvalidModelVersionAtStartup) {
   std::vector<std::string> labels{"ads", "images", "experimental", "other",
                                   "labels"};

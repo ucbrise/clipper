@@ -128,10 +128,6 @@ vector<string> str_to_labels(const string& label_str) {
   return labels;
 }
 
-std::vector<std::string> str_to_model_names(const std::string& names_str) {
-  return str_to_labels(names_str);
-}
-
 std::string models_to_str(const std::vector<VersionedModelId>& models) {
   if (models.empty()) return "";
 
@@ -453,15 +449,16 @@ bool add_application(redox::Redox& redis, const std::string& appname,
   }
 }
 
-bool add_app_link(redox::Redox& redis, const std::string& appname,
+bool add_app_links(redox::Redox& redis, const std::string& appname,
                   const std::vector<std::string>& model_names) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_APP_LINKS_DB_NUM)})) {
-    //    const vector<string> cmd_vec{"SET", appname,
-    //    model_names_to_str(model_names)};
-    const vector<string> cmd_vec{"SADD", appname,
-                                 model_names_to_str(model_names)};
-    return send_cmd_no_reply<int>(redis, cmd_vec);
+    for (auto model_name : model_names) {
+      if (!send_cmd_no_reply<int>(redis, vector<string>{"SADD", appname, model_name})) {
+        return false;
+      }
+    }
+    return true;
   } else {
     return false;
   }

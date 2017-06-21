@@ -102,6 +102,24 @@ TEST_F(RedisTest, AddModel) {
   ASSERT_EQ(result["model_data_path"], model_path);
 }
 
+TEST_F(RedisTest, AddAppLinks) {
+  std::string app_name = "my_app_name";
+  InputType input_type = InputType::Doubles;
+  std::string policy = DefaultOutputSelectionPolicy::get_name();
+  std::string default_output = "1.0";
+  int latency_slo_micros = 10000;
+  ASSERT_TRUE(add_application(*redis_, app_name, input_type, policy, default_output,
+                              latency_slo_micros));
+
+  std::vector<std::string> model_names = std::vector<std::string>{"model1", "model2"};
+  ASSERT_TRUE(add_app_links(*redis_, app_name, model_names));
+
+  auto linked_models = get_app_links(*redis_, app_name);
+  std::sort(linked_models.begin(), linked_models.end());
+  std::sort(model_names.begin(), model_names.end());
+  ASSERT_EQ(model_names, linked_models);
+}
+
 TEST_F(RedisTest, SetCurrentModelVersion) {
   std::string model_name = "mymodel";
   ASSERT_TRUE(set_current_model_version(*redis_, model_name, "2"));
@@ -517,6 +535,40 @@ TEST_F(RedisTest, SubscriptionDetectApplicationDelete) {
   // give Redis some time to register the subscription
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
   ASSERT_TRUE(delete_application(*redis_, name));
+  std::unique_lock<std::mutex> l(notification_mutex);
+  bool result = notification_recv.wait_for(l, std::chrono::milliseconds(1000),
+                                           [&recv]() { return recv == true; });
+  ASSERT_TRUE(result);
+}
+
+TEST_F(RedisTest, SubscriptionDetectAppLinksAdd) {
+  // Register the application to link to
+  std::string name = "my_app_name";
+  InputType input_type = InputType::Doubles;
+  std::string policy = "exp3_policy";
+  std::string default_output = "1.0";
+  int latency_slo_micros = 10000;
+  ASSERT_TRUE(add_application(*redis_, name, input_type, policy, default_output,
+                              latency_slo_micros));
+
+  std::condition_variable_any notification_recv;
+  std::mutex notification_mutex;
+  std::atomic<bool> recv{false};
+  subscribe_to_app_links_changes(
+          *subscriber_, [&notification_recv, &notification_mutex, &recv, name](
+                  const std::string& key, const std::string& event_type) {
+              ASSERT_EQ(event_type, "sadd");
+              std::unique_lock<std::mutex> l(notification_mutex);
+              recv = true;
+              ASSERT_EQ(key, name);
+              notification_recv.notify_all();
+          });
+  // give Redis some time to register the subscription
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+  std::vector<std::string> model_names = {"model1", "model2"};
+  ASSERT_TRUE(add_app_links(*redis_, name, model_names));
+
   std::unique_lock<std::mutex> l(notification_mutex);
   bool result = notification_recv.wait_for(l, std::chrono::milliseconds(1000),
                                            [&recv]() { return recv == true; });

@@ -101,8 +101,6 @@ std::vector<std::string> str_to_labels(const std::string& label_str);
 
 std::string model_names_to_str(const std::vector<std::string>& names);
 
-std::vector<std::string> str_to_model_names(const std::string& names_str);
-
 std::string models_to_str(const std::vector<VersionedModelId>& models);
 
 std::vector<VersionedModelId> str_to_models(const std::string& model_str);
@@ -258,7 +256,7 @@ bool add_application(redox::Redox& redis, const std::string& appname,
                      const std::string& default_output,
                      const long latency_slo_micros);
 
-bool add_app_link(redox::Redox& redis, const std::string& appname,
+bool add_app_links(redox::Redox& redis, const std::string& appname,
                   const std::vector<std::string>& model_names);
 
 /**

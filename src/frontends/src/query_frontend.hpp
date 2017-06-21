@@ -186,7 +186,7 @@ class RequestHandler {
             boost::optional<std::vector<std::string>> new_candidate_models =
                 clipper::redis::get_app_links(redis_connection_, key);
             if (new_candidate_models) {
-              set_candidate_models_for_app(app_name, *new_candidate_models);
+              add_candidate_models_for_app(app_name, *new_candidate_models);
             }
           }
         });
@@ -224,7 +224,7 @@ class RequestHandler {
 
       auto candidate_model_names =
           clipper::redis::get_app_links(redis_connection_, app_name);
-      set_candidate_models_for_app(app_name, candidate_model_names);
+      add_candidate_models_for_app(app_name, candidate_model_names);
 
       InputType input_type = clipper::parse_input_type(app_info["input_type"]);
       std::string policy = app_info["policy"];
@@ -233,6 +233,7 @@ class RequestHandler {
 
       add_application(app_name, input_type, policy, default_output,
                       latency_slo_micros);
+
     }
     if (app_names.size() > 0) {
       clipper::log_info_formatted(
@@ -272,10 +273,18 @@ class RequestHandler {
     redis_subscriber_.disconnect();
   }
 
-  void set_candidate_models_for_app(std::string name,
+  void add_candidate_models_for_app(std::string name,
                                     std::vector<std::string> models) {
     std::unique_lock<std::mutex> l(candidate_models_for_apps_mutex_);
-    candidate_models_for_apps_[name] = models;
+
+    if (candidate_models_for_apps_.find(name) == candidate_models_for_apps_.end()) {
+      candidate_models_for_apps_[name] = models;
+    } else {
+      std::vector<std::string> existing_models = candidate_models_for_apps_[name];
+
+      existing_models.reserve(existing_models.size() + distance(models.begin(), models.end()));
+      existing_models.insert(existing_models.end(), models.begin(), models.end());
+    }
   }
 
   std::vector<std::string> get_candidate_models_for_app(std::string name) {
