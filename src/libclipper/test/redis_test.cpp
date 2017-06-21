@@ -108,10 +108,11 @@ TEST_F(RedisTest, AddAppLinks) {
   std::string policy = DefaultOutputSelectionPolicy::get_name();
   std::string default_output = "1.0";
   int latency_slo_micros = 10000;
-  ASSERT_TRUE(add_application(*redis_, app_name, input_type, policy, default_output,
-                              latency_slo_micros));
+  ASSERT_TRUE(add_application(*redis_, app_name, input_type, policy,
+                              default_output, latency_slo_micros));
 
-  std::vector<std::string> model_names = std::vector<std::string>{"model1", "model2"};
+  std::vector<std::string> model_names =
+      std::vector<std::string>{"model1", "model2"};
   ASSERT_TRUE(add_app_links(*redis_, app_name, model_names));
 
   auto linked_models = get_app_links(*redis_, app_name);
@@ -555,14 +556,14 @@ TEST_F(RedisTest, SubscriptionDetectAppLinksAdd) {
   std::mutex notification_mutex;
   std::atomic<bool> recv{false};
   subscribe_to_app_links_changes(
-          *subscriber_, [&notification_recv, &notification_mutex, &recv, name](
-                  const std::string& key, const std::string& event_type) {
-              ASSERT_EQ(event_type, "sadd");
-              std::unique_lock<std::mutex> l(notification_mutex);
-              recv = true;
-              ASSERT_EQ(key, name);
-              notification_recv.notify_all();
-          });
+      *subscriber_, [&notification_recv, &notification_mutex, &recv, name](
+                        const std::string& key, const std::string& event_type) {
+        ASSERT_EQ(event_type, "sadd");
+        std::unique_lock<std::mutex> l(notification_mutex);
+        recv = true;
+        ASSERT_EQ(key, name);
+        notification_recv.notify_all();
+      });
   // give Redis some time to register the subscription
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
 

@@ -528,7 +528,7 @@ class RequestHandler {
     }
 
     if (clipper::redis::add_app_links(redis_connection_, app_name,
-                                     model_names)) {
+                                      model_names)) {
       return "Success!";
     } else {
       std::stringstream ss;

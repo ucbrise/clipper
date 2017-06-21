@@ -257,7 +257,7 @@ bool add_application(redox::Redox& redis, const std::string& appname,
                      const long latency_slo_micros);
 
 bool add_app_links(redox::Redox& redis, const std::string& appname,
-                  const std::vector<std::string>& model_names);
+                   const std::vector<std::string>& model_names);
 
 /**
  * Deletes a container from the container table if it exists.

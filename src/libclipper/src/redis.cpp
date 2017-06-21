@@ -450,11 +450,12 @@ bool add_application(redox::Redox& redis, const std::string& appname,
 }
 
 bool add_app_links(redox::Redox& redis, const std::string& appname,
-                  const std::vector<std::string>& model_names) {
+                   const std::vector<std::string>& model_names) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_APP_LINKS_DB_NUM)})) {
     for (auto model_name : model_names) {
-      if (!send_cmd_no_reply<int>(redis, vector<string>{"SADD", appname, model_name})) {
+      if (!send_cmd_no_reply<int>(
+              redis, vector<string>{"SADD", appname, model_name})) {
         return false;
       }
     }

@@ -233,7 +233,6 @@ class RequestHandler {
 
       add_application(app_name, input_type, policy, default_output,
                       latency_slo_micros);
-
     }
     if (app_names.size() > 0) {
       clipper::log_info_formatted(
@@ -277,13 +276,17 @@ class RequestHandler {
                                     std::vector<std::string> models) {
     std::unique_lock<std::mutex> l(candidate_models_for_apps_mutex_);
 
-    if (candidate_models_for_apps_.find(name) == candidate_models_for_apps_.end()) {
+    if (candidate_models_for_apps_.find(name) ==
+        candidate_models_for_apps_.end()) {
       candidate_models_for_apps_[name] = models;
     } else {
-      std::vector<std::string> existing_models = candidate_models_for_apps_[name];
+      std::vector<std::string> existing_models =
+          candidate_models_for_apps_[name];
 
-      existing_models.reserve(existing_models.size() + distance(models.begin(), models.end()));
-      existing_models.insert(existing_models.end(), models.begin(), models.end());
+      existing_models.reserve(existing_models.size() +
+                              distance(models.begin(), models.end()));
+      existing_models.insert(existing_models.end(), models.begin(),
+                             models.end());
     }
   }
 
