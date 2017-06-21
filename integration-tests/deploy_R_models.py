@@ -76,7 +76,6 @@ def call_predictions(query_string):
     req_json = json.dumps({'uid': 0, 'input': query_string})
     response = requests.post(url, headers=headers, data=req_json)
     result = response.json()
-
     x = pandas.read_csv(StringIO(result["output"]), sep=";", index_col=0)
     print(x)
 
@@ -93,17 +92,20 @@ def predict_R_model(df):
     #Moreover it calls for the actual predictions by invoking call_predictions() method.  
     num_defaults = 0
     query_string = df.to_csv(sep=";")
-    num_defaults += call_predictions(query_string)
+    num_defaults = call_predictions(query_string)
     return num_defaults
 
 
-def deploy_and_test_model(clipper, model, version, test_data):
+def deploy_and_test_model(clipper, model, version, test_data_collection):
+    #test_data_collection is dictionary of pandas dataframes.
     clipper.deploy_R_model(model_name, version, model,
                            "clipper/r_python_container:latest", "string")
     time.sleep(25)
     num_defaults = 0
-    num_preds = len(test_data)
-    num_defaults = predict_R_model(test_data)
+    num_preds = len(test_data_collection)
+    print(num_preds)
+    for i in range(0,num_preds):
+        num_defaults += predict_R_model(test_data_collection[i])
 
     if num_defaults > 0:
         print("Error: %d/%d predictions were default" % (num_defaults,
@@ -120,13 +122,16 @@ if __name__ == "__main__":
 
         #preparing datasets for training and testing 
         #using dataset mtcars , already provided by R. It has 32 rows and various coloums for eg. mpg,wt,cyl etc  
-        #splitting it for training and testing in ratio 3:2
-        train_data = ro.r('train_data=head(mtcars,0.6*nrow(mtcars))')
-        test_data = ro.r('test_data=tail(mtcars,0.4*nrow(mtcars))')
+        #splitting it for training and testing in ratio 1:1. Further splitting the test data in ratio 1:1
+        train_data = ro.r('train_data=head(mtcars,0.5*nrow(mtcars))')
+        test_data = ro.r('test_data=tail(mtcars,0.5*nrow(mtcars))')
+        test_data_collection={}
+        test_data_collection[0]=ro.r('test_data1=head(test_data,0.5*nrow(test_data))')
+        test_data_collection[1]=ro.r('test_data2=tail(test_data,0.5*nrow(test_data))')
 
         try:
             clipper.register_application(app_name, model_name, "string",
-                                         "default_pred", 100000)
+                                         "default_pred", 100000000)
             time.sleep(1)
             response = requests.post(
                 "http://localhost:1337/%s/predict" % app_name,
@@ -142,7 +147,7 @@ if __name__ == "__main__":
 
             version = 1
             R_model = train_R_model()
-            deploy_and_test_model(clipper, R_model, version, test_data)
+            deploy_and_test_model(clipper, R_model, version, test_data_collection)
         except BenchmarkException as e:
             print(e)
             clipper.stop_all()
