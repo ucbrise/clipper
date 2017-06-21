@@ -181,8 +181,8 @@ std::vector<std::string> get_all_model_names(redox::Redox& redis);
  */
 std::vector<VersionedModelId> get_all_models(redox::Redox& redis);
 
-std::vector<std::string> get_app_links(
-        redox::Redox& redis, const std::string& app_name);
+std::vector<std::string> get_app_links(redox::Redox& redis,
+                                       const std::string& app_name);
 
 /**
  * Adds a container into the container table. This will

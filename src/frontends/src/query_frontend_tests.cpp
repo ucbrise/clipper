@@ -175,8 +175,8 @@ TEST_F(QueryFrontendTest, TestDecodeUpdateMissingField) {
 TEST_F(QueryFrontendTest, TestAddOneApplication) {
   size_t no_apps = rh_.num_applications();
   EXPECT_EQ(no_apps, (size_t)0);
-  rh_.add_application("test_app_1", InputType::Doubles, "test_policy",
-                      "0.4", 30000);
+  rh_.add_application("test_app_1", InputType::Doubles, "test_policy", "0.4",
+                      30000);
   size_t one_app = rh_.num_applications();
   EXPECT_EQ(one_app, (size_t)1);
 }
@@ -250,26 +250,25 @@ TEST_F(QueryFrontendTest,
   }
 }
 
+// add a read links on startup?
+
 TEST_F(QueryFrontendTest, TestReadApplicationsAtStartup) {
   // Add a few applications
   std::string name = "my_app_name";
-  std::vector<std::string> model_names{"music_random_features", "simple_svm",
-                                       "music_cnn"};
+  ;
   InputType input_type = InputType::Doubles;
   std::string policy = "exp3_policy";
   std::string default_output = "1.0";
   int latency_slo_micros = 10000;
-  ASSERT_TRUE(add_application(*redis_, name, model_names, input_type, policy,
-                              default_output, latency_slo_micros));
+  ASSERT_TRUE(add_application(*redis_, name, input_type, policy, default_output,
+                              latency_slo_micros));
   std::string name2 = "my_app_name_2";
-  std::vector<std::string> model_names2{"img_random_features", "simple_svm",
-                                        "img_cnn"};
   InputType input_type2 = InputType::Doubles;
   std::string policy2 = "exp4_policy";
   int latency_slo_micros2 = 50000;
   std::string default_output2 = "1.0";
-  ASSERT_TRUE(add_application(*redis_, name2, model_names2, input_type2,
-                              policy2, default_output2, latency_slo_micros2));
+  ASSERT_TRUE(add_application(*redis_, name2, input_type2, policy2,
+                              default_output2, latency_slo_micros2));
 
   RequestHandler<MockQueryProcessor> rh2_("127.0.0.1", 1337, 8);
   size_t two_apps = rh2_.num_applications();

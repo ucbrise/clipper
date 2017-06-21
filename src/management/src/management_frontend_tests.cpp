@@ -56,7 +56,8 @@ class ManagementFrontendTest : public ::testing::Test {
                                        std::string& default_output,
                                        int latency_slo_micros) {
     rapidjson::Document d;
-    set_add_app_request_doc(d, name, input_type, default_output, latency_slo_micros);
+    set_add_app_request_doc(d, name, input_type, default_output,
+                            latency_slo_micros);
     return to_json_string(d);
   }
 
@@ -76,17 +77,16 @@ class ManagementFrontendTest : public ::testing::Test {
     add_string(d, "model_data_path", model_data_path);
   }
 
-
-  void set_add_app_links_request_doc(rapidjson::Document &d,
-                                     std::string &app_name,
+  void set_add_app_links_request_doc(rapidjson::Document& d,
+                                     std::string& app_name,
                                      std::vector<std::string>& model_names) {
     d.SetObject();
     add_string(d, "app_name", app_name);
     add_string_array(d, "model_names", model_names);
   }
 
-  std::string get_add_app_links_request_json(std::string& name,
-                                             std::vector<std::string>& model_names) {
+  std::string get_add_app_links_request_json(
+      std::string& name, std::vector<std::string>& model_names) {
     rapidjson::Document d;
     set_add_app_links_request_doc(d, name, model_names);
     return to_json_string(d);
@@ -115,7 +115,8 @@ TEST_F(ManagementFrontendTest, TestAddApplicationCorrect) {
   std::string app_name = "myappname";
   std::string input_type = "integers";
   std::string default_output = "4.3";
-  std::string add_app_json = get_add_app_request_json(app_name, input_type, default_output, 1000);
+  std::string add_app_json =
+      get_add_app_request_json(app_name, input_type, default_output, 1000);
 
   ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
   auto result = get_application(*redis_, app_name);
@@ -153,11 +154,14 @@ TEST_F(ManagementFrontendTest, TestAddAppLink) {
   std::string app_name = "myappname";
   std::string input_type = "integers";
   std::string default_output = "4.3";
-  std::string add_app_json = get_add_app_request_json(app_name, input_type, default_output, 1000);
+  std::string add_app_json =
+      get_add_app_request_json(app_name, input_type, default_output, 1000);
   ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
 
-  std::vector<std::string> model_names = std::vector<std::string>{"mymodelname"};
-  std::string add_links_json = get_add_app_links_request_json(app_name, model_names);
+  std::vector<std::string> model_names =
+      std::vector<std::string>{"mymodelname"};
+  std::string add_links_json =
+      get_add_app_links_request_json(app_name, model_names);
 
   ASSERT_EQ(rh_.add_app_links(add_links_json), "Success!");
   std::vector<std::string> result = get_app_links(*redis_, app_name);
@@ -173,18 +177,23 @@ TEST_F(ManagementFrontendTest, TestAddAppLinkWhenAlreadyExists) {
   std::string app_name = "myappname";
   std::string input_type = "integers";
   std::string default_output = "4.3";
-  std::string add_app_json = get_add_app_request_json(app_name, input_type, default_output, 1000);
+  std::string add_app_json =
+      get_add_app_request_json(app_name, input_type, default_output, 1000);
   ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
 
-  std::vector<std::string> model_names = std::vector<std::string>{"mymodelname"};
-  std::string add_links_json = get_add_app_links_request_json(app_name, model_names);
+  std::vector<std::string> model_names =
+      std::vector<std::string>{"mymodelname"};
+  std::string add_links_json =
+      get_add_app_links_request_json(app_name, model_names);
   ASSERT_EQ(rh_.add_app_links(add_links_json), "Success!");
 
   // Attempts to re-add already existing links should work
   ASSERT_EQ(rh_.add_app_links(add_links_json), "Success!");
 
-  std::vector<std::string> new_model_names = std::vector<std::string>{"mymodelname2"};
-  std::string add_new_links_json = get_add_app_links_request_json(app_name, new_model_names);
+  std::vector<std::string> new_model_names =
+      std::vector<std::string>{"mymodelname2"};
+  std::string add_new_links_json =
+      get_add_app_links_request_json(app_name, new_model_names);
 
   // When adding a new, second link, it should break
   ASSERT_THROW(rh_.add_app_links(add_new_links_json), std::invalid_argument);
@@ -192,8 +201,10 @@ TEST_F(ManagementFrontendTest, TestAddAppLinkWhenAlreadyExists) {
 
 TEST_F(ManagementFrontendTest, TestAddAppLinkToNonexistentApp) {
   std::string app_name = "myappname";
-  std::vector<std::string> model_names = std::vector<std::string>{"mymodelname"};
-  std::string add_links_json = get_add_app_links_request_json(app_name, model_names);
+  std::vector<std::string> model_names =
+      std::vector<std::string>{"mymodelname"};
+  std::string add_links_json =
+      get_add_app_links_request_json(app_name, model_names);
 
   ASSERT_THROW(rh_.add_app_links(add_links_json), std::invalid_argument);
 }
@@ -203,7 +214,8 @@ TEST_F(ManagementFrontendTest, TestAddAppLinksProhibitedChars) {
   std::string input_type = "doubles";
   std::string default_output = "my_default_output";
   int latency_slo_micros = 10000;
-  std::string add_app_json = get_add_app_request_json(app_name, input_type, default_output, latency_slo_micros);
+  std::string add_app_json = get_add_app_request_json(
+      app_name, input_type, default_output, latency_slo_micros);
   ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
 
   std::stringstream ss;
@@ -212,8 +224,10 @@ TEST_F(ManagementFrontendTest, TestAddAppLinksProhibitedChars) {
   std::vector<std::string> bad_model_names = {bad_model_name};
 
   // Attempting to add an app link to a model with invalid character should fail
-  std::string add_app_bad_links_json = get_add_app_links_request_json(app_name, bad_model_names);
-  ASSERT_THROW(rh_.add_app_links(add_app_bad_links_json), std::invalid_argument);
+  std::string add_app_bad_links_json =
+      get_add_app_links_request_json(app_name, bad_model_names);
+  ASSERT_THROW(rh_.add_app_links(add_app_bad_links_json),
+               std::invalid_argument);
 }
 
 TEST_F(ManagementFrontendTest, TestAddAppLinkMalformedJson) {
@@ -232,7 +246,8 @@ TEST_F(ManagementFrontendTest, TestAddAppLinkMissingField) {
       "app_name": "myappname"
     }
   )";
-  ASSERT_THROW(rh_.add_app_links(missing_field_add_links_json), json_semantic_error);
+  ASSERT_THROW(rh_.add_app_links(missing_field_add_links_json),
+               json_semantic_error);
 }
 
 TEST_F(ManagementFrontendTest, TestGetAppLinks) {
@@ -240,7 +255,8 @@ TEST_F(ManagementFrontendTest, TestGetAppLinks) {
   std::string app_name = "myappname";
   std::string input_type = "integers";
   std::string default_output = "4.3";
-  std::string add_app_json = get_add_app_request_json(app_name, input_type, default_output, 1000);
+  std::string add_app_json =
+      get_add_app_request_json(app_name, input_type, default_output, 1000);
   ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
 
   // Confirm that no links exist
@@ -249,8 +265,10 @@ TEST_F(ManagementFrontendTest, TestGetAppLinks) {
   ASSERT_EQ("[]", result);
 
   // Add the link
-  std::vector<std::string> model_names = std::vector<std::string>{"mymodelname"};
-  std::string add_links_json = get_add_app_links_request_json(app_name, model_names);
+  std::vector<std::string> model_names =
+      std::vector<std::string>{"mymodelname"};
+  std::string add_links_json =
+      get_add_app_links_request_json(app_name, model_names);
   ASSERT_EQ(rh_.add_app_links(add_links_json), "Success!");
 
   result = rh_.get_app_links(get_app_links_json);
@@ -277,13 +295,15 @@ TEST_F(ManagementFrontendTest, TestGetAppLinksMalformedJson) {
       app_name : "a
     }
   )";
-  ASSERT_THROW(rh_.get_app_links(malformed_get_app_links_json), json_parse_error);
+  ASSERT_THROW(rh_.get_app_links(malformed_get_app_links_json),
+               json_parse_error);
 }
 TEST_F(ManagementFrontendTest, TestAddDuplicateApplication) {
   std::string app_name = "myappname";
   std::string input_type = "integers";
   std::string default_output = "4.3";
-  std::string add_app_json = get_add_app_request_json(app_name, input_type, default_output, 1000);
+  std::string add_app_json =
+      get_add_app_request_json(app_name, input_type, default_output, 1000);
 
   ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
   auto result = get_application(*redis_, "myappname");
@@ -295,15 +315,14 @@ TEST_F(ManagementFrontendTest, TestAddDuplicateApplication) {
   ASSERT_THROW(rh_.add_application(add_app_json), std::invalid_argument);
 }
 
-
-
 TEST_F(ManagementFrontendTest, TestGetApplicationCorrect) {
   // Register the application
   std::string name = "my_app_name";
   std::string input_type = "doubles";
   std::string default_output = "my_default_output";
   int latency_slo_micros = 10000;
-  std::string add_app_json = get_add_app_request_json(name, input_type, default_output, latency_slo_micros);
+  std::string add_app_json = get_add_app_request_json(
+      name, input_type, default_output, latency_slo_micros);
   ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
 
   std::string get_app_json = get_app_json_request_string(name);
@@ -315,11 +334,13 @@ TEST_F(ManagementFrontendTest, TestGetApplicationCorrect) {
 
   std::string response_name = get_string(response_doc, "name");
   std::string response_input_type = get_string(response_doc, "input_type");
-  std::string response_default_output = get_string(response_doc, "default_output");
+  std::string response_default_output =
+      get_string(response_doc, "default_output");
   int response_latency_slo_micros = get_int(response_doc, "latency_slo_micros");
   auto initial_linked_models = get_string_array(response_doc, "linked_models");
 
-  // Confirm that get_application results match values submitted with registration request
+  // Confirm that get_application results match values submitted with
+  // registration request
   ASSERT_EQ(response_name, name);
   ASSERT_EQ(response_input_type, input_type);
   ASSERT_EQ(response_default_output, default_output);
@@ -327,8 +348,10 @@ TEST_F(ManagementFrontendTest, TestGetApplicationCorrect) {
   ASSERT_EQ(initial_linked_models, std::vector<std::string>{});
 
   // Link models
-  std::vector<std::string> model_names = std::vector<std::string>{"mymodelname"};
-  std::string add_links_json = get_add_app_links_request_json(name, model_names);
+  std::vector<std::string> model_names =
+      std::vector<std::string>{"mymodelname"};
+  std::string add_links_json =
+      get_add_app_links_request_json(name, model_names);
   ASSERT_EQ(rh_.add_app_links(add_links_json), "Success!");
 
   json_response = rh_.get_application(get_app_json);
@@ -367,15 +390,19 @@ TEST_F(ManagementFrontendTest, TestGetAllApplicationsVerboseCorrect) {
   std::string default_output = "1.0";
   int latency_slo_micros = 10000;
 
-  std::string add_app1_json_string = get_add_app_request_json(name1, input_type, default_output, latency_slo_micros);
-  std::string add_app2_json_string = get_add_app_request_json(name2, input_type, default_output, latency_slo_micros);
+  std::string add_app1_json_string = get_add_app_request_json(
+      name1, input_type, default_output, latency_slo_micros);
+  std::string add_app2_json_string = get_add_app_request_json(
+      name2, input_type, default_output, latency_slo_micros);
 
   ASSERT_EQ(rh_.add_application(add_app1_json_string), "Success!");
   ASSERT_EQ(rh_.add_application(add_app2_json_string), "Success!");
 
   // Link models to app with name app1
-  std::vector<std::string> model_names = std::vector<std::string>{"mymodelname"};
-  std::string add_links_json = get_add_app_links_request_json(name1, model_names);
+  std::vector<std::string> model_names =
+      std::vector<std::string>{"mymodelname"};
+  std::string add_links_json =
+      get_add_app_links_request_json(name1, model_names);
   ASSERT_EQ(rh_.add_app_links(add_links_json), "Success!");
 
   std::string get_apps_verbose_json = R"(
@@ -403,16 +430,24 @@ TEST_F(ManagementFrontendTest, TestGetAllApplicationsVerboseCorrect) {
   }
 
   std::string app1_response_name = get_string(app1_response_doc, "name");
-  std::string app1_response_input_type = get_string(app1_response_doc, "input_type");
-  std::string app1_response_default_output = get_string(app1_response_doc, "default_output");
-  int app1_response_latency_slo_micros = get_int(app1_response_doc, "latency_slo_micros");
-  auto app1_linked_models = get_string_array(app1_response_doc, "linked_models");
+  std::string app1_response_input_type =
+      get_string(app1_response_doc, "input_type");
+  std::string app1_response_default_output =
+      get_string(app1_response_doc, "default_output");
+  int app1_response_latency_slo_micros =
+      get_int(app1_response_doc, "latency_slo_micros");
+  auto app1_linked_models =
+      get_string_array(app1_response_doc, "linked_models");
 
   std::string app2_response_name = get_string(app2_response_doc, "name");
-  std::string app2_response_input_type = get_string(app2_response_doc, "input_type");
-  std::string app2_response_default_output = get_string(app2_response_doc, "default_output");
-  int app2_response_latency_slo_micros = get_int(app2_response_doc, "latency_slo_micros");
-  auto app2_linked_models = get_string_array(app2_response_doc, "linked_models");
+  std::string app2_response_input_type =
+      get_string(app2_response_doc, "input_type");
+  std::string app2_response_default_output =
+      get_string(app2_response_doc, "default_output");
+  int app2_response_latency_slo_micros =
+      get_int(app2_response_doc, "latency_slo_micros");
+  auto app2_linked_models =
+      get_string_array(app2_response_doc, "linked_models");
 
   ASSERT_EQ(app1_response_name, name1);
   ASSERT_EQ(app1_response_input_type, input_type);
@@ -460,8 +495,10 @@ TEST_F(ManagementFrontendTest, TestGetAllApplicationsNotVerboseCorrect) {
   std::string default_output = "1.0";
   int latency_slo_micros = 10000;
 
-  std::string add_app1_json_string = get_add_app_request_json(name1, input_type, default_output, latency_slo_micros);
-  std::string add_app2_json_string = get_add_app_request_json(name2, input_type, default_output, latency_slo_micros);
+  std::string add_app1_json_string = get_add_app_request_json(
+      name1, input_type, default_output, latency_slo_micros);
+  std::string add_app2_json_string = get_add_app_request_json(
+      name2, input_type, default_output, latency_slo_micros);
 
   ASSERT_EQ(rh_.add_application(add_app1_json_string), "Success!");
   ASSERT_EQ(rh_.add_application(add_app2_json_string), "Success!");

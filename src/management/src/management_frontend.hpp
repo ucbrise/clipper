@@ -201,22 +201,22 @@ class RequestHandler {
         ADD_APP_LINKS, "POST",
         [this](std::shared_ptr<HttpServer::Response> response,
                std::shared_ptr<HttpServer::Request> request) {
-            try {
-              clipper::log_info(LOGGING_TAG_MANAGEMENT_FRONTEND,
-                                "Add application links POST request");
-              std::string result = add_app_links(request->content.string());
-              respond_http(result, "200 OK", response);
-            } catch (const json_parse_error& e) {
-              std::string err_msg =
-                      json_error_msg(e.what(), ADD_APP_LINKS_JSON_SCHEMA);
-              respond_http(err_msg, "400 Bad Request", response);
-            } catch (const json_semantic_error& e) {
-              std::string err_msg =
-                      json_error_msg(e.what(), ADD_APP_LINKS_JSON_SCHEMA);
-              respond_http(err_msg, "400 Bad Request", response);
-            } catch (const std::invalid_argument& e) {
-              respond_http(e.what(), "400 Bad Request", response);
-            }
+          try {
+            clipper::log_info(LOGGING_TAG_MANAGEMENT_FRONTEND,
+                              "Add application links POST request");
+            std::string result = add_app_links(request->content.string());
+            respond_http(result, "200 OK", response);
+          } catch (const json_parse_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), ADD_APP_LINKS_JSON_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const json_semantic_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), ADD_APP_LINKS_JSON_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const std::invalid_argument& e) {
+            respond_http(e.what(), "400 Bad Request", response);
+          }
         });
     server_.add_endpoint(
         ADD_MODEL, "POST",
@@ -316,22 +316,22 @@ class RequestHandler {
         GET_APP_LINKS, "POST",
         [this](std::shared_ptr<HttpServer::Response> response,
                std::shared_ptr<HttpServer::Request> request) {
-            try {
-              clipper::log_info(LOGGING_TAG_MANAGEMENT_FRONTEND,
-                                "Get application links POST request");
-              std::string result = get_app_links(request->content.string());
-              respond_http(result, "200 OK", response);
-            } catch (const json_parse_error& e) {
-              std::string err_msg =
-                      json_error_msg(e.what(), GET_APP_LINKS_REQUESTS_SCHEMA);
-              respond_http(err_msg, "400 Bad Request", response);
-            } catch (const json_semantic_error& e) {
-              std::string err_msg =
-                      json_error_msg(e.what(), GET_APP_LINKS_REQUESTS_SCHEMA);
-              respond_http(err_msg, "400 Bad Request", response);
-            } catch (const std::invalid_argument& e) {
-              respond_http(e.what(), "400 Bad Request", response);
-            }
+          try {
+            clipper::log_info(LOGGING_TAG_MANAGEMENT_FRONTEND,
+                              "Get application links POST request");
+            std::string result = get_app_links(request->content.string());
+            respond_http(result, "200 OK", response);
+          } catch (const json_parse_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), GET_APP_LINKS_REQUESTS_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const json_semantic_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), GET_APP_LINKS_REQUESTS_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const std::invalid_argument& e) {
+            respond_http(e.what(), "400 Bad Request", response);
+          }
         });
     server_.add_endpoint(
         GET_ALL_MODELS, "POST",
@@ -471,16 +471,16 @@ class RequestHandler {
     }
   }
 
-  std::string add_app_links(const std::string &json) {
+  std::string add_app_links(const std::string& json) {
     rapidjson::Document d;
     parse_json(json, d);
 
     std::string app_name = get_string(d, "app_name");
-    std::vector<string> model_names =
-            get_string_array(d, "model_names");
+    std::vector<string> model_names = get_string_array(d, "model_names");
 
     // Confirm that the app exists
-    auto app_info = clipper::redis::get_application(redis_connection_, app_name);
+    auto app_info =
+        clipper::redis::get_application(redis_connection_, app_name);
     if (app_info.size() == 0) {
       std::stringstream ss;
       ss << "No app with name " << app_name << " exists.";
@@ -491,7 +491,8 @@ class RequestHandler {
     if (model_names.size() != 1) {
       std::stringstream ss;
       if (model_names.size() == 0) {
-        ss << "Please provide the name of the model with which you want" << app_name << " to be linked";
+        ss << "Please provide the name of the model with which you want"
+           << app_name << " to be linked";
       } else {
         ss << "Applications must be linked with at most one model. ";
         ss << "Attempted to add links to " << model_names.size() << " models.";
@@ -502,30 +503,32 @@ class RequestHandler {
     }
 
     // Check to see if there are already any links
-    auto existing_app_links = clipper::redis::get_app_links(redis_connection_, app_name);
+    auto existing_app_links =
+        clipper::redis::get_app_links(redis_connection_, app_name);
 
     // Make sure that there is only one link
     if (existing_app_links.size() > 0) {
       // We asserted earlier that `model_names` has size 1
       std::string new_model_name = model_names[0];
 
-      if (std::find(existing_app_links.begin(), existing_app_links.end(), new_model_name) != existing_app_links.end()) {
+      if (std::find(existing_app_links.begin(), existing_app_links.end(),
+                    new_model_name) != existing_app_links.end()) {
         return "Success!";
       } else {
         std::stringstream ss;
-        ss << "There already exist links to different models for app " << app_name << ".";
+        ss << "There already exist links to different models for app "
+           << app_name << ".";
         throw std::invalid_argument(ss.str());
       }
     }
 
     // Validate strings that will be grouped before supplying to redis
     for (auto model_name : model_names) {
-      validate_group_str_for_redis(model_name,
-                                   "model name");
+      validate_group_str_for_redis(model_name, "model name");
     }
 
-    if (clipper::redis::add_app_link(
-            redis_connection_, app_name, model_names)) {
+    if (clipper::redis::add_app_link(redis_connection_, app_name,
+                                     model_names)) {
       return "Success!";
     } else {
       std::stringstream ss;
@@ -541,14 +544,16 @@ class RequestHandler {
     std::string app_name = get_string(d, "app_name");
 
     // Confirm that the app exists
-    auto app_info = clipper::redis::get_application(redis_connection_, app_name);
+    auto app_info =
+        clipper::redis::get_application(redis_connection_, app_name);
     if (app_info.size() == 0) {
       std::stringstream ss;
       ss << "No app with name " << app_name << " exists.";
       throw std::invalid_argument(ss.str());
     }
 
-    auto model_names = clipper::redis::get_app_links(redis_connection_, app_name);
+    auto model_names =
+        clipper::redis::get_app_links(redis_connection_, app_name);
     rapidjson::Document response_doc;
     set_string_array(response_doc, model_names);
 
@@ -576,7 +581,6 @@ class RequestHandler {
         clipper::parse_input_type(get_string(d, "input_type"));
     std::string default_output = get_string(d, "default_output");
 
-
     std::string selection_policy =
         clipper::DefaultOutputSelectionPolicy::get_name();
     int latency_slo_micros = get_int(d, "latency_slo_micros");
@@ -584,9 +588,9 @@ class RequestHandler {
     std::unordered_map<std::string, std::string> existing_app_data =
         clipper::redis::get_application(redis_connection_, app_name);
     if (existing_app_data.empty()) {
-      if (clipper::redis::add_application(
-              redis_connection_, app_name, input_type,
-              selection_policy, default_output, latency_slo_micros)) {
+      if (clipper::redis::add_application(redis_connection_, app_name,
+                                          input_type, selection_policy,
+                                          default_output, latency_slo_micros)) {
         return "Success!";
       } else {
         std::stringstream ss;
@@ -693,7 +697,8 @@ class RequestHandler {
         /* We need to add each app's name to the returned JSON object. */
         add_string(app_doc, "name", app_name);
         /* We need to add linked models to the returned JSON object */
-        linked_models = clipper::redis::get_app_links(redis_connection_, app_name);
+        linked_models =
+            clipper::redis::get_app_links(redis_connection_, app_name);
         add_string_array(app_doc, "linked_models", linked_models);
         response_doc.PushBack(app_doc, response_doc.GetAllocator());
       }
@@ -738,7 +743,8 @@ class RequestHandler {
       /* If an app does exist, we need to add its name to the map. */
       redis_app_metadata_to_json(response_doc, app_metadata);
       add_string(response_doc, "name", app_name);
-      auto linked_models = clipper::redis::get_app_links(redis_connection_, app_name);
+      auto linked_models =
+          clipper::redis::get_app_links(redis_connection_, app_name);
       add_string_array(response_doc, "linked_models", linked_models);
     }
 

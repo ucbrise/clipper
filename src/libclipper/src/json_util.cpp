@@ -384,19 +384,17 @@ std::string to_json_string(rapidjson::Document& d) {
   return buffer.GetString();
 }
 
-
-void set_string_array(rapidjson::Document &d,
-                      const std::vector<std::string> &str_array) {
+void set_string_array(rapidjson::Document& d,
+                      const std::vector<std::string>& str_array) {
   d.SetArray();
   for (auto str : str_array) {
-    rapidjson::Value string_val(
-            rapidjson::StringRef(str.c_str(), str.length()),
-            d.GetAllocator());
+    rapidjson::Value string_val(rapidjson::StringRef(str.c_str(), str.length()),
+                                d.GetAllocator());
     d.PushBack(string_val, d.GetAllocator());
   }
 }
 
-std::vector<std::string> to_string_array(rapidjson::Document &d) {
+std::vector<std::string> to_string_array(rapidjson::Document& d) {
   if (!d.IsArray()) {
     throw json_semantic_error("Document must be of array type");
   }

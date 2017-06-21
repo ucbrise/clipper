@@ -278,10 +278,8 @@ TEST_F(RedisToJsonTest, TestRedisAppMetadataToJson) {
   std::string default_output = "1.0";
   int latency_slo_micros = 10000;
   std::string selection_policy = DefaultOutputSelectionPolicy::get_name();
-  std::vector<std::string> candidate_model_names =
-      std::vector<std::string>{"m", "k"};
 
-  ASSERT_TRUE(add_application(*redis_, "myappname", candidate_model_names,
+  ASSERT_TRUE(add_application(*redis_, "myappname",
                               parse_input_type(input_type), selection_policy,
                               default_output, latency_slo_micros));
   std::unordered_map<std::string, std::string> app_metadata =
@@ -293,8 +291,6 @@ TEST_F(RedisToJsonTest, TestRedisAppMetadataToJson) {
   ASSERT_EQ(get_string(d, "input_type"), input_type);
   ASSERT_EQ(get_string(d, "default_output"), default_output);
   ASSERT_EQ(get_int(d, "latency_slo_micros"), latency_slo_micros);
-  ASSERT_EQ(get_string_array(d, "candidate_model_names"),
-            candidate_model_names);
 }
 
 TEST_F(RedisToJsonTest, TestRedisModelMetadataToJson) {
