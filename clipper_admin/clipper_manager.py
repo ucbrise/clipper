@@ -1256,17 +1256,14 @@ class Clipper:
                  "container docker image")
             return False
 
-
-
-
     def deploy_R_model(self,
-                     name,
-                     version,
-                     model_data,
-                     container_name,
-                     input_type,
-                     labels=DEFAULT_LABEL,
-                     num_containers=1):
+                       name,
+                       version,
+                       model_data,
+                       container_name,
+                       input_type,
+                       labels=DEFAULT_LABEL,
+                       num_containers=1):
         """Registers a model with Clipper and deploys instances of it in containers.
         Parameters
         ----------
@@ -1295,7 +1292,6 @@ class Clipper:
         from rpy2.robjects.packages import importr
         base = importr('base')
 
-
         with hide("warnings", "output", "running"):
             fname = name.replace("/", "_")
             rds_path = '/tmp/%s/%s.rds' % (fname, fname)
@@ -1304,10 +1300,10 @@ class Clipper:
                 os.mkdir(model_data_path)
             except OSError:
                 pass
-            base.saveRDS(model_data,rds_path)           
+            base.saveRDS(model_data, rds_path)
 
             vol = "{model_repo}/{name}/{version}".format(
-                 model_repo=MODEL_REPO, name=name, version=version)
+                model_repo=MODEL_REPO, name=name, version=version)
             # publish model to Clipper and verify success before copying model
             # parameters to Clipper and starting containers
             if not self._publish_new_model(
@@ -1316,23 +1312,16 @@ class Clipper:
                 return False
             print("Published model to Clipper")
 
-
             # Put model parameter data on host
             with hide("warnings", "output", "running"):
                 self._execute_standard("mkdir -p {vol}".format(vol=vol))
 
             with hide("output", "running"):
-                self._execute_put(model_data_path, vol) 
+                self._execute_put(model_data_path, vol)
 
             print("Copied model data to host")
             # aggregate results of starting all containers
             return all([
                 self.add_container(name, version)
                 for r in range(num_containers)
-            ]) 
-            
-
-
-
-
-
+            ])

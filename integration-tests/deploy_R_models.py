@@ -21,13 +21,12 @@ pandas2ri.activate()
 stats = importr('stats')
 base = importr('base')
 
-
 headers = {'Content-type': 'application/json'}
 app_name = "R_model_test"
 model_name = "R_model"
 
 import sys
-if sys.version_info[0] < 3: 
+if sys.version_info[0] < 3:
     from StringIO import StringIO
 else:
     from io import StringIO
@@ -71,19 +70,18 @@ def train_R_model():
     return ro.r('model_R <- lm(mpg~wt+cyl,data=train_data)')
 
 
-
 def call_predictions(query_string):
-    default=0
-    url= "http://localhost:1337/%s/predict" % app_name
-    req_json = json.dumps({'uid': 0, 'input':query_string })
+    default = 0
+    url = "http://localhost:1337/%s/predict" % app_name
+    req_json = json.dumps({'uid': 0, 'input': query_string})
     response = requests.post(url, headers=headers, data=req_json)
-    result=response.json()
+    result = response.json()
 
     x = pandas.read_csv(StringIO(result["output"]), sep=";", index_col=0)
     print(x)
 
     if response.status_code == requests.codes.ok and result["default"] == True:
-        default=1
+        default = 1
     elif response.status_code != requests.codes.ok:
         print(result)
         raise BenchmarkException(response.text)
@@ -98,13 +96,14 @@ def predict_R_model(df):
     num_defaults += call_predictions(query_string)
     return num_defaults
 
-def deploy_and_test_model(clipper, model, version,test_data):
-    clipper.deploy_R_model(model_name, version, model,"clipper/r_python_container:latest",
-                                 "string")
+
+def deploy_and_test_model(clipper, model, version, test_data):
+    clipper.deploy_R_model(model_name, version, model,
+                           "clipper/r_python_container:latest", "string")
     time.sleep(25)
     num_defaults = 0
-    num_preds=len(test_data)
-    num_defaults=predict_R_model(test_data)
+    num_preds = len(test_data)
+    num_defaults = predict_R_model(test_data)
 
     if num_defaults > 0:
         print("Error: %d/%d predictions were default" % (num_defaults,
@@ -112,8 +111,6 @@ def deploy_and_test_model(clipper, model, version,test_data):
     if num_defaults > num_preds / 2:
         raise BenchmarkException("Error querying APP %s, MODEL %s:%d" %
                                  (app_name, model_name, version))
-
-
 
 
 if __name__ == "__main__":
@@ -124,8 +121,8 @@ if __name__ == "__main__":
         #preparing datasets for training and testing 
         #using dataset mtcars , already provided by R. It has 32 rows and various coloums for eg. mpg,wt,cyl etc  
         #splitting it for training and testing in ratio 3:2
-        train_data=ro.r('train_data=head(mtcars,0.6*nrow(mtcars))')
-        test_data=ro.r('test_data=tail(mtcars,0.4*nrow(mtcars))')
+        train_data = ro.r('train_data=head(mtcars,0.6*nrow(mtcars))')
+        test_data = ro.r('test_data=tail(mtcars,0.4*nrow(mtcars))')
 
         try:
             clipper.register_application(app_name, model_name, "string",
@@ -135,7 +132,7 @@ if __name__ == "__main__":
                 "http://localhost:1337/%s/predict" % app_name,
                 headers=headers,
                 data=json.dumps({
-                    'uid' : 0,
+                    'uid': 0,
                     'input': ""
                 }))
             result = response.json()
@@ -144,8 +141,8 @@ if __name__ == "__main__":
                 raise BenchmarkException("Error creating app %s" % app_name)
 
             version = 1
-            R_model=train_R_model()
-            deploy_and_test_model(clipper,R_model,version,test_data)
+            R_model = train_R_model()
+            deploy_and_test_model(clipper, R_model, version, test_data)
         except BenchmarkException as e:
             print(e)
             clipper.stop_all()

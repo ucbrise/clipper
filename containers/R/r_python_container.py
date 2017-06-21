@@ -10,15 +10,16 @@ import rpy2.robjects as ro
 stats = importr('stats')
 base = importr('base')
 import sys
-if sys.version_info[0] < 3: 
+if sys.version_info[0] < 3:
     from StringIO import StringIO
 else:
     from io import StringIO
 
+
 class RContainer(rpc.ModelContainerBase):
     def __init__(self, path):
         print("initiating MyRContainer")
-        self.model = base.readRDS(path)  
+        self.model = base.readRDS(path)
         print("Loaded %s model" % type(self.model), file=sys.stderr)
         self.path = path
 
@@ -61,7 +62,6 @@ if __name__ == "__main__":
         ip = os.environ["CLIPPER_IP"]
     else:
         print("Connecting to Clipper on localhost")
-    
 
     port = 7000
     if "CLIPPER_PORT" in os.environ:
@@ -72,16 +72,16 @@ if __name__ == "__main__":
     input_type = "strings"
     model_path = os.environ["CLIPPER_MODEL_PATH"]
 
-    rds_names=[
-           l for l in os.listdir(model_path) if os.path.splitext(l)[-1] == ".rds"
-    ] 
+    rds_names = [
+        l for l in os.listdir(model_path) if os.path.splitext(l)[-1] == ".rds"
+    ]
 
     if len(rds_names) != 1:
         print("Found %d *.rds files. Expected 1" % len(rds_names))
         sys.exit(1)
     rds_path = os.path.join(model_path, rds_names[0])
     print(rds_path, file=sys.stdout)
-    
-    model=RContainer(rds_path)
+
+    model = RContainer(rds_path)
     rpc_service = rpc.RPCService()
     rpc_service.start(model, ip, port, model_name, model_version, input_type)
