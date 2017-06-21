@@ -181,6 +181,9 @@ std::vector<std::string> get_all_model_names(redox::Redox& redis);
  */
 std::vector<VersionedModelId> get_all_models(redox::Redox& redis);
 
+boost::optional<std::vector<std::string>> get_candidate_models(
+        redox::Redox& redis, const std::string& app_name);
+
 /**
  * Adds a container into the container table. This will
  * overwrite any existing entry with the same key.
@@ -251,10 +254,12 @@ std::vector<std::pair<VersionedModelId, int>> get_all_containers(
  * \return Returns true of the add was successful.
  */
 bool add_application(redox::Redox& redis, const std::string& appname,
-                     const std::vector<std::string>& models,
                      const InputType& input_type, const std::string& policy,
                      const std::string& default_output,
                      const long latency_slo_micros);
+
+bool add_app_link(redox::Redox& redis, const std::string& appname,
+                  const std::vector<std::string>& model_names);
 
 /**
  * Deletes a container from the container table if it exists.

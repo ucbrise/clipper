@@ -64,10 +64,16 @@ const std::string GET_CONTAINER = ADMIN_PATH + "/get_container$";
 const std::string ADD_APPLICATION_JSON_SCHEMA = R"(
   {
    "name" := string,
-   "candidate_model_names" := [string],
    "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
    "default_output" := string,
    "latency_slo_micros" := int
+  }
+)";
+
+const std::string ADD_APP_LINKS_JSON_SCHEMA = R"(
+  {
+    "app_name" := string,
+    "model_names" := := [string]
   }
 )";
 
@@ -413,6 +419,44 @@ class RequestHandler {
     }
   }
 
+  std::string add_app_link(const std::string &json) {
+    rapidjson::Document d;
+    parse_json(json, d);
+
+    std::string app_name = get_string(d, "app_name");
+    std::vector<string> model_names =
+            get_string_array(d, "model_names");
+    if (model_names.size() != 1) {
+      std::stringstream ss;
+      if (model_names.size() == 0) {
+        ss << "Please provide the name of the model with which you want" << app_name << " to be linked";
+      } else {
+        ss << "Applications must be linked with at most one model. ";
+        ss << "Attempted to add links to " << model_names.size() << " models.";
+      }
+      std::string error_msg = ss.str();
+      clipper::log_error(LOGGING_TAG_MANAGEMENT_FRONTEND, error_msg);
+      throw std::invalid_argument(error_msg);
+    }
+
+    // check to see if there are already any links and error if there are
+
+    // Validate strings that will be grouped before supplying to redis
+    for (auto model_name : model_names) {
+      validate_group_str_for_redis(model_name,
+                                   "model name");
+    }
+
+    if (clipper::redis::add_app_link(
+            redis_connection_, app_name, model_names)) {
+      return "Success!";
+    } else {
+      std::stringstream ss;
+      ss << "Error linking models to " << app_name << " in Redis";
+      throw std::invalid_argument(ss.str());
+    }
+  }
+
   /**
    * Creates an endpoint that listens for requests to add new prediction
    * applications to Clipper.
@@ -420,7 +464,6 @@ class RequestHandler {
    * JSON format:
    * {
    *  "name" := string,
-   *  "candidate_model_names" := [string],
    *  "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
    *  "default_output" := string,
    *  "latency_slo_micros" := int
@@ -445,11 +488,6 @@ class RequestHandler {
         clipper::parse_input_type(get_string(d, "input_type"));
     std::string default_output = get_string(d, "default_output");
 
-    // Validate strings that will be grouped before supplying to redis
-    for (auto candidate_model_name : candidate_model_names) {
-      validate_group_str_for_redis(candidate_model_name,
-                                   "candidate model name");
-    }
 
     std::string selection_policy =
         clipper::DefaultOutputSelectionPolicy::get_name();
@@ -459,7 +497,7 @@ class RequestHandler {
         clipper::redis::get_application(redis_connection_, app_name);
     if (existing_app_data.empty()) {
       if (clipper::redis::add_application(
-              redis_connection_, app_name, candidate_model_names, input_type,
+              redis_connection_, app_name, input_type,
               selection_policy, default_output, latency_slo_micros)) {
         return "Success!";
       } else {

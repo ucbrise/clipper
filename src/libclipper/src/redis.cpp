@@ -209,6 +209,22 @@ boost::optional<std::string> get_current_model_version(
   return boost::none;
 }
 
+boost::optional<std::vector<std::string>> get_candidate_models(
+        redox::Redox& redis, const std::string& app_name) {
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_APP_LINKS_DB_NUM)})) {
+    auto result = send_cmd_with_reply<std::vector<std::string>>(redis, {"GET", app_name});
+    if (result) {
+      auto model_data = *result;
+      auto map = parse_redis_map(model_data);
+      return str_to_model_names(map["model_names"]);
+    }
+  }
+  log_error_formatted(LOGGING_TAG_REDIS, "No candidate models found for app {}",
+                      app_name);
+  return boost::none;
+}
+
 bool add_model(Redox& redis, const VersionedModelId& model_id,
                const InputType& input_type, const vector<string>& labels,
                const std::string& container_name,
@@ -414,7 +430,6 @@ std::vector<std::pair<VersionedModelId, int>> get_all_containers(
 }
 
 bool add_application(redox::Redox& redis, const std::string& appname,
-                     const std::vector<std::string>& models,
                      const InputType& input_type, const std::string& policy,
                      const std::string& default_output,
                      const long latency_slo_micros) {
@@ -422,8 +437,6 @@ bool add_application(redox::Redox& redis, const std::string& appname,
           redis, {"SELECT", std::to_string(REDIS_APPLICATION_DB_NUM)})) {
     const vector<string> cmd_vec{"HMSET",
                                  appname,
-                                 "candidate_model_names",
-                                 model_names_to_str(models),
                                  "input_type",
                                  get_readable_input_type(input_type),
                                  "policy",
@@ -432,6 +445,20 @@ bool add_application(redox::Redox& redis, const std::string& appname,
                                  default_output,
                                  "latency_slo_micros",
                                  std::to_string(latency_slo_micros)};
+    return send_cmd_no_reply<string>(redis, cmd_vec);
+  } else {
+    return false;
+  }
+}
+
+bool add_app_link(redox::Redox& redis, const std::string& appname,
+                  const std::vector<std::string>& model_names) {
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_APP_LINKS_DB_NUM)})) {
+    const vector<string> cmd_vec{"HMSET",
+                                 appname,
+                                 "model_names",
+                                 model_names_to_str(model_names)};
     return send_cmd_no_reply<string>(redis, cmd_vec);
   } else {
     return false;

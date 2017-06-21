@@ -160,18 +160,35 @@ class RequestHandler {
                                         "New application detected: {}", key);
             auto app_info =
                 clipper::redis::get_application_by_key(redis_connection_, key);
-            std::vector<std::string> candidate_model_names =
-                clipper::redis::str_to_model_names(
-                    app_info["candidate_model_names"]);
             InputType input_type =
                 clipper::parse_input_type(app_info["input_type"]);
             std::string policy = app_info["policy"];
             std::string default_output = app_info["default_output"];
             int latency_slo_micros = std::stoi(app_info["latency_slo_micros"]);
-            add_application(name, candidate_model_names, input_type, policy,
+            add_application(name, input_type, policy,
                             default_output, latency_slo_micros);
           }
         });
+
+    clipper::redis::subscribe_to_app_links_changes(redis_subscriber_,
+       [this](const std::string& key, const std::string& event_type) {
+           clipper::log_info_formatted(
+                   LOGGING_TAG_QUERY_FRONTEND,
+                   "APP LINKS EVENT DETECTED. Key: {}, event_type: {}", key,
+                   event_type);
+           if (event_type == "hset") {
+             std::string app_name = key;
+             clipper::log_info_formatted(LOGGING_TAG_QUERY_FRONTEND,
+                                         "New model link detected for app: {}", app_name);
+
+             boost::optional<std::string> new_candidate_models  =
+                     clipper::redis::get_candidate_models(redis_connection_,
+                                                               key);
+             if (*new_candidate_models) {
+               set_candidate_models_for_app(app_name, new_candidate_models);
+             }
+           }
+       });
 
     clipper::redis::subscribe_to_model_version_changes(
         redis_subscriber_,
@@ -252,7 +269,18 @@ class RequestHandler {
     redis_subscriber_.disconnect();
   }
 
-  void add_application(std::string name, std::vector<std::string> models,
+  void set_candidate_models_for_app(std::string name, std::vector<std::string> models) {
+    std::unique_lock<std::mutex> l(candidate_models_for_apps_mutex_);
+    candidate_models_for_apps_[name] = models;
+  }
+
+  std::vector<std::string> get_candidate_models_for_app(std::string name) {
+    std::unique_lock<std::mutex> l(candidate_models_for_apps_mutex_);
+    return candidate_models_for_apps_[name];
+  }
+
+
+  void add_application(std::string name,
                        InputType input_type, std::string policy,
                        std::string default_output, long latency_slo_micros) {
     // TODO: QueryProcessor should handle this. We need to decide how the
@@ -272,10 +300,11 @@ class RequestHandler {
     AppMetrics app_metrics(name);
 
     auto predict_fn = [this, name, input_type, policy, latency_slo_micros,
-                       models, app_metrics](
+                       app_metrics](
         std::shared_ptr<HttpServer::Response> response,
         std::shared_ptr<HttpServer::Request> request) {
       try {
+        std::vector<std::string> models_for_app = get_candidate_models_for_app(name);
         std::vector<VersionedModelId> versioned_models;
         {
           std::unique_lock<std::mutex> l(current_model_versions_mutex_);
@@ -522,6 +551,9 @@ class RequestHandler {
   redox::Subscriber redis_subscriber_;
   std::mutex current_model_versions_mutex_;
   std::unordered_map<std::string, std::string> current_model_versions_;
+
+  std::mutex candidate_models_for_apps_mutex_;
+  std::unordered_map<std::string, std::vector<std::string>> candidate_models_for_apps_;
 };
 
 }  // namespace query_frontend
