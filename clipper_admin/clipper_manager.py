@@ -322,7 +322,7 @@ class Clipper:
             self._execute_root("docker-compose up -d query_frontend")
             print("Clipper is running")
 
-    def register_application(self, name, model, input_type, default_output,
+    def register_application(self, name, input_type, default_output,
                              slo_micros):
         """
         Submits a request to register a new Clipper application and returns whether or
@@ -332,8 +332,6 @@ class Clipper:
         ----------
         name : str
             The name of the application.
-        model : str
-            The name of the model this application will query.
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
         default_output : string
@@ -361,7 +359,6 @@ class Clipper:
                                               CLIPPER_MANAGEMENT_PORT)
         req_json = json.dumps({
             "name": name,
-            "candidate_model_names": [model],
             "input_type": input_type,
             "default_output": default_output,
             "latency_slo_micros": slo_micros
@@ -370,6 +367,44 @@ class Clipper:
         r = requests.post(url, headers=headers, data=req_json)
         print(r.text)
         return r.status_code == requests.codes.ok
+
+    def link_model_to_app(self, app_name, model_name):
+        """Allows the model to be used by app
+
+        Parameters
+        ----------
+        app_name : str
+            The name of the application
+        model_name : str
+            The name of the model to link to the application
+        """
+        url = "http://%s:%d/admin/add_app_links" % (self.host,
+                                      CLIPPER_MANAGEMENT_PORT)
+        req_json = json.dumps({
+            "app_name": app_name,
+            "model_names": [model_name]
+        })
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
+        print(r.text)
+
+    def get_linked_models(self, app_name):
+        """Retrieves the models linked to the app
+
+        Parameters
+        ----------
+        app_name : str
+            The name of the application
+        """
+        url = "http://%s:%d/admin/get_app_links" % (self.host,
+                                      CLIPPER_MANAGEMENT_PORT)
+        req_json = json.dumps({
+            "app_name": app_name
+        })
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
+        print(r.text)
+
 
     def get_all_apps(self, verbose=False):
         """Gets information about all applications registered with Clipper.
