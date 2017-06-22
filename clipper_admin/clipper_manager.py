@@ -44,6 +44,8 @@ CLIPPER_LOGS_PATH = "/tmp/clipper-logs"
 CLIPPER_DOCKER_LABEL = "ai.clipper.container.label"
 CLIPPER_MODEL_CONTAINER_LABEL = "ai.clipper.model_container.model_version"
 
+DEFAULT_MODEL_VERSION = 1
+DEFAULT_SLO_MICROS = 10000
 DEFAULT_LABEL = ["DEFAULT"]
 
 aws_cli_config = """
@@ -348,8 +350,8 @@ class Clipper:
 
         Returns
         -------
-        Requests object
-            The response object for the app registration request
+        bool
+            Returns true iff the app reigstration request was successful
 
         """
         url = "http://%s:%d/admin/add_app" % (self.host,
@@ -364,7 +366,7 @@ class Clipper:
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
         print(r.text)
-        return r
+        return r.status_code == requests.codes.ok
 
     def get_all_apps(self, verbose=False):
         """Gets information about all applications registered with Clipper.
@@ -742,72 +744,97 @@ class Clipper:
 
         return deploy_result
 
-    def _register_app_and_check_success(self, app_name, model_name, input_type,
-                                        default_output, slo_micros):
-        response = self.register_application(app_name, model_name, input_type,
-                                             default_output, slo_micros)
-        if response.status_code != 200:
-            print(
-                "Application registration unsuccessful. Will not deploy model.")
-            return False
-        print("Application registration sucessful! Deploying model.")
-        return True
+    def _register_app_and_check_success(self, name, input_type, default_output,
+                                        slo_micros):
+        if self.register_application(name, name, input_type, default_output,
+                                     slo_micros):
+            print("Application registration sucessful! Deploying model.")
+            return True
+        print("Application registration unsuccessful. Will not deploy model.")
+        return False
 
-    def register_app_and_deploy_model(self,
-                                      app_name,
-                                      model_name,
-                                      model_version,
-                                      input_type,
-                                      default_output,
-                                      slo_micros,
-                                      model_data,
-                                      container_name,
-                                      labels=DEFAULT_LABEL,
-                                      num_containers=1):
+    def activate_predict_function(self,
+                                  name,
+                                  predict_function,
+                                  default_output,
+                                  input_type,
+                                  model_version=DEFAULT_MODEL_VERSION,
+                                  slo_micros=DEFAULT_SLO_MICROS,
+                                  labels=DEFAULT_LABEL,
+                                  num_containers=1):
+        """Registers an app and deploys provided predict function as a model.
+
+        Parameters
+        ----------
+        name : str
+            The to be assigned to the registered app and deployed model.
+        predict_function : function
+            Please refer to documentation in `deploy_predict_function`.
+        default_output : string
+            Please refer to documentation in `register_application`.
+        input_type : str
+            The input_type to be associated with the registered app and deployed model.
+            One of "integers", "floats", "doubles", "bytes", or "strings".
+        model_version : Any object with a string representation (with __str__ implementation), optional
+            Please refer to documentation in `deploy_predict_function`.
+        slo_micros : int
+            Please refer to documentation in `register_application`.
+        labels : list of str, optional
+            Please refer to documentation in `deploy_predict_function`.
+        num_containers : int, optional
+            Please refer to documentation in `deploy_predict_function`.
+        """
         if not self._register_app_and_check_success(
-                app_name, model_name, input_type, default_output, slo_micros):
+                name, input_type, default_output, slo_micros):
             return False
 
-        return self.deploy_model(model_name, model_version, model_data,
-                                 container_name, input_type, labels,
-                                 num_containers)
-
-    def register_app_and_deploy_predict_function(self,
-                                                 app_name,
-                                                 model_name,
-                                                 model_version,
-                                                 input_type,
-                                                 default_output,
-                                                 slo_micros,
-                                                 predict_function,
-                                                 labels=DEFAULT_LABEL,
-                                                 num_containers=1):
-        if not self._register_app_and_check_success(
-                app_name, model_name, input_type, default_output, slo_micros):
-            return False
-
-        return self.deploy_predict_function(model_name, model_version,
+        return self.deploy_predict_function(name, model_version,
                                             predict_function, input_type,
                                             labels, num_containers)
 
-    def register_app_and_deploy_pyspark_model(self,
-                                              app_name,
-                                              model_name,
-                                              model_version,
-                                              input_type,
-                                              default_output,
-                                              slo_micros,
-                                              predict_function,
-                                              pyspark_model,
-                                              sc,
-                                              labels=DEFAULT_LABEL,
-                                              num_containers=1):
+    def activate_pyspark_model(self,
+                               name,
+                               predict_function,
+                               pyspark_model,
+                               sc,
+                               default_output,
+                               input_type,
+                               model_version=1,
+                               slo_micros=100000,
+                               labels=DEFAULT_LABEL,
+                               num_containers=1):
+        """Registers an app and deploys provided spark model.
+
+        Parameters
+        ----------
+        name : str
+            The to be assigned to the registered app and deployed model.
+        predict_function : function
+            Please refer to documentation in `deploy_pyspark_model`.
+        pyspark_model : pyspark.mllib.util.Saveable
+            Please refer to documentation in `deploy_pyspark_model`.
+        sc : SparkContext
+            Please refer to documentation in `deploy_pyspark_model`.
+        default_output : string
+            Please refer to documentation in `register_application`.
+        input_type : str
+            The input_type to be associated with the registered app and deployed model.
+            One of "integers", "floats", "doubles", "bytes", or "strings".
+        model_version : Any object with a string representation (with __str__ implementation), optional
+            Please refer to documentation in `deploy_pyspark_model`.
+        slo_micros : int, optional
+            Please refer to documentation in `register_application`.
+        labels : list of str, optional
+            Please refer to documentation in `deploy_pyspark_model`.
+        num_containers : int, optional
+            Please refer to documentation in `deploy_pyspark_model`.
+        """
         if not self._register_app_and_check_success(
-                app_name, model_name, input_type, default_output, slo_micros):
+                name, input_type, default_output, slo_micros):
             return False
 
         return self.deploy_pyspark_model(
-            model_name,
+            name,
             model_version,
             predict_function,
             pyspark_model,

@@ -175,11 +175,11 @@ if __name__ == "__main__":
             deploy_and_test_model(sc, clipper, svm_model, version)
 
             version += 1
-            easy_register_app_name = "easy_register_app_name"
-            clipper.register_app_and_deploy_pyspark_model(
-                easy_register_app_name, model_name, version, "ints",
-                "default_pred", 100000, predict, lr_model, sc)
-            _test_deployed_model(easy_register_app_name, version)
+            app_and_model_name = "easy_register_app_model"
+            clipper.activate_pyspark_model(app_and_model_name, predict,
+                                           lr_model, sc, "default_pred",
+                                           "ints")
+            _test_deployed_model(app_and_model_name, version)
 
         except BenchmarkException as e:
             print(e)

@@ -8,7 +8,8 @@ from sklearn import svm
 from argparse import ArgumentParser
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath('%s/../' % cur_dir))
-from clipper_admin.clipper_manager import Clipper
+import clipper_admin.clipper_manager
+Clipper = clipper_admin.clipper_manager.Clipper
 import random
 import socket
 """
@@ -214,48 +215,24 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertIsNotNone(running_containers_output)
         self.assertGreaterEqual(len(running_containers_output), 1)
 
-    def test_register_app_and_deploy_predict_function_is_successful(self):
-        model_name = "m3"
+    def test_activate_predict_function_is_successful(self):
         model_version = 1
-        app_name = "app2"
+        app_and_model_name = "easy_register_app_model"
         predict_func = lambda inputs: ["0" for x in inputs]
         input_type = "doubles"
 
-        result = self.clipper_inst.register_app_and_deploy_predict_function(
-            app_name, model_name, model_version, input_type, "1.0", 200000,
-            predict_func)
+        result = self.clipper_inst.activate_predict_function(
+            app_and_model_name, predict_func, "1.0", input_type)
 
         self.assertTrue(result)
-        model_info = self.clipper_inst.get_model_info(model_name,
-                                                      model_version)
+        model_info = self.clipper_inst.get_model_info(
+            app_and_model_name,
+            clipper_admin.clipper_manager.DEFAULT_MODEL_VERSION)
         self.assertIsNotNone(model_info)
         running_containers_output = self.clipper_inst._execute_standard(
             "docker ps -q --filter \"ancestor=clipper/python-container\"")
         self.assertIsNotNone(running_containers_output)
         self.assertGreaterEqual(len(running_containers_output), 2)
-
-    def test_register_app_and_deploy_model_is_successful(self):
-        self.clipper_inst.stop_all()
-        self.clipper_inst.start()
-
-        model_name = "m4"
-        model_version = 1
-        model_data = svm.SVC()
-        app_name = "app3"
-        container_name = "clipper/noop-container"
-        input_type = "doubles"
-        model_name = "remove_inactive_test_model"
-        result = self.clipper_inst.register_app_and_deploy_model(
-            app_name, model_name, model_version, input_type, "1.0", 200000,
-            model_data, container_name)
-
-        self.assertTrue(result)
-        running_containers_output = self.clipper_inst._execute_standard(
-            "docker ps -q --filter \"ancestor=clipper/noop-container\"")
-        self.assertIsNotNone(running_containers_output)
-        num_running_containers = running_containers_output.split("\n")
-        print("RUNNING CONTAINERS: %s" % str(num_running_containers))
-        self.assertEqual(len(num_running_containers), 1)
 
 
 class ClipperManagerTestCaseLong(unittest.TestCase):
@@ -342,14 +319,14 @@ SHORT_TEST_ORDERING = [
     'get_app_info_for_registered_app_returns_info_dictionary',
     'get_app_info_for_nonexistent_app_returns_none',
     'test_add_container_for_external_model_fails',
-    'test_model_version_sets_correctly', 'test_get_logs_creates_log_files',
+    'test_model_version_sets_correctly',
+    'test_get_logs_creates_log_files',
     'test_inspect_instance_returns_json_dict',
     'test_model_deploys_successfully',
     'test_add_container_for_deployed_model_succeeds',
     'test_remove_inactive_containers_succeeds',
     'test_predict_function_deploys_successfully',
-    'test_register_app_and_deploy_predict_function_is_successful',
-    'test_register_app_and_deploy_model_is_successful'
+    'test_activate_predict_function_is_successful',
 ]
 
 LONG_TEST_ORDERING = [
