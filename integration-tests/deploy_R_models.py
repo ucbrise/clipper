@@ -143,7 +143,6 @@ def cleanup(clipper, test_succeeded):
         sys.exit(1)
 
 if __name__ == "__main__":
-    pos_label = 3
     try:
         clipper = init_clipper()
 
