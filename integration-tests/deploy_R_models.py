@@ -76,44 +76,71 @@ def call_predictions(query_string):
     req_json = json.dumps({'uid': 0, 'input': query_string})
     response = requests.post(url, headers=headers, data=req_json)
     result = response.json()
-    x = pandas.read_csv(StringIO(result["output"]), sep=";", index_col=0)
-    print(x)
-
     if response.status_code == requests.codes.ok and result["default"] == True:
         default = 1
     elif response.status_code != requests.codes.ok:
         print(result)
         raise BenchmarkException(response.text)
+    else:
+        parsed_output = pandas.read_csv(StringIO(result["output"]), sep=";", index_col=0)
+        print("Request Input:\n{} \nResponse:\n{}\n".format(query_string, parsed_output))
     return default
 
 
 def predict_R_model(df):
-    #This function encodes pandas dataframe to strings,preserving its schema.
-    #Moreover it calls for the actual predictions by invoking call_predictions() method.  
+    """
+    This function splits a dataframe into subframes consisting of a
+    single row. Each subframe is then csv-encoded and sent to Clipper
+    as a prediction request.
+    """
+    num_preds = len(df)
     num_defaults = 0
-    query_string = df.to_csv(sep=";")
-    num_defaults = call_predictions(query_string)
-    return num_defaults
+    for i in range(0, num_preds):
+        subframe = df.iloc[i:i + 1]
+        query_string = subframe.to_csv(sep=";")
+        num_defaults  += call_predictions(query_string)
+    return num_preds, num_defaults
 
 
 def deploy_and_test_model(clipper, model, version, test_data_collection):
-    #test_data_collection is dictionary of pandas dataframes.
+    """
+    Parameters
+    ----------
+    test_data_collection : dict
+        A collection of pandas dataframes for which to request predictions
+    """
     clipper.deploy_R_model(model_name, version, model,
                            "clipper/r_python_container:latest", "string")
     time.sleep(25)
+    num_preds = 0
     num_defaults = 0
-    num_preds = len(test_data_collection)
-    print(num_preds)
-    for i in range(0,num_preds):
-        num_defaults += predict_R_model(test_data_collection[i])
+    for i in range(0, len(test_data_collection)):
+        new_preds, new_defaults = predict_R_model(test_data_collection[i])
+        num_preds += new_preds
+        num_defaults += new_defaults
 
     if num_defaults > 0:
         print("Error: %d/%d predictions were default" % (num_defaults,
                                                          num_preds))
+
+    print("PREDS: {} DEFAULTS: {}".format(num_preds, num_defaults))
+
     if num_defaults > num_preds / 2:
         raise BenchmarkException("Error querying APP %s, MODEL %s:%d" %
                                  (app_name, model_name, version))
 
+def cleanup(clipper, test_succeeded):
+    """
+    Parameters
+    ----------
+    test_succeeded: bool
+        True if the test succeeded, False otherwise
+    """
+    clipper.stop_all()
+    if test_succeeded:
+        print("ALL TESTS PASSED")
+    else:
+        sys.exit(1)
 
 if __name__ == "__main__":
     pos_label = 3
@@ -131,7 +158,7 @@ if __name__ == "__main__":
 
         try:
             clipper.register_application(app_name, model_name, "string",
-                                         "default_pred", 100000000)
+                                         "default_pred", 100000)
             time.sleep(1)
             response = requests.post(
                 "http://localhost:1337/%s/predict" % app_name,
@@ -150,13 +177,10 @@ if __name__ == "__main__":
             deploy_and_test_model(clipper, R_model, version, test_data_collection)
         except BenchmarkException as e:
             print(e)
-            clipper.stop_all()
-            sys.exit(1)
+            cleanup(clipper, test_succeeded=False)
         else:
-            clipper.stop_all()
-            print("ALL TESTS PASSED")
+            cleanup(clipper, test_succeeded=True)
     except Exception as e:
         print(e)
         clipper = Clipper("localhost")
-        clipper.stop_all()
-        sys.exit(1)
+        cleanup(clipper, test_succeeded=False)
