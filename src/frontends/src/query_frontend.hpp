@@ -176,8 +176,8 @@ class RequestHandler {
           std::string app_name = key;
           clipper::log_info_formatted(
               LOGGING_TAG_QUERY_FRONTEND,
-              "APP LINKS EVENT DETECTED. App name: {}, event_type: {}", app_name,
-              event_type);
+              "APP LINKS EVENT DETECTED. App name: {}, event_type: {}",
+              app_name, event_type);
           if (event_type == "sadd") {
             clipper::log_info_formatted(LOGGING_TAG_QUERY_FRONTEND,
                                         "New model link detected for app: {}",

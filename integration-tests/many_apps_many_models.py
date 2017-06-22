@@ -101,6 +101,11 @@ def create_and_test_app(clipper, name, num_models):
     clipper.register_application(app_name, model_name, "doubles",
                                  "default_pred", 100000)
     time.sleep(1)
+
+    # Link model and app
+    clipper.link_model_to_app(app_name, model_name)
+    time.sleep(1)
+
     response = requests.post(
         "http://localhost:1337/%s/predict" % app_name,
         headers=headers,

@@ -78,12 +78,17 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         input_type = "doubles"
         default_output = "DEFAULT"
         slo_micros = 30000
-        self.clipper_inst.register_application(self.app_name, self.model_name,
-                                               input_type, default_output,
-                                               slo_micros)
+        self.clipper_inst.register_application(self.app_name, input_type,
+                                               default_output, slo_micros)
         registered_applications = self.clipper_inst.get_all_apps()
         self.assertGreaterEqual(len(registered_applications), 1)
         self.assertTrue(self.app_name in registered_applications)
+
+    def test_model_links_to_app(self):
+        not_deployed_model = "test_model"
+        self.clipper_inst.link_model_to_app(self.app_name, not_deployed_model)
+        result = self.clipper_inst.get_linked_models(self.app_name)
+        self.assertEqual([not_deployed_model], result)
 
     def get_app_info_for_registered_app_returns_info_dictionary(self):
         result = self.clipper_inst.get_app_info(self.app_name)
@@ -250,11 +255,11 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         self.default_output = "DEFAULT"
         self.latency_slo_micros = 30000
         self.clipper_inst.register_application(
-            self.app_name_1, self.model_name_1, self.input_type,
-            self.default_output, self.latency_slo_micros)
+            self.app_name_1, self.input_type, self.default_output,
+            self.latency_slo_micros)
         self.clipper_inst.register_application(
-            self.app_name_2, self.model_name_2, self.input_type,
-            self.default_output, self.latency_slo_micros)
+            self.app_name_2, self.input_type, self.default_output,
+            self.latency_slo_micros)
 
     @classmethod
     def tearDownClass(self):
@@ -270,6 +275,9 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
             self.model_name_2, model_version, model_data, container_name,
             self.input_type)
         self.assertTrue(result)
+
+        ### Link model and app
+        self.clipper_inst.link_model_to_app(self.app_name_2, self.model_name_2)
 
         time.sleep(30)
 
@@ -290,6 +298,9 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         result = self.clipper_inst.deploy_predict_function(
             self.model_name_1, model_version, predict_func, input_type)
         self.assertTrue(result)
+
+        ### Link model and app
+        self.clipper_inst.link_model_to_app(self.app_name_1, self.model_name_1)
 
         time.sleep(60)
 
@@ -315,7 +326,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
 SHORT_TEST_ORDERING = [
     'test_external_models_register_correctly',
-    'test_application_registers_correctly',
+    'test_application_registers_correctly', 'test_model_links_to_app',
     'get_app_info_for_registered_app_returns_info_dictionary',
     'get_app_info_for_nonexistent_app_returns_none',
     'test_add_container_for_external_model_fails',
