@@ -179,8 +179,13 @@ std::vector<std::string> get_all_model_names(redox::Redox& redis);
  */
 std::vector<VersionedModelId> get_all_models(redox::Redox& redis);
 
-std::vector<std::string> get_app_links(redox::Redox& redis,
-                                       const std::string& app_name);
+/**
+ * Looks up which models are linked to app with name `app_name`
+ * \return Returns a vector of model names. If no models are linked
+ * to the specified app, then am empty vector will be returned.
+ */
+std::vector<std::string> get_linked_models(redox::Redox& redis,
+                                           const std::string& app_name);
 
 /**
  * Adds a container into the container table. This will
@@ -256,8 +261,14 @@ bool add_application(redox::Redox& redis, const std::string& appname,
                      const std::string& default_output,
                      const long latency_slo_micros);
 
-bool add_app_links(redox::Redox& redis, const std::string& appname,
-                   const std::vector<std::string>& model_names);
+/**
+ * Adds links between the specified app and models. This will not
+ * overwrite existing links.
+ *
+ * \return Returns true if the add was successful.
+ */
+bool add_model_links(redox::Redox& redis, const std::string& appname,
+                     const std::vector<std::string>& model_names);
 
 /**
  * Deletes a container from the container table if it exists.
@@ -342,7 +353,15 @@ void subscribe_to_application_changes(
     redox::Subscriber& subscriber,
     std::function<void(const std::string&, const std::string&)> callback);
 
-void subscribe_to_app_links_changes(
+/**
+ * Subscribes to changes in the app model link table. The
+ * callback is called with the string key of the application
+ * that changed and the Redis event type. The key can
+ * be used to look up the new value. The message type identifies
+ * what type of change was detected. This allows subscribers
+ * to differentiate between adds and deletes if necessary.
+*/
+void subscribe_to_model_link_changes(
     redox::Subscriber& subscriber,
     std::function<void(const std::string&, const std::string&)> callback);
 

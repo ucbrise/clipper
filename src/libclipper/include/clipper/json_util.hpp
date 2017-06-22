@@ -127,8 +127,16 @@ void add_object(rapidjson::Document& d, const char* key_name,
 
 std::string to_json_string(rapidjson::Document& d);
 
+/**
+ * Sets `d` to an Array type document containing the elements
+ * in `string_array`.
+ */
 void set_string_array(rapidjson::Document& d,
                       const std::vector<std::string>& str_array);
+/**
+ * Extracts the string vector from the document `d`. Requires
+ * that `d` represents an array with only string elements.
+ */
 std::vector<std::string> to_string_array(rapidjson::Document& d);
 
 /**

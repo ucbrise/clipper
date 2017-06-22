@@ -378,8 +378,8 @@ class Clipper:
         model_name : str
             The name of the model to link to the application
         """
-        url = "http://%s:%d/admin/add_app_links" % (self.host,
-                                                    CLIPPER_MANAGEMENT_PORT)
+        url = "http://%s:%d/admin/add_model_links" % (self.host,
+                                                      CLIPPER_MANAGEMENT_PORT)
         req_json = json.dumps({
             "app_name": app_name,
             "model_names": [model_name]
@@ -401,8 +401,8 @@ class Clipper:
         list
             Returns a list of the names of models linked to the app
         """
-        url = "http://%s:%d/admin/get_app_links" % (self.host,
-                                                    CLIPPER_MANAGEMENT_PORT)
+        url = "http://%s:%d/admin/get_linked_models" % (
+            self.host, CLIPPER_MANAGEMENT_PORT)
         req_json = json.dumps({"app_name": app_name})
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)

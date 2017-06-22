@@ -33,6 +33,25 @@ TEST(JsonUtilTests, TestCorrectJsonValues) {
   EXPECT_EQ(output_json, expected_json);
 }
 
+TEST(JsonUtilTests, TestSetStringArrayCorrect) {
+  const std::vector<std::string> str_array = {"a", "b"};
+  rapidjson::Document d;
+  set_string_array(d, str_array);
+  std::string expected_json = R"(["a","b"])";
+  EXPECT_EQ(to_json_string(d), expected_json);
+}
+
+TEST(JsonUtilTests, TestToStringArrayCorrect) {
+  rapidjson::Document d;
+  rapidjson::Document::AllocatorType& a = d.GetAllocator();
+  d.SetArray();
+  d.PushBack("a", a);
+  d.PushBack("b", a);
+  auto result = to_string_array(d);
+  std::vector<std::string> expected_result = {"a", "b"};
+  EXPECT_EQ(expected_result, result);
+}
+
 TEST(JsonUtilTests, TestCorrectJsonArrays) {
   std::string expected_json =
       R"({"string_array":["test1","word2","phrase3"],)"

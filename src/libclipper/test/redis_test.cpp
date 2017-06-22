@@ -102,7 +102,7 @@ TEST_F(RedisTest, AddModel) {
   ASSERT_EQ(result["model_data_path"], model_path);
 }
 
-TEST_F(RedisTest, AddAppLinks) {
+TEST_F(RedisTest, AddModelLinks) {
   std::string app_name = "my_app_name";
   InputType input_type = InputType::Doubles;
   std::string policy = DefaultOutputSelectionPolicy::get_name();
@@ -113,9 +113,9 @@ TEST_F(RedisTest, AddAppLinks) {
 
   std::vector<std::string> model_names =
       std::vector<std::string>{"model1", "model2"};
-  ASSERT_TRUE(add_app_links(*redis_, app_name, model_names));
+  ASSERT_TRUE(add_model_links(*redis_, app_name, model_names));
 
-  auto linked_models = get_app_links(*redis_, app_name);
+  auto linked_models = get_linked_models(*redis_, app_name);
   std::sort(linked_models.begin(), linked_models.end());
   std::sort(model_names.begin(), model_names.end());
   ASSERT_EQ(model_names, linked_models);
@@ -542,7 +542,7 @@ TEST_F(RedisTest, SubscriptionDetectApplicationDelete) {
   ASSERT_TRUE(result);
 }
 
-TEST_F(RedisTest, SubscriptionDetectAppLinksAdd) {
+TEST_F(RedisTest, SubscriptionDetectModelLinksAdd) {
   // Register the application to link to
   std::string name = "my_app_name";
   InputType input_type = InputType::Doubles;
@@ -555,7 +555,7 @@ TEST_F(RedisTest, SubscriptionDetectAppLinksAdd) {
   std::condition_variable_any notification_recv;
   std::mutex notification_mutex;
   std::atomic<bool> recv{false};
-  subscribe_to_app_links_changes(
+  subscribe_to_model_link_changes(
       *subscriber_, [&notification_recv, &notification_mutex, &recv, name](
                         const std::string& key, const std::string& event_type) {
         ASSERT_EQ(event_type, "sadd");
@@ -568,7 +568,7 @@ TEST_F(RedisTest, SubscriptionDetectAppLinksAdd) {
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
   std::vector<std::string> model_names = {"model1", "model2"};
-  ASSERT_TRUE(add_app_links(*redis_, name, model_names));
+  ASSERT_TRUE(add_model_links(*redis_, name, model_names));
 
   std::unique_lock<std::mutex> l(notification_mutex);
   bool result = notification_recv.wait_for(l, std::chrono::milliseconds(1000),

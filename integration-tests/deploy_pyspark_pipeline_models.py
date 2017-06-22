@@ -124,8 +124,8 @@ if __name__ == "__main__":
         clipper = init_clipper()
 
         try:
-            clipper.register_application(app_name, model_name, "strings",
-                                         "default_pred", 10000000)
+            clipper.register_application(app_name, "strings", "default_pred",
+                                         10000000)
             time.sleep(1)
 
             # Link model and app

@@ -77,18 +77,18 @@ class ManagementFrontendTest : public ::testing::Test {
     add_string(d, "model_data_path", model_data_path);
   }
 
-  void set_add_app_links_request_doc(rapidjson::Document& d,
-                                     std::string& app_name,
-                                     std::vector<std::string>& model_names) {
+  void set_add_model_links_request_doc(rapidjson::Document& d,
+                                       std::string& app_name,
+                                       std::vector<std::string>& model_names) {
     d.SetObject();
     add_string(d, "app_name", app_name);
     add_string_array(d, "model_names", model_names);
   }
 
-  std::string get_add_app_links_request_json(
+  std::string get_add_model_links_request_json(
       std::string& name, std::vector<std::string>& model_names) {
     rapidjson::Document d;
-    set_add_app_links_request_doc(d, name, model_names);
+    set_add_model_links_request_doc(d, name, model_names);
     return to_json_string(d);
   }
 
@@ -99,7 +99,7 @@ class ManagementFrontendTest : public ::testing::Test {
     return to_json_string(d);
   }
 
-  std::string get_app_links_json_request_string(std::string& name) {
+  std::string get_linked_models_json_request_string(std::string& name) {
     rapidjson::Document d;
     d.SetObject();
     add_string(d, "app_name", name);
@@ -150,7 +150,7 @@ TEST_F(ManagementFrontendTest, TestAddApplicationMalformedJson) {
   ASSERT_THROW(rh_.add_application(add_app_json), json_parse_error);
 }
 
-TEST_F(ManagementFrontendTest, TestAddAppLink) {
+TEST_F(ManagementFrontendTest, TestAddModelLinkCorrect) {
   std::string app_name = "myappname";
   std::string input_type = "integers";
   std::string default_output = "4.3";
@@ -161,10 +161,10 @@ TEST_F(ManagementFrontendTest, TestAddAppLink) {
   std::vector<std::string> model_names =
       std::vector<std::string>{"mymodelname"};
   std::string add_links_json =
-      get_add_app_links_request_json(app_name, model_names);
+      get_add_model_links_request_json(app_name, model_names);
 
-  ASSERT_EQ(rh_.add_app_links(add_links_json), "Success!");
-  std::vector<std::string> result = get_app_links(*redis_, app_name);
+  ASSERT_EQ(rh_.add_model_links(add_links_json), "Success!");
+  std::vector<std::string> result = get_linked_models(*redis_, app_name);
 
   // We're storing model names as a set, so redis doesn't guarantee order
   // Sorting will matter once we allow having multiple links per app
@@ -173,7 +173,7 @@ TEST_F(ManagementFrontendTest, TestAddAppLink) {
   ASSERT_EQ(model_names, result);
 }
 
-TEST_F(ManagementFrontendTest, TestAddAppLinkWhenAlreadyExists) {
+TEST_F(ManagementFrontendTest, TestAddModelLinkWhenAlreadyExists) {
   std::string app_name = "myappname";
   std::string input_type = "integers";
   std::string default_output = "4.3";
@@ -184,32 +184,32 @@ TEST_F(ManagementFrontendTest, TestAddAppLinkWhenAlreadyExists) {
   std::vector<std::string> model_names =
       std::vector<std::string>{"mymodelname"};
   std::string add_links_json =
-      get_add_app_links_request_json(app_name, model_names);
-  ASSERT_EQ(rh_.add_app_links(add_links_json), "Success!");
+      get_add_model_links_request_json(app_name, model_names);
+  ASSERT_EQ(rh_.add_model_links(add_links_json), "Success!");
 
   // Attempts to re-add already existing links should work
-  ASSERT_EQ(rh_.add_app_links(add_links_json), "Success!");
+  ASSERT_EQ(rh_.add_model_links(add_links_json), "Success!");
 
   std::vector<std::string> new_model_names =
       std::vector<std::string>{"mymodelname2"};
   std::string add_new_links_json =
-      get_add_app_links_request_json(app_name, new_model_names);
+      get_add_model_links_request_json(app_name, new_model_names);
 
   // When adding a new, second link, it should break
-  ASSERT_THROW(rh_.add_app_links(add_new_links_json), std::invalid_argument);
+  ASSERT_THROW(rh_.add_model_links(add_new_links_json), std::invalid_argument);
 }
 
-TEST_F(ManagementFrontendTest, TestAddAppLinkToNonexistentApp) {
+TEST_F(ManagementFrontendTest, TestAddModelLinkToNonexistentApp) {
   std::string app_name = "myappname";
   std::vector<std::string> model_names =
       std::vector<std::string>{"mymodelname"};
   std::string add_links_json =
-      get_add_app_links_request_json(app_name, model_names);
+      get_add_model_links_request_json(app_name, model_names);
 
-  ASSERT_THROW(rh_.add_app_links(add_links_json), std::invalid_argument);
+  ASSERT_THROW(rh_.add_model_links(add_links_json), std::invalid_argument);
 }
 
-TEST_F(ManagementFrontendTest, TestAddAppLinksProhibitedChars) {
+TEST_F(ManagementFrontendTest, TestAddModelLinkProhibitedChars) {
   std::string app_name = "my_app_name";
   std::string input_type = "doubles";
   std::string default_output = "my_default_output";
@@ -223,34 +223,33 @@ TEST_F(ManagementFrontendTest, TestAddAppLinksProhibitedChars) {
   std::string bad_model_name = ss.str();
   std::vector<std::string> bad_model_names = {bad_model_name};
 
-  // Attempting to add an app link to a model with invalid character should fail
-  std::string add_app_bad_links_json =
-      get_add_app_links_request_json(app_name, bad_model_names);
-  ASSERT_THROW(rh_.add_app_links(add_app_bad_links_json),
-               std::invalid_argument);
+  // Attempting to link an app to a model with invalid character should fail
+  std::string add_bad_links_json =
+      get_add_model_links_request_json(app_name, bad_model_names);
+  ASSERT_THROW(rh_.add_model_links(add_bad_links_json), std::invalid_argument);
 }
 
-TEST_F(ManagementFrontendTest, TestAddAppLinkMalformedJson) {
+TEST_F(ManagementFrontendTest, TestAddModelLinkMalformedJson) {
   std::string malformed_add_links_json = R"(
     {
       "app_name": "myappname"
       "model_names": ["mymodelname"]
     }
   )";
-  ASSERT_THROW(rh_.add_app_links(malformed_add_links_json), json_parse_error);
+  ASSERT_THROW(rh_.add_model_links(malformed_add_links_json), json_parse_error);
 }
 
-TEST_F(ManagementFrontendTest, TestAddAppLinkMissingField) {
+TEST_F(ManagementFrontendTest, TestAddModelLinkMissingField) {
   std::string missing_field_add_links_json = R"(
     {
       "app_name": "myappname"
     }
   )";
-  ASSERT_THROW(rh_.add_app_links(missing_field_add_links_json),
+  ASSERT_THROW(rh_.add_model_links(missing_field_add_links_json),
                json_semantic_error);
 }
 
-TEST_F(ManagementFrontendTest, TestGetAppLinks) {
+TEST_F(ManagementFrontendTest, TestGetModelLinks) {
   // Add the app
   std::string app_name = "myappname";
   std::string input_type = "integers";
@@ -260,42 +259,43 @@ TEST_F(ManagementFrontendTest, TestGetAppLinks) {
   ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
 
   // Confirm that no links exist
-  std::string get_app_links_json = get_app_links_json_request_string(app_name);
-  auto result = rh_.get_app_links(get_app_links_json);
+  std::string get_linked_models_json =
+      get_linked_models_json_request_string(app_name);
+  auto result = rh_.get_linked_models(get_linked_models_json);
   ASSERT_EQ("[]", result);
 
   // Add the link
   std::vector<std::string> model_names =
       std::vector<std::string>{"mymodelname"};
   std::string add_links_json =
-      get_add_app_links_request_json(app_name, model_names);
-  ASSERT_EQ(rh_.add_app_links(add_links_json), "Success!");
+      get_add_model_links_request_json(app_name, model_names);
+  ASSERT_EQ(rh_.add_model_links(add_links_json), "Success!");
 
-  result = rh_.get_app_links(get_app_links_json);
+  result = rh_.get_linked_models(get_linked_models_json);
   rapidjson::Document d;
   parse_json(result, d);
   auto result_array = to_string_array(d);
 
-  // We're storing model names as a set, so redis doesn't guarantee order
-  // Sorting will matter once we allow having multiple links per app
   std::sort(model_names.begin(), model_names.end());
   std::sort(result_array.begin(), result_array.end());
   ASSERT_EQ(model_names, result_array);
 }
 
-TEST_F(ManagementFrontendTest, TestGetAppLinksForNonexistentApp) {
+TEST_F(ManagementFrontendTest, TestGetModelLinksForNonexistentApp) {
   std::string app_name = "myappname";
-  std::string get_app_links_json = get_app_links_json_request_string(app_name);
-  ASSERT_THROW(rh_.get_app_links(get_app_links_json), std::invalid_argument);
+  std::string get_linked_models_json =
+      get_linked_models_json_request_string(app_name);
+  ASSERT_THROW(rh_.get_linked_models(get_linked_models_json),
+               std::invalid_argument);
 }
 
-TEST_F(ManagementFrontendTest, TestGetAppLinksMalformedJson) {
-  std::string malformed_get_app_links_json = R"(
+TEST_F(ManagementFrontendTest, TestGetModelLinksMalformedJson) {
+  std::string malformed_get_linked_models_json = R"(
     {
       app_name : "a
     }
   )";
-  ASSERT_THROW(rh_.get_app_links(malformed_get_app_links_json),
+  ASSERT_THROW(rh_.get_linked_models(malformed_get_linked_models_json),
                json_parse_error);
 }
 TEST_F(ManagementFrontendTest, TestAddDuplicateApplication) {
@@ -351,8 +351,8 @@ TEST_F(ManagementFrontendTest, TestGetApplicationCorrect) {
   std::vector<std::string> model_names =
       std::vector<std::string>{"mymodelname"};
   std::string add_links_json =
-      get_add_app_links_request_json(name, model_names);
-  ASSERT_EQ(rh_.add_app_links(add_links_json), "Success!");
+      get_add_model_links_request_json(name, model_names);
+  ASSERT_EQ(rh_.add_model_links(add_links_json), "Success!");
 
   json_response = rh_.get_application(get_app_json);
   response_doc.SetObject();
@@ -402,8 +402,8 @@ TEST_F(ManagementFrontendTest, TestGetAllApplicationsVerboseCorrect) {
   std::vector<std::string> model_names =
       std::vector<std::string>{"mymodelname"};
   std::string add_links_json =
-      get_add_app_links_request_json(name1, model_names);
-  ASSERT_EQ(rh_.add_app_links(add_links_json), "Success!");
+      get_add_model_links_request_json(name1, model_names);
+  ASSERT_EQ(rh_.add_model_links(add_links_json), "Success!");
 
   std::string get_apps_verbose_json = R"(
   {

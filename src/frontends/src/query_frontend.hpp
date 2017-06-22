@@ -170,7 +170,7 @@ class RequestHandler {
           }
         });
 
-    clipper::redis::subscribe_to_app_links_changes(
+    clipper::redis::subscribe_to_model_link_changes(
         redis_subscriber_,
         [this](const std::string& key, const std::string& event_type) {
           std::string app_name = key;
@@ -183,10 +183,10 @@ class RequestHandler {
                                         "New model link detected for app: {}",
                                         app_name);
 
-            boost::optional<std::vector<std::string>> candidate_models =
-                clipper::redis::get_app_links(redis_connection_, app_name);
-            if (candidate_models) {
-              set_candidate_models_for_app(app_name, *candidate_models);
+            boost::optional<std::vector<std::string>> linked_model_names =
+                clipper::redis::get_linked_models(redis_connection_, app_name);
+            if (linked_model_names) {
+              set_linked_models_for_app(app_name, *linked_model_names);
             }
           }
         });
@@ -222,9 +222,9 @@ class RequestHandler {
       auto app_info =
           clipper::redis::get_application_by_key(redis_connection_, app_name);
 
-      auto candidate_model_names =
-          clipper::redis::get_app_links(redis_connection_, app_name);
-      set_candidate_models_for_app(app_name, candidate_model_names);
+      auto linked_model_names =
+          clipper::redis::get_linked_models(redis_connection_, app_name);
+      set_linked_models_for_app(app_name, linked_model_names);
 
       InputType input_type = clipper::parse_input_type(app_info["input_type"]);
       std::string policy = app_info["policy"];
@@ -272,15 +272,15 @@ class RequestHandler {
     redis_subscriber_.disconnect();
   }
 
-  void set_candidate_models_for_app(std::string name,
-                                    std::vector<std::string> models) {
-    std::unique_lock<std::mutex> l(candidate_models_for_apps_mutex_);
-    candidate_models_for_apps_[name] = models;
+  void set_linked_models_for_app(std::string name,
+                                 std::vector<std::string> models) {
+    std::unique_lock<std::mutex> l(linked_models_for_apps_mutex_);
+    linked_models_for_apps_[name] = models;
   }
 
-  std::vector<std::string> get_candidate_models_for_app(std::string name) {
-    std::unique_lock<std::mutex> l(candidate_models_for_apps_mutex_);
-    return candidate_models_for_apps_[name];
+  std::vector<std::string> get_linked_models_for_app(std::string name) {
+    std::unique_lock<std::mutex> l(linked_models_for_apps_mutex_);
+    return linked_models_for_apps_[name];
   }
 
   void add_application(std::string name, InputType input_type,
@@ -307,7 +307,7 @@ class RequestHandler {
         std::shared_ptr<HttpServer::Response> response,
         std::shared_ptr<HttpServer::Request> request) {
       try {
-        std::vector<std::string> models = get_candidate_models_for_app(name);
+        std::vector<std::string> models = get_linked_models_for_app(name);
         std::vector<VersionedModelId> versioned_models;
         {
           std::unique_lock<std::mutex> l(current_model_versions_mutex_);
@@ -383,7 +383,7 @@ class RequestHandler {
         std::shared_ptr<HttpServer::Response> response,
         std::shared_ptr<HttpServer::Request> request) {
       try {
-        std::vector<std::string> models = get_candidate_models_for_app(name);
+        std::vector<std::string> models = get_linked_models_for_app(name);
         std::vector<VersionedModelId> versioned_models;
         {
           std::unique_lock<std::mutex> l(current_model_versions_mutex_);
@@ -556,9 +556,9 @@ class RequestHandler {
   std::mutex current_model_versions_mutex_;
   std::unordered_map<std::string, std::string> current_model_versions_;
 
-  std::mutex candidate_models_for_apps_mutex_;
+  std::mutex linked_models_for_apps_mutex_;
   std::unordered_map<std::string, std::vector<std::string>>
-      candidate_models_for_apps_;
+      linked_models_for_apps_;
 };
 
 }  // namespace query_frontend

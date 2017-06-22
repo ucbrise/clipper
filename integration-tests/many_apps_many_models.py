@@ -98,8 +98,7 @@ def deploy_model(clipper, name, version):
 def create_and_test_app(clipper, name, num_models):
     app_name = "%s_app" % name
     model_name = "%s_model" % name
-    clipper.register_application(app_name, model_name, "doubles",
-                                 "default_pred", 100000)
+    clipper.register_application(app_name, "doubles", "default_pred", 100000)
     time.sleep(1)
 
     # Link model and app
