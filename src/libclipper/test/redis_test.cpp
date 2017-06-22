@@ -466,7 +466,8 @@ TEST_F(RedisTest, SubscriptionDetectContainerDelete) {
       [&notification_recv, &notification_mutex, &recv, replica_key](
           const std::string& key, const std::string& event_type) {
         log_info_formatted(LOGGING_TAG_REDIS_TEST,
-                           "CONTAINER DELETED CALLBACK. EVENT TYPE: ", event_type);
+                           "CONTAINER DELETED CALLBACK. EVENT TYPE: ",
+                           event_type);
         ASSERT_TRUE(event_type == "hdel" || event_type == "del");
         std::unique_lock<std::mutex> l(notification_mutex);
         recv = true;
