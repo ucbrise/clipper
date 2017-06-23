@@ -112,7 +112,7 @@ class Clipper:
                  redis_ip=DEFAULT_REDIS_IP,
                  redis_port=DEFAULT_REDIS_PORT,
                  redis_persistence_path=None,
-                 restart_containers=True):
+                 restart_containers=False):
         self.redis_ip = redis_ip
         self.redis_port = redis_port
         self.docker_compost_dict = {
@@ -431,7 +431,7 @@ class Clipper:
         ----------
         name : str
             The name to assign this model.
-        version : int
+        version : Any object with a string representation (with __str__ implementation)
             The version to assign this model.
         model_data : str or BaseEstimator
             The trained model to add to Clipper. This can either be a
@@ -470,6 +470,7 @@ class Clipper:
                 warn("%s is invalid model format" % str(type(model_data)))
                 return False
 
+            version = str(version)
             vol = "{model_repo}/{name}/{version}".format(
                 model_repo=MODEL_REPO, name=name, version=version)
             # publish model to Clipper and verify success before copying model
@@ -509,13 +510,14 @@ class Clipper:
         ----------
         name : str
             The name to assign this model.
-        version : int
+        version : Any object with a string representation (with __str__ implementation)
             The version to assign this model.
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
         labels : list of str, optional
             A list of strings annotating the model.
         """
+        version = str(version)
         return self._publish_new_model(name, version, labels, input_type,
                                        EXTERNALLY_MANAGED_MODEL,
                                        EXTERNALLY_MANAGED_MODEL)
@@ -586,7 +588,7 @@ class Clipper:
         ----------
         name : str
             The name to assign this model.
-        version : int
+        version : Any object with a string representation (with __str__ implementation)
             The version to assign this model.
         predict_function : function
             A function that takes three arguments, a SparkContext, the ``model`` parameter and
@@ -679,7 +681,7 @@ class Clipper:
         ----------
         name : str
             The name to assign this model.
-        version : int
+        version : Any object with a string representation (with __str__ implementation)
             The version to assign this model.
         predict_function : function
             The prediction function. Any state associated with the function should be
@@ -766,7 +768,7 @@ class Clipper:
         ----------
         model_name : str
             The name of the model to look up
-        model_version : int
+        model_version : Any object with a string representation (with __str__ implementation)
             The version of the model to look up
 
         Returns
@@ -776,6 +778,7 @@ class Clipper:
             If no model with name `model_name@model_version` is
             registered with Clipper, None is returned.
         """
+        model_version = str(model_version)
         url = "http://%s:1338/admin/get_model" % self.host
         req_json = json.dumps({
             "model_name": model_name,
@@ -826,7 +829,7 @@ class Clipper:
         ----------
         model_name : str
             The name of the container to look up
-        model_version : int
+        model_version : Any object with a string representation (with __str__ implementation)
             The version of the container to look up
         replica_id : int
             The container replica to look up
@@ -837,6 +840,7 @@ class Clipper:
             A dictionary with the specified container's info.
             If no corresponding container is registered with Clipper, None is returned.
         """
+        model_version = str(model_version)
         url = "http://%s:1338/admin/get_container" % self.host
         req_json = json.dumps({
             "model_name": model_name,
@@ -970,7 +974,7 @@ class Clipper:
         ----------
         model_name : str
             The name of the model
-        model_version : int
+        model_version : Any object with a string representation (with __str__ implementation)
             The version of the model
 
         Returns
@@ -979,6 +983,7 @@ class Clipper:
             True if the container was added successfully and False
             if the container could not be added.
         """
+        model_version = str(model_version)
         with hide("warnings", "output", "running"):
             # Look up model info in Redis
             if self.redis_ip == DEFAULT_REDIS_IP:
@@ -1024,7 +1029,7 @@ class Clipper:
                         mv=model_version,
                         mip=model_input_type,
                         clipper_label=CLIPPER_DOCKER_LABEL,
-                        mv_label="%s=%s:%d" % (CLIPPER_MODEL_CONTAINER_LABEL,
+                        mv_label="%s=%s:%s" % (CLIPPER_MODEL_CONTAINER_LABEL,
                                                model_name, model_version),
                         restart_policy=restart_policy))
                 result = self._execute_root(add_container_cmd)
@@ -1101,7 +1106,7 @@ class Clipper:
         ----------
         model_name : str
             The name of the model
-        model_version : int
+        model_version : Any object with a string representation (with __str__ implementation)
             The version of the model. Note that `model_version`
             must be a model version that has already been deployed.
         num_containers : int
@@ -1109,6 +1114,8 @@ class Clipper:
             selected model version.
 
         """
+        model_version = str(model_version)
+
         url = "http://%s:%d/admin/set_model_version" % (
             self.host, CLIPPER_MANAGEMENT_PORT)
         req_json = json.dumps({
@@ -1140,9 +1147,14 @@ class Clipper:
                 container_ids = [l.strip() for l in containers.split("\n")]
                 for container in container_ids:
                     # returns a string formatted as "<model_name>:<model_version>"
-                    container_model_name_and_version = self._execute_root(
-                        "docker inspect --format \"{{ index .Config.Labels \\\"%s\\\"}}\" %s"
-                        % (CLIPPER_MODEL_CONTAINER_LABEL, container))
+                    if self._host_is_local():
+                        container_model_name_and_version = self._execute_root(
+                            "docker inspect --format \"{{ index .Config.Labels \\\"%s\\\"}}\" %s"
+                            % (CLIPPER_MODEL_CONTAINER_LABEL, container))
+                    else:
+                        container_model_name_and_version = self._execute_root(
+                            "docker inspect --format \"{{ index .Config.Labels \\\\\"%s\\\\\"}}\" %s"
+                            % (CLIPPER_MODEL_CONTAINER_LABEL, container))
                     splits = container_model_name_and_version.split(":")
                     container_model_name = splits[0]
                     container_model_version = int(splits[1])

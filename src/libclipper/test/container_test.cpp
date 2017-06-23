@@ -7,7 +7,7 @@ using namespace clipper;
 namespace {
 
 TEST(ModelContainerTests, AverageThroughputUpdatesCorrectlyFewSamples) {
-  VersionedModelId model("test", 1);
+  VersionedModelId model("test", "1");
   ModelContainer container(model, 0, 0, InputType::Doubles);
   std::array<long, 4> single_task_latencies_micros = {{500, 2000, 3000, 5000}};
   long avg_latency = 0;
@@ -24,7 +24,7 @@ TEST(ModelContainerTests, AverageThroughputUpdatesCorrectlyFewSamples) {
 }
 
 TEST(ModelContainerTests, AverageThroughputUpdatesCorrectlyManySamples) {
-  VersionedModelId model("test", 1);
+  VersionedModelId model("test", "1");
   ModelContainer container(model, 0, 0, InputType::Doubles);
   double avg_throughput_millis = 0;
   for (int i = 3; i < 103; i++) {
@@ -40,7 +40,7 @@ TEST(ModelContainerTests, AverageThroughputUpdatesCorrectlyManySamples) {
 }
 
 TEST(ActiveContainerTests, AddContainer) {
-  VersionedModelId m1 = std::make_pair("m", 1);
+  VersionedModelId m1 = VersionedModelId("m", "1");
   int rep_id = 0;
   int conn_id = 0;
   std::shared_ptr<ActiveContainers> active_containers =
@@ -54,11 +54,11 @@ TEST(ActiveContainerTests, AddContainer) {
 }
 
 TEST(ActiveContainerTests, AddMultipleContainersDifferentModels) {
-  VersionedModelId m1 = std::make_pair("m", 1);
+  VersionedModelId m1 = VersionedModelId("m", "1");
   int m1rep_id = 0;
   int m1conn_id = 0;
 
-  VersionedModelId j1 = std::make_pair("j", 1);
+  VersionedModelId j1 = VersionedModelId("j", "1");
   int j1rep_id = 0;
   int j1conn_id = 1;
   std::shared_ptr<ActiveContainers> active_containers =
@@ -83,7 +83,7 @@ TEST(ActiveContainerTests, AddMultipleContainersDifferentModels) {
 }
 
 TEST(ActiveContainerTests, AddMultipleContainersSameModelSameVersion) {
-  VersionedModelId vm = std::make_pair("m", 1);
+  VersionedModelId vm = VersionedModelId("m", "1");
   int firstrep_id = 0;
   int firstconn_id = 0;
 
@@ -110,11 +110,11 @@ TEST(ActiveContainerTests, AddMultipleContainersSameModelSameVersion) {
 }
 
 TEST(ActiveContainerTests, AddMultipleContainersSameModelDifferentVersions) {
-  VersionedModelId vm1 = std::make_pair("m", 1);
+  VersionedModelId vm1 = VersionedModelId("m", "1");
   int firstrep_id = 0;
   int firstconn_id = 0;
 
-  VersionedModelId vm2 = std::make_pair("m", 2);
+  VersionedModelId vm2 = VersionedModelId("m", "2");
   int secondrep_id = 1;
   int secondconn_id = 1;
   std::shared_ptr<ActiveContainers> active_containers =

@@ -53,6 +53,22 @@ class ManagementFrontendTest : public ::testing::Test {
     add_int(d, "latency_slo_micros", latency_slo_micros);
   }
 
+  void set_add_model_request_doc(rapidjson::Document& d,
+                                 std::string& model_name,
+                                 std::string& model_version,
+                                 std::string& input_type,
+                                 std::vector<std::string>& labels,
+                                 std::string& container_name,
+                                 std::string& model_data_path) {
+    d.SetObject();
+    add_string(d, "model_name", model_name);
+    add_string(d, "model_version", model_version);
+    add_string_array(d, "labels", labels);
+    add_string(d, "input_type", input_type);
+    add_string(d, "container_name", container_name);
+    add_string(d, "model_data_path", model_data_path);
+  }
+
   std::string get_app_json_request_string(std::string& name) {
     rapidjson::Document d;
     d.SetObject();
@@ -115,6 +131,29 @@ TEST_F(ManagementFrontendTest, TestAddDuplicateApplication) {
   ASSERT_THROW(rh_.add_application(add_dup_app_json), std::invalid_argument);
 }
 
+TEST_F(ManagementFrontendTest, TestAddApplicationProhibitedChars) {
+  // Valid input values
+  std::string name = "my_app_name";
+  std::vector<std::string> candidate_model_names = {"my_model"};
+  std::vector<std::string> bad_candidate_model_names = {ITEM_DELIMITER +
+                                                        "my_model"};
+  std::string input_type = "doubles";
+  std::string default_output = "my_default_output";
+  int latency_slo_micros = 10000;
+
+  // Test adding app with invalid candidate_model_names
+  rapidjson::Document doc;
+  set_add_app_request_doc(doc, name, bad_candidate_model_names, input_type,
+                          default_output, latency_slo_micros);
+  std::string add_app_json_string = to_json_string(doc);
+  ASSERT_THROW(rh_.add_application(add_app_json_string), std::invalid_argument);
+
+  // Confirm that without this invalid input, add_app succeeds
+  add_string_array(doc, "candidate_model_names", candidate_model_names);
+  add_app_json_string = to_json_string(doc);
+  ASSERT_EQ(rh_.add_application(add_app_json_string), "Success!");
+}
+
 TEST_F(ManagementFrontendTest, TestAddApplicationMissingField) {
   std::string add_app_json = R"(
   {
@@ -168,11 +207,9 @@ TEST_F(ManagementFrontendTest, TestGetApplicationCorrect) {
 }
 
 TEST_F(ManagementFrontendTest, TestGetNonexistentApplicationCorrect) {
-  std::string list_apps_json = R"(
-  {
-    "name": "nonexistent_app"
-  }
-  )";
+  std::string nonexistent_app_name = "nonexistent_app";
+  std::string list_apps_json =
+      get_app_json_request_string(nonexistent_app_name);
   std::string json_response = rh_.get_application(list_apps_json);
   std::string expected_response = "{}";
   ASSERT_EQ(json_response, expected_response);
@@ -319,7 +356,7 @@ TEST_F(ManagementFrontendTest, TestAddModelCorrect) {
   std::string add_model_json = R"(
   {
     "model_name": "mymodelname",
-    "model_version": 4,
+    "model_version": "4",
     "labels": ["label1", "label2", "label3"],
     "input_type": "integers",
     "container_name": "clipper/sklearn_cifar",
@@ -329,8 +366,8 @@ TEST_F(ManagementFrontendTest, TestAddModelCorrect) {
 
   ASSERT_EQ(rh_.add_model(add_model_json), "Success!");
   std::string model_name = "mymodelname";
-  int model_version = 4;
-  auto result = get_model(*redis_, std::make_pair(model_name, model_version));
+  std::string model_version = "4";
+  auto result = get_model(*redis_, VersionedModelId(model_name, model_version));
   // The model table has 7 fields, so we expect to get back a map with 7
   // entries in it (see add_model() in redis.cpp for details on what the
   // fields are).
@@ -338,14 +375,14 @@ TEST_F(ManagementFrontendTest, TestAddModelCorrect) {
 
   // Make sure that the current model version has been updated
   // appropriately.
-  ASSERT_EQ(get_current_model_version(*redis_, model_name), model_version);
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version);
 }
 
 TEST_F(ManagementFrontendTest, TestAddDuplicateModelVersion) {
   std::string add_model_json = R"(
   {
     "model_name": "mymodelname",
-    "model_version": 4,
+    "model_version": "4",
     "labels": ["label1", "label2", "label3"],
     "input_type": "integers",
     "container_name": "clipper/sklearn_cifar",
@@ -355,8 +392,8 @@ TEST_F(ManagementFrontendTest, TestAddDuplicateModelVersion) {
 
   ASSERT_EQ(rh_.add_model(add_model_json), "Success!");
   std::string model_name = "mymodelname";
-  int model_version = 4;
-  auto result = get_model(*redis_, std::make_pair(model_name, model_version));
+  std::string model_version = "4";
+  auto result = get_model(*redis_, VersionedModelId(model_name, model_version));
   // The model table has 7 fields, so we expect to get back a map with 7
   // entries in it (see add_model() in redis.cpp for details on what the
   // fields are).
@@ -364,12 +401,12 @@ TEST_F(ManagementFrontendTest, TestAddDuplicateModelVersion) {
 
   // Make sure that the current model version has been updated
   // appropriately.
-  ASSERT_EQ(get_current_model_version(*redis_, model_name), model_version);
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version);
 
   std::string add_dup_model_json = R"(
   {
     "model_name": "mymodelname",
-    "model_version": 4,
+    "model_version": "4",
     "labels": ["label1", "label5"],
     "input_type": "doubles",
     "container_name": "clipper/other_container",
@@ -384,12 +421,52 @@ TEST_F(ManagementFrontendTest, TestAddModelMissingField) {
   std::string add_model_json = R"(
   {
     "model_name": "mymodelname",
-    "model_version": 4,
+    "model_version": "4",
     "labels": ["label1", "label2", "label3"]
   }
   )";
 
   ASSERT_THROW(rh_.add_model(add_model_json), json_semantic_error);
+}
+
+TEST_F(ManagementFrontendTest, TestAddModelProhibitedChars) {
+  // Valid input values
+  std::string model_name = "my_app_name";
+  std::string model_version = "my_model_version";
+  std::string input_type = "doubles";
+  std::vector<std::string> labels = {"label1", "label2"};
+  std::string container_name = "example/container_name";
+  std::string model_data_path = "/example/model/data/path";
+
+  // Invalid input values
+  std::string bad_model_name = model_name + ITEM_PART_CONCATENATOR;
+  std::string bad_model_version = ITEM_DELIMITER + model_version;
+  std::vector<std::string> bad_labels = {
+      "label1", ITEM_PART_CONCATENATOR + "label" + ITEM_DELIMITER};
+
+  // Test adding model with invalid model_name value
+  rapidjson::Document doc;
+  set_add_model_request_doc(doc, bad_model_name, model_version, input_type,
+                            labels, container_name, model_data_path);
+  std::string add_model_json_string = to_json_string(doc);
+  ASSERT_THROW(rh_.add_model(add_model_json_string), std::invalid_argument);
+  add_string(doc, "model_name", model_name);
+
+  // Test adding model with invalid model_version value
+  add_string(doc, "model_version", bad_model_version);
+  add_model_json_string = to_json_string(doc);
+  ASSERT_THROW(rh_.add_model(add_model_json_string), std::invalid_argument);
+  add_string(doc, "model_version", model_version);
+
+  // Test adding model with invalid labels value
+  add_string_array(doc, "labels", bad_labels);
+  add_model_json_string = to_json_string(doc);
+  ASSERT_THROW(rh_.add_model(add_model_json_string), std::invalid_argument);
+  add_string_array(doc, "labels", labels);
+
+  // Confirm that without these invalid inputs, add_model succeeds
+  add_model_json_string = to_json_string(doc);
+  ASSERT_EQ(rh_.add_model(add_model_json_string), "Success!");
 }
 
 TEST_F(ManagementFrontendTest, TestAddModelMalformedJson) {
@@ -405,7 +482,7 @@ TEST_F(ManagementFrontendTest, TestSetModelVersionCorrect) {
   std::string v1_json = R"(
   {
     "model_name": "m",
-    "model_version": 1,
+    "model_version": "1",
     "labels": ["ads", "images"],
     "input_type": "ints",
     "container_name": "clipper/test_container",
@@ -417,7 +494,7 @@ TEST_F(ManagementFrontendTest, TestSetModelVersionCorrect) {
   std::string v2_json = R"(
   {
     "model_name": "m",
-    "model_version": 2,
+    "model_version": "2",
     "labels": ["ads", "images"],
     "input_type": "ints",
     "container_name": "clipper/test_container",
@@ -429,7 +506,7 @@ TEST_F(ManagementFrontendTest, TestSetModelVersionCorrect) {
   std::string v4_json = R"(
   {
     "model_name": "m",
-    "model_version": 4,
+    "model_version": "4",
     "labels": ["ads", "images"],
     "input_type": "ints",
     "container_name": "clipper/test_container",
@@ -437,17 +514,16 @@ TEST_F(ManagementFrontendTest, TestSetModelVersionCorrect) {
   }
   )";
   ASSERT_EQ(rh_.add_model(v4_json), "Success!");
-
-  ASSERT_EQ(get_current_model_version(*redis_, "m"), 4);
-  ASSERT_TRUE(rh_.set_model_version("m", 2));
-  ASSERT_EQ(get_current_model_version(*redis_, "m"), 2);
+  ASSERT_EQ(*get_current_model_version(*redis_, "m"), "4");
+  ASSERT_TRUE(rh_.set_model_version("m", "2"));
+  ASSERT_EQ(*get_current_model_version(*redis_, "m"), "2");
 }
 
 TEST_F(ManagementFrontendTest, TestSetModelInvalidVersion) {
   std::string v1_json = R"(
   {
     "model_name": "m",
-    "model_version": 1,
+    "model_version": "1",
     "labels": ["ads", "images"],
     "input_type": "ints",
     "container_name": "clipper/test_container",
@@ -459,7 +535,7 @@ TEST_F(ManagementFrontendTest, TestSetModelInvalidVersion) {
   std::string v2_json = R"(
   {
     "model_name": "m",
-    "model_version": 2,
+    "model_version": "2",
     "labels": ["ads", "images"],
     "input_type": "ints",
     "container_name": "clipper/test_container",
@@ -471,7 +547,7 @@ TEST_F(ManagementFrontendTest, TestSetModelInvalidVersion) {
   std::string v4_json = R"(
   {
     "model_name": "m",
-    "model_version": 4,
+    "model_version": "4",
     "labels": ["ads", "images"],
     "input_type": "ints",
     "container_name": "clipper/test_container",
@@ -480,9 +556,9 @@ TEST_F(ManagementFrontendTest, TestSetModelInvalidVersion) {
   )";
   ASSERT_EQ(rh_.add_model(v4_json), "Success!");
 
-  ASSERT_EQ(get_current_model_version(*redis_, "m"), 4);
-  ASSERT_FALSE(rh_.set_model_version("m", 11));
-  ASSERT_EQ(get_current_model_version(*redis_, "m"), 4);
+  ASSERT_EQ(*get_current_model_version(*redis_, "m"), "4");
+  ASSERT_FALSE(rh_.set_model_version("m", "11"));
+  ASSERT_EQ(*get_current_model_version(*redis_, "m"), "4");
 }
 
 }  // namespace
