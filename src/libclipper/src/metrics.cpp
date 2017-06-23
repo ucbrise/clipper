@@ -22,7 +22,6 @@ namespace clipper {
 namespace metrics {
 
 constexpr long MICROS_PER_SECOND = 1000000;
-constexpr long CLOCKS_PER_MILLISECOND = CLOCKS_PER_SEC / MICROS_PER_SECOND;
 constexpr double SECONDS_PER_MINUTE = 60;
 constexpr double ONE_MINUTE = 1;
 constexpr double FIVE_MINUTES = 5;
@@ -229,8 +228,11 @@ void RatioCounter::clear() {
 }
 
 long RealTimeClock::get_time_micros() const {
-  clock_t clocks = clock();
-  return static_cast<long>(clocks) * CLOCKS_PER_MILLISECOND;
+  long current_time_micros =
+      std::chrono::duration_cast<std::chrono::microseconds>(
+          std::chrono::system_clock::now().time_since_epoch())
+          .count();
+  return current_time_micros;
 }
 
 void PresetClock::set_time_micros(const long time_micros) {
@@ -308,7 +310,8 @@ void Meter::mark(uint32_t num) {
 
 void Meter::tick_if_necessary() {
   long curr_micros = clock_->get_time_micros();
-  long tick_interval_micros = ewma_tick_interval_seconds_ * MICROS_PER_SECOND;
+  auto tick_interval_seconds = std::chrono::seconds(ewma_tick_interval_seconds_);
+  long tick_interval_micros = std::chrono::microseconds(tick_interval_seconds).count();
   long last_tick = last_ewma_tick_micros_.load(std::memory_order_seq_cst);
   long time_since_last_tick = curr_micros - last_tick;
 
@@ -358,6 +361,7 @@ double Meter::get_five_minute_rate_seconds() {
 }
 
 double Meter::get_fifteen_minute_rate_seconds() {
+  tick_if_necessary();
   return m15_rate.get_rate_seconds();
 }
 
