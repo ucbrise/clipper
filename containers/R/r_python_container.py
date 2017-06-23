@@ -1,19 +1,18 @@
 from __future__ import print_function
-from sklearn.externals import joblib
 import rpc
 import os
 import numpy as np
-from pandas import *
+import pandas as pd
 from rpy2.robjects import r, pandas2ri
 from rpy2.robjects.packages import importr
 import rpy2.robjects as ro
-stats = importr('stats')
-base = importr('base')
 import sys
 if sys.version_info[0] < 3:
     from StringIO import StringIO
 else:
     from io import StringIO
+stats = importr('stats')
+base = importr('base')
 
 
 class RContainer(rpc.ModelContainerBase):
@@ -26,7 +25,7 @@ class RContainer(rpc.ModelContainerBase):
         outputs = []
         for input_csv in inputs:
             csv_handle = StringIO(input_csv)
-            pdf = pandas.read_csv(csv_handle, sep=";", index_col=0)
+            pdf = pd.read_csv(csv_handle, sep=";", index_col=0)
             pandas2ri.activate()
             rdf = pandas2ri.py2ri(pdf)
             preds = stats.predict(self.model, rdf)

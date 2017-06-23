@@ -73,7 +73,7 @@ def train_R_model():
 def call_predictions(query_string):
     default = 0
     url = "http://localhost:1337/%s/predict" % app_name
-    req_json = json.dumps({'uid': 0, 'input': query_string})
+    req_json = json.dumps({'input': query_string})
     response = requests.post(url, headers=headers, data=req_json)
     result = response.json()
     if response.status_code == requests.codes.ok and result["default"] == True:
@@ -111,8 +111,7 @@ def deploy_and_test_model(clipper, model, version, test_data_collection):
     test_data_collection : dict
         A collection of pandas dataframes for which to request predictions
     """
-    clipper.deploy_R_model(model_name, version, model,
-                           "clipper/r_python_container:latest", "string")
+    clipper.deploy_R_model(model_name, version, model)
     time.sleep(25)
     num_preds = 0
     num_defaults = 0
@@ -169,7 +168,6 @@ if __name__ == "__main__":
                 "http://localhost:1337/%s/predict" % app_name,
                 headers=headers,
                 data=json.dumps({
-                    'uid': 0,
                     'input': ""
                 }))
             result = response.json()

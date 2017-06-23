@@ -1272,8 +1272,6 @@ class Clipper:
                        name,
                        version,
                        model_data,
-                       container_name,
-                       input_type,
                        labels=DEFAULT_LABEL,
                        num_containers=1):
         """Registers a model with Clipper and deploys instances of it in containers.
@@ -1303,6 +1301,8 @@ class Clipper:
         import rpy2.robjects as ro
         from rpy2.robjects.packages import importr
         base = importr('base')
+        input_type="strings"
+        container_name = "clipper/r_python_container"
 
         with hide("warnings", "output", "running"):
             fname = name.replace("/", "_")

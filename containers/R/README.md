@@ -5,7 +5,7 @@ This container enables the deployment of R models. It supports both the R and Py
 In addition to the requirements of running clipper, 
 
 1. R must be installed (version:latest , >=3.4)
-2. Python version must be >=2.7. 
+2. Python version must be =2.7. 
 3. RPy2 must be installed. For more info, go to <https://rpy2.bitbucket.io/>
 
 ## Instructions for Model Deployment and Prediction :
@@ -19,7 +19,7 @@ ro.r('dataset=mtcars')  #model's training dataset
 # Create an R model with an RPy2 reference
 model_RPy2 = ro.r('model_R <- lm(formula,data=dataset)') 
 ```
-- A previously trained and saved model (in .rds format) can also be loaded as RPy2 obeject :
+- A previously trained and saved model (in .rds format) can also be loaded as RPy2 object :
 
 ```py
 from rpy2.robjects.packages import importr
@@ -56,4 +56,4 @@ The following is an example encoding:
 Once a data frame has been string encoded, we can pass it to the container via the `requests.post()` method and obtain batched predictions for each data frame row.
 
 This process is illustrated in the `predict_R_model()` method of 
-<clipper-root>/integration-tests/deploy_R_containers.py
+[R Model Integration Test](../../integration-tests/deploy_R_models.py)
