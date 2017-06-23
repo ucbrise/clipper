@@ -1299,7 +1299,7 @@ class Clipper:
         base = importr('base')
 
         input_type = "strings"
-        container_name = "clipper/r_python_container" 
+        container_name = "clipper/r_python_container"
 
         with hide("warnings", "output", "running"):
             fname = name.replace("/", "_")
