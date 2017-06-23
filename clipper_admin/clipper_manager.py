@@ -45,7 +45,8 @@ CLIPPER_DOCKER_LABEL = "ai.clipper.container.label"
 CLIPPER_MODEL_CONTAINER_LABEL = "ai.clipper.model_container.model_version"
 
 DEFAULT_MODEL_VERSION = 1
-DEFAULT_SLO_MICROS = 10000
+DEFAULT_DEFAULT_OUTPUT = "None"
+DEFAULT_SLO_MICROS = 100000
 DEFAULT_LABEL = ["DEFAULT"]
 
 aws_cli_config = """
@@ -351,7 +352,7 @@ class Clipper:
         Returns
         -------
         bool
-            Returns true iff the app reigstration request was successful
+            Returns true iff the app registration request was successful
 
         """
         url = "http://%s:%d/admin/add_app" % (self.host,
@@ -698,7 +699,7 @@ class Clipper:
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
         labels : list of str, optional
-            A list of strings annotating the model
+            A list of strings annotating the model.
         num_containers : int, optional
             The number of replicas of the model to create. More replicas can be
             created later as well. Defaults to 1.
@@ -753,15 +754,16 @@ class Clipper:
         print("Application registration unsuccessful. Will not deploy model.")
         return False
 
-    def activate_predict_function(self,
-                                  name,
-                                  predict_function,
-                                  default_output,
-                                  input_type,
-                                  model_version=DEFAULT_MODEL_VERSION,
-                                  slo_micros=DEFAULT_SLO_MICROS,
-                                  labels=DEFAULT_LABEL,
-                                  num_containers=1):
+    def register_app_and_deploy_predict_function(
+            self,
+            name,
+            predict_function,
+            input_type,
+            default_output=DEFAULT_DEFAULT_OUTPUT,
+            model_version=DEFAULT_MODEL_VERSION,
+            slo_micros=DEFAULT_SLO_MICROS,
+            labels=DEFAULT_LABEL,
+            num_containers=1):
         """Registers an app and deploys provided predict function as a model.
 
         Parameters
@@ -769,20 +771,26 @@ class Clipper:
         name : str
             The to be assigned to the registered app and deployed model.
         predict_function : function
-            Please refer to documentation in `deploy_predict_function`.
-        default_output : string
-            Please refer to documentation in `register_application`.
+            The prediction function. Any state associated with the function should be
+            captured via closure capture.
         input_type : str
             The input_type to be associated with the registered app and deployed model.
             One of "integers", "floats", "doubles", "bytes", or "strings".
+        default_output : string, optional
+            The default prediction to use if the model does not return a prediction
+            by the end of the latency objective.
         model_version : Any object with a string representation (with __str__ implementation), optional
-            Please refer to documentation in `deploy_predict_function`.
+            The version to assign the deployed model.
         slo_micros : int
-            Please refer to documentation in `register_application`.
+            The query latency objective for the application in microseconds.
+            This is the processing latency between Clipper receiving a request 
+            and sending a response. It does not account for network latencies 
+            before a request is received or after a response is sent.
         labels : list of str, optional
-            Please refer to documentation in `deploy_predict_function`.
+            A list of strings annotating the model.
         num_containers : int, optional
-            Please refer to documentation in `deploy_predict_function`.
+            The number of replicas of the model to create. More replicas can be
+            created later as well.
         """
         if not self._register_app_and_check_success(
                 name, input_type, default_output, slo_micros):
@@ -792,17 +800,18 @@ class Clipper:
                                             predict_function, input_type,
                                             labels, num_containers)
 
-    def activate_pyspark_model(self,
-                               name,
-                               predict_function,
-                               pyspark_model,
-                               sc,
-                               default_output,
-                               input_type,
-                               model_version=1,
-                               slo_micros=100000,
-                               labels=DEFAULT_LABEL,
-                               num_containers=1):
+    def register_app_and_deploy_pyspark_model(
+            self,
+            name,
+            predict_function,
+            pyspark_model,
+            sc,
+            input_type,
+            default_output=DEFAULT_DEFAULT_OUTPUT,
+            model_version=DEFAULT_MODEL_VERSION,
+            slo_micros=DEFAULT_SLO_MICROS,
+            labels=DEFAULT_LABEL,
+            num_containers=1):
         """Registers an app and deploys provided spark model.
 
         Parameters
@@ -810,38 +819,46 @@ class Clipper:
         name : str
             The to be assigned to the registered app and deployed model.
         predict_function : function
-            Please refer to documentation in `deploy_pyspark_model`.
+            A function that takes three arguments, a SparkContext, the ``model`` parameter and
+            a list of inputs of the type specified by the ``input_type`` argument.
+            Any state associated with the function other than the Spark model should
+            be captured via closure capture. Note that the function must not capture
+            the SparkContext or the model implicitly, as these objects are not pickleable
+            and therefore will prevent the ``predict_function`` from being serialized.
         pyspark_model : pyspark.mllib.util.Saveable
-            Please refer to documentation in `deploy_pyspark_model`.
+            An object that mixes in the pyspark Saveable mixin. Generally this
+            is either an mllib model or transformer. This model will be loaded
+            into the Clipper model container and provided as an argument to the
+            predict function each time it is called.
         sc : SparkContext
-            Please refer to documentation in `deploy_pyspark_model`.
-        default_output : string
-            Please refer to documentation in `register_application`.
+            The SparkContext associated with the model. This is needed
+            to save the model for pyspark.mllib models.
         input_type : str
             The input_type to be associated with the registered app and deployed model.
             One of "integers", "floats", "doubles", "bytes", or "strings".
+        default_output : string, optional
+            The default prediction to use if the model does not return a prediction
+            by the end of the latency objective.
         model_version : Any object with a string representation (with __str__ implementation), optional
-            Please refer to documentation in `deploy_pyspark_model`.
+            The version to assign the deployed model.
         slo_micros : int, optional
-            Please refer to documentation in `register_application`.
+            The query latency objective for the application in microseconds.
+            This is the processing latency between Clipper receiving a request 
+            and sending a response. It does not account for network latencies 
+            before a request is received or after a response is sent.
         labels : list of str, optional
-            Please refer to documentation in `deploy_pyspark_model`.
+            A list of strings annotating the model.
         num_containers : int, optional
-            Please refer to documentation in `deploy_pyspark_model`.
+            The number of replicas of the model to create. More replicas can be
+            created later as well.
         """
         if not self._register_app_and_check_success(
                 name, input_type, default_output, slo_micros):
             return False
 
-        return self.deploy_pyspark_model(
-            name,
-            model_version,
-            predict_function,
-            pyspark_model,
-            sc,
-            input_type,
-            labels=DEFAULT_LABEL,
-            num_containers=1)
+        return self.deploy_pyspark_model(name, model_version, predict_function,
+                                         pyspark_model, sc, input_type, labels,
+                                         num_containers)
 
     def get_all_models(self, verbose=False):
         """Gets information about all models registered with Clipper.

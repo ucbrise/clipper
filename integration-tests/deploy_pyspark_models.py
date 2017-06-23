@@ -148,7 +148,8 @@ if __name__ == "__main__":
             lambda line: parseData(line, objective, pos_label)).cache()
 
         try:
-            clipper.register_application(app_name, model_name, "ints",
+            input_type = "ints"
+            clipper.register_application(app_name, model_name, input_type,
                                          "default_pred", 100000)
             time.sleep(1)
             response = requests.post(
@@ -176,9 +177,8 @@ if __name__ == "__main__":
 
             version += 1
             app_and_model_name = "easy_register_app_model"
-            clipper.activate_pyspark_model(app_and_model_name, predict,
-                                           lr_model, sc, "default_pred",
-                                           "ints")
+            clipper.register_app_and_deploy_pyspark_model(
+                app_and_model_name, predict, lr_model, sc, input_type)
             _test_deployed_model(app_and_model_name, version)
 
         except BenchmarkException as e:

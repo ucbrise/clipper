@@ -215,14 +215,14 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertIsNotNone(running_containers_output)
         self.assertGreaterEqual(len(running_containers_output), 1)
 
-    def test_activate_predict_function_is_successful(self):
+    def test_register_app_and_deploy_predict_function_is_successful(self):
         model_version = 1
         app_and_model_name = "easy_register_app_model"
         predict_func = lambda inputs: ["0" for x in inputs]
         input_type = "doubles"
 
-        result = self.clipper_inst.activate_predict_function(
-            app_and_model_name, predict_func, "1.0", input_type)
+        result = self.clipper_inst.register_app_and_deploy_predict_function(
+            app_and_model_name, predict_func, input_type)
 
         self.assertTrue(result)
         model_info = self.clipper_inst.get_model_info(
@@ -326,7 +326,7 @@ SHORT_TEST_ORDERING = [
     'test_add_container_for_deployed_model_succeeds',
     'test_remove_inactive_containers_succeeds',
     'test_predict_function_deploys_successfully',
-    'test_activate_predict_function_is_successful',
+    'test_register_app_and_deploy_predict_function_is_successful',
 ]
 
 LONG_TEST_ORDERING = [
