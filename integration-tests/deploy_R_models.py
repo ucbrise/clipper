@@ -82,8 +82,10 @@ def call_predictions(query_string):
         print(result)
         raise BenchmarkException(response.text)
     else:
-        parsed_output = pandas.read_csv(StringIO(result["output"]), sep=";", index_col=0)
-        print("Request Input:\n{} \nResponse:\n{}\n".format(query_string, parsed_output))
+        parsed_output = pandas.read_csv(
+            StringIO(result["output"]), sep=";", index_col=0)
+        print("Request Input:\n{} \nResponse:\n{}\n".format(
+            query_string, parsed_output))
     return default
 
 
@@ -98,7 +100,7 @@ def predict_R_model(df):
     for i in range(0, num_preds):
         subframe = df.iloc[i:i + 1]
         query_string = subframe.to_csv(sep=";")
-        num_defaults  += call_predictions(query_string)
+        num_defaults += call_predictions(query_string)
     return num_preds, num_defaults
 
 
@@ -129,6 +131,7 @@ def deploy_and_test_model(clipper, model, version, test_data_collection):
         raise BenchmarkException("Error querying APP %s, MODEL %s:%d" %
                                  (app_name, model_name, version))
 
+
 def cleanup(clipper, test_succeeded):
     """
     Parameters
@@ -142,6 +145,7 @@ def cleanup(clipper, test_succeeded):
     else:
         sys.exit(1)
 
+
 if __name__ == "__main__":
     try:
         clipper = init_clipper()
@@ -151,9 +155,11 @@ if __name__ == "__main__":
         #splitting it for training and testing in ratio 1:1. Further splitting the test data in ratio 1:1
         train_data = ro.r('train_data=head(mtcars,0.5*nrow(mtcars))')
         test_data = ro.r('test_data=tail(mtcars,0.5*nrow(mtcars))')
-        test_data_collection={}
-        test_data_collection[0]=ro.r('test_data1=head(test_data,0.5*nrow(test_data))')
-        test_data_collection[1]=ro.r('test_data2=tail(test_data,0.5*nrow(test_data))')
+        test_data_collection = {}
+        test_data_collection[0] = ro.r(
+            'test_data1=head(test_data,0.5*nrow(test_data))')
+        test_data_collection[1] = ro.r(
+            'test_data2=tail(test_data,0.5*nrow(test_data))')
 
         try:
             clipper.register_application(app_name, model_name, "string",
@@ -173,7 +179,8 @@ if __name__ == "__main__":
 
             version = 1
             R_model = train_R_model()
-            deploy_and_test_model(clipper, R_model, version, test_data_collection)
+            deploy_and_test_model(clipper, R_model, version,
+                                  test_data_collection)
         except BenchmarkException as e:
             print(e)
             cleanup(clipper, test_succeeded=False)
