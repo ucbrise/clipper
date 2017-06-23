@@ -31,7 +31,7 @@ self.model = base.readRDS(PATH)  #PATH is the path of saved model.
 
 ```py
 Clipper.deploy_R_model(
-   "example_model",1,model_RPy2,"strings"
+   "example_model", 1, model_RPy2
    )
 ```
 
@@ -39,7 +39,7 @@ Clipper.deploy_R_model(
 
 ```
 Clipper.register_application(
-    "example_app","example_model","strings",default_output,slo_micros=2000
+    "example_app", "example_model", "strings", default_output, slo_micros=2000
     )
  ```
 

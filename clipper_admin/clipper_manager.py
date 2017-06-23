@@ -1286,10 +1286,6 @@ class Clipper:
             this is how python's rpy2 encapsulates any given R model.This model will be loaded
             into the Clipper model container and provided as an argument to the
             predict function each time it is called. 
-        container_name : str
-            The Docker container image to use to run this model container.
-        input_type : str
-            "strings" (from which model specific dataframes can be derived for carrying out predictions). 
         labels : list of str, optional
             A set of strings annotating the model 
         num_containers : int, optional
@@ -1301,8 +1297,9 @@ class Clipper:
         import rpy2.robjects as ro
         from rpy2.robjects.packages import importr
         base = importr('base')
-        input_type="strings"
-        container_name = "clipper/r_python_container"
+
+        input_type = "strings"
+        container_name = "clipper/r_python_container" 
 
         with hide("warnings", "output", "running"):
             fname = name.replace("/", "_")
