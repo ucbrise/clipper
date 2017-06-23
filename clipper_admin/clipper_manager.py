@@ -1267,3 +1267,70 @@ class Clipper:
             warn("Could not find %s, please try with a valid "
                  "container docker image")
             return False
+
+    def deploy_R_model(self,
+                       name,
+                       version,
+                       model_data,
+                       labels=DEFAULT_LABEL,
+                       num_containers=1):
+        """Registers a model with Clipper and deploys instances of it in containers.
+        Parameters
+        ----------
+        name : str
+            The name to assign this model.
+        version : int
+            The version to assign this model.
+        model_data : 
+            The trained model to add to Clipper.The type has to be rpy2.robjects.vectors.ListVector,
+            this is how python's rpy2 encapsulates any given R model.This model will be loaded
+            into the Clipper model container and provided as an argument to the
+            predict function each time it is called. 
+        labels : list of str, optional
+            A set of strings annotating the model 
+        num_containers : int, optional
+            The number of replicas of the model to create. More replicas can be
+            created later as well. Defaults to 1.
+        """
+
+        # importing some R specific dependencies
+        import rpy2.robjects as ro
+        from rpy2.robjects.packages import importr
+        base = importr('base')
+
+        input_type = "strings"
+        container_name = "clipper/r_python_container"
+
+        with hide("warnings", "output", "running"):
+            fname = name.replace("/", "_")
+            rds_path = '/tmp/%s/%s.rds' % (fname, fname)
+            model_data_path = "/tmp/%s" % fname
+            try:
+                os.mkdir(model_data_path)
+            except OSError:
+                pass
+            base.saveRDS(model_data, rds_path)
+
+            vol = "{model_repo}/{name}/{version}".format(
+                model_repo=MODEL_REPO, name=name, version=version)
+            # publish model to Clipper and verify success before copying model
+            # parameters to Clipper and starting containers
+            if not self._publish_new_model(
+                    name, version, labels, input_type, container_name,
+                    os.path.join(vol, os.path.basename(model_data_path))):
+                return False
+            print("Published model to Clipper")
+
+            # Put model parameter data on host
+            with hide("warnings", "output", "running"):
+                self._execute_standard("mkdir -p {vol}".format(vol=vol))
+
+            with hide("output", "running"):
+                self._execute_put(model_data_path, vol)
+
+            print("Copied model data to host")
+            # aggregate results of starting all containers
+            return all([
+                self.add_container(name, version)
+                for r in range(num_containers)
+            ])
