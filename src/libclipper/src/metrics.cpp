@@ -302,6 +302,7 @@ Meter::Meter(std::string name, std::shared_ptr<MeterClock> clock)
       m15_rate(ewma_tick_interval_seconds_, LoadAverage::FifteenMinute) {}
 
 void Meter::mark(uint32_t num) {
+  tick_if_necessary();
   count_.fetch_add(num, std::memory_order_relaxed);
   m1_rate.mark_uncounted(num);
   m5_rate.mark_uncounted(num);
@@ -328,7 +329,7 @@ void Meter::tick_if_necessary() {
 
   if (last_tick_update_successful) {
     double num_ticks = static_cast<double>(time_since_last_tick) /
-                       static_cast<double>(tick_interval_micros);
+        static_cast<double>(tick_interval_micros);
     for (int i = 0; i < static_cast<int>(num_ticks); i++) {
       m1_rate.tick();
       m5_rate.tick();
