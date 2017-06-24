@@ -44,6 +44,9 @@ CLIPPER_LOGS_PATH = "/tmp/clipper-logs"
 CLIPPER_DOCKER_LABEL = "ai.clipper.container.label"
 CLIPPER_MODEL_CONTAINER_LABEL = "ai.clipper.model_container.model_version"
 
+DEFAULT_MODEL_VERSION = 1
+DEFAULT_DEFAULT_OUTPUT = "None"
+DEFAULT_SLO_MICROS = 100000
 DEFAULT_LABEL = ["DEFAULT"]
 
 aws_cli_config = """
@@ -321,7 +324,7 @@ class Clipper:
 
     def register_application(self, name, model, input_type, default_output,
                              slo_micros):
-        """Register a new Clipper application.
+        """Register a new Clipper application and returns the response object.
 
         Parameters
         ----------
@@ -345,6 +348,12 @@ class Clipper:
             the objective not be set aggressively low unless absolutely necessary.
             40000 (40ms) is a good starting value, but the optimal latency objective
             will vary depending on the application.
+
+        Returns
+        -------
+        bool
+            Returns true iff the app registration request was successful
+
         """
         url = "http://%s:%d/admin/add_app" % (self.host,
                                               CLIPPER_MANAGEMENT_PORT)
@@ -358,6 +367,7 @@ class Clipper:
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
         print(r.text)
+        return r.status_code == requests.codes.ok
 
     def get_all_apps(self, verbose=False):
         """Gets information about all applications registered with Clipper.
@@ -689,7 +699,7 @@ class Clipper:
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
         labels : list of str, optional
-            A list of strings annotating the model
+            A list of strings annotating the model.
         num_containers : int, optional
             The number of replicas of the model to create. More replicas can be
             created later as well. Defaults to 1.
@@ -734,6 +744,121 @@ class Clipper:
         shutil.rmtree(serialization_dir)
 
         return deploy_result
+
+    def _register_app_and_check_success(self, name, input_type, default_output,
+                                        slo_micros):
+        if self.register_application(name, name, input_type, default_output,
+                                     slo_micros):
+            print("Application registration sucessful! Deploying model.")
+            return True
+        print("Application registration unsuccessful. Will not deploy model.")
+        return False
+
+    def register_app_and_deploy_predict_function(
+            self,
+            name,
+            predict_function,
+            input_type,
+            default_output=DEFAULT_DEFAULT_OUTPUT,
+            model_version=DEFAULT_MODEL_VERSION,
+            slo_micros=DEFAULT_SLO_MICROS,
+            labels=DEFAULT_LABEL,
+            num_containers=1):
+        """Registers an app and deploys provided predict function as a model.
+
+        Parameters
+        ----------
+        name : str
+            The to be assigned to the registered app and deployed model.
+        predict_function : function
+            The prediction function. Any state associated with the function should be
+            captured via closure capture.
+        input_type : str
+            The input_type to be associated with the registered app and deployed model.
+            One of "integers", "floats", "doubles", "bytes", or "strings".
+        default_output : string, optional
+            The default prediction to use if the model does not return a prediction
+            by the end of the latency objective.
+        model_version : Any object with a string representation (with __str__ implementation), optional
+            The version to assign the deployed model.
+        slo_micros : int
+            The query latency objective for the application in microseconds.
+            This is the processing latency between Clipper receiving a request 
+            and sending a response. It does not account for network latencies 
+            before a request is received or after a response is sent.
+        labels : list of str, optional
+            A list of strings annotating the model.
+        num_containers : int, optional
+            The number of replicas of the model to create. More replicas can be
+            created later as well.
+        """
+        if not self._register_app_and_check_success(
+                name, input_type, default_output, slo_micros):
+            return False
+
+        return self.deploy_predict_function(name, model_version,
+                                            predict_function, input_type,
+                                            labels, num_containers)
+
+    def register_app_and_deploy_pyspark_model(
+            self,
+            name,
+            predict_function,
+            pyspark_model,
+            sc,
+            input_type,
+            default_output=DEFAULT_DEFAULT_OUTPUT,
+            model_version=DEFAULT_MODEL_VERSION,
+            slo_micros=DEFAULT_SLO_MICROS,
+            labels=DEFAULT_LABEL,
+            num_containers=1):
+        """Registers an app and deploys provided spark model.
+
+        Parameters
+        ----------
+        name : str
+            The to be assigned to the registered app and deployed model.
+        predict_function : function
+            A function that takes three arguments, a SparkContext, the ``model`` parameter and
+            a list of inputs of the type specified by the ``input_type`` argument.
+            Any state associated with the function other than the Spark model should
+            be captured via closure capture. Note that the function must not capture
+            the SparkContext or the model implicitly, as these objects are not pickleable
+            and therefore will prevent the ``predict_function`` from being serialized.
+        pyspark_model : pyspark.mllib.util.Saveable
+            An object that mixes in the pyspark Saveable mixin. Generally this
+            is either an mllib model or transformer. This model will be loaded
+            into the Clipper model container and provided as an argument to the
+            predict function each time it is called.
+        sc : SparkContext
+            The SparkContext associated with the model. This is needed
+            to save the model for pyspark.mllib models.
+        input_type : str
+            The input_type to be associated with the registered app and deployed model.
+            One of "integers", "floats", "doubles", "bytes", or "strings".
+        default_output : string, optional
+            The default prediction to use if the model does not return a prediction
+            by the end of the latency objective.
+        model_version : Any object with a string representation (with __str__ implementation), optional
+            The version to assign the deployed model.
+        slo_micros : int, optional
+            The query latency objective for the application in microseconds.
+            This is the processing latency between Clipper receiving a request 
+            and sending a response. It does not account for network latencies 
+            before a request is received or after a response is sent.
+        labels : list of str, optional
+            A list of strings annotating the model.
+        num_containers : int, optional
+            The number of replicas of the model to create. More replicas can be
+            created later as well.
+        """
+        if not self._register_app_and_check_success(
+                name, input_type, default_output, slo_micros):
+            return False
+
+        return self.deploy_pyspark_model(name, model_version, predict_function,
+                                         pyspark_model, sc, input_type, labels,
+                                         num_containers)
 
     def get_all_models(self, verbose=False):
         """Gets information about all models registered with Clipper.
@@ -1267,3 +1392,70 @@ class Clipper:
             warn("Could not find %s, please try with a valid "
                  "container docker image")
             return False
+
+    def deploy_R_model(self,
+                       name,
+                       version,
+                       model_data,
+                       labels=DEFAULT_LABEL,
+                       num_containers=1):
+        """Registers a model with Clipper and deploys instances of it in containers.
+        Parameters
+        ----------
+        name : str
+            The name to assign this model.
+        version : int
+            The version to assign this model.
+        model_data : 
+            The trained model to add to Clipper.The type has to be rpy2.robjects.vectors.ListVector,
+            this is how python's rpy2 encapsulates any given R model.This model will be loaded
+            into the Clipper model container and provided as an argument to the
+            predict function each time it is called. 
+        labels : list of str, optional
+            A set of strings annotating the model 
+        num_containers : int, optional
+            The number of replicas of the model to create. More replicas can be
+            created later as well. Defaults to 1.
+        """
+
+        # importing some R specific dependencies
+        import rpy2.robjects as ro
+        from rpy2.robjects.packages import importr
+        base = importr('base')
+
+        input_type = "strings"
+        container_name = "clipper/r_python_container"
+
+        with hide("warnings", "output", "running"):
+            fname = name.replace("/", "_")
+            rds_path = '/tmp/%s/%s.rds' % (fname, fname)
+            model_data_path = "/tmp/%s" % fname
+            try:
+                os.mkdir(model_data_path)
+            except OSError:
+                pass
+            base.saveRDS(model_data, rds_path)
+
+            vol = "{model_repo}/{name}/{version}".format(
+                model_repo=MODEL_REPO, name=name, version=version)
+            # publish model to Clipper and verify success before copying model
+            # parameters to Clipper and starting containers
+            if not self._publish_new_model(
+                    name, version, labels, input_type, container_name,
+                    os.path.join(vol, os.path.basename(model_data_path))):
+                return False
+            print("Published model to Clipper")
+
+            # Put model parameter data on host
+            with hide("warnings", "output", "running"):
+                self._execute_standard("mkdir -p {vol}".format(vol=vol))
+
+            with hide("output", "running"):
+                self._execute_put(model_data_path, vol)
+
+            print("Copied model data to host")
+            # aggregate results of starting all containers
+            return all([
+                self.add_container(name, version)
+                for r in range(num_containers)
+            ])

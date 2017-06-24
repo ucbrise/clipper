@@ -87,12 +87,16 @@ def predict(spark, model, xs):
 def deploy_and_test_model(sc, clipper, model, version):
     clipper.deploy_pyspark_model(model_name, version, predict, model, sc,
                                  "ints")
+    _test_deployed_model(app_name, version)
+
+
+def _test_deployed_model(app, version):
     time.sleep(25)
     num_preds = 25
     num_defaults = 0
     for i in range(num_preds):
         response = requests.post(
-            "http://localhost:1337/%s/predict" % app_name,
+            "http://localhost:1337/%s/predict" % app,
             headers=headers,
             data=json.dumps({
                 'input': get_test_point()
@@ -109,7 +113,7 @@ def deploy_and_test_model(sc, clipper, model, version):
                                                          num_preds))
     if num_defaults > num_preds / 2:
         raise BenchmarkException("Error querying APP %s, MODEL %s:%d" %
-                                 (app_name, model_name, version))
+                                 (app, model_name, version))
 
 
 def train_logistic_regression(trainRDD):
@@ -144,7 +148,8 @@ if __name__ == "__main__":
             lambda line: parseData(line, objective, pos_label)).cache()
 
         try:
-            clipper.register_application(app_name, model_name, "ints",
+            input_type = "ints"
+            clipper.register_application(app_name, model_name, input_type,
                                          "default_pred", 100000)
             time.sleep(1)
             response = requests.post(
@@ -169,6 +174,13 @@ if __name__ == "__main__":
             version += 1
             rf_model = train_random_forest(trainRDD, 20, 16)
             deploy_and_test_model(sc, clipper, svm_model, version)
+
+            version += 1
+            app_and_model_name = "easy_register_app_model"
+            clipper.register_app_and_deploy_pyspark_model(
+                app_and_model_name, predict, lr_model, sc, input_type)
+            _test_deployed_model(app_and_model_name, version)
+
         except BenchmarkException as e:
             print(e)
             clipper.stop_all()
