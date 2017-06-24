@@ -311,8 +311,10 @@ void Meter::mark(uint32_t num) {
 
 void Meter::tick_if_necessary() {
   long curr_micros = clock_->get_time_micros();
-  auto tick_interval_seconds = std::chrono::seconds(ewma_tick_interval_seconds_);
-  long tick_interval_micros = std::chrono::microseconds(tick_interval_seconds).count();
+  auto tick_interval_seconds =
+      std::chrono::seconds(ewma_tick_interval_seconds_);
+  long tick_interval_micros =
+      std::chrono::microseconds(tick_interval_seconds).count();
   long last_tick = last_ewma_tick_micros_.load(std::memory_order_seq_cst);
   long time_since_last_tick = curr_micros - last_tick;
 
@@ -329,7 +331,7 @@ void Meter::tick_if_necessary() {
 
   if (last_tick_update_successful) {
     double num_ticks = static_cast<double>(time_since_last_tick) /
-        static_cast<double>(tick_interval_micros);
+                       static_cast<double>(tick_interval_micros);
     for (int i = 0; i < static_cast<int>(num_ticks); i++) {
       m1_rate.tick();
       m5_rate.tick();
