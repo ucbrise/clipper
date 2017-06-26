@@ -291,6 +291,7 @@ class Histogram : public Metric {
   void insert(const int64_t value);
   const HistogramStats compute_stats();
   static double percentile(std::vector<int64_t> snapshot, double rank);
+  // This method obtains a snapshot from the histogram's sampler and then calculates the percentile
   double percentile(double rank);
 
   // Metric implementation

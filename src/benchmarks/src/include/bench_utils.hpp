@@ -1,4 +1,5 @@
 #include <unordered_map>
+#include <clipper/metrics.hpp>
 
 namespace bench_utils {
 
@@ -18,6 +19,45 @@ const std::string REPORTS_PATH_VERBOSE = "reports_path_verbose";
 const std::string POISSON_DELAY = "poisson_delay";
 const std::string MODEL_NAME = "model_name";
 const std::string MODEL_VERSION = "model_version";
+
+class BenchMetrics {
+  public:
+    explicit BenchMetrics(std::string app_name)
+      : app_name_(app_name),
+        latency_(
+            clipper::metrics::MetricsRegistry::get_metrics().create_histogram(
+                    "app:" + app_name + ":prediction_latency", "microseconds",
+                    4096)),
+        throughput_(
+            clipper::metrics::MetricsRegistry::get_metrics().create_meter(
+                    "app:" + app_name + ":prediction_throughput")),
+        num_predictions_(
+            clipper::metrics::MetricsRegistry::get_metrics().create_counter(
+                    "app:" + app_name + ":num_predictions")),
+        accuracy_ratio_(
+            clipper::metrics::MetricsRegistry::get_metrics().create_ratio_counter(
+                    "app:" + app_name + ":accuracy")),
+        default_pred_ratio_(
+            clipper::metrics::MetricsRegistry::get_metrics()
+                .create_ratio_counter("app:" + app_name +
+                                      ":default_prediction_ratio")) {}
+    ~BenchMetrics() = default;
+
+    BenchMetrics(const BenchMetrics &) = default;
+
+    BenchMetrics &operator=(const BenchMetrics &) = default;
+
+    BenchMetrics(BenchMetrics &&) = default;
+
+    BenchMetrics &operator=(BenchMetrics &&) = default;
+
+    std::string app_name_;
+    std::shared_ptr<clipper::metrics::Histogram> latency_;
+    std::shared_ptr<clipper::metrics::Meter> throughput_;
+    std::shared_ptr<clipper::metrics::Counter> num_predictions_;
+    std::shared_ptr<metrics::RatioCounter> accuracy_ratio_;
+    std::shared_ptr<clipper::metrics::RatioCounter> default_pred_ratio_;
+};
 
 /**
  * Creates a configuration from data received through the command prompt

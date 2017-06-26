@@ -36,7 +36,7 @@ ModelContainer::ModelContainer(VersionedModelId model, int container_id,
                      model_str, std::to_string(container_id));
 }
 
-void ModelContainer::update_container_stats(size_t batch_size,
+void ModelContainer::update_throughput(size_t batch_size,
                                             long total_latency_micros) {
   if (batch_size <= 0 || total_latency_micros <= 0) {
     throw std::invalid_argument(

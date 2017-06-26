@@ -15,7 +15,7 @@ You'll want to unzip the .tar.gz file manually.
 
 ## Optional Configuration Files
 The following benchmark attributes can be loaded via a JSON configuration file:
-- **cifar_data_path**: The path to a **specific binary data file** within the CIFAR10 binary dataset with a name of the form `data_batch_<n>.bin`. (`/Users/.../cifar-100-binary/data_batch_1.bin`, for example)
+- **cifar_data_path**: The path to a **specific binary data file** within the CIFAR10 binary dataset with a name of the form `data_batch_<n>.bin`. (`<path_to_unzipped_cifar_directory>/data_batch_1.bin`, for example)
 - **num_threads**: The number of threads of execution
 - **num_batches**: The number of batches of requests to be sent by each thread
 - **batch_size**: The number of requests to be sent in each batch

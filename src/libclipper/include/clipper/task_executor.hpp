@@ -487,7 +487,8 @@ class TaskExecutor {
         std::chrono::duration_cast<std::chrono::microseconds>(task_latency)
             .count();
     if (processing_container != nullptr) {
-      processing_container->update_container_stats(1, task_latency_micros);
+      processing_container->update_throughput(1, task_latency_micros);
+      processing_container->latency_hist_.insert(task_latency_micros);
     } else {
       log_error(LOGGING_TAG_TASK_EXECUTOR,
                 "Could not find processing container. Something is wrong.");

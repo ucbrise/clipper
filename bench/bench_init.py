@@ -4,7 +4,6 @@ import errno
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath("%s/../management" % cur_dir))
 sys.path.append(os.path.abspath("%s/../examples" % cur_dir))
-# sys.path.insert(0, os.path.abspath('%s/../containers/python/' % cur_dir))
 
 from tutorial import cifar_utils
 from sklearn import linear_model as lm

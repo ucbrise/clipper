@@ -32,7 +32,7 @@ class ModelContainer {
 
   size_t get_batch_size(Deadline deadline);
   double get_average_throughput_per_millisecond();
-  void update_container_stats(size_t batch_size, long total_latency);
+  void update_throughput(size_t batch_size, long total_latency);
   void send_feedback(PredictTask task);
 
   VersionedModelId model_;

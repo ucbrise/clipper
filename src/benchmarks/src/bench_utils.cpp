@@ -11,79 +11,9 @@ using namespace clipper;
 
 namespace bench_utils {
 
-const std::string CIFAR_DATA_PATH_PROMPT =
-    "Enter a path to the CIFAR10 binary data set: ";
-const std::string NUM_THREADS_PROMPT =
-    "Enter the number of threads of execution: ";
-const std::string NUM_BATCHES_PROMPT =
-    "Enter the number of request batches to be sent by each thread: ";
-const std::string BATCH_SIZE_PROMPT =
-    "Enter the number of requests per batch: ";
-const std::string BATCH_DELAY_MILLIS_PROMPT =
-    "Enter the delay between batches, in milliseconds: ";
-const std::string BATCH_DELAY_MICROS_PROMPT =
-    "Enter the delay between batches, in microseconds: ";
-const std::string LATENCY_OBJECTIVE_PROMPT =
-    "Enter the latency objective, in microseconds: ";
-const std::string REPORT_DELAY_SECONDS_PROMPT =
-    "Enter the delay between reporting metrics, in seconds: ";
-const std::string REPORTS_PATH_PROMPT =
-    "Enter the path to the file for contain benchmark reports: ";
-const std::string REPORTS_PATH_VERBOSE_PROMPT =
-    "Enter the path to the file for contain verbose benchmark reports: ";
-const std::string POISSON_DELAY_PROMPT =
-    "Enter \"true\" if you want the delay between request batches to be drawn "
-    "from a "
-    "poisson distribution: ";
-const std::string MODEL_NAME_PROMPT =
-    "Enter the name of the model you want queried: ";
-const std::string MODEL_VERSION_PROMPT =
-    "Enter the version of the model you want queried: ";
+constexpr int CIFAR_PLANE_INDEX = 0;
+constexpr int CIFAR_BIRD_INDEX = 2;
 
-std::string _get_prompt(std::string var) {
-  if (var == CIFAR_DATA_PATH) {
-    return CIFAR_DATA_PATH_PROMPT;
-  } else if (var == NUM_THREADS) {
-    return NUM_THREADS_PROMPT;
-  } else if (var == NUM_BATCHES) {
-    return NUM_BATCHES_PROMPT;
-  } else if (var == BATCH_SIZE) {
-    return BATCH_SIZE_PROMPT;
-  } else if (var == BATCH_DELAY_MILLIS) {
-    return BATCH_DELAY_MILLIS_PROMPT;
-  } else if (var == LATENCY_OBJECTIVE) {
-    return LATENCY_OBJECTIVE_PROMPT;
-  } else if (var == REPORT_DELAY_SECONDS) {
-    return REPORT_DELAY_SECONDS_PROMPT;
-  } else if (var == REPORTS_PATH) {
-    return REPORTS_PATH_PROMPT;
-  } else if (var == REPORTS_PATH_VERBOSE) {
-    return REPORTS_PATH_VERBOSE_PROMPT;
-  } else if (var == BATCH_DELAY_MICROS) {
-    return BATCH_DELAY_MICROS_PROMPT;
-  } else if (var == POISSON_DELAY) {
-    return POISSON_DELAY_PROMPT;
-  } else if (var == MODEL_NAME) {
-    return MODEL_NAME_PROMPT;
-  } else if (var == MODEL_VERSION) {
-    return MODEL_VERSION_PROMPT;
-  }
-  return "";
-}
-
-std::unordered_map<std::string, std::string> get_config_from_prompt(
-    std::string setup_message, std::vector<std::string> desired_vars) {
-  std::unordered_map<std::string, std::string> responses;
-  std::cout << setup_message << std::endl;
-
-  std::string prompt;
-  for (std::string desired_var : desired_vars) {
-    prompt = _get_prompt(desired_var);
-    std::cout << prompt;
-    std::cin >> responses[desired_var];
-  }
-  return responses;
-}
 
 std::unordered_map<std::string, std::string> get_config_from_json(
     std::string json_path, std::vector<std::string> desired_vars) {
@@ -144,8 +74,8 @@ std::unordered_map<int, std::vector<std::vector<double>>> load_cifar(
 
 std::vector<std::vector<double>> concatenate_cifar_datapoints(
     std::unordered_map<int, std::vector<std::vector<double>>> cifar_data) {
-  std::vector<std::vector<double>> planes_vecs = cifar_data.find(0)->second;
-  std::vector<std::vector<double>> birds_vecs = cifar_data.find(2)->second;
+  std::vector<std::vector<double>> planes_vecs = cifar_data.find(CIFAR_PLANE_INDEX)->second;
+  std::vector<std::vector<double>> birds_vecs = cifar_data.find(CIFAR_BIRD_INDEX)->second;
 
   planes_vecs.insert(planes_vecs.end(), birds_vecs.begin(), birds_vecs.end());
   return planes_vecs;
@@ -153,7 +83,13 @@ std::vector<std::vector<double>> concatenate_cifar_datapoints(
 
 std::string get_str(const std::string &key,
                     std::unordered_map<std::string, std::string> &config) {
-  return config.find(key)->second;
+  auto entry = config.find(key);
+  if (entry == config.end()) {
+    std::stringstream ss;
+    ss << "Key '" << key << "' does not exist in config.";
+    throw std::invalid_argument(ss.str());
+  }
+  return entry->second;
 }
 
 int get_int(const std::string &key,
