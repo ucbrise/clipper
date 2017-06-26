@@ -69,9 +69,8 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
                clipper::DefaultOutputSelectionPolicy::get_name(),
                {VersionedModelId(model_name, model_version)}};
 
-    if (DONT_SEND_REQUESTS) {
-      app_metrics.num_predictions_->increment(1);
-    } else {
+    app_metrics.num_requests_->increment(1);
+    if (SEND_REQUESTS) {
       boost::future<Response> prediction =
               qp.predict(q);
 
