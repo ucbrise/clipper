@@ -62,32 +62,37 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
     query_vec = data[data_index];
     query_vec[0] += j / num_datapoints;
     std::shared_ptr<Input> input = std::make_shared<DoubleVector>(query_vec);
+    Query q = {TEST_APPLICATION_LABEL,
+               UID,
+               input,
+               latency_objective,
+               clipper::DefaultOutputSelectionPolicy::get_name(),
+               {VersionedModelId(model_name, model_version)}};
 
-    boost::future<Response> prediction =
-        qp.predict({TEST_APPLICATION_LABEL,
-                    UID,
-                    input,
-                    latency_objective,
-                    clipper::DefaultOutputSelectionPolicy::get_name(),
-                    {VersionedModelId(model_name, model_version)}});
-
-    prediction.then([app_metrics](boost::future<Response> f) {
-      Response r = f.get();
-
-      // Update metrics
-      if (r.output_is_default_) {
-        app_metrics.default_pred_ratio_->increment(1, 1);
-      } else {
-        app_metrics.default_pred_ratio_->increment(0, 1);
-      }
-      app_metrics.latency_->insert(r.duration_micros_);
+    if (DONT_SEND_REQUESTS) {
       app_metrics.num_predictions_->increment(1);
-      app_metrics.throughput_->mark(1);
-    });
+    } else {
+      boost::future<Response> prediction =
+              qp.predict(q);
 
-    delay_micros =
-        draw_from_poisson ? distribution(generator) : batch_delay_micros;
-    std::this_thread::sleep_for(std::chrono::microseconds(delay_micros));
+      prediction.then([app_metrics](boost::future<Response> f) {
+          Response r = f.get();
+
+          // Update metrics
+          if (r.output_is_default_) {
+            app_metrics.default_pred_ratio_->increment(1, 1);
+          } else {
+            app_metrics.default_pred_ratio_->increment(0, 1);
+          }
+          app_metrics.latency_->insert(r.duration_micros_);
+          app_metrics.num_predictions_->increment(1);
+          app_metrics.throughput_->mark(1);
+      });
+
+      delay_micros =
+              draw_from_poisson ? distribution(generator) : batch_delay_micros;
+      std::this_thread::sleep_for(std::chrono::microseconds(delay_micros));
+    }
   }
 }
 

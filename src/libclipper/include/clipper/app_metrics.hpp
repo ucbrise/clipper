@@ -10,6 +10,9 @@ class AppMetrics {
  public:
   explicit AppMetrics(std::string app_name)
       : app_name_(app_name),
+        num_requests_(
+            clipper::metrics::MetricsRegistry::get_metrics().create_counter(
+                    "app:" + app_name + ":num_requests")),
         latency_(
             clipper::metrics::MetricsRegistry::get_metrics().create_histogram(
                 "app:" + app_name + ":prediction_latency", "microseconds",
@@ -38,6 +41,7 @@ class AppMetrics {
   std::shared_ptr<clipper::metrics::Histogram> latency_;
   std::shared_ptr<clipper::metrics::Meter> throughput_;
   std::shared_ptr<clipper::metrics::Counter> num_predictions_;
+  std::shared_ptr<clipper::metrics::Counter> num_requests_;
   std::shared_ptr<clipper::metrics::RatioCounter> default_pred_ratio_;
 };
 
