@@ -13,7 +13,26 @@ namespace bench_utils {
 
 constexpr int CIFAR_PLANE_INDEX = 0;
 constexpr int CIFAR_BIRD_INDEX = 2;
+constexpr double SKLEARN_PLANE_LABEL = 1;
+constexpr double SKLEARN_BIRD_LABEL = 0;
 
+BenchMetrics::BenchMetrics(std::string app_name) {
+  latency_ = clipper::metrics::MetricsRegistry::get_metrics().create_histogram(
+      "app:" + app_name + ":prediction_latency", "microseconds", 4096);
+  throughput_ = clipper::metrics::MetricsRegistry::get_metrics().create_meter(
+      "app:" + app_name + ":prediction_throughput");
+  send_rate_ = clipper::metrics::MetricsRegistry::get_metrics().create_meter(
+      "app:" + app_name + ":send_rate");
+  num_predictions_ =
+      clipper::metrics::MetricsRegistry::get_metrics().create_counter(
+          "app:" + app_name + ":num_predictions");
+  accuracy_ratio_ =
+      clipper::metrics::MetricsRegistry::get_metrics().create_ratio_counter(
+          "app:" + app_name + ":accuracy_ratio");
+  default_pred_ratio_ =
+      clipper::metrics::MetricsRegistry::get_metrics().create_ratio_counter(
+          "app:" + app_name + ":default_prediction_ratio");
+}
 
 std::unordered_map<std::string, std::string> get_config_from_json(
     std::string json_path, std::vector<std::string> desired_vars) {
@@ -34,16 +53,14 @@ std::unordered_map<std::string, std::string> get_config_from_json(
 }
 
 std::unordered_map<int, std::vector<std::vector<double>>> load_cifar(
-    std::unordered_map<std::string, std::string> &config) {
-  std::string cifar_data_path = config.find(CIFAR_DATA_PATH)->second;
-
+    std::string &cifar_data_path) {
   // A loose check to ensure that the binary dataset (not the python-compatible
   // dataset) is being used
   if (cifar_data_path.find(".bin") == std::string::npos) {
     log_error(
         "BENCH",
         "Please specify the full path of the binary CIFAR-100 data file.");
-    exit(1);  // doesn't seem to actually exit the script
+    std::terminate();
   }
 
   std::ifstream cifar_file(cifar_data_path, std::ios::binary);
@@ -72,13 +89,26 @@ std::unordered_map<int, std::vector<std::vector<double>>> load_cifar(
   return vecs_map;
 }
 
-std::vector<std::vector<double>> concatenate_cifar_datapoints(
+std::pair<std::vector<std::vector<double>>, std::vector<double>>
+concatenate_cifar_datapoints(
     std::unordered_map<int, std::vector<std::vector<double>>> cifar_data) {
-  std::vector<std::vector<double>> planes_vecs = cifar_data.find(CIFAR_PLANE_INDEX)->second;
-  std::vector<std::vector<double>> birds_vecs = cifar_data.find(CIFAR_BIRD_INDEX)->second;
+  std::vector<std::vector<double>> planes_vecs =
+      cifar_data.find(CIFAR_PLANE_INDEX)->second;
+  std::vector<std::vector<double>> birds_vecs =
+      cifar_data.find(CIFAR_BIRD_INDEX)->second;
+
+  std::vector<double> labels(planes_vecs.size() + birds_vecs.size());
+  for (size_t i = 0; i < labels.size(); i++) {
+    if (i < planes_vecs.size()) {
+      labels[i] = SKLEARN_PLANE_LABEL;
+    } else {
+      labels[i] = SKLEARN_BIRD_LABEL;
+    }
+  }
 
   planes_vecs.insert(planes_vecs.end(), birds_vecs.begin(), birds_vecs.end());
-  return planes_vecs;
+
+  return std::make_pair(planes_vecs, labels);
 }
 
 std::string get_str(const std::string &key,

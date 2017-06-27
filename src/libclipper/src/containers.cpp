@@ -37,7 +37,7 @@ ModelContainer::ModelContainer(VersionedModelId model, int container_id,
 }
 
 void ModelContainer::update_throughput(size_t batch_size,
-                                            long total_latency_micros) {
+                                       long total_latency_micros) {
   if (batch_size <= 0 || total_latency_micros <= 0) {
     throw std::invalid_argument(
         "Batch size and latency must be positive for throughput updates!");

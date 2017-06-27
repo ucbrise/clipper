@@ -81,32 +81,32 @@ std::string json_error_msg(const std::string& exception_msg,
 }
 
 class AppMetrics {
-  public:
-    explicit AppMetrics(std::string app_name)
-        : app_name_(app_name),
-          latency_(
-              clipper::metrics::MetricsRegistry::get_metrics().create_histogram(
-                      "app:" + app_name + ":prediction_latency", "microseconds",
-                      4096)),
-          throughput_(
-              clipper::metrics::MetricsRegistry::get_metrics().create_meter(
-                      "app:" + app_name + ":prediction_throughput")),
-          num_predictions_(
-              clipper::metrics::MetricsRegistry::get_metrics().create_counter(
-                      "app:" + app_name + ":num_predictions")),
-          default_pred_ratio_(
-              clipper::metrics::MetricsRegistry::get_metrics()
-                  .create_ratio_counter("app:" + app_name +
-                                        ":default_prediction_ratio")) {}
+ public:
+  explicit AppMetrics(std::string app_name)
+      : app_name_(app_name),
+        latency_(
+            clipper::metrics::MetricsRegistry::get_metrics().create_histogram(
+                "app:" + app_name + ":prediction_latency", "microseconds",
+                4096)),
+        throughput_(
+            clipper::metrics::MetricsRegistry::get_metrics().create_meter(
+                "app:" + app_name + ":prediction_throughput")),
+        num_predictions_(
+            clipper::metrics::MetricsRegistry::get_metrics().create_counter(
+                "app:" + app_name + ":num_predictions")),
+        default_pred_ratio_(
+            clipper::metrics::MetricsRegistry::get_metrics()
+                .create_ratio_counter("app:" + app_name +
+                                      ":default_prediction_ratio")) {}
   ~AppMetrics() = default;
 
-  AppMetrics(const AppMetrics &) = default;
+  AppMetrics(const AppMetrics&) = default;
 
-  AppMetrics &operator=(const AppMetrics &) = default;
+  AppMetrics& operator=(const AppMetrics&) = default;
 
-  AppMetrics(AppMetrics &&) = default;
+  AppMetrics(AppMetrics&&) = default;
 
-  AppMetrics &operator=(AppMetrics &&) = default;
+  AppMetrics& operator=(AppMetrics&&) = default;
 
   std::string app_name_;
   std::shared_ptr<clipper::metrics::Histogram> latency_;
@@ -270,7 +270,7 @@ class RequestHandler {
                                               p.serialize(init_state));
     }
 
-    clipper::app_metrics::AppMetrics app_metrics(name);
+    AppMetrics app_metrics(name);
 
     auto predict_fn = [this, name, input_type, policy, latency_slo_micros,
                        models, app_metrics](
