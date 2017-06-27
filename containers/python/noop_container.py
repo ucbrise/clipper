@@ -6,38 +6,26 @@ import numpy as np
 
 
 class NoopContainer(rpc.ModelContainerBase):
-    def __init__(self):
-        pass
+    def __init__(self, prediction="1.0"):
+        self.prediction = prediction
+
+    def _predict(self, inputs):
+        return [self.prediction] * len(inputs)
 
     def predict_ints(self, inputs):
-        outputs = []
-        for input_item in inputs:
-            outputs.append(str(sum(input_item)))
-        return outputs
+        return self._predict(inputs)
 
     def predict_floats(self, inputs):
-        outputs = []
-        for input_item in inputs:
-            outputs.append(str(sum(input_item)))
-        return outputs
+        return self._predict(inputs)
 
     def predict_doubles(self, inputs):
-        outputs = []
-        for input_item in inputs:
-            outputs.append(str(sum(input_item)))
-        return outputs
+        return self._predict(inputs)
 
     def predict_bytes(self, inputs):
-        outputs = []
-        for input_item in inputs:
-            outputs.append(str(sum(input_item)))
-        return outputs
+        return self._predict(inputs)
 
     def predict_strings(self, inputs):
-        outputs = []
-        for input_item in inputs:
-            outputs.append(str(len(input_item)))
-        return outputs
+        return self._predict(inputs)
 
 
 if __name__ == "__main__":

@@ -28,24 +28,24 @@ Our SKLearn model depends on the CIFAR10 Python dataset for training. In order t
 ```
 
 
-## Spin up a model container for querying
+## Spin up a model container to query
 
-The benchmarking tool will send requests through Clipper to a model. You'll want to spin up this model in a container that implements Clipper's Model-Container RPC interface (will update this to a link when we merge in https://github.com/ucbrise/clipper-website/pull/2).
+The benchmarking tool will send requests through Clipper to a model. You'll want to spin up this model in a container that implements Clipper's Model-Container RPC interface.
 
 You can also use one of our predefined model-container scripts:
 
 - If you want to have the model serving off your machine
 
   - [`bench/setup_noop_bench.sh`](https://github.com/ucbrise/clipper/tree/develop/bench/setup_noop_bench.sh) runs the [`noop_container`](https://github.com/ucbrise/clipper/blob/develop/containers/python/noop_container.py)
-  - [`bench/setup_same_prediction_bench.sh`](https://github.com/ucbrise/clipper/tree/develop/bench/setup_same_prediction_bench.sh) runs the [`same_prediction_container`](https://github.com/ucbrise/clipper/blob/develop/containers/python/same_prediction_container.py)
-  - [`bench/setup_noop_bench.sh`](https://github.com/ucbrise/clipper/tree/develop/bench/setup_sklearn_bench.sh) runs the [`sklearn_cifar_container`](https://github.com/ucbrise/clipper/blob/develop/containers/python/sklearn_cifar_container). If you wish to use this option, remember to download the CIFAR10 python dataset and run
+  - [`bench/setup_sum_bench.sh`](https://github.com/ucbrise/clipper/tree/develop/bench/setup_sum_bench.sh) runs the [`sum_container`](https://github.com/ucbrise/clipper/blob/develop/containers/python/sum_container.py)
+  - [`bench/setup_sklearn_bench.sh`](https://github.com/ucbrise/clipper/tree/develop/bench/setup_sklearn_bench.sh) runs the [`sklearn_cifar_container`](https://github.com/ucbrise/clipper/blob/develop/containers/python/sklearn_cifar_container). If you wish to use this option, remember to download the CIFAR10 python dataset and run
   ```sh
   ./setup_bench.sh <path_to_cifar_python_dataset>
   ```
 where `<path_to_cifar_python_dataset>` is the path to the **directory** containing a parsed CIFAR10 CSV data file with name `cifar_train.data`.
 
 - If you want the model serving off a Docker container, you'll need to build its image. We have some Dockerfiles that define images for some model-containers.
-  - Create the Docker images for the [`same_prediction_container`](https://github.com/ucbrise/clipper/blob/develop/containers/python/same_prediction_container.py)  and [`noop_container`](https://github.com/ucbrise/clipper/blob/develop/containers/python/noop_container.py) by running `./bin/build_bench_docker_images.sh`.
+  - Create the Docker images for the [`noop_container`](https://github.com/ucbrise/clipper/blob/develop/containers/python/noop_container.py)  and [`sum_container`](https://github.com/ucbrise/clipper/blob/develop/containers/python/sum_container.py) by running `./bin/build_bench_docker_images.sh`.
   - Run `docker run <image_id>` on the same host that the benchmarking tool will be run from.
 
 

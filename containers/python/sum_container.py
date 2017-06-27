@@ -5,27 +5,39 @@ import sys
 import numpy as np
 
 
-class SamePredictionContainer(rpc.ModelContainerBase):
-    def __init__(self, prediction="1.0"):
-        self.prediction = prediction
-
-    def _predict(self, inputs):
-        return [self.prediction] * len(inputs)
+class SumContainer(rpc.ModelContainerBase):
+    def __init__(self):
+        pass
 
     def predict_ints(self, inputs):
-        return self._predict(inputs)
+        outputs = []
+        for input_item in inputs:
+            outputs.append(str(sum(input_item)))
+        return outputs
 
     def predict_floats(self, inputs):
-        return self._predict(inputs)
+        outputs = []
+        for input_item in inputs:
+            outputs.append(str(sum(input_item)))
+        return outputs
 
     def predict_doubles(self, inputs):
-        return self._predict(inputs)
+        outputs = []
+        for input_item in inputs:
+            outputs.append(str(sum(input_item)))
+        return outputs
 
     def predict_bytes(self, inputs):
-        return self._predict(inputs)
+        outputs = []
+        for input_item in inputs:
+            outputs.append(str(sum(input_item)))
+        return outputs
 
     def predict_strings(self, inputs):
-        return self._predict(inputs)
+        outputs = []
+        for input_item in inputs:
+            outputs.append(str(len(input_item)))
+        return outputs
 
 
 if __name__ == "__main__":
@@ -61,6 +73,6 @@ if __name__ == "__main__":
         input_type = os.environ["CLIPPER_INPUT_TYPE"]
     else:
         print("Using default input type: doubles")
-    model = SamePredictionContainer()
+    model = SumContainer()
     rpc_service = rpc.RPCService()
     rpc_service.start(model, ip, port, model_name, model_version, input_type)
