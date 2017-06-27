@@ -11,7 +11,7 @@ class AppMetrics {
   explicit AppMetrics(std::string app_name)
       : app_name_(app_name),
         send_request_rate(
-            clipper::metrics::MetricsRegistry::get_metrics().create_counter(
+            clipper::metrics::MetricsRegistry::get_metrics().create_meter(
                     "app:" + app_name + ":send_request_rate")),
         latency_(
             clipper::metrics::MetricsRegistry::get_metrics().create_histogram(
