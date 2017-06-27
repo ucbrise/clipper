@@ -64,6 +64,7 @@ Create a JSON configuration file that specifies values for the following paramet
 - **report\_delay_seconds**: The delay between each flush of benchmarking metrics to your reports file, in seconds. At each flush, the metrics will reset.
 - **model_name**: The name of the model Clipper should connect to. Note that this must be the same as the model name your model-container uses.
 - **model_version**: Your model's version. Again, this must be the same version that your model-container uses.
+- **prevent\_cache_hits**: "true" if you wish for the script to modify datapoints (possibly at the expense of prediction accuracy) in order to prevent hitting Clipper's internal prediction cache. "false" otherwise.
 
 Your JSON config file should look like:
 
@@ -79,7 +80,8 @@ Your JSON config file should look like:
    "reports_path":"<reports_path>",
    "reports_delay_seconds":"<reports_delay_seconds>",
    "model_name":"<model_name>",
-   "model_version":"<model_version>"
+   "model_version":"<model_version>",
+   "poisson_delay":"<true/false>"
 }
 ```
 

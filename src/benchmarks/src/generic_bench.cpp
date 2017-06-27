@@ -27,6 +27,7 @@ const std::string REPORTS_PATH = "reports_path";
 const std::string POISSON_DELAY = "poisson_delay";
 const std::string MODEL_NAME = "model_name";
 const std::string MODEL_VERSION = "model_version";
+const std::string PREVENT_CACHE_HITS = "prevent_cache_hits";
 
 const std::string DEFAULT_OUTPUT = "-1";
 const std::string TEST_APPLICATION_LABEL = "cifar_bench";
@@ -55,6 +56,7 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
   std::string model_name = get_str(MODEL_NAME, config);
   std::string model_version = get_str(MODEL_VERSION, config);
   bool draw_from_poisson = get_bool(POISSON_DELAY, config);
+  bool prevent_cache_hits = get_bool(PREVENT_CACHE_HITS, config);
 
   int num_datapoints = static_cast<int>(data.size());
   std::vector<double> query_vec;
@@ -74,9 +76,11 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
       query_vec = data[data_index];
       label = labels[data_index];
 
-      // Modify it to be epoch and thread-specific (to avoid cache hits)
-      query_vec[0] += (j * request_batch_size + i) / num_datapoints;
-      query_vec[1] += thread_id;
+      if (prevent_cache_hits) {
+        // Modify it to be epoch and thread-specific
+        query_vec[0] = (j * request_batch_size + i) / num_datapoints;
+        query_vec[1] = thread_id;
+      }
 
       // Copy the datapoint into a new shared pointer
       std::shared_ptr<Input> input = std::make_shared<DoubleVector>(query_vec);
@@ -235,7 +239,7 @@ int main(int argc, char *argv[]) {
       CIFAR_DATA_PATH,    NUM_BATCHES,          REQUEST_BATCH_DELAY_MICROS,
       LATENCY_OBJECTIVE,  REPORT_DELAY_SECONDS, REPORTS_PATH,
       POISSON_DELAY,      MODEL_NAME,           MODEL_VERSION,
-      REQUEST_BATCH_SIZE, NUM_THREADS};
+      REQUEST_BATCH_SIZE, NUM_THREADS,          PREVENT_CACHE_HITS};
   if (!json_specified) {
     throw std::invalid_argument("No configuration file provided");
   } else {
