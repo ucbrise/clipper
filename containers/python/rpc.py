@@ -302,7 +302,7 @@ class Server(threading.Thread):
 
                         t4 = datetime.now()
 
-                        response.send(socket)
+                        response.send(socket, self.event_history)
 
                         print("recv: %f us, parse: %f us, handle: %f us" %
                               ((t2 - t1).microseconds, (t3 - t2).microseconds,
@@ -313,7 +313,7 @@ class Server(threading.Thread):
                     else:
                         feedback_request = FeedbackRequest(msg_id_bytes, [])
                         response = self.handle_feedback_request(received_msg)
-                        response.send(socket)
+                        response.send(socket, self.event_history)
                         print("recv: %f us" % ((t2 - t1).microseconds))
 
                 sys.stdout.flush()
@@ -394,13 +394,14 @@ class PredictionResponse():
                      self.string_content_end_position + output_len] = output
         self.string_content_end_position += output_len
 
-    def send(self, socket):
+    def send(self, socket, event_history):
         socket.send("", flags=zmq.SNDMORE)
         socket.send(
             struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT),
             flags=zmq.SNDMORE)
         socket.send(self.msg_id, flags=zmq.SNDMORE)
         socket.send(self.output_buffer[0:self.string_content_end_position])
+        event_history.insert(EVENT_HISTORY_SENT_CONTAINER_CONTENT)
 
     def expand_buffer_if_necessary(self, size):
         if len(self.output_buffer) < size:
