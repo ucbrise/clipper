@@ -23,9 +23,10 @@ def predict(host, uid, x):
 if __name__ == '__main__':
     host = "localhost"
     clipper = Clipper(host, check_for_docker=False)
-    clipper.register_application("example_app", "example_model", "doubles",
-                                 "-1.0", 40000)
+    clipper.register_application("example_app", "doubles", "-1.0", 40000)
     clipper.register_external_model("example_model", 1, "doubles")
+    time.sleep(1.0)
+    clipper.link_model_to_app("example_app", "example_model")
     time.sleep(1.0)
     uid = 0
     while True:

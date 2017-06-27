@@ -46,15 +46,19 @@ Checking if Docker is running...
 >>> clipper.start()
 Clipper is running
 
-# Register an application called "hello_world" that will query a model
-# called "feature_sum_model". This will create a prediction REST endpoint at
-# http://localhost:1337/hello_world/predict
+# Register an application called "hello_world". This will create
+# a prediction REST endpoint at http://localhost:1337/hello_world/predict
 >>> clipper.register_application("hello_world", "feature_sum_model", "doubles", "-1.0", 100000)
 Success!
 
 # Inspect Clipper to see the registered apps
 >>> clipper.get_all_apps()
 [u'hello_world']
+
+# Let Clipper know that queries to your app should be served by
+# a model with name "feature_sum_model".
+>>> clipper.link_model_to_app("hello_world", "feature_sum_model")
+Success!
 
 # Define a simple model that just returns the sum of each feature vector.
 # Note that the prediction function takes a list of feature vectors as
