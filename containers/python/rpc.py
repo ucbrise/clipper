@@ -401,7 +401,7 @@ class PredictionResponse():
             flags=zmq.SNDMORE)
         socket.send(self.msg_id, flags=zmq.SNDMORE)
         socket.send(self.output_buffer[0:self.string_content_end_position])
-        event_history.insert(EVENT_HISTORY_SENT_CONTAINER_CONTENT);
+        event_history.insert(EVENT_HISTORY_SENT_CONTAINER_CONTENT)
 
     def expand_buffer_if_necessary(self, size):
         if len(self.output_buffer) < size:

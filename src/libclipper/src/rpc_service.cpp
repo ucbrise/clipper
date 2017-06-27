@@ -280,8 +280,8 @@ void RPCService::receive_message(
       if (!new_connection) {
         int id = static_cast<int *>(msg_id.data())[0];
         vector<uint8_t> content(
-            (uint8_t *) msg_content.data(),
-            (uint8_t *) msg_content.data() + msg_content.size());
+            (uint8_t *)msg_content.data(),
+            (uint8_t *)msg_content.data() + msg_content.size());
         RPCResponse response(id, content);
 
         auto container_info_entry =
@@ -289,7 +289,7 @@ void RPCService::receive_message(
         if (container_info_entry == connections_containers_map.end()) {
           throw std::runtime_error(
               "Failed to find container that was previously registered via "
-                  "RPC");
+              "RPC");
         }
         std::pair<VersionedModelId, int> container_info =
             container_info_entry->second;
