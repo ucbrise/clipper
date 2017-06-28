@@ -22,6 +22,8 @@ using clipper::Output;
 using clipper::VersionedModelId;
 using rapidjson::Type;
 
+// whitespace change do not merge
+
 namespace clipper {
 namespace json {
 
