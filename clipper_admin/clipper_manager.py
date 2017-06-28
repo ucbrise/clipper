@@ -324,7 +324,9 @@ class Clipper:
 
     def register_application(self, name, model, input_type, default_output,
                              slo_micros):
-        """Register a new Clipper application and returns the response object.
+        """
+        Submits a request to register a new Clipper application and returns whether or
+        not it was successful.
 
         Parameters
         ----------
