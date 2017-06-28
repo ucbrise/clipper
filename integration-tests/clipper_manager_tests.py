@@ -326,7 +326,8 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
 SHORT_TEST_ORDERING = [
     'test_external_models_register_correctly',
-    'test_application_registers_correctly', 'test_model_links_to_app',
+    'test_application_registers_correctly',
+    'test_model_links_to_app',
     'get_app_info_for_registered_app_returns_info_dictionary',
     'get_app_info_for_nonexistent_app_returns_none',
     'test_add_container_for_external_model_fails',

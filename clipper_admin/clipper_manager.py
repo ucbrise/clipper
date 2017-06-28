@@ -377,6 +377,11 @@ class Clipper:
             The name of the application
         model_name : str
             The name of the model to link to the application
+
+        Returns
+        -------
+        bool
+            Returns true iff the model link request was successful
         """
         url = "http://%s:%d/admin/add_model_links" % (self.host,
                                                       CLIPPER_MANAGEMENT_PORT)
@@ -387,6 +392,7 @@ class Clipper:
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
         print(r.text)
+        return r.status_code == requests.codes.ok
 
     def get_linked_models(self, app_name):
         """Retrieves the models linked to the app
@@ -784,14 +790,24 @@ class Clipper:
 
         return deploy_result
 
-    def _register_app_and_check_success(self, name, input_type, default_output,
-                                        slo_micros):
-        if self.register_application(name, name, input_type, default_output,
-                                     slo_micros):
-            print("Application registration sucessful! Deploying model.")
-            return True
-        print("Application registration unsuccessful. Will not deploy model.")
-        return False
+    def _register_app_link_model_check_success(self, name, input_type,
+                                               default_output, slo_micros):
+        if not self.register_application(name, input_type, default_output,
+                                         slo_micros):
+            print(
+                "Application registration unsuccessful. Will not deploy model or link it to app."
+            )
+            return False
+        print("Application registration sucessful! Linking it to model.")
+
+        time.sleep(1)
+        if not self.link_model_to_app(name, name):
+            print(
+                "Linking model to app was unsuccessful. Will not deploy model.")
+            return False
+
+        print("Linking model to app was successful! Deploying model.")
+        return True
 
     def register_app_and_deploy_predict_function(
             self,
@@ -831,7 +847,7 @@ class Clipper:
             The number of replicas of the model to create. More replicas can be
             created later as well.
         """
-        if not self._register_app_and_check_success(
+        if not self._register_app_link_model_check_success(
                 name, input_type, default_output, slo_micros):
             return False
 
@@ -891,7 +907,7 @@ class Clipper:
             The number of replicas of the model to create. More replicas can be
             created later as well.
         """
-        if not self._register_app_and_check_success(
+        if not self._register_app_link_model_check_success(
                 name, input_type, default_output, slo_micros):
             return False
 
