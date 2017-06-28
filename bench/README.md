@@ -53,18 +53,18 @@ where `<path_to_cifar_python_dataset>` is the path to the **directory** containi
 
 Create a JSON configuration file that specifies values for the following parameters:
 
-- **cifar\_data_path**: The path to a *specific binary data file* within the CIFAR10 binary dataset with a name of the form `data_batch_<n>.bin`. (`<path_to_unzipped_cifar_directory>/data_batch_1.bin`, for example)
-- **num_threads**: The number of threads of execution
-- **num_batches**: The number of batches of requests to be sent by each thread
-- **request\_batch_size**: The number of requests to be sent in each batch
-- **request\_batch\_delay_micros**: The per-thread delay between batches, in microseconds
-- **poisson_delay**: `"true"` if you wish for the delays between request batches to be drawn from a poisson distribution with mean **request\_batch\_delay_micros**. `"false"` if you wish for the delay between request batches to be uniform.
+- **cifar\_data_path**: The path to a *specific binary data file* within the CIFAR10 binary dataset with a name of the form `data_batch_<n>.bin`:  `<path_to_unzipped_cifar_directory>/data_batch_1.bin`, for example.
+- **num_threads**: The number of threads of execution. This should be a positive integer. Each of these threads will access the data in an independent, shuffled order, and will send requests according to *num_batches*, *request\_batch_size*, *request\_batch\_delay_micros*, *poisson_delay*, and *prevent\_cache_hits*, all described below.
+- **num_batches**: The number of batches of requests to be sent by each thread.
+- **request\_batch_size**: The number of requests to be sent in each batch.
+- **request\_batch\_delay_micros**: The per-thread delay between batches, in microseconds. *request\_batch\_delay_micros* and *request\_batch_size* together determine the burstiness of your supplied workload.
+- **poisson_delay**: `"true"` if you wish for the delays between request batches to be drawn from a poisson distribution with mean. `"false"` if you wish for the delay between request batches to be uniform.
+- **prevent\_cache_hits**: `"true"` if you wish for the script to modify datapoints (possibly at the expense of prediction accuracy) in order to prevent hitting Clipper's internal prediction cache. `"false"` otherwise.
 - **latency_objective**: The latency objective for the app that will be created, in microseconds
 - **reports_path**: Path to the file in which you want your benchmarking reports saved
 - **report\_delay_seconds**: The delay between each flush of benchmarking metrics to your reports file, in seconds. At each flush, the metrics will reset.
 - **model_name**: The name of the model Clipper should connect to. Note that this must be the same as the model name your model-container uses.
 - **model_version**: Your model's version. Again, this must be the same version that your model-container uses.
-- **prevent\_cache_hits**: "true" if you wish for the script to modify datapoints (possibly at the expense of prediction accuracy) in order to prevent hitting Clipper's internal prediction cache. "false" otherwise.
 
 Your JSON config file should look like:
 
@@ -76,12 +76,12 @@ Your JSON config file should look like:
    "request_batch_size":"<request_batch_size>",
    "request_batch_delay_micros":"<request_batch_delay_micros>",
    "poisson_delay":"<true/false>",
+   "prevent_cache_hits":"<true/false>",
    "latency_objective":"<latency_objective>",
    "reports_path":"<reports_path>",
    "reports_delay_seconds":"<reports_delay_seconds>",
    "model_name":"<model_name>",
-   "model_version":"<model_version>",
-   "poisson_delay":"<true/false>"
+   "model_version":"<model_version>"
 }
 ```
 
