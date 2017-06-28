@@ -1,0 +1,40 @@
+networks:
+  default:
+    external:
+      name: clipper_nw
+services:
+  mgmt_frontend:
+    command:
+    - --redis_ip=redis
+    - --redis_port=6379
+    depends_on:
+    - redis
+    image: clipper/management_frontend:latest
+    labels:
+      ai.clipper.container.label: ''
+    ports:
+    - 1338:1338
+    restart: always
+  query_frontend:
+    command:
+    - --redis_ip=redis
+    - --redis_port=6379
+    depends_on:
+    - mgmt_frontend
+    - redis
+    image: clipper/query_frontend:latest
+    labels:
+      ai.clipper.container.label: ''
+    ports:
+    - 7000:7000
+    - 1337:1337
+    restart: always
+  redis:
+    command: redis-server --port 6379
+    image: redis:alpine
+    labels:
+      ai.clipper.container.label: ''
+    ports:
+    - 6379:6379
+    restart: always
+version: '2'

@@ -8,10 +8,13 @@ from sklearn import svm
 from argparse import ArgumentParser
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath('%s/../' % cur_dir))
+sys.path.insert(0, os.path.abspath('%s/util/' % cur_dir))
 import clipper_admin.clipper_manager
 Clipper = clipper_admin.clipper_manager.Clipper
+sys.path.insert(0, os.path.abspath(cur_dir))
 import random
 import socket
+import test_util
 """
 Executes a test suite consisting of two separate cases: short tests and long tests.
 Before each case, an instance of Clipper is created. Tests
@@ -321,7 +324,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
     def test_deployed_and_linked_predict_function_queried_successfully(self):
         model_version = 1
-        predict_func = lambda inputs: [str(len(x)) for x in inputs]
+        predict_func = lambda inputs: [str(test_util.COEFFICIENT * len(x)) for x in inputs]
         input_type = "doubles"
         result = self.clipper_inst.deploy_predict_function(
             self.model_name_1, model_version, predict_func, input_type)
@@ -346,7 +349,8 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
                 time.sleep(20)
             else:
                 received_non_default_prediction = True
-                self.assertEqual(int(output), len(test_input))
+                self.assertEqual(
+                    int(output), test_util.COEFFICIENT * len(test_input))
                 break
 
         self.assertTrue(received_non_default_prediction)

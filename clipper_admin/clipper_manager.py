@@ -8,6 +8,7 @@ import requests
 import json
 import yaml
 import pprint
+import pickle
 import subprocess32 as subprocess
 import shutil
 from sklearn import base
@@ -17,6 +18,9 @@ import sys
 from .cloudpickle import CloudPickler
 import time
 import re
+from .module_dependency import ModuleDependencyAnalyzer
+
+cloudpickler = CloudPickler
 
 __all__ = ['Clipper']
 
@@ -590,6 +594,8 @@ class Clipper:
         environment_fname = "environment.yml"
         conda_dep_fname = "conda_dependencies.txt"
         pip_dep_fname = "pip_dependencies.txt"
+        local_modules_list_fname = "modules.txt"
+        local_modules_folder_name = "modules"
 
         # Serialize function
         s = StringIO()
@@ -619,7 +625,7 @@ class Clipper:
                     conda_dep_fname, pip_dep_fname)):
                 return False
 
-            print("Supplied environment details")
+            print("Supplied Anaconda environment details")
         else:
             print(
                 "Warning: Anaconda environment was either not found or exporting the environment "
@@ -628,12 +634,118 @@ class Clipper:
                 "See http://clipper.ai/documentation/python_model_deployment/ for more information."
             )
 
+        # Export modules used by predict_function not captured in anaconda or pip
+        self._export_local_modules(
+            c.modules, serialization_dir, conda_dep_fname, pip_dep_fname,
+            local_modules_folder_name, local_modules_list_fname)
+        print("Supplied local modules")
+
         # Write out function serialization
         func_file_path = os.path.join(serialization_dir, predict_fname)
         with open(func_file_path, "w") as serialized_function_file:
             serialized_function_file.write(serialized_prediction_function)
         print("Serialized and supplied predict function")
         return serialization_dir
+
+    def _get_already_exported_modules(self, serialization_dir,
+                                      conda_deps_fname, pip_deps_fname):
+        """
+        Returns a list of names of modules that will be installed on the container.
+        This list includes the names of exported conda and pip modules as well as
+        those of preinstalled modules.
+
+        Returns
+        -------
+        list
+            List of names of modules whose installations are already accounted for
+        """
+        conda_deps_abs_path = os.path.join(serialization_dir, conda_deps_fname)
+        pip_deps_abs_path = os.path.join(serialization_dir, pip_deps_fname)
+        python_container_conda_deps_fname = os.path.join(
+            cur_dir, "python_container_conda_deps.txt")
+
+        get_module_name = lambda line: line.strip().split('=')[0]
+
+        ignore_list = []
+
+        if (os.path.isfile(conda_deps_abs_path)):
+            with open(conda_deps_abs_path, 'r') as f:
+                for line in f:
+                    ignore_list.append(get_module_name(line))
+
+        if (os.path.isfile(pip_deps_fname)):
+            with open(pip_deps_abs_path, 'r') as f:
+                for line in f:
+                    ignore_list.append(get_module_name(line))
+
+        with open(python_container_conda_deps_fname, 'r') as f:
+            for line in f:
+                ignore_list.append(line.strip())
+
+        return ignore_list
+
+    def _export_local_modules(self, func_modules, serialization_dir,
+                              conda_deps_fname, pip_deps_fname,
+                              local_modules_folder_name,
+                              local_modules_list_fname):
+        """
+        Supplies modules in `func_modules` not already accounted for by Anaconda or pip to container.
+        Copies those modules to a location specified by `serialization_dir` and `local_modules_folder_name`
+        Enumerates the local modules copied in a file whose location is specified by `serialization_dir` and
+        `local_module_deps_fname`.
+
+        Parameters
+        ----------
+        func_modules : str
+            The modules to consider exporting
+        serialization_dir : str
+            The path to the diretory containing the conda, pip, and output local modules dependency information
+        conda_deps_fname : str
+            The name of the conda dependency file
+        pip_deps_fname : str
+            The name of the pip dependency file
+        local_modules_folder_name : str
+            The name of the folder to copy modules to
+        local_modules_list_fname : str
+            The name of the output file that will contain the names of all supplied local modules 
+        """
+        ignore_list = self._get_already_exported_modules(
+            serialization_dir, conda_deps_fname, pip_deps_fname)
+        local_module_names = []
+
+        mda = ModuleDependencyAnalyzer()
+        for module_name in ignore_list:
+            mda.ignore(module_name)
+        for module in func_modules:
+            module_name = module.__name__
+            if module_name not in ignore_list and 'clipper_admin' not in module_name:
+                local_module_names.append(module_name)
+                mda.add(module_name)
+            else:
+                mda.ignore(module_name)
+        module_paths = mda.get_and_clear_paths()
+
+        modules_dir = os.path.join(serialization_dir,
+                                   local_modules_folder_name)
+        if not os.path.exists(modules_dir):
+            os.mkdir(modules_dir)
+        for path in module_paths:
+            module_fname = os.path.basename(path)
+            dst = os.path.join(modules_dir, module_fname)
+            try:
+                if os.path.isfile(path):
+                    shutil.copyfile(path, dst)
+                elif os.path.isdir(path):
+                    shutil.copytree(dst, dst)
+            except:
+                print(
+                    "Encountered an error copying {path}. Will not supply it to container.".
+                    format(path=path))
+
+        module_list_path = os.path.join(serialization_dir,
+                                        local_modules_list_fname)
+        with open(module_list_path, "wb") as module_list_file:
+            pickle.dump(local_module_names, module_list_file)
 
     def deploy_pyspark_model(self,
                              name,
@@ -786,9 +898,10 @@ class Clipper:
         """
 
         default_python_container = "clipper/python-container"
+
         serialization_dir = self._save_python_function(name, predict_function)
 
-        # Deploy function
+        # # Deploy function
         deploy_result = self.deploy_model(name, version, serialization_dir,
                                           default_python_container, input_type,
                                           labels, num_containers)

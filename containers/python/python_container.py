@@ -2,11 +2,13 @@ from __future__ import print_function
 import rpc
 import os
 import sys
-
+import importlib
+import pickle
 import numpy as np
 np.set_printoptions(threshold=np.nan)
 
 sys.path.append(os.path.abspath("/lib/"))
+sys.path.append(os.path.abspath("/model/modules"))
 from clipper_admin import cloudpickle
 
 IMPORT_ERROR_RETURN_CODE = 3
@@ -17,9 +19,22 @@ def load_predict_func(file_path):
         return cloudpickle.load(serialized_func_file)
 
 
+def load_modules(modules_list_path):
+    with open(modules_list_path, 'rb') as f:
+        module_fnames = pickle.load(f)
+        for m in module_fnames:
+            importlib.import_module(m)
+
+
 class PythonContainer(rpc.ModelContainerBase):
     def __init__(self, path, input_type):
         self.input_type = rpc.string_to_input_type(input_type)
+
+        modules_folder_path = "{dir}/modules/".format(dir=path)
+        sys.path.append(os.path.abspath(modules_folder_path))
+        modules_list_path = "{dir}/modules.txt".format(dir=path)
+        load_modules(modules_list_path)
+
         predict_fname = "predict_func.pkl"
         predict_path = "{dir}/{predict_fname}".format(
             dir=path, predict_fname=predict_fname)
