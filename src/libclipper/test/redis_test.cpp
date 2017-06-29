@@ -54,6 +54,48 @@ class RedisTest : public ::testing::Test {
   }
 };
 
+TEST_F(RedisTest, SubscriptionDetectModelLinksAdd) {
+  // Register the application to link to
+  std::string name = "my_app_name";
+  InputType input_type = InputType::Doubles;
+  std::string policy = "exp3_policy";
+  std::string default_output = "1.0";
+  int latency_slo_micros = 10000;
+  ASSERT_TRUE(add_application(*redis_, name, input_type, policy, default_output,
+                              latency_slo_micros));
+
+  std::condition_variable_any notification_recv;
+  std::mutex notification_mutex;
+  std::atomic<bool> recv{false};
+  subscribe_to_model_link_changes(
+          *subscriber_, [&notification_recv, &notification_mutex, &recv, name](
+                  const std::string& key, const std::string& event_type) {
+              log_info(LOGGING_TAG_REDIS_TEST, "Received event");
+              ASSERT_EQ(event_type, "sadd");
+              log_info(LOGGING_TAG_REDIS_TEST, "Confirmed event is SADD");
+              std::unique_lock<std::mutex> l(notification_mutex);
+              log_info(LOGGING_TAG_REDIS_TEST, "Got lock in subscription callback");
+              recv = true;
+              ASSERT_EQ(key, name);
+              log_info(LOGGING_TAG_REDIS_TEST, "Before cv notify");
+              notification_recv.notify_all();
+              log_info(LOGGING_TAG_REDIS_TEST, "After cv notify");
+          });
+  // give Redis some time to register the subscription
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+  std::vector<std::string> model_names = {"model1", "model2"};
+  log_info(LOGGING_TAG_REDIS_TEST, "Before add_mode_links");
+  ASSERT_TRUE(add_model_links(*redis_, name, model_names));
+  log_info(LOGGING_TAG_REDIS_TEST, "After add_mode_links");
+  std::unique_lock<std::mutex> l(notification_mutex);
+  log_info(LOGGING_TAG_REDIS_TEST, "Got lock outside of subscription callback");
+  bool result = notification_recv.wait_for(l, std::chrono::milliseconds(1000),
+                                           [&recv]() { return recv == true; });
+  log_info(LOGGING_TAG_REDIS_TEST, "After waiting on cv");
+  ASSERT_TRUE(result);
+}
+
 TEST_F(RedisTest, ParseModelReplicaKey) {
   VersionedModelId model = VersionedModelId("model1", "4");
   int replica_id = 7;
@@ -537,40 +579,6 @@ TEST_F(RedisTest, SubscriptionDetectApplicationDelete) {
   // give Redis some time to register the subscription
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
   ASSERT_TRUE(delete_application(*redis_, name));
-  std::unique_lock<std::mutex> l(notification_mutex);
-  bool result = notification_recv.wait_for(l, std::chrono::milliseconds(1000),
-                                           [&recv]() { return recv == true; });
-  ASSERT_TRUE(result);
-}
-
-TEST_F(RedisTest, SubscriptionDetectModelLinksAdd) {
-  // Register the application to link to
-  std::string name = "my_app_name";
-  InputType input_type = InputType::Doubles;
-  std::string policy = "exp3_policy";
-  std::string default_output = "1.0";
-  int latency_slo_micros = 10000;
-  ASSERT_TRUE(add_application(*redis_, name, input_type, policy, default_output,
-                              latency_slo_micros));
-
-  std::condition_variable_any notification_recv;
-  std::mutex notification_mutex;
-  std::atomic<bool> recv{false};
-  subscribe_to_model_link_changes(
-      *subscriber_, [&notification_recv, &notification_mutex, &recv, name](
-                        const std::string& key, const std::string& event_type) {
-        ASSERT_EQ(event_type, "sadd");
-        std::unique_lock<std::mutex> l(notification_mutex);
-        recv = true;
-        ASSERT_EQ(key, name);
-        notification_recv.notify_all();
-      });
-  // give Redis some time to register the subscription
-  std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-  std::vector<std::string> model_names = {"model1", "model2"};
-  ASSERT_TRUE(add_model_links(*redis_, name, model_names));
-
   std::unique_lock<std::mutex> l(notification_mutex);
   bool result = notification_recv.wait_for(l, std::chrono::milliseconds(1000),
                                            [&recv]() { return recv == true; });
