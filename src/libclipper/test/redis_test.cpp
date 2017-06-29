@@ -68,19 +68,19 @@ TEST_F(RedisTest, SubscriptionDetectModelLinksAdd) {
   std::mutex notification_mutex;
   std::atomic<bool> recv{false};
   subscribe_to_model_link_changes(
-          *subscriber_, [&notification_recv, &notification_mutex, &recv, name](
-                  const std::string& key, const std::string& event_type) {
-              log_info(LOGGING_TAG_REDIS_TEST, "Received event");
-              ASSERT_EQ(event_type, "sadd");
-              log_info(LOGGING_TAG_REDIS_TEST, "Confirmed event is SADD");
-              std::unique_lock<std::mutex> l(notification_mutex);
-              log_info(LOGGING_TAG_REDIS_TEST, "Got lock in subscription callback");
-              recv = true;
-              ASSERT_EQ(key, name);
-              log_info(LOGGING_TAG_REDIS_TEST, "Before cv notify");
-              notification_recv.notify_all();
-              log_info(LOGGING_TAG_REDIS_TEST, "After cv notify");
-          });
+      *subscriber_, [&notification_recv, &notification_mutex, &recv, name](
+                        const std::string& key, const std::string& event_type) {
+        log_info(LOGGING_TAG_REDIS_TEST, "Received event");
+        ASSERT_EQ(event_type, "sadd");
+        log_info(LOGGING_TAG_REDIS_TEST, "Confirmed event is SADD");
+        std::unique_lock<std::mutex> l(notification_mutex);
+        log_info(LOGGING_TAG_REDIS_TEST, "Got lock in subscription callback");
+        recv = true;
+        ASSERT_EQ(key, name);
+        log_info(LOGGING_TAG_REDIS_TEST, "Before cv notify");
+        notification_recv.notify_all();
+        log_info(LOGGING_TAG_REDIS_TEST, "After cv notify");
+      });
   // give Redis some time to register the subscription
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
