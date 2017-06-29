@@ -14,6 +14,7 @@ from sklearn import base
 from sklearn.externals import joblib
 from cStringIO import StringIO
 from .cloudpickle import CloudPickler
+from .clipper_k8s import ClipperK8s
 import time
 import re
 
@@ -479,11 +480,11 @@ class Clipper:
 
             # build, tag, and push docker image to registry
             # NOTE: DOCKER_API_VERSION (set by `minikube docker-env`) must be same version as docker registry server
-            docker_client = docker.from_env(version=os.environ["DOCKER_API_VERSION"])
             repo = '{docker_registry}/{name}:{version}'.format(
                     docker_registry='localhost:5000', # TODO: make configurable
                     name=name,
                     version=version)
+            docker_client = docker.from_env(version=os.environ["DOCKER_API_VERSION"])
             docker_client.images.build(
                     path=model_data_path,
                     tag=repo)
@@ -500,7 +501,7 @@ class Clipper:
 
             # TODO: call this in `add_container` once `repo` is available from redis
             clipper_k8s = ClipperK8s()
-            clipper_k8s.deploy_container(name, version, repo)
+            clipper_k8s.deploy_model(name, version, repo)
 
             # aggregate results of starting all containers
             # return all([

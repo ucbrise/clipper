@@ -11,11 +11,11 @@ class ClipperK8s:
     # TODO: subclass ContainerManager interface
     def __init__(self):
         config.load_kube_config()
+        self.k8s_v1 = client.CoreV1Api()
+        self.k8s_beta = client.ExtensionsV1beta1Api()
         # self.initialize_clipper() # NOTE: this allows containers to discover query_manager by DNS rather than IP,
         #                           # but may couple too tightly to k8s
         self.initialize_registry() # TODO: check doesn't exist before trying
-        self.k8s_v1 = client.CoreV1Api()
-        self.k8s_beta = client.ExtensionsV1beta1Api()
 
     def initialize_clipper(self):
         for name in ['mgmt-frontend', 'query-frontend', 'redis']:
@@ -60,7 +60,7 @@ class ClipperK8s:
             A docker repository path, which must be accessible by the k8s cluster.
         """
         try:
-            k8s_beta.create_namespaced_deployment(
+            self.k8s_beta.create_namespaced_deployment(
                     body={
                         'apiVersion': 'extensions/v1beta1',
                         'kind': 'Deployment',
