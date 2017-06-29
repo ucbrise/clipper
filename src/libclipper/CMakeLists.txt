@@ -38,7 +38,6 @@ export(TARGETS clipper FILE ClipperConfig.cmake)
 # be last in the list
 add_executable(libclippertests EXCLUDE_FROM_ALL
     test/test_main.cpp
-    test/redis_test.cpp
     test/threadpool_test.cpp
     test/container_test.cpp
     test/metrics_test.cpp
@@ -46,6 +45,7 @@ add_executable(libclippertests EXCLUDE_FROM_ALL
     test/timers_test.cpp
     test/data_serialization_tests.cpp
     test/persistent_state_test.cpp
+    test/redis_test.cpp
     test/selection_policies_test.cpp
     test/json_util_test.cpp
     test/logging_test.cpp
