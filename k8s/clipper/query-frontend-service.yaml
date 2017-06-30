@@ -8,6 +8,7 @@ metadata:
     io.kompose.service: query-frontend
   name: query-frontend
 spec:
+  type: NodePort
   ports:
   - name: "7000"
     port: 7000

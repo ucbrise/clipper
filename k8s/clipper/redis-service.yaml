@@ -8,6 +8,7 @@ metadata:
     io.kompose.service: redis
   name: redis
 spec:
+  type: NodePort
   ports:
   - name: "6379"
     port: 6379

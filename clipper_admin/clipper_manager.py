@@ -113,108 +113,14 @@ class Clipper:
                  redis_port=DEFAULT_REDIS_PORT,
                  redis_persistence_path=None,
                  restart_containers=True):
-        self.redis_ip = redis_ip
-        self.redis_port = redis_port
-        self.docker_compost_dict = {
-            'networks': {
-                'default': {
-                    'external': {
-                        'name': DOCKER_NW
-                    }
-                }
-            },
-            'services': {
-                'mgmt_frontend': {
-                    'command': [
-                        '--redis_ip=%s' % self.redis_ip,
-                        '--redis_port=%d' % self.redis_port
-                    ],
-                    'image':
-                    'clipper/management_frontend:latest',
-                    'ports': [
-                        '%d:%d' % (CLIPPER_MANAGEMENT_PORT,
-                                   CLIPPER_MANAGEMENT_PORT)
-                    ],
-                    'labels': {
-                        CLIPPER_DOCKER_LABEL: ""
-                    }
-                },
-                'query_frontend': {
-                    'command': [
-                        '--redis_ip=%s' % self.redis_ip,
-                        '--redis_port=%d' % self.redis_port
-                    ],
-                    'depends_on': ['mgmt_frontend'],
-                    'image':
-                    'clipper/query_frontend:latest',
-                    'ports': [
-                        '%d:%d' % (CLIPPER_RPC_PORT, CLIPPER_RPC_PORT),
-                        '%d:%d' % (CLIPPER_QUERY_PORT, CLIPPER_QUERY_PORT)
-                    ],
-                    'labels': {
-                        CLIPPER_DOCKER_LABEL: ""
-                    }
-                }
-            },
-            'version': '2'
-        }
-        start_redis = (self.redis_ip == DEFAULT_REDIS_IP)
-        if start_redis:
-            self.docker_compost_dict['services']['redis'] = {
-                'image': 'redis:alpine',
-                'ports': ['%d:%d' % (self.redis_port, self.redis_port)],
-                'command': "redis-server --port %d" % self.redis_port,
-                'labels': {
-                    CLIPPER_DOCKER_LABEL: ""
-                }
-            }
-            self.docker_compost_dict['services']['mgmt_frontend'][
-                'depends_on'] = ['redis']
-            self.docker_compost_dict['services']['query_frontend'][
-                'depends_on'].append('redis')
-            if redis_persistence_path:
-                if not os.path.exists(redis_persistence_path):
-                    self.docker_compost_dict['services']['redis'][
-                        'volumes'] = ['%s:/data' % redis_persistence_path]
-                else:
-                    print(
-                        "The directory specified by the redis persistence path already exists"
-                    )
-                    raise ClipperManagerException(
-                        "The directory specified by the redis persistence path already exists"
-                    )
-        self.restart_containers = restart_containers
-        if self.restart_containers:
-            self.docker_compost_dict['services']['mgmt_frontend'][
-                'restart'] = 'always'
-            self.docker_compost_dict['services']['query_frontend'][
-                'restart'] = 'always'
-            if start_redis:
-                self.docker_compost_dict['services']['redis'][
-                    'restart'] = 'always'
+        self.clipper_k8s = ClipperK8s()
 
         self.sudo = sudo
         self.host = host
-        if self._host_is_local():
-            self.host = "localhost"
-            env.host_string = self.host
-        else:
-            if not user or not key_path:
-                print(
-                    "user and key_path must be specified when instantiating Clipper with a nonlocal host"
-                )
-                raise ClipperManagerException(
-                    "user and key_path must be specified when instantiating Clipper with a nonlocal host"
-                )
-            env.user = user
-            env.key_filename = key_path
-            env.host_string = "%s:%d" % (host, ssh_port)
-        if check_for_docker:
-            # Make sure docker is running on cluster
-            self._start_docker_if_necessary()
+        self.host_string = self.host
 
     def _host_is_local(self):
-        return self.host in LOCAL_HOST_NAMES
+        return True
 
     def _start_docker_if_necessary(self):
         # TODO: this should only run if we are running using local Docker daemon
@@ -303,22 +209,6 @@ class Clipper:
                 remote_path=remote_path,
                 *args,
                 **kwargs)
-
-    def start(self):
-        """Start a Clipper instance.
-
-        """
-        with hide("output", "warnings", "running"):
-            self._execute_standard("rm -f docker-compose.yml")
-            self._execute_append("docker-compose.yml",
-                                 yaml.dump(
-                                     self.docker_compost_dict,
-                                     default_flow_style=False))
-            print(
-                "Note: Docker must download the Clipper Docker images if they are not already cached. This may take awhile."
-            )
-            self._execute_root("docker-compose up -d query_frontend")
-            print("Clipper is running")
 
     def register_application(self, name, model, input_type, default_output,
                              slo_micros):
@@ -494,14 +384,12 @@ class Clipper:
             # publish model to Clipper and verify success before copying model
             # parameters to Clipper and starting containers
             if not self._publish_new_model(
-                    name, version, labels, input_type, container_name,
-                    os.path.join(vol, os.path.basename(model_data_path))):
+                    name, version, labels, input_type, container_name, repo):
                 return False
             print("Published model to Clipper")
 
             # TODO: call this in `add_container` once `repo` is available from redis
-            clipper_k8s = ClipperK8s()
-            clipper_k8s.deploy_model(name, version, repo)
+            self.clipper_k8s.deploy_model(name, version, repo)
 
             # aggregate results of starting all containers
             # return all([
@@ -527,6 +415,7 @@ class Clipper:
         labels : list of str, optional
             A list of strings annotating the model.
         """
+        # TODO: this could be implemented by taking a docker repo and deploying a container with it
         return self._publish_new_model(name, version, labels, input_type,
                                        EXTERNALLY_MANAGED_MODEL,
                                        EXTERNALLY_MANAGED_MODEL)
@@ -1192,13 +1081,14 @@ class Clipper:
                                                 CLIPPER_MANAGEMENT_PORT)
         req_json = json.dumps({
             "model_name": name,
-            "model_version": version,
+            "model_version": str(version),
             "labels": labels,
             "input_type": input_type,
             "container_name": container_name,
             "model_data_path": model_data_path
         })
         headers = {'Content-type': 'application/json'}
+        print(req_json)
         r = requests.post(url, headers=headers, data=req_json)
         if r.status_code == requests.codes.ok:
             return True

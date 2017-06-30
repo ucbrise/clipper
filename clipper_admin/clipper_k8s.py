@@ -13,11 +13,12 @@ class ClipperK8s:
         config.load_kube_config()
         self.k8s_v1 = client.CoreV1Api()
         self.k8s_beta = client.ExtensionsV1beta1Api()
-        # self.initialize_clipper() # NOTE: this allows containers to discover query_manager by DNS rather than IP,
-        #                           # but may couple too tightly to k8s
+        self.initialize_clipper() # NOTE: this allows containers to discover query_manager by DNS rather than IP,
+                                  # but may couple too tightly to k8s
         self.initialize_registry() # TODO: check doesn't exist before trying
 
     def initialize_clipper(self):
+        """Deploys Clipper to the k8s cluster and exposes the frontends as services."""
         for name in ['mgmt-frontend', 'query-frontend', 'redis']:
             try:
                 self.k8s_beta.create_namespaced_deployment(

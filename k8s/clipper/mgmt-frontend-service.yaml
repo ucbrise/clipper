@@ -8,6 +8,7 @@ metadata:
     io.kompose.service: mgmt-frontend
   name: mgmt-frontend
 spec:
+  type: NodePort
   ports:
   - name: "1338"
     port: 1338
