@@ -34,7 +34,6 @@ REDIS_CONTAINER_DB_NUM = 3
 REDIS_RESOURCE_DB_NUM = 4
 REDIS_APPLICATION_DB_NUM = 5
 
-DEFAULT_REDIS_IP = "redis"
 DEFAULT_REDIS_PORT = 6379
 CLIPPER_QUERY_PORT = 1337
 CLIPPER_MANAGEMENT_PORT = 1338
@@ -112,23 +111,6 @@ class Clipper:
     def _host_is_local(self):
         return True
 
-    def _start_docker_if_necessary(self):
-        # TODO: this should only run if we are running using local Docker daemon
-        with hide("warnings", "output", "running"):
-            print("Checking if Docker is running...")
-            self._execute_root("docker ps")
-            dc_installed = self._execute_root(
-                "docker-compose --version", warn_only=True)
-            if dc_installed.return_code != 0:
-                print("docker-compose not installed on host.")
-                raise ClipperManagerException(
-                    "docker-compose not installed on host.")
-            nw_create_command = ("docker network create --driver bridge {nw}"
-                                 .format(nw=DOCKER_NW))
-            self._execute_root(nw_create_command, warn_only=True)
-            self._execute_standard(
-                "mkdir -p {model_repo}".format(model_repo=MODEL_REPO))
-
     def _execute_root(self, *args, **kwargs):
         if not self.sudo:
             return self._execute_standard(*args, **kwargs)
@@ -148,9 +130,9 @@ class Clipper:
             root_args = list(args)
             root_args[0] = "sudo %s" % root_args[0]
             args = tuple(root_args)
-        # local is not currently capable of simultaneously printing and
+        # local is not currently capable of simultaneously logging.infoing and
         # capturing output, as run/sudo do. The capture kwarg allows you to
-        # switch between printing and capturing as necessary, and defaults to
+        # switch between logging.infoing and capturing as necessary, and defaults to
         # False. In this case, we need to capture the output and return it.
         if "capture" not in kwargs:
             kwargs["capture"] = True
@@ -238,7 +220,7 @@ class Clipper:
         })
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
-        print(r.text)
+        logging.info(r.text)
 
     def get_all_apps(self, verbose=False):
         """Gets information about all applications registered with Clipper.
@@ -265,7 +247,7 @@ class Clipper:
         if r.status_code == requests.codes.ok:
             return r.json()
         else:
-            print(r.text)
+            logging.warn(r.text)
             return None
 
     def get_app_info(self, name):
@@ -295,7 +277,7 @@ class Clipper:
                 return None
             return app_info
         else:
-            print(r.text)
+            logging.warn(r.text)
             return None
 
     def deploy_model(self,
@@ -346,7 +328,7 @@ class Clipper:
             elif isinstance(model_data, str):
                 # assume that model_data is a path to the serialized model
                 model_data_path = model_data
-                print("model_data_path is: %s" % model_data_path)
+                logging.info("model_data_path is: %s" % model_data_path)
             else:
                 warn("%s is invalid model format" % str(type(model_data)))
                 return False
@@ -374,7 +356,7 @@ class Clipper:
             # publish model to Clipper and verify success before copying model
             # parameters to Clipper and starting containers
             self._publish_new_model(name, version, labels, input_type, container_name, repo)
-            print("Published model to Clipper")
+            logging.info("Published model to Clipper")
 
             # TODO: call this in `add_container` once `repo` is available from redis
             self.clipper_k8s.deploy_model(name, version, repo)
@@ -435,7 +417,7 @@ class Clipper:
         conda_env_exported = self._export_conda_env(environment_file_abs_path)
 
         if conda_env_exported:
-            print("Anaconda environment found. Verifying packages.")
+            logging.info("Anaconda environment found. Verifying packages.")
 
             # Confirm that packages installed through conda are solvable
             # Write out conda and pip dependency files to be supplied to container
@@ -444,9 +426,9 @@ class Clipper:
                     conda_dep_fname, pip_dep_fname)):
                 return False
 
-            print("Supplied environment details")
+            logging.info("Supplied environment details")
         else:
-            print(
+            logging.info(
                 "Warning: Anaconda environment was either not found or exporting the environment "
                 "failed. Your function will still be serialized and deployed, but may fail due to "
                 "missing dependencies. In this case, please re-run inside an Anaconda environment. "
@@ -457,7 +439,7 @@ class Clipper:
         func_file_path = os.path.join(serialization_dir, predict_fname)
         with open(func_file_path, "w") as serialized_function_file:
             serialized_function_file.write(serialized_prediction_function)
-        print("Serialized and supplied predict function")
+        logging.info("Serialized and supplied predict function")
         return serialization_dir
 
     def deploy_pyspark_model(self,
@@ -527,7 +509,7 @@ class Clipper:
             else:
                 pyspark_model.save(sc, spark_model_save_loc)
         except Exception as e:
-            print("Error saving spark model: %s" % e)
+            logging.warn("Error saving spark model: %s" % e)
             raise e
 
         pyspark_container = "clipper/pyspark-container"
@@ -538,7 +520,7 @@ class Clipper:
                   "w") as metadata_file:
             json.dump({"model_class": model_class}, metadata_file)
 
-        print("Spark model saved")
+        logging.info("Spark model saved")
 
         # Deploy model
         deploy_result = self.deploy_model(name, version, serialization_dir,
@@ -645,7 +627,7 @@ class Clipper:
         if r.status_code == requests.codes.ok:
             return r.json()
         else:
-            print(r.text)
+            logging.info(r.text)
             return None
 
     def get_model_info(self, model_name, model_version):
@@ -679,7 +661,7 @@ class Clipper:
                 return None
             return app_info
         else:
-            print(r.text)
+            logging.info(r.text)
             return None
 
     def get_all_containers(self, verbose=False):
@@ -705,7 +687,7 @@ class Clipper:
         if r.status_code == requests.codes.ok:
             return r.json()
         else:
-            print(r.text)
+            logging.info(r.text)
             return None
 
     def get_container_info(self, model_name, model_version, replica_id):
@@ -741,7 +723,7 @@ class Clipper:
                 return None
             return app_info
         else:
-            print(r.text)
+            logging.info(r.text)
             return None
 
     def _inspect_selection_policy(self, app_name, uid):
@@ -824,7 +806,7 @@ class Clipper:
             on the container os. Otherwise returns False.
         """
         if "CONDA_PREFIX" not in os.environ:
-            print("No Anaconda environment found")
+            logging.info("No Anaconda environment found")
             return False
 
         root_prefix = os.environ["CONDA_PREFIX"].split("envs")[0]
@@ -843,8 +825,8 @@ class Clipper:
             stderr=subprocess.PIPE,
             shell=True)
         out, err = process.communicate()
-        print(out)
-        print(err)
+        logging.info(out)
+        logging.info(err)
         return process.returncode == 0
 
     def add_container(self, model_name, model_version):
@@ -880,7 +862,7 @@ class Clipper:
                     key=model_key,
                     db=REDIS_MODEL_DB_NUM),
                 capture=True)
-            print(result)
+            logging.info(result)
 
             if "empty list or set" in result.stdout:
                 # Model not found
@@ -916,7 +898,7 @@ class Clipper:
                 result = self._execute_root(add_container_cmd)
                 return result.return_code == 0
             else:
-                print("Cannot start containers for externally managed model %s"
+                logging.info("Cannot start containers for externally managed model %s"
                       % model_name)
                 return False
 
@@ -954,7 +936,7 @@ class Clipper:
             "docker ps -aq --filter label={clipper_label}".format(
                 clipper_label=CLIPPER_DOCKER_LABEL))
         ids = [l.strip() for l in containers.split("\n")]
-        print("Clipper container IDS found: %s" % str(ids))
+        logging.info("Clipper container IDS found: %s" % str(ids))
         return ids
 
     def inspect_instance(self):
@@ -1004,7 +986,7 @@ class Clipper:
         })
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
-        print(r.text)
+        logging.info(r.text)
         for r in range(num_containers):
             self.add_container(model_name, model_version)
 
@@ -1040,24 +1022,13 @@ class Clipper:
                             self._execute_root("docker rm {container}".format(
                                 container=container))
                             num_containers_removed += 1
-        print("Removed %d inactive containers for model %s" %
+        logging.info("Removed %d inactive containers for model %s" %
               (num_containers_removed, model_name))
         return num_containers_removed
 
     def stop_all(self):
-        """Stops and removes all Clipper Docker containers on the host.
-
-        """
-        # TODO: stop containers in k8s if running on k8s
-        print("Stopping Clipper and all running models...")
-        with hide("output", "warnings", "running"):
-            container_ids = self._get_clipper_container_ids()
-            container_id_str = " ".join(container_ids)
-            self._execute_root(
-                "docker stop {ids}".format(ids=container_id_str),
-                warn_only=True)
-            self._execute_root(
-                "docker rm {ids}".format(ids=container_id_str), warn_only=True)
+        """Stops and removes all Clipper model deployments."""
+        self.clipper_k8s.stop_all_model_deployments()
 
     # TODO: provide registry image for k8s service instead of container_name and model_data_path
     def _publish_new_model(self, name, version, labels, input_type,
@@ -1073,10 +1044,10 @@ class Clipper:
             "model_data_path": model_data_path
         })
         headers = {'Content-type': 'application/json'}
-        print(req_json)
+        logging.info(req_json)
         r = requests.post(url, headers=headers, data=req_json)
         if r.status_code == requests.codes.ok:
             return True
         else:
-            print("Error publishing model: %s" % r.text)
+            logging.warn("Error publishing model: %s" % r.text)
             return False
