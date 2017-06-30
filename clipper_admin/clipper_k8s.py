@@ -98,7 +98,7 @@ class ClipperK8s:
                                                 },
                                                 {
                                                     'name': 'CLIPPER_IP',
-                                                    'value': '192.168.99.100'
+                                                    'value': 'query-frontend'
                                                     # TODO: this is minikube IP, ideally the python-container could use K8s env vars
                                                 }
                                             ]
