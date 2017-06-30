@@ -271,13 +271,13 @@ void RPCService::receive_message(
         zmq_connection_id += 1;
       }
     } break;
-    case MessageType::ContainerContent:
+    case MessageType::ContainerContent: {
+      // This message is a response to a container query
+      message_t msg_id;
+      message_t msg_content;
+      socket.recv(&msg_id, 0);
+      socket.recv(&msg_content, 0);
       if (!new_connection) {
-        // This message is a response to a container query
-        message_t msg_id;
-        message_t msg_content;
-        socket.recv(&msg_id, 0);
-        socket.recv(&msg_content, 0);
         int id = static_cast<int *>(msg_id.data())[0];
         vector<uint8_t> content(
             (uint8_t *)msg_content.data(),
@@ -303,7 +303,7 @@ void RPCService::receive_message(
 
         response_queue_->push(response);
       }
-      break;
+    } break;
     case MessageType::Heartbeat:
       send_heartbeat_response(socket, connection_id, new_connection);
       break;
