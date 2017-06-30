@@ -18,8 +18,8 @@ spec:
     spec:
       containers:
       - args:
-        - --redis_ip=redis
-        - --redis_port=6379
+        - "--redis_ip=$(REDIS_SERVICE_HOST)"
+        - "--redis_port=$(REDIS_SERVICE_PORT)"
         image: clipper/management_frontend:latest
         name: mgmt-frontend
         ports:

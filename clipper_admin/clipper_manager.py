@@ -87,15 +87,6 @@ class Clipper:
         The SSH port to use. Default is port 22.
     check_for_docker : bool, optional
         If True, checks that Docker is running on the host machine. Default is True.
-    redis_port : int, optional
-        The port to use for connecting to redis. Default is port 6379.
-    redis_ip : string, optional
-        The ip address of the redis instance that Clipper should use.
-        If unspecified, a docker container running redis will be started
-        on `host` at the port specified by `redis_port`.
-    redis_persistence_path : string, optional
-        The directory path to which redis data should be persisted. The directory
-        should not already exist. If unspecified, redis will not persist data to disk.
     restart_containers : bool, optional
         If true, containers will restart on failure. If false, containers
         will not restart automatically.
@@ -109,10 +100,8 @@ class Clipper:
                  sudo=False,
                  ssh_port=22,
                  check_for_docker=True,
-                 redis_ip=DEFAULT_REDIS_IP,
-                 redis_port=DEFAULT_REDIS_PORT,
-                 redis_persistence_path=None,
                  restart_containers=True):
+        # TODO: support deploying redis host off-cluster by taking redis_ip as constructor param to ClipperK8s
         self.clipper_k8s = ClipperK8s()
 
         self.sudo = sudo
@@ -383,13 +372,12 @@ class Clipper:
             # TODO: replace `model_data_path` in `_publish_new_model` with the docker repo
             # publish model to Clipper and verify success before copying model
             # parameters to Clipper and starting containers
-            if not self._publish_new_model(
-                    name, version, labels, input_type, container_name, repo):
-                return False
+            self._publish_new_model(name, version, labels, input_type, container_name, repo)
             print("Published model to Clipper")
 
             # TODO: call this in `add_container` once `repo` is available from redis
             self.clipper_k8s.deploy_model(name, version, repo)
+            # self.add_container(name, version)
 
             # aggregate results of starting all containers
             # return all([
@@ -882,16 +870,12 @@ class Clipper:
         # TODO: this must abstract containers deployed on k8s vs those running on local docker, see ContainerManager
         with hide("warnings", "output", "running"):
             # Look up model info in Redis
-            if self.redis_ip == DEFAULT_REDIS_IP:
-                redis_host = self.host
-            else:
-                redis_host = self.redis_ip
             model_key = "{mn}:{mv}".format(mn=model_name, mv=model_version)
             result = local(
                 "redis-cli -h {host} -p {redis_port} -n {db} hgetall {key}".
                 format(
-                    host=redis_host,
-                    redis_port=self.redis_port,
+                    host=self.host,
+                    redis_port=DEFAULT_REDIS_PORT,
                     key=model_key,
                     db=REDIS_MODEL_DB_NUM),
                 capture=True)

@@ -90,15 +90,16 @@ class ClipperK8s:
                                             'env': [
                                                 {
                                                     'name': 'CLIPPER_MODEL_NAME',
-                                                    'value': 'feature-sum-model'
+                                                    'value': name
                                                 },
                                                 {
                                                     'name': 'CLIPPER_MODEL_VERSION',
-                                                    'value': '1'
+                                                    'value': str(version)
                                                 },
                                                 {
                                                     'name': 'CLIPPER_IP',
-                                                    'value': '10.0.2.2' # TODO: WTF magic IP that goes to host
+                                                    'value': '192.168.99.100'
+                                                    # TODO: this is minikube IP, ideally the python-container could use K8s env vars
                                                 }
                                             ]
                                         }
