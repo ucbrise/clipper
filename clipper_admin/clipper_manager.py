@@ -182,6 +182,13 @@ class Clipper:
                 *args,
                 **kwargs)
 
+    def start(self):
+        """Start a Clipper instance.
+
+        """
+        self.clipper_k8s.start()
+        logging.info("Clipper is running")
+
     def register_application(self, name, model, input_type, default_output,
                              slo_micros):
         """Register a new Clipper application.
@@ -347,20 +354,22 @@ class Clipper:
                     name=name,
                     version=version)
             docker_client = docker.from_env(version=os.environ["DOCKER_API_VERSION"])
+            logging.info("Building model Docker image at {}".format(model_data_path))
             docker_client.images.build(
                     path=model_data_path,
                     tag=repo)
+            logging.info("Pushing model Docker image to {}".format(repo))
             docker_client.images.push(repository=repo)
+
+            # TODO: call this in `add_container` once `repo` is available from redis
+            logging.info("Creating model deployment on k8s")
+            self.clipper_k8s.deploy_model(name, version, repo)
 
             # TODO: replace `model_data_path` in `_publish_new_model` with the docker repo
             # publish model to Clipper and verify success before copying model
             # parameters to Clipper and starting containers
+            logging.info("Publishing model to Clipper query manager")
             self._publish_new_model(name, version, labels, input_type, container_name, repo)
-            logging.info("Published model to Clipper")
-
-            # TODO: call this in `add_container` once `repo` is available from redis
-            self.clipper_k8s.deploy_model(name, version, repo)
-            # self.add_container(name, version)
 
             # aggregate results of starting all containers
             # return all([

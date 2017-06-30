@@ -1,20 +1,17 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  annotations:
-    ai.clipper.container.label: ""
-  creationTimestamp: null
   labels:
-    io.kompose.service: mgmt-frontend
+    ai.clipper.container.label: ""
+    ai.clipper.name: mgmt-frontend
   name: mgmt-frontend
 spec:
   replicas: 1
-  strategy: {}
   template:
     metadata:
-      creationTimestamp: null
       labels:
-        io.kompose.service: mgmt-frontend
+        ai.clipper.container.label: ""
+        ai.clipper.name: mgmt-frontend
     spec:
       containers:
       - args:
@@ -24,6 +21,4 @@ spec:
         name: mgmt-frontend
         ports:
         - containerPort: 1338
-        resources: {}
       restartPolicy: Always
-status: {}
