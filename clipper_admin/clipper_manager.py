@@ -678,7 +678,6 @@ class Clipper:
                                 version,
                                 predict_function,
                                 input_type,
-                                container_name="clipper/python-container"
                                 labels=DEFAULT_LABEL,
                                 num_containers=1):
         """Deploy an arbitrary Python function to Clipper.
@@ -699,16 +698,6 @@ class Clipper:
             captured via closure capture.
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
-        container_name : str, optional
-            The Docker container image to use to run this model container.
-            By default this will use the clipper/python-container Docker image distributed
-            by Clipper. This container has several common Python packages already installed
-            and will attempt to install any missing dependencies at runtime.
-            If your predict function requires additional dependencies that the default container
-            fails to install automatically, you can create a custom Docker image that contains
-            those dependencies and specify the custom container in the ``container_name``
-            argument. This custom container must be compatible with clipper/python-container
-            container.
         labels : list of str, optional
             A list of strings annotating the model.
         num_containers : int, optional
@@ -744,11 +733,12 @@ class Clipper:
                 num_containers=1)
         """
 
+        default_python_container = "clipper/python-container"
         serialization_dir = self._save_python_function(name, predict_function)
 
         # Deploy function
         deploy_result = self.deploy_model(name, version, serialization_dir,
-                                          container_name, input_type,
+                                          default_python_container, input_type,
                                           labels, num_containers)
         # Remove temp files
         shutil.rmtree(serialization_dir)
