@@ -27,34 +27,13 @@ class ClipperK8s:
         config.load_kube_config()
         self._k8s_v1 = client.CoreV1Api()
         self._k8s_beta = client.ExtensionsV1beta1Api()
-        self._initialize_clipper()
+
+    def start(self):
+        self._start_clipper()
 
         # NOTE: this provides a minikube accessible docker registry for convenience during dev
         # TODO: should not be required, as `deploy_model` should be able to pull from any accessible `repo`
-        self._initialize_registry()
-
-    def _initialize_clipper(self):
-        """Deploys Clipper to the k8s cluster and exposes the frontends as services."""
-        logging.info("Initializing Clipper services to k8s cluster")
-        for name in ['mgmt-frontend', 'query-frontend', 'redis']:
-            with _pass_conflicts():
-                self._k8s_beta.create_namespaced_deployment(
-                        body=yaml.load(open('k8s/clipper/{}-deployment.yaml'.format(name))), namespace='default')
-            with _pass_conflicts():
-                self._k8s_v1.create_namespaced_service(
-                        body=yaml.load(open('k8s/clipper/{}-service.yaml'.format(name))), namespace='default')
-
-    def _initialize_registry(self):
-        logging.info("Initializing Docker registry on k8s cluster")
-        with _pass_conflicts():
-            self._k8s_v1.create_namespaced_replication_controller(
-                    body=yaml.load(open('k8s/minikube-registry/kube-registry-rc.yaml')), namespace='kube-system')
-        with _pass_conflicts():
-            self._k8s_v1.create_namespaced_service(
-                    body=yaml.load(open('k8s/minikube-registry/kube-registry-svc.yaml')), namespace='kube-system')
-        with _pass_conflicts():
-            self._k8s_beta.create_namespaced_daemon_set(
-                    body=yaml.load(open('k8s/minikube-registry/kube-registry-ds.yaml')), namespace='kube-system')
+        self._start_registry()
 
     def deploy_model(self, name, version, repo):
         """Deploys a versioned model to a k8s cluster.
@@ -119,11 +98,41 @@ class ClipperK8s:
                     }, namespace='default')
 
     def stop_all_model_deployments(self):
+        """Stops all deployments of pods running Clipper models."""
         logging.info("Stopping all running Clipper model deployments...")
         try:
             resp = self._k8s_beta.delete_collection_namespaced_deployment(
                     namespace='default',
                     label_selector='ai.clipper.container.label')
-            logging.info(resp)
         except ApiException as e:
             logging.warn("Exception deleting k8s deployments: {}".format(e))
+
+    def stop_clipper_resources(self):
+        """Stops all Clipper resources.
+
+        WARNING: this will delete Redis and Docker Registry pods.
+        """
+
+    def _start_clipper(self):
+        """Deploys Clipper to the k8s cluster and exposes the frontends as services."""
+        logging.info("Initializing Clipper services to k8s cluster")
+        for name in ['mgmt-frontend', 'query-frontend', 'redis']:
+            with _pass_conflicts():
+                self._k8s_beta.create_namespaced_deployment(
+                        body=yaml.load(open('k8s/clipper/{}-deployment.yaml'.format(name))), namespace='default')
+            with _pass_conflicts():
+                self._k8s_v1.create_namespaced_service(
+                        body=yaml.load(open('k8s/clipper/{}-service.yaml'.format(name))), namespace='default')
+
+    def _start_registry(self):
+        logging.info("Initializing Docker registry on k8s cluster")
+        with _pass_conflicts():
+            self._k8s_v1.create_namespaced_replication_controller(
+                    body=yaml.load(open('k8s/minikube-registry/kube-registry-replication-controller.yaml')), namespace='kube-system')
+        with _pass_conflicts():
+            self._k8s_v1.create_namespaced_service(
+                    body=yaml.load(open('k8s/minikube-registry/kube-registry-service.yaml')), namespace='kube-system')
+        with _pass_conflicts():
+            self._k8s_beta.create_namespaced_daemon_set(
+                    body=yaml.load(open('k8s/minikube-registry/kube-registry-daemon-set.yaml')), namespace='kube-system')
+
