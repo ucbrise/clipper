@@ -1,11 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  annotations:
-    ai.clipper.container.label: ""
-  creationTimestamp: null
   labels:
-    io.kompose.service: query-frontend
+    ai.clipper.container.label: ""
+    ai.clipper.name: query-frontend
   name: query-frontend
 spec:
   type: NodePort
@@ -17,6 +15,4 @@ spec:
     port: 1337
     targetPort: 1337
   selector:
-    io.kompose.service: query-frontend
-status:
-  loadBalancer: {}
+    ai.clipper.name: query-frontend

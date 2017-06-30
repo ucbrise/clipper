@@ -1,20 +1,17 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  annotations:
-    ai.clipper.container.label: ""
-  creationTimestamp: null
   labels:
-    io.kompose.service: query-frontend
+    ai.clipper.container.label: ""
+    ai.clipper.name: query-frontend
   name: query-frontend
 spec:
   replicas: 1
-  strategy: {}
   template:
     metadata:
-      creationTimestamp: null
       labels:
-        io.kompose.service: query-frontend
+        ai.clipper.container.label: ""
+        ai.clipper.name: query-frontend
     spec:
       containers:
       - args:
@@ -25,6 +22,4 @@ spec:
         ports:
         - containerPort: 7000
         - containerPort: 1337
-        resources: {}
       restartPolicy: Always
-status: {}

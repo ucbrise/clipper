@@ -13,5 +13,3 @@ spec:
     targetPort: 1338
   selector:
     ai.clipper.name: mgmt-frontend
-status:
-  loadBalancer: {}

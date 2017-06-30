@@ -61,7 +61,7 @@ class ClipperK8s:
                             'template': {
                                 'metadata': {
                                     'labels': {
-                                        clipper_manager.CLIPPER_DOCKER_LABEL: '',
+                                        clipper_manager.CLIPPER_MODEL_CONTAINER_LABEL: '',
                                         'model': name,
                                         'version': str(version)
                                     }
@@ -99,19 +99,45 @@ class ClipperK8s:
 
     def stop_all_model_deployments(self):
         """Stops all deployments of pods running Clipper models."""
-        logging.info("Stopping all running Clipper model deployments...")
+        logging.info("Stopping all running Clipper model deployments")
         try:
             resp = self._k8s_beta.delete_collection_namespaced_deployment(
                     namespace='default',
-                    label_selector='ai.clipper.container.label')
+                    label_selector=clipper_manager.CLIPPER_MODEL_CONTAINER_LABEL)
         except ApiException as e:
             logging.warn("Exception deleting k8s deployments: {}".format(e))
 
     def stop_clipper_resources(self):
         """Stops all Clipper resources.
 
-        WARNING: this will delete Redis and Docker Registry pods.
+        WARNING: Data stored on an in-cluster Redis deployment will be lost! This method does not delete
+        any existing in-cluster Docker registry.
         """
+        logging.info("Stopping all running Clipper resources")
+
+        try:
+            for service in self._k8s_v1.list_namespaced_service(
+                    namespace='default',
+                    label_selector=clipper_manager.CLIPPER_DOCKER_LABEL).items:
+                # TODO: use delete collection of services if API provides
+                service_name = service.metadata.name
+                self._k8s_v1.delete_namespaced_service(
+                        namespace='default',
+                        name=service_name)
+
+            self._k8s_beta.delete_collection_namespaced_deployment(
+                    namespace='default',
+                    label_selector=clipper_manager.CLIPPER_DOCKER_LABEL)
+
+            self._k8s_v1.delete_collection_namespaced_pod(
+                    namespace='default',
+                    label_selector=clipper_manager.CLIPPER_DOCKER_LABEL)
+
+            self._k8s_v1.delete_collection_namespaced_pod(
+                    namespace='default',
+                    label_selector=clipper_manager.CLIPPER_MODEL_CONTAINER_LABEL)
+        except ApiException as e:
+            logging.warn("Exception deleting k8s resources: {}".format(e))
 
     def _start_clipper(self):
         """Deploys Clipper to the k8s cluster and exposes the frontends as services."""

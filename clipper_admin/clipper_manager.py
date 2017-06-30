@@ -42,7 +42,7 @@ CLIPPER_RPC_PORT = 7000
 CLIPPER_LOGS_PATH = "/tmp/clipper-logs"
 
 CLIPPER_DOCKER_LABEL = "ai.clipper.container.label"
-CLIPPER_MODEL_CONTAINER_LABEL = "ai.clipper.model_container.model_version"
+CLIPPER_MODEL_CONTAINER_LABEL = "ai.clipper.model_container.label"
 
 DEFAULT_LABEL = ["DEFAULT"]
 
@@ -335,7 +335,6 @@ class Clipper:
             elif isinstance(model_data, str):
                 # assume that model_data is a path to the serialized model
                 model_data_path = model_data
-                logging.info("model_data_path is: %s" % model_data_path)
             else:
                 warn("%s is invalid model format" % str(type(model_data)))
                 return False
@@ -370,6 +369,8 @@ class Clipper:
             # parameters to Clipper and starting containers
             logging.info("Publishing model to Clipper query manager")
             self._publish_new_model(name, version, labels, input_type, container_name, repo)
+
+            logging.info("Done deploying!")
 
             # aggregate results of starting all containers
             # return all([
@@ -1036,8 +1037,9 @@ class Clipper:
         return num_containers_removed
 
     def stop_all(self):
-        """Stops and removes all Clipper model deployments."""
+        """Stops and removes all Clipper model deployments and Clipper resources."""
         self.clipper_k8s.stop_all_model_deployments()
+        self.clipper_k8s.stop_clipper_resources()
 
     # TODO: provide registry image for k8s service instead of container_name and model_data_path
     def _publish_new_model(self, name, version, labels, input_type,
