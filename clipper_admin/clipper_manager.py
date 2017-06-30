@@ -15,6 +15,7 @@ from sklearn.externals import joblib
 from cStringIO import StringIO
 from .cloudpickle import CloudPickler
 from .clipper_k8s import ClipperK8s
+import logging
 import time
 import re
 
@@ -102,8 +103,8 @@ class Clipper:
                  check_for_docker=True,
                  restart_containers=True):
         # TODO: support deploying redis host off-cluster by taking redis_ip as constructor param to ClipperK8s
+        logging.basicConfig(level=logging.INFO)
         self.clipper_k8s = ClipperK8s()
-
         self.sudo = sudo
         self.host = host
         self.host_string = self.host

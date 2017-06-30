@@ -1,52 +1,58 @@
 """Clipper Kubernetes Utilities"""
-# TODO: better error handling, check if resources exist before creating
 # TODO: include labels (used by clipper.stop_all)
 # TODO: deletion methods
 
-import yaml
+from contextlib import contextmanager
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
+import logging
+import json
+import yaml
+
+@contextmanager
+def _pass_conflicts():
+    try:
+        yield
+    except ApiException as e:
+        body = json.loads(e.body)
+        if body['reason'] == 'AlreadyExists':
+            logging.info("{} already exists, skipping!".format(body['details']))
+            pass
 
 class ClipperK8s:
     # TODO: subclass ContainerManager interface
     def __init__(self):
         config.load_kube_config()
-        self.k8s_v1 = client.CoreV1Api()
-        self.k8s_beta = client.ExtensionsV1beta1Api()
-        self.initialize_clipper() # NOTE: this allows containers to discover query_manager by DNS rather than IP,
-                                  # but may couple too tightly to k8s
-        self.initialize_registry() # TODO: check doesn't exist before trying
+        self._k8s_v1 = client.CoreV1Api()
+        self._k8s_beta = client.ExtensionsV1beta1Api()
+        self._initialize_clipper()
 
-    def initialize_clipper(self):
+        # NOTE: this provides a minikube accessible docker registry for convenience during dev
+        # TODO: should not be required, as `deploy_model` should be able to pull from any accessible `repo`
+        self._initialize_registry()
+
+    def _initialize_clipper(self):
         """Deploys Clipper to the k8s cluster and exposes the frontends as services."""
+        logging.info("Initializing Clipper services to k8s cluster")
         for name in ['mgmt-frontend', 'query-frontend', 'redis']:
-            try:
-                self.k8s_beta.create_namespaced_deployment(
+            with _pass_conflicts() as cm:
+                resp = self._k8s_beta.create_namespaced_deployment(
                         body=yaml.load(open('k8s/clipper/{}-deployment.yaml'.format(name))), namespace='default')
-            except ApiException:
-                pass
-            try:
-                self.k8s_v1.create_namespaced_service(
+            with _pass_conflicts() as cm:
+                resp = self._k8s_v1.create_namespaced_service(
                         body=yaml.load(open('k8s/clipper/{}-service.yaml'.format(name))), namespace='default')
-            except ApiException:
-                pass
 
-    def initialize_registry(self):
-        try:
-            self.k8s_v1.create_namespaced_replication_controller(
+    def _initialize_registry(self):
+        logging.info("Initializing Docker registry on k8s cluster")
+        with _pass_conflicts():
+            self._k8s_v1.create_namespaced_replication_controller(
                     body=yaml.load(open('k8s/minikube-registry/kube-registry-rc.yaml')), namespace='kube-system')
-        except ApiException: # already exists
-            pass
-        try:
-            self.k8s_v1.create_namespaced_service(
+        with _pass_conflicts():
+            self._k8s_v1.create_namespaced_service(
                     body=yaml.load(open('k8s/minikube-registry/kube-registry-svc.yaml')), namespace='kube-system')
-        except ApiException: # already exists
-            pass
-        try:
-            self.k8s_beta.create_namespaced_daemon_set(
+        with _pass_conflicts():
+            self._k8s_beta.create_namespaced_daemon_set(
                     body=yaml.load(open('k8s/minikube-registry/kube-registry-ds.yaml')), namespace='kube-system')
-        except ApiException: # already exists
-            pass
 
     def deploy_model(self, name, version, repo):
         """Deploys a versioned model to a k8s cluster.
@@ -60,8 +66,9 @@ class ClipperK8s:
         repo : str
             A docker repository path, which must be accessible by the k8s cluster.
         """
-        try:
-            self.k8s_beta.create_namespaced_deployment(
+        with _pass_conflicts():
+            # TODO: handle errors where `repo` is not accessible
+            self._k8s_beta.create_namespaced_deployment(
                     body={
                         'apiVersion': 'extensions/v1beta1',
                         'kind': 'Deployment',
@@ -99,7 +106,6 @@ class ClipperK8s:
                                                 {
                                                     'name': 'CLIPPER_IP',
                                                     'value': 'query-frontend'
-                                                    # TODO: this is minikube IP, ideally the python-container could use K8s env vars
                                                 }
                                             ]
                                         }
@@ -108,5 +114,3 @@ class ClipperK8s:
                             }
                         }
                     }, namespace='default')
-        except ApiException: # already exists
-            pass
