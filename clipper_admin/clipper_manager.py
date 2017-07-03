@@ -64,13 +64,7 @@ class ClipperManagerException(Exception):
 
 class Clipper:
     """
-    Connection to a Clipper instance for administrative purposes.
-
-    Sets up the machine for running Clipper. This includes verifying
-    SSH credentials and initializing Docker.
-
-    Docker and docker-compose must already by installed on the machine
-    before connecting to a machine.
+    Connection to a Clipper instance running on k8s for administrative purposes.
 
     Parameters
     ----------
@@ -79,14 +73,8 @@ class Clipper:
         should allow passwordless SSH access.
     user : str, optional
         The SSH username. This field must be specified if `host` is not local.
-    key_path : str, optional.
-        The path to the SSH private key. This field must be specified if `host` is not local.
     sudo : bool, optional.
         Specifies level of execution for docker commands (sudo if true, standard if false).
-    ssh_port : int, optional
-        The SSH port to use. Default is port 22.
-    check_for_docker : bool, optional
-        If True, checks that Docker is running on the host machine. Default is True.
     restart_containers : bool, optional
         If true, containers will restart on failure. If false, containers
         will not restart automatically.
@@ -95,11 +83,7 @@ class Clipper:
 
     def __init__(self,
                  host,
-                 user=None,
-                 key_path=None,
                  sudo=False,
-                 ssh_port=22,
-                 check_for_docker=True,
                  restart_containers=True):
         # TODO: support deploying redis host off-cluster by taking redis_ip as constructor param to ClipperK8s
         logging.basicConfig(level=logging.INFO)
@@ -107,23 +91,16 @@ class Clipper:
         self.sudo = sudo
         self.host = host
         self.host_string = self.host
-
-    def _host_is_local(self):
-        return True
+        self.restart_containers = restart_containers # TODO: add to logic
 
     def _execute_root(self, *args, **kwargs):
         if not self.sudo:
             return self._execute_standard(*args, **kwargs)
-        elif self._host_is_local():
-            return self._execute_local(True, *args, **kwargs)
         else:
-            return sudo(*args, **kwargs)
+            return self._execute_local(True, *args, **kwargs)
 
     def _execute_standard(self, *args, **kwargs):
-        if self._host_is_local():
-            return self._execute_local(False, *args, **kwargs)
-        else:
-            return run(*args, **kwargs)
+        return self._execute_local(False, *args, **kwargs)
 
     def _execute_local(self, as_root, *args, **kwargs):
         if self.sudo and as_root:
@@ -148,39 +125,6 @@ class Clipper:
         else:
             result = local(*args, **kwargs)
         return result
-
-    def _execute_append(self, filename, text, **kwargs):
-        if self._host_is_local():
-            file = open(filename, "a+")
-            # As with fabric.append(), we should only
-            # append the text if it is not already
-            # present within the file
-            if text not in file.read():
-                file.write(text)
-            file.close()
-        else:
-            append(filename, text, **kwargs)
-
-    def _execute_put(self, local_path, remote_path, *args, **kwargs):
-        if self._host_is_local():
-            # We should only copy data if the paths are different
-            if local_path != remote_path:
-                if os.path.isdir(local_path):
-                    remote_path = os.path.join(remote_path,
-                                               os.path.basename(local_path))
-                    # if remote_path exists, delete it because shutil.copytree requires
-                    # that the dst path doesn't exist
-                    if os.path.exists(remote_path):
-                        shutil.rmtree(remote_path)
-                    shutil.copytree(local_path, remote_path)
-                else:
-                    shutil.copy2(local_path, remote_path)
-        else:
-            put(
-                local_path=local_path,
-                remote_path=remote_path,
-                *args,
-                **kwargs)
 
     def start(self):
         """Start a Clipper instance.
