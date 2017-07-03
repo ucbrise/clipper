@@ -2,8 +2,6 @@
 
 from __future__ import print_function, with_statement, absolute_import
 import docker
-from fabric.api import *
-from fabric.contrib.files import append
 import os
 import requests
 import json
@@ -35,8 +33,8 @@ REDIS_RESOURCE_DB_NUM = 4
 REDIS_APPLICATION_DB_NUM = 5
 
 DEFAULT_REDIS_PORT = 6379
-CLIPPER_QUERY_PORT = 1337
-CLIPPER_MANAGEMENT_PORT = 1338
+CLIPPER_QUERY_PORT = 32595
+CLIPPER_MANAGEMENT_PORT = 31725
 CLIPPER_RPC_PORT = 7000
 
 CLIPPER_LOGS_PATH = "/tmp/clipper-logs"
@@ -92,39 +90,6 @@ class Clipper:
         self.host = host
         self.host_string = self.host
         self.restart_containers = restart_containers # TODO: add to logic
-
-    def _execute_root(self, *args, **kwargs):
-        if not self.sudo:
-            return self._execute_standard(*args, **kwargs)
-        else:
-            return self._execute_local(True, *args, **kwargs)
-
-    def _execute_standard(self, *args, **kwargs):
-        return self._execute_local(False, *args, **kwargs)
-
-    def _execute_local(self, as_root, *args, **kwargs):
-        if self.sudo and as_root:
-            root_args = list(args)
-            root_args[0] = "sudo %s" % root_args[0]
-            args = tuple(root_args)
-        # local is not currently capable of simultaneously logging.infoing and
-        # capturing output, as run/sudo do. The capture kwarg allows you to
-        # switch between logging.infoing and capturing as necessary, and defaults to
-        # False. In this case, we need to capture the output and return it.
-        if "capture" not in kwargs:
-            kwargs["capture"] = True
-        # fabric.local() does not accept the "warn_only"
-        # key word argument, so we must remove it before
-        # calling
-        if "warn_only" in kwargs:
-            del kwargs["warn_only"]
-            # Forces execution to continue in the face of an error,
-            # just like warn_only=True
-            with warn_only():
-                result = local(*args, **kwargs)
-        else:
-            result = local(*args, **kwargs)
-        return result
 
     def start(self):
         """Start a Clipper instance.
@@ -266,61 +231,53 @@ class Clipper:
             The number of replicas of the model to create. More replicas can be
             created later as well. Defaults to 1.
         """
-        with hide("warnings", "output", "running"):
-            if isinstance(model_data, base.BaseEstimator):
-                fname = name.replace("/", "_")
-                model_data_path = "/tmp/%s" % fname
-                pkl_path = '%s/%s.pkl' % (model_data_path, fname)
-                try:
-                    os.mkdir(model_data_path)
-                except OSError:
-                    pass
-                joblib.dump(model_data, pkl_path)
-            elif isinstance(model_data, str):
-                # assume that model_data is a path to the serialized model
-                model_data_path = model_data
-            else:
-                warn("%s is invalid model format" % str(type(model_data)))
-                return False
+        if isinstance(model_data, base.BaseEstimator):
+            fname = name.replace("/", "_")
+            model_data_path = "/tmp/%s" % fname
+            pkl_path = '%s/%s.pkl' % (model_data_path, fname)
+            try:
+                os.mkdir(model_data_path)
+            except OSError:
+                pass
+            joblib.dump(model_data, pkl_path)
+        elif isinstance(model_data, str):
+            # assume that model_data is a path to the serialized model
+            model_data_path = model_data
+        else:
+            warn("%s is invalid model format" % str(type(model_data)))
+            return False
 
-            vol = "{model_repo}/{name}/{version}".format(
-                model_repo=MODEL_REPO, name=name, version=version)
+        vol = "{model_repo}/{name}/{version}".format(
+            model_repo=MODEL_REPO, name=name, version=version)
 
-            # prepare docker image build dir
-            with open(model_data_path + '/Dockerfile', 'w') as f:
-                f.write("FROM {container_name}\nCOPY . /model/.\n".format(container_name=container_name))
+        # prepare docker image build dir
+        with open(model_data_path + '/Dockerfile', 'w') as f:
+            f.write("FROM {container_name}\nCOPY . /model/.\n".format(container_name=container_name))
 
-            # build, tag, and push docker image to registry
-            # NOTE: DOCKER_API_VERSION (set by `minikube docker-env`) must be same version as docker registry server
-            repo = '{docker_registry}/{name}:{version}'.format(
-                    docker_registry='localhost:5000', # TODO: make configurable
-                    name=name,
-                    version=version)
-            docker_client = docker.from_env(version=os.environ["DOCKER_API_VERSION"])
-            logging.info("Building model Docker image at {}".format(model_data_path))
-            docker_client.images.build(
-                    path=model_data_path,
-                    tag=repo)
-            logging.info("Pushing model Docker image to {}".format(repo))
-            docker_client.images.push(repository=repo)
+        # build, tag, and push docker image to registry
+        # NOTE: DOCKER_API_VERSION (set by `minikube docker-env`) must be same version as docker registry server
+        repo = '{docker_registry}/{name}:{version}'.format(
+                docker_registry='localhost:5000', # TODO: make configurable
+                name=name,
+                version=version)
+        docker_client = docker.from_env(version=os.environ["DOCKER_API_VERSION"])
+        logging.info("Building model Docker image at {}".format(model_data_path))
+        docker_client.images.build(
+                path=model_data_path,
+                tag=repo)
+        logging.info("Pushing model Docker image to {}".format(repo))
+        docker_client.images.push(repository=repo)
 
-            # TODO: call this in `add_container` once `repo` is available from redis
-            logging.info("Creating model deployment on k8s")
-            self.clipper_k8s.deploy_model(name, version, repo)
+        logging.info("Creating model deployment on k8s")
+        self.clipper_k8s.deploy_model(name, version, repo)
 
-            # TODO: replace `model_data_path` in `_publish_new_model` with the docker repo
-            # publish model to Clipper and verify success before copying model
-            # parameters to Clipper and starting containers
-            logging.info("Publishing model to Clipper query manager")
-            self._publish_new_model(name, version, labels, input_type, container_name, repo)
+        # TODO: replace `model_data_path` in `_publish_new_model` with the docker repo
+        # publish model to Clipper and verify success before copying model
+        # parameters to Clipper and starting containers
+        logging.info("Publishing model to Clipper query manager")
+        self._publish_new_model(name, version, labels, input_type, container_name, repo)
 
-            logging.info("Done deploying!")
-
-            # aggregate results of starting all containers
-            # return all([
-            #     self.add_container(name, version)
-            #     for r in range(num_containers)
-            # ])
+        logging.info("Done deploying!")
 
     def register_external_model(self,
                                 name,
@@ -783,79 +740,6 @@ class Clipper:
         logging.info(err)
         return process.returncode == 0
 
-    def add_container(self, model_name, model_version):
-        """Create a new container for an existing model.
-
-        Starts a new container for a model that has already been added to
-        Clipper. Note that models are uniquely identified by both name
-        and version, so this method will fail if you have not already called
-        `Clipper.deploy_model()` for the specified name and version.
-
-        Parameters
-        ----------
-        model_name : str
-            The name of the model
-        model_version : int
-            The version of the model
-
-        Returns
-        ----------
-        bool
-            True if the container was added successfully and False
-            if the container could not be added.
-        """
-        # TODO: this must abstract containers deployed on k8s vs those running on local docker, see ContainerManager
-        with hide("warnings", "output", "running"):
-            # Look up model info in Redis
-            model_key = "{mn}:{mv}".format(mn=model_name, mv=model_version)
-            result = local(
-                "redis-cli -h {host} -p {redis_port} -n {db} hgetall {key}".
-                format(
-                    host=self.host,
-                    redis_port=DEFAULT_REDIS_PORT,
-                    key=model_key,
-                    db=REDIS_MODEL_DB_NUM),
-                capture=True)
-            logging.info(result)
-
-            if "empty list or set" in result.stdout:
-                # Model not found
-                warn("Trying to add container but model {mn}:{mv} not in "
-                     "Redis".format(mn=model_name, mv=model_version))
-                return False
-
-            splits = result.stdout.split("\n")
-            model_metadata = dict([(splits[i].strip(), splits[i + 1].strip())
-                                   for i in range(0, len(splits), 2)])
-            image_name = model_metadata["container_name"]
-            model_data_path = model_metadata["model_data_path"]
-            model_input_type = model_metadata["input_type"]
-            restart_policy = 'always' if self.restart_containers else 'no'
-
-            if image_name != EXTERNALLY_MANAGED_MODEL:
-                # Start container
-                add_container_cmd = (
-                    "docker run -d --network={nw} --restart={restart_policy} -v {path}:/model:ro "
-                    "-e \"CLIPPER_MODEL_NAME={mn}\" -e \"CLIPPER_MODEL_VERSION={mv}\" "
-                    "-e \"CLIPPER_IP=query_frontend\" -e \"CLIPPER_INPUT_TYPE={mip}\" -l \"{clipper_label}\" -l \"{mv_label}\" "
-                    "{image}".format(
-                        path=model_data_path,
-                        nw=DOCKER_NW,
-                        image=image_name,
-                        mn=model_name,
-                        mv=model_version,
-                        mip=model_input_type,
-                        clipper_label=CLIPPER_DOCKER_LABEL,
-                        mv_label="%s=%s:%d" % (CLIPPER_MODEL_CONTAINER_LABEL,
-                                               model_name, model_version),
-                        restart_policy=restart_policy))
-                result = self._execute_root(add_container_cmd)
-                return result.return_code == 0
-            else:
-                logging.info("Cannot start containers for externally managed model %s"
-                      % model_name)
-                return False
-
     def get_clipper_logs(self):
         """Copies the logs from all Docker containers running on the host machine
         that have been tagged with the Clipper label (ai.clipper.container.label) into
@@ -866,32 +750,13 @@ class Clipper:
         list(str)
             Returns a list of local filenames containing the Docker container log snapshots.
         """
-        container_ids = self._get_clipper_container_ids()
         cur_time_logs_path = os.path.join(CLIPPER_LOGS_PATH,
                                           time.strftime("%Y%m%d-%H%M%S"))
         if not os.path.exists(cur_time_logs_path):
             os.makedirs(cur_time_logs_path)
         log_file_names = []
-        for container in container_ids:
-            output = self._execute_root(
-                "docker logs {container}".format(container=container))
-            cur_log_fname = os.path.join(cur_time_logs_path,
-                                         "%s-container.log" % container)
-            with open(cur_log_fname, "w") as f:
-                f.write(output)
-            log_file_names.append(cur_log_fname)
+        # TODO: implement, or update docs to point to kubectl logs
         return log_file_names
-
-    def _get_clipper_container_ids(self):
-        """
-        Gets the container IDs of all containers labeled with the clipper label
-        """
-        containers = self._execute_root(
-            "docker ps -aq --filter label={clipper_label}".format(
-                clipper_label=CLIPPER_DOCKER_LABEL))
-        ids = [l.strip() for l in containers.split("\n")]
-        logging.info("Clipper container IDS found: %s" % str(ids))
-        return ids
 
     def inspect_instance(self):
         """Fetches metrics from the running Clipper instance.
@@ -931,7 +796,6 @@ class Clipper:
             selected model version.
 
         """
-        # TODO: update to use k8s API
         url = "http://%s:%d/admin/set_model_version" % (
             self.host, CLIPPER_MANAGEMENT_PORT)
         req_json = json.dumps({
@@ -941,8 +805,7 @@ class Clipper:
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
         logging.info(r.text)
-        for r in range(num_containers):
-            self.add_container(model_name, model_version)
+        # TODO: use k8s API to udpate model_version
 
     def remove_inactive_containers(self, model_name):
         """Removes all containers serving stale versions of the specified model.
@@ -955,27 +818,7 @@ class Clipper:
         """
         # Get all Docker containers tagged as model containers
         num_containers_removed = 0
-        with hide("output", "warnings", "running"):
-            container_ids = self._get_clipper_container_ids()
-            if len(container_ids) > 0:
-                for container in container_ids:
-                    # returns a string formatted as "<model_name>:<model_version>"
-                    container_model_name_and_version = self._execute_root(
-                        "docker inspect --format \"{{ index .Config.Labels \\\"%s\\\"}}\" %s"
-                        % (CLIPPER_MODEL_CONTAINER_LABEL, container))
-                    splits = container_model_name_and_version.split(":")
-                    container_model_name = splits[0]
-                    container_model_version = int(splits[1])
-                    if container_model_name == model_name:
-                        # check if container_model_version is the currently deployed version
-                        model_info = self.get_model_info(
-                            container_model_name, container_model_version)
-                        if model_info == None or not model_info["is_current_version"]:
-                            self._execute_root("docker stop {container}".
-                                               format(container=container))
-                            self._execute_root("docker rm {container}".format(
-                                container=container))
-                            num_containers_removed += 1
+        # TODO: implement using self.get_model_info to check model_version
         logging.info("Removed %d inactive containers for model %s" %
               (num_containers_removed, model_name))
         return num_containers_removed

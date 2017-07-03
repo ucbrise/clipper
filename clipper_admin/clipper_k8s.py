@@ -99,6 +99,8 @@ class ClipperK8s:
 
     def stop_all_model_deployments(self):
         """Stops all deployments of pods running Clipper models."""
+        # TODO: stopping deploy doesn't stop replicaset, maybe this is a kubernetes python API bug?
+        # either way, need to manually stop for now
         logging.info("Stopping all running Clipper model deployments")
         try:
             resp = self._k8s_beta.delete_collection_namespaced_deployment(
@@ -113,6 +115,8 @@ class ClipperK8s:
         WARNING: Data stored on an in-cluster Redis deployment will be lost! This method does not delete
         any existing in-cluster Docker registry.
         """
+        # TODO: stopping deploy doesn't stop replicaset, maybe this is a kubernetes python API bug?
+        # either way, need to manually stop for now
         logging.info("Stopping all running Clipper resources")
 
         try:
