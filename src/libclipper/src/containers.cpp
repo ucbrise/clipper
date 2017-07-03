@@ -28,7 +28,7 @@ ModelContainer::ModelContainer(VersionedModelId model, int container_id,
       input_type_(input_type),
       avg_throughput_per_milli_(0),
       throughput_buffer_(THROUGHPUT_BUFFER_CAPACITY) {
-  std::string model_str = versioned_model_to_str(model);
+  std::string model_str = model.serialize();
   log_info_formatted(LOGGING_TAG_CONTAINERS,
                      "Creating new ModelContainer for model {}, id: {}",
                      model_str, std::to_string(container_id));
@@ -92,17 +92,16 @@ size_t ModelContainer::get_batch_size(Deadline deadline) {
 ActiveContainers::ActiveContainers()
     : containers_(
           std::unordered_map<VersionedModelId,
-                             std::map<int, std::shared_ptr<ModelContainer>>,
-                             decltype(&versioned_model_hash)>(
-              100, &versioned_model_hash)) {}
+                             std::map<int, std::shared_ptr<ModelContainer>>>(
+              {})) {}
 
 void ActiveContainers::add_container(VersionedModelId model, int connection_id,
                                      int replica_id, InputType input_type) {
   log_info_formatted(LOGGING_TAG_CONTAINERS,
                      "Adding new container - model: {}, version: {}, "
                      "connection ID: {}, replica ID: {}, input_type: {}",
-                     model.first, model.second, connection_id, replica_id,
-                     get_readable_input_type(input_type));
+                     model.get_name(), model.get_id(), connection_id,
+                     replica_id, get_readable_input_type(input_type));
   boost::unique_lock<boost::shared_mutex> l{m_};
   auto new_container = std::make_shared<ModelContainer>(model, connection_id,
                                                         replica_id, input_type);
@@ -113,7 +112,7 @@ void ActiveContainers::add_container(VersionedModelId model, int connection_id,
   std::stringstream log_msg;
   log_msg << "\nActive containers:\n";
   for (auto model : containers_) {
-    log_msg << "\tModel: " << versioned_model_to_str(model.first) << "\n";
+    log_msg << "\tModel: " << model.first.serialize() << "\n";
     for (auto r : model.second) {
       log_msg << "\t\trep_id: " << r.first
               << ", container_id: " << r.second->container_id_ << "\n";
@@ -130,7 +129,7 @@ std::shared_ptr<ModelContainer> ActiveContainers::get_model_replica(
   if (replicas_map_entry == containers_.end()) {
     log_error_formatted(LOGGING_TAG_CONTAINERS,
                         "Requested replica {} for model {} NOT FOUND",
-                        replica_id, versioned_model_to_str(model));
+                        replica_id, model.serialize());
     return nullptr;
   }
 
@@ -142,7 +141,7 @@ std::shared_ptr<ModelContainer> ActiveContainers::get_model_replica(
   } else {
     log_error_formatted(LOGGING_TAG_CONTAINERS,
                         "Requested replica {} for model {} NOT FOUND",
-                        replica_id, versioned_model_to_str(model));
+                        replica_id, model.serialize());
     return nullptr;
   }
 }

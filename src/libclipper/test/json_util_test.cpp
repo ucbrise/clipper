@@ -1,4 +1,7 @@
 #include <gtest/gtest.h>
+
+#include <base64.h>
+
 #include <clipper/config.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/json_util.hpp>
@@ -159,30 +162,32 @@ TEST(JsonUtilTests, TestParseCandidateModels) {
   std::string correct_json = R"(
   {
     "correct_candidate_models": [
-      {"model_name": "sklearn_svm", "model_version": 1},
-      {"model_name": "sklearn_svm", "model_version": 2},
-      {"model_name": "network", "model_version": 3}
+      {"model_name": "sklearn_svm", "model_version": "92248e3"},
+      {"model_name": "sklearn_svm", "model_version": "1.2.4"},
+      {"model_name": "network", "model_version": "3--0"}
     ]
   }
   )";
   std::string missing_name_json = R"(
-      {"missing_name": [{"model_version": 3}]}
+      {"missing_name": [{"model_version": "3"}]}
   )";
   std::string missing_version_json = R"(
       {"missing_version": [{"model_name": "m"}]}
   )";
   std::string wrong_name_type_json = R"(
-      {"wrong_name_type": [{"model_name": 123, "model_version": 1}]}
+      {"wrong_name_type": [{"model_name": 123, "model_version": "1"}]}
   )";
   std::string wrong_version_type_json = R"(
   {
     "wrong_version_type": [
-      {"model_name": "g", "model_version": "123"}
+      {"model_name": "g", "model_version": 123}
     ]
   }
   )";
   std::vector<clipper::VersionedModelId> expected_models = {
-      {"sklearn_svm", 1}, {"sklearn_svm", 2}, {"network", 3}};
+      {"sklearn_svm", "92248e3"},
+      {"sklearn_svm", "1.2.4"},
+      {"network", "3--0"}};
 
   rapidjson::Document d;
   parse_json(correct_json, d);
@@ -237,6 +242,21 @@ TEST(JsonUtilTests, TestAddStringPreservesJsonIntegrity) {
   ASSERT_NO_THROW(json::parse_json(json_content, d));
 }
 
+TEST(JsonUtilTests, TestBase64DecodingYieldsOriginalString) {
+  std::string raw_string = "base64 decoded";
+  std::string encoded_string;
+  Base64 encoder_decoder;
+  encoder_decoder.Encode(raw_string, &encoded_string);
+  rapidjson::Document d;
+  d.SetObject();
+  std::string key_name = "test_key";
+  json::add_string(d, key_name.data(), encoded_string);
+  std::vector<uint8_t> decoded_bytes =
+      json::get_base64_encoded_byte_array(d, key_name.data());
+  std::string decoded_string(decoded_bytes.begin(), decoded_bytes.end());
+  ASSERT_EQ(raw_string, decoded_string);
+}
+
 class RedisToJsonTest : public ::testing::Test {
  public:
   RedisToJsonTest() : redis_(std::make_shared<redox::Redox>()) {
@@ -280,7 +300,7 @@ TEST_F(RedisToJsonTest, TestRedisAppMetadataToJson) {
 TEST_F(RedisToJsonTest, TestRedisModelMetadataToJson) {
   std::vector<std::string> labels{"ads", "images", "experimental", "other",
                                   "labels"};
-  VersionedModelId model = std::make_pair("m", 1);
+  VersionedModelId model = VersionedModelId("m", "1");
   std::string input_type = "doubles";
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
@@ -294,8 +314,8 @@ TEST_F(RedisToJsonTest, TestRedisModelMetadataToJson) {
   redis_model_metadata_to_json(d, model_metadata);
 
   ASSERT_EQ(get_string(d, "input_type"), input_type);
-  ASSERT_EQ(get_string(d, "model_name"), model.first);
-  ASSERT_EQ(get_int(d, "model_version"), model.second);
+  ASSERT_EQ(get_string(d, "model_name"), model.get_name());
+  ASSERT_EQ(get_string(d, "model_version"), model.get_id());
   ASSERT_EQ(get_string(d, "input_type"), input_type);
   ASSERT_EQ(get_string_array(d, "labels"), labels);
   ASSERT_EQ(get_string(d, "container_name"), container_name);
@@ -303,7 +323,7 @@ TEST_F(RedisToJsonTest, TestRedisModelMetadataToJson) {
 }
 
 TEST_F(RedisToJsonTest, TestRedisContainerMetadataToJson) {
-  VersionedModelId model = std::make_pair("m", 1);
+  VersionedModelId model = VersionedModelId("m", "1");
   int replica_id = 4;
   int zmq_connection_id = 12;
   std::string input_type = "doubles";
@@ -315,8 +335,8 @@ TEST_F(RedisToJsonTest, TestRedisContainerMetadataToJson) {
   rapidjson::Document d;
   redis_container_metadata_to_json(d, container_metadata);
 
-  ASSERT_EQ(get_string(d, "model_name"), model.first);
-  ASSERT_EQ(get_int(d, "model_version"), model.second);
+  ASSERT_EQ(get_string(d, "model_name"), model.get_name());
+  ASSERT_EQ(get_string(d, "model_version"), model.get_id());
   ASSERT_EQ(get_string(d, "input_type"), input_type);
   ASSERT_EQ(get_int(d, "model_replica_id"), replica_id);
   ASSERT_EQ(get_string(d, "model_id"), gen_versioned_model_key(model));

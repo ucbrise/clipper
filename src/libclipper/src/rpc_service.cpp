@@ -37,9 +37,7 @@ RPCService::RPCService()
       // you to specify your own hash function also requires you
       // to provide the initial size of the map. We define the initial
       // size of the map somewhat arbitrarily as 100.
-      replica_ids_(std::unordered_map<VersionedModelId, int,
-                                      decltype(&versioned_model_hash)>(
-          INITIAL_REPLICA_ID_SIZE, &versioned_model_hash)) {
+      replica_ids_(std::unordered_map<VersionedModelId, int>({})) {
   msg_queueing_hist_ = metrics::MetricsRegistry::get_metrics().create_histogram(
       "internal:rpc_request_queueing_delay", "microseconds", 2056);
 }
@@ -246,15 +244,15 @@ void RPCService::receive_message(
         log_info(LOGGING_TAG_RPC, "New container connected");
         std::string name(static_cast<char *>(model_name.data()),
                          model_name.size());
-        std::string version_str(static_cast<char *>(model_version.data()),
-                                model_version.size());
+        std::string version(static_cast<char *>(model_version.data()),
+                            model_version.size());
         std::string input_type_str(static_cast<char *>(model_input_type.data()),
                                    model_input_type.size());
 
         InputType input_type =
             static_cast<InputType>(std::stoi(input_type_str));
-        int version = std::stoi(version_str);
-        VersionedModelId model = std::make_pair(name, version);
+
+        VersionedModelId model = VersionedModelId(name, version);
         log_info(LOGGING_TAG_RPC, "Container added");
 
         // Note that if the map does not have an entry for this model,
@@ -273,13 +271,13 @@ void RPCService::receive_message(
         zmq_connection_id += 1;
       }
     } break;
-    case MessageType::ContainerContent:
+    case MessageType::ContainerContent: {
+      // This message is a response to a container query
+      message_t msg_id;
+      message_t msg_content;
+      socket.recv(&msg_id, 0);
+      socket.recv(&msg_content, 0);
       if (!new_connection) {
-        // This message is a response to a container query
-        message_t msg_id;
-        message_t msg_content;
-        socket.recv(&msg_id, 0);
-        socket.recv(&msg_content, 0);
         int id = static_cast<int *>(msg_id.data())[0];
         vector<uint8_t> content(
             (uint8_t *)msg_content.data(),
@@ -305,7 +303,7 @@ void RPCService::receive_message(
 
         response_queue_->push(response);
       }
-      break;
+    } break;
     case MessageType::Heartbeat:
       send_heartbeat_response(socket, connection_id, new_connection);
       break;

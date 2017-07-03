@@ -22,6 +22,23 @@ namespace redis {
 const std::string LOGGING_TAG_REDIS = "REDIS";
 
 /**
+ * Elements of this vector should not appear as substrings of any input Clipper
+ * object value that will be grouped into one entry.
+ * This list should be updated to reflect all delimiters and characters added in
+ * `labels_to_str` or `models_to_str`.
+ */
+const std::vector<std::string> prohibited_group_strings = {
+    ITEM_DELIMITER, ITEM_PART_CONCATENATOR};
+
+/**
+ * Use this function to validate inputs that will be grouped before submitting
+ * them to functions in this library.
+ * @return Whether or not `value` contains any elements of `probhited_strings`
+ * as substrings.
+ */
+bool contains_prohibited_chars_for_group(std::string value);
+
+/**
  * Issues a command to Redis and checks return code.
  * \return Returns true if the command was successful.
 */
@@ -91,10 +108,11 @@ std::string models_to_str(const std::vector<VersionedModelId>& models);
 std::vector<VersionedModelId> str_to_models(const std::string& model_str);
 
 bool set_current_model_version(redox::Redox& redis,
-                               const std::string& model_name, int version);
+                               const std::string& model_name,
+                               const std::string& version);
 
-int get_current_model_version(redox::Redox& redis,
-                              const std::string& model_name);
+boost::optional<std::string> get_current_model_version(
+    redox::Redox& redis, const std::string& model_name);
 
 /**
  * Adds a model into the model table. This will
@@ -142,8 +160,8 @@ std::unordered_map<std::string, std::string> get_model(
  * \return Returns a list of model versions. If the
  * model was not found, an empty list will be returned.
  */
-std::vector<int> get_model_versions(redox::Redox& redis,
-                                    const std::string& model_name);
+std::vector<std::string> get_model_versions(redox::Redox& redis,
+                                            const std::string& model_name);
 
 /**
  * Looks up model names listed in the model table. Since a call to KEYS may

@@ -10,6 +10,8 @@
 #include <boost/algorithm/string.hpp>
 #include <unordered_map>
 
+#include <base64.h>
+
 #include <clipper/datatypes.hpp>
 #include <clipper/json_util.hpp>
 #include <clipper/redis.hpp>
@@ -129,6 +131,23 @@ std::string get_string(rapidjson::Value& d, const char* key_name) {
   return std::string(v.GetString());
 }
 
+std::vector<uint8_t> get_base64_encoded_byte_array(rapidjson::Value& d,
+                                                   const char* key_name) {
+  rapidjson::Value& v =
+      check_kv_type_and_return(d, key_name, rapidjson::kStringType);
+  if (!v.IsString()) {
+    throw json_semantic_error("Input of type " + kTypeNames[v.GetType()] +
+                              " is not of type base64-encoded string");
+  }
+  Base64 decoder;
+  std::string encoded_string = std::string(v.GetString());
+  std::string decoded_string;
+  decoder.Decode(encoded_string, &decoded_string);
+  std::vector<uint8_t> decoded_bytes =
+      std::vector<uint8_t>(decoded_string.begin(), decoded_string.end());
+  return decoded_bytes;
+}
+
 /* Getters with error handling for arrays of double, float, int, string */
 std::vector<double> get_double_array(rapidjson::Value& d,
                                      const char* key_name) {
@@ -215,8 +234,8 @@ std::vector<VersionedModelId> get_candidate_models(rapidjson::Value& d,
           "Candidate model JSON object missing model_version.");
     }
     std::string model_name = get_string(elem, "model_name");
-    int model_version = get_int(elem, "model_version");
-    candidate_models.push_back(std::make_pair(model_name, model_version));
+    std::string model_version = get_string(elem, "model_version");
+    candidate_models.push_back(VersionedModelId(model_name, model_version));
   }
   return candidate_models;
 }
@@ -256,7 +275,8 @@ std::shared_ptr<Input> parse_input(InputType input_type, rapidjson::Value& d) {
       return std::make_shared<clipper::SerializableString>(input_string);
     }
     case InputType::Bytes: {
-      throw std::invalid_argument("Base64 encoded bytes are not supported yet");
+      std::vector<uint8_t> inputs = get_base64_encoded_byte_array(d, "input");
+      return std::make_shared<clipper::ByteVector>(inputs);
     }
     default: throw std::invalid_argument("input_type is not a valid type");
   }
@@ -443,7 +463,7 @@ void add_model_version_from_redis(
     const std::unordered_map<std::string, std::string>& model_metadata) {
   std::string key = "model_version";
   check_key_exists_in_map(key, model_metadata);
-  add_int(d, key.c_str(), std::stoi(model_metadata.at(key)));
+  add_string(d, key.c_str(), model_metadata.at(key));
 }
 
 void add_model_labels_from_redis(

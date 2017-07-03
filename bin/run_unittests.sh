@@ -132,7 +132,6 @@ function run_integration_tests {
   else
     echo "Found Spark at $SPARK_HOME"
   fi
-  pip install findspark
   python ../integration-tests/clipper_manager_tests.py
   python ../integration-tests/deploy_pyspark_models.py
   python ../integration-tests/deploy_pyspark_pipeline_models.py

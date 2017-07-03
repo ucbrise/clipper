@@ -2,6 +2,8 @@
 
 from __future__ import print_function, with_statement, absolute_import
 import docker
+from fabric.api import *
+from fabric.contrib.files import append
 import os
 import requests
 import json
@@ -42,6 +44,9 @@ CLIPPER_LOGS_PATH = "/tmp/clipper-logs"
 CLIPPER_DOCKER_LABEL = "ai.clipper.container.label"
 CLIPPER_MODEL_CONTAINER_LABEL = "ai.clipper.model_container.label"
 
+DEFAULT_MODEL_VERSION = 1
+DEFAULT_DEFAULT_OUTPUT = "None"
+DEFAULT_SLO_MICROS = 100000
 DEFAULT_LABEL = ["DEFAULT"]
 
 aws_cli_config = """
@@ -88,8 +93,77 @@ class Clipper:
         self.clipper_k8s = ClipperK8s()
         self.sudo = sudo
         self.host = host
-        self.host_string = self.host
-        self.restart_containers = restart_containers # TODO: add to logic
+
+    def _execute_root(self, *args, **kwargs):
+        if not self.sudo:
+            return self._execute_standard(*args, **kwargs)
+        elif self._host_is_local():
+            return self._execute_local(True, *args, **kwargs)
+        else:
+            return sudo(*args, **kwargs)
+
+    def _execute_standard(self, *args, **kwargs):
+        if self._host_is_local():
+            return self._execute_local(False, *args, **kwargs)
+        else:
+            return run(*args, **kwargs)
+
+    def _execute_local(self, as_root, *args, **kwargs):
+        if self.sudo and as_root:
+            root_args = list(args)
+            root_args[0] = "sudo %s" % root_args[0]
+            args = tuple(root_args)
+        # local is not currently capable of simultaneously printing and
+        # capturing output, as run/sudo do. The capture kwarg allows you to
+        # switch between printing and capturing as necessary, and defaults to
+        # False. In this case, we need to capture the output and return it.
+        if "capture" not in kwargs:
+            kwargs["capture"] = True
+        # fabric.local() does not accept the "warn_only"
+        # key word argument, so we must remove it before
+        # calling
+        if "warn_only" in kwargs:
+            del kwargs["warn_only"]
+            # Forces execution to continue in the face of an error,
+            # just like warn_only=True
+            with warn_only():
+                result = local(*args, **kwargs)
+        else:
+            result = local(*args, **kwargs)
+        return result
+
+    def _execute_append(self, filename, text, **kwargs):
+        if self._host_is_local():
+            file = open(filename, "a+")
+            # As with fabric.append(), we should only
+            # append the text if it is not already
+            # present within the file
+            if text not in file.read():
+                file.write(text)
+            file.close()
+        else:
+            append(filename, text, **kwargs)
+
+    def _execute_put(self, local_path, remote_path, *args, **kwargs):
+        if self._host_is_local():
+            # We should only copy data if the paths are different
+            if local_path != remote_path:
+                if os.path.isdir(local_path):
+                    remote_path = os.path.join(remote_path,
+                                               os.path.basename(local_path))
+                    # if remote_path exists, delete it because shutil.copytree requires
+                    # that the dst path doesn't exist
+                    if os.path.exists(remote_path):
+                        shutil.rmtree(remote_path)
+                    shutil.copytree(local_path, remote_path)
+                else:
+                    shutil.copy2(local_path, remote_path)
+        else:
+            put(
+                local_path=local_path,
+                remote_path=remote_path,
+                *args,
+                **kwargs)
 
     def start(self):
         """Start a Clipper instance.
@@ -100,7 +174,9 @@ class Clipper:
 
     def register_application(self, name, model, input_type, default_output,
                              slo_micros):
-        """Register a new Clipper application.
+        """
+        Submits a request to register a new Clipper application and returns whether or
+        not it was successful.
 
         Parameters
         ----------
@@ -124,6 +200,12 @@ class Clipper:
             the objective not be set aggressively low unless absolutely necessary.
             40000 (40ms) is a good starting value, but the optimal latency objective
             will vary depending on the application.
+
+        Returns
+        -------
+        bool
+            Returns true iff the app registration request was successful
+
         """
         url = "http://%s:%d/admin/add_app" % (self.host,
                                               CLIPPER_MANAGEMENT_PORT)
@@ -137,6 +219,7 @@ class Clipper:
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
         logging.info(r.text)
+        return r.status_code == requests.codes.ok
 
     def get_all_apps(self, verbose=False):
         """Gets information about all applications registered with Clipper.
@@ -210,7 +293,7 @@ class Clipper:
         ----------
         name : str
             The name to assign this model.
-        version : int
+        version : Any object with a string representation (with __str__ implementation)
             The version to assign this model.
         model_data : str or BaseEstimator
             The trained model to add to Clipper. This can either be a
@@ -231,22 +314,6 @@ class Clipper:
             The number of replicas of the model to create. More replicas can be
             created later as well. Defaults to 1.
         """
-        if isinstance(model_data, base.BaseEstimator):
-            fname = name.replace("/", "_")
-            model_data_path = "/tmp/%s" % fname
-            pkl_path = '%s/%s.pkl' % (model_data_path, fname)
-            try:
-                os.mkdir(model_data_path)
-            except OSError:
-                pass
-            joblib.dump(model_data, pkl_path)
-        elif isinstance(model_data, str):
-            # assume that model_data is a path to the serialized model
-            model_data_path = model_data
-        else:
-            warn("%s is invalid model format" % str(type(model_data)))
-            return False
-
         vol = "{model_repo}/{name}/{version}".format(
             model_repo=MODEL_REPO, name=name, version=version)
 
@@ -290,7 +357,7 @@ class Clipper:
         ----------
         name : str
             The name to assign this model.
-        version : int
+        version : Any object with a string representation (with __str__ implementation)
             The version to assign this model.
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
@@ -298,6 +365,7 @@ class Clipper:
             A list of strings annotating the model.
         """
         # TODO: this could be implemented by taking a docker repo and deploying a container with it
+        version = str(version)
         return self._publish_new_model(name, version, labels, input_type,
                                        EXTERNALLY_MANAGED_MODEL,
                                        EXTERNALLY_MANAGED_MODEL)
@@ -339,7 +407,7 @@ class Clipper:
 
             logging.info("Supplied environment details")
         else:
-            logging.info(
+            logging.warn(
                 "Warning: Anaconda environment was either not found or exporting the environment "
                 "failed. Your function will still be serialized and deployed, but may fail due to "
                 "missing dependencies. In this case, please re-run inside an Anaconda environment. "
@@ -368,7 +436,7 @@ class Clipper:
         ----------
         name : str
             The name to assign this model.
-        version : int
+        version : Any object with a string representation (with __str__ implementation)
             The version to assign this model.
         predict_function : function
             A function that takes three arguments, a SparkContext, the ``model`` parameter and
@@ -420,7 +488,7 @@ class Clipper:
             else:
                 pyspark_model.save(sc, spark_model_save_loc)
         except Exception as e:
-            logging.warn("Error saving spark model: %s" % e)
+            logging.error("Error saving spark model: %s" % e)
             raise e
 
         pyspark_container = "clipper/pyspark-container"
@@ -461,7 +529,7 @@ class Clipper:
         ----------
         name : str
             The name to assign this model.
-        version : int
+        version : Any object with a string representation (with __str__ implementation)
             The version to assign this model.
         predict_function : function
             The prediction function. Any state associated with the function should be
@@ -469,7 +537,7 @@ class Clipper:
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
         labels : list of str, optional
-            A list of strings annotating the model
+            A list of strings annotating the model.
         num_containers : int, optional
             The number of replicas of the model to create. More replicas can be
             created later as well. Defaults to 1.
@@ -515,6 +583,121 @@ class Clipper:
 
         return deploy_result
 
+    def _register_app_and_check_success(self, name, input_type, default_output,
+                                        slo_micros):
+        if self.register_application(name, name, input_type, default_output,
+                                     slo_micros):
+            logging.info("Application registration sucessful! Deploying model.")
+            return True
+        logging.warn("Application registration unsuccessful. Will not deploy model.")
+        return False
+
+    def register_app_and_deploy_predict_function(
+            self,
+            name,
+            predict_function,
+            input_type,
+            default_output=DEFAULT_DEFAULT_OUTPUT,
+            model_version=DEFAULT_MODEL_VERSION,
+            slo_micros=DEFAULT_SLO_MICROS,
+            labels=DEFAULT_LABEL,
+            num_containers=1):
+        """Registers an app and deploys provided predict function as a model.
+
+        Parameters
+        ----------
+        name : str
+            The to be assigned to the registered app and deployed model.
+        predict_function : function
+            The prediction function. Any state associated with the function should be
+            captured via closure capture.
+        input_type : str
+            The input_type to be associated with the registered app and deployed model.
+            One of "integers", "floats", "doubles", "bytes", or "strings".
+        default_output : string, optional
+            The default prediction to use if the model does not return a prediction
+            by the end of the latency objective.
+        model_version : Any object with a string representation (with __str__ implementation), optional
+            The version to assign the deployed model.
+        slo_micros : int
+            The query latency objective for the application in microseconds.
+            This is the processing latency between Clipper receiving a request
+            and sending a response. It does not account for network latencies
+            before a request is received or after a response is sent.
+        labels : list of str, optional
+            A list of strings annotating the model.
+        num_containers : int, optional
+            The number of replicas of the model to create. More replicas can be
+            created later as well.
+        """
+        if not self._register_app_and_check_success(
+                name, input_type, default_output, slo_micros):
+            return False
+
+        return self.deploy_predict_function(name, model_version,
+                                            predict_function, input_type,
+                                            labels, num_containers)
+
+    def register_app_and_deploy_pyspark_model(
+            self,
+            name,
+            predict_function,
+            pyspark_model,
+            sc,
+            input_type,
+            default_output=DEFAULT_DEFAULT_OUTPUT,
+            model_version=DEFAULT_MODEL_VERSION,
+            slo_micros=DEFAULT_SLO_MICROS,
+            labels=DEFAULT_LABEL,
+            num_containers=1):
+        """Registers an app and deploys provided spark model.
+
+        Parameters
+        ----------
+        name : str
+            The to be assigned to the registered app and deployed model.
+        predict_function : function
+            A function that takes three arguments, a SparkContext, the ``model`` parameter and
+            a list of inputs of the type specified by the ``input_type`` argument.
+            Any state associated with the function other than the Spark model should
+            be captured via closure capture. Note that the function must not capture
+            the SparkContext or the model implicitly, as these objects are not pickleable
+            and therefore will prevent the ``predict_function`` from being serialized.
+        pyspark_model : pyspark.mllib.util.Saveable
+            An object that mixes in the pyspark Saveable mixin. Generally this
+            is either an mllib model or transformer. This model will be loaded
+            into the Clipper model container and provided as an argument to the
+            predict function each time it is called.
+        sc : SparkContext
+            The SparkContext associated with the model. This is needed
+            to save the model for pyspark.mllib models.
+        input_type : str
+            The input_type to be associated with the registered app and deployed model.
+            One of "integers", "floats", "doubles", "bytes", or "strings".
+        default_output : string, optional
+            The default prediction to use if the model does not return a prediction
+            by the end of the latency objective.
+        model_version : Any object with a string representation (with __str__ implementation), optional
+            The version to assign the deployed model.
+        slo_micros : int, optional
+            The query latency objective for the application in microseconds.
+            This is the processing latency between Clipper receiving a request
+            and sending a response. It does not account for network latencies
+            before a request is received or after a response is sent.
+        labels : list of str, optional
+            A list of strings annotating the model.
+        num_containers : int, optional
+            The number of replicas of the model to create. More replicas can be
+            created later as well.
+        """
+        if not self._register_app_and_check_success(
+                name, input_type, default_output, slo_micros):
+            return False
+
+        return self.deploy_pyspark_model(name, model_version, predict_function,
+                                         pyspark_model, sc, input_type, labels,
+                                         num_containers)
+
     def get_all_models(self, verbose=False):
         """Gets information about all models registered with Clipper.
 
@@ -548,7 +731,7 @@ class Clipper:
         ----------
         model_name : str
             The name of the model to look up
-        model_version : int
+        model_version : Any object with a string representation (with __str__ implementation)
             The version of the model to look up
 
         Returns
@@ -558,6 +741,7 @@ class Clipper:
             If no model with name `model_name@model_version` is
             registered with Clipper, None is returned.
         """
+        model_version = str(model_version)
         url = "http://%s:1338/admin/get_model" % self.host
         req_json = json.dumps({
             "model_name": model_name,
@@ -608,7 +792,7 @@ class Clipper:
         ----------
         model_name : str
             The name of the container to look up
-        model_version : int
+        model_version : Any object with a string representation (with __str__ implementation)
             The version of the container to look up
         replica_id : int
             The container replica to look up
@@ -619,6 +803,7 @@ class Clipper:
             A dictionary with the specified container's info.
             If no corresponding container is registered with Clipper, None is returned.
         """
+        model_version = str(model_version)
         url = "http://%s:1338/admin/get_container" % self.host
         req_json = json.dumps({
             "model_name": model_name,
@@ -788,7 +973,7 @@ class Clipper:
         ----------
         model_name : str
             The name of the model
-        model_version : int
+        model_version : Any object with a string representation (with __str__ implementation)
             The version of the model. Note that `model_version`
             must be a model version that has already been deployed.
         num_containers : int
@@ -796,6 +981,8 @@ class Clipper:
             selected model version.
 
         """
+        model_version = str(model_version)
+
         url = "http://%s:%d/admin/set_model_version" % (
             self.host, CLIPPER_MANAGEMENT_PORT)
         req_json = json.dumps({
@@ -818,6 +1005,7 @@ class Clipper:
         """
         # Get all Docker containers tagged as model containers
         num_containers_removed = 0
+        model_name = ""
         # TODO: implement using self.get_model_info to check model_version
         logging.info("Removed %d inactive containers for model %s" %
               (num_containers_removed, model_name))
@@ -835,17 +1023,83 @@ class Clipper:
                                                 CLIPPER_MANAGEMENT_PORT)
         req_json = json.dumps({
             "model_name": name,
-            "model_version": str(version),
+            "model_version": version,
             "labels": labels,
             "input_type": input_type,
             "container_name": container_name,
             "model_data_path": model_data_path
         })
         headers = {'Content-type': 'application/json'}
-        logging.info(req_json)
         r = requests.post(url, headers=headers, data=req_json)
         if r.status_code == requests.codes.ok:
             return True
         else:
             logging.warn("Error publishing model: %s" % r.text)
             return False
+
+    def deploy_R_model(self,
+                       name,
+                       version,
+                       model_data,
+                       labels=DEFAULT_LABEL,
+                       num_containers=1):
+        """Registers a model with Clipper and deploys instances of it in containers.
+        Parameters
+        ----------
+        name : str
+            The name to assign this model.
+        version : int
+            The version to assign this model.
+        model_data :
+            The trained model to add to Clipper.The type has to be rpy2.robjects.vectors.ListVector,
+            this is how python's rpy2 encapsulates any given R model.This model will be loaded
+            into the Clipper model container and provided as an argument to the
+            predict function each time it is called.
+        labels : list of str, optional
+            A set of strings annotating the model
+        num_containers : int, optional
+            The number of replicas of the model to create. More replicas can be
+            created later as well. Defaults to 1.
+        """
+
+        # importing some R specific dependencies
+        import rpy2.robjects as ro
+        from rpy2.robjects.packages import importr
+        base = importr('base')
+
+        input_type = "strings"
+        container_name = "clipper/r_python_container"
+
+        with hide("warnings", "output", "running"):
+            fname = name.replace("/", "_")
+            rds_path = '/tmp/%s/%s.rds' % (fname, fname)
+            model_data_path = "/tmp/%s" % fname
+            try:
+                os.mkdir(model_data_path)
+            except OSError:
+                pass
+            base.saveRDS(model_data, rds_path)
+
+            vol = "{model_repo}/{name}/{version}".format(
+                model_repo=MODEL_REPO, name=name, version=version)
+            # publish model to Clipper and verify success before copying model
+            # parameters to Clipper and starting containers
+            if not self._publish_new_model(
+                    name, version, labels, input_type, container_name,
+                    os.path.join(vol, os.path.basename(model_data_path))):
+                return False
+            logging.info("Published model to Clipper")
+
+            # Put model parameter data on host
+            with hide("warnings", "output", "running"):
+                self._execute_standard("mkdir -p {vol}".format(vol=vol))
+
+            with hide("output", "running"):
+                self._execute_put(model_data_path, vol)
+
+            logging.info("Copied model data to host")
+            # aggregate results of starting all containers
+            return all([
+                self.add_container(name, version)
+                for r in range(num_containers)
+            ])

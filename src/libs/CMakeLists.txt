@@ -48,6 +48,16 @@ target_include_directories(spdlog INTERFACE
     $<INSTALL_INTERFACE:spdlog>)
 export(TARGETS spdlog FILE SpdlogConfig.cmake)
 
+##########################################
+### Base64
+##########################################
+
+add_library(base64 INTERFACE)
+target_include_directories(base64 INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/base64>
+        $<INSTALL_INTERFACE:base64>)
+export(TARGETS base64 FILE Base64Config.cmake)
+
 add_subdirectory(redox)
 
 add_subdirectory(rapidjson)
