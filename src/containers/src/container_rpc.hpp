@@ -1,6 +1,8 @@
 #ifndef CLIPPER_CONTAINER_RPC_HPP
 #define CLIPPER_CONTAINER_RPC_HPP
 
+#include <thread>
+
 #include <zmq.hpp>
 
 #include <clipper/datatypes.hpp>
@@ -10,26 +12,6 @@ const std::string LOGGING_TAG_CONTAINER = "CONTAINER";
 namespace clipper {
 
 namespace container {
-
-class RPC {
- public:
-  explicit RPC();
-  ~RPC();
-  // TODO(czumar): MOVE AND COPY CONSTRUCTORS
-
-  void start();
-  void stop();
-
- private:
-  void serve_model();
-  void handle_predict_request(long msg_id, std::vector<Input>& inputs, Model<Input> model) const;
-  void handle_heartbeat(const zmq::socket_t &socket) const;
-  void send_heartbeat(const zmq::socket_t &socket) const;
-  void send_container_metadata(const zmq::socket_t &socket) const;
-
-  std::thread serving_thread_;
-  std::atomic_bool stopped_;
-};
 
 template<class T>
 class Model {
@@ -51,6 +33,26 @@ class Model {
 
   }
 
+};
+
+class RPC {
+ public:
+  explicit RPC();
+  ~RPC();
+  // TODO(czumar): MOVE AND COPY CONSTRUCTORS
+
+  void start(const std::string &clipper_ip, int clipper_port);
+  void stop();
+
+ private:
+  void serve_model(const std::string& clipper_address);
+  void handle_predict_request(zmq::socket_t &socket) const;
+  void handle_heartbeat(zmq::socket_t &socket) const;
+  void send_heartbeat(zmq::socket_t &socket) const;
+  void send_container_metadata(zmq::socket_t &socket) const;
+
+  std::thread serving_thread_;
+  std::atomic_bool active_;
 };
 
 } // namespace container
