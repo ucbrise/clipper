@@ -1,6 +1,7 @@
-#include "container_parsing.hpp"
+#include "include/container_parsing.hpp"
 
 #include <clipper/datatypes.hpp>
+#include "include/container_rpc.hpp"
 
 namespace clipper {
 
@@ -8,14 +9,14 @@ namespace container {
 
 template <typename D, class I>
 std::vector<std::shared_ptr<I>> get_parsed_inputs(std::vector<D> &data_buffer,
-                              const std::vector<long>& input_splits,
-                              long num_splits,
+                              const std::vector<long>& input_header,
                               long input_content_size,
                               std::function<std::shared_ptr<I>(std::vector<D>&, long, long)> construct_input) {
+  long num_splits = input_header[1];
   std::vector <std::shared_ptr<I>> inputs(num_splits);
   long prev_split = 0;
-  for (int i = 0; i < num_splits; i++) {
-    long curr_split = input_splits[i];
+  for (int i = 2; i < num_splits + 2; i++) {
+    long curr_split = input_header[i];
     std::shared_ptr<I> input = construct_input(data_buffer, prev_split, curr_split);
     inputs.push_back(input);
     prev_split = curr_split;
@@ -38,11 +39,10 @@ const std::vector<uint8_t> &ByteVectorParser::get_data_buffer(long min_size_byte
 }
 
 const std::vector <std::shared_ptr<ByteVector>> ByteVectorParser::get_inputs(
-    const std::vector<long>& input_splits, long num_splits, long input_content_size) {
+    const std::vector<long>& input_header, long input_content_size) {
   return get_parsed_inputs(
       buffer_,
-      input_splits,
-      num_splits,
+      input_header,
       input_content_size,
       std::function<std::shared_ptr<ByteVector>(std::vector<uint8_t>&, long, long)>(construct_input));
 }
@@ -65,11 +65,10 @@ const std::vector<int>& IntVectorParser::get_data_buffer(long min_size_bytes) {
 }
 
 const std::vector<std::shared_ptr<IntVector>> IntVectorParser::get_inputs(
-    const std::vector<long>& input_splits, long num_splits, long input_content_size) {
+    const std::vector<long>& input_header, long input_content_size) {
   return get_parsed_inputs(
       buffer_,
-      input_splits,
-      num_splits,
+      input_header,
       input_content_size,
       std::function<std::shared_ptr<IntVector>(std::vector<int>&, long, long)>(construct_input));
 }
@@ -92,11 +91,10 @@ const std::vector<float>& FloatVectorParser::get_data_buffer(long min_size_bytes
 }
 
 const std::vector<std::shared_ptr<FloatVector>> FloatVectorParser::get_inputs(
-    const std::vector<long>& input_splits, long num_splits, long input_content_size) {
+    const std::vector<long>& input_header, long input_content_size) {
   return get_parsed_inputs(
       buffer_,
-      input_splits,
-      num_splits,
+      input_header,
       input_content_size,
       std::function<std::shared_ptr<FloatVector>(std::vector<float>&, long, long)>(construct_input));
 }
@@ -119,11 +117,10 @@ const std::vector<double>& DoubleVectorParser::get_data_buffer(long min_size_byt
 }
 
 const std::vector<std::shared_ptr<DoubleVector>> DoubleVectorParser::get_inputs(
-    const std::vector<long>& input_splits, long num_splits, long input_content_size) {
+    const std::vector<long>& input_header, long input_content_size) {
   return get_parsed_inputs(
       buffer_,
-      input_splits,
-      num_splits,
+      input_header,
       input_content_size,
       std::function<std::shared_ptr<DoubleVector>(std::vector<double>&, long, long)>(construct_input));
 }
