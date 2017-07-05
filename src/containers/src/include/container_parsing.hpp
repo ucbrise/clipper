@@ -13,14 +13,14 @@ class InputParser {
  public:
   virtual const std::vector<D> &get_data_buffer(long min_size_bytes) = 0;
   virtual const std::vector<std::shared_ptr<I>> get_inputs(
-      const std::vector<long>& input_splits, long num_splits, long input_content_size) = 0;
+      const std::vector<long>& input_header, long input_content_size) = 0;
 };
 
 class ByteVectorParser : public InputParser<uint8_t, ByteVector> {
  public:
   const std::vector<uint8_t> &get_data_buffer(long min_size_bytes) override;
   const std::vector<std::shared_ptr<ByteVector>> get_inputs(
-      const std::vector<long>& input_splits, long num_splits, long input_content_size) override;
+      const std::vector<long>& input_header, long input_content_size) override;
 
  private:
   static std::shared_ptr<ByteVector> construct_input(
@@ -34,7 +34,7 @@ class IntVectorParser : public InputParser<int, IntVector> {
   public:
     const std::vector<int> &get_data_buffer(long min_size_bytes) override;
     const std::vector <std::shared_ptr<IntVector>> get_inputs(
-      const std::vector<long>& input_splits, long num_splits, long input_content_size) override;
+      const std::vector<long>& input_header, long input_content_size) override;
 
  private:
   static std::shared_ptr<IntVector> construct_input(
@@ -47,7 +47,7 @@ class FloatVectorParser : public InputParser<float, FloatVector> {
  public:
   const std::vector<float> &get_data_buffer(long min_size_bytes) override;
   const std::vector<std::shared_ptr<FloatVector>> get_inputs(
-      const std::vector<long>& input_splits, long num_splits, long input_content_size) override;
+      const std::vector<long>& input_header, long input_content_size) override;
 
  private:
   static std::shared_ptr<FloatVector> construct_input(
@@ -60,7 +60,7 @@ class DoubleVectorParser : public InputParser<double, DoubleVector> {
  public:
   const std::vector<double> &get_data_buffer(long min_size_bytes) override;
   const std::vector<std::shared_ptr<DoubleVector>> get_inputs(
-      const std::vector<long>& input_splits, long num_splits, long input_content_size) override;
+      const std::vector<long>& input_header, long input_content_size) override;
 
  private:
   static std::shared_ptr<DoubleVector> construct_input(
