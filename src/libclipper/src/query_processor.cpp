@@ -10,6 +10,7 @@
 #include <boost/optional.hpp>
 #include <boost/thread.hpp>
 #include <boost/thread/executors/basic_thread_pool.hpp>
+#include <boost/exception_ptr.hpp>
 
 #include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
@@ -113,7 +114,15 @@ boost::future<Response> QueryProcessor::predict(Query query) {
     vector<VersionedModelId> used_models;
     bool all_tasks_timed_out = true;
     for (auto r = task_futures.begin(); r != task_futures.end(); ++r) {
-      if ((*r).is_ready()) {
+      if ((*r).has_exception()) {
+        try {
+          boost::rethrow_exception((*r).get_exception_ptr());
+        } catch (std::exception& e) {
+          log_error_formatted(
+              LOGGING_TAG_QUERY_PROCESSOR,
+              "Unexpected error while executing prediction tasks: {}", e.what());
+        }
+      } else if ((*r).is_ready()) {
         outputs.push_back((*r).get());
         all_tasks_timed_out = false;
       }
