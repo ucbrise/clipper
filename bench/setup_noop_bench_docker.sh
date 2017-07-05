@@ -7,13 +7,24 @@ set -o pipefail
 trap "exit" INT TERM
 trap "kill 0" EXIT
 
-export CLIPPER_MODEL_NAME="bench_noop"
-export CLIPPER_MODEL_VERSION="1"
-export CLIPPER_MODEL_PATH="model/"
+unset CDPATH
+# One-liner from http://stackoverflow.com/a/246128
+# Determines absolute path of the directory containing
+# the script.
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# Sets CLIPPER_IP to AWS instance's IP.
-# This will only work if the docker container corresponding to noop_container
-# is running on the same host as the clipper/query_frontend container.
-export CLIPPER_IP=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)
+# Let the user start this script from anywhere in the filesystem.
+cd $DIR
 
-python /containers/python/noop_container.py 
+# If the IP env variable is not defined, attempt to set it
+# to the current AWS host's IP.
+if [ -z ${IP+x} ]; then
+	. export_aws_ip.sh
+fi
+
+. set_bench_env_vars.sh $MODEL_NAME $MODEL_VERSION $IP
+
+echo "Starting noop_container"
+python ../containers/python/noop_container.py 
+
+cd -

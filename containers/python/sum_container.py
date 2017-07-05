@@ -10,34 +10,19 @@ class SumContainer(rpc.ModelContainerBase):
         pass
 
     def predict_ints(self, inputs):
-        outputs = []
-        for input_item in inputs:
-            outputs.append(str(sum(input_item)))
-        return outputs
+        return [str(sum(item)) for item in inputs]
 
     def predict_floats(self, inputs):
-        outputs = []
-        for input_item in inputs:
-            outputs.append(str(sum(input_item)))
-        return outputs
+        return [str(sum(item)) for item in inputs]
 
     def predict_doubles(self, inputs):
-        outputs = []
-        for input_item in inputs:
-            outputs.append(str(sum(input_item)))
-        return outputs
+        return [str(sum(item)) for item in inputs]
 
     def predict_bytes(self, inputs):
-        outputs = []
-        for input_item in inputs:
-            outputs.append(str(sum(input_item)))
-        return outputs
+        return [str(sum(item)) for item in inputs]
 
     def predict_strings(self, inputs):
-        outputs = []
-        for input_item in inputs:
-            outputs.append(str(len(input_item)))
-        return outputs
+        return [str(len(item)) for item in inputs]
 
 
 if __name__ == "__main__":

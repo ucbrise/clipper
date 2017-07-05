@@ -1,11 +1,14 @@
 FROM clipper/py-rpc:latest
 
-MAINTAINER Dan Crankshaw <dscrankshaw@gmail.com>
-
-COPY containers/python/rpc.py /containers/python/
 COPY containers/python/noop_container.py /containers/python/
-COPY /bench/setup_noop_bench_docker.sh /bench/
+COPY bench/setup_noop_bench_docker.sh /bench/
+COPY bench/set_bench_env_vars.sh /bench/
+COPY containers/python/rpc.py /containers/python/
+COPY bench/export_aws_ip.sh /bench/
 
-CMD ["/bench/setup_noop_bench_docker.sh"]
+ENV MODEL_NAME bench_noop
+ENV MODEL_VERSION 1
+
+CMD /bench/setup_noop_bench_docker.sh
 
 # vim: set filetype=dockerfile:

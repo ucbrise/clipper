@@ -19,9 +19,8 @@ class BenchMetrics {
   std::string app_name_;
   std::shared_ptr<clipper::metrics::Histogram> latency_;
   std::shared_ptr<clipper::metrics::Meter> throughput_;
-  std::shared_ptr<clipper::metrics::Meter> send_rate_;
+  std::shared_ptr<clipper::metrics::Meter> request_throughput_;
   std::shared_ptr<clipper::metrics::Counter> num_predictions_;
-  std::shared_ptr<clipper::metrics::RatioCounter> accuracy_ratio_;
   std::shared_ptr<clipper::metrics::RatioCounter> default_pred_ratio_;
 };
 
@@ -38,12 +37,10 @@ std::unordered_map<int, std::vector<std::vector<double>>> load_cifar(
     std::string &cifar_data_path);
 
 /**
- * Returns a pair. The first entry is a vector of all the cifar datapoints
- * and the second entry is a vector containing all the corresponding labels.
+ * Returns a vector of all the cifar datapoints.
  * Warning: this function mutates the input cifar data.
  */
-std::pair<std::vector<std::vector<double>>, std::vector<double>>
-concatenate_cifar_datapoints(
+std::vector<std::vector<double>> concatenate_cifar_datapoints(
     std::unordered_map<int, std::vector<std::vector<double>>> cifar_data);
 
 /**
