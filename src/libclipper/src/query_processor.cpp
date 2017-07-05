@@ -7,10 +7,10 @@
 #include <unordered_map>
 
 #define PROVIDES_EXECUTORS
+#include <boost/exception_ptr.hpp>
 #include <boost/optional.hpp>
 #include <boost/thread.hpp>
 #include <boost/thread/executors/basic_thread_pool.hpp>
-#include <boost/exception_ptr.hpp>
 
 #include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
@@ -120,7 +120,8 @@ boost::future<Response> QueryProcessor::predict(Query query) {
         } catch (std::exception& e) {
           log_error_formatted(
               LOGGING_TAG_QUERY_PROCESSOR,
-              "Unexpected error while executing prediction tasks: {}", e.what());
+              "Unexpected error while executing prediction tasks: {}",
+              e.what());
         }
       } else if ((*r).is_ready()) {
         outputs.push_back((*r).get());
