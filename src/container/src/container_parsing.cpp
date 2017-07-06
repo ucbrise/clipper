@@ -12,9 +12,12 @@ std::vector<std::shared_ptr<I>> get_parsed_inputs(std::vector<D> &data_buffer,
                               const std::vector<long>& input_header,
                               long input_content_size,
                               std::function<std::shared_ptr<I>(std::vector<D>&, long, long)> construct_input) {
+  // TODO(czumar): Change all input header data from longs to ints!!!!
   long num_splits = input_header[1];
   std::vector <std::shared_ptr<I>> inputs(num_splits);
   long prev_split = 0;
+  // Iterate from the beginning of the input data content
+  // (the first two elements of the header are metadata)
   for (int i = 2; i < num_splits + 2; i++) {
     long curr_split = input_header[i];
     std::shared_ptr<I> input = construct_input(data_buffer, prev_split, curr_split);
