@@ -5,6 +5,8 @@
 #include <utility>
 #include <vector>
 
+#include <boost/exception_ptr.hpp>
+
 #include <clipper/config.hpp>
 #include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
@@ -287,6 +289,18 @@ class RequestHandler {
             request->content.string(), name, versioned_models, policy,
             latency_slo_micros, input_type);
         prediction.then([response, app_metrics](boost::future<Response> f) {
+          if (f.has_exception()) {
+            try {
+              boost::rethrow_exception(f.get_exception_ptr());
+            } catch (std::exception& e) {
+              clipper::log_error_formatted(clipper::LOGGING_TAG_CLIPPER,
+                                           "Unexpected error: {}", e.what());
+            }
+            respond_http("An unexpected error occurred!",
+                         "500 Internal Server Error", response);
+            return;
+          }
+
           Response r = f.get();
 
           // Update metrics
