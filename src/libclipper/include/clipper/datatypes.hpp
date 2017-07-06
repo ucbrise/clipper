@@ -336,6 +336,8 @@ class PredictTask {
   std::chrono::time_point<std::chrono::system_clock> recv_time_;
 };
 
+class FailablePromise {};
+
 /// NOTE: If a feedback task is scheduled, the task scheduler
 /// must send it to ALL replicas of the VersionedModelId.
 class FeedbackTask {
