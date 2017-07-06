@@ -21,7 +21,6 @@ namespace container {
 
 constexpr long SOCKET_POLLING_TIMEOUT_MILLIS = 5000;
 constexpr long SOCKET_ACTIVITY_TIMEOUT_MILLIS = 30000;
-constexpr long INITIAL_INPUT_HEADER_BUFFER_SIZE_LONGS = 100;
 
 template<class I>
 class Model {
@@ -52,13 +51,13 @@ class RPC {
   // TODO(czumar): MOVE AND COPY CONSTRUCTORS
 
   template<typename D, class I>
-  void start(Model<I>& model, InputParser<D, I>& input_parser, const std::string &clipper_ip, int clipper_port) {
+  void start(Model<I> model, InputParser<D, I>& input_parser, const std::string &clipper_ip, int clipper_port) {
     if(active_) {
       throw std::runtime_error("Cannot start a container that is already started!");
     }
     active_ = true;
     const std::string clipper_address = "tcp://" + clipper_ip + ":" + std::to_string(clipper_port);
-    serving_thread_ = std::thread([this, clipper_address, &model, &input_parser](){
+    serving_thread_ = std::thread([this, clipper_address, model, &input_parser](){
       serve_model(model, input_parser, clipper_address);
     });
   };
@@ -80,7 +79,8 @@ class RPC {
     bool connected = false;
     std::chrono::time_point<Clock> last_activity_time;
 
-    std::vector<long> input_header_buffer(INITIAL_INPUT_HEADER_BUFFER_SIZE_LONGS);
+    std::vector<long> input_header_buffer;
+    std::vector<uint8_t> output_buffer;
 
     while(true) {
       zmq::socket_t socket = socket_t(context, ZMQ_DEALER);
@@ -136,14 +136,14 @@ class RPC {
             socket.recv(&msg_request_id, 0);
             socket.recv(&msg_request_header, 0);
 
-            long msg_id = static_cast<long *>(msg_request_id.data())[0];
+            int msg_id = static_cast<int *>(msg_request_id.data())[0];
             RequestType request_type =
                 static_cast<RequestType>(static_cast<int *>(msg_request_header.data())[0]);
 
             switch(request_type) {
-              case RequestType::PredictRequest: {
+              case RequestType::PredictRequest:
                 handle_predict_request(model, input_parser, socket, input_header_buffer, msg_id);
-              } break;
+                break;
 
               case RequestType::FeedbackRequest:
                 // Do nothing for now
@@ -158,7 +158,6 @@ class RPC {
           case rpc::MessageType::NewContainer:
             // TODO(czumar): Log event history
             log_error_formatted(LOGGING_TAG_CONTAINER, "Received erroneous new container message from Clipper!");
-
           default:
             break;
         }
@@ -177,7 +176,8 @@ class RPC {
       InputParser<D, I>& input_parser,
       zmq::socket_t &socket,
       std::vector<long>& input_header_buffer,
-      long msg_id) const {
+      std::vector<uint8_t>& output_buffer,
+      int msg_id) const {
     zmq::message_t msg_input_header_size;
     socket.recv(&msg_input_header_size, 0);
     long input_header_size_bytes = static_cast<long*>(msg_input_header_size.data())[0];
@@ -207,8 +207,59 @@ class RPC {
     std::vector<std::shared_ptr<I>> inputs =
         input_parser.get_inputs(input_header_buffer, input_content_size_bytes);
 
+    // Make predictions
     std::vector<std::string> outputs = model.predict(inputs);
 
+    // Send the outputs as a prediction response
+
+    int num_outputs = static_cast<int>(outputs.size());
+
+    // The output buffer begins with the number of outputs
+    // encoded as an integer
+    long response_size_bytes = sizeof(int);
+
+    for(int i = 0; i < num_outputs; i++) {
+      int output_length = static_cast<int>(outputs[i].length());
+      // The output buffer contains the size of each output
+      // encoded as an integer
+      response_size_bytes += sizeof(int);
+      response_size_bytes += output_length;
+    }
+
+    if(static_cast<long>(output_buffer.size()) < response_size_bytes) {
+      output_buffer.resize(2 * response_size_bytes);
+    }
+
+    int* output_int_view = reinterpret_cast<int *>(output_buffer.data());
+    output_int_view[0] = num_outputs;
+    // Advance the integer output buffer to the correct position
+    // for the output lengths content
+    output_int_view++;
+
+    uint8_t* output_byte_view = reinterpret_cast<uint8_t *>(output_buffer.data());
+    // Advance the byte output buffer to the correct position for the
+    // output content
+    output_byte_view += sizeof(int) + (num_outputs * sizeof(int));
+
+    for(int i = 0; i < num_outputs; i++) {
+      int output_length = static_cast<int>(outputs[i].length());
+      output_int_view[i] = output_length;
+      memcpy(output_byte_view, outputs[i].data(), output_length);
+      output_byte_view += output_length;
+    }
+
+    zmq::message_t msg_message_type(sizeof(int));
+    static_cast<int*>(msg_message_type.data())[0] = static_cast<int>(rpc::MessageType::ContainerContent);
+
+    zmq::message_t msg_message_id(sizeof(int));
+    static_cast<int *>(msg_message_id.data())[0] = msg_id;
+
+    zmq::message_t msg_prediction_response(output_buffer.data(), response_size_bytes, NULL);
+
+    socket.send("", 0, ZMQ_SNDMORE);
+    socket.send(&msg_message_type, ZMQ_SNDMORE);
+    socket.send(&msg_message_id, ZMQ_SNDMORE);
+    socket.send(&msg_prediction_response, 0);
   }
 
   template <class I>
@@ -235,13 +286,22 @@ class RPC {
 
   template <class I>
   void send_container_metadata(Model<I> &model, zmq::socket_t &socket) const {
-    int heartbeat_type = static_cast<int>(rpc::HeartbeatType::RequestContainerMetadata);
-    uint8_t* heartbeat_type_content = reinterpret_cast<uint8_t*>(&heartbeat_type);
+    zmq::message_t msg_message_type(sizeof(int));
+    static_cast<int*>(msg_message_type.data())[0] = static_cast<int>(rpc::MessageType::NewContainer);
+
+    zmq::message_t msg_model_name(&model.name_[0], model.name_.length(), NULL);
+
+    std::string model_version_str = std::to_string(model.version_);
+    zmq::message_t msg_model_version(&model_version_str[0], model_version_str.length(), NULL);
+
+    std::string model_input_type_str = std::to_string(model.input_type_);
+    zmq::message_t msg_model_input_type(&model_input_type_str[0], model_input_type_str.length(), NULL);
+
     socket.send("", 0, ZMQ_SNDMORE);
-    socket.send(heartbeat_type_content, sizeof(int), ZMQ_SNDMORE);
-    socket.send(model.name_, ZMQ_SNDMORE);
-    socket.send(std::to_string(model.version_), ZMQ_SNDMORE);
-    socket.send(std::to_string(static_cast<int>(model.input_type_)), 0);
+    socket.send(&msg_message_type, ZMQ_SNDMORE);
+    socket.send(&msg_model_name, ZMQ_SNDMORE);
+    socket.send(&msg_model_version, ZMQ_SNDMORE);
+    socket.send(&msg_model_input_type, 0);
   }
 };
 

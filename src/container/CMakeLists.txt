@@ -13,7 +13,10 @@ target_link_libraries(cpp_container clipper zmqcpp src/container_parsing.cpp)
 
 add_library(container_lib STATIC src/container_parsing.cpp)
 target_link_libraries(container_lib clipper zmqcpp)
-target_include_directories(container_lib INTERFACE src/include)
+target_include_directories(container_lib PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+        PRIVATE src)
 
 
 
