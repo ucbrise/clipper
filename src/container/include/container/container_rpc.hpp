@@ -6,6 +6,8 @@
 #include <zmq.hpp>
 #include <sstream>
 
+#include <boost/circular_buffer.hpp>
+
 #include "container_parsing.hpp"
 #include <clipper/datatypes.hpp>
 #include <clipper/logging.hpp>
@@ -40,7 +42,7 @@ class Model {
 
 class RPC {
  public:
-  RPC() : active_(false) {
+  RPC() : active_(false), event_history_(EVENT_HISTORY_CAPACITY) {
 
   }
 
@@ -72,6 +74,9 @@ class RPC {
  private:
   std::thread serving_thread_;
   std::atomic_bool active_;
+  boost::circular_buffer<rpc::RPCEvent> event_history_;
+  static const size_t EVENT_HISTORY_CAPACITY = 100;
+
 
   template<typename D, class I>
   void serve_model(Model<I>& model, InputParser<D, I>& input_parser, const std::string& clipper_address) {
@@ -124,12 +129,12 @@ class RPC {
         switch(message_type) {
           case rpc::MessageType::Heartbeat:
             log_info(LOGGING_TAG_CONTAINER, "Received heartbeat!");
-            // TODO(czumar) Log this event to our history
+            event_history_.push_back(rpc::RPCEvent::ReceivedHeartbeat);
             handle_heartbeat(model, socket);
             break;
 
           case rpc::MessageType::ContainerContent: {
-            // TODO(czumar) Log this event to our history
+            event_history_.push_back(rpc::RPCEvent::ReceivedContainerContent);
             zmq::message_t msg_request_id;
             zmq::message_t msg_request_header;
 
@@ -156,7 +161,7 @@ class RPC {
           } break;
 
           case rpc::MessageType::NewContainer:
-            // TODO(czumar): Log event history
+            event_history_.push_back(rpc::RPCEvent::ReceivedContainerMetadata);
             log_error_formatted(LOGGING_TAG_CONTAINER, "Received erroneous new container message from Clipper!");
           default:
             break;
@@ -260,6 +265,7 @@ class RPC {
     socket.send(&msg_message_type, ZMQ_SNDMORE);
     socket.send(&msg_message_id, ZMQ_SNDMORE);
     socket.send(&msg_prediction_response, 0);
+    event_history_.push_back(rpc::RPCEvent::SentContainerContent);
   }
 
   template <class I>
@@ -282,6 +288,7 @@ class RPC {
     socket.send("", 0, ZMQ_SNDMORE);
     socket.send(type_message, ZMQ_SNDMORE);
     socket.send(heartbeat_type_message);
+    event_history_.push_back(rpc::RPCEvent::SentHeartbeat);
   }
 
   template <class I>
@@ -302,6 +309,7 @@ class RPC {
     socket.send(&msg_model_name, ZMQ_SNDMORE);
     socket.send(&msg_model_version, ZMQ_SNDMORE);
     socket.send(&msg_model_input_type, 0);
+    event_history_.push_back(rpc::RPCEvent::SentContainerMetadata);
   }
 };
 
