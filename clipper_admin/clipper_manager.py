@@ -369,7 +369,9 @@ class Clipper:
         return r.status_code == requests.codes.ok
 
     def link_model_to_app(self, app_name, model_name):
-        """Allows the model to be used by app
+        """
+        Allows the model with `model_name` to be used by the app with `app_name`.
+        The model and app should both be registered with Clipper.
 
         Parameters
         ----------
@@ -391,11 +393,10 @@ class Clipper:
         })
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
-        print(r.text)
         return r.status_code == requests.codes.ok
 
     def get_linked_models(self, app_name):
-        """Retrieves the models linked to the app
+        """Retrieves the models linked to the specified application
 
         Parameters
         ----------
@@ -405,14 +406,19 @@ class Clipper:
         Returns
         -------
         list
-            Returns a list of the names of models linked to the app
+            Returns a list of the names of models linked to the app.
+            If no models are linked to the specified app, None is returned.
         """
         url = "http://%s:%d/admin/get_linked_models" % (
             self.host, CLIPPER_MANAGEMENT_PORT)
         req_json = json.dumps({"app_name": app_name})
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
-        return r.json()
+        if r.status_code == requests.codes.ok:
+            return r.json()
+        else:
+            print(r.text)
+            return None
 
     def get_all_apps(self, verbose=False):
         """Gets information about all applications registered with Clipper.
@@ -429,7 +435,7 @@ class Clipper:
         -------
         list
             Returns a list of information about all apps registered to Clipper.
-            If no apps are registered with Clipper, an empty list is returned.
+            If no apps are registered with Clipper, None is returned.
         """
         url = "http://%s:1338/admin/get_all_applications" % self.host
         req_json = json.dumps({"verbose": verbose})
@@ -928,7 +934,7 @@ class Clipper:
         -------
         list
             Returns a list of information about all apps registered to Clipper.
-            If no models are registered with Clipper, an empty list is returned.
+            If no models are registered with Clipper, None is returned.
         """
         url = "http://%s:1338/admin/get_all_models" % self.host
         req_json = json.dumps({"verbose": verbose})
@@ -989,7 +995,7 @@ class Clipper:
         -------
         list
             Returns a list of information about all apps registered to Clipper.
-            If no containerss are registered with Clipper, an empty list is returned.
+            If no containerss are registered with Clipper, None is returned.
         """
         url = "http://%s:1338/admin/get_all_containers" % self.host
         req_json = json.dumps({"verbose": verbose})

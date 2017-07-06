@@ -182,7 +182,7 @@ std::vector<VersionedModelId> get_all_models(redox::Redox& redis);
 /**
  * Looks up which models are linked to app with name `app_name`
  * \return Returns a vector of model names. If no models are linked
- * to the specified app, then am empty vector will be returned.
+ * to the specified app, then an empty vector will be returned.
  */
 std::vector<std::string> get_linked_models(redox::Redox& redis,
                                            const std::string& app_name);
@@ -256,7 +256,7 @@ std::vector<std::pair<VersionedModelId, int>> get_all_containers(
  *
  * \return Returns true of the add was successful.
  */
-bool add_application(redox::Redox& redis, const std::string& appname,
+bool add_application(redox::Redox& redis, const std::string& app_name,
                      const InputType& input_type, const std::string& policy,
                      const std::string& default_output,
                      const long latency_slo_micros);
@@ -267,7 +267,7 @@ bool add_application(redox::Redox& redis, const std::string& appname,
  *
  * \return Returns true if the add was successful.
  */
-bool add_model_links(redox::Redox& redis, const std::string& appname,
+bool add_model_links(redox::Redox& redis, const std::string& app_name,
                      const std::vector<std::string>& model_names);
 
 /**
@@ -277,7 +277,7 @@ bool add_model_links(redox::Redox& redis, const std::string& appname,
  * and was successfully deleted. Returns false if there was a problem
  * or if the application was not in the table.
  */
-bool delete_application(redox::Redox& redis, const std::string& appname);
+bool delete_application(redox::Redox& redis, const std::string& app_name);
 
 /**
  * Looks up an application based on its name.
@@ -290,7 +290,7 @@ bool delete_application(redox::Redox& redis, const std::string& appname);
  * application was not found, an empty map will be returned.
  */
 std::unordered_map<std::string, std::string> get_application(
-    redox::Redox& redis, const std::string& appname);
+    redox::Redox& redis, const std::string& app_name);
 
 /**
  * Looks up an entry in the application table by the fully

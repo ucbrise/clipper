@@ -77,7 +77,7 @@ const std::string ADD_APPLICATION_JSON_SCHEMA = R"(
 const std::string ADD_MODEL_LINKS_JSON_SCHEMA = R"(
   {
     "app_name" := string,
-    "model_names" := := [string]
+    "model_names" := [string]
   }
 )";
 
@@ -497,6 +497,18 @@ class RequestHandler {
       throw std::invalid_argument(ss.str());
     }
 
+    // Confirm that the models exists
+    boost::optional<std::string> model_version;
+    for (auto const& model_name : model_names) {
+      model_version = clipper::redis::get_current_model_version(
+          redis_connection_, model_name);
+      if (!model_version) {
+        std::stringstream ss;
+        ss << "No model with name " << model_name << " exists.";
+        throw std::invalid_argument(ss.str());
+      }
+    }
+
     // Confirm that the user supplied only one model_name
     if (model_names.size() != 1) {
       std::stringstream ss;
@@ -526,9 +538,11 @@ class RequestHandler {
                     new_model_name) != existing_linked_models.end()) {
         return "Success!";
       } else {
+        // We guarantee that there is only one existing model
+        std::string existing_model_name = existing_linked_models[0];
         std::stringstream ss;
-        ss << "There already exist links to different models for app "
-           << app_name << ".";
+        ss << "A model with name " << existing_model_name
+           << " is already linked to " << app_name << ".";
         throw std::invalid_argument(ss.str());
       }
     }

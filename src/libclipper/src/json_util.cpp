@@ -387,7 +387,7 @@ std::string to_json_string(rapidjson::Document& d) {
 void set_string_array(rapidjson::Document& d,
                       const std::vector<std::string>& str_array) {
   d.SetArray();
-  for (auto str : str_array) {
+  for (auto const& str : str_array) {
     rapidjson::Value string_val(rapidjson::StringRef(str.c_str(), str.length()),
                                 d.GetAllocator());
     d.PushBack(string_val, d.GetAllocator());

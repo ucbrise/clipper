@@ -111,8 +111,21 @@ TEST_F(RedisTest, AddModelLinks) {
   ASSERT_TRUE(add_application(*redis_, app_name, input_type, policy,
                               default_output, latency_slo_micros));
 
+  std::vector<std::string> labels{"ads", "images", "experimental", "other",
+                                  "labels"};
+  std::string model_name_1 = "model_1";
+  std::string model_name_2 = "model_2";
+  VersionedModelId model_1 = VersionedModelId(model_name_1, "1");
+  VersionedModelId model_2 = VersionedModelId(model_name_2, "1");
+  std::string container_name = "clipper/test_container";
+  std::string model_path = "/tmp/models/m/1";
+  ASSERT_TRUE(add_model(*redis_, model_1, input_type, labels, container_name,
+                        model_path));
+  ASSERT_TRUE(add_model(*redis_, model_2, input_type, labels, container_name,
+                        model_path));
+
   std::vector<std::string> model_names =
-      std::vector<std::string>{"model1", "model2"};
+      std::vector<std::string>{model_name_1, model_name_2};
   ASSERT_TRUE(add_model_links(*redis_, app_name, model_names));
 
   auto linked_models = get_linked_models(*redis_, app_name);
@@ -579,22 +592,36 @@ TEST_F(RedisTest, SubscriptionDetectModelLinksAdd) {
   ASSERT_TRUE(add_application(*redis_, name, input_type, policy, default_output,
                               latency_slo_micros));
 
+  // Register the models to link
+  std::vector<std::string> labels{"ads", "images", "experimental", "other",
+                                  "labels"};
+  std::string model_name_1 = "model_1";
+  std::string model_name_2 = "model_2";
+  VersionedModelId model_1 = VersionedModelId(model_name_1, "1");
+  VersionedModelId model_2 = VersionedModelId(model_name_2, "1");
+  std::string container_name = "clipper/test_container";
+  std::string model_path = "/tmp/models/m/1";
+  ASSERT_TRUE(add_model(*redis_, model_1, input_type, labels, container_name,
+                        model_path));
+  ASSERT_TRUE(add_model(*redis_, model_2, input_type, labels, container_name,
+                        model_path));
+
   std::condition_variable_any notification_recv;
   std::mutex notification_mutex;
   std::atomic<bool> recv{false};
   subscribe_to_model_link_changes(
       *subscriber_, [&notification_recv, &notification_mutex, &recv, name](
-              const std::string& key, const std::string& event_type) {
-          ASSERT_EQ(event_type, "sadd");
-          std::unique_lock<std::mutex> l(notification_mutex);
-          recv = true;
-          ASSERT_EQ(key, name);
-          notification_recv.notify_all();
+                        const std::string& key, const std::string& event_type) {
+        ASSERT_EQ(event_type, "sadd");
+        std::unique_lock<std::mutex> l(notification_mutex);
+        recv = true;
+        ASSERT_EQ(key, name);
+        notification_recv.notify_all();
       });
   // give Redis some time to register the subscription
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-  std::vector<std::string> model_names = {"model1", "model2"};
+  std::vector<std::string> model_names = {model_name_1, model_name_2};
   ASSERT_TRUE(add_model_links(*redis_, name, model_names));
 
   std::unique_lock<std::mutex> l(notification_mutex);

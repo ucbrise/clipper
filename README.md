@@ -48,7 +48,7 @@ Clipper is running
 
 # Register an application called "hello_world". This will create
 # a prediction REST endpoint at http://localhost:1337/hello_world/predict
->>> clipper.register_application("hello_world", "feature_sum_model", "doubles", "-1.0", 100000)
+>>> clipper.register_application("hello_world", "doubles", "-1.0", 100000)
 Success!
 
 # Inspect Clipper to see the registered apps

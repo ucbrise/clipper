@@ -182,12 +182,9 @@ class RequestHandler {
             clipper::log_info_formatted(LOGGING_TAG_QUERY_FRONTEND,
                                         "New model link detected for app: {}",
                                         app_name);
-
-            boost::optional<std::vector<std::string>> linked_model_names =
+            auto linked_model_names =
                 clipper::redis::get_linked_models(redis_connection_, app_name);
-            if (linked_model_names) {
-              set_linked_models_for_app(app_name, *linked_model_names);
-            }
+            set_linked_models_for_app(app_name, linked_model_names);
           }
         });
 

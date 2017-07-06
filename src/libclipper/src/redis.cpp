@@ -212,7 +212,12 @@ std::vector<std::string> get_linked_models(redox::Redox& redis,
           redis, {"SELECT", std::to_string(REDIS_APP_MODEL_LINKS_DB_NUM)})) {
     auto result =
         send_cmd_with_reply<std::vector<string>>(redis, {"SMEMBERS", app_name});
-    linked_models = *result;
+    if (result) {
+      linked_models = *result;
+    } else {
+      log_error_formatted(LOGGING_TAG_REDIS,
+                          "Found no linked models for app {}", app_name);
+    }
   } else {
     log_error_formatted(
         LOGGING_TAG_REDIS,
