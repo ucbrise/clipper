@@ -17,7 +17,7 @@ add_library(clipper
     src/logging.cpp
     src/json_util.cpp
     src/exceptions.cpp
-    )
+    include/clipper/app_metrics.hpp)
 
 
 # Define headers for this library. PUBLIC headers are used for

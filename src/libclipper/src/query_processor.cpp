@@ -41,6 +41,17 @@ std::shared_ptr<StateDB> QueryProcessor::get_state_table() const {
 
 boost::future<Response> QueryProcessor::predict(Query query) {
   long query_id = query_counter_.fetch_add(1);
+
+  if (SHORT_CIRCUIT_TASK_EXECUTOR) {
+    Response response{query,
+                      query_id,
+                      1000,
+                      Output{"0", {}},
+                      true,
+                      boost::optional<std::string>("short circuit")};
+    return boost::make_ready_future(response);
+  }
+
   auto current_policy_iter = selection_policies_.find(query.selection_policy_);
   if (current_policy_iter == selection_policies_.end()) {
     std::stringstream err_msg_builder;
