@@ -804,15 +804,15 @@ class Clipper:
                 "Application registration unsuccessful. Will not deploy model or link it to app."
             )
             return False
-        print("Application registration sucessful! Linking it to model.")
+        print("Application registration sucessful! Deploying model.")
+        return True
 
-        time.sleep(1)
-        if not self.link_model_to_app(name, name):
-            print(
-                "Linking model to app was unsuccessful. Will not deploy model.")
+    def _link_model_to_app_and_check_success(self, app_name, model_name):
+        if not self.link_model_to_app(app_name, model_name):
+            print("Linking model to app was unsuccessful.")
             return False
 
-        print("Linking model to app was successful! Deploying model.")
+        print("Linking model to app was successful!")
         return True
 
     def register_app_and_deploy_predict_function(
@@ -857,9 +857,16 @@ class Clipper:
                 name, input_type, default_output, slo_micros):
             return False
 
-        return self.deploy_predict_function(name, model_version,
-                                            predict_function, input_type,
-                                            labels, num_containers)
+        if not self.deploy_predict_function(
+                name, model_version, predict_function, input_type, labels,
+                num_containers):
+            return False
+
+        time.sleep(1)
+        if not self._link_model_to_app_and_check_success(name, name):
+            return False
+
+        return True
 
     def register_app_and_deploy_pyspark_model(
             self,
@@ -917,9 +924,16 @@ class Clipper:
                 name, input_type, default_output, slo_micros):
             return False
 
-        return self.deploy_pyspark_model(name, model_version, predict_function,
+        if not self.deploy_pyspark_model(name, model_version, predict_function,
                                          pyspark_model, sc, input_type, labels,
-                                         num_containers)
+                                         num_containers):
+            return False
+
+        time.sleep(1)
+        if not self._link_model_to_app_and_check_success(name, name):
+            return False
+
+        return True
 
     def get_all_models(self, verbose=False):
         """Gets information about all models registered with Clipper.

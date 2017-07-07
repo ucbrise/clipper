@@ -90,7 +90,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
 
     def test_get_model_links_when_none_exist_returns_empty_list(self):
         result = self.clipper_inst.get_linked_models(self.app_name)
-        self.assertIsNone(result)
+        self.assertEqual([], result)
 
     def test_link_registered_model_to_app_succeeds(self):
         result = self.clipper_inst.link_model_to_app(self.app_name,
@@ -226,6 +226,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         model_info = self.clipper_inst.get_model_info(model_name,
                                                       model_version)
         self.assertIsNotNone(model_info)
+
         running_containers_output = self.clipper_inst._execute_standard(
             "docker ps -q --filter \"ancestor=clipper/python-container\"")
         self.assertIsNotNone(running_containers_output)
@@ -245,6 +246,10 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             app_and_model_name,
             clipper_admin.clipper_manager.DEFAULT_MODEL_VERSION)
         self.assertIsNotNone(model_info)
+
+        linked_models = self.clipper_inst.get_linked_models(app_and_model_name)
+        self.assertIsNotNone(linked_models)
+
         running_containers_output = self.clipper_inst._execute_standard(
             "docker ps -q --filter \"ancestor=clipper/python-container\"")
         self.assertIsNotNone(running_containers_output)
