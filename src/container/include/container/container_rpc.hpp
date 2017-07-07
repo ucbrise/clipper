@@ -2,16 +2,17 @@
 #define CLIPPER_CONTAINER_RPC_HPP
 
 #include <thread>
+#include <sstream>
+#include <mutex>
 
 #include <zmq.hpp>
-#include <sstream>
-
 #include <boost/circular_buffer.hpp>
 
 #include "container_parsing.hpp"
 #include <clipper/datatypes.hpp>
 #include <clipper/logging.hpp>
 #include <clipper/rpc_service.hpp>
+#include <clipper/json_util.hpp>
 
 const std::string LOGGING_TAG_CONTAINER = "CONTAINER";
 
@@ -23,63 +24,82 @@ namespace container {
 
 constexpr long SOCKET_POLLING_TIMEOUT_MILLIS = 5000;
 constexpr long SOCKET_ACTIVITY_TIMEOUT_MILLIS = 30000;
+constexpr long EVENT_LOG_CAPACITY = 100;
+
+using RPCLogItem = std::pair<rpc::RPCEvent, Clock::time_point>;
 
 template<class I>
 class Model {
  public:
-  Model(const std::string name, int version, InputType input_type) :
-      name_(name), version_(version), input_type_(input_type) {
-
-  }
-
-  virtual std::vector<std::string> predict(const std::vector<std::shared_ptr<I>> inputs) = 0;
-
-  std::string name_;
-  int version_;
-  InputType input_type_;
-
+  virtual std::vector<std::string> predict(const std::vector<std::shared_ptr<I>> inputs) const = 0;
+  virtual InputType get_input_type() const = 0;
 };
 
 class RPC {
  public:
-  RPC() : active_(false), event_history_(EVENT_HISTORY_CAPACITY) {
+  RPC();
+  ~RPC();
 
-  }
+  // Disallow copy
+  RPC(const RPC &) = delete;
+  RPC &operator=(const RPC &) = delete;
 
-  ~RPC() {
-    stop();
-  }
-
-  // TODO(czumar): MOVE AND COPY CONSTRUCTORS
+  // Default move constructor and assignment.
+  RPC(RPC&& other) = default;
+  RPC& operator=(RPC&& other) = default;
 
   template<typename D, class I>
-  void start(Model<I> model, InputParser<D, I>& input_parser, const std::string &clipper_ip, int clipper_port) {
+  void start(Model<I>& model,
+             std::string model_name,
+             int model_version,
+             InputParser<D, I>& input_parser,
+             std::string clipper_ip,
+             int clipper_port) {
     if(active_) {
       throw std::runtime_error("Cannot start a container that is already started!");
     }
     active_ = true;
     const std::string clipper_address = "tcp://" + clipper_ip + ":" + std::to_string(clipper_port);
-    serving_thread_ = std::thread([this, clipper_address, model, &input_parser](){
-      serve_model(model, input_parser, clipper_address);
+    log_info_formatted(
+        LOGGING_TAG_CONTAINER, "Starting container RPC with clipper ip: {} and port: {}", clipper_ip, clipper_port);
+    serving_thread_ = std::thread([this, clipper_address, &model, model_name, model_version, &input_parser](){
+      serve_model(model, model_name, model_version, input_parser, clipper_address);
     });
   };
 
-  void stop() {
-    if(active_) {
-      active_ = false;
-      serving_thread_.join();
-    }
-  }
+  void stop();
+
+  /**
+   * @return The `num_events` most recent RPC events that have occurred
+   */
+  std::vector<RPCLogItem> get_events(int num_events = EVENT_LOG_CAPACITY) const;
 
  private:
   std::thread serving_thread_;
   std::atomic_bool active_;
-  boost::circular_buffer<rpc::RPCEvent> event_history_;
-  static const size_t EVENT_HISTORY_CAPACITY = 100;
+  std::shared_ptr<std::mutex> event_log_mutex_;
+  std::shared_ptr<boost::circular_buffer<RPCLogItem>> event_log_;
 
+  /**
+ * @return `true` if the received heartbeat is a request for container metadata. `false` otherwise.
+ */
+  bool handle_heartbeat(zmq::socket_t &socket) const;
+
+  void send_heartbeat(zmq::socket_t &socket) const;
+
+  void send_container_metadata(std::string& model_name,
+                               int model_version,
+                               InputType model_input_type,
+                               zmq::socket_t &socket) const;
+
+  void log_event(rpc::RPCEvent event) const;
 
   template<typename D, class I>
-  void serve_model(Model<I>& model, InputParser<D, I>& input_parser, const std::string& clipper_address) {
+  void serve_model(Model<I>& model,
+                   std::string model_name,
+                   int model_version,
+                   InputParser<D, I>& input_parser,
+                   std::string clipper_address) {
     zmq::context_t context(1);
     bool connected = false;
     std::chrono::time_point<Clock> last_activity_time;
@@ -127,14 +147,17 @@ class RPC {
             static_cast<rpc::MessageType>(static_cast<int *>(msg_msg_type_bytes.data())[0]);
 
         switch(message_type) {
-          case rpc::MessageType::Heartbeat:
+          case rpc::MessageType::Heartbeat: {
             log_info(LOGGING_TAG_CONTAINER, "Received heartbeat!");
-            event_history_.push_back(rpc::RPCEvent::ReceivedHeartbeat);
-            handle_heartbeat(model, socket);
-            break;
+            log_event(rpc::RPCEvent::ReceivedHeartbeat);
+            bool requesting_metadata = handle_heartbeat(socket);
+            if (requesting_metadata) {
+              send_container_metadata(model_name, model_version, model.get_input_type(), socket);
+            }
+          } break;
 
           case rpc::MessageType::ContainerContent: {
-            event_history_.push_back(rpc::RPCEvent::ReceivedContainerContent);
+            log_event(rpc::RPCEvent::ReceivedContainerContent);
             zmq::message_t msg_request_id;
             zmq::message_t msg_request_header;
 
@@ -147,7 +170,7 @@ class RPC {
 
             switch(request_type) {
               case RequestType::PredictRequest:
-                handle_predict_request(model, input_parser, socket, input_header_buffer, msg_id);
+                handle_predict_request(model, input_parser, socket, input_header_buffer, output_buffer, msg_id);
                 break;
 
               case RequestType::FeedbackRequest:
@@ -161,7 +184,7 @@ class RPC {
           } break;
 
           case rpc::MessageType::NewContainer:
-            event_history_.push_back(rpc::RPCEvent::ReceivedContainerMetadata);
+            log_event(rpc::RPCEvent::ReceivedContainerMetadata);
             log_error_formatted(LOGGING_TAG_CONTAINER, "Received erroneous new container message from Clipper!");
           default:
             break;
@@ -194,10 +217,10 @@ class RPC {
     // Receive input header
     socket.recv(input_header_buffer.data(), 0);
     InputType input_type = static_cast<InputType>(input_header_buffer[0]);
-    if(input_type != model.input_type_) {
+    if(input_type != model.get_input_type()) {
       std::stringstream ss;
       ss << "Received prediction request with incorrect input type: " << get_readable_input_type(input_type)
-         << "for model with input type: " << get_readable_input_type(model.input_type_);
+         << "for model with input type: " << get_readable_input_type(model.get_input_type());
       throw std::runtime_error(ss.str());
     }
 
@@ -265,53 +288,23 @@ class RPC {
     socket.send(&msg_message_type, ZMQ_SNDMORE);
     socket.send(&msg_message_id, ZMQ_SNDMORE);
     socket.send(&msg_prediction_response, 0);
-    event_history_.push_back(rpc::RPCEvent::SentContainerContent);
-  }
-
-  template <class I>
-  void handle_heartbeat(Model<I> &model, zmq::socket_t &socket) const {
-    zmq::message_t msg_heartbeat_type;
-    socket.recv(&msg_heartbeat_type, 0);
-    rpc::HeartbeatType heartbeat_type
-        = static_cast<rpc::HeartbeatType>(static_cast<int *>(msg_heartbeat_type.data())[0]);
-    if(heartbeat_type == rpc::HeartbeatType::RequestContainerMetadata) {
-      send_container_metadata(model, socket);
-    }
-  }
-
-  void send_heartbeat(zmq::socket_t &socket) const {
-    zmq::message_t type_message(sizeof(int));
-    zmq::message_t heartbeat_type_message(sizeof(int));
-    static_cast<int *>(type_message.data())[0] =
-        static_cast<int>(rpc::MessageType::Heartbeat);
-    static_cast<int *>(heartbeat_type_message.data())[0] = static_cast<int>(rpc::HeartbeatType::KeepAlive);
-    socket.send("", 0, ZMQ_SNDMORE);
-    socket.send(type_message, ZMQ_SNDMORE);
-    socket.send(heartbeat_type_message);
-    event_history_.push_back(rpc::RPCEvent::SentHeartbeat);
-  }
-
-  template <class I>
-  void send_container_metadata(Model<I> &model, zmq::socket_t &socket) const {
-    zmq::message_t msg_message_type(sizeof(int));
-    static_cast<int*>(msg_message_type.data())[0] = static_cast<int>(rpc::MessageType::NewContainer);
-
-    zmq::message_t msg_model_name(&model.name_[0], model.name_.length(), NULL);
-
-    std::string model_version_str = std::to_string(model.version_);
-    zmq::message_t msg_model_version(&model_version_str[0], model_version_str.length(), NULL);
-
-    std::string model_input_type_str = std::to_string(model.input_type_);
-    zmq::message_t msg_model_input_type(&model_input_type_str[0], model_input_type_str.length(), NULL);
-
-    socket.send("", 0, ZMQ_SNDMORE);
-    socket.send(&msg_message_type, ZMQ_SNDMORE);
-    socket.send(&msg_model_name, ZMQ_SNDMORE);
-    socket.send(&msg_model_version, ZMQ_SNDMORE);
-    socket.send(&msg_model_input_type, 0);
-    event_history_.push_back(rpc::RPCEvent::SentContainerMetadata);
+    log_event(rpc::RPCEvent::SentContainerContent);
   }
 };
+
+class RPCTestModel : public Model<DoubleVector> {
+ public:
+  explicit RPCTestModel(RPC &container_rpc);
+
+  std::vector<std::string> predict(const std::vector<std::shared_ptr<DoubleVector>> inputs) const override;
+  InputType get_input_type() const override;
+
+ private:
+  RPC &container_rpc_;
+
+  std::vector<rpc::RPCEvent> get_events(long min_time_millis) const;
+};
+
 
 } // namespace container
 
