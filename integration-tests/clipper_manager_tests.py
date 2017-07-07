@@ -56,8 +56,6 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.clipper_inst.stop_all()
 
     def test_external_models_register_correctly(self):
-        name = "m1"
-        version1 = 1
         input_type = "doubles"
         result = self.clipper_inst.register_external_model(
             self.model_name, self.model_version_1, input_type)
@@ -84,11 +82,24 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertGreaterEqual(len(registered_applications), 1)
         self.assertTrue(self.app_name in registered_applications)
 
-    def test_model_links_to_app(self):
+    def test_link_not_registered_model_to_app_fails(self):
         not_deployed_model = "test_model"
-        self.clipper_inst.link_model_to_app(self.app_name, not_deployed_model)
+        result = self.clipper_inst.link_model_to_app(self.app_name,
+                                                     not_deployed_model)
+        self.assertFalse(result)
+
+    def test_get_model_links_when_none_exist_returns_empty_list(self):
         result = self.clipper_inst.get_linked_models(self.app_name)
-        self.assertEqual([not_deployed_model], result)
+        self.assertIsNone(result)
+
+    def test_link_registered_model_to_app_succeeds(self):
+        result = self.clipper_inst.link_model_to_app(self.app_name,
+                                                     self.model_name)
+        self.assertTrue(result)
+
+    def test_get_model_links_returns_list_of_linked_models(self):
+        result = self.clipper_inst.get_linked_models(self.app_name)
+        self.assertEqual([self.model_name], result)
 
     def get_app_info_for_registered_app_returns_info_dictionary(self):
         result = self.clipper_inst.get_app_info(self.app_name)
@@ -265,7 +276,19 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
     def tearDownClass(self):
         self.clipper_inst.stop_all()
 
-    def test_deployed_model_queried_successfully(self):
+    def test_queries_to_app_without_linked_models_yield_default_predictions(
+            self):
+        url = "http://localhost:1337/{}/predict".format(self.app_name_2)
+        test_input = [99.3, 18.9, 67.2, 34.2]
+        req_json = json.dumps({'input': test_input})
+        headers = {'Content-type': 'application/json'}
+        response = requests.post(url, headers=headers, data=req_json)
+        parsed_response = response.json()
+        print(parsed_response)
+        self.assertEqual(parsed_response["output"], self.default_output)
+        self.assertTrue(parsed_response["default"])
+
+    def test_deployed_and_linked_model_queried_successfully(self):
         model_version = 1
         # Initialize a support vector classifier 
         # that will be deployed to a no-op container
@@ -291,7 +314,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         self.assertNotEqual(parsed_response["output"], self.default_output)
         self.assertFalse(parsed_response["default"])
 
-    def test_deployed_predict_function_queried_successfully(self):
+    def test_deployed_and_linked_predict_function_queried_successfully(self):
         model_version = 1
         predict_func = lambda inputs: [str(len(x)) for x in inputs]
         input_type = "doubles"
@@ -327,7 +350,10 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 SHORT_TEST_ORDERING = [
     'test_external_models_register_correctly',
     'test_application_registers_correctly',
-    'test_model_links_to_app',
+    'test_link_not_registered_model_to_app_fails',
+    'test_get_model_links_when_none_exist_returns_empty_list',
+    'test_link_registered_model_to_app_succeeds',
+    'test_get_model_links_returns_list_of_linked_models',
     'get_app_info_for_registered_app_returns_info_dictionary',
     'get_app_info_for_nonexistent_app_returns_none',
     'test_add_container_for_external_model_fails',
@@ -342,8 +368,9 @@ SHORT_TEST_ORDERING = [
 ]
 
 LONG_TEST_ORDERING = [
-    'test_deployed_model_queried_successfully',
-    'test_deployed_predict_function_queried_successfully'
+    'test_queries_to_app_without_linked_models_yield_default_predictions',
+    'test_deployed_and_linked_model_queried_successfully',
+    'test_deployed_and_linked_predict_function_queried_successfully'
 ]
 
 if __name__ == '__main__':

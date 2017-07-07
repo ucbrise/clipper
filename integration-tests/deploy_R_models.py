@@ -161,9 +161,14 @@ if __name__ == "__main__":
             'test_data2=tail(test_data,0.5*nrow(test_data))')
 
         try:
-            clipper.register_application(app_name, model_name, "string",
-                                         "default_pred", 100000)
+            clipper.register_application(app_name, "string", "default_pred",
+                                         100000)
             time.sleep(1)
+
+            # Link model and app
+            clipper.link_model_to_app(app_name, model_name)
+            time.sleep(1)
+
             response = requests.post(
                 "http://localhost:1337/%s/predict" % app_name,
                 headers=headers,

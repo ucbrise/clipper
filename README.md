@@ -55,11 +55,6 @@ Success!
 >>> clipper.get_all_apps()
 [u'hello_world']
 
-# Let Clipper know that queries to your app should be served by
-# a model with name "feature_sum_model".
->>> clipper.link_model_to_app("hello_world", "feature_sum_model")
-Success!
-
 # Define a simple model that just returns the sum of each feature vector.
 # Note that the prediction function takes a list of feature vectors as
 # input and returns a list of strings.
@@ -68,6 +63,11 @@ Success!
 
 # Deploy the model, naming it "feature_sum_model" and giving it version 1
 >>> clipper.deploy_predict_function("feature_sum_model", 1, feature_sum_function, "doubles")
+
+# Let Clipper know that queries to your app should be served by
+# your newly deployed model.
+>>> clipper.link_model_to_app("hello_world", "feature_sum_model")
+Success!
 
 ```
 
