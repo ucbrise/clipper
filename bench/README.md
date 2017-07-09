@@ -43,27 +43,26 @@ When using these scripts you'll have the ability to set `model_name`, `model_ver
 
   - [`bench/setup_noop_bench.sh`](https://github.com/ucbrise/clipper/tree/develop/bench/setup_noop_bench.sh) runs the [`noop_container`](https://github.com/ucbrise/clipper/blob/develop/containers/python/noop_container.py). The default `model_name` is `"bench_noop"`.
   
-      ./bench/setup_noop_bench.sh [[<model_name> <model_version> [<clipper_ip>]]] 
+    ```./bench/setup_noop_bench.sh [[<model_name> <model_version> [<clipper_ip>]]] ```
     
   - [`bench/setup_sum_bench.sh`](https://github.com/ucbrise/clipper/tree/develop/bench/setup_sum_bench.sh) runs the [`sum_container`](https://github.com/ucbrise/clipper/blob/develop/containers/python/sum_container.py). The default `model_name` is `"bench_sum"`.
 
-       ./bench/setup_sum_bench.sh [[<model_name> <model_version> [<clipper_ip>]]] 
+    ```./bench/setup_sum_bench.sh [[<model_name> <model_version> [<clipper_ip>]]] ```
   
   - [`bench/setup_sklearn_bench.sh`](https://github.com/ucbrise/clipper/tree/develop/bench/setup_sklearn_bench.sh) runs the [`sklearn_cifar_container`](https://github.com/ucbrise/clipper/blob/develop/containers/python/sklearn_cifar_container). If you wish to use this option, remember to download the CIFAR10 python dataset first. The default `model_name` is `"bench_sklearn_cifar"`.
-
     
-      ./bench/setup_sklearn_bench.sh <path_to_cifar_python_dataset> [[<model_name> <model_version> [<clipper_ip>]]]
+    ```./bench/setup_sklearn_bench.sh <path_to_cifar_python_dataset> [[<model_name> <model_version> [<clipper_ip>]]]```
 
     Note that `<path_to_cifar_python_dataset>` should be the path to the **directory** containing a parsed CIFAR10 CSV data file with name `cifar_train.data`.
 
 - If you want to deploy the model in a Docker container, you'll need to build the model container Docker image (`model_version` is `1` by default):
   - Create the Docker images for the [`noop_container`](https://github.com/ucbrise/clipper/blob/develop/containers/python/noop_container.py)  and [`sum_container`](https://github.com/ucbrise/clipper/blob/develop/containers/python/sum_container.py). The default names for each model are the same as the ones listed above.
 
-       ./bench/build_bench_docker_images.sh
+    ```./bench/build_bench_docker_images.sh```
   
   - Run the container on the same host that the benchmarking tool will be run from:
   
-        docker run [-e MODEL_NAME=<nondefault_model_name>] [-e MODEL_VERSION=<nondefault_model_version>] [-e IP=<non-aws-clipper-ip>] <image_id>
+    ```docker run [-e MODEL_NAME=<nondefault_model_name>] [-e MODEL_VERSION=<nondefault_model_version>] [-e IP=<non-aws-clipper-ip>] <image_id>```
         
     If you do not supply an `IP` environment variable in your `docker run ...` command, our script will assume you are on an AWS instance and attempt to grab its IP address.
 
@@ -171,5 +170,5 @@ Under `meters`:
 Under `histograms` (each of these entries lists the unit of measurement, number of datapoints, min, max, mean, standard deviation, and p50, p95, and p99 values):
 
 - `bench:cifar_bench:prediction_latency`: Statistics on latency measured from when the benchmarking script sends a request to when it receives a response.
-- `model:<model_name>:<model_version>:prediction_latency`: Statistics on latency measured from when Clipper sends datapoints to your model-container to when it receives a response. The value will always be lower than that of the former metric.
+- `model:<model_name>:<model_version>:prediction_latency`: Statistics on latency measured from when Clipper sends datapoints to your model-container to when it receives a response.
 - `model:<model_name>:<model_version>1:batch_size`: Statistics on the batch sizes of datapoints sent to your model-container.

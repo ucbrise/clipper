@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
 ##################################
 # Benchmark executable
 
-add_executable(end_to_end_bench src/end_to_end_bench.cpp src/bench_utils.cpp src/include/bench_utils.hpp)
+add_executable(end_to_end_bench src/end_to_end_bench.cpp src/bench_utils.cpp src/bench_utils.hpp)
 
 target_link_libraries(end_to_end_bench clipper boost cxxopts)
 

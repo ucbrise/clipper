@@ -14,7 +14,7 @@
 #include <clipper/logging.hpp>
 #include <clipper/query_processor.hpp>
 
-#include "include/bench_utils.hpp"
+#include "bench_utils.hpp"
 
 const std::string CIFAR_DATA_PATH = "cifar_data_path";
 const std::string NUM_THREADS = "num_threads";

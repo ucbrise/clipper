@@ -5,7 +5,7 @@
 #include <sstream>
 #include <unordered_map>
 
-#include "include/bench_utils.hpp"
+#include "bench_utils.hpp"
 
 using namespace clipper;
 

@@ -25,6 +25,6 @@ fi
 . set_bench_env_vars.sh $MODEL_NAME $MODEL_VERSION $IP
 
 echo "Starting noop_container"
-python ../containers/python/noop_container.py 
+python ../container/noop_container.py 
 
 cd -

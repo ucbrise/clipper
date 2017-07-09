@@ -22,6 +22,6 @@ cd $DIR
 . set_bench_env_vars.sh
 
 echo "Starting sum_container"
-python ../containers/python/sum_container.py 
+python ../containers/python/sum_container.py
 
 cd -

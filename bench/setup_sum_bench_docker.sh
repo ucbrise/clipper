@@ -25,6 +25,6 @@ fi
 . set_bench_env_vars.sh $MODEL_NAME $MODEL_VERSION $IP
 
 echo "Starting sum_container"
-python ../containers/python/sum_container.py 
+python ../container/sum_container.py 
 
 cd -

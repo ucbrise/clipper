@@ -1,9 +1,8 @@
 FROM clipper/py-rpc:latest
 
-COPY containers/python/noop_container.py /containers/python/
+COPY containers/python/noop_container.py /container/
 COPY bench/setup_noop_bench_docker.sh /bench/
 COPY bench/set_bench_env_vars.sh /bench/
-COPY containers/python/rpc.py /containers/python/
 COPY bench/export_aws_ip.sh /bench/
 
 ENV MODEL_NAME bench_noop
