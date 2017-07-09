@@ -9,17 +9,16 @@ namespace container {
 
 template <typename D, class I>
 std::vector<std::shared_ptr<I>> get_parsed_inputs(std::vector<D> &data_buffer,
-                              const std::vector<long>& input_header,
+                              const std::vector<int>& input_header,
                               long input_content_size,
-                              std::function<std::shared_ptr<I>(std::vector<D>&, long, long)> construct_input) {
-  // TODO(czumar): Change all input header data from longs to ints!!!!
-  long num_splits = input_header[1];
+                              std::function<std::shared_ptr<I>(std::vector<D>&, int, int)> construct_input) {
+  int num_splits = input_header[1];
   std::vector <std::shared_ptr<I>> inputs(num_splits);
-  long prev_split = 0;
+  int prev_split = 0;
   // Iterate from the beginning of the input data content
   // (the first two elements of the header are metadata)
   for (int i = 2; i < num_splits + 2; i++) {
-    long curr_split = input_header[i];
+    int curr_split = input_header[i];
     std::shared_ptr<I> input = construct_input(data_buffer, prev_split, curr_split);
     inputs.push_back(input);
     prev_split = curr_split;
@@ -30,8 +29,8 @@ std::vector<std::shared_ptr<I>> get_parsed_inputs(std::vector<D> &data_buffer,
 };
 
 template <typename D>
-void resize_if_necessary(std::vector<D> buffer, long required_buffer_size) {
-  if(static_cast<long>((buffer.size() / sizeof(D))) < required_buffer_size) {
+void resize_if_necessary(std::vector<D> &buffer, long required_buffer_size) {
+  if(static_cast<long>((buffer.size() * sizeof(D))) < required_buffer_size) {
     buffer.resize((2 * required_buffer_size) / sizeof(D));
   }
 }
@@ -42,17 +41,17 @@ const std::vector<uint8_t> &ByteVectorParser::get_data_buffer(long min_size_byte
 }
 
 const std::vector <std::shared_ptr<ByteVector>> ByteVectorParser::get_inputs(
-    const std::vector<long>& input_header, long input_content_size) {
+    const std::vector<int>& input_header, long input_content_size) {
   return get_parsed_inputs(
       buffer_,
       input_header,
       input_content_size,
-      std::function<std::shared_ptr<ByteVector>(std::vector<uint8_t>&, long, long)>(construct_input));
+      std::function<std::shared_ptr<ByteVector>(std::vector<uint8_t>&, int, int)>(construct_input));
 }
 
 std::shared_ptr<ByteVector> ByteVectorParser::construct_input(std::vector<uint8_t>& data_buffer,
-                                                              long data_start,
-                                                              long data_end) {
+                                                              int data_start,
+                                                              int data_end) {
   std::vector<uint8_t> input_data(data_end - data_start);
   // TODO(czumar): Verify constant complexity of these next operations
   auto begin = std::next(data_buffer.begin(), data_start);
@@ -68,17 +67,17 @@ const std::vector<int>& IntVectorParser::get_data_buffer(long min_size_bytes) {
 }
 
 const std::vector<std::shared_ptr<IntVector>> IntVectorParser::get_inputs(
-    const std::vector<long>& input_header, long input_content_size) {
+    const std::vector<int>& input_header, long input_content_size) {
   return get_parsed_inputs(
       buffer_,
       input_header,
       input_content_size,
-      std::function<std::shared_ptr<IntVector>(std::vector<int>&, long, long)>(construct_input));
+      std::function<std::shared_ptr<IntVector>(std::vector<int>&, int, int)>(construct_input));
 }
 
 std::shared_ptr<IntVector> IntVectorParser::construct_input(std::vector<int> &data_buffer,
-                                                            long data_start,
-                                                            long data_end) {
+                                                            int data_start,
+                                                            int data_end) {
   std::vector<int> input_data(data_end - data_start);
   // TODO(czumar): Verify constant complexity of these next operations
   auto begin = std::next(data_buffer.begin(), data_start);
@@ -94,17 +93,17 @@ const std::vector<float>& FloatVectorParser::get_data_buffer(long min_size_bytes
 }
 
 const std::vector<std::shared_ptr<FloatVector>> FloatVectorParser::get_inputs(
-    const std::vector<long>& input_header, long input_content_size) {
+    const std::vector<int>& input_header, long input_content_size) {
   return get_parsed_inputs(
       buffer_,
       input_header,
       input_content_size,
-      std::function<std::shared_ptr<FloatVector>(std::vector<float>&, long, long)>(construct_input));
+      std::function<std::shared_ptr<FloatVector>(std::vector<float>&, int, int)>(construct_input));
 }
 
 std::shared_ptr<FloatVector> FloatVectorParser::construct_input(std::vector<float> &data_buffer,
-                                                                long data_start,
-                                                                long data_end) {
+                                                                int data_start,
+                                                                int data_end) {
   std::vector<float> input_data(data_end - data_start);
   // TODO(czumar): Verify constant complexity of these next operations
   auto begin = std::next(data_buffer.begin(), data_start);
@@ -120,17 +119,17 @@ const std::vector<double>& DoubleVectorParser::get_data_buffer(long min_size_byt
 }
 
 const std::vector<std::shared_ptr<DoubleVector>> DoubleVectorParser::get_inputs(
-    const std::vector<long>& input_header, long input_content_size) {
+    const std::vector<int>& input_header, long input_content_size) {
   return get_parsed_inputs(
       buffer_,
       input_header,
       input_content_size,
-      std::function<std::shared_ptr<DoubleVector>(std::vector<double>&, long, long)>(construct_input));
+      std::function<std::shared_ptr<DoubleVector>(std::vector<double>&, int, int)>(construct_input));
 }
 
 std::shared_ptr<DoubleVector> DoubleVectorParser::construct_input(std::vector<double> &data_buffer,
-                                                                  long data_start,
-                                                                  long data_end) {
+                                                                  int data_start,
+                                                                  int data_end) {
   std::vector<double> input_data(data_end - data_start);
   // TODO(czumar): Verify constant complexity of these next operations
   auto begin = std::next(data_buffer.begin(), data_start);
