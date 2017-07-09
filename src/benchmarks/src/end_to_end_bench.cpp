@@ -105,7 +105,9 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
 
     delay_micros =
         draw_from_poisson ? distribution(generator) : batch_delay_micros;
-    std::this_thread::sleep_for(std::chrono::microseconds(delay_micros));
+    if (delay_micros > 0) {
+      std::this_thread::sleep_for(std::chrono::microseconds(delay_micros));
+    }
   }
 }
 

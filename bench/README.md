@@ -146,13 +146,13 @@ The file starts with documentation of the configuration details you supplied:
 After, metrics are shared by time window. Recall that each window is of length **report\_delay_seconds** (unless you set it to `-1`, in which case there will only be one window that captures the length of the whole run):
 
 
-  <Window 1 start time> - <Window 1 end time>: {
-    <Metrics captured in Window 1>
-  }
-  <Window 2 start time> - <Window 2 end time>: {
-    <Metrics captured in Window 1>
-  }
-  ...
+    <Window 1 start time> - <Window 1 end time>: {
+      <Metrics captured in Window 1>
+    }
+    <Window 2 start time> - <Window 2 end time>: {
+      <Metrics captured in Window 1>
+    }
+    ...
   
 There are several metrics captured in each window. The notable ones are listed below:
 
