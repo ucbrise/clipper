@@ -104,7 +104,7 @@ class RPC {
     bool connected = false;
     std::chrono::time_point<Clock> last_activity_time;
 
-    std::vector<long> input_header_buffer;
+    std::vector<int> input_header_buffer;
     std::vector<uint8_t> output_buffer;
 
     while(true) {
@@ -123,15 +123,13 @@ class RPC {
                 std::chrono::duration_cast<std::chrono::milliseconds>(time_since_last_activity).count();
             if (time_since_last_activity_millis >= SOCKET_ACTIVITY_TIMEOUT_MILLIS) {
               log_info(LOGGING_TAG_CONTAINER, "Connection timed out, reconnecting...");
-              socket.close();
+              connected = false;
               break;
             } else {
               send_heartbeat(socket);
             }
-          } else {
-            // We weren't connected previously, so let's keep polling
-            continue;
           }
+          continue;
         }
 
         connected = true;
@@ -190,11 +188,13 @@ class RPC {
             break;
         }
       }
-
-      // The container is no longer active. Close the socket
-      // and exit the connection loop
+      // The socket associated with the previous session is no longer
+      // being used, so we should close it
       socket.close();
-      return;
+      if(!active_) {
+        // The container is no longer active. Exit the connection loop.
+        return;
+      }
     }
   }
 
@@ -203,7 +203,7 @@ class RPC {
       Model<I>& model,
       InputParser<D, I>& input_parser,
       zmq::socket_t &socket,
-      std::vector<long>& input_header_buffer,
+      std::vector<int>& input_header_buffer,
       std::vector<uint8_t>& output_buffer,
       int msg_id) const {
     zmq::message_t msg_input_header_size;
@@ -214,13 +214,15 @@ class RPC {
     if(static_cast<long>((input_header_buffer.size() / sizeof(long))) < input_header_size_bytes) {
       input_header_buffer.resize(2 * (input_header_size_bytes) / sizeof(long));
     }
+
     // Receive input header
-    socket.recv(input_header_buffer.data(), 0);
+    socket.recv(input_header_buffer.data(), input_header_size_bytes, 0);
+
     InputType input_type = static_cast<InputType>(input_header_buffer[0]);
     if(input_type != model.get_input_type()) {
       std::stringstream ss;
-      ss << "Received prediction request with incorrect input type: " << get_readable_input_type(input_type)
-         << "for model with input type: " << get_readable_input_type(model.get_input_type());
+      ss << "Received prediction request with incorrect input type '" << get_readable_input_type(input_type)
+         << "' for model with input type '" << get_readable_input_type(model.get_input_type()) << "'";
       throw std::runtime_error(ss.str());
     }
 
@@ -228,9 +230,9 @@ class RPC {
     socket.recv(&msg_raw_content_size, 0);
     long input_content_size_bytes = static_cast<long*>(msg_raw_content_size.data())[0];
 
-    std::vector<D> buffer = input_parser.get_data_buffer(input_content_size_bytes);
+    std::vector<D> input_data_buffer = input_parser.get_data_buffer(input_content_size_bytes);
     // Receive input content
-    socket.recv(buffer.data(), input_content_size_bytes, 0);
+    socket.recv(input_data_buffer.data(), input_content_size_bytes, 0);
 
     std::vector<std::shared_ptr<I>> inputs =
         input_parser.get_inputs(input_header_buffer, input_content_size_bytes);
@@ -285,9 +287,9 @@ class RPC {
     zmq::message_t msg_prediction_response(output_buffer.data(), response_size_bytes, NULL);
 
     socket.send("", 0, ZMQ_SNDMORE);
-    socket.send(&msg_message_type, ZMQ_SNDMORE);
-    socket.send(&msg_message_id, ZMQ_SNDMORE);
-    socket.send(&msg_prediction_response, 0);
+    socket.send(msg_message_type, ZMQ_SNDMORE);
+    socket.send(msg_message_id, ZMQ_SNDMORE);
+    socket.send(msg_prediction_response, 0);
     log_event(rpc::RPCEvent::SentContainerContent);
   }
 };
