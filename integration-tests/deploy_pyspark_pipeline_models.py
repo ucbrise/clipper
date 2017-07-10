@@ -128,10 +128,6 @@ if __name__ == "__main__":
                                          10000000)
             time.sleep(1)
 
-            # Link model and app
-            clipper.link_model_to_app(app_name, model_name)
-            time.sleep(1)
-
             response = requests.post(
                 "http://localhost:1337/%s/predict" % app_name,
                 headers=headers,
@@ -148,6 +144,11 @@ if __name__ == "__main__":
             clipper.deploy_pyspark_model(model_name, version, predict, model,
                                          spark.sparkContext, "strings")
             time.sleep(10)
+
+            # Link model and app
+            clipper.link_model_to_app(app_name, model_name)
+            time.sleep(5)
+
             num_preds = 25
             num_defaults = 0
             for i in range(num_preds):

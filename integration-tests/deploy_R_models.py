@@ -113,6 +113,10 @@ def deploy_and_test_model(clipper, model, version, test_data_collection):
     """
     clipper.deploy_R_model(model_name, version, model)
     time.sleep(25)
+
+    clipper.link_model_to_app(app_name, model_name)
+    time.sleep(5)
+
     num_preds = 0
     num_defaults = 0
     for i in range(0, len(test_data_collection)):
@@ -163,10 +167,6 @@ if __name__ == "__main__":
         try:
             clipper.register_application(app_name, "string", "default_pred",
                                          100000)
-            time.sleep(1)
-
-            # Link model and app
-            clipper.link_model_to_app(app_name, model_name)
             time.sleep(1)
 
             response = requests.post(

@@ -84,9 +84,20 @@ def predict(spark, model, xs):
     return [str(model.predict(normalize(x))) for x in xs]
 
 
-def deploy_and_test_model(sc, clipper, model, version, input_type):
+def deploy_and_test_model(sc,
+                          clipper,
+                          model,
+                          version,
+                          input_type,
+                          link_model=False):
     clipper.deploy_pyspark_model(model_name, version, predict, model, sc,
                                  input_type)
+    time.sleep(5)
+
+    if link_model:
+        clipper.link_model_to_app(app_name, model_name)
+        time.sleep(5)
+
     _test_deployed_model(app_name, version)
 
 
@@ -153,10 +164,6 @@ if __name__ == "__main__":
                                          100000)
             time.sleep(1)
 
-            # Link model and app
-            clipper.link_model_to_app(app_name, model_name)
-            time.sleep(1)
-
             response = requests.post(
                 "http://localhost:1337/%s/predict" % app_name,
                 headers=headers,
@@ -170,7 +177,8 @@ if __name__ == "__main__":
 
             version = 1
             lr_model = train_logistic_regression(trainRDD)
-            deploy_and_test_model(sc, clipper, lr_model, version, input_type)
+            deploy_and_test_model(sc, clipper, lr_model, version, input_type,
+                                  True)
 
             version += 1
             svm_model = train_svm(trainRDD)
