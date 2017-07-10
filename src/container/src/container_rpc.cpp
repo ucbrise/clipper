@@ -2,22 +2,20 @@
 
 #include <zmq.hpp>
 
-#include <container/container_rpc.hpp>
 #include <container/container_parsing.hpp>
+#include <container/container_rpc.hpp>
 
 namespace clipper {
 
 namespace container {
 
-RPC::RPC() : active_(false),
-             event_log_mutex_(std::make_shared<std::mutex>()),
-             event_log_(std::make_shared<boost::circular_buffer<RPCLogItem>>(EVENT_LOG_CAPACITY)) {
+RPC::RPC()
+    : active_(false),
+      event_log_mutex_(std::make_shared<std::mutex>()),
+      event_log_(std::make_shared<boost::circular_buffer<RPCLogItem>>(
+          EVENT_LOG_CAPACITY)) {}
 
-}
-
-RPC::~RPC() {
-  stop();
-}
+RPC::~RPC() { stop(); }
 
 void RPC::stop() {
   if (active_) {
@@ -29,9 +27,10 @@ void RPC::stop() {
 std::vector<RPCLogItem> RPC::get_events(int num_events) const {
   std::vector<RPCLogItem> events;
   std::lock_guard<std::mutex> lock(*event_log_mutex_);
-  int num_to_return = std::min(num_events, static_cast<int>(event_log_->size()));
+  int num_to_return =
+      std::min(num_events, static_cast<int>(event_log_->size()));
   for (auto it = event_log_->begin(); it != event_log_->end(); ++it) {
-    if(num_to_return == 0) {
+    if (num_to_return == 0) {
       break;
     }
     events.push_back(*it);
@@ -43,8 +42,8 @@ std::vector<RPCLogItem> RPC::get_events(int num_events) const {
 bool RPC::handle_heartbeat(zmq::socket_t &socket) const {
   zmq::message_t msg_heartbeat_type;
   socket.recv(&msg_heartbeat_type, 0);
-  rpc::HeartbeatType heartbeat_type
-      = static_cast<rpc::HeartbeatType>(static_cast<int *>(msg_heartbeat_type.data())[0]);
+  rpc::HeartbeatType heartbeat_type = static_cast<rpc::HeartbeatType>(
+      static_cast<int *>(msg_heartbeat_type.data())[0]);
   return (heartbeat_type == rpc::HeartbeatType::RequestContainerMetadata);
 }
 
@@ -58,20 +57,23 @@ void RPC::send_heartbeat(zmq::socket_t &socket) const {
   log_event(rpc::RPCEvent::SentHeartbeat);
 }
 
-void RPC::send_container_metadata(std::string &model_name,
-                                  int model_version,
+void RPC::send_container_metadata(std::string &model_name, int model_version,
                                   InputType model_input_type,
                                   zmq::socket_t &socket) const {
   zmq::message_t msg_message_type(sizeof(int));
-  static_cast<int *>(msg_message_type.data())[0] = static_cast<int>(rpc::MessageType::NewContainer);
+  static_cast<int *>(msg_message_type.data())[0] =
+      static_cast<int>(rpc::MessageType::NewContainer);
 
   zmq::message_t msg_model_name(&model_name[0], model_name.length(), NULL);
 
   std::string model_version_str = std::to_string(model_version);
-  zmq::message_t msg_model_version(&model_version_str[0], model_version_str.length(), NULL);
+  zmq::message_t msg_model_version(&model_version_str[0],
+                                   model_version_str.length(), NULL);
 
-  std::string model_input_type_str = std::to_string(static_cast<int>(model_input_type));
-  zmq::message_t msg_model_input_type(&model_input_type_str[0], model_input_type_str.length(), NULL);
+  std::string model_input_type_str =
+      std::to_string(static_cast<int>(model_input_type));
+  zmq::message_t msg_model_input_type(&model_input_type_str[0],
+                                      model_input_type_str.length(), NULL);
 
   socket.send("", 0, ZMQ_SNDMORE);
   socket.send(msg_message_type, ZMQ_SNDMORE);
@@ -89,6 +91,6 @@ void RPC::log_event(rpc::RPCEvent event) const {
   event_log_->push_back(new_log_item);
 }
 
-} // namespace container
+}  // namespace container
 
-} // namespace clipper
+}  // namespace clipper
