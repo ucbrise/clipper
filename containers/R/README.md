@@ -37,11 +37,18 @@ Clipper.deploy_R_model(
 
 - Register Application :
 
-```
+```py
 Clipper.register_application(
-    "example_app", "example_model", "strings", default_output, slo_micros=2000
+    "example_app", "strings", default_output, slo_micros=2000
     )
  ```
+- Link model to application :
+
+```py
+Clipper.link_model_to_app(
+		"example_app", "example_model"
+		)
+```
 
 - Requesting predictions
 

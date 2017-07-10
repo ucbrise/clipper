@@ -1,0 +1,7 @@
+FROM clipper/py-rpc:latest
+
+COPY containers/python/sum_container.py /container/
+
+CMD ["python", "/container/sum_container.py"]
+
+# vim: set filetype=dockerfile:

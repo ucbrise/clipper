@@ -413,9 +413,11 @@ class TaskExecutor {
       std::vector<InflightMessage> cur_batch;
       rpc::PredictionRequest prediction_request(container->input_type_);
       std::stringstream query_ids_in_batch;
+      std::chrono::time_point<std::chrono::system_clock> current_time =
+          std::chrono::system_clock::now();
       for (auto b : batch) {
         prediction_request.add_input(b.input_);
-        cur_batch.emplace_back(b.recv_time_, container->container_id_, b.model_,
+        cur_batch.emplace_back(current_time, container->container_id_, b.model_,
                                container->replica_id_, b.input_);
         query_ids_in_batch << b.query_id_ << " ";
       }
@@ -486,6 +488,7 @@ class TaskExecutor {
             .count();
     if (processing_container != nullptr) {
       processing_container->update_throughput(1, task_latency_micros);
+      processing_container->latency_hist_.insert(task_latency_micros);
     } else {
       log_error(LOGGING_TAG_TASK_EXECUTOR,
                 "Could not find processing container. Something is wrong.");

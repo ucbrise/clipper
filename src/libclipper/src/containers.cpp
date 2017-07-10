@@ -26,6 +26,9 @@ ModelContainer::ModelContainer(VersionedModelId model, int container_id,
       container_id_(container_id),
       replica_id_(replica_id),
       input_type_(input_type),
+      latency_hist_("container:" + model.serialize() + ":" +
+                        std::to_string(replica_id) + ":prediction_latency",
+                    "microseconds", HISTOGRAM_SAMPLE_SIZE),
       avg_throughput_per_milli_(0),
       throughput_buffer_(THROUGHPUT_BUFFER_CAPACITY) {
   std::string model_str = model.serialize();
@@ -40,6 +43,9 @@ void ModelContainer::update_throughput(size_t batch_size,
     throw std::invalid_argument(
         "Batch size and latency must be positive for throughput updates!");
   }
+
+  latency_hist_.insert(total_latency_micros);
+
   boost::unique_lock<boost::shared_mutex> lock(throughput_mutex_);
   double new_throughput = 1000 * (static_cast<double>(batch_size) /
                                   static_cast<double>(total_latency_micros));

@@ -322,7 +322,7 @@ class Clipper:
             self._execute_root("docker-compose up -d query_frontend")
             print("Clipper is running")
 
-    def register_application(self, name, model, input_type, default_output,
+    def register_application(self, name, input_type, default_output,
                              slo_micros):
         """
         Submits a request to register a new Clipper application and returns whether or
@@ -332,8 +332,6 @@ class Clipper:
         ----------
         name : str
             The name of the application.
-        model : str
-            The name of the model this application will query.
         input_type : str
             One of "integers", "floats", "doubles", "bytes", or "strings".
         default_output : string
@@ -361,7 +359,6 @@ class Clipper:
                                               CLIPPER_MANAGEMENT_PORT)
         req_json = json.dumps({
             "name": name,
-            "candidate_model_names": [model],
             "input_type": input_type,
             "default_output": default_output,
             "latency_slo_micros": slo_micros
@@ -370,6 +367,59 @@ class Clipper:
         r = requests.post(url, headers=headers, data=req_json)
         print(r.text)
         return r.status_code == requests.codes.ok
+
+    def link_model_to_app(self, app_name, model_name):
+        """
+        Allows the model with `model_name` to be used by the app with `app_name`.
+        The model and app should both be registered with Clipper.
+
+        Parameters
+        ----------
+        app_name : str
+            The name of the application
+        model_name : str
+            The name of the model to link to the application
+
+        Returns
+        -------
+        bool
+            Returns true iff the model link request was successful
+        """
+        url = "http://%s:%d/admin/add_model_links" % (self.host,
+                                                      CLIPPER_MANAGEMENT_PORT)
+        req_json = json.dumps({
+            "app_name": app_name,
+            "model_names": [model_name]
+        })
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
+        print(r.text)
+        return r.status_code == requests.codes.ok
+
+    def get_linked_models(self, app_name):
+        """Retrieves the models linked to the specified application
+
+        Parameters
+        ----------
+        app_name : str
+            The name of the application
+
+        Returns
+        -------
+        list
+            Returns a list of the names of models linked to the app.
+            If no models are linked to the specified app, None is returned.
+        """
+        url = "http://%s:%d/admin/get_linked_models" % (
+            self.host, CLIPPER_MANAGEMENT_PORT)
+        req_json = json.dumps({"app_name": app_name})
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
+        if r.status_code == requests.codes.ok:
+            return r.json()
+        else:
+            print(r.text)
+            return None
 
     def get_all_apps(self, verbose=False):
         """Gets information about all applications registered with Clipper.
@@ -386,7 +436,7 @@ class Clipper:
         -------
         list
             Returns a list of information about all apps registered to Clipper.
-            If no apps are registered with Clipper, an empty list is returned.
+            If no apps are registered with Clipper, None is returned.
         """
         url = "http://%s:1338/admin/get_all_applications" % self.host
         req_json = json.dumps({"verbose": verbose})
@@ -747,14 +797,24 @@ class Clipper:
 
         return deploy_result
 
-    def _register_app_and_check_success(self, name, input_type, default_output,
-                                        slo_micros):
-        if self.register_application(name, name, input_type, default_output,
-                                     slo_micros):
-            print("Application registration sucessful! Deploying model.")
-            return True
-        print("Application registration unsuccessful. Will not deploy model.")
-        return False
+    def _register_app_link_model_check_success(self, name, input_type,
+                                               default_output, slo_micros):
+        if not self.register_application(name, input_type, default_output,
+                                         slo_micros):
+            print(
+                "Application registration unsuccessful. Will not deploy model or link it to app."
+            )
+            return False
+        print("Application registration sucessful! Deploying model.")
+        return True
+
+    def _link_model_to_app_and_check_success(self, app_name, model_name):
+        if not self.link_model_to_app(app_name, model_name):
+            print("Linking model to app was unsuccessful.")
+            return False
+
+        print("Linking model to app was successful!")
+        return True
 
     def register_app_and_deploy_predict_function(
             self,
@@ -794,13 +854,20 @@ class Clipper:
             The number of replicas of the model to create. More replicas can be
             created later as well.
         """
-        if not self._register_app_and_check_success(
+        if not self._register_app_link_model_check_success(
                 name, input_type, default_output, slo_micros):
             return False
 
-        return self.deploy_predict_function(name, model_version,
-                                            predict_function, input_type,
-                                            labels, num_containers)
+        if not self.deploy_predict_function(
+                name, model_version, predict_function, input_type, labels,
+                num_containers):
+            return False
+
+        time.sleep(1)
+        if not self._link_model_to_app_and_check_success(name, name):
+            return False
+
+        return True
 
     def register_app_and_deploy_pyspark_model(
             self,
@@ -854,13 +921,20 @@ class Clipper:
             The number of replicas of the model to create. More replicas can be
             created later as well.
         """
-        if not self._register_app_and_check_success(
+        if not self._register_app_link_model_check_success(
                 name, input_type, default_output, slo_micros):
             return False
 
-        return self.deploy_pyspark_model(name, model_version, predict_function,
+        if not self.deploy_pyspark_model(name, model_version, predict_function,
                                          pyspark_model, sc, input_type, labels,
-                                         num_containers)
+                                         num_containers):
+            return False
+
+        time.sleep(1)
+        if not self._link_model_to_app_and_check_success(name, name):
+            return False
+
+        return True
 
     def get_all_models(self, verbose=False):
         """Gets information about all models registered with Clipper.
@@ -875,7 +949,7 @@ class Clipper:
         -------
         list
             Returns a list of information about all apps registered to Clipper.
-            If no models are registered with Clipper, an empty list is returned.
+            If no models are registered with Clipper, None is returned.
         """
         url = "http://%s:1338/admin/get_all_models" % self.host
         req_json = json.dumps({"verbose": verbose})
@@ -936,7 +1010,7 @@ class Clipper:
         -------
         list
             Returns a list of information about all apps registered to Clipper.
-            If no containerss are registered with Clipper, an empty list is returned.
+            If no containerss are registered with Clipper, None is returned.
         """
         url = "http://%s:1338/admin/get_all_containers" % self.host
         req_json = json.dumps({"verbose": verbose})

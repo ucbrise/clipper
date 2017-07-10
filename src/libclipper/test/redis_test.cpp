@@ -102,6 +102,38 @@ TEST_F(RedisTest, AddModel) {
   ASSERT_EQ(result["model_data_path"], model_path);
 }
 
+TEST_F(RedisTest, AddModelLinks) {
+  std::string app_name = "my_app_name";
+  InputType input_type = InputType::Doubles;
+  std::string policy = DefaultOutputSelectionPolicy::get_name();
+  std::string default_output = "1.0";
+  int latency_slo_micros = 10000;
+  ASSERT_TRUE(add_application(*redis_, app_name, input_type, policy,
+                              default_output, latency_slo_micros));
+
+  std::vector<std::string> labels{"ads", "images", "experimental", "other",
+                                  "labels"};
+  std::string model_name_1 = "model_1";
+  std::string model_name_2 = "model_2";
+  VersionedModelId model_1 = VersionedModelId(model_name_1, "1");
+  VersionedModelId model_2 = VersionedModelId(model_name_2, "1");
+  std::string container_name = "clipper/test_container";
+  std::string model_path = "/tmp/models/m/1";
+  ASSERT_TRUE(add_model(*redis_, model_1, input_type, labels, container_name,
+                        model_path));
+  ASSERT_TRUE(add_model(*redis_, model_2, input_type, labels, container_name,
+                        model_path));
+
+  std::vector<std::string> model_names =
+      std::vector<std::string>{model_name_1, model_name_2};
+  ASSERT_TRUE(add_model_links(*redis_, app_name, model_names));
+
+  auto linked_models = get_linked_models(*redis_, app_name);
+  std::sort(linked_models.begin(), linked_models.end());
+  std::sort(model_names.begin(), model_names.end());
+  ASSERT_EQ(model_names, linked_models);
+}
+
 TEST_F(RedisTest, SetCurrentModelVersion) {
   std::string model_name = "mymodel";
   ASSERT_TRUE(set_current_model_version(*redis_, model_name, "2"));
@@ -273,20 +305,17 @@ TEST_F(RedisTest, DeleteContainer) {
 
 TEST_F(RedisTest, AddApplication) {
   std::string name = "my_app_name";
-  std::vector<std::string> model_names{"music_random_features", "simple_svm",
-                                       "music_cnn"};
   InputType input_type = InputType::Doubles;
   std::string policy = DefaultOutputSelectionPolicy::get_name();
   std::string default_output = "1.0";
   int latency_slo_micros = 10000;
-  ASSERT_TRUE(add_application(*redis_, name, model_names, input_type, policy,
-                              default_output, latency_slo_micros));
+  ASSERT_TRUE(add_application(*redis_, name, input_type, policy, default_output,
+                              latency_slo_micros));
   auto result = get_application(*redis_, name);
-  // The application table has 5 fields, so we expect to get back a map with 5
+  // The application table has 4 fields, so we expect to get back a map with 4
   // entries in it (see add_application() in redis.cpp for details on what the
   // fields are).
-  EXPECT_EQ(result.size(), static_cast<size_t>(5));
-  EXPECT_EQ(str_to_model_names(result["candidate_model_names"]), model_names);
+  EXPECT_EQ(result.size(), static_cast<size_t>(4));
   EXPECT_EQ(parse_input_type(result["input_type"]), input_type);
   EXPECT_EQ(result["policy"], policy);
   EXPECT_EQ(result["default_output"], default_output);
@@ -295,16 +324,14 @@ TEST_F(RedisTest, AddApplication) {
 
 TEST_F(RedisTest, DeleteApplication) {
   std::string name = "my_app_name";
-  std::vector<std::string> model_names{"music_random_features", "simple_svm",
-                                       "music_cnn"};
   InputType input_type = InputType::Doubles;
   std::string policy = "exp3_policy";
   std::string default_output = "1.0";
   int latency_slo_micros = 10000;
-  ASSERT_TRUE(add_application(*redis_, name, model_names, input_type, policy,
-                              default_output, latency_slo_micros));
+  ASSERT_TRUE(add_application(*redis_, name, input_type, policy, default_output,
+                              latency_slo_micros));
   auto get_result = get_application(*redis_, name);
-  EXPECT_EQ(get_result.size(), static_cast<size_t>(5));
+  EXPECT_EQ(get_result.size(), static_cast<size_t>(4));
   ASSERT_TRUE(delete_application(*redis_, name));
   auto delete_result = get_application(*redis_, name);
   EXPECT_EQ(delete_result.size(), static_cast<size_t>(0));
@@ -313,23 +340,19 @@ TEST_F(RedisTest, DeleteApplication) {
 TEST_F(RedisTest, GetAllApplicationNames) {
   // Add a few applications, get should return all of their names.
   std::string name = "my_app_name";
-  std::vector<std::string> model_names{"music_random_features", "simple_svm",
-                                       "music_cnn"};
   InputType input_type = InputType::Doubles;
   std::string policy = "exp3_policy";
   std::string default_output = "1.0";
   int latency_slo_micros = 10000;
-  ASSERT_TRUE(add_application(*redis_, name, model_names, input_type, policy,
-                              default_output, latency_slo_micros));
+  ASSERT_TRUE(add_application(*redis_, name, input_type, policy, default_output,
+                              latency_slo_micros));
   std::string name2 = "my_app_name_2";
-  std::vector<std::string> model_names2{"img_random_features", "simple_svm",
-                                        "img_cnn"};
   InputType input_type2 = InputType::Doubles;
   std::string policy2 = "exp4_policy";
   int latency_slo_micros2 = 50000;
   std::string default_output2 = "1.0";
-  ASSERT_TRUE(add_application(*redis_, name2, model_names2, input_type2,
-                              policy2, default_output2, latency_slo_micros2));
+  ASSERT_TRUE(add_application(*redis_, name2, input_type2, policy2,
+                              default_output2, latency_slo_micros2));
 
   std::vector<std::string> app_names = get_all_application_names(*redis_);
   ASSERT_EQ(app_names.size(), static_cast<size_t>(2));
@@ -475,8 +498,6 @@ TEST_F(RedisTest, SubscriptionDetectContainerDelete) {
 
 TEST_F(RedisTest, SubscriptionDetectApplicationAdd) {
   std::string name = "my_app_name";
-  std::vector<std::string> model_names{"music_random_features", "simple_svm",
-                                       "music_cnn"};
   InputType input_type = InputType::Doubles;
   std::string policy = "exp3_policy";
   std::string default_output = "1.0";
@@ -497,8 +518,8 @@ TEST_F(RedisTest, SubscriptionDetectApplicationAdd) {
   // give Redis some time to register the subscription
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-  ASSERT_TRUE(add_application(*redis_, name, model_names, input_type, policy,
-                              default_output, latency_slo_micros));
+  ASSERT_TRUE(add_application(*redis_, name, input_type, policy, default_output,
+                              latency_slo_micros));
 
   std::unique_lock<std::mutex> l(notification_mutex);
   bool result = notification_recv.wait_for(l, std::chrono::milliseconds(1000),
@@ -508,14 +529,12 @@ TEST_F(RedisTest, SubscriptionDetectApplicationAdd) {
 
 TEST_F(RedisTest, SubscriptionDetectApplicationDelete) {
   std::string name = "my_app_name";
-  std::vector<std::string> model_names{"music_random_features", "simple_svm",
-                                       "music_cnn"};
   InputType input_type = InputType::Doubles;
   std::string policy = "exp3_policy";
   std::string default_output = "1.0";
   int latency_slo_micros = 10000;
-  ASSERT_TRUE(add_application(*redis_, name, model_names, input_type, policy,
-                              default_output, latency_slo_micros));
+  ASSERT_TRUE(add_application(*redis_, name, input_type, policy, default_output,
+                              latency_slo_micros));
   std::condition_variable_any notification_recv;
   std::mutex notification_mutex;
   std::atomic<bool> recv{false};
@@ -560,6 +579,56 @@ TEST_F(RedisTest, SubscriptionDetectModelVersionAdd) {
   std::unique_lock<std::mutex> l(notification_mutex);
   bool result = notification_recv.wait_for(l, std::chrono::milliseconds(1000),
                                            [&recv]() { return recv == true; });
+  ASSERT_TRUE(result);
+}
+
+TEST_F(RedisTest, SubscriptionDetectModelLinksAdd) {
+  // Register the application to link to
+  std::string name = "my_app_name";
+  InputType input_type = InputType::Doubles;
+  std::string policy = "exp3_policy";
+  std::string default_output = "1.0";
+  int latency_slo_micros = 10000;
+  ASSERT_TRUE(add_application(*redis_, name, input_type, policy, default_output,
+                              latency_slo_micros));
+
+  // Register the models to link
+  std::vector<std::string> labels{"ads", "images", "experimental", "other",
+                                  "labels"};
+  std::string model_name_1 = "model_1";
+  std::string model_name_2 = "model_2";
+  std::string model_version = "1";
+  VersionedModelId model_1_id = VersionedModelId(model_name_1, model_version);
+  VersionedModelId model_2_id = VersionedModelId(model_name_2, model_version);
+  std::string container_name = "clipper/test_container";
+  std::string model_path = "/tmp/models/m/1";
+  ASSERT_TRUE(add_model(*redis_, model_1_id, input_type, labels, container_name,
+                        model_path));
+  ASSERT_TRUE(add_model(*redis_, model_2_id, input_type, labels, container_name,
+                        model_path));
+
+  std::condition_variable_any notification_recv;
+  std::mutex notification_mutex;
+  std::atomic<int> num_sadd_recv{0};
+  subscribe_to_model_link_changes(
+      *subscriber_,
+      [&notification_recv, &notification_mutex, &num_sadd_recv, name](
+          const std::string& key, const std::string& event_type) {
+        ASSERT_EQ(event_type, "sadd");
+        std::unique_lock<std::mutex> l(notification_mutex);
+        num_sadd_recv += 1;
+        ASSERT_EQ(key, name);
+        notification_recv.notify_all();
+      });
+  // give Redis some time to register the subscription
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  std::vector<std::string> model_names = {model_name_1, model_name_2};
+  ASSERT_TRUE(add_model_links(*redis_, name, model_names));
+
+  std::unique_lock<std::mutex> l(notification_mutex);
+  bool result = notification_recv.wait_for(
+      l, std::chrono::milliseconds(1000),
+      [&num_sadd_recv]() { return num_sadd_recv == 2; });
   ASSERT_TRUE(result);
 }
 
