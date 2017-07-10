@@ -12,5 +12,6 @@ setup(
     keywords=['clipper', 'prediction', 'model', 'management'],
     install_requires=[
         'requests', 'pyparsing', 'appdirs', 'pprint', 'subprocess32',
-        'sklearn', 'numpy', 'scipy', 'fabric', 'pyyaml'
+        'sklearn', 'numpy', 'scipy', 'fabric', 'pyyaml', 'abc', 'docker',
+        'kubernetes'
     ])

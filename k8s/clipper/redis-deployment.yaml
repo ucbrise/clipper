@@ -1,0 +1,25 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    ai.clipper.container.label: ""
+    ai.clipper.name: redis
+  name: redis
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        ai.clipper.container.label: ""
+        ai.clipper.name: redis
+    spec:
+      containers:
+      - args:
+        - redis-server
+        - --port
+        - "6379"
+        image: redis:alpine
+        name: redis
+        ports:
+        - containerPort: 6379
+      restartPolicy: Always

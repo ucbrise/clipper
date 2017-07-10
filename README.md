@@ -23,6 +23,29 @@ Clipper is a prediction serving system that sits between user-facing application
 
 * Clipper **improves prediction accuracy** by introducing state-of-the-art bandit and ensemble methods to intelligently select and combine predictions and achieve real-time personalization across machine learning frameworks.  *Clipper makes users happy.*
 
+## Kubernetes quickstart
+
+Dependencies:
+
+ * [Docker](https://www.docker.com/)
+ * [Minikube](https://github.com/kubernetes/minikube/releases)
+
+```bash
+# (Optional) create clipper virtualenv
+pyenv virtualenv 2.7.11 clipper
+pyenv local clipper
+
+# install clipper_admin (editable)
+pip install -e .
+
+# start minikube
+minikube start --insecure-registry localhost:5000
+
+# start docker and configure to use minikube registry
+systemctl start docker
+eval $(minikube docker-env)
+```
+
 
 ## Quickstart
 
