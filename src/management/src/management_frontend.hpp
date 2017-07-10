@@ -244,21 +244,10 @@ class RequestHandler {
         [this](std::shared_ptr<HttpServer::Response> response,
                std::shared_ptr<HttpServer::Request> request) {
           try {
-            rapidjson::Document d;
-            parse_json(request->content.string(), d);
-            std::string model_name = get_string(d, "model_name");
-            std::string new_model_version = get_string(d, "model_version");
-
-            check_updated_model_consistent_with_app_links(model_name,
-                                                          new_model_version);
-            bool success = set_model_version(model_name, new_model_version);
-            if (success) {
-              respond_http("SUCCESS", "200 OK", response);
-            } else {
-              std::string err_msg = "ERROR: Version " + new_model_version +
-                                    " does not exist for model " + model_name;
-              respond_http(err_msg, "400 Bad Request", response);
-            }
+            clipper::log_info(LOGGING_TAG_MANAGEMENT_FRONTEND,
+                              "Set model version POST request");
+            std::string result = set_model_version(request->content.string());
+            respond_http(result, "200 OK", response);
           } catch (const json_parse_error& e) {
             std::string err_msg =
                 json_error_msg(e.what(), SET_VERSION_JSON_SCHEMA);
@@ -667,9 +656,8 @@ class RequestHandler {
 
     if (clipper::redis::add_model(redis_connection_, model_id, input_type,
                                   labels, container_name, model_data_path)) {
-      if (set_model_version(model_id.get_name(), model_id.get_id())) {
-        return "Success!";
-      }
+      attempt_model_version_update(model_id.get_name(), model_id.get_id());
+      return "Success!";
     }
     std::stringstream ss;
     ss << "Error adding model " << model_id.get_name() << ":"
@@ -1054,8 +1042,35 @@ class RequestHandler {
     return app_metadata["default_output"];
   }
 
-  bool set_model_version(const string& model_name,
-                         const string& new_model_version) {
+  /**
+   * Creates an endpoint that listens for requests to update
+   * a specified model to a specified version.
+   *
+   * JSON format:
+   * {
+   *  "model_name" := string,
+   *  "model_version" := string,
+   * }
+   */
+  std::string set_model_version(const std::string& json) {
+    rapidjson::Document d;
+    parse_json(json, d);
+    std::string model_name = get_string(d, "model_name");
+    std::string new_model_version = get_string(d, "model_version");
+
+    check_updated_model_consistent_with_app_links(model_name,
+                                                  new_model_version);
+    attempt_model_version_update(model_name, new_model_version);
+    return "Success!";
+  }
+
+  /**
+   * Attempts to update the version of model with name `model_name` to
+   * `new_model_version`. Validates inputs, throwing exceptions accordingly,
+   * and makes the database update.
+   */
+  void attempt_model_version_update(const string& model_name,
+                                    const string& new_model_version) {
     std::vector<std::string> versions =
         clipper::redis::get_model_versions(redis_connection_, model_name);
     bool version_exists = false;
@@ -1070,14 +1085,20 @@ class RequestHandler {
           redis_connection_, VersionedModelId(model_name, new_model_version));
       auto input_type = model_info["input_type"];
       check_updated_model_consistent_with_app_links(model_name, input_type);
-      return clipper::redis::set_current_model_version(
-          redis_connection_, model_name, new_model_version);
+      if (!clipper::redis::set_current_model_version(
+              redis_connection_, model_name, new_model_version)) {
+        std::stringstream ss;
+        ss << "ERROR: Version " << new_model_version
+           << " does not exist for model " << model_name;
+        throw std::invalid_argument(ss.str());
+      }
     } else {
-      clipper::log_error_formatted(
-          LOGGING_TAG_MANAGEMENT_FRONTEND,
-          "Cannot set non-existent version {} for model {}", new_model_version,
-          model_name);
-      return false;
+      std::stringstream ss;
+      ss << "Cannot set non-existent version " << new_model_version
+         << " for model " << model_name;
+      std::string err_msg = ss.str();
+      clipper::log_error(LOGGING_TAG_MANAGEMENT_FRONTEND, err_msg);
+      throw std::invalid_argument(err_msg);
     }
   }
 

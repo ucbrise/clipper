@@ -97,6 +97,21 @@ class ManagementFrontendTest : public ::testing::Test {
     add_string_array(d, "model_names", model_names);
   }
 
+  void set_set_model_version_request_doc(rapidjson::Document& d,
+                                         std::string& model_name,
+                                         std::string& new_model_version) {
+    d.SetObject();
+    add_string(d, "model_name", model_name);
+    add_string(d, "model_version", new_model_version);
+  }
+
+  std::string get_set_model_version_request_json(
+      std::string& model_name, std::string& new_model_version) {
+    rapidjson::Document d;
+    set_set_model_version_request_doc(d, model_name, new_model_version);
+    return to_json_string(d);
+  }
+
   std::string get_add_model_links_request_json(
       std::string& name, std::vector<std::string>& model_names) {
     rapidjson::Document d;
@@ -543,86 +558,67 @@ TEST_F(ManagementFrontendTest, TestAddModelMalformedJson) {
 }
 
 TEST_F(ManagementFrontendTest, TestSetModelVersionCorrect) {
-  std::string v1_json = R"(
-  {
-    "model_name": "m",
-    "model_version": "1",
-    "labels": ["ads", "images"],
-    "input_type": "ints",
-    "container_name": "clipper/test_container",
-    "model_data_path": "/tmp/models/m/1"
-  }
-  )";
+  std::string model_name = "m";
+  std::string model_version_1 = "1";
+  std::string model_version_2 = "2";
+  std::string model_version_4 = "4";
+  std::string input_type = "ints";
+  std::vector<std::string> labels = {"ads", "images"};
+  std::string container_name = "clipper/test_container";
+  std::string model_data_path = "/tmp/models/m/1";
+
+  std::string v1_json =
+      get_add_model_request_json(model_name, model_version_1, input_type,
+                                 labels, container_name, model_data_path);
+  std::string v2_json =
+      get_add_model_request_json(model_name, model_version_2, input_type,
+                                 labels, container_name, model_data_path);
+  std::string v4_json =
+      get_add_model_request_json(model_name, model_version_4, input_type,
+                                 labels, container_name, model_data_path);
   ASSERT_EQ(rh_.add_model(v1_json), "Success!");
-
-  std::string v2_json = R"(
-  {
-    "model_name": "m",
-    "model_version": "2",
-    "labels": ["ads", "images"],
-    "input_type": "ints",
-    "container_name": "clipper/test_container",
-    "model_data_path": "/tmp/models/m/2"
-  }
-  )";
   ASSERT_EQ(rh_.add_model(v2_json), "Success!");
-
-  std::string v4_json = R"(
-  {
-    "model_name": "m",
-    "model_version": "4",
-    "labels": ["ads", "images"],
-    "input_type": "ints",
-    "container_name": "clipper/test_container",
-    "model_data_path": "/tmp/models/m/4"
-  }
-  )";
   ASSERT_EQ(rh_.add_model(v4_json), "Success!");
-  ASSERT_EQ(*get_current_model_version(*redis_, "m"), "4");
-  ASSERT_TRUE(rh_.set_model_version("m", "2"));
-  ASSERT_EQ(*get_current_model_version(*redis_, "m"), "2");
+
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version_4);
+
+  std::string set_model_version_json =
+      get_set_model_version_request_json(model_name, model_version_2);
+  ASSERT_EQ(rh_.set_model_version(set_model_version_json), "Success!");
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version_2);
 }
 
 TEST_F(ManagementFrontendTest, TestSetModelInvalidVersion) {
-  std::string v1_json = R"(
-  {
-    "model_name": "m",
-    "model_version": "1",
-    "labels": ["ads", "images"],
-    "input_type": "ints",
-    "container_name": "clipper/test_container",
-    "model_data_path": "/tmp/models/m/1"
-  }
-  )";
+  std::string model_name = "m";
+  std::string model_version_1 = "1";
+  std::string model_version_2 = "2";
+  std::string model_version_4 = "4";
+  std::string input_type = "ints";
+  std::vector<std::string> labels = {"ads", "images"};
+  std::string container_name = "clipper/test_container";
+  std::string model_data_path = "/tmp/models/m/1";
+
+  std::string v1_json =
+      get_add_model_request_json(model_name, model_version_1, input_type,
+                                 labels, container_name, model_data_path);
+  std::string v2_json =
+      get_add_model_request_json(model_name, model_version_2, input_type,
+                                 labels, container_name, model_data_path);
+  std::string v4_json =
+      get_add_model_request_json(model_name, model_version_4, input_type,
+                                 labels, container_name, model_data_path);
   ASSERT_EQ(rh_.add_model(v1_json), "Success!");
-
-  std::string v2_json = R"(
-  {
-    "model_name": "m",
-    "model_version": "2",
-    "labels": ["ads", "images"],
-    "input_type": "ints",
-    "container_name": "clipper/test_container",
-    "model_data_path": "/tmp/models/m/2"
-  }
-  )";
   ASSERT_EQ(rh_.add_model(v2_json), "Success!");
-
-  std::string v4_json = R"(
-  {
-    "model_name": "m",
-    "model_version": "4",
-    "labels": ["ads", "images"],
-    "input_type": "ints",
-    "container_name": "clipper/test_container",
-    "model_data_path": "/tmp/models/m/4"
-  }
-  )";
   ASSERT_EQ(rh_.add_model(v4_json), "Success!");
 
-  ASSERT_EQ(*get_current_model_version(*redis_, "m"), "4");
-  ASSERT_FALSE(rh_.set_model_version("m", "11"));
-  ASSERT_EQ(*get_current_model_version(*redis_, "m"), "4");
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version_4);
+
+  std::string nonexistent_model_version = "11";
+  std::string set_model_version_json =
+      get_set_model_version_request_json(model_name, nonexistent_model_version);
+  ASSERT_THROW(rh_.set_model_version(set_model_version_json),
+               std::invalid_argument);
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version_4);
 }
 
 TEST_F(ManagementFrontendTest, TestAddModelLinkCorrect) {
@@ -746,7 +742,9 @@ TEST_F(ManagementFrontendTest,
       get_add_model_links_request_json(app_name, model_names);
   ASSERT_EQ(rh_.add_model_links(add_links_json), "Success!");
 
-  ASSERT_THROW(rh_.set_model_version(model_name, incompatible_model_version),
+  std::string set_model_version_json = get_set_model_version_request_json(
+      model_name, incompatible_model_version);
+  ASSERT_THROW(rh_.set_model_version(set_model_version_json),
                std::invalid_argument);
 }
 
