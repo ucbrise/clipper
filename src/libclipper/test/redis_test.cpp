@@ -591,7 +591,7 @@ TEST_F(RedisTest, SubscriptionDetectModelLinksAdd) {
   int latency_slo_micros = 10000;
   ASSERT_TRUE(add_application(*redis_, name, input_type, policy, default_output,
                               latency_slo_micros));
-  log_info(LOGGING_TAG_REDIS_TEST, "Registered app");
+
   // Register the models to link
   std::vector<std::string> labels{"ads", "images", "experimental", "other",
                                   "labels"};
@@ -606,39 +606,29 @@ TEST_F(RedisTest, SubscriptionDetectModelLinksAdd) {
                         model_path));
   ASSERT_TRUE(add_model(*redis_, model_2_id, input_type, labels, container_name,
                         model_path));
-  log_info(LOGGING_TAG_REDIS_TEST, "Registered models");
+
   std::condition_variable_any notification_recv;
   std::mutex notification_mutex;
-  std::atomic<bool> recv{false};
+  std::atomic<int> num_sadd_recv{0};
   subscribe_to_model_link_changes(
-      *subscriber_, [&notification_recv, &notification_mutex, &recv, name](
-                        const std::string& key, const std::string& event_type) {
-        log_info(LOGGING_TAG_REDIS_TEST, "Detected model link change");
+      *subscriber_,
+      [&notification_recv, &notification_mutex, &num_sadd_recv, name](
+          const std::string& key, const std::string& event_type) {
         ASSERT_EQ(event_type, "sadd");
         std::unique_lock<std::mutex> l(notification_mutex);
-        log_info(LOGGING_TAG_REDIS_TEST, "Got mutex in subscription closure.");
-        recv = true;
-        log_info(LOGGING_TAG_REDIS_TEST, "Set recv = true.");
+        num_sadd_recv += 1;
         ASSERT_EQ(key, name);
-        log_info(LOGGING_TAG_REDIS_TEST, "Asserted key = name");
         notification_recv.notify_all();
-        log_info(LOGGING_TAG_REDIS_TEST, "Notified cv waiters.");
       });
   // give Redis some time to register the subscription
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
-  log_info(LOGGING_TAG_REDIS_TEST, "Finished sleeping");
   std::vector<std::string> model_names = {model_name_1, model_name_2};
   ASSERT_TRUE(add_model_links(*redis_, name, model_names));
-  log_info(LOGGING_TAG_REDIS_TEST, "Added model links.");
 
   std::unique_lock<std::mutex> l(notification_mutex);
-  log_info(LOGGING_TAG_REDIS_TEST, "Got mutex outside subscription closure.");
-  bool result =
-      notification_recv.wait_for(l, std::chrono::milliseconds(1000), [&recv]() {
-        log_info(LOGGING_TAG_REDIS_TEST, "Inside wait_for callback");
-        return recv == true;
-      });
-  log_info(LOGGING_TAG_REDIS_TEST, "Finished generating `result`: ", result);
+  bool result = notification_recv.wait_for(
+      l, std::chrono::milliseconds(1000),
+      [&num_sadd_recv]() { return num_sadd_recv == 2; });
   ASSERT_TRUE(result);
 }
 
