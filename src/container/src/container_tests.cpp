@@ -2,9 +2,13 @@
 
 #include <gtest/gtest.h>
 
+#include <clipper/datatypes.hpp>
 #include <container/container_parsing.hpp>
 #include <container/container_rpc.hpp>
+<<<<<<< fe5ba92482c3b48f13993d05b4e634b00cb04b2a
 #include <container/datatypes.hpp>
+=======
+>>>>>>> Format code
 
 using namespace clipper::container;
 
@@ -163,7 +167,7 @@ TEST(ContainerTests, DoubleVectorParserCreatesInputsFromRawContentCorrectly) {
   std::vector<std::vector<double>> input_vecs = create_primitive_parser_vecs<double>();
 
   std::vector<std::shared_ptr<Input>> inputs;
-  for(auto const& vec : input_vecs) {
+  for (auto const& vec : input_vecs) {
     inputs.push_back(std::make_shared<DoubleVector>(vec));
   clipper::rpc::PredictionRequest prediction_request(
       inputs, clipper::InputType::Doubles);
