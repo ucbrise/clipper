@@ -1,3 +1,5 @@
+#include <cxxopts.hpp>
+
 #include <rapidjson/rapidjson.h>
 
 #include <clipper/datatypes.hpp>
@@ -65,7 +67,18 @@ class RPCTestModel : public Model<clipper::DoubleVector> {
   }
 };
 
-int main() {
+int main(int argc, char* argv[]) {
+  cxxopts::Options options("Cpp RPC Test",
+                           "RPC layer testing for cpp model containers");
+  // clang-format off
+  options.add_options()
+      ("t,test_length", "length of the test in seconds",
+       cxxopts::value<long>()->default_value("10"));
+  // clang-format on
+  options.parse(argc, argv);
+
+  long test_length = options["test_length"].as<long>();
+
   RPC container_rpc;
   RPCTestModel test_model(container_rpc);
   std::string model_name = "cpp_test";
@@ -78,7 +91,7 @@ int main() {
   container_rpc.start(test_model, model_name, model_version, parser, clipper_ip,
                       clipper_port);
 
-  std::this_thread::sleep_for(std::chrono::seconds(40));
+  std::this_thread::sleep_for(std::chrono::seconds(test_length));
 
   container_rpc.stop();
 }

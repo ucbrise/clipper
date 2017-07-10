@@ -95,6 +95,7 @@ class RPC {
       serve_model(model, model_name, model_version, input_parser,
                   clipper_address);
     });
+    serving_thread_.detach();
   };
 
   void stop();

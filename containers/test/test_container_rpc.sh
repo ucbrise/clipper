@@ -66,7 +66,8 @@ cd $DIR/../../
 # Start cpp rpc test container
 cd container
 make container_rpc_test
-./container_rpc_test &
+container_uptime_seconds=180
+./container_rpc_test $container_uptime_seconds &
 
 sleep 10s
 
