@@ -1,227 +1,263 @@
-#include <time.h>
+#include <fstream>
 #include <functional>
 #include <iostream>
-#include <memory>
-#include <string>
-#include <utility>
+#include <random>
 #include <vector>
 
 #include <boost/thread.hpp>
 #include <cxxopts.hpp>
 
-#include <rapidjson/document.h>
 #include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/future.hpp>
 #include <clipper/json_util.hpp>
 #include <clipper/logging.hpp>
 #include <clipper/query_processor.hpp>
-#include <fstream>
+
+#include "bench_utils.hpp"
+
+const std::string CIFAR_DATA_PATH = "cifar_data_path";
+const std::string NUM_THREADS = "num_threads";
+const std::string NUM_BATCHES = "num_batches";
+const std::string REQUEST_BATCH_SIZE = "request_batch_size";
+const std::string REQUEST_BATCH_DELAY_MICROS = "request_batch_delay_micros";
+const std::string LATENCY_OBJECTIVE = "latency_objective";
+const std::string REPORT_DELAY_SECONDS = "report_delay_seconds";
+const std::string BENCHMARK_REPORT_PATH = "benchmark_report_path";
+const std::string POISSON_DELAY = "poisson_delay";
+const std::string MODEL_NAME = "model_name";
+const std::string MODEL_VERSION = "model_version";
+const std::string PREVENT_CACHE_HITS = "prevent_cache_hits";
+
+const int FLUSH_AT_END_INDICATOR = -1;
+
+const std::string DEFAULT_OUTPUT = "-1";
+const std::string TEST_APPLICATION_LABEL = "cifar_bench";
+const int UID = 0;
+
+std::atomic<bool> all_requests_sent(false);
 
 using namespace clipper;
+using namespace bench_utils;
 
-const std::string SKLEARN_MODEL_NAME = "bench_sklearn_cifar";
-const std::string CONFIG_KEY_PATH = "path";
-const std::string CONFIG_KEY_NUM_THREADS = "num_threads";
-const std::string CONFIG_KEY_NUM_BATCHES = "num_batches";
-const std::string CONFIG_KEY_BATCH_SIZE = "batch_size";
-const std::string CONFIG_KEY_BATCH_DELAY = "batch_delay";
-
-constexpr double SKLEARN_PLANE_LABEL = 1;
-constexpr double SKLEARN_BIRD_LABEL = 0;
-
-const std::string TEST_APPLICATION_LABEL = "test";
-
-std::unordered_map<int, std::vector<std::vector<double>>> load_cifar(
-    std::unordered_map<std::string, std::string> &config) {
-  std::ifstream cifar_file(config.find(CONFIG_KEY_PATH)->second,
-                           std::ios::binary);
-  std::istreambuf_iterator<char> cifar_data(cifar_file);
-  std::unordered_map<int, std::vector<std::vector<double>>> vecs_map;
-  for (int i = 0; i < 10000; i++) {
-    int label = static_cast<int>(*cifar_data);
-    cifar_data++;
-    std::vector<uint8_t> cifar_byte_vec;
-    cifar_byte_vec.reserve(3072);
-    std::copy_n(cifar_data, 3072, std::back_inserter(cifar_byte_vec));
-    cifar_data++;
-    std::vector<double> cifar_double_vec(cifar_byte_vec.begin(),
-                                         cifar_byte_vec.end());
-
-    std::unordered_map<int, std::vector<std::vector<double>>>::iterator
-        label_vecs = vecs_map.find(label);
-    if (label_vecs != vecs_map.end()) {
-      label_vecs->second.push_back(cifar_double_vec);
-    } else {
-      std::vector<std::vector<double>> new_label_vecs;
-      new_label_vecs.push_back(cifar_double_vec);
-      vecs_map.emplace(label, new_label_vecs);
-    }
-  }
-  return vecs_map;
+std::string get_window_str(int window_lower, int window_upper) {
+  std::stringstream ss;
+  ss << std::to_string(window_lower) << "s - " << std::to_string(window_upper)
+     << "s";
+  return ss.str();
 }
 
-void send_predictions(
-    std::unordered_map<std::string, std::string> &config, QueryProcessor &qp,
-    std::unordered_map<int, std::vector<std::vector<double>>> &cifar_data,
-    std::shared_ptr<metrics::RatioCounter> accuracy_ratio) {
-  std::vector<std::vector<double>> planes_vecs = cifar_data.find(0)->second;
-  std::vector<std::vector<double>> birds_vecs = cifar_data.find(2)->second;
+void send_predictions(std::unordered_map<std::string, std::string> &config,
+                      QueryProcessor &qp, std::vector<std::vector<double>> data,
+                      BenchMetrics &bench_metrics, int thread_id) {
+  int num_batches = get_int(NUM_BATCHES, config);
+  int request_batch_size = get_int(REQUEST_BATCH_SIZE, config);
+  long batch_delay_micros = get_long(REQUEST_BATCH_DELAY_MICROS, config);
+  int latency_objective = get_int(LATENCY_OBJECTIVE, config);
+  std::string model_name = get_str(MODEL_NAME, config);
+  std::string model_version = get_str(MODEL_VERSION, config);
+  bool draw_from_poisson = get_bool(POISSON_DELAY, config);
+  bool prevent_cache_hits = get_bool(PREVENT_CACHE_HITS, config);
 
-  int num_batches = std::stoi(config.find(CONFIG_KEY_NUM_BATCHES)->second);
-  int batch_size = std::stoi(config.find(CONFIG_KEY_BATCH_SIZE)->second);
-  long batch_delay_millis =
-      static_cast<long>(std::stoi(config.find(CONFIG_KEY_BATCH_DELAY)->second));
+  int num_datapoints = static_cast<int>(data.size());
+  std::vector<double> query_vec;
+  std::default_random_engine generator;
+  std::poisson_distribution<int> distribution(batch_delay_micros);
+  long delay_micros;
+  int query_num;
+
   for (int j = 0; j < num_batches; j++) {
-    std::vector<boost::future<Response>> futures;
-    std::vector<int> binary_labels;
-    for (int i = 0; i < batch_size; i++) {
-      int index = std::rand() % 2;
-      std::vector<double> query_vec;
-      if (index == 0) {
-        // Send a plane
-        size_t plane_index = std::rand() % planes_vecs.size();
-        query_vec = planes_vecs[plane_index];
-        binary_labels.emplace_back(SKLEARN_PLANE_LABEL);
-      } else {
-        // Send a bird
-        size_t bird_index = std::rand() % birds_vecs.size();
-        query_vec = birds_vecs[bird_index];
-        binary_labels.emplace_back(SKLEARN_BIRD_LABEL);
+    for (int i = 0; i < request_batch_size; i++) {
+      query_num = j * request_batch_size + i;
+      query_vec = data[query_num % num_datapoints];
+
+      if (prevent_cache_hits) {
+        // Modify it to be epoch and thread-specific
+        query_vec[0] = query_num / num_datapoints;
+        query_vec[1] = thread_id;
       }
 
-      std::shared_ptr<Input> cifar_input =
-          std::make_shared<DoubleVector>(query_vec);
-      boost::future<Response> future =
-          qp.predict({TEST_APPLICATION_LABEL,
-                      0,
-                      cifar_input,
-                      100000,
-                      clipper::DefaultOutputSelectionPolicy::get_name(),
-                      {VersionedModelId(SKLEARN_MODEL_NAME, "1")}});
-      futures.push_back(std::move(future));
+      std::shared_ptr<Input> input = std::make_shared<DoubleVector>(query_vec);
+      Query q = {TEST_APPLICATION_LABEL,
+                 UID,
+                 input,
+                 latency_objective,
+                 clipper::DefaultOutputSelectionPolicy::get_name(),
+                 {VersionedModelId(model_name, model_version)}};
+
+      boost::future<Response> prediction = qp.predict(q);
+      bench_metrics.request_throughput_->mark(1);
+
+      prediction.then([bench_metrics](boost::future<Response> f) {
+        Response r = f.get();
+
+        // Update metrics
+        if (r.output_is_default_) {
+          bench_metrics.default_pred_ratio_->increment(1, 1);
+        } else {
+          bench_metrics.default_pred_ratio_->increment(0, 1);
+        }
+        bench_metrics.latency_->insert(r.duration_micros_);
+        bench_metrics.num_predictions_->increment(1);
+        bench_metrics.throughput_->mark(1);
+      });
     }
 
-    std::shared_ptr<std::atomic_int> completed =
-        std::make_shared<std::atomic_int>(0);
-    std::pair<boost::future<void>, std::vector<boost::future<Response>>>
-        results = future::when_all(std::move(futures), completed);
-    results.first.get();
-    for (int i = 0; i < static_cast<int>(results.second.size()); i++) {
-      boost::future<Response> &future = results.second[i];
-      double label = static_cast<double>(binary_labels[i]);
-      double pred = std::stod(future.get().output_.y_hat_);
-      if (pred == label) {
-        accuracy_ratio->increment(1, 1);
-      } else {
-        accuracy_ratio->increment(0, 1);
-      }
+    delay_micros =
+        draw_from_poisson ? distribution(generator) : batch_delay_micros;
+    if (delay_micros > 0) {
+      std::this_thread::sleep_for(std::chrono::microseconds(delay_micros));
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(batch_delay_millis));
   }
 }
 
-std::unordered_map<std::string, std::string> create_config(
-    std::string path, std::string num_threads, std::string num_batches,
-    std::string batch_size, std::string batch_delay) {
-  std::unordered_map<std::string, std::string> config;
-  config.emplace(CONFIG_KEY_PATH, path);
-  config.emplace(CONFIG_KEY_NUM_THREADS, num_threads);
-  config.emplace(CONFIG_KEY_NUM_BATCHES, num_batches);
-  config.emplace(CONFIG_KEY_BATCH_SIZE, batch_size);
-  config.emplace(CONFIG_KEY_BATCH_DELAY, batch_delay);
-  return config;
-};
+void document_benchmark_details(
+    std::unordered_map<std::string, std::string> &config,
+    std::ofstream &report_file) {
+  std::stringstream ss;
+  ss << "---Configuration---" << std::endl;
+  for (auto it : config) ss << it.first << ": " << it.second << std::endl;
+  ss << "-------------------" << std::endl;
+  std::string configuration_details = ss.str();
+  report_file << configuration_details;
+  log_info("CONFIG", configuration_details);
+}
 
-std::unordered_map<std::string, std::string> get_config_from_prompt() {
-  std::string path;
-  std::string num_threads;
-  std::string num_batches;
-  std::string batch_size;
-  std::string batch_delay;
+void report_window_details(std::ofstream &report_file, std::string window) {
+  auto metrics = metrics::MetricsRegistry::get_metrics().report_metrics(true);
+  report_file << window << ": " << metrics;
+  report_file.flush();
 
-  std::cout << "Before proceeding, run bench/setup_bench.sh from clipper's "
-               "root directory."
-            << std::endl;
-  std::cout << "Enter a path to the CIFAR10 binary data set: ";
-  std::cin >> path;
-  std::cout << "Enter the number of threads of execution: ";
-  std::cin >> num_threads;
-  std::cout
-      << "Enter the number of request batches to be sent by each thread: ";
-  std::cin >> num_batches;
-  std::cout << "Enter the number of requests per batch: ";
-  std::cin >> batch_size;
-  std::cout << "Enter the delay between batches, in milliseconds: ";
-  std::cin >> batch_delay;
+  log_info("WINDOW", window);
+  log_info("METRICS", metrics);
+}
 
-  return create_config(path, num_threads, num_batches, batch_size, batch_delay);
-};
+void repeatedly_report_and_clear_metrics(
+    std::unordered_map<std::string, std::string> &config) {
+  int report_delay_seconds = get_int(REPORT_DELAY_SECONDS, config);
+  std::string latency_obj_string = get_str(LATENCY_OBJECTIVE, config);
+  std::string batch_delay_string = get_str(REQUEST_BATCH_DELAY_MICROS, config);
+  std::string report_path = get_str(BENCHMARK_REPORT_PATH, config);
 
-std::unordered_map<std::string, std::string> get_config_from_json(
-    std::string json_path) {
-  std::ifstream json_file(json_path);
-  std::stringstream buffer;
-  buffer << json_file.rdbuf();
-  std::string json_text = buffer.str();
-  rapidjson::Document d;
-  json::parse_json(json_text, d);
-  std::string cifar_path = json::get_string(d, "cifar_data_path");
-  std::string num_threads = json::get_string(d, "num_threads");
-  std::string num_batches = json::get_string(d, "num_batches");
-  std::string batch_size = json::get_string(d, "batch_size");
-  std::string batch_delay = json::get_string(d, "batch_delay_millis");
-  return create_config(cifar_path, num_threads, num_batches, batch_size,
-                       batch_delay);
-};
+  // Write out run details
+  std::ofstream report_file(report_path);
+  document_benchmark_details(config, report_file);
 
-int main(int argc, char *argv[]) {
-  cxxopts::Options options("performance_bench",
-                           "Clipper performance benchmarking");
-  // clang-format off
-  options.add_options()
-      ("f,filename", "Config file name", cxxopts::value<std::string>());
-  // clang-format on
-  options.parse(argc, argv);
-  bool json_specified = (options.count("filename") > 0);
-  std::unordered_map<std::string, std::string> test_config;
+  std::string window, metrics;
+  int window_num = 1;
+  int window_lower, window_upper;
 
-  if (json_specified) {
-    std::string json_path = options["filename"].as<std::string>();
-    test_config = get_config_from_json(json_path);
-  } else {
-    test_config = get_config_from_prompt();
+  while (!all_requests_sent) {
+    // Wait for metrics
+    std::this_thread::sleep_for(std::chrono::seconds(report_delay_seconds));
+
+    window_lower = report_delay_seconds * (window_num - 1);
+    window_upper = report_delay_seconds * window_num;
+    window = get_window_str(window_lower, window_upper);
+    report_window_details(report_file, window);
+
+    window_num += 1;
   }
+}
+
+void write_full_report(std::unordered_map<std::string, std::string> &config,
+                       double start_time_seconds) {
+  std::string report_path = get_str(BENCHMARK_REPORT_PATH, config);
+
+  double end_time_seconds =
+      std::chrono::duration_cast<std::chrono::seconds>(
+          std::chrono::system_clock::now().time_since_epoch())
+          .count();
+  int window_len_seconds = (int)(end_time_seconds - start_time_seconds);
+
+  std::string window = get_window_str(0, window_len_seconds);
+
+  // Write out run details
+  std::ofstream report_file(report_path);
+  document_benchmark_details(config, report_file);
+  report_window_details(report_file, window);
+}
+
+void run_benchmark(std::unordered_map<std::string, std::string> &config) {
   get_config().ready();
   QueryProcessor qp;
   std::this_thread::sleep_for(std::chrono::seconds(3));
 
   clipper::DefaultOutputSelectionPolicy p;
-  clipper::Output parsed_default_output("0", {});
+  clipper::Output parsed_default_output(DEFAULT_OUTPUT, {});
   auto init_state = p.init_state(parsed_default_output);
   clipper::StateKey state_key{TEST_APPLICATION_LABEL, clipper::DEFAULT_USER_ID,
                               0};
   qp.get_state_table()->put(state_key, p.serialize(init_state));
-  std::shared_ptr<metrics::RatioCounter> accuracy_ratio =
-      metrics::MetricsRegistry::get_metrics().create_ratio_counter("accuracy");
-  std::unordered_map<int, std::vector<std::vector<double>>> cifar_data =
-      load_cifar(test_config);
 
-  // Seed the random number generator that will be used to randomly select
-  // query input vectors from the CIFAR dataset
-  std::srand(time(NULL));
-  int num_threads = std::stoi(test_config.find(CONFIG_KEY_NUM_THREADS)->second);
+  // We only need the datapoints – not their labels.
+  std::string cifar_data_path = get_str(CIFAR_DATA_PATH, config);
+  auto cifar_data = load_cifar(cifar_data_path);
+  std::vector<std::vector<double>> datapoints =
+      concatenate_cifar_datapoints(cifar_data);
+  int num_threads = get_int(NUM_THREADS, config);
+
+  BenchMetrics bench_metrics(TEST_APPLICATION_LABEL);
   std::vector<std::thread> threads;
-  for (int i = 0; i < num_threads; i++) {
+
+  double start_time_seconds =
+      std::chrono::duration_cast<std::chrono::seconds>(
+          std::chrono::system_clock::now().time_since_epoch())
+          .count();
+
+  for (int j = 0; j < num_threads; j++) {
+    std::vector<std::vector<double>> thread_datapoints(datapoints);
     std::thread thread([&]() {
-      send_predictions(test_config, qp, cifar_data, accuracy_ratio);
+      send_predictions(config, qp, thread_datapoints, bench_metrics, j);
     });
     threads.push_back(std::move(thread));
   }
+
+  int report_delay_seconds = get_int(REPORT_DELAY_SECONDS, config);
+  bool flush_at_end = report_delay_seconds == FLUSH_AT_END_INDICATOR;
+
+  std::thread metrics_thread;
+
+  if (!flush_at_end) {
+    metrics_thread =
+        std::thread([&]() { repeatedly_report_and_clear_metrics(config); });
+  }
+
   for (auto &thread : threads) {
     thread.join();
   }
-  std::string metrics =
-      metrics::MetricsRegistry::get_metrics().report_metrics();
-  log_info("BENCH", metrics);
+  all_requests_sent = true;
+
+  if (flush_at_end) {
+    write_full_report(config, start_time_seconds);
+  } else {
+    metrics_thread.join();
+  }
+
+  log_info("BENCH", "Terminating benchmarking script");
+}
+
+int main(int argc, char *argv[]) {
+  cxxopts::Options options("generic_bench",
+                           "Clipper generic performance benchmarking");
+  // clang-format off
+  options.add_options()
+          ("f,filename", "Config file name", cxxopts::value<std::string>());
+  // clang-format on
+  options.parse(argc, argv);
+  bool json_specified = (options.count("filename") > 0);
+
+  std::vector<std::string> desired_vars = {
+      CIFAR_DATA_PATH,    NUM_BATCHES,          REQUEST_BATCH_DELAY_MICROS,
+      LATENCY_OBJECTIVE,  REPORT_DELAY_SECONDS, BENCHMARK_REPORT_PATH,
+      POISSON_DELAY,      MODEL_NAME,           MODEL_VERSION,
+      REQUEST_BATCH_SIZE, NUM_THREADS,          PREVENT_CACHE_HITS};
+  if (!json_specified) {
+    throw std::invalid_argument("No configuration file provided");
+  } else {
+    std::string json_path = options["filename"].as<std::string>();
+    std::unordered_map<std::string, std::string> config =
+        get_config_from_json(json_path, desired_vars);
+    run_benchmark(config);
+  }
 }

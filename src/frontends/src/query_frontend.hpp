@@ -99,7 +99,9 @@ class AppMetrics {
                 .create_ratio_counter("app:" + app_name +
                                       ":default_prediction_ratio")) {}
   ~AppMetrics() = default;
+
   AppMetrics(const AppMetrics&) = default;
+
   AppMetrics& operator=(const AppMetrics&) = default;
 
   AppMetrics(AppMetrics&&) = default;

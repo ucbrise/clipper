@@ -16,8 +16,7 @@ add_library(clipper
     src/redis.cpp
     src/logging.cpp
     src/json_util.cpp
-    src/exceptions.cpp
-    )
+    src/exceptions.cpp)
 
 
 # Define headers for this library. PUBLIC headers are used for
