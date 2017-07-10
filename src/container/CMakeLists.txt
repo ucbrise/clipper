@@ -25,4 +25,4 @@ add_dependencies(unittests container_tests)
 add_executable(container_rpc_test EXCLUDE_FROM_ALL
         src/container_rpc_test.cpp)
 
-target_link_libraries(container_rpc_test clipper zmqcpp container_lib)
+target_link_libraries(container_rpc_test clipper zmqcpp container_lib cxxopts)
