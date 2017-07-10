@@ -690,9 +690,7 @@ class Clipper:
                               local_modules_list_fname):
         """
         Supplies modules in `func_modules` not already accounted for by Anaconda or pip to container.
-        Copies those modules to a location specified by `serialization_dir` and `local_modules_folder_name`
-        Enumerates the local modules copied in a file whose location is specified by `serialization_dir` and
-        `local_module_deps_fname`.
+        Copies those modules to {`serialization_dir`}/{`local_module_deps_fname`}.
 
         Parameters
         ----------
@@ -711,7 +709,7 @@ class Clipper:
         """
         ignore_list = self._get_already_exported_modules(
             serialization_dir, conda_deps_fname, pip_deps_fname)
-        local_module_names = []
+        paths_to_copy = set()
 
         mda = ModuleDependencyAnalyzer()
         for module_name in ignore_list:
@@ -719,33 +717,55 @@ class Clipper:
         for module in func_modules:
             module_name = module.__name__
             if module_name not in ignore_list and 'clipper_admin' not in module_name:
-                local_module_names.append(module_name)
                 mda.add(module_name)
+
+                if '.' in module_name:
+                    module_name_split = module_name.split()
+                    try:
+                        file_location = module.__file__
+                        package_nested_layer = len(module_name.split('.')) - 1
+                        folder_indices = [
+                            i for i, x in enumerate(file_location) if x == "/"
+                        ]
+                        cutoff_index = folder_indices[-package_nested_layer]
+                        package_path = file_location[:cutoff_index]
+                        paths_to_copy.add(package_path)
+                    except:
+                        print(
+                            "Could not identify the location of the root package {package} for module {module}. Will not supply it to the container.".
+                            format(
+                                package=module_name_split[0],
+                                module=module_name))
             else:
                 mda.ignore(module_name)
         module_paths = mda.get_and_clear_paths()
+
+        def path_already_captured(path):
+            for existing_path in paths_to_copy:
+                if path.startswith(existing_path):
+                    return True
+            return False
+
+        for module_path in module_paths:
+            if not path_already_captured(module_path):
+                paths_to_copy.add(module_path)
 
         modules_dir = os.path.join(serialization_dir,
                                    local_modules_folder_name)
         if not os.path.exists(modules_dir):
             os.mkdir(modules_dir)
-        for path in module_paths:
+        for path in paths_to_copy:
             module_fname = os.path.basename(path)
             dst = os.path.join(modules_dir, module_fname)
             try:
                 if os.path.isfile(path):
                     shutil.copyfile(path, dst)
                 elif os.path.isdir(path):
-                    shutil.copytree(dst, dst)
+                    shutil.copytree(path, dst)
             except:
                 print(
                     "Encountered an error copying {path}. Will not supply it to container.".
                     format(path=path))
-
-        module_list_path = os.path.join(serialization_dir,
-                                        local_modules_list_fname)
-        with open(module_list_path, "wb") as module_list_file:
-            pickle.dump(local_module_names, module_list_file)
 
     def deploy_pyspark_model(self,
                              name,
