@@ -77,6 +77,8 @@ int main() {
 
   container_rpc.start(test_model, model_name, model_version, parser, clipper_ip,
                       clipper_port);
-  while (true)
-    ;
+
+  std::this_thread::sleep_for(std::chrono::seconds(40));
+
+  container_rpc.stop();
 }

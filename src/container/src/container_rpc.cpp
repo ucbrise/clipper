@@ -9,6 +9,9 @@ namespace clipper {
 
 namespace container {
 
+std::stringstream PerformanceTimer::log_;
+Clock::time_point PerformanceTimer::last_log_ = Clock::time_point(std::chrono::milliseconds(0));
+
 RPC::RPC()
     : active_(false),
       event_log_mutex_(std::make_shared<std::mutex>()),

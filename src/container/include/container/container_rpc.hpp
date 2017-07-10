@@ -4,6 +4,7 @@
 #include <mutex>
 #include <sstream>
 #include <thread>
+#include <chrono>
 
 #include <boost/circular_buffer.hpp>
 #include <zmq.hpp>
@@ -33,6 +34,31 @@ class Model {
   virtual std::vector<std::string> predict(
       const std::vector<std::shared_ptr<I>> inputs) const = 0;
   virtual InputType get_input_type() const = 0;
+};
+
+// This is not thread safe
+class PerformanceTimer {
+ public:
+  static void start_timing() {
+    log_.str("");
+    last_log_ = Clock::now();
+
+  }
+
+  static void log_elapsed(const std::string tag) {
+    Clock::time_point curr_time = Clock::now();
+    long log_diff_micros = std::chrono::duration_cast<std::chrono::microseconds>(curr_time - last_log_).count();
+    log_ << tag << ": " << std::to_string(log_diff_micros) << " us" << ", ";
+    last_log_ = curr_time;
+  }
+
+  static std::string get_log() {
+    return log_.str();
+  }
+
+ private:
+  static std::stringstream log_;
+  static Clock::time_point last_log_;
 };
 
 class RPC {
@@ -142,6 +168,8 @@ class RPC {
         connected = true;
         last_activity_time = Clock::now();
 
+        PerformanceTimer::start_timing();
+
         zmq::message_t msg_delimiter;
         zmq::message_t msg_msg_type_bytes;
 
@@ -248,8 +276,12 @@ class RPC {
     // Receive input content
     socket.recv(input_data_buffer.data(), input_content_size_bytes, 0);
 
+    PerformanceTimer::log_elapsed("Recv");
+
     std::vector<std::shared_ptr<I>> inputs =
         input_parser.get_inputs(input_header_buffer, input_content_size_bytes);
+
+    PerformanceTimer::log_elapsed("Parse");
 
     // Make predictions
     std::vector<std::string> outputs = model.predict(inputs);
@@ -308,6 +340,9 @@ class RPC {
     socket.send(msg_message_id, ZMQ_SNDMORE);
     socket.send(msg_prediction_response, 0);
     log_event(rpc::RPCEvent::SentContainerContent);
+
+    PerformanceTimer::log_elapsed("Handle");
+    log_info(LOGGING_TAG_CONTAINER, PerformanceTimer::get_log());
   }
 };
 
