@@ -160,16 +160,31 @@ class RequestHandler {
                                         "New application detected: {}", key);
             auto app_info =
                 clipper::redis::get_application_by_key(redis_connection_, key);
-            std::vector<std::string> candidate_model_names =
-                clipper::redis::str_to_model_names(
-                    app_info["candidate_model_names"]);
             InputType input_type =
                 clipper::parse_input_type(app_info["input_type"]);
             std::string policy = app_info["policy"];
             std::string default_output = app_info["default_output"];
             int latency_slo_micros = std::stoi(app_info["latency_slo_micros"]);
-            add_application(name, candidate_model_names, input_type, policy,
-                            default_output, latency_slo_micros);
+            add_application(name, input_type, policy, default_output,
+                            latency_slo_micros);
+          }
+        });
+
+    clipper::redis::subscribe_to_model_link_changes(
+        redis_subscriber_,
+        [this](const std::string& key, const std::string& event_type) {
+          std::string app_name = key;
+          clipper::log_info_formatted(
+              LOGGING_TAG_QUERY_FRONTEND,
+              "APP LINKS EVENT DETECTED. App name: {}, event_type: {}",
+              app_name, event_type);
+          if (event_type == "sadd") {
+            clipper::log_info_formatted(LOGGING_TAG_QUERY_FRONTEND,
+                                        "New model link detected for app: {}",
+                                        app_name);
+            auto linked_model_names =
+                clipper::redis::get_linked_models(redis_connection_, app_name);
+            set_linked_models_for_app(app_name, linked_model_names);
           }
         });
 
@@ -204,15 +219,17 @@ class RequestHandler {
       auto app_info =
           clipper::redis::get_application_by_key(redis_connection_, app_name);
 
-      std::vector<std::string> candidate_model_names =
-          clipper::redis::str_to_model_names(app_info["candidate_model_names"]);
+      auto linked_model_names =
+          clipper::redis::get_linked_models(redis_connection_, app_name);
+      set_linked_models_for_app(app_name, linked_model_names);
+
       InputType input_type = clipper::parse_input_type(app_info["input_type"]);
       std::string policy = app_info["policy"];
       std::string default_output = app_info["default_output"];
       int latency_slo_micros = std::stoi(app_info["latency_slo_micros"]);
 
-      add_application(app_name, candidate_model_names, input_type, policy,
-                      default_output, latency_slo_micros);
+      add_application(app_name, input_type, policy, default_output,
+                      latency_slo_micros);
     }
     if (app_names.size() > 0) {
       clipper::log_info_formatted(
@@ -252,9 +269,20 @@ class RequestHandler {
     redis_subscriber_.disconnect();
   }
 
-  void add_application(std::string name, std::vector<std::string> models,
-                       InputType input_type, std::string policy,
-                       std::string default_output, long latency_slo_micros) {
+  void set_linked_models_for_app(std::string name,
+                                 std::vector<std::string> models) {
+    std::unique_lock<std::mutex> l(linked_models_for_apps_mutex_);
+    linked_models_for_apps_[name] = models;
+  }
+
+  std::vector<std::string> get_linked_models_for_app(std::string name) {
+    std::unique_lock<std::mutex> l(linked_models_for_apps_mutex_);
+    return linked_models_for_apps_[name];
+  }
+
+  void add_application(std::string name, InputType input_type,
+                       std::string policy, std::string default_output,
+                       long latency_slo_micros) {
     // TODO: QueryProcessor should handle this. We need to decide how the
     // default output fits into the generic selection policy API. Do all
     // selection policies have a default output?
@@ -272,10 +300,11 @@ class RequestHandler {
     AppMetrics app_metrics(name);
 
     auto predict_fn = [this, name, input_type, policy, latency_slo_micros,
-                       models, app_metrics](
+                       app_metrics](
         std::shared_ptr<HttpServer::Response> response,
         std::shared_ptr<HttpServer::Request> request) {
       try {
+        std::vector<std::string> models = get_linked_models_for_app(name);
         std::vector<VersionedModelId> versioned_models;
         {
           std::unique_lock<std::mutex> l(current_model_versions_mutex_);
@@ -347,10 +376,11 @@ class RequestHandler {
     std::string predict_endpoint = "^/" + name + "/predict$";
     server_.add_endpoint(predict_endpoint, "POST", predict_fn);
 
-    auto update_fn = [this, name, input_type, policy, models](
+    auto update_fn = [this, name, input_type, policy](
         std::shared_ptr<HttpServer::Response> response,
         std::shared_ptr<HttpServer::Request> request) {
       try {
+        std::vector<std::string> models = get_linked_models_for_app(name);
         std::vector<VersionedModelId> versioned_models;
         {
           std::unique_lock<std::mutex> l(current_model_versions_mutex_);
@@ -522,6 +552,10 @@ class RequestHandler {
   redox::Subscriber redis_subscriber_;
   std::mutex current_model_versions_mutex_;
   std::unordered_map<std::string, std::string> current_model_versions_;
+
+  std::mutex linked_models_for_apps_mutex_;
+  std::unordered_map<std::string, std::vector<std::string>>
+      linked_models_for_apps_;
 };
 
 }  // namespace query_frontend

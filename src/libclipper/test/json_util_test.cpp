@@ -33,6 +33,25 @@ TEST(JsonUtilTests, TestCorrectJsonValues) {
   EXPECT_EQ(output_json, expected_json);
 }
 
+TEST(JsonUtilTests, TestSetStringArrayCorrect) {
+  const std::vector<std::string> str_array = {"a", "b"};
+  rapidjson::Document d;
+  set_string_array(d, str_array);
+  std::string expected_json = R"(["a","b"])";
+  EXPECT_EQ(to_json_string(d), expected_json);
+}
+
+TEST(JsonUtilTests, TestToStringArrayCorrect) {
+  rapidjson::Document d;
+  rapidjson::Document::AllocatorType& a = d.GetAllocator();
+  d.SetArray();
+  d.PushBack("a", a);
+  d.PushBack("b", a);
+  auto result = to_string_array(d);
+  std::vector<std::string> expected_result = {"a", "b"};
+  EXPECT_EQ(expected_result, result);
+}
+
 TEST(JsonUtilTests, TestCorrectJsonArrays) {
   std::string expected_json =
       R"({"string_array":["test1","word2","phrase3"],)"
@@ -278,10 +297,8 @@ TEST_F(RedisToJsonTest, TestRedisAppMetadataToJson) {
   std::string default_output = "1.0";
   int latency_slo_micros = 10000;
   std::string selection_policy = DefaultOutputSelectionPolicy::get_name();
-  std::vector<std::string> candidate_model_names =
-      std::vector<std::string>{"m", "k"};
 
-  ASSERT_TRUE(add_application(*redis_, "myappname", candidate_model_names,
+  ASSERT_TRUE(add_application(*redis_, "myappname",
                               parse_input_type(input_type), selection_policy,
                               default_output, latency_slo_micros));
   std::unordered_map<std::string, std::string> app_metadata =
@@ -293,8 +310,6 @@ TEST_F(RedisToJsonTest, TestRedisAppMetadataToJson) {
   ASSERT_EQ(get_string(d, "input_type"), input_type);
   ASSERT_EQ(get_string(d, "default_output"), default_output);
   ASSERT_EQ(get_int(d, "latency_slo_micros"), latency_slo_micros);
-  ASSERT_EQ(get_string_array(d, "candidate_model_names"),
-            candidate_model_names);
 }
 
 TEST_F(RedisToJsonTest, TestRedisModelMetadataToJson) {

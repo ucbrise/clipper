@@ -46,10 +46,9 @@ Checking if Docker is running...
 >>> clipper.start()
 Clipper is running
 
-# Register an application called "hello_world" that will query a model
-# called "feature_sum_model". This will create a prediction REST endpoint at
-# http://localhost:1337/hello_world/predict
->>> clipper.register_application("hello_world", "feature_sum_model", "doubles", "-1.0", 100000)
+# Register an application called "hello_world". This will create
+# a prediction REST endpoint at http://localhost:1337/hello_world/predict
+>>> clipper.register_application("hello_world", "doubles", "-1.0", 100000)
 Success!
 
 # Inspect Clipper to see the registered apps
@@ -64,6 +63,11 @@ Success!
 
 # Deploy the model, naming it "feature_sum_model" and giving it version 1
 >>> clipper.deploy_predict_function("feature_sum_model", 1, feature_sum_function, "doubles")
+
+# Let Clipper know that queries to your app should be served by
+# your newly deployed model.
+>>> clipper.link_model_to_app("hello_world", "feature_sum_model")
+Success!
 
 ```
 

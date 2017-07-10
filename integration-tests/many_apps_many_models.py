@@ -75,6 +75,10 @@ def deploy_model(clipper, name, version):
         "doubles",
         num_containers=1)
     time.sleep(10)
+
+    clipper.link_model_to_app(app_name, model_name)
+    time.sleep(5)
+
     num_preds = 25
     num_defaults = 0
     for i in range(num_preds):
@@ -98,9 +102,9 @@ def deploy_model(clipper, name, version):
 def create_and_test_app(clipper, name, num_models):
     app_name = "%s_app" % name
     model_name = "%s_model" % name
-    clipper.register_application(app_name, model_name, "doubles",
-                                 "default_pred", 100000)
+    clipper.register_application(app_name, "doubles", "default_pred", 100000)
     time.sleep(1)
+
     response = requests.post(
         "http://localhost:1337/%s/predict" % app_name,
         headers=headers,

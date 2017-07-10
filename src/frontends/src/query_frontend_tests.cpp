@@ -175,8 +175,8 @@ TEST_F(QueryFrontendTest, TestDecodeUpdateMissingField) {
 TEST_F(QueryFrontendTest, TestAddOneApplication) {
   size_t no_apps = rh_.num_applications();
   EXPECT_EQ(no_apps, (size_t)0);
-  rh_.add_application("test_app_1", {}, InputType::Doubles, "test_policy",
-                      "0.4", 30000);
+  rh_.add_application("test_app_1", InputType::Doubles, "test_policy", "0.4",
+                      30000);
   size_t one_app = rh_.num_applications();
   EXPECT_EQ(one_app, (size_t)1);
 }
@@ -187,7 +187,7 @@ TEST_F(QueryFrontendTest, TestAddManyApplications) {
 
   for (int i = 0; i < 500; ++i) {
     std::string cur_name = "test_app_" + std::to_string(i);
-    rh_.add_application(cur_name, {}, InputType::Doubles, "test_policy", "0.4",
+    rh_.add_application(cur_name, InputType::Doubles, "test_policy", "0.4",
                         30000);
   }
 
@@ -253,23 +253,19 @@ TEST_F(QueryFrontendTest,
 TEST_F(QueryFrontendTest, TestReadApplicationsAtStartup) {
   // Add a few applications
   std::string name = "my_app_name";
-  std::vector<std::string> model_names{"music_random_features", "simple_svm",
-                                       "music_cnn"};
   InputType input_type = InputType::Doubles;
   std::string policy = "exp3_policy";
   std::string default_output = "1.0";
   int latency_slo_micros = 10000;
-  ASSERT_TRUE(add_application(*redis_, name, model_names, input_type, policy,
-                              default_output, latency_slo_micros));
+  ASSERT_TRUE(add_application(*redis_, name, input_type, policy, default_output,
+                              latency_slo_micros));
   std::string name2 = "my_app_name_2";
-  std::vector<std::string> model_names2{"img_random_features", "simple_svm",
-                                        "img_cnn"};
   InputType input_type2 = InputType::Doubles;
   std::string policy2 = "exp4_policy";
   int latency_slo_micros2 = 50000;
   std::string default_output2 = "1.0";
-  ASSERT_TRUE(add_application(*redis_, name2, model_names2, input_type2,
-                              policy2, default_output2, latency_slo_micros2));
+  ASSERT_TRUE(add_application(*redis_, name2, input_type2, policy2,
+                              default_output2, latency_slo_micros2));
 
   RequestHandler<MockQueryProcessor> rh2_("127.0.0.1", 1337, 8);
   size_t two_apps = rh2_.num_applications();
@@ -302,6 +298,39 @@ TEST_F(QueryFrontendTest, TestReadModelsAtStartup) {
 
   RequestHandler<MockQueryProcessor> rh2_("127.0.0.1", 1337, 8);
   EXPECT_EQ(rh2_.get_current_model_versions(), expected_models);
+}
+
+TEST_F(QueryFrontendTest, TestReadModelLinksAtStartup) {
+  // Add a few applications
+  std::string app_name_1 = "my_app_name";
+  std::string app_name_2 = "my_app_name_2";
+  InputType input_type = InputType::Doubles;
+  std::string policy = "exp3_policy";
+  std::string default_output = "1.0";
+  int latency_slo_micros = 10000;
+  ASSERT_TRUE(add_application(*redis_, app_name_1, input_type, policy,
+                              default_output, latency_slo_micros));
+  ASSERT_TRUE(add_application(*redis_, app_name_2, input_type, policy,
+                              default_output, latency_slo_micros));
+
+  // Give some candidate model names to app with `app_name_1`
+  add_model_links(*redis_, app_name_1, {"m1"});
+  add_model_links(*redis_, app_name_1, {"m2", "m3"});
+
+  std::vector<std::string> expected_app1_linked_models = {"m1", "m2", "m3"};
+
+  RequestHandler<MockQueryProcessor> rh2_("127.0.0.1", 1337, 8);
+
+  std::vector<std::string> app1_linked_models =
+      rh2_.get_linked_models_for_app(app_name_1);
+  std::sort(app1_linked_models.begin(), app1_linked_models.end());
+  std::sort(expected_app1_linked_models.begin(),
+            expected_app1_linked_models.end());
+  EXPECT_EQ(expected_app1_linked_models, app1_linked_models);
+
+  // App with name `app_name_2` shouldn't have any linked models
+  EXPECT_EQ(rh2_.get_linked_models_for_app(app_name_2),
+            std::vector<std::string>{});
 }
 
 TEST_F(QueryFrontendTest, TestReadInvalidModelVersionAtStartup) {
