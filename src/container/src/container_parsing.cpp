@@ -151,18 +151,15 @@ std::vector<char>& SerializableStringParser::get_data_buffer(long min_size_bytes
 const std::vector<std::shared_ptr<SerializableString>> SerializableStringParser::get_inputs(
     const std::vector<int>& /*input_header*/, long input_content_size) {
   std::vector<std::shared_ptr<SerializableString>> inputs;
-  long bytes_processed = 0;
-
   char* concat_content = buffer_.data();
-  char* input_content = std::strtok(concat_content, "\0");
-  while(input_content != NULL && bytes_processed < input_content_size) {
-    bytes_processed += std::strlen(input_content);
+  long bytes_processed = 0;
+  while(bytes_processed < input_content_size) {
+    std::string input_str(concat_content);
     // account for the null terminator in the processed bytes count
-    bytes_processed += 1;
-    std::string input_content_str(input_content);
-    std::shared_ptr<SerializableString> input = std::make_shared<SerializableString>(input_content_str);
+    bytes_processed += input_str.length() + 1;
+    concat_content += input_str.length() + 1;
+    std::shared_ptr<SerializableString> input = std::make_shared<SerializableString>(input_str);
     inputs.push_back(input);
-    input_content = std::strtok(NULL, "\0");
   }
   return inputs;
 }
