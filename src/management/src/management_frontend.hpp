@@ -1059,6 +1059,13 @@ class RequestHandler {
 
     std::vector<std::string> versions =
         clipper::redis::get_model_versions(redis_connection_, model_name);
+
+    if (versions.size() == 0) {
+      std::stringstream ss;
+      ss << "Cannot set version for nonexistent model " << model_name;
+      throw std::invalid_argument(ss.str());
+    }
+
     bool version_exists = false;
     for (auto v : versions) {
       if (v == new_model_version) {

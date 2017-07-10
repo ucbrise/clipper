@@ -588,6 +588,16 @@ TEST_F(ManagementFrontendTest, TestSetModelVersionCorrect) {
   ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version_2);
 }
 
+TEST_F(ManagementFrontendTest, TestSetVersionNonexistentModel) {
+  std::string model_name = "m";
+  std::string model_version = "1";
+
+  std::string set_model_version_json =
+      get_set_model_version_request_json(model_name, model_version);
+  ASSERT_THROW(rh_.set_model_version(set_model_version_json),
+               std::invalid_argument);
+}
+
 TEST_F(ManagementFrontendTest, TestSetModelInvalidVersion) {
   std::string model_name = "m";
   std::string model_version_1 = "1";

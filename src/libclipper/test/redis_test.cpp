@@ -597,13 +597,14 @@ TEST_F(RedisTest, SubscriptionDetectModelLinksAdd) {
                                   "labels"};
   std::string model_name_1 = "model_1";
   std::string model_name_2 = "model_2";
-  VersionedModelId model_1 = VersionedModelId(model_name_1, "1");
-  VersionedModelId model_2 = VersionedModelId(model_name_2, "1");
+  std::string model_version = "1";
+  VersionedModelId model_1_id = VersionedModelId(model_name_1, model_version);
+  VersionedModelId model_2_id = VersionedModelId(model_name_2, model_version);
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
-  ASSERT_TRUE(add_model(*redis_, model_1, input_type, labels, container_name,
+  ASSERT_TRUE(add_model(*redis_, model_1_id, input_type, labels, container_name,
                         model_path));
-  ASSERT_TRUE(add_model(*redis_, model_2, input_type, labels, container_name,
+  ASSERT_TRUE(add_model(*redis_, model_2_id, input_type, labels, container_name,
                         model_path));
   log_info(LOGGING_TAG_REDIS_TEST, "Registered models");
   std::condition_variable_any notification_recv;
@@ -617,21 +618,27 @@ TEST_F(RedisTest, SubscriptionDetectModelLinksAdd) {
         std::unique_lock<std::mutex> l(notification_mutex);
         log_info(LOGGING_TAG_REDIS_TEST, "Got mutex in subscription closure.");
         recv = true;
+        log_info(LOGGING_TAG_REDIS_TEST, "Set recv = true.");
         ASSERT_EQ(key, name);
+        log_info(LOGGING_TAG_REDIS_TEST, "Asserted key = name");
         notification_recv.notify_all();
         log_info(LOGGING_TAG_REDIS_TEST, "Notified cv waiters.");
       });
   // give Redis some time to register the subscription
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
+  log_info(LOGGING_TAG_REDIS_TEST, "Finished sleeping");
   std::vector<std::string> model_names = {model_name_1, model_name_2};
   ASSERT_TRUE(add_model_links(*redis_, name, model_names));
   log_info(LOGGING_TAG_REDIS_TEST, "Added model links.");
 
   std::unique_lock<std::mutex> l(notification_mutex);
   log_info(LOGGING_TAG_REDIS_TEST, "Got mutex outside subscription closure.");
-  bool result = notification_recv.wait_for(l, std::chrono::milliseconds(1000),
-                                           [&recv]() { return recv == true; });
+  bool result =
+      notification_recv.wait_for(l, std::chrono::milliseconds(1000), [&recv]() {
+        log_info(LOGGING_TAG_REDIS_TEST, "Inside wait_for callback");
+        return recv == true;
+      });
+  log_info(LOGGING_TAG_REDIS_TEST, "Finished generating `result`: ", result);
   ASSERT_TRUE(result);
 }
 
