@@ -657,6 +657,99 @@ TEST_F(ManagementFrontendTest, TestAddModelLinkCorrect) {
   ASSERT_EQ(model_names, result);
 }
 
+TEST_F(ManagementFrontendTest, TestAddModelLinkIncompatibleInputType) {
+  std::string app_name = "myappname";
+  std::string app_input_type = "integers";
+  std::string default_output = "4.3";
+  std::string add_app_json =
+      get_add_app_request_json(app_name, app_input_type, default_output, 1000);
+  ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
+
+  std::string model_name = "mymodelname";
+  std::string model_version = "4";
+  std::string model_input_type = "doubles";
+  std::string container_name = "container/name";
+  std::string model_data_path = "tmp/model";
+  std::vector<std::string> labels = {"l1", "l2"};
+  std::string add_model_json =
+      get_add_model_request_json(model_name, model_version, model_input_type,
+                                 labels, container_name, model_data_path);
+  ASSERT_EQ(rh_.add_model(add_model_json), "Success!");
+
+  std::vector<std::string> model_names = std::vector<std::string>{model_name};
+  std::string add_links_json =
+      get_add_model_links_request_json(app_name, model_names);
+
+  ASSERT_THROW(rh_.add_model_links(add_links_json), std::invalid_argument);
+}
+
+TEST_F(ManagementFrontendTest, TestAddNewLinkedModelIncompatibleInputType) {
+  std::string app_name = "myappname";
+  std::string input_type = "integers";
+  std::string default_output = "4.3";
+  std::string add_app_json =
+      get_add_app_request_json(app_name, input_type, default_output, 1000);
+  ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
+
+  std::string model_name = "mymodelname";
+  std::string model_version = "4";
+  std::string container_name = "container/name";
+  std::string model_data_path = "tmp/model";
+  std::vector<std::string> labels = {"l1", "l2"};
+  std::string add_compatible_model_json =
+      get_add_model_request_json(model_name, model_version, input_type, labels,
+                                 container_name, model_data_path);
+  ASSERT_EQ(rh_.add_model(add_compatible_model_json), "Success!");
+
+  std::vector<std::string> model_names = std::vector<std::string>{model_name};
+  std::string add_links_json =
+      get_add_model_links_request_json(app_name, model_names);
+
+  ASSERT_EQ(rh_.add_model_links(add_links_json), "Success!");
+
+  std::string incompatible_model_input_type = "doubles";
+  std::string add_incompatible_model_json = get_add_model_request_json(
+      model_name, model_version, incompatible_model_input_type, labels,
+      container_name, model_data_path);
+  ASSERT_THROW(rh_.add_model(add_incompatible_model_json),
+               std::invalid_argument);
+}
+
+TEST_F(ManagementFrontendTest,
+       TestSetModellVersionForLinkedModelIncompatibleInputType) {
+  std::string app_name = "myappname";
+  std::string input_type = "integers";
+  std::string default_output = "4.3";
+  std::string add_app_json =
+      get_add_app_request_json(app_name, input_type, default_output, 1000);
+  ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
+
+  std::string incompatible_model_input_type = "doubles";
+  std::string compatible_model_version = "2";
+  std::string model_name = "mymodelname";
+  std::string incompatible_model_version = "1";
+  std::string container_name = "container/name";
+  std::string model_data_path = "tmp/model";
+  std::vector<std::string> labels = {"l1", "l2"};
+
+  std::string add_incompatible_model_json = get_add_model_request_json(
+      model_name, incompatible_model_version, incompatible_model_input_type,
+      labels, container_name, model_data_path);
+  std::string add_compatible_model_json = get_add_model_request_json(
+      model_name, compatible_model_version, input_type, labels, container_name,
+      model_data_path);
+  ASSERT_EQ(rh_.add_model(add_incompatible_model_json), "Success!");
+  ASSERT_EQ(rh_.add_model(add_compatible_model_json), "Success!");
+
+  std::vector<std::string> model_names = std::vector<std::string>{model_name};
+  std::string add_links_json =
+      get_add_model_links_request_json(app_name, model_names);
+  ASSERT_EQ(rh_.add_model_links(add_links_json), "Success!");
+
+  ASSERT_THROW(rh_.set_model_version(model_name, incompatible_model_version),
+               std::invalid_argument);
+}
+
 TEST_F(ManagementFrontendTest, TestAddModelLinkWithNonexistentModel) {
   std::string app_name = "myappname";
   std::string input_type = "integers";

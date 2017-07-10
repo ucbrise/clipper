@@ -393,6 +393,7 @@ class Clipper:
         })
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
+        print(r.text)
         return r.status_code == requests.codes.ok
 
     def get_linked_models(self, app_name):

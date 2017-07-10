@@ -249,6 +249,8 @@ class RequestHandler {
             std::string model_name = get_string(d, "model_name");
             std::string new_model_version = get_string(d, "model_version");
 
+            check_updated_model_consistent_with_app_links(model_name,
+                                                          new_model_version);
             bool success = set_model_version(model_name, new_model_version);
             if (success) {
               respond_http("SUCCESS", "200 OK", response);
@@ -497,8 +499,11 @@ class RequestHandler {
       throw std::invalid_argument(ss.str());
     }
 
-    // Confirm that the models exists
+    // Confirm that the models exists and have compatible input_types
+    auto app_input_type = app_info["input_type"];
     boost::optional<std::string> model_version;
+    std::unordered_map<std::string, std::string> model_info;
+    std::string model_input_type;
     for (auto const& model_name : model_names) {
       model_version = clipper::redis::get_current_model_version(
           redis_connection_, model_name);
@@ -506,6 +511,18 @@ class RequestHandler {
         std::stringstream ss;
         ss << "No model with name " << model_name << " exists.";
         throw std::invalid_argument(ss.str());
+      } else {
+        model_info = clipper::redis::get_model(
+            redis_connection_, VersionedModelId(model_name, *model_version));
+        model_input_type = model_info["input_type"];
+        if (model_input_type != app_input_type) {
+          std::stringstream ss;
+          ss << "Model with name " << model_name
+             << " has incompatible input_type " << model_input_type
+             << ". Requested app to link to has input_type " << app_input_type
+             << ".";
+          throw std::invalid_argument(ss.str());
+        }
       }
     }
 
@@ -524,11 +541,10 @@ class RequestHandler {
       throw std::invalid_argument(error_msg);
     }
 
-    // Check to see if there are already any links
+    // Make sure that there will only be one link
     auto existing_linked_models =
         clipper::redis::get_linked_models(redis_connection_, app_name);
 
-    // Make sure that there is only one link
     if (existing_linked_models.size() > 0) {
       // We asserted earlier that `model_names` has size 1
       std::string new_model_name = model_names[0];
@@ -545,11 +561,6 @@ class RequestHandler {
            << " is already linked to " << app_name << ".";
         throw std::invalid_argument(ss.str());
       }
-    }
-
-    // Validate strings that will be grouped before supplying to redis
-    for (auto model_name : model_names) {
-      validate_group_str_for_redis(model_name, "model name");
     }
 
     if (clipper::redis::add_model_links(redis_connection_, app_name,
@@ -623,18 +634,18 @@ class RequestHandler {
   std::string add_model(const std::string& json) {
     rapidjson::Document d;
     parse_json(json, d);
-
-    VersionedModelId model_id = VersionedModelId(
-        get_string(d, "model_name"), get_string(d, "model_version"));
+    std::string model_name = get_string(d, "model_name");
+    std::string model_version = get_string(d, "model_version");
+    VersionedModelId model_id = VersionedModelId(model_name, model_version);
 
     std::vector<std::string> labels = get_string_array(d, "labels");
-    InputType input_type =
-        clipper::parse_input_type(get_string(d, "input_type"));
+    std::string input_type_raw = get_string(d, "input_type");
+    InputType input_type = clipper::parse_input_type(input_type_raw);
     std::string container_name = get_string(d, "container_name");
     std::string model_data_path = get_string(d, "model_data_path");
 
     // Validate strings that will be grouped before supplying to redis
-    validate_group_str_for_redis(model_id.get_name(), "model name");
+    validate_group_str_for_redis(model_name, "model name");
     validate_group_str_for_redis(model_id.get_id(), "model version");
     for (auto label : labels) {
       validate_group_str_for_redis(label, "label");
@@ -643,22 +654,52 @@ class RequestHandler {
     // check if this version of the model has already been deployed
     std::unordered_map<std::string, std::string> existing_model_data =
         clipper::redis::get_model(redis_connection_, model_id);
-    if (existing_model_data.empty()) {
-      if (clipper::redis::add_model(redis_connection_, model_id, input_type,
-                                    labels, container_name, model_data_path)) {
-        if (set_model_version(model_id.get_name(), model_id.get_id())) {
-          return "Success!";
-        }
-      }
+
+    if (!existing_model_data.empty()) {
       std::stringstream ss;
-      ss << "Error adding model " << model_id.get_name() << ":"
-         << model_id.get_id() << " to Redis";
-      throw std::invalid_argument(ss.str());
-    } else {
-      std::stringstream ss;
-      ss << "Error model " << model_id.get_name() << ":" << model_id.get_id()
+      ss << "Error model " << model_name << ":" << model_version
          << " already exists";
       throw std::invalid_argument(ss.str());
+    }
+
+    // Need to fux with this
+    check_updated_model_consistent_with_app_links(model_name, input_type_raw);
+
+    if (clipper::redis::add_model(redis_connection_, model_id, input_type,
+                                  labels, container_name, model_data_path)) {
+      if (set_model_version(model_id.get_name(), model_id.get_id())) {
+        return "Success!";
+      }
+    }
+    std::stringstream ss;
+    ss << "Error adding model " << model_id.get_name() << ":"
+       << model_id.get_id() << " to Redis";
+    throw std::invalid_argument(ss.str());
+  }
+
+  void check_updated_model_consistent_with_app_links(
+      std::string model_name, std::string proposed_input_type) {
+    auto app_names =
+        clipper::redis::get_all_application_names(redis_connection_);
+    std::vector<std::string> linked_models;
+    std::unordered_map<std::string, std::string> app_info;
+    std::string app_input_type;
+    for (auto const& app_name : app_names) {
+      linked_models =
+          clipper::redis::get_linked_models(redis_connection_, app_name);
+      if (std::find(linked_models.begin(), linked_models.end(), model_name) !=
+          linked_models.end()) {
+        app_info = clipper::redis::get_application(redis_connection_, app_name);
+        app_input_type = app_info["input_type"];
+        if (proposed_input_type != app_input_type) {
+          std::stringstream ss;
+          ss << "Model with name " << model_name << " is already linked to app "
+             << app_name << " using input type " << app_input_type
+             << ". The input type you provided for a new version of the model, "
+             << proposed_input_type << ", is not compatible.";
+          throw std::invalid_argument(ss.str());
+        }
+      }
     }
   }
 
@@ -1025,6 +1066,10 @@ class RequestHandler {
       }
     }
     if (version_exists) {
+      auto model_info = clipper::redis::get_model(
+          redis_connection_, VersionedModelId(model_name, new_model_version));
+      auto input_type = model_info["input_type"];
+      check_updated_model_consistent_with_app_links(model_name, input_type);
       return clipper::redis::set_current_model_version(
           redis_connection_, model_name, new_model_version);
     } else {
