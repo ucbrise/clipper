@@ -11,8 +11,18 @@ target_include_directories(container_lib PUBLIC
         PRIVATE src)
 
 ##################################
-# C++ container executable for testing
+# Container test suite
 
-add_executable(container_test src/container_test.cpp)
+add_executable(container_tests EXCLUDE_FROM_ALL
+        src/container_tests.cpp
+        )
+target_link_libraries(container_tests clipper gtest gmock_main container_lib)
+add_dependencies(unittests container_tests)
 
-target_link_libraries(container_test clipper zmqcpp container_lib)
+##################################
+# Container executable for testing
+
+add_executable(container_rpc_test EXCLUDE_FROM_ALL
+        src/container_rpc_test.cpp)
+
+target_link_libraries(container_rpc_test clipper zmqcpp container_lib)

@@ -12,7 +12,6 @@
 #include <clipper/datatypes.hpp>
 #include <clipper/logging.hpp>
 #include <clipper/rpc_service.hpp>
-#include <clipper/json_util.hpp>
 
 const std::string LOGGING_TAG_CONTAINER = "CONTAINER";
 
@@ -230,7 +229,7 @@ class RPC {
     socket.recv(&msg_raw_content_size, 0);
     long input_content_size_bytes = static_cast<long*>(msg_raw_content_size.data())[0];
 
-    std::vector<D> input_data_buffer = input_parser.get_data_buffer(input_content_size_bytes);
+    std::vector<D>& input_data_buffer = input_parser.get_data_buffer(input_content_size_bytes);
     // Receive input content
     socket.recv(input_data_buffer.data(), input_content_size_bytes, 0);
 
@@ -293,20 +292,6 @@ class RPC {
     log_event(rpc::RPCEvent::SentContainerContent);
   }
 };
-
-class RPCTestModel : public Model<DoubleVector> {
- public:
-  explicit RPCTestModel(RPC &container_rpc);
-
-  std::vector<std::string> predict(const std::vector<std::shared_ptr<DoubleVector>> inputs) const override;
-  InputType get_input_type() const override;
-
- private:
-  RPC &container_rpc_;
-
-  std::vector<rpc::RPCEvent> get_events(long min_time_millis) const;
-};
-
 
 } // namespace container
 
