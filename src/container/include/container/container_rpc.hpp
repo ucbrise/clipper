@@ -1,10 +1,10 @@
 #ifndef CLIPPER_CONTAINER_RPC_HPP
 #define CLIPPER_CONTAINER_RPC_HPP
 
+#include <chrono>
 #include <mutex>
 #include <sstream>
 #include <thread>
-#include <chrono>
 
 #include <boost/circular_buffer.hpp>
 #include <zmq.hpp>
@@ -42,19 +42,20 @@ class PerformanceTimer {
   static void start_timing() {
     log_.str("");
     last_log_ = Clock::now();
-
   }
 
   static void log_elapsed(const std::string tag) {
     Clock::time_point curr_time = Clock::now();
-    long log_diff_micros = std::chrono::duration_cast<std::chrono::microseconds>(curr_time - last_log_).count();
-    log_ << tag << ": " << std::to_string(log_diff_micros) << " us" << ", ";
+    long log_diff_micros =
+        std::chrono::duration_cast<std::chrono::microseconds>(curr_time -
+                                                              last_log_)
+            .count();
+    log_ << tag << ": " << std::to_string(log_diff_micros) << " us"
+         << ", ";
     last_log_ = curr_time;
   }
 
-  static std::string get_log() {
-    return log_.str();
-  }
+  static std::string get_log() { return log_.str(); }
 
  private:
   static std::stringstream log_;
