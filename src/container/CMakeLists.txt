@@ -20,7 +20,7 @@ target_link_libraries(container_tests clipper gtest gmock_main container_lib)
 add_dependencies(unittests container_tests)
 
 ##################################
-# Container executable for testing
+# Container executable for rpc testing
 
 add_executable(container_rpc_test EXCLUDE_FROM_ALL
         src/container_rpc_test.cpp)

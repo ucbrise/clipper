@@ -42,6 +42,35 @@ std::vector<std::shared_ptr<I>> get_inputs_from_prediction_request(
   return input_parser.get_inputs(header_vec, raw_content.size());
 };
 
+TEST(ContainerTests, ByteVectorParserCreatesInputsFromRawContentCorrectly) {
+  std::vector<std::vector<uint8_t>> input_vecs;
+  for(int i = 0; i < 3; i++) {
+    std::vector<uint8_t> input_vec;
+    uint8_t* vec_data = reinterpret_cast<uint8_t*>(&i);
+    for(int j = 0; j < static_cast<int>(sizeof(int)); j++) {
+      input_vec.push_back(vec_data[j]);
+    }
+    input_vecs.push_back(input_vec);
+  }
+
+  std::vector<std::shared_ptr<Input>> inputs;
+  for(auto const& vec : input_vecs) {
+    inputs.push_back(std::make_shared<ByteVector>(vec));
+  }
+
+  ASSERT_EQ(input_vecs.size(), inputs.size());
+
+  rpc::PredictionRequest prediction_request(inputs, InputType::Bytes);
+  container::ByteVectorParser parser;
+
+  std::vector<std::shared_ptr<ByteVector>> parsed_inputs =
+      get_inputs_from_prediction_request(prediction_request, parser);
+  ASSERT_EQ(parsed_inputs.size(), input_vecs.size());
+  for(int i = 0; i < static_cast<int>(parsed_inputs.size()); i++) {
+    ASSERT_EQ(parsed_inputs[i]->get_data(), input_vecs[i]);
+  }
+}
+
 TEST(ContainerTests, IntVectorParserCreatesInputsFromRawContentCorrectly) {
   std::vector<std::vector<int>> input_vecs = create_primitive_parser_vecs<int>();
 
@@ -106,7 +135,30 @@ TEST(ContainerTests, DoubleVectorParserCreatesInputsFromRawContentCorrectly) {
   }
 }
 
+TEST(ContainerTests, SerializableStringParserCreatesInputsFromRawContentCorrectly) {
+  std::vector<std::string> input_vecs;
+  input_vecs.push_back("first_test_vector");
+  input_vecs.push_back("%*7&3333$$$$");
+  char16_t unicode_char = u'\u00F6';
+  input_vecs.push_back(std::to_string(unicode_char));
 
+  std::vector<std::shared_ptr<Input>> inputs;
+  for(auto const& vec : input_vecs) {
+    inputs.push_back(std::make_shared<SerializableString>(vec));
+  }
 
+  ASSERT_EQ(input_vecs.size(), inputs.size());
 
+  rpc::PredictionRequest prediction_request(inputs, InputType::Strings);
+  container::SerializableStringParser parser;
+
+  std::vector<std::shared_ptr<SerializableString>> parsed_inputs =
+      get_inputs_from_prediction_request(prediction_request, parser);
+
+  ASSERT_EQ(parsed_inputs.size(), input_vecs.size());
+  for(int i = 0; i < static_cast<int>(parsed_inputs.size()); i++) {
+    ASSERT_EQ(parsed_inputs[i]->get_data(), input_vecs[i]);
+  }
 }
+
+} // namespace

@@ -8,22 +8,6 @@
 
 using namespace clipper::container;
 
-class StringModel : public Model<clipper::SerializableString> {
- public:
-  std::vector<std::string> predict(const std::vector<std::shared_ptr<clipper::SerializableString>> inputs) const {
-    std::vector<std::string> outputs;
-    for(auto const& elem : inputs) {
-      clipper::log_info(LOGGING_TAG_CONTAINER, elem->get_data());
-      outputs.push_back("result");
-    }
-    return outputs;
-  }
-
-  InputType get_input_type() const {
-    return InputType::Strings;
-  }
-};
-
 class RPCTestModel : public Model<clipper::DoubleVector> {
  public:
   RPCTestModel(RPC& container_rpc) : container_rpc_(container_rpc) {
@@ -82,13 +66,10 @@ class RPCTestModel : public Model<clipper::DoubleVector> {
 
 int main() {
   RPC container_rpc;
-  //RPCTestModel test_model(container_rpc);
-  StringModel test_model;
+  RPCTestModel test_model(container_rpc);
   std::string model_name = "cpp_test";
   int model_version = 1;
-  //DoubleVectorParser parser;
-  SerializableStringParser parser;
-
+  DoubleVectorParser parser;
 
   std::string clipper_ip = "localhost";
   int clipper_port = 7000;
