@@ -11,6 +11,11 @@ namespace container {
 template <typename D, class I>
 class InputParser {
  public:
+  /**
+   * Exposes a buffer into which request data should be
+   * read directly from a socket. The buffer contents
+   * can then be parsed via `get_inputs`
+   */
   virtual std::vector<D>& get_data_buffer(long min_size_bytes) = 0;
   virtual const std::vector<std::shared_ptr<I>> get_inputs(
       const std::vector<int>& input_header, long input_content_size) = 0;
