@@ -64,12 +64,13 @@ cd $DIR/../../
 ./configure && cd debug/src
 
 # Start cpp rpc test container
+cd container
 make container_rpc_test
-./container/src/container_rpc_test &
+./container_rpc_test &
 
 sleep 10s
 
-cd benchmarks
+cd $DIR/../../debug/src/benchmarks
 make rpctest
 echo "Executing RPC test (first iteration)..."
 REDIS_PORT=$1
