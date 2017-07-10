@@ -1,5 +1,7 @@
-#include <container/container_rpc.hpp>
+#include <iterator>
+#include <cstring>
 
+#include <container/container_rpc.hpp>
 #include <clipper/datatypes.hpp>
 #include <container/container_parsing.hpp>
 
@@ -12,8 +14,9 @@ std::vector<std::shared_ptr<I>> get_parsed_inputs(std::vector<D> &data_buffer,
                               const std::vector<int>& input_header,
                               long input_content_size,
                               std::function<std::shared_ptr<I>(std::vector<D>&, int, int)> construct_input) {
-  int num_splits = input_header[1];
-  std::vector <std::shared_ptr<I>> inputs(num_splits);
+  // For a prediction request containing `n` inputs, there are `n - 1` split indices
+  int num_splits = input_header[1] - 1;
+  std::vector <std::shared_ptr<I>> inputs;
   int prev_split = 0;
   // Iterate from the beginning of the input data content
   // (the first two elements of the header are metadata)
@@ -23,7 +26,8 @@ std::vector<std::shared_ptr<I>> get_parsed_inputs(std::vector<D> &data_buffer,
     inputs.push_back(input);
     prev_split = curr_split;
   }
-  std::shared_ptr<I> tail_input = construct_input(data_buffer, prev_split, input_content_size);
+  int typed_input_content_size = static_cast<int>(input_content_size / static_cast<long>(sizeof(D)));
+  std::shared_ptr<I> tail_input = construct_input(data_buffer, prev_split, typed_input_content_size);
   inputs.push_back(tail_input);
   return inputs;
 };
@@ -31,11 +35,11 @@ std::vector<std::shared_ptr<I>> get_parsed_inputs(std::vector<D> &data_buffer,
 template <typename D>
 void resize_if_necessary(std::vector<D> &buffer, long required_buffer_size) {
   if(static_cast<long>((buffer.size() * sizeof(D))) < required_buffer_size) {
-    buffer.resize((2 * required_buffer_size) / sizeof(D));
+    buffer.reserve((2 * required_buffer_size) / sizeof(D));
   }
 }
 
-const std::vector<uint8_t> &ByteVectorParser::get_data_buffer(long min_size_bytes) {
+std::vector<uint8_t> &ByteVectorParser::get_data_buffer(long min_size_bytes) {
   resize_if_necessary(buffer_, min_size_bytes);
   return buffer_;
 }
@@ -52,8 +56,8 @@ const std::vector <std::shared_ptr<ByteVector>> ByteVectorParser::get_inputs(
 std::shared_ptr<ByteVector> ByteVectorParser::construct_input(std::vector<uint8_t>& data_buffer,
                                                               int data_start,
                                                               int data_end) {
-  std::vector<uint8_t> input_data(data_end - data_start);
-  // TODO(czumar): Verify constant complexity of these next operations
+  std::vector<uint8_t> input_data;
+  input_data.reserve(data_end - data_start);
   auto begin = std::next(data_buffer.begin(), data_start);
   auto end = std::next(data_buffer.begin(), data_end);
   input_data.insert(input_data.end(), std::make_move_iterator(begin), std::make_move_iterator(end));
@@ -61,7 +65,7 @@ std::shared_ptr<ByteVector> ByteVectorParser::construct_input(std::vector<uint8_
   return input;
 }
 
-const std::vector<int>& IntVectorParser::get_data_buffer(long min_size_bytes) {
+std::vector<int>& IntVectorParser::get_data_buffer(long min_size_bytes) {
   resize_if_necessary(buffer_, min_size_bytes);
   return buffer_;
 }
@@ -78,8 +82,8 @@ const std::vector<std::shared_ptr<IntVector>> IntVectorParser::get_inputs(
 std::shared_ptr<IntVector> IntVectorParser::construct_input(std::vector<int> &data_buffer,
                                                             int data_start,
                                                             int data_end) {
-  std::vector<int> input_data(data_end - data_start);
-  // TODO(czumar): Verify constant complexity of these next operations
+  std::vector<int> input_data;
+  input_data.reserve(data_end - data_start);
   auto begin = std::next(data_buffer.begin(), data_start);
   auto end = std::next(data_buffer.begin(), data_end);
   input_data.insert(input_data.end(), std::make_move_iterator(begin), std::make_move_iterator(end));
@@ -87,7 +91,7 @@ std::shared_ptr<IntVector> IntVectorParser::construct_input(std::vector<int> &da
   return input;
 }
 
-const std::vector<float>& FloatVectorParser::get_data_buffer(long min_size_bytes) {
+std::vector<float>& FloatVectorParser::get_data_buffer(long min_size_bytes) {
   resize_if_necessary(buffer_, min_size_bytes);
   return buffer_;
 }
@@ -104,8 +108,8 @@ const std::vector<std::shared_ptr<FloatVector>> FloatVectorParser::get_inputs(
 std::shared_ptr<FloatVector> FloatVectorParser::construct_input(std::vector<float> &data_buffer,
                                                                 int data_start,
                                                                 int data_end) {
-  std::vector<float> input_data(data_end - data_start);
-  // TODO(czumar): Verify constant complexity of these next operations
+  std::vector<float> input_data;
+  input_data.reserve(data_end - data_start);
   auto begin = std::next(data_buffer.begin(), data_start);
   auto end = std::next(data_buffer.begin(), data_end);
   input_data.insert(input_data.end(), std::make_move_iterator(begin), std::make_move_iterator(end));
@@ -113,7 +117,7 @@ std::shared_ptr<FloatVector> FloatVectorParser::construct_input(std::vector<floa
   return input;
 }
 
-const std::vector<double>& DoubleVectorParser::get_data_buffer(long min_size_bytes) {
+std::vector<double>& DoubleVectorParser::get_data_buffer(long min_size_bytes) {
   resize_if_necessary(buffer_, min_size_bytes);
   return buffer_;
 }
@@ -130,13 +134,37 @@ const std::vector<std::shared_ptr<DoubleVector>> DoubleVectorParser::get_inputs(
 std::shared_ptr<DoubleVector> DoubleVectorParser::construct_input(std::vector<double> &data_buffer,
                                                                   int data_start,
                                                                   int data_end) {
-  std::vector<double> input_data(data_end - data_start);
-  // TODO(czumar): Verify constant complexity of these next operations
+  std::vector<double> input_data;
+  input_data.reserve(data_end - data_start);
   auto begin = std::next(data_buffer.begin(), data_start);
   auto end = std::next(data_buffer.begin(), data_end);
-  input_data.insert(input_data.end(), std::make_move_iterator(begin), std::make_move_iterator(end));
+  input_data.insert(input_data.begin(), std::make_move_iterator(begin), std::make_move_iterator(end));
   std::shared_ptr<DoubleVector> input = std::make_shared<DoubleVector>(input_data);
   return input;
+}
+
+std::vector<char>& SerializableStringParser::get_data_buffer(long min_size_bytes) {
+  resize_if_necessary(buffer_, min_size_bytes);
+  return buffer_;
+}
+
+const std::vector<std::shared_ptr<SerializableString>> SerializableStringParser::get_inputs(
+    const std::vector<int>& /*input_header*/, long input_content_size) {
+  std::vector<std::shared_ptr<SerializableString>> inputs;
+  long bytes_processed = 0;
+
+  char* concat_content = buffer_.data();
+  char* input_content = std::strtok(concat_content, "\0");
+  while(input_content != NULL && bytes_processed < input_content_size) {
+    bytes_processed += std::strlen(input_content);
+    // account for the null terminator in the processed bytes count
+    bytes_processed += 1;
+    std::string input_content_str(input_content);
+    std::shared_ptr<SerializableString> input = std::make_shared<SerializableString>(input_content_str);
+    inputs.push_back(input);
+    input_content = std::strtok(NULL, "\0");
+  }
+  return inputs;
 }
 
 } // namespace container

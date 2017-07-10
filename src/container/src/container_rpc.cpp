@@ -1,6 +1,5 @@
 #include <algorithm>
 
-#include <rapidjson/rapidjson.h>
 #include <zmq.hpp>
 
 #include <container/container_rpc.hpp>
@@ -28,10 +27,9 @@ void RPC::stop() {
 }
 
 std::vector<RPCLogItem> RPC::get_events(int num_events) const {
-
   std::vector<RPCLogItem> events;
   std::lock_guard<std::mutex> lock(*event_log_mutex_);
-  int num_to_return = std::min(num_events, static_cast<int>(events.size()));
+  int num_to_return = std::min(num_events, static_cast<int>(event_log_->size()));
   for (auto it = event_log_->begin(); it != event_log_->end(); ++it) {
     if(num_to_return == 0) {
       break;
@@ -89,55 +87,6 @@ void RPC::log_event(rpc::RPCEvent event) const {
   Clock::time_point curr_time = Clock::now();
   auto new_log_item = std::make_pair(event, curr_time);
   event_log_->push_back(new_log_item);
-}
-
-RPCTestModel::RPCTestModel(RPC &container_rpc) : container_rpc_(container_rpc) {
-
-}
-
-std::vector<std::string> RPCTestModel::predict(const std::vector<std::shared_ptr<DoubleVector>> inputs) const {
-  std::vector<std::string> outputs;
-  for(auto const& input : inputs) {
-    long min_timestamp_millis = static_cast<long>(input->get_data()[0]);
-    std::vector<rpc::RPCEvent> recent_events = get_events(min_timestamp_millis);
-    rapidjson::Document output_json;
-    output_json.SetArray();
-    rapidjson::Document::AllocatorType& allocator = output_json.GetAllocator();
-    for(const rpc::RPCEvent &event : recent_events) {
-      int code = static_cast<int>(event);
-      output_json.PushBack(code, allocator);
-    }
-    std::string output = json::to_json_string(output_json);
-    outputs.push_back(output);
-  }
-  return outputs;
-}
-
-std::vector<rpc::RPCEvent> RPCTestModel::get_events(long min_time_millis) const {
-  std::vector<rpc::RPCEvent> ordered_events;
-  std::vector<RPCLogItem> log_items = container_rpc_.get_events();
-  std::chrono::milliseconds min_duration(min_time_millis);
-
-  bool added_event = false;
-  for(int i = 0; i < static_cast<int>(log_items.size()); i++) {
-    RPCLogItem curr_item = log_items[i];
-    long time_difference =
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            min_duration - curr_item.second.time_since_epoch()).count();
-    if(time_difference > 0) {
-      if(!added_event && i > 0) {
-        // Capture the heartbeat message sent before
-        // Clipper came online
-        ordered_events.push_back(log_items[i - 1].first);
-      }
-      ordered_events.push_back(curr_item.first);
-    }
-  }
-  return ordered_events;
-}
-
-InputType RPCTestModel::get_input_type() const {
-  return InputType::Doubles;
 }
 
 } // namespace container
