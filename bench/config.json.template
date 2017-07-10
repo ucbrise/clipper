@@ -1,0 +1,14 @@
+{
+   "cifar_data_path":"<cifar_data_path>",
+   "num_threads":"<num_threads>",
+   "num_batches":"<num_batches>",
+   "request_batch_size":"<request_batch_size>",
+   "request_batch_delay_micros":"<request_batch_delay_micros>",
+   "poisson_delay":"<true/false>",
+   "prevent_cache_hits":"<true/false>",
+   "latency_objective":"<latency_objective>",
+   "benchmark_report_path":"<benchmark_report_path>",
+   "report_delay_seconds":"<report_delay_seconds>",
+   "model_name":"<model_name>",
+   "model_version":"<model_version>"
+}

@@ -101,8 +101,6 @@ std::vector<std::string> str_to_labels(const std::string& label_str);
 
 std::string model_names_to_str(const std::vector<std::string>& names);
 
-std::vector<std::string> str_to_model_names(const std::string& names_str);
-
 std::string models_to_str(const std::vector<VersionedModelId>& models);
 
 std::vector<VersionedModelId> str_to_models(const std::string& model_str);
@@ -182,6 +180,14 @@ std::vector<std::string> get_all_model_names(redox::Redox& redis);
 std::vector<VersionedModelId> get_all_models(redox::Redox& redis);
 
 /**
+ * Looks up which models are linked to app with name `app_name`
+ * \return Returns a vector of model names. If no models are linked
+ * to the specified app, then an empty vector will be returned.
+ */
+std::vector<std::string> get_linked_models(redox::Redox& redis,
+                                           const std::string& app_name);
+
+/**
  * Adds a container into the container table. This will
  * overwrite any existing entry with the same key.
  *
@@ -250,11 +256,19 @@ std::vector<std::pair<VersionedModelId, int>> get_all_containers(
  *
  * \return Returns true of the add was successful.
  */
-bool add_application(redox::Redox& redis, const std::string& appname,
-                     const std::vector<std::string>& models,
+bool add_application(redox::Redox& redis, const std::string& app_name,
                      const InputType& input_type, const std::string& policy,
                      const std::string& default_output,
                      const long latency_slo_micros);
+
+/**
+ * Adds links between the specified app and models. This will not
+ * overwrite existing links.
+ *
+ * \return Returns true if the add was successful.
+ */
+bool add_model_links(redox::Redox& redis, const std::string& app_name,
+                     const std::vector<std::string>& model_names);
 
 /**
  * Deletes a container from the container table if it exists.
@@ -263,7 +277,7 @@ bool add_application(redox::Redox& redis, const std::string& appname,
  * and was successfully deleted. Returns false if there was a problem
  * or if the application was not in the table.
  */
-bool delete_application(redox::Redox& redis, const std::string& appname);
+bool delete_application(redox::Redox& redis, const std::string& app_name);
 
 /**
  * Looks up an application based on its name.
@@ -276,7 +290,7 @@ bool delete_application(redox::Redox& redis, const std::string& appname);
  * application was not found, an empty map will be returned.
  */
 std::unordered_map<std::string, std::string> get_application(
-    redox::Redox& redis, const std::string& appname);
+    redox::Redox& redis, const std::string& app_name);
 
 /**
  * Looks up an entry in the application table by the fully
@@ -336,6 +350,18 @@ void subscribe_to_container_changes(
  * to differentiate between adds, updates, and deletes if necessary.
 */
 void subscribe_to_application_changes(
+    redox::Subscriber& subscriber,
+    std::function<void(const std::string&, const std::string&)> callback);
+
+/**
+ * Subscribes to changes in the app model link table. The
+ * callback is called with the string key of the application
+ * that changed and the Redis event type. The key can
+ * be used to look up the new value. The message type identifies
+ * what type of change was detected. This allows subscribers
+ * to differentiate between adds and deletes if necessary.
+*/
+void subscribe_to_model_link_changes(
     redox::Subscriber& subscriber,
     std::function<void(const std::string&, const std::string&)> callback);
 

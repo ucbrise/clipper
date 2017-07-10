@@ -3,6 +3,7 @@ backports_abc
 bleach
 certifi
 configparser
+cryptography
 decorator
 entrypoints
 enum34

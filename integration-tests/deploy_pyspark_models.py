@@ -84,9 +84,20 @@ def predict(spark, model, xs):
     return [str(model.predict(normalize(x))) for x in xs]
 
 
-def deploy_and_test_model(sc, clipper, model, version):
+def deploy_and_test_model(sc,
+                          clipper,
+                          model,
+                          version,
+                          input_type,
+                          link_model=False):
     clipper.deploy_pyspark_model(model_name, version, predict, model, sc,
-                                 "ints")
+                                 input_type)
+    time.sleep(5)
+
+    if link_model:
+        clipper.link_model_to_app(app_name, model_name)
+        time.sleep(5)
+
     _test_deployed_model(app_name, version)
 
 
@@ -149,9 +160,10 @@ if __name__ == "__main__":
 
         try:
             input_type = "ints"
-            clipper.register_application(app_name, model_name, input_type,
-                                         "default_pred", 100000)
+            clipper.register_application(app_name, input_type, "default_pred",
+                                         100000)
             time.sleep(1)
+
             response = requests.post(
                 "http://localhost:1337/%s/predict" % app_name,
                 headers=headers,
@@ -165,15 +177,16 @@ if __name__ == "__main__":
 
             version = 1
             lr_model = train_logistic_regression(trainRDD)
-            deploy_and_test_model(sc, clipper, lr_model, version)
+            deploy_and_test_model(sc, clipper, lr_model, version, input_type,
+                                  True)
 
             version += 1
             svm_model = train_svm(trainRDD)
-            deploy_and_test_model(sc, clipper, svm_model, version)
+            deploy_and_test_model(sc, clipper, svm_model, version, input_type)
 
             version += 1
             rf_model = train_random_forest(trainRDD, 20, 16)
-            deploy_and_test_model(sc, clipper, svm_model, version)
+            deploy_and_test_model(sc, clipper, svm_model, version, input_type)
 
             version += 1
             app_and_model_name = "easy_register_app_model"

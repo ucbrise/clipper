@@ -56,8 +56,6 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.clipper_inst.stop_all()
 
     def test_external_models_register_correctly(self):
-        name = "m1"
-        version1 = 1
         input_type = "doubles"
         result = self.clipper_inst.register_external_model(
             self.model_name, self.model_version_1, input_type)
@@ -78,12 +76,30 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         input_type = "doubles"
         default_output = "DEFAULT"
         slo_micros = 30000
-        self.clipper_inst.register_application(self.app_name, self.model_name,
-                                               input_type, default_output,
-                                               slo_micros)
+        self.clipper_inst.register_application(self.app_name, input_type,
+                                               default_output, slo_micros)
         registered_applications = self.clipper_inst.get_all_apps()
         self.assertGreaterEqual(len(registered_applications), 1)
         self.assertTrue(self.app_name in registered_applications)
+
+    def test_link_not_registered_model_to_app_fails(self):
+        not_deployed_model = "test_model"
+        result = self.clipper_inst.link_model_to_app(self.app_name,
+                                                     not_deployed_model)
+        self.assertFalse(result)
+
+    def test_get_model_links_when_none_exist_returns_empty_list(self):
+        result = self.clipper_inst.get_linked_models(self.app_name)
+        self.assertEqual([], result)
+
+    def test_link_registered_model_to_app_succeeds(self):
+        result = self.clipper_inst.link_model_to_app(self.app_name,
+                                                     self.model_name)
+        self.assertTrue(result)
+
+    def test_get_model_links_returns_list_of_linked_models(self):
+        result = self.clipper_inst.get_linked_models(self.app_name)
+        self.assertEqual([self.model_name], result)
 
     def get_app_info_for_registered_app_returns_info_dictionary(self):
         result = self.clipper_inst.get_app_info(self.app_name)
@@ -210,6 +226,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         model_info = self.clipper_inst.get_model_info(model_name,
                                                       model_version)
         self.assertIsNotNone(model_info)
+
         running_containers_output = self.clipper_inst._execute_standard(
             "docker ps -q --filter \"ancestor=clipper/python-container\"")
         self.assertIsNotNone(running_containers_output)
@@ -229,6 +246,10 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             app_and_model_name,
             clipper_admin.clipper_manager.DEFAULT_MODEL_VERSION)
         self.assertIsNotNone(model_info)
+
+        linked_models = self.clipper_inst.get_linked_models(app_and_model_name)
+        self.assertIsNotNone(linked_models)
+
         running_containers_output = self.clipper_inst._execute_standard(
             "docker ps -q --filter \"ancestor=clipper/python-container\"")
         self.assertIsNotNone(running_containers_output)
@@ -250,17 +271,29 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         self.default_output = "DEFAULT"
         self.latency_slo_micros = 30000
         self.clipper_inst.register_application(
-            self.app_name_1, self.model_name_1, self.input_type,
-            self.default_output, self.latency_slo_micros)
+            self.app_name_1, self.input_type, self.default_output,
+            self.latency_slo_micros)
         self.clipper_inst.register_application(
-            self.app_name_2, self.model_name_2, self.input_type,
-            self.default_output, self.latency_slo_micros)
+            self.app_name_2, self.input_type, self.default_output,
+            self.latency_slo_micros)
 
     @classmethod
     def tearDownClass(self):
         self.clipper_inst.stop_all()
 
-    def test_deployed_model_queried_successfully(self):
+    def test_queries_to_app_without_linked_models_yield_default_predictions(
+            self):
+        url = "http://localhost:1337/{}/predict".format(self.app_name_2)
+        test_input = [99.3, 18.9, 67.2, 34.2]
+        req_json = json.dumps({'input': test_input})
+        headers = {'Content-type': 'application/json'}
+        response = requests.post(url, headers=headers, data=req_json)
+        parsed_response = response.json()
+        print(parsed_response)
+        self.assertEqual(parsed_response["output"], self.default_output)
+        self.assertTrue(parsed_response["default"])
+
+    def test_deployed_and_linked_model_queried_successfully(self):
         model_version = 1
         # Initialize a support vector classifier 
         # that will be deployed to a no-op container
@@ -270,6 +303,9 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
             self.model_name_2, model_version, model_data, container_name,
             self.input_type)
         self.assertTrue(result)
+
+        ### Link model and app
+        self.clipper_inst.link_model_to_app(self.app_name_2, self.model_name_2)
 
         time.sleep(30)
 
@@ -283,13 +319,16 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         self.assertNotEqual(parsed_response["output"], self.default_output)
         self.assertFalse(parsed_response["default"])
 
-    def test_deployed_predict_function_queried_successfully(self):
+    def test_deployed_and_linked_predict_function_queried_successfully(self):
         model_version = 1
         predict_func = lambda inputs: [str(len(x)) for x in inputs]
         input_type = "doubles"
         result = self.clipper_inst.deploy_predict_function(
             self.model_name_1, model_version, predict_func, input_type)
         self.assertTrue(result)
+
+        ### Link model and app
+        self.clipper_inst.link_model_to_app(self.app_name_1, self.model_name_1)
 
         time.sleep(60)
 
@@ -316,6 +355,10 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 SHORT_TEST_ORDERING = [
     'test_external_models_register_correctly',
     'test_application_registers_correctly',
+    'test_link_not_registered_model_to_app_fails',
+    'test_get_model_links_when_none_exist_returns_empty_list',
+    'test_link_registered_model_to_app_succeeds',
+    'test_get_model_links_returns_list_of_linked_models',
     'get_app_info_for_registered_app_returns_info_dictionary',
     'get_app_info_for_nonexistent_app_returns_none',
     'test_add_container_for_external_model_fails',
@@ -330,8 +373,9 @@ SHORT_TEST_ORDERING = [
 ]
 
 LONG_TEST_ORDERING = [
-    'test_deployed_model_queried_successfully',
-    'test_deployed_predict_function_queried_successfully'
+    'test_queries_to_app_without_linked_models_yield_default_predictions',
+    'test_deployed_and_linked_model_queried_successfully',
+    'test_deployed_and_linked_predict_function_queried_successfully'
 ]
 
 if __name__ == '__main__':

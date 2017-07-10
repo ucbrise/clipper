@@ -128,10 +128,6 @@ vector<string> str_to_labels(const string& label_str) {
   return labels;
 }
 
-std::vector<std::string> str_to_model_names(const std::string& names_str) {
-  return str_to_labels(names_str);
-}
-
 std::string models_to_str(const std::vector<VersionedModelId>& models) {
   if (models.empty()) return "";
 
@@ -207,6 +203,29 @@ boost::optional<std::string> get_current_model_version(
   log_error_formatted(LOGGING_TAG_REDIS, "No versions found for model {}",
                       model_name);
   return boost::none;
+}
+
+std::vector<std::string> get_linked_models(redox::Redox& redis,
+                                           const std::string& app_name) {
+  std::vector<std::string> linked_models;
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_APP_MODEL_LINKS_DB_NUM)})) {
+    auto result =
+        send_cmd_with_reply<std::vector<string>>(redis, {"SMEMBERS", app_name});
+    if (result) {
+      linked_models = *result;
+    } else {
+      log_error_formatted(LOGGING_TAG_REDIS,
+                          "Found no linked models for app {}", app_name);
+    }
+  } else {
+    log_error_formatted(
+        LOGGING_TAG_REDIS,
+        "Redis encountered an error in searching for app links for {}",
+        app_name);
+  }
+
+  return linked_models;
 }
 
 bool add_model(Redox& redis, const VersionedModelId& model_id,
@@ -414,7 +433,6 @@ std::vector<std::pair<VersionedModelId, int>> get_all_containers(
 }
 
 bool add_application(redox::Redox& redis, const std::string& appname,
-                     const std::vector<std::string>& models,
                      const InputType& input_type, const std::string& policy,
                      const std::string& default_output,
                      const long latency_slo_micros) {
@@ -422,8 +440,6 @@ bool add_application(redox::Redox& redis, const std::string& appname,
           redis, {"SELECT", std::to_string(REDIS_APPLICATION_DB_NUM)})) {
     const vector<string> cmd_vec{"HMSET",
                                  appname,
-                                 "candidate_model_names",
-                                 model_names_to_str(models),
                                  "input_type",
                                  get_readable_input_type(input_type),
                                  "policy",
@@ -433,6 +449,22 @@ bool add_application(redox::Redox& redis, const std::string& appname,
                                  "latency_slo_micros",
                                  std::to_string(latency_slo_micros)};
     return send_cmd_no_reply<string>(redis, cmd_vec);
+  } else {
+    return false;
+  }
+}
+
+bool add_model_links(redox::Redox& redis, const std::string& appname,
+                     const std::vector<std::string>& model_names) {
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_APP_MODEL_LINKS_DB_NUM)})) {
+    for (auto model_name : model_names) {
+      if (!send_cmd_no_reply<int>(
+              redis, vector<string>{"SADD", appname, model_name})) {
+        return false;
+      }
+    }
+    return true;
   } else {
     return false;
   }
@@ -524,6 +556,14 @@ void subscribe_to_application_changes(
   std::string prefix = "";
   subscribe_to_keyspace_changes(REDIS_APPLICATION_DB_NUM, prefix, subscriber,
                                 std::move(callback));
+}
+
+void subscribe_to_model_link_changes(
+    redox::Subscriber& subscriber,
+    std::function<void(const std::string&, const std::string&)> callback) {
+  std::string prefix = "";
+  subscribe_to_keyspace_changes(REDIS_APP_MODEL_LINKS_DB_NUM, prefix,
+                                subscriber, std::move(callback));
 }
 
 void subscribe_to_model_version_changes(

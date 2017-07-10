@@ -41,16 +41,24 @@ class ManagementFrontendTest : public ::testing::Test {
   }
 
   void set_add_app_request_doc(rapidjson::Document& d, std::string& name,
-                               std::vector<std::string>& candidate_model_names,
                                std::string& input_type,
                                std::string& default_output,
                                int latency_slo_micros) {
     d.SetObject();
     add_string(d, "name", name);
-    add_string_array(d, "candidate_model_names", candidate_model_names);
     add_string(d, "input_type", input_type);
     add_string(d, "default_output", default_output);
     add_int(d, "latency_slo_micros", latency_slo_micros);
+  }
+
+  std::string get_add_app_request_json(std::string& name,
+                                       std::string& input_type,
+                                       std::string& default_output,
+                                       int latency_slo_micros) {
+    rapidjson::Document d;
+    set_add_app_request_doc(d, name, input_type, default_output,
+                            latency_slo_micros);
+    return to_json_string(d);
   }
 
   void set_add_model_request_doc(rapidjson::Document& d,
@@ -69,10 +77,59 @@ class ManagementFrontendTest : public ::testing::Test {
     add_string(d, "model_data_path", model_data_path);
   }
 
+  std::string get_add_model_request_json(std::string& model_name,
+                                         std::string& model_version,
+                                         std::string& input_type,
+                                         std::vector<std::string>& labels,
+                                         std::string& container_name,
+                                         std::string& model_data_path) {
+    rapidjson::Document d;
+    set_add_model_request_doc(d, model_name, model_version, input_type, labels,
+                              container_name, model_data_path);
+    return to_json_string(d);
+  }
+
+  void set_add_model_links_request_doc(rapidjson::Document& d,
+                                       std::string& app_name,
+                                       std::vector<std::string>& model_names) {
+    d.SetObject();
+    add_string(d, "app_name", app_name);
+    add_string_array(d, "model_names", model_names);
+  }
+
+  void set_set_model_version_request_doc(rapidjson::Document& d,
+                                         std::string& model_name,
+                                         std::string& new_model_version) {
+    d.SetObject();
+    add_string(d, "model_name", model_name);
+    add_string(d, "model_version", new_model_version);
+  }
+
+  std::string get_set_model_version_request_json(
+      std::string& model_name, std::string& new_model_version) {
+    rapidjson::Document d;
+    set_set_model_version_request_doc(d, model_name, new_model_version);
+    return to_json_string(d);
+  }
+
+  std::string get_add_model_links_request_json(
+      std::string& name, std::vector<std::string>& model_names) {
+    rapidjson::Document d;
+    set_add_model_links_request_doc(d, name, model_names);
+    return to_json_string(d);
+  }
+
   std::string get_app_json_request_string(std::string& name) {
     rapidjson::Document d;
     d.SetObject();
     add_string(d, "name", name);
+    return to_json_string(d);
+  }
+
+  std::string get_linked_models_json_request_string(std::string& name) {
+    rapidjson::Document d;
+    d.SetObject();
+    add_string(d, "app_name", name);
     return to_json_string(d);
   }
 
@@ -82,76 +139,18 @@ class ManagementFrontendTest : public ::testing::Test {
 };
 
 TEST_F(ManagementFrontendTest, TestAddApplicationCorrect) {
-  std::string add_app_json = R"(
-  {
-    "name": "myappname",
-    "candidate_model_names": ["image_model"],
-    "input_type": "integers",
-    "default_output": "4.3",
-    "latency_slo_micros": 10000
-  }
-  )";
+  std::string app_name = "myappname";
+  std::string input_type = "integers";
+  std::string default_output = "4.3";
+  std::string add_app_json =
+      get_add_app_request_json(app_name, input_type, default_output, 1000);
 
   ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
-  auto result = get_application(*redis_, "myappname");
-  // The application table has 5 fields, so we expect to get back a map with 5
+  auto result = get_application(*redis_, app_name);
+  // The application table has 4 fields, so we expect to get back a map with 4
   // entries in it (see add_application() in redis.cpp for details on what the
   // fields are).
-  ASSERT_EQ(result.size(), static_cast<size_t>(5));
-}
-
-TEST_F(ManagementFrontendTest, TestAddDuplicateApplication) {
-  std::string add_app_json = R"(
-  {
-    "name": "myappname",
-    "candidate_model_names": ["image_model"],
-    "input_type": "integers",
-    "default_output": "4.3",
-    "latency_slo_micros": 10000
-  }
-  )";
-
-  ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
-  auto result = get_application(*redis_, "myappname");
-  // The application table has 5 fields, so we expect to get back a map with 5
-  // entries in it (see add_application() in redis.cpp for details on what the
-  // fields are).
-  ASSERT_EQ(result.size(), static_cast<size_t>(5));
-
-  std::string add_dup_app_json = R"(
-  {
-    "name": "myappname",
-    "candidate_model_names": ["k", "m"],
-    "input_type": "integers",
-    "default_output": "4.3",
-    "latency_slo_micros": 120000
-  }
-  )";
-
-  ASSERT_THROW(rh_.add_application(add_dup_app_json), std::invalid_argument);
-}
-
-TEST_F(ManagementFrontendTest, TestAddApplicationProhibitedChars) {
-  // Valid input values
-  std::string name = "my_app_name";
-  std::vector<std::string> candidate_model_names = {"my_model"};
-  std::vector<std::string> bad_candidate_model_names = {ITEM_DELIMITER +
-                                                        "my_model"};
-  std::string input_type = "doubles";
-  std::string default_output = "my_default_output";
-  int latency_slo_micros = 10000;
-
-  // Test adding app with invalid candidate_model_names
-  rapidjson::Document doc;
-  set_add_app_request_doc(doc, name, bad_candidate_model_names, input_type,
-                          default_output, latency_slo_micros);
-  std::string add_app_json_string = to_json_string(doc);
-  ASSERT_THROW(rh_.add_application(add_app_json_string), std::invalid_argument);
-
-  // Confirm that without this invalid input, add_app succeeds
-  add_string_array(doc, "candidate_model_names", candidate_model_names);
-  add_app_json_string = to_json_string(doc);
-  ASSERT_EQ(rh_.add_application(add_app_json_string), "Success!");
+  ASSERT_EQ(result.size(), static_cast<size_t>(4));
 }
 
 TEST_F(ManagementFrontendTest, TestAddApplicationMissingField) {
@@ -178,32 +177,80 @@ TEST_F(ManagementFrontendTest, TestAddApplicationMalformedJson) {
   ASSERT_THROW(rh_.add_application(add_app_json), json_parse_error);
 }
 
+TEST_F(ManagementFrontendTest, TestAddDuplicateApplication) {
+  std::string app_name = "myappname";
+  std::string input_type = "integers";
+  std::string default_output = "4.3";
+  std::string add_app_json =
+      get_add_app_request_json(app_name, input_type, default_output, 1000);
+
+  ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
+  auto result = get_application(*redis_, "myappname");
+  // The application table has 4 fields, so we expect to get back a map with 4
+  // entries in it (see add_application() in redis.cpp for details on what the
+  // fields are).
+  ASSERT_EQ(result.size(), static_cast<size_t>(4));
+
+  ASSERT_THROW(rh_.add_application(add_app_json), std::invalid_argument);
+}
+
 TEST_F(ManagementFrontendTest, TestGetApplicationCorrect) {
+  // Register the application
   std::string name = "my_app_name";
   std::string input_type = "doubles";
-  std::string default_output = "1.0";
+  std::string default_output = "my_default_output";
   int latency_slo_micros = 10000;
-  // For now, we only support adding one candidate model
-  std::vector<std::string> candidate_model_names{"music_random_features"};
-
-  rapidjson::Document add_app_json_document;
-  set_add_app_request_doc(add_app_json_document, name, candidate_model_names,
-                          input_type, default_output, latency_slo_micros);
-  std::string add_app_json_string = to_json_string(add_app_json_document);
-
-  ASSERT_EQ(rh_.add_application(add_app_json_string), "Success!");
+  std::string add_app_json = get_add_app_request_json(
+      name, input_type, default_output, latency_slo_micros);
+  ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
 
   std::string get_app_json = get_app_json_request_string(name);
-
   std::string json_response = rh_.get_application(get_app_json);
 
   rapidjson::Document response_doc;
   response_doc.SetObject();
   parse_json(json_response, response_doc);
 
-  // The JSON provided for adding the app contains the same name-value
-  // attribute pairs that should be returned by `get_application`.
-  ASSERT_EQ(add_app_json_document, response_doc);
+  std::string response_name = get_string(response_doc, "name");
+  std::string response_input_type = get_string(response_doc, "input_type");
+  std::string response_default_output =
+      get_string(response_doc, "default_output");
+  int response_latency_slo_micros = get_int(response_doc, "latency_slo_micros");
+  auto initial_linked_models = get_string_array(response_doc, "linked_models");
+
+  // Confirm that get_application results match values submitted with
+  // registration request
+  ASSERT_EQ(response_name, name);
+  ASSERT_EQ(response_input_type, input_type);
+  ASSERT_EQ(response_default_output, default_output);
+  ASSERT_EQ(response_latency_slo_micros, latency_slo_micros);
+  ASSERT_EQ(initial_linked_models, std::vector<std::string>{});
+
+  std::string model_name = "mymodelname";
+  std::string model_version = "4";
+  std::string container_name = "container/name";
+  std::string model_data_path = "tmp/model";
+  std::vector<std::string> labels = {"label1", "label2"};
+  std::string add_model_json =
+      get_add_model_request_json(model_name, model_version, input_type, labels,
+                                 container_name, model_data_path);
+  ASSERT_EQ(rh_.add_model(add_model_json), "Success!");
+
+  // Link models
+  std::vector<std::string> model_names = std::vector<std::string>{model_name};
+  std::string add_links_json =
+      get_add_model_links_request_json(name, model_names);
+  ASSERT_EQ(rh_.add_model_links(add_links_json), "Success!");
+
+  json_response = rh_.get_application(get_app_json);
+  response_doc.SetObject();
+  parse_json(json_response, response_doc);
+
+  // Confirm that get_application results show linked models
+  auto response_linked_models = get_string_array(response_doc, "linked_models");
+  std::sort(response_linked_models.begin(), response_linked_models.end());
+  std::sort(model_names.begin(), model_names.end());
+  ASSERT_EQ(model_names, response_linked_models);
 }
 
 TEST_F(ManagementFrontendTest, TestGetNonexistentApplicationCorrect) {
@@ -230,21 +277,31 @@ TEST_F(ManagementFrontendTest, TestGetAllApplicationsVerboseCorrect) {
   std::string input_type = "doubles";
   std::string default_output = "1.0";
   int latency_slo_micros = 10000;
-  // For now, we only support adding one candidate model
-  std::vector<std::string> candidate_model_names{"music_random_features"};
 
-  rapidjson::Document add_app1_json_document;
-  set_add_app_request_doc(add_app1_json_document, name1, candidate_model_names,
-                          input_type, default_output, latency_slo_micros);
-  std::string add_app1_json_string = to_json_string(add_app1_json_document);
-
-  rapidjson::Document add_app2_json_document;
-  set_add_app_request_doc(add_app2_json_document, name2, candidate_model_names,
-                          input_type, default_output, latency_slo_micros);
-  std::string add_app2_json_string = to_json_string(add_app2_json_document);
+  std::string add_app1_json_string = get_add_app_request_json(
+      name1, input_type, default_output, latency_slo_micros);
+  std::string add_app2_json_string = get_add_app_request_json(
+      name2, input_type, default_output, latency_slo_micros);
 
   ASSERT_EQ(rh_.add_application(add_app1_json_string), "Success!");
   ASSERT_EQ(rh_.add_application(add_app2_json_string), "Success!");
+
+  // Add the model to link to
+  std::string model_name = "mymodelname";
+  std::string model_version = "4";
+  std::string container_name = "container/name";
+  std::string model_data_path = "tmp/model";
+  std::vector<std::string> labels = {"label1", "label2"};
+  std::string add_model_json =
+      get_add_model_request_json(model_name, model_version, input_type, labels,
+                                 container_name, model_data_path);
+  ASSERT_EQ(rh_.add_model(add_model_json), "Success!");
+
+  // Link models to app with name app1
+  std::vector<std::string> model_names = std::vector<std::string>{model_name};
+  std::string add_links_json =
+      get_add_model_links_request_json(name1, model_names);
+  ASSERT_EQ(rh_.add_model_links(add_links_json), "Success!");
 
   std::string get_apps_verbose_json = R"(
   {
@@ -270,10 +327,39 @@ TEST_F(ManagementFrontendTest, TestGetAllApplicationsVerboseCorrect) {
     app2_response_doc = temp;
   }
 
-  // Confirm that the JSON response provided app metadata that
-  // matches the information provided upon their registration
-  ASSERT_EQ(add_app1_json_document, app1_response_doc);
-  ASSERT_EQ(add_app2_json_document, app2_response_doc);
+  std::string app1_response_name = get_string(app1_response_doc, "name");
+  std::string app1_response_input_type =
+      get_string(app1_response_doc, "input_type");
+  std::string app1_response_default_output =
+      get_string(app1_response_doc, "default_output");
+  int app1_response_latency_slo_micros =
+      get_int(app1_response_doc, "latency_slo_micros");
+  auto app1_linked_models =
+      get_string_array(app1_response_doc, "linked_models");
+
+  std::string app2_response_name = get_string(app2_response_doc, "name");
+  std::string app2_response_input_type =
+      get_string(app2_response_doc, "input_type");
+  std::string app2_response_default_output =
+      get_string(app2_response_doc, "default_output");
+  int app2_response_latency_slo_micros =
+      get_int(app2_response_doc, "latency_slo_micros");
+  auto app2_linked_models =
+      get_string_array(app2_response_doc, "linked_models");
+
+  ASSERT_EQ(app1_response_name, name1);
+  ASSERT_EQ(app1_response_input_type, input_type);
+  ASSERT_EQ(app1_response_default_output, default_output);
+  ASSERT_EQ(app1_response_latency_slo_micros, latency_slo_micros);
+  std::sort(app1_linked_models.begin(), app1_linked_models.end());
+  std::sort(model_names.begin(), model_names.end());
+  ASSERT_EQ(model_names, app1_linked_models);
+
+  ASSERT_EQ(app2_response_name, name2);
+  ASSERT_EQ(app2_response_input_type, input_type);
+  ASSERT_EQ(app2_response_default_output, default_output);
+  ASSERT_EQ(app2_response_latency_slo_micros, latency_slo_micros);
+  ASSERT_EQ(app2_linked_models, std::vector<std::string>{});
 }
 
 TEST_F(ManagementFrontendTest,
@@ -306,18 +392,11 @@ TEST_F(ManagementFrontendTest, TestGetAllApplicationsNotVerboseCorrect) {
   std::string input_type = "doubles";
   std::string default_output = "1.0";
   int latency_slo_micros = 10000;
-  // For now, we only support adding one candidate model
-  std::vector<std::string> candidate_model_names{"music_random_features"};
 
-  rapidjson::Document add_app1_json_document;
-  set_add_app_request_doc(add_app1_json_document, name1, candidate_model_names,
-                          input_type, default_output, latency_slo_micros);
-  std::string add_app1_json_string = to_json_string(add_app1_json_document);
-
-  rapidjson::Document add_app2_json_document;
-  set_add_app_request_doc(add_app2_json_document, name2, candidate_model_names,
-                          input_type, default_output, latency_slo_micros);
-  std::string add_app2_json_string = to_json_string(add_app2_json_document);
+  std::string add_app1_json_string = get_add_app_request_json(
+      name1, input_type, default_output, latency_slo_micros);
+  std::string add_app2_json_string = get_add_app_request_json(
+      name2, input_type, default_output, latency_slo_micros);
 
   ASSERT_EQ(rh_.add_application(add_app1_json_string), "Success!");
   ASSERT_EQ(rh_.add_application(add_app2_json_string), "Success!");
@@ -479,86 +558,356 @@ TEST_F(ManagementFrontendTest, TestAddModelMalformedJson) {
 }
 
 TEST_F(ManagementFrontendTest, TestSetModelVersionCorrect) {
-  std::string v1_json = R"(
-  {
-    "model_name": "m",
-    "model_version": "1",
-    "labels": ["ads", "images"],
-    "input_type": "ints",
-    "container_name": "clipper/test_container",
-    "model_data_path": "/tmp/models/m/1"
-  }
-  )";
+  std::string model_name = "m";
+  std::string model_version_1 = "1";
+  std::string model_version_2 = "2";
+  std::string model_version_4 = "4";
+  std::string input_type = "ints";
+  std::vector<std::string> labels = {"ads", "images"};
+  std::string container_name = "clipper/test_container";
+  std::string model_data_path = "/tmp/models/m/1";
+
+  std::string v1_json =
+      get_add_model_request_json(model_name, model_version_1, input_type,
+                                 labels, container_name, model_data_path);
+  std::string v2_json =
+      get_add_model_request_json(model_name, model_version_2, input_type,
+                                 labels, container_name, model_data_path);
+  std::string v4_json =
+      get_add_model_request_json(model_name, model_version_4, input_type,
+                                 labels, container_name, model_data_path);
   ASSERT_EQ(rh_.add_model(v1_json), "Success!");
-
-  std::string v2_json = R"(
-  {
-    "model_name": "m",
-    "model_version": "2",
-    "labels": ["ads", "images"],
-    "input_type": "ints",
-    "container_name": "clipper/test_container",
-    "model_data_path": "/tmp/models/m/2"
-  }
-  )";
   ASSERT_EQ(rh_.add_model(v2_json), "Success!");
-
-  std::string v4_json = R"(
-  {
-    "model_name": "m",
-    "model_version": "4",
-    "labels": ["ads", "images"],
-    "input_type": "ints",
-    "container_name": "clipper/test_container",
-    "model_data_path": "/tmp/models/m/4"
-  }
-  )";
   ASSERT_EQ(rh_.add_model(v4_json), "Success!");
-  ASSERT_EQ(*get_current_model_version(*redis_, "m"), "4");
-  ASSERT_TRUE(rh_.set_model_version("m", "2"));
-  ASSERT_EQ(*get_current_model_version(*redis_, "m"), "2");
+
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version_4);
+
+  std::string set_model_version_json =
+      get_set_model_version_request_json(model_name, model_version_2);
+  ASSERT_EQ(rh_.set_model_version(set_model_version_json), "Success!");
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version_2);
+}
+
+TEST_F(ManagementFrontendTest, TestSetVersionNonexistentModel) {
+  std::string model_name = "m";
+  std::string model_version = "1";
+
+  std::string set_model_version_json =
+      get_set_model_version_request_json(model_name, model_version);
+  ASSERT_THROW(rh_.set_model_version(set_model_version_json),
+               std::invalid_argument);
 }
 
 TEST_F(ManagementFrontendTest, TestSetModelInvalidVersion) {
-  std::string v1_json = R"(
-  {
-    "model_name": "m",
-    "model_version": "1",
-    "labels": ["ads", "images"],
-    "input_type": "ints",
-    "container_name": "clipper/test_container",
-    "model_data_path": "/tmp/models/m/1"
-  }
-  )";
+  std::string model_name = "m";
+  std::string model_version_1 = "1";
+  std::string model_version_2 = "2";
+  std::string model_version_4 = "4";
+  std::string input_type = "ints";
+  std::vector<std::string> labels = {"ads", "images"};
+  std::string container_name = "clipper/test_container";
+  std::string model_data_path = "/tmp/models/m/1";
+
+  std::string v1_json =
+      get_add_model_request_json(model_name, model_version_1, input_type,
+                                 labels, container_name, model_data_path);
+  std::string v2_json =
+      get_add_model_request_json(model_name, model_version_2, input_type,
+                                 labels, container_name, model_data_path);
+  std::string v4_json =
+      get_add_model_request_json(model_name, model_version_4, input_type,
+                                 labels, container_name, model_data_path);
   ASSERT_EQ(rh_.add_model(v1_json), "Success!");
-
-  std::string v2_json = R"(
-  {
-    "model_name": "m",
-    "model_version": "2",
-    "labels": ["ads", "images"],
-    "input_type": "ints",
-    "container_name": "clipper/test_container",
-    "model_data_path": "/tmp/models/m/2"
-  }
-  )";
   ASSERT_EQ(rh_.add_model(v2_json), "Success!");
-
-  std::string v4_json = R"(
-  {
-    "model_name": "m",
-    "model_version": "4",
-    "labels": ["ads", "images"],
-    "input_type": "ints",
-    "container_name": "clipper/test_container",
-    "model_data_path": "/tmp/models/m/4"
-  }
-  )";
   ASSERT_EQ(rh_.add_model(v4_json), "Success!");
 
-  ASSERT_EQ(*get_current_model_version(*redis_, "m"), "4");
-  ASSERT_FALSE(rh_.set_model_version("m", "11"));
-  ASSERT_EQ(*get_current_model_version(*redis_, "m"), "4");
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version_4);
+
+  std::string nonexistent_model_version = "11";
+  std::string set_model_version_json =
+      get_set_model_version_request_json(model_name, nonexistent_model_version);
+  ASSERT_THROW(rh_.set_model_version(set_model_version_json),
+               std::invalid_argument);
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version_4);
+}
+
+TEST_F(ManagementFrontendTest, TestAddModelLinkCorrect) {
+  std::string app_name = "myappname";
+  std::string input_type = "integers";
+  std::string default_output = "4.3";
+  std::string add_app_json =
+      get_add_app_request_json(app_name, input_type, default_output, 1000);
+  ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
+
+  std::string model_name = "mymodelname";
+  std::string model_version = "4";
+  std::string container_name = "container/name";
+  std::string model_data_path = "tmp/model";
+  std::vector<std::string> labels = {"l1", "l2"};
+  std::string add_model_json =
+      get_add_model_request_json(model_name, model_version, input_type, labels,
+                                 container_name, model_data_path);
+  ASSERT_EQ(rh_.add_model(add_model_json), "Success!");
+
+  std::vector<std::string> model_names = std::vector<std::string>{model_name};
+  std::string add_links_json =
+      get_add_model_links_request_json(app_name, model_names);
+
+  ASSERT_EQ(rh_.add_model_links(add_links_json), "Success!");
+  std::vector<std::string> result = get_linked_models(*redis_, app_name);
+
+  // We're storing model names as a set, so redis doesn't guarantee order
+  // Sorting will matter once we allow having multiple links per app
+  std::sort(model_names.begin(), model_names.end());
+  std::sort(result.begin(), result.end());
+  ASSERT_EQ(model_names, result);
+}
+
+TEST_F(ManagementFrontendTest, TestAddModelLinkIncompatibleInputType) {
+  std::string app_name = "myappname";
+  std::string app_input_type = "integers";
+  std::string default_output = "4.3";
+  std::string add_app_json =
+      get_add_app_request_json(app_name, app_input_type, default_output, 1000);
+  ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
+
+  std::string model_name = "mymodelname";
+  std::string model_version = "4";
+  std::string model_input_type = "doubles";
+  std::string container_name = "container/name";
+  std::string model_data_path = "tmp/model";
+  std::vector<std::string> labels = {"l1", "l2"};
+  std::string add_model_json =
+      get_add_model_request_json(model_name, model_version, model_input_type,
+                                 labels, container_name, model_data_path);
+  ASSERT_EQ(rh_.add_model(add_model_json), "Success!");
+
+  std::vector<std::string> model_names = std::vector<std::string>{model_name};
+  std::string add_links_json =
+      get_add_model_links_request_json(app_name, model_names);
+
+  ASSERT_THROW(rh_.add_model_links(add_links_json), std::invalid_argument);
+}
+
+TEST_F(ManagementFrontendTest, TestAddNewLinkedModelIncompatibleInputType) {
+  std::string app_name = "myappname";
+  std::string input_type = "integers";
+  std::string default_output = "4.3";
+  std::string add_app_json =
+      get_add_app_request_json(app_name, input_type, default_output, 1000);
+  ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
+
+  std::string model_name = "mymodelname";
+  std::string model_version = "4";
+  std::string container_name = "container/name";
+  std::string model_data_path = "tmp/model";
+  std::vector<std::string> labels = {"l1", "l2"};
+  std::string add_compatible_model_json =
+      get_add_model_request_json(model_name, model_version, input_type, labels,
+                                 container_name, model_data_path);
+  ASSERT_EQ(rh_.add_model(add_compatible_model_json), "Success!");
+
+  std::vector<std::string> model_names = std::vector<std::string>{model_name};
+  std::string add_links_json =
+      get_add_model_links_request_json(app_name, model_names);
+
+  ASSERT_EQ(rh_.add_model_links(add_links_json), "Success!");
+
+  std::string incompatible_model_input_type = "doubles";
+  std::string add_incompatible_model_json = get_add_model_request_json(
+      model_name, model_version, incompatible_model_input_type, labels,
+      container_name, model_data_path);
+  ASSERT_THROW(rh_.add_model(add_incompatible_model_json),
+               std::invalid_argument);
+}
+
+TEST_F(ManagementFrontendTest,
+       TestSetModellVersionForLinkedModelIncompatibleInputType) {
+  std::string app_name = "myappname";
+  std::string input_type = "integers";
+  std::string default_output = "4.3";
+  std::string add_app_json =
+      get_add_app_request_json(app_name, input_type, default_output, 1000);
+  ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
+
+  std::string incompatible_model_input_type = "doubles";
+  std::string compatible_model_version = "2";
+  std::string model_name = "mymodelname";
+  std::string incompatible_model_version = "1";
+  std::string container_name = "container/name";
+  std::string model_data_path = "tmp/model";
+  std::vector<std::string> labels = {"l1", "l2"};
+
+  std::string add_incompatible_model_json = get_add_model_request_json(
+      model_name, incompatible_model_version, incompatible_model_input_type,
+      labels, container_name, model_data_path);
+  std::string add_compatible_model_json = get_add_model_request_json(
+      model_name, compatible_model_version, input_type, labels, container_name,
+      model_data_path);
+  ASSERT_EQ(rh_.add_model(add_incompatible_model_json), "Success!");
+  ASSERT_EQ(rh_.add_model(add_compatible_model_json), "Success!");
+
+  std::vector<std::string> model_names = std::vector<std::string>{model_name};
+  std::string add_links_json =
+      get_add_model_links_request_json(app_name, model_names);
+  ASSERT_EQ(rh_.add_model_links(add_links_json), "Success!");
+
+  std::string set_model_version_json = get_set_model_version_request_json(
+      model_name, incompatible_model_version);
+  ASSERT_THROW(rh_.set_model_version(set_model_version_json),
+               std::invalid_argument);
+}
+
+TEST_F(ManagementFrontendTest, TestAddModelLinkWithNonexistentModel) {
+  std::string app_name = "myappname";
+  std::string input_type = "integers";
+  std::string default_output = "4.3";
+  std::string add_app_json =
+      get_add_app_request_json(app_name, input_type, default_output, 1000);
+  ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
+
+  std::string model_name = "mymodelname";
+
+  std::vector<std::string> model_names = std::vector<std::string>{model_name};
+  std::string add_links_json =
+      get_add_model_links_request_json(app_name, model_names);
+
+  ASSERT_THROW(rh_.add_model_links(add_links_json), std::invalid_argument);
+}
+
+TEST_F(ManagementFrontendTest, TestAddModelLinkWhenAlreadyExists) {
+  std::string app_name = "myappname";
+  std::string input_type = "integers";
+  std::string default_output = "4.3";
+  std::string add_app_json =
+      get_add_app_request_json(app_name, input_type, default_output, 1000);
+  ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
+
+  std::string model_name = "mymodelname";
+  std::string model_version = "4";
+  std::string container_name = "container/name";
+  std::string model_data_path = "tmp/model";
+  std::vector<std::string> labels = {"label1", "label2"};
+  std::string add_model_json =
+      get_add_model_request_json(model_name, model_version, input_type, labels,
+                                 container_name, model_data_path);
+  ASSERT_EQ(rh_.add_model(add_model_json), "Success!");
+
+  std::vector<std::string> model_names = std::vector<std::string>{model_name};
+  std::string add_links_json =
+      get_add_model_links_request_json(app_name, model_names);
+  ASSERT_EQ(rh_.add_model_links(add_links_json), "Success!");
+
+  // Attempts to re-add already existing links should work
+  ASSERT_EQ(rh_.add_model_links(add_links_json), "Success!");
+
+  std::vector<std::string> new_model_names =
+      std::vector<std::string>{"mymodelname2"};
+  std::string add_new_links_json =
+      get_add_model_links_request_json(app_name, new_model_names);
+
+  // When adding a new, second link, it should break
+  ASSERT_THROW(rh_.add_model_links(add_new_links_json), std::invalid_argument);
+}
+
+TEST_F(ManagementFrontendTest, TestAddModelLinkToNonexistentApp) {
+  std::string model_name = "mymodelname";
+  std::string model_version = "4";
+  std::string container_name = "container/name";
+  std::string model_data_path = "tmp/model";
+  std::string input_type = "integers";
+  std::vector<std::string> labels = {"label1", "label2"};
+  std::string add_model_json =
+      get_add_model_request_json(model_name, model_version, input_type, labels,
+                                 container_name, model_data_path);
+  ASSERT_EQ(rh_.add_model(add_model_json), "Success!");
+
+  std::string app_name = "myappname";
+  std::vector<std::string> model_names = std::vector<std::string>{model_name};
+  std::string add_links_json =
+      get_add_model_links_request_json(app_name, model_names);
+
+  ASSERT_THROW(rh_.add_model_links(add_links_json), std::invalid_argument);
+}
+
+TEST_F(ManagementFrontendTest, TestAddModelLinkMalformedJson) {
+  std::string malformed_add_links_json = R"(
+    {
+      "app_name": "myappname"
+      "model_names": ["mymodelname"]
+    }
+  )";
+  ASSERT_THROW(rh_.add_model_links(malformed_add_links_json), json_parse_error);
+}
+
+TEST_F(ManagementFrontendTest, TestAddModelLinkMissingField) {
+  std::string missing_field_add_links_json = R"(
+    {
+      "app_name": "myappname"
+    }
+  )";
+  ASSERT_THROW(rh_.add_model_links(missing_field_add_links_json),
+               json_semantic_error);
+}
+
+TEST_F(ManagementFrontendTest, TestGetModelLinks) {
+  // Add the app
+  std::string app_name = "myappname";
+  std::string input_type = "integers";
+  std::string default_output = "4.3";
+  std::string add_app_json =
+      get_add_app_request_json(app_name, input_type, default_output, 1000);
+  ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
+
+  // Confirm that no links exist
+  std::string get_linked_models_json =
+      get_linked_models_json_request_string(app_name);
+  auto result = rh_.get_linked_models(get_linked_models_json);
+  ASSERT_EQ("[]", result);
+
+  // Add the model
+  std::string model_name = "mymodelname";
+  std::string model_version = "4";
+  std::string container_name = "container/name";
+  std::string model_data_path = "tmp/model";
+  std::vector<std::string> labels = {"label1", "label2"};
+  std::string add_model_json =
+      get_add_model_request_json(model_name, model_version, input_type, labels,
+                                 container_name, model_data_path);
+  ASSERT_EQ(rh_.add_model(add_model_json), "Success!");
+
+  // Add the link
+  std::vector<std::string> model_names = std::vector<std::string>{model_name};
+  std::string add_links_json =
+      get_add_model_links_request_json(app_name, model_names);
+  ASSERT_EQ(rh_.add_model_links(add_links_json), "Success!");
+
+  result = rh_.get_linked_models(get_linked_models_json);
+  rapidjson::Document d;
+  parse_json(result, d);
+  auto result_array = to_string_array(d);
+
+  std::sort(model_names.begin(), model_names.end());
+  std::sort(result_array.begin(), result_array.end());
+  ASSERT_EQ(model_names, result_array);
+}
+
+TEST_F(ManagementFrontendTest, TestGetModelLinksForNonexistentApp) {
+  std::string app_name = "myappname";
+  std::string get_linked_models_json =
+      get_linked_models_json_request_string(app_name);
+  ASSERT_THROW(rh_.get_linked_models(get_linked_models_json),
+               std::invalid_argument);
+}
+
+TEST_F(ManagementFrontendTest, TestGetModelLinksMalformedJson) {
+  std::string malformed_get_linked_models_json = R"(
+    {
+      app_name : "a
+    }
+  )";
+  ASSERT_THROW(rh_.get_linked_models(malformed_get_linked_models_json),
+               json_parse_error);
 }
 
 }  // namespace
