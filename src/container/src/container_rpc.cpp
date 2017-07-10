@@ -24,7 +24,7 @@ RPC::~RPC() { stop(); }
 void RPC::stop() {
   if (active_) {
     active_ = false;
-    if(serving_thread_.joinable()) {
+    if (serving_thread_.joinable()) {
       serving_thread_.join();
     }
   }
