@@ -651,7 +651,6 @@ class RequestHandler {
       throw std::invalid_argument(ss.str());
     }
 
-    // Need to fux with this
     check_updated_model_consistent_with_app_links(model_name, input_type_raw);
 
     if (clipper::redis::add_model(redis_connection_, model_id, input_type,
@@ -1058,19 +1057,6 @@ class RequestHandler {
     std::string model_name = get_string(d, "model_name");
     std::string new_model_version = get_string(d, "model_version");
 
-    check_updated_model_consistent_with_app_links(model_name,
-                                                  new_model_version);
-    attempt_model_version_update(model_name, new_model_version);
-    return "Success!";
-  }
-
-  /**
-   * Attempts to update the version of model with name `model_name` to
-   * `new_model_version`. Validates inputs, throwing exceptions accordingly,
-   * and makes the database update.
-   */
-  void attempt_model_version_update(const string& model_name,
-                                    const string& new_model_version) {
     std::vector<std::string> versions =
         clipper::redis::get_model_versions(redis_connection_, model_name);
     bool version_exists = false;
@@ -1080,25 +1066,36 @@ class RequestHandler {
         break;
       }
     }
-    if (version_exists) {
-      auto model_info = clipper::redis::get_model(
-          redis_connection_, VersionedModelId(model_name, new_model_version));
-      auto input_type = model_info["input_type"];
-      check_updated_model_consistent_with_app_links(model_name, input_type);
-      if (!clipper::redis::set_current_model_version(
-              redis_connection_, model_name, new_model_version)) {
-        std::stringstream ss;
-        ss << "ERROR: Version " << new_model_version
-           << " does not exist for model " << model_name;
-        throw std::invalid_argument(ss.str());
-      }
-    } else {
+    if (!version_exists) {
       std::stringstream ss;
       ss << "Cannot set non-existent version " << new_model_version
          << " for model " << model_name;
       std::string err_msg = ss.str();
       clipper::log_error(LOGGING_TAG_MANAGEMENT_FRONTEND, err_msg);
       throw std::invalid_argument(err_msg);
+    }
+
+    auto model_info = clipper::redis::get_model(
+        redis_connection_, VersionedModelId(model_name, new_model_version));
+    auto input_type = model_info["input_type"];
+    check_updated_model_consistent_with_app_links(model_name, input_type);
+
+    attempt_model_version_update(model_name, new_model_version);
+    return "Success!";
+  }
+
+  /**
+   * Attempts to update the version of model with name `model_name` to
+   * `new_model_version`.
+   */
+  void attempt_model_version_update(const string& model_name,
+                                    const string& new_model_version) {
+    if (!clipper::redis::set_current_model_version(
+            redis_connection_, model_name, new_model_version)) {
+      std::stringstream ss;
+      ss << "ERROR: Version " << new_model_version
+         << " does not exist for model " << model_name;
+      throw std::invalid_argument(ss.str());
     }
   }
 
