@@ -69,26 +69,15 @@ void RPC::send_container_metadata(std::string &model_name, int model_version,
   static_cast<int *>(msg_message_type.data())[0] =
       static_cast<int>(rpc::MessageType::NewContainer);
 
-  zmq::message_t msg_model_name(&model_name[0], model_name.length(), NULL);
-
   std::string model_version_str = std::to_string(model_version);
-  zmq::message_t msg_model_version(&model_version_str[0],
-                                   model_version_str.length(), NULL);
-
   std::string model_input_type_str =
       std::to_string(static_cast<int>(model_input_type));
-  zmq::message_t msg_model_input_type(&model_input_type_str[0],
-                                      model_input_type_str.length(), NULL);
-
-  log_info_formatted(LOGGING_TAG_CONTAINER, "{} {}", model_version_str, model_input_type_str);
-  log_info_formatted(LOGGING_TAG_CONTAINER, "{}", msg_model_input_type.size());
-  log_info_formatted(LOGGING_TAG_CONTAINER, "{}", msg_model_version.size());
 
   socket.send("", 0, ZMQ_SNDMORE);
   socket.send(msg_message_type, ZMQ_SNDMORE);
-  socket.send(msg_model_name, ZMQ_SNDMORE);
-  socket.send(msg_model_version, ZMQ_SNDMORE);
-  socket.send(msg_model_input_type, 0);
+  socket.send(model_name.data(), model_name.length(), ZMQ_SNDMORE);
+  socket.send(model_version_str.data(), model_version_str.length(), ZMQ_SNDMORE);
+  socket.send(model_input_type_str.data(), model_version_str.length(), 0);
   log_info(LOGGING_TAG_CONTAINER, "Sent container metadata!");
   log_event(rpc::RPCEvent::SentContainerMetadata);
 }

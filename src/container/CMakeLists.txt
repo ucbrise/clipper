@@ -16,7 +16,7 @@ target_include_directories(container_lib PUBLIC
 add_executable(container_tests EXCLUDE_FROM_ALL
         src/container_tests.cpp
         )
-target_link_libraries(container_tests clipper gtest gmock_main container_lib)
+target_link_libraries(container_tests gtest gmock_main container_lib)
 add_dependencies(unittests container_tests)
 
 ##################################

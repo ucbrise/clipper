@@ -2,13 +2,19 @@
 
 #include <gtest/gtest.h>
 
-#include <clipper/datatypes.hpp>
+#include <container/datatypes.hpp>
 #include <container/container_parsing.hpp>
 #include <container/container_rpc.hpp>
 
-using namespace clipper;
+using namespace clipper::container;
 
 namespace {
+
+using ByteVectorParser = InputParser<uint8_t>;
+using IntVectorParser = InputParser<int>;
+using FloatVectorParser = InputParser<float>;
+using DoubleVectorParser = InputParser<double>;
+using SerializableStringParser = InputParser<char>;
 
 template <typename T>
 std::vector<std::vector<T>> create_primitive_parser_vecs() {
@@ -24,11 +30,10 @@ std::vector<std::vector<T>> create_primitive_parser_vecs() {
   return vecs;
 }
 
-template <typename D, class I>
-std::vector<std::shared_ptr<I>> get_inputs_from_prediction_request(
-    rpc::PredictionRequest& prediction_request,
-    container::InputParser<D, I>& input_parser) {
-  std::vector<ByteBuffer> serialized_request = prediction_request.serialize();
+template <typename D>
+std::vector<std::shared_ptr<Input<D>>> get_inputs_from_prediction_request(
+    clipper::rpc::PredictionRequest& prediction_request, InputParser<D>& input_parser) {
+  std::vector<clipper::ByteBuffer> serialized_request = prediction_request.serialize();
 
   auto raw_input_header = serialized_request[2];
   int* input_header = reinterpret_cast<int*>(raw_input_header.data());
@@ -51,27 +56,35 @@ TEST(ContainerTests, ByteVectorParserCreatesInputsFromRawContentCorrectly) {
   for (int i = 0; i < 3; i++) {
     std::vector<uint8_t> input_vec;
     uint8_t* vec_data = reinterpret_cast<uint8_t*>(&i);
-    for (int j = 0; j < static_cast<int>(sizeof(int)); j++) {
+    for (size_t j = 0; j < sizeof(int); j++) {
       input_vec.push_back(vec_data[j]);
     }
     input_vecs.push_back(input_vec);
   }
 
-  std::vector<std::shared_ptr<Input>> inputs;
+  std::vector<std::shared_ptr<clipper::Input>> inputs;
   for (auto const& vec : input_vecs) {
-    inputs.push_back(std::make_shared<ByteVector>(vec));
+    inputs.push_back(std::make_shared<clipper::ByteVector>(vec));
   }
 
   ASSERT_EQ(input_vecs.size(), inputs.size());
 
-  rpc::PredictionRequest prediction_request(inputs, InputType::Bytes);
-  container::ByteVectorParser parser;
+  clipper::rpc::PredictionRequest prediction_request(inputs, clipper::InputType::Bytes);
+
+  std::vector<uint8_t> input_buffer;
+  ByteVectorParser parser(input_buffer);
 
   std::vector<std::shared_ptr<ByteVector>> parsed_inputs =
-      get_inputs_from_prediction_request(prediction_request, parser);
+      get_inputs_from_prediction_request<uint8_t>(prediction_request, parser);
+
   ASSERT_EQ(parsed_inputs.size(), input_vecs.size());
-  for (int i = 0; i < static_cast<int>(parsed_inputs.size()); i++) {
-    ASSERT_EQ(parsed_inputs[i]->get_data(), input_vecs[i]);
+  for (size_t i = 0; i < parsed_inputs.size(); i++) {
+    const uint8_t* input_content = parsed_inputs[i]->get_data();
+    size_t input_length = parsed_inputs[i]->get_length();
+    ASSERT_EQ(input_length, input_vecs[i].size());
+    for (size_t j = 0; j < input_length; j++) {
+      ASSERT_EQ(input_content[j], input_vecs[i][j]);
+    }
   }
 }
 
@@ -79,21 +92,29 @@ TEST(ContainerTests, IntVectorParserCreatesInputsFromRawContentCorrectly) {
   std::vector<std::vector<int>> input_vecs =
       create_primitive_parser_vecs<int>();
 
-  std::vector<std::shared_ptr<Input>> inputs;
+  std::vector<std::shared_ptr<clipper::Input>> inputs;
   for (auto const& vec : input_vecs) {
-    inputs.push_back(std::make_shared<IntVector>(vec));
+    inputs.push_back(std::make_shared<clipper::IntVector>(vec));
   }
 
   ASSERT_EQ(input_vecs.size(), inputs.size());
 
-  rpc::PredictionRequest prediction_request(inputs, InputType::Ints);
-  container::IntVectorParser parser;
+  clipper::rpc::PredictionRequest prediction_request(inputs, clipper::InputType::Ints);
+
+  std::vector<int> input_buffer;
+  IntVectorParser parser(input_buffer);
 
   std::vector<std::shared_ptr<IntVector>> parsed_inputs =
-      get_inputs_from_prediction_request(prediction_request, parser);
+      get_inputs_from_prediction_request<int>(prediction_request, parser);
+
   ASSERT_EQ(parsed_inputs.size(), input_vecs.size());
-  for (int i = 0; i < static_cast<int>(parsed_inputs.size()); i++) {
-    ASSERT_EQ(parsed_inputs[i]->get_data(), input_vecs[i]);
+  for (size_t i = 0; i < parsed_inputs.size(); i++) {
+    const int* input_content = parsed_inputs[i]->get_data();
+    size_t input_length = parsed_inputs[i]->get_length();
+    ASSERT_EQ(input_length, input_vecs[i].size());
+    for (size_t j = 0; j < input_length; j++) {
+      ASSERT_EQ(input_content[j], input_vecs[i][j]);
+    }
   }
 }
 
@@ -101,21 +122,29 @@ TEST(ContainerTests, FloatVectorParserCreatesInputsFromRawContentCorrectly) {
   std::vector<std::vector<float>> input_vecs =
       create_primitive_parser_vecs<float>();
 
-  std::vector<std::shared_ptr<Input>> inputs;
+  std::vector<std::shared_ptr<clipper::Input>> inputs;
   for (auto const& vec : input_vecs) {
-    inputs.push_back(std::make_shared<FloatVector>(vec));
+    inputs.push_back(std::make_shared<clipper::FloatVector>(vec));
   }
 
   ASSERT_EQ(input_vecs.size(), inputs.size());
 
-  rpc::PredictionRequest prediction_request(inputs, InputType::Floats);
-  container::FloatVectorParser parser;
+  clipper::rpc::PredictionRequest prediction_request(inputs, clipper::InputType::Floats);
+
+  std::vector<float> input_buffer;
+  FloatVectorParser parser(input_buffer);
 
   std::vector<std::shared_ptr<FloatVector>> parsed_inputs =
-      get_inputs_from_prediction_request(prediction_request, parser);
+      get_inputs_from_prediction_request<float>(prediction_request, parser);
+
   ASSERT_EQ(parsed_inputs.size(), input_vecs.size());
-  for (int i = 0; i < static_cast<int>(parsed_inputs.size()); i++) {
-    ASSERT_EQ(parsed_inputs[i]->get_data(), input_vecs[i]);
+  for (size_t i = 0; i < parsed_inputs.size(); i++) {
+    const float* input_content = parsed_inputs[i]->get_data();
+    size_t input_length = parsed_inputs[i]->get_length();
+    ASSERT_EQ(input_length, input_vecs[i].size());
+    for (size_t j = 0; j < input_length; j++) {
+      ASSERT_EQ(input_content[j], input_vecs[i][j]);
+    }
   }
 }
 
@@ -123,49 +152,60 @@ TEST(ContainerTests, DoubleVectorParserCreatesInputsFromRawContentCorrectly) {
   std::vector<std::vector<double>> input_vecs =
       create_primitive_parser_vecs<double>();
 
-  std::vector<std::shared_ptr<Input>> inputs;
+  std::vector<std::shared_ptr<clipper::Input>> inputs;
   for (auto const& vec : input_vecs) {
-    inputs.push_back(std::make_shared<DoubleVector>(vec));
+    inputs.push_back(std::make_shared<clipper::DoubleVector>(vec));
   }
 
   ASSERT_EQ(input_vecs.size(), inputs.size());
 
-  rpc::PredictionRequest prediction_request(inputs, InputType::Doubles);
-  container::DoubleVectorParser parser;
+  clipper::rpc::PredictionRequest prediction_request(inputs, clipper::InputType::Doubles);
+
+  std::vector<double> input_buffer;
+  DoubleVectorParser parser(input_buffer);
 
   std::vector<std::shared_ptr<DoubleVector>> parsed_inputs =
-      get_inputs_from_prediction_request(prediction_request, parser);
+      get_inputs_from_prediction_request<double>(prediction_request, parser);
 
   ASSERT_EQ(parsed_inputs.size(), input_vecs.size());
-  for (int i = 0; i < static_cast<int>(parsed_inputs.size()); i++) {
-    ASSERT_EQ(parsed_inputs[i]->get_data(), input_vecs[i]);
+  for (size_t i = 0; i < parsed_inputs.size(); i++) {
+    const double* input_content = parsed_inputs[i]->get_data();
+    size_t input_length = parsed_inputs[i]->get_length();
+    ASSERT_EQ(input_length, input_vecs[i].size());
+    for (size_t j = 0; j < input_length; j++) {
+      ASSERT_EQ(input_content[j], input_vecs[i][j]);
+    }
   }
 }
 
 TEST(ContainerTests,
      SerializableStringParserCreatesInputsFromRawContentCorrectly) {
-  std::vector<std::string> input_vecs;
-  input_vecs.push_back("first_test_vector");
-  input_vecs.push_back("%*7&3333$$$$");
+  std::vector<std::string> input_strs;
+  input_strs.push_back("first_test_string");
+  input_strs.push_back("%*7&3333$$$$");
   char16_t unicode_char = u'\u00F6';
-  input_vecs.push_back(std::to_string(unicode_char));
+  input_strs.push_back(std::to_string(unicode_char));
 
-  std::vector<std::shared_ptr<Input>> inputs;
-  for (auto const& vec : input_vecs) {
-    inputs.push_back(std::make_shared<SerializableString>(vec));
+  std::vector<std::shared_ptr<clipper::Input>> inputs;
+  for (auto const& vec : input_strs) {
+    inputs.push_back(std::make_shared<clipper::SerializableString>(vec));
   }
 
-  ASSERT_EQ(input_vecs.size(), inputs.size());
+  ASSERT_EQ(input_strs.size(), inputs.size());
 
-  rpc::PredictionRequest prediction_request(inputs, InputType::Strings);
-  container::SerializableStringParser parser;
+  clipper::rpc::PredictionRequest prediction_request(inputs, clipper::InputType::Strings);
+
+  std::vector<char> input_buffer;
+  SerializableStringParser parser(input_buffer);
 
   std::vector<std::shared_ptr<SerializableString>> parsed_inputs =
-      get_inputs_from_prediction_request(prediction_request, parser);
+      get_inputs_from_prediction_request<char>(prediction_request, parser);
 
-  ASSERT_EQ(parsed_inputs.size(), input_vecs.size());
-  for (int i = 0; i < static_cast<int>(parsed_inputs.size()); i++) {
-    ASSERT_EQ(parsed_inputs[i]->get_data(), input_vecs[i]);
+  ASSERT_EQ(parsed_inputs.size(), input_strs.size());
+  for (size_t i = 0; i < parsed_inputs.size(); i++) {
+    const char* input_content = parsed_inputs[i]->get_data();
+    std::string input_str(input_content);
+    ASSERT_EQ(input_str, input_strs[i]);
   }
 }
 
