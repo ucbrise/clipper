@@ -9,7 +9,7 @@
 #include <boost/circular_buffer.hpp>
 #include <zmq.hpp>
 
-#include <clipper/datatypes.hpp>
+#include <container/datatypes.hpp>
 #include <clipper/logging.hpp>
 #include <clipper/rpc_service.hpp>
 #include "container_parsing.hpp"
@@ -28,11 +28,41 @@ constexpr long EVENT_LOG_CAPACITY = 100;
 
 using RPCLogItem = std::pair<rpc::RPCEvent, Clock::time_point>;
 
-template <class I>
+template <typename T>
+struct supported_input_trait {
+  static const bool is_supported = false;
+};
+
+template <>
+struct supported_input_trait<uint8_t> {
+  static const bool is_supported = true;
+};
+
+template <>
+struct supported_input_trait<int> {
+  static const bool is_supported = true;
+};
+
+template <>
+struct supported_input_trait<float> {
+  static const bool is_supported = true;
+};
+
+template <>
+struct supported_input_trait<double> {
+  static const bool is_supported = true;
+};
+
+template <>
+struct supported_input_trait<char> {
+  static const bool is_supported = true;
+};
+
+template <typename D>
 class Model {
  public:
   virtual std::vector<std::string> predict(
-      const std::vector<std::shared_ptr<I>> inputs) const = 0;
+      const std::vector<std::shared_ptr<Input<D>>> inputs) const = 0;
   virtual InputType get_input_type() const = 0;
 };
 
@@ -75,10 +105,15 @@ class RPC {
   RPC(RPC&& other) = default;
   RPC& operator=(RPC&& other) = default;
 
-  template <typename D, class I>
-  void start(Model<I>& model, std::string model_name, int model_version,
-             InputParser<D, I>& input_parser, std::string clipper_ip,
+  template <typename D>
+  void start(Model<D>& model,
+             std::string model_name,
+             int model_version,
+             std::string clipper_ip,
              int clipper_port) {
+    if(!supported_input_trait<D>::is_supported) {
+      throw std::runtime_error("Model must be of a supported input type!");
+    }
     if (active_) {
       throw std::runtime_error(
           "Cannot start a container that is already started!");
@@ -90,10 +125,8 @@ class RPC {
         LOGGING_TAG_CONTAINER,
         "Starting container RPC with clipper ip: {} and port: {}", clipper_ip,
         clipper_port);
-    serving_thread_ = std::thread([this, clipper_address, &model, model_name,
-                                   model_version, &input_parser]() {
-      serve_model(model, model_name, model_version, input_parser,
-                  clipper_address);
+    serving_thread_ = std::thread([this, clipper_address, &model, model_name, model_version]() {
+      serve_model(model, model_name, model_version, clipper_address);
     });
     serving_thread_.detach();
   };
@@ -125,14 +158,13 @@ class RPC {
 
   void log_event(rpc::RPCEvent event) const;
 
-  template <typename D, class I>
-  void serve_model(Model<I>& model, std::string model_name, int model_version,
-                   InputParser<D, I>& input_parser,
-                   std::string clipper_address) {
+  template <typename D>
+  void serve_model(Model<D>& model, std::string model_name, int model_version, std::string clipper_address) {
     zmq::context_t context(1);
     bool connected = false;
     std::chrono::time_point<Clock> last_activity_time;
 
+    InputParser<D> input_parser;
     std::vector<int> input_header_buffer;
     std::vector<uint8_t> output_buffer;
 
@@ -238,8 +270,8 @@ class RPC {
     }
   }
 
-  template <typename D, class I>
-  void handle_predict_request(Model<I>& model, InputParser<D, I>& input_parser,
+  template <typename D>
+  void handle_predict_request(Model<D>& model, InputParser<D> input_parser,
                               zmq::socket_t& socket,
                               std::vector<int>& input_header_buffer,
                               std::vector<uint8_t>& output_buffer,
@@ -280,7 +312,7 @@ class RPC {
 
     PerformanceTimer::log_elapsed("Recv");
 
-    std::vector<std::shared_ptr<I>> inputs =
+    std::vector<std::shared_ptr<Input<D>>> inputs =
         input_parser.get_inputs(input_header_buffer, input_content_size_bytes);
 
     PerformanceTimer::log_elapsed("Parse");
