@@ -2,9 +2,9 @@
 
 #include <gtest/gtest.h>
 
-#include <container/datatypes.hpp>
 #include <container/container_parsing.hpp>
 #include <container/container_rpc.hpp>
+#include <container/datatypes.hpp>
 
 using namespace clipper::container;
 
@@ -32,8 +32,10 @@ std::vector<std::vector<T>> create_primitive_parser_vecs() {
 
 template <typename D>
 std::vector<Input<D>> get_inputs_from_prediction_request(
-    clipper::rpc::PredictionRequest& prediction_request, InputParser<D>& input_parser) {
-  std::vector<clipper::ByteBuffer> serialized_request = prediction_request.serialize();
+    clipper::rpc::PredictionRequest& prediction_request,
+    InputParser<D>& input_parser) {
+  std::vector<clipper::ByteBuffer> serialized_request =
+      prediction_request.serialize();
 
   auto raw_input_header = serialized_request[2];
   int* input_header = reinterpret_cast<int*>(raw_input_header.data());
@@ -69,7 +71,8 @@ TEST(ContainerTests, ByteVectorParserCreatesInputsFromRawContentCorrectly) {
 
   ASSERT_EQ(input_vecs.size(), inputs.size());
 
-  clipper::rpc::PredictionRequest prediction_request(inputs, clipper::InputType::Bytes);
+  clipper::rpc::PredictionRequest prediction_request(inputs,
+                                                     clipper::InputType::Bytes);
 
   std::vector<uint8_t> input_buffer;
   ByteVectorParser parser(input_buffer);
@@ -99,7 +102,8 @@ TEST(ContainerTests, IntVectorParserCreatesInputsFromRawContentCorrectly) {
 
   ASSERT_EQ(input_vecs.size(), inputs.size());
 
-  clipper::rpc::PredictionRequest prediction_request(inputs, clipper::InputType::Ints);
+  clipper::rpc::PredictionRequest prediction_request(inputs,
+                                                     clipper::InputType::Ints);
 
   std::vector<int> input_buffer;
   IntVectorParser parser(input_buffer);
@@ -129,7 +133,8 @@ TEST(ContainerTests, FloatVectorParserCreatesInputsFromRawContentCorrectly) {
 
   ASSERT_EQ(input_vecs.size(), inputs.size());
 
-  clipper::rpc::PredictionRequest prediction_request(inputs, clipper::InputType::Floats);
+  clipper::rpc::PredictionRequest prediction_request(
+      inputs, clipper::InputType::Floats);
 
   std::vector<float> input_buffer;
   FloatVectorParser parser(input_buffer);
@@ -159,7 +164,8 @@ TEST(ContainerTests, DoubleVectorParserCreatesInputsFromRawContentCorrectly) {
 
   ASSERT_EQ(input_vecs.size(), inputs.size());
 
-  clipper::rpc::PredictionRequest prediction_request(inputs, clipper::InputType::Doubles);
+  clipper::rpc::PredictionRequest prediction_request(
+      inputs, clipper::InputType::Doubles);
 
   std::vector<double> input_buffer;
   DoubleVectorParser parser(input_buffer);
@@ -193,7 +199,8 @@ TEST(ContainerTests,
 
   ASSERT_EQ(input_strs.size(), inputs.size());
 
-  clipper::rpc::PredictionRequest prediction_request(inputs, clipper::InputType::Strings);
+  clipper::rpc::PredictionRequest prediction_request(
+      inputs, clipper::InputType::Strings);
 
   std::vector<char> input_buffer;
   SerializableStringParser parser(input_buffer);

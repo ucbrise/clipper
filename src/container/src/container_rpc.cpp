@@ -76,7 +76,8 @@ void RPC::send_container_metadata(std::string &model_name, int model_version,
   socket.send("", 0, ZMQ_SNDMORE);
   socket.send(msg_message_type, ZMQ_SNDMORE);
   socket.send(model_name.data(), model_name.length(), ZMQ_SNDMORE);
-  socket.send(model_version_str.data(), model_version_str.length(), ZMQ_SNDMORE);
+  socket.send(model_version_str.data(), model_version_str.length(),
+              ZMQ_SNDMORE);
   socket.send(model_input_type_str.data(), model_version_str.length(), 0);
   log_info(LOGGING_TAG_CONTAINER, "Sent container metadata!");
   log_event(rpc::RPCEvent::SentContainerMetadata);
