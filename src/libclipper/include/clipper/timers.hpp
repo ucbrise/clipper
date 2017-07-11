@@ -11,6 +11,7 @@
 
 #include <boost/thread.hpp>
 
+#include <clipper/datatypes.hpp>
 #include <clipper/logging.hpp>
 
 namespace clipper {
@@ -80,7 +81,7 @@ class Timer {
   bool operator<=(const Timer &rhs) const;
   bool operator>=(const Timer &rhs) const;
 
-  void expire();
+  void expire(Query query);
 
   std::chrono::time_point<std::chrono::high_resolution_clock> deadline_;
 
@@ -89,17 +90,18 @@ class Timer {
 };
 
 struct TimerCompare {
-  bool operator()(const std::shared_ptr<Timer> &lhs,
-                  const std::shared_ptr<Timer> &rhs) const {
-    return *lhs > *rhs;
+  bool operator()(const std::pair<Query, std::shared_ptr<Timer>> &lhs,
+                  const std::pair<Query, std::shared_ptr<Timer>> &rhs) const {
+    return *(lhs.second) > *(rhs.second);
     // return *rhs < *lhs;
   }
 };
 
 // need to use pointers here to get reference semantics
 using TimerPQueue =
-    std::priority_queue<std::shared_ptr<Timer>,
-                        std::vector<std::shared_ptr<Timer>>, TimerCompare>;
+    std::priority_queue<std::pair<Query, std::shared_ptr<Timer>>,
+                        std::vector<std::pair<Query, std::shared_ptr<Timer>>>,
+                        TimerCompare>;
 
 template <typename Clock>
 class TimerSystem {
@@ -135,12 +137,14 @@ class TimerSystem {
             [this]() { return !queue_.empty(); });
       }
       if (queue_.size() > 0) {
-        auto earliest_timer = queue_.top();
+        auto top_entry = queue_.top();
+        Query query = top_entry.first;
+        auto earliest_timer = top_entry.second;
         auto duration_ms =
             std::chrono::duration_cast<std::chrono::milliseconds>(
                 earliest_timer->deadline_ - cur_time);
         if (duration_ms.count() <= 0) {
-          earliest_timer->expire();
+          earliest_timer->expire(query);
           queue_.pop();
         }
       }
@@ -155,13 +159,26 @@ class TimerSystem {
   }
 
   boost::future<void> set_timer(long duration_micros) {
+    std::shared_ptr<Input> input;
+    Query q = {"made_up_app",
+               0,
+               input,
+               1000,
+               "DefaultOutputSelectionPolicy",
+               {VersionedModelId("a", "1")},
+               0};
+    set_timer(duration_micros, q);
+  }
+
+  boost::future<void> set_timer(long duration_micros, Query query) {
     assert(initialized_);
     boost::promise<void> promise;
     auto f = promise.get_future();
     auto tp = clock_.now() + std::chrono::microseconds(duration_micros);
     //  Timer timer{tp, promise};
     std::unique_lock<std::mutex> l(queue_mutex_);
-    queue_.emplace(std::make_shared<Timer>(tp, std::move(promise)));
+    queue_.emplace(
+        std::make_pair(query, std::make_shared<Timer>(tp, std::move(promise))));
     queue_not_empty_condition_.notify_all();
     return f;
   }

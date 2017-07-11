@@ -88,6 +88,7 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
       bench_metrics.request_throughput_->mark(1);
       log_info("TID", "Benchmark script", query_num,
                std::this_thread::get_id());
+      set_benchmark_script_tid(query_num, std::this_thread::get_id());
 
       if (SEND_REQUESTS) {
         boost::future<Response> prediction = qp.predict(q);
@@ -95,6 +96,8 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
           Response r = f.get();
           log_info("TID", "Benchmark script continuation", r.query_.test_qid_,
                    std::this_thread::get_id());
+          set_benchmark_script_continuation_tid(r.query_.test_qid_,
+                                                std::this_thread::get_id());
 
           // Update metrics
           if (r.output_is_default_) {
@@ -184,6 +187,51 @@ void write_full_report(std::unordered_map<std::string, std::string> &config,
   report_window_details(report_file, window);
 }
 
+void report_tid_metrics() {
+  std::this_thread::sleep_for(std::chrono::seconds(10));
+  auto tid_table = get_tid_table();
+
+  // Remove entries that aren't complete
+  for (auto it = begin(tid_table); it != end(tid_table);) {
+    if (it->second[complete_account_index] != complete_account_value) {
+      it = tid_table.erase(it);
+    } else {
+      ++it;
+    }
+  }
+
+  // Remove entries that aren't complete
+  int task_or_timer_completion_tid, response_ready_future_continuation_tid,
+      benchmark_script_continuation_tid;
+  int num_task_complete_same_as_response_continuation = 0;
+  int num_task_complete_same_as_benchmark_script_continuation = 0;
+
+  for (auto it = begin(tid_table); it != end(tid_table); ++it) {
+    auto vec = it->second;
+
+    task_or_timer_completion_tid = vec[task_or_timer_completion_tid_index];
+    response_ready_future_continuation_tid =
+        vec[response_ready_continuation_tid_index];
+    benchmark_script_continuation_tid =
+        vec[benchmark_script_continuation_tid_index];
+
+    if (task_or_timer_completion_tid ==
+        response_ready_future_continuation_tid) {
+      num_task_complete_same_as_response_continuation += 1;
+    }
+
+    if (task_or_timer_completion_tid == benchmark_script_continuation_tid) {
+      num_task_complete_same_as_benchmark_script_continuation += 1;
+    }
+  }
+
+  log_info("BENCH", "num_task_complete_same_as_benchmark_script_continuation",
+           num_task_complete_same_as_benchmark_script_continuation);
+  log_info("BENCH", "num_task_complete_same_as_response_continuation",
+           num_task_complete_same_as_response_continuation);
+  log_info("BENCH", "tid_table_size", tid_table.size());
+}
+
 void run_benchmark(std::unordered_map<std::string, std::string> &config) {
   get_config().ready();
   QueryProcessor qp;
@@ -239,6 +287,9 @@ void run_benchmark(std::unordered_map<std::string, std::string> &config) {
   } else {
     metrics_thread.join();
   }
+
+  std::thread report_tid_metrics_thread([&]() { report_tid_metrics(); });
+  report_tid_metrics_thread.join();
 
   log_info("BENCH", "Terminating benchmarking script");
 }

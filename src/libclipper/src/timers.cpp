@@ -34,6 +34,11 @@ bool Timer::operator>=(const Timer &rhs) const {
   return deadline_ >= rhs.deadline_;
 }
 
-void Timer::expire() { completion_promise_.set_value(); }
+void Timer::expire(Query query) {
+  log_info("TID", "Complete timer", query.test_qid_,
+           std::this_thread::get_id());
+  set_timer_completion_tid(query.test_qid_, std::this_thread::get_id());
+  completion_promise_.set_value();
+}
 
 }  // namespace clipper

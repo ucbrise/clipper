@@ -7,6 +7,7 @@
 #include <thread>
 #include <vector>
 
+#include <clipper/logging.hpp>
 #include "boost/thread.hpp"
 
 namespace clipper {
@@ -45,6 +46,36 @@ std::pair<boost::future<void>, std::vector<boost::future<T>>> when_all(
           }
           return result.get();
         }));
+  }
+
+  return std::make_pair<boost::future<void>, std::vector<boost::future<T>>>(
+      completion_promise->get_future(), std::move(wrapped_futures));
+}
+
+template <class T>
+std::pair<boost::future<void>, std::vector<boost::future<T>>> when_all_test(
+    std::vector<boost::future<T>> futures,
+    std::shared_ptr<std::atomic<int>> num_completed, Query query) {
+  if (futures.size() == 0) {
+    return std::make_pair(boost::make_ready_future(),
+                          std::vector<boost::future<T>>{});
+  }
+  int num_futures = futures.size();
+  auto completion_promise = std::make_shared<boost::promise<void>>();
+  std::vector<boost::future<T>> wrapped_futures;
+  for (auto f = futures.begin(); f != futures.end(); ++f) {
+    wrapped_futures.push_back(f->then([num_futures, completion_promise,
+                                       num_completed,
+                                       query](auto result) mutable {
+      if (num_completed->fetch_add(1) + 1 == num_futures) {
+        completion_promise->set_value();
+        log_info("TID", "Completed task futures", query.test_qid_,
+                 std::this_thread::get_id());
+        set_task_completion_tid(query.test_qid_, std::this_thread::get_id());
+        assert(*num_completed == num_futures);
+      }
+      return result.get();
+    }));
   }
 
   return std::make_pair<boost::future<void>, std::vector<boost::future<T>>>(

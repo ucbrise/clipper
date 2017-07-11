@@ -87,13 +87,16 @@ boost::future<Response> QueryProcessor::predict(Query query) {
                         "No connected models found for query with id: {}",
                         query_id);
   }
+
+  log_info("TID", "Create timer future", query.test_qid_,
+           std::this_thread::get_id());
   boost::future<void> timer_future =
-      timer_system_.set_timer(query.latency_budget_micros_);
+      timer_system_.set_timer(query.latency_budget_micros_, query);
 
   boost::future<void> all_tasks_completed;
   auto num_completed = std::make_shared<std::atomic<int>>(0);
   std::tie(all_tasks_completed, task_futures) =
-      future::when_all(std::move(task_futures), num_completed);
+      future::when_all_test(std::move(task_futures), num_completed, query);
 
   auto completed_flag = std::make_shared<std::atomic_flag>();
   // Due to some complexities of initializing the atomic_flag in a shared_ptr,
@@ -157,8 +160,10 @@ boost::future<Response> QueryProcessor::predict(Query query) {
                       final_output.first,
                       final_output.second,
                       default_explanation};
-    log_info("TID", "Response set val", query.test_qid_,
+    log_info("TID", "Response ready future continuation", query.test_qid_,
              std::this_thread::get_id());
+    set_response_ready_continuation_tid(query.test_qid_,
+                                        std::this_thread::get_id());
     response_promise.set_value(response);
   });
   return response_future;
