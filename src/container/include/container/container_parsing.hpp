@@ -11,6 +11,9 @@ namespace container {
 template <typename D>
 class InputParser {
  public:
+  InputParser(std::vector<D>& buffer) : buffer_(buffer) {
+
+  }
   /**
    * Exposes a buffer into which request data should be
    * read directly from a socket. The buffer contents
