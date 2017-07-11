@@ -593,7 +593,6 @@ class Clipper:
         environment_fname = "environment.yml"
         conda_dep_fname = "conda_dependencies.txt"
         pip_dep_fname = "pip_dependencies.txt"
-        local_modules_list_fname = "modules.txt"
         local_modules_folder_name = "modules"
 
         # Serialize function
@@ -634,9 +633,9 @@ class Clipper:
             )
 
         # Export modules used by predict_function not captured in anaconda or pip
-        self._export_local_modules(
-            c.modules, serialization_dir, conda_dep_fname, pip_dep_fname,
-            local_modules_folder_name, local_modules_list_fname)
+        self._export_local_modules(c.modules, serialization_dir,
+                                   conda_dep_fname, pip_dep_fname,
+                                   local_modules_folder_name)
         print("Supplied local modules")
 
         # Write out function serialization
@@ -685,8 +684,7 @@ class Clipper:
 
     def _export_local_modules(self, func_modules, serialization_dir,
                               conda_deps_fname, pip_deps_fname,
-                              local_modules_folder_name,
-                              local_modules_list_fname):
+                              local_modules_folder_name):
         """
         Supplies modules in `func_modules` not already accounted for by Anaconda or pip to container.
         Copies those modules to {`serialization_dir`}/{`local_module_deps_fname`}.
@@ -703,8 +701,6 @@ class Clipper:
             The name of the pip dependency file
         local_modules_folder_name : str
             The name of the folder to copy modules to
-        local_modules_list_fname : str
-            The name of the output file that will contain the names of all supplied local modules 
         """
         ignore_list = self._get_already_exported_modules(
             serialization_dir, conda_deps_fname, pip_deps_fname)
@@ -917,10 +913,9 @@ class Clipper:
         """
 
         default_python_container = "clipper/python-container"
-
         serialization_dir = self._save_python_function(name, predict_function)
 
-        # # Deploy function
+        # Deploy function
         deploy_result = self.deploy_model(name, version, serialization_dir,
                                           default_python_container, input_type,
                                           labels, num_containers)
