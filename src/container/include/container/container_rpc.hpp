@@ -63,7 +63,7 @@ template <class I>
 class Model {
  public:
   virtual std::vector<std::string> predict(
-      const std::vector<std::shared_ptr<I>> inputs) const = 0;
+      const std::vector<I> inputs) const = 0;
   virtual InputType get_input_type() const = 0;
 };
 
@@ -312,7 +312,7 @@ class RPC {
 
     PerformanceTimer::log_elapsed("Recv");
 
-    std::vector<std::shared_ptr<Input<D>>> inputs =
+    std::vector<Input<D>> inputs =
         input_parser.get_inputs(input_header_buffer, input_content_size_bytes);
 
     PerformanceTimer::log_elapsed("Parse");
