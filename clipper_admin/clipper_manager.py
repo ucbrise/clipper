@@ -19,8 +19,6 @@ import time
 import re
 from .module_dependency import ModuleDependencyAnalyzer
 
-cloudpickler = CloudPickler
-
 __all__ = ['Clipper']
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
