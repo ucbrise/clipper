@@ -2,7 +2,6 @@
 
 #include <gtest/gtest.h>
 
-#include <container/datatypes.hpp>
 #include <container/container_parsing.hpp>
 #include <container/container_rpc.hpp>
 #include <container/datatypes.hpp>

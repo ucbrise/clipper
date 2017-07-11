@@ -9,10 +9,10 @@
 #include <boost/circular_buffer.hpp>
 #include <zmq.hpp>
 
-#include <container/datatypes.hpp>
+#include <clipper/datatypes.hpp>
 #include <clipper/logging.hpp>
 #include <clipper/rpc_service.hpp>
-#include <clipper/datatypes.hpp>
+#include <container/datatypes.hpp>
 #include "container_parsing.hpp"
 
 const std::string LOGGING_TAG_CONTAINER = "CONTAINER";
@@ -107,12 +107,10 @@ class RPC {
   RPC& operator=(RPC&& other) = default;
 
   template <typename D>
-  void start(Model<Input<D>>& model,
-             std::string model_name,
-             int model_version,
-             std::string clipper_ip,
-             int clipper_port) {
-    static_assert(supported_input_trait<Input<D>>::is_supported, "Model must be of a supported input type!");
+  void start(Model<Input<D>>& model, std::string model_name, int model_version,
+             std::string clipper_ip, int clipper_port) {
+    static_assert(supported_input_trait<Input<D>>::is_supported,
+                  "Model must be of a supported input type!");
     if (active_) {
       throw std::runtime_error(
           "Cannot start a container that is already started!");
@@ -124,9 +122,10 @@ class RPC {
         LOGGING_TAG_CONTAINER,
         "Starting container RPC with clipper ip: {} and port: {}", clipper_ip,
         clipper_port);
-    serving_thread_ = std::thread([this, clipper_address, &model, model_name, model_version]() {
-      serve_model(model, model_name, model_version, clipper_address);
-    });
+    serving_thread_ = std::thread(
+        [this, clipper_address, &model, model_name, model_version]() {
+          serve_model(model, model_name, model_version, clipper_address);
+        });
     serving_thread_.detach();
   };
 
@@ -158,7 +157,8 @@ class RPC {
   void log_event(rpc::RPCEvent event) const;
 
   template <typename D>
-  void serve_model(Model<Input<D>>& model, std::string model_name, int model_version, std::string clipper_address) {
+  void serve_model(Model<Input<D>>& model, std::string model_name,
+                   int model_version, std::string clipper_address) {
     zmq::context_t context(1);
     bool connected = false;
     std::chrono::time_point<Clock> last_activity_time;
@@ -271,7 +271,8 @@ class RPC {
   }
 
   template <typename D>
-  void handle_predict_request(Model<Input<D>>& model, InputParser<D> input_parser,
+  void handle_predict_request(Model<Input<D>>& model,
+                              InputParser<D> input_parser,
                               zmq::socket_t& socket,
                               std::vector<int>& input_header_buffer,
                               std::vector<uint8_t>& output_buffer,

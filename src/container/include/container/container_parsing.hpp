@@ -21,9 +21,7 @@ struct input_parser_type<char> {
 template <typename D>
 class InputParser {
  public:
-  InputParser(std::vector<D>& buffer) : buffer_(buffer) {
-
-  }
+  InputParser(std::vector<D>& buffer) : buffer_(buffer) {}
   /**
    * Exposes a buffer into which request data should be
    * read directly from a socket. The buffer contents
@@ -34,9 +32,9 @@ class InputParser {
     return buffer_;
   }
 
-  const std::vector<Input<D>> get_inputs(
-      const std::vector<int>& input_header, long input_content_size) {
-    if(input_parser_type<D>::is_string_parser) {
+  const std::vector<Input<D>> get_inputs(const std::vector<int>& input_header,
+                                         long input_content_size) {
+    if (input_parser_type<D>::is_string_parser) {
       return get_string_inputs(input_header, input_content_size);
     } else {
       return get_primitive_inputs(input_header, input_content_size);
@@ -75,7 +73,8 @@ class InputParser {
     return inputs;
   }
 
-  const Input<D> construct_input(std::vector<D>& data_buffer, size_t data_start, size_t data_end) {
+  const Input<D> construct_input(std::vector<D>& data_buffer, size_t data_start,
+                                 size_t data_end) {
     D* input_data = data_buffer.data() + data_start;
     size_t length = data_end - data_start;
     Input<D> input(input_data, length);
@@ -97,7 +96,6 @@ class InputParser {
     }
     return inputs;
   }
-
 };
 
 }  // namespace container
