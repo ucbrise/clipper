@@ -8,7 +8,6 @@ import requests
 import json
 import yaml
 import pprint
-import pickle
 import subprocess32 as subprocess
 import shutil
 from sklearn import base
