@@ -57,7 +57,7 @@ void RPC::send_heartbeat(zmq::socket_t &socket) const {
   static_cast<int *>(type_message.data())[0] =
       static_cast<int>(rpc::MessageType::Heartbeat);
   socket.send("", 0, ZMQ_SNDMORE);
-  socket.send(type_message);
+  socket.send(type_message, 0);
   log_info(LOGGING_TAG_CONTAINER, "Sent heartbeat!");
   log_event(rpc::RPCEvent::SentHeartbeat);
 }
@@ -80,11 +80,15 @@ void RPC::send_container_metadata(std::string &model_name, int model_version,
   zmq::message_t msg_model_input_type(&model_input_type_str[0],
                                       model_input_type_str.length(), NULL);
 
+  log_info_formatted(LOGGING_TAG_CONTAINER, "{} {}", model_version_str, model_input_type_str);
+  log_info_formatted(LOGGING_TAG_CONTAINER, "{}", msg_model_input_type.size());
+  log_info_formatted(LOGGING_TAG_CONTAINER, "{}", msg_model_version.size());
+
   socket.send("", 0, ZMQ_SNDMORE);
   socket.send(msg_message_type, ZMQ_SNDMORE);
   socket.send(msg_model_name, ZMQ_SNDMORE);
   socket.send(msg_model_version, ZMQ_SNDMORE);
-  socket.send(msg_model_input_type);
+  socket.send(msg_model_input_type, 0);
   log_info(LOGGING_TAG_CONTAINER, "Sent container metadata!");
   log_event(rpc::RPCEvent::SentContainerMetadata);
 }

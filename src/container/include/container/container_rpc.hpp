@@ -12,6 +12,7 @@
 #include <container/datatypes.hpp>
 #include <clipper/logging.hpp>
 #include <clipper/rpc_service.hpp>
+#include <clipper/datatypes.hpp>
 #include "container_parsing.hpp"
 
 const std::string LOGGING_TAG_CONTAINER = "CONTAINER";
@@ -34,35 +35,35 @@ struct supported_input_trait {
 };
 
 template <>
-struct supported_input_trait<uint8_t> {
+struct supported_input_trait<ByteVector> {
   static const bool is_supported = true;
 };
 
 template <>
-struct supported_input_trait<int> {
+struct supported_input_trait<IntVector> {
   static const bool is_supported = true;
 };
 
 template <>
-struct supported_input_trait<float> {
+struct supported_input_trait<FloatVector> {
   static const bool is_supported = true;
 };
 
 template <>
-struct supported_input_trait<double> {
+struct supported_input_trait<DoubleVector> {
   static const bool is_supported = true;
 };
 
 template <>
-struct supported_input_trait<char> {
+struct supported_input_trait<SerializableString> {
   static const bool is_supported = true;
 };
 
-template <typename D>
+template <class I>
 class Model {
  public:
   virtual std::vector<std::string> predict(
-      const std::vector<std::shared_ptr<Input<D>>> inputs) const = 0;
+      const std::vector<std::shared_ptr<I>> inputs) const = 0;
   virtual InputType get_input_type() const = 0;
 };
 
@@ -106,14 +107,12 @@ class RPC {
   RPC& operator=(RPC&& other) = default;
 
   template <typename D>
-  void start(Model<D>& model,
+  void start(Model<Input<D>>& model,
              std::string model_name,
              int model_version,
              std::string clipper_ip,
              int clipper_port) {
-    if(!supported_input_trait<D>::is_supported) {
-      throw std::runtime_error("Model must be of a supported input type!");
-    }
+    static_assert(supported_input_trait<Input<D>>::is_supported, "Model must be of a supported input type!");
     if (active_) {
       throw std::runtime_error(
           "Cannot start a container that is already started!");
@@ -159,13 +158,14 @@ class RPC {
   void log_event(rpc::RPCEvent event) const;
 
   template <typename D>
-  void serve_model(Model<D>& model, std::string model_name, int model_version, std::string clipper_address) {
+  void serve_model(Model<Input<D>>& model, std::string model_name, int model_version, std::string clipper_address) {
     zmq::context_t context(1);
     bool connected = false;
     std::chrono::time_point<Clock> last_activity_time;
 
-    InputParser<D> input_parser;
     std::vector<int> input_header_buffer;
+    std::vector<D> input_buffer;
+    InputParser<D> input_parser(input_buffer);
     std::vector<uint8_t> output_buffer;
 
     while (true) {
@@ -271,7 +271,7 @@ class RPC {
   }
 
   template <typename D>
-  void handle_predict_request(Model<D>& model, InputParser<D> input_parser,
+  void handle_predict_request(Model<Input<D>>& model, InputParser<D> input_parser,
                               zmq::socket_t& socket,
                               std::vector<int>& input_header_buffer,
                               std::vector<uint8_t>& output_buffer,

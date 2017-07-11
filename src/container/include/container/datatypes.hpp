@@ -21,7 +21,7 @@ class Input {
   }
 
  private:
-  D* data_;
+  const D* data_;
   size_t length_;
 
 };

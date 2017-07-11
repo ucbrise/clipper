@@ -9,7 +9,7 @@
 
 using namespace clipper::container;
 
-class RPCTestModel : public Model<double> {
+class RPCTestModel : public Model<DoubleVector> {
  public:
   RPCTestModel(RPC& container_rpc) : container_rpc_(container_rpc) {}
 
