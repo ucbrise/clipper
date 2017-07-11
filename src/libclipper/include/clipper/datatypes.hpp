@@ -225,6 +225,9 @@ class Query {
   Query(std::string label, long user_id, std::shared_ptr<Input> input,
         long latency_budget_micros, std::string selection_policy,
         std::vector<VersionedModelId> candidate_models);
+  Query(std::string label, long user_id, std::shared_ptr<Input> input,
+        long latency_budget_micros, std::string selection_policy,
+        std::vector<VersionedModelId> candidate_models, int test_qid);
 
   // Note that it should be relatively cheap to copy queries because
   // the actual input won't be copied
@@ -240,6 +243,7 @@ class Query {
   // use is to distinguish queries coming from different
   // REST endpoints.
   std::string label_;
+  int test_qid_;
   long user_id_;
   std::shared_ptr<Input> input_;
   // TODO change this to a deadline instead of a duration

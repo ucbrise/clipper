@@ -83,24 +83,30 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
                  input,
                  latency_objective,
                  clipper::DefaultOutputSelectionPolicy::get_name(),
-                 {VersionedModelId(model_name, model_version)}};
-
-      boost::future<Response> prediction = qp.predict(q);
+                 {VersionedModelId(model_name, model_version)},
+                 query_num};
       bench_metrics.request_throughput_->mark(1);
+      log_info("TID", "Benchmark script", query_num,
+               std::this_thread::get_id());
 
-      prediction.then([bench_metrics](boost::future<Response> f) {
-        Response r = f.get();
+      if (SEND_REQUESTS) {
+        boost::future<Response> prediction = qp.predict(q);
+        prediction.then([bench_metrics](boost::future<Response> f) {
+          Response r = f.get();
+          log_info("TID", "Benchmark script continuation", r.query_.test_qid_,
+                   std::this_thread::get_id());
 
-        // Update metrics
-        if (r.output_is_default_) {
-          bench_metrics.default_pred_ratio_->increment(1, 1);
-        } else {
-          bench_metrics.default_pred_ratio_->increment(0, 1);
-        }
-        bench_metrics.latency_->insert(r.duration_micros_);
-        bench_metrics.num_predictions_->increment(1);
-        bench_metrics.throughput_->mark(1);
-      });
+          // Update metrics
+          if (r.output_is_default_) {
+            bench_metrics.default_pred_ratio_->increment(1, 1);
+          } else {
+            bench_metrics.default_pred_ratio_->increment(0, 1);
+          }
+          bench_metrics.latency_->insert(r.duration_micros_);
+          bench_metrics.num_predictions_->increment(1);
+          bench_metrics.throughput_->mark(1);
+        });
+      }
     }
 
     delay_micros =

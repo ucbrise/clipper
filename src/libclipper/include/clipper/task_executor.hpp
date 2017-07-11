@@ -21,6 +21,8 @@
 #include <clipper/threadpool.hpp>
 #include <clipper/util.hpp>
 
+#include "../../../logging_constants.hpp"
+
 namespace clipper {
 
 const std::string LOGGING_TAG_TASK_EXECUTOR = "TASKEXECUTOR";
@@ -155,6 +157,9 @@ class ModelQueue {
   // current system time. This method should only be called
   // when a unique lock on the queue_mutex is held.
   void remove_tasks_with_elapsed_deadlines() {
+    if (IGNORE_OVERDUE_TASKS) {
+      return;
+    }
     std::chrono::time_point<std::chrono::system_clock> current_time =
         std::chrono::system_clock::now();
     while (!queue_.empty()) {
@@ -401,8 +406,13 @@ class TaskExecutor {
     // goes out of scope.
     l.unlock();
 
-    std::vector<PredictTask> batch = current_model_queue->get_batch([container](
-        Deadline deadline) { return container->get_batch_size(deadline); });
+    std::vector<PredictTask> batch =
+        current_model_queue->get_batch([container](Deadline deadline) {
+          if (USE_FIXED_BATCH_SIZE) {
+            return FIXED_BATCH_SIZE;
+          }
+          return container->get_batch_size(deadline);
+        });
 
     if (batch.size() > 0) {
       // move the lock up here, so that nothing can pull from the

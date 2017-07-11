@@ -311,6 +311,18 @@ rpc::PredictionResponse::deserialize_prediction_response(ByteBuffer bytes) {
 
 Query::Query(std::string label, long user_id, std::shared_ptr<Input> input,
              long latency_budget_micros, std::string selection_policy,
+             std::vector<VersionedModelId> candidate_models, int test_qid)
+    : label_(label),
+      user_id_(user_id),
+      input_(input),
+      latency_budget_micros_(latency_budget_micros),
+      selection_policy_(selection_policy),
+      candidate_models_(candidate_models),
+      test_qid_(test_qid),
+      create_time_(std::chrono::high_resolution_clock::now()) {}
+
+Query::Query(std::string label, long user_id, std::shared_ptr<Input> input,
+             long latency_budget_micros, std::string selection_policy,
              std::vector<VersionedModelId> candidate_models)
     : label_(label),
       user_id_(user_id),
