@@ -2,13 +2,10 @@
 
 #include <gtest/gtest.h>
 
-#include <clipper/datatypes.hpp>
+#include <container/datatypes.hpp>
 #include <container/container_parsing.hpp>
 #include <container/container_rpc.hpp>
-<<<<<<< fe5ba92482c3b48f13993d05b4e634b00cb04b2a
 #include <container/datatypes.hpp>
-=======
->>>>>>> Format code
 
 using namespace clipper::container;
 

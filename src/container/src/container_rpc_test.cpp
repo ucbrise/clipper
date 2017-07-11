@@ -63,6 +63,26 @@ class RPCTestModel : public Model<DoubleVector> {
   }
 };
 
+class NoOpModel : public Model<DoubleVector> {
+ public:
+  std::vector<std::string> predict(const std::vector<std::shared_ptr<DoubleVector>> inputs) const override {
+    std::vector<std::string> outputs;
+    for(auto const& input : inputs) {
+      for(int i = 0; i < input->get_length(); i++) {
+        std::cout << "ELEM: " << input->get_data()[i];
+      }
+      outputs.push_back("DEFAULT!");
+    }
+    return outputs;
+  }
+
+  InputType get_input_type() const override {
+    return InputType::Doubles;
+  }
+
+
+};
+
 int main(int argc, char* argv[]) {
   cxxopts::Options options("Cpp RPC Test",
                            "RPC layer testing for cpp model containers");
@@ -76,7 +96,8 @@ int main(int argc, char* argv[]) {
   long test_length = options["test_length"].as<long>();
 
   RPC container_rpc;
-  RPCTestModel test_model(container_rpc);
+  //RPCTestModel test_model(container_rpc);
+  NoOpModel test_model;
   std::string model_name = "cpp_test";
   int model_version = 1;
 
