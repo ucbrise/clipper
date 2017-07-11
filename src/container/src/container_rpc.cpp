@@ -2,7 +2,6 @@
 
 #include <zmq.hpp>
 
-#include <container/container_parsing.hpp>
 #include <container/container_rpc.hpp>
 
 namespace clipper {

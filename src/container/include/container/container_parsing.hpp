@@ -1,14 +1,14 @@
 #ifndef CLIPPER_CONTAINER_PARSING_HPP
 #define CLIPPER_CONTAINER_PARSING_HPP
 
-#include <clipper/datatypes.hpp>
+#include <container/datatypes.hpp>
 #include <vector>
 
 namespace clipper {
 
 namespace container {
 
-template <typename D, class I>
+template <typename D>
 class InputParser {
  public:
   /**
@@ -16,71 +16,51 @@ class InputParser {
    * read directly from a socket. The buffer contents
    * can then be parsed via `get_inputs`
    */
-  virtual std::vector<D>& get_data_buffer(long min_size_bytes) = 0;
-  virtual const std::vector<std::shared_ptr<I>> get_inputs(
-      const std::vector<int>& input_header, long input_content_size) = 0;
-};
+  std::vector<D>& get_data_buffer(long min_size_bytes) {
+    resize_if_necessary(buffer_, min_size_bytes);
+    return buffer_;
+  }
 
-class ByteVectorParser : public InputParser<uint8_t, ByteVector> {
- public:
-  std::vector<uint8_t>& get_data_buffer(long min_size_bytes) override;
-  const std::vector<std::shared_ptr<ByteVector>> get_inputs(
-      const std::vector<int>& input_header, long input_content_size) override;
-
- private:
-  static std::shared_ptr<ByteVector> construct_input(
-      std::vector<uint8_t>& data_buffer, int data_start, int data_end);
-
-  std::vector<uint8_t> buffer_;
-};
-
-class IntVectorParser : public InputParser<int, IntVector> {
- public:
-  std::vector<int>& get_data_buffer(long min_size_bytes) override;
-  const std::vector<std::shared_ptr<IntVector>> get_inputs(
-      const std::vector<int>& input_header, long input_content_size) override;
-
- private:
-  static std::shared_ptr<IntVector> construct_input(
-      std::vector<int>& data_buffer, int data_start, int data_end);
-
-  std::vector<int> buffer_;
-};
-
-class FloatVectorParser : public InputParser<float, FloatVector> {
- public:
-  std::vector<float>& get_data_buffer(long min_size_bytes) override;
-  const std::vector<std::shared_ptr<FloatVector>> get_inputs(
-      const std::vector<int>& input_header, long input_content_size) override;
+  const std::vector<std::shared_ptr<Input<D>>> get_inputs(
+      const std::vector<int>& input_header, long input_content_size) {
+    // For a prediction request containing `n` inputs, there are `n - 1` split
+    // indices
+    int num_splits = input_header[1] - 1;
+    std::vector<std::shared_ptr<Input<D>>> inputs;
+    int prev_split = 0;
+    // Iterate from the beginning of the input data content
+    // (the first two elements of the header are metadata)
+    for (int i = 2; i < num_splits + 2; i++) {
+      int curr_split = input_header[i];
+      std::shared_ptr<Input<D>> input =
+          construct_input(buffer_, prev_split, curr_split);
+      inputs.push_back(input);
+      prev_split = curr_split;
+    }
+    int typed_input_content_size =
+        static_cast<int>(input_content_size / static_cast<long>(sizeof(D)));
+    std::shared_ptr<Input<D>> tail_input =
+        construct_input(buffer_, prev_split, typed_input_content_size);
+    inputs.push_back(tail_input);
+    return inputs;
+  }
 
  private:
-  static std::shared_ptr<FloatVector> construct_input(
-      std::vector<float>& data_buffer, int data_start, int data_end);
+  std::vector<D>& buffer_;
 
-  std::vector<float> buffer_;
-};
+  void resize_if_necessary(std::vector<D>& buffer, long required_buffer_size) {
+    if (static_cast<long>((buffer.size() * sizeof(D))) < required_buffer_size) {
+      buffer.reserve((2 * required_buffer_size) / sizeof(D));
+    }
+  }
 
-class DoubleVectorParser : public InputParser<double, DoubleVector> {
- public:
-  std::vector<double>& get_data_buffer(long min_size_bytes) override;
-  const std::vector<std::shared_ptr<DoubleVector>> get_inputs(
-      const std::vector<int>& input_header, long input_content_size) override;
-
- private:
-  static std::shared_ptr<DoubleVector> construct_input(
-      std::vector<double>& data_buffer, int data_start, int data_end);
-
-  std::vector<double> buffer_;
-};
-
-class SerializableStringParser : public InputParser<char, SerializableString> {
- public:
-  std::vector<char>& get_data_buffer(long min_size_bytes) override;
-  const std::vector<std::shared_ptr<SerializableString>> get_inputs(
-      const std::vector<int>& input_header, long input_content_size) override;
-
- private:
-  std::vector<char> buffer_;
+  std::shared_ptr<Input<D>> construct_input(
+      std::vector<D>& data_buffer, int data_start, int data_end) {
+    D* input_data = data_buffer.data() + data_start;
+    size_t length = static_cast<size_t>(data_end - data_start);
+    std::shared_ptr<Input<D>> input = std::make_shared<Input<D>>(input_data, length);
+    return input;
+  }
 };
 
 }  // namespace container

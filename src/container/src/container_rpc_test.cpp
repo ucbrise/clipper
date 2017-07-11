@@ -2,7 +2,6 @@
 
 #include <rapidjson/rapidjson.h>
 
-#include <clipper/datatypes.hpp>
 #include <clipper/json_util.hpp>
 #include <clipper/logging.hpp>
 #include <container/container_parsing.hpp>
@@ -10,13 +9,11 @@
 
 using namespace clipper::container;
 
-class RPCTestModel : public Model<clipper::DoubleVector> {
+class RPCTestModel : public Model<double> {
  public:
   RPCTestModel(RPC& container_rpc) : container_rpc_(container_rpc) {}
 
-  std::vector<std::string> predict(
-      const std::vector<std::shared_ptr<clipper::DoubleVector>> inputs)
-      const override {
+  std::vector<std::string> predict(const std::vector<std::shared_ptr<DoubleVector>> inputs) const override {
     std::vector<std::string> outputs;
     for (auto const& input : inputs) {
       long min_timestamp_millis = static_cast<long>(input->get_data()[0]);
@@ -83,13 +80,11 @@ int main(int argc, char* argv[]) {
   RPCTestModel test_model(container_rpc);
   std::string model_name = "cpp_test";
   int model_version = 1;
-  DoubleVectorParser parser;
 
   std::string clipper_ip = "localhost";
   int clipper_port = 7000;
 
-  container_rpc.start(test_model, model_name, model_version, parser, clipper_ip,
-                      clipper_port);
+  container_rpc.start(test_model, model_name, model_version, clipper_ip, clipper_port);
 
   std::this_thread::sleep_for(std::chrono::seconds(test_length));
 
