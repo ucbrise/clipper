@@ -13,10 +13,10 @@ class RPCTestModel : public Model<DoubleVector> {
  public:
   RPCTestModel(RPC& container_rpc) : container_rpc_(container_rpc) {}
 
-  std::vector<std::string> predict(const std::vector<std::shared_ptr<DoubleVector>> inputs) const override {
+  std::vector<std::string> predict(const std::vector<DoubleVector> inputs) const override {
     std::vector<std::string> outputs;
     for (auto const& input : inputs) {
-      long min_timestamp_millis = static_cast<long>(input->get_data()[0]);
+      long min_timestamp_millis = static_cast<long>(input.get_data()[0]);
       std::vector<clipper::rpc::RPCEvent> recent_events =
           get_events(min_timestamp_millis);
       rapidjson::Document output_json;
@@ -64,26 +64,6 @@ class RPCTestModel : public Model<DoubleVector> {
   }
 };
 
-class NoOpModel : public Model<DoubleVector> {
- public:
-  std::vector<std::string> predict(const std::vector<std::shared_ptr<DoubleVector>> inputs) const override {
-    std::vector<std::string> outputs;
-    for(auto const& input : inputs) {
-      for(int i = 0; i < input->get_length(); i++) {
-        std::cout << "ELEM: " << input->get_data()[i];
-      }
-      outputs.push_back("DEFAULT!");
-    }
-    return outputs;
-  }
-
-  InputType get_input_type() const override {
-    return InputType::Doubles;
-  }
-
-
-};
-
 int main(int argc, char* argv[]) {
   cxxopts::Options options("Cpp RPC Test",
                            "RPC layer testing for cpp model containers");
@@ -97,8 +77,7 @@ int main(int argc, char* argv[]) {
   long test_length = options["test_length"].as<long>();
 
   RPC container_rpc;
-  //RPCTestModel test_model(container_rpc);
-  NoOpModel test_model;
+  RPCTestModel test_model(container_rpc);
   std::string model_name = "cpp_test";
   int model_version = 1;
 

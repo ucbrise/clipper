@@ -31,7 +31,7 @@ std::vector<std::vector<T>> create_primitive_parser_vecs() {
 }
 
 template <typename D>
-std::vector<std::shared_ptr<Input<D>>> get_inputs_from_prediction_request(
+std::vector<Input<D>> get_inputs_from_prediction_request(
     clipper::rpc::PredictionRequest& prediction_request, InputParser<D>& input_parser) {
   std::vector<clipper::ByteBuffer> serialized_request = prediction_request.serialize();
 
@@ -74,13 +74,13 @@ TEST(ContainerTests, ByteVectorParserCreatesInputsFromRawContentCorrectly) {
   std::vector<uint8_t> input_buffer;
   ByteVectorParser parser(input_buffer);
 
-  std::vector<std::shared_ptr<ByteVector>> parsed_inputs =
+  std::vector<ByteVector> parsed_inputs =
       get_inputs_from_prediction_request<uint8_t>(prediction_request, parser);
 
   ASSERT_EQ(parsed_inputs.size(), input_vecs.size());
   for (size_t i = 0; i < parsed_inputs.size(); i++) {
-    const uint8_t* input_content = parsed_inputs[i]->get_data();
-    size_t input_length = parsed_inputs[i]->get_length();
+    const uint8_t* input_content = parsed_inputs[i].get_data();
+    size_t input_length = parsed_inputs[i].get_length();
     ASSERT_EQ(input_length, input_vecs[i].size());
     for (size_t j = 0; j < input_length; j++) {
       ASSERT_EQ(input_content[j], input_vecs[i][j]);
@@ -104,13 +104,13 @@ TEST(ContainerTests, IntVectorParserCreatesInputsFromRawContentCorrectly) {
   std::vector<int> input_buffer;
   IntVectorParser parser(input_buffer);
 
-  std::vector<std::shared_ptr<IntVector>> parsed_inputs =
+  std::vector<IntVector> parsed_inputs =
       get_inputs_from_prediction_request<int>(prediction_request, parser);
 
   ASSERT_EQ(parsed_inputs.size(), input_vecs.size());
   for (size_t i = 0; i < parsed_inputs.size(); i++) {
-    const int* input_content = parsed_inputs[i]->get_data();
-    size_t input_length = parsed_inputs[i]->get_length();
+    const int* input_content = parsed_inputs[i].get_data();
+    size_t input_length = parsed_inputs[i].get_length();
     ASSERT_EQ(input_length, input_vecs[i].size());
     for (size_t j = 0; j < input_length; j++) {
       ASSERT_EQ(input_content[j], input_vecs[i][j]);
@@ -134,13 +134,13 @@ TEST(ContainerTests, FloatVectorParserCreatesInputsFromRawContentCorrectly) {
   std::vector<float> input_buffer;
   FloatVectorParser parser(input_buffer);
 
-  std::vector<std::shared_ptr<FloatVector>> parsed_inputs =
+  std::vector<FloatVector> parsed_inputs =
       get_inputs_from_prediction_request<float>(prediction_request, parser);
 
   ASSERT_EQ(parsed_inputs.size(), input_vecs.size());
   for (size_t i = 0; i < parsed_inputs.size(); i++) {
-    const float* input_content = parsed_inputs[i]->get_data();
-    size_t input_length = parsed_inputs[i]->get_length();
+    const float* input_content = parsed_inputs[i].get_data();
+    size_t input_length = parsed_inputs[i].get_length();
     ASSERT_EQ(input_length, input_vecs[i].size());
     for (size_t j = 0; j < input_length; j++) {
       ASSERT_EQ(input_content[j], input_vecs[i][j]);
@@ -164,13 +164,13 @@ TEST(ContainerTests, DoubleVectorParserCreatesInputsFromRawContentCorrectly) {
   std::vector<double> input_buffer;
   DoubleVectorParser parser(input_buffer);
 
-  std::vector<std::shared_ptr<DoubleVector>> parsed_inputs =
+  std::vector<DoubleVector> parsed_inputs =
       get_inputs_from_prediction_request<double>(prediction_request, parser);
 
   ASSERT_EQ(parsed_inputs.size(), input_vecs.size());
   for (size_t i = 0; i < parsed_inputs.size(); i++) {
-    const double* input_content = parsed_inputs[i]->get_data();
-    size_t input_length = parsed_inputs[i]->get_length();
+    const double* input_content = parsed_inputs[i].get_data();
+    size_t input_length = parsed_inputs[i].get_length();
     ASSERT_EQ(input_length, input_vecs[i].size());
     for (size_t j = 0; j < input_length; j++) {
       ASSERT_EQ(input_content[j], input_vecs[i][j]);
@@ -198,12 +198,12 @@ TEST(ContainerTests,
   std::vector<char> input_buffer;
   SerializableStringParser parser(input_buffer);
 
-  std::vector<std::shared_ptr<SerializableString>> parsed_inputs =
+  std::vector<SerializableString> parsed_inputs =
       get_inputs_from_prediction_request<char>(prediction_request, parser);
 
   ASSERT_EQ(parsed_inputs.size(), input_strs.size());
   for (size_t i = 0; i < parsed_inputs.size(); i++) {
-    const char* input_content = parsed_inputs[i]->get_data();
+    const char* input_content = parsed_inputs[i].get_data();
     std::string input_str(input_content);
     ASSERT_EQ(input_str, input_strs[i]);
   }

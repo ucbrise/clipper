@@ -12,11 +12,11 @@ class Input {
 
   }
 
-  const D* get_data() {
+  const D* get_data() const {
     return data_;
   }
 
-  size_t get_length() {
+  size_t get_length() const {
     return length_;
   }
 
