@@ -457,6 +457,58 @@ TEST_F(ManagementFrontendTest, TestAddModelCorrect) {
   ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version);
 }
 
+TEST_F(ManagementFrontendTest, TestAddLinkedModelCompatibleInputType) {
+  std::string app_name = "myappname";
+  std::string input_type = "integers";
+  std::string default_output = "4.3";
+  std::string add_app_json =
+      get_add_app_request_json(app_name, input_type, default_output, 1000);
+
+  ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
+
+  std::string add_model_json = R"(
+  {
+    "model_name": "mymodelname",
+    "model_version": "4",
+    "labels": ["label1", "label2", "label3"],
+    "input_type": "integers",
+    "container_name": "clipper/sklearn_cifar",
+    "model_data_path": "/tmp/model/repo/m/4"
+  }
+  )";
+
+  ASSERT_EQ(rh_.add_model(add_model_json), "Success!");
+  std::string model_name = "mymodelname";
+  std::string model_version = "4";
+  auto result = get_model(*redis_, VersionedModelId(model_name, model_version));
+  // The model table has 7 fields, so we expect to get back a map with 7
+  // entries in it (see add_model() in redis.cpp for details on what the
+  // fields are).
+  ASSERT_EQ(result.size(), static_cast<size_t>(7));
+
+  // Make sure that the current model version has been updated
+  // appropriately.
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version);
+  std::vector<std::string> model_names{model_name};
+
+  std::string add_links_json =
+      get_add_model_links_request_json(app_name, model_names);
+
+  ASSERT_EQ(rh_.add_model_links(add_links_json), "Success!");
+
+  std::string add_new_model_json = R"(
+  {
+    "model_name": "mymodelname",
+    "model_version": "6",
+    "labels": ["label1", "label5"],
+    "input_type": "ints",
+    "container_name": "clipper/other_container",
+    "model_data_path": "/tmp/model/repo/m/4"
+  }
+  )";
+  ASSERT_EQ(rh_.add_model(add_new_model_json), "Success!");
+}
+
 TEST_F(ManagementFrontendTest, TestAddDuplicateModelVersion) {
   std::string add_model_json = R"(
   {
