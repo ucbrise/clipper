@@ -139,9 +139,11 @@ function run_integration_tests {
     echo "Found Spark at $SPARK_HOME"
   fi
   python ../integration-tests/clipper_admin_tests.py
+  python ../integration-tests/many_apps_many_models.py 2 3
   python ../integration-tests/deploy_pyspark_models.py
   python ../integration-tests/deploy_pyspark_pipeline_models.py
-  python ../integration-tests/many_apps_many_models.py 2 3
+  # TODO: uncomment
+  # python ../integration-tests/deploy_R_models.py
 }
 
 function run_all_tests {

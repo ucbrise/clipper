@@ -19,6 +19,9 @@ else:
     PY3 = True
 
 
+SERVICE = "docker"
+
+
 logger = logging.getLogger(__name__)
 
 headers = {'Content-type': 'application/json'}

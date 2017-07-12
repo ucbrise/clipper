@@ -150,11 +150,13 @@ def cleanup(clipper, test_succeeded):
 
 
 if __name__ == "__main__":
+    # TODO: fix this test
+    sys.exit(1)
     try:
         clipper = init_clipper()
 
-        #preparing datasets for training and testing 
-        #using dataset mtcars , already provided by R. It has 32 rows and various coloums for eg. mpg,wt,cyl etc  
+        #preparing datasets for training and testing
+        #using dataset mtcars , already provided by R. It has 32 rows and various coloums for eg. mpg,wt,cyl etc
         #splitting it for training and testing in ratio 1:1. Further splitting the test data in ratio 1:1
         train_data = ro.r('train_data=head(mtcars,0.5*nrow(mtcars))')
         test_data = ro.r('test_data=tail(mtcars,0.5*nrow(mtcars))')

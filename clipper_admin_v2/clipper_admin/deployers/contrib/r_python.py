@@ -36,7 +36,6 @@ def deploy_R_model(cm,
         created later as well. Defaults to 1.
     """
 
-    # importing some R specific dependencies
     base_image = "clipper/r_python_container"
     input_type = "strings"
     fname = name.replace("/", "_")

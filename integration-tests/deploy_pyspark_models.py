@@ -5,10 +5,6 @@ import requests
 import json
 import numpy as np
 import time
-import subprocess32 as subprocess
-import pprint
-import random
-import socket
 import logging
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
@@ -26,11 +22,11 @@ from pyspark.mllib.regression import LabeledPoint
 from pyspark.sql import SparkSession
 
 from test_utils import (create_container_manager, BenchmarkException,
-                        headers, log_clipper_state)
+                        headers, log_clipper_state, SERVICE)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin_v2" % cur_dir))
 import clipper_admin as cl
-from clipper_admin.deployers.pyspark import deploy_pyspark_model
+from clipper_admin.deployers.pyspark import deploy_pyspark_model, create_endpoint
 
 logging.basicConfig(format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
                     datefmt='%y-%m-%d:%H:%M:%S',
@@ -40,8 +36,6 @@ logger = logging.getLogger(__name__)
 
 app_name = "pyspark_test"
 model_name = "pyspark_model"
-
-service = "docker"
 
 
 def normalize(x):
@@ -74,15 +68,16 @@ def predict_with_local_modules(spark, model, xs):
 
 
 def deploy_and_test_model(sc, cm, model, version, link_model=False, predict_fn=predict):
-    deploy_pyspark_model(cm, model_name, version, "ints", predict_fn, model, sc)
+    deploy_pyspark_model(cm, model_name, version, "integers", predict_fn, model, sc)
 
     time.sleep(5)
 
     if link_model:
-        link_model_to_app(cm, app_name, model_name)
+        cl.link_model_to_app(cm, app_name, model_name)
         time.sleep(5)
 
     test_model(app_name, version)
+
 
 def test_model(app, version):
     time.sleep(25)
@@ -135,14 +130,14 @@ if __name__ == "__main__":
                 .appName("clipper-pyspark")\
                 .getOrCreate()
         sc = spark.sparkContext
-        cm = create_container_manager(service, cleanup=True, start_clipper=True)
+        cm = create_container_manager(SERVICE, cleanup=True, start_clipper=True)
 
         train_path = os.path.join(cur_dir, "data/train.data")
         trainRDD = sc.textFile(train_path).map(
             lambda line: parseData(line, objective, pos_label)).cache()
 
         try:
-            cl.register_application(cm, app_name, model_name, "ints",
+            cl.register_application(cm, app_name, "integers",
                                     "default_pred", 100000)
             time.sleep(1)
 
@@ -170,20 +165,19 @@ if __name__ == "__main__":
             deploy_and_test_model(sc, cm, svm_model, version)
 
             app_and_model_name = "easy_register_app_model"
-            register_app_and_deploy_pyspark_model(cm,
-                app_and_model_name, "ints", predict, lr_model, sc)
+            create_endpoint(cm, app_and_model_name, "integers", predict, lr_model, sc)
             test_model(app_and_model_name, 1)
 
             deploy_and_test_model(sc, cm, lr_model, version, predict_with_local_modules)
         except BenchmarkException as e:
             log_clipper_state(cm)
             logger.exception("BenchmarkException")
-            cm = create_container_manager(service, cleanup=True, start_clipper=False)
+            cm = create_container_manager(SERVICE, cleanup=True, start_clipper=False)
             sys.exit(1)
         else:
             spark.stop()
-            cm = create_container_manager(service, cleanup=True, start_clipper=False)
+            cm = create_container_manager(SERVICE, cleanup=True, start_clipper=False)
     except Exception as e:
         logger.exception("Exception")
-        cm = create_container_manager(service, cleanup=True, start_clipper=False)
+        cm = create_container_manager(SERVICE, cleanup=True, start_clipper=False)
         sys.exit(1)

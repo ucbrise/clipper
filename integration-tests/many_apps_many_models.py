@@ -7,7 +7,7 @@ import numpy as np
 import time
 import logging
 from test_utils import (create_container_manager, BenchmarkException, fake_model_data,
-                        headers, log_clipper_state)
+                        headers, log_clipper_state, SERVICE)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin_v2" % cur_dir))
 import clipper_admin as cl
@@ -19,7 +19,6 @@ logging.basicConfig(format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d
 
 logger = logging.getLogger(__name__)
 
-service = "k8s"
 
 
 def deploy_model(cm, name, version):
@@ -60,8 +59,7 @@ def deploy_model(cm, name, version):
 
 def create_and_test_app(cm, name, num_models):
     app_name = "%s_app" % name
-    model_name = "%s_model" % name
-    cl.register_application(cm, app_name, model_name, "doubles",
+    cl.register_application(cm, app_name, "doubles",
                             "default_pred", 100000)
     time.sleep(1)
 
@@ -94,7 +92,7 @@ if __name__ == "__main__":
         # for num_apps and num_models
         pass
     try:
-        cm = create_container_manager(service, cleanup=True, start_clipper=True)
+        cm = create_container_manager(SERVICE, cleanup=True, start_clipper=True)
         try:
             logger.info("Running integration test with %d apps and %d models" %
                         (num_apps, num_models))
@@ -106,11 +104,11 @@ if __name__ == "__main__":
         except BenchmarkException as e:
             log_clipper_state(cm)
             logger.exception("BenchmarkException")
-            create_container_manager(service, cleanup=True, start_clipper=False)
+            create_container_manager(SERVICE, cleanup=True, start_clipper=False)
             sys.exit(1)
         else:
-            create_container_manager(service, cleanup=True, start_clipper=False)
+            create_container_manager(SERVICE, cleanup=True, start_clipper=False)
     except Exception as e:
         logger.exception("Exception")
-        create_container_manager(service, cleanup=True, start_clipper=False)
+        create_container_manager(SERVICE, cleanup=True, start_clipper=False)
         sys.exit(1)

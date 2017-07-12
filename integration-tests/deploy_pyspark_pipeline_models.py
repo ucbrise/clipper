@@ -15,7 +15,7 @@ from pyspark.ml.feature import HashingTF, Tokenizer
 from pyspark.sql import SparkSession
 
 from test_utils import (create_container_manager, BenchmarkException,
-                        headers, log_clipper_state)
+                        headers, log_clipper_state, SERVICE)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin_v2" % cur_dir))
 import clipper_admin as cl
@@ -30,7 +30,6 @@ logger = logging.getLogger(__name__)
 app_name = "pyspark_pipeline_test"
 model_name = "pyspark_pipeline"
 
-service = "docker"
 
 columns = ["id", "text"]
 
@@ -93,11 +92,10 @@ def run_test():
                   [json.dumps((np.random.randint(1000), "spark abcd"))]))
 
     try:
-        cm = create_container_manager(service, cleanup=True, start_clipper=True)
+        cm = create_container_manager(SERVICE, cleanup=True, start_clipper=True)
 
         try:
-            cl.register_application(cm, app_name, model_name, "strings",
-                                    "default_pred", 10000000)
+            cl.register_application(cm, app_name, "strings", "default_pred", 10000000)
             time.sleep(1)
 
             response = requests.post(
@@ -163,15 +161,15 @@ def run_test():
         except BenchmarkException as e:
             log_clipper_state(cm)
             logger.exception("BenchmarkException")
-            cm = create_container_manager(service, cleanup=True, start_clipper=False)
+            cm = create_container_manager(SERVICE, cleanup=True, start_clipper=False)
             sys.exit(1)
         else:
             spark.stop()
-            cm = create_container_manager(service, cleanup=True, start_clipper=False)
+            cm = create_container_manager(SERVICE, cleanup=True, start_clipper=False)
             logger.info("ALL TESTS PASSED")
     except Exception as e:
         logger.exception("Exception")
-        cm = create_container_manager(service, cleanup=True, start_clipper=False)
+        cm = create_container_manager(SERVICE, cleanup=True, start_clipper=False)
         sys.exit(1)
 
 
