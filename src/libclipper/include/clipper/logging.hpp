@@ -28,6 +28,13 @@ static constexpr int complete_account_index = 5;
 static constexpr int incomplete_account_value = 0;
 static constexpr int complete_account_value = 1;
 
+static constexpr int BENCH_SCRIPT_INDEX = 0;
+static constexpr int WHEN_ANY_INDEX = 1;
+static constexpr int TIMER_EXPIRE_INDEX = 2;
+static constexpr int RESPONSE_READY_INDEX = 3;
+static constexpr int BENCH_CONT_INDEX = 4;
+
+
 // Defines the logging format as [HH:MM:SS.mmm][<LOG_LEVEL>] <Message>
 // Note: <Message> includes a formatted, user-defined tag (see
 // get_formatted_tag())
@@ -101,8 +108,22 @@ class Logger {
   // ready future continuation TID, benchmark script continuation TID]
   std::unordered_map<int, std::vector<int>> tid_table;
 
+  // TID -> [count in benchmark, count in when any, count in timer expire,
+  // count in response ready, count in bench continuation]
+  std::unordered_map<std::__thread_id, std::vector<int>> t_counts_table;
+
+  void _update_count(std::__thread_id tid, int index) {
+    if (t_counts_table.find(tid) == t_counts_table.end()) {
+      t_counts_table[tid] = std::vector<int>{0, 0, 0, 0, 0};
+    }
+
+    auto vec = t_counts_table[tid];
+    vec[index] += 1;
+    t_counts_table[tid] = vec;
+  }
+
   void set_benchmark_script_tid(int test_qid, int tid) {
-    auto tid_vec = std::vector<int>{0, 0, 0, 0, 0, 0};
+    auto tid_vec = std::vector<int>{-1, -1, -1, -1, -1, -1};
     tid_vec[benchmark_script_tid_index] = tid;
     tid_vec[if_task_completed_index] = if_task_completed_reserve_value;
     tid_vec[complete_account_index] = incomplete_account_value;
@@ -114,6 +135,7 @@ class Logger {
     if (tid_vec[if_task_completed_index] == if_task_completed_reserve_value) {
       tid_vec[if_task_completed_index] = timer_completed_value;
       tid_vec[task_or_timer_completion_tid_index] = tid;
+      tid_table[test_qid] = tid_vec;
     }
   }
 
@@ -122,18 +144,21 @@ class Logger {
     if (tid_vec[if_task_completed_index] == if_task_completed_reserve_value) {
       tid_vec[if_task_completed_index] = task_completed_value;
       tid_vec[task_or_timer_completion_tid_index] = tid;
+      tid_table[test_qid] = tid_vec;
     }
   }
 
   void set_response_ready_continuation_tid(int test_qid, int tid) {
     auto tid_vec = tid_table[test_qid];
     tid_vec[response_ready_continuation_tid_index] = tid;
+    tid_table[test_qid] = tid_vec;
   }
 
   void set_benchmark_script_continuation_tid(int test_qid, int tid) {
     auto tid_vec = tid_table[test_qid];
     tid_vec[benchmark_script_continuation_tid_index] = tid;
     tid_vec[complete_account_index] = complete_account_value;
+    tid_table[test_qid] = tid_vec;
   }
 
  private:
@@ -275,6 +300,31 @@ static void set_benchmark_script_continuation_tid(int test_qid,
 static std::unordered_map<int, std::vector<int>> get_tid_table() {
   return Logger::get().tid_table;
 }
+
+static void update_bench_script_count(std::__thread_id tid) {
+  Logger::get()._update_count(tid, BENCH_SCRIPT_INDEX);
+}
+
+static void update_when_any_count(std::__thread_id tid) {
+  Logger::get()._update_count(tid, WHEN_ANY_INDEX);
+}
+
+static void update_response_ready_count(std::__thread_id tid) {
+  Logger::get()._update_count(tid, RESPONSE_READY_INDEX);
+}
+
+static void update_bench_cont_count(std::__thread_id tid) {
+  Logger::get()._update_count(tid, BENCH_CONT_INDEX);
+}
+
+static void update_timer_expire_count(std::__thread_id tid) {
+  Logger::get()._update_count(tid, TIMER_EXPIRE_INDEX);
+}
+
+static std::unordered_map<std::__thread_id, std::vector<int>>
+get_t_counts_table() {
+  return Logger::get().t_counts_table;
+};
 
 template <class... Strings>
 static void log_info(const std::string tag, Strings... messages) {

@@ -28,6 +28,7 @@ const std::string POISSON_DELAY = "poisson_delay";
 const std::string MODEL_NAME = "model_name";
 const std::string MODEL_VERSION = "model_version";
 const std::string PREVENT_CACHE_HITS = "prevent_cache_hits";
+const std::string THREAD_COUNTS_REPORT_PATH = "thread_counts_report_path";
 
 const int FLUSH_AT_END_INDICATOR = -1;
 
@@ -73,8 +74,8 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
 
       if (prevent_cache_hits) {
         // Modify it to be epoch and thread-specific
-        query_vec[0] = query_num / num_datapoints;
-        query_vec[1] = thread_id;
+        query_vec[0] = query_num;
+        query_vec[1] += thread_id;
       }
 
       std::shared_ptr<Input> input = std::make_shared<DoubleVector>(query_vec);
@@ -86,18 +87,21 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
                  {VersionedModelId(model_name, model_version)},
                  query_num};
       bench_metrics.request_throughput_->mark(1);
-      log_info("TID", "Benchmark script", query_num,
-               std::this_thread::get_id());
+      //      log_info("TID", "Benchmark script", query_num,
+      //               std::this_thread::get_id());
       set_benchmark_script_tid(query_num, std::this_thread::get_id());
+      update_bench_script_count(std::this_thread::get_id());
 
       if (SEND_REQUESTS) {
         boost::future<Response> prediction = qp.predict(q);
         prediction.then([bench_metrics](boost::future<Response> f) {
           Response r = f.get();
-          log_info("TID", "Benchmark script continuation", r.query_.test_qid_,
-                   std::this_thread::get_id());
+          //          log_info("TID", "Benchmark script continuation",
+          //          r.query_.test_qid_,
+          //                   std::this_thread::get_id());
           set_benchmark_script_continuation_tid(r.query_.test_qid_,
                                                 std::this_thread::get_id());
+          update_bench_cont_count(std::this_thread::get_id());
 
           // Update metrics
           if (r.output_is_default_) {
@@ -192,19 +196,21 @@ void report_tid_metrics() {
   auto tid_table = get_tid_table();
 
   // Remove entries that aren't complete
-  for (auto it = begin(tid_table); it != end(tid_table);) {
-    if (it->second[complete_account_index] != complete_account_value) {
-      it = tid_table.erase(it);
-    } else {
-      ++it;
-    }
-  }
+  //  for (auto it = begin(tid_table); it != end(tid_table);) {
+  //    if (it->second[complete_account_index] != complete_account_value) {
+  //      it = tid_table.erase(it);
+  //    } else {
+  //      ++it;
+  //    }
+  //  }
 
   // Remove entries that aren't complete
   int task_or_timer_completion_tid, response_ready_future_continuation_tid,
       benchmark_script_continuation_tid;
   int num_task_complete_same_as_response_continuation = 0;
   int num_task_complete_same_as_benchmark_script_continuation = 0;
+
+  std::vector<int> unique_tid = {};
 
   for (auto it = begin(tid_table); it != end(tid_table); ++it) {
     auto vec = it->second;
@@ -223,6 +229,16 @@ void report_tid_metrics() {
     if (task_or_timer_completion_tid == benchmark_script_continuation_tid) {
       num_task_complete_same_as_benchmark_script_continuation += 1;
     }
+
+    std::stringstream ss;
+    for (auto el : vec) {
+      if (std::find(unique_tid.begin(), unique_tid.end(), el) ==
+          unique_tid.end()) {
+        unique_tid.push_back(el);
+      }
+      ss << el << ":";
+    }
+    log_info("NISHAD", ss.str());
   }
 
   log_info("BENCH", "num_task_complete_same_as_benchmark_script_continuation",
@@ -230,6 +246,48 @@ void report_tid_metrics() {
   log_info("BENCH", "num_task_complete_same_as_response_continuation",
            num_task_complete_same_as_response_continuation);
   log_info("BENCH", "tid_table_size", tid_table.size());
+  log_info("BENCH", "num_unique_threads", unique_tid.size());
+}
+
+void report_t_counts_metrics(
+    std::unordered_map<std::string, std::string> config) {
+  std::string report_path = get_str(THREAD_COUNTS_REPORT_PATH, config);
+  std::ofstream report_file(report_path);
+  document_benchmark_details(config, report_file);
+
+  std::stringstream ss_indices;
+  ss_indices << "BENCH_SCRIPT_INDEX: " << BENCH_SCRIPT_INDEX << ", ";
+  ss_indices << "WHEN_ANY_INDEX: " << WHEN_ANY_INDEX << ", ";
+  ss_indices << "TIMER_EXPIRE_INDEX: " << TIMER_EXPIRE_INDEX << ", ";
+  ss_indices << "RESPONSE_READY_INDEX: " << RESPONSE_READY_INDEX << ", ";
+  ss_indices << "BENCH_CONT_INDEX: " << BENCH_CONT_INDEX << std::endl;
+  std::string indices_info = ss_indices.str();
+  log_info("INDICES", indices_info);
+  report_file << indices_info;
+
+  std::stringstream ss_logging_consts;
+  ss_logging_consts << "SHORT_CIRCUIT_TASK_EXECUTOR: " << SHORT_CIRCUIT_TASK_EXECUTOR << ", ";
+  ss_logging_consts << "SEND_REQUESTS: " << SEND_REQUESTS << ", ";
+  ss_logging_consts << "IGNORE_OVERDUE_TASKS: " << IGNORE_OVERDUE_TASKS << ", ";
+  ss_logging_consts << "USE_FIXED_BATCH_SIZE: " << USE_FIXED_BATCH_SIZE << ", ";
+  ss_logging_consts << "FIXED_BATCH_SIZE: " << FIXED_BATCH_SIZE << std::endl;
+  std::string logging_constants_info = ss_logging_consts.str();
+  log_info("CONSTS", logging_constants_info);
+  report_file << logging_constants_info;
+
+  auto t_counts_table = get_t_counts_table();
+  std::stringstream ss;
+  ss << std::endl;
+  for (auto it = begin(t_counts_table); it != end(t_counts_table); ++it) {
+    ss << it->first << ": ";
+    for (auto el : it->second) {
+      ss << el << ", ";
+    }
+    ss << std::endl;
+  }
+  std::string table = ss.str();
+  log_info("TABLE", table);
+  report_file << table;
 }
 
 void run_benchmark(std::unordered_map<std::string, std::string> &config) {
@@ -288,8 +346,12 @@ void run_benchmark(std::unordered_map<std::string, std::string> &config) {
     metrics_thread.join();
   }
 
-  std::thread report_tid_metrics_thread([&]() { report_tid_metrics(); });
-  report_tid_metrics_thread.join();
+  //  std::thread report_tid_metrics_thread([&]() { report_tid_metrics(); });
+  //  report_tid_metrics_thread.join();
+
+  std::thread report_t_counts_metrics_thread(
+      [&]() { report_t_counts_metrics(config); });
+  report_t_counts_metrics_thread.join();
 
   log_info("BENCH", "Terminating benchmarking script");
 }
@@ -308,7 +370,8 @@ int main(int argc, char *argv[]) {
       CIFAR_DATA_PATH,    NUM_BATCHES,          REQUEST_BATCH_DELAY_MICROS,
       LATENCY_OBJECTIVE,  REPORT_DELAY_SECONDS, BENCHMARK_REPORT_PATH,
       POISSON_DELAY,      MODEL_NAME,           MODEL_VERSION,
-      REQUEST_BATCH_SIZE, NUM_THREADS,          PREVENT_CACHE_HITS};
+      REQUEST_BATCH_SIZE, NUM_THREADS,          PREVENT_CACHE_HITS,
+      THREAD_COUNTS_REPORT_PATH};
   if (!json_specified) {
     throw std::invalid_argument("No configuration file provided");
   } else {

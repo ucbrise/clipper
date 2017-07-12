@@ -88,8 +88,6 @@ boost::future<Response> QueryProcessor::predict(Query query) {
                         query_id);
   }
 
-  log_info("TID", "Create timer future", query.test_qid_,
-           std::this_thread::get_id());
   boost::future<void> timer_future =
       timer_system_.set_timer(query.latency_budget_micros_, query);
 
@@ -160,10 +158,11 @@ boost::future<Response> QueryProcessor::predict(Query query) {
                       final_output.first,
                       final_output.second,
                       default_explanation};
-    log_info("TID", "Response ready future continuation", query.test_qid_,
-             std::this_thread::get_id());
+    //    log_info("TID", "Response ready future continuation", query.test_qid_,
+    //             std::this_thread::get_id());
     set_response_ready_continuation_tid(query.test_qid_,
                                         std::this_thread::get_id());
+    update_response_ready_count(std::this_thread::get_id());
     response_promise.set_value(response);
   });
   return response_future;
