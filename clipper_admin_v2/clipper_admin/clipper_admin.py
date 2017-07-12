@@ -25,17 +25,48 @@ def start_clipper(cm):
         return False
 
 
-def register_application(cm, name, model, input_type, default_output, slo_micros):
+def register_application(cm, name, input_type, default_output, slo_micros):
     url = "http://{host}/admin/add_app".format(host=cm.get_admin_addr())
     req_json = json.dumps({
         "name": name,
-        "candidate_model_names": [model],
         "input_type": input_type,
         "default_output": default_output,
         "latency_slo_micros": slo_micros
     })
     headers = {'Content-type': 'application/json'}
     r = requests.post(url, headers=headers, data=req_json)
+    if r.status_code != requests.codes.ok:
+        msg = "Received error status code: {code} and message: {msg}".format(
+            code=r.status_code, msg=r.text)
+        logger.error(msg)
+        raise ClipperException(msg)
+
+def link_model_to_app(cm, app_name, model_name):
+    """
+    Allows the model with `model_name` to be used by the app with `app_name`.
+    The model and app should both be registered with Clipper.
+
+    Parameters
+    ----------
+    app_name : str
+        The name of the application
+    model_name : str
+        The name of the model to link to the application
+
+    Returns
+    -------
+    bool
+        Returns true iff the model link request was successful
+    """
+
+    url = "http://{host}/admin/add_model_links".format(host=cm.get_admin_addr())
+    req_json = json.dumps({
+        "app_name": app_name,
+        "model_names": [model_name]
+    })
+    headers = {'Content-type': 'application/json'}
+    r = requests.post(url, headers=headers, data=req_json)
+    logger.info(r.text)
     if r.status_code != requests.codes.ok:
         msg = "Received error status code: {code} and message: {msg}".format(
             code=r.status_code, msg=r.text)
@@ -121,6 +152,8 @@ def register_model(cm, name, version, input_type, repo=None, labels=None):
         raise ClipperException(msg)
 
 
+
+
 def add_replica(cm, name, version):
     version = str(version)
     model_data = get_model_info(cm, name, version)
@@ -204,6 +237,31 @@ def get_app_info(cm, name):
         logger.error(msg)
         raise ClipperException(msg)
 
+def get_linked_models(cm, app_name):
+    """Retrieves the models linked to the specified application
+
+    Parameters
+    ----------
+    app_name : str
+        The name of the application
+
+    Returns
+    -------
+    list
+        Returns a list of the names of models linked to the app.
+        If no models are linked to the specified app, None is returned.
+    """
+    url = "http://{host}/admin/get_linked_models".format(host=cm.get_admin_addr())
+    req_json = json.dumps({"app_name": app_name})
+    headers = {'Content-type': 'application/json'}
+    r = requests.post(url, headers=headers, data=req_json)
+    if r.status_code == requests.codes.ok:
+        return r.json()
+    else:
+        msg = "Received error status code: {code} and message: {msg}".format(
+            code=r.status_code, msg=r.text)
+        logger.error(msg)
+        raise ClipperException(msg)
 
 def get_all_models(cm, verbose=False):
     """Gets information about all models registered with Clipper.

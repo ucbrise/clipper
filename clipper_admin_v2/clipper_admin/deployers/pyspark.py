@@ -8,9 +8,67 @@ import json
 
 from ..clipper_admin import ClipperException
 from .deployer_utils import save_python_function
-from ..clipper_admin import deploy_model
+from ..clipper_admin import register_application, deploy_model, link_model_to_app
 
 logger = logging.getLogger(__name__)
+
+
+def create_endpoint(cm,
+                    name,
+                    input_type,
+                    func,
+                    pyspark_model,
+                    sc,
+                    default_output="None",
+                    version=1,
+                    slo_micros=100000,
+                    labels=None,
+                    registry=None,
+                    base_image="clipper/pyspark-container",
+                    num_replicas=1):
+    """Registers an app and deploys provided predict function as a model.
+
+    Parameters
+    ----------
+    name : str
+        The to be assigned to the registered app and deployed model.
+    predict_function : function
+        The prediction function. Any state associated with the function should be
+        captured via closure capture.
+    input_type : str
+        The input_type to be associated with the registered app and deployed model.
+        One of "integers", "floats", "doubles", "bytes", or "strings".
+    default_output : string, optional
+        The default prediction to use if the model does not return a prediction
+        by the end of the latency objective.
+    model_version : Any object with a string representation (with __str__ implementation), optional
+        The version to assign the deployed model.
+    slo_micros : int
+        The query latency objective for the application in microseconds.
+        This is the processing latency between Clipper receiving a request
+        and sending a response. It does not account for network latencies
+        before a request is received or after a response is sent.
+    labels : list of str, optional
+        A list of strings annotating the model.
+    num_containers : int, optional
+        The number of replicas of the model to create. More replicas can be
+        created later as well.
+    """
+
+    register_application(cm, name, input_type, default_output, slo_micros)
+    deploy_pyspark_model(cm,
+                         name,
+                         version,
+                         input_type,
+                         func,
+                         pyspark_model,
+                         sc,
+                         base_image,
+                         labels,
+                         registry,
+                         num_replicas)
+
+    link_model_to_app(cm, name, name)
 
 
 def deploy_pyspark_model(cm,
