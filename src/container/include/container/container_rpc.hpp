@@ -127,7 +127,7 @@ class RPC {
           serve_model(model, model_name, model_version, clipper_address);
         });
     serving_thread_.detach();
-  };
+  }
 
   void stop();
 

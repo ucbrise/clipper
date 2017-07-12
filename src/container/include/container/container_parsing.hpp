@@ -1,8 +1,10 @@
 #ifndef CLIPPER_CONTAINER_PARSING_HPP
 #define CLIPPER_CONTAINER_PARSING_HPP
 
-#include <container/datatypes.hpp>
+#include <cstring>
 #include <vector>
+
+#include <container/datatypes.hpp>
 
 namespace clipper {
 
