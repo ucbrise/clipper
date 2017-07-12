@@ -35,10 +35,9 @@ bool Timer::operator>=(const Timer &rhs) const {
 }
 
 void Timer::expire(Query query) {
-  //  log_info("TID", "Complete timer", query.test_qid_,
-  //           std::this_thread::get_id());
-  set_timer_completion_tid(query.test_qid_, std::this_thread::get_id());
+  set_q_path_timer_expire(query.test_qid_, std::this_thread::get_id());
   update_timer_expire_count(std::this_thread::get_id());
+  log_info("qid", query.test_qid_, "in timer expire", std::this_thread::get_id());
   completion_promise_.set_value();
 }
 

@@ -29,6 +29,7 @@ const std::string MODEL_NAME = "model_name";
 const std::string MODEL_VERSION = "model_version";
 const std::string PREVENT_CACHE_HITS = "prevent_cache_hits";
 const std::string THREAD_COUNTS_REPORT_PATH = "thread_counts_report_path";
+const std::string SLEEP_AFTER_SEND_TIME_SEC = "sleep_afer_send_time_sec";
 
 const int FLUSH_AT_END_INDICATOR = -1;
 
@@ -87,21 +88,20 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
                  {VersionedModelId(model_name, model_version)},
                  query_num};
       bench_metrics.request_throughput_->mark(1);
-      //      log_info("TID", "Benchmark script", query_num,
-      //               std::this_thread::get_id());
-      set_benchmark_script_tid(query_num, std::this_thread::get_id());
+
+      set_q_path_bench_script(query_num, std::this_thread::get_id());
       update_bench_script_count(std::this_thread::get_id());
+      log_info("qid", query_num, "send request", std::this_thread::get_id());
 
       if (SEND_REQUESTS) {
         boost::future<Response> prediction = qp.predict(q);
         prediction.then([bench_metrics](boost::future<Response> f) {
           Response r = f.get();
-          //          log_info("TID", "Benchmark script continuation",
-          //          r.query_.test_qid_,
-          //                   std::this_thread::get_id());
-          set_benchmark_script_continuation_tid(r.query_.test_qid_,
-                                                std::this_thread::get_id());
+
+          set_q_path_bench_cont(r.query_.test_qid_,
+                                              std::this_thread::get_id());
           update_bench_cont_count(std::this_thread::get_id());
+          log_info("qid", r.query_.test_qid_, "bench continuation", std::this_thread::get_id());
 
           // Update metrics
           if (r.output_is_default_) {
@@ -191,62 +191,31 @@ void write_full_report(std::unordered_map<std::string, std::string> &config,
   report_window_details(report_file, window);
 }
 
-void report_tid_metrics() {
-  std::this_thread::sleep_for(std::chrono::seconds(10));
-  auto tid_table = get_tid_table();
+struct Hasher {
+  std::size_t operator()(const std::pair<int, int>& k) const {
+    using std::size_t;
+    using std::hash;
+    using std::string;
 
-  // Remove entries that aren't complete
-  //  for (auto it = begin(tid_table); it != end(tid_table);) {
-  //    if (it->second[complete_account_index] != complete_account_value) {
-  //      it = tid_table.erase(it);
-  //    } else {
-  //      ++it;
-  //    }
-  //  }
-
-  // Remove entries that aren't complete
-  int task_or_timer_completion_tid, response_ready_future_continuation_tid,
-      benchmark_script_continuation_tid;
-  int num_task_complete_same_as_response_continuation = 0;
-  int num_task_complete_same_as_benchmark_script_continuation = 0;
-
-  std::vector<int> unique_tid = {};
-
-  for (auto it = begin(tid_table); it != end(tid_table); ++it) {
-    auto vec = it->second;
-
-    task_or_timer_completion_tid = vec[task_or_timer_completion_tid_index];
-    response_ready_future_continuation_tid =
-        vec[response_ready_continuation_tid_index];
-    benchmark_script_continuation_tid =
-        vec[benchmark_script_continuation_tid_index];
-
-    if (task_or_timer_completion_tid ==
-        response_ready_future_continuation_tid) {
-      num_task_complete_same_as_response_continuation += 1;
-    }
-
-    if (task_or_timer_completion_tid == benchmark_script_continuation_tid) {
-      num_task_complete_same_as_benchmark_script_continuation += 1;
-    }
-
-    std::stringstream ss;
-    for (auto el : vec) {
-      if (std::find(unique_tid.begin(), unique_tid.end(), el) ==
-          unique_tid.end()) {
-        unique_tid.push_back(el);
-      }
-      ss << el << ":";
-    }
-    log_info("NISHAD", ss.str());
+    std::size_t seed = 0;
+    boost::hash_combine(seed, k.first);
+    boost::hash_combine(seed, k.second);
+    return seed;
   }
+};
 
-  log_info("BENCH", "num_task_complete_same_as_benchmark_script_continuation",
-           num_task_complete_same_as_benchmark_script_continuation);
-  log_info("BENCH", "num_task_complete_same_as_response_continuation",
-           num_task_complete_same_as_response_continuation);
-  log_info("BENCH", "tid_table_size", tid_table.size());
-  log_info("BENCH", "num_unique_threads", unique_tid.size());
+void update_sim_table(std::unordered_map<std::pair<int, int>, int, Hasher>& sim_table, std::vector<std::__thread_id>& vec) {
+  for (int i = 0; i < static_cast<int>(vec.size()); i++) {
+    for (int j = 0; j < static_cast<int>(vec.size()); j++) {
+      if (vec[i] == vec[j]) {
+        auto key = std::make_pair(i, j);
+        if (sim_table.find(key) == sim_table.end()) {
+          sim_table[key] = 0;
+        }
+        sim_table[key] += 1;
+      }
+    }
+  };
 }
 
 void report_t_counts_metrics(
@@ -254,16 +223,6 @@ void report_t_counts_metrics(
   std::string report_path = get_str(THREAD_COUNTS_REPORT_PATH, config);
   std::ofstream report_file(report_path);
   document_benchmark_details(config, report_file);
-
-  std::stringstream ss_indices;
-  ss_indices << "BENCH_SCRIPT_INDEX: " << BENCH_SCRIPT_INDEX << ", ";
-  ss_indices << "WHEN_ANY_INDEX: " << WHEN_ANY_INDEX << ", ";
-  ss_indices << "TIMER_EXPIRE_INDEX: " << TIMER_EXPIRE_INDEX << ", ";
-  ss_indices << "RESPONSE_READY_INDEX: " << RESPONSE_READY_INDEX << ", ";
-  ss_indices << "BENCH_CONT_INDEX: " << BENCH_CONT_INDEX << std::endl;
-  std::string indices_info = ss_indices.str();
-  log_info("INDICES", indices_info);
-  report_file << indices_info;
 
   std::stringstream ss_logging_consts;
   ss_logging_consts << "SHORT_CIRCUIT_TASK_EXECUTOR: " << SHORT_CIRCUIT_TASK_EXECUTOR << ", ";
@@ -273,22 +232,93 @@ void report_t_counts_metrics(
   ss_logging_consts << "FIXED_BATCH_SIZE: " << FIXED_BATCH_SIZE << std::endl;
   std::string logging_constants_info = ss_logging_consts.str();
   log_info("CONSTS", logging_constants_info);
-  report_file << logging_constants_info;
+  report_file << logging_constants_info << "--------------" << std::endl;
+
+  std::stringstream ss_indices;
+  ss_indices << "BENCH_SCRIPT_INDEX: " << BENCH_SCRIPT_INDEX << ", ";
+  ss_indices << "WHEN_ANY_INDEX: " << WHEN_ANY_INDEX << ", ";
+  ss_indices << "TIMER_EXPIRE_INDEX: " << TIMER_EXPIRE_INDEX << ", ";
+  ss_indices << "RESPONSE_READY_INDEX: " << RESPONSE_READY_INDEX << ", ";
+  ss_indices << "BENCH_CONT_INDEX: " << BENCH_CONT_INDEX << std::endl;
+  std::string indices_info = ss_indices.str();
+  log_info("INDICES", indices_info);
+  report_file << indices_info << std::endl;
 
   auto t_counts_table = get_t_counts_table();
-  std::stringstream ss;
-  ss << std::endl;
+  std::stringstream t_ss;
+  t_ss << std::endl;
   for (auto it = begin(t_counts_table); it != end(t_counts_table); ++it) {
-    ss << it->first << ": ";
+    t_ss << it->first << ": ";
     for (auto el : it->second) {
-      ss << el << ", ";
+      t_ss << el << ", ";
     }
-    ss << std::endl;
+    t_ss << std::endl;
   }
-  std::string table = ss.str();
+  std::string table = t_ss.str();
   log_info("TABLE", table);
-  report_file << table;
+  report_file << table << "--------------" << std::endl;
+
+  std::unordered_map<std::pair<int, int>, int, Hasher> task_completed_same_thread;
+  std::unordered_map<std::pair<int, int>, int, Hasher> timer_completed_same_thread;
+  int task_completed_count = 0;
+  int timer_completed_count = 0;
+  auto q_path_table = get_q_path_table();
+  std::stringstream q_ss;
+  for  (auto it = begin(q_path_table); it != end(q_path_table); ++it) {
+    std::vector<std::__thread_id> vec = it->second.first;
+    bool tasks_completed_first  = it->second.second.first;
+    bool response_received  = it->second.second.second;
+    if (!response_received) {
+      continue;
+    }
+    if (tasks_completed_first) {
+      task_completed_count += 1;
+      update_sim_table(task_completed_same_thread, vec);
+    } else {
+      timer_completed_count += 1;
+      update_sim_table(timer_completed_same_thread, vec);
+    }
+  }
+
+  std::stringstream ss_task;
+  std::stringstream ss_time;
+  for (int i = Q_PATH_BENCH_SCRIPT_INDEX; i <= Q_PATH_BENCH_CONT_INDEX; i++) {
+    for (int j = Q_PATH_BENCH_SCRIPT_INDEX; j <= Q_PATH_BENCH_CONT_INDEX; j++) {
+      std::pair<int, int> key = std::make_pair(i, j);
+      ss_task << task_completed_same_thread[key] << ", ";
+      ss_time << timer_completed_same_thread[key] << ", ";
+     }
+    ss_task << std::endl;
+    ss_time << std::endl;
+  };
+  std::string task_string = ss_task.str();
+  std::string timer_string = ss_time.str();
+
+  std::stringstream q_p_constants;
+  q_p_constants << "event " << SHORT_CIRCUIT_TASK_EXECUTOR << ": bench script sends request" << std::endl;
+  q_p_constants << "event " << Q_PATH_TASK_OR_TIMER_INDEX << ": response_ready_future gets completed" << std::endl;
+  q_p_constants << "event " << Q_PATH_RESPONSE_READY_INDEX << ": response_ready_future continuation gets run " << std::endl;
+  q_p_constants << "event " << Q_PATH_BENCH_CONT_INDEX << ": bench script continuation gets run" << std::endl;
+  std::string q_p_info = q_p_constants.str();
+  log_info("QP_INFO", q_p_info);
+  report_file << std::endl;
+  report_file << q_p_info;
+  report_file << std::endl;
+
+  std::stringstream similarity_ss;
+
+  similarity_ss << "Number of queries whose response_ready_future was completed by all_tasks_completed: " << task_completed_count << ", Number completed by timer_future: " << timer_completed_count << std::endl;
+  similarity_ss << "Matrix[i, j] corresponds to event at the number of queries for which the thread that executed event i also executed thread j" << std::endl << std::endl;
+  similarity_ss << "response_ready_future future completed by all_tasks_completed: " <<  std::endl << task_string << std::endl;
+  similarity_ss << "response_ready_future future completed by timer_future: " <<  std::endl << timer_string;
+  std::string similarity_info = similarity_ss.str();
+
+  log_info("QPATH", similarity_info);
+  report_file << similarity_info;
+  report_file.flush();
 }
+
+
 
 void run_benchmark(std::unordered_map<std::string, std::string> &config) {
   get_config().ready();
@@ -346,8 +376,10 @@ void run_benchmark(std::unordered_map<std::string, std::string> &config) {
     metrics_thread.join();
   }
 
-  //  std::thread report_tid_metrics_thread([&]() { report_tid_metrics(); });
-  //  report_tid_metrics_thread.join();
+  int sleep_amt = get_int(SLEEP_AFTER_SEND_TIME_SEC, config);
+  if (sleep_amt > 0) {
+    std::this_thread::sleep_for(std::chrono::seconds(sleep_amt));
+  }
 
   std::thread report_t_counts_metrics_thread(
       [&]() { report_t_counts_metrics(config); });
@@ -371,7 +403,7 @@ int main(int argc, char *argv[]) {
       LATENCY_OBJECTIVE,  REPORT_DELAY_SECONDS, BENCHMARK_REPORT_PATH,
       POISSON_DELAY,      MODEL_NAME,           MODEL_VERSION,
       REQUEST_BATCH_SIZE, NUM_THREADS,          PREVENT_CACHE_HITS,
-      THREAD_COUNTS_REPORT_PATH};
+      THREAD_COUNTS_REPORT_PATH, SLEEP_AFTER_SEND_TIME_SEC};
   if (!json_specified) {
     throw std::invalid_argument("No configuration file provided");
   } else {
