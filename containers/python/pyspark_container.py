@@ -48,6 +48,8 @@ def load_pyspark_model(metadata_path, spark, model_path):
 class PySparkContainer(rpc.ModelContainerBase):
     def __init__(self, path, input_type):
         self.input_type = rpc.string_to_input_type(input_type)
+        modules_folder_path = "{dir}/modules/".format(dir=path)
+        sys.path.append(os.path.abspath(modules_folder_path))
         predict_fname = "predict_func.pkl"
         predict_path = "{dir}/{predict_fname}".format(
             dir=path, predict_fname=predict_fname)

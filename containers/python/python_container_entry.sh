@@ -6,6 +6,8 @@ CONDA_DEPS_PATH="/model/conda_dependencies.txt"
 PIP_DEPS_PATH="/model/pip_dependencies.txt"
 CONTAINER_SCRIPT_PATH="/container/python_container.py"
 
+LOCAL_PACKAGE_IMPORT_MSG="The ImportError may have been caused by a missing local package. A local package is one not found in the pip or conda distributions. Local package-based imports for modules of the form a.b.c need to exist in a local folder structure .../a/b/c.py in order to be supplid to the container."
+
 test -f $CONDA_DEPS_PATH
 dependency_check_returncode=$?
 
@@ -28,11 +30,13 @@ if [ $? -eq $IMPORT_ERROR_RETURN_CODE ]; then
 
 	  if [ $? -eq $IMPORT_ERROR_RETURN_CODE ]; then
 	  	echo "Encountered an ImportError even after installing supplied dependencies."
+	  	echo $LOCAL_PACKAGE_IMPORT_MSG
 	  	exit 1
 	  fi
 	else
 		echo "Encountered an ImportError when running Python container."
-		echo "Please supply necessary dependencies through an Anaconda environment and try again."
+		echo $LOCAL_PACKAGE_IMPORT_MSG
+		echo "If the ImportError was not caused by a missing local package, please supply necessary dependencies through an Anaconda environment and try again."
 		exit 1
 	fi
 fi
