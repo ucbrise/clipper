@@ -218,8 +218,8 @@ void run_benchmark(std::unordered_map<std::string, std::string> &config) {
   std::thread metrics_thread;
 
   if (!flush_at_end) {
-    metrics_thread =
-        std::thread([&]() { repeatedly_report_and_clear_metrics(config); });
+    metrics_thread = std::thread(
+        [&config]() { repeatedly_report_and_clear_metrics(config); });
   }
 
   for (auto &thread : threads) {
