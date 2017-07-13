@@ -134,13 +134,7 @@ class Logger {
   }
 
   void _update_q_path_tasks_completed_before_timer(int qid, bool tasks_completed_first) {
-    int completed_by;
-    if (tasks_completed_first) {
-      completed_by = COMPLETED_BY_TASK;
-    } else {
-      completed_by = COMPLETED_BY_TIMER;
-    }
-    q_path_table[qid].second.first = completed_by;
+    q_path_table[qid].second.first = tasks_completed_first ? COMPLETED_BY_TASK : COMPLETED_BY_TIMER;
   }
 
   void _update_q_path_response_received(int qid) {

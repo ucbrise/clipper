@@ -69,9 +69,9 @@ std::pair<boost::future<void>, std::vector<boost::future<T>>> when_all_test(
                                        query](auto result) mutable {
       if (num_completed->fetch_add(1) + 1 == num_futures) {
         completion_promise->set_value();
-//        log_info("qid", query.test_qid_, "in when_all", std::this_thread::get_id());
-//        set_q_path_when_any(query.test_qid_, std::this_thread::get_id());
-//        update_when_any_count(std::this_thread::get_id());
+        log_info("qid", query.test_qid_, "in when_all", std::this_thread::get_id());
+        set_q_path_when_any(query.test_qid_, std::this_thread::get_id());
+        update_when_any_count(std::this_thread::get_id());
         assert(*num_completed == num_futures);
       }
       return result.get();

@@ -89,19 +89,19 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
                  query_num};
       bench_metrics.request_throughput_->mark(1);
 
-//      set_q_path_bench_script(query_num, std::this_thread::get_id());
-//      update_bench_script_count(std::this_thread::get_id());
-//      log_info("qid", query_num, "send request", std::this_thread::get_id());
+      set_q_path_bench_script(query_num, std::this_thread::get_id());
+      update_bench_script_count(std::this_thread::get_id());
+      log_info("qid", query_num, "send request", std::this_thread::get_id());
 
       if (SEND_REQUESTS) {
         boost::future<Response> prediction = qp.predict(q);
         prediction.then([bench_metrics](boost::future<Response> f) {
           Response r = f.get();
 
-//          set_q_path_bench_cont(r.query_.test_qid_,
-//                                              std::this_thread::get_id());
-//          update_bench_cont_count(std::this_thread::get_id());
-//          log_info("qid", r.query_.test_qid_, "bench continuation", std::this_thread::get_id());
+          set_q_path_bench_cont(r.query_.test_qid_,
+                                              std::this_thread::get_id());
+          update_bench_cont_count(std::this_thread::get_id());
+          log_info("qid", r.query_.test_qid_, "bench continuation", std::this_thread::get_id());
 
           // Update metrics
           if (r.output_is_default_) {
@@ -358,9 +358,9 @@ void run_benchmark(std::unordered_map<std::string, std::string> &config) {
           .count();
 
   for (int j = 0; j < num_threads; j++) {
-    std::vector<std::vector<double>> thread_datapoints(datapoints);
+//    std::vector<std::vector<double>> thread_datapoints(datapoints);
     std::thread thread([&]() {
-      send_predictions(config, qp, thread_datapoints, bench_metrics, j);
+      send_predictions(config, qp, datapoints, bench_metrics, j);
     });
     threads.push_back(std::move(thread));
   }
@@ -393,9 +393,9 @@ void run_benchmark(std::unordered_map<std::string, std::string> &config) {
     std::this_thread::sleep_for(std::chrono::seconds(sleep_amt));
   }
 
-//  std::thread report_t_counts_metrics_thread(
-//      [&]() { report_t_counts_metrics(config); });
-//  report_t_counts_metrics_thread.join();
+  std::thread report_t_counts_metrics_thread(
+      [&]() { report_t_counts_metrics(config); });
+  report_t_counts_metrics_thread.join();
 
   log_info("BENCH", "Terminating benchmarking script");
   std::terminate();

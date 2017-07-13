@@ -159,9 +159,9 @@ boost::future<Response> QueryProcessor::predict(Query query) {
                       final_output.second,
                       default_explanation};
 
-//    log_info("qid", query.test_qid_, "response_ready_future continuation", std::this_thread::get_id());
-//    set_q_path_response_ready(query.test_qid_, std::this_thread::get_id());
-//    update_response_ready_count(std::this_thread::get_id());
+    log_info("qid", query.test_qid_, "response_ready_future continuation", std::this_thread::get_id());
+    set_q_path_response_ready(query.test_qid_, std::this_thread::get_id());
+    update_response_ready_count(std::this_thread::get_id());
     response_promise.set_value(response);
   });
   return response_future;
