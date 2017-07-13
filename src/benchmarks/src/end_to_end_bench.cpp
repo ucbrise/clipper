@@ -89,19 +89,19 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
                  query_num};
       bench_metrics.request_throughput_->mark(1);
 
-      set_q_path_bench_script(query_num, std::this_thread::get_id());
-      update_bench_script_count(std::this_thread::get_id());
-      log_info("qid", query_num, "send request", std::this_thread::get_id());
+//      set_q_path_bench_script(query_num, std::this_thread::get_id());
+//      update_bench_script_count(std::this_thread::get_id());
+//      log_info("qid", query_num, "send request", std::this_thread::get_id());
 
       if (SEND_REQUESTS) {
         boost::future<Response> prediction = qp.predict(q);
         prediction.then([bench_metrics](boost::future<Response> f) {
           Response r = f.get();
 
-          set_q_path_bench_cont(r.query_.test_qid_,
-                                              std::this_thread::get_id());
-          update_bench_cont_count(std::this_thread::get_id());
-          log_info("qid", r.query_.test_qid_, "bench continuation", std::this_thread::get_id());
+//          set_q_path_bench_cont(r.query_.test_qid_,
+//                                              std::this_thread::get_id());
+//          update_bench_cont_count(std::this_thread::get_id());
+//          log_info("qid", r.query_.test_qid_, "bench continuation", std::this_thread::get_id());
 
           // Update metrics
           if (r.output_is_default_) {
@@ -224,6 +224,8 @@ void report_t_counts_metrics(
   std::ofstream report_file(report_path);
   document_benchmark_details(config, report_file);
 
+  log_info("main", "report_t_counts_metrics tid:", std::this_thread::get_id());
+
   std::stringstream ss_logging_consts;
   ss_logging_consts << "SHORT_CIRCUIT_TASK_EXECUTOR: " << SHORT_CIRCUIT_TASK_EXECUTOR << ", ";
   ss_logging_consts << "SEND_REQUESTS: " << SEND_REQUESTS << ", ";
@@ -261,22 +263,27 @@ void report_t_counts_metrics(
   std::unordered_map<std::pair<int, int>, int, Hasher> task_completed_same_thread;
   std::unordered_map<std::pair<int, int>, int, Hasher> timer_completed_same_thread;
   int task_completed_count = 0;
+  int neither_completed_count = 0;
   int timer_completed_count = 0;
+  int num_incomplete = 0;
   auto q_path_table = get_q_path_table();
   std::stringstream q_ss;
   for  (auto it = begin(q_path_table); it != end(q_path_table); ++it) {
     std::vector<std::__thread_id> vec = it->second.first;
-    bool tasks_completed_first  = it->second.second.first;
+    int who_completed  = it->second.second.first;
     bool response_received  = it->second.second.second;
     if (!response_received) {
+      num_incomplete += 1;
       continue;
     }
-    if (tasks_completed_first) {
+    if (who_completed == COMPLETED_BY_TASK) {
       task_completed_count += 1;
       update_sim_table(task_completed_same_thread, vec);
-    } else {
+    } else if (who_completed == COMPLETED_BY_TIMER) {
       timer_completed_count += 1;
       update_sim_table(timer_completed_same_thread, vec);
+    } else if (who_completed == COMPLETED_BY_NEITHER) {
+      neither_completed_count += 1;
     }
   }
 
@@ -307,7 +314,10 @@ void report_t_counts_metrics(
 
   std::stringstream similarity_ss;
 
-  similarity_ss << "Number of queries whose response_ready_future was completed by all_tasks_completed: " << task_completed_count << ", Number completed by timer_future: " << timer_completed_count << std::endl;
+  similarity_ss << "Number of queries whose response_ready_future was completed by all_tasks_completed: " << task_completed_count << std::endl;
+  similarity_ss << "Number completed by timer_future: " << timer_completed_count << std::endl;
+  similarity_ss << "Number completed by neither (should happen when models aren't connected): " << neither_completed_count << std::endl;
+  similarity_ss << "Number of queries that didn't receive a response: " << num_incomplete << std::endl;
   similarity_ss << "Matrix[i, j] corresponds to event at the number of queries for which the thread that executed event i also executed thread j" << std::endl << std::endl;
   similarity_ss << "response_ready_future future completed by all_tasks_completed: " <<  std::endl << task_string << std::endl;
   similarity_ss << "response_ready_future future completed by timer_future: " <<  std::endl << timer_string;
@@ -376,16 +386,19 @@ void run_benchmark(std::unordered_map<std::string, std::string> &config) {
     metrics_thread.join();
   }
 
+  log_info("main", "run_bench tid:", std::this_thread::get_id());
+
   int sleep_amt = get_int(SLEEP_AFTER_SEND_TIME_SEC, config);
   if (sleep_amt > 0) {
     std::this_thread::sleep_for(std::chrono::seconds(sleep_amt));
   }
 
-  std::thread report_t_counts_metrics_thread(
-      [&]() { report_t_counts_metrics(config); });
-  report_t_counts_metrics_thread.join();
+//  std::thread report_t_counts_metrics_thread(
+//      [&]() { report_t_counts_metrics(config); });
+//  report_t_counts_metrics_thread.join();
 
   log_info("BENCH", "Terminating benchmarking script");
+  std::terminate();
 }
 
 int main(int argc, char *argv[]) {
