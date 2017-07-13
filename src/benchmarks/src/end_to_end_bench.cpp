@@ -359,7 +359,7 @@ void run_benchmark(std::unordered_map<std::string, std::string> &config) {
 
   for (int j = 0; j < num_threads; j++) {
 //    std::vector<std::vector<double>> thread_datapoints(datapoints);
-    std::thread thread([&]() {
+    std::thread thread([&config, &qp, datapoints, &bench_metrics, j]() {
       send_predictions(config, qp, datapoints, bench_metrics, j);
     });
     threads.push_back(std::move(thread));
