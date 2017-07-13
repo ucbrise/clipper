@@ -651,7 +651,7 @@ class RequestHandler {
       throw std::invalid_argument(ss.str());
     }
 
-    check_updated_model_consistent_with_app_links(model_name, input_type_raw);
+    check_updated_model_consistent_with_app_links(model_name, input_type);
 
     if (clipper::redis::add_model(redis_connection_, model_id, input_type,
                                   labels, container_name, model_data_path)) {
@@ -665,25 +665,27 @@ class RequestHandler {
   }
 
   void check_updated_model_consistent_with_app_links(
-      std::string model_name, std::string proposed_input_type) {
+      std::string model_name, clipper::InputType proposed_input_type) {
     auto app_names =
         clipper::redis::get_all_application_names(redis_connection_);
     std::vector<std::string> linked_models;
     std::unordered_map<std::string, std::string> app_info;
-    std::string app_input_type;
     for (auto const& app_name : app_names) {
       linked_models =
           clipper::redis::get_linked_models(redis_connection_, app_name);
       if (std::find(linked_models.begin(), linked_models.end(), model_name) !=
           linked_models.end()) {
         app_info = clipper::redis::get_application(redis_connection_, app_name);
-        app_input_type = app_info["input_type"];
+        clipper::InputType app_input_type =
+            clipper::parse_input_type(app_info["input_type"]);
         if (proposed_input_type != app_input_type) {
           std::stringstream ss;
           ss << "Model with name " << model_name << " is already linked to app "
-             << app_name << " using input type " << app_input_type
+             << app_name << " using input type "
+             << get_readable_input_type(app_input_type)
              << ". The input type you provided for a new version of the model, "
-             << proposed_input_type << ", is not compatible.";
+             << get_readable_input_type(proposed_input_type)
+             << ", is not compatible.";
           throw std::invalid_argument(ss.str());
         }
       }
@@ -1084,7 +1086,8 @@ class RequestHandler {
 
     auto model_info = clipper::redis::get_model(
         redis_connection_, VersionedModelId(model_name, new_model_version));
-    auto input_type = model_info["input_type"];
+    clipper::InputType input_type =
+        clipper::parse_input_type(model_info["input_type"]);
     check_updated_model_consistent_with_app_links(model_name, input_type);
 
     attempt_model_version_update(model_name, new_model_version);
