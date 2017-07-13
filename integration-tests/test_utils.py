@@ -19,7 +19,7 @@ else:
     PY3 = True
 
 
-SERVICE = "docker"
+SERVICE = "k8s"
 
 
 logger = logging.getLogger(__name__)
