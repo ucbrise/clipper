@@ -124,20 +124,29 @@ class Logger {
   // count in response ready, count in bench continuation]
   std::unordered_map<std::__thread_id, std::vector<int>> t_counts_table;
 
-  void _update_q_path(int qid, std::__thread_id tid, int index) {
+  void _make_q_path_entry_if_doesnt_exist(int qid) {
+    std::vector<std::__thread_id> vec;
     if (q_path_table.find(qid) == q_path_table.end()) {
       std::__thread_id tid = std::__thread_id();
-      std::vector<std::__thread_id> vec = std::vector<std::__thread_id>{tid, tid, tid, tid};
+       vec = std::vector<std::__thread_id>{tid, tid, tid, tid};
       q_path_table[qid] = std::make_pair(vec, std::make_pair(COMPLETED_BY_NEITHER, false));
     }
+  }
+
+  void _update_q_path(int qid, std::__thread_id tid, int index) {
+    _make_q_path_entry_if_doesnt_exist(qid);
     q_path_table[qid].first[index] = tid;
   }
 
   void _update_q_path_tasks_completed_before_timer(int qid, bool tasks_completed_first) {
-    q_path_table[qid].second.first = tasks_completed_first ? COMPLETED_BY_TASK : COMPLETED_BY_TIMER;
+    _make_q_path_entry_if_doesnt_exist(qid);
+    if (q_path_table[qid].second.first == COMPLETED_BY_NEITHER) {
+      q_path_table[qid].second.first = tasks_completed_first ? COMPLETED_BY_TASK : COMPLETED_BY_TIMER;
+    }
   }
 
   void _update_q_path_response_received(int qid) {
+    _make_q_path_entry_if_doesnt_exist(qid);
     q_path_table[qid].second.second = true;
   }
 

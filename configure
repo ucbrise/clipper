@@ -268,7 +268,7 @@ cd $RELEASE_DIR
 rm -f CMakeCache.txt
 build_cmd="$CMAKE \
     $GENERATOR \
-    -D CMAKE_BUILD_TYPE=Release \
+    -D CMAKE_BUILD_TYPE=RelWithDebInfo \
     $CFLAGS \
     ../"
 echo $build_cmd | tee -a "../$LOG_FILE"

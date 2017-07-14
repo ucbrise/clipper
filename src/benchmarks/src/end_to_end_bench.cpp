@@ -248,14 +248,28 @@ void report_t_counts_metrics(
 
   auto t_counts_table = get_t_counts_table();
   std::stringstream t_ss;
+  std::vector<int> num_threads_executing_event = {0, 0, 0, 0, 0};
   t_ss << std::endl;
   for (auto it = begin(t_counts_table); it != end(t_counts_table); ++it) {
     t_ss << it->first << ": ";
+    int i = 0;
     for (auto el : it->second) {
       t_ss << el << ", ";
+      if (el > 0) {
+        num_threads_executing_event[i] += 1;
+      }
+      i += 1;
     }
     t_ss << std::endl;
   }
+
+  std::stringstream num_threads_executing_event_ss;
+  for (auto el : num_threads_executing_event) {
+    num_threads_executing_event_ss << el << " : ";
+  }
+  report_file << "num_threads_executing_event_ss:    " << num_threads_executing_event_ss.str() << std::endl;
+
+
   std::string table = t_ss.str();
   log_info("TABLE", table);
   report_file << table << "--------------" << std::endl;
@@ -394,7 +408,7 @@ void run_benchmark(std::unordered_map<std::string, std::string> &config) {
   }
 
   std::thread report_t_counts_metrics_thread(
-      [&]() { report_t_counts_metrics(config); });
+      [&config]() { report_t_counts_metrics(config); });
   report_t_counts_metrics_thread.join();
 
   log_info("BENCH", "Terminating benchmarking script");
