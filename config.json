@@ -1,0 +1,16 @@
+{
+  "cifar_data_path":"/Users/nishadsingh/Documents/clip/dataset/cifar-100-binary/test.bin",
+  "num_threads":"1",
+  "num_batches":"10000",
+  "request_batch_size":"1",
+  "request_batch_delay_micros":"10",
+  "poisson_delay":"false",
+  "prevent_cache_hits":"true",
+  "latency_objective":"25000",
+  "report_delay_seconds":"-1",
+  "model_name":"bench_noop",
+  "model_version":"1",
+  "benchmark_report_path":"/Users/nishadsingh/Documents/clip/thread_reports/r_sendrate_10_numbatch_250000.txt",
+  "thread_counts_report_path":"/Users/nishadsingh/Documents/clip/thread_reports/t_sendrate_10_numbatch_250000_test.txt",
+  "sleep_afer_send_time_sec":"5"
+}
