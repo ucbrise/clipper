@@ -94,7 +94,7 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   boost::future<void> all_tasks_completed;
   auto num_completed = std::make_shared<std::atomic<int>>(0);
   std::tie(all_tasks_completed, task_futures) =
-      future::when_all_test(std::move(task_futures), num_completed, query);
+      future::when_all_log_thread_info(std::move(task_futures), num_completed, query);
 
   auto completed_flag = std::make_shared<std::atomic_flag>();
   // Due to some complexities of initializing the atomic_flag in a shared_ptr,
@@ -159,9 +159,8 @@ boost::future<Response> QueryProcessor::predict(Query query) {
                       final_output.second,
                       default_explanation};
 
-    log_info("qid", query.test_qid_, "response_ready_future continuation", std::this_thread::get_id());
-    set_q_path_response_ready(query.test_qid_, std::this_thread::get_id());
-    update_response_ready_count(std::this_thread::get_id());
+//    thread_info_logger::ThreadInfoLogger::set_q_path_response_ready(query.test_qid_, std::this_thread::get_id());
+    thread_info_logger::ThreadInfoLogger::update_response_ready_count(std::this_thread::get_id());
     response_promise.set_value(response);
   });
   return response_future;

@@ -14,39 +14,6 @@ static constexpr uint LOGGING_LEVEL_FORMAT_ERROR_LENGTH = 5;
 static constexpr uint LOGGING_LEVEL_FORMAT_DEBUG_LENGTH = 5;
 static constexpr uint MAX_LOGGING_LEVEL_FORMAT_LENGTH = 5;
 static constexpr uint MAX_TAG_LENGTH = 10;
-
-static constexpr int if_task_completed_reserve_value = -1;
-static constexpr int task_completed_value = 1;
-static constexpr int timer_completed_value = 0;
-//  int tid_vec_size = 6;
-static constexpr int benchmark_script_tid_index = 0;
-static constexpr int if_task_completed_index = 1;
-static constexpr int task_or_timer_completion_tid_index = 2;
-static constexpr int response_ready_continuation_tid_index = 3;
-static constexpr int benchmark_script_continuation_tid_index = 4;
-static constexpr int complete_account_index = 5;
-static constexpr int incomplete_account_value = 0;
-static constexpr int complete_account_value = 1;
-
-static constexpr int BENCH_SCRIPT_INDEX = 0;
-static constexpr int WHEN_ANY_INDEX = 1;
-static constexpr int TIMER_EXPIRE_INDEX = 2;
-static constexpr int RESPONSE_READY_INDEX = 3;
-static constexpr int BENCH_CONT_INDEX = 4;
-
-static constexpr int Q_PATH_BENCH_SCRIPT_INDEX = 0;
-static constexpr int Q_PATH_TASK_OR_TIMER_INDEX = 1;
-static constexpr int Q_PATH_RESPONSE_READY_INDEX = 2;
-static constexpr int Q_PATH_BENCH_CONT_INDEX = 3;
-
-static constexpr int COMPLETED_BY_TIMER = 1;
-static constexpr int COMPLETED_BY_TASK = 2;
-static constexpr int COMPLETED_BY_NEITHER = 3;
-
-//    [count in benchmark, count in when any, count in timer expire,
-    // count in response ready, count in bench continuation]
-
-
 // Defines the logging format as [HH:MM:SS.mmm][<LOG_LEVEL>] <Message>
 // Note: <Message> includes a formatted, user-defined tag (see
 // get_formatted_tag())
@@ -114,51 +81,6 @@ class Logger {
   template <class... Args>
   void log_error_formatted(const std::string tag, const char *message,
                            Args... args) const;
-
-  // QID -> <[benchmark script TID, timer or when_any expire TID, response
-  // ready future continuation TID, benchmark script continuation TID],
-  // <which completed, true if response was received>>
-  std::unordered_map<int, std::pair<std::vector<std::__thread_id>, std::pair<int, bool>>> q_path_table;
-
-  // TID -> [count in benchmark, count in when any, count in timer expire,
-  // count in response ready, count in bench continuation]
-  std::unordered_map<std::__thread_id, std::vector<int>> t_counts_table;
-
-  void _make_q_path_entry_if_doesnt_exist(int qid) {
-    std::vector<std::__thread_id> vec;
-    if (q_path_table.find(qid) == q_path_table.end()) {
-      std::__thread_id tid = std::__thread_id();
-       vec = std::vector<std::__thread_id>{tid, tid, tid, tid};
-      q_path_table[qid] = std::make_pair(vec, std::make_pair(COMPLETED_BY_NEITHER, false));
-    }
-  }
-
-  void _update_q_path(int qid, std::__thread_id tid, int index) {
-    _make_q_path_entry_if_doesnt_exist(qid);
-    q_path_table[qid].first[index] = tid;
-  }
-
-  void _update_q_path_tasks_completed_before_timer(int qid, bool tasks_completed_first) {
-    _make_q_path_entry_if_doesnt_exist(qid);
-    if (q_path_table[qid].second.first == COMPLETED_BY_NEITHER) {
-      q_path_table[qid].second.first = tasks_completed_first ? COMPLETED_BY_TASK : COMPLETED_BY_TIMER;
-    }
-  }
-
-  void _update_q_path_response_received(int qid) {
-    _make_q_path_entry_if_doesnt_exist(qid);
-    q_path_table[qid].second.second = true;
-  }
-
-  void _update_count(std::__thread_id tid, int index) {
-    if (t_counts_table.find(tid) == t_counts_table.end()) {
-      t_counts_table[tid] = std::vector<int>{0, 0, 0, 0, 0};
-    }
-
-    auto vec = t_counts_table[tid];
-    vec[index] += 1;
-    t_counts_table[tid] = vec;
-  }
 
  private:
   Logger();
@@ -268,58 +190,6 @@ void Logger::concatenate_messages(std::stringstream &ss, LogLevel log_level,
   }
   ss << message;
 }
-
-static void set_q_path_bench_script(int qid, std::__thread_id tid) {
-  Logger::get()._update_q_path(qid, tid, Q_PATH_BENCH_SCRIPT_INDEX);
-}
-
-static void set_q_path_when_any(int qid, std::__thread_id tid) {
-  Logger::get()._update_q_path(qid, tid, Q_PATH_TASK_OR_TIMER_INDEX);
-  Logger::get()._update_q_path_tasks_completed_before_timer(qid, true);
-}
-
-static void set_q_path_timer_expire(int qid, std::__thread_id tid) {
-  Logger::get()._update_q_path(qid, tid, Q_PATH_TASK_OR_TIMER_INDEX);
-  Logger::get()._update_q_path_tasks_completed_before_timer(qid, false);
-}
-
-static void set_q_path_response_ready(int qid, std::__thread_id tid) {
-  Logger::get()._update_q_path(qid, tid, Q_PATH_RESPONSE_READY_INDEX);
-}
-
-static void set_q_path_bench_cont(int qid, std::__thread_id tid) {
-  Logger::get()._update_q_path(qid, tid, Q_PATH_BENCH_CONT_INDEX);
-  Logger::get()._update_q_path_response_received(qid);
-}
-
-static std::unordered_map<int, std::pair<std::vector<std::__thread_id>, std::pair<int, bool>>> get_q_path_table() {
-  return Logger::get().q_path_table;
-}
-
-static void update_bench_script_count(std::__thread_id tid) {
-  Logger::get()._update_count(tid, BENCH_SCRIPT_INDEX);
-}
-
-static void update_when_any_count(std::__thread_id tid) {
-  Logger::get()._update_count(tid, WHEN_ANY_INDEX);
-}
-
-static void update_response_ready_count(std::__thread_id tid) {
-  Logger::get()._update_count(tid, RESPONSE_READY_INDEX);
-}
-
-static void update_bench_cont_count(std::__thread_id tid) {
-  Logger::get()._update_count(tid, BENCH_CONT_INDEX);
-}
-
-static void update_timer_expire_count(std::__thread_id tid) {
-  Logger::get()._update_count(tid, TIMER_EXPIRE_INDEX);
-}
-
-static std::unordered_map<std::__thread_id, std::vector<int>>
-get_t_counts_table() {
-  return Logger::get().t_counts_table;
-};
 
 template <class... Strings>
 static void log_info(const std::string tag, Strings... messages) {

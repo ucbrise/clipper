@@ -9,6 +9,7 @@
 
 #include <clipper/logging.hpp>
 #include "boost/thread.hpp"
+#include "../../benchmarks/src/thread_info_logger.hpp"
 
 namespace clipper {
 
@@ -53,7 +54,7 @@ std::pair<boost::future<void>, std::vector<boost::future<T>>> when_all(
 }
 
 template <class T>
-std::pair<boost::future<void>, std::vector<boost::future<T>>> when_all_test(
+std::pair<boost::future<void>, std::vector<boost::future<T>>> when_all_log_thread_info(
     std::vector<boost::future<T>> futures,
     std::shared_ptr<std::atomic<int>> num_completed, Query query) {
   if (futures.size() == 0) {
@@ -69,9 +70,8 @@ std::pair<boost::future<void>, std::vector<boost::future<T>>> when_all_test(
                                        query](auto result) mutable {
       if (num_completed->fetch_add(1) + 1 == num_futures) {
         completion_promise->set_value();
-        log_info("qid", query.test_qid_, "in when_all", std::this_thread::get_id());
-        set_q_path_when_any(query.test_qid_, std::this_thread::get_id());
-        update_when_any_count(std::this_thread::get_id());
+//        thread_info_logger::ThreadInfoLogger::set_q_path_tasks_completed(query.test_qid_, std::this_thread::get_id());
+        thread_info_logger::ThreadInfoLogger::update_tasks_completed_count(std::this_thread::get_id());
         assert(*num_completed == num_futures);
       }
       return result.get();

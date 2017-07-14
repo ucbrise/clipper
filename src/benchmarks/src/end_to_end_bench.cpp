@@ -41,6 +41,7 @@ std::atomic<bool> all_requests_sent(false);
 
 using namespace clipper;
 using namespace bench_utils;
+using namespace thread_info_logger;
 
 std::string get_window_str(int window_lower, int window_upper) {
   std::stringstream ss;
@@ -72,6 +73,7 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
     for (int i = 0; i < request_batch_size; i++) {
       query_num = j * request_batch_size + i;
       query_vec = data[query_num % num_datapoints];
+//      ThreadInfoLogger::create_q_path_entry(query_num);
 
       if (prevent_cache_hits) {
         // Modify it to be epoch and thread-specific
@@ -89,19 +91,17 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
                  query_num};
       bench_metrics.request_throughput_->mark(1);
 
-      set_q_path_bench_script(query_num, std::this_thread::get_id());
-      update_bench_script_count(std::this_thread::get_id());
-      log_info("qid", query_num, "send request", std::this_thread::get_id());
+//      ThreadInfoLogger::set_q_path_bench_script(query_num, std::this_thread::get_id());
+      ThreadInfoLogger::update_bench_script_count(std::this_thread::get_id());
 
       if (SEND_REQUESTS) {
         boost::future<Response> prediction = qp.predict(q);
         prediction.then([bench_metrics](boost::future<Response> f) {
           Response r = f.get();
 
-          set_q_path_bench_cont(r.query_.test_qid_,
-                                              std::this_thread::get_id());
-          update_bench_cont_count(std::this_thread::get_id());
-          log_info("qid", r.query_.test_qid_, "bench continuation", std::this_thread::get_id());
+//          ThreadInfoLogger::set_q_path_bench_cont(r.query_.test_qid_,
+//                                                  std::this_thread::get_id());
+          ThreadInfoLogger::update_bench_cont_count(std::this_thread::get_id());
 
           // Update metrics
           if (r.output_is_default_) {
@@ -224,8 +224,6 @@ void report_t_counts_metrics(
   std::ofstream report_file(report_path);
   document_benchmark_details(config, report_file);
 
-  log_info("main", "report_t_counts_metrics tid:", std::this_thread::get_id());
-
   std::stringstream ss_logging_consts;
   ss_logging_consts << "SHORT_CIRCUIT_TASK_EXECUTOR: " << SHORT_CIRCUIT_TASK_EXECUTOR << ", ";
   ss_logging_consts << "SEND_REQUESTS: " << SEND_REQUESTS << ", ";
@@ -234,27 +232,22 @@ void report_t_counts_metrics(
   ss_logging_consts << "FIXED_BATCH_SIZE: " << FIXED_BATCH_SIZE << std::endl;
   std::string logging_constants_info = ss_logging_consts.str();
   log_info("CONSTS", logging_constants_info);
-  report_file << logging_constants_info << "--------------" << std::endl;
+  report_file << logging_constants_info << std::endl;
 
-  std::stringstream ss_indices;
-  ss_indices << "BENCH_SCRIPT_INDEX: " << BENCH_SCRIPT_INDEX << ", ";
-  ss_indices << "WHEN_ANY_INDEX: " << WHEN_ANY_INDEX << ", ";
-  ss_indices << "TIMER_EXPIRE_INDEX: " << TIMER_EXPIRE_INDEX << ", ";
-  ss_indices << "RESPONSE_READY_INDEX: " << RESPONSE_READY_INDEX << ", ";
-  ss_indices << "BENCH_CONT_INDEX: " << BENCH_CONT_INDEX << std::endl;
-  std::string indices_info = ss_indices.str();
-  log_info("INDICES", indices_info);
-  report_file << indices_info << std::endl;
-
-  auto t_counts_table = get_t_counts_table();
+  auto t_counts_table = ThreadInfoLogger::get_t_counts_table();
   std::stringstream t_ss;
+  int spacing = 20;
   std::vector<int> num_threads_executing_event = {0, 0, 0, 0, 0};
   t_ss << std::endl;
   for (auto it = begin(t_counts_table); it != end(t_counts_table); ++it) {
     t_ss << it->first << ": ";
     int i = 0;
     for (auto el : it->second) {
-      t_ss << el << ", ";
+      t_ss << el;
+      int num_spaces = spacing - static_cast<int>(std::to_string(el).size());
+      for (int j = 0; j < num_spaces; j ++) {
+        t_ss << " ";
+      }
       if (el > 0) {
         num_threads_executing_event[i] += 1;
       }
@@ -263,86 +256,118 @@ void report_t_counts_metrics(
     t_ss << std::endl;
   }
 
-  std::stringstream num_threads_executing_event_ss;
+  report_file << std::endl;
+  report_file << "-----------------------------------Number of times each thread executed each event------------------------------------" << std::endl << std::endl;
+  report_file << "thread id       bench script        tasks completed     timer expired       response ready      bench continuation" << std::endl;
+  report_file << "----------------------------------------------------------------------------------------------------------------------" << std::endl;
+
+  report_file << "                ";
   for (auto el : num_threads_executing_event) {
-    num_threads_executing_event_ss << el << " : ";
+    report_file << el << " unique threads";
+    int num_spaces = spacing - static_cast<int>(std::to_string(el).size()) - 15;
+    for (int j = 0; j < num_spaces; j ++) {
+      report_file << " ";
+    }
   }
-  report_file << "num_threads_executing_event_ss:    " << num_threads_executing_event_ss.str() << std::endl;
+  report_file << std::endl;
 
 
   std::string table = t_ss.str();
   log_info("TABLE", table);
-  report_file << table << "--------------" << std::endl;
+  report_file << table << std::endl << std::endl;
 
-  std::unordered_map<std::pair<int, int>, int, Hasher> task_completed_same_thread;
-  std::unordered_map<std::pair<int, int>, int, Hasher> timer_completed_same_thread;
-  int task_completed_count = 0;
-  int neither_completed_count = 0;
-  int timer_completed_count = 0;
-  int num_incomplete = 0;
-  auto q_path_table = get_q_path_table();
-  std::stringstream q_ss;
-  for  (auto it = begin(q_path_table); it != end(q_path_table); ++it) {
-    std::vector<std::__thread_id> vec = it->second.first;
-    int who_completed  = it->second.second.first;
-    bool response_received  = it->second.second.second;
-    if (!response_received) {
-      num_incomplete += 1;
-      continue;
-    }
-    if (who_completed == COMPLETED_BY_TASK) {
-      task_completed_count += 1;
-      update_sim_table(task_completed_same_thread, vec);
-    } else if (who_completed == COMPLETED_BY_TIMER) {
-      timer_completed_count += 1;
-      update_sim_table(timer_completed_same_thread, vec);
-    } else if (who_completed == COMPLETED_BY_NEITHER) {
-      neither_completed_count += 1;
-    }
-  }
-
-  std::stringstream ss_task;
-  std::stringstream ss_time;
-  for (int i = Q_PATH_BENCH_SCRIPT_INDEX; i <= Q_PATH_BENCH_CONT_INDEX; i++) {
-    for (int j = Q_PATH_BENCH_SCRIPT_INDEX; j <= Q_PATH_BENCH_CONT_INDEX; j++) {
-      std::pair<int, int> key = std::make_pair(i, j);
-      ss_task << task_completed_same_thread[key] << ", ";
-      ss_time << timer_completed_same_thread[key] << ", ";
-     }
-    ss_task << std::endl;
-    ss_time << std::endl;
-  };
-  std::string task_string = ss_task.str();
-  std::string timer_string = ss_time.str();
-
-  std::stringstream q_p_constants;
-  q_p_constants << "event " << SHORT_CIRCUIT_TASK_EXECUTOR << ": bench script sends request" << std::endl;
-  q_p_constants << "event " << Q_PATH_TASK_OR_TIMER_INDEX << ": response_ready_future gets completed" << std::endl;
-  q_p_constants << "event " << Q_PATH_RESPONSE_READY_INDEX << ": response_ready_future continuation gets run " << std::endl;
-  q_p_constants << "event " << Q_PATH_BENCH_CONT_INDEX << ": bench script continuation gets run" << std::endl;
-  std::string q_p_info = q_p_constants.str();
-  log_info("QP_INFO", q_p_info);
-  report_file << std::endl;
-  report_file << q_p_info;
-  report_file << std::endl;
-
-  std::stringstream similarity_ss;
-
-  similarity_ss << "Number of queries whose response_ready_future was completed by all_tasks_completed: " << task_completed_count << std::endl;
-  similarity_ss << "Number completed by timer_future: " << timer_completed_count << std::endl;
-  similarity_ss << "Number completed by neither (should happen when models aren't connected): " << neither_completed_count << std::endl;
-  similarity_ss << "Number of queries that didn't receive a response: " << num_incomplete << std::endl;
-  similarity_ss << "Matrix[i, j] corresponds to event at the number of queries for which the thread that executed event i also executed thread j" << std::endl << std::endl;
-  similarity_ss << "response_ready_future future completed by all_tasks_completed: " <<  std::endl << task_string << std::endl;
-  similarity_ss << "response_ready_future future completed by timer_future: " <<  std::endl << timer_string;
-  std::string similarity_info = similarity_ss.str();
-
-  log_info("QPATH", similarity_info);
-  report_file << similarity_info;
+//  std::unordered_map<std::pair<int, int>, int, Hasher> task_completed_same_thread;
+//  std::unordered_map<std::pair<int, int>, int, Hasher> timer_completed_same_thread;
+//  int task_completed_count = 0;
+//  int timer_completed_count = 0;
+//  int num_incomplete = 0;
+//  auto q_path_table = ThreadInfoLogger::get_q_path_table();
+//  std::stringstream q_ss;
+//  for  (auto it = begin(q_path_table); it != end(q_path_table); ++it) {
+//    std::vector<std::__thread_id> vec = it->second.first;
+//    double task_completed_time  = it->second.second.first.first;
+//    double timer_expired_time  = it->second.second.first.second;
+//    bool response_received  = it->second.second.second;
+//    if (!response_received) {
+//      num_incomplete += 1;
+//      continue;
+//    }
+//
+//    if (timer_expired_time > task_completed_time) {
+//      task_completed_count += 1;
+//      update_sim_table(task_completed_same_thread, vec);
+//    } else {
+//      timer_completed_count += 1;
+//      update_sim_table(timer_completed_same_thread, vec);
+//    }
+//  }
+//
+//  std::stringstream ss_task;
+//  std::stringstream ss_time;
+//  ss_task << "                    bench script        tasks completed     timer expired        response ready      bench continuation" << std::endl;
+//  ss_time << "                    bench script        tasks completed     timer expired        response ready      bench continuation" << std::endl;
+//  ss_task << "-----------------------------------------------------------------------------------------------------------------------" << std::endl;
+//  ss_time << "-----------------------------------------------------------------------------------------------------------------------" << std::endl;
+//
+//  for (int i = ThreadInfoLogger::BENCH_SCRIPT_INDEX; i <= ThreadInfoLogger::BENCH_CONT_INDEX; i++) {
+//    std::string label;
+//    if (i == ThreadInfoLogger::BENCH_SCRIPT_INDEX) {
+//      label = "bench script";
+//    } else if (i == ThreadInfoLogger::TIMER_EXPIRE_INDEX) {
+//      label = "timer expired";
+//    } else if (i == ThreadInfoLogger::TASKS_COMPLETED_INDEX) {
+//      label = "tasks completed";
+//    } else if (i == ThreadInfoLogger::RESPONSE_READY_INDEX) {
+//      label = "response ready";
+//    } else {
+//      label = "bench continuation";
+//    }
+//    int num_remaining_spaces = spacing - static_cast<int>(label.length());
+//    ss_task << label;
+//    ss_time << label;
+//    for (int j = 0; j < num_remaining_spaces; j++) {
+//      ss_task << " ";
+//      ss_time << " ";
+//    }
+//    for (int j = ThreadInfoLogger::BENCH_SCRIPT_INDEX; j <= ThreadInfoLogger::BENCH_CONT_INDEX; j++) {
+//      std::string task_el, time_el;
+//      if (i <= j) {
+//        std::pair<int, int> key = std::make_pair(i, j);
+//        task_el = std::to_string(task_completed_same_thread[key]);
+//        time_el = std::to_string(timer_completed_same_thread[key]);
+//      } else {
+//        task_el = " ";
+//        time_el = " ";
+//      }
+//      ss_task << task_el;
+//      ss_time << time_el;
+//      for (size_t k = 0; k < spacing - task_el.size(); k++) {
+//        ss_task << " ";
+//      }
+//      for (size_t k = 0; k < spacing - time_el.size(); k++) {
+//        ss_time << " ";
+//      }
+//    }
+//    ss_task << std::endl;
+//    ss_time << std::endl;
+//  };
+//  std::string task_string = ss_task.str();
+//  std::string timer_string = ss_time.str();
+//
+//  std::stringstream similarity_ss;
+//
+//  similarity_ss << "Number of queries whose response_ready_future was completed by all_tasks_completed: " << task_completed_count << std::endl;
+//  similarity_ss << "Number of queries whose response_ready_future was completed by timer_future: " << timer_completed_count << std::endl;
+//  similarity_ss << "Number of queries that didn't receive a response: " << num_incomplete << std::endl << std::endl << std::endl;
+//  similarity_ss << "Matrix[i, j] corresponds to event at the number of queries for which the thread that executed event i also executed thread j" << std::endl << std::endl;
+//  similarity_ss << "----------------Stats for queries where response_ready_future future completed by all_tasks_completed------------------" <<  std::endl << task_string << std::endl;
+//  similarity_ss << "-------------------Stats for queries where response_ready_future future completed by timer_future----------------------" <<  std::endl << timer_string;
+//  std::string similarity_info = similarity_ss.str();
+//
+//  log_info("QPATH", similarity_info);
+//  report_file << similarity_info;
   report_file.flush();
 }
-
-
 
 void run_benchmark(std::unordered_map<std::string, std::string> &config) {
   get_config().ready();
