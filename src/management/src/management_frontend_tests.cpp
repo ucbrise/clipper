@@ -61,6 +61,13 @@ class ManagementFrontendTest : public ::testing::Test {
     return to_json_string(d);
   }
 
+  std::string get_delete_app_request_json(std::string& name) {
+    rapidjson::Document d;
+    d.SetObject();
+    add_string(d, "name", name);
+    return to_json_string(d);
+  }
+
   void set_add_model_request_doc(rapidjson::Document& d,
                                  std::string& model_name,
                                  std::string& model_version,
@@ -197,6 +204,45 @@ TEST_F(ManagementFrontendTest, TestAddDuplicateApplication) {
   ASSERT_EQ(result.size(), static_cast<size_t>(4));
 
   ASSERT_THROW(rh_.add_application(add_app_json), std::invalid_argument);
+}
+
+TEST_F(ManagementFrontendTest, TestDeleteApplicationCorrect) {
+  std::string app_name = "myappname";
+  std::string input_type = "integers";
+  std::string default_output = "4.3";
+  std::string add_app_json =
+      get_add_app_request_json(app_name, input_type, default_output, 1000);
+
+  ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
+
+  std::string del_app_json = get_delete_app_request_json(app_name);
+  ASSERT_EQ(rh_.delete_application(del_app_json), "Success!");
+  auto result = get_application(*redis_, app_name);
+  ASSERT_EQ(result.size(), static_cast<size_t>(0));
+}
+
+TEST_F(ManagementFrontendTest, TestDeleteNonexistentApplication) {
+  std::string app_name = "myappname";
+
+  std::string del_app_json = get_delete_app_request_json(app_name);
+  ASSERT_THROW(rh_.delete_application(del_app_json), std::invalid_argument);
+}
+
+TEST_F(ManagementFrontendTest, TestDeleteApplicationMalformedJson) {
+  std::string app_name = "myappname";
+  std::string input_type = "integers";
+  std::string default_output = "4.3";
+  std::string add_app_json =
+      get_add_app_request_json(app_name, input_type, default_output, 1000);
+
+  ASSERT_EQ(rh_.add_application(add_app_json), "Success!");
+
+  std::string del_app_json = R"(
+  {
+    name: "app,
+  }
+  )";
+  ASSERT_THROW(rh_.delete_application(del_app_json), json_parse_error);
 }
 
 TEST_F(ManagementFrontendTest, TestGetApplicationCorrect) {
@@ -934,7 +980,7 @@ TEST_F(ManagementFrontendTest, TestRemoveModelLinkCorrect) {
       get_remove_model_links_request_json(app_name, model_names);
   ASSERT_EQ(rh_.remove_model_links(remove_links_json), "Success!");
   auto result = get_linked_models(*redis_, app_name);
-  ASSERT_EQ(result.size(), 0);
+  ASSERT_EQ(result, std::vector<std::string>{});
 }
 
 TEST_F(ManagementFrontendTest, TestRemoveModelLinkMissingField) {

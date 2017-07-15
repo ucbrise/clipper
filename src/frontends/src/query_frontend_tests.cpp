@@ -9,6 +9,14 @@
 
 #include "query_frontend.hpp"
 
+#ifdef USE_BOOST_REGEX
+#include <boost/regex.hpp>
+#define REGEX_NS boost
+#else
+#include <regex>
+#define REGEX_NS std
+#endif
+
 using namespace clipper;
 using namespace clipper::redis;
 using namespace query_frontend;
@@ -59,6 +67,34 @@ class QueryFrontendTest : public ::testing::Test {
     redis_->disconnect();
   }
 };
+
+TEST_F(QueryFrontendTest, TestRegexHelperFunctions) {
+  std::string resource = "app_name";
+  std::string action = "predict";
+
+  std::string predict_address = rh_._get_endpoint_address(resource, action);
+  std::string predict_regex = rh_._get_endpoint_regex_str(resource, action);
+  EXPECT_TRUE(
+      REGEX_NS::regex_match(predict_address, REGEX_NS::regex(predict_regex)));
+
+  std::string wrong_predict_address =
+      rh_._get_endpoint_address("app_name_2", action);
+  EXPECT_FALSE(REGEX_NS::regex_match(wrong_predict_address,
+                                     REGEX_NS::regex(predict_regex)));
+}
+
+TEST_F(QueryFrontendTest, TestDeleteApplication) {
+  size_t no_apps = rh_.num_applications();
+  EXPECT_EQ(no_apps, (size_t)0);
+  std::string app_name = "test_app_1";
+  rh_.add_application(app_name, InputType::Doubles, "test_policy", "0.4",
+                      30000);
+  size_t one_app = rh_.num_applications();
+  EXPECT_EQ(one_app, (size_t)1);
+
+  rh_.delete_application(app_name);
+  EXPECT_EQ(no_apps, rh_.num_applications());
+}
 
 TEST_F(QueryFrontendTest, TestDecodeCorrectInputInts) {
   std::string test_json_ints = "{\"input\": [1,2,3,4]}";
@@ -313,10 +349,14 @@ TEST_F(QueryFrontendTest, TestReadModelLinksAtStartup) {
   ASSERT_TRUE(add_application(*redis_, app_name_2, input_type, policy,
                               default_output, latency_slo_micros));
 
-  // Give some candidate model names to app with `app_name_1`
+  // Add and remove some model links to app with `app_name_1`
   add_model_links(*redis_, app_name_1, {"m1"});
   add_model_links(*redis_, app_name_1, {"m2", "m3"});
   remove_model_links(*redis_, app_name_1, {"m2"});
+
+  // Add and remove all model links to app with `app_name_2`
+  add_model_links(*redis_, app_name_2, {"m2", "m3"});
+  remove_all_model_links(*redis_, app_name_2);
 
   std::vector<std::string> expected_app1_linked_models = {"m1", "m3"};
 

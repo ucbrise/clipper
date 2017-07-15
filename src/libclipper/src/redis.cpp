@@ -486,6 +486,15 @@ bool remove_model_links(redox::Redox& redis, const std::string& appname,
   }
 }
 
+bool remove_all_model_links(redox::Redox& redis, const std::string& appname) {
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_APP_MODEL_LINKS_DB_NUM)})) {
+    return send_cmd_no_reply<int>(redis, vector<string>{"DEL", appname});
+  } else {
+    return false;
+  }
+}
+
 bool delete_application(redox::Redox& redis, const std::string& appname) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_APPLICATION_DB_NUM)})) {

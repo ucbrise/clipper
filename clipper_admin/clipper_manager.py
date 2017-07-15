@@ -397,6 +397,22 @@ class Clipper:
         print(r.text)
         return r.status_code == requests.codes.ok
 
+    def delete_application(self, name):
+        """
+        Deletes an existing Clipper application. Also removes its associated
+        model links.
+
+        Parameters
+        ----------
+        name : str
+            The name of the application.
+        """
+        url = "http://%s:1338/admin/delete_app" % self.host
+        req_json = json.dumps({"name": name})
+        headers = {'Content-type': 'application/json'}
+        r = requests.delete(url, headers=headers, data=req_json)
+        print(r.text)
+
     def remove_model_link(self, app_name, model_name):
         """
         Prevents the model with `model_name` from being used by the app with `app_name`.

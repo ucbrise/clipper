@@ -85,6 +85,17 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertGreaterEqual(len(registered_applications), 1)
         self.assertTrue(self.app_name in registered_applications)
 
+    def test_delete_application_suceeds(self):
+        temp_app_name = "temp_app"
+        input_type = "doubles"
+        default_output = "DEFAULT"
+        slo_micros = 30000
+        self.clipper_inst.register_application(temp_app_name, input_type,
+                                               default_output, slo_micros)
+        self.clipper_inst.delete_application(temp_app_name)
+        registered_applications = self.clipper_inst.get_all_apps()
+        self.assertFalse(self.app_name in registered_applications)
+
     def test_link_not_registered_model_to_app_fails(self):
         not_deployed_model = "test_model"
         result = self.clipper_inst.link_model_to_app(self.app_name,
@@ -383,6 +394,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 SHORT_TEST_ORDERING = [
     'test_external_models_register_correctly',
     'test_application_registers_correctly',
+    'test_delete_application_suceeds',
     'test_link_not_registered_model_to_app_fails',
     'test_get_model_links_when_none_exist_returns_empty_list',
     'test_link_registered_model_to_app_succeeds',

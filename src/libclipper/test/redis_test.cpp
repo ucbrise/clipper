@@ -177,6 +177,42 @@ TEST_F(RedisTest, RemoveModelLinks) {
   ASSERT_EQ(linked_models, std::vector<std::string>{model_name_3});
 }
 
+TEST_F(RedisTest, RemoveAllModelLinks) {
+  std::string app_name = "my_app_name";
+  InputType input_type = InputType::Doubles;
+  std::string policy = DefaultOutputSelectionPolicy::get_name();
+  std::string default_output = "1.0";
+  int latency_slo_micros = 10000;
+  ASSERT_TRUE(add_application(*redis_, app_name, input_type, policy,
+                              default_output, latency_slo_micros));
+
+  std::vector<std::string> labels{"ads", "images", "experimental", "other",
+                                  "labels"};
+  std::string model_name_1 = "model_1";
+  std::string model_name_2 = "model_2";
+  VersionedModelId model_1 = VersionedModelId(model_name_1, "1");
+  VersionedModelId model_2 = VersionedModelId(model_name_2, "1");
+  std::string container_name = "clipper/test_container";
+  std::string model_path = "/tmp/models/m/1";
+  ASSERT_TRUE(add_model(*redis_, model_1, input_type, labels, container_name,
+                        model_path));
+  ASSERT_TRUE(add_model(*redis_, model_2, input_type, labels, container_name,
+                        model_path));
+
+  std::vector<std::string> model_names =
+      std::vector<std::string>{model_name_1, model_name_2};
+  ASSERT_TRUE(add_model_links(*redis_, app_name, model_names));
+
+  auto linked_models = get_linked_models(*redis_, app_name);
+  std::sort(linked_models.begin(), linked_models.end());
+  std::sort(model_names.begin(), model_names.end());
+  ASSERT_EQ(model_names, linked_models);
+
+  ASSERT_TRUE(remove_all_model_links(*redis_, app_name));
+  linked_models = get_linked_models(*redis_, app_name);
+  ASSERT_EQ(linked_models, std::vector<std::string>{});
+}
+
 TEST_F(RedisTest, SetCurrentModelVersion) {
   std::string model_name = "mymodel";
   ASSERT_TRUE(set_current_model_version(*redis_, model_name, "2"));
@@ -730,6 +766,59 @@ TEST_F(RedisTest, SubscriptionDetectModelLinksRemove) {
   bool result = notification_recv.wait_for(
       l, std::chrono::milliseconds(1000),
       [&num_srem_recv]() { return num_srem_recv == 2; });
+  ASSERT_TRUE(result);
+}
+
+TEST_F(RedisTest, SubscriptionDetectRemoveAllModelLinks) {
+  // Register the application to link to
+  std::string name = "my_app_name";
+  InputType input_type = InputType::Doubles;
+  std::string policy = "exp3_policy";
+  std::string default_output = "1.0";
+  int latency_slo_micros = 10000;
+  ASSERT_TRUE(add_application(*redis_, name, input_type, policy, default_output,
+                              latency_slo_micros));
+
+  // Register the models to link
+  std::vector<std::string> labels{"ads", "images", "experimental", "other",
+                                  "labels"};
+  std::string model_name_1 = "model_1";
+  std::string model_name_2 = "model_2";
+  std::string model_version = "1";
+  VersionedModelId model_1_id = VersionedModelId(model_name_1, model_version);
+  VersionedModelId model_2_id = VersionedModelId(model_name_2, model_version);
+  std::string container_name = "clipper/test_container";
+  std::string model_path = "/tmp/models/m/1";
+  ASSERT_TRUE(add_model(*redis_, model_1_id, input_type, labels, container_name,
+                        model_path));
+  ASSERT_TRUE(add_model(*redis_, model_2_id, input_type, labels, container_name,
+                        model_path));
+  std::vector<std::string> model_names = {model_name_1, model_name_2};
+  ASSERT_TRUE(add_model_links(*redis_, name, model_names));
+
+  std::condition_variable_any notification_recv;
+  std::mutex notification_mutex;
+  std::atomic<bool> recv{true};
+  subscribe_to_model_link_changes(
+      *subscriber_, [&notification_recv, &notification_mutex, &recv, name](
+                        const std::string& key, const std::string& event_type) {
+        ASSERT_TRUE(event_type == "del");
+        if (event_type == "srem") {
+          ASSERT_EQ(event_type, "srem");
+          std::unique_lock<std::mutex> l(notification_mutex);
+          recv = true;
+          ASSERT_EQ(key, name);
+          notification_recv.notify_all();
+        }
+      });
+  // give Redis some time to register the subscription
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+  ASSERT_TRUE(remove_all_model_links(*redis_, name));
+
+  std::unique_lock<std::mutex> l(notification_mutex);
+  bool result = notification_recv.wait_for(l, std::chrono::milliseconds(1000),
+                                           [&recv]() { return recv == true; });
   ASSERT_TRUE(result);
 }
 

@@ -50,6 +50,7 @@ const std::string LOGGING_TAG_MANAGEMENT_FRONTEND = "MGMTFRNTD";
 
 const std::string ADMIN_PATH = "^/admin";
 const std::string ADD_APPLICATION = ADMIN_PATH + "/add_app$";
+const std::string DELETE_APPLICATION = ADMIN_PATH + "/delete_app$";
 const std::string ADD_MODEL_LINKS = ADMIN_PATH + "/add_model_links$";
 const std::string REMOVE_MODEL_LINKS = ADMIN_PATH + "/remove_model_links$";
 const std::string ADD_MODEL = ADMIN_PATH + "/add_model$";
@@ -72,6 +73,12 @@ const std::string ADD_APPLICATION_JSON_SCHEMA = R"(
    "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
    "default_output" := string,
    "latency_slo_micros" := int
+  }
+)";
+
+const std::string DELETE_APPLICATION_JSON_SCHEMA = R"(
+  {
+    "name" := string
   }
 )";
 
@@ -200,6 +207,27 @@ class RequestHandler {
           } catch (const json_semantic_error& e) {
             std::string err_msg =
                 json_error_msg(e.what(), ADD_APPLICATION_JSON_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const std::invalid_argument& e) {
+            respond_http(e.what(), "400 Bad Request", response);
+          }
+        });
+    server_.add_endpoint(
+        DELETE_APPLICATION, "POST",
+        [this](std::shared_ptr<HttpServer::Response> response,
+               std::shared_ptr<HttpServer::Request> request) {
+          try {
+            clipper::log_info(LOGGING_TAG_MANAGEMENT_FRONTEND,
+                              "Delete application POST request");
+            std::string result = delete_application(request->content.string());
+            respond_http(result, "200 OK", response);
+          } catch (const json_parse_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), DELETE_APPLICATION_JSON_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const json_semantic_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), DELETE_APPLICATION_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
           } catch (const std::invalid_argument& e) {
             respond_http(e.what(), "400 Bad Request", response);
@@ -682,6 +710,49 @@ class RequestHandler {
     } else {
       std::stringstream ss;
       ss << "Error application " << app_name << " already exists";
+      throw std::invalid_argument(ss.str());
+    }
+  }
+
+  /**
+   * Creates an endpoint that listens for requests to retrieve info about
+   * a specified Clipper application.
+   *
+   * JSON format:
+   * {
+   *  "name" := string
+   * }
+   *
+   * \return Returns a JSON string encoding a map of the specified application's
+   * attribute name-value pairs.
+   *
+   */
+  std::string delete_application(const std::string& json) {
+    rapidjson::Document d;
+    parse_json(json, d);
+
+    std::string app_name = get_string(d, "name");
+
+    // Confirm that the app exists
+    auto app_info =
+        clipper::redis::get_application(redis_connection_, app_name);
+    if (app_info.size() == 0) {
+      std::stringstream ss;
+      ss << "No app with name " << app_name << " exists.";
+      throw std::invalid_argument(ss.str());
+    }
+
+    if (clipper::redis::delete_application(redis_connection_, app_name)) {
+      if (clipper::redis::remove_all_model_links(redis_connection_, app_name)) {
+        return "Success!";
+      }
+      std::stringstream ss;
+      ss << "Successfully deleted application " << app_name
+         << "but encountered an error removing its model links in Redis.";
+      throw std::invalid_argument(ss.str());
+    } else {
+      std::stringstream ss;
+      ss << "Error deleting application " << app_name << " from Redis";
       throw std::invalid_argument(ss.str());
     }
   }
