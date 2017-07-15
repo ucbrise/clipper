@@ -26,41 +26,59 @@ constexpr long EVENT_LOG_CAPACITY = 100;
 using RPCLogItem = std::pair<RPCEvent, Clock::time_point>;
 
 template <typename T>
-struct supported_input_trait {
+struct input_info {
   static const bool is_supported = false;
+  static const InputType input_type = InputType::Invalid;
 };
 
 template <>
-struct supported_input_trait<ByteVector> {
+struct input_info<ByteVector> {
   static const bool is_supported = true;
+  static const InputType input_type = InputType::Bytes;
 };
 
 template <>
-struct supported_input_trait<IntVector> {
+struct input_info<IntVector> {
   static const bool is_supported = true;
+  static const InputType input_type = InputType::Ints;
 };
 
 template <>
-struct supported_input_trait<FloatVector> {
+struct input_info<FloatVector> {
   static const bool is_supported = true;
+  static const InputType input_type = InputType::Floats;
 };
 
 template <>
-struct supported_input_trait<DoubleVector> {
+struct input_info<DoubleVector> {
   static const bool is_supported = true;
+  static const InputType input_type = InputType::Doubles;
 };
 
 template <>
-struct supported_input_trait<SerializableString> {
+struct input_info<SerializableString> {
   static const bool is_supported = true;
+  static const InputType input_type = InputType::Strings;
 };
 
 template <class I>
 class Model {
  public:
+  Model() : input_type_(input_info<I>::input_type) {
+    static_assert(input_info<I>::is_supported,
+                  "Model must be of a supported input type!");
+  }
+
   virtual std::vector<std::string> predict(
       const std::vector<I> inputs) const = 0;
-  virtual InputType get_input_type() const = 0;
+
+  InputType get_input_type() {
+    return input_type_;
+  }
+
+ private:
+  const InputType input_type_;
+
 };
 
 // This is not thread safe
@@ -133,8 +151,6 @@ class RPC {
   template <typename D>
   void start_rpc(Model<Input<D>>& model, std::string& model_name,
                  int model_version, std::string& clipper_ip, int clipper_port) {
-    static_assert(supported_input_trait<Input<D>>::is_supported,
-                  "Model must be of a supported input type!");
     if (active_) {
       throw std::runtime_error(
           "Cannot start a container that is already started!");

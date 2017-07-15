@@ -21,6 +21,7 @@ enum class MessageType {
 enum class HeartbeatType { KeepAlive = 0, RequestContainerMetadata = 1 };
 
 enum class InputType {
+  Invalid = -1,
   Bytes = 0,
   Ints = 1,
   Floats = 2,
@@ -40,6 +41,7 @@ static inline std::string get_readable_input_type(InputType type) {
     case InputType::Floats: return std::string("floats");
     case InputType::Doubles: return std::string("doubles");
     case InputType::Strings: return std::string("strings");
+    case InputType::Invalid: return std::string("invalid");
   }
   return std::string("Invalid input type");
 }
