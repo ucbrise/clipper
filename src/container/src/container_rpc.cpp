@@ -15,8 +15,8 @@ Clock::time_point PerformanceTimer::last_log_ =
 RPC::RPC()
     : active_(false),
       event_log_mutex_(std::make_shared<std::mutex>()),
-      event_log_(std::make_shared<CircularBuffer<RPCLogItem>>(
-          EVENT_LOG_CAPACITY)) {}
+      event_log_(
+          std::make_shared<CircularBuffer<RPCLogItem>>(EVENT_LOG_CAPACITY)) {}
 
 RPC::~RPC() { stop(); }
 

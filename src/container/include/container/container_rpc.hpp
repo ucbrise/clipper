@@ -2,15 +2,15 @@
 #define CLIPPER_CONTAINER_RPC_HPP
 
 #include <chrono>
-#include <mutex>
 #include <iostream>
+#include <mutex>
 #include <sstream>
 #include <thread>
 
 #include <zmq.hpp>
 
-#include <container/datatypes.hpp>
 #include <container/container_parsing.hpp>
+#include <container/datatypes.hpp>
 #include <container/util.hpp>
 
 const std::string LOGGING_TAG_CONTAINER = "CONTAINER";
@@ -103,15 +103,16 @@ class RPC {
   RPC& operator=(RPC&& other) = default;
 
   template <typename D>
-  void start_async(Model<Input<D>>& model, std::string model_name, int model_version,
-             std::string clipper_ip, int clipper_port) {
+  void start_async(Model<Input<D>>& model, std::string model_name,
+                   int model_version, std::string clipper_ip,
+                   int clipper_port) {
     start_rpc(model, model_name, model_version, clipper_ip, clipper_port);
     serving_thread_.detach();
   }
 
   template <typename D>
   void start(Model<Input<D>>& model, std::string model_name, int model_version,
-      std::string clipper_ip, int clipper_port) {
+             std::string clipper_ip, int clipper_port) {
     start_rpc(model, model_name, model_version, clipper_ip, clipper_port);
     serving_thread_.join();
   }
@@ -130,8 +131,8 @@ class RPC {
   std::shared_ptr<CircularBuffer<RPCLogItem>> event_log_;
 
   template <typename D>
-  void start_rpc(Model<Input<D>>& model, std::string& model_name, int model_version,
-                 std::string& clipper_ip, int clipper_port) {
+  void start_rpc(Model<Input<D>>& model, std::string& model_name,
+                 int model_version, std::string& clipper_ip, int clipper_port) {
     static_assert(supported_input_trait<Input<D>>::is_supported,
                   "Model must be of a supported input type!");
     if (active_) {
@@ -141,7 +142,8 @@ class RPC {
     active_ = true;
     const std::string clipper_address =
         "tcp://" + clipper_ip + ":" + std::to_string(clipper_port);
-    std::cout << "Starting container RPC with clipper ip: " << clipper_ip << " and port: " << clipper_port << std::endl;
+    std::cout << "Starting container RPC with clipper ip: " << clipper_ip
+              << " and port: " << clipper_port << std::endl;
     serving_thread_ = std::thread(
         [this, clipper_address, &model, model_name, model_version]() {
           serve_model(model, model_name, model_version, clipper_address);
@@ -194,7 +196,7 @@ class RPC {
                     .count();
             if (time_since_last_activity_millis >=
                 SOCKET_ACTIVITY_TIMEOUT_MILLIS) {
-                std::cout << "Connection timed out, reconnecting..." << std::endl;
+              std::cout << "Connection timed out, reconnecting..." << std::endl;
               connected = false;
               break;
             } else {
@@ -259,7 +261,9 @@ class RPC {
 
           case MessageType::NewContainer:
             log_event(RPCEvent::ReceivedContainerMetadata);
-            std::cout << "Error! Received erroneous new container message from Clipper!" << std::endl;
+            std::cout << "Error! Received erroneous new container message from "
+                         "Clipper!"
+                      << std::endl;
           default: break;
         }
       }

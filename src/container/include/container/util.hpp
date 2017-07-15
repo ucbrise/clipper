@@ -6,10 +6,10 @@ namespace container {
 template <class T>
 class CircularBuffer {
  public:
-
   explicit CircularBuffer(const size_t capacity) : capacity_(capacity) {
-    if(capacity <= 0) {
-      throw std::runtime_error("Circular buffer instance must have a positive capacity!");
+    if (capacity <= 0) {
+      throw std::runtime_error(
+          "Circular buffer instance must have a positive capacity!");
     }
     items_.reserve(capacity_);
   }
@@ -27,7 +27,7 @@ class CircularBuffer {
     std::vector<T> items_to_return;
     items_to_return.reserve(items_.size());
     size_t output_index = curr_index_ % items_.size();
-    for(size_t i = 0; i < items_.size(); i++) {
+    for (size_t i = 0; i < items_.size(); i++) {
       items_to_return.push_back(items_[output_index]);
       output_index = (output_index + 1) % items_.size();
     }
@@ -38,9 +38,7 @@ class CircularBuffer {
   size_t curr_index_ = 0;
   std::vector<T> items_;
   const size_t capacity_;
-
 };
-
 }
 
-#endif //CLIPPER_UTIL_HPP
+#endif  // CLIPPER_UTIL_HPP
