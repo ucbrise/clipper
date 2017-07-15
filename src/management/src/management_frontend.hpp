@@ -51,6 +51,7 @@ const std::string LOGGING_TAG_MANAGEMENT_FRONTEND = "MGMTFRNTD";
 const std::string ADMIN_PATH = "^/admin";
 const std::string ADD_APPLICATION = ADMIN_PATH + "/add_app$";
 const std::string ADD_MODEL_LINKS = ADMIN_PATH + "/add_model_links$";
+const std::string REMOVE_MODEL_LINKS = ADMIN_PATH + "/remove_model_links$";
 const std::string ADD_MODEL = ADMIN_PATH + "/add_model$";
 const std::string SET_MODEL_VERSION = ADMIN_PATH + "/set_model_version$";
 
@@ -78,6 +79,13 @@ const std::string ADD_MODEL_LINKS_JSON_SCHEMA = R"(
   {
     "app_name" := string,
     "model_names" := [string]
+  }
+)";
+
+const std::string REMOVE_MODEL_LINKS_JSON_SCHEMA = R"(
+  {
+  "app_name" := string,
+  "model_names" := [string]
   }
 )";
 
@@ -213,6 +221,27 @@ class RequestHandler {
           } catch (const json_semantic_error& e) {
             std::string err_msg =
                 json_error_msg(e.what(), ADD_MODEL_LINKS_JSON_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const std::invalid_argument& e) {
+            respond_http(e.what(), "400 Bad Request", response);
+          }
+        });
+    server_.add_endpoint(
+        REMOVE_MODEL_LINKS, "POST",
+        [this](std::shared_ptr<HttpServer::Response> response,
+               std::shared_ptr<HttpServer::Request> request) {
+          try {
+            clipper::log_info(LOGGING_TAG_MANAGEMENT_FRONTEND,
+                              "Remove application links POST request");
+            std::string result = remove_model_links(request->content.string());
+            respond_http(result, "200 OK", response);
+          } catch (const json_parse_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), REMOVE_MODEL_LINKS_JSON_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const json_semantic_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), REMOVE_MODEL_LINKS_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
           } catch (const std::invalid_argument& e) {
             respond_http(e.what(), "400 Bad Request", response);
@@ -558,6 +587,57 @@ class RequestHandler {
     } else {
       std::stringstream ss;
       ss << "Error linking models to " << app_name << " in Redis";
+      throw std::invalid_argument(ss.str());
+    }
+  }
+
+  /**
+   * Creates an endpoint that listens for requests to remove links between
+   * apps and models
+   *
+   * JSON format:
+   * {
+   *  "app_name" := string,
+   *  "model_names" := [string]
+   * }
+   */
+  std::string remove_model_links(const std::string& json) {
+    rapidjson::Document d;
+    parse_json(json, d);
+
+    std::string app_name = get_string(d, "app_name");
+    std::vector<string> model_names = get_string_array(d, "model_names");
+
+    // Confirm that the app exists
+    auto app_info =
+        clipper::redis::get_application(redis_connection_, app_name);
+    if (app_info.size() == 0) {
+      std::stringstream ss;
+      ss << "No app with name " << app_name << " exists.";
+      throw std::invalid_argument(ss.str());
+    }
+
+    // Confirm that the model names supplied are of linked models
+    auto existing_linked_models =
+        clipper::redis::get_linked_models(redis_connection_, app_name);
+
+    for (auto const& model_name : model_names) {
+      if (std::find(existing_linked_models.begin(),
+                    existing_linked_models.end(),
+                    model_name) == existing_linked_models.end()) {
+        std::stringstream ss;
+        ss << "Cannot remove nonexistent link between app " << app_name
+           << " and model " << model_name;
+        throw std::invalid_argument(ss.str());
+      }
+    }
+
+    if (clipper::redis::remove_model_links(redis_connection_, app_name,
+                                           model_names)) {
+      return "Success!";
+    } else {
+      std::stringstream ss;
+      ss << "Error removing linked models from " << app_name << " in Redis";
       throw std::invalid_argument(ss.str());
     }
   }

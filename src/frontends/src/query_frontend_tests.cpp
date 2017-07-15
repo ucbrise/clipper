@@ -316,8 +316,9 @@ TEST_F(QueryFrontendTest, TestReadModelLinksAtStartup) {
   // Give some candidate model names to app with `app_name_1`
   add_model_links(*redis_, app_name_1, {"m1"});
   add_model_links(*redis_, app_name_1, {"m2", "m3"});
+  remove_model_links(*redis_, app_name_1, {"m2"});
 
-  std::vector<std::string> expected_app1_linked_models = {"m1", "m2", "m3"};
+  std::vector<std::string> expected_app1_linked_models = {"m1", "m3"};
 
   RequestHandler<MockQueryProcessor> rh2_("127.0.0.1", 1337, 8);
 

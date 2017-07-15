@@ -271,6 +271,14 @@ bool add_model_links(redox::Redox& redis, const std::string& app_name,
                      const std::vector<std::string>& model_names);
 
 /**
+ * Removes links between the specified app and models.
+ *
+ * \return Returns true if the removal was successful.
+ */
+bool remove_model_links(redox::Redox& redis, const std::string& app_name,
+                        const std::vector<std::string>& model_names);
+
+/**
  * Deletes a container from the container table if it exists.
  *
  * \return Returns true if the container was present in the table

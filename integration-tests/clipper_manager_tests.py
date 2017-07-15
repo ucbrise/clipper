@@ -104,6 +104,14 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         result = self.clipper_inst.get_linked_models(self.app_name)
         self.assertEqual([self.model_name], result)
 
+    def test_remove_model_links_succeeds(self):
+        remove_model_result = self.clipper_inst.remove_model_link(
+            self.app_name, self.model_name)
+        self.assertTrue(remove_model_result)
+        get_linked_models_result = self.clipper_inst.get_linked_models(
+            self.app_name)
+        self.assertEqual([], get_linked_models_result)
+
     def get_app_info_for_registered_app_returns_info_dictionary(self):
         result = self.clipper_inst.get_app_info(self.app_name)
         self.assertIsNotNone(result)
@@ -322,6 +330,21 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         self.assertNotEqual(parsed_response["output"], self.default_output)
         self.assertFalse(parsed_response["default"])
 
+    def test_queries_to_app_with_removed_model_links_yield_default_predictions(
+            self):
+        self.clipper_inst.remove_model_link(self.app_name_2, self.model_name_2)
+        time.sleep(1)
+
+        url = "http://localhost:1337/{}/predict".format(self.app_name_2)
+        test_input = [99.3, 18.9, 67.2, 34.2]
+        req_json = json.dumps({'input': test_input})
+        headers = {'Content-type': 'application/json'}
+        response = requests.post(url, headers=headers, data=req_json)
+        parsed_response = response.json()
+        print(parsed_response)
+        self.assertEqual(parsed_response["output"], self.default_output)
+        self.assertTrue(parsed_response["default"])
+
     def test_deployed_and_linked_predict_function_queried_successfully(self):
         model_version = 1
         predict_func = lambda inputs: [str(mm.COEFFICIENT * mmip.COEFFICIENT * len(x)) for x in inputs]
@@ -380,6 +403,7 @@ SHORT_TEST_ORDERING = [
 LONG_TEST_ORDERING = [
     'test_queries_to_app_without_linked_models_yield_default_predictions',
     'test_deployed_and_linked_model_queried_successfully',
+    'test_queries_to_app_with_removed_model_links_yield_default_predictions',
     'test_deployed_and_linked_predict_function_queried_successfully'
 ]
 
