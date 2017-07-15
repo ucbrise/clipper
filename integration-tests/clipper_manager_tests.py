@@ -94,7 +94,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
                                                default_output, slo_micros)
         self.clipper_inst.delete_application(temp_app_name)
         registered_applications = self.clipper_inst.get_all_apps()
-        self.assertFalse(self.app_name in registered_applications)
+        self.assertFalse(temp_app_name in registered_applications)
 
     def test_link_not_registered_model_to_app_fails(self):
         not_deployed_model = "test_model"

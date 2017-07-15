@@ -406,12 +406,18 @@ class Clipper:
         ----------
         name : str
             The name of the application.
+
+        Returns
+        -------
+            Returns true iff the application was successfully deleted
         """
-        url = "http://%s:1338/admin/delete_app" % self.host
+        url = "http://%s:%d/admin/delete_app" % (self.host,
+                                                 CLIPPER_MANAGEMENT_PORT)
         req_json = json.dumps({"name": name})
         headers = {'Content-type': 'application/json'}
-        r = requests.delete(url, headers=headers, data=req_json)
+        r = requests.post(url, headers=headers, data=req_json)
         print(r.text)
+        return r.status_code == requests.codes.ok
 
     def remove_model_link(self, app_name, model_name):
         """
