@@ -34,8 +34,6 @@ class RPCTestModel : public Model<DoubleVector> {
     return outputs;
   }
 
-  InputType get_input_type() const override { return InputType::Doubles; }
-
  private:
   RPC& container_rpc_;
 
