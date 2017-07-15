@@ -3,23 +3,19 @@
 
 #include <chrono>
 #include <mutex>
+#include <iostream>
 #include <sstream>
 #include <thread>
 
-#include <boost/circular_buffer.hpp>
 #include <zmq.hpp>
 
-#include <clipper/datatypes.hpp>
-#include <clipper/logging.hpp>
-#include <clipper/rpc_service.hpp>
 #include <container/datatypes.hpp>
-#include "container_parsing.hpp"
+#include <container/container_parsing.hpp>
+#include <container/util.hpp>
 
 const std::string LOGGING_TAG_CONTAINER = "CONTAINER";
 
 using Clock = std::chrono::system_clock;
-
-namespace clipper {
 
 namespace container {
 
@@ -27,7 +23,7 @@ constexpr long SOCKET_POLLING_TIMEOUT_MILLIS = 5000;
 constexpr long SOCKET_ACTIVITY_TIMEOUT_MILLIS = 30000;
 constexpr long EVENT_LOG_CAPACITY = 100;
 
-using RPCLogItem = std::pair<rpc::RPCEvent, Clock::time_point>;
+using RPCLogItem = std::pair<RPCEvent, Clock::time_point>;
 
 template <typename T>
 struct supported_input_trait {
@@ -107,8 +103,35 @@ class RPC {
   RPC& operator=(RPC&& other) = default;
 
   template <typename D>
-  void start(Model<Input<D>>& model, std::string model_name, int model_version,
+  void start_async(Model<Input<D>>& model, std::string model_name, int model_version,
              std::string clipper_ip, int clipper_port) {
+    start_rpc(model, model_name, model_version, clipper_ip, clipper_port);
+    serving_thread_.detach();
+  }
+
+  template <typename D>
+  void start(Model<Input<D>>& model, std::string model_name, int model_version,
+      std::string clipper_ip, int clipper_port) {
+    start_rpc(model, model_name, model_version, clipper_ip, clipper_port);
+    serving_thread_.join();
+  }
+
+  void stop();
+
+  /**
+   * @return The most recent RPC events that have occurred
+   */
+  std::vector<RPCLogItem> get_events() const;
+
+ private:
+  std::thread serving_thread_;
+  std::atomic_bool active_;
+  std::shared_ptr<std::mutex> event_log_mutex_;
+  std::shared_ptr<CircularBuffer<RPCLogItem>> event_log_;
+
+  template <typename D>
+  void start_rpc(Model<Input<D>>& model, std::string& model_name, int model_version,
+                 std::string& clipper_ip, int clipper_port) {
     static_assert(supported_input_trait<Input<D>>::is_supported,
                   "Model must be of a supported input type!");
     if (active_) {
@@ -118,29 +141,12 @@ class RPC {
     active_ = true;
     const std::string clipper_address =
         "tcp://" + clipper_ip + ":" + std::to_string(clipper_port);
-    log_info_formatted(
-        LOGGING_TAG_CONTAINER,
-        "Starting container RPC with clipper ip: {} and port: {}", clipper_ip,
-        clipper_port);
+    std::cout << "Starting container RPC with clipper ip: " << clipper_ip << " and port: " << clipper_port << std::endl;
     serving_thread_ = std::thread(
         [this, clipper_address, &model, model_name, model_version]() {
           serve_model(model, model_name, model_version, clipper_address);
         });
-    serving_thread_.detach();
   }
-
-  void stop();
-
-  /**
-   * @return The `num_events` most recent RPC events that have occurred
-   */
-  std::vector<RPCLogItem> get_events(int num_events = EVENT_LOG_CAPACITY) const;
-
- private:
-  std::thread serving_thread_;
-  std::atomic_bool active_;
-  std::shared_ptr<std::mutex> event_log_mutex_;
-  std::shared_ptr<boost::circular_buffer<RPCLogItem>> event_log_;
 
   /**
  * @return `true` if the received heartbeat is a request for container metadata.
@@ -154,7 +160,7 @@ class RPC {
                                InputType model_input_type,
                                zmq::socket_t& socket) const;
 
-  void log_event(rpc::RPCEvent event) const;
+  void log_event(RPCEvent event) const;
 
   template <typename D>
   void serve_model(Model<Input<D>>& model, std::string model_name,
@@ -169,7 +175,7 @@ class RPC {
     std::vector<uint8_t> output_buffer;
 
     while (true) {
-      zmq::socket_t socket = socket_t(context, ZMQ_DEALER);
+      zmq::socket_t socket = zmq::socket_t(context, ZMQ_DEALER);
       zmq::pollitem_t items[] = {{socket, 0, ZMQ_POLLIN, 0}};
       socket.connect(clipper_address);
       send_heartbeat(socket);
@@ -188,8 +194,7 @@ class RPC {
                     .count();
             if (time_since_last_activity_millis >=
                 SOCKET_ACTIVITY_TIMEOUT_MILLIS) {
-              log_info(LOGGING_TAG_CONTAINER,
-                       "Connection timed out, reconnecting...");
+                std::cout << "Connection timed out, reconnecting..." << std::endl;
               connected = false;
               break;
             } else {
@@ -210,13 +215,13 @@ class RPC {
         socket.recv(&msg_delimiter, 0);
         socket.recv(&msg_msg_type_bytes, 0);
 
-        rpc::MessageType message_type = static_cast<rpc::MessageType>(
+        MessageType message_type = static_cast<MessageType>(
             static_cast<int*>(msg_msg_type_bytes.data())[0]);
 
         switch (message_type) {
-          case rpc::MessageType::Heartbeat: {
-            log_info(LOGGING_TAG_CONTAINER, "Received heartbeat!");
-            log_event(rpc::RPCEvent::ReceivedHeartbeat);
+          case MessageType::Heartbeat: {
+            std::cout << "Received heartbeat!" << std::endl;
+            log_event(RPCEvent::ReceivedHeartbeat);
             bool requesting_metadata = handle_heartbeat(socket);
             if (requesting_metadata) {
               send_container_metadata(model_name, model_version,
@@ -224,8 +229,8 @@ class RPC {
             }
           } break;
 
-          case rpc::MessageType::ContainerContent: {
-            log_event(rpc::RPCEvent::ReceivedContainerContent);
+          case MessageType::ContainerContent: {
+            log_event(RPCEvent::ReceivedContainerContent);
             zmq::message_t msg_request_id;
             zmq::message_t msg_request_header;
 
@@ -252,11 +257,9 @@ class RPC {
 
           } break;
 
-          case rpc::MessageType::NewContainer:
-            log_event(rpc::RPCEvent::ReceivedContainerMetadata);
-            log_error_formatted(
-                LOGGING_TAG_CONTAINER,
-                "Received erroneous new container message from Clipper!");
+          case MessageType::NewContainer:
+            log_event(RPCEvent::ReceivedContainerMetadata);
+            std::cout << "Error! Received erroneous new container message from Clipper!" << std::endl;
           default: break;
         }
       }
@@ -362,7 +365,7 @@ class RPC {
 
     zmq::message_t msg_message_type(sizeof(int));
     static_cast<int*>(msg_message_type.data())[0] =
-        static_cast<int>(rpc::MessageType::ContainerContent);
+        static_cast<int>(MessageType::ContainerContent);
 
     zmq::message_t msg_message_id(sizeof(int));
     static_cast<int*>(msg_message_id.data())[0] = msg_id;
@@ -374,14 +377,12 @@ class RPC {
     socket.send(msg_message_type, ZMQ_SNDMORE);
     socket.send(msg_message_id, ZMQ_SNDMORE);
     socket.send(msg_prediction_response, 0);
-    log_event(rpc::RPCEvent::SentContainerContent);
+    log_event(RPCEvent::SentContainerContent);
 
     PerformanceTimer::log_elapsed("Handle");
-    log_info(LOGGING_TAG_CONTAINER, PerformanceTimer::get_log());
+    std::cout << PerformanceTimer::get_log() << std::endl;
   }
 };
 
 }  // namespace container
-
-}  // namespace clipper
 #endif  // CLIPPER_CONTAINER_RPC_HPP

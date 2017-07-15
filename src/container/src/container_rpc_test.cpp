@@ -3,11 +3,11 @@
 #include <rapidjson/rapidjson.h>
 
 #include <clipper/json_util.hpp>
-#include <clipper/logging.hpp>
 #include <container/container_parsing.hpp>
 #include <container/container_rpc.hpp>
+#include <container/datatypes.hpp>
 
-using namespace clipper::container;
+using namespace container;
 
 class RPCTestModel : public Model<DoubleVector> {
  public:
@@ -18,13 +18,12 @@ class RPCTestModel : public Model<DoubleVector> {
     std::vector<std::string> outputs;
     for (auto const& input : inputs) {
       long min_timestamp_millis = static_cast<long>(input.get_data()[0]);
-      std::vector<clipper::rpc::RPCEvent> recent_events =
-          get_events(min_timestamp_millis);
+      std::vector<RPCEvent> recent_events = get_events(min_timestamp_millis);
       rapidjson::Document output_json;
       output_json.SetArray();
       rapidjson::Document::AllocatorType& allocator =
           output_json.GetAllocator();
-      for (const clipper::rpc::RPCEvent& event : recent_events) {
+      for (const RPCEvent& event : recent_events) {
         int code = static_cast<int>(event);
         output_json.PushBack(code, allocator);
       }
@@ -37,8 +36,8 @@ class RPCTestModel : public Model<DoubleVector> {
  private:
   RPC& container_rpc_;
 
-  std::vector<clipper::rpc::RPCEvent> get_events(long min_time_millis) const {
-    std::vector<clipper::rpc::RPCEvent> ordered_events;
+  std::vector<RPCEvent> get_events(long min_time_millis) const {
+    std::vector<RPCEvent> ordered_events;
     std::vector<RPCLogItem> log_items = container_rpc_.get_events();
     std::chrono::milliseconds min_duration(min_time_millis);
 
@@ -83,7 +82,7 @@ int main(int argc, char* argv[]) {
   std::string clipper_ip = "localhost";
   int clipper_port = 7000;
 
-  container_rpc.start(test_model, model_name, model_version, clipper_ip,
+  container_rpc.start_async(test_model, model_name, model_version, clipper_ip,
                       clipper_port);
 
   std::this_thread::sleep_for(std::chrono::seconds(test_length));

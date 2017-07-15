@@ -6,8 +6,6 @@
 
 #include <container/datatypes.hpp>
 
-namespace clipper {
-
 namespace container {
 
 template <typename T>
@@ -101,7 +99,5 @@ class InputParser {
 };
 
 }  // namespace container
-
-}  // namespace clipper
 
 #endif  // CLIPPER_CONTAINER_PARSING_HPP
