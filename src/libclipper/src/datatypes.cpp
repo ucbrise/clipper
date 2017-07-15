@@ -34,8 +34,7 @@ std::string get_readable_input_type(InputType type) {
     case InputType::Doubles: return std::string("doubles");
     case InputType::Strings: return std::string("strings");
     case InputType::Invalid:
-    default:
-      return std::string("Invalid input type");
+    default: return std::string("Invalid input type");
   }
 }
 

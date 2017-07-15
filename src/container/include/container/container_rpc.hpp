@@ -76,13 +76,10 @@ class Model {
   virtual std::vector<std::string> predict(
       const std::vector<I> inputs) const = 0;
 
-  InputType get_input_type() const {
-    return input_type_;
-  }
+  InputType get_input_type() const { return input_type_; }
 
  private:
   const InputType input_type_;
-
 };
 
 // This is not thread safe
