@@ -3,19 +3,21 @@
 #include "r_models.hpp"
 
 #include <Rcpp.h>
-#include <container/datatypes.hpp>
+#include "datatypes.hpp"
+
+namespace container {
 
 RNumericVectorModel::RNumericVectorModel(Rcpp::Function function) : function_(function) {
 
 }
 
 std::vector<std::string> RNumericVectorModel::predict(const std::vector<DoubleVector> inputs) const {
+  std::vector<std::string> outs;
   for(auto const& input : inputs) {
     Rcpp::NumericVector numeric_input(input.get_data(), input.get_data() + input.get_length());
     double result = Rcpp::as<double>(function_(numeric_input));
-    std::cout << result << std::endl;
+    outs.push_back(std::to_string(result));
   }
-  std::vector<std::string> outs;
   return outs;
 }
 
@@ -45,3 +47,5 @@ std::vector<std::string> RDataFrameModel::predict(const std::vector<Serializable
   std::vector<std::string> outs;
   return outs;
 }
+
+} // namespace container

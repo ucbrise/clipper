@@ -3,10 +3,10 @@
 
 #include <Rcpp.h>
 
-#include <container/container_rpc.hpp>
-#include <container/datatypes.hpp>
+#include "container_rpc.hpp"
+#include "datatypes.hpp"
 
-using namespace container;
+namespace container {
 
 class RNumericVectorModel : public Model<DoubleVector> {
  public:
@@ -35,5 +35,7 @@ class RDataFrameModel : public Model<SerializableString> {
   RDataFrameModel();
   std::vector<std::string> predict(const std::vector<SerializableString> inputs) const override;
 };
+
+} // namespace container
 
 #endif //CLIPPER_R_MODELS_HPP
