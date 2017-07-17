@@ -187,6 +187,7 @@ class RPC {
       send_heartbeat(socket);
 
       while (active_) {
+        R_CheckUserInterrupt();
         zmq_poll(items, 1, SOCKET_POLLING_TIMEOUT_MILLIS);
         if (!(items[0].revents & ZMQ_POLLIN)) {
           if (connected) {

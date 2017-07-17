@@ -191,7 +191,7 @@ class RPC {
     std::vector<D> input_buffer;
     InputParser<D> input_parser(input_buffer);
     std::vector<uint8_t> output_buffer;
-    
+
     while (true) {
       zmq::socket_t socket = zmq::socket_t(context, ZMQ_DEALER);
       zmq::pollitem_t items[] = {{socket, 0, ZMQ_POLLIN, 0}};

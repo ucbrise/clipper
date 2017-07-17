@@ -30,5 +30,5 @@ target_link_libraries(container_rpc_test clipper zmqcpp container_lib cxxopts)
 ##################################
 # R support library dev - DELETE BEFORE MERGING
 
-add_library(r_container SHARED R/r_models.cpp)
+add_library(r_container SHARED R/r_clipper.cpp R/r_models.cpp)
 target_link_libraries(r_container container_lib zmqcpp rcpp)
