@@ -16,17 +16,17 @@ BEGIN_RCPP
 END_RCPP
 }
 
-RcppExport SEXP serve_data_frame_model(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 RcppExport SEXP serve_integer_vector_model(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 RcppExport SEXP serve_numeric_vector_model(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 RcppExport SEXP serve_raw_vector_model(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+RcppExport SEXP serve_serialized_input_model(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 
 static const R_CallMethodDef CallEntries[] = {
     {"rclipper_rcpp_hello_world", (DL_FUNC) &rclipper_rcpp_hello_world, 0},
-    {"serve_data_frame_model",     (DL_FUNC) &serve_data_frame_model,     6},
-    {"serve_integer_vector_model", (DL_FUNC) &serve_integer_vector_model, 6},
-    {"serve_numeric_vector_model", (DL_FUNC) &serve_numeric_vector_model, 6},
-    {"serve_raw_vector_model",     (DL_FUNC) &serve_raw_vector_model,     6},
+    {"serve_integer_vector_model",   (DL_FUNC) &serve_integer_vector_model,   6},
+    {"serve_numeric_vector_model",   (DL_FUNC) &serve_numeric_vector_model,   6},
+    {"serve_raw_vector_model",       (DL_FUNC) &serve_raw_vector_model,       6},
+    {"serve_serialized_input_model", (DL_FUNC) &serve_serialized_input_model, 6},
     {NULL, NULL, 0}
 };
 

@@ -40,9 +40,9 @@ RcppExport void serve_raw_vector_model(
   serve_model(name, version, clipper_ip, clipper_port, model);
 }
 
-RcppExport void serve_data_frame_model(
+RcppExport void serve_serialized_input_model(
     SEXP name, SEXP version, SEXP clipper_ip, SEXP clipper_port, SEXP function) {
   Rcpp::Function predict_function(function);
-  RDataFrameModel model(predict_function);
+  RSerializedInputModel model(predict_function);
   serve_model(name, version, clipper_ip, clipper_port, model);
 }
