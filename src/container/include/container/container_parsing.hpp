@@ -25,7 +25,8 @@ struct input_parser_type<char> {
  * used by models to render predictions.
  *
  * @tparam D A primitive datatype corresponding to a valid Input<D> object
- * (ex: D == `uint8_t` is valid because ByteVector == Input<uint8_t> is a valid Input object)
+ * (ex: D == `uint8_t` is valid because ByteVector == Input<uint8_t> is a valid
+ * Input object)
  */
 template <typename D>
 class InputParser {
@@ -66,7 +67,8 @@ class InputParser {
     int num_splits = input_header[1] - 1;
     // The first two elements of the header indicate the type of input data
     // and the number of content split indices. Therefore, actual splits
-    // begin at header index 2 and continue through header index `num_splits` + 2
+    // begin at header index 2 and continue through header index `num_splits` +
+    // 2
     int splits_begin_index = 2;
     int splits_end_index = num_splits + 2;
     std::vector<Input<D>> inputs;
