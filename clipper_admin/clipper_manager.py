@@ -17,6 +17,7 @@ import sys
 from .cloudpickle import CloudPickler
 import time
 import re
+from .module_dependency import ModuleDependencyAnalyzer
 
 __all__ = ['Clipper']
 
@@ -590,6 +591,7 @@ class Clipper:
         environment_fname = "environment.yml"
         conda_dep_fname = "conda_dependencies.txt"
         pip_dep_fname = "pip_dependencies.txt"
+        local_modules_folder_name = "modules"
 
         # Serialize function
         s = StringIO()
@@ -619,7 +621,7 @@ class Clipper:
                     conda_dep_fname, pip_dep_fname)):
                 return False
 
-            print("Supplied environment details")
+            print("Supplied Anaconda environment details")
         else:
             print(
                 "Warning: Anaconda environment was either not found or exporting the environment "
@@ -628,12 +630,135 @@ class Clipper:
                 "See http://clipper.ai/documentation/python_model_deployment/ for more information."
             )
 
+        # Export modules used by predict_function not captured in anaconda or pip
+        self._export_local_modules(c.modules, serialization_dir,
+                                   conda_dep_fname, pip_dep_fname,
+                                   local_modules_folder_name)
+        print("Supplied local modules")
+
         # Write out function serialization
         func_file_path = os.path.join(serialization_dir, predict_fname)
         with open(func_file_path, "w") as serialized_function_file:
             serialized_function_file.write(serialized_prediction_function)
         print("Serialized and supplied predict function")
         return serialization_dir
+
+    def _get_already_exported_modules(self, serialization_dir,
+                                      conda_deps_fname, pip_deps_fname):
+        """
+        Returns a list of names of modules that will be installed on the container.
+        This list includes the names of exported conda and pip modules as well as
+        those of preinstalled modules.
+
+        Returns
+        -------
+        list
+            List of names of modules whose installations are already accounted for
+        """
+        conda_deps_abs_path = os.path.join(serialization_dir, conda_deps_fname)
+        pip_deps_abs_path = os.path.join(serialization_dir, pip_deps_fname)
+        python_container_conda_deps_fname = os.path.join(
+            cur_dir, "python_container_conda_deps.txt")
+
+        get_module_name = lambda line: line.strip().split('=')[0]
+
+        ignore_list = []
+
+        if (os.path.isfile(conda_deps_abs_path)):
+            with open(conda_deps_abs_path, 'r') as f:
+                for line in f:
+                    ignore_list.append(get_module_name(line))
+
+        if (os.path.isfile(pip_deps_fname)):
+            with open(pip_deps_abs_path, 'r') as f:
+                for line in f:
+                    ignore_list.append(get_module_name(line))
+
+        with open(python_container_conda_deps_fname, 'r') as f:
+            for line in f:
+                ignore_list.append(line.strip())
+
+        return ignore_list
+
+    def _export_local_modules(self, func_modules, serialization_dir,
+                              conda_deps_fname, pip_deps_fname,
+                              local_modules_folder_name):
+        """
+        Supplies modules in `func_modules` not already accounted for by Anaconda or pip to container.
+        Copies those modules to {`serialization_dir`}/{`local_module_deps_fname`}.
+
+        Parameters
+        ----------
+        func_modules : str
+            The modules to consider exporting
+        serialization_dir : str
+            The path to the diretory containing the conda, pip, and output local modules dependency information
+        conda_deps_fname : str
+            The name of the conda dependency file
+        pip_deps_fname : str
+            The name of the pip dependency file
+        local_modules_folder_name : str
+            The name of the folder to copy modules to
+        """
+        ignore_list = self._get_already_exported_modules(
+            serialization_dir, conda_deps_fname, pip_deps_fname)
+        paths_to_copy = set()
+
+        mda = ModuleDependencyAnalyzer()
+        for module_name in ignore_list:
+            mda.ignore(module_name)
+        for module in func_modules:
+            module_name = module.__name__
+            if module_name not in ignore_list and 'clipper_admin' not in module_name:
+                mda.add(module_name)
+
+                if '.' in module_name:
+                    module_name_split = module_name.split()
+                    try:
+                        file_location = module.__file__
+                        package_nested_layer = len(module_name.split('.')) - 1
+                        folder_indices = [
+                            i for i, x in enumerate(file_location) if x == "/"
+                        ]
+                        cutoff_index = folder_indices[-package_nested_layer]
+                        package_path = file_location[:cutoff_index]
+                        paths_to_copy.add(package_path)
+                    except:
+                        print(
+                            "Could not identify the location of the root package {package} for module {module}. Will not supply it to the container.".
+                            format(
+                                package=module_name_split[0],
+                                module=module_name))
+            else:
+                mda.ignore(module_name)
+        module_paths = mda.get_and_clear_paths()
+
+        def path_already_captured(path):
+            for existing_path in paths_to_copy:
+                if path.startswith(existing_path):
+                    return True
+            return False
+
+        for module_path in module_paths:
+            if not path_already_captured(module_path):
+                paths_to_copy.add(module_path)
+
+        modules_dir = os.path.join(serialization_dir,
+                                   local_modules_folder_name)
+        if not os.path.exists(modules_dir):
+            os.mkdir(modules_dir)
+        for path in paths_to_copy:
+            module_fname = os.path.basename(path)
+            dst = os.path.join(modules_dir, module_fname)
+            try:
+                if os.path.isfile(path):
+                    shutil.copyfile(path, dst)
+                elif os.path.isdir(path):
+                    shutil.copytree(path, dst)
+            except:
+                print(
+                    "Encountered an error copying {path}. Will not supply it to container.".
+                    format(path=path))
 
     def deploy_pyspark_model(self,
                              name,

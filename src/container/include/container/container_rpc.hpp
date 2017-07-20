@@ -302,7 +302,7 @@ class RPC {
 
   template <typename D>
   void handle_predict_request(Model<Input<D>>& model,
-                              InputParser<D> input_parser,
+                              InputParser<D>& input_parser,
                               zmq::socket_t& socket,
                               std::vector<int>& input_header_buffer,
                               std::vector<uint8_t>& output_buffer,

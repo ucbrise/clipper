@@ -206,9 +206,8 @@ void run_benchmark(std::unordered_map<std::string, std::string> &config) {
           .count();
 
   for (int j = 0; j < num_threads; j++) {
-    std::vector<std::vector<double>> thread_datapoints(datapoints);
-    std::thread thread([&]() {
-      send_predictions(config, qp, thread_datapoints, bench_metrics, j);
+    std::thread thread([&config, &qp, datapoints, &bench_metrics, j]() {
+      send_predictions(config, qp, datapoints, bench_metrics, j);
     });
     threads.push_back(std::move(thread));
   }
@@ -219,8 +218,8 @@ void run_benchmark(std::unordered_map<std::string, std::string> &config) {
   std::thread metrics_thread;
 
   if (!flush_at_end) {
-    metrics_thread =
-        std::thread([&]() { repeatedly_report_and_clear_metrics(config); });
+    metrics_thread = std::thread(
+        [&config]() { repeatedly_report_and_clear_metrics(config); });
   }
 
   for (auto &thread : threads) {
