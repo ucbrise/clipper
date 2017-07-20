@@ -118,8 +118,10 @@ rpc::PredictionRequest create_request(InputType input_type, int message_size) {
     case InputType::Floats: return generate_floats_request(message_size);
     case InputType::Bytes: return generate_bytes_request(message_size);
     case InputType::Ints: return generate_ints_request(message_size);
+    case InputType::Invalid:
+    default:
+      throw std::invalid_argument("Unsupported input type");
   }
-  throw std::invalid_argument("Unsupported input type");
 }
 
 class Benchmarker {
