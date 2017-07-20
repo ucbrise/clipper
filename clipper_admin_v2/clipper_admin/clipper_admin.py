@@ -121,7 +121,6 @@ def deploy_model(
             tag=repo)
 
     logger.info("Pushing model Docker image to {}".format(repo))
-    print(docker_client.images.push(repository=repo))
     cm.deploy_model(name, version, input_type, repo, num_replicas=num_replicas)
     logger.info("Registering model with Clipper")
     register_model(cm, name, version, input_type, repo=repo, labels=labels)
