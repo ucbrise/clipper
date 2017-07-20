@@ -139,7 +139,6 @@ class RPC {
         [this, clipper_address, &model, model_name, model_version]() {
           serve_model(model, model_name, model_version, clipper_address);
         });
-    serving_thread_.detach();
   }
 
   void stop();
@@ -172,6 +171,8 @@ class RPC {
   template <typename D>
   void serve_model(Model<Input<D>>& model, std::string model_name,
                    int model_version, std::string clipper_address) {
+    // Initialize a ZeroMQ context with a single IO thread.
+    // This thread will be used by the socket we're about to create
     zmq::context_t context(1);
     bool connected = false;
     std::chrono::time_point<Clock> last_activity_time;
@@ -223,8 +224,8 @@ class RPC {
         socket.recv(&msg_delimiter, 0);
         socket.recv(&msg_msg_type_bytes, 0);
 
-        rpc::MessageType message_type = static_cast<rpc::MessageType>(
-            static_cast<int*>(msg_msg_type_bytes.data())[0]);
+        int message_type_code = static_cast<int*>(msg_msg_type_bytes.data())[0];
+        rpc::MessageType message_type = static_cast<rpc::MessageType>(message_type_code);
 
         switch (message_type) {
           case rpc::MessageType::Heartbeat: {
@@ -246,8 +247,8 @@ class RPC {
             socket.recv(&msg_request_header, 0);
 
             int msg_id = static_cast<int*>(msg_request_id.data())[0];
-            RequestType request_type = static_cast<RequestType>(
-                static_cast<int*>(msg_request_header.data())[0]);
+            int request_type_code = static_cast<int*>(msg_request_header.data())[0];
+            RequestType request_type = static_cast<RequestType>(request_type_code);
 
             switch (request_type) {
               case RequestType::PredictRequest:
@@ -257,10 +258,15 @@ class RPC {
                 break;
 
               case RequestType::FeedbackRequest:
-                // Do nothing for now
+                throw std::runtime_error("Received unsupported feedback request!");
                 break;
 
-              default: break;
+              default: {
+                std::stringstream ss;
+                ss << "Received RPC message of an unknown request type corresponding to integer code "
+                   << request_type_code;
+                throw std::runtime_error(ss.str());
+              }
             }
 
           } break;
@@ -270,7 +276,11 @@ class RPC {
             log_error_formatted(
                 LOGGING_TAG_CONTAINER,
                 "Received erroneous new container message from Clipper!");
-          default: break;
+          default: {
+            std::stringstream ss;
+            ss << "Received RPC message of an unknown message type corresponding to integer code " << message_type_code;
+            throw std::runtime_error(ss.str());
+          }
         }
       }
       // The socket associated with the previous session is no longer

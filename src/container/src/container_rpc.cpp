@@ -26,6 +26,7 @@ void RPC::stop() {
     if (serving_thread_.joinable()) {
       serving_thread_.join();
     }
+    log_info_formatted(LOGGING_TAG_CONTAINER, "Shut down successfully");
   }
 }
 
