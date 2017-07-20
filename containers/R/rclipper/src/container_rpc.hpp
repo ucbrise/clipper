@@ -6,6 +6,7 @@
 #include <mutex>
 #include <sstream>
 #include <thread>
+#include <atomic>
 
 #include <Rcpp.h>
 #include "zmq.hpp"
