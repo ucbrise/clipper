@@ -186,7 +186,7 @@ class K8sContainerManager(ContainerManager):
 
         current_num_replicas = response.spec.replicas
 
-        response = self._k8s_beta.patch_namespaced_deployments_scale(
+        self._k8s_beta.patch_namespaced_deployments_scale(
                 name=deployment_name,
                 namespace='default',
                 body={
@@ -196,8 +196,29 @@ class K8sContainerManager(ContainerManager):
                 })
 
     def get_logs(self, logging_dir):
-        # TODO(feynman): Implement this
-        raise NotImplementedError
+        logging_dir = os.path.abspath(os.path.expanduser(logging_dir))
+
+        log_files = []
+        if not os.path.exists(logging_dir):
+            os.makedirs(logging_dir)
+            logger.info("Created logging directory: %s" % logging_dir)
+
+        for pod in self._k8s_v1.list_namespaced_pod(
+                namespace='default',
+                label_selector=CLIPPER_MODEL_CONTAINER_LABEL).items:
+            for c in pod.status.container_statuses:
+                log_file_name = "image_{image}:container_{id}.log".format(
+                    image=c.image_id, id=c.container_id)
+                log_file = os.path.join(logging_dir, log_file_name)
+                with open(log_file, "w") as lf:
+                    lf.write(
+                            self._k8s_v1.read_namespaced_pod_log(
+                                namespace='default',
+                                name=pod.metadata.name,
+                                container=c.name))
+                log_files.append(log_file)
+        return log_files
+
 
     def stop_models(self, model_name=None, keep_version=None):
         # TODO(feynman): Account for model_name and keep_version.
