@@ -3,8 +3,7 @@ import docker
 import logging
 import os
 from ..container_manager import (
-    ContainerManager, CLIPPER_QUERY_PORT, CLIPPER_MANAGEMENT_PORT,
-    CLIPPER_RPC_PORT, CLIPPER_DOCKER_LABEL, CLIPPER_MODEL_CONTAINER_LABEL)
+    ContainerManager, CLIPPER_DOCKER_LABEL, CLIPPER_MODEL_CONTAINER_LABEL)
 
 DOCKER_NETWORK_NAME = "clipper_network"
 
@@ -14,12 +13,8 @@ logger = logging.getLogger(__name__)
 class DockerContainerManager(ContainerManager):
     def __init__(self,
                  clipper_public_hostname,
-                 redis_ip=None,
-                 redis_port=6379,
-                 registry=None,
-                 registry_username=None,
-                 registry_password=None,
-                 extra_container_kwargs={}):
+                 extra_container_kwargs={},
+                 **kwargs):
         """
         Parameters
         ----------
@@ -34,19 +29,16 @@ class DockerContainerManager(ContainerManager):
             Any additional keyword arguments to pass to the call to
             :py:meth:`docker.client.containers.run`.
         """
-        super(DockerContainerManager, self).__init__(clipper_public_hostname)
+        super(DockerContainerManager, self).__init__(clipper_public_hostname, **kwargs)
         if "DOCKER_API_VERSION" in os.environ:
             self.docker_client = docker.from_env(
                 version=os.environ["DOCKER_API_VERSION"])
         else:
             self.docker_client = docker.from_env()
-        self.redis_port = redis_port
-        self.redis_ip = redis_ip
         self.extra_container_kwargs = extra_container_kwargs
-        self.public_hostname = clipper_public_hostname
         self.query_frontend_name = "query_frontend"
         self.mgmt_frontend_name = "mgmt_frontend"
-        if registry is not None:
+        if self.registry is not None:
             # TODO: test with provided registry
             self.registry = registry
             if registry_username is not None and registry_password is not None:
@@ -90,15 +82,15 @@ class DockerContainerManager(ContainerManager):
             'clipper/management_frontend:latest',
             cmd,
             name=self.mgmt_frontend_name,
-            ports={'%s/tcp' % CLIPPER_MANAGEMENT_PORT: CLIPPER_MANAGEMENT_PORT},
+            ports={'%s/tcp' % self.clipper_management_port: self.clipper_management_port},
             **self.extra_container_kwargs)
         self.docker_client.containers.run(
             'clipper/query_frontend:latest',
             cmd,
             name=self.query_frontend_name,
             ports={
-                '%s/tcp' % CLIPPER_QUERY_PORT: CLIPPER_QUERY_PORT,
-                '%s/tcp' % CLIPPER_RPC_PORT: CLIPPER_RPC_PORT
+                '%s/tcp' % self.clipper_query_port: self.clipper_query_port,
+                '%s/tcp' % self.clipper_rpc_port: self.clipper_rpc_port
             },
             **self.extra_container_kwargs)
 

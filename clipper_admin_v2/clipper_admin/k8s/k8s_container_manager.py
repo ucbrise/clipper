@@ -30,19 +30,12 @@ def _pass_conflicts():
 class K8sContainerManager(ContainerManager):
     def __init__(self,
                  clipper_public_hostname,
-                 redis_ip=None,
-                 redis_port=6379,
-                 registry=None,
-                 registry_username=None,
-                 registry_password=None):
-        super(K8sContainerManager, self).__init__(clipper_public_hostname)
+                 **kwargs):
+        super(K8sContainerManager, self).__init__(clipper_public_hostname, **kwargs)
         config.load_kube_config()
         self._k8s_v1 = client.CoreV1Api()
         self._k8s_beta = client.ExtensionsV1beta1Api()
-        self.redis_port = redis_port
-        self.redis_ip = redis_ip
-        self.registry = None
-        if registry is None:
+        if self.registry is None:
             self.registry = self._start_registry()
         else:
             # TODO: test with provided registry
@@ -123,7 +116,7 @@ class K8sContainerManager(ContainerManager):
                     body=body,
                     namespace='default')
 
-    def deploy_model(self, name, version, input_type, repo):
+    def deploy_model(self, name, version, input_type, repo, num_replicas=1):
         """Deploys a versioned model to a k8s cluster.
 
         Parameters
@@ -146,7 +139,7 @@ class K8sContainerManager(ContainerManager):
                         '-deployment'  # NOTE: must satisfy RFC 1123 pathname conventions
                     },
                     'spec': {
-                        'replicas': 1,
+                        'replicas': num_replicas,
                         'template': {
                             'metadata': {
                                 'labels': {
@@ -185,8 +178,22 @@ class K8sContainerManager(ContainerManager):
                 namespace='default')
 
     def add_replica(self, name, version, input_type, repo):
-        # TODO(feynman): Implement this
-        raise NotImplementedError
+        """Increments the number of replicas of a model.
+
+        """
+        deployment_name = "{}-deployment".format(name) # NOTE: assumes `metadata.name` can identify the model deployment.
+        response = self._k8s_beta.read_namespaced_deployments_scale(name=deployment_name, namespace='default')
+
+        current_num_replicas = response.spec.replicas
+
+        response = self._k8s_beta.patch_namespaced_deployments_scale(
+                name=deployment_name,
+                namespace='default',
+                body={
+                    'spec': {
+                        'replicas': current_num_replicas + 1,
+                    }
+                })
 
     def get_logs(self, logging_dir):
         # TODO(feynman): Implement this

@@ -35,8 +35,8 @@ Dependencies:
 pyenv virtualenv 2.7.11 clipper
 pyenv local clipper
 
-# install clipper_admin (editable)
-pip install -e .
+# install clipper_admin_v2 (editable)
+pip install -e clipper_admin_v2/.
 
 # start minikube
 minikube start --insecure-registry localhost:5000

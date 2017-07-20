@@ -30,6 +30,7 @@ def register_application(cm, name, input_type, default_output, slo_micros):
     req_json = json.dumps({
         "name": name,
         "input_type": input_type,
+        "candidate_model_names": ["test"],
         "default_output": default_output,
         "latency_slo_micros": slo_micros
     })
