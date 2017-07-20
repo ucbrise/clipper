@@ -351,6 +351,12 @@ class RPC {
     // Make predictions
     std::vector<std::string> outputs = model.predict(inputs);
 
+    if(outputs.size() != inputs.size()) {
+      std::stringstream ss;
+      ss << "Number of model outputs: " << outputs.size()  << " does not equal the number of inputs: " << inputs.size();
+      throw std::runtime_error(ss.str());
+    }
+
     // Send the outputs as a prediction response
 
     int num_outputs = static_cast<int>(outputs.size());
