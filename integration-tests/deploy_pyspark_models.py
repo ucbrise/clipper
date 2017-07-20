@@ -6,12 +6,15 @@ import json
 import numpy as np
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/.." % cur_dir))
+sys.path.insert(0, os.path.abspath('%s/util_direct_import/' % cur_dir))
 from clipper_admin import Clipper
 import time
 import subprocess32 as subprocess
 import pprint
 import random
 import socket
+from util_package import mock_module_in_package as mmip
+import mock_module as mm
 
 import findspark
 findspark.init()
@@ -84,13 +87,21 @@ def predict(spark, model, xs):
     return [str(model.predict(normalize(x))) for x in xs]
 
 
+def predict_with_local_modules(spark, model, xs):
+    return [
+        str(model.predict(normalixe(x)) * mmip.COEFFICIENT * mm.COEFICIENT)
+        for x in xs
+    ]
+
+
 def deploy_and_test_model(sc,
                           clipper,
                           model,
                           version,
                           input_type,
-                          link_model=False):
-    clipper.deploy_pyspark_model(model_name, version, predict, model, sc,
+                          link_model=False,
+                          predict_fn=predict):
+    clipper.deploy_pyspark_model(model_name, version, predict_fn, model, sc,
                                  input_type)
     time.sleep(5)
 
@@ -193,6 +204,10 @@ if __name__ == "__main__":
             clipper.register_app_and_deploy_pyspark_model(
                 app_and_model_name, predict, lr_model, sc, input_type)
             _test_deployed_model(app_and_model_name, version)
+
+            version += 1
+            deploy_and_test_model(sc, clipper, lr_model, version, False,
+                                  predict_with_local_modules)
 
         except BenchmarkException as e:
             print(e)

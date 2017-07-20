@@ -2,7 +2,7 @@ FROM clipper/py-rpc:latest
 
 MAINTAINER Dan Crankshaw <dscrankshaw@gmail.com>
 
-COPY containers/python/python_container_conda_deps.txt /lib/
+COPY clipper_admin/python_container_conda_deps.txt /lib/
 
 RUN curl -o /spark.tgz https://d3kbcqa49mib13.cloudfront.net/spark-2.1.1-bin-hadoop2.7.tgz \
       && cd / && tar zxf /spark.tgz && mv /spark-2.1.1-bin-hadoop2.7 /spark \
