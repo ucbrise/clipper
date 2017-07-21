@@ -33,6 +33,15 @@ using RPCRequest =
     std::tuple<const int, const int, const std::vector<std::vector<uint8_t>>,
                const long>;
 
+enum class RPCEvent {
+  SentHeartbeat = 1,
+  ReceivedHeartbeat = 2,
+  SentContainerMetadata = 3,
+  ReceivedContainerMetadata = 4,
+  SentContainerContent = 5,
+  ReceivedContainerContent = 6
+};
+
 enum class MessageType {
   NewContainer = 0,
   ContainerContent = 1,

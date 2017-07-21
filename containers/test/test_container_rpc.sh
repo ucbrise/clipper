@@ -53,17 +53,25 @@ python ../python/rpc_test_container.py &
 
 cd ../jvm
 mvn clean package -DskipTests &> /dev/null
-#Start java rpc test container
+# Start java rpc test container
 echo "Starting java RPC test container..."
 # && mvn -Dtest=RPCProtocolTest test &> /dev/null &
 java -Djava.library.path=$JZMQ_HOME \
    -cp rpc-test/target/rpc-test-0.1.jar \
    ai.clipper.rpctest.RPCProtocolTest &
 
-sleep 10
 cd $DIR/../../
-./configure && cd debug
-cd src/benchmarks
+./configure && cd debug/src
+
+# Start cpp rpc test container
+cd container
+make container_rpc_test
+container_uptime_seconds=180
+./container_rpc_test $container_uptime_seconds &
+
+sleep 10s
+
+cd $DIR/../../debug/src/benchmarks
 make rpctest
 echo "Executing RPC test (first iteration)..."
 REDIS_PORT=$1

@@ -17,6 +17,7 @@ using QueryId = long;
 using FeedbackAck = bool;
 
 enum class InputType {
+  Invalid = -1,
   Bytes = 0,
   Ints = 1,
   Floats = 2,
