@@ -26,14 +26,16 @@ Clipper is a prediction serving system that sits between user-facing application
 
 ## Quickstart
 
+**Note: This quickstart works for the latest version of code. For a quickstart that works with the released version of Clipper available on PyPi, go to our [website](http://clipper.ai/overview/quickstart/)**
 
-**Note: This quickstart requires [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/).**
+> Note: This quickstart requires [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/).
 
 
 #### Start a Clipper Instance and Deploy a Model
 
 ```
-$ pip install clipper_admin
+# From the root of the Clipper repo
+$ pip install -e .
 $ python
 >>> from clipper_admin import Clipper
 >>> import numpy as np
