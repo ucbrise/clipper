@@ -1,0 +1,9 @@
+Package: rclipper
+Type: Package
+Title: Containerizes and deploys R closures to Clipper
+Version: 1.0
+Date: 2017-07-22
+Author: Corey Zumar
+Maintainer: Who to complain to <yourfault@somewhere.net>
+Description: More about what it does (maybe more than one line)
+License: Apache 2.0
