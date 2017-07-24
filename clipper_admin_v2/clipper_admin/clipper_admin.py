@@ -25,12 +25,11 @@ def start_clipper(cm):
         return False
 
 
-def register_application(cm, name, model_name, input_type, default_output, slo_micros):
+def register_application(cm, name, input_type, default_output, slo_micros):
     url = "http://{host}/admin/add_app".format(host=cm.get_admin_addr())
     req_json = json.dumps({
         "name": name,
         "input_type": input_type,
-        "candidate_model_names": [model_name],
         "default_output": default_output,
         "latency_slo_micros": slo_micros
     })
@@ -121,6 +120,8 @@ def deploy_model(
             tag=repo)
 
     logger.info("Pushing model Docker image to {}".format(repo))
+    # TODO: is this push needed?
+    # docker_client.images.push(repository=repo)
     cm.deploy_model(name, version, input_type, repo, num_replicas=num_replicas)
     logger.info("Registering model with Clipper")
     register_model(cm, name, version, input_type, repo=repo, labels=labels)

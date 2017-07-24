@@ -3,7 +3,8 @@ import docker
 import logging
 import os
 from ..container_manager import (
-    ContainerManager, CLIPPER_DOCKER_LABEL, CLIPPER_MODEL_CONTAINER_LABEL)
+    ContainerManager, CLIPPER_DOCKER_LABEL, CLIPPER_MODEL_CONTAINER_LABEL,
+    CLIPPER_INTERNAL_RPC_PORT, CLIPPER_INTERNAL_QUERY_PORT, CLIPPER_INTERNAL_MANAGEMENT_PORT)
 
 DOCKER_NETWORK_NAME = "clipper_network"
 
@@ -82,15 +83,15 @@ class DockerContainerManager(ContainerManager):
             'clipper/management_frontend:latest',
             cmd,
             name=self.mgmt_frontend_name,
-            ports={'%s/tcp' % self.clipper_management_port: self.clipper_management_port},
+            ports={'%s/tcp' % CLIPPER_INTERNAL_MANAGEMENT_PORT: self.clipper_management_port},
             **self.extra_container_kwargs)
         self.docker_client.containers.run(
             'clipper/query_frontend:latest',
             cmd,
             name=self.query_frontend_name,
             ports={
-                '%s/tcp' % self.clipper_query_port: self.clipper_query_port,
-                '%s/tcp' % self.clipper_rpc_port: self.clipper_rpc_port
+                '%s/tcp' % CLIPPER_INTERNAL_QUERY_PORT: self.clipper_query_port,
+                '%s/tcp' % CLIPPER_INTERNAL_RPC_PORT: self.clipper_rpc_port
             },
             **self.extra_container_kwargs)
 

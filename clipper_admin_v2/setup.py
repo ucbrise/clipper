@@ -24,7 +24,6 @@ setup(
     install_requires=[
         'requests', 'pyparsing', 'appdirs', 'pprint', 'subprocess32',
         'sklearn', 'numpy', 'scipy', 'pyyaml', 'docker', 'kubernetes', 'six',
-        'fabric'
     ],
     extras_require={'TensorFlow': ['tensorflow'],
                     'RPython': ['rpy2']}

@@ -124,6 +124,7 @@ for contributors can be found on our website at <http://clipper.ai/contributing>
 + Corey Zumar (@Corey-Zumar)
 + Nishad Singh (@nishadsingh1)
 + Alexey Tumanov (@atumanov)
++ Feynman Liang (@feynmanliang)
 
 You can contact us at <clipper-dev@googlegroups.com>
 

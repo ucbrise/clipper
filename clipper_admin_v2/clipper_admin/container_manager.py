@@ -1,6 +1,9 @@
 import abc
 
 # Constants
+CLIPPER_INTERNAL_QUERY_PORT = 1337
+CLIPPER_INTERNAL_MANAGEMENT_PORT = 1338
+CLIPPER_INTERNAL_RPC_PORT = 7000
 
 CLIPPER_DOCKER_LABEL = "ai.clipper.container.label"
 CLIPPER_MODEL_CONTAINER_LABEL = "ai.clipper.model_container.label"
