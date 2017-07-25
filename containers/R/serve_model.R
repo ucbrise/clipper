@@ -9,8 +9,6 @@ option_list = list(
               help="model name"),
   make_option(c("-v", "--model_version"), type="character", default=NULL, 
               help="model version"),
-  make_option(c("-t", "--model_input_type"), type="character", default=NULL, 
-              help="model input type"),
   make_option(c("-i", "--clipper_ip"), type="character", default=NULL, 
               help="clipper host ip"),
   make_option(c("-p", "--clipper_port"), type="character", default=NULL, 
@@ -35,12 +33,21 @@ for(i in seq_along(lib_deps)) {
   library(lib_dep, character.only=TRUE)
 }
 
-model <- tryCatch({
+sample_input <- tryCatch({
+  sample_input_path = file.path(opts$model_data_path, "sample.rds")
+  readRDS(sample_input_path)
+}, error = function(e) {
+  print(e)
+  stop("Failed to load sample input")
+})
+model_input_type = class(sample_input)
+
+model_function <- tryCatch({
   model_path = file.path(opts$model_data_path, "fn.rds")
   readRDS(model_path)
 }, error = function(e) {
   print(e)
-  stop("Failed to load serialized model!")
+  stop("Failed to load model function!")
 })
 
 depfile_regex = "dep_[0-9]+.rds"
@@ -60,4 +67,4 @@ for(i in seq_along(model_data_file_names)) {
 }
 
 rclipper::serve_model(opts$model_name, strtoi(opts$model_version), opts$clipper_ip, 
-                      strtoi(opts$clipper_port), model, opts$model_input_type)
+                      strtoi(opts$clipper_port), model_function, model_input_type)

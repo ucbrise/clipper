@@ -10,6 +10,8 @@ COPY rclipper_docker rclipper
 COPY serve_model.R serve_model.R
 COPY r_container_entrypoint.sh entrypoint.sh
 
+ENV CLIPPER_MODEL_PATH=/model
+
 RUN R -e "install.packages('jsonlite', repos='http://cran.us.r-project.org')" 
 RUN R -e "install.packages('Rcpp', repos='http://cran.us.r-project.org')"
 RUN R -e "install.packages('optparse', repos='http://cran.us.r-project.org')"
