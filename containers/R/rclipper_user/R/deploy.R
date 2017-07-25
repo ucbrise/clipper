@@ -1,4 +1,4 @@
-serve_model = function(model_name, model_version, clipper_ip, clipper_port, model_function, sample_input) {
+deploy_model = function(model_name, model_version, clipper_ip, model_function, sample_input) {
   base_model_path = "/tmp/r_models/"
   dir.create(file.path(base_model_path))
   
@@ -20,5 +20,14 @@ serve_model = function(model_name, model_version, clipper_ip, clipper_port, mode
   sample_input_path = file.path(base_model_path, relative_model_path, "sample.rds")
   saveRDS(sample_input, sample_input_path)
   
-  # CALL PYTHON SCRIPT
+  package_path <- paste(system.file(package="rclipper"), "launch_container.py", sep="/")
+  
+  python_call = sprintf("python %s -m %s -n %s -v %d -i %s",
+                        package_path,
+                        full_model_path, 
+                        model_name,
+                        model_version,
+                        clipper_ip)
+  
+  system(python_call)
 }

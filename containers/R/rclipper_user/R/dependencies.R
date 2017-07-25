@@ -105,7 +105,7 @@ serialize_function = function(fn, output_dir_path) {
   model_fn_name = as.character(substitute(fn))
   model_fn_out_path = file.path(output_dir_path, "fn.rds")
   saveRDS(fn, file=model_fn_out_path)
-  print(paste(c("Serialized model function: ", model_fn_name), collapse= " "))
+  print("Serialized model function!")
   
   print("Done!")
 }

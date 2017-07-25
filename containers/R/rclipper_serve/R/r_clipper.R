@@ -76,7 +76,7 @@ serve_model = function(name, version, ip, port, fn, input_class) {
           package="rclipper")
   } else {
     err_msg = 
-      sprintf("Function input type of class %s is unsupported", 
+      sprintf("Function input type of class %s is not supported", 
               input_class)
     stop(err_msg)
   }

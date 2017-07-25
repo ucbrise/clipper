@@ -11,6 +11,7 @@ COPY serve_model.R serve_model.R
 COPY r_container_entrypoint.sh entrypoint.sh
 
 ENV CLIPPER_MODEL_PATH=/model
+ENV CLIPPER_PORT=7000
 
 RUN R -e "install.packages('jsonlite', repos='http://cran.us.r-project.org')" 
 RUN R -e "install.packages('Rcpp', repos='http://cran.us.r-project.org')"
