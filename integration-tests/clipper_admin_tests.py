@@ -37,17 +37,6 @@ logger = logging.getLogger(__name__)
 
 
 class ClipperManagerTestCaseShort(unittest.TestCase):
-    # @classmethod
-    # def setUpClass(self):
-    #     self.clipper_conn = create_connection(
-    #         SERVICE, cleanup=True, start_clipper=True)
-    #     self.app_name = "app1"
-    #     self.model_name = "m1"
-    #     self.model_version_1 = 1
-    #     self.model_version_2 = 2
-    #     self.deploy_model_name = "m3"
-    #     self.deploy_model_version = 1
-    #
     @classmethod
     def tearDownClass(self):
         self.clipper_conn = create_connection(
