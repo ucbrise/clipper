@@ -14,11 +14,10 @@ from pyspark.ml.classification import LogisticRegression
 from pyspark.ml.feature import HashingTF, Tokenizer
 from pyspark.sql import SparkSession
 
-from test_utils import (create_container_manager, BenchmarkException, headers,
+from test_utils import (create_connection, BenchmarkException, headers,
                         log_clipper_state, SERVICE)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin_v2" % cur_dir))
-import clipper_admin as cl
 from clipper_admin.deployers.pyspark import deploy_pyspark_model
 
 logging.basicConfig(
@@ -92,12 +91,11 @@ def run_test():
                   [json.dumps((np.random.randint(1000), "spark abcd"))]))
 
     try:
-        cm = create_container_manager(
+        clipper_conn = create_connection(
             SERVICE, cleanup=True, start_clipper=True)
 
         try:
-            cl.register_application(cm, app_name, "strings", "default_pred",
-                                    10000000)
+            clipper_conn.register_application(app_name, "strings", "default_pred", 10000000)
             time.sleep(1)
 
             response = requests.post(
@@ -113,9 +111,9 @@ def run_test():
                 raise BenchmarkException("Error creating app %s" % app_name)
 
             version = 1
-            deploy_pyspark_model(cm, model_name, version, "strings", predict,
+            deploy_pyspark_model(clipper_conn, model_name, version, "strings", predict,
                                  model, spark.sparkContext)
-            cl.link_model_to_app(cm, app_name, model_name)
+            clipper_conn.link_model_to_app(app_name, model_name)
             time.sleep(30)
             num_preds = 25
             num_defaults = 0
@@ -138,7 +136,7 @@ def run_test():
                                          (app_name, model_name, version))
 
             version += 1
-            deploy_pyspark_model(cm, model_name, version, "strings", predict,
+            deploy_pyspark_model(clipper_conn, model_name, version, "strings", predict,
                                  model, spark.sparkContext)
             time.sleep(30)
             num_preds = 25
@@ -161,19 +159,19 @@ def run_test():
                 raise BenchmarkException("Error querying APP %s, MODEL %s:%d" %
                                          (app_name, model_name, version))
         except BenchmarkException as e:
-            log_clipper_state(cm)
+            log_clipper_state()
             logger.exception("BenchmarkException")
-            cm = create_container_manager(
+            clipper_conn = create_connection(
                 SERVICE, cleanup=True, start_clipper=False)
             sys.exit(1)
         else:
             spark.stop()
-            cm = create_container_manager(
+            clipper_conn = create_connection(
                 SERVICE, cleanup=True, start_clipper=False)
             logger.info("ALL TESTS PASSED")
     except Exception as e:
         logger.exception("Exception")
-        cm = create_container_manager(
+        clipper_conn = create_connection(
             SERVICE, cleanup=True, start_clipper=False)
         sys.exit(1)
 

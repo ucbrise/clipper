@@ -56,9 +56,9 @@ def create_endpoint(clipper_conn,
 
     clipper_conn.register_application(name, input_type, default_output,
                                       slo_micros)
-    clipper_conn.deploy_pyspark_model(name, version, input_type, func,
-                                      pyspark_model, sc, base_image, labels,
-                                      registry, num_replicas)
+    deploy_pyspark_model(clipper_conn, name, version, input_type, func,
+                         pyspark_model, sc, base_image, labels,
+                         registry, num_replicas)
 
     clipper_conn.link_model_to_app(name, name)
 

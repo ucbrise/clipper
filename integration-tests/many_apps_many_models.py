@@ -6,11 +6,10 @@ import json
 import numpy as np
 import time
 import logging
-from test_utils import (create_container_manager, BenchmarkException,
+from test_utils import (create_connection, BenchmarkException,
                         fake_model_data, headers, log_clipper_state, SERVICE)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin_v2" % cur_dir))
-import clipper_admin as cl
 from clipper_admin import __version__ as code_version
 
 logging.basicConfig(
@@ -21,11 +20,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def deploy_model(cm, name, version):
+def deploy_model(clipper_conn, name, version):
     app_name = "%s_app" % name
     model_name = "%s_model" % name
-    cl.deploy_model(
-        cm,
+    clipper_conn.deploy_model(
         model_name,
         version,
         "doubles",
@@ -34,7 +32,7 @@ def deploy_model(cm, name, version):
         num_replicas=1)
     time.sleep(10)
 
-    cl.link_model_to_app(cm, app_name, model_name)
+    clipper_conn.link_model_to_app(app_name, model_name)
     time.sleep(5)
 
     num_preds = 25
@@ -57,9 +55,9 @@ def deploy_model(cm, name, version):
                                  (app_name, model_name, version))
 
 
-def create_and_test_app(cm, name, num_models):
+def create_and_test_app(clipper_conn, name, num_models):
     app_name = "%s_app" % name
-    cl.register_application(cm, app_name, "doubles", "default_pred", 100000)
+    clipper_conn.register_application(app_name, "doubles", "default_pred", 100000)
     time.sleep(1)
 
     response = requests.post(
@@ -74,7 +72,7 @@ def create_and_test_app(cm, name, num_models):
         raise BenchmarkException("Error creating app %s" % app_name)
 
     for i in range(num_models):
-        deploy_model(cm, name, i)
+        deploy_model(clipper_conn, name, i)
         time.sleep(1)
 
 
@@ -91,26 +89,26 @@ if __name__ == "__main__":
         # for num_apps and num_models
         pass
     try:
-        cm = create_container_manager(
+        clipper_conn = create_connection(
             SERVICE, cleanup=True, start_clipper=True)
         try:
             logger.info("Running integration test with %d apps and %d models" %
                         (num_apps, num_models))
             for a in range(num_apps):
-                create_and_test_app(cm, "app_%s" % a, num_models)
-            logger.info(cl.get_clipper_logs(cm))
-            log_clipper_state(cm)
+                create_and_test_app(clipper_conn, "app_%s" % a, num_models)
+            logger.info(clipper_conn.get_clipper_logs())
+            log_clipper_state(clipper_conn)
             logger.info("SUCCESS")
         except BenchmarkException as e:
-            log_clipper_state(cm)
+            log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
-            create_container_manager(
+            create_connection(
                 SERVICE, cleanup=True, start_clipper=False)
             sys.exit(1)
         else:
-            create_container_manager(
+            create_connection(
                 SERVICE, cleanup=True, start_clipper=False)
     except Exception as e:
         logger.exception("Exception")
-        create_container_manager(SERVICE, cleanup=True, start_clipper=False)
+        create_connection(SERVICE, cleanup=True, start_clipper=False)
         sys.exit(1)
