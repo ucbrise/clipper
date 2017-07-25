@@ -15,8 +15,15 @@ logger = logging.getLogger(__name__)
 class DockerContainerManager(ContainerManager):
     def __init__(self,
                  clipper_public_hostname,
-                 extra_container_kwargs={},
-                 **kwargs):
+                 clipper_query_port=1337,
+                 clipper_management_port=1338,
+                 clipper_rpc_port=7000,
+                 redis_ip=None,
+                 redis_port=6379,
+                 registry=None,
+                 registry_username=None,
+                 registry_password=None,
+                 extra_container_kwargs={}):
         """
         Parameters
         ----------
@@ -31,8 +38,16 @@ class DockerContainerManager(ContainerManager):
             Any additional keyword arguments to pass to the call to
             :py:meth:`docker.client.containers.run`.
         """
-        super(DockerContainerManager, self).__init__(clipper_public_hostname,
-                                                     **kwargs)
+        # super(DockerContainerManager, self).__init__(clipper_public_hostname,
+        #                                              **kwargs)
+        self.public_hostname = "127.0.0.1"
+        self.clipper_query_port = clipper_query_port
+        self.clipper_management_port = clipper_management_port
+        self.clipper_rpc_port = clipper_rpc_port
+        self.redis_ip = redis_ip
+        self.redis_port = redis_port
+        self.registry = None
+
         if "DOCKER_API_VERSION" in os.environ:
             self.docker_client = docker.from_env(
                 version=os.environ["DOCKER_API_VERSION"])
@@ -41,7 +56,7 @@ class DockerContainerManager(ContainerManager):
         self.extra_container_kwargs = extra_container_kwargs
         self.query_frontend_name = "query_frontend"
         self.mgmt_frontend_name = "mgmt_frontend"
-        if self.registry is not None:
+        if registry is not None:
             # TODO: test with provided registry
             self.registry = registry
             if registry_username is not None and registry_password is not None:
@@ -54,6 +69,10 @@ class DockerContainerManager(ContainerManager):
                 logger.info(login_response)
 
         # TODO: Deal with Redis persistence
+
+    def connect(self):
+        # No extra connection steps to take on connection
+        return
 
     def start_clipper(self):
         try:
@@ -213,3 +232,11 @@ class DockerContainerManager(ContainerManager):
             filters={"label": CLIPPER_DOCKER_LABEL})
         for c in containers:
             c.stop()
+
+    def get_admin_addr(self):
+        return "{host}:{port}".format(
+            host=self.public_hostname, port=self.clipper_management_port)
+
+    def get_query_addr(self):
+        return "{host}:{port}".format(
+            host=self.public_hostname, port=self.clipper_query_port)

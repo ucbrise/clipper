@@ -5,6 +5,7 @@ from ..container_manager import (ContainerManager, CLIPPER_DOCKER_LABEL,
 from contextlib import contextmanager
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
+from kubernetes.client import configuration
 import logging
 import json
 import yaml
@@ -27,13 +28,22 @@ def _pass_conflicts():
 
 
 class K8sContainerManager(ContainerManager):
-    def __init__(self, clipper_public_hostname, **kwargs):
-        super(K8sContainerManager, self).__init__(clipper_public_hostname,
-                                                  **kwargs)
+    def __init__(self, k8s_ip,
+                 redis_ip=None,
+                 redis_port=6379,
+                 registry=None,
+                 registry_username=None,
+                 registry_password=None):
+
+        self.k8s_ip = k8s_ip
+        self.redis_ip = redis_ip
+        self.redis_port = redis_port
+
         config.load_kube_config()
+        configuration.assert_hostname = False
         self._k8s_v1 = client.CoreV1Api()
         self._k8s_beta = client.ExtensionsV1beta1Api()
-        if self.registry is None:
+        if registry is None:
             self.registry = self._start_registry()
         else:
             # TODO: test with provided registry
@@ -101,8 +111,9 @@ class K8sContainerManager(ContainerManager):
                     open(
                         os.path.join(cur_dir, '{}-service.yaml'.format(name))))
                 body["spec"]["ports"][0]["port"] = self.redis_port
-                self._k8s_v1.create_namespaced_service(
+                service = self._k8s_v1.create_namespaced_service(
                     body=body, namespace='default')
+                self.redis_ip = service.spec.cluster_ip
         for name in ['mgmt-frontend', 'query-frontend']:
             with _pass_conflicts():
                 body = yaml.load(
@@ -124,6 +135,18 @@ class K8sContainerManager(ContainerManager):
                         os.path.join(cur_dir, '{}-service.yaml'.format(name))))
                 self._k8s_v1.create_namespaced_service(
                     body=body, namespace='default')
+        self.connect()
+
+    def connect(self):
+        self.clipper_management_port = self._k8s_v1.read_namespaced_service(
+            name="mgmt-frontend", namespace='default').spec.ports[0].node_port
+        query_frontend_ports = self._k8s_v1.read_namespaced_service(
+            name="query-frontend", namespace='default').spec.ports
+        for p in query_frontend_ports:
+            if p.name == "1337":
+                self.clipper_query_port = p.node_port
+            elif p.name == "7000":
+                self.clipper_rpc_port = p.node_port
 
     def deploy_model(self, name, version, input_type, repo, num_replicas=1):
         """Deploys a versioned model to a k8s cluster.
@@ -272,3 +295,11 @@ class K8sContainerManager(ContainerManager):
 
     def get_registry(self):
         return self.registry
+
+    def get_admin_addr(self):
+        return "{host}:{port}".format(
+            host=self.k8s_ip, port=self.clipper_management_port)
+
+    def get_query_addr(self):
+        return "{host}:{port}".format(
+            host=self.k8s_ip, port=self.clipper_query_port)

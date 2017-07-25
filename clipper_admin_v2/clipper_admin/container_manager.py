@@ -13,54 +13,13 @@ CONTAINERLESS_MODEL_IMAGE = "NO_CONTAINER"
 class ContainerManager(object):
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self,
-                 clipper_public_hostname,
-                 clipper_query_port=1337,
-                 clipper_management_port=1338,
-                 clipper_rpc_port=7000,
-                 redis_ip=None,
-                 redis_port=6379,
-                 registry=None,
-                 registry_username=None,
-                 registry_password=None):
-        # TODO(crankshaw): Clipper public hostname may not be known until
-        # after Clipper is started.
-        self.public_hostname = clipper_public_hostname
-        self.clipper_query_port = clipper_query_port
-        self.clipper_management_port = clipper_management_port
-        self.clipper_rpc_port = clipper_rpc_port
-        self.redis_ip = redis_ip
-        self.redis_port = redis_port
-        self.registry = None
-
     @abc.abstractmethod
     def start_clipper(self):
         return
 
-    # @abc.abstractmethod
-    # def start_clipper(self
-    #              clipper_public_hostname,
-    #              clipper_query_port=1337,
-    #              clipper_management_port=1338,
-    #              clipper_rpc_port=7000,
-    #              redis_ip=None,
-    #              redis_port=6379,
-    #                   **kwargs):
-    #
-    #     return
-
-    # def connect(self,
-    #              clipper_public_hostname,
-    #              clipper_query_port=1337,
-    #              clipper_management_port=1338,
-    #              clipper_rpc_port=7000,
-    #              registry=None,
-    #              registry_username=None,
-    #              registry_password=None):
-    #     self.public_hostname = clipper_public_hostname
-    #     self.clipper_query_port = clipper_query_port
-    #     self.clipper_management_port = clipper_management_port
-    #     self.clipper_rpc_port = clipper_rpc_port
+    @abc.abstractmethod
+    def connect(self):
+        return
 
     @abc.abstractmethod
     def deploy_model(self, name, version, input_type, repo):
@@ -118,10 +77,10 @@ class ContainerManager(object):
         """
         return None
 
+    @abc.abstractmethod
     def get_admin_addr(self):
-        return "{host}:{port}".format(
-            host=self.public_hostname, port=self.clipper_management_port)
+        return
 
+    @abc.abstractmethod
     def get_query_addr(self):
-        return "{host}:{port}".format(
-            host=self.public_hostname, port=self.clipper_query_port)
+        return
