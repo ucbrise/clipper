@@ -4,12 +4,11 @@ import logging
 import shutil
 
 from .deployer_utils import save_python_function
-from ..clipper_admin import register_application, deploy_model, link_model_to_app
 
 logger = logging.getLogger(__name__)
 
 
-def create_endpoint(cm,
+def create_endpoint(clipper_conn,
                     name,
                     input_type,
                     func,
@@ -49,21 +48,15 @@ def create_endpoint(cm,
         created later as well.
     """
 
-    register_application(cm, name, input_type, default_output, slo_micros)
-    deploy_python_closure(cm,
-                          name,
-                          version,
-                          input_type,
-                          func,
-                          base_image,
-                          labels,
-                          registry,
-                          num_replicas)
+    clipper_conn.register_application(name, input_type, default_output,
+                                      slo_micros)
+    deploy_python_closure(clipper_conn, name, version, input_type, func,
+                          base_image, labels, registry, num_replicas)
 
-    link_model_to_app(cm, name, name)
+    clipper_conn.link_model_to_app(name, name)
 
 
-def deploy_python_closure(cm,
+def deploy_python_closure(clipper_conn,
                           name,
                           version,
                           input_type,
@@ -130,8 +123,9 @@ def deploy_python_closure(cm,
     serialization_dir = save_python_function(name, func)
     logger.info("Python closure saved")
     # Deploy function
-    deploy_result = deploy_model(cm, name, version, input_type,
-                                 serialization_dir, base_image, labels, registry, num_replicas)
+    deploy_result = clipper_conn.deploy_model(name, version, input_type,
+                                              serialization_dir, base_image,
+                                              labels, registry, num_replicas)
     # Remove temp files
     shutil.rmtree(serialization_dir)
     return deploy_result

@@ -4,7 +4,8 @@ import logging
 import os
 from ..container_manager import (
     ContainerManager, CLIPPER_DOCKER_LABEL, CLIPPER_MODEL_CONTAINER_LABEL,
-    CLIPPER_INTERNAL_RPC_PORT, CLIPPER_INTERNAL_QUERY_PORT, CLIPPER_INTERNAL_MANAGEMENT_PORT)
+    CLIPPER_INTERNAL_RPC_PORT, CLIPPER_INTERNAL_QUERY_PORT,
+    CLIPPER_INTERNAL_MANAGEMENT_PORT)
 
 DOCKER_NETWORK_NAME = "clipper_network"
 
@@ -30,7 +31,8 @@ class DockerContainerManager(ContainerManager):
             Any additional keyword arguments to pass to the call to
             :py:meth:`docker.client.containers.run`.
         """
-        super(DockerContainerManager, self).__init__(clipper_public_hostname, **kwargs)
+        super(DockerContainerManager, self).__init__(clipper_public_hostname,
+                                                     **kwargs)
         if "DOCKER_API_VERSION" in os.environ:
             self.docker_client = docker.from_env(
                 version=os.environ["DOCKER_API_VERSION"])
@@ -55,9 +57,11 @@ class DockerContainerManager(ContainerManager):
 
     def start_clipper(self):
         try:
-            self.docker_client.networks.create(DOCKER_NETWORK_NAME, check_duplicate=True)
+            self.docker_client.networks.create(
+                DOCKER_NETWORK_NAME, check_duplicate=True)
         except docker.errors.APIError as e:
-            logger.info("{nw} network already exists".format(nw=DOCKER_NETWORK_NAME))
+            logger.info(
+                "{nw} network already exists".format(nw=DOCKER_NETWORK_NAME))
         container_args = {
             "network": DOCKER_NETWORK_NAME,
             "labels": {
@@ -83,14 +87,18 @@ class DockerContainerManager(ContainerManager):
             'clipper/management_frontend:latest',
             cmd,
             name=self.mgmt_frontend_name,
-            ports={'%s/tcp' % CLIPPER_INTERNAL_MANAGEMENT_PORT: self.clipper_management_port},
+            ports={
+                '%s/tcp' % CLIPPER_INTERNAL_MANAGEMENT_PORT:
+                self.clipper_management_port
+            },
             **self.extra_container_kwargs)
         self.docker_client.containers.run(
             'clipper/query_frontend:latest',
             cmd,
             name=self.query_frontend_name,
             ports={
-                '%s/tcp' % CLIPPER_INTERNAL_QUERY_PORT: self.clipper_query_port,
+                '%s/tcp' % CLIPPER_INTERNAL_QUERY_PORT:
+                self.clipper_query_port,
                 '%s/tcp' % CLIPPER_INTERNAL_RPC_PORT: self.clipper_rpc_port
             },
             **self.extra_container_kwargs)
@@ -105,10 +113,23 @@ class DockerContainerManager(ContainerManager):
             "localhost:5000/my_model_name:my_model_version" or
             "quay.io/my_namespace/my_model_name:my_model_version"
         """
-        for _ in range(num_replicas):
-            self.add_replica(name, version, input_type, repo)
+        self.set_num_replicas(name, version, input_type, repo, num_replicas)
 
-    def add_replica(self, name, version, input_type, repo):
+    def _get_replicas(self, name, version):
+        containers = self.docker_client.containers.list(
+            filters={
+                "label":
+                "{key}={name}:{version}".format(
+                    key=CLIPPER_MODEL_CONTAINER_LABEL,
+                    name=name,
+                    version=version)
+            })
+        return containers
+
+    def get_num_replicas(self, name, version):
+        return len(self._get_replicas(name, version))
+
+    def _add_replica(self, name, version, input_type, repo):
         """
         Parameters
         ----------
@@ -132,6 +153,32 @@ class DockerContainerManager(ContainerManager):
                 name=name, version=version)
         self.docker_client.containers.run(
             repo, environment=env_vars, **self.extra_container_kwargs)
+
+    def set_num_replicas(self, name, version, input_type, repo, num_replicas):
+        current_replicas = self._get_replicas(name, version)
+        if len(current_replicas) < num_replicas:
+            num_missing = num_replicas - len(current_replicas)
+            logger.info(
+                "Found {cur} replicas for {name}:{version}. Adding {missing}".
+                format(
+                    cur=len(current_replicas),
+                    name=name,
+                    version=version,
+                    missing=(num_missing)))
+            for _ in range(num_missing):
+                self._add_replica(name, version, input_type, repo)
+        elif len(current_replicas) > num_replicas:
+            num_extra = len(current_replicas) - num_replicas
+            logger.info(
+                "Found {cur} replicas for {name}:{version}. Removing {extra}".
+                format(
+                    cur=len(current_replicas),
+                    name=name,
+                    version=version,
+                    extra=(num_extra)))
+            while len(current_replicas) > num_replicas:
+                cur_container = current_replicas.pop()
+                cur_container.stop()
 
     def get_logs(self, logging_dir):
         containers = self.docker_client.containers.list(

@@ -39,5 +39,6 @@ time docker build --build-arg CODE_VERSION=$tag -t clipper/python-closure-contai
 time docker build --build-arg CODE_VERSION=$tag -t clipper/pyspark-container:$tag -f ./PySparkContainerDockerfile ./
 time docker build --build-arg CODE_VERSION=$tag -t clipper/sklearn_cifar_container:$tag -f ./SklearnCifarDockerfile ./
 time docker build --build-arg CODE_VERSION=$tag -t clipper/tf_cifar_container:$tag -f ./TensorFlowCifarDockerfile ./
-time docker build --build-arg CODE_VERSION=$tag -t clipper/r_python_container:$tag -f ./RPythonDockerfile ./
+# TODO: uncomment
+# time docker build --build-arg CODE_VERSION=$tag -t clipper/r_python_container:$tag -f ./RPythonDockerfile ./
 cd -

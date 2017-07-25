@@ -22,16 +22,14 @@ def _pass_conflicts():
     except ApiException as e:
         body = json.loads(e.body)
         if body['reason'] == 'AlreadyExists':
-            logger.info(
-                "{} already exists, skipping!".format(body['details']))
+            logger.info("{} already exists, skipping!".format(body['details']))
             pass
 
 
 class K8sContainerManager(ContainerManager):
-    def __init__(self,
-                 clipper_public_hostname,
-                 **kwargs):
-        super(K8sContainerManager, self).__init__(clipper_public_hostname, **kwargs)
+    def __init__(self, clipper_public_hostname, **kwargs):
+        super(K8sContainerManager, self).__init__(clipper_public_hostname,
+                                                  **kwargs)
         config.load_kube_config()
         self._k8s_v1 = client.CoreV1Api()
         self._k8s_beta = client.ExtensionsV1beta1Api()
@@ -66,7 +64,10 @@ class K8sContainerManager(ContainerManager):
         with _pass_conflicts():
             self._k8s_v1.create_namespaced_replication_controller(
                 body=yaml.load(
-                    open(os.path.join(cur_dir, 'kube-registry-replication-controller.yaml'))),
+                    open(
+                        os.path.join(
+                            cur_dir,
+                            'kube-registry-replication-controller.yaml'))),
                 namespace='kube-system')
         with _pass_conflicts():
             self._k8s_v1.create_namespaced_service(
@@ -76,7 +77,9 @@ class K8sContainerManager(ContainerManager):
         with _pass_conflicts():
             self._k8s_beta.create_namespaced_daemon_set(
                 body=yaml.load(
-                    open(os.path.join(cur_dir, 'kube-registry-daemon-set.yaml'))),
+                    open(
+                        os.path.join(cur_dir,
+                                     'kube-registry-daemon-set.yaml'))),
                 namespace='kube-system')
         return "localhost:5000"
 
@@ -89,32 +92,38 @@ class K8sContainerManager(ContainerManager):
             with _pass_conflicts():
                 self._k8s_beta.create_namespaced_deployment(
                     body=yaml.load(
-                        open(os.path.join(cur_dir, '{}-deployment.yaml'.format(name)))),
+                        open(
+                            os.path.join(cur_dir, '{}-deployment.yaml'.format(
+                                name)))),
                     namespace='default')
             with _pass_conflicts():
                 body = yaml.load(
-                    open(os.path.join(cur_dir, '{}-service.yaml'.format(name))))
+                    open(
+                        os.path.join(cur_dir, '{}-service.yaml'.format(name))))
                 body["spec"]["ports"][0]["port"] = self.redis_port
                 self._k8s_v1.create_namespaced_service(
-                    body=body,
-                    namespace='default')
+                    body=body, namespace='default')
         for name in ['mgmt-frontend', 'query-frontend']:
             with _pass_conflicts():
                 body = yaml.load(
-                    open(os.path.join(cur_dir, '{}-deployment.yaml'.format(name))))
+                    open(
+                        os.path.join(cur_dir, '{}-deployment.yaml'.format(
+                            name))))
                 if self.redis_ip is not None:
-                    args = ["--redis_ip={}".format(self.redis_ip),
-                            "--redis_port={}".format(self.redis_port)]
-                    body["spec"]["template"]["spec"]["containers"][0]["args"] = args
+                    args = [
+                        "--redis_ip={}".format(self.redis_ip),
+                        "--redis_port={}".format(self.redis_port)
+                    ]
+                    body["spec"]["template"]["spec"]["containers"][0][
+                        "args"] = args
                 self._k8s_beta.create_namespaced_deployment(
-                    body=body,
-                    namespace='default')
+                    body=body, namespace='default')
             with _pass_conflicts():
                 body = yaml.load(
-                    open(os.path.join(cur_dir, '{}-service.yaml'.format(name))))
+                    open(
+                        os.path.join(cur_dir, '{}-service.yaml'.format(name))))
                 self._k8s_v1.create_namespaced_service(
-                    body=body,
-                    namespace='default')
+                    body=body, namespace='default')
 
     def deploy_model(self, name, version, input_type, repo, num_replicas=1):
         """Deploys a versioned model to a k8s cluster.
@@ -143,12 +152,9 @@ class K8sContainerManager(ContainerManager):
                         'template': {
                             'metadata': {
                                 'labels': {
-                                    CLIPPER_MODEL_CONTAINER_LABEL:
-                                    '',
-                                    'model':
-                                    name,
-                                    'version':
-                                    str(version)
+                                    CLIPPER_MODEL_CONTAINER_LABEL: '',
+                                    'model': name,
+                                    'version': str(version)
                                 }
                             },
                             'spec': {
@@ -177,23 +183,26 @@ class K8sContainerManager(ContainerManager):
                 },
                 namespace='default')
 
-    def add_replica(self, name, version, input_type, repo):
-        """Increments the number of replicas of a model.
+    def get_num_replicas(self, name, version):
+        deployment_name = "{}-deployment".format(
+            name
+        )  # NOTE: assumes `metadata.name` can identify the model deployment.
+        response = self._k8s_beta.read_namespaced_deployments_scale(
+            name=deployment_name, namespace='default')
 
-        """
-        deployment_name = "{}-deployment".format(name) # NOTE: assumes `metadata.name` can identify the model deployment.
-        response = self._k8s_beta.read_namespaced_deployments_scale(name=deployment_name, namespace='default')
+        return response.spec.replicas
 
-        current_num_replicas = response.spec.replicas
+    def set_num_replicas(self, name, version, input_type, repo, num_replicas):
+        deployment_name = "{}-deployment".format(
+            name
+        )  # NOTE: assumes `metadata.name` can identify the model deployment.
 
         self._k8s_beta.patch_namespaced_deployments_scale(
-                name=deployment_name,
-                namespace='default',
-                body={
-                    'spec': {
-                        'replicas': current_num_replicas + 1,
-                    }
-                })
+            name=deployment_name,
+            namespace='default',
+            body={'spec': {
+                'replicas': num_replicas,
+            }})
 
     def get_logs(self, logging_dir):
         logging_dir = os.path.abspath(os.path.expanduser(logging_dir))
@@ -212,13 +221,12 @@ class K8sContainerManager(ContainerManager):
                 log_file = os.path.join(logging_dir, log_file_name)
                 with open(log_file, "w") as lf:
                     lf.write(
-                            self._k8s_v1.read_namespaced_pod_log(
-                                namespace='default',
-                                name=pod.metadata.name,
-                                container=c.name))
+                        self._k8s_v1.read_namespaced_pod_log(
+                            namespace='default',
+                            name=pod.metadata.name,
+                            container=c.name))
                 log_files.append(log_file)
         return log_files
-
 
     def stop_models(self, model_name=None, keep_version=None):
         # TODO(feynman): Account for model_name and keep_version.
@@ -251,12 +259,10 @@ class K8sContainerManager(ContainerManager):
                     namespace='default', name=service_name)
 
             self._k8s_beta.delete_collection_namespaced_deployment(
-                namespace='default',
-                label_selector=CLIPPER_DOCKER_LABEL)
+                namespace='default', label_selector=CLIPPER_DOCKER_LABEL)
 
             self._k8s_v1.delete_collection_namespaced_pod(
-                namespace='default',
-                label_selector=CLIPPER_DOCKER_LABEL)
+                namespace='default', label_selector=CLIPPER_DOCKER_LABEL)
 
             self._k8s_v1.delete_collection_namespaced_pod(
                 namespace='default',

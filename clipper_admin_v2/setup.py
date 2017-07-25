@@ -15,16 +15,24 @@ setup(
     maintainer_email='crankshaw@cs.berkeley.edu',
     url='http://clipper.ai',
     license=license,
-    packages=["clipper_admin",
-              "clipper_admin.docker",
-              "clipper_admin.k8s",
-              "clipper_admin.deployers",
-              "clipper_admin.deployers.contrib"],
+    packages=[
+        "clipper_admin", "clipper_admin.docker", "clipper_admin.k8s",
+        "clipper_admin.deployers", "clipper_admin.deployers.contrib"
+    ],
     keywords=['clipper', 'prediction', 'model', 'management'],
     install_requires=[
-        'requests', 'pyparsing', 'appdirs', 'pprint', 'subprocess32',
-        'sklearn', 'numpy', 'scipy', 'pyyaml', 'docker', 'kubernetes', 'six',
+        'requests',
+        'pyparsing',
+        'appdirs',
+        'pprint',
+        'subprocess32',
+        'sklearn',
+        'numpy',
+        'scipy',
+        'pyyaml',
+        'docker',
+        'kubernetes',
+        'six',
     ],
     extras_require={'TensorFlow': ['tensorflow'],
-                    'RPython': ['rpy2']}
-)
+                    'RPython': ['rpy2']})

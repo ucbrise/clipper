@@ -10,12 +10,7 @@ base = importr('base')
 logger = logging.getLogger(__name__)
 
 
-def deploy_R_model(cm,
-                   name,
-                   version,
-                   model_data,
-                   labels=None,
-                   num_replicas=1):
+def deploy_R_model(cm, name, version, model_data, labels=None, num_replicas=1):
     # TODO: fix documentation
     """Registers a model with Clipper and deploys instances of it in containers.
     Parameters
@@ -48,7 +43,8 @@ def deploy_R_model(cm,
     logger.info("R model saved")
 
     deploy_result = deploy_model(cm, name, version, input_type,
-                                 serialization_dir, base_image, labels, num_replicas)
+                                 serialization_dir, base_image, labels,
+                                 num_replicas)
 
     # Remove temp files
     shutil.rmtree(serialization_dir)

@@ -29,8 +29,8 @@ def save_python_function(name, func):
     serialized_prediction_function = s.getvalue()
 
     # Set up serialization directory
-    serialization_dir = os.path.join(
-        '/tmp', relative_base_serializations_dir, name)
+    serialization_dir = os.path.join('/tmp', relative_base_serializations_dir,
+                                     name)
     if not os.path.exists(serialization_dir):
         os.makedirs(serialization_dir)
 
@@ -46,8 +46,8 @@ def save_python_function(name, func):
         # Confirm that packages installed through conda are solvable
         # Write out conda and pip dependency files to be supplied to container
         if not (check_and_write_dependencies(
-                environment_file_abs_path, serialization_dir,
-                conda_dep_fname, pip_dep_fname)):
+                environment_file_abs_path, serialization_dir, conda_dep_fname,
+                pip_dep_fname)):
             return False
 
         logging.info("Supplied environment details")
@@ -86,8 +86,8 @@ def export_conda_env(environment_file_abs_path):
     return process.returncode == 0
 
 
-def check_and_write_dependencies(environment_path, directory,
-                                 conda_dep_fname, pip_dep_fname):
+def check_and_write_dependencies(environment_path, directory, conda_dep_fname,
+                                 pip_dep_fname):
     """Returns true if the provided conda environment is compatible with the container os.
 
     If packages listed in specified conda environment file have conflicting dependencies,
@@ -124,15 +124,14 @@ def check_and_write_dependencies(environment_path, directory,
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     process = subprocess.Popen(
         ("{py_path} {cur_dir}/check_and_write_deps.py {environment_path} {directory} {platform} "
-         "{conda_dep_fname} {pip_dep_fname}").
-        format(
-            py_path=py_path,
-            cur_dir=cur_dir,
-            environment_path=environment_path,
-            directory=directory,
-            platform=CONTAINER_CONDA_PLATFORM,
-            conda_dep_fname=conda_dep_fname,
-            pip_dep_fname=pip_dep_fname),
+         "{conda_dep_fname} {pip_dep_fname}").format(
+             py_path=py_path,
+             cur_dir=cur_dir,
+             environment_path=environment_path,
+             directory=directory,
+             platform=CONTAINER_CONDA_PLATFORM,
+             conda_dep_fname=conda_dep_fname,
+             pip_dep_fname=pip_dep_fname),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         shell=True)

@@ -8,12 +8,11 @@ import json
 
 from ..clipper_admin import ClipperException
 from .deployer_utils import save_python_function
-from ..clipper_admin import register_application, deploy_model, link_model_to_app
 
 logger = logging.getLogger(__name__)
 
 
-def create_endpoint(cm,
+def create_endpoint(clipper_conn,
                     name,
                     input_type,
                     func,
@@ -55,23 +54,16 @@ def create_endpoint(cm,
         created later as well.
     """
 
-    register_application(cm, name, input_type, default_output, slo_micros)
-    deploy_pyspark_model(cm,
-                         name,
-                         version,
-                         input_type,
-                         func,
-                         pyspark_model,
-                         sc,
-                         base_image,
-                         labels,
-                         registry,
-                         num_replicas)
+    clipper_conn.register_application(name, input_type, default_output,
+                                      slo_micros)
+    clipper_conn.deploy_pyspark_model(name, version, input_type, func,
+                                      pyspark_model, sc, base_image, labels,
+                                      registry, num_replicas)
 
-    link_model_to_app(cm, name, name)
+    clipper_conn.link_model_to_app(name, name)
 
 
-def deploy_pyspark_model(cm,
+def deploy_pyspark_model(clipper_conn,
                          name,
                          version,
                          input_type,
@@ -149,8 +141,9 @@ def deploy_pyspark_model(cm,
     logger.info("Spark model saved")
 
     # Deploy model
-    deploy_result = deploy_model(cm, name, version, input_type,
-                                 serialization_dir, base_image, labels, registry, num_replicas)
+    deploy_result = clipper_conn.deploy_model(name, version, input_type,
+                                              serialization_dir, base_image,
+                                              labels, registry, num_replicas)
 
     # Remove temp files
     shutil.rmtree(serialization_dir)

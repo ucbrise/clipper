@@ -9,19 +9,22 @@ CLIPPER_DOCKER_LABEL = "ai.clipper.container.label"
 CLIPPER_MODEL_CONTAINER_LABEL = "ai.clipper.model_container.label"
 CONTAINERLESS_MODEL_IMAGE = "NO_CONTAINER"
 
+
 class ContainerManager(object):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self,
-            clipper_public_hostname,
-            clipper_query_port=1337,
-            clipper_management_port=1338,
-            clipper_rpc_port=7000,
-            redis_ip=None,
-            redis_port=6379,
-            registry=None,
-            registry_username=None,
-            registry_password=None):
+                 clipper_public_hostname,
+                 clipper_query_port=1337,
+                 clipper_management_port=1338,
+                 clipper_rpc_port=7000,
+                 redis_ip=None,
+                 redis_port=6379,
+                 registry=None,
+                 registry_username=None,
+                 registry_password=None):
+        # TODO(crankshaw): Clipper public hostname may not be known until
+        # after Clipper is started.
         self.public_hostname = clipper_public_hostname
         self.clipper_query_port = clipper_query_port
         self.clipper_management_port = clipper_management_port
@@ -34,17 +37,41 @@ class ContainerManager(object):
     def start_clipper(self):
         return
 
-    # TODO(feynmanliang): Do we need a separate deploy_model method?
-    # It seems like in k8s, you might create a DeploymentService
-    # when a model is deployed, and then just add replicas to it
-    # when  calling `add_replica()`. In this case, the two methods
-    # would require different behavior.
+    # @abc.abstractmethod
+    # def start_clipper(self
+    #              clipper_public_hostname,
+    #              clipper_query_port=1337,
+    #              clipper_management_port=1338,
+    #              clipper_rpc_port=7000,
+    #              redis_ip=None,
+    #              redis_port=6379,
+    #                   **kwargs):
+    #
+    #     return
+
+    # def connect(self,
+    #              clipper_public_hostname,
+    #              clipper_query_port=1337,
+    #              clipper_management_port=1338,
+    #              clipper_rpc_port=7000,
+    #              registry=None,
+    #              registry_username=None,
+    #              registry_password=None):
+    #     self.public_hostname = clipper_public_hostname
+    #     self.clipper_query_port = clipper_query_port
+    #     self.clipper_management_port = clipper_management_port
+    #     self.clipper_rpc_port = clipper_rpc_port
+
     @abc.abstractmethod
     def deploy_model(self, name, version, input_type, repo):
         return
 
     @abc.abstractmethod
-    def add_replica(self, name, version, input_type, repo):
+    def get_num_replicas(self, name, version):
+        return
+
+    @abc.abstractmethod
+    def set_num_replicas(self, name, version, input_type, repo):
         return
 
     @abc.abstractmethod

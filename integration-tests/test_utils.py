@@ -9,8 +9,9 @@ import logging
 import time
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin_v2" % cur_dir))
-import clipper_admin as cl
-from clipper_admin import DockerContainerManager, K8sContainerManager
+from clipper_admin import ClipperConnection, DockerContainerManager, K8sContainerManager
+from clipper_admin.container_manager import CLIPPER_DOCKER_LABEL
+
 if sys.version < '3':
     import subprocess32 as subprocess
     PY3 = False
@@ -18,9 +19,7 @@ else:
     import subprocess
     PY3 = True
 
-
-SERVICE = "k8s"
-
+SERVICE = "docker"
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +45,7 @@ PORT_RANGE = [34256, 40000]
 
 def get_docker_client():
     if "DOCKER_API_VERSION" in os.environ:
-        return docker.from_env(
-            version=os.environ["DOCKER_API_VERSION"])
+        return docker.from_env(version=os.environ["DOCKER_API_VERSION"])
     else:
         return docker.from_env()
 
@@ -63,43 +61,49 @@ def find_unbound_port():
             sock.bind(("127.0.0.1", port))
             return port
         except socket.error:
-            logger.debug("randomly generated port %d is bound. Trying again." % port)
+            logger.debug(
+                "randomly generated port %d is bound. Trying again." % port)
 
 
-def create_container_manager(service, cleanup=True, start_clipper=True):
+def create_connection(service, cleanup=True, start_clipper=True):
     if service == "docker":
         # TODO: create registry
         logging.info("Creating DockerContainerManager")
-        cm = DockerContainerManager("localhost", redis_port=find_unbound_port())
+        cm = DockerContainerManager(
+            "localhost", redis_port=find_unbound_port())
+        cl = ClipperConnection(cm)
         if cleanup:
-            cl.stop_all(cm)
+            cl.stop_all()
             docker_client = get_docker_client()
             docker_client.containers.prune(
-                filters={"label": cl.container_manager.CLIPPER_DOCKER_LABEL})
+                filters={"label": CLIPPER_DOCKER_LABEL})
     elif service == "k8s":
         logging.info("Creating K8sContainerManager")
-        k8s_ip = subprocess.Popen(['minikube', 'ip'],
-                                  stdout=subprocess.PIPE).communicate()[0].strip()
+        k8s_ip = subprocess.Popen(
+            ['minikube', 'ip'],
+            stdout=subprocess.PIPE).communicate()[0].strip()
         logging.info("K8s IP: %s" % k8s_ip)
         cm = K8sContainerManager(k8s_ip, redis_port=find_unbound_port())
+        cl = ClipperConnection(cm)
         if cleanup:
-            cl.stop_all(cm)
+            cl.stop_all()
     else:
-        msg = "{cm} is a currently unsupported container manager".format(cm=service)
+        msg = "{cm} is a currently unsupported container manager".format(
+            cm=service)
         logging.error(msg)
         raise BenchmarkException(msg)
     if start_clipper:
         logging.info("Starting Clipper")
-        cl.start_clipper(cm)
+        cl.start_clipper()
         time.sleep(1)
-    return cm
+    return cl
 
 
-def log_clipper_state(cm):
+def log_clipper_state(cl):
     pp = pprint.PrettyPrinter(indent=4)
-    logger.info("\nAPPLICATIONS:\n{app_str}".format(
-        app_str=pp.pformat(cl.get_all_apps(cm, verbose=True))))
-    logger.info("\nMODELS:\n{model_str}".format(
-        model_str=pp.pformat(cl.get_all_models(cm, verbose=True))))
-    logger.info("\nCONTAINERS:\n{cont_str}".format(
-        cont_str=pp.pformat(cl.get_all_model_replicas(cm, verbose=True))))
+    logger.info("\nAPPLICATIONS:\n{app_str}".format(app_str=pp.pformat(
+        cl.get_all_apps(verbose=True))))
+    logger.info("\nMODELS:\n{model_str}".format(model_str=pp.pformat(
+        cl.get_all_models(verbose=True))))
+    logger.info("\nCONTAINERS:\n{cont_str}".format(cont_str=pp.pformat(
+        cl.get_all_model_replicas(verbose=True))))

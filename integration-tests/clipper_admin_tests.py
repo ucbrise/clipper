@@ -14,7 +14,7 @@ import time
 import requests
 from argparse import ArgumentParser
 import logging
-from test_utils import get_docker_client, create_container_manager, fake_model_data, SERVICE
+from test_utils import get_docker_client, create_connection, fake_model_data, SERVICE
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -28,180 +28,222 @@ sys.path.insert(0, os.path.abspath('%s/util_direct_import/' % cur_dir))
 from util_package import mock_module_in_package as mmip
 import mock_module as mm
 
-
-logging.basicConfig(format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
-                    datefmt='%y-%m-%d:%H:%M:%S',
-                    level=logging.INFO)
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+    datefmt='%y-%m-%d:%H:%M:%S',
+    level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
 
 class ClipperManagerTestCaseShort(unittest.TestCase):
-    @classmethod
-    def setUpClass(self):
-        self.cm = create_container_manager(SERVICE, cleanup=True, start_clipper=True)
-        self.app_name = "app1"
-        self.model_name = "m1"
-        self.model_version_1 = 1
-        self.model_version_2 = 2
-        self.deploy_model_name = "m3"
-        self.deploy_model_version = 1
-
+    # @classmethod
+    # def setUpClass(self):
+    #     self.clipper_conn = create_connection(
+    #         SERVICE, cleanup=True, start_clipper=True)
+    #     self.app_name = "app1"
+    #     self.model_name = "m1"
+    #     self.model_version_1 = 1
+    #     self.model_version_2 = 2
+    #     self.deploy_model_name = "m3"
+    #     self.deploy_model_version = 1
+    #
     @classmethod
     def tearDownClass(self):
-        self.cm = create_container_manager(SERVICE, cleanup=True, start_clipper=False)
+        self.clipper_conn = create_connection(
+            SERVICE, cleanup=True, start_clipper=False)
+
+    def setUp(self):
+        self.clipper_conn = create_connection(
+            SERVICE, cleanup=True, start_clipper=True)
 
     def test_register_model_correct(self):
         input_type = "doubles"
-        cl.register_model(self.cm,
-                          self.model_name,
-                          self.model_version_1,
-                          input_type)
-        registered_model_info = cl.get_model_info(self.cm,
-                                                  self.model_name,
-                                                  self.model_version_1)
+        model_name = "m"
+        self.clipper_conn.register_model(model_name, "v1", input_type)
+        registered_model_info = self.clipper_conn.get_model_info(
+            model_name, "v1")
         self.assertIsNotNone(registered_model_info)
 
-        cl.register_model(self.cm,
-                          self.model_name,
-                          self.model_version_2,
-                          input_type)
-        registered_model_info = cl.get_model_info(self.cm,
-                                                  self.model_name,
-                                                  self.model_version_2)
+        self.clipper_conn.register_model(model_name, "v2", input_type)
+        registered_model_info = self.clipper_conn.get_model_info(
+            model_name, "v2")
         self.assertIsNotNone(registered_model_info)
 
     def test_register_application_correct(self):
         input_type = "doubles"
         default_output = "DEFAULT"
         slo_micros = 30000
-        cl.register_application(self.cm,
-                                self.app_name,
-                                input_type,
-                                default_output,
-                                slo_micros)
-        registered_applications = cl.get_all_apps(self.cm)
+        app_name = "testapp"
+        self.clipper_conn.register_application(app_name, input_type,
+                                               default_output, slo_micros)
+        registered_applications = self.clipper_conn.get_all_apps()
         self.assertGreaterEqual(len(registered_applications), 1)
-        self.assertTrue(self.app_name in registered_applications)
+        self.assertTrue(app_name in registered_applications)
 
     def test_link_not_registered_model_to_app_fails(self):
         not_deployed_model = "test_model"
+        app_name = "testapp"
+        input_type = "doubles"
+        default_output = "DEFAULT"
+        slo_micros = 30000
+        self.clipper_conn.register_application(app_name, input_type,
+                                               default_output, slo_micros)
         with self.assertRaises(cl.ClipperException) as context:
-            cl.link_model_to_app(self.cm,
-                                 self.app_name,
-                                 not_deployed_model)
+            self.clipper_conn.link_model_to_app(app_name,
+                                                not_deployed_model)
         self.assertTrue("No model with name" in str(context.exception))
 
     def test_get_model_links_when_none_exist_returns_empty_list(self):
-        result = cl.get_linked_models(self.cm, self.app_name)
+        app_name = "testapp"
+        input_type = "doubles"
+        default_output = "DEFAULT"
+        slo_micros = 30000
+        self.clipper_conn.register_application(app_name, input_type,
+                                               default_output, slo_micros)
+        result = self.clipper_conn.get_linked_models(app_name)
         self.assertEqual([], result)
 
     def test_link_registered_model_to_app_succeeds(self):
-        cl.link_model_to_app(self.cm,
-                             self.app_name,
-                             self.model_name)
-        result = cl.get_linked_models(self.cm, self.app_name)
-        self.assertEqual([self.model_name], result)
+        # Register app
+        app_name = "testapp"
+        input_type = "doubles"
+        default_output = "DEFAULT"
+        slo_micros = 30000
+        self.clipper_conn.register_application(app_name, input_type,
+                                               default_output, slo_micros)
+
+        # Register model
+        model_name = "m"
+        self.clipper_conn.register_model(model_name, "v1", input_type)
+
+        self.clipper_conn.link_model_to_app(app_name, model_name)
+        result = self.clipper_conn.get_linked_models(app_name)
+        self.assertEqual([model_name], result)
 
     def get_app_info_for_registered_app_returns_info_dictionary(self):
-        result = cl.get_app_info(self.cm, self.app_name)
+        # Register app
+        app_name = "testapp"
+        input_type = "doubles"
+        default_output = "DEFAULT"
+        slo_micros = 30000
+        self.clipper_conn.register_application(app_name, input_type,
+                                               default_output, slo_micros)
+        result = self.clipper_conn.get_app_info(app_name)
         self.assertIsNotNone(result)
         self.assertEqual(type(result), dict)
 
     def get_app_info_for_nonexistent_app_returns_none(self):
-        result = cl.get_app_info(self.cm, "fake_app")
+        result = self.clipper_conn.get_app_info("fake_app")
         self.assertIsNone(result)
 
-    def test_add_replica_for_external_model_fails(self):
+    def test_set_num_replicas_for_external_model_fails(self):
+        # Register model
+        model_name = "m"
+        input_type = "doubles"
+        version = "v1"
+        self.clipper_conn.register_model(model_name, version, input_type)
         with self.assertRaises(cl.ClipperException) as context:
-            cl.add_replica(self.cm,
-                           self.model_name,
-                           self.model_version_1)
+            self.clipper_conn.set_num_replicas(model_name, version, 5)
         self.assertTrue("containerless model" in str(context.exception))
 
     def test_model_version_sets_correctly(self):
-        cl.set_model_version(self.cm,
-                             self.model_name,
-                             self.model_version_1)
-        all_models = cl.get_all_models(self.cm, verbose=True)
+        model_name = "m"
+        input_type = "doubles"
+
+        v1 = "v1"
+        self.clipper_conn.register_model(model_name, v1, input_type)
+
+        v2 = "v2"
+        self.clipper_conn.register_model(model_name, v2, input_type)
+
+        self.clipper_conn.set_model_version(model_name, v1)
+        all_models = self.clipper_conn.get_all_models(verbose=True)
         models_list_contains_correct_version = False
         for model_info in all_models:
             version = model_info["model_version"]
-            if version == str(self.model_version_1):
+            if version == v1:
                 models_list_contains_correct_version = True
                 self.assertTrue(model_info["is_current_version"])
-
         self.assertTrue(models_list_contains_correct_version)
 
     def test_get_logs_creates_log_files(self):
-        log_file_names = cl.get_clipper_logs(self.cm)
+        log_file_names = self.clipper_conn.get_clipper_logs()
         self.assertIsNotNone(log_file_names)
         self.assertGreaterEqual(len(log_file_names), 1)
         for file_name in log_file_names:
             self.assertTrue(os.path.isfile(file_name))
 
     def test_inspect_instance_returns_json_dict(self):
-        metrics = cl.inspect_instance(self.cm)
+        metrics = self.clipper_conn.inspect_instance()
         self.assertEqual(type(metrics), dict)
         self.assertGreaterEqual(len(metrics), 1)
 
     def test_model_deploys_successfully(self):
-        container_name = "clipper/noop-container:{}".format(code_version)
+        model_name = "m"
         input_type = "doubles"
-        cl.deploy_model(self.cm,
-                        self.deploy_model_name,
-                        self.deploy_model_version,
-                        input_type,
-                        fake_model_data,
-                        container_name)
-        model_info = cl.get_model_info(self.cm, self.deploy_model_name, self.deploy_model_version)
+        version = "v1"
+        container_name = "clipper/noop-container"
+        self.clipper_conn.deploy_model(model_name,
+                                       version, input_type,
+                                       fake_model_data, container_name)
+        model_info = self.clipper_conn.get_model_info(model_name, version)
         self.assertIsNotNone(model_info)
         self.assertEqual(type(model_info), dict)
         docker_client = get_docker_client()
         containers = docker_client.containers.list(
             filters={"ancestor": container_name})
-        self.assertGreaterEqual(len(containers), 1)
+        self.assertEqual(len(containers), 1)
 
-    def test_add_replica_for_deployed_model_succeeds(self):
-        cl.add_replica(self.cm,
-                       self.deploy_model_name,
-                       self.deploy_model_version)
+    def test_set_num_replicas_for_deployed_model_succeeds(self):
+        model_name = "m"
+        input_type = "doubles"
+        version = "v1"
         container_name = "clipper/noop-container"
-        docker_client = get_docker_client()
-        containers = docker_client.containers.list(
-            filters={"ancestor": container_name})
-        self.assertGreaterEqual(len(containers), 2)
+        input_type = "doubles"
+        self.clipper_conn.deploy_model(model_name,
+                                       version, input_type,
+                                       fake_model_data, container_name)
+
+        # Version defaults to current version
+        self.clipper_conn.set_num_replicas(model_name, num_replicas=4)
+        time.sleep(1)
+        num_reps = self.clipper_conn.get_num_replicas(model_name, version)
+        self.assertEqual(num_reps, 4)
+
+        self.clipper_conn.set_num_replicas(model_name, version, num_replicas=2)
+        time.sleep(1)
+        num_reps = self.clipper_conn.get_num_replicas(model_name, version)
+        self.assertEqual(num_reps, 2)
 
     def test_remove_inactive_containers_succeeds(self):
-        self.cm = create_container_manager(SERVICE, cleanup=True, start_clipper=True)
         container_name = "clipper/noop-container"
         input_type = "doubles"
         model_name = "remove_inactive_test_model"
-        cl.deploy_model(self.cm,
-                        model_name,
-                        1,
-                        input_type,
-                        fake_model_data,
-                        container_name,
-                        num_replicas=2)
+        self.clipper_conn.deploy_model(
+            model_name,
+            1,
+            input_type,
+            fake_model_data,
+            container_name,
+            num_replicas=2)
         docker_client = get_docker_client()
         containers = docker_client.containers.list(
             filters={"ancestor": container_name})
         self.assertEqual(len(containers), 2)
 
-        cl.deploy_model(self.cm,
-                        model_name,
-                        2,
-                        input_type,
-                        fake_model_data,
-                        container_name,
-                        num_replicas=3)
+        self.clipper_conn.deploy_model(
+            model_name,
+            2,
+            input_type,
+            fake_model_data,
+            container_name,
+            num_replicas=3)
         containers = docker_client.containers.list(
             filters={"ancestor": container_name})
         self.assertEqual(len(containers), 5)
 
-        cl.stop_inactive_model_versions(
-            self.cm, model_name)
+        self.clipper_conn.stop_inactive_model_versions(model_name)
         containers = docker_client.containers.list(
             filters={"ancestor": container_name})
         self.assertEqual(len(containers), 3)
@@ -214,14 +256,10 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             return ["0" for x in inputs]
 
         input_type = "doubles"
-        deploy_python_closure(self.cm,
-                              model_name,
-                              model_version,
-                              input_type,
+        deploy_python_closure(self.clipper_conn, model_name, model_version, input_type,
                               predict_func)
-        model_info = cl.get_model_info(self.cm,
-                                       model_name,
-                                       model_version)
+        model_info = self.clipper_conn.get_model_info(model_name,
+                                                      model_version)
         self.assertIsNotNone(model_info)
 
         docker_client = get_docker_client()
@@ -238,34 +276,30 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
 
         input_type = "doubles"
 
-        create_py_endpoint(self.cm,
-                           name,
-                           input_type,
-                           predict_func)
+        create_py_endpoint(self.clipper_conn, name, input_type, predict_func)
 
-        registered_applications = cl.get_all_apps(self.cm)
-        self.assertGreaterEqual(len(registered_applications), 1)
+        registered_applications = self.clipper_conn.get_all_apps()
+        self.assertEqual(len(registered_applications), 1)
         self.assertTrue(name in registered_applications)
 
-        registered_model_info = cl.get_model_info(self.cm,
-                                                  name,
-                                                  expected_version)
+        registered_model_info = self.clipper_conn.get_model_info(
+            name, expected_version)
         self.assertIsNotNone(registered_model_info)
 
-        linked_models = cl.get_linked_models(self.cm,
-                                             name)
+        linked_models = self.clipper_conn.get_linked_models(name)
         self.assertIsNotNone(linked_models)
 
         docker_client = get_docker_client()
         containers = docker_client.containers.list(
             filters={"ancestor": "clipper/python-closure-container"})
-        self.assertGreaterEqual(len(containers), 2)
+        self.assertEqual(len(containers), 1)
 
 
 class ClipperManagerTestCaseLong(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        self.cm = create_container_manager(SERVICE, cleanup=True, start_clipper=True)
+        self.clipper_conn = create_connection(
+            SERVICE, cleanup=True, start_clipper=True)
         self.app_name_1 = "app3"
         self.app_name_2 = "app4"
         self.model_name_1 = "m4"
@@ -274,21 +308,18 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         self.default_output = "DEFAULT"
         self.latency_slo_micros = 30000
 
-        cl.register_application(self.cm,
-                                self.app_name_1,
-                                self.input_type,
-                                self.default_output,
-                                self.latency_slo_micros)
+        self.clipper_conn.register_application(
+            self.app_name_1, self.input_type, self.default_output,
+            self.latency_slo_micros)
 
-        cl.register_application(self.cm,
-                                self.app_name_2,
-                                self.input_type,
-                                self.default_output,
-                                self.latency_slo_micros)
+        self.clipper_conn.register_application(
+            self.app_name_2, self.input_type, self.default_output,
+            self.latency_slo_micros)
 
     @classmethod
     def tearDownClass(self):
-        self.cm = create_container_manager(SERVICE, cleanup=True, start_clipper=False)
+        self.clipper_conn = create_connection(
+            SERVICE, cleanup=True, start_clipper=False)
 
     def test_unlinked_app_returns_default_predictions(self):
         url = "http://localhost:1337/{}/predict".format(self.app_name_2)
@@ -304,14 +335,11 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
     def test_deployed_model_queried_successfully(self):
         model_version = 1
         container_name = "clipper/noop-container"
-        cl.deploy_model(self.cm,
-                        self.model_name_2,
-                        model_version,
-                        self.input_type,
-                        fake_model_data,
-                        container_name)
+        self.clipper_conn.deploy_model(self.model_name_2, model_version,
+                                       self.input_type, fake_model_data,
+                                       container_name)
 
-        cl.link_model_to_app(self.cm, self.app_name_2, self.model_name_2)
+        self.clipper_conn.link_model_to_app(self.app_name_2, self.model_name_2)
         time.sleep(30)
 
         url = "http://localhost:1337/{}/predict".format(self.app_name_2)
@@ -331,13 +359,10 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
             return [str(mm.COEFFICIENT * mmip.COEFFICIENT * len(x)) for x in inputs]
 
         input_type = "doubles"
-        deploy_python_closure(self.cm,
-                              self.model_name_1,
-                              model_version,
-                              input_type,
+        deploy_python_closure(self.clipper_conn, self.model_name_1, model_version, input_type,
                               predict_func)
 
-        cl.link_model_to_app(self.cm, self.app_name_1, self.model_name_1)
+        self.clipper_conn.link_model_to_app(self.app_name_1, self.model_name_1)
         time.sleep(60)
 
         received_non_default_prediction = False
@@ -370,12 +395,12 @@ SHORT_TEST_ORDERING = [
     'test_link_registered_model_to_app_succeeds',
     'get_app_info_for_registered_app_returns_info_dictionary',
     'get_app_info_for_nonexistent_app_returns_none',
-    'test_add_replica_for_external_model_fails',
+    'test_set_num_replicas_for_external_model_fails',
     'test_model_version_sets_correctly',
     'test_get_logs_creates_log_files',
     'test_inspect_instance_returns_json_dict',
     'test_model_deploys_successfully',
-    'test_add_replica_for_deployed_model_succeeds',
+    'test_set_num_replicas_for_deployed_model_succeeds',
     'test_remove_inactive_containers_succeeds',
     'test_python_closure_deploys_successfully',
     'test_register_py_endpoint',
@@ -388,8 +413,9 @@ LONG_TEST_ORDERING = [
 ]
 
 if __name__ == '__main__':
-    description = ("Runs clipper manager tests. If no arguments are specified, all tests are "
-                   "executed.")
+    description = (
+        "Runs clipper manager tests. If no arguments are specified, all tests are "
+        "executed.")
     parser = ArgumentParser(description)
     parser.add_argument(
         "-s",

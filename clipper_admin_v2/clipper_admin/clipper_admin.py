@@ -15,475 +15,502 @@ class ClipperException(Exception):
     pass
 
 
-def start_clipper(cm):
-    try:
-        cm.start_clipper()
-        logger.info("Clipper is running")
-        return True
-    except ClipperException as e:
-        logger.info(e.msg)
-        return False
+class ClipperConnection(object):
+    def __init__(self, container_manager):
+        self.cm = container_manager
 
+    def start_clipper(self):
+        try:
+            self.cm.start_clipper()
+            logger.info("Clipper is running")
+            return True
+        except ClipperException as e:
+            logger.info(e.msg)
+            return False
 
-def register_application(cm, name, input_type, default_output, slo_micros):
-    url = "http://{host}/admin/add_app".format(host=cm.get_admin_addr())
-    req_json = json.dumps({
-        "name": name,
-        "input_type": input_type,
-        "default_output": default_output,
-        "latency_slo_micros": slo_micros
-    })
-    headers = {'Content-type': 'application/json'}
-    r = requests.post(url, headers=headers, data=req_json)
-    if r.status_code != requests.codes.ok:
-        msg = "Received error status code: {code} and message: {msg}".format(
-            code=r.status_code, msg=r.text)
-        logger.error(msg)
-        raise ClipperException(msg)
+    def connect(self, clipper_public_hostname):
+        self.cm.connect(clipper_public_hostname)
 
-def link_model_to_app(cm, app_name, model_name):
-    """
-    Allows the model with `model_name` to be used by the app with `app_name`.
-    The model and app should both be registered with Clipper.
+    def register_application(self, name, input_type, default_output,
+                             slo_micros):
+        url = "http://{host}/admin/add_app".format(
+            host=self.cm.get_admin_addr())
+        req_json = json.dumps({
+            "name": name,
+            "input_type": input_type,
+            "default_output": default_output,
+            "latency_slo_micros": slo_micros
+        })
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
+        if r.status_code != requests.codes.ok:
+            msg = "Received error status code: {code} and message: {msg}".format(
+                code=r.status_code, msg=r.text)
+            logger.error(msg)
+            raise ClipperException(msg)
 
-    Parameters
-    ----------
-    app_name : str
-        The name of the application
-    model_name : str
-        The name of the model to link to the application
+    def link_model_to_app(self, app_name, model_name):
+        """
+        Allows the model with `model_name` to be used by the app with `app_name`.
+        The model and app should both be registered with Clipper.
 
-    Returns
-    -------
-    bool
-        Returns true iff the model link request was successful
-    """
+        Parameters
+        ----------
+        app_name : str
+            The name of the application
+        model_name : str
+            The name of the model to link to the application
 
-    url = "http://{host}/admin/add_model_links".format(host=cm.get_admin_addr())
-    req_json = json.dumps({
-        "app_name": app_name,
-        "model_names": [model_name]
-    })
-    headers = {'Content-type': 'application/json'}
-    r = requests.post(url, headers=headers, data=req_json)
-    logger.info(r.text)
-    if r.status_code != requests.codes.ok:
-        msg = "Received error status code: {code} and message: {msg}".format(
-            code=r.status_code, msg=r.text)
-        logger.error(msg)
-        raise ClipperException(msg)
+        Returns
+        -------
+        bool
+            Returns true iff the model link request was successful
+        """
 
+        url = "http://{host}/admin/add_model_links".format(
+            host=self.cm.get_admin_addr())
+        req_json = json.dumps({
+            "app_name": app_name,
+            "model_names": [model_name]
+        })
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
+        logger.info(r.text)
+        if r.status_code != requests.codes.ok:
+            msg = "Received error status code: {code} and message: {msg}".format(
+                code=r.status_code, msg=r.text)
+            logger.error(msg)
+            raise ClipperException(msg)
 
-def _resolve_docker_repo(cm, image, registry):
-    if registry is None:
-        registry = cm.get_registry()
-    if registry is None:
-        repo = image
-    else:
-        repo = "{registry}/{image}".format(
-                registry=registry,
-                image=image)
-    return repo
-
-
-def deploy_model(
-        cm,
-        name,
-        version,
-        input_type,
-        model_data_path,
-        base_image,
-        labels=None,
-        registry=None,
-        num_replicas=1):
-    version = str(version)
-
-    with open(model_data_path + '/Dockerfile', 'w') as f:
-        f.write("FROM {container_name}\nCOPY . /model/.\n".format(container_name=base_image))
-
-    # build, tag, and push docker image to registry
-    # NOTE: DOCKER_API_VERSION (set by `minikube docker-env`) must be same
-    # version as docker registry server
-
-    image_name = "{name}:{version}".format(
-                name=name,
-                version=version)
-    repo = _resolve_docker_repo(cm, image_name, registry)
-    if "DOCKER_API_VERSION" in os.environ:
-        docker_client = docker.from_env(
-            version=os.environ["DOCKER_API_VERSION"])
-    else:
-        docker_client = docker.from_env()
-    logger.info("Building model Docker image at {}".format(model_data_path))
-    docker_client.images.build(
-            path=model_data_path,
-            tag=repo)
-
-    logger.info("Pushing model Docker image to {}".format(repo))
-    # TODO: is this push needed?
-    # docker_client.images.push(repository=repo)
-    cm.deploy_model(name, version, input_type, repo, num_replicas=num_replicas)
-    logger.info("Registering model with Clipper")
-    register_model(cm, name, version, input_type, repo=repo, labels=labels)
-    logger.info("Done deploying!")
-
-
-def register_model(cm, name, version, input_type, repo=None, labels=None):
-    version = str(version)
-    url = "http://{host}/admin/add_model".format(host=cm.get_admin_addr())
-    if repo is None:
-        repo = CONTAINERLESS_MODEL_IMAGE
-    if labels is None:
-        labels = DEFAULT_LABEL
-    req_json = json.dumps({
-        "model_name": name,
-        "model_version": version,
-        "labels": labels,
-        "input_type": input_type,
-        "container_name": repo,
-        "model_data_path": "DEPRECATED",
-    })
-    headers = {'Content-type': 'application/json'}
-    logger.debug(req_json)
-    r = requests.post(url, headers=headers, data=req_json)
-    if r.status_code != requests.codes.ok:
-        msg = "Received error status code: {code} and message: {msg}".format(
-            code=r.status_code, msg=r.text)
-        logger.error(msg)
-        raise ClipperException(msg)
-
-
-
-
-def add_replica(cm, name, version):
-    version = str(version)
-    model_data = get_model_info(cm, name, version)
-    if model_data is not None:
-        input_type = model_data["input_type"]
-        image = model_data["container_name"]
-        if image != CONTAINERLESS_MODEL_IMAGE:
-            cm.add_replica(name, version, input_type, image)
+    def _resolve_docker_repo(self, image, registry):
+        if registry is None:
+            registry = self.cm.get_registry()
+        if registry is None:
+            repo = image
         else:
-            msg = "Cannot add container for containerless model {name}:{version}".format(
+            repo = "{registry}/{image}".format(registry=registry, image=image)
+        return repo
+
+    def deploy_model(self,
+                     name,
+                     version,
+                     input_type,
+                     model_data_path,
+                     base_image,
+                     labels=None,
+                     registry=None,
+                     num_replicas=1):
+        version = str(version)
+
+        with open(model_data_path + '/Dockerfile', 'w') as f:
+            f.write("FROM {container_name}\nCOPY . /model/.\n".format(
+                container_name=base_image))
+
+        # build, tag, and push docker image to registry
+        # NOTE: DOCKER_API_VERSION (set by `minikube docker-env`) must be same
+        # version as docker registry server
+
+        image_name = "{name}:{version}".format(name=name, version=version)
+        repo = self._resolve_docker_repo(image_name, registry)
+        if "DOCKER_API_VERSION" in os.environ:
+            docker_client = docker.from_env(
+                version=os.environ["DOCKER_API_VERSION"])
+        else:
+            docker_client = docker.from_env()
+        logger.info(
+            "Building model Docker image at {}".format(model_data_path))
+        docker_client.images.build(path=model_data_path, tag=repo)
+
+        logger.info("Pushing model Docker image to {}".format(repo))
+        docker_client.images.push(repository=repo)
+        self.cm.deploy_model(
+            name, version, input_type, repo, num_replicas=num_replicas)
+        logger.info("Registering model with Clipper")
+        self.register_model(
+            name, version, input_type, repo=repo, labels=labels)
+        logger.info("Done deploying!")
+
+    def register_model(self, name, version, input_type, repo=None,
+                       labels=None):
+        version = str(version)
+        url = "http://{host}/admin/add_model".format(
+            host=self.cm.get_admin_addr())
+        if repo is None:
+            repo = CONTAINERLESS_MODEL_IMAGE
+        if labels is None:
+            labels = DEFAULT_LABEL
+        req_json = json.dumps({
+            "model_name": name,
+            "model_version": version,
+            "labels": labels,
+            "input_type": input_type,
+            "container_name": repo,
+            "model_data_path": "DEPRECATED",
+        })
+        headers = {'Content-type': 'application/json'}
+        logger.debug(req_json)
+        r = requests.post(url, headers=headers, data=req_json)
+        if r.status_code != requests.codes.ok:
+            msg = "Received error status code: {code} and message: {msg}".format(
+                code=r.status_code, msg=r.text)
+            logger.error(msg)
+            raise ClipperException(msg)
+
+    def get_num_replicas(self, name, version):
+        if version is None:
+            model_info = self.get_all_models(verbose=True)
+            for m in model_info:
+                if m["is_current_version"]:
+                    version = m["model_version"]
+        assert version is not None
+        version = str(version)
+        return self.cm.get_num_replicas(name, version)
+
+    def set_num_replicas(self, name, version=None, num_replicas=1):
+        """Set the total number of active replicas for a model.
+
+        If there are more than the current number of replicas
+        currently allocated, this will remove replicas. If there are
+        less, this will add replicas.
+
+        Parameters
+        ----------
+        name : str
+            The name of the model
+        version : str, optional
+            The version of the model. If no version is provided,
+            the currently deployed version will be used.
+        num_replicas : int, optional
+            The desired number of replicas.
+        """
+        if version is None:
+            model_info = self.get_all_models(verbose=True)
+            for m in model_info:
+                if m["is_current_version"]:
+                    version = m["model_version"]
+        assert version is not None
+
+        version = str(version)
+        model_data = self.get_model_info(name, version)
+        if model_data is not None:
+            input_type = model_data["input_type"]
+            image = model_data["container_name"]
+            if image != CONTAINERLESS_MODEL_IMAGE:
+                self.cm.set_num_replicas(name, version, input_type, image,
+                                         num_replicas)
+            else:
+                msg = "Cannot resize the replica set for containerless model {name}:{version}".format(
+                    name=name, version=version)
+                logger.error(msg)
+                raise ClipperException(msg)
+        else:
+            msg = "Cannot add container for non-registered model {name}:{version}".format(
                 name=name, version=version)
             logger.error(msg)
             raise ClipperException(msg)
-    else:
-        msg = "Cannot add container for non-registered model {name}:{version}".format(
-            name=name, version=version)
-        logger.error(msg)
-        raise ClipperException(msg)
 
+    def get_all_apps(self, verbose=False):
+        """Gets information about all applications registered with Clipper.
 
-def get_all_apps(cm, verbose=False):
-    """Gets information about all applications registered with Clipper.
+        Parameters
+        ----------
+        verbose : bool
+            If set to False, the returned list contains the apps' names.
+            If set to True, the list contains application info dictionaries.
+            These dictionaries have the same attribute name-value pairs that were
+            provided to `register_application`.
 
-    Parameters
-    ----------
-    verbose : bool
-        If set to False, the returned list contains the apps' names.
-        If set to True, the list contains application info dictionaries.
-        These dictionaries have the same attribute name-value pairs that were
-        provided to `register_application`.
+        Returns
+        -------
+        list
+            Returns a list of information about all apps registered to Clipper.
+            If no apps are registered with Clipper, an empty list is returned.
+        """
+        url = "http://{host}/admin/get_all_applications".format(
+            host=self.cm.get_admin_addr())
+        req_json = json.dumps({"verbose": verbose})
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
 
-    Returns
-    -------
-    list
-        Returns a list of information about all apps registered to Clipper.
-        If no apps are registered with Clipper, an empty list is returned.
-    """
-    url = "http://{host}/admin/get_all_applications".format(host=cm.get_admin_addr())
-    req_json = json.dumps({"verbose": verbose})
-    headers = {'Content-type': 'application/json'}
-    r = requests.post(url, headers=headers, data=req_json)
+        if r.status_code == requests.codes.ok:
+            return r.json()
+        else:
+            msg = "Received error status code: {code} and message: {msg}".format(
+                code=r.status_code, msg=r.text)
+            logger.error(msg)
+            raise ClipperException(msg)
 
-    if r.status_code == requests.codes.ok:
-        return r.json()
-    else:
-        msg = "Received error status code: {code} and message: {msg}".format(
-            code=r.status_code, msg=r.text)
-        logger.error(msg)
-        raise ClipperException(msg)
+    def get_app_info(self, name):
+        """Gets detailed information about a registered application.
 
+        Parameters
+        ----------
+        name : str
+            The name of the application to look up
 
-def get_app_info(cm, name):
-    """Gets detailed information about a registered application.
+        Returns
+        -------
+        dict
+            Returns a dictionary with the specified application's info. This
+            will contain the attribute name-value pairs that were provided to
+            `register_application`. If no application with name `name` is
+            registered with Clipper, None is returned.
+        """
+        url = "http://{host}/admin/get_application".format(
+            host=self.cm.get_admin_addr())
+        req_json = json.dumps({"name": name})
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
 
-    Parameters
-    ----------
-    name : str
-        The name of the application to look up
+        if r.status_code == requests.codes.ok:
+            app_info = r.json()
+            if len(app_info) == 0:
+                return None
+            return app_info
+        else:
+            msg = "Received error status code: {code} and message: {msg}".format(
+                code=r.status_code, msg=r.text)
+            logger.error(msg)
+            raise ClipperException(msg)
 
-    Returns
-    -------
-    dict
-        Returns a dictionary with the specified application's info. This
-        will contain the attribute name-value pairs that were provided to
-        `register_application`. If no application with name `name` is
-        registered with Clipper, None is returned.
-    """
-    url = "http://{host}/admin/get_application".format(host=cm.get_admin_addr())
-    req_json = json.dumps({"name": name})
-    headers = {'Content-type': 'application/json'}
-    r = requests.post(url, headers=headers, data=req_json)
+    def get_linked_models(self, app_name):
+        """Retrieves the models linked to the specified application
 
-    if r.status_code == requests.codes.ok:
-        app_info = r.json()
-        if len(app_info) == 0:
+        Parameters
+        ----------
+        app_name : str
+            The name of the application
+
+        Returns
+        -------
+        list
+            Returns a list of the names of models linked to the app.
+            If no models are linked to the specified app, None is returned.
+        """
+        url = "http://{host}/admin/get_linked_models".format(
+            host=self.cm.get_admin_addr())
+        req_json = json.dumps({"app_name": app_name})
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
+        if r.status_code == requests.codes.ok:
+            return r.json()
+        else:
+            msg = "Received error status code: {code} and message: {msg}".format(
+                code=r.status_code, msg=r.text)
+            logger.error(msg)
+            raise ClipperException(msg)
+
+    def get_all_models(self, verbose=False):
+        """Gets information about all models registered with Clipper.
+
+        Parameters
+        ----------
+        verbose : bool
+            If set to False, the returned list contains the models' names.
+            If set to True, the list contains model info dictionaries.
+
+        Returns
+        -------
+        list
+            Returns a list of information about all apps registered to Clipper.
+            If no models are registered with Clipper, an empty list is returned.
+        """
+        url = "http://{host}/admin/get_all_models".format(
+            host=self.cm.get_admin_addr())
+        req_json = json.dumps({"verbose": verbose})
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
+
+        if r.status_code == requests.codes.ok:
+            return r.json()
+        else:
+            logger.warning(r.text)
             return None
-        return app_info
-    else:
-        msg = "Received error status code: {code} and message: {msg}".format(
-            code=r.status_code, msg=r.text)
-        logger.error(msg)
-        raise ClipperException(msg)
 
-def get_linked_models(cm, app_name):
-    """Retrieves the models linked to the specified application
+    def get_model_info(self, name, version):
+        """Gets detailed information about a registered model.
 
-    Parameters
-    ----------
-    app_name : str
-        The name of the application
+        Parameters
+        ----------
+        model_name : str
+            The name of the model to look up
+        model_version : int
+            The version of the model to look up
 
-    Returns
-    -------
-    list
-        Returns a list of the names of models linked to the app.
-        If no models are linked to the specified app, None is returned.
-    """
-    url = "http://{host}/admin/get_linked_models".format(host=cm.get_admin_addr())
-    req_json = json.dumps({"app_name": app_name})
-    headers = {'Content-type': 'application/json'}
-    r = requests.post(url, headers=headers, data=req_json)
-    if r.status_code == requests.codes.ok:
-        return r.json()
-    else:
-        msg = "Received error status code: {code} and message: {msg}".format(
-            code=r.status_code, msg=r.text)
-        logger.error(msg)
-        raise ClipperException(msg)
+        Returns
+        -------
+        dict
+            Returns a dictionary with the specified model's info.
+            If no model with name `model_name@model_version` is
+            registered with Clipper, None is returned.
+        """
+        version = str(version)
+        url = "http://{host}/admin/get_model".format(
+            host=self.cm.get_admin_addr())
+        req_json = json.dumps({"model_name": name, "model_version": version})
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
 
-def get_all_models(cm, verbose=False):
-    """Gets information about all models registered with Clipper.
+        if r.status_code == requests.codes.ok:
+            app_info = r.json()
+            if len(app_info) == 0:
+                return None
+            return app_info
+        else:
+            msg = "Received error status code: {code} and message: {msg}".format(
+                code=r.status_code, msg=r.text)
+            logger.error(msg)
+            raise ClipperException(msg)
 
-    Parameters
-    ----------
-    verbose : bool
-        If set to False, the returned list contains the models' names.
-        If set to True, the list contains model info dictionaries.
+    def get_all_model_replicas(self, verbose=False):
+        """Gets information about all model containers registered with Clipper.
 
-    Returns
-    -------
-    list
-        Returns a list of information about all apps registered to Clipper.
-        If no models are registered with Clipper, an empty list is returned.
-    """
-    url = "http://{host}/admin/get_all_models".format(host=cm.get_admin_addr())
-    req_json = json.dumps({"verbose": verbose})
-    headers = {'Content-type': 'application/json'}
-    r = requests.post(url, headers=headers, data=req_json)
+        Parameters
+        ----------
+        verbose : bool
+            If set to False, the returned list contains the apps' names.
+            If set to True, the list contains container info dictionaries.
 
-    if r.status_code == requests.codes.ok:
-        return r.json()
-    else:
-        logger.warning(r.text)
-        return None
+        Returns
+        -------
+        list
+            Returns a list of information about all model containers known to Clipper.
+            If no containers are registered with Clipper, an empty list is returned.
+        """
+        url = "http://{host}/admin/get_all_containers".format(
+            host=self.cm.get_admin_addr())
+        req_json = json.dumps({"verbose": verbose})
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
+        if r.status_code == requests.codes.ok:
+            return r.json()
+        else:
+            msg = "Received error status code: {code} and message: {msg}".format(
+                code=r.status_code, msg=r.text)
+            logger.error(msg)
+            raise ClipperException(msg)
 
+    def get_model_replica_info(self, name, version, replica_id):
+        """Gets detailed information about a registered container.
 
-def get_model_info(cm, name, version):
-    """Gets detailed information about a registered model.
+        Parameters
+        ----------
+        name : str
+            The name of the container to look up
+        version : int
+            The version of the container to look up
+        replica_id : int
+            The container replica to look up
 
-    Parameters
-    ----------
-    model_name : str
-        The name of the model to look up
-    model_version : int
-        The version of the model to look up
+        Returns
+        -------
+        dict
+            A dictionary with the specified container's info.
+            If no corresponding container is registered with Clipper, None is returned.
+        """
+        version = str(version)
+        url = "http://{host}/admin/get_container".format(
+            host=self.cm.get_admin_addr())
+        req_json = json.dumps({
+            "model_name": name,
+            "model_version": version,
+            "replica_id": replica_id,
+        })
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
 
-    Returns
-    -------
-    dict
-        Returns a dictionary with the specified model's info.
-        If no model with name `model_name@model_version` is
-        registered with Clipper, None is returned.
-    """
-    version = str(version)
-    url = "http://{host}/admin/get_model".format(host=cm.get_admin_addr())
-    req_json = json.dumps({
-        "model_name": name,
-        "model_version": version
-    })
-    headers = {'Content-type': 'application/json'}
-    r = requests.post(url, headers=headers, data=req_json)
+        if r.status_code == requests.codes.ok:
+            app_info = r.json()
+            if len(app_info) == 0:
+                return None
+            return app_info
+        else:
+            msg = "Received error status code: {code} and message: {msg}".format(
+                code=r.status_code, msg=r.text)
+            logger.error(msg)
+            raise ClipperException(msg)
 
-    if r.status_code == requests.codes.ok:
-        app_info = r.json()
-        if len(app_info) == 0:
-            return None
-        return app_info
-    else:
-        msg = "Received error status code: {code} and message: {msg}".format(
-            code=r.status_code, msg=r.text)
-        logger.error(msg)
-        raise ClipperException(msg)
+    def get_clipper_logs(self, logging_dir="clipper_logs/"):
+        return self.cm.get_logs(logging_dir)
 
+    def inspect_instance(self):
+        """Fetches metrics from the running Clipper instance.
 
-def get_all_model_replicas(cm, verbose=False):
-    """Gets information about all model containers registered with Clipper.
+        Returns
+        -------
+        str
+            The JSON string containing the current set of metrics
+            for this instance. On error, the string will be an error message
+            (not JSON formatted).
+        """
+        url = "http://{host}/metrics".format(host=self.cm.get_query_addr())
+        r = requests.get(url)
+        if r.status_code == requests.codes.ok:
+            return r.json()
+        else:
+            msg = "Received error status code: {code} and message: {msg}".format(
+                code=r.status_code, msg=r.text)
+            logger.error(msg)
+            raise ClipperException(msg)
 
-    Parameters
-    ----------
-    verbose : bool
-        If set to False, the returned list contains the apps' names.
-        If set to True, the list contains container info dictionaries.
+    def set_model_version(self, name, version, num_replicas=None):
+        """Changes the current model version to `model_version`.
 
-    Returns
-    -------
-    list
-        Returns a list of information about all model containers known to Clipper.
-        If no containers are registered with Clipper, an empty list is returned.
-    """
-    url = "http://{host}/admin/get_all_containers".format(host=cm.get_admin_addr())
-    req_json = json.dumps({"verbose": verbose})
-    headers = {'Content-type': 'application/json'}
-    r = requests.post(url, headers=headers, data=req_json)
-    if r.status_code == requests.codes.ok:
-        return r.json()
-    else:
-        msg = "Received error status code: {code} and message: {msg}".format(
-            code=r.status_code, msg=r.text)
-        logger.error(msg)
-        raise ClipperException(msg)
+        This method can be used to do model rollback and rollforward to
+        any previously deployed version of the model. Note that model
+        versions automatically get updated when `deploy_model()` is
+        called, so there is no need to manually update the version as well.
 
+        Parameters
+        ----------
+        name : str
+            The name of the model
+        version : str | obj with __str__ representation
+            The version of the model. Note that `version`
+            must be a model version that has already been deployed.
+        num_replicas : int
+            The number of new containers to start with the newly
+            selected model version.
 
-def get_model_replica_info(cm, name, version, replica_id):
-    """Gets detailed information about a registered container.
+        """
+        version = str(version)
+        url = "http://{host}/admin/set_model_version".format(
+            host=self.cm.get_admin_addr())
+        req_json = json.dumps({"model_name": name, "model_version": version})
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
+        if r.status_code != requests.codes.ok:
+            msg = "Received error status code: {code} and message: {msg}".format(
+                code=r.status_code, msg=r.text)
+            logger.error(msg)
+            raise ClipperException(msg)
 
-    Parameters
-    ----------
-    name : str
-        The name of the container to look up
-    version : int
-        The version of the container to look up
-    replica_id : int
-        The container replica to look up
+        if num_replicas is not None:
+            self.set_num_replicas(name, version, num_replicas)
 
-    Returns
-    -------
-    dict
-        A dictionary with the specified container's info.
-        If no corresponding container is registered with Clipper, None is returned.
-    """
-    version = str(version)
-    url = "http://{host}/admin/get_container".format(host=cm.get_admin_addr())
-    req_json = json.dumps({
-        "model_name": name,
-        "model_version": version,
-        "replica_id": replica_id,
-    })
-    headers = {'Content-type': 'application/json'}
-    r = requests.post(url, headers=headers, data=req_json)
+    def stop_inactive_model_versions(self, model_name):
+        """Removes all containers serving stale versions of the specified model.
 
-    if r.status_code == requests.codes.ok:
-        app_info = r.json()
-        if len(app_info) == 0:
-            return None
-        return app_info
-    else:
-        msg = "Received error status code: {code} and message: {msg}".format(
-            code=r.status_code, msg=r.text)
-        logger.error(msg)
-        raise ClipperException(msg)
+        Parameters
+        ----------
+        model_name : str
+            The name of the model whose old containers you want to clean.
+        """
+        model_info = self.get_all_models(verbose=True)
+        current_version = None
+        for m in model_info:
+            if m["is_current_version"]:
+                current_version = m["model_version"]
+        assert current_version is not None
+        self.cm.stop_models(
+            model_name=model_name, keep_version=current_version)
 
+    def stop_deployed_models(self):
+        self.cm.stop_models()
 
-def get_clipper_logs(cm, logging_dir="clipper_logs/"):
-    return cm.get_logs(logging_dir)
+    def stop_clipper(self):
+        self.cm.stop_clipper()
 
-
-def inspect_instance(cm):
-    """Fetches metrics from the running Clipper instance.
-
-    Returns
-    -------
-    str
-        The JSON string containing the current set of metrics
-        for this instance. On error, the string will be an error message
-        (not JSON formatted).
-    """
-    url = "http://{host}/metrics".format(host=cm.get_query_addr())
-    r = requests.get(url)
-    if r.status_code == requests.codes.ok:
-        return r.json()
-    else:
-        msg = "Received error status code: {code} and message: {msg}".format(
-            code=r.status_code, msg=r.text)
-        logger.error(msg)
-        raise ClipperException(msg)
-
-
-def set_model_version(cm, name, version, num_containers=0):
-    """Changes the current model version to `model_version`.
-
-    This method can be used to do model rollback and rollforward to
-    any previously deployed version of the model. Note that model
-    versions automatically get updated when `deploy_model()` is
-    called, so there is no need to manually update the version as well.
-
-    Parameters
-    ----------
-    name : str
-        The name of the model
-    version : str | obj with __str__ representation
-        The version of the model. Note that `version`
-        must be a model version that has already been deployed.
-    num_containers : int
-        The number of new containers to start with the newly
-        selected model version.
-
-    """
-    version = str(version)
-    url = "http://{host}/admin/set_model_version".format(host=cm.get_admin_addr())
-    req_json = json.dumps({
-        "model_name": name,
-        "model_version": version
-    })
-    headers = {'Content-type': 'application/json'}
-    r = requests.post(url, headers=headers, data=req_json)
-    if r.status_code != requests.codes.ok:
-        msg = "Received error status code: {code} and message: {msg}".format(
-            code=r.status_code, msg=r.text)
-        logger.error(msg)
-        raise ClipperException(msg)
-    for r in range(num_containers):
-        add_replica(cm, name, version)
-
-
-def stop_inactive_model_versions(cm, model_name):
-    """Removes all containers serving stale versions of the specified model.
-
-    Parameters
-    ----------
-    model_name : str
-        The name of the model whose old containers you want to clean.
-    """
-    model_info = get_all_models(cm, verbose=True)
-    current_version = None
-    for m in model_info:
-        if m["is_current_version"]:
-            current_version = m["model_version"]
-    assert current_version is not None
-    cm.stop_models(model_name=model_name, keep_version=current_version)
-
-
-def stop_deployed_models(cm):
-    cm.stop_models()
-
-
-def stop_clipper(cm):
-    cm.stop_clipper()
-
-
-def stop_all(cm):
-    cm.stop_models()
-    cm.stop_clipper()
+    def stop_all(self):
+        self.cm.stop_models()
+        self.cm.stop_clipper()
