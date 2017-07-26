@@ -1,10 +1,10 @@
 #include <algorithm>
-#include <iostream>
 
 #include <zmq.hpp>
 
 #include <container/container_rpc.hpp>
-#include <container/util.hpp>
+
+namespace clipper {
 
 namespace container {
 
@@ -15,8 +15,8 @@ Clock::time_point PerformanceTimer::last_log_ =
 RPC::RPC()
     : active_(false),
       event_log_mutex_(std::make_shared<std::mutex>()),
-      event_log_(
-          std::make_shared<CircularBuffer<RPCLogItem>>(EVENT_LOG_CAPACITY)) {}
+      event_log_(std::make_shared<boost::circular_buffer<RPCLogItem>>(
+          EVENT_LOG_CAPACITY)) {}
 
 RPC::~RPC() { stop(); }
 
@@ -31,28 +31,37 @@ void RPC::stop() {
   }
 }
 
-std::vector<RPCLogItem> RPC::get_events() const {
+std::vector<RPCLogItem> RPC::get_events(int num_events) const {
   std::vector<RPCLogItem> events;
   std::lock_guard<std::mutex> lock(*event_log_mutex_);
-  return event_log_->get_items();
+  int num_to_return =
+      std::min(num_events, static_cast<int>(event_log_->size()));
+  for (auto it = event_log_->begin(); it != event_log_->end(); ++it) {
+    if (num_to_return == 0) {
+      break;
+    }
+    events.push_back(*it);
+    num_to_return--;
+  }
+  return events;
 }
 
 bool RPC::handle_heartbeat(zmq::socket_t &socket) const {
   zmq::message_t msg_heartbeat_type;
   socket.recv(&msg_heartbeat_type, 0);
-  HeartbeatType heartbeat_type = static_cast<HeartbeatType>(
+  rpc::HeartbeatType heartbeat_type = static_cast<rpc::HeartbeatType>(
       static_cast<int *>(msg_heartbeat_type.data())[0]);
-  return (heartbeat_type == HeartbeatType::RequestContainerMetadata);
+  return (heartbeat_type == rpc::HeartbeatType::RequestContainerMetadata);
 }
 
 void RPC::send_heartbeat(zmq::socket_t &socket) const {
   zmq::message_t type_message(sizeof(int));
   static_cast<int *>(type_message.data())[0] =
-      static_cast<int>(MessageType::Heartbeat);
+      static_cast<int>(rpc::MessageType::Heartbeat);
   socket.send("", 0, ZMQ_SNDMORE);
   socket.send(type_message, 0);
-  std::cout << "Sent heartbeat!" << std::endl;
-  log_event(RPCEvent::SentHeartbeat);
+  log_info(LOGGING_TAG_CONTAINER, "Sent heartbeat!");
+  log_event(rpc::RPCEvent::SentHeartbeat);
 }
 
 void RPC::send_container_metadata(std::string &model_name, int model_version,
@@ -60,7 +69,7 @@ void RPC::send_container_metadata(std::string &model_name, int model_version,
                                   zmq::socket_t &socket) const {
   zmq::message_t msg_message_type(sizeof(int));
   static_cast<int *>(msg_message_type.data())[0] =
-      static_cast<int>(MessageType::NewContainer);
+      static_cast<int>(rpc::MessageType::NewContainer);
 
   std::string model_version_str = std::to_string(model_version);
   std::string model_input_type_str =
@@ -72,15 +81,15 @@ void RPC::send_container_metadata(std::string &model_name, int model_version,
   socket.send(model_version_str.data(), model_version_str.length(),
               ZMQ_SNDMORE);
   socket.send(model_input_type_str.data(), model_version_str.length(), 0);
-  std::cout << "Sent container metadata!" << std::endl;
-  log_event(RPCEvent::SentContainerMetadata);
+  log_info(LOGGING_TAG_CONTAINER, "Sent container metadata!");
+  log_event(rpc::RPCEvent::SentContainerMetadata);
 }
 
-void RPC::log_event(RPCEvent event) const {
+void RPC::log_event(rpc::RPCEvent event) const {
   std::lock_guard<std::mutex> lock(*event_log_mutex_);
   Clock::time_point curr_time = Clock::now();
   auto new_log_item = std::make_pair(event, curr_time);
-  event_log_->insert(new_log_item);
+  event_log_->push_back(new_log_item);
 }
 
 }  // namespace container

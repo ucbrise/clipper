@@ -6,6 +6,8 @@
 
 #include <container/datatypes.hpp>
 
+namespace clipper {
+
 namespace container {
 
 template <typename T>
@@ -18,6 +20,14 @@ struct input_parser_type<char> {
   static const bool is_string_parser = true;
 };
 
+/**
+ * Parses raw data of type `D` to create `Input<D>` objects that will be
+ * used by models to render predictions.
+ *
+ * @tparam D A primitive datatype corresponding to a valid Input<D> object
+ * (ex: D == `uint8_t` is valid because ByteVector == Input<uint8_t> is a valid
+ * Input object)
+ */
 template <typename D>
 class InputParser {
  public:
@@ -55,11 +65,17 @@ class InputParser {
     // For a prediction request containing `n` inputs, there are `n - 1` split
     // indices
     int num_splits = input_header[1] - 1;
+    // The first two elements of the header indicate the type of input data
+    // and the number of content split indices. Therefore, actual splits
+    // begin at header index 2 and continue through header index `num_splits` +
+    // 2
+    int splits_begin_index = 2;
+    int splits_end_index = num_splits + 2;
     std::vector<Input<D>> inputs;
     int prev_split = 0;
-    // Iterate from the beginning of the input data content
+    // Iterate from the beginning of the input header content
     // (the first two elements of the header are metadata)
-    for (int i = 2; i < num_splits + 2; i++) {
+    for (int i = splits_begin_index; i < splits_end_index; ++i) {
       int curr_split = input_header[i];
       Input<D> input = construct_input(buffer_, prev_split, curr_split);
       inputs.push_back(input);
@@ -99,5 +115,7 @@ class InputParser {
 };
 
 }  // namespace container
+
+}  // namespace clipper
 
 #endif  // CLIPPER_CONTAINER_PARSING_HPP

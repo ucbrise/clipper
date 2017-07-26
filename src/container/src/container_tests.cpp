@@ -2,12 +2,11 @@
 
 #include <gtest/gtest.h>
 
-#include <clipper/datatypes.hpp>
 #include <container/container_parsing.hpp>
 #include <container/container_rpc.hpp>
 #include <container/datatypes.hpp>
 
-using namespace container;
+using namespace clipper::container;
 
 namespace {
 

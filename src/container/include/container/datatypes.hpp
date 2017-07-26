@@ -1,51 +1,9 @@
 #ifndef CLIPPER_DATATYPES_HPP
 #define CLIPPER_DATATYPES_HPP
 
+namespace clipper {
+
 namespace container {
-
-enum class RPCEvent {
-  SentHeartbeat = 1,
-  ReceivedHeartbeat = 2,
-  SentContainerMetadata = 3,
-  ReceivedContainerMetadata = 4,
-  SentContainerContent = 5,
-  ReceivedContainerContent = 6
-};
-
-enum class MessageType {
-  NewContainer = 0,
-  ContainerContent = 1,
-  Heartbeat = 2
-};
-
-enum class HeartbeatType { KeepAlive = 0, RequestContainerMetadata = 1 };
-
-enum class InputType {
-  Invalid = -1,
-  Bytes = 0,
-  Ints = 1,
-  Floats = 2,
-  Doubles = 3,
-  Strings = 4,
-};
-
-enum class RequestType {
-  PredictRequest = 0,
-  FeedbackRequest = 1,
-};
-
-static inline std::string get_readable_input_type(InputType type) {
-  switch (type) {
-    case InputType::Bytes: return std::string("bytes");
-    case InputType::Ints: return std::string("integers");
-    case InputType::Floats: return std::string("floats");
-    case InputType::Doubles: return std::string("doubles");
-    case InputType::Strings: return std::string("strings");
-    case InputType::Invalid:
-    default:
-      std::string("Invalid input type");
-  }
-}
 
 template <typename D>
 class Input {
@@ -68,5 +26,7 @@ typedef Input<double> DoubleVector;
 typedef Input<char> SerializableString;
 
 }  // namespace container
+
+}  // namespace clipper
 
 #endif  // CLIPPER_DATATYPES_HPP
