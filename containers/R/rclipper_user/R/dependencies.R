@@ -25,6 +25,13 @@ get_input_dependencies = function(cd_dependencies) {
 }
 
 get_file_dependencies = function(cd_dependencies) {
+  # This is a bit hacky. `CodeDepends` doesn't always
+  # return the same data type. Either a class extending
+  # `list` or a class of type `S4` is returned. In the
+  # second case, it's sufficient to coerce the object to a list.
+  if(typeof(cd_dependencies) == "S4") {
+    cd_dependencies = list(cd_dependencies)
+  }
   all_file_dependencies = character()
   for(i in seq_along(cd_dependencies)) {
     file_dependencies = cd_dependencies[[i]]@files
@@ -69,15 +76,27 @@ get_all_dependencies = function(fn_name, output_path) {
     lib_deps = get_library_dependencies(cd_dependencies)
     all_library_dependencies <<- c(all_library_dependencies, lib_deps)
     
-    file_deps = get_file_dependencies(cd_dependencies)
-    if(length(file_deps) > 0) {
+    func_file_deps = get_file_dependencies(cd_dependencies)
+    if(length(func_file_deps) > 0) {
       # We can't assign a dictionary key to an empty vector,
       # so only make the assignment if we found file dependencies
-      all_file_dependencies[[func_name]] <<- file_deps
+      all_file_dependencies[[func_name]] <<- func_file_deps
     }
     
     input_deps = get_input_dependencies(cd_dependencies)
     all_input_dependencies <<- c(all_input_dependencies, input_deps)
+    
+    for(i in seq_along(input_deps)) {
+      input_name = input_deps[i]
+      input = get(input_name)
+      input_cd_deps = CodeDepends::getInputs(input)
+      input_file_deps = get_file_dependencies(input_cd_deps)
+      if(length(input_file_deps) > 0) {
+        # We can't assign a dictionary key to an empty vector,
+        # so only make the assignment if we found file dependencies
+        all_file_dependencies[[input_name]] <<- input_file_deps
+      }
+    }
     
     func_deps = get_function_dependencies(cd_dependencies)
     for(i in seq_along(func_deps)) {
@@ -94,7 +113,6 @@ get_all_dependencies = function(fn_name, output_path) {
   get_deps(fn_name)
   
   all_library_dependencies = unique(all_library_dependencies)
-  all_file_dependencies = unique(all_file_dependencies)
   all_input_dependencies = unique(all_input_dependencies)
   all_function_dependencies = unique(all_function_dependencies)
   
@@ -133,47 +151,52 @@ serialize_function = function(fn_name, output_dir_path) {
   # Given a file path, this can be used to match its extension (including '.' character)
   file_extension_pattern = "(\\.[^.]+)$"
   file_dependency_count = 0
-  file_dependent_func_names = names(file_dependencies)
+  file_dependent_object_names = names(file_dependencies)
   
   # A mapping from a function name to a list of
   # tuples (2 element vector). Each tuple contains
   # the original path of a file dependency and its
   # new name after copying
-  func_file_dependency_map = list()
+  object_file_dependency_map = list()
   
-  all_functions = c(function_dependencies, fn_name)
-  for(i in seq_along(all_functions)) {
-    function_name = all_functions[i]
-    if(function_name %in% file_dependent_func_names) {
-      func_file_deps = file_dependencies[[function_name]]
-      func_file_map_entries = list()
-      for(i in seq_along(func_file_deps)) {
-        file_dep_path = func_file_deps[i]
+  all_dependent_objects = c(function_dependencies, fn_name, input_dependencies)
+  for(i in seq_along(all_dependent_objects)) {
+    obj_name = all_dependent_objects[i]
+    if(obj_name %in% file_dependent_object_names) {
+      obj_file_deps = file_dependencies[[obj_name]]
+      obj_file_map_entries = list()
+      for(i in seq_along(obj_file_deps)) {
+        file_dep_path = obj_file_deps[i]
         if(dir.exists(file_dep_path)) {
           # The dependency is a directory containing multiple files. Recursively copy it.
           dest_dir_name = sprintf("dir_%d", file_dependency_count)
           dest_dir_path = file.path(output_dir_path, dest_dir_name)
           dir.create(dest_dir_path)
           file.copy(file.path(file_dep_path, "."), dest_dir_path, recursive=TRUE)
-          func_file_map_entries[[i]] = c(file_dep_path, dest_dir_name)
+          obj_file_map_entries[[i]] = c(file_dep_path, dest_dir_name)
           log_step("Recursively copied dependent directory", file_dep_path)
         } else {
           # The dependency is a single file. Copy it, preserving its extension.
           file_dep_extension = stringr::str_extract(file_dep_path, file_extension_pattern)
+          if(is.na(file_dep_extension)) {
+            # It's possible that the file has no extension. 
+            # This avoids incorrectly appending `NA` to the file
+            file_dep_extension = ""
+          }
           dest_file_name = sprintf("file_%d%s", file_dependency_count, file_dep_extension)
           dest_file_path = file.path(output_dir_path, dest_file_name)
           file.copy(file_dep_path, dest_file_path)
-          func_file_map_entries[[i]] = c(file_dep_path, dest_file_name)
+          obj_file_map_entries[[i]] = c(file_dep_path, dest_file_name)
           log_step("Copied dependent file", file_dep_path)
         }
         file_dependency_count = file_dependency_count + 1
       }
-      func_file_dependency_map[[function_name]] = func_file_map_entries
+      object_file_dependency_map[[obj_name]] = obj_file_map_entries
     }
   }
   
-  func_files_map_out_path = file.path(output_dir_path, "func_files_map.rds")
-  saveRDS(func_file_dependency_map, func_files_map_out_path)
+  object_files_map_out_path = file.path(output_dir_path, "obj_files_map.rds")
+  saveRDS(object_file_dependency_map, object_files_map_out_path)
   
   model_fn_out_path = file.path(output_dir_path, "fn.rds")
   save(list=fn_name, file=model_fn_out_path)

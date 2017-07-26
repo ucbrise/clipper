@@ -67,41 +67,41 @@ for(i in seq_along(model_data_file_names)) {
   }
 }
 
-func_file_dependency_map <- tryCatch({
-  map_path = file.path(opts$model_data_path, "func_files_map.rds")
+object_file_dependency_map <- tryCatch({
+  map_path = file.path(opts$model_data_path, "obj_files_map.rds")
   readRDS(map_path)
 }, error = function(e) {
   print(e)
   stop("Failed to load function-to-files dependency mapping")
 })
 
-file_dependent_func_names = names(func_file_dependency_map)
-for(i in seq_along(file_dependent_func_names)) {
-  func_name = file_dependent_func_names[i]
-  func_file_deps = func_file_dependency_map[[i]]
-  for(j in seq_along(func_file_deps)) {
-    original_dep_path = func_file_deps[[j]][1]
-    new_dep_name = func_file_deps[[j]][2]
+file_dependent_object_names = names(object_file_dependency_map)
+for(i in seq_along(file_dependent_object_names)) {
+  obj_name = file_dependent_object_names[i]
+  obj_file_deps = object_file_dependency_map[[i]]
+  for(j in seq_along(obj_file_deps)) {
+    original_dep_path = obj_file_deps[[j]][1]
+    new_dep_name = obj_file_deps[[j]][2]
     new_dep_path = file.path(opts$model_data_path, new_dep_name)
     
-    # Convert the original function into a list containing its
+    # Convert the original object into a list containing its
     # lines of code
-    original_func_string = deparse(get(func_name))
+    original_obj_string = deparse(get(obj_name))
     
     # Replace all code occurrences of the old file dependency path
     # with the path to the copied dependency included within
     # the model data directory
-    new_func_lines = lapply(original_func_string, function(str) {
+    new_obj_lines = lapply(original_obj_string, function(str) {
       return(gsub(original_dep_path, new_dep_path, str))
     })
-    new_func_string = paste(new_func_lines, collapse="\n")
+    new_obj_string = paste(new_obj_lines, collapse="\n")
     
-    # Convert the new code back into a function
-    new_func = eval(parse(text=new_func_string))
+    # Convert the new code back into an object
+    new_obj = eval(parse(text=new_obj_string))
     
-    # Reassign the variable referencing the original function 
+    # Reassign the variable referencing the original object
     # to reference the new one
-    assign(func_name, new_func)
+    assign(obj_name, new_obj)
   }
 }
 
