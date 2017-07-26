@@ -200,7 +200,7 @@ serialize_function = function(fn_name, output_dir_path) {
   
   model_fn_out_path = file.path(output_dir_path, "fn.rds")
   save(list=fn_name, file=model_fn_out_path)
-  log_step("Serialized model function", fn_name)
+  print("Serialized model function!")
   
   print("Done!")
 }

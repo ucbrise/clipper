@@ -6,7 +6,7 @@ RUN wget http://download.zeromq.org/zeromq-4.1.4.tar.gz && tar -xvf zeromq-4.1.4
 
 RUN cd zeromq-4.1.4 && ./autogen.sh && ./configure && make install
 
-COPY rclipper_docker rclipper
+COPY rclipper_serve rclipper_serve
 COPY serve_model.R serve_model.R
 COPY r_container_entrypoint.sh entrypoint.sh
 
@@ -16,8 +16,9 @@ ENV CLIPPER_PORT=7000
 RUN R -e "install.packages('jsonlite', repos='http://cran.us.r-project.org')" 
 RUN R -e "install.packages('Rcpp', repos='http://cran.us.r-project.org')"
 RUN R -e "install.packages('optparse', repos='http://cran.us.r-project.org')"
+RUN R -e "install.packages('stringr', repos='http://cran.us.r-project.org')"
 
-RUN R CMD INSTALL rclipper
+RUN R CMD INSTALL rclipper_serve
 
 ENTRYPOINT ["/entrypoint.sh"]
 

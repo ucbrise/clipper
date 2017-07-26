@@ -105,5 +105,5 @@ for(i in seq_along(file_dependent_object_names)) {
   }
 }
 
-rclipper::serve_model(opts$model_name, strtoi(opts$model_version), opts$clipper_ip, 
+rclipper.serve::serve_model(opts$model_name, strtoi(opts$model_version), opts$clipper_ip, 
                       strtoi(opts$clipper_port), get(model_function_name), model_input_type)

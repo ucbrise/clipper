@@ -1,14 +1,15 @@
-Package: rclipper
+Package: rclipper.serve
 Type: Package
-Title: What the Package Does in One 'Title
-     Case' Line
+Title: Serves R models locally with Clipper
 Version: 1.0
 Date: 2017-07-15
-Author: Your Name
-Maintainer: Your Name <your@email.com>
-Description: One paragraph description of
-     what the package does as one or more
-     full sentences.
+Author: Corey Zumar
+Maintainer: Dan Crankshaw <crankshaw@eecs.berkeley.edu>
+
+Description: Serves R models locally with Clipper. This uses
+Rcpp as an interface between Clipper’s C++ model container and
+user-defined R functions.
+
 License: GPL (>= 2)
 Imports: 
 	Rcpp (>= 0.12.11),

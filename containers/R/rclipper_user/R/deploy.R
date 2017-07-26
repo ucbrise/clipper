@@ -15,7 +15,8 @@ deploy_model = function(model_name, model_version, clipper_ip, model_function, s
   full_model_path = file.path(base_model_path, relative_model_path)
   dir.create(full_model_path)
   
-  serialize_function(model_function, full_model_path)
+  model_function_name = as.character(substitute(model_function))
+  serialize_function(model_function_name, full_model_path)
   
   sample_input_path = file.path(base_model_path, relative_model_path, "sample.rds")
   saveRDS(sample_input, sample_input_path)

@@ -4,6 +4,8 @@ Title: Containerizes and deploys R closures to Clipper
 Version: 1.0
 Date: 2017-07-22
 Author: Corey Zumar
-Maintainer: Who to complain to <yourfault@somewhere.net>
-Description: More about what it does (maybe more than one line)
+Maintainer: Dan Crankshaw <crankshaw@eecs.berkeley.edu>
+Description: Containerizes and deploys R closures to Clipper
 License: Apache 2.0
+Imports:
+	CodeDepends (>= 0.5-3)
