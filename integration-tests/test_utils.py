@@ -84,7 +84,7 @@ def create_connection(service, cleanup=True, start_clipper=True):
             ['minikube', 'ip'],
             stdout=subprocess.PIPE).communicate()[0].strip()
         logging.info("K8s IP: %s" % k8s_ip)
-        cm = K8sContainerManager(k8s_ip, redis_port=find_unbound_port())
+        cm = K8sContainerManager(k8s_ip)
         cl = ClipperConnection(cm)
         if cleanup:
             cl.stop_all()
@@ -97,6 +97,8 @@ def create_connection(service, cleanup=True, start_clipper=True):
         logging.info("Starting Clipper")
         cl.start_clipper()
         time.sleep(1)
+    else:
+        cl.connect()
     return cl
 
 

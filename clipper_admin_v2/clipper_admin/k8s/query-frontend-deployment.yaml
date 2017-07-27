@@ -17,7 +17,8 @@ spec:
       - args:
         - "--redis_ip=$(REDIS_SERVICE_HOST)"
         - "--redis_port=$(REDIS_SERVICE_PORT)"
-        image: clipper/query_frontend:latest
+        # image: clipper/query_frontend:test
+        image: clipper/query_frontend:test
         name: query-frontend
         ports:
         - containerPort: 7000

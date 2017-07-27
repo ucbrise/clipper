@@ -11,6 +11,7 @@ import json
 import yaml
 import docker
 import os
+import time
 
 logger = logging.getLogger(__name__)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
@@ -25,6 +26,8 @@ def _pass_conflicts():
         if body['reason'] == 'AlreadyExists':
             logger.info("{} already exists, skipping!".format(body['details']))
             pass
+        else:
+            raise e
 
 
 class K8sContainerManager(ContainerManager):
@@ -43,7 +46,8 @@ class K8sContainerManager(ContainerManager):
         configuration.assert_hostname = False
         self._k8s_v1 = client.CoreV1Api()
         self._k8s_beta = client.ExtensionsV1beta1Api()
-        if registry is None:
+        self.registry = registry
+        if self.registry is None:
             self.registry = self._start_registry()
         else:
             # TODO: test with provided registry
@@ -91,7 +95,8 @@ class K8sContainerManager(ContainerManager):
                         os.path.join(cur_dir,
                                      'kube-registry-daemon-set.yaml'))),
                 namespace='kube-system')
-        return "localhost:5000"
+        # TODO: this is wrong
+        return "{}:5000".format(self.k8s_ip)
 
     def start_clipper(self):
         """Deploys Clipper to the k8s cluster and exposes the frontends as services."""
@@ -111,9 +116,9 @@ class K8sContainerManager(ContainerManager):
                     open(
                         os.path.join(cur_dir, '{}-service.yaml'.format(name))))
                 body["spec"]["ports"][0]["port"] = self.redis_port
-                service = self._k8s_v1.create_namespaced_service(
+                self._k8s_v1.create_namespaced_service(
                     body=body, namespace='default')
-                self.redis_ip = service.spec.cluster_ip
+            time.sleep(10)
         for name in ['mgmt-frontend', 'query-frontend']:
             with _pass_conflicts():
                 body = yaml.load(
@@ -138,13 +143,18 @@ class K8sContainerManager(ContainerManager):
         self.connect()
 
     def connect(self):
-        self.clipper_management_port = self._k8s_v1.read_namespaced_service(
-            name="mgmt-frontend", namespace='default').spec.ports[0].node_port
+        mgmt_frontend_ports = self._k8s_v1.read_namespaced_service(
+            name="mgmt-frontend", namespace='default').spec.ports
+        for p in mgmt_frontend_ports:
+            if p.name == "1338":
+                self.clipper_management_port = p.node_port
+                logger.info("Setting Clipper mgmt port to {}".format(self.clipper_management_port))
         query_frontend_ports = self._k8s_v1.read_namespaced_service(
             name="query-frontend", namespace='default').spec.ports
         for p in query_frontend_ports:
             if p.name == "1337":
                 self.clipper_query_port = p.node_port
+                logger.info("Setting Clipper query port to {}".format(self.clipper_query_port))
             elif p.name == "7000":
                 self.clipper_rpc_port = p.node_port
 
@@ -265,6 +275,8 @@ class K8sContainerManager(ContainerManager):
             logger.warn("Exception deleting k8s deployments: {}".format(e))
 
     def stop_clipper(self):
+        # TODO: fix this function
+        pass
         """Stops all Clipper resources.
 
         WARNING: Data stored on an in-cluster Redis deployment will be lost!

@@ -37,9 +37,10 @@ def deploy_model(clipper_conn, name, version):
 
     num_preds = 25
     num_defaults = 0
+    addr = clipper_conn.get_query_addr()
     for i in range(num_preds):
         response = requests.post(
-            "http://localhost:1337/%s/predict" % app_name,
+            "http://%s/%s/predict" % (addr, app_name),
             headers=headers,
             data=json.dumps({
                 'input': list(np.random.random(30))
@@ -60,8 +61,9 @@ def create_and_test_app(clipper_conn, name, num_models):
     clipper_conn.register_application(app_name, "doubles", "default_pred", 100000)
     time.sleep(1)
 
+    addr = clipper_conn.get_query_addr()
     response = requests.post(
-        "http://localhost:1337/%s/predict" % app_name,
+        "http://%s/%s/predict" % (addr, app_name),
         headers=headers,
         data=json.dumps({
             'input': list(np.random.random(30))
@@ -91,6 +93,9 @@ if __name__ == "__main__":
     try:
         clipper_conn = create_connection(
             SERVICE, cleanup=True, start_clipper=True)
+        time.sleep(10)
+        print(clipper_conn.cm.get_query_addr())
+        print(clipper_conn.inspect_instance())
         try:
             logger.info("Running integration test with %d apps and %d models" %
                         (num_apps, num_models))

@@ -2,9 +2,11 @@ from __future__ import absolute_import, division, print_function
 import logging
 import docker
 import requests
+from requests.exceptions import RequestException
 import json
 import os
 from .container_manager import CONTAINERLESS_MODEL_IMAGE
+import time
 
 DEFAULT_LABEL = ["DEFAULT"]
 
@@ -22,19 +24,28 @@ class ClipperConnection(object):
     def start_clipper(self):
         try:
             self.cm.start_clipper()
+            while True:
+                try:
+                    url = "http://{host}/metrics".format(host=self.cm.get_query_addr())
+                    requests.get(url, timeout=5)
+                    break
+                except RequestException as e:
+                    logger.info("Clipper still initializing.")
+                    time.sleep(1)
             logger.info("Clipper is running")
             return True
         except ClipperException as e:
             logger.info(e.msg)
             return False
 
-    def connect(self, clipper_public_hostname):
-        self.cm.connect(clipper_public_hostname)
+    def connect(self):
+        self.cm.connect()
 
     def register_application(self, name, input_type, default_output,
                              slo_micros):
         url = "http://{host}/admin/add_app".format(
             host=self.cm.get_admin_addr())
+        print(url)
         req_json = json.dumps({
             "name": name,
             "input_type": input_type,
@@ -91,7 +102,7 @@ class ClipperConnection(object):
             repo = "{registry}/{image}".format(registry=registry, image=image)
         return repo
 
-    def deploy_model(self,
+    def build_and_deploy_model(self,
                      name,
                      version,
                      input_type,
@@ -123,6 +134,16 @@ class ClipperConnection(object):
 
         logger.info("Pushing model Docker image to {}".format(repo))
         docker_client.images.push(repository=repo)
+        self.deploy_model(name, version, input_type, repo, labels, num_replicas)
+
+
+    def deploy_model(self,
+                     name,
+                     version,
+                     input_type,
+                     repo,
+                     labels=None,
+                     num_replicas=1):
         self.cm.deploy_model(
             name, version, input_type, repo, num_replicas=num_replicas)
         logger.info("Registering model with Clipper")
@@ -226,8 +247,7 @@ class ClipperConnection(object):
             Returns a list of information about all apps registered to Clipper.
             If no apps are registered with Clipper, an empty list is returned.
         """
-        url = "http://{host}/admin/get_all_applications".format(
-            host=self.cm.get_admin_addr())
+        url = "http://{host}/admin/get_all_applications".format(host=self.cm.get_admin_addr())
         req_json = json.dumps({"verbose": verbose})
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
@@ -504,6 +524,9 @@ class ClipperConnection(object):
         assert current_version is not None
         self.cm.stop_models(
             model_name=model_name, keep_version=current_version)
+
+    def get_query_addr(self):
+        return self.cm.get_query_addr()
 
     def stop_deployed_models(self):
         self.cm.stop_models()
