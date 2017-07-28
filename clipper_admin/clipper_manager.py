@@ -1310,60 +1310,41 @@ class Clipper:
             if the container could not be added.
         """
         model_version = str(model_version)
-        with hide("warnings", "output", "running"):
-            # Look up model info in Redis
-            if self.redis_ip == DEFAULT_REDIS_IP:
-                redis_host = self.host
-            else:
-                redis_host = self.redis_ip
-            model_key = "{mn}:{mv}".format(mn=model_name, mv=model_version)
-            result = local(
-                "redis-cli -h {host} -p {redis_port} -n {db} hgetall {key}".
-                format(
-                    host=redis_host,
-                    redis_port=self.redis_port,
-                    key=model_key,
-                    db=REDIS_MODEL_DB_NUM),
-                capture=True)
-            print(result)
+        model_metadata = self.get_model_info(model_name, model_version)
+        if model_metadata == None:
+            # Model not found
+            warn("Trying to add container but model {mn}:{mv} not in "
+                 "Redis".format(mn=model_name, mv=model_version))
+            return False
 
-            if "empty list or set" in result.stdout:
-                # Model not found
-                warn("Trying to add container but model {mn}:{mv} not in "
-                     "Redis".format(mn=model_name, mv=model_version))
-                return False
+        image_name = model_metadata["container_name"]
+        model_data_path = model_metadata["model_data_path"]
+        model_input_type = model_metadata["input_type"]
+        restart_policy = 'always' if self.restart_containers else 'no'
 
-            splits = result.stdout.split("\n")
-            model_metadata = dict([(splits[i].strip(), splits[i + 1].strip())
-                                   for i in range(0, len(splits), 2)])
-            image_name = model_metadata["container_name"]
-            model_data_path = model_metadata["model_data_path"]
-            model_input_type = model_metadata["input_type"]
-            restart_policy = 'always' if self.restart_containers else 'no'
-
-            if image_name != EXTERNALLY_MANAGED_MODEL:
-                # Start container
-                add_container_cmd = (
-                    "docker run -d --network={nw} --restart={restart_policy} -v {path}:/model:ro "
-                    "-e \"CLIPPER_MODEL_NAME={mn}\" -e \"CLIPPER_MODEL_VERSION={mv}\" "
-                    "-e \"CLIPPER_IP=query_frontend\" -e \"CLIPPER_INPUT_TYPE={mip}\" -l \"{clipper_label}\" -l \"{mv_label}\" "
-                    "{image}".format(
-                        path=model_data_path,
-                        nw=DOCKER_NW,
-                        image=image_name,
-                        mn=model_name,
-                        mv=model_version,
-                        mip=model_input_type,
-                        clipper_label=CLIPPER_DOCKER_LABEL,
-                        mv_label="%s=%s:%s" % (CLIPPER_MODEL_CONTAINER_LABEL,
-                                               model_name, model_version),
-                        restart_policy=restart_policy))
-                result = self._execute_root(add_container_cmd)
-                return result.return_code == 0
-            else:
-                print("Cannot start containers for externally managed model %s"
-                      % model_name)
-                return False
+        if image_name != EXTERNALLY_MANAGED_MODEL:
+            # Start container
+            add_container_cmd = (
+                "docker run -d --network={nw} --restart={restart_policy} -v {path}:/model:ro "
+                "-e \"CLIPPER_MODEL_NAME={mn}\" -e \"CLIPPER_MODEL_VERSION={mv}\" "
+                "-e \"CLIPPER_IP=query_frontend\" -e \"CLIPPER_INPUT_TYPE={mip}\" -l \"{clipper_label}\" -l \"{mv_label}\" "
+                "{image}".format(
+                    path=model_data_path,
+                    nw=DOCKER_NW,
+                    image=image_name,
+                    mn=model_name,
+                    mv=model_version,
+                    mip=model_input_type,
+                    clipper_label=CLIPPER_DOCKER_LABEL,
+                    mv_label="%s=%s:%s" % (CLIPPER_MODEL_CONTAINER_LABEL,
+                                           model_name, model_version),
+                    restart_policy=restart_policy))
+            result = self._execute_root(add_container_cmd)
+            return result.return_code == 0
+        else:
+            print("Cannot start containers for externally managed model %s" %
+                  model_name)
+            return False
 
     def get_clipper_logs(self):
         """Copies the logs from all Docker containers running on the host machine
