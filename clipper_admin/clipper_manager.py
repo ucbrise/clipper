@@ -1342,8 +1342,8 @@ class Clipper:
             result = self._execute_root(add_container_cmd)
             return result.return_code == 0
         else:
-            print("Cannot start containers for externally managed model %s"
-                  % model_name)
+            print("Cannot start containers for externally managed model %s" %
+                  model_name)
             return False
 
     def get_clipper_logs(self):
