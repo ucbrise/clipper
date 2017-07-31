@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 def deploy_model(clipper_conn, name, version):
     app_name = "%s_app" % name
     model_name = "%s_model" % name
-    clipper_conn.deploy_model(
+    clipper_conn.build_and_deploy_model(
         model_name,
         version,
         "doubles",

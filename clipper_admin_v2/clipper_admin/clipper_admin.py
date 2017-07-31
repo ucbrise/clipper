@@ -129,7 +129,7 @@ class ClipperConnection(object):
         else:
             docker_client = docker.from_env()
         logger.info(
-            "Building model Docker image at {}".format(model_data_path))
+            "Building model Docker image with model data from {}".format(model_data_path))
         docker_client.images.build(path=model_data_path, tag=repo)
 
         logger.info("Pushing model Docker image to {}".format(repo))

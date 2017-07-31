@@ -1,16 +1,10 @@
-# Clipper
-
-[![Build Status](https://amplab.cs.berkeley.edu/jenkins/buildStatus/icon?job=Clipper)](https://amplab.cs.berkeley.edu/jenkins/job/Clipper/) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-
-
-<img src="images/clipper-logo.png" width="200">
-
-
-## What is Clipper?
+Clipper?
+================
 
 Clipper is a prediction serving system that sits between user-facing applications and a wide range of commonly used machine learning models and frameworks. Learn more about Clipper and view documentation at our website <http://clipper.ai>.
 
-## What does Clipper do?
+What does Clipper do?
+---------------------
 
 * Clipper **simplifies integration of machine learning techniques** into user facing applications by providing a simple standard REST interface for prediction and feedback across a wide range of commonly used machine learning frameworks.  *Clipper makes product teams happy.*
 
@@ -23,31 +17,34 @@ Clipper is a prediction serving system that sits between user-facing application
 
 * Clipper **improves prediction accuracy** by introducing state-of-the-art bandit and ensemble methods to intelligently select and combine predictions and achieve real-time personalization across machine learning frameworks.  *Clipper makes users happy.*
 
-## Kubernetes quickstart
+Kubernetes quickstart
+----------------------
 
 Dependencies:
 
- * [Docker](https://www.docker.com/)
- * [Minikube](https://github.com/kubernetes/minikube/releases)
-
-```bash
-# (Optional) create clipper virtualenv
-pyenv virtualenv 2.7.11 clipper
-pyenv local clipper
-
-# install clipper_admin (editable)
-pip install -e .
-
-# start minikube
-minikube start --insecure-registry localhost:5000
-
-# start docker and configure to use minikube registry
-systemctl start docker
-eval $(minikube docker-env)
-```
+ * `Docker <https://www.docker.com/>`_
+ * `Minikube <https://github.com/kubernetes/minikube/releases>`_
 
 
-## Quickstart
+::
+      # (Optional) create clipper virtualenv
+      pyenv virtualenv 2.7.11 clipper
+      pyenv local clipper
+
+      # install clipper_admin (editable)
+      pip install -e .
+
+      # start minikube
+      minikube start --insecure-registry localhost:5000
+
+      # start docker and configure to use minikube registry
+      systemctl start docker
+      eval $(minikube docker-env)
+
+
+
+Quickstart
+----------
 
 
 **Note: This quickstart requires [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/).**

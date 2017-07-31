@@ -6,9 +6,13 @@ with open('README.rst') as f:
 with open('LICENSE.txt') as f:
     license = f.read()
 
+version = {}
+with open("clipper_admin/version.py") as fp:
+    exec(fp.read(), version)
+
 setup(
     name='clipper_admin',
-    version='0.2.0-rc1',
+    version=version['__version__'],
     description='Admin commands for the Clipper prediction-serving system',
     long_description=readme,
     maintainer='Dan Crankshaw',

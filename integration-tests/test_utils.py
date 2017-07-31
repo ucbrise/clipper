@@ -88,6 +88,8 @@ def create_connection(service, cleanup=True, start_clipper=True):
         cl = ClipperConnection(cm)
         if cleanup:
             cl.stop_all()
+            # Give k8s some time to clean up
+            time.sleep(10)
     else:
         msg = "{cm} is a currently unsupported container manager".format(
             cm=service)

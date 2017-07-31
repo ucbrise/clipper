@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 from ..container_manager import (ContainerManager, CLIPPER_DOCKER_LABEL,
                                  CLIPPER_MODEL_CONTAINER_LABEL)
 
+from ..version import __version__
 from contextlib import contextmanager
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
@@ -95,8 +96,8 @@ class K8sContainerManager(ContainerManager):
                         os.path.join(cur_dir,
                                      'kube-registry-daemon-set.yaml'))),
                 namespace='kube-system')
-        # TODO: this is wrong
-        return "{}:5000".format(self.k8s_ip)
+        # return "{}:5000".format(self.k8s_ip)
+        return "localhost:5000"
 
     def start_clipper(self):
         """Deploys Clipper to the k8s cluster and exposes the frontends as services."""
@@ -132,6 +133,8 @@ class K8sContainerManager(ContainerManager):
                     ]
                     body["spec"]["template"]["spec"]["containers"][0][
                         "args"] = args
+                body["spec"]["template"]["spec"]["containers"][0][
+                    "image"] += ":{}".format(__version__)
                 self._k8s_beta.create_namespaced_deployment(
                     body=body, namespace='default')
             with _pass_conflicts():
@@ -276,7 +279,6 @@ class K8sContainerManager(ContainerManager):
 
     def stop_clipper(self):
         # TODO: fix this function
-        pass
         """Stops all Clipper resources.
 
         WARNING: Data stored on an in-cluster Redis deployment will be lost!
@@ -293,7 +295,25 @@ class K8sContainerManager(ContainerManager):
                 self._k8s_v1.delete_namespaced_service(
                     namespace='default', name=service_name)
 
+            # for deployment in self._k8s_beta.list_namespaced_deployment(
+            #         namespace='default',
+            #         label_selector=CLIPPER_DOCKER_LABEL).items:
+            #     deployment_name = deployment.metadata.name
+            #     logger.info("Deployment name: {}".format(deployment_name))
+            #     self._k8s_beta.delete_namespaced_deployment(
+            #         namespace='default',
+            #         name=deployment_name,
+            #         body=client.V1DeleteOptions()
+            #         # propagation_policy="foreground"
+            #     )
+
             self._k8s_beta.delete_collection_namespaced_deployment(
+                namespace='default', label_selector=CLIPPER_DOCKER_LABEL)
+
+            self._k8s_beta.delete_collection_namespaced_replica_set(
+                namespace='default', label_selector=CLIPPER_DOCKER_LABEL)
+
+            self._k8s_v1.delete_collection_namespaced_replication_controller(
                 namespace='default', label_selector=CLIPPER_DOCKER_LABEL)
 
             self._k8s_v1.delete_collection_namespaced_pod(

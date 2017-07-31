@@ -11,6 +11,9 @@ DOCKER_NETWORK_NAME = "clipper_network"
 
 logger = logging.getLogger(__name__)
 
+from ..version import __version__
+
+
 
 class DockerContainerManager(ContainerManager):
     def __init__(self,
@@ -103,7 +106,7 @@ class DockerContainerManager(ContainerManager):
         cmd = "--redis_ip={redis_ip} --redis_port={redis_port}".format(
             redis_ip=self.redis_ip, redis_port=self.redis_port)
         self.docker_client.containers.run(
-            'clipper/management_frontend:latest',
+            'clipper/management_frontend:{}'.format(__version__),
             cmd,
             name=self.mgmt_frontend_name,
             ports={
@@ -112,7 +115,7 @@ class DockerContainerManager(ContainerManager):
             },
             **self.extra_container_kwargs)
         self.docker_client.containers.run(
-            'clipper/query_frontend:latest',
+            'clipper/query_frontend:{}',
             cmd,
             name=self.query_frontend_name,
             ports={
