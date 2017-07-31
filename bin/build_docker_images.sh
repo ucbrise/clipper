@@ -10,10 +10,11 @@ unset CDPATH
 # the script.
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-tag=$(<../VERSION.txt)
 
 # Let the user start this script from anywhere in the filesystem.
 cd $DIR/..
+
+tag=$(<VERSION.txt)
 
 # Build the Clipper Docker images
 time docker build -t clipper/query_frontend:$tag -f QueryFrontendDockerfile ./

@@ -10,10 +10,11 @@ unset CDPATH
 # the script.
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-tag=$(<../VERSION.txt)
 
 # Let the user start this script from anywhere in the filesystem.
 cd $DIR/..
+
+tag=$(<VERSION.txt)
 
 if [ $# -ne 0 ] && [ $# -ne 4 ]; then
 	echo "Usage: ./build_bench_docker_images.sh [<sum_model_name> <sum_model_version> <noop_model_name> <noop_model_version>]"
