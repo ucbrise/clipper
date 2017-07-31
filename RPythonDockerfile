@@ -1,4 +1,5 @@
-FROM clipper/py-rpc:latest
+ARG CODE_VERSION=0.2-rc1
+FROM clipper/py-rpc:${CODE_VERSION}
 
 ## Use Debian unstable via pinning -- new style via APT::Default-Release
 RUN echo "deb http://http.debian.net/debian sid main" > /etc/apt/sources.list.d/debian-unstable.list \

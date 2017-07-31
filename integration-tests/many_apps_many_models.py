@@ -7,6 +7,7 @@ import numpy as np
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/.." % cur_dir))
 from clipper_admin import Clipper
+from clipper_admin import __version__ as code_version
 import time
 import subprocess32 as subprocess
 import pprint
@@ -71,7 +72,7 @@ def deploy_model(clipper, name, version):
         model_name,
         version,
         fake_model_data,
-        "clipper/noop-container",
+        "clipper/noop-container:{}".format(code_version),
         "doubles",
         num_containers=1)
     time.sleep(10)
