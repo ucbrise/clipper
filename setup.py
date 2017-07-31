@@ -3,7 +3,7 @@ from setuptools import find_packages
 
 version = {}
 with open("clipper_admin/version.py") as fp:
-    exec(fp.read(), version)
+    exec (fp.read(), version)
 
 setup(
     name='clipper_admin',

@@ -911,7 +911,8 @@ class Clipper:
                 num_containers=1)
         """
 
-        default_python_container = "clipper/python-container:{}".format(code_version)
+        default_python_container = "clipper/python-container:{}".format(
+            code_version)
         serialization_dir = self._save_python_function(name, predict_function)
 
         # Deploy function
