@@ -10,6 +10,7 @@ cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath('%s/../' % cur_dir))
 sys.path.insert(0, os.path.abspath('%s/util_direct_import/' % cur_dir))
 import clipper_admin.clipper_manager
+from clipper_admin import __version__ as code_version
 Clipper = clipper_admin.clipper_manager.Clipper
 import random
 import socket
@@ -144,10 +145,10 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertGreaterEqual(len(metrics), 1)
 
     def test_model_deploys_successfully(self):
-        # Initialize a support vector classifier 
+        # Initialize a support vector classifier
         # that will be deployed to a no-op container
         model_data = svm.SVC()
-        container_name = "clipper/noop-container"
+        container_name = "clipper/noop-container:{}".format(code_version)
         input_type = "doubles"
         result = self.clipper_inst.deploy_model(
             self.deploy_model_name, self.deploy_model_version, model_data,
@@ -157,7 +158,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             self.deploy_model_name, self.deploy_model_version)
         self.assertIsNotNone(model_info)
         running_containers_output = self.clipper_inst._execute_standard(
-            "docker ps -q --filter \"ancestor=clipper/noop-container\"")
+            "docker ps -q --filter \"ancestor=clipper/noop-container:{}\"".
+            format(code_version))
         self.assertIsNotNone(running_containers_output)
         self.assertGreaterEqual(len(running_containers_output), 1)
 
@@ -166,18 +168,19 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
                                                  self.deploy_model_version)
         self.assertTrue(result)
         running_containers_output = self.clipper_inst._execute_standard(
-            "docker ps -q --filter \"ancestor=clipper/noop-container\"")
+            "docker ps -q --filter \"ancestor=clipper/noop-container:{}\"".
+            format(code_version))
         self.assertIsNotNone(running_containers_output)
         split_output = running_containers_output.split("\n")
         self.assertGreaterEqual(len(split_output), 2)
 
     def test_remove_inactive_containers_succeeds(self):
-        # Initialize a support vector classifier 
+        # Initialize a support vector classifier
         # that will be deployed to a no-op container
         self.clipper_inst.stop_all()
         self.clipper_inst.start()
         model_data = svm.SVC()
-        container_name = "clipper/noop-container"
+        container_name = "clipper/noop-container:{}".format(code_version)
         input_type = "doubles"
         model_name = "remove_inactive_test_model"
         result = self.clipper_inst.deploy_model(
@@ -189,7 +192,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             num_containers=2)
         self.assertTrue(result)
         running_containers_output = self.clipper_inst._execute_standard(
-            "docker ps -q --filter \"ancestor=clipper/noop-container\"")
+            "docker ps -q --filter \"ancestor=clipper/noop-container:{}\"".
+            format(code_version))
         self.assertIsNotNone(running_containers_output)
         num_running_containers = running_containers_output.split("\n")
         print("RUNNING CONTAINERS: %s" % str(num_running_containers))
@@ -204,7 +208,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             num_containers=3)
         self.assertTrue(result)
         running_containers_output = self.clipper_inst._execute_standard(
-            "docker ps -q --filter \"ancestor=clipper/noop-container\"")
+            "docker ps -q --filter \"ancestor=clipper/noop-container:{}\"".
+            format(code_version))
         self.assertIsNotNone(running_containers_output)
         num_running_containers = running_containers_output.split("\n")
         self.assertEqual(len(num_running_containers), 5)
@@ -213,7 +218,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             model_name)
         self.assertEqual(num_containers_removed, 2)
         running_containers_output = self.clipper_inst._execute_standard(
-            "docker ps -q --filter \"ancestor=clipper/noop-container\"")
+            "docker ps -q --filter \"ancestor=clipper/noop-container:{}\"".
+            format(code_version))
         self.assertIsNotNone(running_containers_output)
         num_running_containers = running_containers_output.split("\n")
         self.assertEqual(len(num_running_containers), 3)
@@ -231,7 +237,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertIsNotNone(model_info)
 
         running_containers_output = self.clipper_inst._execute_standard(
-            "docker ps -q --filter \"ancestor=clipper/python-container\"")
+            "docker ps -q --filter \"ancestor=clipper/python-container:{}\"".
+            format(code_version))
         self.assertIsNotNone(running_containers_output)
         self.assertGreaterEqual(len(running_containers_output), 1)
 
@@ -254,7 +261,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertIsNotNone(linked_models)
 
         running_containers_output = self.clipper_inst._execute_standard(
-            "docker ps -q --filter \"ancestor=clipper/python-container\"")
+            "docker ps -q --filter \"ancestor=clipper/python-container:{}\"".
+            format(code_version))
         self.assertIsNotNone(running_containers_output)
         self.assertGreaterEqual(len(running_containers_output), 2)
 
@@ -298,10 +306,10 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
     def test_deployed_and_linked_model_queried_successfully(self):
         model_version = 1
-        # Initialize a support vector classifier 
+        # Initialize a support vector classifier
         # that will be deployed to a no-op container
         model_data = svm.SVC()
-        container_name = "clipper/noop-container"
+        container_name = "clipper/noop-container:{}".format(code_version)
         result = self.clipper_inst.deploy_model(
             self.model_name_2, model_version, model_data, container_name,
             self.input_type)

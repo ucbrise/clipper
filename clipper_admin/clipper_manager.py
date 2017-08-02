@@ -18,6 +18,7 @@ from .cloudpickle import CloudPickler
 import time
 import re
 from .module_dependency import ModuleDependencyAnalyzer
+from .version import version as code_version
 
 __all__ = ['Clipper']
 
@@ -99,7 +100,7 @@ class Clipper:
         on `host` at the port specified by `redis_port`.
     redis_persistence_path : string, optional
         The directory path to which redis data should be persisted. The directory
-        should not already exist. If unspecified, redis will not persist data to disk. 
+        should not already exist. If unspecified, redis will not persist data to disk.
     restart_containers : bool, optional
         If true, containers will restart on failure. If false, containers
         will not restart automatically.
@@ -134,7 +135,7 @@ class Clipper:
                         '--redis_port=%d' % self.redis_port
                     ],
                     'image':
-                    'clipper/management_frontend:latest',
+                    'clipper/management_frontend:{}'.format(code_version),
                     'ports': [
                         '%d:%d' % (CLIPPER_MANAGEMENT_PORT,
                                    CLIPPER_MANAGEMENT_PORT)
@@ -150,7 +151,7 @@ class Clipper:
                     ],
                     'depends_on': ['mgmt_frontend'],
                     'image':
-                    'clipper/query_frontend:latest',
+                    'clipper/query_frontend:{}'.format(code_version),
                     'ports': [
                         '%d:%d' % (CLIPPER_RPC_PORT, CLIPPER_RPC_PORT),
                         '%d:%d' % (CLIPPER_QUERY_PORT, CLIPPER_QUERY_PORT)
@@ -340,8 +341,8 @@ class Clipper:
             by the end of the latency objective.
         slo_micros : int
             The query latency objective for the application in microseconds.
-            This is the processing latency between Clipper receiving a request 
-            and sending a response. It does not account for network latencies 
+            This is the processing latency between Clipper receiving a request
+            and sending a response. It does not account for network latencies
             before a request is received or after a response is sent.
 
             If Clipper cannot process a query within the latency objective,
@@ -830,7 +831,7 @@ class Clipper:
             print("Error saving spark model: %s" % e)
             raise e
 
-        pyspark_container = "clipper/pyspark-container"
+        pyspark_container = "clipper/pyspark-container:{}".format(code_version)
 
         # extract the pyspark class name. This will be something like
         # pyspark.mllib.classification.LogisticRegressionModel
@@ -910,7 +911,8 @@ class Clipper:
                 num_containers=1)
         """
 
-        default_python_container = "clipper/python-container"
+        default_python_container = "clipper/python-container:{}".format(
+            code_version)
         serialization_dir = self._save_python_function(name, predict_function)
 
         # Deploy function
@@ -970,8 +972,8 @@ class Clipper:
             The version to assign the deployed model.
         slo_micros : int
             The query latency objective for the application in microseconds.
-            This is the processing latency between Clipper receiving a request 
-            and sending a response. It does not account for network latencies 
+            This is the processing latency between Clipper receiving a request
+            and sending a response. It does not account for network latencies
             before a request is received or after a response is sent.
         labels : list of str, optional
             A list of strings annotating the model.
@@ -1037,8 +1039,8 @@ class Clipper:
             The version to assign the deployed model.
         slo_micros : int, optional
             The query latency objective for the application in microseconds.
-            This is the processing latency between Clipper receiving a request 
-            and sending a response. It does not account for network latencies 
+            This is the processing latency between Clipper receiving a request
+            and sending a response. It does not account for network latencies
             before a request is received or after a response is sent.
         labels : list of str, optional
             A list of strings annotating the model.
@@ -1242,7 +1244,7 @@ class Clipper:
         If packages listed in specified conda environment file have conflicting dependencies,
         this function will warn the user and return False.
 
-        If there are no conflicting package dependencies, existence of the packages in the 
+        If there are no conflicting package dependencies, existence of the packages in the
         container conda channel is tested. The user is warned about any missing packages.
         All existing conda packages are written out to `conda_dep_fname` and pip packages
         to `pip_dep_fname` in the given `directory`. This function then returns True.
@@ -1588,13 +1590,13 @@ class Clipper:
             The name to assign this model.
         version : int
             The version to assign this model.
-        model_data : 
+        model_data :
             The trained model to add to Clipper.The type has to be rpy2.robjects.vectors.ListVector,
             this is how python's rpy2 encapsulates any given R model.This model will be loaded
             into the Clipper model container and provided as an argument to the
-            predict function each time it is called. 
+            predict function each time it is called.
         labels : list of str, optional
-            A set of strings annotating the model 
+            A set of strings annotating the model
         num_containers : int, optional
             The number of replicas of the model to create. More replicas can be
             created later as well. Defaults to 1.
@@ -1606,7 +1608,7 @@ class Clipper:
         base = importr('base')
 
         input_type = "strings"
-        container_name = "clipper/r_python_container"
+        container_name = "clipper/r_python_container:{}".format(code_version)
 
         with hide("warnings", "output", "running"):
             fname = name.replace("/", "_")

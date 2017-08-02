@@ -1,9 +1,13 @@
 from distutils.core import setup
 from setuptools import find_packages
+import os
+
+with open(os.path.abspath("VERSION.txt"), 'r') as f:
+    version = f.read().strip()
 
 setup(
     name='clipper_admin',
-    version='0.1.2',
+    version=version,
     description='Admin commands for the Clipper prediction-serving system',
     author='Dan Crankshaw',
     author_email='crankshaw@cs.berkeley.edu',

@@ -1,4 +1,5 @@
-FROM clipper/py-rpc:latest
+ARG CODE_VERSION=0.2-rc1
+FROM clipper/py-rpc:${CODE_VERSION}
 
 COPY containers/python/sum_container.py /container/
 COPY bench/setup_sum_bench_docker.sh /bench/
