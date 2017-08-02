@@ -158,7 +158,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             self.deploy_model_name, self.deploy_model_version)
         self.assertIsNotNone(model_info)
         running_containers_output = self.clipper_inst._execute_standard(
-            "docker ps -q --filter \"ancestor=clipper/noop-container\"")
+            "docker ps -q --filter \"ancestor=clipper/noop-container:{}\"".format(code_version))
         self.assertIsNotNone(running_containers_output)
         self.assertGreaterEqual(len(running_containers_output), 1)
 
@@ -167,7 +167,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
                                                  self.deploy_model_version)
         self.assertTrue(result)
         running_containers_output = self.clipper_inst._execute_standard(
-            "docker ps -q --filter \"ancestor=clipper/noop-container\"")
+            "docker ps -q --filter \"ancestor=clipper/noop-container:{}\"".format(code_version))
         self.assertIsNotNone(running_containers_output)
         split_output = running_containers_output.split("\n")
         self.assertGreaterEqual(len(split_output), 2)
@@ -190,7 +190,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             num_containers=2)
         self.assertTrue(result)
         running_containers_output = self.clipper_inst._execute_standard(
-            "docker ps -q --filter \"ancestor=clipper/noop-container\"")
+            "docker ps -q --filter \"ancestor=clipper/noop-container:{}\"".format(code_version))
         self.assertIsNotNone(running_containers_output)
         num_running_containers = running_containers_output.split("\n")
         print("RUNNING CONTAINERS: %s" % str(num_running_containers))
@@ -205,7 +205,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             num_containers=3)
         self.assertTrue(result)
         running_containers_output = self.clipper_inst._execute_standard(
-            "docker ps -q --filter \"ancestor=clipper/noop-container\"")
+            "docker ps -q --filter \"ancestor=clipper/noop-container:{}\"".format(code_version))
         self.assertIsNotNone(running_containers_output)
         num_running_containers = running_containers_output.split("\n")
         self.assertEqual(len(num_running_containers), 5)
@@ -214,7 +214,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             model_name)
         self.assertEqual(num_containers_removed, 2)
         running_containers_output = self.clipper_inst._execute_standard(
-            "docker ps -q --filter \"ancestor=clipper/noop-container\"")
+            "docker ps -q --filter \"ancestor=clipper/noop-container:{}\"".format(code_version))
         self.assertIsNotNone(running_containers_output)
         num_running_containers = running_containers_output.split("\n")
         self.assertEqual(len(num_running_containers), 3)
@@ -232,7 +232,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertIsNotNone(model_info)
 
         running_containers_output = self.clipper_inst._execute_standard(
-            "docker ps -q --filter \"ancestor=clipper/python-container\"")
+            "docker ps -q --filter \"ancestor=clipper/python-container:{}\"".format(code_version))
         self.assertIsNotNone(running_containers_output)
         self.assertGreaterEqual(len(running_containers_output), 1)
 
@@ -255,7 +255,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertIsNotNone(linked_models)
 
         running_containers_output = self.clipper_inst._execute_standard(
-            "docker ps -q --filter \"ancestor=clipper/python-container\"")
+            "docker ps -q --filter \"ancestor=clipper/python-container:{}\"".format(code_version))
         self.assertIsNotNone(running_containers_output)
         self.assertGreaterEqual(len(running_containers_output), 2)
 

@@ -206,7 +206,7 @@ if __name__ == "__main__":
             _test_deployed_model(app_and_model_name, version)
 
             version += 1
-            deploy_and_test_model(sc, clipper, lr_model, version, False,
+            deploy_and_test_model(sc, clipper, lr_model, version, input_type,
                                   predict_with_local_modules)
 
         except BenchmarkException as e:

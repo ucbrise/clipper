@@ -1,5 +1,5 @@
 import sys
 import os
-
-with open(os.path.abspath("../VERSION.txt"), 'r') as f:
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+with open(os.path.abspath(os.path.join(cur_dir, "../VERSION.txt")), 'r') as f:
     version = f.read().strip()
