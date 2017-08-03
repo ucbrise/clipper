@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
-from ..container_manager import (ContainerManager, CLIPPER_DOCKER_LABEL,
-                                 CLIPPER_MODEL_CONTAINER_LABEL)
-from ..clipper_admin import ClipperException
+from ..container_manager import (create_model_container_label, ContainerManager,
+                                 CLIPPER_DOCKER_LABEL, CLIPPER_MODEL_CONTAINER_LABEL)
+from ..exceptions import ClipperException
 
 from contextlib import contextmanager
 from kubernetes import client, config
@@ -199,7 +199,7 @@ class K8sContainerManager(ContainerManager):
                             'metadata': {
                                 'labels': {
                                     CLIPPER_MODEL_CONTAINER_LABEL:
-                                    "{}:{}".format(name, version),
+                                    create_model_container_label(name, version),
                                     CLIPPER_DOCKER_LABEL: ""
                                 }
                             },

@@ -1,4 +1,5 @@
 import abc
+from .exceptions import ClipperException
 
 # Constants
 CLIPPER_INTERNAL_QUERY_PORT = 1337
@@ -8,6 +9,25 @@ CLIPPER_INTERNAL_RPC_PORT = 7000
 CLIPPER_DOCKER_LABEL = "ai.clipper.container.label"
 CLIPPER_MODEL_CONTAINER_LABEL = "ai.clipper.model_container.label"
 CONTAINERLESS_MODEL_IMAGE = "NO_CONTAINER"
+
+# NOTE: we use '_' as the delimiter because k8s allows the use
+# '_' in labels but not in deployment names. We force model names and
+# versions to be compliant with both limitations, so this gives us an extra
+# character to use when creating labels.
+_MODEL_CONTAINER_LABEL_DELIMITER = "_"
+
+
+def create_model_container_label(name, version):
+    return "{name}{delim}{version}".format(name=name,
+                                           delim=_MODEL_CONTAINER_LABEL_DELIMITER,
+                                           version=version)
+
+
+def parse_model_container_label(label):
+    splits = label.split(_MODEL_CONTAINER_LABEL_DELIMITER)
+    if len(splits) != 2:
+        raise ClipperException("Unable to parse model container label {}".format(label))
+    return splits
 
 
 class ContainerManager(object):

@@ -7,6 +7,9 @@ import json
 import os
 from .container_manager import CONTAINERLESS_MODEL_IMAGE
 import time
+import re
+
+from .exceptions import ClipperException
 
 from .version import __version__
 
@@ -15,8 +18,31 @@ DEFAULT_LABEL = ["DEFAULT"]
 logger = logging.getLogger(__name__)
 
 
-class ClipperException(Exception):
-    pass
+
+
+# deploy_regex_str = "[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\Z"
+deploy_regex_str = "[a-z0-9]([-a-z0-9]*[a-z0-9])?\Z"
+deployment_regex = re.compile(deploy_regex_str)
+
+# NOTE: Label regex should match a superset of the strings that match deployment_regex
+# label_regex = re.compile("(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?\Z")
+
+
+def validate_versioned_model_name(name, version):
+    if deployment_regex.match(name) is None:
+        raise ClipperException("Invalid value: {name}: a model name must be a valid DNS-1123 "
+                               " subdomain. It must consist of lower case "
+                               "alphanumeric characters, '-' or '.', and must start and end with "
+                               "an alphanumeric character (e.g. 'example.com', regex used for "
+                               "validation is '{reg}'"
+                               .format(name=name, reg=deploy_regex_str))
+    if deployment_regex.match(version) is None:
+        raise ClipperException("Invalid value: {version}: a model version must be a valid DNS-1123 "
+                               " subdomain. It must consist of lower case "
+                               "alphanumeric characters, '-' or '.', and must start and end with "
+                               "an alphanumeric character (e.g. 'example.com', regex used for "
+                               "validation is '{reg}'"
+                               .format(version=version, reg=deploy_regex_str))
 
 
 class ClipperConnection(object):
@@ -108,6 +134,8 @@ class ClipperConnection(object):
                                num_replicas=1):
         version = str(version)
 
+        validate_versioned_model_name(name, version)
+
         with open(model_data_path + '/Dockerfile', 'w') as f:
             f.write("FROM {container_name}\nCOPY . /model/.\n".format(
                 container_name=base_image))
@@ -140,6 +168,8 @@ class ClipperConnection(object):
                      image,
                      labels=None,
                      num_replicas=1):
+
+        validate_versioned_model_name(name, version)
         self.cm.deploy_model(
             name, version, input_type, image, num_replicas=num_replicas)
         logger.info("Registering model with Clipper")

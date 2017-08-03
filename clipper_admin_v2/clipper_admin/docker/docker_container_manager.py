@@ -2,10 +2,10 @@ from __future__ import absolute_import, division, print_function
 import docker
 import logging
 import os
-from ..container_manager import (
-    ContainerManager, CLIPPER_DOCKER_LABEL, CLIPPER_MODEL_CONTAINER_LABEL,
-    CLIPPER_INTERNAL_RPC_PORT, CLIPPER_INTERNAL_QUERY_PORT,
-    CLIPPER_INTERNAL_MANAGEMENT_PORT)
+from ..container_manager import (create_model_container_label, parse_model_container_label,
+                                 ContainerManager, CLIPPER_DOCKER_LABEL,
+                                 CLIPPER_MODEL_CONTAINER_LABEL, CLIPPER_INTERNAL_RPC_PORT,
+                                 CLIPPER_INTERNAL_QUERY_PORT, CLIPPER_INTERNAL_MANAGEMENT_PORT)
 
 DOCKER_NETWORK_NAME = "clipper_network"
 
@@ -138,10 +138,9 @@ class DockerContainerManager(ContainerManager):
         containers = self.docker_client.containers.list(
             filters={
                 "label":
-                "{key}={name}:{version}".format(
+                "{key}={val}".format(
                     key=CLIPPER_MODEL_CONTAINER_LABEL,
-                    name=name,
-                    version=version)
+                    val=create_model_container_label(name, version))
             })
         return containers
 
@@ -168,8 +167,7 @@ class DockerContainerManager(ContainerManager):
             "CLIPPER_INPUT_TYPE": input_type,
         }
         self.extra_container_kwargs["labels"][
-            CLIPPER_MODEL_CONTAINER_LABEL] = "{name}:{version}".format(
-                name=name, version=version)
+            CLIPPER_MODEL_CONTAINER_LABEL] = create_model_container_label(name, version)
         self.docker_client.containers.run(
             repo, environment=env_vars, **self.extra_container_kwargs)
 
@@ -221,8 +219,7 @@ class DockerContainerManager(ContainerManager):
         containers = self.docker_client.containers.list(
             filters={"label": CLIPPER_MODEL_CONTAINER_LABEL})
         for c in containers:
-            c_name, c_version = c.labels[CLIPPER_MODEL_CONTAINER_LABEL].split(
-                ":")
+            c_name, c_version = parse_model_container_label(c.labels[CLIPPER_MODEL_CONTAINER_LABEL])
             if model_name is not None and model_name == c_name:
                 if keep_version is None or keep_version != c_version:
                     c.stop()

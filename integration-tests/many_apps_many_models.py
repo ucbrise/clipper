@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 
 
 def deploy_model(clipper_conn, name, version):
-    app_name = "%s_app" % name
-    model_name = "%s_model" % name
+    app_name = "%s-app" % name
+    model_name = "%s-model" % name
     clipper_conn.build_and_deploy_model(
         model_name,
         version,
@@ -34,7 +34,7 @@ def deploy_model(clipper_conn, name, version):
     time.sleep(10)
 
     clipper_conn.link_model_to_app(app_name, model_name)
-    time.sleep(5)
+    time.sleep(30)
 
     num_preds = 25
     num_defaults = 0
@@ -58,7 +58,7 @@ def deploy_model(clipper_conn, name, version):
 
 
 def create_and_test_app(clipper_conn, name, num_models):
-    app_name = "%s_app" % name
+    app_name = "%s-app" % name
     clipper_conn.register_application(app_name, "doubles", "default_pred", 100000)
     time.sleep(1)
 
@@ -101,7 +101,7 @@ if __name__ == "__main__":
             logger.info("Running integration test with %d apps and %d models" %
                         (num_apps, num_models))
             for a in range(num_apps):
-                create_and_test_app(clipper_conn, "app_%s" % a, num_models)
+                create_and_test_app(clipper_conn, "testapp%s" % a, num_models)
             logger.info(clipper_conn.get_clipper_logs())
             log_clipper_state(clipper_conn)
             logger.info("SUCCESS")
