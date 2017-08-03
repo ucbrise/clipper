@@ -11,6 +11,7 @@ cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin_v2" % cur_dir))
 from clipper_admin import ClipperConnection, DockerContainerManager, K8sContainerManager
 from clipper_admin.container_manager import CLIPPER_DOCKER_LABEL
+from clipper_admin.exceptions import ClipperException
 
 if sys.version < '3':
     import subprocess32 as subprocess
@@ -103,7 +104,10 @@ def create_connection(service, cleanup=True, start_clipper=True):
             mgmt_frontend_image="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/management_frontend:0.2-rc1")
         time.sleep(1)
     else:
-        cl.connect()
+        try:
+            cl.connect()
+        except ClipperException as e:
+            pass
     return cl
 
 

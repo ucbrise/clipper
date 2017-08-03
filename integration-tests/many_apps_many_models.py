@@ -34,25 +34,34 @@ def deploy_model(clipper_conn, name, version):
     time.sleep(10)
 
     clipper_conn.link_model_to_app(app_name, model_name)
-    time.sleep(30)
 
-    num_preds = 25
-    num_defaults = 0
-    addr = clipper_conn.get_query_addr()
-    for i in range(num_preds):
-        response = requests.post(
-            "http://%s/%s/predict" % (addr, app_name),
-            headers=headers,
-            data=json.dumps({
-                'input': list(np.random.random(30))
-            }))
-        result = response.json()
-        if response.status_code == requests.codes.ok and result["default"]:
-            num_defaults += 1
-    if num_defaults > 0:
-        logger.error("Error: %d/%d predictions were default" % (num_defaults,
+    success = False
+    num_tries = 0
+
+    while not success and num_tries < 5:
+        time.sleep(30)
+        num_preds = 25
+        num_defaults = 0
+        addr = clipper_conn.get_query_addr()
+        for i in range(num_preds):
+            response = requests.post(
+                "http://%s/%s/predict" % (addr, app_name),
+                headers=headers,
+                data=json.dumps({
+                    'input': list(np.random.random(30))
+                }))
+            result = response.json()
+            if response.status_code == requests.codes.ok and result["default"]:
+                num_defaults += 1
+        if num_defaults > 0:
+            logger.error("Error: %d/%d predictions were default" % (num_defaults,
                                                                 num_preds))
-    if num_defaults > num_preds / 2:
+        if num_defaults < num_preds / 2:
+            success = True
+
+        num_tries += 1
+
+    if not success:
         raise BenchmarkException("Error querying APP %s, MODEL %s:%d" %
                                  (app_name, model_name, version))
 

@@ -158,20 +158,26 @@ class K8sContainerManager(ContainerManager):
         self.external_node_hosts = external_node_hosts
         logger.info("Found {num_nodes} nodes: {nodes}".format(num_nodes=len(external_node_hosts),
                                                               nodes=", ".join(external_node_hosts)))
-        mgmt_frontend_ports = self._k8s_v1.read_namespaced_service(
-            name="mgmt-frontend", namespace='default').spec.ports
-        for p in mgmt_frontend_ports:
-            if p.name == "1338":
-                self.clipper_management_port = p.node_port
-                logger.info("Setting Clipper mgmt port to {}".format(self.clipper_management_port))
-        query_frontend_ports = self._k8s_v1.read_namespaced_service(
-            name="query-frontend", namespace='default').spec.ports
-        for p in query_frontend_ports:
-            if p.name == "1337":
-                self.clipper_query_port = p.node_port
-                logger.info("Setting Clipper query port to {}".format(self.clipper_query_port))
-            elif p.name == "7000":
-                self.clipper_rpc_port = p.node_port
+        try:
+            mgmt_frontend_ports = self._k8s_v1.read_namespaced_service(
+                name="mgmt-frontend", namespace='default').spec.ports
+            for p in mgmt_frontend_ports:
+                if p.name == "1338":
+                    self.clipper_management_port = p.node_port
+                    logger.info("Setting Clipper mgmt port to {}".format(
+                        self.clipper_management_port))
+            query_frontend_ports = self._k8s_v1.read_namespaced_service(
+                name="query-frontend", namespace='default').spec.ports
+            for p in query_frontend_ports:
+                if p.name == "1337":
+                    self.clipper_query_port = p.node_port
+                    logger.info("Setting Clipper query port to {}".format(self.clipper_query_port))
+                elif p.name == "7000":
+                    self.clipper_rpc_port = p.node_port
+        except ApiException as e:
+            logging.warn("Exception connecting to Clipper Kubernetes cluster: {}".format(e))
+            raise ClipperException("Could not connect to Clipper Kubernetes cluster. "
+                                   "Reason: {}".format(e))
 
     def deploy_model(self, name, version, input_type, image, num_replicas=1):
         """Deploys a versioned model to a k8s cluster.
@@ -261,10 +267,14 @@ class K8sContainerManager(ContainerManager):
 
         for pod in self._k8s_v1.list_namespaced_pod(
                 namespace='default',
-                label_selector=CLIPPER_MODEL_CONTAINER_LABEL).items:
-            for c in pod.status.container_statuses:
-                log_file_name = "image_{image}:container_{id}.log".format(
-                    image=c.image_id, id=c.container_id)
+                label_selector=CLIPPER_DOCKER_LABEL).items:
+            for i, c in enumerate(pod.status.container_statuses):
+                # log_file_name = "image_{image}:container_{id}.log".format(
+                #     image=c.image_id, id=c.container_id)
+                log_file_name = "{pod}_{num}.log".format(pod=pod.metadata.name, num=str(i))
+                log_file_alt = "{cname}.log".format(cname=c.name)
+                logger.info("log file name: {}".format(log_file_name))
+                logger.info("log alt file name: {}".format(log_file_alt))
                 log_file = os.path.join(logging_dir, log_file_name)
                 with open(log_file, "w") as lf:
                     lf.write(
