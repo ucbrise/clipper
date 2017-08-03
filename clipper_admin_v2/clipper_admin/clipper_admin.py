@@ -8,6 +8,8 @@ import os
 from .container_manager import CONTAINERLESS_MODEL_IMAGE
 import time
 
+from .version import __version__
+
 DEFAULT_LABEL = ["DEFAULT"]
 
 logger = logging.getLogger(__name__)
@@ -21,9 +23,11 @@ class ClipperConnection(object):
     def __init__(self, container_manager):
         self.cm = container_manager
 
-    def start_clipper(self):
+    def start_clipper(self,
+                      query_frontend_image='clipper/query_frontend:{}'.format(__version__),
+                      mgmt_frontend_image='clipper/management_frontend:{}'.format(__version__)):
         try:
-            self.cm.start_clipper()
+            self.cm.start_clipper(query_frontend_image, mgmt_frontend_image)
             while True:
                 try:
                     url = "http://{host}/metrics".format(host=self.cm.get_query_addr())
@@ -93,24 +97,15 @@ class ClipperConnection(object):
             logger.error(msg)
             raise ClipperException(msg)
 
-    def _resolve_docker_repo(self, image, registry):
-        if registry is None:
-            registry = self.cm.get_registry()
-        if registry is None:
-            repo = image
-        else:
-            repo = "{registry}/{image}".format(registry=registry, image=image)
-        return repo
-
     def build_and_deploy_model(self,
-                     name,
-                     version,
-                     input_type,
-                     model_data_path,
-                     base_image,
-                     labels=None,
-                     registry=None,
-                     num_replicas=1):
+                               name,
+                               version,
+                               input_type,
+                               model_data_path,
+                               base_image,
+                               labels=None,
+                               container_registry=None,
+                               num_replicas=1):
         version = str(version)
 
         with open(model_data_path + '/Dockerfile', 'w') as f:
@@ -121,43 +116,44 @@ class ClipperConnection(object):
         # NOTE: DOCKER_API_VERSION (set by `minikube docker-env`) must be same
         # version as docker registry server
 
-        image_name = "{name}:{version}".format(name=name, version=version)
-        repo = self._resolve_docker_repo(image_name, registry)
-        if "DOCKER_API_VERSION" in os.environ:
-            docker_client = docker.from_env(
-                version=os.environ["DOCKER_API_VERSION"])
-        else:
-            docker_client = docker.from_env()
+        image = "{name}:{version}".format(name=name, version=version)
+        if container_registry is not None:
+            image = "{reg}/{image}".format(reg=container_registry, image=image)
+        # if "DOCKER_API_VERSION" in os.environ:
+        #     docker_client = docker.from_env(
+        #         version=os.environ["DOCKER_API_VERSION"])
+        # else:
+        docker_client = docker.from_env()
         logger.info(
             "Building model Docker image with model data from {}".format(model_data_path))
-        docker_client.images.build(path=model_data_path, tag=repo)
+        docker_client.images.build(path=model_data_path, tag=image)
 
-        logger.info("Pushing model Docker image to {}".format(repo))
-        docker_client.images.push(repository=repo)
-        self.deploy_model(name, version, input_type, repo, labels, num_replicas)
-
+        logger.info("Pushing model Docker image to {}".format(image))
+        # if container_registry is not None:
+        docker_client.images.push(repository=image)
+        self.deploy_model(name, version, input_type, image, labels, num_replicas)
 
     def deploy_model(self,
                      name,
                      version,
                      input_type,
-                     repo,
+                     image,
                      labels=None,
                      num_replicas=1):
         self.cm.deploy_model(
-            name, version, input_type, repo, num_replicas=num_replicas)
+            name, version, input_type, image, num_replicas=num_replicas)
         logger.info("Registering model with Clipper")
         self.register_model(
-            name, version, input_type, repo=repo, labels=labels)
+            name, version, input_type, image=image, labels=labels)
         logger.info("Done deploying!")
 
-    def register_model(self, name, version, input_type, repo=None,
+    def register_model(self, name, version, input_type, image=None,
                        labels=None):
         version = str(version)
         url = "http://{host}/admin/add_model".format(
             host=self.cm.get_admin_addr())
-        if repo is None:
-            repo = CONTAINERLESS_MODEL_IMAGE
+        if image is None:
+            image = CONTAINERLESS_MODEL_IMAGE
         if labels is None:
             labels = DEFAULT_LABEL
         req_json = json.dumps({
@@ -165,7 +161,7 @@ class ClipperConnection(object):
             "model_version": version,
             "labels": labels,
             "input_type": input_type,
-            "container_name": repo,
+            "container_name": image,
             "model_data_path": "DEPRECATED",
         })
         headers = {'Content-type': 'application/json'}

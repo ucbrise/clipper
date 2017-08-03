@@ -14,7 +14,9 @@ class ContainerManager(object):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def start_clipper(self):
+    def start_clipper(self,
+                      query_frontend_image,
+                      mgmt_frontend_image):
         return
 
     @abc.abstractmethod
@@ -22,7 +24,7 @@ class ContainerManager(object):
         return
 
     @abc.abstractmethod
-    def deploy_model(self, name, version, input_type, repo):
+    def deploy_model(self, name, version, input_type, image):
         return
 
     @abc.abstractmethod
@@ -30,7 +32,7 @@ class ContainerManager(object):
         return
 
     @abc.abstractmethod
-    def set_num_replicas(self, name, version, input_type, repo):
+    def set_num_replicas(self, name, version, input_type, image):
         return
 
     @abc.abstractmethod
@@ -71,11 +73,6 @@ class ContainerManager(object):
     @abc.abstractmethod
     def stop_clipper(self):
         pass
-
-    def get_registry(self):
-        """Return a reference to the Docker registry created by the ContainerManager
-        """
-        return None
 
     @abc.abstractmethod
     def get_admin_addr(self):

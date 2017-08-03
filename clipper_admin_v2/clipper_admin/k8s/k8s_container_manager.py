@@ -1,8 +1,8 @@
 from __future__ import absolute_import, division, print_function
 from ..container_manager import (ContainerManager, CLIPPER_DOCKER_LABEL,
                                  CLIPPER_MODEL_CONTAINER_LABEL)
+from ..clipper_admin import ClipperException
 
-from ..version import __version__
 from contextlib import contextmanager
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
@@ -10,7 +10,6 @@ from kubernetes.client import configuration
 import logging
 import json
 import yaml
-import docker
 import os
 import time
 
@@ -32,14 +31,12 @@ def _pass_conflicts():
 
 
 class K8sContainerManager(ContainerManager):
-    def __init__(self, k8s_ip,
+    def __init__(self, k8s_api_ip,
                  redis_ip=None,
                  redis_port=6379,
-                 registry=None,
-                 registry_username=None,
-                 registry_password=None):
+                 start_local_registry=False):
 
-        self.k8s_ip = k8s_ip
+        self.k8s_api_ip = k8s_api_ip
         self.redis_ip = redis_ip
         self.redis_port = redis_port
 
@@ -47,25 +44,24 @@ class K8sContainerManager(ContainerManager):
         configuration.assert_hostname = False
         self._k8s_v1 = client.CoreV1Api()
         self._k8s_beta = client.ExtensionsV1beta1Api()
-        self.registry = registry
-        if self.registry is None:
-            self.registry = self._start_registry()
-        else:
-            # TODO: test with provided registry
-            self.registry = registry
-            if registry_username is not None and registry_password is not None:
-                if "DOCKER_API_VERSION" in os.environ:
-                    self.docker_client = docker.from_env(
-                        version=os.environ["DOCKER_API_VERSION"])
-                else:
-                    self.docker_client = docker.from_env()
-                logger.info("Logging in to {registry} as {user}".format(
-                    registry=registry, user=registry_username))
-                login_response = self.docker_client.login(
-                    username=registry_username,
-                    password=registry_password,
-                    registry=registry)
-                logger.info(login_response)
+        if start_local_registry:
+            self._start_registry()
+        # else:
+        #     # TODO: test with provided registry
+        #     self.registry = registry
+        #     if registry_username is not None and registry_password is not None:
+        #         if "DOCKER_API_VERSION" in os.environ:
+        #             self.docker_client = docker.from_env(
+        #                 version=os.environ["DOCKER_API_VERSION"])
+        #         else:
+        #             self.docker_client = docker.from_env()
+        #         logger.info("Logging in to {registry} as {user}".format(
+        #             registry=registry, user=registry_username))
+        #         login_response = self.docker_client.login(
+        #             username=registry_username,
+        #             password=registry_password,
+        #             registry=registry)
+        #         logger.info(login_response)
 
     def _start_registry(self):
         """
@@ -96,10 +92,12 @@ class K8sContainerManager(ContainerManager):
                         os.path.join(cur_dir,
                                      'kube-registry-daemon-set.yaml'))),
                 namespace='kube-system')
-        # return "{}:5000".format(self.k8s_ip)
-        return "localhost:5000"
+        # return "{}:5000".format(self.k8s_api_ip)
+        # return "localhost:5000"
 
-    def start_clipper(self):
+    def start_clipper(self,
+                      query_frontend_image,
+                      mgmt_frontend_image):
         """Deploys Clipper to the k8s cluster and exposes the frontends as services."""
         logger.info("Initializing Clipper services to k8s cluster")
         # if an existing Redis service isn't provided, start one
@@ -120,7 +118,8 @@ class K8sContainerManager(ContainerManager):
                 self._k8s_v1.create_namespaced_service(
                     body=body, namespace='default')
             time.sleep(10)
-        for name in ['mgmt-frontend', 'query-frontend']:
+        for name, img in zip(['mgmt-frontend', 'query-frontend'],
+                             [mgmt_frontend_image, query_frontend_image]):
             with _pass_conflicts():
                 body = yaml.load(
                     open(
@@ -134,7 +133,7 @@ class K8sContainerManager(ContainerManager):
                     body["spec"]["template"]["spec"]["containers"][0][
                         "args"] = args
                 body["spec"]["template"]["spec"]["containers"][0][
-                    "image"] += ":{}".format(__version__)
+                    "image"] = img
                 self._k8s_beta.create_namespaced_deployment(
                     body=body, namespace='default')
             with _pass_conflicts():
@@ -146,6 +145,19 @@ class K8sContainerManager(ContainerManager):
         self.connect()
 
     def connect(self):
+        nodes = self._k8s_v1.list_node()
+        external_node_hosts = []
+        for node in nodes.items:
+            for addr in node.status.addresses:
+                if addr.type == "ExternalDNS":
+                    external_node_hosts.append(addr.address)
+        if len(external_node_hosts) == 0:
+            msg = "Error connecting to Kubernetes cluster. No external node addresses found"
+            logger.error(msg)
+            raise ClipperException(msg)
+        self.external_node_hosts = external_node_hosts
+        logger.info("Found {num_nodes} nodes: {nodes}".format(num_nodes=len(external_node_hosts),
+                                                              nodes=", ".join(external_node_hosts)))
         mgmt_frontend_ports = self._k8s_v1.read_namespaced_service(
             name="mgmt-frontend", namespace='default').spec.ports
         for p in mgmt_frontend_ports:
@@ -161,7 +173,7 @@ class K8sContainerManager(ContainerManager):
             elif p.name == "7000":
                 self.clipper_rpc_port = p.node_port
 
-    def deploy_model(self, name, version, input_type, repo, num_replicas=1):
+    def deploy_model(self, name, version, input_type, image, num_replicas=1):
         """Deploys a versioned model to a k8s cluster.
 
         Parameters
@@ -170,35 +182,31 @@ class K8sContainerManager(ContainerManager):
             The name to assign this model.
         version : int
             The version to assign this model.
-        repo : str
+        image : str
             A docker repository path, which must be accessible by the k8s cluster.
         """
         with _pass_conflicts():
-            # TODO: handle errors where `repo` is not accessible
-            self._k8s_beta.create_namespaced_deployment(
-                body={
+            deployment_name = get_model_deployment_name(name, version)
+            body = {
                     'apiVersion': 'extensions/v1beta1',
                     'kind': 'Deployment',
                     'metadata': {
-                        'name': name +
-                        '-deployment'  # NOTE: must satisfy RFC 1123 pathname conventions
+                        "name": deployment_name
                     },
                     'spec': {
                         'replicas': num_replicas,
                         'template': {
                             'metadata': {
                                 'labels': {
-                                    CLIPPER_MODEL_CONTAINER_LABEL: '',
-                                    'model': name,
-                                    'version': str(version)
+                                    CLIPPER_MODEL_CONTAINER_LABEL:
+                                    "{}:{}".format(name, version),
+                                    CLIPPER_DOCKER_LABEL: ""
                                 }
                             },
                             'spec': {
                                 'containers': [{
-                                    'name':
-                                    name,
-                                    'image':
-                                    repo,
+                                    'name': deployment_name,
+                                    'image': image,
                                     'ports': [{
                                         'containerPort': 80
                                     }],
@@ -216,22 +224,25 @@ class K8sContainerManager(ContainerManager):
                             }
                         }
                     }
-                },
+                }
+            with open("deploy.yaml", "w") as f:
+                yaml.dump(body, f)
+            self._k8s_beta.create_namespaced_deployment(
+                body=body,
                 namespace='default')
 
     def get_num_replicas(self, name, version):
-        deployment_name = "{}-deployment".format(
-            name
-        )  # NOTE: assumes `metadata.name` can identify the model deployment.
+
+        deployment_name = get_model_deployment_name(name, version)
         response = self._k8s_beta.read_namespaced_deployments_scale(
             name=deployment_name, namespace='default')
 
         return response.spec.replicas
 
-    def set_num_replicas(self, name, version, input_type, repo, num_replicas):
-        deployment_name = "{}-deployment".format(
-            name
-        )  # NOTE: assumes `metadata.name` can identify the model deployment.
+    def set_num_replicas(self, name, version, input_type, image, num_replicas):
+
+        # NOTE: assumes `metadata.name` can identify the model deployment.
+        deployment_name = get_model_deployment_name(name, version)
 
         self._k8s_beta.patch_namespaced_deployments_scale(
             name=deployment_name,
@@ -330,8 +341,12 @@ class K8sContainerManager(ContainerManager):
 
     def get_admin_addr(self):
         return "{host}:{port}".format(
-            host=self.k8s_ip, port=self.clipper_management_port)
+            host=self.external_node_hosts[0], port=self.clipper_management_port)
 
     def get_query_addr(self):
         return "{host}:{port}".format(
-            host=self.k8s_ip, port=self.clipper_query_port)
+            host=self.external_node_hosts[0], port=self.clipper_query_port)
+
+
+def get_model_deployment_name(name, version):
+    return "{name}-{version}-deployment".format(name=name, version=version)

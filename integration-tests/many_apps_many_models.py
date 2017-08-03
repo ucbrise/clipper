@@ -29,7 +29,8 @@ def deploy_model(clipper_conn, name, version):
         "doubles",
         fake_model_data,
         "clipper/noop-container",
-        num_replicas=1)
+        num_replicas=1,
+        container_registry="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper")
     time.sleep(10)
 
     clipper_conn.link_model_to_app(app_name, model_name)

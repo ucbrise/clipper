@@ -80,9 +80,10 @@ def create_connection(service, cleanup=True, start_clipper=True):
                 filters={"label": CLIPPER_DOCKER_LABEL})
     elif service == "k8s":
         logging.info("Creating K8sContainerManager")
-        k8s_ip = subprocess.Popen(
-            ['minikube', 'ip'],
-            stdout=subprocess.PIPE).communicate()[0].strip()
+        # k8s_ip = subprocess.Popen(
+        #     ['minikube', 'ip'],
+        #     stdout=subprocess.PIPE).communicate()[0].strip()
+        k8s_ip = "https://api.cluster.clipper-k8s-testing.com"
         logging.info("K8s IP: %s" % k8s_ip)
         cm = K8sContainerManager(k8s_ip)
         cl = ClipperConnection(cm)
@@ -97,7 +98,9 @@ def create_connection(service, cleanup=True, start_clipper=True):
         raise BenchmarkException(msg)
     if start_clipper:
         logging.info("Starting Clipper")
-        cl.start_clipper()
+        cl.start_clipper(
+            query_frontend_image="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/query_frontend:0.2-rc1",
+            mgmt_frontend_image="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/management_frontend:0.2-rc1")
         time.sleep(1)
     else:
         cl.connect()
