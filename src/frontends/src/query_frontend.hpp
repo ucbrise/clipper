@@ -322,26 +322,28 @@ class RequestHandler {
             request->content.string(), name, versioned_models, policy,
             latency_slo_micros, input_type);
 
-        prediction.then([response, app_metrics](Response r) {
-          // Update metrics
-          if (r.output_is_default_) {
-            app_metrics.default_pred_ratio_->increment(1, 1);
-          } else {
-            app_metrics.default_pred_ratio_->increment(0, 1);
-          }
-          app_metrics.latency_->insert(r.duration_micros_);
-          app_metrics.num_predictions_->increment(1);
-          app_metrics.throughput_->mark(1);
+        prediction
+            .then([response, app_metrics](Response r) {
+              // Update metrics
+              if (r.output_is_default_) {
+                app_metrics.default_pred_ratio_->increment(1, 1);
+              } else {
+                app_metrics.default_pred_ratio_->increment(0, 1);
+              }
+              app_metrics.latency_->insert(r.duration_micros_);
+              app_metrics.num_predictions_->increment(1);
+              app_metrics.throughput_->mark(1);
 
-          std::string content = get_prediction_response_content(r);
-          respond_http(content, "200 OK", response);
+              std::string content = get_prediction_response_content(r);
+              respond_http(content, "200 OK", response);
 
-        }).onError([response](const std::exception& e) {
-          clipper::log_error_formatted(clipper::LOGGING_TAG_CLIPPER,
-                                       "Unexpected error: {}", e.what());
-          respond_http("An unexpected error occurred!",
-                       "500 Internal Server Error", response);
-        });
+            })
+            .onError([response](const std::exception& e) {
+              clipper::log_error_formatted(clipper::LOGGING_TAG_CLIPPER,
+                                           "Unexpected error: {}", e.what());
+              respond_http("An unexpected error occurred!",
+                           "500 Internal Server Error", response);
+            });
       } catch (const json_parse_error& e) {
         std::string error_msg =
             json_error_msg(e.what(), PREDICTION_JSON_SCHEMA);

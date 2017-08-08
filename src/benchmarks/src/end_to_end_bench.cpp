@@ -4,8 +4,8 @@
 #include <random>
 #include <vector>
 
-#include <cxxopts.hpp>
 #include <folly/futures/Future.h>
+#include <cxxopts.hpp>
 
 #include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>

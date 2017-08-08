@@ -12,8 +12,8 @@
 #include <boost/thread.hpp>
 #include <boost/thread/executors/basic_thread_pool.hpp>
 
-#include <folly/futures/Future.h>
 #include <folly/Unit.h>
+#include <folly/futures/Future.h>
 
 #include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
@@ -93,49 +93,55 @@ folly::Future<Response> QueryProcessor::predict(Query query) {
   std::shared_ptr<std::mutex> outputs_mutex = std::make_shared<std::mutex>();
   std::vector<Output> outputs;
   outputs.reserve(task_futures.size());
-  std::shared_ptr<std::vector<Output>> outputs_ptr = std::make_shared<std::vector<Output>>(std::move(outputs));
+  std::shared_ptr<std::vector<Output>> outputs_ptr =
+      std::make_shared<std::vector<Output>>(std::move(outputs));
 
   std::vector<folly::Future<folly::Unit>> wrapped_task_futures;
   for (auto it = task_futures.begin(); it < task_futures.end(); it++) {
     wrapped_task_futures.push_back(
         it->then([outputs_mutex, outputs_ptr](Output output) {
-          std::lock_guard<std::mutex> lock(*outputs_mutex);
-          outputs_ptr->push_back(output);
-        }).onError([](const std::exception& e) {
+            std::lock_guard<std::mutex> lock(*outputs_mutex);
+            outputs_ptr->push_back(output);
+          }).onError([](const std::exception& e) {
           log_error_formatted(
               LOGGING_TAG_QUERY_PROCESSOR,
               "Unexpected error while executing prediction tasks: {}",
               e.what());
-        })
-    );
+        }));
   }
 
   // TODO(czumar): Verify that handling exceptions within task_future.onError()
-  // ensures that the task_completion_future doesn't return early due to an error
+  // ensures that the task_completion_future doesn't return early due to an
+  // error
   folly::Future<folly::Unit> all_tasks_completed_future =
-      folly::collect(wrapped_task_futures).then([](std::vector<folly::Unit> /* outputs */) {});
+      folly::collect(wrapped_task_futures)
+          .then([](std::vector<folly::Unit> /* outputs */) {});
 
   std::vector<folly::Future<folly::Unit>> when_either_futures;
   when_either_futures.push_back(std::move(all_tasks_completed_future));
   when_either_futures.push_back(std::move(timer_future));
 
-  folly::Future<std::pair<size_t, folly::Try<folly::Unit>>> response_ready_future =
-      folly::collectAny(when_either_futures);
+  folly::Future<std::pair<size_t, folly::Try<folly::Unit>>>
+      response_ready_future = folly::collectAny(when_either_futures);
 
   folly::Promise<Response> response_promise;
   folly::Future<Response> response_future = response_promise.getFuture();
 
-  response_ready_future.then([outputs_ptr, outputs_mutex, num_tasks, query, query_id, selection_state, current_policy,
-                                 response_promise = std::move(response_promise), default_explanation](
-      const std::pair<size_t, folly::Try<folly::Unit>>& /* completed_future */) mutable {
+  response_ready_future.then([
+    outputs_ptr, outputs_mutex, num_tasks, query, query_id, selection_state,
+    current_policy, response_promise = std::move(response_promise),
+    default_explanation
+  ](const std::pair<size_t,
+                    folly::Try<folly::Unit>>& /* completed_future */) mutable {
     std::lock_guard<std::mutex> outputs_lock(*outputs_mutex);
-    if(outputs_ptr->empty() && num_tasks > 0 && !default_explanation) {
+    if (outputs_ptr->empty() && num_tasks > 0 && !default_explanation) {
       default_explanation =
           "Failed to retrieve a prediction response within the specified "
-              "latency SLO";
+          "latency SLO";
     }
 
-    std::pair<Output, bool> final_output = current_policy->combine_predictions(selection_state, query, *outputs_ptr);
+    std::pair<Output, bool> final_output = current_policy->combine_predictions(
+        selection_state, query, *outputs_ptr);
 
     std::chrono::time_point<std::chrono::high_resolution_clock> end =
         std::chrono::high_resolution_clock::now();
@@ -206,39 +212,46 @@ folly::Future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
   vector<folly::Future<FeedbackAck>> feedback_task_futures =
       task_executor_.schedule_feedback(std::move(feedback_tasks));
 
-  folly::Future<std::vector<Output>> all_preds_completed = folly::collect(predict_task_futures);
+  folly::Future<std::vector<Output>> all_preds_completed =
+      folly::collect(predict_task_futures);
 
-  folly::Future<std::vector<FeedbackAck>> all_feedback_completed = folly::collect(feedback_task_futures);
+  folly::Future<std::vector<FeedbackAck>> all_feedback_completed =
+      folly::collect(feedback_task_futures);
 
   // This promise gets completed after selection policy state update has
   // finished.
   folly::Promise<FeedbackAck> select_policy_update_promise;
-  folly::Future<FeedbackAck> select_policy_updated = select_policy_update_promise.getFuture();
+  folly::Future<FeedbackAck> select_policy_updated =
+      select_policy_update_promise.getFuture();
   auto state_table = get_state_table();
 
-  all_preds_completed.then([moved_promise = std::move(select_policy_update_promise), selection_state, current_policy,
-                               state_table, feedback, query_id, state_key](std::vector<Output> preds) mutable {
+  all_preds_completed.then([
+    moved_promise = std::move(select_policy_update_promise), selection_state,
+    current_policy, state_table, feedback, query_id, state_key
+  ](std::vector<Output> preds) mutable {
     auto new_selection_state = current_policy->process_feedback(
         selection_state, feedback.feedback_, preds);
     state_table->put(state_key, current_policy->serialize(new_selection_state));
     moved_promise.setValue(true);
   });
 
-  auto feedback_ack_ready_future = folly::collect(all_feedback_completed, select_policy_updated);
+  auto feedback_ack_ready_future =
+      folly::collect(all_feedback_completed, select_policy_updated);
 
   folly::Future<FeedbackAck> final_feedback_future =
-      feedback_ack_ready_future.then([](std::tuple<std::vector<FeedbackAck>, FeedbackAck> results) {
-        bool select_policy_update_result = std::get<1>(results);
-        if(!select_policy_update_result) {
-          return false;
-        }
-        for(FeedbackAck task_feedback : std::get<0>(results)) {
-          if(!task_feedback) {
-            return false;
-          }
-        }
-        return true;
-      });
+      feedback_ack_ready_future.then(
+          [](std::tuple<std::vector<FeedbackAck>, FeedbackAck> results) {
+            bool select_policy_update_result = std::get<1>(results);
+            if (!select_policy_update_result) {
+              return false;
+            }
+            for (FeedbackAck task_feedback : std::get<0>(results)) {
+              if (!task_feedback) {
+                return false;
+              }
+            }
+            return true;
+          });
 
   return final_feedback_future;
 }

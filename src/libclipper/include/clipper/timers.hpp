@@ -9,9 +9,9 @@
 #include <queue>
 #include <thread>
 
-#include <boost/thread.hpp>
-#include <folly/futures/Future.h>
 #include <folly/Unit.h>
+#include <folly/futures/Future.h>
+#include <boost/thread.hpp>
 
 #include <clipper/logging.hpp>
 
