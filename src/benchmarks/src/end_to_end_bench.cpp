@@ -9,7 +9,6 @@
 
 #include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
-#include <clipper/future.hpp>
 #include <clipper/json_util.hpp>
 #include <clipper/logging.hpp>
 #include <clipper/query_processor.hpp>

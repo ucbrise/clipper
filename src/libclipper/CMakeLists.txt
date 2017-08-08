@@ -49,7 +49,6 @@ add_executable(libclippertests EXCLUDE_FROM_ALL
     test/selection_policies_test.cpp
     test/json_util_test.cpp
     test/logging_test.cpp
-    test/future_test.cpp
     test/task_executor_test.cpp
     test/config_test.cpp
     test/base64_test.cpp)

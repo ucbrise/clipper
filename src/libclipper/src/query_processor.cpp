@@ -18,7 +18,6 @@
 #include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/exceptions.hpp>
-#include <clipper/future.hpp>
 #include <clipper/logging.hpp>
 #include <clipper/metrics.hpp>
 #include <clipper/query_processor.hpp>
