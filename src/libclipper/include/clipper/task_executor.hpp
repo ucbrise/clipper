@@ -11,6 +11,8 @@
 #include <boost/thread.hpp>
 #include <redox.hpp>
 
+#include <folly/futures/Future.h>
+
 #include <clipper/config.hpp>
 #include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
@@ -69,13 +71,13 @@ class CacheEntry {
 
   bool completed_ = false;
   Output value_;
-  std::vector<boost::promise<Output>> value_promises_;
+  std::vector<folly::Promise<Output>> value_promises_;
 };
 
 class PredictionCache {
  public:
   PredictionCache();
-  boost::future<Output> fetch(const VersionedModelId &model,
+  folly::Future<Output> fetch(const VersionedModelId &model,
                               const std::shared_ptr<Input> &input);
 
   void put(const VersionedModelId &model, const std::shared_ptr<Input> &input,
@@ -294,17 +296,17 @@ class TaskExecutor {
   TaskExecutor(TaskExecutor &&other) = default;
   TaskExecutor &operator=(TaskExecutor &&other) = default;
 
-  std::vector<boost::future<Output>> schedule_predictions(
+  std::vector<folly::Future<Output>> schedule_predictions(
       std::vector<PredictTask> tasks) {
     predictions_counter_->increment(tasks.size());
-    std::vector<boost::future<Output>> output_futures;
+    std::vector<folly::Future<Output>> output_futures;
     for (auto t : tasks) {
       // add each task to the queue corresponding to its associated model
       boost::shared_lock<boost::shared_mutex> lock(model_queues_mutex_);
       auto model_queue_entry = model_queues_.find(t.model_);
       if (model_queue_entry != model_queues_.end()) {
         output_futures.push_back(cache_.fetch(t.model_, t.input_));
-        if (!output_futures.back().is_ready()) {
+        if (!output_futures.back().isReady()) {
           t.recv_time_ = std::chrono::system_clock::now();
           model_queue_entry->second->add_task(t);
           log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
@@ -335,7 +337,7 @@ class TaskExecutor {
     return output_futures;
   }
 
-  std::vector<boost::future<FeedbackAck>> schedule_feedback(
+  std::vector<folly::Future<FeedbackAck>> schedule_feedback(
       const std::vector<FeedbackTask> tasks) {
     UNUSED(tasks);
     // TODO Implement

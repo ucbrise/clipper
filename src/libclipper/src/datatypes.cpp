@@ -8,6 +8,7 @@
 #include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/util.hpp>
+#include <clipper/logging.hpp>
 
 namespace clipper {
 
@@ -220,6 +221,7 @@ void rpc::PredictionRequest::validate_input_type(
        << get_readable_input_type(input->type())
        << " to a prediction request with input type "
        << get_readable_input_type(input_type_);
+    log_error(LOGGING_TAG_CLIPPER, ss.str());
     throw std::invalid_argument(ss.str());
   }
 }

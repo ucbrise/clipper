@@ -15,7 +15,7 @@ namespace clipper {
 
 Timer::Timer(
     std::chrono::time_point<std::chrono::high_resolution_clock> deadline,
-    boost::promise<void> completion_promise)
+    folly::Promise<folly::Unit> completion_promise)
     : deadline_(deadline), completion_promise_(std::move(completion_promise)) {}
 
 bool Timer::operator<(const Timer &rhs) const {
@@ -34,6 +34,6 @@ bool Timer::operator>=(const Timer &rhs) const {
   return deadline_ >= rhs.deadline_;
 }
 
-void Timer::expire() { completion_promise_.set_value(); }
+void Timer::expire() { completion_promise_.setValue(); }
 
 }  // namespace clipper

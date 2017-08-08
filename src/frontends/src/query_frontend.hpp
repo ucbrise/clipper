@@ -7,6 +7,8 @@
 
 #include <boost/exception_ptr.hpp>
 
+#include <folly/futures/Future.h>
+
 #include <clipper/config.hpp>
 #include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
@@ -316,24 +318,11 @@ class RequestHandler {
           }
         }
 
-        auto prediction = decode_and_handle_predict(
+        folly::Future<Response> prediction = decode_and_handle_predict(
             request->content.string(), name, versioned_models, policy,
             latency_slo_micros, input_type);
-        prediction.then([response, app_metrics](boost::future<Response> f) {
-          if (f.has_exception()) {
-            try {
-              boost::rethrow_exception(f.get_exception_ptr());
-            } catch (std::exception& e) {
-              clipper::log_error_formatted(clipper::LOGGING_TAG_CLIPPER,
-                                           "Unexpected error: {}", e.what());
-            }
-            respond_http("An unexpected error occurred!",
-                         "500 Internal Server Error", response);
-            return;
-          }
 
-          Response r = f.get();
-
+        prediction.then([response, app_metrics](Response r) {
           // Update metrics
           if (r.output_is_default_) {
             app_metrics.default_pred_ratio_->increment(1, 1);
@@ -346,6 +335,12 @@ class RequestHandler {
 
           std::string content = get_prediction_response_content(r);
           respond_http(content, "200 OK", response);
+
+        }).onError([response](const std::exception& e) {
+          clipper::log_error_formatted(clipper::LOGGING_TAG_CLIPPER,
+                                       "Unexpected error: {}", e.what());
+          respond_http("An unexpected error occurred!",
+                       "500 Internal Server Error", response);
         });
       } catch (const json_parse_error& e) {
         std::string error_msg =
@@ -391,11 +386,10 @@ class RequestHandler {
             }
           }
         }
-        auto update =
+        folly::Future<FeedbackAck> update =
             decode_and_handle_update(request->content.string(), name,
                                      versioned_models, policy, input_type);
-        update.then([response](boost::future<FeedbackAck> f) {
-          FeedbackAck ack = f.get();
+        update.then([response](FeedbackAck ack) {
           std::stringstream ss;
           ss << "Feedback received? " << ack;
           std::string content = ss.str();
@@ -485,7 +479,7 @@ class RequestHandler {
    *  "input" := [double] | [int] | [string] | [byte] | [float]
    * }
    */
-  boost::future<Response> decode_and_handle_predict(
+  folly::Future<Response> decode_and_handle_predict(
       std::string json_content, std::string name,
       std::vector<VersionedModelId> models, std::string policy,
       long latency_slo_micros, InputType input_type) {
@@ -509,7 +503,7 @@ class RequestHandler {
    *  "label" := double
    * }
    */
-  boost::future<FeedbackAck> decode_and_handle_update(
+  folly::Future<FeedbackAck> decode_and_handle_update(
       std::string json_content, std::string name,
       std::vector<VersionedModelId> models, std::string policy,
       InputType input_type) {
