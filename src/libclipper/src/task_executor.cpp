@@ -7,6 +7,7 @@
 #include <clipper/metrics.hpp>
 #include <clipper/task_executor.hpp>
 #include <clipper/util.hpp>
+#include <clipper/logging.hpp>
 
 #include <boost/thread.hpp>
 
@@ -32,7 +33,11 @@ folly::Future<Output> PredictionCache::fetch(
     if (search->second.completed_) {
       // value already in cache
       hit_ratio_->increment(1, 1);
-      return folly::makeFuture<Output>(std::move(search->second.value_));
+      // `makeFuture` takes an rvalue reference, so moving/forwarding
+      // the cache value directly would destroy it. Therefore, we use
+      // copy assignment to `value` and move the copied object instead
+      Output value = search->second.value_;
+      return folly::makeFuture<Output>(std::move(value));
     } else {
       // value not in cache yet
       folly::Promise<Output> new_promise;
