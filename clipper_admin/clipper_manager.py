@@ -151,7 +151,7 @@ class Clipper:
                     ],
                     'depends_on': ['mgmt_frontend'],
                     'image':
-                    'clipper/test:{}'.format("latest"),
+                    'clipper/query_frontend:{}'.format("code_version"),
                     'ports': [
                         '%d:%d' % (CLIPPER_RPC_PORT, CLIPPER_RPC_PORT),
                         '%d:%d' % (CLIPPER_QUERY_PORT, CLIPPER_QUERY_PORT)
