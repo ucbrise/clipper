@@ -123,16 +123,19 @@ TEST(ModelQueueTests, TestGetBatchRemovesTasksWithElapsedDeadline) {
   ASSERT_EQ(tasks[0].query_id_, task_c.query_id_);
 }
 
-TEST(PredictionCacheTests, TestIncompleteFuturesForEvictedEntryAreCompletedOnPut) {
+TEST(PredictionCacheTests,
+     TestIncompleteFuturesForEvictedEntryAreCompletedOnPut) {
   size_t cache_size_elements = 1;
   PredictionCache cache(cache_size_elements);
   VersionedModelId model_id("TEST", "1");
-  std::shared_ptr<Input> first_input = std::make_shared<IntVector>(std::vector<int> {1,2,3});
+  std::shared_ptr<Input> first_input =
+      std::make_shared<IntVector>(std::vector<int>{1, 2, 3});
   Output first_output("1", std::vector<VersionedModelId>{});
 
   auto first_output_future = cache.fetch(model_id, first_input);
-  for(int i = 0; i < 10; ++i) {
-    std::shared_ptr<Input> input = std::make_shared<IntVector>(std::vector<int> {i});
+  for (int i = 0; i < 10; ++i) {
+    std::shared_ptr<Input> input =
+        std::make_shared<IntVector>(std::vector<int>{i});
     Output output(std::to_string(i), std::vector<VersionedModelId>{});
     cache.put(model_id, input, output);
   }
@@ -144,15 +147,17 @@ TEST(PredictionCacheTests, TestIncompleteFuturesForEvictedEntryAreCompletedOnPut
   ASSERT_FALSE(cache.fetch(model_id, first_input).is_ready());
 }
 
-TEST(PredictionCacheTests, TestEvictionPolicyConsistentWithClockMultipleFetchesAndPuts) {
+TEST(PredictionCacheTests,
+     TestEvictionPolicyConsistentWithClockMultipleFetchesAndPuts) {
   size_t cache_size_elements = 4;
   PredictionCache cache(cache_size_elements);
   VersionedModelId model_id("TEST", "1");
   std::vector<std::shared_ptr<Input>> inputs;
   std::vector<Output> outputs;
-  for(int i = 0; i < 6; ++i) {
-    inputs.push_back(std::make_shared<IntVector>(std::vector<int> {i}));
-    outputs.push_back(Output(std::to_string(i), std::vector<VersionedModelId> {}));
+  for (int i = 0; i < 6; ++i) {
+    inputs.push_back(std::make_shared<IntVector>(std::vector<int>{i}));
+    outputs.push_back(
+        Output(std::to_string(i), std::vector<VersionedModelId>{}));
   }
   // Insert a completed entry into page slot 0, advance clock hand to slot 1
   cache.put(model_id, inputs[0], outputs[0]);
@@ -171,14 +176,16 @@ TEST(PredictionCacheTests, TestEvictionPolicyConsistentWithClockMultipleFetchesA
   auto third_input_future = cache.fetch(model_id, inputs[2]);
   // Insert an incomplete entry into page slot 3, advance clock hand to slot 0
   auto fourth_input_future = cache.fetch(model_id, inputs[3]);
-  // Cycle through all slots until all used bits are 0 and replace the completed entry in
+  // Cycle through all slots until all used bits are 0 and replace the completed
+  // entry in
   // page slot 0 with an incomplete entry, advance clock hand to slot 1
   auto fifth_input_future = cache.fetch(model_id, inputs[4]);
 
   // Fetching the entry in page slot 1 sets its used bit to 1
   ASSERT_TRUE(cache.fetch(model_id, inputs[1]).is_ready());
   // Set slot 1's used bit to 0, advance the clock hand to slot 2, and
-  // replace the incomplete entry for inputs[2] in page slot 2 with an incomplete entry
+  // replace the incomplete entry for inputs[2] in page slot 2 with an
+  // incomplete entry
   // corresponding to inputs[0].
   ASSERT_FALSE(cache.fetch(model_id, inputs[0]).is_ready());
 
@@ -189,15 +196,16 @@ TEST(PredictionCacheTests, TestEvictionPolicyConsistentWithClockMultipleFetchesA
   cache.put(model_id, inputs[4], outputs[4]);
   cache.put(model_id, inputs[0], outputs[0]);
 
-  std::vector<int> in_cache_indices {0,1,3,4};
-  std::vector<int> not_in_cache_indices {2,5};
+  std::vector<int> in_cache_indices{0, 1, 3, 4};
+  std::vector<int> not_in_cache_indices{2, 5};
 
-  for(int index : in_cache_indices) {
+  for (int index : in_cache_indices) {
     ASSERT_TRUE(cache.fetch(model_id, inputs[index]).is_ready());
-    ASSERT_EQ(cache.fetch(model_id, inputs[index]).get().y_hat_, outputs[index].y_hat_);
+    ASSERT_EQ(cache.fetch(model_id, inputs[index]).get().y_hat_,
+              outputs[index].y_hat_);
   }
 
-  for(int index : not_in_cache_indices) {
+  for (int index : not_in_cache_indices) {
     ASSERT_FALSE(cache.fetch(model_id, inputs[index]).is_ready());
   }
 }

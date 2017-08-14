@@ -64,7 +64,7 @@ void PredictionCache::put(const VersionedModelId &model,
   auto key = hash(model, input->hash());
   auto search = entries_.find(key);
   if (search != entries_.end()) {
-    CacheEntry& entry = search->second;
+    CacheEntry &entry = search->second;
     if (!entry.completed_) {
       // Complete the outstanding promises
       auto& promises = entry.value_promises_;
@@ -72,7 +72,7 @@ void PredictionCache::put(const VersionedModelId &model,
         promises.back().setValue(std::move(output));
         promises.pop_back();
       }
-      if(entry.evicted_) {
+      if (entry.evicted_) {
         // If the page corresponding to this entry was previously evicted,
         // remove the entry from the map
         entries_.erase(search);
@@ -90,25 +90,26 @@ void PredictionCache::put(const VersionedModelId &model,
 }
 
 void PredictionCache::insert_entry(const long key, CacheEntry &value) {
-  if(page_buffer_.size() < max_size_) {
+  if (page_buffer_.size() < max_size_) {
     page_buffer_.push_back(key);
     page_buffer_index_ = (page_buffer_index_ + 1) % max_size_;
   } else {
     bool inserted = false;
-    while(!inserted) {
+    while (!inserted) {
       long page_key = page_buffer_[page_buffer_index_];
       auto page_entry_search = entries_.find(page_key);
-      if(page_entry_search == entries_.end()) {
-        throw std::runtime_error("Failed to find corresponding cache entry for a buffer page!");
+      if (page_entry_search == entries_.end()) {
+        throw std::runtime_error(
+            "Failed to find corresponding cache entry for a buffer page!");
       }
-      CacheEntry& page_entry = page_entry_search->second;
-      if(page_entry_search->second.used_) {
+      CacheEntry &page_entry = page_entry_search->second;
+      if (page_entry_search->second.used_) {
         page_entry.used_ = false;
       } else {
         page_buffer_[page_buffer_index_] = key;
         inserted = true;
         page_entry.evicted_ = true;
-        if(page_entry.completed_) {
+        if (page_entry.completed_) {
           // If there are no outstanding futures, remove
           // the page's corresponding entry from the entries map
           entries_.erase(page_entry_search);

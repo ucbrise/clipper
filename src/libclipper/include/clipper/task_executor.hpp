@@ -509,7 +509,7 @@ class TaskExecutor {
           .latency_->insert(static_cast<int64_t>(task_latency_micros));
     }
     cache_->put(completed_msg.model_, completed_msg.input_,
-               Output{deserialized_output, {completed_msg.model_}});
+                Output{deserialized_output, {completed_msg.model_}});
   }
 };
 
