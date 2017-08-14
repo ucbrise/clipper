@@ -139,6 +139,9 @@ TEST(PredictionCacheTests, TestIncompleteFuturesForEvictedEntryAreCompletedOnPut
   cache.put(model_id, first_input, first_output);
   ASSERT_TRUE(first_output_future.is_ready());
   ASSERT_EQ(first_output_future.get().y_hat_, first_output.y_hat_);
+  // After the entry's associated futures were completed, the entry should
+  // have been removed from the cache
+  ASSERT_FALSE(cache.fetch(model_id, first_input).is_ready());
 }
 
 TEST(PredictionCacheTests, TestEvictionPolicyConsistentWithClockMultipleFetchesAndPuts) {
