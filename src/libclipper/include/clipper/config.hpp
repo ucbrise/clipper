@@ -103,6 +103,11 @@ struct Config {
       throw std::logic_error("Cannot write to Config after ready");
     }
     assert(!readable_);
+    if(size <= 0) {
+      std::stringstream ss;
+      ss << "Task execution threadpool size must be positive! Attempted to set a size of: " << size;
+      throw std::invalid_argument(ss.str());
+    }
     task_execution_threadpool_size_ = size;
   }
 
@@ -126,7 +131,7 @@ struct Config {
       ss << "Prediction cache size cannot be negative! Attempted to set a "
             "cache size of: "
          << size_bytes << " bytes";
-      throw std::runtime_error(ss.str());
+      throw std::invalid_argument(ss.str());
     }
     prediction_cache_size_bytes_ = size_bytes;
   }
