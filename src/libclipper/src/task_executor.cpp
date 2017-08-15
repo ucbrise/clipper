@@ -13,7 +13,8 @@ namespace clipper {
 
 CacheEntry::CacheEntry() {}
 
-PredictionCache::PredictionCache(size_t size_bytes) : max_size_bytes_(size_bytes) {
+PredictionCache::PredictionCache(size_t size_bytes)
+    : max_size_bytes_(size_bytes) {
   lookups_counter_ = metrics::MetricsRegistry::get_metrics().create_counter(
       "internal:prediction_cache_lookups");
   hit_ratio_ = metrics::MetricsRegistry::get_metrics().create_ratio_counter(
@@ -96,7 +97,7 @@ void PredictionCache::put(const VersionedModelId &model,
 
 void PredictionCache::insert_entry(const long key, CacheEntry &value) {
   size_t entry_size_bytes = value.completed_ ? value.value_.y_hat_.size() : 0;
-  if(entry_size_bytes <= max_size_bytes_) {
+  if (entry_size_bytes <= max_size_bytes_) {
     evict_entries(size_bytes_ + entry_size_bytes - max_size_bytes_);
     page_buffer_.insert(page_buffer_.begin() + page_buffer_index_, key);
     page_buffer_index_ = (page_buffer_index_ + 1) % page_buffer_.size();
@@ -105,17 +106,17 @@ void PredictionCache::insert_entry(const long key, CacheEntry &value) {
   } else {
     // This entry is too large to cache
     log_error_formatted(LOGGING_TAG_TASK_EXECUTOR,
-                        "Received an output of size: {} bytes that exceeds cache size of: {} bytes",
-                        entry_size_bytes,
-                        max_size_bytes_);
+                        "Received an output of size: {} bytes that exceeds "
+                        "cache size of: {} bytes",
+                        entry_size_bytes, max_size_bytes_);
   }
 }
 
 void PredictionCache::evict_entries(long space_needed_bytes) {
-  if(space_needed_bytes <= 0) {
+  if (space_needed_bytes <= 0) {
     return;
   }
-  while(space_needed_bytes > 0) {
+  while (space_needed_bytes > 0) {
     long page_key = page_buffer_[page_buffer_index_];
     auto page_entry_search = entries_.find(page_key);
     if (page_entry_search == entries_.end()) {
@@ -128,7 +129,9 @@ void PredictionCache::evict_entries(long space_needed_bytes) {
       page_buffer_index_ = (page_buffer_index_ + 1) % page_buffer_.size();
     } else {
       page_buffer_.erase(page_buffer_.begin() + page_buffer_index_);
-      page_buffer_index_ = page_buffer_.size() > 0 ? page_buffer_index_ % page_buffer_.size() : 0;
+      page_buffer_index_ = page_buffer_.size() > 0
+                               ? page_buffer_index_ % page_buffer_.size()
+                               : 0;
       size_bytes_ -= page_entry.value_.y_hat_.size();
       space_needed_bytes -= page_entry.value_.y_hat_.size();
       entries_.erase(page_entry_search);

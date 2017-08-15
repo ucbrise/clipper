@@ -124,71 +124,81 @@ TEST(ModelQueueTests, TestGetBatchRemovesTasksWithElapsedDeadline) {
   ASSERT_EQ(tasks[0].query_id_, task_c.query_id_);
 }
 
-TEST(PredictionCacheTests, TestOutputDataSizeDoesNotIncreaseBeyondMaximumCacheSize) {
+TEST(PredictionCacheTests,
+     TestOutputDataSizeDoesNotIncreaseBeyondMaximumCacheSize) {
   std::vector<std::shared_ptr<Input>> inputs;
   std::vector<Output> outputs;
   size_t cache_size = 0;
-  for(int i = 0; i < 4; ++i) {
-    inputs.push_back(std::make_shared<IntVector>(std::vector<int> {i}));
-    Output output(std::to_string(i), std::vector<VersionedModelId> {});
+  for (int i = 0; i < 4; ++i) {
+    inputs.push_back(std::make_shared<IntVector>(std::vector<int>{i}));
+    Output output(std::to_string(i), std::vector<VersionedModelId>{});
     size_t output_size = output.y_hat_.size();
     outputs.push_back(output);
     cache_size += output_size;
   }
   VersionedModelId model_id("TEST", "1");
   PredictionCache cache(cache_size);
-  for(size_t i = 0; i < inputs.size(); ++i) {
+  for (size_t i = 0; i < inputs.size(); ++i) {
     cache.put(model_id, inputs[i], outputs[i]);
     auto output_future = cache.fetch(model_id, inputs[i]);
     ASSERT_TRUE(output_future.is_ready());
     ASSERT_EQ(output_future.get().y_hat_, outputs[i].y_hat_);
   }
-  std::shared_ptr<Input> last_input = std::make_shared<IntVector>(std::vector<int> {5});
+  std::shared_ptr<Input> last_input =
+      std::make_shared<IntVector>(std::vector<int>{5});
   cache.put(model_id, last_input, outputs[0]);
   auto last_output_future = cache.fetch(model_id, last_input);
   ASSERT_TRUE(last_output_future.is_ready());
   ASSERT_EQ(last_output_future.get().y_hat_, outputs[0].y_hat_);
-  // Inserting a fifth entry should have brought the cache size above the maximum
-  // threshold. In accordance with the clock eviction policy, the output corresponding
-  // to inputs[0] at page buffer index 0 should have been replaced with the output
+  // Inserting a fifth entry should have brought the cache size above the
+  // maximum
+  // threshold. In accordance with the clock eviction policy, the output
+  // corresponding
+  // to inputs[0] at page buffer index 0 should have been replaced with the
+  // output
   // corresponding to `last_input`, which is outputs[0]
   ASSERT_FALSE(cache.fetch(model_id, inputs[0]).is_ready());
-  // The cache should still contain entries corresponding to input indices 1, 2, and 3
-  for(int i = 1; i < 4; ++i) {
+  // The cache should still contain entries corresponding to input indices 1, 2,
+  // and 3
+  for (int i = 1; i < 4; ++i) {
     auto output_future = cache.fetch(model_id, inputs[i]);
     ASSERT_TRUE(output_future.is_ready());
     ASSERT_EQ(output_future.get().y_hat_, outputs[i].y_hat_);
   }
 }
 
-TEST(PredictionCacheTests, TestEvictionPolicyConsistentWithVariableSizeClockMultipleFetchesAndPuts) {
+TEST(PredictionCacheTests,
+     TestEvictionPolicyConsistentWithVariableSizeClockMultipleFetchesAndPuts) {
   std::string small_output_text("text");
   std::string large_output_text("texttext");
   ASSERT_EQ(large_output_text.size(), small_output_text.size() * 2);
 
   std::vector<Output> small_outputs;
   std::vector<std::shared_ptr<Input>> small_inputs;
-  for(int i = 0; i < 5; ++i) {
-    std::shared_ptr<Input> input = std::make_shared<IntVector>(std::vector<int> {i});
-    Output output(small_output_text, std::vector<VersionedModelId> {});
+  for (int i = 0; i < 5; ++i) {
+    std::shared_ptr<Input> input =
+        std::make_shared<IntVector>(std::vector<int>{i});
+    Output output(small_output_text, std::vector<VersionedModelId>{});
     small_inputs.push_back(input);
     small_outputs.push_back(output);
   }
 
   std::vector<Output> large_outputs;
   std::vector<std::shared_ptr<Input>> large_inputs;
-  for(int i = 0; i < 2; ++i) {
-    std::shared_ptr<Input> input = std::make_shared<IntVector>(std::vector<int> {i, i});
-    Output output(large_output_text, std::vector<VersionedModelId> {});
+  for (int i = 0; i < 2; ++i) {
+    std::shared_ptr<Input> input =
+        std::make_shared<IntVector>(std::vector<int>{i, i});
+    Output output(large_output_text, std::vector<VersionedModelId>{});
     large_inputs.push_back(input);
     large_outputs.push_back(output);
   }
 
-  PredictionCache cache((3 * small_output_text.size()) + (2 * large_output_text.size()));
+  PredictionCache cache((3 * small_output_text.size()) +
+                        (2 * large_output_text.size()));
   VersionedModelId model_id("TEST", "1");
   cache.put(model_id, large_inputs[0], large_outputs[0]);
   cache.put(model_id, large_inputs[1], large_outputs[1]);
-  for(int i = 0; i < 3; ++i) {
+  for (int i = 0; i < 3; ++i) {
     cache.put(model_id, small_inputs[i], small_outputs[1]);
   }
 
@@ -200,9 +210,10 @@ TEST(PredictionCacheTests, TestEvictionPolicyConsistentWithVariableSizeClockMult
   ASSERT_TRUE(second_large_output_future.is_ready());
   ASSERT_EQ(second_large_output_future.get().y_hat_, large_outputs[1].y_hat_);
 
-  // The cache should contain the three previously-inserted small output entries, but it
+  // The cache should contain the three previously-inserted small output
+  // entries, but it
   // should not contain any other small output entries
-  for(int i = 0; i < 3; ++i) {
+  for (int i = 0; i < 3; ++i) {
     auto small_output_future = cache.fetch(model_id, small_inputs[i]);
     ASSERT_TRUE(small_output_future.is_ready());
     ASSERT_EQ(small_output_future.get().y_hat_, small_outputs[i].y_hat_);
@@ -226,7 +237,7 @@ TEST(PredictionCacheTests, TestEvictionPolicyConsistentWithVariableSizeClockMult
   cache.put(model_id, small_inputs[4], small_outputs[4]);
   ASSERT_FALSE(cache.fetch(model_id, large_inputs[0]).is_ready());
   ASSERT_TRUE(cache.fetch(model_id, large_inputs[1]).is_ready());
-  for(int i = 0; i < 5; ++i) {
+  for (int i = 0; i < 5; ++i) {
     auto small_output_future = cache.fetch(model_id, small_inputs[i]);
     ASSERT_TRUE(small_output_future.is_ready());
     ASSERT_EQ(small_output_future.get().y_hat_, small_outputs[i].y_hat_);
@@ -236,10 +247,11 @@ TEST(PredictionCacheTests, TestEvictionPolicyConsistentWithVariableSizeClockMult
   // large_outputs[1] at page buffer index 2. The cache should now contain
   // entries corresponding to small outputs at vector indices 0-4, as well as
   // an additional entry corresponding to small_outputs[0] that we just inserted
-  std::shared_ptr<Input> last_small_input = std::make_shared<IntVector>(std::vector<int> {6});
+  std::shared_ptr<Input> last_small_input =
+      std::make_shared<IntVector>(std::vector<int>{6});
   cache.put(model_id, last_small_input, small_outputs[0]);
   ASSERT_FALSE(cache.fetch(model_id, large_inputs[1]).is_ready());
-  for(int i = 0; i < 5; ++i) {
+  for (int i = 0; i < 5; ++i) {
     auto small_output_future = cache.fetch(model_id, small_inputs[i]);
     ASSERT_TRUE(small_output_future.is_ready());
     ASSERT_EQ(small_output_future.get().y_hat_, small_outputs[i].y_hat_);
@@ -251,12 +263,14 @@ TEST(PredictionCacheTests, TestEvictionPolicyConsistentWithVariableSizeClockMult
   // Inserting an additional small large input should evict the entry containing
   // small_outputs[0] at page buffer index 3. The cache should now contain
   // entries corresponding to small outputs at vector indices 1-4, as well as
-  // an additional entries corresponding to: large_outputs[0] that (just inserted)
+  // an additional entries corresponding to: large_outputs[0] that (just
+  // inserted)
   // and small_outputs[0] (inserted in the previous step)
-  std::shared_ptr<Input> last_large_input = std::make_shared<IntVector>(std::vector<int>{3, 3});
+  std::shared_ptr<Input> last_large_input =
+      std::make_shared<IntVector>(std::vector<int>{3, 3});
   cache.put(model_id, last_large_input, large_outputs[0]);
   ASSERT_FALSE(cache.fetch(model_id, large_inputs[0]).is_ready());
-  for(int i = 1; i < 5; ++i) {
+  for (int i = 1; i < 5; ++i) {
     auto small_output_future = cache.fetch(model_id, small_inputs[i]);
     ASSERT_TRUE(small_output_future.is_ready());
     ASSERT_EQ(small_output_future.get().y_hat_, small_outputs[i].y_hat_);
@@ -266,11 +280,11 @@ TEST(PredictionCacheTests, TestEvictionPolicyConsistentWithVariableSizeClockMult
   ASSERT_EQ(last_large_output_future.get().y_hat_, large_outputs[0].y_hat_);
 }
 
-TEST(PredictionCacheTests,
-     TestIncompleteFuturesAreCompletedOnPut) {
-  std::shared_ptr<Input> input = std::make_shared<IntVector>(std::vector<int> {10});
+TEST(PredictionCacheTests, TestIncompleteFuturesAreCompletedOnPut) {
+  std::shared_ptr<Input> input =
+      std::make_shared<IntVector>(std::vector<int>{10});
   std::string output_text("1234");
-  Output output(output_text, std::vector<VersionedModelId> {});
+  Output output(output_text, std::vector<VersionedModelId>{});
 
   VersionedModelId model_id("TEST", "1");
   PredictionCache cache1(output_text.size());
@@ -281,7 +295,7 @@ TEST(PredictionCacheTests,
   // cache1 is large enough to contain the output entry that is being inserted,
   // so subsequent lookups should succeed
   cache1.put(model_id, input, output);
-  for(int i = 0; i < 5; ++i) {
+  for (int i = 0; i < 5; ++i) {
     output_future = cache1.fetch(model_id, input);
     ASSERT_TRUE(output_future.is_ready());
     ASSERT_EQ(output_future.get().y_hat_, output.y_hat_);
@@ -298,7 +312,7 @@ TEST(PredictionCacheTests,
   cache2.put(model_id, input, output);
   ASSERT_TRUE(output_future.is_ready());
   ASSERT_EQ(output_future.get().y_hat_, output.y_hat_);
-  for(int i = 0; i < 5; ++i) {
+  for (int i = 0; i < 5; ++i) {
     output_future = cache2.fetch(model_id, input);
     ASSERT_FALSE(output_future.is_ready());
   }
@@ -306,9 +320,10 @@ TEST(PredictionCacheTests,
   PredictionCache cache3(output_text.size());
   output_future = cache3.fetch(model_id, input);
   ASSERT_FALSE(output_future.is_ready());
-  for(int i = 0; i < 5; ++i) {
-    std::shared_ptr<Input> new_input = std::make_shared<IntVector>(std::vector<int> {i});
-    Output new_output("12", std::vector<VersionedModelId> {});
+  for (int i = 0; i < 5; ++i) {
+    std::shared_ptr<Input> new_input =
+        std::make_shared<IntVector>(std::vector<int>{i});
+    Output new_output("12", std::vector<VersionedModelId>{});
     cache3.put(model_id, new_input, new_output);
   }
   ASSERT_FALSE(output_future.is_ready());
@@ -323,8 +338,9 @@ TEST(PredictionCacheTests,
 TEST(PredictionCacheTests, TestEntryLargerThanCacheSizeIsEvicted) {
   VersionedModelId model_id("TEST", "1");
   PredictionCache cache(0);
-  std::shared_ptr<Input> input = std::make_shared<IntVector>(std::vector<int> {0});
-  Output output("text", std::vector<VersionedModelId> {});
+  std::shared_ptr<Input> input =
+      std::make_shared<IntVector>(std::vector<int>{0});
+  Output output("text", std::vector<VersionedModelId>{});
   cache.put(model_id, input, output);
   ASSERT_FALSE(cache.fetch(model_id, input).is_ready());
 }

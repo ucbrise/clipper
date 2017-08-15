@@ -2,10 +2,10 @@
 #define CLIPPER_LIB_CONFIG_HPP
 
 #include <cassert>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <utility>
-#include <sstream>
 
 // TODO: Change the name of this file.
 namespace clipper {
@@ -13,7 +13,7 @@ namespace clipper {
 const std::string DEFAULT_REDIS_ADDRESS("localhost");
 constexpr int DEFAULT_REDIS_PORT = 6379;
 constexpr int DEFAULT_TASK_EXECUTION_THREADPOOL_SIZE = 4;
-constexpr long DEFAULT_PREDICTION_CACHE_SIZE_BYTES = 33554432; // 32 MiB
+constexpr long DEFAULT_PREDICTION_CACHE_SIZE_BYTES = 33554432;  // 32 MiB
 
 /**
  * Globally readable constant configuration.
@@ -121,9 +121,11 @@ struct Config {
       throw std::logic_error("Cannot write to Config after ready");
     }
     assert(!readable_);
-    if(size_bytes < 0) {
+    if (size_bytes < 0) {
       std::stringstream ss;
-      ss << "Prediction cache size cannot be negative! Attempted to set a cache size of: " << size_bytes << " bytes";
+      ss << "Prediction cache size cannot be negative! Attempted to set a "
+            "cache size of: "
+         << size_bytes << " bytes";
       throw std::runtime_error(ss.str());
     }
     prediction_cache_size_bytes_ = size_bytes;
