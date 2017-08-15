@@ -113,7 +113,7 @@ struct Config {
     task_execution_threadpool_size_ = size;
   }
 
-  long get_prediction_cache_size() {
+  long get_prediction_cache_size() const {
     if (!readable_) {
       // TODO: use a better exception
       throw std::logic_error("Cannot read Config until ready");
