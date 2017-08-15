@@ -72,14 +72,16 @@ class CacheEntry {
 
   bool completed_ = false;
   bool used_ = true;
-  bool evicted_ = false;
   Output value_;
   std::vector<folly::Promise<Output>> value_promises_;
 };
 
+// A cache page is a pair of <hash, entry_size>
+using CachePage = std::pair<long, long>;
+
 class PredictionCache {
  public:
-  PredictionCache(size_t size);
+  PredictionCache(size_t size_bytes);
   folly::Future<Output> fetch(const VersionedModelId &model,
                               const std::shared_ptr<Input> &input);
 
@@ -89,9 +91,11 @@ class PredictionCache {
  private:
   size_t hash(const VersionedModelId &model, size_t input_hash) const;
   void insert_entry(const long key, CacheEntry &value);
+  void evict_entries(long space_needed_bytes);
 
   std::mutex m_;
-  const size_t max_size_;
+  const size_t max_size_bytes_;
+  size_t size_bytes_ = 0;
   // TODO cache needs a promise as well?
   std::unordered_map<long, CacheEntry> entries_;
   std::vector<long> page_buffer_;
