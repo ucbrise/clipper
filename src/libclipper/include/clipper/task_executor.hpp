@@ -218,7 +218,8 @@ class TaskExecutor {
       : active_(std::make_shared<std::atomic_bool>(true)),
         active_containers_(std::make_shared<ActiveContainers>()),
         rpc_(std::make_unique<rpc::RPCService>()),
-        cache_(std::make_unique<PredictionCache>(get_config().get_prediction_cache_size())),
+        cache_(std::make_unique<PredictionCache>(
+            get_config().get_prediction_cache_size())),
         model_queues_({}),
         model_metrics_({}) {
     log_info(LOGGING_TAG_TASK_EXECUTOR, "TaskExecutor started");

@@ -103,9 +103,11 @@ struct Config {
       throw std::logic_error("Cannot write to Config after ready");
     }
     assert(!readable_);
-    if(size <= 0) {
+    if (size <= 0) {
       std::stringstream ss;
-      ss << "Task execution threadpool size must be positive! Attempted to set a size of: " << size;
+      ss << "Task execution threadpool size must be positive! Attempted to set "
+            "a size of: "
+         << size;
       throw std::invalid_argument(ss.str());
     }
     task_execution_threadpool_size_ = size;

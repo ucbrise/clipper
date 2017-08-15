@@ -86,8 +86,11 @@ TEST_F(ConfigTest, TestSpecifyingNegativePredictionCacheSizeThrowsError) {
   ASSERT_THROW(conf.set_prediction_cache_size(-1), std::invalid_argument);
 }
 
-TEST_F(ConfigTest, TestSpecifyingNonpositiveTaskExecutionThreadpoolSizeThrowsError) {
+TEST_F(ConfigTest,
+       TestSpecifyingNonpositiveTaskExecutionThreadpoolSizeThrowsError) {
   Config& conf = get_config();
-  ASSERT_THROW(conf.set_task_execution_threadpool_size(0), std::invalid_argument);
-  ASSERT_THROW(conf.set_task_execution_threadpool_size(-1), std::invalid_argument);
+  ASSERT_THROW(conf.set_task_execution_threadpool_size(0),
+               std::invalid_argument);
+  ASSERT_THROW(conf.set_task_execution_threadpool_size(-1),
+               std::invalid_argument);
 }
