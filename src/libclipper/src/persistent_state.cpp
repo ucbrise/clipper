@@ -6,7 +6,6 @@
 #include <string>
 #include <thread>
 
-
 #include <clipper/config.hpp>
 #include <clipper/constants.hpp>
 #include <clipper/logging.hpp>
