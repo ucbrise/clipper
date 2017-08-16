@@ -11,7 +11,6 @@
 
 #include <folly/Unit.h>
 #include <folly/futures/Future.h>
-#include <boost/thread.hpp>
 
 #include <clipper/logging.hpp>
 

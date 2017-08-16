@@ -4,7 +4,6 @@
 #include <thread>
 #include <utility>
 
-#include <boost/thread.hpp>
 #include <clipper/timers.hpp>
 #include <clipper/util.hpp>
 

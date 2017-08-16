@@ -8,7 +8,7 @@
 #include <unordered_map>
 
 #include <boost/optional.hpp>
-#include <boost/thread.hpp>
+
 #include <redox.hpp>
 
 #include <folly/futures/Future.h>

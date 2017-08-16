@@ -8,8 +8,6 @@
 #include <clipper/task_executor.hpp>
 #include <clipper/util.hpp>
 
-#include <boost/thread.hpp>
-
 namespace clipper {
 
 CacheEntry::CacheEntry() {}

@@ -1,6 +1,6 @@
 #include <boost/bimap.hpp>
 #include <boost/functional/hash.hpp>
-#include <boost/thread.hpp>
+
 #include <chrono>
 #include <iostream>
 

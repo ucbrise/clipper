@@ -6,8 +6,6 @@
 #include <thread>
 #include <unordered_map>
 
-#include <boost/thread.hpp>
-
 #include "datatypes.hpp"
 #include "logging.hpp"
 

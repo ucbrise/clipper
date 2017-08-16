@@ -9,7 +9,7 @@
 #define PROVIDES_EXECUTORS
 #include <boost/exception_ptr.hpp>
 #include <boost/optional.hpp>
-#include <boost/thread.hpp>
+
 #include <boost/thread/executors/basic_thread_pool.hpp>
 
 #include <folly/Unit.h>
@@ -85,8 +85,6 @@ folly::Future<Response> QueryProcessor::predict(Query query) {
 
   size_t num_tasks = task_futures.size();
 
-  // TODO(czumar): Find a more readable name for std::vector<folly::Unit> and
-  // typedef accordingly
   folly::Future<folly::Unit> timer_future =
       timer_system_.set_timer(query.latency_budget_micros_);
 
@@ -110,9 +108,6 @@ folly::Future<Response> QueryProcessor::predict(Query query) {
         }));
   }
 
-  // TODO(czumar): Verify that handling exceptions within task_future.onError()
-  // ensures that the task_completion_future doesn't return early due to an
-  // error
   folly::Future<folly::Unit> all_tasks_completed_future =
       folly::collect(wrapped_task_futures)
           .then([](std::vector<folly::Unit> /* outputs */) {});
