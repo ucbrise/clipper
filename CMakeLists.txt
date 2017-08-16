@@ -21,7 +21,7 @@ set_property(TARGET boost PROPERTY
     INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
 
 # Include Folly as an imported target
-find_package(Folly 2017.07.31.00 REQUIRED)
+find_package(Folly REQUIRED)
 add_library(folly INTERFACE IMPORTED)
 set_property(TARGET folly PROPERTY
     INTERFACE_INCLUDE_DIRECTORIES ${FOLLY_INCLUDE_DIR})
