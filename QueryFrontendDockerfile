@@ -1,5 +1,5 @@
 ARG CODE_VERSION
-FROM clipper/lib-base:${CODE_VERSION}
+FROM clipper/lib_base:${CODE_VERSION}
 
 # Build Clipper
 

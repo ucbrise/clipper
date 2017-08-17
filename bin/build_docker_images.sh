@@ -17,7 +17,7 @@ cd $DIR/..
 tag=$(<VERSION.txt)
 
 # Build the Clipper Docker images
-time docker build -t clipper/lib-base:$tag -f ./ClipperLibBaseDockerfile ./
+time docker build -t clipper/lib_base:$tag -f ./ClipperLibBaseDockerfile ./
 time docker build --build-arg CODE_VERSION=$tag -t clipper/query_frontend:$tag -f QueryFrontendDockerfile ./
 time docker build --build-arg CODE_VERSION=$tag -t clipper/management_frontend:$tag -f ManagementFrontendDockerfile ./
 cd -
