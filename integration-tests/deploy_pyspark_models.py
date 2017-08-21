@@ -34,8 +34,8 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-app_name = "pyspark_test"
-model_name = "pyspark_model"
+app_name = "pyspark-test"
+model_name = "pyspark-model"
 
 
 def normalize(x):
@@ -164,7 +164,7 @@ if __name__ == "__main__":
             rf_model = train_random_forest(trainRDD, 20, 16)
             deploy_and_test_model(sc, clipper_conn, svm_model, version)
 
-            app_and_model_name = "easy_register_app_model"
+            app_and_model_name = "easy-register-app-model"
             create_endpoint(clipper_conn, app_and_model_name, "integers", predict,
                             lr_model, sc)
             test_model(app_and_model_name, 1)

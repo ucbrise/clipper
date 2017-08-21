@@ -2,6 +2,7 @@ from __future__ import print_function, with_statement, absolute_import
 
 import logging
 import shutil
+from ..version import __version__
 
 from .deployer_utils import save_python_function
 
@@ -17,7 +18,7 @@ def create_endpoint(clipper_conn,
                     slo_micros=100000,
                     labels=None,
                     registry=None,
-                    base_image="clipper/python-closure-container",
+                    base_image="clipper/python-closure-container:{}".format(__version__),
                     num_replicas=1):
     """Registers an app and deploys provided predict function as a model.
 
@@ -61,7 +62,7 @@ def deploy_python_closure(clipper_conn,
                           version,
                           input_type,
                           func,
-                          base_image="clipper/python-closure-container",
+                          base_image="clipper/python-closure-container:{}".format(__version__),
                           labels=None,
                           registry=None,
                           num_replicas=1):
@@ -123,7 +124,7 @@ def deploy_python_closure(clipper_conn,
     serialization_dir = save_python_function(name, func)
     logger.info("Python closure saved")
     # Deploy function
-    deploy_result = clipper_conn.deploy_model(name, version, input_type,
+    deploy_result = clipper_conn.build_and_deploy_model(name, version, input_type,
                                               serialization_dir, base_image,
                                               labels, registry, num_replicas)
     # Remove temp files

@@ -10,7 +10,8 @@ from test_utils import (create_connection, BenchmarkException,
                         fake_model_data, headers, log_clipper_state, SERVICE)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin_v2" % cur_dir))
-from clipper_admin import __version__ as code_version
+from clipper_admin import __version__ as clipper_version
+
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
@@ -28,7 +29,7 @@ def deploy_model(clipper_conn, name, version):
         version,
         "doubles",
         fake_model_data,
-        "clipper/noop-container",
+        "clipper/noop-container:{}".format(clipper_version),
         num_replicas=1,
         container_registry="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper")
     time.sleep(10)

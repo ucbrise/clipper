@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.abspath('%s/../clipper_admin_v2' % cur_dir))
 import clipper_admin as cl
 from clipper_admin.deployers.python import create_endpoint as create_py_endpoint
 from clipper_admin.deployers.python import deploy_python_closure
-from clipper_admin import __version__ as code_version
+from clipper_admin import __version__ as clipper_version
 
 sys.path.insert(0, os.path.abspath('%s/util_direct_import/' % cur_dir))
 from util_package import mock_module_in_package as mmip
@@ -171,11 +171,11 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
     def test_model_deploys_successfully(self):
         model_name = "m"
         version = "v1"
-        container_name = "clipper/noop-container"
+        container_name = "clipper/noop-container:{}".format(clipper_version)
         input_type = "doubles"
         self.clipper_conn.build_and_deploy_model(model_name,
-                                       version, input_type,
-                                       fake_model_data, container_name)
+                                                 version, input_type,
+                                                 fake_model_data, container_name)
         model_info = self.clipper_conn.get_model_info(model_name, version)
         self.assertIsNotNone(model_info)
         self.assertEqual(type(model_info), dict)
@@ -188,11 +188,11 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         model_name = "m"
         input_type = "doubles"
         version = "v1"
-        container_name = "clipper/noop-container"
+        container_name = "clipper/noop-container:{}".format(clipper_version)
         input_type = "doubles"
         self.clipper_conn.build_and_deploy_model(model_name,
-                                       version, input_type,
-                                       fake_model_data, container_name)
+                                                 version, input_type,
+                                                 fake_model_data, container_name)
 
         # Version defaults to current version
         self.clipper_conn.set_num_replicas(model_name, num_replicas=4)
@@ -206,9 +206,9 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertEqual(num_reps, 2)
 
     def test_remove_inactive_containers_succeeds(self):
-        container_name = "clipper/noop-container"
+        container_name = "clipper/noop-container:{}".format(clipper_version)
         input_type = "doubles"
-        model_name = "remove_inactive_test_model"
+        model_name = "remove-inactive-test-model"
         self.clipper_conn.build_and_deploy_model(
             model_name,
             1,
@@ -253,11 +253,11 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
 
         docker_client = get_docker_client()
         containers = docker_client.containers.list(
-            filters={"ancestor": "clipper/python-closure-container"})
+            filters={"ancestor": "clipper/python-closure-container:{}".format(clipper_version)})
         self.assertGreaterEqual(len(containers), 1)
 
     def test_register_py_endpoint(self):
-        name = "py_closure_test"
+        name = "py-closure-test"
         expected_version = 1
 
         def predict_func(inputs):
@@ -280,7 +280,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
 
         docker_client = get_docker_client()
         containers = docker_client.containers.list(
-            filters={"ancestor": "clipper/python-closure-container"})
+            filters={"ancestor": "clipper/python-closure-container:{}".format(clipper_version)})
         self.assertEqual(len(containers), 1)
 
 
@@ -323,10 +323,10 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
     def test_deployed_model_queried_successfully(self):
         model_version = 1
-        container_name = "clipper/noop-container"
+        container_name = "clipper/noop-container:{}".format(clipper_version)
         self.clipper_conn.build_and_deploy_model(self.model_name_2, model_version,
-                                       self.input_type, fake_model_data,
-                                       container_name)
+                                                 self.input_type, fake_model_data,
+                                                 container_name)
 
         self.clipper_conn.link_model_to_app(self.app_name_2, self.model_name_2)
         time.sleep(30)

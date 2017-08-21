@@ -6,6 +6,7 @@ import re
 import os
 import json
 
+from ..version import __version__
 from ..clipper_admin import ClipperException
 from .deployer_utils import save_python_function
 
@@ -23,7 +24,7 @@ def create_endpoint(clipper_conn,
                     slo_micros=100000,
                     labels=None,
                     registry=None,
-                    base_image="clipper/pyspark-container",
+                    base_image="clipper/pyspark-container:{}".format(__version__),
                     num_replicas=1):
     """Registers an app and deploys provided predict function as a model.
 
@@ -70,7 +71,7 @@ def deploy_pyspark_model(clipper_conn,
                          func,
                          pyspark_model,
                          sc,
-                         base_image="clipper/pyspark-container",
+                         base_image="clipper/pyspark-container:{}".format(__version__),
                          labels=None,
                          registry=None,
                          num_replicas=1):
@@ -141,9 +142,9 @@ def deploy_pyspark_model(clipper_conn,
     logger.info("Spark model saved")
 
     # Deploy model
-    deploy_result = clipper_conn.deploy_model(name, version, input_type,
-                                              serialization_dir, base_image,
-                                              labels, registry, num_replicas)
+    deploy_result = clipper_conn.build_and_deploy_model(name, version, input_type,
+                                                        serialization_dir, base_image,
+                                                        labels, registry, num_replicas)
 
     # Remove temp files
     shutil.rmtree(serialization_dir)

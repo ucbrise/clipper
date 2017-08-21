@@ -27,8 +27,8 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-app_name = "pyspark_pipeline_test"
-model_name = "pyspark_pipeline"
+app_name = "pyspark-pipeline-test"
+model_name = "pyspark-pipeline"
 
 columns = ["id", "text"]
 

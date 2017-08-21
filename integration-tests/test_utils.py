@@ -20,8 +20,8 @@ else:
     import subprocess
     PY3 = True
 
-# SERVICE = "docker"
-SERVICE = "k8s"
+SERVICE = "docker"
+# SERVICE = "k8s"
 
 logger = logging.getLogger(__name__)
 
