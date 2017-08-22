@@ -37,6 +37,7 @@ REDIS_APPLICATION_DB_NUM = 5
 
 DEFAULT_REDIS_IP = "redis"
 DEFAULT_REDIS_PORT = 6379
+DEFAULT_PREDICTION_CACHE_SIZE_BYTES = 33554432L;
 CLIPPER_QUERY_PORT = 1337
 CLIPPER_MANAGEMENT_PORT = 1338
 CLIPPER_RPC_PORT = 7000
@@ -104,7 +105,9 @@ class Clipper:
     restart_containers : bool, optional
         If true, containers will restart on failure. If false, containers
         will not restart automatically.
-
+    cache_size : int, optional
+        The size of Clipper's prediction cache in bytes. Default cache size is
+        32 MiB
     """
 
     def __init__(self,
@@ -117,7 +120,8 @@ class Clipper:
                  redis_ip=DEFAULT_REDIS_IP,
                  redis_port=DEFAULT_REDIS_PORT,
                  redis_persistence_path=None,
-                 restart_containers=False):
+                 restart_containers=False,
+                 cache_size=DEFAULT_PREDICTION_CACHE_SIZE_BYTES):
         self.redis_ip = redis_ip
         self.redis_port = redis_port
         self.docker_compost_dict = {
@@ -147,7 +151,8 @@ class Clipper:
                 'query_frontend': {
                     'command': [
                         '--redis_ip=%s' % self.redis_ip,
-                        '--redis_port=%d' % self.redis_port
+                        '--redis_port=%d' % self.redis_port,
+                        '--prediction_cache_size=%d' % cache_size
                     ],
                     'depends_on': ['mgmt_frontend'],
                     'image':
