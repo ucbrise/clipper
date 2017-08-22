@@ -14,8 +14,6 @@ int main(int argc, char* argv[]) {
         cxxopts::value<std::string>()->default_value(clipper::DEFAULT_REDIS_ADDRESS))
     ("redis_port", "Redis port",
         cxxopts::value<int>()->default_value(std::to_string(clipper::DEFAULT_REDIS_PORT)))
-    ("threadpool_size", "Number of threads for the task execution threadpool",
-        cxxopts::value<int>()->default_value(std::to_string(clipper::DEFAULT_TASK_EXECUTION_THREADPOOL_SIZE)))
     ("prediction_cache_size", "Size of the prediction cache in bytes, excluding cache metadata",
        cxxopts::value<long>()->default_value(std::to_string(clipper::DEFAULT_PREDICTION_CACHE_SIZE_BYTES)));
   // clang-format on

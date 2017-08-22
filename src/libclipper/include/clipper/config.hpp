@@ -12,7 +12,6 @@ namespace clipper {
 
 const std::string DEFAULT_REDIS_ADDRESS("localhost");
 constexpr int DEFAULT_REDIS_PORT = 6379;
-constexpr int DEFAULT_TASK_EXECUTION_THREADPOOL_SIZE = 4;
 constexpr long DEFAULT_PREDICTION_CACHE_SIZE_BYTES = 33554432;  // 32 MiB
 
 /**
@@ -34,7 +33,6 @@ struct Config {
       : readable_(false),
         redis_address_(DEFAULT_REDIS_ADDRESS),
         redis_port_(DEFAULT_REDIS_PORT),
-        task_execution_threadpool_size_(DEFAULT_TASK_EXECUTION_THREADPOOL_SIZE),
         prediction_cache_size_bytes_(DEFAULT_PREDICTION_CACHE_SIZE_BYTES) {}
 
   /**
@@ -44,7 +42,6 @@ struct Config {
     readable_ = false;
     redis_address_ = DEFAULT_REDIS_ADDRESS;
     redis_port_ = DEFAULT_REDIS_PORT;
-    task_execution_threadpool_size_ = DEFAULT_TASK_EXECUTION_THREADPOOL_SIZE;
     prediction_cache_size_bytes_ = DEFAULT_PREDICTION_CACHE_SIZE_BYTES;
   }
 
@@ -88,31 +85,6 @@ struct Config {
     redis_port_ = port;
   }
 
-  int get_task_execution_threadpool_size() const {
-    if (!readable_) {
-      // TODO: use a better exception
-      throw std::logic_error("Cannot read Config until ready");
-    }
-    assert(readable_);
-    return task_execution_threadpool_size_;
-  }
-
-  void set_task_execution_threadpool_size(int size) {
-    if (readable_) {
-      // TODO: use a better exception
-      throw std::logic_error("Cannot write to Config after ready");
-    }
-    assert(!readable_);
-    if (size <= 0) {
-      std::stringstream ss;
-      ss << "Task execution threadpool size must be positive! Attempted to set "
-            "a size of: "
-         << size;
-      throw std::invalid_argument(ss.str());
-    }
-    task_execution_threadpool_size_ = size;
-  }
-
   long get_prediction_cache_size() const {
     if (!readable_) {
       // TODO: use a better exception
@@ -142,7 +114,6 @@ struct Config {
   bool readable_;
   std::string redis_address_;
   int redis_port_;
-  int task_execution_threadpool_size_;
   long prediction_cache_size_bytes_;
 };
 

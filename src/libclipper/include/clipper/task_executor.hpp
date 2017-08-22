@@ -26,7 +26,6 @@
 namespace clipper {
 
 const std::string LOGGING_TAG_TASK_EXECUTOR = "TASKEXECUTOR";
-constexpr size_t CACHE_SIZE_ELEMENTS = 2048;
 
 class ModelMetrics {
  public:
