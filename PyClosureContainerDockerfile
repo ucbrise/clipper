@@ -1,4 +1,4 @@
-FROM clipper/py-rpc:0.2-rc1
+FROM clipper/py-rpc:risecamp
 
 COPY containers/python/python_container_conda_deps.txt /lib/
 RUN conda install -y --file /lib/python_container_conda_deps.txt
