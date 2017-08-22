@@ -75,7 +75,6 @@ class ClipperConnection(object):
                              slo_micros):
         url = "http://{host}/admin/add_app".format(
             host=self.cm.get_admin_addr())
-        print(url)
         req_json = json.dumps({
             "name": name,
             "input_type": input_type,

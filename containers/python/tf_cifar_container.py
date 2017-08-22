@@ -62,7 +62,7 @@ if __name__ == "__main__":
     # one with the file extension *.meta, the other
     # with no extension
     model_files = os.listdir(model_dir_path)
-    assert len(model_files) == 2
+    assert len(model_files) >= 2
     fname = os.path.splitext(model_files[0])[0]
     full_fname = os.path.join(model_dir_path, fname)
     print(full_fname)
