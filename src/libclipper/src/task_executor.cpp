@@ -116,7 +116,7 @@ void PredictionCache::evict_entries(long space_needed_bytes) {
   if (space_needed_bytes <= 0) {
     return;
   }
-  while (space_needed_bytes > 0) {
+  while (space_needed_bytes > 0 && !page_buffer_.empty()) {
     long page_key = page_buffer_[page_buffer_index_];
     auto page_entry_search = entries_.find(page_key);
     if (page_entry_search == entries_.end()) {
