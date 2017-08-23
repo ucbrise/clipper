@@ -11,6 +11,7 @@ RUN apk add --no-cache git bash make boost-dev cmake libev-dev hiredis-dev zerom
 ## Install DoubleConversion
 RUN git clone https://github.com/google/double-conversion \
     && cd double-conversion \
+    && git checkout tags/v3.0.0 \
     && cmake -DBUILD_SHARED_LIBS=ON . \
     && make \
     && make install \
@@ -22,14 +23,17 @@ ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$DOUBLE_CONVERSION_HOME
 
 ## Install GFLags
 RUN git clone https://github.com/gflags/gflags \
-    && mkdir gflags/build \
-    && cd gflags/build \
+    && cd gflags \
+    && git checkout tags/v2.2.1 \
+    && mkdir build \
+    && cd build \
     && cmake -DBUILD_SHARED_LIBS=ON .. \
     && make install
 
 ## Install Folly
 RUN git clone https://github.com/facebook/folly \
     && cd folly/folly \
+    && git checkout tags/v2017.08.14.00 \
     && autoreconf -ivf \
     && ./configure LDFLAGS=-L$DOUBLE_CONVERSION_HOME/ CPPFLAGS=-I$DOUBLE_CONVERSION_HOME \
     && make \
