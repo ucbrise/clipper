@@ -5,12 +5,11 @@ import requests
 from requests.exceptions import RequestException
 import json
 import os
-from .container_manager import CONTAINERLESS_MODEL_IMAGE
 import time
 import re
 
+from .container_manager import CONTAINERLESS_MODEL_IMAGE
 from .exceptions import ClipperException
-
 from .version import __version__
 
 DEFAULT_LABEL = ["DEFAULT"]
