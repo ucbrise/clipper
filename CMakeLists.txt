@@ -20,6 +20,15 @@ set_property(TARGET boost PROPERTY
 set_property(TARGET boost PROPERTY
     INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
 
+# Include Folly as an imported target
+find_package(Folly REQUIRED)
+add_library(folly INTERFACE IMPORTED)
+set_property(TARGET folly PROPERTY
+    INTERFACE_INCLUDE_DIRECTORIES ${FOLLY_INCLUDE_DIR})
+set(FOLLY_LINK_FLAGS "-lglog -lcrypto -lssl")
+set_property(TARGET folly PROPERTY
+    INTERFACE_LINK_LIBRARIES ${FOLLY_LINK_FLAGS} ${FOLLY_LIBRARY})
+
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra -Werror -Wno-deprecated-declarations -Wno-unsupported-friend")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra -Wno-deprecated-declarations")
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")

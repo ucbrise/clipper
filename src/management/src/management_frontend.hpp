@@ -7,8 +7,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/thread.hpp>
-
 #include <redox.hpp>
 #include <server_http.hpp>
 

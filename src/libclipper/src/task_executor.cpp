@@ -8,8 +8,6 @@
 #include <clipper/task_executor.hpp>
 #include <clipper/util.hpp>
 
-#include <boost/thread.hpp>
-
 namespace clipper {
 
 CacheEntry::CacheEntry() {}
@@ -21,7 +19,7 @@ PredictionCache::PredictionCache() {
       "internal:prediction_cache_hit_ratio");
 }
 
-boost::future<Output> PredictionCache::fetch(
+folly::Future<Output> PredictionCache::fetch(
     const VersionedModelId &model, const std::shared_ptr<Input> &input) {
   std::unique_lock<std::mutex> l(m_);
   auto key = hash(model, input->hash());
@@ -32,11 +30,15 @@ boost::future<Output> PredictionCache::fetch(
     if (search->second.completed_) {
       // value already in cache
       hit_ratio_->increment(1, 1);
-      return boost::make_ready_future<Output>(search->second.value_);
+      // `makeFuture` takes an rvalue reference, so moving/forwarding
+      // the cache value directly would destroy it. Therefore, we use
+      // copy assignment to `value` and move the copied object instead
+      Output value = search->second.value_;
+      return folly::makeFuture<Output>(std::move(value));
     } else {
       // value not in cache yet
-      boost::promise<Output> new_promise;
-      boost::future<Output> new_future = new_promise.get_future();
+      folly::Promise<Output> new_promise;
+      folly::Future<Output> new_future = new_promise.getFuture();
       search->second.value_promises_.push_back(std::move(new_promise));
       hit_ratio_->increment(0, 1);
       return new_future;
@@ -45,8 +47,8 @@ boost::future<Output> PredictionCache::fetch(
     // cache entry doesn't exist yet, so create entry
     CacheEntry new_entry;
     // create promise/future pair for this request
-    boost::promise<Output> new_promise;
-    boost::future<Output> new_future = new_promise.get_future();
+    folly::Promise<Output> new_promise;
+    folly::Future<Output> new_future = new_promise.getFuture();
     new_entry.value_promises_.push_back(std::move(new_promise));
     cache_.insert(std::make_pair(key, std::move(new_entry)));
     hit_ratio_->increment(0, 1);
@@ -64,7 +66,7 @@ void PredictionCache::put(const VersionedModelId &model,
     if (!search->second.completed_) {
       // Complete the outstanding promises
       for (auto &p : search->second.value_promises_) {
-        p.set_value(output);
+        p.setValue(std::move(output));
       }
       search->second.completed_ = true;
       search->second.value_ = output;

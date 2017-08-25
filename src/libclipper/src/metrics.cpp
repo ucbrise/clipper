@@ -13,7 +13,7 @@
 
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/thread.hpp>
+
 #include <clipper/logging.hpp>
 #include <clipper/metrics.hpp>
 

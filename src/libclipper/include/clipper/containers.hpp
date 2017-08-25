@@ -6,7 +6,6 @@
 #include <unordered_map>
 
 #include <boost/circular_buffer.hpp>
-#include <boost/thread.hpp>
 
 #include <clipper/datatypes.hpp>
 #include <clipper/metrics.hpp>

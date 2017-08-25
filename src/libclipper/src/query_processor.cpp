@@ -9,13 +9,15 @@
 #define PROVIDES_EXECUTORS
 #include <boost/exception_ptr.hpp>
 #include <boost/optional.hpp>
-#include <boost/thread.hpp>
+
 #include <boost/thread/executors/basic_thread_pool.hpp>
+
+#include <folly/Unit.h>
+#include <folly/futures/Future.h>
 
 #include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/exceptions.hpp>
-#include <clipper/future.hpp>
 #include <clipper/logging.hpp>
 #include <clipper/metrics.hpp>
 #include <clipper/query_processor.hpp>
@@ -40,7 +42,7 @@ std::shared_ptr<StateDB> QueryProcessor::get_state_table() const {
   return state_db_;
 }
 
-boost::future<Response> QueryProcessor::predict(Query query) {
+folly::Future<Response> QueryProcessor::predict(Query query) {
   long query_id = query_counter_.fetch_add(1);
   auto current_policy_iter = selection_policies_.find(query.selection_policy_);
   if (current_policy_iter == selection_policies_.end()) {
@@ -72,7 +74,7 @@ boost::future<Response> QueryProcessor::predict(Query query) {
   log_info_formatted(LOGGING_TAG_QUERY_PROCESSOR, "Found {} tasks",
                      tasks.size());
 
-  vector<boost::future<Output>> task_futures =
+  vector<folly::Future<Output>> task_futures =
       task_executor_.schedule_predictions(tasks);
   if (task_futures.empty()) {
     default_explanation = "No connected models found for query";
@@ -80,62 +82,61 @@ boost::future<Response> QueryProcessor::predict(Query query) {
                         "No connected models found for query with id: {}",
                         query_id);
   }
-  boost::future<void> timer_future =
+
+  size_t num_tasks = task_futures.size();
+
+  folly::Future<folly::Unit> timer_future =
       timer_system_.set_timer(query.latency_budget_micros_);
 
-  boost::future<void> all_tasks_completed;
-  auto num_completed = std::make_shared<std::atomic<int>>(0);
-  std::tie(all_tasks_completed, task_futures) =
-      future::when_all(std::move(task_futures), num_completed);
+  std::shared_ptr<std::mutex> outputs_mutex = std::make_shared<std::mutex>();
+  std::vector<Output> outputs;
+  outputs.reserve(task_futures.size());
+  std::shared_ptr<std::vector<Output>> outputs_ptr =
+      std::make_shared<std::vector<Output>>(std::move(outputs));
 
-  auto completed_flag = std::make_shared<std::atomic_flag>();
-  // Due to some complexities of initializing the atomic_flag in a shared_ptr,
-  // we explicitly set the value of the flag to false after initialization.
-  completed_flag->clear();
-  boost::future<void> response_ready_future;
-
-  std::tie(response_ready_future, all_tasks_completed, timer_future) =
-      future::when_either(std::move(all_tasks_completed),
-                          std::move(timer_future), completed_flag);
-
-  boost::promise<Response> response_promise;
-  auto response_future = response_promise.get_future();
-
-  // NOTE: We capture the num_completed, completed_flag, and default_explanation
-  // variables
-  // so that they outlive the composed_futures.
-  response_ready_future.then([
-    this, query, query_id, response_promise = std::move(response_promise),
-    selection_state, current_policy, task_futures = std::move(task_futures),
-    num_completed, completed_flag, default_explanation
-  ](auto) mutable {
-
-    vector<Output> outputs;
-    vector<VersionedModelId> used_models;
-    bool all_tasks_timed_out = true;
-    for (auto r = task_futures.begin(); r != task_futures.end(); ++r) {
-      if ((*r).has_exception()) {
-        try {
-          boost::rethrow_exception((*r).get_exception_ptr());
-        } catch (std::exception& e) {
+  std::vector<folly::Future<folly::Unit>> wrapped_task_futures;
+  for (auto it = task_futures.begin(); it < task_futures.end(); it++) {
+    wrapped_task_futures.push_back(
+        it->then([outputs_mutex, outputs_ptr](Output output) {
+            std::lock_guard<std::mutex> lock(*outputs_mutex);
+            outputs_ptr->push_back(output);
+          }).onError([](const std::exception& e) {
           log_error_formatted(
               LOGGING_TAG_QUERY_PROCESSOR,
               "Unexpected error while executing prediction tasks: {}",
               e.what());
-        }
-      } else if ((*r).is_ready()) {
-        outputs.push_back((*r).get());
-        all_tasks_timed_out = false;
-      }
-    }
-    if (all_tasks_timed_out && !task_futures.empty() && !default_explanation) {
+        }));
+  }
+
+  folly::Future<folly::Unit> all_tasks_completed_future =
+      folly::collect(wrapped_task_futures)
+          .then([](std::vector<folly::Unit> /* outputs */) {});
+
+  std::vector<folly::Future<folly::Unit>> when_either_futures;
+  when_either_futures.push_back(std::move(all_tasks_completed_future));
+  when_either_futures.push_back(std::move(timer_future));
+
+  folly::Future<std::pair<size_t, folly::Try<folly::Unit>>>
+      response_ready_future = folly::collectAny(when_either_futures);
+
+  folly::Promise<Response> response_promise;
+  folly::Future<Response> response_future = response_promise.getFuture();
+
+  response_ready_future.then([
+    outputs_ptr, outputs_mutex, num_tasks, query, query_id, selection_state,
+    current_policy, response_promise = std::move(response_promise),
+    default_explanation
+  ](const std::pair<size_t,
+                    folly::Try<folly::Unit>>& /* completed_future */) mutable {
+    std::lock_guard<std::mutex> outputs_lock(*outputs_mutex);
+    if (outputs_ptr->empty() && num_tasks > 0 && !default_explanation) {
       default_explanation =
           "Failed to retrieve a prediction response within the specified "
           "latency SLO";
     }
 
-    std::pair<Output, bool> final_output =
-        current_policy->combine_predictions(selection_state, query, outputs);
+    std::pair<Output, bool> final_output = current_policy->combine_predictions(
+        selection_state, query, *outputs_ptr);
 
     std::chrono::time_point<std::chrono::high_resolution_clock> end =
         std::chrono::high_resolution_clock::now();
@@ -150,17 +151,17 @@ boost::future<Response> QueryProcessor::predict(Query query) {
                       final_output.first,
                       final_output.second,
                       default_explanation};
-    response_promise.set_value(response);
+    response_promise.setValue(response);
   });
   return response_future;
 }
 
-boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
+folly::Future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
   log_info(LOGGING_TAG_QUERY_PROCESSOR, "Received feedback for user {}",
            feedback.user_id_);
 
   long query_id = query_counter_.fetch_add(1);
-  boost::future<FeedbackAck> error_response = boost::make_ready_future(false);
+  folly::Future<FeedbackAck> error_response = folly::makeFuture(false);
 
   auto current_policy_iter =
       selection_policies_.find(feedback.selection_policy_);
@@ -200,68 +201,52 @@ boost::future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
   // 3) Complete select_policy_update_promise
   // 4) Wait for all feedback_tasks to complete (feedback_processed future)
 
-  vector<boost::future<Output>> predict_task_futures =
+  vector<folly::Future<Output>> predict_task_futures =
       task_executor_.schedule_predictions({predict_tasks});
 
-  vector<boost::future<FeedbackAck>> feedback_task_futures =
+  vector<folly::Future<FeedbackAck>> feedback_task_futures =
       task_executor_.schedule_feedback(std::move(feedback_tasks));
 
-  boost::future<void> all_preds_completed;
-  auto num_preds_completed = std::make_shared<std::atomic<int>>(0);
-  std::tie(all_preds_completed, predict_task_futures) =
-      future::when_all(std::move(predict_task_futures), num_preds_completed);
+  folly::Future<std::vector<Output>> all_preds_completed =
+      folly::collect(predict_task_futures);
 
-  boost::future<void> all_feedback_completed;
-  auto num_feedback_completed = std::make_shared<std::atomic<int>>(0);
-  std::tie(all_feedback_completed, feedback_task_futures) = future::when_all(
-      std::move(feedback_task_futures), num_feedback_completed);
+  folly::Future<std::vector<FeedbackAck>> all_feedback_completed =
+      folly::collect(feedback_task_futures);
 
   // This promise gets completed after selection policy state update has
   // finished.
-  boost::promise<FeedbackAck> select_policy_update_promise;
+  folly::Promise<FeedbackAck> select_policy_update_promise;
+  folly::Future<FeedbackAck> select_policy_updated =
+      select_policy_update_promise.getFuture();
   auto state_table = get_state_table();
-  auto select_policy_updated = select_policy_update_promise.get_future();
+
   all_preds_completed.then([
     moved_promise = std::move(select_policy_update_promise), selection_state,
-    current_policy, state_table, feedback, query_id, state_key,
-    predict_task_futures = std::move(predict_task_futures)
-  ](auto) mutable {
-
-    std::vector<Output> preds;
-    // collect actual predictions from their futures
-    for (auto& r : predict_task_futures) {
-      preds.push_back(r.get());
-    }
+    current_policy, state_table, feedback, query_id, state_key
+  ](std::vector<Output> preds) mutable {
     auto new_selection_state = current_policy->process_feedback(
         selection_state, feedback.feedback_, preds);
     state_table->put(state_key, current_policy->serialize(new_selection_state));
-    moved_promise.set_value(true);
+    moved_promise.setValue(true);
   });
 
-  boost::future<void> feedback_ack_ready_future;
-  auto num_futures_completed = std::make_shared<std::atomic<int>>(0);
-  std::tie(feedback_ack_ready_future, all_feedback_completed,
-           select_policy_updated) =
-      future::when_both(std::move(all_feedback_completed),
-                        std::move(select_policy_updated),
-                        num_futures_completed);
+  auto feedback_ack_ready_future =
+      folly::collect(all_feedback_completed, select_policy_updated);
 
-  boost::future<FeedbackAck> final_feedback_future =
-      feedback_ack_ready_future.then([
-        select_policy_updated = std::move(select_policy_updated),
-        feedback_task_futures = std::move(feedback_task_futures)
-      ](auto) mutable {
-        auto select_policy_update_result = select_policy_updated.get();
-        if (!select_policy_update_result) {
-          return false;
-        }
-        for (auto& r : feedback_task_futures) {
-          if (!r.get()) {
-            return false;
-          }
-        }
-        return true;
-      });
+  folly::Future<FeedbackAck> final_feedback_future =
+      feedback_ack_ready_future.then(
+          [](std::tuple<std::vector<FeedbackAck>, FeedbackAck> results) {
+            bool select_policy_update_result = std::get<1>(results);
+            if (!select_policy_update_result) {
+              return false;
+            }
+            for (FeedbackAck task_feedback : std::get<0>(results)) {
+              if (!task_feedback) {
+                return false;
+              }
+            }
+            return true;
+          });
 
   return final_feedback_future;
 }

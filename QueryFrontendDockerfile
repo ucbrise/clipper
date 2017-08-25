@@ -1,9 +1,11 @@
-FROM frolvlad/alpine-gxx
+ARG CODE_VERSION=0.2-rc1
+FROM clipper/lib_base:${CODE_VERSION}
+
+# Build Clipper
 
 COPY ./ /clipper
 
-RUN apk add --no-cache git bash make boost-dev cmake libev-dev hiredis-dev zeromq-dev \
-    && cd /clipper/src/libs/spdlog \
+RUN cd /clipper/src/libs/spdlog \
     && git apply ../patches/make_spdlog_compile_linux.patch \
     && cd /clipper \
     && ./configure --cleanup-quiet \
