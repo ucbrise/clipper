@@ -6,6 +6,9 @@
 #include <thread>
 #include <unordered_map>
 
+#include <boost/thread/locks.hpp>
+#include <boost/thread/shared_mutex.hpp>
+
 #include "datatypes.hpp"
 #include "logging.hpp"
 
