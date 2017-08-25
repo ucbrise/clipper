@@ -86,6 +86,17 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertGreaterEqual(len(registered_applications), 1)
         self.assertTrue(self.app_name in registered_applications)
 
+    def test_delete_application_suceeds(self):
+        temp_app_name = "temp_app"
+        input_type = "doubles"
+        default_output = "DEFAULT"
+        slo_micros = 30000
+        self.clipper_inst.register_application(temp_app_name, input_type,
+                                               default_output, slo_micros)
+        self.clipper_inst.delete_application(temp_app_name)
+        registered_applications = self.clipper_inst.get_all_apps()
+        self.assertFalse(temp_app_name in registered_applications)
+
     def test_link_not_registered_model_to_app_fails(self):
         not_deployed_model = "test_model"
         result = self.clipper_inst.link_model_to_app(self.app_name,
@@ -104,6 +115,14 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
     def test_get_model_links_returns_list_of_linked_models(self):
         result = self.clipper_inst.get_linked_models(self.app_name)
         self.assertEqual([self.model_name], result)
+
+    def test_remove_model_links_succeeds(self):
+        remove_model_result = self.clipper_inst.remove_model_link(
+            self.app_name, self.model_name)
+        self.assertTrue(remove_model_result)
+        get_linked_models_result = self.clipper_inst.get_linked_models(
+            self.app_name)
+        self.assertEqual([], get_linked_models_result)
 
     def get_app_info_for_registered_app_returns_info_dictionary(self):
         result = self.clipper_inst.get_app_info(self.app_name)
@@ -330,6 +349,21 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         self.assertNotEqual(parsed_response["output"], self.default_output)
         self.assertFalse(parsed_response["default"])
 
+    def test_queries_to_app_with_removed_model_links_yield_default_predictions(
+            self):
+        self.clipper_inst.remove_model_link(self.app_name_2, self.model_name_2)
+        time.sleep(1)
+
+        url = "http://localhost:1337/{}/predict".format(self.app_name_2)
+        test_input = [99.3, 18.9, 67.2, 34.2]
+        req_json = json.dumps({'input': test_input})
+        headers = {'Content-type': 'application/json'}
+        response = requests.post(url, headers=headers, data=req_json)
+        parsed_response = response.json()
+        print(parsed_response)
+        self.assertEqual(parsed_response["output"], self.default_output)
+        self.assertTrue(parsed_response["default"])
+
     def test_deployed_and_linked_predict_function_queried_successfully(self):
         model_version = 1
         predict_func = lambda inputs: [str(mm.COEFFICIENT * mmip.COEFFICIENT * len(x)) for x in inputs]
@@ -368,6 +402,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 SHORT_TEST_ORDERING = [
     'test_external_models_register_correctly',
     'test_application_registers_correctly',
+    'test_delete_application_suceeds',
     'test_link_not_registered_model_to_app_fails',
     'test_get_model_links_when_none_exist_returns_empty_list',
     'test_link_registered_model_to_app_succeeds',
@@ -388,6 +423,7 @@ SHORT_TEST_ORDERING = [
 LONG_TEST_ORDERING = [
     'test_queries_to_app_without_linked_models_yield_default_predictions',
     'test_deployed_and_linked_model_queried_successfully',
+    'test_queries_to_app_with_removed_model_links_yield_default_predictions',
     'test_deployed_and_linked_predict_function_queried_successfully'
 ]
 

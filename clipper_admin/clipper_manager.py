@@ -398,6 +398,57 @@ class Clipper:
         print(r.text)
         return r.status_code == requests.codes.ok
 
+    def delete_application(self, name):
+        """
+        Deletes an existing Clipper application. Also removes its associated
+        model links.
+
+        Parameters
+        ----------
+        name : str
+            The name of the application.
+
+        Returns
+        -------
+            Returns true iff the application was successfully deleted
+        """
+        url = "http://%s:%d/admin/delete_app" % (self.host,
+                                                 CLIPPER_MANAGEMENT_PORT)
+        req_json = json.dumps({"name": name})
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
+        print(r.text)
+        return r.status_code == requests.codes.ok
+
+    def remove_model_link(self, app_name, model_name):
+        """
+        Prevents the model with `model_name` from being used by the app with `app_name`.
+        The model and app should both be registered with Clipper and a link should
+        already exist between them.
+
+        Parameters
+        ----------
+        app_name : str
+            The name of the application
+        model_name : str
+            The name of the model to link to the application
+
+        Returns
+        -------
+        bool
+            Returns true iff the model link removal request was successful
+        """
+        url = "http://%s:%d/admin/remove_model_links" % (
+            self.host, CLIPPER_MANAGEMENT_PORT)
+        req_json = json.dumps({
+            "app_name": app_name,
+            "model_names": [model_name]
+        })
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
+        print(r.text)
+        return r.status_code == requests.codes.ok
+
     def get_linked_models(self, app_name):
         """Retrieves the models linked to the specified application
 
