@@ -25,7 +25,7 @@ find_package(Folly REQUIRED)
 add_library(folly INTERFACE IMPORTED)
 set_property(TARGET folly PROPERTY
     INTERFACE_INCLUDE_DIRECTORIES ${FOLLY_INCLUDE_DIR})
-set(FOLLY_LINK_FLAGS "-lglog -lcrypto -lssl")
+set(FOLLY_LINK_FLAGS "-lglog -lcrypto -lssl -lgflags -ldouble-conversion -lboost")
 set_property(TARGET folly PROPERTY
     INTERFACE_LINK_LIBRARIES ${FOLLY_LINK_FLAGS} ${FOLLY_LIBRARY})
 
