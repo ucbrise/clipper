@@ -1,4 +1,4 @@
-ARG CODE_VERSION
+ARG CODE_VERSION=0.2-rc1
 FROM clipper/lib_base:${CODE_VERSION}
 
 COPY ./ /clipper
