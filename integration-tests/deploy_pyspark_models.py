@@ -169,6 +169,7 @@ if __name__ == "__main__":
                             lr_model, sc)
             test_model(app_and_model_name, 1)
 
+            version += 1
             deploy_and_test_model(sc, clipper_conn, lr_model, version, predict_with_local_modules)
         except BenchmarkException as e:
             log_clipper_state(clipper_conn)

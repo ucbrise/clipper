@@ -13,12 +13,12 @@ from clipper_admin import ClipperConnection, DockerContainerManager, K8sContaine
 from clipper_admin.container_manager import CLIPPER_DOCKER_LABEL
 from clipper_admin.exceptions import ClipperException
 
-if sys.version < '3':
-    import subprocess32 as subprocess
-    PY3 = False
-else:
-    import subprocess
-    PY3 = True
+# if sys.version < '3':
+#     import subprocess32 as subprocess
+#     PY3 = False
+# else:
+#     import subprocess
+#     PY3 = True
 
 SERVICE = "docker"
 # SERVICE = "k8s"
@@ -100,8 +100,9 @@ def create_connection(service, cleanup=True, start_clipper=True):
     if start_clipper:
         logging.info("Starting Clipper")
         cl.start_clipper(
-            query_frontend_image="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/query_frontend:0.2-rc1",
-            mgmt_frontend_image="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/management_frontend:0.2-rc1")
+            # query_frontend_image="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/query_frontend:0.2-rc1",
+            # mgmt_frontend_image="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/management_frontend:0.2-rc1"
+        )
         time.sleep(1)
     else:
         try:

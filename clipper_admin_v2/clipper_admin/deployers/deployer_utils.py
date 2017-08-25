@@ -170,7 +170,7 @@ def get_already_exported_modules(serialization_dir, conda_deps_fname, pip_deps_f
         cur_dir, "..", "python_container_conda_deps.txt"))
 
     def get_module_name(line):
-        line.strip().split('=')[0]
+        return line.strip().split('=')[1]
 
     ignore_list = []
 
