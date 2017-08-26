@@ -1,3 +1,4 @@
+from __future__ import absolute_import, division, print_function
 from conda.api import get_index
 from conda.base.context import context
 from conda.exceptions import UnsatisfiableError, NoPackagesFoundError
@@ -95,18 +96,21 @@ def check_solvability_write_deps(env_path, directory, platform,
             r.install(conda_deps)
     except UnsatisfiableError as unsat_e:
         print(
-            "Your conda dependencies are unsatisfiable (see error text below). Please resolve these issues and call `deploy_predict_func` again."
+            "Your conda dependencies are unsatisfiable (see error text below). Please resolve "
+            "these issues and call `deploy_predict_func` again."
         )
         print(unsat_e)
         return False
 
     if missing_packages is not None:
         print(
-            "The following packages in your conda environment aren't available in the linux-64 conda channel the container will use:"
+            "The following packages in your conda environment aren't available in the linux-64 "
+            "conda channel the container will use:"
         )
         print(", ".join(str(package) for package in missing_packages))
         print(
-            "We will skip their installation when deploying your function. If your function uses these packages, the container will experience a runtime error when queried."
+            "We will skip their installation when deploying your function. If your function uses "
+            "these packages, the container will experience a runtime error when queried."
         )
 
     _write_out_dependencies(directory, conda_dep_fname, pip_dep_fname,

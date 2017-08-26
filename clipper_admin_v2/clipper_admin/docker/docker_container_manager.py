@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class DockerContainerManager(ContainerManager):
     def __init__(self,
-                 clipper_public_hostname,
+                 docker_ip_address="127.0.0.1",
                  clipper_query_port=1337,
                  clipper_management_port=1338,
                  clipper_rpc_port=7000,
@@ -24,7 +24,7 @@ class DockerContainerManager(ContainerManager):
         """
         Parameters
         ----------
-        clipper_public_hostname : str
+        docker_ip_address : str
             The public hostname or IP address at which the Clipper Docker
             containers can be accessed via their exposed ports. On macOs this
             can be set to "localhost" as Docker automatically makes exposed
@@ -35,15 +35,12 @@ class DockerContainerManager(ContainerManager):
             Any additional keyword arguments to pass to the call to
             :py:meth:`docker.client.containers.run`.
         """
-        # super(DockerContainerManager, self).__init__(clipper_public_hostname,
-        #                                              **kwargs)
-        self.public_hostname = "127.0.0.1"
+        self.public_hostname = docker_ip_address
         self.clipper_query_port = clipper_query_port
         self.clipper_management_port = clipper_management_port
         self.clipper_rpc_port = clipper_rpc_port
         self.redis_ip = redis_ip
         self.redis_port = redis_port
-        self.registry = None
 
         self.docker_client = docker.from_env()
         self.extra_container_kwargs = extra_container_kwargs
@@ -52,24 +49,24 @@ class DockerContainerManager(ContainerManager):
 
         # TODO: Deal with Redis persistence
 
-    def connect(self):
-        # No extra connection steps to take on connection
-        return
-
     def start_clipper(self, query_frontend_image, mgmt_frontend_image):
         try:
             self.docker_client.networks.create(
                 DOCKER_NETWORK_NAME, check_duplicate=True)
         except docker.errors.APIError as e:
-            logger.info(
+            logger.debug(
                 "{nw} network already exists".format(nw=DOCKER_NETWORK_NAME))
         container_args = {
             "network": DOCKER_NETWORK_NAME,
-            "labels": {
-                CLIPPER_DOCKER_LABEL: ""
-            },
             "detach": True,
         }
+
+        # Merge Clipper-specific labels with any user-provided labels
+        if "labels" in self.extra_container_kwargs:
+            self.extra_container_args["labels"].update({CLIPPER_DOCKER_LABEL: ""})
+        else:
+            self.extra_container_args["labels"] = {CLIPPER_DOCKER_LABEL: ""}
+
         self.extra_container_kwargs.update(container_args)
 
         if self.redis_ip is None:
@@ -77,9 +74,9 @@ class DockerContainerManager(ContainerManager):
             self.redis_ip = "redis"
             self.docker_client.containers.run(
                 'redis:alpine',
-                "redis-server --port %d" % self.redis_port,
+                "redis-server",
                 name="redis",
-                ports={'%s/tcp' % self.redis_port: self.redis_port},
+                ports={'6379/tcp', self.redis_port},
                 **self.extra_container_kwargs)
 
         cmd = "--redis_ip={redis_ip} --redis_port={redis_port}".format(
@@ -104,6 +101,10 @@ class DockerContainerManager(ContainerManager):
             },
             **self.extra_container_kwargs)
         self.connect()
+
+    def connect(self):
+        # No extra connection steps to take on connection
+        return
 
     def deploy_model(self, name, version, input_type, repo, num_replicas=1):
         """
@@ -198,14 +199,13 @@ class DockerContainerManager(ContainerManager):
             log_files.append(log_file)
         return log_files
 
-    def stop_models(self, model_name=None, keep_version=None):
+    def stop_models(self, models):
         containers = self.docker_client.containers.list(
             filters={"label": CLIPPER_MODEL_CONTAINER_LABEL})
         for c in containers:
             c_name, c_version = parse_model_container_label(c.labels[CLIPPER_MODEL_CONTAINER_LABEL])
-            if model_name is not None and model_name == c_name:
-                if keep_version is None or keep_version != c_version:
-                    c.stop()
+            if c_name in models and c_version in models[c_name]:
+                c.stop()
 
     def stop_clipper(self):
         containers = self.docker_client.containers.list(

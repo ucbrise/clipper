@@ -15,7 +15,7 @@ def create_endpoint(clipper_conn,
                     func,
                     default_output="None",
                     version=1,
-                    slo_micros=100000,
+                    slo_micros=3000000,
                     labels=None,
                     registry=None,
                     base_image="clipper/python-closure-container:{}".format(__version__),
@@ -125,8 +125,8 @@ def deploy_python_closure(clipper_conn,
     logger.info("Python closure saved")
     # Deploy function
     deploy_result = clipper_conn.build_and_deploy_model(name, version, input_type,
-                                              serialization_dir, base_image,
-                                              labels, registry, num_replicas)
+                                                        serialization_dir, base_image,
+                                                        labels, registry, num_replicas)
     # Remove temp files
     shutil.rmtree(serialization_dir)
     return deploy_result

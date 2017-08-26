@@ -232,10 +232,50 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             filters={"ancestor": container_name})
         self.assertEqual(len(containers), 5)
 
-        self.clipper_conn.stop_inactive_model_versions(model_name)
+        self.clipper_conn.stop_inactive_model_versions([model_name])
         containers = docker_client.containers.list(
             filters={"ancestor": container_name})
         self.assertEqual(len(containers), 3)
+
+    def test_stop_models(self):
+        container_name = "clipper/noop-container:{}".format(clipper_version)
+        input_type = "doubles"
+        mnames = ["jimmypage", "robertplant", "jpj", "johnbohnam"]
+        versions = ["i", "ii", "iii", "iv"]
+        for model_name in mnames:
+            for version in versions:
+                self.clipper_conn.deploy_model(
+                    model_name,
+                    version,
+                    input_type,
+                    container_name,
+                    num_replicas=1)
+
+        docker_client = get_docker_client()
+        containers = docker_client.containers.list(
+            filters={"ancestor": container_name})
+        self.assertEqual(len(containers), len(mnames)*len(versions))
+
+        # stop all versions of models jimmypage, robertplant
+        self.stop_models(mnames[:2])
+        containers = docker_client.containers.list(
+            filters={"ancestor": container_name})
+        self.assertEqual(len(containers), len(mnames[2:])*len(versions))
+
+        # After calling this method, the remaining models should be:
+        # jpj:i, jpj:iii, johnbohman:ii
+        self.stop_versioned_models({
+            "jpj": ["ii", "iv"],
+            "johnbohnam": ["i", "iv", "iii"],
+        })
+        containers = docker_client.containers.list(
+            filters={"ancestor": container_name})
+        self.assertEqual(len(containers), 3)
+
+        self.clipper_conn.stop_deployed_models()
+        containers = docker_client.containers.list(
+            filters={"ancestor": container_name})
+        self.assertEqual(len(containers), 0)
 
     def test_python_closure_deploys_successfully(self):
         model_name = "m2"
@@ -391,6 +431,7 @@ SHORT_TEST_ORDERING = [
     'test_model_deploys_successfully',
     'test_set_num_replicas_for_deployed_model_succeeds',
     'test_remove_inactive_containers_succeeds',
+    'test_stop_models',
     'test_python_closure_deploys_successfully',
     'test_register_py_endpoint',
 ]

@@ -182,8 +182,6 @@ class K8sContainerManager(ContainerManager):
                         }
                     }
                 }
-            with open("deploy.yaml", "w") as f:
-                yaml.dump(body, f)
             self._k8s_beta.create_namespaced_deployment(
                 body=body,
                 namespace='default')
@@ -236,16 +234,18 @@ class K8sContainerManager(ContainerManager):
                 log_files.append(log_file)
         return log_files
 
-    def stop_models(self, model_name=None, keep_version=None):
-        # TODO(crankshaw): Account for model_name and keep_version.
-        # NOTE: the format of the value of CLIPPER_MODEL_CONTAINER_LABEL
-        # is "model_name:model_version"
-        """Stops all deployments of pods running Clipper models."""
-        logger.info("Stopping all running Clipper model deployments")
+    def stop_models(self, models):
+        # Stops all deployments of pods running Clipper models with the specified
+        # names and versions.
+        # logger.info("Stopping all running Clipper model deployments")
         try:
-            self._k8s_beta.delete_collection_namespaced_deployment(
-                namespace='default',
-                label_selector=CLIPPER_MODEL_CONTAINER_LABEL)
+            for m in models:
+                for v in models[m]:
+                    self._k8s_beta.delete_collection_namespaced_deployment(
+                        namespace='default',
+                        label_selector="{label}:{val}".format(
+                            label=CLIPPER_MODEL_CONTAINER_LABEL,
+                            val=create_model_container_label(m, v)))
         except ApiException as e:
             logger.warn("Exception deleting k8s deployments: {}".format(e))
 

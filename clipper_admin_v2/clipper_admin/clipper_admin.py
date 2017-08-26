@@ -560,9 +560,16 @@ class ClipperConnection(object):
         if num_replicas is not None:
             self.set_num_replicas(name, num_replicas, version)
 
+    def get_query_addr(self):
+        if not self.connected:
+            raise UnconnectedException()
+        return self.cm.get_query_addr()
+
     def stop_models(self, model_names):
-        """Stops all versions of the provided models. This is a convenience method to avoid the need
-        to explicitly list all deployed versions of a model.
+        """Stops all versions of the provided models.
+
+        This is a convenience method to avoid the need to explicitly list all deployed versions
+        of a model.
 
         Parameters
         ----------
@@ -570,38 +577,67 @@ class ClipperConnection(object):
             A list of model names. All replicas of all versions of each model specified in the list
             will be stopped.
         """
-        # TODO(crankshaw): implement
-        return
+        if not self.connected:
+            raise UnconnectedException()
+        model_info = self.get_all_models(verbose=True)
+        model_dict = {}
+        for m in model_info:
+            if m["name"] in model_names:
+                if m["name"] in model_dict:
+                    model_dict[m["name"]].append(m["version"])
+                else:
+                    model_dict[m["name"]] = [m["version"]]
+        self.cm.stop_models(model_dict)
 
+    def stop_versioned_models(self, models):
+        """Stops all replicas of the specified versions of the specified models.
 
-    def stop_inactive_model_versions(self, model_name):
-        """Removes all containers serving stale versions of the specified model.
+        Note
+        ----
+        This method will stop the currently deployed versions of models if you specify them. You
+        almost certainly want to use one of the other stop_* methods. Use with caution.
 
         Parameters
         ----------
-        model_name : str
-            The name of the model whose old containers you want to clean.
+        models : dict(str, list(str))
+            For each entry in the dict, the key is a model name and the value is a list of model
+            versions. All replicas for each version of each model will be stopped.
+        """
+        if not self.connected:
+            raise UnconnectedException()
+        self.cm.stop_models(models)
+
+    def stop_inactive_model_versions(self, model_names):
+        """Removes all containers serving stale versions of the specified models.
+
+        Parameters
+        ----------
+        model_names : list(str)
+            The names of the models whose old containers you want to clean.
         """
         if not self.connected:
             raise UnconnectedException()
         model_info = self.get_all_models(verbose=True)
-        current_version = None
+        model_dict = {}
         for m in model_info:
-            if m["is_current_version"]:
-                current_version = m["model_version"]
-        assert current_version is not None
-        self.cm.stop_models(
-            model_name=model_name, keep_version=current_version)
-
-    def get_query_addr(self):
-        if not self.connected:
-            raise UnconnectedException()
-        return self.cm.get_query_addr()
+            if m["name"] in model_names and not m["is_current_version"]:
+                if m["name"] in model_dict:
+                    model_dict[m["name"]].append(m["version"])
+                else:
+                    model_dict[m["name"]] = [m["version"]]
+        self.cm.stop_models(model_dict)
 
     def stop_deployed_models(self):
         if not self.connected:
             raise UnconnectedException()
-        self.cm.stop_models()
+        model_info = self.get_all_models(verbose=True)
+        model_dict = {}
+        for m in model_info:
+            if m["name"] in model_dict:
+                model_dict[m["name"]].append(m["version"])
+            else:
+                model_dict[m["name"]] = [m["version"]]
+        self.cm.stop_models(model_dict)
 
     def stop_clipper(self):
         if not self.connected:
@@ -611,5 +647,5 @@ class ClipperConnection(object):
     def stop_all(self):
         if not self.connected:
             raise UnconnectedException()
-        self.cm.stop_models()
+        self.stop_deployed_models()
         self.cm.stop_clipper()
