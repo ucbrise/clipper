@@ -133,7 +133,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         version = "v1"
         self.clipper_conn.register_model(model_name, version, input_type)
         with self.assertRaises(cl.ClipperException) as context:
-            self.clipper_conn.set_num_replicas(model_name, version, 5)
+            self.clipper_conn.set_num_replicas(model_name, 5, version)
         self.assertTrue("containerless model" in str(context.exception))
 
     def test_model_version_sets_correctly(self):
@@ -195,12 +195,12 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
                                                  fake_model_data, container_name)
 
         # Version defaults to current version
-        self.clipper_conn.set_num_replicas(model_name, num_replicas=4)
+        self.clipper_conn.set_num_replicas(model_name, 4)
         time.sleep(1)
         num_reps = self.clipper_conn.get_num_replicas(model_name, version)
         self.assertEqual(num_reps, 4)
 
-        self.clipper_conn.set_num_replicas(model_name, version, num_replicas=2)
+        self.clipper_conn.set_num_replicas(model_name, 2, version)
         time.sleep(1)
         num_reps = self.clipper_conn.get_num_replicas(model_name, version)
         self.assertEqual(num_reps, 2)

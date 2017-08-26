@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.abspath("%s/../clipper_admin_v2" % cur_dir))
 from clipper_admin import ClipperConnection, DockerContainerManager, K8sContainerManager
 from clipper_admin.container_manager import CLIPPER_DOCKER_LABEL
 from clipper_admin.exceptions import ClipperException
+from clipper_admin import __version__ as clipper_version
 
 # if sys.version < '3':
 #     import subprocess32 as subprocess
@@ -20,7 +21,7 @@ from clipper_admin.exceptions import ClipperException
 #     import subprocess
 #     PY3 = True
 
-SERVICE = "docker"
+# SERVICE = "docker"
 # SERVICE = "k8s"
 
 logger = logging.getLogger(__name__)
@@ -67,42 +68,19 @@ def find_unbound_port():
                 "randomly generated port %d is bound. Trying again." % port)
 
 
-def create_connection(service, cleanup=True, start_clipper=True):
-    if service == "docker":
-        # TODO: create registry
-        logging.info("Creating DockerContainerManager")
-        cm = DockerContainerManager(
-            "localhost", redis_port=find_unbound_port())
-        cl = ClipperConnection(cm)
-        if cleanup:
-            cl.stop_all()
-            docker_client = get_docker_client()
-            docker_client.containers.prune(
-                filters={"label": CLIPPER_DOCKER_LABEL})
-    elif service == "k8s":
-        logging.info("Creating K8sContainerManager")
-        # k8s_ip = subprocess.Popen(
-        #     ['minikube', 'ip'],
-        #     stdout=subprocess.PIPE).communicate()[0].strip()
-        k8s_ip = "https://api.cluster.clipper-k8s-testing.com"
-        logging.info("K8s IP: %s" % k8s_ip)
-        cm = K8sContainerManager(k8s_ip)
-        cl = ClipperConnection(cm)
-        if cleanup:
-            cl.stop_all()
-            # Give k8s some time to clean up
-            time.sleep(10)
-    else:
-        msg = "{cm} is a currently unsupported container manager".format(
-            cm=service)
-        logging.error(msg)
-        raise BenchmarkException(msg)
+def create_docker_connection(cleanup=True, start_clipper=True):
+    logging.info("Creating DockerContainerManager")
+    cm = DockerContainerManager(
+        "localhost", redis_port=find_unbound_port())
+    cl = ClipperConnection(cm)
+    if cleanup:
+        cl.stop_all()
+        docker_client = get_docker_client()
+        docker_client.containers.prune(
+            filters={"label": CLIPPER_DOCKER_LABEL})
     if start_clipper:
         logging.info("Starting Clipper")
-        cl.start_clipper(
-            # query_frontend_image="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/query_frontend:0.2-rc1",
-            # mgmt_frontend_image="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/management_frontend:0.2-rc1"
-        )
+        cl.start_clipper()
         time.sleep(1)
     else:
         try:
@@ -111,6 +89,30 @@ def create_connection(service, cleanup=True, start_clipper=True):
             pass
     return cl
 
+def create_k8s_connection(cleanup=True, start_clipper=True):
+    logging.info("Creating K8sContainerManager")
+    k8s_ip = "https://api.cluster.clipper-k8s-testing.com"
+    logging.info("K8s IP: %s" % k8s_ip)
+    cm = K8sContainerManager(k8s_ip)
+    cl = ClipperConnection(cm)
+    if cleanup:
+        cl.stop_all()
+        # Give k8s some time to clean up
+        time.sleep(10)
+    if start_clipper:
+        logging.info("Starting Clipper")
+        # TODO: update these images
+        cl.start_clipper(
+            query_frontend_image="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/query_frontend:{}".format(clipper_version),
+            mgmt_frontend_image="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/management_frontend:{}".format(clipper_version)
+        )
+        time.sleep(1)
+    else:
+        try:
+            cl.connect()
+        except ClipperException as e:
+            pass
+    return cl
 
 def log_clipper_state(cl):
     pp = pprint.PrettyPrinter(indent=4)

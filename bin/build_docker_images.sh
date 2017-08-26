@@ -21,6 +21,13 @@ time docker build -t clipper/lib_base:$tag -f ./ClipperLibBaseDockerfile ./
 time docker build --build-arg CODE_VERSION=$tag -t clipper/query_frontend:$tag -f QueryFrontendDockerfile ./
 time docker build --build-arg CODE_VERSION=$tag -t clipper/management_frontend:$tag -f ManagementFrontendDockerfile ./
 time docker build --build-arg CODE_VERSION=$tag -t clipper/unittests:$tag -f ClipperTestsDockerfile ./
+
+# Tag and push the latest version of the Clipper Docker images to the container registry
+# for the K8s testing cluster
+docker tag clipper/query_frontend:$tag 568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/query_frontend:$tag
+docker push 568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/query_frontend:$tag
+docker tag clipper/management_frontend:$tag 568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/management_frontend:$tag
+docker push 568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/management_frontend:$tag
 cd -
 
 # Build Spark JVM Container

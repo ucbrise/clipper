@@ -20,9 +20,6 @@ class DockerContainerManager(ContainerManager):
                  clipper_rpc_port=7000,
                  redis_ip=None,
                  redis_port=6379,
-                 registry=None,
-                 registry_username=None,
-                 registry_password=None,
                  extra_container_kwargs={}):
         """
         Parameters
@@ -48,25 +45,10 @@ class DockerContainerManager(ContainerManager):
         self.redis_port = redis_port
         self.registry = None
 
-        if "DOCKER_API_VERSION" in os.environ:
-            self.docker_client = docker.from_env(
-                version=os.environ["DOCKER_API_VERSION"])
-        else:
-            self.docker_client = docker.from_env()
+        self.docker_client = docker.from_env()
         self.extra_container_kwargs = extra_container_kwargs
         self.query_frontend_name = "query_frontend"
         self.mgmt_frontend_name = "mgmt_frontend"
-        if registry is not None:
-            # TODO: test with provided registry
-            self.registry = registry
-            if registry_username is not None and registry_password is not None:
-                logger.info("Logging in to {registry} as {user}".format(
-                    registry=registry, user=registry_username))
-                login_response = self.docker_client.login(
-                    username=registry_username,
-                    password=registry_password,
-                    registry=registry)
-                logger.info(login_response)
 
         # TODO: Deal with Redis persistence
 
@@ -121,6 +103,7 @@ class DockerContainerManager(ContainerManager):
                 '%s/tcp' % CLIPPER_INTERNAL_RPC_PORT: self.clipper_rpc_port
             },
             **self.extra_container_kwargs)
+        self.connect()
 
     def deploy_model(self, name, version, input_type, repo, num_replicas=1):
         """

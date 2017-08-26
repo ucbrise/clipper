@@ -29,12 +29,13 @@ def _pass_conflicts():
         else:
             raise e
 
+# TODO(docs): Users should only ever need to call the constructor directly.
+# The rest of the documentation should be notes about what will actually happen
+# on the kubernetes cluster.
+
 
 class K8sContainerManager(ContainerManager):
-    def __init__(self, k8s_api_ip,
-                 redis_ip=None,
-                 redis_port=6379,
-                 start_local_registry=False):
+    def __init__(self, k8s_api_ip, redis_ip=None, redis_port=6379):
 
         self.k8s_api_ip = k8s_api_ip
         self.redis_ip = redis_ip
@@ -44,56 +45,6 @@ class K8sContainerManager(ContainerManager):
         configuration.assert_hostname = False
         self._k8s_v1 = client.CoreV1Api()
         self._k8s_beta = client.ExtensionsV1beta1Api()
-        if start_local_registry:
-            self._start_registry()
-        # else:
-        #     # TODO: test with provided registry
-        #     self.registry = registry
-        #     if registry_username is not None and registry_password is not None:
-        #         if "DOCKER_API_VERSION" in os.environ:
-        #             self.docker_client = docker.from_env(
-        #                 version=os.environ["DOCKER_API_VERSION"])
-        #         else:
-        #             self.docker_client = docker.from_env()
-        #         logger.info("Logging in to {registry} as {user}".format(
-        #             registry=registry, user=registry_username))
-        #         login_response = self.docker_client.login(
-        #             username=registry_username,
-        #             password=registry_password,
-        #             registry=registry)
-        #         logger.info(login_response)
-
-    def _start_registry(self):
-        """
-
-        Returns
-        -------
-        str
-            The address of the registry
-        """
-        logger.info("Initializing Docker registry on k8s cluster")
-        with _pass_conflicts():
-            self._k8s_v1.create_namespaced_replication_controller(
-                body=yaml.load(
-                    open(
-                        os.path.join(
-                            cur_dir,
-                            'kube-registry-replication-controller.yaml'))),
-                namespace='kube-system')
-        with _pass_conflicts():
-            self._k8s_v1.create_namespaced_service(
-                body=yaml.load(
-                    open(os.path.join(cur_dir, 'kube-registry-service.yaml'))),
-                namespace='kube-system')
-        with _pass_conflicts():
-            self._k8s_beta.create_namespaced_daemon_set(
-                body=yaml.load(
-                    open(
-                        os.path.join(cur_dir,
-                                     'kube-registry-daemon-set.yaml'))),
-                namespace='kube-system')
-        # return "{}:5000".format(self.k8s_api_ip)
-        # return "localhost:5000"
 
     def start_clipper(self,
                       query_frontend_image,
@@ -286,7 +237,7 @@ class K8sContainerManager(ContainerManager):
         return log_files
 
     def stop_models(self, model_name=None, keep_version=None):
-        # TODO(feynman): Account for model_name and keep_version.
+        # TODO(crankshaw): Account for model_name and keep_version.
         # NOTE: the format of the value of CLIPPER_MODEL_CONTAINER_LABEL
         # is "model_name:model_version"
         """Stops all deployments of pods running Clipper models."""
@@ -299,7 +250,6 @@ class K8sContainerManager(ContainerManager):
             logger.warn("Exception deleting k8s deployments: {}".format(e))
 
     def stop_clipper(self):
-        # TODO: fix this function
         """Stops all Clipper resources.
 
         WARNING: Data stored on an in-cluster Redis deployment will be lost!
@@ -311,22 +261,9 @@ class K8sContainerManager(ContainerManager):
             for service in self._k8s_v1.list_namespaced_service(
                     namespace='default',
                     label_selector=CLIPPER_DOCKER_LABEL).items:
-                # TODO: use delete collection of services if API provides
                 service_name = service.metadata.name
                 self._k8s_v1.delete_namespaced_service(
                     namespace='default', name=service_name)
-
-            # for deployment in self._k8s_beta.list_namespaced_deployment(
-            #         namespace='default',
-            #         label_selector=CLIPPER_DOCKER_LABEL).items:
-            #     deployment_name = deployment.metadata.name
-            #     logger.info("Deployment name: {}".format(deployment_name))
-            #     self._k8s_beta.delete_namespaced_deployment(
-            #         namespace='default',
-            #         name=deployment_name,
-            #         body=client.V1DeleteOptions()
-            #         # propagation_policy="foreground"
-            #     )
 
             self._k8s_beta.delete_collection_namespaced_deployment(
                 namespace='default', label_selector=CLIPPER_DOCKER_LABEL)

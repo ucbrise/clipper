@@ -37,6 +37,12 @@ class ContainerManager(object):
     def start_clipper(self,
                       query_frontend_image,
                       mgmt_frontend_image):
+        # NOTE: An implementation of this interface should be connected to a running
+        # Clipper instance when this method returns. ClipperConnection will not
+        # call ContainerManager.connect() separately after calling start_clipper(), so
+        # if there are additional steps needed to connect a Clipper cluster after it
+        # has been started, the implementor of this interface should manage that internally.
+        # For example, K8sContainerManager calls self.connect() at the end of start_clipper().
         return
 
     @abc.abstractmethod
@@ -52,7 +58,7 @@ class ContainerManager(object):
         return
 
     @abc.abstractmethod
-    def set_num_replicas(self, name, version, input_type, image):
+    def set_num_replicas(self, name, version, input_type, image, num_replicas):
         return
 
     @abc.abstractmethod
@@ -77,16 +83,14 @@ class ContainerManager(object):
         return
 
     @abc.abstractmethod
-    def stop_models(self, model_name=None, keep_version=None):
-        """Stops Docker containers serving models but leaves the core Clipper containers running.
+    def stop_models(self, models):
+        # TODO: changed args
+        """Stops all replicas of the specified models.
         Parameters
         ----------
-        model_name : str(optional)
-            Only removes containers serving the specified the model with ``model_name``
-        keep_version : str(optional)
-            Leaves model containers with the specified name and version untouched. This argument
-            is ignored if model_name is empty. The typical use case for this argument is to remove
-            old versions of a model but keep the currently active version.
+        models : dict(str, list(str))
+            For each entry in the dict, the key is a model name and the value is a list of model
+            versions. All replicas for each version of each model will be stopped.
         """
         return
 

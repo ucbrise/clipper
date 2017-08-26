@@ -4,12 +4,11 @@ import docker
 import requests
 from requests.exceptions import RequestException
 import json
-import os
 import time
 import re
 
 from .container_manager import CONTAINERLESS_MODEL_IMAGE
-from .exceptions import ClipperException
+from .exceptions import ClipperException, UnconnectedException
 from .version import __version__
 
 DEFAULT_LABEL = ["DEFAULT"]
@@ -17,17 +16,11 @@ DEFAULT_LABEL = ["DEFAULT"]
 logger = logging.getLogger(__name__)
 
 
-
-
-# deploy_regex_str = "[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\Z"
 deploy_regex_str = "[a-z0-9]([-a-z0-9]*[a-z0-9])?\Z"
 deployment_regex = re.compile(deploy_regex_str)
 
-# NOTE: Label regex should match a superset of the strings that match deployment_regex
-# label_regex = re.compile("(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?\Z")
 
-
-def validate_versioned_model_name(name, version):
+def _validate_versioned_model_name(name, version):
     if deployment_regex.match(name) is None:
         raise ClipperException("Invalid value: {name}: a model name must be a valid DNS-1123 "
                                " subdomain. It must consist of lower case "
@@ -46,6 +39,7 @@ def validate_versioned_model_name(name, version):
 
 class ClipperConnection(object):
     def __init__(self, container_manager):
+        self.connected = False
         self.cm = container_manager
 
     def start_clipper(self,
@@ -62,16 +56,19 @@ class ClipperConnection(object):
                     logger.info("Clipper still initializing.")
                     time.sleep(1)
             logger.info("Clipper is running")
-            return True
+            self.connected = True
         except ClipperException as e:
-            logger.info(e.msg)
-            return False
+            logger.warning("Error starting Clipper: {}".format(e.msg))
+            raise e
 
     def connect(self):
         self.cm.connect()
+        self.connected = True
 
     def register_application(self, name, input_type, default_output,
                              slo_micros):
+        if not self.connected:
+            raise UnconnectedException()
         url = "http://{host}/admin/add_app".format(
             host=self.cm.get_admin_addr())
         req_json = json.dumps({
@@ -105,6 +102,8 @@ class ClipperConnection(object):
         bool
             Returns true iff the model link request was successful
         """
+        if not self.connected:
+            raise UnconnectedException()
 
         url = "http://{host}/admin/add_model_links".format(
             host=self.cm.get_admin_addr())
@@ -130,9 +129,11 @@ class ClipperConnection(object):
                                labels=None,
                                container_registry=None,
                                num_replicas=1):
+        if not self.connected:
+            raise UnconnectedException()
         version = str(version)
 
-        validate_versioned_model_name(name, version)
+        _validate_versioned_model_name(name, version)
 
         with open(model_data_path + '/Dockerfile', 'w') as f:
             f.write("FROM {container_name}\nCOPY . /model/.\n".format(
@@ -166,8 +167,9 @@ class ClipperConnection(object):
                      image,
                      labels=None,
                      num_replicas=1):
-
-        validate_versioned_model_name(name, version)
+        if not self.connected:
+            raise UnconnectedException()
+        _validate_versioned_model_name(name, version)
         self.cm.deploy_model(
             name, version, input_type, image, num_replicas=num_replicas)
         logger.info("Registering model with Clipper")
@@ -177,6 +179,8 @@ class ClipperConnection(object):
 
     def register_model(self, name, version, input_type, image=None,
                        labels=None):
+        if not self.connected:
+            raise UnconnectedException()
         version = str(version)
         url = "http://{host}/admin/add_model".format(
             host=self.cm.get_admin_addr())
@@ -202,6 +206,8 @@ class ClipperConnection(object):
             raise ClipperException(msg)
 
     def get_num_replicas(self, name, version):
+        if not self.connected:
+            raise UnconnectedException()
         if version is None:
             model_info = self.get_all_models(verbose=True)
             for m in model_info:
@@ -211,7 +217,7 @@ class ClipperConnection(object):
         version = str(version)
         return self.cm.get_num_replicas(name, version)
 
-    def set_num_replicas(self, name, version=None, num_replicas=1):
+    def set_num_replicas(self, name, num_replicas, version=None):
         """Set the total number of active replicas for a model.
 
         If there are more than the current number of replicas
@@ -228,6 +234,8 @@ class ClipperConnection(object):
         num_replicas : int, optional
             The desired number of replicas.
         """
+        if not self.connected:
+            raise UnconnectedException()
         if version is None:
             model_info = self.get_all_models(verbose=True)
             for m in model_info:
@@ -244,8 +252,8 @@ class ClipperConnection(object):
                 self.cm.set_num_replicas(name, version, input_type, image,
                                          num_replicas)
             else:
-                msg = "Cannot resize the replica set for containerless model {name}:{version}".format(
-                    name=name, version=version)
+                msg = ("Cannot resize the replica set for containerless model "
+                       "{name}:{version}").format(name=name, version=version)
                 logger.error(msg)
                 raise ClipperException(msg)
         else:
@@ -271,6 +279,8 @@ class ClipperConnection(object):
             Returns a list of information about all apps registered to Clipper.
             If no apps are registered with Clipper, an empty list is returned.
         """
+        if not self.connected:
+            raise UnconnectedException()
         url = "http://{host}/admin/get_all_applications".format(host=self.cm.get_admin_addr())
         req_json = json.dumps({"verbose": verbose})
         headers = {'Content-type': 'application/json'}
@@ -300,6 +310,8 @@ class ClipperConnection(object):
             `register_application`. If no application with name `name` is
             registered with Clipper, None is returned.
         """
+        if not self.connected:
+            raise UnconnectedException()
         url = "http://{host}/admin/get_application".format(
             host=self.cm.get_admin_addr())
         req_json = json.dumps({"name": name})
@@ -331,6 +343,8 @@ class ClipperConnection(object):
             Returns a list of the names of models linked to the app.
             If no models are linked to the specified app, None is returned.
         """
+        if not self.connected:
+            raise UnconnectedException()
         url = "http://{host}/admin/get_linked_models".format(
             host=self.cm.get_admin_addr())
         req_json = json.dumps({"app_name": app_name})
@@ -359,6 +373,8 @@ class ClipperConnection(object):
             Returns a list of information about all apps registered to Clipper.
             If no models are registered with Clipper, an empty list is returned.
         """
+        if not self.connected:
+            raise UnconnectedException()
         url = "http://{host}/admin/get_all_models".format(
             host=self.cm.get_admin_addr())
         req_json = json.dumps({"verbose": verbose})
@@ -388,6 +404,8 @@ class ClipperConnection(object):
             If no model with name `model_name@model_version` is
             registered with Clipper, None is returned.
         """
+        if not self.connected:
+            raise UnconnectedException()
         version = str(version)
         url = "http://{host}/admin/get_model".format(
             host=self.cm.get_admin_addr())
@@ -421,6 +439,8 @@ class ClipperConnection(object):
             Returns a list of information about all model containers known to Clipper.
             If no containers are registered with Clipper, an empty list is returned.
         """
+        if not self.connected:
+            raise UnconnectedException()
         url = "http://{host}/admin/get_all_containers".format(
             host=self.cm.get_admin_addr())
         req_json = json.dumps({"verbose": verbose})
@@ -452,6 +472,8 @@ class ClipperConnection(object):
             A dictionary with the specified container's info.
             If no corresponding container is registered with Clipper, None is returned.
         """
+        if not self.connected:
+            raise UnconnectedException()
         version = str(version)
         url = "http://{host}/admin/get_container".format(
             host=self.cm.get_admin_addr())
@@ -475,6 +497,8 @@ class ClipperConnection(object):
             raise ClipperException(msg)
 
     def get_clipper_logs(self, logging_dir="clipper_logs/"):
+        if not self.connected:
+            raise UnconnectedException()
         return self.cm.get_logs(logging_dir)
 
     def inspect_instance(self):
@@ -487,6 +511,8 @@ class ClipperConnection(object):
             for this instance. On error, the string will be an error message
             (not JSON formatted).
         """
+        if not self.connected:
+            raise UnconnectedException()
         url = "http://{host}/metrics".format(host=self.cm.get_query_addr())
         r = requests.get(url)
         if r.status_code == requests.codes.ok:
@@ -517,6 +543,8 @@ class ClipperConnection(object):
             selected model version.
 
         """
+        if not self.connected:
+            raise UnconnectedException()
         version = str(version)
         url = "http://{host}/admin/set_model_version".format(
             host=self.cm.get_admin_addr())
@@ -530,7 +558,21 @@ class ClipperConnection(object):
             raise ClipperException(msg)
 
         if num_replicas is not None:
-            self.set_num_replicas(name, version, num_replicas)
+            self.set_num_replicas(name, num_replicas, version)
+
+    def stop_models(self, model_names):
+        """Stops all versions of the provided models. This is a convenience method to avoid the need
+        to explicitly list all deployed versions of a model.
+
+        Parameters
+        ----------
+        model_names : list(str)
+            A list of model names. All replicas of all versions of each model specified in the list
+            will be stopped.
+        """
+        # TODO(crankshaw): implement
+        return
+
 
     def stop_inactive_model_versions(self, model_name):
         """Removes all containers serving stale versions of the specified model.
@@ -540,6 +582,8 @@ class ClipperConnection(object):
         model_name : str
             The name of the model whose old containers you want to clean.
         """
+        if not self.connected:
+            raise UnconnectedException()
         model_info = self.get_all_models(verbose=True)
         current_version = None
         for m in model_info:
@@ -550,14 +594,22 @@ class ClipperConnection(object):
             model_name=model_name, keep_version=current_version)
 
     def get_query_addr(self):
+        if not self.connected:
+            raise UnconnectedException()
         return self.cm.get_query_addr()
 
     def stop_deployed_models(self):
+        if not self.connected:
+            raise UnconnectedException()
         self.cm.stop_models()
 
     def stop_clipper(self):
+        if not self.connected:
+            raise UnconnectedException()
         self.cm.stop_clipper()
 
     def stop_all(self):
+        if not self.connected:
+            raise UnconnectedException()
         self.cm.stop_models()
         self.cm.stop_clipper()
