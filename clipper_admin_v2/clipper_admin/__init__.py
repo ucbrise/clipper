@@ -5,3 +5,4 @@ from .k8s.k8s_container_manager import K8sContainerManager
 from .clipper_admin import *
 from . import deployers
 from .version import __version__
+from .exceptions import ClipperException, UnconnectedException

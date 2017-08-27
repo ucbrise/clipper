@@ -85,6 +85,7 @@ class ContainerManager(object):
     @abc.abstractmethod
     def stop_models(self, models):
         """Stops all replicas of the specified models.
+
         Parameters
         ----------
         models : dict(str, list(str))
