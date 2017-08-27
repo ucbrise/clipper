@@ -14,8 +14,8 @@ from pyspark.ml.classification import LogisticRegression
 from pyspark.ml.feature import HashingTF, Tokenizer
 from pyspark.sql import SparkSession
 
-from test_utils import (create_connection, BenchmarkException, headers,
-                        log_clipper_state, SERVICE)
+from test_utils import (create_docker_connection, BenchmarkException, headers,
+                        log_clipper_state)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin_v2" % cur_dir))
 from clipper_admin.deployers.pyspark import deploy_pyspark_model
@@ -91,8 +91,7 @@ def run_test():
                   [json.dumps((np.random.randint(1000), "spark abcd"))]))
 
     try:
-        clipper_conn = create_connection(
-            SERVICE, cleanup=True, start_clipper=True)
+        clipper_conn = create_docker_connection(cleanup=True, start_clipper=True)
 
         try:
             clipper_conn.register_application(app_name, "strings", "default_pred", 10000000)
@@ -161,18 +160,15 @@ def run_test():
         except BenchmarkException as e:
             log_clipper_state()
             logger.exception("BenchmarkException")
-            clipper_conn = create_connection(
-                SERVICE, cleanup=True, start_clipper=False)
+            clipper_conn = create_docker_connection(cleanup=True, start_clipper=False)
             sys.exit(1)
         else:
             spark.stop()
-            clipper_conn = create_connection(
-                SERVICE, cleanup=True, start_clipper=False)
+            clipper_conn = create_docker_connection(cleanup=True, start_clipper=False)
             logger.info("ALL TESTS PASSED")
     except Exception as e:
         logger.exception("Exception")
-        clipper_conn = create_connection(
-            SERVICE, cleanup=True, start_clipper=False)
+        clipper_conn = create_docker_connection(cleanup=True, start_clipper=False)
         sys.exit(1)
 
 

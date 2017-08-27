@@ -11,18 +11,7 @@ cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin_v2" % cur_dir))
 from clipper_admin import ClipperConnection, DockerContainerManager, K8sContainerManager
 from clipper_admin.container_manager import CLIPPER_DOCKER_LABEL
-from clipper_admin.exceptions import ClipperException
 from clipper_admin import __version__ as clipper_version
-
-# if sys.version < '3':
-#     import subprocess32 as subprocess
-#     PY3 = False
-# else:
-#     import subprocess
-#     PY3 = True
-
-# SERVICE = "docker"
-# SERVICE = "k8s"
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +60,7 @@ def find_unbound_port():
 def create_docker_connection(cleanup=True, start_clipper=True):
     logging.info("Creating DockerContainerManager")
     cm = DockerContainerManager(
-        "localhost", redis_port=find_unbound_port())
+        docker_ip_address="127.0.0.1", redis_port=find_unbound_port())
     cl = ClipperConnection(cm)
     if cleanup:
         cl.stop_all()
@@ -83,11 +72,9 @@ def create_docker_connection(cleanup=True, start_clipper=True):
         cl.start_clipper()
         time.sleep(1)
     else:
-        try:
-            cl.connect()
-        except ClipperException as e:
-            pass
+        cl.connect()
     return cl
+
 
 def create_k8s_connection(cleanup=True, start_clipper=True):
     logging.info("Creating K8sContainerManager")
@@ -110,9 +97,10 @@ def create_k8s_connection(cleanup=True, start_clipper=True):
     else:
         try:
             cl.connect()
-        except ClipperException as e:
+        except Exception as e:
             pass
     return cl
+
 
 def log_clipper_state(cl):
     pp = pprint.PrettyPrinter(indent=4)

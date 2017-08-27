@@ -14,7 +14,7 @@ import time
 import requests
 from argparse import ArgumentParser
 import logging
-from test_utils import get_docker_client, create_connection, fake_model_data, SERVICE
+from test_utils import get_docker_client, create_docker_connection, fake_model_data
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -39,12 +39,10 @@ logger = logging.getLogger(__name__)
 class ClipperManagerTestCaseShort(unittest.TestCase):
     @classmethod
     def tearDownClass(self):
-        self.clipper_conn = create_connection(
-            SERVICE, cleanup=True, start_clipper=False)
+        self.clipper_conn = create_docker_connection(cleanup=True, start_clipper=False)
 
     def setUp(self):
-        self.clipper_conn = create_connection(
-            SERVICE, cleanup=True, start_clipper=True)
+        self.clipper_conn = create_docker_connection(cleanup=True, start_clipper=True)
 
     def test_register_model_correct(self):
         input_type = "doubles"
@@ -185,7 +183,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertEqual(len(containers), 1)
 
     def test_set_num_replicas_for_deployed_model_succeeds(self):
-        model_name = "m"
+        model_name = "set-num-reps-model"
         input_type = "doubles"
         version = "v1"
         container_name = "clipper/noop-container:{}".format(clipper_version)
@@ -257,14 +255,14 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertEqual(len(containers), len(mnames)*len(versions))
 
         # stop all versions of models jimmypage, robertplant
-        self.stop_models(mnames[:2])
+        self.clipper_conn.stop_models(mnames[:2])
         containers = docker_client.containers.list(
             filters={"ancestor": container_name})
         self.assertEqual(len(containers), len(mnames[2:])*len(versions))
 
         # After calling this method, the remaining models should be:
         # jpj:i, jpj:iii, johnbohman:ii
-        self.stop_versioned_models({
+        self.clipper_conn.stop_versioned_models({
             "jpj": ["ii", "iv"],
             "johnbohnam": ["i", "iv", "iii"],
         })
@@ -327,8 +325,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
 class ClipperManagerTestCaseLong(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        self.clipper_conn = create_connection(
-            SERVICE, cleanup=True, start_clipper=True)
+        self.clipper_conn = create_docker_connection(cleanup=True, start_clipper=True)
         self.app_name_1 = "app3"
         self.app_name_2 = "app4"
         self.model_name_1 = "m4"
@@ -347,8 +344,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
     @classmethod
     def tearDownClass(self):
-        self.clipper_conn = create_connection(
-            SERVICE, cleanup=True, start_clipper=False)
+        self.clipper_conn = create_docker_connection(cleanup=True, start_clipper=False)
 
     def test_unlinked_app_returns_default_predictions(self):
         url = "http://localhost:1337/{}/predict".format(self.app_name_2)

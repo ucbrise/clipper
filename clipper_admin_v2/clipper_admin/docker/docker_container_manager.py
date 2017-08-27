@@ -63,9 +63,9 @@ class DockerContainerManager(ContainerManager):
 
         # Merge Clipper-specific labels with any user-provided labels
         if "labels" in self.extra_container_kwargs:
-            self.extra_container_args["labels"].update({CLIPPER_DOCKER_LABEL: ""})
+            self.extra_container_kwargs["labels"].update({CLIPPER_DOCKER_LABEL: ""})
         else:
-            self.extra_container_args["labels"] = {CLIPPER_DOCKER_LABEL: ""}
+            self.extra_container_kwargs["labels"] = {CLIPPER_DOCKER_LABEL: ""}
 
         self.extra_container_kwargs.update(container_args)
 
@@ -74,9 +74,9 @@ class DockerContainerManager(ContainerManager):
             self.redis_ip = "redis"
             self.docker_client.containers.run(
                 'redis:alpine',
-                "redis-server",
+                "redis-server --port %s" % self.redis_port,
                 name="redis",
-                ports={'6379/tcp', self.redis_port},
+                ports={'%s/tcp' % self.redis_port: self.redis_port},
                 **self.extra_container_kwargs)
 
         cmd = "--redis_ip={redis_ip} --redis_port={redis_port}".format(
@@ -207,7 +207,13 @@ class DockerContainerManager(ContainerManager):
             if c_name in models and c_version in models[c_name]:
                 c.stop()
 
-    def stop_clipper(self):
+    def stop_all_model_containers(self):
+        containers = self.docker_client.containers.list(
+            filters={"label": CLIPPER_MODEL_CONTAINER_LABEL})
+        for c in containers:
+            c.stop()
+
+    def stop_all(self):
         containers = self.docker_client.containers.list(
             filters={"label": CLIPPER_DOCKER_LABEL})
         for c in containers:

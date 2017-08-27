@@ -21,8 +21,7 @@ from pyspark.mllib.tree import RandomForest
 from pyspark.mllib.regression import LabeledPoint
 from pyspark.sql import SparkSession
 
-from test_utils import (create_connection, BenchmarkException, headers,
-                        log_clipper_state, SERVICE)
+from test_utils import (create_docker_connection, BenchmarkException, headers, log_clipper_state)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin_v2" % cur_dir))
 from clipper_admin.deployers.pyspark import deploy_pyspark_model, create_endpoint
@@ -130,8 +129,7 @@ if __name__ == "__main__":
                 .appName("clipper-pyspark")\
                 .getOrCreate()
         sc = spark.sparkContext
-        clipper_conn = create_connection(
-            SERVICE, cleanup=True, start_clipper=True)
+        clipper_conn = create_docker_connection(cleanup=True, start_clipper=True)
 
         train_path = os.path.join(cur_dir, "data/train.data")
         trainRDD = sc.textFile(train_path).map(
@@ -174,15 +172,12 @@ if __name__ == "__main__":
         except BenchmarkException as e:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
-            clipper_conn = create_connection(
-                SERVICE, cleanup=True, start_clipper=False)
+            clipper_conn = create_docker_connection(cleanup=True, start_clipper=False)
             sys.exit(1)
         else:
             spark.stop()
-            clipper_conn = create_connection(
-                SERVICE, cleanup=True, start_clipper=False)
+            clipper_conn = create_docker_connection(cleanup=True, start_clipper=False)
     except Exception as e:
         logger.exception("Exception")
-        clipper_conn = create_connection(
-            SERVICE, cleanup=True, start_clipper=False)
+        clipper_conn = create_docker_connection(cleanup=True, start_clipper=False)
         sys.exit(1)

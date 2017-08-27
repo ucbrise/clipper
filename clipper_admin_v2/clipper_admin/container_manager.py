@@ -84,7 +84,6 @@ class ContainerManager(object):
 
     @abc.abstractmethod
     def stop_models(self, models):
-        # TODO: changed args
         """Stops all replicas of the specified models.
         Parameters
         ----------
@@ -95,7 +94,12 @@ class ContainerManager(object):
         return
 
     @abc.abstractmethod
-    def stop_clipper(self):
+    def stop_all_model_containers(self):
+        return
+
+    @abc.abstractmethod
+    def stop_all(self):
+        """Stop all resources associated with Clipper."""
         pass
 
     @abc.abstractmethod

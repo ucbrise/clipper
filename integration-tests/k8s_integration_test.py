@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 # TODO: Add k8s specific checks that use k8s API
 
+
 def deploy_model(clipper_conn, name, version):
     app_name = "%s-app" % name
     model_name = "%s-model" % name
@@ -57,7 +58,7 @@ def deploy_model(clipper_conn, name, version):
                 num_defaults += 1
         if num_defaults > 0:
             logger.error("Error: %d/%d predictions were default" % (num_defaults,
-                                                                num_preds))
+                                                                    num_preds))
         if num_defaults < num_preds / 2:
             success = True
 
@@ -115,14 +116,12 @@ if __name__ == "__main__":
             logger.info(clipper_conn.get_clipper_logs())
             log_clipper_state(clipper_conn)
             logger.info("SUCCESS")
+            clipper_conn.stop_all()
         except BenchmarkException as e:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
             create_k8s_connection(cleanup=True, start_clipper=False)
             sys.exit(1)
-        else:
-            create_k8s_connection(cleanup=True, start_clipper=False)
     except Exception as e:
-        logger.exception("Exception")
-        create_k8s_connection(cleanup=True, start_clipper=False)
+        logger.exception("Exception: {}".format(e.msg()))
         sys.exit(1)

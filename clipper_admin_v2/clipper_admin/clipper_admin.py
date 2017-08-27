@@ -582,11 +582,11 @@ class ClipperConnection(object):
         model_info = self.get_all_models(verbose=True)
         model_dict = {}
         for m in model_info:
-            if m["name"] in model_names:
-                if m["name"] in model_dict:
-                    model_dict[m["name"]].append(m["version"])
+            if m["model_name"] in model_names:
+                if m["model_name"] in model_dict:
+                    model_dict[m["model_name"]].append(m["model_version"])
                 else:
-                    model_dict[m["name"]] = [m["version"]]
+                    model_dict[m["model_name"]] = [m["model_version"]]
         self.cm.stop_models(model_dict)
 
     def stop_versioned_models(self, models):
@@ -620,11 +620,11 @@ class ClipperConnection(object):
         model_info = self.get_all_models(verbose=True)
         model_dict = {}
         for m in model_info:
-            if m["name"] in model_names and not m["is_current_version"]:
-                if m["name"] in model_dict:
-                    model_dict[m["name"]].append(m["version"])
+            if m["model_name"] in model_names and not m["is_current_version"]:
+                if m["model_name"] in model_dict:
+                    model_dict[m["model_name"]].append(m["model_version"])
                 else:
-                    model_dict[m["name"]] = [m["version"]]
+                    model_dict[m["model_name"]] = [m["model_version"]]
         self.cm.stop_models(model_dict)
 
     def stop_deployed_models(self):
@@ -633,19 +633,19 @@ class ClipperConnection(object):
         model_info = self.get_all_models(verbose=True)
         model_dict = {}
         for m in model_info:
-            if m["name"] in model_dict:
-                model_dict[m["name"]].append(m["version"])
+            if m["model_name"] in model_dict:
+                model_dict[m["model_name"]].append(m["model_version"])
             else:
-                model_dict[m["name"]] = [m["version"]]
+                model_dict[m["model_name"]] = [m["model_version"]]
         self.cm.stop_models(model_dict)
 
-    def stop_clipper(self):
-        if not self.connected:
-            raise UnconnectedException()
-        self.cm.stop_clipper()
+    def stop_all_model_containers(self):
+        """Stop all docker containers labeled as Clipper model containers.
+
+        This method can be used to clean up leftover Clipper model containers even if the
+        Clipper management frontend or Redis has crashe.
+        """
+        self.cm.stop_all_model_containers()
 
     def stop_all(self):
-        if not self.connected:
-            raise UnconnectedException()
-        self.stop_deployed_models()
-        self.cm.stop_clipper()
+        self.cm.stop_all()

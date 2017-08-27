@@ -237,7 +237,6 @@ class K8sContainerManager(ContainerManager):
     def stop_models(self, models):
         # Stops all deployments of pods running Clipper models with the specified
         # names and versions.
-        # logger.info("Stopping all running Clipper model deployments")
         try:
             for m in models:
                 for v in models[m]:
@@ -248,8 +247,18 @@ class K8sContainerManager(ContainerManager):
                             val=create_model_container_label(m, v)))
         except ApiException as e:
             logger.warn("Exception deleting k8s deployments: {}".format(e))
+            raise e
 
-    def stop_clipper(self):
+    def stop_all_model_containers(self):
+        try:
+            self._k8s_beta.delete_collection_namespaced_deployment(
+                namespace='default',
+                label_selector=CLIPPER_MODEL_CONTAINER_LABEL)
+        except ApiException as e:
+            logger.warn("Exception deleting k8s deployments: {}".format(e))
+            raise e
+
+    def stop_all(self):
         """Stops all Clipper resources.
 
         WARNING: Data stored on an in-cluster Redis deployment will be lost!
