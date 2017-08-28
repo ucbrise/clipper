@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include <boost/optional.hpp>
 #include <redox.hpp>
 #include <server_http.hpp>
 
@@ -14,6 +15,7 @@
 
 #include <clipper/config.hpp>
 #include <clipper/datatypes.hpp>
+#include <clipper/exceptions.hpp>
 #include <clipper/json_util.hpp>
 #include <clipper/logging.hpp>
 #include <clipper/persistent_state.hpp>
@@ -191,7 +193,7 @@ class RequestHandler {
             std::string err_msg =
                 json_error_msg(e.what(), ADD_APPLICATION_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
-          } catch (const std::invalid_argument& e) {
+          } catch (const clipper::ManagementOperationError& e) {
             respond_http(e.what(), "400 Bad Request", response);
           }
         });
@@ -212,7 +214,7 @@ class RequestHandler {
             std::string err_msg =
                 json_error_msg(e.what(), ADD_MODEL_LINKS_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
-          } catch (const std::invalid_argument& e) {
+          } catch (const clipper::ManagementOperationError& e) {
             respond_http(e.what(), "400 Bad Request", response);
           }
         });
@@ -233,7 +235,7 @@ class RequestHandler {
             std::string err_msg =
                 json_error_msg(e.what(), ADD_MODEL_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
-          } catch (const std::invalid_argument& e) {
+          } catch (const clipper::ManagementOperationError& e) {
             respond_http(e.what(), "400 Bad Request", response);
           }
         });
@@ -254,7 +256,7 @@ class RequestHandler {
             std::string err_msg =
                 json_error_msg(e.what(), SET_VERSION_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
-          } catch (const std::invalid_argument& e) {
+          } catch (const clipper::ManagementOperationError& e) {
             respond_http(e.what(), "400 Bad Request", response);
           }
         });
@@ -276,7 +278,7 @@ class RequestHandler {
             std::string err_msg =
                 json_error_msg(e.what(), VERBOSE_OPTION_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
-          } catch (const std::invalid_argument& e) {
+          } catch (const clipper::ManagementOperationError& e) {
             respond_http(e.what(), "400 Bad Request", response);
           }
         });
@@ -297,7 +299,7 @@ class RequestHandler {
             std::string err_msg =
                 json_error_msg(e.what(), GET_APPLICATION_REQUESTS_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
-          } catch (const std::invalid_argument& e) {
+          } catch (const clipper::ManagementOperationError& e) {
             respond_http(e.what(), "400 Bad Request", response);
           }
         });
@@ -318,7 +320,7 @@ class RequestHandler {
             std::string err_msg =
                 json_error_msg(e.what(), GET_LINKED_MODELS_REQUESTS_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
-          } catch (const std::invalid_argument& e) {
+          } catch (const clipper::ManagementOperationError& e) {
             respond_http(e.what(), "400 Bad Request", response);
           }
         });
@@ -339,7 +341,7 @@ class RequestHandler {
             std::string err_msg =
                 json_error_msg(e.what(), VERBOSE_OPTION_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
-          } catch (const std::invalid_argument& e) {
+          } catch (const clipper::ManagementOperationError& e) {
             respond_http(e.what(), "400 Bad Request", response);
           }
         });
@@ -360,7 +362,7 @@ class RequestHandler {
             std::string err_msg =
                 json_error_msg(e.what(), GET_MODEL_REQUESTS_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
-          } catch (const std::invalid_argument& e) {
+          } catch (const clipper::ManagementOperationError& e) {
             respond_http(e.what(), "400 Bad Request", response);
           }
         });
@@ -381,7 +383,7 @@ class RequestHandler {
             std::string err_msg =
                 json_error_msg(e.what(), VERBOSE_OPTION_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
-          } catch (const std::invalid_argument& e) {
+          } catch (const clipper::ManagementOperationError& e) {
             respond_http(e.what(), "400 Bad Request", response);
           }
         });
@@ -402,7 +404,7 @@ class RequestHandler {
             std::string err_msg =
                 json_error_msg(e.what(), GET_CONTAINER_REQUESTS_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
-          } catch (const std::invalid_argument& e) {
+          } catch (const clipper::ManagementOperationError& e) {
             respond_http(e.what(), "400 Bad Request", response);
           }
         });
@@ -421,7 +423,7 @@ class RequestHandler {
             std::string err_msg =
                 json_error_msg(e.what(), SELECTION_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
-          } catch (const std::invalid_argument& e) {
+          } catch (const clipper::ManagementOperationError& e) {
             respond_http(e.what(), "400 Bad Request", response);
           }
         });
@@ -436,7 +438,8 @@ class RequestHandler {
    * Checks `value` for prohibited characters in strings that will be grouped.
    * If it does, throws an error with message stating that input has an invalid
    * `label`.
-   * @throws Throws a std::invalud_argument error if `value` contains prohibited
+   *
+   * \throws ManagementOperationError error if `value` contains prohibited
    * characters.
    */
   void validate_group_str_for_redis(const std::string& value,
@@ -456,19 +459,22 @@ class RequestHandler {
       // Add final element of `prohibited_group_strings`
       ss << "'" << *(prohibited_group_strings.end() - 1) << "'";
 
-      throw std::invalid_argument(ss.str());
+      throw clipper::ManagementOperationError(ss.str());
     }
   }
 
   /**
-   * Creates an endpoint that listens for requests to add links between apps
-   * and models
+   * Processes a request to add links between a specified application
+   * and a set of models
    *
    * JSON format:
    * {
    *  "app_name" := string,
    *  "model_names" := [string]
    * }
+   *
+   * \return A string describing the operation's success
+   * \throws ManagementOperationError if the operation is not successful
    */
   std::string add_model_links(const std::string& json) {
     rapidjson::Document d;
@@ -482,8 +488,10 @@ class RequestHandler {
         clipper::redis::get_application(redis_connection_, app_name);
     if (app_info.size() == 0) {
       std::stringstream ss;
-      ss << "No app with name " << app_name << " exists.";
-      throw std::invalid_argument(ss.str());
+      ss << "No app with name "
+         << "'" << app_name << "'"
+         << " exists.";
+      throw clipper::ManagementOperationError(ss.str());
     }
 
     // Confirm that the models exists and have compatible input_types
@@ -496,19 +504,24 @@ class RequestHandler {
           redis_connection_, model_name);
       if (!model_version) {
         std::stringstream ss;
-        ss << "No model with name " << model_name << " exists.";
-        throw std::invalid_argument(ss.str());
+        ss << "No model with name "
+           << "'" << model_name << "'"
+           << " exists.";
+        throw clipper::ManagementOperationError(ss.str());
       } else {
         model_info = clipper::redis::get_model(
             redis_connection_, VersionedModelId(model_name, *model_version));
         model_input_type = model_info["input_type"];
         if (model_input_type != app_input_type) {
           std::stringstream ss;
-          ss << "Model with name " << model_name
-             << " has incompatible input_type " << model_input_type
-             << ". Requested app to link to has input_type " << app_input_type
+          ss << "Model with name "
+             << "'" << model_name << "'"
+             << " has incompatible input_type "
+             << "'" << model_input_type << "'"
+             << ". Requested app to link to has input_type "
+             << "'" << app_input_type << "'"
              << ".";
-          throw std::invalid_argument(ss.str());
+          throw clipper::ManagementOperationError(ss.str());
         }
       }
     }
@@ -517,52 +530,67 @@ class RequestHandler {
     if (model_names.size() != 1) {
       std::stringstream ss;
       if (model_names.size() == 0) {
-        ss << "Please provide the name of the model with which you want"
-           << app_name << " to be linked";
+        ss << "Please provide the name of the model that you want to link to "
+              "the application "
+           << "'" << app_name << "'";
       } else {
         ss << "Applications must be linked with at most one model. ";
         ss << "Attempted to add links to " << model_names.size() << " models.";
       }
       std::string error_msg = ss.str();
       clipper::log_error(LOGGING_TAG_MANAGEMENT_FRONTEND, error_msg);
-      throw std::invalid_argument(error_msg);
+      throw clipper::ManagementOperationError(error_msg);
     }
 
     // Make sure that there will only be one link
     auto existing_linked_models =
         clipper::redis::get_linked_models(redis_connection_, app_name);
 
+    std::string new_model_name = model_names[0];
+
     if (existing_linked_models.size() > 0) {
       // We asserted earlier that `model_names` has size 1
-      std::string new_model_name = model_names[0];
 
       if (std::find(existing_linked_models.begin(),
                     existing_linked_models.end(),
                     new_model_name) != existing_linked_models.end()) {
-        return "Success!";
+        std::stringstream ss;
+        ss << "The model with name "
+           << "'" << new_model_name << "'"
+           << " is already linked to "
+           << "'" << app_name << "'";
+        throw clipper::ManagementOperationError(ss.str());
       } else {
         // We guarantee that there is only one existing model
         std::string existing_model_name = existing_linked_models[0];
         std::stringstream ss;
         ss << "A model with name " << existing_model_name
-           << " is already linked to " << app_name << ".";
-        throw std::invalid_argument(ss.str());
+           << " is already linked to "
+           << "'" << app_name << "'"
+           << ".";
+        throw clipper::ManagementOperationError(ss.str());
       }
     }
 
     if (clipper::redis::add_model_links(redis_connection_, app_name,
                                         model_names)) {
-      return "Success!";
+      std::stringstream ss;
+      ss << "Successfully linked model with name "
+         << "'" << new_model_name << "'"
+         << " to application "
+         << "'" << app_name << "'";
+      return ss.str();
     } else {
       std::stringstream ss;
-      ss << "Error linking models to " << app_name << " in Redis";
-      throw std::invalid_argument(ss.str());
+      ss << "Error linking models to "
+         << "'" << app_name << "'"
+         << " in Redis";
+      throw clipper::ManagementOperationError(ss.str());
     }
   }
 
   /**
-   * Creates an endpoint that listens for requests to add new prediction
-   * applications to Clipper.
+   * Processes a request to add a new application to Clipper
    *
    * JSON format:
    * {
@@ -571,6 +599,9 @@ class RequestHandler {
    *  "default_output" := string,
    *  "latency_slo_micros" := int
    * }
+   *
+   * \return A string describing the operation's success
+   * \throws ManagementOperationError if the operation is not successful
    */
   std::string add_application(const std::string& json) {
     rapidjson::Document d;
@@ -591,22 +622,28 @@ class RequestHandler {
       if (clipper::redis::add_application(redis_connection_, app_name,
                                           input_type, selection_policy,
                                           default_output, latency_slo_micros)) {
-        return "Success!";
+        std::stringstream ss;
+        ss << "Successfully added application with name "
+           << "'" << app_name << "'";
+        return ss.str();
       } else {
         std::stringstream ss;
-        ss << "Error adding application " << app_name << " to Redis";
-        throw std::invalid_argument(ss.str());
+        ss << "Error adding application "
+           << "'" << app_name << "'"
+           << " to Redis";
+        throw clipper::ManagementOperationError(ss.str());
       }
     } else {
       std::stringstream ss;
-      ss << "Error application " << app_name << " already exists";
-      throw std::invalid_argument(ss.str());
+      ss << "application "
+         << "'" << app_name << "'"
+         << " already exists";
+      throw clipper::ManagementOperationError(ss.str());
     }
   }
 
   /**
-   * Creates an endpoint that listens for requests to add new models to
-   * Clipper.
+   * Processes a request to add a new model to Clipper
    *
    * JSON format:
    * {
@@ -617,6 +654,9 @@ class RequestHandler {
    *  "container_name" := string,
    *  "model_data_path" := string
    * }
+   *
+   * \return A string describing the operation's success
+   * \throws ManagementOperationError if the operation is not successful
    */
   std::string add_model(const std::string& json) {
     rapidjson::Document d;
@@ -644,26 +684,57 @@ class RequestHandler {
 
     if (!existing_model_data.empty()) {
       std::stringstream ss;
-      ss << "Error model " << model_name << ":" << model_version
+      ss << "model with name "
+         << "'" << model_name << "'"
+         << " and version "
+         << "'" << model_version << "'"
          << " already exists";
-      throw std::invalid_argument(ss.str());
+      throw clipper::ManagementOperationError(ss.str());
     }
 
-    check_updated_model_consistent_with_app_links(model_name, input_type);
+    check_updated_model_consistent_with_app_links(
+        VersionedModelId(model_name, model_version),
+        boost::make_optional<InputType>(input_type));
 
     if (clipper::redis::add_model(redis_connection_, model_id, input_type,
                                   labels, container_name, model_data_path)) {
       attempt_model_version_update(model_id.get_name(), model_id.get_id());
-      return "Success!";
+      std::stringstream ss;
+      ss << "Successfully added model with name "
+         << "'" << model_name << "'"
+         << " and input type "
+         << "'" << clipper::get_readable_input_type(input_type) << "'";
+      return ss.str();
     }
     std::stringstream ss;
     ss << "Error adding model " << model_id.get_name() << ":"
        << model_id.get_id() << " to Redis";
-    throw std::invalid_argument(ss.str());
+    throw clipper::ManagementOperationError(ss.str());
   }
 
+  /**
+   * During a version update, ensures that the input type associated
+   * with a VersionedModelId matches the input type associated with
+   * each application to which it is linked
+   *
+   * \param model_id The id of the model being checked
+   * \param input_type (optional) The input type for the model, if it is already
+   * known
+   *
+   * \throws ManagementOperationError If a discrepancy exists
+   * between the model input type and the application type
+   * to which the
+   */
   void check_updated_model_consistent_with_app_links(
-      std::string model_name, clipper::InputType proposed_input_type) {
+      VersionedModelId model_id,
+      boost::optional<InputType> input_type = boost::none) {
+    InputType model_input_type;
+    if (input_type) {
+      model_input_type = input_type.get();
+    } else {
+      auto model_info = clipper::redis::get_model(redis_connection_, model_id);
+      model_input_type = clipper::parse_input_type(model_info["input_type"]);
+    }
     auto app_names =
         clipper::redis::get_all_application_names(redis_connection_);
     std::vector<std::string> linked_models;
@@ -671,28 +742,31 @@ class RequestHandler {
     for (auto const& app_name : app_names) {
       linked_models =
           clipper::redis::get_linked_models(redis_connection_, app_name);
-      if (std::find(linked_models.begin(), linked_models.end(), model_name) !=
-          linked_models.end()) {
+      if (std::find(linked_models.begin(), linked_models.end(),
+                    model_id.get_name()) != linked_models.end()) {
         app_info = clipper::redis::get_application(redis_connection_, app_name);
         clipper::InputType app_input_type =
             clipper::parse_input_type(app_info["input_type"]);
-        if (proposed_input_type != app_input_type) {
+        if (model_input_type != app_input_type) {
           std::stringstream ss;
-          ss << "Model with name " << model_name << " is already linked to app "
-             << app_name << " using input type "
-             << get_readable_input_type(app_input_type)
+          ss << "Model with name "
+             << "'" << model_id.get_name() << "'"
+             << " is already linked to app "
+             << "'" << app_name << "'"
+             << " using input type "
+             << "'" << get_readable_input_type(app_input_type) << "'"
              << ". The input type you provided for a new version of the model, "
-             << get_readable_input_type(proposed_input_type)
+             << "'" << get_readable_input_type(model_input_type) << "'"
              << ", is not compatible.";
-          throw std::invalid_argument(ss.str());
+          throw clipper::ManagementOperationError(ss.str());
         }
       }
     }
   }
 
   /**
-   * Creates an endpoint that listens for requests to retrieve info about
-   * registered Clipper applications.
+   * Processes a request to retrieve information about all registered
+   * Clipper applications
    *
    * JSON format:
    * {
@@ -703,7 +777,6 @@ class RequestHandler {
    * registered apps. If `verbose` == False, the encoded list has all registered
    * apps' names. Else, the encoded map contains objects with full app
    * information.
-   *
    */
   std::string get_all_applications(const std::string& json) {
     rapidjson::Document d;
@@ -744,8 +817,8 @@ class RequestHandler {
   }
 
   /**
-   * Creates an endpoint that listens for requests to retrieve info about
-   * a specified Clipper application.
+   * Processes a request to retrieve information about a specified
+   * Clipper application
    *
    * JSON format:
    * {
@@ -754,7 +827,6 @@ class RequestHandler {
    *
    * \return Returns a JSON string encoding a map of the specified application's
    * attribute name-value pairs.
-   *
    */
   std::string get_application(const std::string& json) {
     rapidjson::Document d;
@@ -782,8 +854,8 @@ class RequestHandler {
   }
 
   /**
-   * Creates an endpoint that listens for requests to retrieve info about
-   * the models linked to specified applications.
+   * Processes a request to retrieve information about the
+   * set of models linked to a specified application
    *
    * JSON format:
    * {
@@ -794,6 +866,7 @@ class RequestHandler {
    * application's
    * linked models' names.
    *
+   * \throws ManagementOperationError if the operation is not successful
    */
   std::string get_linked_models(const std::string& json) {
     rapidjson::Document d;
@@ -806,8 +879,10 @@ class RequestHandler {
         clipper::redis::get_application(redis_connection_, app_name);
     if (app_info.size() == 0) {
       std::stringstream ss;
-      ss << "No app with name " << app_name << " exists.";
-      throw std::invalid_argument(ss.str());
+      ss << "No application with name "
+         << "'" << app_name << "'"
+         << " exists.";
+      throw clipper::ManagementOperationError(ss.str());
     }
 
     auto model_names =
@@ -819,8 +894,8 @@ class RequestHandler {
   }
 
   /**
-   * Creates an endpoint that listens for requests to retrieve info about
-   * registered Clipper models.
+   * Processes a request to retrieve information about all
+   * registered Clipper models
    *
    * JSON format:
    * {
@@ -832,7 +907,6 @@ class RequestHandler {
    * registered
    * models' names. Else, the encoded map contains objects with full model
    * information.
-   *
    */
   std::string get_all_models(const std::string& json) {
     rapidjson::Document d;
@@ -876,8 +950,8 @@ class RequestHandler {
   }
 
   /**
-   * Creates an endpoint that listens for requests to retrieve info about
-   * a specified Clipper model.
+   * Processes a request to retrieve information about a specified
+   * model registered with Clipper
    *
    * JSON format:
    * {
@@ -888,7 +962,6 @@ class RequestHandler {
    * \return Returns a JSON string encoding a map of the specified model's
    * attribute name-value pairs, including whether it is the currently deployed
    * version of the model.
-   *
    */
   std::string get_model(const std::string& json) {
     rapidjson::Document d;
@@ -918,8 +991,8 @@ class RequestHandler {
   }
 
   /**
-   * Creates an endpoint that listens for requests to retrieve info about
-   * Clipper containers.
+   * Processes a request to retrieve information about all
+   * model containers registered with Clipper
    *
    * JSON format:
    * {
@@ -931,7 +1004,6 @@ class RequestHandler {
    * If `verbose` == False, the encoded list has all containers' names (model
    * name, model version, container ID).
    * Else, the encoded map contains objects with full container information.
-   *
    */
   std::string get_all_containers(const std::string& json) {
     rapidjson::Document d;
@@ -974,8 +1046,8 @@ class RequestHandler {
   }
 
   /**
-   * Creates an endpoint that listens for requests to retrieve info about
-   * a specified Clipper container.
+   * Processes a request to retrieve information about a
+   * specified container registered with Clipper
    *
    * JSON format:
    * {
@@ -986,7 +1058,6 @@ class RequestHandler {
    *
    * \return Returns a JSON string encoding a map of the specified container's
    * attribute name-value pairs.
-   *
    */
   std::string get_container(const std::string& json) {
     rapidjson::Document d;
@@ -1013,8 +1084,8 @@ class RequestHandler {
   }
 
   /**
-   * Creates an endpoint that looks up the debug string
-   * for a user's selection policy state for an application.
+   * Processes a request to obtain the debug string
+   * for a user's selection policy state for an applicaiton.
    *
    * JSON format:
    * {
@@ -1042,14 +1113,17 @@ class RequestHandler {
   }
 
   /**
-   * Creates an endpoint that listens for requests to update
-   * a specified model to a specified version.
+   * Processes a request to update a specified model to a
+   * specified version
    *
    * JSON format:
    * {
    *  "model_name" := string,
    *  "model_version" := string,
    * }
+   *
+   * \return A string describing the operation's success
+   * \throws ManagementOperationError if the operation is not successful
    */
   std::string set_model_version(const std::string& json) {
     rapidjson::Document d;
@@ -1062,8 +1136,9 @@ class RequestHandler {
 
     if (versions.size() == 0) {
       std::stringstream ss;
-      ss << "Cannot set version for nonexistent model " << model_name;
-      throw std::invalid_argument(ss.str());
+      ss << "Cannot set version for nonexistent model "
+         << "'" << model_name << "'";
+      throw clipper::ManagementOperationError(ss.str());
     }
 
     bool version_exists = false;
@@ -1075,21 +1150,25 @@ class RequestHandler {
     }
     if (!version_exists) {
       std::stringstream ss;
-      ss << "Cannot set non-existent version " << new_model_version
-         << " for model " << model_name;
+      ss << "Cannot set non-existent version "
+         << "'" << new_model_version << "'"
+         << " for model with name "
+         << "'" << model_name << "'";
       std::string err_msg = ss.str();
       clipper::log_error(LOGGING_TAG_MANAGEMENT_FRONTEND, err_msg);
-      throw std::invalid_argument(err_msg);
+      throw clipper::ManagementOperationError(err_msg);
     }
 
-    auto model_info = clipper::redis::get_model(
-        redis_connection_, VersionedModelId(model_name, new_model_version));
-    clipper::InputType input_type =
-        clipper::parse_input_type(model_info["input_type"]);
-    check_updated_model_consistent_with_app_links(model_name, input_type);
+    check_updated_model_consistent_with_app_links(
+        VersionedModelId(model_name, new_model_version));
 
     attempt_model_version_update(model_name, new_model_version);
-    return "Success!";
+    std::stringstream ss;
+    ss << "Successfully set model with name "
+       << "'" << model_name << "'"
+       << " to version "
+       << "'" << new_model_version << "'";
+    return ss.str();
   }
 
   /**
@@ -1101,9 +1180,11 @@ class RequestHandler {
     if (!clipper::redis::set_current_model_version(
             redis_connection_, model_name, new_model_version)) {
       std::stringstream ss;
-      ss << "ERROR: Version " << new_model_version
-         << " does not exist for model " << model_name;
-      throw std::invalid_argument(ss.str());
+      ss << "Version "
+         << "'" << new_model_version << "'"
+         << " does not exist for model with name"
+         << "'" << model_name << "'";
+      throw clipper::ManagementOperationError(ss.str());
     }
   }
 
