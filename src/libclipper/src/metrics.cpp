@@ -419,9 +419,7 @@ int64_t ReservoirSampler::sample(const int64_t value) {
   return replaced_value;
 }
 
-size_t ReservoirSampler::current_size() const {
-  return reservoir_.size();
-}
+size_t ReservoirSampler::current_size() const { return reservoir_.size(); }
 
 const std::vector<int64_t> ReservoirSampler::snapshot() const {
   return reservoir_;
@@ -433,8 +431,9 @@ void ReservoirSampler::clear() {
 }
 
 HistogramStats::HistogramStats(size_t data_size, int64_t min, int64_t max,
-                               long double mean, long double std_dev, long double p50,
-                               long double p95, long double p99)
+                               long double mean, long double std_dev,
+                               long double p50, long double p95,
+                               long double p99)
     : data_size_(data_size),
       min_(min),
       max_(max),
@@ -458,10 +457,10 @@ void Histogram::insert(const int64_t value) {
 
 void Histogram::update_mean(const size_t old_reservoir_size,
                             const size_t new_reservoir_size,
-                            const int64_t new_value,
-                            const int64_t old_value) {
+                            const int64_t new_value, const int64_t old_value) {
   int64_t old_sum = static_cast<int64_t>(mean_ * old_reservoir_size);
-  mean_ = static_cast<long double>(old_sum - old_value + new_value) / static_cast<long double>(new_reservoir_size);
+  mean_ = static_cast<long double>(old_sum - old_value + new_value) /
+          static_cast<long double>(new_reservoir_size);
 }
 
 long double Histogram::percentile(std::vector<int64_t> snapshot, double rank) {

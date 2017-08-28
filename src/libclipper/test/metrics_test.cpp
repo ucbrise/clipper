@@ -1,6 +1,6 @@
 #include <cmath>
-#include <string>
 #include <limits>
+#include <string>
 
 #include <gtest/gtest.h>
 
@@ -140,11 +140,12 @@ TEST(MetricsTests, HistogramMinMaxMeanAreCorrectWithNumericallyLargeElements) {
   Histogram histogram("Test Histogram", "milliseconds", sample_size);
   long max_long = std::numeric_limits<long>::max();
   int64_t sum = 0;
-  for(int i = 0; i < sample_size; i++) {
+  for (int i = 0; i < sample_size; i++) {
     histogram.insert(max_long - i);
     sum += max_long - i;
   }
-  long double expected_mean = static_cast<long double>(sum) / static_cast<long double>(sample_size);
+  long double expected_mean =
+      static_cast<long double>(sum) / static_cast<long double>(sample_size);
   HistogramStats stats = histogram.compute_stats();
   ASSERT_DOUBLE_EQ(stats.mean_, expected_mean);
   ASSERT_DOUBLE_EQ(stats.max_, max_long);
@@ -207,7 +208,8 @@ TEST(MetricsTests, MetricsRegistryReportingFormatCorrectness) {
   ASSERT_EQ(hist2_tree.get<int64_t>("min"), hist2_stats.min_);
   ASSERT_EQ(hist2_tree.get<int64_t>("max"), hist2_stats.max_);
   ASSERT_DOUBLE_EQ(hist2_tree.get<long double>("mean"), hist2_stats.mean_);
-  ASSERT_DOUBLE_EQ(hist2_tree.get<long double>("std_dev"), hist2_stats.std_dev_);
+  ASSERT_DOUBLE_EQ(hist2_tree.get<long double>("std_dev"),
+                   hist2_stats.std_dev_);
   ASSERT_DOUBLE_EQ(hist2_tree.get<long double>("p50"), hist2_stats.p50_);
   ASSERT_DOUBLE_EQ(hist2_tree.get<long double>("p95"), hist2_stats.p95_);
   ASSERT_DOUBLE_EQ(hist2_tree.get<long double>("p99"), hist2_stats.p99_);

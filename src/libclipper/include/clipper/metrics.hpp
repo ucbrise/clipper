@@ -273,8 +273,8 @@ class HistogramStats {
   /** Constructs a HistogramStats object with all values zero **/
   explicit HistogramStats(){};
   explicit HistogramStats(size_t data_size, int64_t min, int64_t max,
-                          long double mean, long double std_dev, long double p50, long double p95,
-                          long double p99);
+                          long double mean, long double std_dev,
+                          long double p50, long double p95, long double p99);
 
   size_t data_size_ = 0;
   int64_t min_ = 0;
@@ -316,11 +316,11 @@ class Histogram : public Metric {
    * @param old_reservoir_size The old size of the reservoir
    * @param new_reservoir_size The new size of the reservoir
    * @param new_value The value that was just inserted into the reservoir
-   * @param old_value The value that was just removed from the reservoir (use zero if nothing was removed)
+   * @param old_value The value that was just removed from the reservoir (use
+   * zero if nothing was removed)
    */
   void update_mean(const size_t old_reservoir_size,
-                   const size_t new_reservoir_size,
-                   const int64_t new_value,
+                   const size_t new_reservoir_size, const int64_t new_value,
                    const int64_t old_value);
 
   std::string name_;
