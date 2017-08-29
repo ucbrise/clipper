@@ -1,0 +1,32 @@
+ARG CODE_VERSION=develop
+FROM clipper/lib_base:${CODE_VERSION}
+
+
+# Install Anaconda and Python deps
+RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh \
+    && wget --quiet 'https://repo.continuum.io/archive/Anaconda2-4.2.0-Linux-x86_64.sh' -O /tmp/anaconda.sh \
+    && /bin/bash /tmp/anaconda.sh -b -p /opt/conda \
+    && rm /tmp/anaconda.sh
+ENV PATH "/opt/conda/bin:$PATH"
+RUN conda install -y libgcc pyzmq
+RUN pip install requests subprocess32 scikit-learn numpy scipy fabric pyyaml docker kubernetes pyspark
+
+# install docker
+RUN apt-get update && apt-get install -y \
+      apt-transport-https ca-certificates curl software-properties-common \
+      && curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - \
+      && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+      && apt-get update \
+      && apt-get install -yqq docker-ce
+
+# RUN gpasswd -a $NB_USER docker
+
+COPY ./ /clipper
+
+# Patch Clipper
+RUN cd /clipper/src/libs/spdlog \
+    && git apply ../patches/make_spdlog_compile_linux.patch
+
+ENTRYPOINT ["/clipper/bin/check_format.sh && /clipper/bin/run_unittests.sh -a"]
+
+# vim: set filetype=dockerfile:
