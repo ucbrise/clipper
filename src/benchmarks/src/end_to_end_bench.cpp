@@ -4,12 +4,11 @@
 #include <random>
 #include <vector>
 
-#include <boost/thread.hpp>
+#include <folly/futures/Future.h>
 #include <cxxopts.hpp>
 
 #include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
-#include <clipper/future.hpp>
 #include <clipper/json_util.hpp>
 #include <clipper/logging.hpp>
 #include <clipper/query_processor.hpp>
@@ -85,12 +84,10 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
                  clipper::DefaultOutputSelectionPolicy::get_name(),
                  {VersionedModelId(model_name, model_version)}};
 
-      boost::future<Response> prediction = qp.predict(q);
+      folly::Future<Response> prediction = qp.predict(q);
       bench_metrics.request_throughput_->mark(1);
 
-      prediction.then([bench_metrics](boost::future<Response> f) {
-        Response r = f.get();
-
+      prediction.then([bench_metrics](Response r) {
         // Update metrics
         if (r.output_is_default_) {
           bench_metrics.default_pred_ratio_->increment(1, 1);

@@ -3,6 +3,8 @@
 
 #include <boost/optional.hpp>
 
+#include <folly/futures/Future.h>
+
 #include <clipper/config.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/query_processor.hpp>
@@ -18,13 +20,13 @@ namespace {
 class MockQueryProcessor {
  public:
   MockQueryProcessor() = default;
-  boost::future<Response> predict(Query query) {
+  folly::Future<Response> predict(Query query) {
     Response response(query, 3, 5, Output("-1.0", {VersionedModelId("m", "1")}),
                       false, boost::optional<std::string>{});
-    return boost::make_ready_future(response);
+    return folly::makeFuture(response);
   }
-  boost::future<FeedbackAck> update(FeedbackQuery /*feedback*/) {
-    return boost::make_ready_future(true);
+  folly::Future<FeedbackAck> update(FeedbackQuery /*feedback*/) {
+    return folly::makeFuture(true);
   }
 
   std::shared_ptr<StateDB> get_state_table() const {

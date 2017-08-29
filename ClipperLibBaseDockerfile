@@ -1,0 +1,40 @@
+FROM frolvlad/alpine-gxx
+
+RUN echo "@testing http://nl.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories
+
+RUN apk add --no-cache git bash make boost-dev cmake libev-dev hiredis-dev zeromq-dev \
+    libtool automake autoconf-archive@testing lz4-dev xz-dev snappy-dev zlib-dev \
+    glog-dev@testing scons openssl-dev libevent-dev
+
+# Set up Folly
+
+## Install DoubleConversion
+RUN git clone https://github.com/google/double-conversion \
+    && cd double-conversion \
+    && git checkout tags/v3.0.0 \
+    && cmake -DBUILD_SHARED_LIBS=ON . \
+    && make \
+    && make install \
+    && ln -s src double-conversion
+
+ENV DOUBLE_CONVERSION_HOME=/double-conversion/double-conversion/
+
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$DOUBLE_CONVERSION_HOME
+
+## Install GFLags
+RUN git clone https://github.com/gflags/gflags \
+    && cd gflags \
+    && git checkout tags/v2.2.1 \
+    && mkdir build \
+    && cd build \
+    && cmake -DBUILD_SHARED_LIBS=ON .. \
+    && make install
+
+## Install Folly
+RUN git clone https://github.com/facebook/folly \
+    && cd folly/folly \
+    && git checkout tags/v2017.08.14.00 \
+    && autoreconf -ivf \
+    && ./configure LDFLAGS=-L$DOUBLE_CONVERSION_HOME/ CPPFLAGS=-I$DOUBLE_CONVERSION_HOME \
+    && make \
+    && make install

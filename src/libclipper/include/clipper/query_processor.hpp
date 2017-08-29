@@ -6,7 +6,7 @@
 #include <tuple>
 #include <utility>
 
-#include <boost/thread.hpp>
+#include <folly/futures/Future.h>
 
 #include "datatypes.hpp"
 #include "metrics.hpp"
@@ -34,8 +34,8 @@ class QueryProcessor {
   QueryProcessor(QueryProcessor&& other) = default;
   QueryProcessor& operator=(QueryProcessor&& other) = default;
 
-  boost::future<Response> predict(Query query);
-  boost::future<FeedbackAck> update(FeedbackQuery feedback);
+  folly::Future<Response> predict(Query query);
+  folly::Future<FeedbackAck> update(FeedbackQuery feedback);
 
   std::shared_ptr<StateDB> get_state_table() const;
 

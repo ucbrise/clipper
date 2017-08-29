@@ -8,7 +8,6 @@
 
 #include <boost/functional/hash.hpp>
 #include <boost/optional.hpp>
-#include <boost/thread.hpp>
 
 namespace clipper {
 

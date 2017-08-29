@@ -9,7 +9,8 @@
 #include <queue>
 #include <thread>
 
-#include <boost/thread.hpp>
+#include <folly/Unit.h>
+#include <folly/futures/Future.h>
 
 #include <clipper/logging.hpp>
 
@@ -64,7 +65,7 @@ class Timer {
  public:
   Timer() = delete;
   Timer(std::chrono::time_point<std::chrono::high_resolution_clock> deadline,
-        boost::promise<void> completion_promise);
+        folly::Promise<folly::Unit> completion_promise);
   ~Timer() = default;
 
   // Disallow copy
@@ -85,7 +86,7 @@ class Timer {
   std::chrono::time_point<std::chrono::high_resolution_clock> deadline_;
 
  private:
-  boost::promise<void> completion_promise_;
+  folly::Promise<folly::Unit> completion_promise_;
 };
 
 struct TimerCompare {
@@ -154,12 +155,11 @@ class TimerSystem {
     manager_thread_.join();
   }
 
-  boost::future<void> set_timer(long duration_micros) {
+  folly::Future<folly::Unit> set_timer(long duration_micros) {
     assert(initialized_);
-    boost::promise<void> promise;
-    auto f = promise.get_future();
+    folly::Promise<folly::Unit> promise;
+    auto f = promise.getFuture();
     auto tp = clock_.now() + std::chrono::microseconds(duration_micros);
-    //  Timer timer{tp, promise};
     std::unique_lock<std::mutex> l(queue_mutex_);
     queue_.emplace(std::make_shared<Timer>(tp, std::move(promise)));
     queue_not_empty_condition_.notify_all();
