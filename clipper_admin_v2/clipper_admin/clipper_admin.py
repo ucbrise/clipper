@@ -38,13 +38,47 @@ def _validate_versioned_model_name(name, version):
 
 
 class ClipperConnection(object):
+
     def __init__(self, container_manager):
+        """Create a new ClipperConnection object.
+
+        After creating a ``ClipperConnection`` instance, you still need to connect
+        to a Clipper cluster. You can connect to an existing cluster by calling
+        :py:meth:`clipper_admin.ClipperConnection.connect` or create a new Clipper cluster
+        with :py:meth:`clipper_admin.ClipperConnection.start_clipper`, which will automatically
+        connect to the cluster once it Clipper has successfully started.
+
+        Parameters
+        ----------
+        container_manager : ``clipper_admin.container_manager.ContainerManager``
+            An instance of a concrete subclass of ``ContainerManager``.
+        """
         self.connected = False
         self.cm = container_manager
 
     def start_clipper(self,
                       query_frontend_image='clipper/query_frontend:{}'.format(__version__),
                       mgmt_frontend_image='clipper/management_frontend:{}'.format(__version__)):
+        """Start a new Clipper cluster and connect to it.
+
+        This command will start a new Clipper instance using the container manager provided when
+        the ``ClipperConnection`` instance was constructed.
+
+        Parameters
+        ----------
+        query_frontend_image : str(optional)
+            The query frontend docker image to use. You can set this argument to specify
+            a custom build of the query frontend, but any customization should maintain API
+            compability and preserve the expected behavior of the system.
+        mgmt_frontend_image : str(optional)
+            The management frontend docker image to use. You can set this argument to specify
+            a custom build of the management frontend, but any customization should maintain API
+            compability and preserve the expected behavior of the system.
+
+        Raises
+        ------
+        :py:exc:`clipper.ClipperException`
+        """
         try:
             self.cm.start_clipper(query_frontend_image, mgmt_frontend_image)
             while True:
@@ -62,11 +96,51 @@ class ClipperConnection(object):
             raise e
 
     def connect(self):
+        """Connect to a running Clipper cluster."""
+
         self.cm.connect()
         self.connected = True
 
-    def register_application(self, name, input_type, default_output,
-                             slo_micros):
+    def register_application(self, name, input_type, default_output, slo_micros):
+        # TODO(crankshaw): Update user guide links
+        """Register a new application with Clipper.
+
+        An application in Clipper corresponds to a named REST endpoint that can be used to request
+        predictions. This command will attempt to create a new endpoint with the provided name.
+        Application names must be unique. This command will fail if an application with the provided
+        name already exists.
+
+
+        Parameters
+        ----------
+        name : str
+            The unique name of the application.
+        input_type : str
+            The type of the request data this endpoint can process. Input type can be
+            one of "integers", "floats", "doubles", "bytes", or "strings". See the
+            `User Guide <http://clipper.ai/user_guide/#input-types>`_ for more details
+            on picking the right input type for your application.
+        default_output : str
+            The default output for the application. The default output will be returned whenever
+            an application is unable to receive a response from a model within the specified
+            query latency SLO (service level objective). The reason the default output was returned
+            is always provided as part of the prediction response object.
+        slo_micros : int
+            The query latency objective for the application in microseconds.
+            This is the processing latency between Clipper receiving a request
+            and sending a response. It does not account for network latencies
+            before a request is received or after a response is sent.
+            If Clipper cannot process a query within the latency objective,
+            the default output is returned. Therefore, it is recommended that
+            the SLO not be set aggressively low unless absolutely necessary.
+            100000 (100ms) is a good starting value, but the optimal latency objective
+            will vary depending on the application.
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+        :py:exc:`clipper.ClipperException`
+        """
         if not self.connected:
             raise UnconnectedException()
         url = "http://{host}/admin/add_app".format(
@@ -86,9 +160,7 @@ class ClipperConnection(object):
             raise ClipperException(msg)
 
     def link_model_to_app(self, app_name, model_name):
-        """
-        Allows the model with `model_name` to be used by the app with `app_name`.
-        The model and app should both be registered with Clipper.
+        """Routes requests from the specified app to be evaluted by the specified model.
 
         Parameters
         ----------
@@ -97,10 +169,16 @@ class ClipperConnection(object):
         model_name : str
             The name of the model to link to the application
 
-        Returns
-        -------
-        bool
-            Returns true iff the model link request was successful
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+        :py:exc:`clipper.ClipperException`
+
+        Note
+        -----
+        Both the specified model and application must be registered with Clipper, and they
+        must have the same input type. If the application has previously been linked to a different
+        model, this command will fail.
         """
         if not self.connected:
             raise UnconnectedException()
@@ -129,6 +207,64 @@ class ClipperConnection(object):
                                labels=None,
                                container_registry=None,
                                num_replicas=1):
+
+        """Build a new model container Docker image with the provided data and deploy it as
+        a model to Clipper.
+
+        This method does two things.
+
+        1. Builds a new Docker image from the provided base image with the local directory specified by
+        ``model_data_path`` copied into the image. The Dockerfile that gets generated to build the image
+        is equivalent to the following::
+
+            FROM <base_image>
+            COPY <model_data_path> /model/
+
+        The newly built image is then pushed to the specified container registry. If no container registry
+        is specified, the image will be pushed to the default DockerHub registry. Clipper will tag the
+        newly built with the tag [<registry>]/<name>:<version>, and if a container registry is provided,
+
+        2. Registers and deploys a model with the specified metadata using the newly built container as the
+        Docker image for that model. See :py:meth:`clipper.ClipperConnection.deploy_model` for more details
+        on model deployment.
+        
+        Parameters
+        ----------
+        name : str
+            The name of the deployed model
+        version : str
+            The version to assign this model. Versions must be unique on a per-model
+            basis, but may be re-used across different models.
+        input_type : str
+            The type of the request data this endpoint can process. Input type can be
+            one of "integers", "floats", "doubles", "bytes", or "strings". See the
+            `User Guide <http://clipper.ai/user_guide/#input-types>`_ for more details
+            on picking the right input type for your application.
+        model_data_path : str
+            A path to a local directory. The contents of this directory will be recursively copied into the
+            Docker container.
+        base_image : str
+            The base Docker image to build the new model image from. This
+            image should contain all code necessary to run a Clipper model
+            container RPC client.
+        labels : list(str), optional
+            A list of strings annotating the model. These are ignored by Clipper
+            and used purely for user annotations.
+        container_registry : str, optional
+            The Docker container registry to push the freshly built model to. Note
+            that if you are running Clipper on Kubernetes, this registry must be accesible
+            to the Kubernetes cluster in order to fetch the container from the registry.
+        num_replicas : int, optional
+            The number of replicas of the model to create. The number of replicas
+            for a model can be changed at any time with
+            :py:meth:`clipper.ClipperConnection.set_num_replicas`.
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+        :py:exc:`clipper.ClipperException`
+        """
+
         if not self.connected:
             raise UnconnectedException()
         version = str(version)
@@ -136,7 +272,7 @@ class ClipperConnection(object):
         _validate_versioned_model_name(name, version)
 
         with open(model_data_path + '/Dockerfile', 'w') as f:
-            f.write("FROM {container_name}\nCOPY . /model/.\n".format(
+            f.write("FROM {container_name}\nCOPY . /model/\n".format(
                 container_name=base_image))
 
         # build, tag, and push docker image to registry
@@ -167,6 +303,55 @@ class ClipperConnection(object):
                      image,
                      labels=None,
                      num_replicas=1):
+        """Deploys the model in the provided Docker image to Clipper.
+
+        Deploying a model to Clipper does a few things.
+
+        1. It starts a set of Docker model containers running the model packaged
+        in the ``image`` Docker image. The number of containers it will start is dictated
+        by the ``num_replicas`` argument, but the way that these containers get started
+        depends on your choice of ``ContainerManager`` implementation.
+
+        2. It registers the model and version with Clipper and sets the current version of the
+        model to this version by internally calling :py:meth:`clipper_admin.ClipperConnection.register_model`.
+
+        Notes
+        -----
+        If you want to deploy a model in some other way (e.g. a model that cannot run in a Docker container for
+        some reason), you can start the model manually or with an external tool and call ``register_model`` directly.
+
+        Parameters
+        ----------
+        name : str
+            The name of the deployed model
+        version : str
+            The version to assign this model. Versions must be unique on a per-model
+            basis, but may be re-used across different models.
+        input_type : str
+            The type of the request data this endpoint can process. Input type can be
+            one of "integers", "floats", "doubles", "bytes", or "strings". See the
+            `User Guide <http://clipper.ai/user_guide/#input-types>`_ for more details
+            on picking the right input type for your application.
+        image : str
+             The fully specified Docker image to deploy. If using a custom
+             registry, the registry name must be prepended to the image. For example,
+             if your Docker image is stored in the quay.io registry, you should specify
+             the image argument as
+             "quay.io/my_namespace/image_name:tag". The image name and tag are independent of
+             the ``name`` and ``version`` arguments, and can be set to whatever you want.
+        labels : list(str), optional
+            A list of strings annotating the model. These are ignored by Clipper
+            and used purely for user annotations.
+        num_replicas : int, optional
+            The number of replicas of the model to create. The number of replicas
+            for a model can be changed at any time with
+            :py:meth:`clipper.ClipperConnection.set_num_replicas`.
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+        :py:exc:`clipper.ClipperException`
+        """
         if not self.connected:
             raise UnconnectedException()
         _validate_versioned_model_name(name, version)
@@ -177,8 +362,44 @@ class ClipperConnection(object):
             name, version, input_type, image=image, labels=labels)
         logger.info("Done deploying!")
 
-    def register_model(self, name, version, input_type, image=None,
-                       labels=None):
+    def register_model(self, name, version, input_type, image=None, labels=None):
+        """Registers a new model version with Clipper.
+
+
+        This method does not launch any model containers, it only registers the model description
+        (metadata such as name, version, and input type) with Clipper. A model must be registered
+        with Clipper before it can be linked to an application.
+
+        You should rarely have to use this method directly. Using one the Clipper deployer
+        methods in :py:mod:`clipper_admin.deployers` or calling ``build_and_deploy_model`` or
+        ``deploy_model`` will automatically register your model with Clipper.
+
+        Parameters
+        ----------
+        name : str
+            The name of the deployed model
+        version : str
+            The version to assign this model. Versions must be unique on a per-model
+            basis, but may be re-used across different models.
+        input_type : str
+            The type of the request data this endpoint can process. Input type can be
+            one of "integers", "floats", "doubles", "bytes", or "strings". See the
+            `User Guide <http://clipper.ai/user_guide/#input-types>`_ for more details
+            on picking the right input type for your application.
+        image : str, optional
+            A docker image name. If provided, the image will be recorded as part of the
+            model descrtipin in Clipper when registering the model but this method will
+            make no attempt to launch any containers with this image.
+        labels : list(str), optional
+            A list of strings annotating the model. These are ignored by Clipper
+            and used purely for user annotations.
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+        :py:exc:`clipper.ClipperException`
+        """
+
         if not self.connected:
             raise UnconnectedException()
         version = str(version)
@@ -206,6 +427,25 @@ class ClipperConnection(object):
             raise ClipperException(msg)
 
     def get_num_replicas(self, name, version):
+        """Gets the current number of model container replicas for a model.
+
+        Parameters
+        ----------
+        name : str
+            The name of the model
+        version : str, optional
+            The version of the model. If no version is provided,
+            the currently deployed version will be used.
+
+        Returns
+        -------
+        int
+            The number of active replicas
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+        """
         if not self.connected:
             raise UnconnectedException()
         if version is None:
@@ -218,7 +458,7 @@ class ClipperConnection(object):
         return self.cm.get_num_replicas(name, version)
 
     def set_num_replicas(self, name, num_replicas, version=None):
-        """Set the total number of active replicas for a model.
+        """Sets the total number of active replicas for a model.
 
         If there are more than the current number of replicas
         currently allocated, this will remove replicas. If there are
@@ -233,6 +473,11 @@ class ClipperConnection(object):
             the currently deployed version will be used.
         num_replicas : int, optional
             The desired number of replicas.
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+        :py:exc:`clipper.ClipperException`
         """
         if not self.connected:
             raise UnconnectedException()
@@ -278,7 +523,13 @@ class ClipperConnection(object):
         list
             Returns a list of information about all apps registered to Clipper.
             If no apps are registered with Clipper, an empty list is returned.
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+        :py:exc:`clipper.ClipperException`
         """
+
         if not self.connected:
             raise UnconnectedException()
         url = "http://{host}/admin/get_all_applications".format(host=self.cm.get_admin_addr())
@@ -309,6 +560,10 @@ class ClipperConnection(object):
             will contain the attribute name-value pairs that were provided to
             `register_application`. If no application with name `name` is
             registered with Clipper, None is returned.
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
         """
         if not self.connected:
             raise UnconnectedException()
@@ -497,12 +752,25 @@ class ClipperConnection(object):
             raise ClipperException(msg)
 
     def get_clipper_logs(self, logging_dir="clipper_logs/"):
+        """Download the logs from all Clipper docker containers.
+
+        Parameters
+        ----------
+        logging_dir : str, optional
+            The directory to save the downloaded logs. If the directory does not
+            exist, it will be created.
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+
+        """
         if not self.connected:
             raise UnconnectedException()
         return self.cm.get_logs(logging_dir)
 
     def inspect_instance(self):
-        """Fetches metrics from the running Clipper instance.
+        """Fetches performance metrics from the running Clipper cluster.
 
         Returns
         -------
@@ -510,6 +778,11 @@ class ClipperConnection(object):
             The JSON string containing the current set of metrics
             for this instance. On error, the string will be an error message
             (not JSON formatted).
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+        :py:exc:`clipper.ClipperException`
         """
         if not self.connected:
             raise UnconnectedException()
@@ -524,12 +797,10 @@ class ClipperConnection(object):
             raise ClipperException(msg)
 
     def set_model_version(self, name, version, num_replicas=None):
-        """Changes the current model version to `model_version`.
+        """Changes the current model version to "model_version".
 
-        This method can be used to do model rollback and rollforward to
-        any previously deployed version of the model. Note that model
-        versions automatically get updated when `deploy_model()` is
-        called, so there is no need to manually update the version as well.
+        This method can be used to perform model roll-back and roll-forward. The
+        version can be set to any previously deployed version of the model.
 
         Parameters
         ----------
@@ -542,6 +813,16 @@ class ClipperConnection(object):
             The number of new containers to start with the newly
             selected model version.
 
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+        :py:exc:`clipper.ClipperException`
+
+        Note
+        -----
+        Model versions automatically get updated when
+        py:meth:`clipper_admin.ClipperConnection.deploy_model()` is called. There is no need to
+        manually update the version after deploying a new model.
         """
         if not self.connected:
             raise UnconnectedException()
@@ -561,21 +842,39 @@ class ClipperConnection(object):
             self.set_num_replicas(name, num_replicas, version)
 
     def get_query_addr(self):
+        """Get the IP address at which the query frontend can be reached request predictions.
+
+        Returns
+        -------
+        str
+            The address as an IP address or hostname.
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+            versions. All replicas for each version of each model will be stopped.
+        """
+
         if not self.connected:
             raise UnconnectedException()
         return self.cm.get_query_addr()
 
     def stop_models(self, model_names):
-        """Stops all versions of the provided models.
+        """Stops all versions of the specified models.
 
-        This is a convenience method to avoid the need to explicitly list all deployed versions
-        of a model.
+        This is a convenience method to avoid the need to explicitly list all versions
+        of a model when calling :py:meth:`clipper_admin.ClipperConnection.stop_versioned_models`.
 
         Parameters
         ----------
         model_names : list(str)
             A list of model names. All replicas of all versions of each model specified in the list
             will be stopped.
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+            versions. All replicas for each version of each model will be stopped.
         """
         if not self.connected:
             raise UnconnectedException()
@@ -589,31 +888,48 @@ class ClipperConnection(object):
                     model_dict[m["model_name"]] = [m["model_version"]]
         self.cm.stop_models(model_dict)
 
-    def stop_versioned_models(self, models):
-        """Stops all replicas of the specified versions of the specified models.
+    def stop_versioned_models(self, model_versions_dict):
+        """Stops the specified versions of the specified models.
+
+        Parameters
+        ----------
+        model_versions_dict : dict(str, list(str))
+            For each entry in the dict, the key is a model name and the value is a list of model
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+            versions. All replicas for each version of each model will be stopped.
 
         Note
         ----
         This method will stop the currently deployed versions of models if you specify them. You
         almost certainly want to use one of the other stop_* methods. Use with caution.
 
-        Parameters
-        ----------
-        models : dict(str, list(str))
-            For each entry in the dict, the key is a model name and the value is a list of model
-            versions. All replicas for each version of each model will be stopped.
         """
         if not self.connected:
             raise UnconnectedException()
-        self.cm.stop_models(models)
+        self.cm.stop_models(model_versions_dict)
 
     def stop_inactive_model_versions(self, model_names):
-        """Removes all containers serving stale versions of the specified models.
+        """Stops all model containers serving stale versions of the specified models.
+
+        For example, if you have deployed versions 1, 2, and 3 of model "music_recommender"
+        and version 3 is the current version::
+
+            clipper_conn.stop_inactive_model_versions(["music_recommender"])
+
+        will stop any containers serving versions 1 and 2 but will leave containers serving
+        version 3 untouched.
 
         Parameters
         ----------
         model_names : list(str)
-            The names of the models whose old containers you want to clean.
+            The names of the models whose old containers you want to stop.
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
         """
         if not self.connected:
             raise UnconnectedException()
@@ -627,25 +943,20 @@ class ClipperConnection(object):
                     model_dict[m["model_name"]] = [m["model_version"]]
         self.cm.stop_models(model_dict)
 
-    def stop_deployed_models(self):
-        if not self.connected:
-            raise UnconnectedException()
-        model_info = self.get_all_models(verbose=True)
-        model_dict = {}
-        for m in model_info:
-            if m["model_name"] in model_dict:
-                model_dict[m["model_name"]].append(m["model_version"])
-            else:
-                model_dict[m["model_name"]] = [m["model_version"]]
-        self.cm.stop_models(model_dict)
-
     def stop_all_model_containers(self):
-        """Stop all docker containers labeled as Clipper model containers.
+        """Stops all model containers started via Clipper admin commands.
 
         This method can be used to clean up leftover Clipper model containers even if the
-        Clipper management frontend or Redis has crashe.
+        Clipper management frontend or Redis has crashed. It can also be called without calling
+        ``connect`` first.
         """
         self.cm.stop_all_model_containers()
 
     def stop_all(self):
+        """Stops all processes that were started via Clipper admin commands.
+
+        This includes the query and management frontend Docker containers and all model containers.
+        If you started Redis independently, this will not affect Redis. It can also be called without calling
+        ``connect`` first.
+        """
         self.cm.stop_all()

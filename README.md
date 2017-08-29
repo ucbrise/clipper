@@ -18,33 +18,9 @@ Clipper is a prediction serving system that sits between user-facing application
 * Clipper **simplifies model deployment** and **helps reduce common bugs** by using the same tools and libraries used in model development to render live predictions.  *Clipper makes data scientists happy.*
 
 
-
 * Clipper **improves throughput** and ensures **reliable millisecond latencies** by introducing adaptive batching, caching, and straggler mitigation techniques.  *Clipper makes the infra-team less unhappy.*
 
 * Clipper **improves prediction accuracy** by introducing state-of-the-art bandit and ensemble methods to intelligently select and combine predictions and achieve real-time personalization across machine learning frameworks.  *Clipper makes users happy.*
-
-## Kubernetes quickstart
-
-Dependencies:
-
- * [Docker](https://www.docker.com/)
- * [Minikube](https://github.com/kubernetes/minikube/releases)
-
-```bash
-# (Optional) create clipper virtualenv
-pyenv virtualenv 2.7.11 clipper
-pyenv local clipper
-
-# install clipper_admin_v2 (editable)
-pip install -e clipper_admin_v2/.
-
-# start minikube
-minikube start --insecure-registry localhost:5000
-
-# start docker and configure to use minikube registry
-systemctl start docker
-eval $(minikube docker-env)
-```
 
 
 ## Quickstart
@@ -53,6 +29,7 @@ eval $(minikube docker-env)
 
 > This quickstart requires [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/).
 
+TODO(crankshaw): update quickstart
 
 #### Start a Clipper Instance and Deploy a Model
 
@@ -131,6 +108,7 @@ for contributors can be found on our website at <http://clipper.ai/contributing>
 + Corey Zumar (@Corey-Zumar)
 + Nishad Singh (@nishadsingh1)
 + Alexey Tumanov (@atumanov)
++ Feynman Liang (@feynmanliang)
 
 You can contact us at <clipper-dev@googlegroups.com>
 

@@ -106,17 +106,15 @@ class DockerContainerManager(ContainerManager):
         # No extra connection steps to take on connection
         return
 
-    def deploy_model(self, name, version, input_type, repo, num_replicas=1):
-        """
-        Parameters
-        ----------
-        repo : str
-            The fully specified Docker repository to deploy. If using a custom
-            registry, the registry name must be prepended to the repo. For example,
-            "localhost:5000/my_model_name:my_model_version" or
-            "quay.io/my_namespace/my_model_name:my_model_version"
-        """
-        self.set_num_replicas(name, version, input_type, repo, num_replicas)
+    def deploy_model(self, name, version, input_type, image, num_replicas=1):
+        # Parameters
+        # ----------
+        # image : str
+        #     The fully specified Docker imagesitory to deploy. If using a custom
+        #     registry, the registry name must be prepended to the image. For example,
+        #     "localhost:5000/my_model_name:my_model_version" or
+        #     "quay.io/my_namespace/my_model_name:my_model_version"
+        self.set_num_replicas(name, version, input_type, image, num_replicas)
 
     def _get_replicas(self, name, version):
         containers = self.docker_client.containers.list(
@@ -131,13 +129,13 @@ class DockerContainerManager(ContainerManager):
     def get_num_replicas(self, name, version):
         return len(self._get_replicas(name, version))
 
-    def _add_replica(self, name, version, input_type, repo):
+    def _add_replica(self, name, version, input_type, image):
         """
         Parameters
         ----------
-        repo : str
-            The fully specified Docker repository to deploy. If using a custom
-            registry, the registry name must be prepended to the repo. For example,
+        image : str
+            The fully specified Docker imagesitory to deploy. If using a custom
+            registry, the registry name must be prepended to the image. For example,
             "localhost:5000/my_model_name:my_model_version" or
             "quay.io/my_namespace/my_model_name:my_model_version"
         """
@@ -153,9 +151,9 @@ class DockerContainerManager(ContainerManager):
         self.extra_container_kwargs["labels"][
             CLIPPER_MODEL_CONTAINER_LABEL] = create_model_container_label(name, version)
         self.docker_client.containers.run(
-            repo, environment=env_vars, **self.extra_container_kwargs)
+            image, environment=env_vars, **self.extra_container_kwargs)
 
-    def set_num_replicas(self, name, version, input_type, repo, num_replicas):
+    def set_num_replicas(self, name, version, input_type, image, num_replicas):
         current_replicas = self._get_replicas(name, version)
         if len(current_replicas) < num_replicas:
             num_missing = num_replicas - len(current_replicas)
@@ -167,7 +165,7 @@ class DockerContainerManager(ContainerManager):
                     version=version,
                     missing=(num_missing)))
             for _ in range(num_missing):
-                self._add_replica(name, version, input_type, repo)
+                self._add_replica(name, version, input_type, image)
         elif len(current_replicas) > num_replicas:
             num_extra = len(current_replicas) - num_replicas
             logger.info(

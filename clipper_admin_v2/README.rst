@@ -1,5 +1,8 @@
 Clipper
-================
+========
+
+What is Clipper?
+-----------------
 
 Clipper is a prediction serving system that sits between user-facing applications and a wide range of commonly used machine learning models and frameworks. Learn more about Clipper and view documentation at our website <http://clipper.ai>.
 
@@ -12,16 +15,14 @@ What does Clipper do?
 
 * Clipper **improves throughput** and ensures **reliable millisecond latencies** by introducing adaptive batching, caching, and straggler mitigation techniques.  *Clipper makes the infra-team less unhappy.*
 
-* Clipper **improves prediction accuracy** by introducing state-of-the-art bandit and ensemble methods to intelligently select and combine predictions and achieve real-time personalization across machine learning frameworks.  *Clipper makes users happy.*
-
 Quickstart
 ----------
 
-
 *Note: This quickstart requires [Docker](https://www.docker.com/).*
 
-
 **Start a Clipper Instance and Deploy a Model**
+
+TODO(crankshaw): Update quickstart
 
 ::
 
@@ -71,6 +72,7 @@ From a Python REPL::
       >>> import requests, json, numpy as np
       >>> headers = {"Content-type": "application/json"}
       >>> requests.post("http://localhost:1337/hello_world/predict", headers=headers, data=json.dumps({"uid": 0, "input": list(np.random.random(10))})).json()
+
 
 
 Contributing

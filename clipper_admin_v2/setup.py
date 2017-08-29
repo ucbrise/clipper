@@ -27,17 +27,15 @@ setup(
     keywords=['clipper', 'prediction', 'model', 'management'],
     install_requires=[
         'requests',
-        'pyparsing',
-        'appdirs',
-        'pprint',
         'subprocess32',
-        'sklearn',
-        'numpy',
-        'scipy',
         'pyyaml',
         'docker',
         'kubernetes',
         'six',
     ],
-    extras_require={'TensorFlow': ['tensorflow'],
-                    'RPython': ['rpy2']})
+    extras_require={
+        'TensorFlow': ['tensorflow'],
+        'PySpark': ['pyspark'],
+        'RPython': ['rpy2']
+        }
+    )

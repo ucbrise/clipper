@@ -1,7 +1,5 @@
 from __future__ import print_function, with_statement, absolute_import
 import shutil
-import findspark
-findspark.init()
 import pyspark
 import logging
 import re

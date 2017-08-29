@@ -1,14 +1,3 @@
-
-
-Key Concepts
-============
-
-A model deployment in Clipper has three elements:
-
-1. *An application*
-2. *A model*
-3. *Model containers*
-
 API Documentation
 ==================
 
@@ -17,12 +6,9 @@ Clipper Connection
 
 The main object used to 
 
-All of Requests' functionality can be accessed by these 7 methods.
-
 .. autoclass:: clipper_admin.ClipperConnection
     :members:
     :undoc-members:
-    :show-inheritance:
 
 Exceptions
 ----------
@@ -34,14 +20,12 @@ Exceptions
 Container Managers
 ------------------
 
-.. autoclass:: clipper_admin.container_manager.ContainerManager
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 .. autoclass:: clipper_admin.DockerContainerManager
     :members:
-    :undoc-members:
+    :show-inheritance:
+
+.. autoclass:: clipper_admin.K8sContainerManager
+    :members:
     :show-inheritance:
 
 Model Deployers

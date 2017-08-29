@@ -270,7 +270,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             filters={"ancestor": container_name})
         self.assertEqual(len(containers), 3)
 
-        self.clipper_conn.stop_deployed_models()
+        self.clipper_conn.stop_all_model_containers()
         containers = docker_client.containers.list(
             filters={"ancestor": container_name})
         self.assertEqual(len(containers), 0)

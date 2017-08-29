@@ -60,6 +60,7 @@ extensions = [
 ]
 
 autodoc_member_order = 'bysource'
+# autoclass_content = 'init'
 
 # The master toctree document.
 master_doc = 'index'
@@ -169,10 +170,15 @@ texinfo_documents = [
 intersphinx_mapping = {'https://docs.python.org/': None}
 github_doc_root = 'https://github.com/ucbrise/clipper/tree/develop/clipper_admin_v2/docs'
 
+# From https://stackoverflow.com/a/5599712/814642
+def skip(app, what, name, obj, skip, options):
+    if name == "__init__":
+        return False
+    return skip
 
 # app setup hook
 def setup(app):
-    pass
+    app.connect("autodoc-skip-member", skip)
     # app.add_config_value('recommonmark_config', {
     #     'url_resolver': lambda url: github_doc_root + url,
     #     'auto_toc_tree_section': 'Contents',
