@@ -13,19 +13,20 @@ from .deployer_utils import save_python_function
 logger = logging.getLogger(__name__)
 
 
-def create_endpoint(clipper_conn,
-                    name,
-                    input_type,
-                    func,
-                    pyspark_model,
-                    sc,
-                    default_output="None",
-                    version=1,
-                    slo_micros=3000000,
-                    labels=None,
-                    registry=None,
-                    base_image="clipper/pyspark-container:{}".format(__version__),
-                    num_replicas=1):
+def create_endpoint(
+        clipper_conn,
+        name,
+        input_type,
+        func,
+        pyspark_model,
+        sc,
+        default_output="None",
+        version=1,
+        slo_micros=3000000,
+        labels=None,
+        registry=None,
+        base_image="clipper/pyspark-container:{}".format(__version__),
+        num_replicas=1):
     """Registers an app and deploys provided predict function as a model.
 
     Parameters
@@ -58,23 +59,24 @@ def create_endpoint(clipper_conn,
     clipper_conn.register_application(name, input_type, default_output,
                                       slo_micros)
     deploy_pyspark_model(clipper_conn, name, version, input_type, func,
-                         pyspark_model, sc, base_image, labels,
-                         registry, num_replicas)
+                         pyspark_model, sc, base_image, labels, registry,
+                         num_replicas)
 
     clipper_conn.link_model_to_app(name, name)
 
 
-def deploy_pyspark_model(clipper_conn,
-                         name,
-                         version,
-                         input_type,
-                         func,
-                         pyspark_model,
-                         sc,
-                         base_image="clipper/pyspark-container:{}".format(__version__),
-                         labels=None,
-                         registry=None,
-                         num_replicas=1):
+def deploy_pyspark_model(
+        clipper_conn,
+        name,
+        version,
+        input_type,
+        func,
+        pyspark_model,
+        sc,
+        base_image="clipper/pyspark-container:{}".format(__version__),
+        labels=None,
+        registry=None,
+        num_replicas=1):
     # TODO: fix documentation
     """Deploy a Spark MLLib model to Clipper.
 
@@ -142,9 +144,9 @@ def deploy_pyspark_model(clipper_conn,
     logger.info("Spark model saved")
 
     # Deploy model
-    deploy_result = clipper_conn.build_and_deploy_model(name, version, input_type,
-                                                        serialization_dir, base_image,
-                                                        labels, registry, num_replicas)
+    deploy_result = clipper_conn.build_and_deploy_model(
+        name, version, input_type, serialization_dir, base_image, labels,
+        registry, num_replicas)
 
     # Remove temp files
     shutil.rmtree(serialization_dir)

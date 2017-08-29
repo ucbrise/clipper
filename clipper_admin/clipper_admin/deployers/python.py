@@ -9,17 +9,18 @@ from .deployer_utils import save_python_function
 logger = logging.getLogger(__name__)
 
 
-def create_endpoint(clipper_conn,
-                    name,
-                    input_type,
-                    func,
-                    default_output="None",
-                    version=1,
-                    slo_micros=3000000,
-                    labels=None,
-                    registry=None,
-                    base_image="clipper/python-closure-container:{}".format(__version__),
-                    num_replicas=1):
+def create_endpoint(
+        clipper_conn,
+        name,
+        input_type,
+        func,
+        default_output="None",
+        version=1,
+        slo_micros=3000000,
+        labels=None,
+        registry=None,
+        base_image="clipper/python-closure-container:{}".format(__version__),
+        num_replicas=1):
     """Registers an app and deploys provided predict function as a model.
 
     Parameters
@@ -57,15 +58,16 @@ def create_endpoint(clipper_conn,
     clipper_conn.link_model_to_app(name, name)
 
 
-def deploy_python_closure(clipper_conn,
-                          name,
-                          version,
-                          input_type,
-                          func,
-                          base_image="clipper/python-closure-container:{}".format(__version__),
-                          labels=None,
-                          registry=None,
-                          num_replicas=1):
+def deploy_python_closure(
+        clipper_conn,
+        name,
+        version,
+        input_type,
+        func,
+        base_image="clipper/python-closure-container:{}".format(__version__),
+        labels=None,
+        registry=None,
+        num_replicas=1):
     # TODO: fix documentation
     """Deploy an arbitrary Python function to Clipper.
 
@@ -124,9 +126,9 @@ def deploy_python_closure(clipper_conn,
     serialization_dir = save_python_function(name, func)
     logger.info("Python closure saved")
     # Deploy function
-    deploy_result = clipper_conn.build_and_deploy_model(name, version, input_type,
-                                                        serialization_dir, base_image,
-                                                        labels, registry, num_replicas)
+    deploy_result = clipper_conn.build_and_deploy_model(
+        name, version, input_type, serialization_dir, base_image, labels,
+        registry, num_replicas)
     # Remove temp files
     shutil.rmtree(serialization_dir)
     return deploy_result

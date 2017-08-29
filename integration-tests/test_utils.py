@@ -65,8 +65,7 @@ def create_docker_connection(cleanup=True, start_clipper=True):
     if cleanup:
         cl.stop_all()
         docker_client = get_docker_client()
-        docker_client.containers.prune(
-            filters={"label": CLIPPER_DOCKER_LABEL})
+        docker_client.containers.prune(filters={"label": CLIPPER_DOCKER_LABEL})
     if start_clipper:
         logging.info("Starting Clipper")
         cl.start_clipper()
@@ -89,9 +88,12 @@ def create_kubernetes_connection(cleanup=True, start_clipper=True):
     if start_clipper:
         logging.info("Starting Clipper")
         cl.start_clipper(
-            query_frontend_image="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/query_frontend:{}".format(clipper_version),
-            mgmt_frontend_image="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/management_frontend:{}".format(clipper_version)
-        )
+            query_frontend_image=
+            "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/query_frontend:{}".
+            format(clipper_version),
+            mgmt_frontend_image=
+            "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/management_frontend:{}".
+            format(clipper_version))
         time.sleep(1)
     else:
         try:

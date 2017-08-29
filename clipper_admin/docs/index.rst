@@ -30,6 +30,8 @@ one for running Clipper locally directly on Docker, and one for running Clipper 
 Model Deployers
 ----------------
 
+TODO: Update the model deployers section
+
 Pure Python functions
 ~~~~~~~~~~~~~~~~~~~~~
 .. autofunction:: clipper_admin.deployers.python.deploy_python_closure

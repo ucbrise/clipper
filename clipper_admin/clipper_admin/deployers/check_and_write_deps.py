@@ -97,16 +97,14 @@ def check_solvability_write_deps(env_path, directory, platform,
     except UnsatisfiableError as unsat_e:
         print(
             "Your conda dependencies are unsatisfiable (see error text below). Please resolve "
-            "these issues and call `deploy_predict_func` again."
-        )
+            "these issues and call `deploy_predict_func` again.")
         print(unsat_e)
         return False
 
     if missing_packages is not None:
         print(
             "The following packages in your conda environment aren't available in the linux-64 "
-            "conda channel the container will use:"
-        )
+            "conda channel the container will use:")
         print(", ".join(str(package) for package in missing_packages))
         print(
             "We will skip their installation when deploying your function. If your function uses "

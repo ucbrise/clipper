@@ -2,12 +2,11 @@ from __future__ import absolute_import, division, print_function
 import docker
 import logging
 import os
-from ..container_manager import (create_model_container_label, parse_model_container_label,
-                                 ContainerManager, CLIPPER_DOCKER_LABEL,
-                                 CLIPPER_MODEL_CONTAINER_LABEL, CLIPPER_INTERNAL_RPC_PORT,
-                                 CLIPPER_INTERNAL_QUERY_PORT, CLIPPER_INTERNAL_MANAGEMENT_PORT)
-
-DOCKER_NETWORK_NAME = "clipper_network"
+from ..container_manager import (
+    create_model_container_label, parse_model_container_label,
+    ContainerManager, CLIPPER_DOCKER_LABEL, CLIPPER_MODEL_CONTAINER_LABEL,
+    CLIPPER_INTERNAL_RPC_PORT, CLIPPER_INTERNAL_QUERY_PORT,
+    CLIPPER_INTERNAL_MANAGEMENT_PORT)
 
 logger = logging.getLogger(__name__)
 
@@ -20,20 +19,37 @@ class DockerContainerManager(ContainerManager):
                  clipper_rpc_port=7000,
                  redis_ip=None,
                  redis_port=6379,
+                 docker_network="host",
                  extra_container_kwargs={}):
         """
         Parameters
         ----------
-        docker_ip_address : str
+        docker_ip_address : str, optional
             The public hostname or IP address at which the Clipper Docker
-            containers can be accessed via their exposed ports. On macOs this
-            can be set to "localhost" as Docker automatically makes exposed
-            ports on Docker containers available via localhost, but on other
-            operating systems this must be set explicitly.
-
+            containers can be accessed via their exposed ports. If running the containers
+            on a network other than "host", you may need to set this explicitly for ``ClipperConnection``
+            access the Clipper containers.
+        clipper_query_port : int, optional
+            The port on which the query frontend should listen for incoming prediction requests.
+        clipper_management_port : int, optional
+            The port on which the management frontend should expose the management REST API.
+        clipper_rpc_port : int, optional
+            The port to start the Clipper RPC service on.
+        redis_ip : str, optional
+            The address of a running Redis cluster. If set to None, Clipper will start
+            a Redis container for you.
+        redis_port : int, optional
+            The Redis port. If ``redis_ip`` is set to None, Clipper will start Redis on this port.
+            If ``redis_ip`` is provided, Clipper will connect to Redis on this port.
+        docker_network : str, optional
+            The docker network to attach the containers to. If unspecified, this defaults to the "host"
+            network. You can read more about Docker networking in the
+            `Docker User Guide <https://docs.docker.com/engine/userguide/networking/>`_.
         extra_container_kwargs : dict
             Any additional keyword arguments to pass to the call to
             :py:meth:`docker.client.containers.run`.
+
+
         """
         self.public_hostname = docker_ip_address
         self.clipper_query_port = clipper_query_port
@@ -41,29 +57,33 @@ class DockerContainerManager(ContainerManager):
         self.clipper_rpc_port = clipper_rpc_port
         self.redis_ip = redis_ip
         self.redis_port = redis_port
+        self.docker_network = docker_network
 
         self.docker_client = docker.from_env()
         self.extra_container_kwargs = extra_container_kwargs
         self.query_frontend_name = "query_frontend"
         self.mgmt_frontend_name = "mgmt_frontend"
 
-        # TODO: Deal with Redis persistence
-
     def start_clipper(self, query_frontend_image, mgmt_frontend_image):
-        try:
-            self.docker_client.networks.create(
-                DOCKER_NETWORK_NAME, check_duplicate=True)
-        except docker.errors.APIError as e:
-            logger.debug(
-                "{nw} network already exists".format(nw=DOCKER_NETWORK_NAME))
+        if self.docker_network is not "host":
+            # The "host" network already exists so we never need to try to create it
+            try:
+                self.docker_client.networks.create(
+                    self.docker_network, check_duplicate=True)
+            except docker.errors.APIError as e:
+                logger.debug("{nw} network already exists".format(
+                    nw=self.docker_network))
         container_args = {
-            "network": DOCKER_NETWORK_NAME,
+            "network": self.docker_network,
             "detach": True,
         }
 
         # Merge Clipper-specific labels with any user-provided labels
         if "labels" in self.extra_container_kwargs:
-            self.extra_container_kwargs["labels"].update({CLIPPER_DOCKER_LABEL: ""})
+            self.extra_container_kwargs["labels"].update({
+                CLIPPER_DOCKER_LABEL:
+                ""
+            })
         else:
             self.extra_container_kwargs["labels"] = {CLIPPER_DOCKER_LABEL: ""}
 
@@ -149,7 +169,8 @@ class DockerContainerManager(ContainerManager):
             "CLIPPER_INPUT_TYPE": input_type,
         }
         self.extra_container_kwargs["labels"][
-            CLIPPER_MODEL_CONTAINER_LABEL] = create_model_container_label(name, version)
+            CLIPPER_MODEL_CONTAINER_LABEL] = create_model_container_label(
+                name, version)
         self.docker_client.containers.run(
             image, environment=env_vars, **self.extra_container_kwargs)
 
@@ -201,7 +222,8 @@ class DockerContainerManager(ContainerManager):
         containers = self.docker_client.containers.list(
             filters={"label": CLIPPER_MODEL_CONTAINER_LABEL})
         for c in containers:
-            c_name, c_version = parse_model_container_label(c.labels[CLIPPER_MODEL_CONTAINER_LABEL])
+            c_name, c_version = parse_model_container_label(
+                c.labels[CLIPPER_MODEL_CONTAINER_LABEL])
             if c_name in models and c_version in models[c_name]:
                 c.stop()
 

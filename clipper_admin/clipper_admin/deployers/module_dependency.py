@@ -56,7 +56,8 @@ class ModuleDependencyAnalyzer(object):
         elif isinstance(module_name, str):
             self._modules_to_ignore.add(module_name)
         else:
-            raise TypeError('module_name must be string, found type {}'.format(type(module_name)))
+            raise TypeError('module_name must be string, found type {}'.format(
+                type(module_name)))
 
     def get_and_clear_paths(self):
         # might be nice if this returned module names as well

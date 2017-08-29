@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
-from ..container_manager import (create_model_container_label, ContainerManager,
-                                 CLIPPER_DOCKER_LABEL, CLIPPER_MODEL_CONTAINER_LABEL)
+from ..container_manager import (create_model_container_label,
+                                 ContainerManager, CLIPPER_DOCKER_LABEL,
+                                 CLIPPER_MODEL_CONTAINER_LABEL)
 from ..exceptions import ClipperException
 
 from contextlib import contextmanager
@@ -40,7 +41,7 @@ class KubernetesContainerManager(ContainerManager):
         redis_ip : str, optional
             The address of a running Redis cluster. If set to None, Clipper will start
             a Redis deployment for you.
-        redis_port : int
+        redis_port : int, optional
             The Redis port. If ``redis_ip`` is set to None, Clipper will start Redis on this port.
             If ``redis_ip`` is provided, Clipper will connect to Redis on this port.
 
@@ -61,9 +62,7 @@ class KubernetesContainerManager(ContainerManager):
         self._k8s_v1 = client.CoreV1Api()
         self._k8s_beta = client.ExtensionsV1beta1Api()
 
-    def start_clipper(self,
-                      query_frontend_image,
-                      mgmt_frontend_image):
+    def start_clipper(self, query_frontend_image, mgmt_frontend_image):
         # If an existing Redis service isn't provided, start one
         if self.redis_ip is None:
             name = 'redis'
@@ -120,8 +119,9 @@ class KubernetesContainerManager(ContainerManager):
             logger.error(msg)
             raise ClipperException(msg)
         self.external_node_hosts = external_node_hosts
-        logger.info("Found {num_nodes} nodes: {nodes}".format(num_nodes=len(external_node_hosts),
-                                                              nodes=", ".join(external_node_hosts)))
+        logger.info("Found {num_nodes} nodes: {nodes}".format(
+            num_nodes=len(external_node_hosts),
+            nodes=", ".join(external_node_hosts)))
         try:
             mgmt_frontend_ports = self._k8s_v1.read_namespaced_service(
                 name="mgmt-frontend", namespace='default').spec.ports
@@ -135,58 +135,64 @@ class KubernetesContainerManager(ContainerManager):
             for p in query_frontend_ports:
                 if p.name == "1337":
                     self.clipper_query_port = p.node_port
-                    logger.info("Setting Clipper query port to {}".format(self.clipper_query_port))
+                    logger.info("Setting Clipper query port to {}".format(
+                        self.clipper_query_port))
                 elif p.name == "7000":
                     self.clipper_rpc_port = p.node_port
         except ApiException as e:
-            logging.warn("Exception connecting to Clipper Kubernetes cluster: {}".format(e))
-            raise ClipperException("Could not connect to Clipper Kubernetes cluster. "
-                                   "Reason: {}".format(e))
+            logging.warn(
+                "Exception connecting to Clipper Kubernetes cluster: {}".
+                format(e))
+            raise ClipperException(
+                "Could not connect to Clipper Kubernetes cluster. "
+                "Reason: {}".format(e))
 
     def deploy_model(self, name, version, input_type, image, num_replicas=1):
         with _pass_conflicts():
             deployment_name = get_model_deployment_name(name, version)
             body = {
-                    'apiVersion': 'extensions/v1beta1',
-                    'kind': 'Deployment',
-                    'metadata': {
-                        "name": deployment_name
-                    },
-                    'spec': {
-                        'replicas': num_replicas,
-                        'template': {
-                            'metadata': {
-                                'labels': {
-                                    CLIPPER_MODEL_CONTAINER_LABEL:
-                                    create_model_container_label(name, version),
-                                    CLIPPER_DOCKER_LABEL: ""
-                                }
-                            },
-                            'spec': {
-                                'containers': [{
-                                    'name': deployment_name,
-                                    'image': image,
-                                    'ports': [{
-                                        'containerPort': 80
-                                    }],
-                                    'env': [{
-                                        'name': 'CLIPPER_MODEL_NAME',
-                                        'value': name
-                                    }, {
-                                        'name': 'CLIPPER_MODEL_VERSION',
-                                        'value': str(version)
-                                    }, {
-                                        'name': 'CLIPPER_IP',
-                                        'value': 'query-frontend'
-                                    }]
-                                }]
+                'apiVersion': 'extensions/v1beta1',
+                'kind': 'Deployment',
+                'metadata': {
+                    "name": deployment_name
+                },
+                'spec': {
+                    'replicas': num_replicas,
+                    'template': {
+                        'metadata': {
+                            'labels': {
+                                CLIPPER_MODEL_CONTAINER_LABEL:
+                                create_model_container_label(name, version),
+                                CLIPPER_DOCKER_LABEL:
+                                ""
                             }
+                        },
+                        'spec': {
+                            'containers': [{
+                                'name':
+                                deployment_name,
+                                'image':
+                                image,
+                                'ports': [{
+                                    'containerPort': 80
+                                }],
+                                'env': [{
+                                    'name': 'CLIPPER_MODEL_NAME',
+                                    'value': name
+                                }, {
+                                    'name': 'CLIPPER_MODEL_VERSION',
+                                    'value': str(version)
+                                }, {
+                                    'name': 'CLIPPER_IP',
+                                    'value': 'query-frontend'
+                                }]
+                            }]
                         }
                     }
                 }
+            }
             self._k8s_beta.create_namespaced_deployment(
-                body=body,
-                namespace='default')
+                body=body, namespace='default')
 
     def get_num_replicas(self, name, version):
         deployment_name = get_model_deployment_name(name, version)
@@ -220,7 +226,8 @@ class KubernetesContainerManager(ContainerManager):
             for i, c in enumerate(pod.status.container_statuses):
                 # log_file_name = "image_{image}:container_{id}.log".format(
                 #     image=c.image_id, id=c.container_id)
-                log_file_name = "{pod}_{num}.log".format(pod=pod.metadata.name, num=str(i))
+                log_file_name = "{pod}_{num}.log".format(
+                    pod=pod.metadata.name, num=str(i))
                 log_file_alt = "{cname}.log".format(cname=c.name)
                 logger.info("log file name: {}".format(log_file_name))
                 logger.info("log alt file name: {}".format(log_file_alt))
@@ -246,7 +253,8 @@ class KubernetesContainerManager(ContainerManager):
                             label=CLIPPER_MODEL_CONTAINER_LABEL,
                             val=create_model_container_label(m, v)))
         except ApiException as e:
-            logger.warn("Exception deleting kubernetes deployments: {}".format(e))
+            logger.warn(
+                "Exception deleting kubernetes deployments: {}".format(e))
             raise e
 
     def stop_all_model_containers(self):
@@ -255,7 +263,8 @@ class KubernetesContainerManager(ContainerManager):
                 namespace='default',
                 label_selector=CLIPPER_MODEL_CONTAINER_LABEL)
         except ApiException as e:
-            logger.warn("Exception deleting kubernetes deployments: {}".format(e))
+            logger.warn(
+                "Exception deleting kubernetes deployments: {}".format(e))
             raise e
 
     def stop_all(self):
@@ -285,14 +294,16 @@ class KubernetesContainerManager(ContainerManager):
                 namespace='default',
                 label_selector=CLIPPER_MODEL_CONTAINER_LABEL)
         except ApiException as e:
-            logging.warn("Exception deleting kubernetes resources: {}".format(e))
+            logging.warn(
+                "Exception deleting kubernetes resources: {}".format(e))
 
     def get_registry(self):
         return self.registry
 
     def get_admin_addr(self):
         return "{host}:{port}".format(
-            host=self.external_node_hosts[0], port=self.clipper_management_port)
+            host=self.external_node_hosts[0],
+            port=self.clipper_management_port)
 
     def get_query_addr(self):
         return "{host}:{port}".format(

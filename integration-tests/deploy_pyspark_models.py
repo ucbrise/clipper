@@ -21,7 +21,8 @@ from pyspark.mllib.tree import RandomForest
 from pyspark.mllib.regression import LabeledPoint
 from pyspark.sql import SparkSession
 
-from test_utils import (create_docker_connection, BenchmarkException, headers, log_clipper_state)
+from test_utils import (create_docker_connection, BenchmarkException, headers,
+                        log_clipper_state)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
 from clipper_admin.deployers.pyspark import deploy_pyspark_model, create_endpoint
@@ -66,8 +67,14 @@ def predict_with_local_modules(spark, model, xs):
     ]
 
 
-def deploy_and_test_model(sc, clipper_conn, model, version, link_model=False, predict_fn=predict):
-    deploy_pyspark_model(clipper_conn, model_name, version, "integers", predict_fn, model, sc)
+def deploy_and_test_model(sc,
+                          clipper_conn,
+                          model,
+                          version,
+                          link_model=False,
+                          predict_fn=predict):
+    deploy_pyspark_model(clipper_conn, model_name, version, "integers",
+                         predict_fn, model, sc)
 
     time.sleep(5)
 
@@ -129,14 +136,16 @@ if __name__ == "__main__":
                 .appName("clipper-pyspark")\
                 .getOrCreate()
         sc = spark.sparkContext
-        clipper_conn = create_docker_connection(cleanup=True, start_clipper=True)
+        clipper_conn = create_docker_connection(
+            cleanup=True, start_clipper=True)
 
         train_path = os.path.join(cur_dir, "data/train.data")
         trainRDD = sc.textFile(train_path).map(
             lambda line: parseData(line, objective, pos_label)).cache()
 
         try:
-            clipper_conn.register_application(app_name, "integers", "default_pred", 100000)
+            clipper_conn.register_application(app_name, "integers",
+                                              "default_pred", 100000)
             time.sleep(1)
 
             response = requests.post(
@@ -163,21 +172,25 @@ if __name__ == "__main__":
             deploy_and_test_model(sc, clipper_conn, svm_model, version)
 
             app_and_model_name = "easy-register-app-model"
-            create_endpoint(clipper_conn, app_and_model_name, "integers", predict,
-                            lr_model, sc)
+            create_endpoint(clipper_conn, app_and_model_name, "integers",
+                            predict, lr_model, sc)
             test_model(app_and_model_name, 1)
 
             version += 1
-            deploy_and_test_model(sc, clipper_conn, lr_model, version, predict_with_local_modules)
+            deploy_and_test_model(sc, clipper_conn, lr_model, version,
+                                  predict_with_local_modules)
         except BenchmarkException as e:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
-            clipper_conn = create_docker_connection(cleanup=True, start_clipper=False)
+            clipper_conn = create_docker_connection(
+                cleanup=True, start_clipper=False)
             sys.exit(1)
         else:
             spark.stop()
-            clipper_conn = create_docker_connection(cleanup=True, start_clipper=False)
+            clipper_conn = create_docker_connection(
+                cleanup=True, start_clipper=False)
     except Exception as e:
         logger.exception("Exception")
-        clipper_conn = create_docker_connection(cleanup=True, start_clipper=False)
+        clipper_conn = create_docker_connection(
+            cleanup=True, start_clipper=False)
         sys.exit(1)

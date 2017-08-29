@@ -20,9 +20,7 @@ setup(
     url='http://clipper.ai',
     license=license,
     packages=[
-        "clipper_admin",
-        "clipper_admin.docker",
-        "clipper_admin.kubernetes",
+        "clipper_admin", "clipper_admin.docker", "clipper_admin.kubernetes",
         "clipper_admin.deployers"
     ],
     package_data={'clipper_admin': ['*.txt']},
@@ -37,5 +35,4 @@ setup(
     ],
     extras_require={
         'PySpark': ['pyspark'],
-        }
-    )
+    })

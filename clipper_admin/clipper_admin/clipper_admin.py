@@ -15,30 +15,29 @@ DEFAULT_LABEL = ["DEFAULT"]
 
 logger = logging.getLogger(__name__)
 
-
 deploy_regex_str = "[a-z0-9]([-a-z0-9]*[a-z0-9])?\Z"
 deployment_regex = re.compile(deploy_regex_str)
 
 
 def _validate_versioned_model_name(name, version):
     if deployment_regex.match(name) is None:
-        raise ClipperException("Invalid value: {name}: a model name must be a valid DNS-1123 "
-                               " subdomain. It must consist of lower case "
-                               "alphanumeric characters, '-' or '.', and must start and end with "
-                               "an alphanumeric character (e.g. 'example.com', regex used for "
-                               "validation is '{reg}'"
-                               .format(name=name, reg=deploy_regex_str))
+        raise ClipperException(
+            "Invalid value: {name}: a model name must be a valid DNS-1123 "
+            " subdomain. It must consist of lower case "
+            "alphanumeric characters, '-' or '.', and must start and end with "
+            "an alphanumeric character (e.g. 'example.com', regex used for "
+            "validation is '{reg}'".format(name=name, reg=deploy_regex_str))
     if deployment_regex.match(version) is None:
-        raise ClipperException("Invalid value: {version}: a model version must be a valid DNS-1123 "
-                               " subdomain. It must consist of lower case "
-                               "alphanumeric characters, '-' or '.', and must start and end with "
-                               "an alphanumeric character (e.g. 'example.com', regex used for "
-                               "validation is '{reg}'"
-                               .format(version=version, reg=deploy_regex_str))
+        raise ClipperException(
+            "Invalid value: {version}: a model version must be a valid DNS-1123 "
+            " subdomain. It must consist of lower case "
+            "alphanumeric characters, '-' or '.', and must start and end with "
+            "an alphanumeric character (e.g. 'example.com', regex used for "
+            "validation is '{reg}'".format(
+                version=version, reg=deploy_regex_str))
 
 
 class ClipperConnection(object):
-
     def __init__(self, container_manager):
         """Create a new ClipperConnection object.
 
@@ -56,9 +55,12 @@ class ClipperConnection(object):
         self.connected = False
         self.cm = container_manager
 
-    def start_clipper(self,
-                      query_frontend_image='clipper/query_frontend:{}'.format(__version__),
-                      mgmt_frontend_image='clipper/management_frontend:{}'.format(__version__)):
+    def start_clipper(
+            self,
+            query_frontend_image='clipper/query_frontend:{}'.format(
+                __version__),
+            mgmt_frontend_image='clipper/management_frontend:{}'.format(
+                __version__)):
         """Start a new Clipper cluster and connect to it.
 
         This command will start a new Clipper instance using the container manager provided when
@@ -83,7 +85,8 @@ class ClipperConnection(object):
             self.cm.start_clipper(query_frontend_image, mgmt_frontend_image)
             while True:
                 try:
-                    url = "http://{host}/metrics".format(host=self.cm.get_query_addr())
+                    url = "http://{host}/metrics".format(
+                        host=self.cm.get_query_addr())
                     requests.get(url, timeout=5)
                     break
                 except RequestException as e:
@@ -101,7 +104,8 @@ class ClipperConnection(object):
         self.cm.connect()
         self.connected = True
 
-    def register_application(self, name, input_type, default_output, slo_micros):
+    def register_application(self, name, input_type, default_output,
+                             slo_micros):
         # TODO(crankshaw): Update user guide links
         """Register a new application with Clipper.
 
@@ -207,7 +211,6 @@ class ClipperConnection(object):
                                labels=None,
                                container_registry=None,
                                num_replicas=1):
-
         """Build a new model container Docker image with the provided data and deploy it as
         a model to Clipper.
 
@@ -279,13 +282,14 @@ class ClipperConnection(object):
         if container_registry is not None:
             image = "{reg}/{image}".format(reg=container_registry, image=image)
         docker_client = docker.from_env()
-        logger.info(
-            "Building model Docker image with model data from {}".format(model_data_path))
+        logger.info("Building model Docker image with model data from {}".
+                    format(model_data_path))
         docker_client.images.build(path=model_data_path, tag=image)
 
         logger.info("Pushing model Docker image to {}".format(image))
         docker_client.images.push(repository=image)
-        self.deploy_model(name, version, input_type, image, labels, num_replicas)
+        self.deploy_model(name, version, input_type, image, labels,
+                          num_replicas)
 
     def deploy_model(self,
                      name,
@@ -353,7 +357,12 @@ class ClipperConnection(object):
             name, version, input_type, image=image, labels=labels)
         logger.info("Done deploying!")
 
-    def register_model(self, name, version, input_type, image=None, labels=None):
+    def register_model(self,
+                       name,
+                       version,
+                       input_type,
+                       image=None,
+                       labels=None):
         """Registers a new model version with Clipper.
 
         This method does not launch any model containers, it only registers the model description
@@ -488,7 +497,8 @@ class ClipperConnection(object):
                                          num_replicas)
             else:
                 msg = ("Cannot resize the replica set for containerless model "
-                       "{name}:{version}").format(name=name, version=version)
+                       "{name}:{version}").format(
+                           name=name, version=version)
                 logger.error(msg)
                 raise ClipperException(msg)
         else:
@@ -522,7 +532,8 @@ class ClipperConnection(object):
 
         if not self.connected:
             raise UnconnectedException()
-        url = "http://{host}/admin/get_all_applications".format(host=self.cm.get_admin_addr())
+        url = "http://{host}/admin/get_all_applications".format(
+            host=self.cm.get_admin_addr())
         req_json = json.dumps({"verbose": verbose})
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)

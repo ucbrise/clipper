@@ -18,15 +18,15 @@ _MODEL_CONTAINER_LABEL_DELIMITER = "_"
 
 
 def create_model_container_label(name, version):
-    return "{name}{delim}{version}".format(name=name,
-                                           delim=_MODEL_CONTAINER_LABEL_DELIMITER,
-                                           version=version)
+    return "{name}{delim}{version}".format(
+        name=name, delim=_MODEL_CONTAINER_LABEL_DELIMITER, version=version)
 
 
 def parse_model_container_label(label):
     splits = label.split(_MODEL_CONTAINER_LABEL_DELIMITER)
     if len(splits) != 2:
-        raise ClipperException("Unable to parse model container label {}".format(label))
+        raise ClipperException(
+            "Unable to parse model container label {}".format(label))
     return splits
 
 
@@ -34,9 +34,7 @@ class ContainerManager(object):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def start_clipper(self,
-                      query_frontend_image,
-                      mgmt_frontend_image):
+    def start_clipper(self, query_frontend_image, mgmt_frontend_image):
         # NOTE: An implementation of this interface should be connected to a running
         # Clipper instance when this method returns. ClipperConnection will not
         # call ContainerManager.connect() separately after calling start_clipper(), so

@@ -39,10 +39,12 @@ logger = logging.getLogger(__name__)
 class ClipperManagerTestCaseShort(unittest.TestCase):
     @classmethod
     def tearDownClass(self):
-        self.clipper_conn = create_docker_connection(cleanup=True, start_clipper=False)
+        self.clipper_conn = create_docker_connection(
+            cleanup=True, start_clipper=False)
 
     def setUp(self):
-        self.clipper_conn = create_docker_connection(cleanup=True, start_clipper=True)
+        self.clipper_conn = create_docker_connection(
+            cleanup=True, start_clipper=True)
 
     def test_register_model_correct(self):
         input_type = "doubles"
@@ -77,8 +79,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.clipper_conn.register_application(app_name, input_type,
                                                default_output, slo_micros)
         with self.assertRaises(cl.ClipperException) as context:
-            self.clipper_conn.link_model_to_app(app_name,
-                                                not_deployed_model)
+            self.clipper_conn.link_model_to_app(app_name, not_deployed_model)
         self.assertTrue("No model with name" in str(context.exception))
 
     def test_get_model_links_when_none_exist_returns_empty_list(self):
@@ -171,9 +172,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         version = "v1"
         container_name = "clipper/noop-container:{}".format(clipper_version)
         input_type = "doubles"
-        self.clipper_conn.build_and_deploy_model(model_name,
-                                                 version, input_type,
-                                                 fake_model_data, container_name)
+        self.clipper_conn.build_and_deploy_model(
+            model_name, version, input_type, fake_model_data, container_name)
         model_info = self.clipper_conn.get_model_info(model_name, version)
         self.assertIsNotNone(model_info)
         self.assertEqual(type(model_info), dict)
@@ -188,9 +188,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         version = "v1"
         container_name = "clipper/noop-container:{}".format(clipper_version)
         input_type = "doubles"
-        self.clipper_conn.build_and_deploy_model(model_name,
-                                                 version, input_type,
-                                                 fake_model_data, container_name)
+        self.clipper_conn.build_and_deploy_model(
+            model_name, version, input_type, fake_model_data, container_name)
 
         # Version defaults to current version
         self.clipper_conn.set_num_replicas(model_name, 4)
@@ -252,13 +251,13 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         docker_client = get_docker_client()
         containers = docker_client.containers.list(
             filters={"ancestor": container_name})
-        self.assertEqual(len(containers), len(mnames)*len(versions))
+        self.assertEqual(len(containers), len(mnames) * len(versions))
 
         # stop all versions of models jimmypage, robertplant
         self.clipper_conn.stop_models(mnames[:2])
         containers = docker_client.containers.list(
             filters={"ancestor": container_name})
-        self.assertEqual(len(containers), len(mnames[2:])*len(versions))
+        self.assertEqual(len(containers), len(mnames[2:]) * len(versions))
 
         # After calling this method, the remaining models should be:
         # jpj:i, jpj:iii, johnbohman:ii
@@ -283,15 +282,17 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             return ["0" for x in inputs]
 
         input_type = "doubles"
-        deploy_python_closure(self.clipper_conn, model_name, model_version, input_type,
-                              predict_func)
+        deploy_python_closure(self.clipper_conn, model_name, model_version,
+                              input_type, predict_func)
         model_info = self.clipper_conn.get_model_info(model_name,
                                                       model_version)
         self.assertIsNotNone(model_info)
 
         docker_client = get_docker_client()
-        containers = docker_client.containers.list(
-            filters={"ancestor": "clipper/python-closure-container:{}".format(clipper_version)})
+        containers = docker_client.containers.list(filters={
+            "ancestor":
+            "clipper/python-closure-container:{}".format(clipper_version)
+        })
         self.assertGreaterEqual(len(containers), 1)
 
     def test_register_py_endpoint(self):
@@ -317,15 +318,18 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertIsNotNone(linked_models)
 
         docker_client = get_docker_client()
-        containers = docker_client.containers.list(
-            filters={"ancestor": "clipper/python-closure-container:{}".format(clipper_version)})
+        containers = docker_client.containers.list(filters={
+            "ancestor":
+            "clipper/python-closure-container:{}".format(clipper_version)
+        })
         self.assertEqual(len(containers), 1)
 
 
 class ClipperManagerTestCaseLong(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        self.clipper_conn = create_docker_connection(cleanup=True, start_clipper=True)
+        self.clipper_conn = create_docker_connection(
+            cleanup=True, start_clipper=True)
         self.app_name_1 = "app3"
         self.app_name_2 = "app4"
         self.model_name_1 = "m4"
@@ -344,7 +348,8 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
     @classmethod
     def tearDownClass(self):
-        self.clipper_conn = create_docker_connection(cleanup=True, start_clipper=False)
+        self.clipper_conn = create_docker_connection(
+            cleanup=True, start_clipper=False)
 
     def test_unlinked_app_returns_default_predictions(self):
         url = "http://localhost:1337/{}/predict".format(self.app_name_2)
@@ -360,9 +365,9 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
     def test_deployed_model_queried_successfully(self):
         model_version = 1
         container_name = "clipper/noop-container:{}".format(clipper_version)
-        self.clipper_conn.build_and_deploy_model(self.model_name_2, model_version,
-                                                 self.input_type, fake_model_data,
-                                                 container_name)
+        self.clipper_conn.build_and_deploy_model(
+            self.model_name_2, model_version, self.input_type, fake_model_data,
+            container_name)
 
         self.clipper_conn.link_model_to_app(self.app_name_2, self.model_name_2)
         time.sleep(30)
@@ -381,11 +386,13 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         model_version = 1
 
         def predict_func(inputs):
-            return [str(mm.COEFFICIENT * mmip.COEFFICIENT * len(x)) for x in inputs]
+            return [
+                str(mm.COEFFICIENT * mmip.COEFFICIENT * len(x)) for x in inputs
+            ]
 
         input_type = "doubles"
-        deploy_python_closure(self.clipper_conn, self.model_name_1, model_version, input_type,
-                              predict_func)
+        deploy_python_closure(self.clipper_conn, self.model_name_1,
+                              model_version, input_type, predict_func)
 
         self.clipper_conn.link_model_to_app(self.app_name_1, self.model_name_1)
         time.sleep(60)

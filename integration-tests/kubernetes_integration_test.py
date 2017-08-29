@@ -12,7 +12,6 @@ cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
 from clipper_admin import __version__ as clipper_version
 
-
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
     datefmt='%y-%m-%d:%H:%M:%S',
@@ -33,7 +32,8 @@ def deploy_model(clipper_conn, name, version):
         fake_model_data,
         "clipper/noop-container:{}".format(clipper_version),
         num_replicas=1,
-        container_registry="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper")
+        container_registry=
+        "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper")
     time.sleep(10)
 
     clipper_conn.link_model_to_app(app_name, model_name)
@@ -57,8 +57,8 @@ def deploy_model(clipper_conn, name, version):
             if response.status_code == requests.codes.ok and result["default"]:
                 num_defaults += 1
         if num_defaults > 0:
-            logger.error("Error: %d/%d predictions were default" % (num_defaults,
-                                                                    num_preds))
+            logger.error("Error: %d/%d predictions were default" %
+                         (num_defaults, num_preds))
         if num_defaults < num_preds / 2:
             success = True
 
@@ -71,7 +71,8 @@ def deploy_model(clipper_conn, name, version):
 
 def create_and_test_app(clipper_conn, name, num_models):
     app_name = "%s-app" % name
-    clipper_conn.register_application(app_name, "doubles", "default_pred", 100000)
+    clipper_conn.register_application(app_name, "doubles", "default_pred",
+                                      100000)
     time.sleep(1)
 
     addr = clipper_conn.get_query_addr()
@@ -104,7 +105,8 @@ if __name__ == "__main__":
         # for num_apps and num_models
         pass
     try:
-        clipper_conn = create_kubernetes_connection(cleanup=True, start_clipper=True)
+        clipper_conn = create_kubernetes_connection(
+            cleanup=True, start_clipper=True)
         time.sleep(10)
         print(clipper_conn.cm.get_query_addr())
         print(clipper_conn.inspect_instance())

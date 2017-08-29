@@ -66,9 +66,8 @@ def save_python_function(name, func):
         )
 
     # Export modules used by predict_function not captured in anaconda or pip
-    export_local_modules(c.modules, serialization_dir,
-                         conda_dep_fname, pip_dep_fname,
-                         local_modules_folder_name)
+    export_local_modules(c.modules, serialization_dir, conda_dep_fname,
+                         pip_dep_fname, local_modules_folder_name)
     logger.info("Supplied local modules")
 
     # Write out function serialization
@@ -153,7 +152,8 @@ def check_and_write_dependencies(environment_path, directory, conda_dep_fname,
     return process.returncode == 0
 
 
-def get_already_exported_modules(serialization_dir, conda_deps_fname, pip_deps_fname):
+def get_already_exported_modules(serialization_dir, conda_deps_fname,
+                                 pip_deps_fname):
     """
     Returns a list of names of modules that will be installed on the container.
     This list includes the names of exported conda and pip modules as well as
@@ -166,8 +166,8 @@ def get_already_exported_modules(serialization_dir, conda_deps_fname, pip_deps_f
     """
     conda_deps_abs_path = os.path.join(serialization_dir, conda_deps_fname)
     pip_deps_abs_path = os.path.join(serialization_dir, pip_deps_fname)
-    python_container_conda_deps_fname = os.path.abspath(os.path.join(
-        cur_dir, "..", "python_container_conda_deps.txt"))
+    python_container_conda_deps_fname = os.path.abspath(
+        os.path.join(cur_dir, "..", "python_container_conda_deps.txt"))
 
     def get_module_name(line):
         return line.strip().split('=')[1]
@@ -191,9 +191,8 @@ def get_already_exported_modules(serialization_dir, conda_deps_fname, pip_deps_f
     return ignore_list
 
 
-def export_local_modules(func_modules, serialization_dir,
-                         conda_deps_fname, pip_deps_fname,
-                         local_modules_folder_name):
+def export_local_modules(func_modules, serialization_dir, conda_deps_fname,
+                         pip_deps_fname, local_modules_folder_name):
     """
     Supplies modules in `func_modules` not already accounted for by Anaconda or pip to container.
     Copies those modules to {`serialization_dir`}/{`local_module_deps_fname`}.
@@ -239,8 +238,7 @@ def export_local_modules(func_modules, serialization_dir,
                     logger.warning(
                         "Could not identify the location of the root package {package} for module {module}. Will not supply it to the container.".
                         format(
-                            package=module_name_split[0],
-                            module=module_name))
+                            package=module_name_split[0], module=module_name))
         else:
             mda.ignore(module_name)
     module_paths = mda.get_and_clear_paths()
@@ -255,8 +253,7 @@ def export_local_modules(func_modules, serialization_dir,
         if not path_already_captured(module_path):
             paths_to_copy.add(module_path)
 
-    modules_dir = os.path.join(serialization_dir,
-                               local_modules_folder_name)
+    modules_dir = os.path.join(serialization_dir, local_modules_folder_name)
     if not os.path.exists(modules_dir):
         os.mkdir(modules_dir)
     for path in paths_to_copy:
