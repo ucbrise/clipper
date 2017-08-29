@@ -17,7 +17,6 @@ int main(int argc, char** argv) {
 
   clipper::Config& conf = clipper::get_config();
   conf.set_redis_port(options["redis_port"].as<int>());
-  conf.set_task_execution_threadpool_size(2);
   conf.ready();
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();

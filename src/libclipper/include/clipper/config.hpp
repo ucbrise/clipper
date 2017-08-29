@@ -2,12 +2,17 @@
 #define CLIPPER_LIB_CONFIG_HPP
 
 #include <cassert>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <utility>
 
 // TODO: Change the name of this file.
 namespace clipper {
+
+const std::string DEFAULT_REDIS_ADDRESS("localhost");
+constexpr int DEFAULT_REDIS_PORT = 6379;
+constexpr long DEFAULT_PREDICTION_CACHE_SIZE_BYTES = 33554432;  // 32 MiB
 
 /**
  * Globally readable constant configuration.
@@ -26,18 +31,18 @@ struct Config {
  public:
   explicit Config()
       : readable_(false),
-        redis_address_("localhost"),
-        redis_port_(6379),
-        task_execution_threadpool_size_(4) {}
+        redis_address_(DEFAULT_REDIS_ADDRESS),
+        redis_port_(DEFAULT_REDIS_PORT),
+        prediction_cache_size_bytes_(DEFAULT_PREDICTION_CACHE_SIZE_BYTES) {}
 
   /**
    * For unit testing only!
    */
   void reset() {
     readable_ = false;
-    redis_address_ = "localhost";
-    redis_port_ = 6379;
-    task_execution_threadpool_size_ = 4;
+    redis_address_ = DEFAULT_REDIS_ADDRESS;
+    redis_port_ = DEFAULT_REDIS_PORT;
+    prediction_cache_size_bytes_ = DEFAULT_PREDICTION_CACHE_SIZE_BYTES;
   }
 
   void ready() { readable_ = true; }
@@ -80,29 +85,36 @@ struct Config {
     redis_port_ = port;
   }
 
-  int get_task_execution_threadpool_size() const {
+  long get_prediction_cache_size() const {
     if (!readable_) {
       // TODO: use a better exception
       throw std::logic_error("Cannot read Config until ready");
     }
     assert(readable_);
-    return task_execution_threadpool_size_;
+    return prediction_cache_size_bytes_;
   }
 
-  void set_task_execution_threadpool_size(int size) {
+  void set_prediction_cache_size(long size_bytes) {
     if (readable_) {
       // TODO: use a better exception
       throw std::logic_error("Cannot write to Config after ready");
     }
     assert(!readable_);
-    task_execution_threadpool_size_ = size;
+    if (size_bytes < 0) {
+      std::stringstream ss;
+      ss << "Prediction cache size cannot be negative! Attempted to set a "
+            "cache size of: "
+         << size_bytes << " bytes";
+      throw std::invalid_argument(ss.str());
+    }
+    prediction_cache_size_bytes_ = size_bytes;
   }
 
  private:
   bool readable_;
   std::string redis_address_;
   int redis_port_;
-  int task_execution_threadpool_size_;
+  long prediction_cache_size_bytes_;
 };
 
 inline Config& get_config() {
