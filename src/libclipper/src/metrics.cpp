@@ -401,7 +401,8 @@ void Meter::clear() {
 ReservoirSampler::ReservoirSampler(size_t sample_size)
     : sample_size_(sample_size) {}
 
-void ReservoirSampler::sample(const int64_t value) {
+int64_t ReservoirSampler::sample(const int64_t value) {
+  int64_t replaced_value = 0;
   if (n_ < sample_size_) {
     reservoir_.push_back(value);
   } else {
@@ -410,11 +411,15 @@ void ReservoirSampler::sample(const int64_t value) {
     }
     size_t j = rand() % (n_ + 1);
     if (j < sample_size_) {
+      replaced_value = reservoir_[j];
       reservoir_[j] = value;
     }
   }
   n_++;
+  return replaced_value;
 }
+
+size_t ReservoirSampler::current_size() const { return reservoir_.size(); }
 
 const std::vector<int64_t> ReservoirSampler::snapshot() const {
   return reservoir_;
@@ -426,8 +431,9 @@ void ReservoirSampler::clear() {
 }
 
 HistogramStats::HistogramStats(size_t data_size, int64_t min, int64_t max,
-                               double mean, double std_dev, double p50,
-                               double p95, double p99)
+                               long double mean, long double std_dev,
+                               long double p50, long double p95,
+                               long double p99)
     : data_size_(data_size),
       min_(min),
       max_(max),
@@ -443,10 +449,21 @@ Histogram::Histogram(const std::string name, const std::string unit,
 
 void Histogram::insert(const int64_t value) {
   std::lock_guard<std::mutex> guard(sampler_lock_);
-  sampler_.sample(value);
+  size_t old_reservoir_size = sampler_.current_size();
+  int64_t replaced_value = sampler_.sample(value);
+  size_t new_reservoir_size = sampler_.current_size();
+  update_mean(old_reservoir_size, new_reservoir_size, value, replaced_value);
 }
 
-double Histogram::percentile(std::vector<int64_t> snapshot, double rank) {
+void Histogram::update_mean(const size_t old_reservoir_size,
+                            const size_t new_reservoir_size,
+                            const int64_t new_value, const int64_t old_value) {
+  int64_t old_sum = static_cast<int64_t>(mean_ * old_reservoir_size);
+  mean_ = static_cast<long double>(old_sum - old_value + new_value) /
+          static_cast<long double>(new_reservoir_size);
+}
+
+long double Histogram::percentile(std::vector<int64_t> snapshot, double rank) {
   if (rank < 0 || rank > 1) {
     throw std::invalid_argument("Percentile rank must be in [0,1]!");
   }
@@ -468,7 +485,7 @@ double Histogram::percentile(std::vector<int64_t> snapshot, double rank) {
     x = sample_size;
   }
   size_t index = std::floor(x) - 1;
-  double v = snapshot[index];
+  long double v = snapshot[index];
   double remainder = x - std::floor(x);
   if (remainder == 0) {
     return v;
@@ -477,7 +494,7 @@ double Histogram::percentile(std::vector<int64_t> snapshot, double rank) {
   }
 }
 
-double Histogram::percentile(double rank) {
+long double Histogram::percentile(double rank) {
   std::lock_guard<std::mutex> guard(sampler_lock_);
   std::vector<int64_t> snapshot = sampler_.snapshot();
   if (snapshot.size() == 0) {
@@ -499,22 +516,19 @@ const HistogramStats Histogram::compute_stats() {
   std::sort(snapshot.begin(), snapshot.end());
   int64_t min = snapshot.front();
   int64_t max = snapshot.back();
-  double p50 = percentile(snapshot, .5);
-  double p95 = percentile(snapshot, .95);
-  double p99 = percentile(snapshot, .99);
-  double mean = static_cast<double>(
-                    std::accumulate(snapshot.begin(), snapshot.end(), 0)) /
-                static_cast<double>(snapshot_size);
-  double var = 0;
+  long double p50 = percentile(snapshot, .5);
+  long double p95 = percentile(snapshot, .95);
+  long double p99 = percentile(snapshot, .99);
+  long double var = 0;
   if (snapshot_size > 1) {
     for (auto elem : snapshot) {
-      double incr = std::pow((static_cast<double>(elem) - mean), 2);
+      long double incr = std::pow(elem - mean_, static_cast<long double>(2));
       var += incr;
     }
     var = var / static_cast<double>(snapshot_size);
   }
-  double std_dev = std::sqrt(var);
-  return HistogramStats(snapshot_size, min, max, mean, std_dev, p50, p95, p99);
+  long double std_dev = std::sqrt(var);
+  return HistogramStats(snapshot_size, min, max, mean_, std_dev, p50, p95, p99);
 }
 
 MetricType Histogram::type() const { return MetricType::Histogram; }
