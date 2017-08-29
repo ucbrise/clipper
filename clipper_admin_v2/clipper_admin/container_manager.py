@@ -10,7 +10,7 @@ CLIPPER_DOCKER_LABEL = "ai.clipper.container.label"
 CLIPPER_MODEL_CONTAINER_LABEL = "ai.clipper.model_container.label"
 CONTAINERLESS_MODEL_IMAGE = "NO_CONTAINER"
 
-# NOTE: we use '_' as the delimiter because k8s allows the use
+# NOTE: we use '_' as the delimiter because kubernetes allows the use
 # '_' in labels but not in deployment names. We force model names and
 # versions to be compliant with both limitations, so this gives us an extra
 # character to use when creating labels.
@@ -42,7 +42,7 @@ class ContainerManager(object):
         # call ContainerManager.connect() separately after calling start_clipper(), so
         # if there are additional steps needed to connect a Clipper cluster after it
         # has been started, the implementor of this interface should manage that internally.
-        # For example, K8sContainerManager calls self.connect() at the end of start_clipper().
+        # For example, KubernetesContainerManager calls self.connect() at the end of start_clipper().
         return
 
     @abc.abstractmethod

@@ -9,7 +9,7 @@ import logging
 import time
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin_v2" % cur_dir))
-from clipper_admin import ClipperConnection, DockerContainerManager, K8sContainerManager
+from clipper_admin import ClipperConnection, DockerContainerManager, KubernetesContainerManager
 from clipper_admin.container_manager import CLIPPER_DOCKER_LABEL
 from clipper_admin import __version__ as clipper_version
 
@@ -76,19 +76,18 @@ def create_docker_connection(cleanup=True, start_clipper=True):
     return cl
 
 
-def create_k8s_connection(cleanup=True, start_clipper=True):
-    logging.info("Creating K8sContainerManager")
-    k8s_ip = "https://api.cluster.clipper-k8s-testing.com"
-    logging.info("K8s IP: %s" % k8s_ip)
-    cm = K8sContainerManager(k8s_ip)
+def create_kubernetes_connection(cleanup=True, start_clipper=True):
+    logging.info("Creating KubernetesContainerManager")
+    kubernetes_ip = "https://api.cluster.clipper-k8s-testing.com"
+    logging.info("Kubernetes IP: %s" % kubernetes_ip)
+    cm = KubernetesContainerManager(kubernetes_ip)
     cl = ClipperConnection(cm)
     if cleanup:
         cl.stop_all()
-        # Give k8s some time to clean up
+        # Give kubernetes some time to clean up
         time.sleep(10)
     if start_clipper:
         logging.info("Starting Clipper")
-        # TODO: update these images
         cl.start_clipper(
             query_frontend_image="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/query_frontend:{}".format(clipper_version),
             mgmt_frontend_image="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/management_frontend:{}".format(clipper_version)

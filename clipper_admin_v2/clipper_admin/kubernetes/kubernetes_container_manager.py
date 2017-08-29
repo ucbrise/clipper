@@ -31,11 +31,11 @@ def _pass_conflicts():
 
 
 class KubernetesContainerManager(ContainerManager):
-    def __init__(self, k8s_api_ip, redis_ip=None, redis_port=6379):
+    def __init__(self, kubernetes_api_ip, redis_ip=None, redis_port=6379):
         """
         Parameters
         ----------
-        k8s_api_ip : str
+        kubernetes_api_ip : str
             The hostname or IP address of the Kubernetes API server for your Kubernetes cluster.
         redis_ip : str, optional
             The address of a running Redis cluster. If set to None, Clipper will start
@@ -52,7 +52,7 @@ class KubernetesContainerManager(ContainerManager):
         Clipper launch one for you.
         """
 
-        self.k8s_api_ip = k8s_api_ip
+        self.kubernetes_api_ip = kubernetes_api_ip
         self.redis_ip = redis_ip
         self.redis_port = redis_port
 
@@ -246,7 +246,7 @@ class KubernetesContainerManager(ContainerManager):
                             label=CLIPPER_MODEL_CONTAINER_LABEL,
                             val=create_model_container_label(m, v)))
         except ApiException as e:
-            logger.warn("Exception deleting k8s deployments: {}".format(e))
+            logger.warn("Exception deleting kubernetes deployments: {}".format(e))
             raise e
 
     def stop_all_model_containers(self):
@@ -255,7 +255,7 @@ class KubernetesContainerManager(ContainerManager):
                 namespace='default',
                 label_selector=CLIPPER_MODEL_CONTAINER_LABEL)
         except ApiException as e:
-            logger.warn("Exception deleting k8s deployments: {}".format(e))
+            logger.warn("Exception deleting kubernetes deployments: {}".format(e))
             raise e
 
     def stop_all(self):
@@ -285,7 +285,7 @@ class KubernetesContainerManager(ContainerManager):
                 namespace='default',
                 label_selector=CLIPPER_MODEL_CONTAINER_LABEL)
         except ApiException as e:
-            logging.warn("Exception deleting k8s resources: {}".format(e))
+            logging.warn("Exception deleting kubernetes resources: {}".format(e))
 
     def get_registry(self):
         return self.registry

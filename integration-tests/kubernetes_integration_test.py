@@ -6,7 +6,7 @@ import json
 import numpy as np
 import time
 import logging
-from test_utils import (create_k8s_connection, BenchmarkException,
+from test_utils import (create_kubernetes_connection, BenchmarkException,
                         fake_model_data, headers, log_clipper_state)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin_v2" % cur_dir))
@@ -20,7 +20,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-# TODO: Add k8s specific checks that use k8s API
+# TODO: Add kubernetes specific checks that use kubernetes API
 
 
 def deploy_model(clipper_conn, name, version):
@@ -104,7 +104,7 @@ if __name__ == "__main__":
         # for num_apps and num_models
         pass
     try:
-        clipper_conn = create_k8s_connection(cleanup=True, start_clipper=True)
+        clipper_conn = create_kubernetes_connection(cleanup=True, start_clipper=True)
         time.sleep(10)
         print(clipper_conn.cm.get_query_addr())
         print(clipper_conn.inspect_instance())
@@ -120,7 +120,7 @@ if __name__ == "__main__":
         except BenchmarkException as e:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
-            create_k8s_connection(cleanup=True, start_clipper=False)
+            create_kubernetes_connection(cleanup=True, start_clipper=False)
             sys.exit(1)
     except Exception as e:
         logger.exception("Exception: {}".format(e.msg()))

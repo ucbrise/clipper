@@ -20,8 +20,10 @@ setup(
     url='http://clipper.ai',
     license=license,
     packages=[
-        "clipper_admin", "clipper_admin.docker", "clipper_admin.k8s",
-        "clipper_admin.deployers", "clipper_admin.deployers.contrib"
+        "clipper_admin",
+        "clipper_admin.docker",
+        "clipper_admin.kubernetes",
+        "clipper_admin.deployers"
     ],
     package_data={'clipper_admin': ['*.txt']},
     keywords=['clipper', 'prediction', 'model', 'management'],
@@ -34,8 +36,6 @@ setup(
         'six',
     ],
     extras_require={
-        'TensorFlow': ['tensorflow'],
         'PySpark': ['pyspark'],
-        'RPython': ['rpy2']
         }
     )

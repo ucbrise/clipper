@@ -142,7 +142,7 @@ function run_integration_tests {
   python ../integration-tests/many_apps_many_models.py 2 3
   python ../integration-tests/deploy_pyspark_models.py
   python ../integration-tests/deploy_pyspark_pipeline_models.py
-  python ../integration-tests/k8s_integration_test.py
+  python ../integration-tests/kubernetes_integration_test.py
   # TODO: uncomment
   # python ../integration-tests/deploy_R_models.py
 }
