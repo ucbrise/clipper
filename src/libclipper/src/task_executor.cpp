@@ -69,18 +69,8 @@ void PredictionCache::put(const VersionedModelId &model,
     CacheEntry &entry = search->second;
     if (!entry.completed_) {
       // Complete the outstanding promises
-      auto& promises = entry.value_promises_;
-      while(promises.size() > 0) {
-        promises.back().setValue(std::move(output));
-        promises.pop_back();
-      }
-      if (entry.evicted_) {
-        // If the page corresponding to this entry was previously evicted,
-        // remove the entry from the map
-        entries_.erase(search);
-      } else {
-        entry.completed_ = true;
-        entry.value_ = output;
+      for (auto &p : entry.value_promises_) {
+        p.setValue(std::move(output));
       }
       entry.completed_ = true;
       entry.value_ = output;
