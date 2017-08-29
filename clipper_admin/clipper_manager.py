@@ -1510,6 +1510,7 @@ class Clipper:
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
         if r.status_code == requests.codes.ok:
+            print(r.text)
             return True
         else:
             print("Error publishing model: %s" % r.text)
