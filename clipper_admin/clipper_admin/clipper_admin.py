@@ -86,7 +86,8 @@ class ClipperConnection(object):
         :py:exc:`clipper.ClipperException`
         """
         try:
-            self.cm.start_clipper(query_frontend_image, mgmt_frontend_image, cache_size)
+            self.cm.start_clipper(query_frontend_image, mgmt_frontend_image,
+                                  cache_size)
             while True:
                 try:
                     url = "http://{host}/metrics".format(

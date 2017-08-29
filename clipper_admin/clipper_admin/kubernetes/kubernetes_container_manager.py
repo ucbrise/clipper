@@ -62,7 +62,8 @@ class KubernetesContainerManager(ContainerManager):
         self._k8s_v1 = client.CoreV1Api()
         self._k8s_beta = client.ExtensionsV1beta1Api()
 
-    def start_clipper(self, query_frontend_image, mgmt_frontend_image, cache_size):
+    def start_clipper(self, query_frontend_image, mgmt_frontend_image,
+                      cache_size):
         # If an existing Redis service isn't provided, start one
         if self.redis_ip is None:
             name = 'redis'
@@ -94,7 +95,8 @@ class KubernetesContainerManager(ContainerManager):
                         "--redis_port={}".format(self.redis_port)
                     ]
                     if name is 'query-frontend':
-                        args.append("--prediction_cache_size={}".format(cache_size))
+                        args.append(
+                            "--prediction_cache_size={}".format(cache_size))
                     body["spec"]["template"]["spec"]["containers"][0][
                         "args"] = args
                 body["spec"]["template"]["spec"]["containers"][0][
