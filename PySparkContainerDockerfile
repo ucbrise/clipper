@@ -1,7 +1,7 @@
 ARG CODE_VERSION=develop
 FROM clipper/py-rpc:${CODE_VERSION}
 
-COPY clipper_admin_v2/clipper_admin/python_container_conda_deps.txt /lib/
+COPY clipper_admin/clipper_admin/python_container_conda_deps.txt /lib/
 
 RUN curl -o /spark.tgz https://d3kbcqa49mib13.cloudfront.net/spark-2.1.1-bin-hadoop2.7.tgz \
       && cd / && tar zxf /spark.tgz && mv /spark-2.1.1-bin-hadoop2.7 /spark \
@@ -13,8 +13,8 @@ RUN curl -o /spark.tgz https://d3kbcqa49mib13.cloudfront.net/spark-2.1.1-bin-had
 
 COPY containers/python/pyspark_container.py containers/python/pyspark_container_entry.sh /container/
 COPY VERSION.txt /lib/
-COPY clipper_admin_v2/ /lib/clipper_admin_v2
-RUN pip install /lib/clipper_admin_v2
+COPY clipper_admin/ /lib/clipper_admin
+RUN pip install /lib/clipper_admin
 
 ENV SPARK_HOME="/spark"
 

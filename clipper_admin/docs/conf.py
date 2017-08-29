@@ -168,7 +168,7 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
-github_doc_root = 'https://github.com/ucbrise/clipper/tree/develop/clipper_admin_v2/docs'
+github_doc_root = 'https://github.com/ucbrise/clipper/tree/develop/clipper_admin/docs'
 
 # From https://stackoverflow.com/a/5599712/814642
 def skip(app, what, name, obj, skip, options):

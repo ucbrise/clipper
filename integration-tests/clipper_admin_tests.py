@@ -18,7 +18,7 @@ from test_utils import get_docker_client, create_docker_connection, fake_model_d
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
-sys.path.insert(0, os.path.abspath('%s/../clipper_admin_v2' % cur_dir))
+sys.path.insert(0, os.path.abspath('%s/../clipper_admin' % cur_dir))
 import clipper_admin as cl
 from clipper_admin.deployers.python import create_endpoint as create_py_endpoint
 from clipper_admin.deployers.python import deploy_python_closure

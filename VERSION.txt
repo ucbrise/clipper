@@ -1,1 +1,1 @@
-clipper_admin_v2/clipper_admin/VERSION.txt
+clipper_admin/clipper_admin/VERSION.txt

@@ -8,7 +8,7 @@ import docker
 import logging
 import time
 cur_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.abspath("%s/../clipper_admin_v2" % cur_dir))
+sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
 from clipper_admin import ClipperConnection, DockerContainerManager, KubernetesContainerManager
 from clipper_admin.container_manager import CLIPPER_DOCKER_LABEL
 from clipper_admin import __version__ as clipper_version

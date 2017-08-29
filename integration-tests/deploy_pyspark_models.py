@@ -23,7 +23,7 @@ from pyspark.sql import SparkSession
 
 from test_utils import (create_docker_connection, BenchmarkException, headers, log_clipper_state)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.abspath("%s/../clipper_admin_v2" % cur_dir))
+sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
 from clipper_admin.deployers.pyspark import deploy_pyspark_model, create_endpoint
 
 logging.basicConfig(
