@@ -1,4 +1,4 @@
-ARG CODE_VERSION=0.2-rc1
+ARG CODE_VERSION=develop
 FROM clipper/py-rpc:${CODE_VERSION}
 
 ## Use Debian unstable via pinning -- new style via APT::Default-Release
