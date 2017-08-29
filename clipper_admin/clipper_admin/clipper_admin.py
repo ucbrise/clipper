@@ -12,6 +12,7 @@ from .exceptions import ClipperException, UnconnectedException
 from .version import __version__
 
 DEFAULT_LABEL = ["DEFAULT"]
+DEFAULT_PREDICTION_CACHE_SIZE_BYTES = 33554432L
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +61,8 @@ class ClipperConnection(object):
             query_frontend_image='clipper/query_frontend:{}'.format(
                 __version__),
             mgmt_frontend_image='clipper/management_frontend:{}'.format(
-                __version__)):
+                __version__),
+            cache_size=DEFAULT_PREDICTION_CACHE_SIZE_BYTES):
         """Start a new Clipper cluster and connect to it.
 
         This command will start a new Clipper instance using the container manager provided when
@@ -76,13 +78,15 @@ class ClipperConnection(object):
             The management frontend docker image to use. You can set this argument to specify
             a custom build of the management frontend, but any customization should maintain API
             compability and preserve the expected behavior of the system.
+        cache_size : int, optional
+            The size of Clipper's prediction cache in bytes. Default cache size is 32 MiB.
 
         Raises
         ------
         :py:exc:`clipper.ClipperException`
         """
         try:
-            self.cm.start_clipper(query_frontend_image, mgmt_frontend_image)
+            self.cm.start_clipper(query_frontend_image, mgmt_frontend_image, cache_size)
             while True:
                 try:
                     url = "http://{host}/metrics".format(

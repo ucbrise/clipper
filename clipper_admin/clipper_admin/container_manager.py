@@ -34,7 +34,7 @@ class ContainerManager(object):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def start_clipper(self, query_frontend_image, mgmt_frontend_image):
+    def start_clipper(self, query_frontend_image, mgmt_frontend_image, cache_size):
         # NOTE: An implementation of this interface should be connected to a running
         # Clipper instance when this method returns. ClipperConnection will not
         # call ContainerManager.connect() separately after calling start_clipper(), so

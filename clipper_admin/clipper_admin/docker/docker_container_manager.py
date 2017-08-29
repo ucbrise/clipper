@@ -64,7 +64,7 @@ class DockerContainerManager(ContainerManager):
         self.query_frontend_name = "query_frontend"
         self.mgmt_frontend_name = "mgmt_frontend"
 
-    def start_clipper(self, query_frontend_image, mgmt_frontend_image):
+    def start_clipper(self, query_frontend_image, mgmt_frontend_image, cache_size):
         if self.docker_network is not "host":
             # The "host" network already exists so we never need to try to create it
             try:
@@ -99,17 +99,19 @@ class DockerContainerManager(ContainerManager):
                 ports={'%s/tcp' % self.redis_port: self.redis_port},
                 **self.extra_container_kwargs)
 
-        cmd = "--redis_ip={redis_ip} --redis_port={redis_port}".format(
+        mgmt_cmd = "--redis_ip={redis_ip} --redis_port={redis_port}".format(
             redis_ip=self.redis_ip, redis_port=self.redis_port)
         self.docker_client.containers.run(
             mgmt_frontend_image,
-            cmd,
+            mgmt_cmd,
             name=self.mgmt_frontend_name,
             ports={
                 '%s/tcp' % CLIPPER_INTERNAL_MANAGEMENT_PORT:
                 self.clipper_management_port
             },
             **self.extra_container_kwargs)
+        query_cmd = "--redis_ip={redis_ip} --redis_port={redis_port} --prediction_cache_size={cache_size}".format(
+            redis_ip=self.redis_ip, redis_port=self.redis_port, cache_size=cache_size)
         self.docker_client.containers.run(
             query_frontend_image,
             cmd,
