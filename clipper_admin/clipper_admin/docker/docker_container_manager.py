@@ -5,8 +5,9 @@ import os
 from ..container_manager import (
     create_model_container_label, parse_model_container_label,
     ContainerManager, CLIPPER_DOCKER_LABEL, CLIPPER_MODEL_CONTAINER_LABEL,
-    CLIPPER_INTERNAL_RPC_PORT, CLIPPER_INTERNAL_QUERY_PORT,
-    CLIPPER_INTERNAL_MANAGEMENT_PORT)
+    CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL,
+    CLIPPER_MGMT_FRONTEND_CONTAINER_LABEL, CLIPPER_INTERNAL_RPC_PORT,
+    CLIPPER_INTERNAL_QUERY_PORT, CLIPPER_INTERNAL_MANAGEMENT_PORT)
 
 logger = logging.getLogger(__name__)
 
@@ -61,8 +62,13 @@ class DockerContainerManager(ContainerManager):
 
         self.docker_client = docker.from_env()
         self.extra_container_kwargs = extra_container_kwargs
-        self.query_frontend_name = "query_frontend"
-        self.mgmt_frontend_name = "mgmt_frontend"
+
+        # Merge Clipper-specific labels with any user-provided labels
+        if "labels" in self.extra_container_kwargs:
+            self.common_labels = self.extra_container_kwargs.pop("labels")
+            self.common_labels.update({CLIPPER_DOCKER_LABEL: ""})
+        else:
+            self.common_labels = {CLIPPER_DOCKER_LABEL: ""}
 
     def start_clipper(self, query_frontend_image, mgmt_frontend_image,
                       cache_size):
@@ -79,51 +85,46 @@ class DockerContainerManager(ContainerManager):
             "detach": True,
         }
 
-        # Merge Clipper-specific labels with any user-provided labels
-        if "labels" in self.extra_container_kwargs:
-            self.extra_container_kwargs["labels"].update({
-                CLIPPER_DOCKER_LABEL:
-                ""
-            })
-        else:
-            self.extra_container_kwargs["labels"] = {CLIPPER_DOCKER_LABEL: ""}
-
         self.extra_container_kwargs.update(container_args)
 
         if self.redis_ip is None:
             logger.info("Starting managed Redis instance in Docker")
-            self.redis_ip = "redis"
-            self.docker_client.containers.run(
+            redis_container = self.docker_client.containers.run(
                 'redis:alpine',
                 "redis-server --port %s" % self.redis_port,
-                name="redis",
                 ports={'%s/tcp' % self.redis_port: self.redis_port},
+                labels=self.common_labels,
                 **self.extra_container_kwargs)
+            self.redis_ip = redis_container.name
 
         mgmt_cmd = "--redis_ip={redis_ip} --redis_port={redis_port}".format(
             redis_ip=self.redis_ip, redis_port=self.redis_port)
+        mgmt_labels = self.common_labels
+        mgmt_labels[CLIPPER_MGMT_FRONTEND_CONTAINER_LABEL] = ""
         self.docker_client.containers.run(
             mgmt_frontend_image,
             mgmt_cmd,
-            name=self.mgmt_frontend_name,
             ports={
                 '%s/tcp' % CLIPPER_INTERNAL_MANAGEMENT_PORT:
                 self.clipper_management_port
             },
+            labels=mgmt_labels,
             **self.extra_container_kwargs)
         query_cmd = "--redis_ip={redis_ip} --redis_port={redis_port} --prediction_cache_size={cache_size}".format(
             redis_ip=self.redis_ip,
             redis_port=self.redis_port,
             cache_size=cache_size)
+        query_labels = self.common_labels
+        query_labels[CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL] = ""
         self.docker_client.containers.run(
             query_frontend_image,
-            cmd,
-            name=self.query_frontend_name,
+            query_cmd,
             ports={
                 '%s/tcp' % CLIPPER_INTERNAL_QUERY_PORT:
                 self.clipper_query_port,
                 '%s/tcp' % CLIPPER_INTERNAL_RPC_PORT: self.clipper_rpc_port
             },
+            labels=query_labels,
             **self.extra_container_kwargs)
         self.connect()
 
@@ -164,6 +165,8 @@ class DockerContainerManager(ContainerManager):
             "localhost:5000/my_model_name:my_model_version" or
             "quay.io/my_namespace/my_model_name:my_model_version"
         """
+
+        # get query frontend name
 
         env_vars = {
             "CLIPPER_MODEL_NAME": name,

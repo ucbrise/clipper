@@ -8,6 +8,8 @@ CLIPPER_INTERNAL_RPC_PORT = 7000
 
 CLIPPER_DOCKER_LABEL = "ai.clipper.container.label"
 CLIPPER_MODEL_CONTAINER_LABEL = "ai.clipper.model_container.label"
+CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL = "ai.clipper.query_frontend.label"
+CLIPPER_MGMT_FRONTEND_CONTAINER_LABEL = "ai.clipper.management_frontend.label"
 CONTAINERLESS_MODEL_IMAGE = "NO_CONTAINER"
 
 # NOTE: we use '_' as the delimiter because kubernetes allows the use
@@ -41,7 +43,8 @@ class ContainerManager(object):
         # call ContainerManager.connect() separately after calling start_clipper(), so
         # if there are additional steps needed to connect a Clipper cluster after it
         # has been started, the implementor of this interface should manage that internally.
-        # For example, KubernetesContainerManager calls self.connect() at the end of start_clipper().
+        # For example, KubernetesContainerManager calls self.connect() at the end of
+        # start_clipper().
         return
 
     @abc.abstractmethod
