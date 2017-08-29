@@ -275,24 +275,15 @@ class ClipperConnection(object):
             f.write("FROM {container_name}\nCOPY . /model/\n".format(
                 container_name=base_image))
 
-        # build, tag, and push docker image to registry
-        # NOTE: DOCKER_API_VERSION (set by `minikube docker-env`) must be same
-        # version as docker registry server
-
         image = "{name}:{version}".format(name=name, version=version)
         if container_registry is not None:
             image = "{reg}/{image}".format(reg=container_registry, image=image)
-        # if "DOCKER_API_VERSION" in os.environ:
-        #     docker_client = docker.from_env(
-        #         version=os.environ["DOCKER_API_VERSION"])
-        # else:
         docker_client = docker.from_env()
         logger.info(
             "Building model Docker image with model data from {}".format(model_data_path))
         docker_client.images.build(path=model_data_path, tag=image)
 
         logger.info("Pushing model Docker image to {}".format(image))
-        # if container_registry is not None:
         docker_client.images.push(repository=image)
         self.deploy_model(name, version, input_type, image, labels, num_replicas)
 
@@ -364,7 +355,6 @@ class ClipperConnection(object):
 
     def register_model(self, name, version, input_type, image=None, labels=None):
         """Registers a new model version with Clipper.
-
 
         This method does not launch any model containers, it only registers the model description
         (metadata such as name, version, and input type) with Clipper. A model must be registered
@@ -585,7 +575,7 @@ class ClipperConnection(object):
             raise ClipperException(msg)
 
     def get_linked_models(self, app_name):
-        """Retrieves the models linked to the specified application
+        """Retrieves the models linked to the specified application.
 
         Parameters
         ----------
@@ -597,7 +587,13 @@ class ClipperConnection(object):
         list
             Returns a list of the names of models linked to the app.
             If no models are linked to the specified app, None is returned.
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+        :py:exc:`clipper.ClipperException`
         """
+
         if not self.connected:
             raise UnconnectedException()
         url = "http://{host}/admin/get_linked_models".format(
@@ -627,6 +623,11 @@ class ClipperConnection(object):
         list
             Returns a list of information about all apps registered to Clipper.
             If no models are registered with Clipper, an empty list is returned.
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+        :py:exc:`clipper.ClipperException`
         """
         if not self.connected:
             raise UnconnectedException()
@@ -639,8 +640,10 @@ class ClipperConnection(object):
         if r.status_code == requests.codes.ok:
             return r.json()
         else:
-            logger.warning(r.text)
-            return None
+            msg = "Received error status code: {code} and message: {msg}".format(
+                code=r.status_code, msg=r.text)
+            logger.error(msg)
+            raise ClipperException(msg)
 
     def get_model_info(self, name, version):
         """Gets detailed information about a registered model.
@@ -658,6 +661,11 @@ class ClipperConnection(object):
             Returns a dictionary with the specified model's info.
             If no model with name `model_name@model_version` is
             registered with Clipper, None is returned.
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+        :py:exc:`clipper.ClipperException`
         """
         if not self.connected:
             raise UnconnectedException()
@@ -693,6 +701,11 @@ class ClipperConnection(object):
         list
             Returns a list of information about all model containers known to Clipper.
             If no containers are registered with Clipper, an empty list is returned.
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+        :py:exc:`clipper.ClipperException`
         """
         if not self.connected:
             raise UnconnectedException()
@@ -726,6 +739,11 @@ class ClipperConnection(object):
         dict
             A dictionary with the specified container's info.
             If no corresponding container is registered with Clipper, None is returned.
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+        :py:exc:`clipper.ClipperException`
         """
         if not self.connected:
             raise UnconnectedException()
@@ -905,7 +923,6 @@ class ClipperConnection(object):
         ----
         This method will stop the currently deployed versions of models if you specify them. You
         almost certainly want to use one of the other stop_* methods. Use with caution.
-
         """
         if not self.connected:
             raise UnconnectedException()

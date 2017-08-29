@@ -29,13 +29,28 @@ def _pass_conflicts():
         else:
             raise e
 
-# TODO(docs): Users should only ever need to call the constructor directly.
-# The rest of the documentation should be notes about what will actually happen
-# on the kubernetes cluster.
 
-
-class K8sContainerManager(ContainerManager):
+class KubernetesContainerManager(ContainerManager):
     def __init__(self, k8s_api_ip, redis_ip=None, redis_port=6379):
+        """
+        Parameters
+        ----------
+        k8s_api_ip : str
+            The hostname or IP address of the Kubernetes API server for your Kubernetes cluster.
+        redis_ip : str, optional
+            The address of a running Redis cluster. If set to None, Clipper will start
+            a Redis deployment for you.
+        redis_port : int
+            The Redis port. If ``redis_ip`` is set to None, Clipper will start Redis on this port.
+            If ``redis_ip`` is provided, Clipper will connect to Redis on this port.
+
+        Note
+        ----
+        Clipper stores all persistent configuration state (such as registered application and model
+        information) in Redis. If you want Clipper to be durable and able to recover from failures,
+        we recommend configuring your own persistent and replicated Redis cluster rather than letting
+        Clipper launch one for you.
+        """
 
         self.k8s_api_ip = k8s_api_ip
         self.redis_ip = redis_ip
@@ -49,9 +64,7 @@ class K8sContainerManager(ContainerManager):
     def start_clipper(self,
                       query_frontend_image,
                       mgmt_frontend_image):
-        """Deploys Clipper to the k8s cluster and exposes the frontends as services."""
-        logger.info("Initializing Clipper services to k8s cluster")
-        # if an existing Redis service isn't provided, start one
+        # If an existing Redis service isn't provided, start one
         if self.redis_ip is None:
             name = 'redis'
             with _pass_conflicts():
@@ -131,17 +144,6 @@ class K8sContainerManager(ContainerManager):
                                    "Reason: {}".format(e))
 
     def deploy_model(self, name, version, input_type, image, num_replicas=1):
-        """Deploys a versioned model to a k8s cluster.
-
-        Parameters
-        ----------
-        name : str
-            The name to assign this model.
-        version : int
-            The version to assign this model.
-        image : str
-            A docker repository path, which must be accessible by the k8s cluster.
-        """
         with _pass_conflicts():
             deployment_name = get_model_deployment_name(name, version)
             body = {
@@ -187,7 +189,6 @@ class K8sContainerManager(ContainerManager):
                 namespace='default')
 
     def get_num_replicas(self, name, version):
-
         deployment_name = get_model_deployment_name(name, version)
         response = self._k8s_beta.read_namespaced_deployments_scale(
             name=deployment_name, namespace='default')
@@ -195,7 +196,6 @@ class K8sContainerManager(ContainerManager):
         return response.spec.replicas
 
     def set_num_replicas(self, name, version, input_type, image, num_replicas):
-
         # NOTE: assumes `metadata.name` can identify the model deployment.
         deployment_name = get_model_deployment_name(name, version)
 
@@ -259,11 +259,6 @@ class K8sContainerManager(ContainerManager):
             raise e
 
     def stop_all(self):
-        """Stops all Clipper resources.
-
-        WARNING: Data stored on an in-cluster Redis deployment will be lost!
-        This method does not delete any existing in-cluster Docker registry.
-        """
         logger.info("Stopping all running Clipper resources")
 
         try:
