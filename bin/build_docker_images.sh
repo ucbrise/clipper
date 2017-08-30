@@ -20,6 +20,7 @@ tag=$(<VERSION.txt)
 time docker build -t clipper/lib_base:$tag -f ./ClipperLibBaseDockerfile ./
 time docker build --build-arg CODE_VERSION=$tag -t clipper/query_frontend:$tag -f QueryFrontendDockerfile ./
 time docker build --build-arg CODE_VERSION=$tag -t clipper/management_frontend:$tag -f ManagementFrontendDockerfile ./
+time docker build --build-arg CODE_VERSION=$tag -t clipper/unittests:$tag -f ClipperTestsDockerfile ./
 cd -
 
 # Build Spark JVM Container
