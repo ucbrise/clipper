@@ -63,8 +63,7 @@ def create_docker_connection(cleanup=True, start_clipper=True):
         clipper_query_port=find_unbound_port(),
         clipper_management_port=find_unbound_port(),
         clipper_rpc_port=find_unbound_port(),
-        redis_port=find_unbound_port()
-    )
+        redis_port=find_unbound_port())
     cl = ClipperConnection(cm)
     if cleanup:
         cl.stop_all()
