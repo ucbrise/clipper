@@ -352,7 +352,8 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
             cleanup=True, start_clipper=False)
 
     def test_unlinked_app_returns_default_predictions(self):
-        url = "http://localhost:1337/{}/predict".format(self.app_name_2)
+        addr = self.clipper_conn.get_query_addr()
+        url = "http://{addr}/{app}/predict".format(addr=addr, app=self.app_name_2)
         test_input = [99.3, 18.9, 67.2, 34.2]
         req_json = json.dumps({'input': test_input})
         headers = {'Content-type': 'application/json'}
@@ -371,8 +372,8 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
         self.clipper_conn.link_model_to_app(self.app_name_2, self.model_name_2)
         time.sleep(30)
-
-        url = "http://localhost:1337/{}/predict".format(self.app_name_2)
+        addr = self.clipper_conn.get_query_addr()
+        url = "http://{addr}/{app}/predict".format(addr=addr, app=self.app_name_2)
         test_input = [99.3, 18.9, 67.2, 34.2]
         req_json = json.dumps({'input': test_input})
         headers = {'Content-type': 'application/json'}
@@ -398,7 +399,8 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         time.sleep(60)
 
         received_non_default_prediction = False
-        url = "http://localhost:1337/{}/predict".format(self.app_name_1)
+        addr = self.clipper_conn.get_query_addr()
+        url = "http://{addr}/{app}/predict".format(addr=addr, app=self.app_name_1)
         test_input = [101.1, 99.5, 107.2]
         req_json = json.dumps({'input': test_input})
         headers = {'Content-type': 'application/json'}

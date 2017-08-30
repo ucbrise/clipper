@@ -20,7 +20,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def deploy_model(clipper_conn, name, version):
+def deploy_model(clipper_conn, name, version, link=False):
     app_name = "%s-app" % name
     model_name = "%s-model" % name
     clipper_conn.build_and_deploy_model(
@@ -32,7 +32,8 @@ def deploy_model(clipper_conn, name, version):
         num_replicas=1)
     time.sleep(10)
 
-    clipper_conn.link_model_to_app(app_name, model_name)
+    if link:
+        clipper_conn.link_model_to_app(app_name, model_name)
 
     success = False
     num_tries = 0
@@ -83,8 +84,10 @@ def create_and_test_app(clipper_conn, name, num_models):
         logger.error("Error: %s" % response.text)
         raise BenchmarkException("Error creating app %s" % app_name)
 
+    link = True
     for i in range(num_models):
-        deploy_model(clipper_conn, name, i)
+        deploy_model(clipper_conn, name, i, link)
+        link = False
         time.sleep(1)
 
 
@@ -104,8 +107,6 @@ if __name__ == "__main__":
         clipper_conn = create_docker_connection(
             cleanup=True, start_clipper=True)
         time.sleep(10)
-        print(clipper_conn.cm.get_query_addr())
-        print(clipper_conn.inspect_instance())
         try:
             logger.info("Running integration test with %d apps and %d models" %
                         (num_apps, num_models))

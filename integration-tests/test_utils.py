@@ -60,7 +60,11 @@ def find_unbound_port():
 def create_docker_connection(cleanup=True, start_clipper=True):
     logging.info("Creating DockerContainerManager")
     cm = DockerContainerManager(
-        docker_ip_address="127.0.0.1", redis_port=find_unbound_port())
+        clipper_query_port=find_unbound_port(),
+        clipper_management_port=find_unbound_port(),
+        clipper_rpc_port=find_unbound_port(),
+        redis_port=find_unbound_port()
+    )
     cl = ClipperConnection(cm)
     if cleanup:
         cl.stop_all()
