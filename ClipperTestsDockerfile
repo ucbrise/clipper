@@ -1,57 +1,22 @@
 ARG CODE_VERSION=develop
 FROM clipper/lib_base:${CODE_VERSION}
- 
 
-ENV CONDA_DIR="/opt/conda"
-ENV PATH="$CONDA_DIR/bin:$PATH"
+# install docker
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install --fix-missing -y \
+      wget apt-transport-https ca-certificates curl software-properties-common \
+      && curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
+      && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+      && apt-get update \
+      && apt-get install --fix-missing -y docker-ce
 
-# Install conda
-# From https://github.com/frol/docker-alpine-miniconda3/blob/017a9c9dc134e98729a075de105b19b89343b892/Dockerfile
-RUN CONDA_VERSION="4.3.14" && \
-       apk add --no-cache --virtual=.build-dependencies wget ca-certificates bash && \
-       \
-       mkdir -p "$CONDA_DIR" && \
-       wget "http://repo.continuum.io/miniconda/Miniconda2-${CONDA_VERSION}-Linux-x86_64.sh" -O miniconda.sh && \
-       bash miniconda.sh -f -b -p "$CONDA_DIR" && \
-       echo "export PATH=$CONDA_DIR/bin:\$PATH" > /etc/profile.d/conda.sh && \
-       rm miniconda.sh && \
-       # conda update && \
-       # conda update --all --yes && \
-       # conda config --set auto_update_conda False && \
-       # rm -r "$CONDA_DIR/pkgs/" && \
-       # \
-       # apk del --purge .build-dependencies && \
-       # \
-       mkdir -p "$CONDA_DIR/locks" && \
-       chmod 777 "$CONDA_DIR/locks"
-
-
-
-
-# Install Anaconda and Python deps
-# RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh \
-#     && wget --quiet 'https://repo.continuum.io/archive/Anaconda2-4.2.0-Linux-x86_64.sh' -O /tmp/anaconda.sh \
-#     && bash /tmp/anaconda.sh -b -p /opt/conda \
-#     && rm /tmp/anaconda.sh
+RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh \
+    && wget --quiet 'https://repo.continuum.io/archive/Anaconda2-4.2.0-Linux-x86_64.sh' -O /tmp/anaconda.sh \
+    && /bin/bash /tmp/anaconda.sh -b -p /opt/conda \
+    && rm /tmp/anaconda.sh
 ENV PATH "/opt/conda/bin:$PATH"
 RUN conda install -y pyzmq
+ 
 RUN pip install requests subprocess32 scikit-learn numpy scipy fabric pyyaml docker kubernetes pyspark
-
-# RUN echo "https://dl-cdn.alpinelinux.org/alpine/edge/main" > /etc/apk/repositories  && \
-#         echo "@testing https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \
-#         echo "@community https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories
-
-RUN echo "@community https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories
-
-RUN apk add --update docker@community
-
-# # install docker
-# RUN apt-get update && apt-get install -y \
-#       apt-transport-https ca-certificates curl software-properties-common \
-#       && curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - \
-#       && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
-#       && apt-get update \
-#       && apt-get install -yqq docker-ce
 
 # RUN gpasswd -a $NB_USER docker
 
