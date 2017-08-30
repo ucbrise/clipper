@@ -288,7 +288,7 @@ class ClipperConnection(object):
         if not self.connected:
             raise UnconnectedException()
         image = self.build_model(name, version, model_data_path, base_image,
-                                 container_registry)
+                                 container_registry, force)
         self.deploy_model(name, version, input_type, image, labels,
                           num_replicas)
 
@@ -312,10 +312,12 @@ class ClipperConnection(object):
         is specified, the image will be pushed to the default DockerHub registry. Clipper will tag the
         newly built image with the tag [<registry>]/<name>:<version>.
 
+        This method can be called without being connected to a Clipper cluster.
+
         Parameters
         ----------
         name : str
-            The name of the deployed model
+            The name of the deployed model.
         version : str
             The version to assign this model. Versions must be unique on a per-model
             basis, but may be re-used across different models.
@@ -346,7 +348,10 @@ class ClipperConnection(object):
 
         Note
         ----
-        This method can be called without being connected to a Clipper cluster.
+        Both the model name and version must be valid DNS-1123 subdomains. Each must consist of
+        lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric
+        character (e.g. 'example.com', regex used for validation is
+        '[a-z0-9]([-a-z0-9]*[a-z0-9])?\Z'.
         """
 
         version = str(version)
@@ -434,6 +439,13 @@ class ClipperConnection(object):
         ------
         :py:exc:`clipper.UnconnectedException`
         :py:exc:`clipper.ClipperException`
+
+        Note
+        ----
+        Both the model name and version must be valid DNS-1123 subdomains. Each must consist of
+        lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric
+        character (e.g. 'example.com', regex used for validation is
+        '[a-z0-9]([-a-z0-9]*[a-z0-9])?\Z'.
         """
         if not self.connected:
             raise UnconnectedException()
