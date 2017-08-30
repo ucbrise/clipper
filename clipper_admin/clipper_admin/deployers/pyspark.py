@@ -145,8 +145,15 @@ def deploy_pyspark_model(
 
     # Deploy model
     deploy_result = clipper_conn.build_and_deploy_model(
-        name, version, input_type, serialization_dir, base_image, labels,
-        registry, num_replicas)
+        name,
+        version,
+        input_type,
+        serialization_dir,
+        base_image,
+        labels,
+        registry,
+        num_replicas,
+        force=True)
 
     # Remove temp files
     shutil.rmtree(serialization_dir)

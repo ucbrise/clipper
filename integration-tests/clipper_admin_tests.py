@@ -173,7 +173,12 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         container_name = "clipper/noop-container:{}".format(clipper_version)
         input_type = "doubles"
         self.clipper_conn.build_and_deploy_model(
-            model_name, version, input_type, fake_model_data, container_name)
+            model_name,
+            version,
+            input_type,
+            fake_model_data,
+            container_name,
+            force=True)
         model_info = self.clipper_conn.get_model_info(model_name, version)
         self.assertIsNotNone(model_info)
         self.assertEqual(type(model_info), dict)
@@ -182,6 +187,21 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             filters={"ancestor": container_name})
         self.assertEqual(len(containers), 1)
 
+    def test_dont_overwrite_docker_file(self):
+        model_name = "m"
+        version = "v1"
+        container_name = "clipper/noop-container:{}".format(clipper_version)
+        input_type = "doubles"
+        # Force this one to make sure there's a docker file in the directory
+        self.clipper_conn.build_model(
+            model_name, version, fake_model_data, container_name, force=True)
+
+        # This call to build_model should cause an error
+        with self.assertRaises(cl.ClipperException) as context:
+            self.clipper_conn.build_model(model_name, version, fake_model_data,
+                                          container_name)
+        self.assertTrue("Found existing Dockerfile" in str(context.exception))
+
     def test_set_num_replicas_for_deployed_model_succeeds(self):
         model_name = "set-num-reps-model"
         input_type = "doubles"
@@ -189,7 +209,12 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         container_name = "clipper/noop-container:{}".format(clipper_version)
         input_type = "doubles"
         self.clipper_conn.build_and_deploy_model(
-            model_name, version, input_type, fake_model_data, container_name)
+            model_name,
+            version,
+            input_type,
+            fake_model_data,
+            container_name,
+            force=True)
 
         # Version defaults to current version
         self.clipper_conn.set_num_replicas(model_name, 4)
@@ -212,7 +237,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             input_type,
             fake_model_data,
             container_name,
-            num_replicas=2)
+            num_replicas=2,
+            force=True)
         docker_client = get_docker_client()
         containers = docker_client.containers.list(
             filters={"ancestor": container_name})
@@ -224,7 +250,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             input_type,
             fake_model_data,
             container_name,
-            num_replicas=3)
+            num_replicas=3,
+            force=True)
         containers = docker_client.containers.list(
             filters={"ancestor": container_name})
         self.assertEqual(len(containers), 5)
@@ -368,8 +395,12 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         model_version = 1
         container_name = "clipper/noop-container:{}".format(clipper_version)
         self.clipper_conn.build_and_deploy_model(
-            self.model_name_2, model_version, self.input_type, fake_model_data,
-            container_name)
+            self.model_name_2,
+            model_version,
+            self.input_type,
+            fake_model_data,
+            container_name,
+            force=True)
 
         self.clipper_conn.link_model_to_app(self.app_name_2, self.model_name_2)
         time.sleep(30)
@@ -432,6 +463,7 @@ SHORT_TEST_ORDERING = [
     'test_link_registered_model_to_app_succeeds',
     'get_app_info_for_registered_app_returns_info_dictionary',
     'get_app_info_for_nonexistent_app_returns_none',
+    'test_dont_overwrite_docker_file',
     'test_set_num_replicas_for_external_model_fails',
     'test_model_version_sets_correctly',
     'test_get_logs_creates_log_files',

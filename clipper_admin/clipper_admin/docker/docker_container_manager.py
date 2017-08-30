@@ -55,6 +55,10 @@ class DockerContainerManager(ContainerManager):
         self.clipper_management_port = clipper_management_port
         self.clipper_rpc_port = clipper_rpc_port
         self.redis_ip = redis_ip
+        if redis_ip is None:
+            self.external_redis = False
+        else:
+            self.external_redis = True
         self.redis_port = redis_port
         if docker_network is "host":
             raise ClipperException(
@@ -87,7 +91,7 @@ class DockerContainerManager(ContainerManager):
 
         self.extra_container_kwargs.update(container_args)
 
-        if self.redis_ip is None:
+        if not self.external_redis:
             logger.info("Starting managed Redis instance in Docker")
             redis_container = self.docker_client.containers.run(
                 'redis:alpine',

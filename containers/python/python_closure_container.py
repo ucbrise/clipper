@@ -4,7 +4,6 @@ import os
 import sys
 import numpy as np
 
-# sys.path.append(os.path.abspath("/lib/"))
 from clipper_admin.deployers import cloudpickle
 
 IMPORT_ERROR_RETURN_CODE = 3

@@ -1,4 +1,4 @@
-ARG CODE_VERSION=0.2-rc1
+ARG CODE_VERSION=develop
 FROM clipper/py-rpc:${CODE_VERSION}
 
 COPY clipper_admin/clipper_admin/python_container_conda_deps.txt /lib/

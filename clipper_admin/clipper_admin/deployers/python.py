@@ -127,8 +127,15 @@ def deploy_python_closure(
     logger.info("Python closure saved")
     # Deploy function
     deploy_result = clipper_conn.build_and_deploy_model(
-        name, version, input_type, serialization_dir, base_image, labels,
-        registry, num_replicas)
+        name,
+        version,
+        input_type,
+        serialization_dir,
+        base_image,
+        labels,
+        registry,
+        num_replicas,
+        force=True)
     # Remove temp files
     shutil.rmtree(serialization_dir)
     return deploy_result

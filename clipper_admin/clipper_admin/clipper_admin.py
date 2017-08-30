@@ -6,6 +6,7 @@ from requests.exceptions import RequestException
 import json
 import time
 import re
+import os
 
 from .container_manager import CONTAINERLESS_MODEL_IMAGE
 from .exceptions import ClipperException, UnconnectedException
@@ -13,6 +14,11 @@ from .version import __version__
 
 DEFAULT_LABEL = ["DEFAULT"]
 DEFAULT_PREDICTION_CACHE_SIZE_BYTES = 33554432L
+
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+    datefmt='%y-%m-%d:%H:%M:%S',
+    level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
@@ -215,27 +221,20 @@ class ClipperConnection(object):
                                base_image,
                                labels=None,
                                container_registry=None,
-                               num_replicas=1):
+                               num_replicas=1,
+                               force=False):
         """Build a new model container Docker image with the provided data and deploy it as
         a model to Clipper.
 
         This method does two things.
 
         1. Builds a new Docker image from the provided base image with the local directory specified by
-        ``model_data_path`` copied into the image. The Dockerfile that gets generated to build the image
-        is equivalent to the following::
+        ``model_data_path`` copied into the image by calling
+        :py:meth:`clipper_admin.ClipperConnection.build_model`.
 
-            FROM <base_image>
-            COPY <model_data_path> /model/
+        2. Registers and deploys a model with the specified metadata using the newly built
+        image by calling :py:meth:`clipper_admin.ClipperConnection.deploy_model`.
 
-        The newly built image is then pushed to the specified container registry. If no container registry
-        is specified, the image will be pushed to the default DockerHub registry. Clipper will tag the
-        newly built with the tag [<registry>]/<name>:<version>, and if a container registry is provided,
-
-        2. Registers and deploys a model with the specified metadata using the newly built container as the
-        Docker image for that model. See :py:meth:`clipper.ClipperConnection.deploy_model` for more details
-        on model deployment.
-        
         Parameters
         ----------
         name : str
@@ -266,6 +265,9 @@ class ClipperConnection(object):
             The number of replicas of the model to create. The number of replicas
             for a model can be changed at any time with
             :py:meth:`clipper.ClipperConnection.set_num_replicas`.
+        force : bool, optional
+            If True, this method will overwrite any existing Dockerfile in ``model_data_path``
+            when building the new image.
 
         Raises
         ------
@@ -275,9 +277,81 @@ class ClipperConnection(object):
 
         if not self.connected:
             raise UnconnectedException()
+        image = self.build_model(name, version, model_data_path, base_image,
+                                 container_registry)
+        self.deploy_model(name, version, input_type, image, labels,
+                          num_replicas)
+
+    def build_model(self,
+                    name,
+                    version,
+                    model_data_path,
+                    base_image,
+                    container_registry=None,
+                    force=False):
+        """Build a new model container Docker image with the provided data"
+
+        This method builds a new Docker image from the provided base image with the local directory specified by
+        ``model_data_path`` copied into the image. The Dockerfile that gets generated to build the image
+        is equivalent to the following::
+
+            FROM <base_image>
+            COPY <model_data_path> /model/
+
+        The newly built image is then pushed to the specified container registry. If no container registry
+        is specified, the image will be pushed to the default DockerHub registry. Clipper will tag the
+        newly built image with the tag [<registry>]/<name>:<version>.
+
+        Parameters
+        ----------
+        name : str
+            The name of the deployed model
+        version : str
+            The version to assign this model. Versions must be unique on a per-model
+            basis, but may be re-used across different models.
+        model_data_path : str
+            A path to a local directory. The contents of this directory will be recursively copied into the
+            Docker container.
+        base_image : str
+            The base Docker image to build the new model image from. This
+            image should contain all code necessary to run a Clipper model
+            container RPC client.
+        container_registry : str, optional
+            The Docker container registry to push the freshly built model to. Note
+            that if you are running Clipper on Kubernetes, this registry must be accesible
+            to the Kubernetes cluster in order to fetch the container from the registry.
+        force : bool, optional
+            If True, this method will overwrite any existing Dockerfile in ``model_data_path``
+            when building the new image.
+
+        Returns
+        -------
+        str :
+            The fully specified tag of the newly built image. This will include the
+            container registry if specified.
+
+        Raises
+        ------
+        :py:exc:`clipper.ClipperException`
+
+        Note
+        ----
+        This method can be called without being connected to a Clipper cluster.
+        """
+
         version = str(version)
 
         _validate_versioned_model_name(name, version)
+
+        docker_file_path = os.path.join(model_data_path, "Dockerfile")
+        if os.path.isfile(docker_file_path):
+            if force:
+                logger.warning(
+                    "Found existing Dockerfile in {path}. This file will be overwritten".
+                    format(model_data_path))
+            else:
+                raise ClipperException("Found existing Dockerfile in {path}.".
+                                       format(model_data_path))
 
         with open(model_data_path + '/Dockerfile', 'w') as f:
             f.write("FROM {container_name}\nCOPY . /model/\n".format(
@@ -293,8 +367,7 @@ class ClipperConnection(object):
 
         logger.info("Pushing model Docker image to {}".format(image))
         docker_client.images.push(repository=image)
-        self.deploy_model(name, version, input_type, image, labels,
-                          num_replicas)
+        return image
 
     def deploy_model(self,
                      name,
@@ -430,7 +503,39 @@ class ClipperConnection(object):
             logger.error(msg)
             raise ClipperException(msg)
 
-    def get_num_replicas(self, name, version):
+    def get_current_model_version(self, name):
+        """Get the current model version for the specified model.
+
+        Parameters
+        ----------
+        name : str
+            The name of the model
+
+        Returns
+        -------
+        str
+            The current model version
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+        :py:exc:`clipper.ClipperException`
+
+        """
+        if not self.connected:
+            raise UnconnectedException()
+        version = None
+        model_info = self.get_all_models(verbose=True)
+        for m in model_info:
+            if m["model_name"] == name and m["is_current_version"]:
+                version = m["model_version"]
+                break
+        if version is None:
+            raise ClipperException(
+                "No versions of model {} registered with Clipper".format(name))
+        return version
+
+    def get_num_replicas(self, name, version=None):
         """Gets the current number of model container replicas for a model.
 
         Parameters
@@ -449,16 +554,14 @@ class ClipperConnection(object):
         Raises
         ------
         :py:exc:`clipper.UnconnectedException`
+        :py:exc:`clipper.ClipperException`
         """
         if not self.connected:
             raise UnconnectedException()
         if version is None:
-            model_info = self.get_all_models(verbose=True)
-            for m in model_info:
-                if m["is_current_version"]:
-                    version = m["model_version"]
-        assert version is not None
-        version = str(version)
+            version = self.get_current_model_version(name)
+        else:
+            version = str(version)
         return self.cm.get_num_replicas(name, version)
 
     def set_num_replicas(self, name, num_replicas, version=None):
@@ -486,13 +589,9 @@ class ClipperConnection(object):
         if not self.connected:
             raise UnconnectedException()
         if version is None:
-            model_info = self.get_all_models(verbose=True)
-            for m in model_info:
-                if m["is_current_version"]:
-                    version = m["model_version"]
-        assert version is not None
-
-        version = str(version)
+            version = self.get_current_model_version(name)
+        else:
+            version = str(version)
         model_data = self.get_model_info(name, version)
         if model_data is not None:
             input_type = model_data["input_type"]
