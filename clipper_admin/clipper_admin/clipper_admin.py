@@ -4,6 +4,7 @@ import docker
 import requests
 from requests.exceptions import RequestException
 import json
+import pprint
 import time
 import re
 import os
@@ -13,7 +14,7 @@ from .exceptions import ClipperException, UnconnectedException
 from .version import __version__
 
 DEFAULT_LABEL = ["DEFAULT"]
-DEFAULT_PREDICTION_CACHE_SIZE_BYTES = 33554432L
+DEFAULT_PREDICTION_CACHE_SIZE_BYTES = 33554432
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
@@ -114,10 +115,15 @@ class ClipperConnection(object):
 
         self.cm.connect()
         self.connected = True
+        logger.info("Successfully connected to Clipper cluster at {}".format(
+            self.cm.get_query_addr()))
 
     def register_application(self, name, input_type, default_output,
                              slo_micros):
-        # TODO(crankshaw): Update user guide links
+        # TODO(crankshaw): Add links to user guide section on input types once user guide is
+        # written:
+        # "See the `User Guide <http://clipper.ai/user_guide/#input-types>`_ for more details
+        # on picking the right input type for your application."
         """Register a new application with Clipper.
 
         An application in Clipper corresponds to a named REST endpoint that can be used to request
@@ -125,16 +131,13 @@ class ClipperConnection(object):
         Application names must be unique. This command will fail if an application with the provided
         name already exists.
 
-
         Parameters
         ----------
         name : str
             The unique name of the application.
         input_type : str
             The type of the request data this endpoint can process. Input type can be
-            one of "integers", "floats", "doubles", "bytes", or "strings". See the
-            `User Guide <http://clipper.ai/user_guide/#input-types>`_ for more details
-            on picking the right input type for your application.
+            one of "integers", "floats", "doubles", "bytes", or "strings".
         default_output : str
             The default output for the application. The default output will be returned whenever
             an application is unable to receive a response from a model within the specified
@@ -168,11 +171,14 @@ class ClipperConnection(object):
         })
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
+        logger.debug(r.text)
         if r.status_code != requests.codes.ok:
             msg = "Received error status code: {code} and message: {msg}".format(
                 code=r.status_code, msg=r.text)
             logger.error(msg)
             raise ClipperException(msg)
+        else:
+            logger.info("{app} was successfully registered".format(app=name))
 
     def link_model_to_app(self, app_name, model_name):
         """Routes requests from the specified app to be evaluted by the specified model.
@@ -206,12 +212,15 @@ class ClipperConnection(object):
         })
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
-        logger.info(r.text)
+        logger.debug(r.text)
         if r.status_code != requests.codes.ok:
             msg = "Received error status code: {code} and message: {msg}".format(
                 code=r.status_code, msg=r.text)
             logger.error(msg)
             raise ClipperException(msg)
+        else:
+            logger.info("Model {model} is now linked to application {app}".
+                        format(model=model_name, app=app_name))
 
     def build_and_deploy_model(self,
                                name,
@@ -430,10 +439,10 @@ class ClipperConnection(object):
         _validate_versioned_model_name(name, version)
         self.cm.deploy_model(
             name, version, input_type, image, num_replicas=num_replicas)
-        logger.info("Registering model with Clipper")
         self.register_model(
             name, version, input_type, image=image, labels=labels)
-        logger.info("Done deploying!")
+        logger.info("Done deploying model {name}:{version}.".format(
+            name=name, version=version))
 
     def register_model(self,
                        name,
@@ -497,11 +506,15 @@ class ClipperConnection(object):
         headers = {'Content-type': 'application/json'}
         logger.debug(req_json)
         r = requests.post(url, headers=headers, data=req_json)
+        logger.debug(r.text)
         if r.status_code != requests.codes.ok:
             msg = "Received error status code: {code} and message: {msg}".format(
                 code=r.status_code, msg=r.text)
             logger.error(msg)
             raise ClipperException(msg)
+        else:
+            logger.info("Successfully registered model {name}:{version}".
+                        format(name=name, version=version))
 
     def get_current_model_version(self, name):
         """Get the current model version for the specified model.
@@ -641,6 +654,7 @@ class ClipperConnection(object):
         req_json = json.dumps({"verbose": verbose})
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
+        logger.debug(r.text)
 
         if r.status_code == requests.codes.ok:
             return r.json()
@@ -677,10 +691,13 @@ class ClipperConnection(object):
         req_json = json.dumps({"name": name})
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
+        logger.debug(r.text)
 
         if r.status_code == requests.codes.ok:
             app_info = r.json()
             if len(app_info) == 0:
+                logger.warning("Application {} is not registered with Clipper".
+                               format(name))
                 return None
             return app_info
         else:
@@ -716,6 +733,7 @@ class ClipperConnection(object):
         req_json = json.dumps({"app_name": app_name})
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
+        logger.debug(r.text)
         if r.status_code == requests.codes.ok:
             return r.json()
         else:
@@ -751,6 +769,7 @@ class ClipperConnection(object):
         req_json = json.dumps({"verbose": verbose})
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
+        logger.debug(r.text)
 
         if r.status_code == requests.codes.ok:
             return r.json()
@@ -790,12 +809,16 @@ class ClipperConnection(object):
         req_json = json.dumps({"model_name": name, "model_version": version})
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
+        logger.debug(r.text)
 
         if r.status_code == requests.codes.ok:
-            app_info = r.json()
-            if len(app_info) == 0:
+            model_info = r.json()
+            if len(model_info) == 0:
+                logger.warning(
+                    "Model {name}:{version} is not registered with Clipper.".
+                    format(name=name, version=version))
                 return None
-            return app_info
+            return model_info
         else:
             msg = "Received error status code: {code} and message: {msg}".format(
                 code=r.status_code, msg=r.text)
@@ -829,6 +852,7 @@ class ClipperConnection(object):
         req_json = json.dumps({"verbose": verbose})
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
+        logger.debug(r.text)
         if r.status_code == requests.codes.ok:
             return r.json()
         else:
@@ -872,12 +896,16 @@ class ClipperConnection(object):
         })
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
+        logger.debug(r.text)
 
         if r.status_code == requests.codes.ok:
-            app_info = r.json()
-            if len(app_info) == 0:
+            model_rep_info = r.json()
+            if len(model_rep_info) == 0:
+                logger.warning(
+                    "No model replica with ID {rep_id} found for model {name}:{version}".
+                    format(rep_id=replica_id, name=name, version=version))
                 return None
-            return app_info
+            return model_rep_info
         else:
             msg = "Received error status code: {code} and message: {msg}".format(
                 code=r.status_code, msg=r.text)
@@ -921,6 +949,7 @@ class ClipperConnection(object):
             raise UnconnectedException()
         url = "http://{host}/metrics".format(host=self.cm.get_query_addr())
         r = requests.get(url)
+        logger.debug(r.text)
         if r.status_code == requests.codes.ok:
             return r.json()
         else:
@@ -965,6 +994,7 @@ class ClipperConnection(object):
         req_json = json.dumps({"model_name": name, "model_version": version})
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
+        logger.debug(r.text)
         if r.status_code != requests.codes.ok:
             msg = "Received error status code: {code} and message: {msg}".format(
                 code=r.status_code, msg=r.text)
@@ -1020,6 +1050,10 @@ class ClipperConnection(object):
                 else:
                     model_dict[m["model_name"]] = [m["model_version"]]
         self.cm.stop_models(model_dict)
+        pp = pprint.PrettyPrinter(indent=4)
+        logger.info(
+            "Stopped all containers for these models and versions:\n{}".format(
+                pp.pformat(model_dict)))
 
     def stop_versioned_models(self, model_versions_dict):
         """Stops the specified versions of the specified models.
@@ -1042,6 +1076,10 @@ class ClipperConnection(object):
         if not self.connected:
             raise UnconnectedException()
         self.cm.stop_models(model_versions_dict)
+        pp = pprint.PrettyPrinter(indent=4)
+        logger.info(
+            "Stopped all containers for these models and versions:\n{}".format(
+                pp.pformat(model_versions_dict)))
 
     def stop_inactive_model_versions(self, model_names):
         """Stops all model containers serving stale versions of the specified models.
@@ -1074,6 +1112,10 @@ class ClipperConnection(object):
                 else:
                     model_dict[m["model_name"]] = [m["model_version"]]
         self.cm.stop_models(model_dict)
+        pp = pprint.PrettyPrinter(indent=4)
+        logger.info(
+            "Stopped all containers for these models and versions:\n{}".format(
+                pp.pformat(model_dict)))
 
     def stop_all_model_containers(self):
         """Stops all model containers started via Clipper admin commands.
@@ -1083,6 +1125,7 @@ class ClipperConnection(object):
         ``connect`` first.
         """
         self.cm.stop_all_model_containers()
+        logger.info("Stopped all Clipper model containers")
 
     def stop_all(self):
         """Stops all processes that were started via Clipper admin commands.
@@ -1092,3 +1135,4 @@ class ClipperConnection(object):
         ``connect`` first.
         """
         self.cm.stop_all()
+        logger.info("Stopped all Clipper cluster and all model containers")
