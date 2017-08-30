@@ -178,7 +178,8 @@ class ClipperConnection(object):
             logger.error(msg)
             raise ClipperException(msg)
         else:
-            logger.info("{app} was successfully registered".format(app=name))
+            logger.info("Application {app} was successfully registered".format(
+                app=name))
 
     def link_model_to_app(self, app_name, model_name):
         """Routes requests from the specified app to be evaluted by the specified model.
@@ -436,6 +437,7 @@ class ClipperConnection(object):
         """
         if not self.connected:
             raise UnconnectedException()
+        version = str(version)
         _validate_versioned_model_name(name, version)
         self.cm.deploy_model(
             name, version, input_type, image, num_replicas=num_replicas)
@@ -633,7 +635,7 @@ class ClipperConnection(object):
             If set to False, the returned list contains the apps' names.
             If set to True, the list contains application info dictionaries.
             These dictionaries have the same attribute name-value pairs that were
-            provided to `register_application`.
+            provided to :py:meth:`clipper_admin.ClipperConnection.register_application`.
 
         Returns
         -------
@@ -677,7 +679,8 @@ class ClipperConnection(object):
         dict
             Returns a dictionary with the specified application's info. This
             will contain the attribute name-value pairs that were provided to
-            `register_application`. If no application with name `name` is
+            :py:meth:`clipper_admin.ClipperConnection.register_application`.
+            If no application with name ``name`` is
             registered with Clipper, None is returned.
 
         Raises
