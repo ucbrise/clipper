@@ -176,7 +176,7 @@ if __name__ == "__main__":
             app_and_model_name = "easy-register-app-model"
             create_endpoint(clipper_conn, app_and_model_name, "integers",
                             predict, lr_model, sc)
-            test_model(app_and_model_name, 1)
+            test_model(clipper_conn, app_and_model_name, 1)
 
             version += 1
             deploy_and_test_model(sc, clipper_conn, lr_model, version,
