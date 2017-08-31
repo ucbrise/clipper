@@ -37,7 +37,8 @@ if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal_handler)
     clipper_conn = ClipperConnection(DockerContainerManager())
     clipper_conn.start_clipper()
-    python_deployer.create_endpoint(clipper_conn, "simple-example", "doubles", feature_sum)
+    python_deployer.create_endpoint(clipper_conn, "simple-example", "doubles",
+                                    feature_sum)
     time.sleep(2)
     try:
         while True:

@@ -27,33 +27,58 @@ def create_endpoint(
         registry=None,
         base_image="clipper/pyspark-container:{}".format(__version__),
         num_replicas=1):
-    """Registers an app and deploys provided predict function as a model.
+    """Registers an app and deploys the provided predict function with PySpark model as
+    a Clipper model.
 
     Parameters
     ----------
+    clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
+        A ``ClipperConnection`` object connected to a running Clipper cluster.
     name : str
-        The to be assigned to the registered app and deployed model.
-    predict_function : function
-        The prediction function. Any state associated with the function should be
-        captured via closure capture.
+        The name to be assigned to both the registered application and deployed model.
     input_type : str
         The input_type to be associated with the registered app and deployed model.
         One of "integers", "floats", "doubles", "bytes", or "strings".
-    default_output : string, optional
-        The default prediction to use if the model does not return a prediction
-        by the end of the latency objective.
-    model_version : Any object with a string representation (with __str__ implementation), optional
-        The version to assign the deployed model.
-    slo_micros : int
+    func : function
+        The prediction function. Any state associated with the function will be
+        captured via closure capture and pickled with Cloudpickle.
+    pyspark_model : pyspark.mllib.* or pyspark.ml.pipeline.PipelineModel object
+        The PySpark model to save.
+    sc : SparkContext,
+        The current SparkContext. This is needed to save the PySpark model.
+    default_output : str, optional
+        The default output for the application. The default output will be returned whenever
+        an application is unable to receive a response from a model within the specified
+        query latency SLO (service level objective). The reason the default output was returned
+        is always provided as part of the prediction response object. Defaults to "None".
+    version : str, optional
+        The version to assign this model. Versions must be unique on a per-model
+        basis, but may be re-used across different models.
+    slo_micros : int, optional
         The query latency objective for the application in microseconds.
         This is the processing latency between Clipper receiving a request
         and sending a response. It does not account for network latencies
         before a request is received or after a response is sent.
-    labels : list of str, optional
-        A list of strings annotating the model.
-    num_containers : int, optional
-        The number of replicas of the model to create. More replicas can be
-        created later as well.
+        If Clipper cannot process a query within the latency objective,
+        the default output is returned. Therefore, it is recommended that
+        the SLO not be set aggressively low unless absolutely necessary.
+        100000 (100ms) is a good starting value, but the optimal latency objective
+        will vary depending on the application.
+    labels : list(str), optional
+        A list of strings annotating the model. These are ignored by Clipper
+        and used purely for user annotations.
+    registry : str, optional
+        The Docker container registry to push the freshly built model to. Note
+        that if you are running Clipper on Kubernetes, this registry must be accesible
+        to the Kubernetes cluster in order to fetch the container from the registry.
+    base_image : str, optional
+        The base Docker image to build the new model image from. This
+        image should contain all code necessary to run a Clipper model
+        container RPC client.
+    num_replicas : int, optional
+        The number of replicas of the model to create. The number of replicas
+        for a model can be changed at any time with
+        :py:meth:`clipper.ClipperConnection.set_num_replicas`.
     """
 
     clipper_conn.register_application(name, input_type, default_output,
@@ -77,42 +102,83 @@ def deploy_pyspark_model(
         labels=None,
         registry=None,
         num_replicas=1):
-    # TODO: fix documentation
-    """Deploy a Spark MLLib model to Clipper.
+    """Deploy a Python function with a PySpark model.
+
+    The function must take 3 arguments (in order): a SparkSession, the PySpark model, and a list of
+    inputs. It must return a list of strings of the same length as the list of inputs.
 
     Parameters
     ----------
+    clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
+        A ``ClipperConnection`` object connected to a running Clipper cluster.
     name : str
-        The name to assign this model.
-    version : int
-        The version to assign this model.
-    predict_function : function
-        A function that takes three arguments, a SparkContext, the ``model`` parameter and
-        a list of inputs of the type specified by the ``input_type`` argument.
-        Any state associated with the function other than the Spark model should
-        be captured via closure capture. Note that the function must not capture
-        the SparkContext or the model implicitly, as these objects are not pickleable
-        and therefore will prevent the ``predict_function`` from being serialized.
-    pyspark_model : pyspark.mllib.util.Saveable
-        An object that mixes in the pyspark Saveable mixin. Generally this
-        is either an mllib model or transformer. This model will be loaded
-        into the Clipper model container and provided as an argument to the
-        predict function each time it is called.
-    sc : SparkContext
-        The SparkContext associated with the model. This is needed
-        to save the model for pyspark.mllib models.
+        The name to be assigned to both the registered application and deployed model.
+    version : str
+        The version to assign this model. Versions must be unique on a per-model
+        basis, but may be re-used across different models.
     input_type : str
+        The input_type to be associated with the registered app and deployed model.
         One of "integers", "floats", "doubles", "bytes", or "strings".
-    labels : list of str, optional
-        A set of strings annotating the model
-    num_containers : int, optional
-        The number of replicas of the model to create. More replicas can be
-        created later as well. Defaults to 1.
+    func : function
+        The prediction function. Any state associated with the function will be
+        captured via closure capture and pickled with Cloudpickle.
+    pyspark_model : pyspark.mllib.* or pyspark.ml.pipeline.PipelineModel object
+        The PySpark model to save.
+    sc : SparkContext,
+        The current SparkContext. This is needed to save the PySpark model.
+    base_image : str, optional
+        The base Docker image to build the new model image from. This
+        image should contain all code necessary to run a Clipper model
+        container RPC client.
+    labels : list(str), optional
+        A list of strings annotating the model. These are ignored by Clipper
+        and used purely for user annotations.
+    registry : str, optional
+        The Docker container registry to push the freshly built model to. Note
+        that if you are running Clipper on Kubernetes, this registry must be accesible
+        to the Kubernetes cluster in order to fetch the container from the registry.
+    num_replicas : int, optional
+        The number of replicas of the model to create. The number of replicas
+        for a model can be changed at any time with
+        :py:meth:`clipper.ClipperConnection.set_num_replicas`.
 
-    Returns
+
+    Example
     -------
-    bool
-        True if the model was successfully deployed. False otherwise.
+    Define a pre-processing function ``shift()`` and to normalize prediction inputs::
+
+        from clipper_admin import ClipperConnection, DockerContainerManager
+        from clipper_admin.deployers.pyspark import deploy_pyspark_model
+        from pyspark.mllib.classification import LogisticRegressionWithSGD
+        from pyspark.sql import SparkSession
+
+        spark = SparkSession\
+                .builder\
+                .appName("clipper-pyspark")\
+                .getOrCreate()
+
+        sc = spark.sparkContext
+
+        clipper_conn = ClipperConnection(DockerContainerManager())
+
+        # Connect to an already-running Clipper cluster
+        clipper_conn.connect()
+
+        # Loading a training dataset omitted...
+        model = LogisticRegressionWithSGD.train(trainRDD, iterations=10)
+
+        # Note that this function accesses the trained PySpark model via an explicit
+        # argument, but other state can be captured via closure capture if necessary.
+        def predict(spark, model, inputs):
+            return [str(model.predict(shift(x))) for x in inputs]
+
+        deploy_pyspark_model(
+            clipper_conn,
+            name="example",
+            input_type="doubles",
+            func=predict,
+            pyspark_model=model,
+            sc=sc)
     """
 
     model_class = re.search("pyspark.*'",
@@ -144,7 +210,7 @@ def deploy_pyspark_model(
     logger.info("Spark model saved")
 
     # Deploy model
-    deploy_result = clipper_conn.build_and_deploy_model(
+    clipper_conn.build_and_deploy_model(
         name,
         version,
         input_type,
@@ -157,5 +223,3 @@ def deploy_pyspark_model(
 
     # Remove temp files
     shutil.rmtree(serialization_dir)
-
-    return deploy_result

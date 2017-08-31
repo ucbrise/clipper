@@ -21,33 +21,53 @@ def create_endpoint(
         registry=None,
         base_image="clipper/python-closure-container:{}".format(__version__),
         num_replicas=1):
-    """Registers an app and deploys provided predict function as a model.
+    """Registers an application and deploys the provided predict function as a model.
 
     Parameters
     ----------
+    clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
+        A ``ClipperConnection`` object connected to a running Clipper cluster.
     name : str
-        The to be assigned to the registered app and deployed model.
-    predict_function : function
-        The prediction function. Any state associated with the function should be
-        captured via closure capture.
+        The name to be assigned to both the registered application and deployed model.
     input_type : str
         The input_type to be associated with the registered app and deployed model.
         One of "integers", "floats", "doubles", "bytes", or "strings".
-    default_output : string, optional
-        The default prediction to use if the model does not return a prediction
-        by the end of the latency objective.
-    model_version : Any object with a string representation (with __str__ implementation), optional
-        The version to assign the deployed model.
-    slo_micros : int
+    func : function
+        The prediction function. Any state associated with the function will be
+        captured via closure capture and pickled with Cloudpickle.
+    default_output : str, optional
+        The default output for the application. The default output will be returned whenever
+        an application is unable to receive a response from a model within the specified
+        query latency SLO (service level objective). The reason the default output was returned
+        is always provided as part of the prediction response object. Defaults to "None".
+    version : str, optional
+        The version to assign this model. Versions must be unique on a per-model
+        basis, but may be re-used across different models.
+    slo_micros : int, optional
         The query latency objective for the application in microseconds.
         This is the processing latency between Clipper receiving a request
         and sending a response. It does not account for network latencies
         before a request is received or after a response is sent.
-    labels : list of str, optional
-        A list of strings annotating the model.
-    num_containers : int, optional
-        The number of replicas of the model to create. More replicas can be
-        created later as well.
+        If Clipper cannot process a query within the latency objective,
+        the default output is returned. Therefore, it is recommended that
+        the SLO not be set aggressively low unless absolutely necessary.
+        100000 (100ms) is a good starting value, but the optimal latency objective
+        will vary depending on the application.
+    labels : list(str), optional
+        A list of strings annotating the model. These are ignored by Clipper
+        and used purely for user annotations.
+    registry : str, optional
+        The Docker container registry to push the freshly built model to. Note
+        that if you are running Clipper on Kubernetes, this registry must be accesible
+        to the Kubernetes cluster in order to fetch the container from the registry.
+    base_image : str, optional
+        The base Docker image to build the new model image from. This
+        image should contain all code necessary to run a Clipper model
+        container RPC client.
+    num_replicas : int, optional
+        The number of replicas of the model to create. The number of replicas
+        for a model can be changed at any time with
+        :py:meth:`clipper.ClipperConnection.set_num_replicas`.
     """
 
     clipper_conn.register_application(name, input_type, default_output,
@@ -68,41 +88,57 @@ def deploy_python_closure(
         labels=None,
         registry=None,
         num_replicas=1):
-    # TODO: fix documentation
     """Deploy an arbitrary Python function to Clipper.
 
     The function should take a list of inputs of the type specified by `input_type` and
-    return a Python or numpy array of predictions as strings. All dependencies for the function
-    must be installed with Anaconda or Pip and this function must be called from within an Anaconda
-    environment.
+    return a Python list or numpy array of predictions as strings.
 
     Parameters
     ----------
+    clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
+        A ``ClipperConnection`` object connected to a running Clipper cluster.
     name : str
-        The name to assign this model.
-    version : int
-        The version to assign this model.
-    predict_function : function
-        The prediction function. Any state associated with the function should be
-        captured via closure capture.
+        The name to be assigned to both the registered application and deployed model.
+    version : str
+        The version to assign this model. Versions must be unique on a per-model
+        basis, but may be re-used across different models.
     input_type : str
+        The input_type to be associated with the registered app and deployed model.
         One of "integers", "floats", "doubles", "bytes", or "strings".
-    labels : list of str, optional
-        A list of strings annotating the model
-    num_containers : int, optional
-        The number of replicas of the model to create. More replicas can be
-        created later as well. Defaults to 1.
+    func : function
+        The prediction function. Any state associated with the function will be
+        captured via closure capture and pickled with Cloudpickle.
+    base_image : str, optional
+        The base Docker image to build the new model image from. This
+        image should contain all code necessary to run a Clipper model
+        container RPC client.
+    labels : list(str), optional
+        A list of strings annotating the model. These are ignored by Clipper
+        and used purely for user annotations.
+    registry : str, optional
+        The Docker container registry to push the freshly built model to. Note
+        that if you are running Clipper on Kubernetes, this registry must be accesible
+        to the Kubernetes cluster in order to fetch the container from the registry.
+    num_replicas : int, optional
+        The number of replicas of the model to create. The number of replicas
+        for a model can be changed at any time with
+        :py:meth:`clipper.ClipperConnection.set_num_replicas`.
 
-    Returns
-    -------
-    bool
-        True if the model was successfully deployed. False otherwise.
 
     Example
     -------
-    Define a feature function ``center()`` and train a model on the featurized input::
+    Define a pre-processing function ``center()`` and train a model on the pre-processed input::
 
+        from clipper_admin import ClipperConnection, DockerContainerManager
         from clipper_admin.deployers.python import deploy_python_closure
+        import numpy as np
+        import sklearn
+
+        clipper_conn = ClipperConnection(DockerContainerManager())
+
+        # Connect to an already-running Clipper cluster
+        clipper_conn.connect()
+
         def center(xs):
             means = np.mean(xs, axis=0)
             return xs - means
@@ -111,22 +147,25 @@ def deploy_python_closure(
         model = sklearn.linear_model.LogisticRegression()
         model.fit(centered_xs, ys)
 
+        # Note that this function accesses the trained model via closure capture,
+        # rather than having the model passed in as an explicit argument.
         def centered_predict(inputs):
             centered_inputs = center(inputs)
-            return model.predict(centered_inputs)
+            # model.predict returns a list of predictions
+            preds = model.predict(centered_inputs)
+            return [str(p) for p in preds]
 
         deploy_python_closure(
-            "example_model",
-            1,
-            centered_predict,
-            "doubles",
-            num_containers=1)
+            clipper_conn,
+            name="example",
+            input_type="doubles",
+            func=centered_predict)
     """
 
     serialization_dir = save_python_function(name, func)
     logger.info("Python closure saved")
     # Deploy function
-    deploy_result = clipper_conn.build_and_deploy_model(
+    clipper_conn.build_and_deploy_model(
         name,
         version,
         input_type,
@@ -138,4 +177,3 @@ def deploy_python_closure(
         force=True)
     # Remove temp files
     shutil.rmtree(serialization_dir)
-    return deploy_result

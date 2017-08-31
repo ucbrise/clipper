@@ -287,8 +287,13 @@ class ClipperConnection(object):
 
         if not self.connected:
             raise UnconnectedException()
-        image = self.build_model(name, version, model_data_path, base_image,
-                                 container_registry, force=force)
+        image = self.build_model(
+            name,
+            version,
+            model_data_path,
+            base_image,
+            container_registry,
+            force=force)
         self.deploy_model(name, version, input_type, image, labels,
                           num_replicas)
 
