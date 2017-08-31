@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    ai.clipper.container.label: ""
+    ai.clipper.name: mgmt-frontend
+  name: mgmt-frontend
+spec:
+  type: NodePort
+  ports:
+  - name: "1338"
+    port: 1338
+    targetPort: 1338
+  selector:
+    ai.clipper.name: mgmt-frontend

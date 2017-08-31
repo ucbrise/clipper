@@ -17,8 +17,7 @@ RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh \
 ENV PATH "/opt/conda/bin:$PATH"
 RUN conda install -y libgcc pyzmq
  
-RUN pip install requests subprocess32 scikit-learn numpy scipy fabric pyyaml docker \
-      kubernetes pyspark docker-compose findspark
+RUN pip install requests subprocess32 scikit-learn numpy pyyaml docker kubernetes pyspark findspark
 
 RUN mkdir /spark && cd /spark \
         && curl -o spark.tgz https://d3kbcqa49mib13.cloudfront.net/spark-2.1.1-bin-hadoop2.7.tgz \

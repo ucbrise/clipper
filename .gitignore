@@ -3,6 +3,7 @@
 .ycm_p
 .ycm_extra_conf.py
 *.pyc
+*.egg-info
 
 # build directories
 release/
@@ -16,3 +17,5 @@ _build/
 # scala
 dependency-reduced-pom.xml
 *.iml
+
+docker-compose.yml

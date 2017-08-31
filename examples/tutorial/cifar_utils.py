@@ -1,3 +1,4 @@
+from __future__ import print_function
 import json
 import os
 import requests
@@ -119,7 +120,7 @@ def parse_pred(p):
 
 
 def cifar_prediction(host, app, uid, x):
-    url = "http://%s:1337/%s/predict" % (host, app)
+    url = "http://%s/%s/predict" % (host, app)
     req_json = json.dumps({'uid': uid, 'input': list(x)})
     headers = {'Content-type': 'application/json'}
     start = datetime.now()
@@ -163,7 +164,7 @@ def run_iteration(host, app, uid, test_x, test_y):
         elif correct_y == 1 and pred_y == 0:
             false_neg += 1
         else:
-            print "predicted: {p}, correct: {c}".format(p=pred_y, c=correct_y)
+            print("predicted: {p}, correct: {c}".format(p=pred_y, c=correct_y))
         latencies.append(latency)
     total = float(total)
     return (float(correct) / total, float(false_pos) / total,

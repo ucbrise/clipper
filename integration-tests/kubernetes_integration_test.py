@@ -6,7 +6,7 @@ import json
 import numpy as np
 import time
 import logging
-from test_utils import (create_docker_connection, BenchmarkException,
+from test_utils import (create_kubernetes_connection, BenchmarkException,
                         fake_model_data, headers, log_clipper_state)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
@@ -19,8 +19,10 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+# TODO: Add kubernetes specific checks that use kubernetes API
 
-def deploy_model(clipper_conn, name, version, link=False):
+
+def deploy_model(clipper_conn, name, version):
     app_name = "%s-app" % name
     model_name = "%s-model" % name
     clipper_conn.build_and_deploy_model(
@@ -30,11 +32,12 @@ def deploy_model(clipper_conn, name, version, link=False):
         fake_model_data,
         "clipper/noop-container:{}".format(clipper_version),
         num_replicas=1,
+        container_registry=
+        "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper",
         force=True)
     time.sleep(10)
 
-    if link:
-        clipper_conn.link_model_to_app(app_name, model_name)
+    clipper_conn.link_model_to_app(app_name, model_name)
 
     success = False
     num_tries = 0
@@ -85,16 +88,14 @@ def create_and_test_app(clipper_conn, name, num_models):
         logger.error("Error: %s" % response.text)
         raise BenchmarkException("Error creating app %s" % app_name)
 
-    link = True
     for i in range(num_models):
-        deploy_model(clipper_conn, name, i, link)
-        link = False
+        deploy_model(clipper_conn, name, i)
         time.sleep(1)
 
 
 if __name__ == "__main__":
-    num_apps = 6
-    num_models = 8
+    num_apps = 3
+    num_models = 3
     try:
         if len(sys.argv) > 1:
             num_apps = int(sys.argv[1])
@@ -105,9 +106,11 @@ if __name__ == "__main__":
         # for num_apps and num_models
         pass
     try:
-        clipper_conn = create_docker_connection(
+        clipper_conn = create_kubernetes_connection(
             cleanup=True, start_clipper=True)
         time.sleep(10)
+        print(clipper_conn.cm.get_query_addr())
+        print(clipper_conn.inspect_instance())
         try:
             logger.info("Running integration test with %d apps and %d models" %
                         (num_apps, num_models))
@@ -116,14 +119,12 @@ if __name__ == "__main__":
             logger.info(clipper_conn.get_clipper_logs())
             log_clipper_state(clipper_conn)
             logger.info("SUCCESS")
+            clipper_conn.stop_all()
         except BenchmarkException as e:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
-            create_docker_connection(cleanup=True, start_clipper=False)
+            create_kubernetes_connection(cleanup=True, start_clipper=False)
             sys.exit(1)
-        else:
-            create_docker_connection(cleanup=True, start_clipper=False)
     except Exception as e:
-        logger.exception("Exception")
-        create_docker_connection(cleanup=True, start_clipper=False)
+        logger.exception("Exception: {}".format(e))
         sys.exit(1)
