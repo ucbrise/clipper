@@ -99,8 +99,9 @@ def run_test():
                                               "default_pred", 10000000)
             time.sleep(1)
 
+            addr = clipper_conn.get_query_addr()
             response = requests.post(
-                "http://localhost:1337/%s/predict" % app_name,
+                "http://%s/%s/predict" % (addr, app_name),
                 headers=headers,
                 data=json.dumps({
                     'input':
@@ -118,9 +119,10 @@ def run_test():
             time.sleep(30)
             num_preds = 25
             num_defaults = 0
+            addr = clipper_conn.get_query_addr()
             for i in range(num_preds):
                 response = requests.post(
-                    "http://localhost:1337/%s/predict" % app_name,
+                    "http://%s/%s/predict" % (addr, app_name),
                     headers=headers,
                     data=json.dumps({
                         'input':
@@ -142,9 +144,10 @@ def run_test():
             time.sleep(30)
             num_preds = 25
             num_defaults = 0
+            addr = clipper_conn.get_query_addr()
             for i in range(num_preds):
                 response = requests.post(
-                    "http://localhost:1337/%s/predict" % app_name,
+                    "http://%s/%s/predict" % (addr, app_name),
                     headers=headers,
                     data=json.dumps({
                         'input':

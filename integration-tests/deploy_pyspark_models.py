@@ -82,16 +82,17 @@ def deploy_and_test_model(sc,
         clipper_conn.link_model_to_app(app_name, model_name)
         time.sleep(5)
 
-    test_model(app_name, version)
+    test_model(clipper_conn, app_name, version)
 
 
-def test_model(app, version):
+def test_model(clipper_conn, app, version):
     time.sleep(25)
     num_preds = 25
     num_defaults = 0
+    addr = clipper_conn.get_query_addr()
     for i in range(num_preds):
         response = requests.post(
-            "http://localhost:1337/%s/predict" % app,
+            "http://%s/%s/predict" % (addr, app),
             headers=headers,
             data=json.dumps({
                 'input': get_test_point()
@@ -148,8 +149,9 @@ if __name__ == "__main__":
                                               "default_pred", 100000)
             time.sleep(1)
 
+            addr = clipper_conn.get_query_addr()
             response = requests.post(
-                "http://localhost:1337/%s/predict" % app_name,
+                "http://%s/%s/predict" % (addr, app_name),
                 headers=headers,
                 data=json.dumps({
                     'input': get_test_point()
