@@ -67,7 +67,7 @@ class DockerContainerManager(ContainerManager):
         self.docker_network = docker_network
 
         self.docker_client = docker.from_env()
-        self.extra_container_kwargs = extra_container_kwargs
+        self.extra_container_kwargs = extra_container_kwargs.copy()
 
         # Merge Clipper-specific labels with any user-provided labels
         if "labels" in self.extra_container_kwargs:
@@ -75,6 +75,13 @@ class DockerContainerManager(ContainerManager):
             self.common_labels.update({CLIPPER_DOCKER_LABEL: ""})
         else:
             self.common_labels = {CLIPPER_DOCKER_LABEL: ""}
+
+        container_args = {
+            "network": self.docker_network,
+            "detach": True,
+        }
+
+        self.extra_container_kwargs.update(container_args)
 
     def start_clipper(self, query_frontend_image, mgmt_frontend_image,
                       cache_size):
@@ -84,12 +91,6 @@ class DockerContainerManager(ContainerManager):
         except docker.errors.APIError as e:
             logger.debug(
                 "{nw} network already exists".format(nw=self.docker_network))
-        container_args = {
-            "network": self.docker_network,
-            "detach": True,
-        }
-
-        self.extra_container_kwargs.update(container_args)
 
         if not self.external_redis:
             logger.info("Starting managed Redis instance in Docker")

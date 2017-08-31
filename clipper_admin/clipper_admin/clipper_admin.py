@@ -288,7 +288,7 @@ class ClipperConnection(object):
         if not self.connected:
             raise UnconnectedException()
         image = self.build_model(name, version, model_data_path, base_image,
-                                 container_registry, force)
+                                 container_registry, force=force)
         self.deploy_model(name, version, input_type, image, labels,
                           num_replicas)
 
@@ -363,10 +363,10 @@ class ClipperConnection(object):
             if force:
                 logger.warning(
                     "Found existing Dockerfile in {path}. This file will be overwritten".
-                    format(model_data_path))
+                    format(path=model_data_path))
             else:
                 raise ClipperException("Found existing Dockerfile in {path}.".
-                                       format(model_data_path))
+                                       format(path=model_data_path))
 
         with open(model_data_path + '/Dockerfile', 'w') as f:
             f.write("FROM {container_name}\nCOPY . /model/\n".format(
