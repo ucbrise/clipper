@@ -57,7 +57,7 @@ In addition, the function must only use pure Python code. More specifically, all
 captured by the function will be pickled using `Cloudpickle <https://github.com/cloudpipe/cloudpickle>`_,
 so any state captured by the function must be able to be pickled. Most Python libraries that
 use C extensions create objects that cannot be pickled. This includes many common machine-learning
-frameworks including PySpark, TensorFlow, PyTorch, and Caffe. You will have to create your own
+frameworks such as PySpark, TensorFlow, PyTorch, and Caffe. You will have to create your own
 Docker containers and call the native serialization libraries of these frameworks in order to deploy them.
 
 The base Docker image we use to deploy these functions has already installed several common Python dependencies

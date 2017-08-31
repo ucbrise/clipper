@@ -62,7 +62,7 @@ def predict(spark, model, xs):
 
 def predict_with_local_modules(spark, model, xs):
     return [
-        str(model.predict(normalize(x)) * mmip.COEFFICIENT * mm.COEFICIENT)
+        str(model.predict(normalize(x)) * mmip.COEFFICIENT * mm.COEFFICIENT)
         for x in xs
     ]
 
@@ -163,7 +163,13 @@ if __name__ == "__main__":
 
             version = 1
             lr_model = train_logistic_regression(trainRDD)
-            deploy_and_test_model(sc, clipper_conn, lr_model, version, True)
+            deploy_and_test_model(
+                sc,
+                clipper_conn,
+                lr_model,
+                version,
+                link_model=True,
+                predict_fn=predict_with_local_modules)
 
             version += 1
             svm_model = train_svm(trainRDD)
@@ -179,8 +185,12 @@ if __name__ == "__main__":
             test_model(clipper_conn, app_and_model_name, 1)
 
             version += 1
-            deploy_and_test_model(sc, clipper_conn, lr_model, version,
-                                  predict_with_local_modules)
+            deploy_and_test_model(
+                sc,
+                clipper_conn,
+                lr_model,
+                version,
+                predict_fn=predict_with_local_modules)
         except BenchmarkException as e:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")

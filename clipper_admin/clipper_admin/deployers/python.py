@@ -58,7 +58,7 @@ def create_endpoint(
         and used purely for user annotations.
     registry : str, optional
         The Docker container registry to push the freshly built model to. Note
-        that if you are running Clipper on Kubernetes, this registry must be accesible
+        that if you are running Clipper on Kubernetes, this registry must be accessible
         to the Kubernetes cluster in order to fetch the container from the registry.
     base_image : str, optional
         The base Docker image to build the new model image from. This
