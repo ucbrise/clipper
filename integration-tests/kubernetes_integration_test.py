@@ -126,5 +126,5 @@ if __name__ == "__main__":
             create_kubernetes_connection(cleanup=True, start_clipper=False)
             sys.exit(1)
     except Exception as e:
-        logger.exception("Exception: {}".format(e.msg()))
+        logger.exception("Exception: {}".format(e))
         sys.exit(1)
