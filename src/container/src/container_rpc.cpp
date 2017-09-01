@@ -93,5 +93,4 @@ void RPC::log_event(rpc::RPCEvent event) const {
 }
 
 }  // namespace container
-
 }  // namespace clipper

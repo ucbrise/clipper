@@ -160,11 +160,10 @@ TEST(ContainerTests, DoubleVectorParserCreatesInputsFromRawContentCorrectly) {
   std::vector<std::shared_ptr<clipper::Input>> inputs;
   for (auto const& vec : input_vecs) {
     inputs.push_back(std::make_shared<clipper::DoubleVector>(vec));
-  std::vector<std::vector<double>> input_vecs = create_primitive_parser_vecs<double>();
+  }
 
-  std::vector<std::shared_ptr<Input>> inputs;
-  for (auto const& vec : input_vecs) {
-    inputs.push_back(std::make_shared<DoubleVector>(vec));
+  ASSERT_EQ(input_vecs.size(), inputs.size());
+
   clipper::rpc::PredictionRequest prediction_request(
       inputs, clipper::InputType::Doubles);
 
@@ -218,3 +217,4 @@ TEST(ContainerTests,
 }
 
 }  // namespace
+
