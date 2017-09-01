@@ -3,6 +3,8 @@ import os
 import sys
 import requests
 import json
+import tempfile
+import shutil
 import numpy as np
 import time
 import logging
@@ -10,7 +12,7 @@ from test_utils import (create_docker_connection, BenchmarkException,
                         fake_model_data, headers, log_clipper_state)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
-from clipper_admin import __version__ as clipper_version
+from clipper_admin import __version__ as clipper_version, CLIPPER_TEMP_DIR
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
@@ -112,7 +114,13 @@ if __name__ == "__main__":
                         (num_apps, num_models))
             for a in range(num_apps):
                 create_and_test_app(clipper_conn, "testapp%s" % a, num_models)
-            logger.info(clipper_conn.get_clipper_logs())
+
+            if not os.path.exists(CLIPPER_TEMP_DIR):
+                os.makedirs(CLIPPER_TEMP_DIR)
+            tmp_log_dir = tempfile.mkdtemp(dir=CLIPPER_TEMP_DIR)
+            logger.info(clipper_conn.get_clipper_logs(logging_dir=tmp_log_dir))
+            # Remove temp files
+            shutil.rmtree(tmp_log_dir)
             log_clipper_state(clipper_conn)
             logger.info("SUCCESS")
         except BenchmarkException as e:
