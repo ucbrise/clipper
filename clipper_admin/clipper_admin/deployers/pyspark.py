@@ -1,5 +1,6 @@
 from __future__ import print_function, with_statement, absolute_import
 import shutil
+import pyspark
 import logging
 import re
 import os
@@ -10,11 +11,6 @@ from ..clipper_admin import ClipperException
 from .deployer_utils import save_python_function
 
 logger = logging.getLogger(__name__)
-
-try:
-    import pyspark
-except ImportError:
-    logger.warning("Could not import PySpark")
 
 
 def create_endpoint(
