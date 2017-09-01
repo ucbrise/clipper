@@ -17,6 +17,9 @@ from clipper_admin import __version__ as clipper_version
 logger = logging.getLogger(__name__)
 
 headers = {'Content-type': 'application/json'}
+if not os.path.exists(CLIPPER_TEMP_DIR):
+    os.makedirs(CLIPPER_TEMP_DIR)
+
 fake_model_data = tempfile.mkdtemp(dir=CLIPPER_TEMP_DIR)
 
 
