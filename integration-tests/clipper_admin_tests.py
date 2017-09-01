@@ -161,7 +161,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         if not os.path.exists(cl.CLIPPER_TEMP_DIR):
             os.makedirs(cl.CLIPPER_TEMP_DIR)
         tmp_log_dir = tempfile.mkdtemp(dir=cl.CLIPPER_TEMP_DIR)
-        log_file_names = self.clipper_conn.get_clipper_logs(logging_dir=tmp_log_dir)
+        log_file_names = self.clipper_conn.get_clipper_logs(
+            logging_dir=tmp_log_dir)
         self.assertIsNotNone(log_file_names)
         self.assertGreaterEqual(len(log_file_names), 1)
         for file_name in log_file_names:
