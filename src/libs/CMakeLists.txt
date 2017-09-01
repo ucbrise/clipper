@@ -58,16 +58,6 @@ target_include_directories(base64 INTERFACE
         $<INSTALL_INTERFACE:base64>)
 export(TARGETS base64 FILE Base64Config.cmake)
 
-##########################################
-### Rcpp for Dev - DELETE THIS BEFORE MERGING!
-##########################################
-
-add_library(rcpp INTERFACE)
-target_include_directories(rcpp INTERFACE
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/rcpp>
-        $<INSTALL_INTERFACE:rcpp>)
-export(TARGETS rcpp FILE RcppConfig.cmake)
-
 add_subdirectory(redox)
 
 add_subdirectory(rapidjson)
