@@ -131,7 +131,7 @@ class RPC {
   void stop();
 
   /**
-   * @return The most recent RPC events that have occurred
+   * @return The `num_events` most recent RPC events that have occurred
    */
   std::vector<RPCLogItem> get_events() const;
 
@@ -257,10 +257,17 @@ class RPC {
                 break;
 
               case RequestType::FeedbackRequest:
-                // Do nothing for now
+                throw std::runtime_error(
+                    "Received unsupported feedback request!");
                 break;
 
-              default: break;
+              default: {
+                std::stringstream ss;
+                ss << "Received RPC message of an unknown request type "
+                      "corresponding to integer code "
+                   << request_type_code;
+                throw std::runtime_error(ss.str());
+              }
             }
 
           } break;
@@ -270,7 +277,13 @@ class RPC {
             Rcpp::Rcout << "Error! Received erroneous new container message from "
                          "Clipper!"
                       << std::endl;
-          default: break;
+          default: {
+                std::stringstream ss;
+                ss << "Received RPC message of an unknown request type "
+                      "corresponding to integer code "
+                   << request_type_code;
+                throw std::runtime_error(ss.str());
+          }
         }
       }
       // The socket associated with the previous session is no longer
@@ -333,6 +346,13 @@ class RPC {
 
     // Make predictions
     std::vector<std::string> outputs = model.predict(inputs);
+
+    if (outputs.size() != inputs.size()) {
+      std::stringstream ss;
+      ss << "Number of model outputs: " << outputs.size()
+         << " does not equal the number of inputs: " << inputs.size();
+      throw std::runtime_error(ss.str());
+    }
 
     // Send the outputs as a prediction response
 
