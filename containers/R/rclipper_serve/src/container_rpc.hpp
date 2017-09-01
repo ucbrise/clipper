@@ -172,6 +172,8 @@ class RPC {
   template <typename D>
   void serve_model(Model<Input<D>>& model, std::string model_name,
                    int model_version, std::string clipper_address) {
+    // Initialize a ZeroMQ context with a single IO thread.
+    // This thread will be used by the socket we're about to create
     zmq::context_t context(1);
     bool connected = false;
     std::chrono::time_point<Clock> last_activity_time;
