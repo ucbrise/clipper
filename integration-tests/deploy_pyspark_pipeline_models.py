@@ -7,8 +7,6 @@ import numpy as np
 import time
 import logging
 
-import findspark
-findspark.init()
 from pyspark.ml import Pipeline
 from pyspark.ml.classification import LogisticRegression
 from pyspark.ml.feature import HashingTF, Tokenizer

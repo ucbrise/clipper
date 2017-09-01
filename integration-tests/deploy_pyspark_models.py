@@ -13,8 +13,6 @@ sys.path.insert(0, os.path.abspath('%s/util_direct_import/' % cur_dir))
 from util_package import mock_module_in_package as mmip
 import mock_module as mm
 
-import findspark
-findspark.init()
 from pyspark.mllib.classification import LogisticRegressionWithSGD
 from pyspark.mllib.classification import SVMWithSGD
 from pyspark.mllib.tree import RandomForest
