@@ -13,7 +13,7 @@ from .container_manager import CONTAINERLESS_MODEL_IMAGE
 from .exceptions import ClipperException, UnconnectedException
 from .version import __version__
 
-DEFAULT_LABEL = ["DEFAULT"]
+DEFAULT_LABEL = []
 DEFAULT_PREDICTION_CACHE_SIZE_BYTES = 33554432
 
 logging.basicConfig(
