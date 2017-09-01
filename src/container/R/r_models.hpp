@@ -11,17 +11,18 @@ using namespace container;
 class RNumericVectorModel : public Model<DoubleVector> {
  public:
   RNumericVectorModel(const Rcpp::Function function);
-  std::vector<std::string> predict(const std::vector<DoubleVector> inputs) const override;
+  std::vector<std::string> predict(
+      const std::vector<DoubleVector> inputs) const override;
 
  private:
   const Rcpp::Function function_;
-
 };
 
 class RIntegerVectorModel : public Model<IntVector> {
  public:
   RIntegerVectorModel(const Rcpp::Function function);
-  std::vector<std::string> predict(const std::vector<IntVector> inputs) const override;
+  std::vector<std::string> predict(
+      const std::vector<IntVector> inputs) const override;
 
  private:
   const Rcpp::Function function_;
@@ -30,7 +31,8 @@ class RIntegerVectorModel : public Model<IntVector> {
 class RRawVectorModel : public Model<ByteVector> {
  public:
   RRawVectorModel(const Rcpp::Function function);
-  std::vector<std::string> predict(const std::vector<ByteVector> inputs) const override;
+  std::vector<std::string> predict(
+      const std::vector<ByteVector> inputs) const override;
 
  private:
   const Rcpp::Function function_;
@@ -39,10 +41,11 @@ class RRawVectorModel : public Model<ByteVector> {
 class RSerializedInputModel : public Model<SerializableString> {
  public:
   RSerializedInputModel(const Rcpp::Function function);
-  std::vector<std::string> predict(const std::vector<SerializableString> inputs) const override;
+  std::vector<std::string> predict(
+      const std::vector<SerializableString> inputs) const override;
 
  private:
   const Rcpp::Function function_;
 };
 
-#endif //CLIPPER_R_MODELS_HPP
+#endif  // CLIPPER_R_MODELS_HPP
