@@ -33,8 +33,7 @@ def deploy_model(clipper_conn, name, version):
         "clipper/noop-container:{}".format(clipper_version),
         num_replicas=1,
         container_registry=
-        "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper",
-        force=True)
+        "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper")
     time.sleep(10)
 
     clipper_conn.link_model_to_app(app_name, model_name)

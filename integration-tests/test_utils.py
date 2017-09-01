@@ -7,20 +7,17 @@ import socket
 import docker
 import logging
 import time
+import tempfile
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
-from clipper_admin import ClipperConnection, DockerContainerManager, KubernetesContainerManager
+from clipper_admin import ClipperConnection, DockerContainerManager, KubernetesContainerManager, CLIPPER_TEMP_DIR
 from clipper_admin.container_manager import CLIPPER_DOCKER_LABEL
 from clipper_admin import __version__ as clipper_version
 
 logger = logging.getLogger(__name__)
 
 headers = {'Content-type': 'application/json'}
-fake_model_data = "/tmp/test123456"
-try:
-    os.mkdir(fake_model_data)
-except OSError:
-    pass
+fake_model_data = tempfile.mkdtemp(dir=CLIPPER_TEMP_DIR)
 
 
 class BenchmarkException(Exception):

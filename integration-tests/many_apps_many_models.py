@@ -29,8 +29,7 @@ def deploy_model(clipper_conn, name, version, link=False):
         "doubles",
         fake_model_data,
         "clipper/noop-container:{}".format(clipper_version),
-        num_replicas=1,
-        force=True)
+        num_replicas=1)
     time.sleep(10)
 
     if link:
