@@ -27,7 +27,6 @@ void RPC::stop() {
       serving_thread_.join();
     }
     log_info_formatted(LOGGING_TAG_CONTAINER, "Shut down successfully");
-    serving_thread_.join();
   }
 }
 
@@ -93,4 +92,5 @@ void RPC::log_event(rpc::RPCEvent event) const {
 }
 
 }  // namespace container
+
 }  // namespace clipper
