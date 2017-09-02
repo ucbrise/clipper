@@ -65,28 +65,22 @@ build_images () {
     # the order in which the images are built
     ###########################################################################
 
+    # Build Clipper core images
+    create_image lib_base ClipperLibBaseDockerfile $private
+    create_image query_frontend QueryFrontendDockerfile $public
+    create_image management_frontend ManagementFrontendDockerfile $public
+    create_image unittests ClipperTestsDockerfile  $private
 
-    # create_image lib_base ClipperLibBaseDockerfile $private
-    # create_image query_frontend QueryFrontendDockerfile $public
-    # create_image management_frontend ManagementFrontendDockerfile $public
-    # create_image unittests ClipperTestsDockerfile  $private
-
-
-    # Build Spark JVM Container
-    # cd $DIR/../containers/jvm
-    # time docker build -t clipper/spark-scala-container:$tag -f SparkScalaContainerDockerfile ./
-    # cd -
-
+    # Build containers
     create_image spark-scala-container SparkScalaContainerDockerfile $public
 
-    # Build the Python model containers
-    # first build base image
-    # create_image py-rpc RPCDockerfile $public
-    # create_image sum-container SumDockerfile  $private
-    # create_image noop-container NoopDockerfile $public
-    # create_image python-closure-container PyClosureContainerDockerfile $public
-    # create_image pyspark-container PySparkContainerDockerfile $public
-    # create_image tf_cifar_container TensorFlowCifarDockerfile $public
+    # First build Python base image
+    create_image py-rpc RPCDockerfile $public
+    create_image sum-container SumDockerfile  $private
+    create_image noop-container NoopDockerfile $public
+    create_image python-closure-container PyClosureContainerDockerfile $public
+    create_image pyspark-container PySparkContainerDockerfile $public
+    create_image tf_cifar_container TensorFlowCifarDockerfile $public
 }
 
 usage () {
