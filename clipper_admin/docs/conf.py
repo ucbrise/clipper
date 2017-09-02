@@ -34,7 +34,7 @@ templates_path = ['_templates']
 
 import sys
 import os
-import shlex
+# import shlex
 
 import sphinx_rtd_theme
 
