@@ -9,8 +9,6 @@ import numpy as np
 # sys.path.append(os.path.abspath("/lib/"))
 from clipper_admin.deployers import cloudpickle
 
-import findspark
-findspark.init()
 import pyspark
 from pyspark import SparkConf, SparkContext
 from pyspark.sql import SparkSession
