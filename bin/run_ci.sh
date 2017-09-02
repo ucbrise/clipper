@@ -15,7 +15,9 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $DIR/..
 tag=$(<VERSION.txt)
 
-./build_docker_images.sh
+# Build docker images
+./bin/build_docker_images.sh
 
+# Run tests
 docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp \
     -v /home/jenkins/.docker:/root/.docker clipper/unittests:$tag
