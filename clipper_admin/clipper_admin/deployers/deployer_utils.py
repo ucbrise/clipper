@@ -3,10 +3,12 @@ from __future__ import print_function, with_statement, absolute_import
 import logging
 from .cloudpickle import CloudPickler
 from .module_dependency import ModuleDependencyAnalyzer
+from ..clipper_admin import CLIPPER_TEMP_DIR
 import six
 import os
 import sys
 import shutil
+import tempfile
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 if sys.version < '3':
     import subprocess32 as subprocess
@@ -21,7 +23,6 @@ logger = logging.getLogger(__name__)
 
 
 def save_python_function(name, func):
-    relative_base_serializations_dir = "python_func_serializations"
     predict_fname = "func.pkl"
     environment_fname = "environment.yml"
     conda_dep_fname = "conda_dependencies.txt"
@@ -35,10 +36,10 @@ def save_python_function(name, func):
     serialized_prediction_function = s.getvalue()
 
     # Set up serialization directory
-    serialization_dir = os.path.join('/tmp', relative_base_serializations_dir,
-                                     name)
-    if not os.path.exists(serialization_dir):
-        os.makedirs(serialization_dir)
+    if not os.path.exists(CLIPPER_TEMP_DIR):
+        os.makedirs(CLIPPER_TEMP_DIR)
+    serialization_dir = tempfile.mkdtemp(dir=CLIPPER_TEMP_DIR)
+    logger.info("Saving function to {}".format(serialization_dir))
 
     # Export Anaconda environment
     environment_file_abs_path = os.path.join(serialization_dir,
