@@ -1,4 +1,4 @@
-ARG CODE_VERSION=develop
+ARG CODE_VERSION
 FROM clipper/lib_base:${CODE_VERSION}
 
 # install docker

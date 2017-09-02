@@ -1,3 +1,4 @@
+ARG CODE_VERSION
 FROM continuumio/anaconda:latest
 
 MAINTAINER Dan Crankshaw <dscrankshaw@gmail.com>

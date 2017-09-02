@@ -1,4 +1,4 @@
-ARG CODE_VERSION=develop
+ARG CODE_VERSION
 FROM clipper/py-rpc:${CODE_VERSION}
 
 COPY containers/python/noop_container.py /container/

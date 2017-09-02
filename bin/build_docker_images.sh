@@ -26,6 +26,8 @@ cd $CLIPPER_ROOT
 version_tag=$(<VERSION.txt)
 sha_tag=`git rev-parse --verify --short HEAD`
 
+namespace="clipper"
+
 # We build images with the SHA tag to try to prevent clobbering other images
 # being built from different branches on the same machine. This is particularly
 # useful for running these scripts on the Jenkins build cluster.
@@ -38,13 +40,16 @@ create_image () {
     local public=$3        # Push the built images to Docker Hub under
                             # the clipper namespace. Must have credentials.
                      
-    time docker build --build-arg CODE_VERSION=$sha_tag -t clipper/$image:$sha_tag \
+    echo "Building $namespace/$image:$sha_tag from file $dockerfile"
+    time docker build --build-arg CODE_VERSION=$sha_tag -t $namespace/$image:$sha_tag \
         -f dockerfiles/$dockerfile $CLIPPER_ROOT
-    docker tag clipper/$image:$sha_tag clipper/$image:$version_tag
+    docker tag $namespace/$image:$sha_tag $namespace/$image:$version_tag
 
-    if [ "$publish" = true && "$public" = true ] ; then
-        docker push clipper/$image:$version_tag
-        docker push clipper/$image:$sha_tag
+    if [ "$publish" = true ] && [ "$public" = true ] ; then
+        echo "Publishing $namespace/$image:$sha_tag"
+        docker push $namespace/$image:$sha_tag
+        echo "Publishing $namespace/$image:$version_tag"
+        docker push $namespace/$image:$version_tag
     fi
 }
 
@@ -66,9 +71,9 @@ build_images () {
 
     # TODO TODO TODO: fix this centralize
     # Build Spark JVM Container
-    cd $DIR/../containers/jvm
-    time docker build -t clipper/spark-scala-container:$tag -f SparkScalaContainerDockerfile ./
-    cd -
+    # cd $DIR/../containers/jvm
+    # time docker build -t clipper/spark-scala-container:$tag -f SparkScalaContainerDockerfile ./
+    # cd -
 
     # Build the Python model containers
     cd $DIR/..
@@ -100,14 +105,16 @@ EOF
 
 if [ "$#" == 0 ]
 then
-  publish=false
-  build_images
+  args="--nopublish"
 else
   args=$1
 fi
 
 case $args in
     -p | --publish )        publish=true
+                            build_images
+                            ;;
+    -n | --nopublish )      publish=false
                             build_images
                             ;;
     -h | --help )           usage
