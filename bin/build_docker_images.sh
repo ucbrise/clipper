@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 
-# This script builds all the public Docker images that the Clipper project distributes
-# and pushes them to Docker hub.
-# Each image is pushed with the tag <image_name>:version
-# In addition, if the version is "develop", each image will also be
-# tagged with <image_name>:git_hash. Git hash tags are only pushed for
-# the develop branch.
+# This script builds all the Clipper Docker images and publishes the useful ones to
+# Docker Hub (images that we don't publish are things like the unittest image and the
+# shared dependency base that don't really make sense to distribute on their own).
+# Each image that is built is tagged with two tags:
+# + The current Git SHA: <image_name>:git_hash
+# + The current version as read from VERSION.txt: <image_name>:version
+# For the images that we publish, both tags will be pushed.
 
 
 set -e
@@ -56,7 +57,7 @@ create_image () {
 
 # Build the Clipper Docker images.
 build_images () {
-    # True and false indicate whether or not to public the image. We public public images.
+    # True and false indicate whether or not to publish the image. We publish public images.
     local private=false
     local public=true
 

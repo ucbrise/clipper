@@ -1,3 +1,4 @@
+# This ARG isn't used but prevents warnings in the build script
 ARG CODE_VERSION
 FROM continuumio/anaconda:latest
 
