@@ -1,7 +1,5 @@
-ARG CODE_VERSION=develop
+ARG CODE_VERSION
 FROM clipper/lib_base:${CODE_VERSION}
-
-# Build Clipper
 
 COPY ./ /clipper
 
@@ -11,8 +9,8 @@ RUN cd /clipper/src/libs/spdlog \
     && ./configure --cleanup-quiet \
     && ./configure --release \
     && cd release \
-    && make query_frontend
+    && make management_frontend
 
-ENTRYPOINT ["/clipper/release/src/frontends/query_frontend"]
+ENTRYPOINT ["/clipper/release/src/management/management_frontend"]
 
 # vim: set filetype=dockerfile:

@@ -26,15 +26,15 @@ fi
 
 docker build -t clipper/py-rpc:$tag -f ./RPCDockerfile ./
 if [ $# -eq 0 ]; then
-	time docker build build --build-arg CODE_VERSION=$tag -t clipper/sum-bench:$tag -f SumBenchDockerfile ./
-	time docker build build --build-arg CODE_VERSION=$tag -t clipper/noop-bench:$tag -f NoopBenchDockerfile ./
+	time docker build build --build-arg CODE_VERSION=$tag -t clipper/sum-bench:$tag -f dockerfiles/SumBenchDockerfile ./
+	time docker build build --build-arg CODE_VERSION=$tag -t clipper/noop-bench:$tag -f dockerfiles/NoopBenchDockerfile ./
 else
 	echo $1
 	echo $2
 	echo $3
 	echo $4
-	time docker build build --build-arg CODE_VERSION=$tag -t clipper/sum-bench:$tag -f SumBenchDockerfile ./ --build-arg MODEL_NAME="$1" --build-arg MODEL_VERSION="$2"
-	time docker build build --build-arg CODE_VERSION=$tag -t clipper/noop-bench:$tag -f NoopBenchDockerfile ./ --build-arg MODEL_NAME="$3" --build-arg MODEL_VERSION="$4"
+	time docker build build --build-arg CODE_VERSION=$tag -t clipper/sum-bench:$tag -f dockerfiles/SumBenchDockerfile ./ --build-arg MODEL_NAME="$1" --build-arg MODEL_VERSION="$2"
+	time docker build build --build-arg CODE_VERSION=$tag -t clipper/noop-bench:$tag -f dockerfiles/NoopBenchDockerfile ./ --build-arg MODEL_NAME="$3" --build-arg MODEL_VERSION="$4"
 fi
 
 cd -
