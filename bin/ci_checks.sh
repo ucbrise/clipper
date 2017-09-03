@@ -23,7 +23,7 @@ tag=$(<VERSION.txt)
 cd -
 
 # Test docker login
-# docker pull 568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/query_frontend:$tag
+docker pull 568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/query_frontend:$tag
 
 # Set up credentials for K8s testing cluster.
 export KUBECONFIG=~/kubeconfig_$(date +"%Y%m%d%H%M%S")
