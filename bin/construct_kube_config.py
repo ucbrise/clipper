@@ -7,7 +7,9 @@ cert_auth_env_var = "CLIPPER_K8S_CERT_AUTH"
 client_cert_env_var = "CLIPPER_K8S_CLIENT_CERT"
 client_key_env_var = "CLIPPER_K8S_CLIENT_KEY"
 pw_env_var = "CLIPPER_K8S_PASSWORD"
-required_vars = [cert_auth_env_var, client_cert_env_var, client_key_env_var, pw_env_var]
+required_vars = [
+    cert_auth_env_var, client_cert_env_var, client_key_env_var, pw_env_var
+]
 
 
 def write_config(dest_path):
@@ -23,43 +25,42 @@ def write_config(dest_path):
     pw_data = os.environ[pw_env_var]
 
     base_config = {
-        'kind': 'Config',
+        'kind':
+        'Config',
         'preferences': {},
-        'current-context': 'cluster.clipper-k8s-testing.com',
-        'contexts': [
-            {
-                'name': 'cluster.clipper-k8s-testing.com',
-                'context': {
-                    'cluster': 'cluster.clipper-k8s-testing.com',
-                    'user': 'cluster.clipper-k8s-testing.com'}}],
-        'clusters': [
-            {
-                'cluster': {
-                    'certificate-authority-data': cert_auth_data,
-                    'server': 'https://api.cluster.clipper-k8s-testing.com'
-                },
-                'name': 'cluster.clipper-k8s-testing.com'
+        'current-context':
+        'cluster.clipper-k8s-testing.com',
+        'contexts': [{
+            'name': 'cluster.clipper-k8s-testing.com',
+            'context': {
+                'cluster': 'cluster.clipper-k8s-testing.com',
+                'user': 'cluster.clipper-k8s-testing.com'
             }
-        ],
-        'apiVersion': 'v1',
-        'users': [
-            {
-                'name': 'cluster.clipper-k8s-testing.com',
-                'user': {
-                    'username': 'admin',
-                    'password': pw_data,
-                    'client-key-data': client_key_data,
-                    'client-certificate-data': client_cert_data
-                }
+        }],
+        'clusters': [{
+            'cluster': {
+                'certificate-authority-data': cert_auth_data,
+                'server': 'https://api.cluster.clipper-k8s-testing.com'
             },
-            {
-                'name': 'cluster.clipper-k8s-testing.com-basic-auth',
-                'user': {
-                    'username': 'admin',
-                    'password': pw_data
-                }
+            'name': 'cluster.clipper-k8s-testing.com'
+        }],
+        'apiVersion':
+        'v1',
+        'users': [{
+            'name': 'cluster.clipper-k8s-testing.com',
+            'user': {
+                'username': 'admin',
+                'password': pw_data,
+                'client-key-data': client_key_data,
+                'client-certificate-data': client_cert_data
             }
-        ]
+        }, {
+            'name': 'cluster.clipper-k8s-testing.com-basic-auth',
+            'user': {
+                'username': 'admin',
+                'password': pw_data
+            }
+        }]
     }
     with open(dest_path, "w") as f:
         yaml.dump(base_config, f)
