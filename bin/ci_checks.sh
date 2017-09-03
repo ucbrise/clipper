@@ -39,6 +39,8 @@ trap clean_up SIGHUP SIGINT SIGTERM EXIT
 # + CLIPPER_K8S_CLIENT_KEY
 # + CLIPPER_K8S_PASSWORD
 python $DIR/construct_kube_config.py $KUBECONFIG
+
+# Test K8s cluster access
 kubectl get nodes
 
 $DIR/check_format.sh
