@@ -130,9 +130,7 @@ function run_integration_tests {
   python ../integration-tests/many_apps_many_models.py 2 3
   python ../integration-tests/deploy_pyspark_models.py
   python ../integration-tests/deploy_pyspark_pipeline_models.py
-  # TODO: K8s tests still have some kinks that need to be worked
-  # out on the cluster.
-  # python ../integration-tests/kubernetes_integration_test.py
+  python ../integration-tests/kubernetes_integration_test.py
 }
 
 function run_all_tests {
