@@ -23,7 +23,7 @@ setup(
         "clipper_admin", "clipper_admin.docker", "clipper_admin.kubernetes",
         "clipper_admin.deployers"
     ],
-    package_data={'clipper_admin': ['*.txt']},
+    package_data={'clipper_admin': ['*.txt', '*/*.yaml']},
     keywords=['clipper', 'prediction', 'model', 'management'],
     install_requires=[
         'requests',
