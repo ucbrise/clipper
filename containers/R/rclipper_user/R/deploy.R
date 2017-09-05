@@ -21,7 +21,7 @@ deploy_model = function(model_name, model_version, model_function, sample_input,
   sample_input_path = file.path(base_model_path, relative_model_path, "sample.rds")
   saveRDS(sample_input, sample_input_path)
   
-  package_path <- paste(system.file(package="rclipper"), "launch_container.py", sep="/")
+  package_path <- paste(system.file(package="rclipper"), "build_container.py", sep="/")
   
   if(missing(model_registry)) {
     python_call = sprintf("python %s -m %s -n %s -v %d",
