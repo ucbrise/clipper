@@ -225,8 +225,9 @@ class RPC {
         socket.recv(&msg_delimiter, 0);
         socket.recv(&msg_msg_type_bytes, 0);
 
-        MessageType message_type = static_cast<MessageType>(
-            static_cast<int*>(msg_msg_type_bytes.data())[0]);
+        int message_type_code = static_cast<int*>(msg_msg_type_bytes.data())[0];
+        rpc::MessageType message_type =
+            static_cast<rpc::MessageType>(message_type_code);
 
         switch (message_type) {
           case MessageType::Heartbeat: {
@@ -247,6 +248,7 @@ class RPC {
             socket.recv(&msg_request_id, 0);
             socket.recv(&msg_request_header, 0);
 
+            int msg_id = static_cast<int*>(msg_request_id.data())[0];
             int request_type_code =
                 static_cast<int*>(msg_request_header.data())[0];
             RequestType request_type =
@@ -282,9 +284,9 @@ class RPC {
                       << std::endl;
           default: {
                 std::stringstream ss;
-                ss << "Received RPC message of an unknown request type "
+                ss << "Received RPC message of an unknown message type "
                       "corresponding to integer code "
-                   << request_type_code;
+                   << message_type_code;
                 throw std::runtime_error(ss.str());
           }
         }
