@@ -28,7 +28,7 @@ deploy_model = function(model_name, model_version, model_function, sample_input,
                           package_path,
                           full_model_path, 
                           model_name,
-                          model_version
+                          model_version)
   } else {
     python_call = sprintf("python %s -m %s -n %s -v %d -r %s",
                           package_path,
