@@ -1,4 +1,4 @@
-deploy_model = function(model_name, model_version, clipper_ip, model_function, sample_input) {
+deploy_model = function(model_name, model_version, model_function, sample_input, model_registry=NULL) {
   base_model_path = "/tmp/r_models/"
   dir.create(file.path(base_model_path))
   
@@ -23,12 +23,20 @@ deploy_model = function(model_name, model_version, clipper_ip, model_function, s
   
   package_path <- paste(system.file(package="rclipper"), "launch_container.py", sep="/")
   
-  python_call = sprintf("python %s -m %s -n %s -v %d -i %s",
-                        package_path,
-                        full_model_path, 
-                        model_name,
-                        model_version,
-                        clipper_ip)
+  if(missing(model_registry)) {
+    python_call = sprintf("python %s -m %s -n %s -v %d",
+                          package_path,
+                          full_model_path, 
+                          model_name,
+                          model_version
+  } else {
+    python_call = sprintf("python %s -m %s -n %s -v %d -r %s",
+                          package_path,
+                          full_model_path, 
+                          model_name,
+                          model_version,
+                          model_registry)
+  }
   
   system(python_call)
 }

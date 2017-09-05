@@ -247,9 +247,10 @@ class RPC {
             socket.recv(&msg_request_id, 0);
             socket.recv(&msg_request_header, 0);
 
-            int msg_id = static_cast<int*>(msg_request_id.data())[0];
-            RequestType request_type = static_cast<RequestType>(
-                static_cast<int*>(msg_request_header.data())[0]);
+            int request_type_code =
+                static_cast<int*>(msg_request_header.data())[0];
+            RequestType request_type =
+                static_cast<RequestType>(request_type_code);
 
             switch (request_type) {
               case RequestType::PredictRequest:
