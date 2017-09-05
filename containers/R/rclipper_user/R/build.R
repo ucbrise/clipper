@@ -1,4 +1,4 @@
-deploy_model = function(model_name, model_version, model_function, sample_input, model_registry=NULL) {
+build_model = function(model_name, model_version, model_function, sample_input, model_registry=NULL) {
   base_model_path = "/tmp/r_models/"
   dir.create(file.path(base_model_path))
   
