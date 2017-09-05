@@ -226,8 +226,8 @@ class RPC {
         socket.recv(&msg_msg_type_bytes, 0);
 
         int message_type_code = static_cast<int*>(msg_msg_type_bytes.data())[0];
-        rpc::MessageType message_type =
-            static_cast<rpc::MessageType>(message_type_code);
+        MessageType message_type =
+            static_cast<MessageType>(message_type_code);
 
         switch (message_type) {
           case MessageType::Heartbeat: {
