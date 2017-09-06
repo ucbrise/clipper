@@ -4,6 +4,8 @@ import argparse
 import docker
 import tempfile
 import re
+import tarfile
+import six
 
 from cl_exceptions import ClipperException
 
@@ -12,7 +14,7 @@ from version import __version__
 deploy_regex_str = "[a-z0-9]([-a-z0-9]*[a-z0-9])?\Z"
 deployment_regex = re.compile(deploy_regex_str)
 
-CLIPPER_R_CONTAINER_BASE_IMAGE = "clipper/r-container-base:%s".format(__version__)
+CLIPPER_R_CONTAINER_BASE_IMAGE = "clipper/r-container-base:{}".format(__version__)
 
 def validate_versioned_model_name(name, version):
     if deployment_regex.match(name) is None:
@@ -31,8 +33,7 @@ def validate_versioned_model_name(name, version):
             "validation is '{reg}'".format(
                 version=version, reg=deploy_regex_str))
 
-def build_model(self,
-                name,
+def build_model(name,
                 version,
                 model_data_path,
                 base_image,
@@ -91,7 +92,7 @@ def build_model(self,
 
     version = str(version)
 
-    _validate_versioned_model_name(name, version)
+    validate_versioned_model_name(name, version)
 
     with tempfile.NamedTemporaryFile(
             mode="w+b", suffix="tar") as context_file:
@@ -103,6 +104,7 @@ def build_model(self,
             df_contents = six.StringIO(
                 "FROM {container_name}\nCOPY {data_path} /model/\n".format(
                     container_name=base_image, data_path=model_data_path))
+            print("BASE IMAGE: {}".format(base_image))
             df_tarinfo = tarfile.TarInfo('Dockerfile')
             df_contents.seek(0, os.SEEK_END)
             df_tarinfo.size = df_contents.tell()
@@ -116,12 +118,12 @@ def build_model(self,
             image = "{reg}/{image}".format(
                 reg=container_registry, image=image)
         docker_client = docker.from_env()
-        logger.info("Building model Docker image with model data from {}".
+        print("Building model Docker image with model data from {}".
                     format(model_data_path))
         docker_client.images.build(
             fileobj=context_file, custom_context=True, tag=image)
 
-    logger.info("Pushing model Docker image to {}".format(image))
+    print("Pushing model Docker image to {}".format(image))
     docker_client.images.push(repository=image)
     return image
 

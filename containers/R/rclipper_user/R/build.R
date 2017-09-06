@@ -1,6 +1,6 @@
 build_model = function(model_name, model_version, model_function, sample_input, model_registry=NULL) {
   base_model_path = "/tmp/r_models/"
-  dir.create(file.path(base_model_path))
+  dir.create(file.path(base_model_path), showWarnings = FALSE)
   
   time_format = "%Y-%m-%d-%H%-%M-%OS"
   # Force seconds field in timestamp
@@ -24,7 +24,7 @@ build_model = function(model_name, model_version, model_function, sample_input, 
   package_path <- paste(system.file(package="rclipper"), "build_container.py", sep="/")
   
   if(missing(model_registry)) {
-    python_call = sprintf("python %s -m %s -n %s -v %d",
+    python_call = sprintf("python %s -m %s -n %s -v %s",
                           package_path,
                           full_model_path, 
                           model_name,
