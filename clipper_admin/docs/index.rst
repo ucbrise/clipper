@@ -41,7 +41,7 @@ logic.
 
 .. note::
     You can find additional examples of using both model deployers in
-    `Clipper's integration tests <https://github.com/ucbrise/clipper/tree/develop/integration-tests>`_.
+    `Clipper's integration tests <https://github.com/ucbrise/clipper/tree/release-0.2/integration-tests>`_.
 
 Pure Python functions
 ~~~~~~~~~~~~~~~~~~~~~
@@ -72,12 +72,12 @@ While Clipper will try to capture additional dependencies and install them, thes
 built into the Docker image but instead will be downloaded and installed each time a container is started.
 As a result, this can significantly increase container initialization time (sometimes taking several
 minutes to start up). To remedy this, you can create a new Docker image based on the default
-image ``clipper/python-closure-container:develop`` that installs these additional dependencies.
+image ``clipper/python-closure-container:0.2`` that installs these additional dependencies.
 
 For example, if you knew your function needed the Python package ``networkx``, you could create
 the following Dockerfile::
 
-    FROM clipper/python-closure-container:develop
+    FROM clipper/python-closure-container:0.2
     RUN pip install networkx
 
 You would then use this Dockerfile to build a new image::
