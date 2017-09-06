@@ -26,6 +26,16 @@ cd $CLIPPER_ROOT
 # Initialize tags
 version_tag=$(<VERSION.txt)
 sha_tag=`git rev-parse --verify --short HEAD`
+branch_name=`git symbolic-ref --short HEAD`
+minor_version_exists=false
+
+if [[ $branch_name == "release-"* ]]; then
+  minor_version=`echo $branch_name | cut -d '-' -f2`
+  minor_version_exists=true
+fi
+
+
+
 
 namespace="clipper"
 
@@ -51,6 +61,16 @@ create_image () {
         docker push $namespace/$image:$sha_tag
         echo "Publishing $namespace/$image:$version_tag"
         docker push $namespace/$image:$version_tag
+
+        # If we're on a release branch, also tag and publish an image tagged
+        # with just the minor version. E.g. if on branch "release-0.2", we'll also
+        # publish an image tagged with "0.2". This image will be updated to the newest
+        # patch version every time we push a patch.
+        if [ "$minor_version_exists" = true ] ; then
+          docker tag $namespace/$image:$sha_tag $namespace/$image:$minor_version
+          echo "On a release branch. Publishing $namespace/$image:$minor_version"
+          docker push $namespace/$image:$minor_version
+        fi
     fi
 }
 
