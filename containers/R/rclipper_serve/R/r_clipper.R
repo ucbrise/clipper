@@ -74,10 +74,10 @@ serve_model = function(name, version, ip, port, fn, sample_input) {
         # so return it directly
         return(deserialized_pred_fn)
       }
-      input_class = class(deserialized_input)
-      if(input_class != input_class) {
+      deserialized_input_class = class(deserialized_input)
+      if(deserialized_input_class != input_class) {
         return(sprintf("Received invalid input of class `%s`` for model expecting inputs of class `%s`", 
-                       input_class, 
+                       deserialized_input_class, 
                        input_class))
       }
       return(pred_fn(deserialized_input))
