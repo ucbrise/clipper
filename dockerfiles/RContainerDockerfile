@@ -1,0 +1,24 @@
+# This ARG isn't used but prevents warnings in the build script
+ARG CODE_VERSION
+
+FROM r-base
+
+RUN apt-get update && apt-get --yes install git libzmq3-dev libtool libtool-bin libsodium-dev pkg-config build-essential autoconf automake
+
+RUN wget http://download.zeromq.org/zeromq-4.1.4.tar.gz && tar -xvf zeromq-4.1.4.tar.gz
+
+RUN cd zeromq-4.1.4 && ./autogen.sh && ./configure && make install
+
+COPY containers/R/rclipper_serve rclipper_serve
+COPY containers/R/serve_model.R serve_model.R
+COPY containers/R/r_container_entrypoint.sh r_container_entrypoint.sh
+
+ENV CLIPPER_MODEL_PATH=/model
+ENV CLIPPER_PORT=7000
+
+RUN R -e "install.packages(c('jsonlite', 'Rcpp', 'optparse', 'stringr'), repos='http://cran.us.r-project.org')" 
+
+RUN R CMD INSTALL rclipper_serve
+
+ENTRYPOINT ["/r_container_entrypoint.sh"]
+

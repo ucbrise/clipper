@@ -1,10 +1,10 @@
 Package: rclipper
 Type: Package
 Title: Containerizes and deploys R closures to Clipper
-Version: 1.0
+Version: 0.1
 Date: 2017-07-22
 Author: Corey Zumar
-Maintainer: Dan Crankshaw <crankshaw@eecs.berkeley.edu>
+Maintainer: Corey Zumar <czumar@eecs.berkeley.edu>
 Description: Containerizes and deploys R closures to Clipper
 License: Apache 2.0
 Imports:
