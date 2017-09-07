@@ -16,15 +16,6 @@ R CMD INSTALL rclipper_user
 
 cd $DIR
 
-Rscript rclipper_test.R
-if [ $? -neq 0 ]; then
-	echo "Failed during execution of R test script"
-	exit(1)
-fi
+Rscript build_test_model.R
 
-python rclipper_test.py
-
-if [ $? -neq 0]; then
-	echo "Failed during execution of python test script"
-	exit(1)
-fi
+python deploy_query_test_model.py

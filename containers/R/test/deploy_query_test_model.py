@@ -26,10 +26,15 @@ def deploy_and_link_model(conn):
 def send_requests():
 	for i in range(0, 5):
 		url = "http://localhost:1337/%s/predict" % APP_NAME
-		req_json = json.dumps({'input': [float(j) for j in range(0, i + 1)]})
+		input_item = [float(j) for j in range(0, i + 1)]
+		req_json = json.dumps({'input': input_item})
 		headers = {'Content-type': 'application/json'}
 		r = requests.post(url, headers=headers, data=req_json)
 		print(r.text)
+		response_json = json.loads(r.text)
+		assert(int(response_json["output"]) == len(input_item))
+
+	print("Success!")
 
 if __name__ == "__main__":
 	mgr = DockerContainerManager(redis_port=6379)
