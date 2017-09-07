@@ -40,7 +40,6 @@ sample_input <- tryCatch({
   print(e)
   stop("Failed to load sample input")
 })
-model_input_type = class(sample_input)
 
 model_function_info <- tryCatch({
   model_path = file.path(opts$model_data_path, "fn.rds")
@@ -106,4 +105,4 @@ for(i in seq_along(file_dependent_object_names)) {
 }
 
 rclipper.serve::serve_model(opts$model_name, strtoi(opts$model_version), opts$clipper_ip, 
-                      strtoi(opts$clipper_port), get(model_function_name), model_input_type)
+                      strtoi(opts$clipper_port), get(model_function_name), sample_input)

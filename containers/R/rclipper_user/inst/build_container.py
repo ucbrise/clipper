@@ -104,7 +104,6 @@ def build_model(name,
             df_contents = six.StringIO(
                 "FROM {container_name}\nCOPY {data_path} /model/\n".format(
                     container_name=base_image, data_path=model_data_path))
-            print("BASE IMAGE: {}".format(base_image))
             df_tarinfo = tarfile.TarInfo('Dockerfile')
             df_contents.seek(0, os.SEEK_END)
             df_tarinfo.size = df_contents.tell()
