@@ -14,7 +14,9 @@ from version import __version__
 deploy_regex_str = "[a-z0-9]([-a-z0-9]*[a-z0-9])?\Z"
 deployment_regex = re.compile(deploy_regex_str)
 
-CLIPPER_R_CONTAINER_BASE_IMAGE = "clipper/r-container-base:{}".format(__version__)
+CLIPPER_R_CONTAINER_BASE_IMAGE = "clipper/r-container-base:{}".format(
+    __version__)
+
 
 def validate_versioned_model_name(name, version):
     if deployment_regex.match(name) is None:
@@ -32,6 +34,7 @@ def validate_versioned_model_name(name, version):
             "an alphanumeric character (e.g. 'example.com', regex used for "
             "validation is '{reg}'".format(
                 version=version, reg=deploy_regex_str))
+
 
 def build_model(name,
                 version,
@@ -94,11 +97,9 @@ def build_model(name,
 
     validate_versioned_model_name(name, version)
 
-    with tempfile.NamedTemporaryFile(
-            mode="w+b", suffix="tar") as context_file:
+    with tempfile.NamedTemporaryFile(mode="w+b", suffix="tar") as context_file:
         # Create build context tarfile
-        with tarfile.TarFile(
-                fileobj=context_file, mode="w") as context_tar:
+        with tarfile.TarFile(fileobj=context_file, mode="w") as context_tar:
             context_tar.add(model_data_path)
             # From https://stackoverflow.com/a/740854/814642
             df_contents = six.StringIO(
@@ -114,17 +115,17 @@ def build_model(name,
         context_file.seek(0)
         image = "{name}:{version}".format(name=name, version=version)
         if container_registry is not None:
-            image = "{reg}/{image}".format(
-                reg=container_registry, image=image)
+            image = "{reg}/{image}".format(reg=container_registry, image=image)
         docker_client = docker.from_env()
-        print("Building model Docker image with model data from {}".
-                    format(model_data_path))
+        print("Building model Docker image with model data from {}".format(
+            model_data_path))
         docker_client.images.build(
             fileobj=context_file, custom_context=True, tag=image)
 
     print("Pushing model Docker image to {}".format(image))
     docker_client.images.push(repository=image)
     return image
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Launch an R model container")
@@ -147,7 +148,9 @@ if __name__ == "__main__":
         "-r",
         "--registry",
         type=str,
-        help="The Docker container registry to which to push the freshly built model image")
+        help=
+        "The Docker container registry to which to push the freshly built model image"
+    )
 
     args = parser.parse_args()
     arg_errs = []
@@ -167,4 +170,5 @@ if __name__ == "__main__":
             print(err)
         raise ClipperException()
 
-    build_model(args.model_name, args.model_version, args.model_data_path, CLIPPER_R_CONTAINER_BASE_IMAGE, args.registry)
+    build_model(args.model_name, args.model_version, args.model_data_path,
+                CLIPPER_R_CONTAINER_BASE_IMAGE, args.registry)
