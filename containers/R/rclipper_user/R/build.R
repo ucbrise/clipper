@@ -1,4 +1,18 @@
-# Note: We expect sample_input to be a single input, not a list of inputs
+#' Builds a Docker image for a Clipper model container that can be launched to serve a model
+#' with the provided prediction function
+#' 
+#' @param model_name string (character vector of length 1). The name to assign to the model image.
+#' @param model_version string (character vector of length 1). The version tag to assign to the model image.
+#' @param prediction_function function. This should accept a type-homogeneous list of 
+#' inputs and return a list of outputs of the same length. If the elements of the output list
+#' are not strings (character vectors of length 1), they will be converted to a serialized
+#' string representation via 'jsonlite'.
+#' @param sample_input For a prediction function that accepts a list of inputs of type X,
+#' this should be a single input of type X. This is used to validate the compatability
+#' of the function with Clipper and to determine the Clipper data type (bytes, ints, strings, etc)
+#' to associate with the model.
+#' @param model_registry string (character vector of length 1). The name of the image registry
+#' to which to upload the model image. If NULL, the image will not be uploaded to a registry.
 build_model = function(model_name, model_version, prediction_function, sample_input, model_registry=NULL) {
   sample_output <- tryCatch({
     prediction_function(list(sample_input))
@@ -32,7 +46,7 @@ build_model = function(model_name, model_version, prediction_function, sample_in
   dir.create(full_model_path)
   
   prediction_function_name = as.character(substitute(prediction_function))
-  serialize_function(prediction_function_name, full_model_path)
+  .serialize_function(prediction_function_name, full_model_path)
   
   sample_input_path = file.path(base_model_path, relative_model_path, "sample.rds")
   saveRDS(sample_input, sample_input_path)

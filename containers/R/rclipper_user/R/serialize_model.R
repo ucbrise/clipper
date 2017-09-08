@@ -1,4 +1,8 @@
-get_library_dependencies = function(cd_dependencies) {
+#' Given a list of dependencies for an object/function from
+#' CodeDepends, obtains all of the library dependencies.
+#' 
+#' @return A list of library dependencies.
+.get_library_dependencies = function(cd_dependencies) {
   env_dependencies = (.packages())
   namespace_dependencies = character()
   for(i in seq_along(cd_dependencies)) {
@@ -8,7 +12,11 @@ get_library_dependencies = function(cd_dependencies) {
   return(unique(library_dependencies))
 }
 
-get_input_dependencies = function(cd_dependencies) {
+#' Given a list of dependencies for a function from
+#' CodeDepends, obtains all of the input dependencies.
+#' 
+#' @return A list of input dependencies.
+.get_input_dependencies = function(cd_dependencies) {
   all_input_dependencies = character()
   for(i in seq_along(cd_dependencies)) {
     input_dependencies = cd_dependencies[[i]]@inputs
@@ -24,11 +32,15 @@ get_input_dependencies = function(cd_dependencies) {
   return(all_input_dependencies)
 }
 
-get_file_dependencies = function(cd_dependencies) {
+#' Given a list of dependencies for an object/function from
+#' CodeDepends, obtains all of the file dependencies.
+#' 
+#' @return A list of file dependencies.
+.get_file_dependencies = function(cd_dependencies) {
   # This is a bit hacky. `CodeDepends` doesn't always
   # return the same data type. Either a class extending
   # `list` or a class of type `S4` is returned. In the
-  # second case, it's sufficient to coerce the object to a list.
+  # second case, we need to coerce the object to a list.
   if(typeof(cd_dependencies) == "S4") {
     cd_dependencies = list(cd_dependencies)
   }
@@ -40,7 +52,12 @@ get_file_dependencies = function(cd_dependencies) {
   return(all_file_dependencies)
 }
 
-get_function_dependencies = function(cd_dependencies) {
+#' Given a list of dependencies for a function from
+#' CodeDepends, obtains all of the function dependencies.
+#' This is NOT recursive.
+#' 
+#' @return A list of function dependencies.
+.get_function_dependencies = function(cd_dependencies) {
   all_function_dependencies = character()
   for(i in seq_along(cd_dependencies)) {
     function_dependencies = names(cd_dependencies[[i]]@functions)
@@ -56,7 +73,14 @@ get_function_dependencies = function(cd_dependencies) {
   return(all_function_dependencies)
 }
 
-get_all_dependencies = function(fn_name, output_path) {
+#' Recursively obtains all of the dependencies of a provided
+#' function.
+#' 
+#' @param fn_name The name of the function for which to
+#' obtain dependencies.
+#' @return A list containing all of the input, object, file, 
+#' and function dependencies of the provided function.
+.get_all_dependencies = function(fn_name) {
   dependency_count = 0
   all_library_dependencies = character()
   all_file_dependencies = list()
@@ -73,24 +97,24 @@ get_all_dependencies = function(fn_name, output_path) {
       stop("CodeDepends encountered an error while analyzing the model function!")
     })
     
-    lib_deps = get_library_dependencies(cd_dependencies)
+    lib_deps = .get_library_dependencies(cd_dependencies)
     all_library_dependencies <<- c(all_library_dependencies, lib_deps)
     
-    func_file_deps = get_file_dependencies(cd_dependencies)
+    func_file_deps = .get_file_dependencies(cd_dependencies)
     if(length(func_file_deps) > 0) {
       # We can't assign a dictionary key to an empty vector,
       # so only make the assignment if we found file dependencies
       all_file_dependencies[[func_name]] <<- func_file_deps
     }
     
-    input_deps = get_input_dependencies(cd_dependencies)
+    input_deps = .get_input_dependencies(cd_dependencies)
     all_input_dependencies <<- c(all_input_dependencies, input_deps)
     
     for(i in seq_along(input_deps)) {
       input_name = input_deps[i]
       input = get(input_name)
       input_cd_deps = CodeDepends::getInputs(input)
-      input_file_deps = get_file_dependencies(input_cd_deps)
+      input_file_deps = .get_file_dependencies(input_cd_deps)
       if(length(input_file_deps) > 0) {
         # We can't assign a dictionary key to an empty vector,
         # so only make the assignment if we found file dependencies
@@ -98,7 +122,7 @@ get_all_dependencies = function(fn_name, output_path) {
       }
     }
     
-    func_deps = get_function_dependencies(cd_dependencies)
+    func_deps = .get_function_dependencies(cd_dependencies)
     for(i in seq_along(func_deps)) {
       dep_func_name = func_deps[i]
       if(!(dep_func_name %in% all_function_dependencies)) {
@@ -119,21 +143,29 @@ get_all_dependencies = function(fn_name, output_path) {
   return(list(all_library_dependencies, all_file_dependencies, all_input_dependencies, all_function_dependencies))
 }
 
-serialize_function = function(fn_name, output_dir_path) {
+#' Serializes the provided function and all of its
+#' dependencies to the specified output directory.
+#' 
+#' @param fn_name The name of the function to serialize.
+.serialize_function = function(fn_name, output_dir_path) {
   log_step = function(description, object_name) {
     print(paste(c(description, object_name), collapse=": "))
   }
   
-  all_dependencies = get_all_dependencies(fn_name)
+  all_dependencies = .get_all_dependencies(fn_name)
   library_dependencies = all_dependencies[[1]]
   file_dependencies = all_dependencies[[2]]
   input_dependencies = all_dependencies[[3]]
   function_dependencies = all_dependencies[[4]]
   
+  # Serialize the list of dependent libraries to a binary
+  # output file
   lib_out_path = file.path(output_dir_path, "libs.rds")
   saveRDS(library_dependencies, lib_out_path)
   log_step("Serialized list of dependent libraries", library_dependencies)
   
+  # Serialize each dependent input to a unique
+  # binary output file
   for(i in seq_along(input_dependencies)) {
     out_path = file.path(output_dir_path, sprintf("input_dep_%d.rds", i))
     input_name = input_dependencies[i]
@@ -141,6 +173,8 @@ serialize_function = function(fn_name, output_dir_path) {
     log_step("Serialized dependent object", input_name)
   }
   
+  # Serialize each dependent function to a unique
+  # binary output file
   for(i in seq_along(function_dependencies)) {
     function_out_path = file.path(output_dir_path, sprintf("fn_dep_%d.rds", i))
     function_name = function_dependencies[i]
@@ -159,6 +193,10 @@ serialize_function = function(fn_name, output_dir_path) {
   # new name after copying
   object_file_dependency_map = list()
   
+  # Serialize each dependent object to a unique binary output file.
+  # If an object references a dependent file, the file will be copied
+  # and renamed. A mapping between file-dependent objects and their 
+  # associated files will be also be produced and serialized.
   all_dependent_objects = c(function_dependencies, fn_name, input_dependencies)
   for(i in seq_along(all_dependent_objects)) {
     obj_name = all_dependent_objects[i]

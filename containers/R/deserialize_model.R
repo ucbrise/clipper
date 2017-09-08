@@ -1,6 +1,11 @@
 #!/usr/bin/env Rscript
 library("stringr")
 
+#' Given a path to a model serialized via the `rclipper` user library,
+#' deserializes the model and loads all of its dependencies into
+#' the global environment.
+#' 
+#' @return The name of the deserialized model prediction function.
 deserialize_model = function(model_data_path) {
   lib_deps <- tryCatch({
     libs_path = file.path(model_data_path, "libs.rds")
@@ -29,6 +34,8 @@ deserialize_model = function(model_data_path) {
   
   depfile_pattern = "dep_[0-9]+.rds"
   
+  # Loads all of the model's dependent objects, inputs,
+  # and functions into the global environment
   model_data_file_names = list.files(model_data_path)
   for(i in seq_along(model_data_file_names)) {
     file_name = model_data_file_names[i]
@@ -41,6 +48,8 @@ deserialize_model = function(model_data_path) {
         stop(paste(c("Failed to load dependency ", file_name), collapse=" "))
       })
       dep_name = dep_info[[1]]
+      # Assign the dependency to its original, pre-serialization
+      # name within the global environment
       assign(dep_name, get(dep_name), .GlobalEnv)
     }
   }
@@ -53,6 +62,8 @@ deserialize_model = function(model_data_path) {
     stop("Failed to load function-to-files dependency mapping")
   })
   
+  # For each object with a file dependency, associate the object
+  # with the copied, renamed file within the global environment
   file_dependent_object_names = names(object_file_dependency_map)
   for(i in seq_along(file_dependent_object_names)) {
     obj_name = file_dependent_object_names[i]

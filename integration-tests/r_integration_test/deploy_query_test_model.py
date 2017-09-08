@@ -37,8 +37,6 @@ def send_requests():
         response_json = json.loads(r.text)
         assert (int(response_json["output"]) == len(input_item))
 
-    print("Success!")
-
 
 if __name__ == "__main__":
     mgr = DockerContainerManager(redis_port=6379)
@@ -52,3 +50,5 @@ if __name__ == "__main__":
     time.sleep(5)
 
     send_requests()
+    conn.stop_all()
+    print("Success!")
