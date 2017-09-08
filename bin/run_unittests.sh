@@ -140,7 +140,7 @@ function run_integration_tests {
   python ../integration-tests/deploy_pyspark_models.py
   python ../integration-tests/deploy_pyspark_pipeline_models.py
   python ../integration-tests/kubernetes_integration_test.py
-  ./../integration-tests/r_integration_test/rclipper_test.sh
+  ./../integration-tests/r_integration_test/rclipper_test.sh $REDIS_PORT
 }
 
 function run_all_tests {

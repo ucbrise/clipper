@@ -4,6 +4,8 @@ set -e
 set -u
 set -o pipefail
 
+redis_port=$1
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 cd $DIR
@@ -24,4 +26,4 @@ cd $DIR
 
 Rscript build_test_model.R
 
-python deploy_query_test_model.py
+python deploy_query_test_model.py $redis_port

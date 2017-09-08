@@ -16,7 +16,6 @@ MODEL_NAME = "rtest-model"
 MODEL_VERSION = 1
 MODEL_IMAGE_NAME = "rtest-model:1"
 
-
 def create_application(conn):
     conn.register_application(APP_NAME, INPUT_TYPE, APP_DEFAULT_VALUE, APP_SLO)
 
@@ -35,11 +34,17 @@ def send_requests():
         r = requests.post(url, headers=headers, data=req_json)
         print(r.text)
         response_json = json.loads(r.text)
+        assert(not response_json["default"])
         assert (int(response_json["output"]) == len(input_item))
 
 
 if __name__ == "__main__":
-    mgr = DockerContainerManager(redis_port=6379)
+    if len(sys.argv) < 2:
+        print("Usage is 'python deploy_query_test_model.py <redis_port>")
+
+    redis_port = int(sys.argv[1])
+
+    mgr = DockerContainerManager(redis_port=redis_port)
     conn = ClipperConnection(mgr)
     conn.stop_all()
     conn.start_clipper()
