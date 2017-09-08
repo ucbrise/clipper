@@ -19,6 +19,7 @@ function usage {
     -f, --frontend              Run tests only for frontend folder.
     -j, --jvm-container         Run tests only for jvm container folder.
     -c, --cpp-container         Run tests only for the cpp container folder.
+    -rc, --r-container          Run tests only for the R container folder.
     -r, --rpc-container         Run tests only for rpc container folder.
     -i, --integration_tests     Run integration tests.
     -h, --help                  Display this message and exit.
@@ -103,7 +104,7 @@ function run_r_container_tests {
   cd $DIR
   cd ../containers/R/tests
   echo "Running R container tests..."
-  ./src/container/container_tests
+  ./run_tests.sh
 }
 
 function run_rpc_container_tests {
@@ -155,6 +156,8 @@ function run_all_tests {
   redis-cli -p $REDIS_PORT "flushall"
   run_cpp_container_tests
   redis-cli -p $REDIS_PORT "flushall"
+  run_r_container_tests
+  redis-cli -ip $REDIS_PORT "flushall"
   run_rpc_container_tests
   redis-cli -p $REDIS_PORT "flushall"
 }
@@ -184,6 +187,9 @@ case $args in
                             ;;
     -c | --cpp-container )  set_test_environment
                             run_cpp_container_tests
+                            ;;
+    -rc | --r-container )   set_test_environment
+                            run_r_container_tests
                             ;;
     -r | --rpc-container )  set_test_environment
                             run_rpc_container_tests
