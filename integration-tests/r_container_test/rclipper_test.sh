@@ -8,12 +8,12 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 version_tag=$(<VERSION.txt)
 
-CLIPPER_ROOT=$DIR/../../..
-cd $CLIPPER_ROOT_DIR
+CLIPPER_ROOT=$DIR/../..
+cd $CLIPPER_ROOT
 
-time docker build -t clipper/r-container-base:$version_tag -f ./RContainerDockerfile ./
+time docker build -t clipper/r-container-base:$version_tag -f ./dockerfiles/RContainerDockerfile ./
 
-USER_PACKAGE_DIR=$DIR/..
+USER_PACKAGE_DIR=$CLIPPER_ROOT/containers/R
 cd $USER_PACKAGE_DIR
 
 R CMD INSTALL rclipper_user
