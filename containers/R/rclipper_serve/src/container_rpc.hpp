@@ -1,3 +1,6 @@
+// NOTE: This file was slightly adapted from `container_rpc.hpp`
+// within the C++ container source to meet R packaging requirements.
+
 #ifndef CLIPPER_CONTAINER_RPC_HPP
 #define CLIPPER_CONTAINER_RPC_HPP
 
