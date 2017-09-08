@@ -6,6 +6,8 @@ set -o pipefail
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+cd $DIR
+
 version_tag=$(<VERSION.txt)
 
 CLIPPER_ROOT=$DIR/../..
