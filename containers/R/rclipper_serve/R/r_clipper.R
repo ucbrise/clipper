@@ -1,3 +1,15 @@
+#' Serves a model locally by connecting to clipper at the address
+#' specified by the provided ip and port
+#'
+#' @param name string (character vector of length 1). The name to give to the model.
+#' @param version string (character vector of length 1). The version to give to the model.
+#' @param ip string (character vector of length 1). The ip address of the Clipper host machine
+#' @param port integer. The port of the Clipper host machine
+#' @param fn function. The model's prediction function.
+#' @param sample_input For a prediction function that accepts a list of inputs of type X,
+#' this should be a single input of type X. This is used to validate the compatability
+#' of the function with Clipper and to determine the Clipper data type (bytes, ints, strings, etc)
+#' to associate with the model.
 serve_model = function(name, version, ip, port, fn, sample_input) {
   input_class = class(sample_input)
   pred_fn = function(input) {
