@@ -1,4 +1,4 @@
-#' Serves a model locally by connecting to clipper at the address
+#' Serves a model by connecting to clipper at the address
 #' specified by the provided ip and port
 #'
 #' @param name string (character vector of length 1). The name to give to the model.

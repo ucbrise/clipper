@@ -18,6 +18,7 @@ function usage {
     -m, --management            Run tests only for management folder.
     -f, --frontend              Run tests only for frontend folder.
     -j, --jvm-container         Run tests only for jvm container folder.
+    -c, --cpp-container         Run tests only for the cpp container folder.
     -r, --rpc-container         Run tests only for rpc container folder.
     -i, --integration_tests     Run integration tests.
     -h, --help                  Display this message and exit.
@@ -95,6 +96,13 @@ function run_jvm_container_tests {
 function run_cpp_container_tests {
   cd $DIR/../debug
   echo "Running CPP container tests..."
+  ./src/container/container_tests
+}
+
+function run_r_container_tests {
+  cd $DIR
+  cd ../containers/R/tests
+  echo "Running R container tests..."
   ./src/container/container_tests
 }
 
