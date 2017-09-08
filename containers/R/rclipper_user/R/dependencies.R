@@ -104,9 +104,9 @@ get_all_dependencies = function(fn_name, output_path) {
       if(!(dep_func_name %in% all_function_dependencies)) {
         # If we haven't explored this function dependency yet,
         # recursively obtain its dependencies
+        all_function_dependencies <<- c(all_function_dependencies, dep_func_name)
         get_deps(dep_func_name)
       }
-      all_function_dependencies <<- c(all_function_dependencies, dep_func_name)
     }
   }
   
