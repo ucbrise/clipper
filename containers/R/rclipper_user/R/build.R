@@ -99,7 +99,7 @@ build_model = function(model_name, model_version, prediction_function, sample_in
     "To deploy this model, execute the following command from a connected ClipperConnection object `conn`:",
     sprintf("conn.deploy_model(\"%s\", \"%s\", \"%s\", \"%s\", num_replicas=<num_container_replicas>)", 
             model_name, model_version, clipper_input_type, image_name),
-    ""
+    "",
     sep='\n')
   
   cat(deployment_instructions)
