@@ -54,7 +54,7 @@ serve_model = function(name, version, ip, port, fn, sample_input) {
           ip,
           port,
           pred_fn,
-          package="rclipper.serve")
+          package="Rclipper.serve")
   } else if(input_class == "integer") {
     .Call("serve_integer_vector_model",
           name,
@@ -62,7 +62,7 @@ serve_model = function(name, version, ip, port, fn, sample_input) {
           ip,
           port,
           pred_fn,
-          package="rclipper.serve")
+          package="Rclipper.serve")
   } else if(input_class == "raw") {
     .Call("serve_raw_vector_model",
           name,
@@ -70,7 +70,7 @@ serve_model = function(name, version, ip, port, fn, sample_input) {
           ip,
           port,
           pred_fn,
-          package="rclipper.serve")
+          package="Rclipper.serve")
   } else if(input_class %in% serialized_classes) {
     deserialize_pred_fn = function(input) {
       caught_error = FALSE
@@ -100,7 +100,7 @@ serve_model = function(name, version, ip, port, fn, sample_input) {
           ip,
           port,
           deserialize_pred_fn,
-          package="rclipper.serve")
+          package="Rclipper.serve")
   } else {
     err_msg = 
       sprintf("Function input type of class %s is not supported", 

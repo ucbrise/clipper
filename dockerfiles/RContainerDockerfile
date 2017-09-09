@@ -17,11 +17,11 @@ COPY containers/R/r_container_entrypoint.sh r_container_entrypoint.sh
 ENV CLIPPER_MODEL_PATH=/model
 ENV CLIPPER_PORT=7000
 
-RUN R -e "install.packages('devtools')" \
-    && R -e "devtools::install_version('jsonlite', version=1.5, repos='http://cran.us.r-project.org')" \
-    && R -e "devtools::install_version('Rcpp', version=0.12.12, repos='http://cran.us.r-project.org')" \
-    && R -e "devtools::install_version('optparse', version=1.4.4, repos='http://cran.us.r-project.org')" \
-    && R -e "devtools::install_version('stringr', version=1.2.0, repos='http://cran.us.r-project.org')"
+RUN R -e "install.packages('versions', repos='http://cran.us.r-project.org')" \
+    && R -e "versions::install.versions('jsonlite', version='1.5')" \
+    && R -e "versions::install.versions('Rcpp', version='0.12.12')" \
+    && R -e "versions::install.versions('optparse', version='1.4.4')" \
+    && R -e "versions::install.versions('stringr', version='1.2.0')"
 
 RUN R CMD INSTALL rclipper_serve
 

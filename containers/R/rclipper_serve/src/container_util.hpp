@@ -1,5 +1,7 @@
-// NOTE: This file was slightly adapted from `container_util.hpp`
-// within the C++ container source to meet R packaging requirements.
+/**
+  NOTE: This file was slightly adapted from `container_util.hpp`
+  within the C++ container source to meet R packaging requirements.
+*/
 
 #ifndef CLIPPER_UTIL_HPP
 #define CLIPPER_UTIL_HPP

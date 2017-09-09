@@ -1,6 +1,8 @@
-// NOTE: This file is a thinner version of `datatypes.hpp/cpp`
-// within the libclipper source. We use this thin copy
-// to decouple the R container from the Clipper C++ libraries.
+/**
+  NOTE: This file is a thinner version of `datatypes.hpp/cpp`
+  within the libclipper source. We use this thin copy
+  to decouple the R container from the Clipper C++ libraries.
+*/
 
 #ifndef CLIPPER_DATATYPES_HPP
 #define CLIPPER_DATATYPES_HPP

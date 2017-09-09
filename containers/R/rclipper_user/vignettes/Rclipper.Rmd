@@ -1,0 +1,133 @@
+---
+title: "Using the Rclipper package"
+author: "Corey Zumar"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using the Rclipper package}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Rclipper
+
+Rclipper is a package for building serveable Clipper models from R functions. Given an API-compatible R function,
+Rclipper's **build_model** function builds a Docker image for a Clipper model. This model can then
+be deployed to Clipper via the [Python clipper_admin package](https://pypi.python.org/pypi/clipper_admin).
+
+## Writing an API-compatible R prediction function
+An API-compatible prediction function must accept a type-homogeneous **list** of inputs of one of the following types:
+
+* Raw Vector
+* Integer Vector
+* Numeric Vector
+* String (length-1 character vector)
+* Data Frame
+* Matrix
+* Array
+* List
+
+Additionally, **given a list of inputs** of length *N*, a prediction function **must return a list of outputs**
+of length *N*. All elements of the output list must be of the same type.
+
+**Note:** If a prediction function returns a list of string (length-1 character vector) objects, each output
+will be delivered to Clipper as-is, without any additional serialization. Otherwise, all non-string outputs
+will be string-serialized via the [jsonlite package](https://cran.r-project.org/web/packages/jsonlite/index.html),
+and their serialized representations will be sent to Clipper.
+
+## Building a model
+Once you've written an API-compatible prediction function, you can build a Clipper model with it via
+the **build_model** function:
+
+```
+#' @param model_name string (character vector of length 1). The name to assign to the model image.
+#' @param model_version string (character vector of length 1). The version tag to assign to the model image.
+#' @param prediction_function function. This should accept a type-homogeneous list of 
+#' inputs and return a list of outputs of the same length. If the elements of the output list
+#' are not strings (character vectors of length 1), they will be converted to a serialized
+#' string representation via 'jsonlite'.
+#' @param sample_input For a prediction function that accepts a list of inputs of type X,
+#' this should be a single input of type X. This is used to validate the compatability
+#' of the function with Clipper and to determine the Clipper data type (bytes, ints, strings, etc)
+#' to associate with the model.
+#' @param model_registry string (character vector of length 1). The name of the image registry
+#' to which to upload the model image. If NULL, the image will not be uploaded to a registry.
+
+Rclipper::build_model(model_name, model_version, prediction_function, sample_input, model_registry = NULL)
+```
+
+This will build a docker image with the tag: *model_registry*/*model_name*:*model_version*. If no registry
+was specified, the image will have the tag: *model_name*:*model_version*. Additonally, this function will output
+a command that you can execute within an interactive Python environment to deploy the model with the 
+[clipper_admin package](https://pypi.python.org/pypi/clipper_admin).
+
+## Deploying a model
+Once you've built a model, use the provided command to deploy it with the 
+[clipper_admin package](https://pypi.python.org/pypi/clipper_admin). For information about how to
+register the model with an application so that it can be queried, please consult the 
+[clipper_admin API documentation](http://docs.clipper.ai/en/).
+
+## Querying a model
+After you've built a model, deployed the model, and registered the model with an application,
+you can query it with the input data of the correct type. The following table maps the input type of 
+your model's prediction function to the Clipper input type associated with your deployed model:
+
+| R input type   | Clipper Input Type |      JSON Format      | Example                        |
+|---------------:|:-------------------|:---------------------:|:------------------------------:|
+| Raw Vector     |   Bytes            | Base64-encoded string | Y2xpcHBlciB0ZXh0               |
+| Integer Vector |   Ints             | Integer array         | [1,2,3,4]                      |
+| Numeric Vector |   Floats           | Floating point array  | [1.0,2.0,3.0.,4.0]             | 
+| String         |   Strings          | String                | "input text"                   |
+| Data Frame     |   Strings          | String                | `jsonlite::toJSON(mtcars)`     |
+| Matrix         |   Strings          | String                | `jsonlite::toJSON(diag(3))`    |
+| Array          |   Strings          | String                | `jsonlite::toJSON(array(1:4))` |
+| List           |   Strings          | String                | `jsonlite::toJSON(list(1:4))`  |
+
+## Example
+
+### Define an API-compatible prediction function
+```{r}
+#' Given a list of vector inputs,
+#' outputs a list containing the
+#' length of each input vector as a string
+pred_fn = function(inputs) {
+  return(lapply(inputs, function(input) {
+    return(as.character(length(input)))
+  }))
+}
+
+print(pred_fn(list(c(1,2), c(3))))
+```
+
+### Build a model
+```{r}
+# Specify that the prediction function expects integer vectors
+# by supplying an integer vector as the sample input
+Rclipper::build_model("test-model", "1", pred_fn, sample_input = as.integer(c(1,2,3)))
+```
+
+### Deploy and link the model
+This assumes that a Clipper cluster is running on *localhost* with a registered application that has the name *app1*.
+In a Python interactive environment:
+```
+from clipper_admin import DockerContainerManager, ClipperConnection
+cm = DockerContainerManager()
+conn = ClipperConnection(cm)
+conn.connect()
+
+# Deploy a single replica of the model
+conn.deploy_model("test-model", "1", "ints", "test-model:1", replicas=1)
+
+conn.link_model_to_app("app1", "test-model")
+```
+
+### Query the model
+We can now query the model via the provided application with [cURL](https://github.com/curl/curl):
+```
+$ curl -X POST --header "Content-Type:application/json" -d '{"input": [1,2,3,4]}' 127.0.0.1:1337/app1/predict
+```
+
+```
+$ {"query_id":2,"output":4,"default":false}
+```
+

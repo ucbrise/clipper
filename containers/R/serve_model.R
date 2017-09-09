@@ -29,5 +29,5 @@ sample_input <- tryCatch({
 
 model_function_name = deserialize_model(opts$model_data_path)
 
-rclipper.serve::serve_model(opts$model_name, strtoi(opts$model_version), opts$clipper_ip, 
+Rclipper.serve::serve_model(opts$model_name, strtoi(opts$model_version), opts$clipper_ip, 
                       strtoi(opts$clipper_port), get(model_function_name), sample_input)

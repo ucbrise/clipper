@@ -1,5 +1,7 @@
-// NOTE: This file was slightly adapted from `container_rpc.cpp`
-// within the C++ container source to meet R packaging requirements.
+/**
+  NOTE: This file was slightly adapted from `container_rpc.cpp`
+  within the C++ container source to meet R packaging requirements.
+*/
 
 #include <algorithm>
 #include <iostream>

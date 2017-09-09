@@ -1,4 +1,4 @@
-Package: rclipper.serve
+Package: Rclipper.serve
 Type: Package
 Title: Serves R Models Locally With Clipper
 Version: 0.1

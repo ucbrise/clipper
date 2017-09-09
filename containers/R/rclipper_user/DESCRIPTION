@@ -1,4 +1,4 @@
-Package: rclipper
+Package: Rclipper
 Type: Package
 Title: Containerizes and deploys R closures to Clipper
 Version: 0.1
@@ -9,3 +9,6 @@ Description: Containerizes and deploys R closures to Clipper
 License: Apache 2.0
 Imports:
 	CodeDepends (>= 0.5-3)
+Suggests: knitr,
+    rmarkdown
+VignetteBuilder: knitr

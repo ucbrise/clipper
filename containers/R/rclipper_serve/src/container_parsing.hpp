@@ -1,5 +1,7 @@
-// NOTE: This file was slightly adapted from `container_parsing.hpp`
-// within the C++ container source to meet R packaging requirements.
+/**
+  NOTE: This file was slightly adapted from `container_parsing.hpp`
+  within the C++ container source to meet R packaging requirements.
+*/
 
 #ifndef CLIPPER_CONTAINER_PARSING_HPP
 #define CLIPPER_CONTAINER_PARSING_HPP

@@ -13,7 +13,26 @@
 #' to associate with the model.
 #' @param model_registry string (character vector of length 1). The name of the image registry
 #' to which to upload the model image. If NULL, the image will not be uploaded to a registry.
-build_model = function(model_name, model_version, prediction_function, sample_input, model_registry=NULL) {
+build_model = function(model_name, model_version, prediction_function, sample_input, model_registry = NULL) {
+  serialized_classes = c("data.frame", "matrix", "array", "list")
+  input_class = class(sample_input)
+  clipper_input_type <- switch(
+    input_class,
+    "raw" = "bytes",
+    "integer" = "ints",
+    "numeric" = "floats",
+    "character" = "strings",
+    {
+      if(input_class %not in% serialized_classes) {
+        err_msg = 
+          sprintf("Function input type of class %s is not supported", 
+                  input_class)
+        stop(err_msg)
+      }
+      "strings"
+    }
+  )
+  
   sample_output <- tryCatch({
     prediction_function(list(sample_input))
   }, error = function(e) {
@@ -51,7 +70,7 @@ build_model = function(model_name, model_version, prediction_function, sample_in
   sample_input_path = file.path(base_model_path, relative_model_path, "sample.rds")
   saveRDS(sample_input, sample_input_path)
   
-  package_path <- paste(system.file(package="rclipper"), "build_container.py", sep="/")
+  package_path <- paste(system.file(package="Rclipper"), "build_container.py", sep="/")
   
   if(missing(model_registry)) {
     python_call = sprintf("python %s -m %s -n %s -v %s",
@@ -69,4 +88,19 @@ build_model = function(model_name, model_version, prediction_function, sample_in
   }
   
   system(python_call)
+  
+  if(is.null(model_registry)) {
+    image_name = sprintf("%s:%s", model_name, model_version)
+  } else {
+    image_name = sprintf("%s/%s:%s", model_registry, model_name, model_version)
+  }
+  
+  deployment_instructions = paste(
+    "To deploy this model, execute the following command from a connected ClipperConnection object `conn`:",
+    sprintf("conn.deploy_model(\"%s\", \"%s\", \"%s\", \"%s\", num_replicas=<num_container_replicas>)", 
+            model_name, model_version, clipper_input_type, image_name),
+    ""
+    sep='\n')
+  
+  cat(deployment_instructions)
 }
