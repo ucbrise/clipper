@@ -12,7 +12,7 @@ from test_utils import (create_kubernetes_connection, BenchmarkException,
                         fake_model_data, headers, log_clipper_state)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
-from clipper_admin import __version__ as clipper_version, CLIPPER_TEMP_DIR
+from clipper_admin import __version__ as clipper_version, CLIPPER_TEMP_DIR, ClipperException
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # TODO: Add kubernetes specific checks that use kubernetes API
 
 
-def deploy_model(clipper_conn, name, version):
+def deploy_model(clipper_conn, name, version, link=False):
     app_name = "%s-app" % name
     model_name = "%s-model" % name
     clipper_conn.build_and_deploy_model(
@@ -38,7 +38,8 @@ def deploy_model(clipper_conn, name, version):
         "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper")
     time.sleep(10)
 
-    clipper_conn.link_model_to_app(app_name, model_name)
+    if link:
+        clipper_conn.link_model_to_app(app_name, model_name)
 
     success = False
     num_tries = 0
@@ -90,7 +91,10 @@ def create_and_test_app(clipper_conn, name, num_models):
         raise BenchmarkException("Error creating app %s" % app_name)
 
     for i in range(num_models):
-        deploy_model(clipper_conn, name, i)
+        if i == 0:
+            deploy_model(clipper_conn, name, i, link=True)
+        else:
+            deploy_model(clipper_conn, name, i)
         time.sleep(1)
 
 
@@ -130,6 +134,11 @@ if __name__ == "__main__":
         except BenchmarkException as e:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
+            create_kubernetes_connection(cleanup=True, start_clipper=False)
+            sys.exit(1)
+        except ClipperException as e:
+            log_clipper_state(clipper_conn)
+            logger.exception("ClipperException")
             create_kubernetes_connection(cleanup=True, start_clipper=False)
             sys.exit(1)
     except Exception as e:
