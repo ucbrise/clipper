@@ -61,6 +61,24 @@ std::vector<std::string> RRawVectorModel::predict(const std::vector<ByteVector> 
   return outputs;
 }
 
+RCharacterVectorModel::RCharacterVectorModel(const Rcpp::Function function) : function_(function) {
+
+}
+
+std::vector<std::string> RCharacterVectorModel::predict(const std::vector<SerializableString> inputs) const {
+  std::vector<std::string> outputs;
+  std::vector<Rcpp::CharacterVector> raw_inputs;
+  for(auto const& input : inputs) {
+    Rcpp::CharacterVector raw_input(input.get_data(), input.get_data() + input.get_length());
+    raw_inputs.push_back(std::move(raw_input));
+  }
+  Rcpp::List list = function_(Rcpp::wrap(raw_inputs));
+  for(Rcpp::List::iterator it = list.begin(); it != list.end(); ++it) {
+    outputs.push_back(Rcpp::as<std::string>(*it));
+  }
+  return outputs;
+}
+
 RSerializedInputModel::RSerializedInputModel(const Rcpp::Function function) : function_(function) {
 
 }

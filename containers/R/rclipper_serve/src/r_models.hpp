@@ -36,6 +36,15 @@ class RRawVectorModel : public Model<ByteVector> {
   const Rcpp::Function function_;
 };
 
+class RCharacterVectorModel : public Model<SerializableString> {
+ public:
+  RCharacterVectorModel(const Rcpp::Function function);
+  std::vector<std::string> predict(const std::vector<SerializableString> inputs) const override;
+
+ private:
+  const Rcpp::Function function_;
+};
+
 class RSerializedInputModel : public Model<SerializableString> {
  public:
   RSerializedInputModel(const Rcpp::Function function);

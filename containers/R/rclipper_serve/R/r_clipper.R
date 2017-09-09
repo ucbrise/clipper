@@ -71,6 +71,14 @@ serve_model = function(name, version, ip, port, fn, sample_input) {
           port,
           pred_fn,
           package="Rclipper.serve")
+  } else if(input_class == "character") {
+    .Call("serve_character_vector_model",
+          name,
+          version,
+          ip,
+          port,
+          pred_fn,
+          package="Rclipper.serve")
   } else if(input_class %in% serialized_classes) {
     deserialize_pred_fn = function(input) {
       caught_error = FALSE
