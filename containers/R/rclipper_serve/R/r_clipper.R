@@ -72,35 +72,51 @@ serve_model = function(name, version, ip, port, fn, sample_input) {
           pred_fn,
           package="Rclipper.serve")
   } else if(input_class == "character") {
+    parse_string_pred_fn = function(inputs) {
+      get_string = function(input) {
+        # The input arrives as a list of ASCII
+        # codes. We first map these to their
+        # corresponding characters.
+        char_list <- sapply(input, function(code) {
+          return(rawToChar(as.raw(code)))
+        })
+        # Concatenate the list of characters
+        # into a single string
+        return(paste(Reduce(c, char_list), collapse=""))
+      }
+      return(pred_fn(lapply(inputs, get_string)))
+    }
     .Call("serve_character_vector_model",
           name,
           version,
           ip,
           port,
-          pred_fn,
+          parse_string_pred_fn,
           package="Rclipper.serve")
   } else if(input_class %in% serialized_classes) {
-    deserialize_pred_fn = function(input) {
-      caught_error = FALSE
-      deserialized_input <- tryCatch({
-        jsonlite::unserializeJSON(input)
-      }, error = function(e) {
-        caught_error <<- TRUE
-        error_output = sprintf('{"error": %s"}', e)
-        return(error_output)
-      })
-      if(caught_error) {
-        # 'deserialized_input' is the error message, 
-        # so return it directly
-        return(deserialized_pred_fn)
+    deserialize_pred_fn = function(inputs) {
+      deserialize_input = function(input) {
+        caught_error = FALSE
+        deserialized_input <- tryCatch({
+          jsonlite::unserializeJSON(input)
+        }, error = function(e) {
+          caught_error <<- TRUE
+          error_output = sprintf('{"error": %s"}', e)
+          return(error_output)
+        })
+        if(caught_error) {
+          # 'deserialized_input' is the error message, 
+          # so return it directly
+          return(deserialized_pred_fn)
+        }
+        deserialized_input_class = class(deserialized_input)
+        if(deserialized_input_class != input_class) {
+          return(sprintf("Received invalid input of class `%s`` for model expecting inputs of class `%s`", 
+                         deserialized_input_class, 
+                         input_class))
+        }
       }
-      deserialized_input_class = class(deserialized_input)
-      if(deserialized_input_class != input_class) {
-        return(sprintf("Received invalid input of class `%s`` for model expecting inputs of class `%s`", 
-                       deserialized_input_class, 
-                       input_class))
-      }
-      return(pred_fn(deserialized_input))
+      return(pred_fn(lapply(inputs, deserialized_input)))
     }
     .Call("serve_serialized_input_model",
           name,
