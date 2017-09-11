@@ -67,9 +67,10 @@ RCharacterVectorModel::RCharacterVectorModel(const Rcpp::Function function) : fu
 
 std::vector<std::string> RCharacterVectorModel::predict(const std::vector<SerializableString> inputs) const {
   std::vector<std::string> outputs;
-  std::vector<Rcpp::CharacterVector> raw_inputs;
+  std::vector<Rcpp::RawVector> raw_inputs;
   for(auto const& input : inputs) {
-    Rcpp::CharacterVector raw_input(input.get_data(), input.get_data() + input.get_length());
+    Rcpp::Rcout << std::string(input.get_data(), input.get_length()) << std::endl;
+    Rcpp::RawVector raw_input(input.get_data(), input.get_data() + input.get_length());
     raw_inputs.push_back(std::move(raw_input));
   }
   Rcpp::List list = function_(Rcpp::wrap(raw_inputs));

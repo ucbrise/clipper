@@ -19,7 +19,7 @@ ENV CLIPPER_PORT=7000
 
 RUN R -e "install.packages('versions', repos='http://cran.us.r-project.org')" \
     && R -e "versions::install.versions('jsonlite', version='1.5')" \
-    && R -e "versions::install.versions('Rcpp', version='0.12.12')" \
+    && R -e "versions::install.versions('Rcpp', version='0.12.11')" \
     && R -e "versions::install.versions('optparse', version='1.4.4')" \
     && R -e "versions::install.versions('stringr', version='1.2.0')"
 

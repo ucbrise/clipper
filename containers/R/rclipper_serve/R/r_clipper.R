@@ -74,11 +74,11 @@ serve_model = function(name, version, ip, port, fn, sample_input) {
   } else if(input_class == "character") {
     parse_string_pred_fn = function(inputs) {
       get_string = function(input) {
-        # The input arrives as a list of ASCII
+        # The input arrives as a list of byte
         # codes. We first map these to their
         # corresponding characters.
         char_list <- sapply(input, function(code) {
-          return(rawToChar(as.raw(code)))
+          return(rawToChar(code))
         })
         # Concatenate the list of characters
         # into a single string
@@ -107,7 +107,7 @@ serve_model = function(name, version, ip, port, fn, sample_input) {
         if(caught_error) {
           # 'deserialized_input' is the error message, 
           # so return it directly
-          return(deserialized_pred_fn)
+          return(deserialized_input)
         }
         deserialized_input_class = class(deserialized_input)
         if(deserialized_input_class != input_class) {
@@ -116,7 +116,7 @@ serve_model = function(name, version, ip, port, fn, sample_input) {
                          input_class))
         }
       }
-      return(pred_fn(lapply(inputs, deserialized_input)))
+      return(pred_fn(lapply(inputs, deserialize_input)))
     }
     .Call("serve_serialized_input_model",
           name,

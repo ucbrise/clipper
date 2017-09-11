@@ -23,7 +23,7 @@ build_model = function(model_name, model_version, prediction_function, sample_in
     "numeric" = "floats",
     "character" = "strings",
     {
-      if(input_class %not in% serialized_classes) {
+      if(!(input_class %in% serialized_classes)) {
         err_msg = 
           sprintf("Function input type of class %s is not supported", 
                   input_class)
