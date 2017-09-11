@@ -1,9 +1,9 @@
 #' Serves a model by connecting to clipper at the address
 #' specified by the provided ip and port
 #'
-#' @param name string (character vector of length 1). The name to give to the model.
-#' @param version string (character vector of length 1). The version to give to the model.
-#' @param ip string (character vector of length 1). The ip address of the Clipper host machine
+#' @param name character vector of length 1. The name to give to the model.
+#' @param version character vector of length 1. The version to give to the model.
+#' @param ip character vector of length 1. The ip address of the Clipper host machine
 #' @param port integer. The port of the Clipper host machine
 #' @param fn function. The model's prediction function.
 #' @param sample_input For a prediction function that accepts a list of inputs of type X,
