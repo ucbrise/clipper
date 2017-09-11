@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 library("stringr")
 
-#' Given a path to a model serialized via the `rclipper` user library,
+#' Given a path to a model serialized via the `Rclipper` user library,
 #' deserializes the model and loads all of its dependencies into
 #' the global environment.
 #' 

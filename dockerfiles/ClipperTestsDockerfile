@@ -46,6 +46,12 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s
       && chmod +x kubectl \
       && mv kubectl /usr/local/bin/
 
+# Install R
+RUN echo "deb http://cran.rstudio.com/bin/linux/ubuntu xenial/" >> /etc/apt/sources.list \
+      && gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9 \
+      && gpg -a --export E084DAB9 | apt-key add - \
+      && apt-get update && apt-get install -y r-base
+
 COPY ./ /clipper
 
 # Patch Clipper

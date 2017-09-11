@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-require("rclipper")
+require("Rclipper")
 
 source("../deserialize_model.R")
 source("test_helper.R")
@@ -40,7 +40,7 @@ output_3 = matmul(A3)
 
 output_path = create_output_directory()
 
-rclipper::serialize_function(as.character(substitute(matmul)), output_path)
+Rclipper::serialize_function(as.character(substitute(matmul)), output_path)
 
 identity_mat = NULL
 B = NULL

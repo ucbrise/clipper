@@ -147,7 +147,7 @@
 #' dependencies to the specified output directory.
 #' 
 #' @param fn_name The name of the function to serialize.
-.serialize_function = function(fn_name, output_dir_path) {
+serialize_function = function(fn_name, output_dir_path) {
   log_step = function(description, object_name) {
     print(paste(c(description, object_name), collapse=": "))
   }

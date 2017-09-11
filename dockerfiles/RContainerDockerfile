@@ -27,3 +27,4 @@ RUN R CMD INSTALL rclipper_serve
 
 ENTRYPOINT ["/r_container_entrypoint.sh"]
 
+# vim: set filetype=dockerfile:

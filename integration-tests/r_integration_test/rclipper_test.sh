@@ -7,20 +7,12 @@ set -o pipefail
 redis_port=$1
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
-cd $DIR
-
-version_tag=$(<VERSION.txt)
-
 CLIPPER_ROOT=$DIR/../..
-cd $CLIPPER_ROOT
-
-time docker build -t clipper/r-container-base:$version_tag -f ./dockerfiles/RContainerDockerfile ./
 
 USER_PACKAGE_DIR=$CLIPPER_ROOT/containers/R
 cd $USER_PACKAGE_DIR
 
-R CMD INSTALL rclipper_user
+R CMD INSTALL Rclipper_user
 
 cd $DIR
 

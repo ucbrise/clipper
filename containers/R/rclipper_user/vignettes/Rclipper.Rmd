@@ -31,9 +31,9 @@ Additionally, **given a list of inputs** of length *N*, a prediction function **
 of length *N*. All elements of the output list must be of the same type.
 
 **Note:** If a prediction function returns a list of string (length-1 character vector) objects, each output
-will be delivered to Clipper as-is, without any additional serialization. Otherwise, all non-string outputs
+will be returned as-is, without any additional serialization. Otherwise, all non-string outputs
 will be string-serialized via the [jsonlite package](https://cran.r-project.org/web/packages/jsonlite/index.html),
-and their serialized representations will be sent to Clipper.
+and their serialized representations will be returned.
 
 ## Building a model
 Once you've written an API-compatible prediction function, you can build a Clipper model with it via
@@ -56,7 +56,7 @@ the **build_model** function:
 Rclipper::build_model(model_name, model_version, prediction_function, sample_input, model_registry = NULL)
 ```
 
-This will build a docker image with the tag: *model_registry*/*model_name*:*model_version*. If no registry
+This will build a Docker image with the tag: *model_registry*/*model_name*:*model_version*. If no registry
 was specified, the image will have the tag: *model_name*:*model_version*. Additonally, this function will output
 a command that you can execute within an interactive Python environment to deploy the model with the 
 [clipper_admin package](https://pypi.python.org/pypi/clipper_admin).
@@ -69,7 +69,7 @@ register the model with an application so that it can be queried, please consult
 
 ## Querying a model
 After you've built a model, deployed the model, and registered the model with an application,
-you can query it with the input data of the correct type. The following table maps the input type of 
+you can query it with input data of the correct type. The following table maps the input type of 
 your model's prediction function to the Clipper input type associated with your deployed model:
 
 | R input type   | Clipper Input Type |      JSON Format      | Example                        |
@@ -116,13 +116,14 @@ conn = ClipperConnection(cm)
 conn.connect()
 
 # Deploy a single replica of the model
-conn.deploy_model("test-model", "1", "ints", "test-model:1", replicas=1)
+conn.deploy_model(name="test-model", version="1", input_type="ints", image="test-model:1", replicas=1)
 
-conn.link_model_to_app("app1", "test-model")
+conn.link_model_to_app(app_name="app1", model_name="test-model")
 ```
 
 ### Query the model
-We can now query the model via the provided application with [cURL](https://github.com/curl/curl):
+You can now query the model from any HTTP client. 
+For example, directly from the command line with [cURL](https://github.com/curl/curl):
 ```
 $ curl -X POST --header "Content-Type:application/json" -d '{"input": [1,2,3,4]}' 127.0.0.1:1337/app1/predict
 ```

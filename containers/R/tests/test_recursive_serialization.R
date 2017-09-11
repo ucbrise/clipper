@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-require("rclipper")
+require("Rclipper")
 
 source("../deserialize_model.R")
 source("test_helper.R")
@@ -26,7 +26,7 @@ fib_helper = function(x) {
 
 output_path = create_output_directory()
 
-rclipper::serialize_function(as.character(substitute(fib_or_return)), output_path)
+Rclipper::serialize_function(as.character(substitute(fib_or_return)), output_path)
 
 original_fn = fib_or_return
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-require("rclipper")
+require("Rclipper")
 
 source("../deserialize_model.R")
 source("test_helper.R")
@@ -15,7 +15,7 @@ func = function(y) {
 
 output_path = create_output_directory()
 
-rclipper::serialize_function(as.character(substitute(func)), output_path)
+Rclipper::serialize_function(as.character(substitute(func)), output_path)
 
 output_1 = func(1)
 output_2 = func(10)

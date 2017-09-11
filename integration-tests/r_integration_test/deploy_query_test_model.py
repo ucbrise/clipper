@@ -4,6 +4,9 @@ import time
 import requests
 import json
 
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.abspath("%s/../../clipper_admin" % cur_dir))
+
 from clipper_admin import ClipperConnection, DockerContainerManager
 
 APP_NAME = "rtest_app"

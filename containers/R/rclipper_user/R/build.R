@@ -48,7 +48,7 @@ build_model = function(model_name, model_version, prediction_function, sample_in
               an object of type: %s", class(sample_output))
   }
   
-  base_model_path = "/tmp/r_models/"
+  base_model_path = "/tmp/clipper/"
   dir.create(file.path(base_model_path), showWarnings = FALSE)
   
   time_format = "%Y-%m-%d-%H%-%M-%OS"
@@ -65,7 +65,7 @@ build_model = function(model_name, model_version, prediction_function, sample_in
   dir.create(full_model_path)
   
   prediction_function_name = as.character(substitute(prediction_function))
-  .serialize_function(prediction_function_name, full_model_path)
+  serialize_function(prediction_function_name, full_model_path)
   
   sample_input_path = file.path(base_model_path, relative_model_path, "sample.rds")
   saveRDS(sample_input, sample_input_path)
