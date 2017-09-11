@@ -15,6 +15,10 @@ Rclipper is a package for building serveable Clipper models from R functions. Gi
 Rclipper's **build_model** function builds a Docker image for a Clipper model. This model can then
 be deployed to Clipper via the [Python clipper_admin package](https://pypi.python.org/pypi/clipper_admin).
 
+## Dependencies
+Rclipper depends on the [Python clipper_admin package](https://pypi.python.org/pypi/clipper_admin) for building and deploying models. In order to use
+this admin package, [Docker for Python](https://pypi.python.org/pypi/docker/) must also be installed.
+
 ## Writing an API-compatible R prediction function
 An API-compatible prediction function must accept a type-homogeneous **list** of inputs of one of the following types:
 
