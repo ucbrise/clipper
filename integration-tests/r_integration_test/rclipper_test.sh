@@ -17,6 +17,8 @@ R CMD INSTALL rclipper_user
 
 cd $DIR
 
+pip install -e ./clipper_admin/
+
 Rscript build_test_model.R
 
 python deploy_query_test_model.py
