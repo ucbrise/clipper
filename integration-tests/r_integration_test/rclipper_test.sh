@@ -12,7 +12,9 @@ CLIPPER_ROOT=$DIR/../..
 USER_PACKAGE_DIR=$CLIPPER_ROOT/containers/R
 cd $USER_PACKAGE_DIR
 
-R CMD INSTALL CodeDepends
+R -e "install.packages('versions', repos='http://cran.us.r-project.org')"
+R -e "versions::install.versions('CodeDepends', version='0.5-3')"
+
 R CMD INSTALL rclipper_user
 
 cd $DIR
