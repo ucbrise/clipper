@@ -17,7 +17,7 @@ R CMD INSTALL rclipper_user
 
 cd $DIR
 
-pip install -e $DIR/clipper_admin
+pip install -e $CLIPPER_ROOT/clipper_admin
 
 Rscript build_test_model.R
 
