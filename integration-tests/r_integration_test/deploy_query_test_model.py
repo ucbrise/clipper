@@ -61,8 +61,9 @@ def send_requests(conn):
             if response.status_code == requests.codes.ok and not result["default"]:
                 num_success += 1
             if num_success != num_preds > 0:
-                logger.error("Error: %d/%d predictions were default or unsuccessful" %
-                            (num_preds - num_success, num_preds))
+                logger.error(
+                    "Error: %d/%d predictions were default or unsuccessful" %
+                    (num_preds - num_success, num_preds))
         if num_success > num_preds / 2.0:
             success = True
         num_tries += 1
