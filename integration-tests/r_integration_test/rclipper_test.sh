@@ -12,6 +12,7 @@ CLIPPER_ROOT=$DIR/../..
 USER_PACKAGE_DIR=$CLIPPER_ROOT/containers/R
 cd $USER_PACKAGE_DIR
 
+R CMD INSTALL CodeDepends
 R CMD INSTALL rclipper_user
 
 cd $DIR
