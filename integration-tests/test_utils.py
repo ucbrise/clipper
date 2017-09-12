@@ -87,7 +87,7 @@ def create_kubernetes_connection(cleanup=True, start_clipper=True):
     if cleanup:
         cl.stop_all()
         # Give kubernetes some time to clean up
-        time.sleep(10)
+        time.sleep(20)
     if start_clipper:
         logging.info("Starting Clipper")
         cl.start_clipper(
