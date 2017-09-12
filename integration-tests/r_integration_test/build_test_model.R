@@ -7,4 +7,4 @@ predict_func = function(inputs) {
 	}))
 }
 
-rclipper::build_model(MODEL_NAME, MODEL_VERSION, predict_func, as.numeric(7))
+Rclipper::build_model(MODEL_NAME, MODEL_VERSION, predict_func, as.numeric(7))
