@@ -95,10 +95,19 @@ serve_model = function(name, version, ip, port, fn, sample_input) {
           package="Rclipper.serve")
   } else if(input_class %in% serialized_classes) {
     deserialize_pred_fn = function(inputs) {
-      deserialize_input = function(input) {
+      deserialize_and_predict = function(input) {
+        # The input arrives as a list of byte
+        # codes. We first map these to their
+        # corresponding characters.
+        char_list <- sapply(input, function(code) {
+          return(rawToChar(code))
+        })
+        # Concatenate the list of characters
+        # into a single string
+        serialized_str = paste(Reduce(c, char_list), collapse="")
         caught_error = FALSE
         deserialized_input <- tryCatch({
-          jsonlite::unserializeJSON(input)
+          jsonlite::unserializeJSON(serialized_str)
         }, error = function(e) {
           caught_error <<- TRUE
           error_output = sprintf('{"error": %s"}', e)
@@ -111,12 +120,16 @@ serve_model = function(name, version, ip, port, fn, sample_input) {
         }
         deserialized_input_class = class(deserialized_input)
         if(deserialized_input_class != input_class) {
-          return(sprintf("Received invalid input of class `%s`` for model expecting inputs of class `%s`", 
+          return(sprintf("Received invalid input of class `%s`` 
+                         for model expecting inputs of class `%s`", 
                          deserialized_input_class, 
                          input_class))
         }
+        # Note: This evaluation procedure doesn't allow for 
+        # batching with serialized R class inputs
+        return(pred_fn(list(deserialized_input))[[1]])
       }
-      return(pred_fn(lapply(inputs, deserialize_input)))
+      return(lapply(inputs, deserialize_and_predict))
     }
     .Call("serve_serialized_input_model",
           name,

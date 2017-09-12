@@ -69,7 +69,6 @@ std::vector<std::string> RCharacterVectorModel::predict(const std::vector<Serial
   std::vector<std::string> outputs;
   std::vector<Rcpp::RawVector> raw_inputs;
   for(auto const& input : inputs) {
-    Rcpp::Rcout << std::string(input.get_data(), input.get_length()) << std::endl;
     Rcpp::RawVector raw_input(input.get_data(), input.get_data() + input.get_length());
     raw_inputs.push_back(std::move(raw_input));
   }
@@ -86,9 +85,9 @@ RSerializedInputModel::RSerializedInputModel(const Rcpp::Function function) : fu
 
 std::vector<std::string> RSerializedInputModel::predict(const std::vector<SerializableString> inputs) const {
   std::vector<std::string> outputs;
-  std::vector<Rcpp::CharacterVector> serialized_inputs;
+  std::vector<Rcpp::RawVector> serialized_inputs;
   for(auto const& input : inputs) {
-    Rcpp::CharacterVector serialized_input(input.get_data(), input.get_data() + input.get_length());
+    Rcpp::RawVector serialized_input(input.get_data(), input.get_data() + input.get_length());
     serialized_inputs.push_back(std::move(serialized_input));
   }
   Rcpp::List list = function_(Rcpp::wrap(serialized_inputs));
