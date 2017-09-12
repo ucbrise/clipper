@@ -10,8 +10,8 @@ import numpy as np
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../../clipper_admin" % cur_dir))
 
-from clipper_admin import ClipperConnection, DockerContainerManager
-from ..test_utils import create_docker_connection, headers, BenchmarkException
+sys.path.insert(0, os.path.abspath("%s/.." % cur_dir))
+from test_utils import create_docker_connection, headers, BenchmarkException
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
