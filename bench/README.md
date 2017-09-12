@@ -21,10 +21,12 @@ You'll want to unzip the .tar.gz file manually.
 ### (Optional) Download CIFAR10 Python Dataset for SKLearn Model 
 You can skip this section if you do not intend to use our SKLearn Model for benchmarking.
 
-Our SKLearn model depends on the CIFAR10 Python dataset for training. In order to train the model with this dataset, it must be converted to CSV format. The [CIFAR10 python download utility](../examples/tutorial/download_cifar.py) can be used to obtain the required CSV-formatted dataset.
+Our SKLearn model depends on the CIFAR10 Python dataset for training. In order to train the model with this dataset, it must be converted to CSV format. We provide scripts to download the dataset and convert it to CSV. From the root of the Clipper repo:
 
-```sh
-../examples/tutorial/download_cifar.py /path/to/save/dataset
+```
+# Download the dataset to <download_path>. It will be saved to <download_path>/cifar-10-batches-py
+python examples/tutorial/download_cifar.py <download_path>
+python examples/tutorial/extract_cifar.py <download_path> None None
 ```
 
 
@@ -43,26 +45,36 @@ When using these scripts you'll have the ability to set `model_name`, `model_ver
 
   - [`bench/setup_noop_bench.sh`](https://github.com/ucbrise/clipper/tree/develop/bench/setup_noop_bench.sh) runs the [`noop_container`](https://github.com/ucbrise/clipper/blob/develop/containers/python/noop_container.py). The default `model_name` is `"bench_noop"`.
   
-    ```./bench/setup_noop_bench.sh [[<model_name> <model_version> [<clipper_ip>]]] ```
+  ```
+  ./bench/setup_noop_bench.sh [[<model_name> <model_version> [<clipper_ip>]]]
+  ```
     
   - [`bench/setup_sum_bench.sh`](https://github.com/ucbrise/clipper/tree/develop/bench/setup_sum_bench.sh) runs the [`sum_container`](https://github.com/ucbrise/clipper/blob/develop/containers/python/sum_container.py). The default `model_name` is `"bench_sum"`.
 
-    ```./bench/setup_sum_bench.sh [[<model_name> <model_version> [<clipper_ip>]]] ```
+  ```
+  ./bench/setup_sum_bench.sh [[<model_name> <model_version> [<clipper_ip>]]]
+  ```
   
   - [`bench/setup_sklearn_bench.sh`](https://github.com/ucbrise/clipper/tree/develop/bench/setup_sklearn_bench.sh) runs the [`sklearn_cifar_container`](https://github.com/ucbrise/clipper/blob/develop/containers/python/sklearn_cifar_container). If you wish to use this option, remember to download the CIFAR10 python dataset first. The default `model_name` is `"bench_sklearn_cifar"`.
     
-    ```./bench/setup_sklearn_bench.sh <path_to_cifar_python_dataset> [[<model_name> <model_version> [<clipper_ip>]]]```
+  ```
+  ./bench/setup_sklearn_bench.sh <download_path> [[<model_name> <model_version> [<clipper_ip>]]]
+  ```
 
-    Note that `<path_to_cifar_python_dataset>` should be the path to the **directory** containing a parsed CIFAR10 CSV data file with name `cifar_train.data`.
+Note that `<path_to_cifar_python_dataset>` should be the path to the **directory** containing a parsed CIFAR10 CSV data file with name `cifar_train.data`.
 
 - If you want to deploy the model in a Docker container, you'll need to build the model container Docker image (`model_version` is `1` by default):
   - Create the Docker images for the [`noop_container`](https://github.com/ucbrise/clipper/blob/develop/containers/python/noop_container.py)  and [`sum_container`](https://github.com/ucbrise/clipper/blob/develop/containers/python/sum_container.py). The default names for each model are the same as the ones listed above.
 
-    ```./bench/build_bench_docker_images.sh```
+  ```
+  ./bench/build_bench_docker_images.sh
+  ```
   
   - Run the container on the same host that the benchmarking tool will be run from:
   
-    ```docker run [-e MODEL_NAME=<nondefault_model_name>] [-e MODEL_VERSION=<nondefault_model_version>] [-e IP=<non-aws-clipper-ip>] <image_id>```
+  ```
+  docker run [-e MODEL_NAME=<nondefault_model_name>] [-e MODEL_VERSION=<nondefault_model_version>] [-e IP=<non-aws-clipper-ip>] <image_id>
+  ```
         
     If you do not supply an `IP` environment variable in your `docker run ...` command, our script will assume you are on an AWS instance and attempt to grab its IP address.
 
@@ -72,16 +84,27 @@ When using these scripts you'll have the ability to set `model_name`, `model_ver
 Create a JSON configuration file that specifies values for the following parameters:
 
 - **cifar\_data_path**: The path to a *specific binary data file* within the CIFAR10 binary dataset with a name of the form `data_batch_<n>.bin`. For example, `<path_to_unzipped_cifar_directory>/data_batch_1.bin`.
+
 - **num_threads**: The number of threads used to send benchmark requests. This should be a positive integer. Each of these threads will access its own copy of the data and will send requests according to *num_batches*, *request\_batch_size*, *request\_batch\_delay_micros*, *poisson_delay*, and *prevent\_cache_hits*, all described below.
+
 - **num_batches**: The total number of request batches to be sent by each thread.
+
 - **request\_batch_size**: The number of requests to be sent in each batch.
+
 - **request\_batch\_delay_micros**: The per-thread delay between batches, in microseconds. *request\_batch\_delay_micros* and *request\_batch_size* together determine the burstiness of your supplied workload.
+
 - **poisson_delay**: `"true"` if you wish for the delays between request batches to be drawn from a poisson distribution with mean `request_batch_delay_micros`. `"false"` if you wish for the delay between request batches to be uniform.
+
 - **prevent\_cache_hits**: `"true"` if you wish for the script to modify datapoints (possibly at the expense of prediction accuracy) in order to prevent hitting Clipper's internal prediction cache. `"false"` otherwise.
+
 - **latency_objective**: The latency objective for the app that will be created, in microseconds
+
 - **benchmark\_report_path**: Path to the file in which you want your benchmarking reports saved
+
 - **report\_delay_seconds**: The delay between each flush of benchmarking metrics to your reports file, in seconds. At each flush, the metrics will reset. If you set the value of this field to `-1`, the metrics will only flush once all threads sending benchmarking requests have terminated.
+
 - **model_name**: The name of the model Clipper should connect to. Note that this must be the same as the model name your model-container uses.
+
 - **model_version**: Your model's version. Again, this must be the same version that your model-container uses.
 
 Your JSON config file should look like:
