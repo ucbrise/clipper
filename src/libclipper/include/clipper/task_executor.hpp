@@ -501,7 +501,7 @@ class TaskExecutor {
       }
       for (int batch_num = 0; batch_num < batch_size; ++batch_num) {
         InflightMessage completed_msg = keys[batch_num];
-        cache_->put(completed_msg.model_, completed_msg.query_id_,
+        cache_->put(completed_msg.model_, completed_msg.input_,
                     Output{parsed_response.outputs_[batch_num],
                            {completed_msg.model_}});
       }
