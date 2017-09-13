@@ -472,9 +472,9 @@ class TaskExecutor {
       InflightMessage &first_message = keys[0];
       const VersionedModelId &cur_model = first_message.model_;
       const int cur_replica_id = first_message.replica_id_;
-      auto task_latency = current_time - first_message.send_time_;
-      long task_latency_micros =
-          std::chrono::duration_cast<std::chrono::microseconds>(task_latency)
+      auto batch_latency = current_time - first_message.send_time_;
+      long batch_latency_micros =
+          std::chrono::duration_cast<std::chrono::microseconds>(batch_latency)
               .count();
 
       // Because an RPCResponse is guaranteed to contain data received from
@@ -484,8 +484,7 @@ class TaskExecutor {
       std::shared_ptr<ModelContainer> processing_container =
           active_containers_->get_model_replica(cur_model, cur_replica_id);
 
-      processing_container->update_throughput(batch_size, task_latency_micros);
-      processing_container->latency_hist_.insert(task_latency_micros);
+      processing_container->update_throughput(batch_size, batch_latency_micros);
 
       boost::optional<ModelMetrics> cur_model_metric;
       auto cur_model_metric_entry = model_metrics_.find(cur_model);
@@ -496,14 +495,19 @@ class TaskExecutor {
         (*cur_model_metric).throughput_->mark(batch_size);
         (*cur_model_metric).num_predictions_->increment(batch_size);
         (*cur_model_metric).batch_size_->insert(batch_size);
-        (*cur_model_metric)
-            .latency_->insert(static_cast<int64_t>(task_latency_micros));
       }
       for (int batch_num = 0; batch_num < batch_size; ++batch_num) {
         InflightMessage completed_msg = keys[batch_num];
         cache_->put(completed_msg.model_, completed_msg.input_,
                     Output{parsed_response.outputs_[batch_num],
                            {completed_msg.model_}});
+        auto task_latency = current_time - completed_msg.send_time_;
+        long task_latency_micros =
+            std::chrono::duration_cast<std::chrono::microseconds>(task_latency).count();
+        if (cur_model_metric) {
+          (*cur_model_metric).
+              latency_->insert(static_cast<int64_t>(task_latency_micros));
+        }
       }
     }
   }
