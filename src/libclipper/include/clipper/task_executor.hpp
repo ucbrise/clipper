@@ -503,10 +503,11 @@ class TaskExecutor {
                            {completed_msg.model_}});
         auto task_latency = current_time - completed_msg.send_time_;
         long task_latency_micros =
-            std::chrono::duration_cast<std::chrono::microseconds>(task_latency).count();
+            std::chrono::duration_cast<std::chrono::microseconds>(task_latency)
+                .count();
         if (cur_model_metric) {
-          (*cur_model_metric).
-              latency_->insert(static_cast<int64_t>(task_latency_micros));
+          (*cur_model_metric)
+              .latency_->insert(static_cast<int64_t>(task_latency_micros));
         }
       }
     }
