@@ -477,6 +477,10 @@ class TaskExecutor {
           std::chrono::duration_cast<std::chrono::microseconds>(task_latency)
               .count();
 
+      // Because an RPCResponse is guaranteed to contain data received from
+      // a single model container, the processing container for the first
+      // InflightMessage in the batch is the same processing container
+      // for all InflightMessage objects in the batch
       std::shared_ptr<ModelContainer> processing_container =
           active_containers_->get_model_replica(cur_model, cur_replica_id);
 
