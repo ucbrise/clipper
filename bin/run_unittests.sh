@@ -157,7 +157,7 @@ function run_all_tests {
   run_cpp_container_tests
   redis-cli -p $REDIS_PORT "flushall"
   run_r_container_tests
-  redis-cli -ip $REDIS_PORT "flushall"
+  redis-cli -p $REDIS_PORT "flushall"
   run_rpc_container_tests
   redis-cli -p $REDIS_PORT "flushall"
 }
