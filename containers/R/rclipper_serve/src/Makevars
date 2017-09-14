@@ -1,0 +1,5 @@
+# This is the path to the prebuilt libzmq dynamic library
+# that is present in the docker container 'clipper/r_container'.
+# You may have to change this path to run the package locally.
+
+PKG_LIBS=/usr/local/lib/libzmq.so

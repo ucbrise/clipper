@@ -1,0 +1,17 @@
+Package: Rclipper.serve
+Type: Package
+Title: Serves R Models Locally With Clipper
+Version: 0.1
+Date: 2017-07-15
+Author: Corey Zumar
+Maintainer: Corey Zumar <czumar@eecs.berkeley.edu>
+Description: Serves R models locally with Clipper.
+    This uses Rcpp as an interface between Clipper's
+    C++ model container and user-defined R functions.
+License: GPL (>= 2)
+Imports: 
+	Rcpp (>= 0.12.11),
+	jsonlite
+LinkingTo: Rcpp
+SystemRequirements: C++11
+
