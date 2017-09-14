@@ -33,13 +33,15 @@ MODEL_IMAGE_NAME = "rtest-model:1"
 
 
 def create_application(clipper_conn):
-    clipper_conn.register_application(APP_NAME, INPUT_TYPE, APP_DEFAULT_VALUE, APP_SLO)
+    clipper_conn.register_application(APP_NAME, INPUT_TYPE, APP_DEFAULT_VALUE,
+                                      APP_SLO)
     time.sleep(1)
 
 
 def deploy_and_link_model(clipper_conn):
     subprocess.check_call(["Rscript", "build_test_model.R"])
-    clipper_conn.deploy_model(MODEL_NAME, MODEL_VERSION, INPUT_TYPE, MODEL_IMAGE_NAME)
+    clipper_conn.deploy_model(MODEL_NAME, MODEL_VERSION, INPUT_TYPE,
+                              MODEL_IMAGE_NAME)
     clipper_conn.link_model_to_app(app_name=APP_NAME, model_name=MODEL_NAME)
 
 
