@@ -80,7 +80,7 @@ your model's prediction function to the Clipper input type associated with your 
 |-----------------:|:-------------------|:---------------------:|:------------------------------:|
 | Raw Vector       |   Bytes            | Base64-encoded string | Y2xpcHBlciB0ZXh0               |
 | Integer Vector   |   Ints             | Integer array         | [1,2,3,4]                      |
-| Numeric Vector   |   Floats           | Floating point array  | [1.0,2.0,3.0.,4.0]             | 
+| Numeric Vector   |   Doubles          | Floating point array  | [1.0,2.0,3.0.,4.0]             | 
 | Character Vector |   Strings          | String                | "input text"                   |
 | Data Frame       |   Strings          | String                | `jsonlite::toJSON(mtcars)`     |
 | Matrix           |   Strings          | String                | `jsonlite::toJSON(diag(3))`    |

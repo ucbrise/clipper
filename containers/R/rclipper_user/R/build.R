@@ -20,7 +20,7 @@ build_model = function(model_name, model_version, prediction_function, sample_in
     input_class,
     "raw" = "bytes",
     "integer" = "ints",
-    "numeric" = "floats",
+    "numeric" = "doubles",
     "character" = "strings",
     {
       if(!(input_class %in% serialized_classes)) {
