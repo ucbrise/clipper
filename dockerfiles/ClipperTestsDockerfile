@@ -52,6 +52,13 @@ RUN echo "deb http://cran.rstudio.com/bin/linux/ubuntu xenial/" >> /etc/apt/sour
       && gpg -a --export E084DAB9 | apt-key add - \
       && apt-get update && apt-get install -y r-base
 
+RUN R -e "install.packages('versions', repos='http://cran.us.r-project.org')" \
+    && R -e "versions::install.versions('jsonlite', version='1.5')" \
+    && R -e "versions::install.versions('Rcpp', version='0.12.11')" \
+    && R -e "versions::install.versions('optparse', version='1.4.4')" \
+    && R -e "versions::install.versions('stringr', version='1.2.0')" \
+    && R -e "versions::install.versions('CodeDepends', version='0.5-3')"
+
 COPY ./ /clipper
 
 # Patch Clipper
