@@ -469,7 +469,23 @@ class TaskExecutor {
     std::chrono::time_point<std::chrono::system_clock> current_time =
         std::chrono::system_clock::now();
     if (batch_size > 0) {
-      const VersionedModelId &cur_model = keys[0].model_;
+      InflightMessage &first_message = keys[0];
+      const VersionedModelId &cur_model = first_message.model_;
+      const int cur_replica_id = first_message.replica_id_;
+      auto batch_latency = current_time - first_message.send_time_;
+      long batch_latency_micros =
+          std::chrono::duration_cast<std::chrono::microseconds>(batch_latency)
+              .count();
+
+      // Because an RPCResponse is guaranteed to contain data received from
+      // a single model container, the processing container for the first
+      // InflightMessage in the batch is the same processing container
+      // for all InflightMessage objects in the batch
+      std::shared_ptr<ModelContainer> processing_container =
+          active_containers_->get_model_replica(cur_model, cur_replica_id);
+
+      processing_container->update_throughput(batch_size, batch_latency_micros);
+
       boost::optional<ModelMetrics> cur_model_metric;
       auto cur_model_metric_entry = model_metrics_.find(cur_model);
       if (cur_model_metric_entry != model_metrics_.end()) {
@@ -482,38 +498,19 @@ class TaskExecutor {
       }
       for (int batch_num = 0; batch_num < batch_size; ++batch_num) {
         InflightMessage completed_msg = keys[batch_num];
-        process_completed_message(completed_msg,
-                                  parsed_response.outputs_[batch_num],
-                                  current_time, cur_model_metric);
+        cache_->put(completed_msg.model_, completed_msg.input_,
+                    Output{parsed_response.outputs_[batch_num],
+                           {completed_msg.model_}});
+        auto task_latency = current_time - completed_msg.send_time_;
+        long task_latency_micros =
+            std::chrono::duration_cast<std::chrono::microseconds>(task_latency)
+                .count();
+        if (cur_model_metric) {
+          (*cur_model_metric)
+              .latency_->insert(static_cast<int64_t>(task_latency_micros));
+        }
       }
     }
-  }
-
-  void process_completed_message(
-      InflightMessage &completed_msg, std::string &deserialized_output,
-      std::chrono::time_point<std::chrono::system_clock> &current_time,
-      boost::optional<ModelMetrics> cur_model_metric) {
-    std::shared_ptr<ModelContainer> processing_container =
-        active_containers_->get_model_replica(completed_msg.model_,
-                                              completed_msg.replica_id_);
-
-    auto task_latency = current_time - completed_msg.send_time_;
-    long task_latency_micros =
-        std::chrono::duration_cast<std::chrono::microseconds>(task_latency)
-            .count();
-    if (processing_container != nullptr) {
-      processing_container->update_throughput(1, task_latency_micros);
-      processing_container->latency_hist_.insert(task_latency_micros);
-    } else {
-      log_error(LOGGING_TAG_TASK_EXECUTOR,
-                "Could not find processing container. Something is wrong.");
-    }
-    if (cur_model_metric) {
-      (*cur_model_metric)
-          .latency_->insert(static_cast<int64_t>(task_latency_micros));
-    }
-    cache_->put(completed_msg.model_, completed_msg.input_,
-                Output{deserialized_output, {completed_msg.model_}});
   }
 };
 
