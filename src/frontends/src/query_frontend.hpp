@@ -318,27 +318,25 @@ class RequestHandler {
           }
         }
 
-        folly::Future<std::vector<Response>> predictions = decode_and_handle_predict(
+        folly::Future<Response> prediction = decode_and_handle_predict(
             request->content.string(), name, versioned_models, policy,
             latency_slo_micros, input_type);
 
-        predictions
-            .then([response, app_metrics](std::vector<Response>& responses) {
-
-              for (Response r : responses) {
-                  // Update metrics
-                  if (r.output_is_default_) {
-                      app_metrics.default_pred_ratio_->increment(1, 1);
-                  } else {
-                      app_metrics.default_pred_ratio_->increment(0, 1);
-                  }
-                  app_metrics.latency_->insert(r.duration_micros_);
-                  app_metrics.num_predictions_->increment(1);
-                  app_metrics.throughput_->mark(1);
-
-                  std::string content = get_prediction_response_content(r);
-                  respond_http(content, "200 OK", response);
+        prediction
+            .then([response, app_metrics](Response r) {
+              // Update metrics
+              if (r.output_is_default_) {
+                app_metrics.default_pred_ratio_->increment(1, 1);
+              } else {
+                app_metrics.default_pred_ratio_->increment(0, 1);
               }
+              app_metrics.latency_->insert(r.duration_micros_);
+              app_metrics.num_predictions_->increment(1);
+              app_metrics.throughput_->mark(1);
+
+              std::string content = get_prediction_response_content(r);
+              respond_http(content, "200 OK", response);
+
             })
             .onError([response](const std::exception& e) {
               clipper::log_error_formatted(clipper::LOGGING_TAG_CLIPPER,
@@ -483,39 +481,20 @@ class RequestHandler {
    *  "input" := [double] | [int] | [string] | [byte] | [float]
    * }
    */
-  // should return folly::Future<std:vector<Try<Response>>>
-  folly::Future<std::vector<Response>> decode_and_handle_predict(
+  folly::Future<Response> decode_and_handle_predict(
       std::string json_content, std::string name,
       std::vector<VersionedModelId> models, std::string policy,
       long latency_slo_micros, InputType input_type) {
     rapidjson::Document d;
     clipper::json::parse_json(json_content, d);
-
-    if (d.HasMember("input_batch")) {
-        rapidjson::Value::Member* old_member = d.FindMember("input_batch");
-        d.AddMember("input", old_member->value, d.GetAllocator());
-        d.RemoveMember("input_batch");
-    } else { // d.HasMember("input") instead
-        rapidjson::Value v = d["input"];
-        d["input"].SetArray().PushBack(v, d.GetAllocator());
-    }
-
-    std::vector<folly::Future<Response>> predictions;
-    rapidjson::Document d_temp;
-    const Value& requests = d["input"];
-    for (SizeType i = 0; i < requests.Size(); i++) {
-        long uid = 0;
-        d_temp.AddMember("input", requests[i], d_temp.GetAllocator());
-        // NOTE: We will eventually support personalization again so this commented
-        // out code is intentionally left in as a placeholder.
-        // long uid = clipper::json::get_long(d_temp, "uid");
-        std::shared_ptr<Input> input = clipper::json::parse_input(input_type, d_temp);
-        auto prediction = query_processor_.predict(
-                Query{name, uid, input, latency_slo_micros, policy, models});
-        predictions.push_back(prediction);
-        d_temp.RemoveMember("input");
-    }
-      return folly::Future::collectAll(predictions);
+    long uid = 0;
+    // NOTE: We will eventually support personalization again so this commented
+    // out code is intentionally left in as a placeholder.
+    // long uid = clipper::json::get_long(d, "uid");
+    std::shared_ptr<Input> input = clipper::json::parse_input(input_type, d);
+    auto prediction = query_processor_.predict(
+        Query{name, uid, input, latency_slo_micros, policy, models});
+    return prediction;
   }
 
   /*
