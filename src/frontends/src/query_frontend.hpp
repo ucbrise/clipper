@@ -318,25 +318,32 @@ class RequestHandler {
           }
         }
 
-        folly::Future<Response> prediction = decode_and_handle_predict(
+        // STEP 1: decode_and_handle_predict should take a batch query
+          folly::Future<std::vector<folly::Try<Response>>> predictions = decode_and_handle_predict(
             request->content.string(), name, versioned_models, policy,
             latency_slo_micros, input_type);
 
-        prediction
-            .then([response, app_metrics](Response r) {
-              // Update metrics
-              if (r.output_is_default_) {
-                app_metrics.default_pred_ratio_->increment(1, 1);
-              } else {
-                app_metrics.default_pred_ratio_->increment(0, 1);
+        // STEP 3: apply this lambda in a loop for each prediction response
+        predictions
+            .then([response, app_metrics](std::vector<folly::Try<Response>> responses) {
+              std::string final_content;
+              for (Response r : responses)  {
+                // Update metrics
+                if (r.output_is_default_) {
+                  app_metrics.default_pred_ratio_->increment(1, 1);
+                } else {
+                  app_metrics.default_pred_ratio_->increment(0, 1);
+                }
+                app_metrics.latency_->insert(r.duration_micros_);
+                app_metrics.num_predictions_->increment(1);
+                app_metrics.throughput_->mark(1);
+
+                std::string content = get_prediction_response_content(r);
+                // STEP 4: append "content" to a "final_content" string instead of respond_http'ing each one
+                final_content += content + "\n";
+                // STEP 5: catch errors when calling this function, and append the error to "final_content"
               }
-              app_metrics.latency_->insert(r.duration_micros_);
-              app_metrics.num_predictions_->increment(1);
-              app_metrics.throughput_->mark(1);
-
-              std::string content = get_prediction_response_content(r);
-              respond_http(content, "200 OK", response);
-
+              respond_http(final_content, "200 OK", response);
             })
             .onError([response](const std::exception& e) {
               clipper::log_error_formatted(clipper::LOGGING_TAG_CLIPPER,
@@ -388,6 +395,7 @@ class RequestHandler {
             }
           }
         }
+        // STEP 2: decode_and_handle_update should take a batch query
         folly::Future<FeedbackAck> update =
             decode_and_handle_update(request->content.string(), name,
                                      versioned_models, policy, input_type);
