@@ -325,23 +325,27 @@ class RequestHandler {
 
         // STEP 3: apply this lambda in a loop for each prediction response
         predictions
-            .then([response, app_metrics](std::vector<folly::Try<Response>> responses) {
+            .then([response, app_metrics](std::vector<folly::Try<Response>> tries) {
               std::string final_content;
-              for (Response r : responses)  {
-                // Update metrics
-                if (r.output_is_default_) {
-                  app_metrics.default_pred_ratio_->increment(1, 1);
-                } else {
-                  app_metrics.default_pred_ratio_->increment(0, 1);
-                }
-                app_metrics.latency_->insert(r.duration_micros_);
-                app_metrics.num_predictions_->increment(1);
-                app_metrics.throughput_->mark(1);
+              for (auto t : tries)  {
+                try {
+                  Response r = t.value();
+                  // Update metrics
+                  if (r.output_is_default_) {
+                    app_metrics.default_pred_ratio_->increment(1, 1);
+                  } else {
+                    app_metrics.default_pred_ratio_->increment(0, 1);
+                  }
+                  app_metrics.latency_->insert(r.duration_micros_);
+                  app_metrics.num_predictions_->increment(1);
+                  app_metrics.throughput_->mark(1);
 
-                std::string content = get_prediction_response_content(r);
-                // STEP 4: append "content" to a "final_content" string instead of respond_http'ing each one
-                final_content += content + "\n";
-                // STEP 5: catch errors when calling this function, and append the error to "final_content"
+                  std::string content = get_prediction_response_content(r);
+                  // STEP 4: append "content" to a "final_content" string instead of respond_http'ing each one
+                  final_content += content + "\n";
+                }  catch (const std::exception& e) {
+                      // STEP 5: catch errors when calling this function, and append the error to "final_content"
+                  }
               }
               respond_http(final_content, "200 OK", response);
             })
@@ -497,30 +501,33 @@ class RequestHandler {
     clipper::json::parse_json(json_content, d);
 
     if (d.HasMember("input_batch")) {
-        rapidjson::Value::Member* old_member = d.FindMember("input_batch");
-        d.AddMember("input", old_member->value, d.GetAllocator());
+//        rapidjson::Value::Member* old_member = d.FindMember("input_batch");
+        rapidjson::Document::AllocatorType& allocator = d.GetAllocator();
+        d.AddMember("input", d["input_batch"].GetArray(), allocator);
         d.RemoveMember("input_batch");
     } else { // d.HasMember("input") instead
-        rapidjson::Value v = d["input"];
-        d["input"].SetArray().PushBack(v, d.GetAllocator());
+        double v = d["input"].GetDouble();
+        rapidjson::Document::AllocatorType& allocator = d.GetAllocator();
+        d["input"].SetArray().PushBack(v, allocator);
     }
 
     std::vector<folly::Future<Response>> predictions;
-    rapidjson::Document d_temp;
-    const Value& requests = d["input"];
-    for (SizeType i = 0; i < requests.Size(); i++) {
+    rapidjson::Document d_tmp;
+    rapidjson::Document::AllocatorType& allocator_tmp = d_tmp.GetAllocator();
+    const rapidjson::Value& requests = d["input"];
+    for (rapidjson::SizeType i = 0; i < requests.Size(); i++) {
         long uid = 0;
-        d_temp.AddMember("input", requests[i], d_temp.GetAllocator());
+        d_tmp.AddMember("input", requests[i].GetDouble(), allocator_tmp);
         // NOTE: We will eventually support personalization again so this commented
         // out code is intentionally left in as a placeholder.
-        // long uid = clipper::json::get_long(d_temp, "uid");
-        std::shared_ptr<Input> input = clipper::json::parse_input(input_type, d_temp);
+        // long uid = clipper::json::get_long(d_tmp, "uid");
+        std::shared_ptr<Input> input = clipper::json::parse_input(input_type, d_tmp);
         auto prediction = query_processor_.predict(
                 Query{name, uid, input, latency_slo_micros, policy, models});
-        predictions.push_back(prediction);
-        d_temp.RemoveMember("input");
+        predictions.push_back(std::move(prediction));
+        d_tmp.RemoveMember("input");
     }
-      return folly::Future::collectAll(predictions);
+      return folly::collectAll(predictions);
   }
 
   /*
