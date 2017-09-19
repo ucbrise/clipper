@@ -481,20 +481,38 @@ class RequestHandler {
    *  "input" := [double] | [int] | [string] | [byte] | [float]
    * }
    */
-  folly::Future<Response> decode_and_handle_predict(
+  folly::Future<std::vector<folly::Try<Response>>> decode_and_handle_predict(
       std::string json_content, std::string name,
       std::vector<VersionedModelId> models, std::string policy,
       long latency_slo_micros, InputType input_type) {
     rapidjson::Document d;
     clipper::json::parse_json(json_content, d);
-    long uid = 0;
-    // NOTE: We will eventually support personalization again so this commented
-    // out code is intentionally left in as a placeholder.
-    // long uid = clipper::json::get_long(d, "uid");
-    std::shared_ptr<Input> input = clipper::json::parse_input(input_type, d);
-    auto prediction = query_processor_.predict(
-        Query{name, uid, input, latency_slo_micros, policy, models});
-    return prediction;
+
+    if (d.HasMember("input_batch")) {
+        rapidjson::Value::Member* old_member = d.FindMember("input_batch");
+        d.AddMember("input", old_member->value, d.GetAllocator());
+        d.RemoveMember("input_batch");
+    } else { // d.HasMember("input") instead
+        rapidjson::Value v = d["input"];
+        d["input"].SetArray().PushBack(v, d.GetAllocator());
+    }
+
+    std::vector<folly::Future<Response>> predictions;
+    rapidjson::Document d_temp;
+    const Value& requests = d["input"];
+    for (SizeType i = 0; i < requests.Size(); i++) {
+        long uid = 0;
+        d_temp.AddMember("input", requests[i], d_temp.GetAllocator());
+        // NOTE: We will eventually support personalization again so this commented
+        // out code is intentionally left in as a placeholder.
+        // long uid = clipper::json::get_long(d_temp, "uid");
+        std::shared_ptr<Input> input = clipper::json::parse_input(input_type, d_temp);
+        auto prediction = query_processor_.predict(
+                Query{name, uid, input, latency_slo_micros, policy, models});
+        predictions.push_back(prediction);
+        d_temp.RemoveMember("input");
+    }
+      return folly::Future::collectAll(predictions);
   }
 
   /*
