@@ -207,14 +207,14 @@ class Server(threading.Thread):
                         if time_delta_millis >= SOCKET_ACTIVITY_TIMEOUT_MILLIS:
                             # Terminate the session
                             print("Connection timed out, reconnecting...")
-                            sys.stdout.flush()
-                            sys.stderr.flush()
                             connected = False
                             poller.unregister(socket)
                             socket.close()
                             break
                         else:
                             self.send_heartbeat(socket)
+                        sys.stdout.flush()
+                        sys.stderr.flush()
                     continue
 
                 # Received a message before the polling timeout
@@ -230,6 +230,8 @@ class Server(threading.Thread):
                 if msg_type == MESSAGE_TYPE_HEARTBEAT:
                     self.event_history.insert(EVENT_HISTORY_RECEIVED_HEARTBEAT)
                     print("Received heartbeat!")
+                    sys.stdout.flush()
+                    sys.stderr.flush()
                     heartbeat_type_bytes = socket.recv()
                     heartbeat_type = struct.unpack("<I",
                                                    heartbeat_type_bytes)[0]
@@ -327,6 +329,8 @@ class Server(threading.Thread):
         socket.send_string(str(self.model_input_type))
         self.event_history.insert(EVENT_HISTORY_SENT_CONTAINER_METADATA)
         print("Sent container metadata!")
+        sys.stdout.flush()
+        sys.stderr.flush()
 
     def send_heartbeat(self, socket):
         socket.send("", zmq.SNDMORE)
@@ -340,9 +344,9 @@ class PredictionRequest:
     Parameters
     ----------
     msg_id : bytes
-        The raw message id associated with the RPC 
+        The raw message id associated with the RPC
         prediction request message
-    inputs : 
+    inputs :
         One of [[byte]], [[int]], [[float]], [[double]], [string]
     """
 
@@ -373,8 +377,8 @@ class PredictionResponse():
         self.num_outputs = num_outputs
         self.expand_buffer_if_necessary(
             total_string_length * MAXIMUM_UTF_8_CHAR_LENGTH_BYTES)
-        self.memview = memoryview(self.output_buffer)
-        struct.pack_into("<I", self.output_buffer, 0, num_outputs)
+        self.memview = memoryview(PredictionResponse.output_buffer)
+        struct.pack_into("<I", PredictionResponse.output_buffer, 0, num_outputs)
         self.string_content_end_position = BYTES_PER_INT + (
             BYTES_PER_INT * num_outputs)
         self.current_output_sizes_position = BYTES_PER_INT
@@ -387,7 +391,7 @@ class PredictionResponse():
         """
         output = unicode(output, "utf-8").encode("utf-8")
         output_len = len(output)
-        struct.pack_into("<I", self.output_buffer,
+        struct.pack_into("<I", PredictionResponse.output_buffer,
                          self.current_output_sizes_position, output_len)
         self.current_output_sizes_position += BYTES_PER_INT
         self.memview[self.string_content_end_position:
@@ -400,12 +404,12 @@ class PredictionResponse():
             struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT),
             flags=zmq.SNDMORE)
         socket.send(self.msg_id, flags=zmq.SNDMORE)
-        socket.send(self.output_buffer[0:self.string_content_end_position])
+        socket.send(PredictionResponse.output_buffer[0:self.string_content_end_position])
         event_history.insert(EVENT_HISTORY_SENT_CONTAINER_CONTENT)
 
     def expand_buffer_if_necessary(self, size):
-        if len(self.output_buffer) < size:
-            self.output_buffer = bytearray(size * 2)
+        if len(PredictionResponse.output_buffer) < size:
+            PredictionResponse.output_buffer = bytearray(size * 2)
 
 
 class FeedbackRequest():
