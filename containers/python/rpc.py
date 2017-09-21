@@ -378,7 +378,8 @@ class PredictionResponse():
         self.expand_buffer_if_necessary(
             total_string_length * MAXIMUM_UTF_8_CHAR_LENGTH_BYTES)
         self.memview = memoryview(PredictionResponse.output_buffer)
-        struct.pack_into("<I", PredictionResponse.output_buffer, 0, num_outputs)
+        struct.pack_into("<I", PredictionResponse.output_buffer, 0,
+                         num_outputs)
         self.string_content_end_position = BYTES_PER_INT + (
             BYTES_PER_INT * num_outputs)
         self.current_output_sizes_position = BYTES_PER_INT
@@ -404,7 +405,8 @@ class PredictionResponse():
             struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT),
             flags=zmq.SNDMORE)
         socket.send(self.msg_id, flags=zmq.SNDMORE)
-        socket.send(PredictionResponse.output_buffer[0:self.string_content_end_position])
+        socket.send(PredictionResponse.output_buffer[
+            0:self.string_content_end_position])
         event_history.insert(EVENT_HISTORY_SENT_CONTAINER_CONTENT)
 
     def expand_buffer_if_necessary(self, size):
