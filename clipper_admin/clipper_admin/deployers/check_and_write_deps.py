@@ -106,7 +106,7 @@ def check_solvability_write_deps(env_path, directory, platform,
         print(
             "The following packages in your conda environment aren't available in the linux-64 "
             "conda channel the container will use:")
-        print(", ".join(str(package) for package in missing_packages))
+        print(", ".join(str(package[0].spec) for package in missing_packages))
         print(
             "We will skip their installation when deploying your function. If your function uses "
             "these packages, the container will experience a runtime error when queried."
