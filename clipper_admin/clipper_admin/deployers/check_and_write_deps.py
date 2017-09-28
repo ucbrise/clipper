@@ -92,7 +92,6 @@ def check_solvability_write_deps(env_path, directory, platform,
             for package in missing_packages:
                 conda_deps.remove(package[0].spec)
 
-
             # Check that the dependencies that are not missing are satisfiable
             r.install(conda_deps)
     except UnsatisfiableError as unsat_e:
