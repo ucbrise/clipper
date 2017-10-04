@@ -8,6 +8,12 @@
 # + The current version as read from VERSION.txt: <image_name>:version
 # For the images that we publish, both tags will be pushed.
 
+# In addition, if we are on a release branch (one that matches the regex "release-*")
+# and the version in VERSION.txt is not a release candidate and matches the form
+# MAJOR.MINOR.PATCH, we will publish an additional tag MAJOR.MINOR. This allows users
+# pin their docker images to the minor version and get updates with new patches
+# automatically.
+
 
 set -e
 set -u
@@ -162,30 +168,6 @@ function semverGT() {
     fi
 }
 
-# if [ "___semver.sh" == "___`basename $0`" ]; then
-#
-# MAJOR=0
-# MINOR=0
-# PATCH=0
-# SPECIAL=""
-#
-# semverParseInto $1 MAJOR MINOR PATCH SPECIAL
-# echo "$1 -> M: $MAJOR m:$MINOR p:$PATCH s:$SPECIAL"
-#
-# semverParseInto $2 MAJOR MINOR PATCH SPECIAL
-# echo "$2 -> M: $MAJOR m:$MINOR p:$PATCH s:$SPECIAL"
-#
-# semverEQ $1 $2
-# echo "$1 == $2 -> $?."
-#
-# semverLT $1 $2
-# echo "$1 < $2 -> $?."
-#
-# semverGT $1 $2
-# echo "$1 > $2 -> $?."
-#
-# fi
-#
 
 ##############################################################
 
