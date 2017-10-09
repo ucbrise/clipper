@@ -200,7 +200,7 @@ class KubernetesContainerManager(ContainerManager):
 
     def get_num_replicas(self, name, version):
         deployment_name = get_model_deployment_name(name, version)
-        response = self._k8s_beta.read_namespaced_deployments_scale(
+        response = self._k8s_beta.read_namespaced_deployment_scale(
             name=deployment_name, namespace='default')
 
         return response.spec.replicas
@@ -209,7 +209,7 @@ class KubernetesContainerManager(ContainerManager):
         # NOTE: assumes `metadata.name` can identify the model deployment.
         deployment_name = get_model_deployment_name(name, version)
 
-        self._k8s_beta.patch_namespaced_deployments_scale(
+        self._k8s_beta.patch_namespaced_deployment_scale(
             name=deployment_name,
             namespace='default',
             body={'spec': {
