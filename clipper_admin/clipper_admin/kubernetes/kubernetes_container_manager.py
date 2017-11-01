@@ -189,6 +189,9 @@ class KubernetesContainerManager(ContainerManager):
                                 }, {
                                     'name': 'CLIPPER_IP',
                                     'value': 'query-frontend'
+                                }, {
+                                    'name': 'CLIPPER_INPUT_TYPE',
+                                    'value': input_type
                                 }]
                             }]
                         }
