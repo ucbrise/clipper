@@ -86,7 +86,7 @@ def run_test():
 
     # test predict function
     print(predict(spark, model,
-                [json.dumps((np.random.randint(1000), "spark abcd"))]))
+                  [json.dumps((np.random.randint(1000), "spark abcd"))]))
 
     try:
         clipper_conn = create_docker_connection(
