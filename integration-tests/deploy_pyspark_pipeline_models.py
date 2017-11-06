@@ -85,8 +85,7 @@ def run_test():
                                                        prediction))
 
     # test predict function
-    print(
-        predict(spark, model,
+    print(predict(spark, model,
                 [json.dumps((np.random.randint(1000), "spark abcd"))]))
 
     try:
