@@ -10,6 +10,7 @@ from ..container_manager import (
     CLIPPER_MGMT_FRONTEND_CONTAINER_LABEL, CLIPPER_INTERNAL_RPC_PORT,
     CLIPPER_INTERNAL_QUERY_PORT, CLIPPER_INTERNAL_MANAGEMENT_PORT)
 from ..exceptions import ClipperException
+from requests.exceptions import ConnectionError
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +92,9 @@ class DockerContainerManager(ContainerManager):
         except docker.errors.APIError as e:
             logger.debug(
                 "{nw} network already exists".format(nw=self.docker_network))
+        except ConnectionError:
+            msg = "Unable to connect to Docker. Please Check if Docker is running."
+            raise ClipperException(msg)
 
         if not self.external_redis:
             logger.info("Starting managed Redis instance in Docker")
