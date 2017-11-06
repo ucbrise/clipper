@@ -96,7 +96,6 @@ class DockerContainerManager(ContainerManager):
             msg = "Unable to connect to Docker. Please Check if Docker is running."
             raise ClipperException(msg)
 
-
         if not self.external_redis:
             logger.info("Starting managed Redis instance in Docker")
             redis_container = self.docker_client.containers.run(

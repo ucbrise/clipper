@@ -1,5 +1,6 @@
 class ClipperException(Exception):
     """A generic exception indicating that Clipper encountered a problem."""
+
     def __init__(self, msg, *args):
         self.msg = msg
         super(Exception, self).__init__(msg, *args)
