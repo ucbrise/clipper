@@ -21,7 +21,9 @@ class ModelContainer {
  public:
   ~ModelContainer() = default;
   ModelContainer(VersionedModelId model, int container_id, int replica_id,
-                 InputType input_type);
+                  InputType input_type);
+  ModelContainer(VersionedModelId model, int container_id, int replica_id,
+                 InputType input_type, boost::optional<int> designated_batch_size);
   // disallow copy
   ModelContainer(const ModelContainer &) = delete;
   ModelContainer &operator=(const ModelContainer &) = delete;
@@ -37,6 +39,7 @@ class ModelContainer {
   VersionedModelId model_;
   int container_id_;
   int replica_id_;
+  boost::optional<int> designated_batch_size_;
   InputType input_type_;
   clipper::metrics::Histogram latency_hist_;
 

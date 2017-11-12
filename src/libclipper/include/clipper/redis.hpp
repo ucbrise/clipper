@@ -118,6 +118,8 @@ boost::optional<std::string> get_current_model_version(
  *
  * \param container_name should be the name of a Docker container
  * \param model_data_path should be the path on the Clipper host
+ * \param designated_batch_size should be the user defined batch size of the container, it's default value(-1)
+ * indicate that the user did not designate a specific batch size for the container.
  * to the serialized model data needed for the container
  *
  * \return Returns true if the add was successful.
@@ -126,7 +128,8 @@ bool add_model(redox::Redox& redis, const VersionedModelId& model_id,
                const InputType& input_type,
                const std::vector<std::string>& labels,
                const std::string& container_name,
-               const std::string& model_data_path);
+               const std::string& model_data_path,
+               boost::optional<int> designated_batch_size);
 
 /**
  * Deletes a model from the model table if it exists.
@@ -160,7 +163,6 @@ std::unordered_map<std::string, std::string> get_model(
  */
 std::vector<std::string> get_model_versions(redox::Redox& redis,
                                             const std::string& model_name);
-
 /**
  * Looks up model names listed in the model table. Since a call to KEYS may
  * return multiple version values associated with each model key, this method

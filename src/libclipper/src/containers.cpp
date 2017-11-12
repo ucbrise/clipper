@@ -21,10 +21,29 @@ const std::string LOGGING_TAG_CONTAINERS = "CONTAINERS";
 
 ModelContainer::ModelContainer(VersionedModelId model, int container_id,
                                int replica_id, InputType input_type)
+        : model_(model),
+          container_id_(container_id),
+          replica_id_(replica_id),
+          input_type_(input_type),
+          designated_batch_size_(-1),
+          latency_hist_("container:" + model.serialize() + ":" +
+                        std::to_string(replica_id) + ":prediction_latency",
+                        "microseconds", HISTOGRAM_SAMPLE_SIZE),
+          avg_throughput_per_milli_(0),
+          throughput_buffer_(THROUGHPUT_BUFFER_CAPACITY) {
+  std::string model_str = model.serialize();
+  log_info_formatted(LOGGING_TAG_CONTAINERS,
+                     "Creating new ModelContainer for model {}, id: {}",
+                     model_str, std::to_string(container_id));
+}
+
+ModelContainer::ModelContainer(VersionedModelId model, int container_id,
+                               int replica_id, InputType input_type, boost::optional<int> designated_batch_size)
     : model_(model),
       container_id_(container_id),
       replica_id_(replica_id),
       input_type_(input_type),
+      designated_batch_size_(designated_batch_size),
       latency_hist_("container:" + model.serialize() + ":" +
                         std::to_string(replica_id) + ":prediction_latency",
                     "microseconds", HISTOGRAM_SAMPLE_SIZE),
@@ -76,6 +95,9 @@ double ModelContainer::get_average_throughput_per_millisecond() {
 }
 
 size_t ModelContainer::get_batch_size(Deadline deadline) {
+  if (this->designated_batch_size_ != -1)
+    return this->designated_batch_size_.get();
+
   double current_time_millis =
       std::chrono::duration_cast<std::chrono::milliseconds>(
           std::chrono::system_clock::now().time_since_epoch())

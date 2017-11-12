@@ -229,14 +229,15 @@ std::vector<std::string> get_linked_models(redox::Redox& redis,
 }
 
 bool add_model(Redox& redis, const VersionedModelId& model_id,
-               const InputType& input_type, const vector<string>& labels,
+               const InputType& input_type, const std::vector<string>& labels,
                const std::string& container_name,
-               const std::string& model_data_path) {
+               const std::string& model_data_path,
+               boost::optional<int> designated_batch_size) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
     std::string model_id_key = gen_versioned_model_key(model_id);
     // clang-format off
-    const vector<string> cmd_vec{
+    const std::vector<std::string> cmd_vec{
       "HMSET",            model_id_key,
       "model_name",       model_id.get_name(),
       "model_version",    model_id.get_id(),
@@ -244,7 +245,8 @@ bool add_model(Redox& redis, const VersionedModelId& model_id,
       "input_type",       get_readable_input_type(input_type),
       "labels",           labels_to_str(labels),
       "container_name",   container_name,
-      "model_data_path",  model_data_path};
+      "model_data_path",  model_data_path,
+      "designated_batch_size", std::to_string(designated_batch_size.get())};
     // clang-format on
     return send_cmd_no_reply<string>(redis, cmd_vec);
   } else {
@@ -270,7 +272,7 @@ unordered_map<string, string> get_model(Redox& redis,
 
     std::vector<std::string> model_data;
     auto result =
-        send_cmd_with_reply<vector<string>>(redis, {"HGETALL", model_id_key});
+        send_cmd_with_reply<std::vector<string>>(redis, {"HGETALL", model_id_key});
     if (result) {
       model_data = *result;
     }
@@ -330,7 +332,7 @@ std::vector<VersionedModelId> get_all_models(redox::Redox& redis) {
           redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
     // Use wildcard argument for KEYS command to get all key names.
     // The number of keys is assumed to be within reasonable limits.
-    auto result = send_cmd_with_reply<vector<string>>(redis, {"KEYS", "*"});
+    auto result = send_cmd_with_reply<std::vector<string>>(redis, {"KEYS", "*"});
     if (result) {
       for (auto model_str : *result) {
         std::vector<VersionedModelId> parsed_model = str_to_models(model_str);
@@ -348,7 +350,7 @@ bool add_container(Redox& redis, const VersionedModelId& model_id,
           redis, {"SELECT", std::to_string(REDIS_CONTAINER_DB_NUM)})) {
     std::string replica_key = gen_model_replica_key(model_id, model_replica_id);
     std::string model_id_key = gen_versioned_model_key(model_id);
-    const vector<string> cmd_vec{"HMSET",
+    const std::vector<string> cmd_vec{"HMSET",
                                  replica_key,
                                  "model_id",
                                  model_id_key,
