@@ -77,15 +77,21 @@ std::vector<uint8_t> get_base64_encoded_byte_array(rapidjson::Value& d,
 
 std::vector<double> get_double_array(rapidjson::Value& d, const char* key_name);
 
-std::vector<std::vector<double>> get_double_arrays(rapidjson::Value& d,
-                                     const char* key_name);
-
 std::vector<float> get_float_array(rapidjson::Value& d, const char* key_name);
 
 std::vector<int> get_int_array(rapidjson::Value& d, const char* key_name);
 
 std::vector<std::string> get_string_array(rapidjson::Value& d,
                                           const char* key_name);
+
+std::vector<std::vector<double>> get_double_arrays(rapidjson::Value& d,
+                                     const char* key_name);
+
+std::vector<std::vector<float>> get_float_arrays(rapidjson::Value& d,
+                                     const char* key_name);
+
+std::vector<std::vector<int>> get_int_arrays(rapidjson::Value& d,
+                                     const char* key_name);
 
 std::vector<VersionedModelId> get_candidate_models(rapidjson::Value& d,
                                                    const char* key_name);

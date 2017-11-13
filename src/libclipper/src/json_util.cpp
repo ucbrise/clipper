@@ -244,6 +244,62 @@ std::vector<std::vector<double>> get_double_arrays(rapidjson::Value& d,
   return double_arrays;
 }
 
+std::vector<std::vector<float>> get_float_arrays(rapidjson::Value& d,
+                                     const char* key_name) {
+  rapidjson::Value& v =
+      check_kv_type_and_return(d, key_name, rapidjson::kArrayType);
+  std::vector<std::vector<float>> float_arrays;
+
+  float_arrays.reserve(v.Capacity());
+  for (rapidjson::Value& elem_array : v.GetArray()) {
+    if (!elem_array.IsArray()) {
+      throw json_semantic_error("Array input of type " +
+                                  kTypeNames[elem_array.GetType()] +
+                                  " is not of type array");
+    }
+    std::vector<float> float_array;
+    std::cout << "new array" << "\n";
+    for (rapidjson::Value& elem : elem_array.GetArray()) {
+      if (!elem.IsFloat()) {
+        throw json_semantic_error("Array input of type " +
+                                    kTypeNames[elem.GetType()] +
+                                    " is not of type float");
+      }
+      float_array.push_back(elem.GetFloat());
+    }
+    float_arrays.push_back(float_array);
+  }
+  return float_arrays;
+}
+
+std::vector<std::vector<int>> get_int_arrays(rapidjson::Value& d,
+                                     const char* key_name) {
+  rapidjson::Value& v =
+      check_kv_type_and_return(d, key_name, rapidjson::kArrayType);
+  std::vector<std::vector<int>> int_arrays;
+
+  int_arrays.reserve(v.Capacity());
+  for (rapidjson::Value& elem_array : v.GetArray()) {
+    if (!elem_array.IsArray()) {
+      throw json_semantic_error("Array input of type " +
+                                  kTypeNames[elem_array.GetType()] +
+                                  " is not of type array");
+    }
+    std::vector<int> int_array;
+    std::cout << "new array" << "\n";
+    for (rapidjson::Value& elem : elem_array.GetArray()) {
+      if (!elem.IsInt()) {
+        throw json_semantic_error("Array input of type " +
+                                    kTypeNames[elem.GetType()] +
+                                    " is not of type int");
+      }
+      int_array.push_back(elem.GetInt());
+    }
+    int_arrays.push_back(int_array);
+  }
+  return int_arrays;
+}
+
 std::vector<VersionedModelId> get_candidate_models(rapidjson::Value& d,
                                                    const char* key_name) {
   rapidjson::Value& v =
@@ -321,12 +377,22 @@ std::vector<std::shared_ptr<Input>> parse_input_batch(InputType input_type, rapi
       }
       return result;
     }
-    // case InputType::Floats: {
-    //   std::vector<shared_ptr<clipper::FloatVector>> result;
-    // }
-    // case InputType::Ints: {
-    //   std::vector<shared_ptr<clipper::IntVector>> result;
-    // }
+    case InputType::Floats: {
+      auto input_batch = get_float_arrays(d, "input_batch");
+      std::vector<std::shared_ptr<Input>> result;
+      for(auto inputs : input_batch) {
+        result.push_back(std::make_shared<clipper::FloatVector>(inputs));
+      }
+      return result;
+    }
+    case InputType::Ints: {
+      auto input_batch = get_int_arrays(d, "input_batch");
+      std::vector<std::shared_ptr<Input>> result;
+      for(auto inputs : input_batch) {
+        result.push_back(std::make_shared<clipper::IntVector>(inputs));
+      }
+      return result;
+    }
     // case InputType::Strings: {
     //   std::vector<shared_ptr<clipper::SerializableString>> result;
     // }

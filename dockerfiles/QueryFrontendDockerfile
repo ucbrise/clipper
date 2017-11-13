@@ -7,7 +7,7 @@ RUN cd /clipper/src/libs/spdlog \
     && git apply ../patches/make_spdlog_compile_linux.patch \
     && cd /clipper \
     && ./configure --cleanup-quiet \
-    && ./configure --release \
+    && ./configure --release
 
 COPY ./src /clipper/src
 
