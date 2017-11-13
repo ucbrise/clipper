@@ -215,6 +215,35 @@ std::vector<std::string> get_string_array(rapidjson::Value& d,
   return vals;
 }
 
+/* Getters with error handling for nested arrays of double, float, int, string */
+std::vector<std::vector<double>> get_double_arrays(rapidjson::Value& d,
+                                     const char* key_name) {
+  rapidjson::Value& v =
+      check_kv_type_and_return(d, key_name, rapidjson::kArrayType);
+  std::vector<std::vector<double>> double_arrays;
+
+  double_arrays.reserve(v.Capacity());
+  for (rapidjson::Value& elem_array : v.GetArray()) {
+    if (!elem_array.IsArray()) {
+      throw json_semantic_error("Array input of type " +
+                                  kTypeNames[elem_array.GetType()] +
+                                  " is not of type array");
+    }
+    std::vector<double> double_array;
+    std::cout << "new array" << "\n";
+    for (rapidjson::Value& elem : elem_array.GetArray()) {
+      if (!elem.IsDouble()) {
+        throw json_semantic_error("Array input of type " +
+                                    kTypeNames[elem.GetType()] +
+                                    " is not of type double");
+      }
+      double_array.push_back(elem.GetDouble());
+    }
+    double_arrays.push_back(double_array);
+  }
+  return double_arrays;
+}
+
 std::vector<VersionedModelId> get_candidate_models(rapidjson::Value& d,
                                                    const char* key_name) {
   rapidjson::Value& v =
@@ -278,6 +307,32 @@ std::shared_ptr<Input> parse_input(InputType input_type, rapidjson::Value& d) {
       std::vector<uint8_t> inputs = get_base64_encoded_byte_array(d, "input");
       return std::make_shared<clipper::ByteVector>(inputs);
     }
+    default: throw std::invalid_argument("input_type is not a valid type");
+  }
+}
+
+std::vector<std::shared_ptr<Input>> parse_input_batch(InputType input_type, rapidjson::Value& d) {
+  switch (input_type) {
+    case InputType::Doubles: {
+      auto input_batch = get_double_arrays(d, "input_batch");
+      std::vector<std::shared_ptr<Input>> result;
+      for(auto inputs : input_batch) {
+        result.push_back(std::make_shared<clipper::DoubleVector>(inputs));
+      }
+      return result;
+    }
+    // case InputType::Floats: {
+    //   std::vector<shared_ptr<clipper::FloatVector>> result;
+    // }
+    // case InputType::Ints: {
+    //   std::vector<shared_ptr<clipper::IntVector>> result;
+    // }
+    // case InputType::Strings: {
+    //   std::vector<shared_ptr<clipper::SerializableString>> result;
+    // }
+    // case InputType::Bytes: {
+    //   std::vector<shared_ptr<clipper::ByteVector>> result;
+    // }
     default: throw std::invalid_argument("input_type is not a valid type");
   }
 }

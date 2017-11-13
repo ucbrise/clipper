@@ -77,6 +77,9 @@ std::vector<uint8_t> get_base64_encoded_byte_array(rapidjson::Value& d,
 
 std::vector<double> get_double_array(rapidjson::Value& d, const char* key_name);
 
+std::vector<std::vector<double>> get_double_arrays(rapidjson::Value& d,
+                                     const char* key_name);
+
 std::vector<float> get_float_array(rapidjson::Value& d, const char* key_name);
 
 std::vector<int> get_int_array(rapidjson::Value& d, const char* key_name);
@@ -92,6 +95,8 @@ rapidjson::Value& get_object(rapidjson::Value& d, const char* key_name);
 void parse_json(const std::string& json_content, rapidjson::Document& d);
 
 std::shared_ptr<Input> parse_input(InputType input_type, rapidjson::Value& d);
+
+std::vector<std::shared_ptr<Input>> parse_input_batch(InputType input_type, rapidjson::Value& d);
 
 /* Utilities for serialization into JSON */
 void add_kv_pair(rapidjson::Document& d, const char* key_name,

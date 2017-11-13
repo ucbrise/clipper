@@ -318,19 +318,16 @@ class RequestHandler {
           }
         }
 
-        // STEP 1: decode_and_handle_predict should take a batch query
           folly::Future<std::vector<folly::Try<Response>>> predictions = decode_and_handle_predict(
             request->content.string(), name, versioned_models, policy,
             latency_slo_micros, input_type);
 
-        // STEP 3: apply this lambda in a loop for each prediction response
         predictions
             .then([response, app_metrics](std::vector<folly::Try<Response>> tries) {
               std::string final_content;
               for (auto t : tries)  {
                 try {
                   Response r = t.value();
-                  // Update metrics
                   if (r.output_is_default_) {
                     app_metrics.default_pred_ratio_->increment(1, 1);
                   } else {
@@ -341,10 +338,8 @@ class RequestHandler {
                   app_metrics.throughput_->mark(1);
 
                   std::string content = get_prediction_response_content(r);
-                  // STEP 4: append "content" to a "final_content" string instead of respond_http'ing each one
                   final_content += content + "\n";
                 }  catch (const std::exception& e) {
-                      // STEP 5: catch errors when calling this function, and append the error to "final_content"
                   }
               }
               respond_http(final_content, "200 OK", response);
@@ -499,33 +494,22 @@ class RequestHandler {
       long latency_slo_micros, InputType input_type) {
     rapidjson::Document d;
     clipper::json::parse_json(json_content, d);
-
-    if (d.HasMember("input_batch")) {
-//        rapidjson::Value::Member* old_member = d.FindMember("input_batch");
-        rapidjson::Document::AllocatorType& allocator = d.GetAllocator();
-        d.AddMember("input", d["input_batch"].GetArray(), allocator);
-        d.RemoveMember("input_batch");
-    } else { // d.HasMember("input") instead
-        double v = d["input"].GetDouble();
-        rapidjson::Document::AllocatorType& allocator = d.GetAllocator();
-        d["input"].SetArray().PushBack(v, allocator);
-    }
-
+    long uid = 0;
     std::vector<folly::Future<Response>> predictions;
-    rapidjson::Document d_tmp;
-    rapidjson::Document::AllocatorType& allocator_tmp = d_tmp.GetAllocator();
-    const rapidjson::Value& requests = d["input"];
-    for (rapidjson::SizeType i = 0; i < requests.Size(); i++) {
-        long uid = 0;
-        d_tmp.AddMember("input", requests[i].GetDouble(), allocator_tmp);
-        // NOTE: We will eventually support personalization again so this commented
-        // out code is intentionally left in as a placeholder.
-        // long uid = clipper::json::get_long(d_tmp, "uid");
-        std::shared_ptr<Input> input = clipper::json::parse_input(input_type, d_tmp);
-        auto prediction = query_processor_.predict(
-                Query{name, uid, input, latency_slo_micros, policy, models});
-        predictions.push_back(std::move(prediction));
-        d_tmp.RemoveMember("input");
+
+    if (d.HasMember("input")) {
+      std::shared_ptr<Input> input = clipper::json::parse_input(input_type, d);
+      auto prediction = query_processor_.predict(
+              Query{name, uid, input, latency_slo_micros, policy, models});
+      predictions.push_back(std::move(prediction));
+    } else { // d.HasMember("input_batch") instead
+        std::vector<std::shared_ptr<Input>> input_batch = 
+                clipper::json::parse_input_batch(input_type, d);
+        for (auto input : input_batch) {
+          auto prediction = query_processor_.predict(
+                  Query{name, uid, input, latency_slo_micros, policy, models});
+          predictions.push_back(std::move(prediction));
+        }
     }
       return folly::collectAll(predictions);
   }
