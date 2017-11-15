@@ -1,6 +1,8 @@
 from __future__ import print_function, with_statement, absolute_import
 
 import logging
+import os
+import posixpath
 import shutil
 from ..version import __version__
 
@@ -163,6 +165,8 @@ def deploy_python_closure(
     """
 
     serialization_dir = save_python_function(name, func)
+    # Special handling for Windows, which uses backslash for path delimiting
+    serialization_dir = posixpath.join(*os.path.split(serialization_dir))
     logger.info("Python closure saved")
     # Deploy function
     clipper_conn.build_and_deploy_model(name, version, input_type,
