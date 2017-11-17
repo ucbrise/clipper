@@ -340,6 +340,7 @@ class RequestHandler {
                   std::string content = get_prediction_response_content(r);
                   final_content += content + "\n";
                 }  catch (const std::exception& e) {
+                  // returned a response before all predictions in the batch were ready 
                   }
               }
               respond_http(final_content, "200 OK", response);
