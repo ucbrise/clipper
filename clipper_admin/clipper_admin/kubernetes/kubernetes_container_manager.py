@@ -32,7 +32,11 @@ def _pass_conflicts():
 
 
 class KubernetesContainerManager(ContainerManager):
-    def __init__(self, kubernetes_api_ip, redis_ip=None, redis_port=6379):
+    def __init__(self,
+                 kubernetes_api_ip,
+                 redis_ip=None,
+                 redis_port=6379,
+                 useInternalIP=False):
         """
         Parameters
         ----------
@@ -44,6 +48,9 @@ class KubernetesContainerManager(ContainerManager):
         redis_port : int, optional
             The Redis port. If ``redis_ip`` is set to None, Clipper will start Redis on this port.
             If ``redis_ip`` is provided, Clipper will connect to Redis on this port.
+        useInternalIP : bool, optional
+            Use Internal IP of the K8S nodes . If ``useInternalIP`` is set to False, Clipper will throw an exception, if none of the nodes have ExternalDNS .
+            If ``useInternalIP`` is set to true, Clipper will use the Internal IP of the K8S node if no ExternalDNS exists for any of the nodes.
 
         Note
         ----
@@ -56,6 +63,7 @@ class KubernetesContainerManager(ContainerManager):
         self.kubernetes_api_ip = kubernetes_api_ip
         self.redis_ip = redis_ip
         self.redis_port = redis_port
+        self.useInternalIP = useInternalIP
 
         config.load_kube_config()
         configuration.assert_hostname = False
@@ -117,6 +125,12 @@ class KubernetesContainerManager(ContainerManager):
         for node in nodes.items:
             for addr in node.status.addresses:
                 if addr.type == "ExternalDNS":
+                    external_node_hosts.append(addr.address)
+        if len(external_node_hosts) == 0 and (self.useInternalIP):
+            msg = "No external node addresses found.Using Internal IP address"
+            logger.warn(msg)
+            for addr in node.status.addresses:
+                if addr.type == "InternalIP":
                     external_node_hosts.append(addr.address)
         if len(external_node_hosts) == 0:
             msg = "Error connecting to Kubernetes cluster. No external node addresses found"
