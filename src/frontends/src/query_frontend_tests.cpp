@@ -64,10 +64,11 @@ class QueryFrontendTest : public ::testing::Test {
 
 TEST_F(QueryFrontendTest, TestDecodeCorrectInputInts) {
   std::string test_json_ints = "{\"input\": [1,2,3,4]}";
-  Response response =
+  std::vector<folly::Try<Response>> responses =
       rh_.decode_and_handle_predict(test_json_ints, "test", {}, "test_policy",
                                     30000, InputType::Ints)
           .get();
+  Response response = responses[0].value();
 
   Query parsed_query = response.query_;
 
@@ -82,10 +83,11 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputInts) {
 
 TEST_F(QueryFrontendTest, TestDecodeCorrectInputDoubles) {
   std::string test_json_doubles = "{\"input\": [1.4,2.23,3.243242,0.3223424]}";
-  Response response =
-      rh_.decode_and_handle_predict(test_json_doubles, "test", {},
-                                    "test_policy", 30000, InputType::Doubles)
+  std::vector<folly::Try<Response>> responses =
+      rh_.decode_and_handle_predict(test_json_doubles, "test", {}, "test_policy",
+                                    30000, InputType::Doubles)
           .get();
+  Response response = responses[0].value();
 
   Query parsed_query = response.query_;
 
@@ -102,10 +104,11 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputString) {
   std::string test_json_string =
       "{\"input\": \"hello world. This is a test string with "
       "punctionation!@#$Y#;}#\"}";
-  Response response =
+  std::vector<folly::Try<Response>> responses =
       rh_.decode_and_handle_predict(test_json_string, "test", {}, "test_policy",
                                     30000, InputType::Strings)
           .get();
+  Response response = responses[0].value();
 
   Query parsed_query = response.query_;
 
@@ -200,10 +203,12 @@ TEST_F(QueryFrontendTest, TestAddManyApplications) {
 TEST_F(QueryFrontendTest,
        TestJsonResponseForSuccessfulPredictionFormattedCorrectly) {
   std::string test_json = "{\"uid\": 1, \"input\": [1,2,3]}";
-  Response response =
-      rh_.decode_and_handle_predict(test_json, "test", {}, "test_policy", 30000,
-                                    InputType::Ints)
+  std::vector<folly::Try<Response>> responses =
+      rh_.decode_and_handle_predict(test_json, "test", {}, "test_policy",
+                                    30000, InputType::Ints)
           .get();
+  Response response = responses[0].value();
+  
   std::string json_response = rh_.get_prediction_response_content(response);
   rapidjson::Document parsed_response;
   json::parse_json(json_response, parsed_response);
