@@ -232,7 +232,7 @@ bool add_model(Redox& redis, const VersionedModelId& model_id,
                const InputType& input_type, const std::vector<string>& labels,
                const std::string& container_name,
                const std::string& model_data_path,
-               boost::optional<int> designated_batch_size) {
+               boost::optional<int> batch_size) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
     std::string model_id_key = gen_versioned_model_key(model_id);
@@ -246,13 +246,27 @@ bool add_model(Redox& redis, const VersionedModelId& model_id,
       "labels",           labels_to_str(labels),
       "container_name",   container_name,
       "model_data_path",  model_data_path,
-      "designated_batch_size", std::to_string(designated_batch_size.get())};
+      "batch_size", std::to_string(batch_size.get())};
     // clang-format on
     return send_cmd_no_reply<string>(redis, cmd_vec);
   } else {
     return false;
   }
 }
+
+std::unordered_map<std::string,std::string> get_model_by_key(redox::Redox& redis, const std::string & key){
+  if(send_cmd_no_reply<string>(redis,{"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})){
+    std::vector<std::string> model_data;
+    auto result = send_cmd_with_reply<std::vector<std::string>>(redis, {"HGETALL", key});
+    if(result){
+      model_data =* result;
+    }
+    return parse_redis_map(model_data);
+  }
+  else{
+    return std::unordered_map<std::string,std::string>{};
+  }
+};
 
 bool delete_model(Redox& redis, const VersionedModelId& model_id) {
   if (send_cmd_no_reply<string>(
@@ -391,7 +405,7 @@ unordered_map<string, string> get_container(Redox& redis,
     std::string replica_key = gen_model_replica_key(model_id, model_replica_id);
     std::vector<std::string> container_data;
     auto result =
-        send_cmd_with_reply<vector<string>>(redis, {"HGETALL", replica_key});
+        send_cmd_with_reply<std::vector<std::string>>(redis, {"HGETALL", replica_key});
     if (result) {
       container_data = *result;
     }
@@ -406,7 +420,7 @@ unordered_map<string, string> get_container_by_key(Redox& redis,
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_CONTAINER_DB_NUM)})) {
     std::vector<std::string> container_data;
-    auto result = send_cmd_with_reply<vector<string>>(redis, {"HGETALL", key});
+    auto result = send_cmd_with_reply<std::vector<std::string>>(redis, {"HGETALL", key});
     if (result) {
       container_data = *result;
     }

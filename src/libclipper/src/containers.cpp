@@ -25,7 +25,7 @@ ModelContainer::ModelContainer(VersionedModelId model, int container_id,
           container_id_(container_id),
           replica_id_(replica_id),
           input_type_(input_type),
-          designated_batch_size_(-1),
+          batch_size_(-1),
           latency_hist_("container:" + model.serialize() + ":" +
                         std::to_string(replica_id) + ":prediction_latency",
                         "microseconds", HISTOGRAM_SAMPLE_SIZE),
@@ -38,12 +38,12 @@ ModelContainer::ModelContainer(VersionedModelId model, int container_id,
 }
 
 ModelContainer::ModelContainer(VersionedModelId model, int container_id,
-                               int replica_id, InputType input_type, boost::optional<int> designated_batch_size)
+                               int replica_id, InputType input_type, boost::optional<int> batch_size)
     : model_(model),
       container_id_(container_id),
       replica_id_(replica_id),
       input_type_(input_type),
-      designated_batch_size_(designated_batch_size),
+      batch_size_(batch_size),
       latency_hist_("container:" + model.serialize() + ":" +
                         std::to_string(replica_id) + ":prediction_latency",
                     "microseconds", HISTOGRAM_SAMPLE_SIZE),
@@ -95,8 +95,8 @@ double ModelContainer::get_average_throughput_per_millisecond() {
 }
 
 size_t ModelContainer::get_batch_size(Deadline deadline) {
-  if (this->designated_batch_size_ != -1)
-    return this->designated_batch_size_.get();
+  if (this->batch_size_ != -1)
+    return this->batch_size_.get();
 
   double current_time_millis =
       std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -146,6 +146,36 @@ void ActiveContainers::add_container(VersionedModelId model, int connection_id,
     }
   }
   log_info(LOGGING_TAG_CONTAINERS, log_msg.str());
+}
+
+void ActiveContainers::add_container(VersionedModelId model, int connection_id,
+                                     int replica_id, InputType input_type, boost::optional<int> batch_size) {
+  log_info_formatted(LOGGING_TAG_CONTAINERS,
+                     "Adding new container - model: {}, version: {}, "
+                             "connection ID: {}, replica ID: {}, input_type: {} batch_size: {}",
+                     model.get_name(), model.get_id(), connection_id,
+                     replica_id, get_readable_input_type(input_type), batch_size.get());
+  boost::unique_lock<boost::shared_mutex> l{m_};
+  auto new_container = std::make_shared<ModelContainer>(model, connection_id,
+                                                        replica_id, input_type, batch_size);
+  auto entry = containers_[new_container->model_];
+  entry.emplace(replica_id, new_container);
+  containers_[new_container->model_] = entry;
+  assert(containers_[new_container->model_].size() > 0);
+  std::stringstream log_msg;
+  log_msg << "\nActive containers:\n";
+  for (auto model : containers_) {
+    log_msg << "\tModel: " << model.first.serialize() << "\n";
+    for (auto r : model.second) {
+      log_msg << "\t\trep_id: " << r.first
+              << ", container_id: " << r.second->container_id_ << "\n";
+    }
+  }
+  log_info(LOGGING_TAG_CONTAINERS, log_msg.str());
+}
+
+void ModelContainer::set_batch_size(int batch_size) {
+    batch_size_ = batch_size;
 }
 
 std::shared_ptr<ModelContainer> ActiveContainers::get_model_replica(

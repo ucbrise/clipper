@@ -272,9 +272,17 @@ class TaskExecutor {
             VersionedModelId vm = VersionedModelId(
                 container_info["model_name"], container_info["model_version"]);
             int replica_id = std::stoi(container_info["model_replica_id"]);
+            //#int batch_size = std::stoi(container_info["batch_size"]);
+            boost::optional<int> batch_size = -1;
+            for( auto it = container_info.begin(); it != container_info.end(); it++){
+              if (it->first == "batch_size"){
+                batch_size = std::stoi(container_info[it->first]);
+              }
+            }
+
             active_containers_->add_container(
                 vm, std::stoi(container_info["zmq_connection_id"]), replica_id,
-                parse_input_type(container_info["input_type"]));
+                parse_input_type(container_info["input_type"]), batch_size);
 
             TaskExecutionThreadPool::create_queue(vm, replica_id);
             TaskExecutionThreadPool::submit_job(
