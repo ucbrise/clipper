@@ -486,6 +486,7 @@ class RequestHandler {
    * JSON format for prediction query request:
    * {
    *  "input" := [double] | [int] | [string] | [byte] | [float]
+   *  "input_batch" := [[double] | [int] | [byte] | [float] | string]
    * }
    */
   folly::Future<std::vector<folly::Try<Response>>> decode_and_handle_predict(

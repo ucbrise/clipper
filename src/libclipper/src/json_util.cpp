@@ -230,7 +230,6 @@ std::vector<std::vector<double>> get_double_arrays(rapidjson::Value& d,
                                   " is not of type array");
     }
     std::vector<double> double_array;
-    std::cout << "new array" << "\n";
     for (rapidjson::Value& elem : elem_array.GetArray()) {
       if (!elem.IsDouble()) {
         throw json_semantic_error("Array input of type " +
@@ -258,7 +257,6 @@ std::vector<std::vector<float>> get_float_arrays(rapidjson::Value& d,
                                   " is not of type array");
     }
     std::vector<float> float_array;
-    std::cout << "new array" << "\n";
     for (rapidjson::Value& elem : elem_array.GetArray()) {
       if (!elem.IsFloat()) {
         throw json_semantic_error("Array input of type " +
@@ -286,7 +284,6 @@ std::vector<std::vector<int>> get_int_arrays(rapidjson::Value& d,
                                   " is not of type array");
     }
     std::vector<int> int_array;
-    std::cout << "new array" << "\n";
     for (rapidjson::Value& elem : elem_array.GetArray()) {
       if (!elem.IsInt()) {
         throw json_semantic_error("Array input of type " +
@@ -298,6 +295,31 @@ std::vector<std::vector<int>> get_int_arrays(rapidjson::Value& d,
     int_arrays.push_back(int_array);
   }
   return int_arrays;
+}
+
+std::vector<std::vector<uint8_t>> get_base64_encoded_byte_arrays(rapidjson::Value& d,
+                                     const char* key_name) {
+  rapidjson::Value& v =
+      check_kv_type_and_return(d, key_name, rapidjson::kArrayType);
+  std::vector<std::vector<uint8_t>> byte_arrays;
+
+  byte_arrays.reserve(v.Capacity());
+  for (rapidjson::Value& elem : v.GetArray()) {
+    if (!elem.IsString()) {
+      throw json_semantic_error("Input of type " + kTypeNames[elem.GetType()] +
+                                " is not of type base64-encoded string");
+    }
+
+    Base64 decoder;
+    std::string encoded_string = std::string(elem.GetString());
+    std::string decoded_string;
+    decoder.Decode(encoded_string, &decoded_string);
+    std::vector<uint8_t> decoded_bytes =
+        std::vector<uint8_t>(decoded_string.begin(), decoded_string.end());
+    
+    byte_arrays.push_back(decoded_bytes);
+  }
+  return byte_arrays;
 }
 
 std::vector<VersionedModelId> get_candidate_models(rapidjson::Value& d,
@@ -372,33 +394,43 @@ std::vector<std::shared_ptr<Input>> parse_input_batch(InputType input_type, rapi
     case InputType::Doubles: {
       auto input_batch = get_double_arrays(d, "input_batch");
       std::vector<std::shared_ptr<Input>> result;
-      for(auto inputs : input_batch) {
-        result.push_back(std::make_shared<clipper::DoubleVector>(inputs));
+      for (auto input : input_batch) {
+        result.push_back(std::make_shared<clipper::DoubleVector>(input));
       }
       return result;
     }
     case InputType::Floats: {
       auto input_batch = get_float_arrays(d, "input_batch");
       std::vector<std::shared_ptr<Input>> result;
-      for(auto inputs : input_batch) {
-        result.push_back(std::make_shared<clipper::FloatVector>(inputs));
+      for (auto input : input_batch) {
+        result.push_back(std::make_shared<clipper::FloatVector>(input));
       }
       return result;
     }
     case InputType::Ints: {
       auto input_batch = get_int_arrays(d, "input_batch");
       std::vector<std::shared_ptr<Input>> result;
-      for(auto inputs : input_batch) {
-        result.push_back(std::make_shared<clipper::IntVector>(inputs));
+      for (auto input : input_batch) {
+        result.push_back(std::make_shared<clipper::IntVector>(input));
       }
       return result;
     }
-    // case InputType::Strings: {
-    //   std::vector<shared_ptr<clipper::SerializableString>> result;
-    // }
-    // case InputType::Bytes: {
-    //   std::vector<shared_ptr<clipper::ByteVector>> result;
-    // }
+    case InputType::Strings: {
+      auto input_batch = get_string_array(d, "input_batch");
+      std::vector<std::shared_ptr<Input>> result;
+      for (auto input : input_batch) {
+        result.push_back(std::make_shared<clipper::SerializableString>(input));
+      }
+      return result;
+    }
+    case InputType::Bytes: {
+      auto input_batch = get_base64_encoded_byte_arrays(d, "input_batch");
+      std::vector<std::shared_ptr<Input>> result;
+      for (auto input : input_batch) {
+        result.push_back(std::make_shared<clipper::ByteVector>(input));
+      }
+      return result;
+    }
     default: throw std::invalid_argument("input_type is not a valid type");
   }
 }
