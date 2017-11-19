@@ -474,7 +474,7 @@ class ClipperConnection(object):
         '''
         self.cm.deploy_model(name=name, version=version, input_type=input_type, image=image, batch_size=batch_size)
         self.register_model(
-            name, version, input_type, batch_size=batch_size, image=image, labels=labels)
+            name, version, input_type, image=image, labels=labels, batch_size=batch_size)
         logger.info("Done deploying model {name}:{version}.".format(
             name=name, version=version))
 
@@ -543,6 +543,7 @@ class ClipperConnection(object):
             "model_data_path": "DEPRECATED",
             "batch_size": batch_size
         })
+
         headers = {'Content-type': 'application/json'}
         logger.debug(req_json)
         r = requests.post(url, headers=headers, data=req_json)

@@ -171,6 +171,13 @@ std::vector<std::string> get_model_versions(redox::Redox& redis,
  * \return Returns a vector of model names as strings. If no model names
  * were found, then an empty vector will be returned.
  */
+std::unordered_map<std::string,std::string> get_model_by_key(redox::Redox& redis, const std::string & key);
+ /**
+  * get_model_by_key
+  *
+  * @param redis
+  * @return
+  */
 std::vector<std::string> get_all_model_names(redox::Redox& redis);
 
 /**

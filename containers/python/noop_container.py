@@ -3,13 +3,15 @@ import rpc
 import os
 import sys
 import numpy as np
-
+import time
 
 class NoopContainer(rpc.ModelContainerBase):
     def __init__(self, prediction="1.0"):
         self.prediction = prediction
 
     def _predict(self, inputs):
+        print("The size of batch is:",len(inputs))
+        time.sleep(.05)
         return [self.prediction] * len(inputs)
 
     def predict_ints(self, inputs):

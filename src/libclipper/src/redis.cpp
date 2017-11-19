@@ -430,6 +430,8 @@ unordered_map<string, string> get_container_by_key(Redox& redis,
   }
 }
 
+
+
 std::vector<std::pair<VersionedModelId, int>> get_all_containers(
     redox::Redox& redis) {
   std::vector<std::pair<VersionedModelId, int>> containers;
@@ -454,7 +456,7 @@ bool add_application(redox::Redox& redis, const std::string& appname,
                      const long latency_slo_micros) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_APPLICATION_DB_NUM)})) {
-    const vector<string> cmd_vec{"HMSET",
+    const std::vector<std::string> cmd_vec{"HMSET",
                                  appname,
                                  "input_type",
                                  get_readable_input_type(input_type),
@@ -476,7 +478,7 @@ bool add_model_links(redox::Redox& redis, const std::string& appname,
           redis, {"SELECT", std::to_string(REDIS_APP_MODEL_LINKS_DB_NUM)})) {
     for (auto model_name : model_names) {
       if (!send_cmd_no_reply<int>(
-              redis, vector<string>{"SADD", appname, model_name})) {
+              redis, std::vector<std::string>{"SADD", appname, model_name})) {
         return false;
       }
     }
@@ -501,7 +503,7 @@ std::unordered_map<std::string, std::string> get_application(
           redis, {"SELECT", std::to_string(REDIS_APPLICATION_DB_NUM)})) {
     std::vector<std::string> container_data;
     auto result =
-        send_cmd_with_reply<vector<string>>(redis, {"HGETALL", appname});
+        send_cmd_with_reply<std::vector<std::string>>(redis, {"HGETALL", appname});
     if (result) {
       container_data = *result;
     }
@@ -526,7 +528,7 @@ std::vector<string> get_all_application_names(redox::Redox& redis) {
           redis, {"SELECT", std::to_string(REDIS_APPLICATION_DB_NUM)})) {
     // Use wildcard argument for KEYS command to get all key names.
     // The number of keys is assumed to be within reasonable limits.
-    auto result = send_cmd_with_reply<vector<string>>(redis, {"KEYS", "*"});
+    auto result = send_cmd_with_reply<std::vector<std::string>>(redis, {"KEYS", "*"});
     if (result) {
       app_names = *result;
     }
