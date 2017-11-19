@@ -264,6 +264,7 @@ class TaskExecutor {
     redis::subscribe_to_model_changes(redis_subscriber_,
                     [this, task_executor_valid = active_ ](const std::string &key,
                                                            const std::string &event_type) {
+                log_info(LOGGING_TAG_TASK_EXECUTOR,"subscribe_to_model_changes is called");
                 if (event_type == "hset" && *task_executor_valid) {
                     auto model_info = clipper::redis::get_model_by_key(redis_connection_, key);
                     VersionedModelId model_id = VersionedModelId(model_info["model_name"], model_info["model_version"]);
