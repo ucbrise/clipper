@@ -241,9 +241,8 @@ build_images () {
     ###########################################################################
 
     # Build Clipper core images
-    # create_image lib_base ClipperLibBaseDockerfile $private
+    create_image lib_base ClipperLibBaseDockerfile $private
     create_image query_frontend QueryFrontendDockerfile $public
-    exit
     create_image management_frontend ManagementFrontendDockerfile $public
     create_image unittests ClipperTestsDockerfile  $private
 

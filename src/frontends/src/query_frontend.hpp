@@ -340,7 +340,7 @@ class RequestHandler {
                   std::string content = get_prediction_response_content(r);
                   final_content += content + "\n";
                 }  catch (const std::exception& e) {
-                  // returned a response before all predictions in the batch were ready 
+                  // case: returned a response before all predictions in the batch were ready 
                   }
               }
               respond_http(final_content, "200 OK", response);
@@ -395,7 +395,6 @@ class RequestHandler {
             }
           }
         }
-        // STEP 2: decode_and_handle_update should take a batch query
         folly::Future<FeedbackAck> update =
             decode_and_handle_update(request->content.string(), name,
                                      versioned_models, policy, input_type);
