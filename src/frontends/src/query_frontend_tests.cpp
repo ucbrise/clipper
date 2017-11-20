@@ -221,6 +221,15 @@ TEST_F(QueryFrontendTest, TestDecodeWrongInputType) {
       json_semantic_error);
 }
 
+TEST_F(QueryFrontendTest, TestDecodeWrongInputTypeInBatch) {
+  std::string test_json_doubles =
+      "{\"uid\": 23, \"input_batch\": [[1,2], [3.243242,0.3223424]]}";
+  ASSERT_THROW(
+      rh_.decode_and_handle_predict(test_json_doubles, "test", {},
+                                    "test_policy", 30000, InputType::Ints),
+      json_semantic_error);
+}
+
 TEST_F(QueryFrontendTest, TestDecodeCorrectUpdate) {
   std::string update_json =
       "{\"uid\": 23, \"input\": [1.4,2.23,3.243242,0.3223424], \"label\": 1.0}";
