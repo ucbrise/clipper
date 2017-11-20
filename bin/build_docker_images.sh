@@ -8,6 +8,12 @@
 # + The current version as read from VERSION.txt: <image_name>:version
 # For the images that we publish, both tags will be pushed.
 
+# In addition, if we are on a release branch (one that matches the regex "release-*")
+# and the version in VERSION.txt is not a release candidate and matches the form
+# MAJOR.MINOR.PATCH, we will publish an additional tag MAJOR.MINOR. This allows users
+# pin their docker images to the minor version and get updates with new patches
+# automatically.
+
 
 set -e
 set -u
@@ -26,6 +32,162 @@ cd $CLIPPER_ROOT
 # Initialize tags
 version_tag=$(<VERSION.txt)
 sha_tag=`git rev-parse --verify --short HEAD`
+
+######## Utilities for managing versioning ############
+# From https://github.com/cloudflare/semver_bash/blob/c1133faf0efe17767b654b213f212c326df73fa3/semver.sh
+# LICENSE: 
+# Copyright (c) 2013, Ray Bejjani
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met: 
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer. 
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution. 
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# The views and conclusions contained in the software and documentation are those
+# of the authors and should not be interpreted as representing official policies, 
+# either expressed or implied, of the FreeBSD Project.
+
+function semverParseInto() {
+    local RE='[^0-9]*\([0-9]*\)[.]\([0-9]*\)[.]\([0-9]*\)\([0-9A-Za-z-]*\)'
+    #MAJOR
+    eval $2=`echo $1 | sed -e "s#$RE#\1#"`
+    #MINOR
+    eval $3=`echo $1 | sed -e "s#$RE#\2#"`
+    #MINOR
+    eval $4=`echo $1 | sed -e "s#$RE#\3#"`
+    #SPECIAL
+    eval $5=`echo $1 | sed -e "s#$RE#\4#"`
+}
+
+function semverEQ() {
+    local MAJOR_A=0
+    local MINOR_A=0
+    local PATCH_A=0
+    local SPECIAL_A=0
+
+    local MAJOR_B=0
+    local MINOR_B=0
+    local PATCH_B=0
+    local SPECIAL_B=0
+
+    semverParseInto $1 MAJOR_A MINOR_A PATCH_A SPECIAL_A
+    semverParseInto $2 MAJOR_B MINOR_B PATCH_B SPECIAL_B
+
+    if [ $MAJOR_A -ne $MAJOR_B ]; then
+        return 1
+    fi
+
+    if [ $MINOR_A -ne $MINOR_B ]; then
+        return 1
+    fi
+
+    if [ $PATCH_A -ne $PATCH_B ]; then
+        return 1
+    fi
+
+    if [[ "_$SPECIAL_A" != "_$SPECIAL_B" ]]; then
+        return 1
+    fi
+
+
+    return 0
+
+}
+
+function semverLT() {
+    local MAJOR_A=0
+    local MINOR_A=0
+    local PATCH_A=0
+    local SPECIAL_A=0
+
+    local MAJOR_B=0
+    local MINOR_B=0
+    local PATCH_B=0
+    local SPECIAL_B=0
+
+    semverParseInto $1 MAJOR_A MINOR_A PATCH_A SPECIAL_A
+    semverParseInto $2 MAJOR_B MINOR_B PATCH_B SPECIAL_B
+
+    if [ $MAJOR_A -lt $MAJOR_B ]; then
+        return 0
+    fi
+
+    if [[ $MAJOR_A -le $MAJOR_B  && $MINOR_A -lt $MINOR_B ]]; then
+        return 0
+    fi
+    
+    if [[ $MAJOR_A -le $MAJOR_B  && $MINOR_A -le $MINOR_B && $PATCH_A -lt $PATCH_B ]]; then
+        return 0
+    fi
+
+    if [[ "_$SPECIAL_A"  == "_" ]] && [[ "_$SPECIAL_B"  == "_" ]] ; then
+        return 1
+    fi
+    if [[ "_$SPECIAL_A"  == "_" ]] && [[ "_$SPECIAL_B"  != "_" ]] ; then
+        return 1
+    fi
+    if [[ "_$SPECIAL_A"  != "_" ]] && [[ "_$SPECIAL_B"  == "_" ]] ; then
+        return 0
+    fi
+
+    if [[ "_$SPECIAL_A" < "_$SPECIAL_B" ]]; then
+        return 0
+    fi
+
+    return 1
+
+}
+
+function semverGT() {
+    semverEQ $1 $2
+    local EQ=$?
+
+    semverLT $1 $2
+    local LT=$?
+
+    if [ $EQ -ne 0 ] && [ $LT -ne 0 ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+
+##############################################################
+
+set_version_tag () {
+  if ! [[ "$version_tag" == "develop" ]] ; then
+    local MAJOR=0
+    local MINOR=0
+    local PATCH=0
+    local SPECIAL=""
+    semverParseInto $version_tag MAJOR MINOR PATCH SPECIAL
+    if [[ -z "$SPECIAL"  ]] ; then
+      minor_version="$MAJOR.$MINOR"
+    else
+      echo "special found"
+    fi
+  fi
+}
+
+
+set_version_tag
 
 namespace="clipper"
 
@@ -51,6 +213,18 @@ create_image () {
         docker push $namespace/$image:$sha_tag
         echo "Publishing $namespace/$image:$version_tag"
         docker push $namespace/$image:$version_tag
+
+        # If the version is normal versioned release (not develop and not a release candidate),
+        # We also tag and publish an image tagged
+        # with just the minor version. E.g. if VERSION.txt is "0.2.0", we'll also
+        # publish an image tagged with "0.2". This image will be updated to the newest
+        # patch version every time we push a patch, but will not be updated for release
+        # candidates.
+        if ! [[ -z ${minor_version+set} ]] ; then
+          docker tag $namespace/$image:$sha_tag $namespace/$image:$minor_version
+          echo "Found release version. Publishing $namespace/$image:$minor_version"
+          docker push $namespace/$image:$minor_version
+        fi
     fi
 }
 
@@ -84,7 +258,11 @@ build_images () {
     create_image python-closure-container PyClosureContainerDockerfile $public
     create_image pyspark-container PySparkContainerDockerfile $public
     create_image tf_cifar_container TensorFlowCifarDockerfile $public
+    create_image tf-container TensorFlowDockerfile $public
 }
+
+
+
 
 usage () {
     cat <<EOF

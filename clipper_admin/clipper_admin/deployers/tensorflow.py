@@ -1,29 +1,32 @@
 from __future__ import print_function, with_statement, absolute_import
-
-import logging
-import os
-import posixpath
 import shutil
-from ..version import __version__
+import tensorflow as tf
+import logging
+import re
+import os
+import json
 
+from ..version import __version__
+from ..clipper_admin import ClipperException
 from .deployer_utils import save_python_function
 
 logger = logging.getLogger(__name__)
 
 
-def create_endpoint(
-        clipper_conn,
-        name,
-        input_type,
-        func,
-        default_output="None",
-        version=1,
-        slo_micros=3000000,
-        labels=None,
-        registry=None,
-        base_image="clipper/python-closure-container:{}".format(__version__),
-        num_replicas=1):
-    """Registers an application and deploys the provided predict function as a model.
+def create_endpoint(clipper_conn,
+                    name,
+                    input_type,
+                    func,
+                    tf_sess,
+                    default_output="None",
+                    version=1,
+                    slo_micros=3000000,
+                    labels=None,
+                    registry=None,
+                    base_image="clipper/tf-container:{}".format(__version__),
+                    num_replicas=1):
+    """Registers an app and deploys the provided predict function with TensorFlow  model as
+    a Clipper model.
 
     Parameters
     ----------
@@ -37,6 +40,7 @@ def create_endpoint(
     func : function
         The prediction function. Any state associated with the function will be
         captured via closure capture and pickled with Cloudpickle.
+    tf_sess : The Tensorflow Session to save.
     default_output : str, optional
         The default output for the application. The default output will be returned whenever
         an application is unable to receive a response from a model within the specified
@@ -60,7 +64,7 @@ def create_endpoint(
         and used purely for user annotations.
     registry : str, optional
         The Docker container registry to push the freshly built model to. Note
-        that if you are running Clipper on Kubernetes, this registry must be accessible
+        that if you are running Clipper on Kubernetes, this registry must be accesible
         to the Kubernetes cluster in order to fetch the container from the registry.
     base_image : str, optional
         The base Docker image to build the new model image from. This
@@ -74,27 +78,25 @@ def create_endpoint(
 
     clipper_conn.register_application(name, input_type, default_output,
                                       slo_micros)
-    deploy_python_closure(clipper_conn, name, version, input_type, func,
-                          base_image, labels, registry, num_replicas)
+    deploy_tensorflow_model(clipper_conn, name, version, input_type, func,
+                            tf_sess, base_image, labels, registry,
+                            num_replicas)
 
     clipper_conn.link_model_to_app(name, name)
 
 
-def deploy_python_closure(
+def deploy_tensorflow_model(
         clipper_conn,
         name,
         version,
         input_type,
         func,
-        base_image="clipper/python-closure-container:{}".format(__version__),
+        tf_sess,
+        base_image="clipper/tf-container:{}".format(__version__),
         labels=None,
         registry=None,
         num_replicas=1):
-    """Deploy an arbitrary Python function to Clipper.
-
-    The function should take a list of inputs of the type specified by `input_type` and
-    return a Python list or numpy array of predictions as strings.
-
+    """Deploy a Python prediction function with a Tensorflow model.
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
@@ -110,6 +112,8 @@ def deploy_python_closure(
     func : function
         The prediction function. Any state associated with the function will be
         captured via closure capture and pickled with Cloudpickle.
+    tf_sess : tensorflow.python.client.session.Session
+        The tensor flow session to save.
     base_image : str, optional
         The base Docker image to build the new model image from. This
         image should contain all code necessary to run a Clipper model
@@ -129,48 +133,44 @@ def deploy_python_closure(
 
     Example
     -------
-    Define a pre-processing function ``center()`` and train a model on the pre-processed input::
-
         from clipper_admin import ClipperConnection, DockerContainerManager
-        from clipper_admin.deployers.python import deploy_python_closure
-        import numpy as np
-        import sklearn
+        from clipper_admin.deployers.tensorflow import deploy_tensorflow_model
 
         clipper_conn = ClipperConnection(DockerContainerManager())
 
         # Connect to an already-running Clipper cluster
         clipper_conn.connect()
 
-        def center(xs):
-            means = np.mean(xs, axis=0)
-            return xs - means
-
-        centered_xs = center(xs)
-        model = sklearn.linear_model.LogisticRegression()
-        model.fit(centered_xs, ys)
-
-        # Note that this function accesses the trained model via closure capture,
-        # rather than having the model passed in as an explicit argument.
-        def centered_predict(inputs):
-            centered_inputs = center(inputs)
-            # model.predict returns a list of predictions
-            preds = model.predict(centered_inputs)
+        def predict(sess, inputs):
+            preds = sess.run('predict_class:0', feed_dict={'pixels:0': inputs})
             return [str(p) for p in preds]
 
-        deploy_python_closure(
-            clipper_conn,
-            name="example",
-            input_type="doubles",
-            func=centered_predict)
-    """
+        deploy_tensorflow_model(
+        clipper_conn,
+        model_name,
+        version,
+        input_type,
+        predict_fn,
+        sess)
 
+    """
+    # save predict function
     serialization_dir = save_python_function(name, func)
-    # Special handling for Windows, which uses backslash for path delimiting
-    serialization_dir = posixpath.join(*os.path.split(serialization_dir))
-    logger.info("Python closure saved")
-    # Deploy function
+    # save Tensorflow session
+    tf_sess_save_loc = os.path.join(serialization_dir, "tfmodel/model.ckpt")
+    try:
+        saver = tf.train.Saver()
+        save_path = saver.save(tf_sess, tf_sess_save_loc)
+    except Exception as e:
+        logger.warn("Error saving Tensorflow model: %s" % e)
+        raise e
+
+    logger.info("TensorFlow model saved at: %s " % save_path)
+
+    # Deploy model
     clipper_conn.build_and_deploy_model(name, version, input_type,
                                         serialization_dir, base_image, labels,
                                         registry, num_replicas)
+
     # Remove temp files
     shutil.rmtree(serialization_dir)

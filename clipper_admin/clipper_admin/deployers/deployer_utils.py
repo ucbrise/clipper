@@ -63,7 +63,7 @@ def save_python_function(name, func):
             "Warning: Anaconda environment was either not found or exporting the environment "
             "failed. Your function will still be serialized and deployed, but may fail due to "
             "missing dependencies. In this case, please re-run inside an Anaconda environment. "
-            "See http://clipper.ai/documentation/python_model_deployment/ for more information."
+            "See http://docs.clipper.ai/en/release-0.2/index.html#pure-python-functions for more information."
         )
 
     # Export modules used by predict_function not captured in anaconda or pip
