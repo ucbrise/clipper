@@ -257,6 +257,7 @@ build_images () {
     create_image python-closure-container PyClosureContainerDockerfile $public
     create_image pyspark-container PySparkContainerDockerfile $public
     create_image tf_cifar_container TensorFlowCifarDockerfile $public
+    create_image tf-container TensorFlowDockerfile $public
 }
 
 
