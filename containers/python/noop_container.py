@@ -10,6 +10,8 @@ class NoopContainer(rpc.ModelContainerBase):
         self.prediction = prediction
 
     def _predict(self, inputs):
+        time.sleep(0.01)
+        print("the batch size is",len(inputs))
         return [self.prediction] * len(inputs)
 
     def predict_ints(self, inputs):

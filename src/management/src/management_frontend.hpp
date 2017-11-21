@@ -672,10 +672,10 @@ class RequestHandler {
     std::string model_data_path = get_string(d, "model_data_path");
     int batch_size = get_int(d, "batch_size");
 
-    // The barch_size should be either positive or -1
-    if( batch_size<0 && batch_size!= -1){
+    // The batch_size should be either positive or DEFAULT_BATCH_SIZE
+    if( batch_size<=0 && batch_size!= DEFAULT_BATCH_SIZE){
       std::stringstream ss;
-      ss << "The batch size must be positive or -1";
+      ss << "The batch size must be positive or DEFAULT_BATCH_SIZE, which is -1";
       throw clipper::ManagementOperationError(ss.str());
     }
     // Validate strings that will be grouped before supplying to redis

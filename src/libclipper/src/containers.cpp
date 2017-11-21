@@ -5,6 +5,7 @@
 #include <random>
 // uncomment to disable assert()
 // #define NDEBUG
+
 #include <cassert>
 
 #include <clipper/constants.hpp>
@@ -77,8 +78,11 @@ double ModelContainer::get_average_throughput_per_millisecond() {
 }
 
 size_t ModelContainer::get_batch_size(Deadline deadline) {
-  if (this->batch_size_ != -1){
-      return this->batch_size_;
+    std::cout<<"Batch_size="<<batch_size_<<std::endl;
+    std::cout<<"this->Batch_size="<<this->batch_size_<<std::endl;
+    if (batch_size_ != DEFAULT_BATCH_SIZE){
+      std::cout<<"Default"<<std::endl;
+      return batch_size_;
   }
 
   double current_time_millis =
@@ -115,7 +119,7 @@ void ActiveContainers::add_container(VersionedModelId model, int connection_id,
   boost::unique_lock<boost::shared_mutex> l{m_};
 
   // Set a default batch size of -1
-  int batch_size = -1;
+  int batch_size = DEFAULT_BATCH_SIZE;
   auto batch_size_search = batch_sizes_.find(model);
   if(batch_size_search != batch_sizes_.end()) {
     batch_size = batch_size_search->second;

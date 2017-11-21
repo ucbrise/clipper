@@ -2,6 +2,8 @@
 #ifndef CLIPPER_LIB_CONTAINERS_HPP
 #define CLIPPER_LIB_CONTAINERS_HPP
 
+constexpr int DEFAULT_BATCH_SIZE = -1;
+
 #include <memory>
 #include <unordered_map>
 
@@ -20,8 +22,6 @@ using Deadline = std::chrono::time_point<std::chrono::system_clock>;
 class ModelContainer {
  public:
   ~ModelContainer() = default;
-  ModelContainer(VersionedModelId model, int container_id, int replica_id,
-                   InputType input_type);
   ModelContainer(VersionedModelId model, int container_id, int replica_id,
                  InputType input_type, int batch_size);
   // disallow copy

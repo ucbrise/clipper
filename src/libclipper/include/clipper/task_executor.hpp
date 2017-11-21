@@ -287,7 +287,7 @@ class TaskExecutor {
             VersionedModelId vm = VersionedModelId(
                 container_info["model_name"], container_info["model_version"]);
             int replica_id = std::stoi(container_info["model_replica_id"]);
-            int batch_size = -1;
+            int batch_size = DEFAULT_BATCH_SIZE;
             auto batch_size_search = container_info.find("batch_size");
             if( batch_size_search != container_info.end() ){
               // The entry exists, obtain the value and update the batch size
