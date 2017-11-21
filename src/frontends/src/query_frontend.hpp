@@ -303,8 +303,8 @@ class RequestHandler {
 
     auto predict_fn = [this, name, input_type, policy, latency_slo_micros,
                        app_metrics](
-        std::shared_ptr<HttpServer::Response> response,
-        std::shared_ptr<HttpServer::Request> request) {
+                          std::shared_ptr<HttpServer::Response> response,
+                          std::shared_ptr<HttpServer::Request> request) {
       try {
         std::vector<std::string> models = get_linked_models_for_app(name);
         std::vector<VersionedModelId> versioned_models;
@@ -318,14 +318,16 @@ class RequestHandler {
           }
         }
 
-          folly::Future<std::vector<folly::Try<Response>>> predictions = decode_and_handle_predict(
-            request->content.string(), name, versioned_models, policy,
-            latency_slo_micros, input_type);
+        folly::Future<std::vector<folly::Try<Response>>> predictions =
+            decode_and_handle_predict(request->content.string(), name,
+                                      versioned_models, policy,
+                                      latency_slo_micros, input_type);
 
         predictions
-            .then([response, app_metrics](std::vector<folly::Try<Response>> tries) {
+            .then([response,
+                   app_metrics](std::vector<folly::Try<Response>> tries) {
               std::string final_content;
-              for (auto t : tries)  {
+              for (auto t : tries) {
                 try {
                   Response r = t.value();
                   if (r.output_is_default_) {
@@ -339,9 +341,10 @@ class RequestHandler {
 
                   std::string content = get_prediction_response_content(r);
                   final_content += content + "\n";
-                }  catch (const std::exception& e) {
-                  // case: returned a response before all predictions in the batch were ready 
-                  }
+                } catch (const std::exception& e) {
+                  // case: returned a response before all predictions in the
+                  // batch were ready
+                }
               }
               respond_http(final_content, "200 OK", response);
             })
@@ -381,8 +384,8 @@ class RequestHandler {
     server_.add_endpoint(predict_endpoint, "POST", predict_fn);
 
     auto update_fn = [this, name, input_type, policy](
-        std::shared_ptr<HttpServer::Response> response,
-        std::shared_ptr<HttpServer::Request> request) {
+                         std::shared_ptr<HttpServer::Response> response,
+                         std::shared_ptr<HttpServer::Request> request) {
       try {
         std::vector<std::string> models = get_linked_models_for_app(name);
         std::vector<VersionedModelId> versioned_models;
@@ -501,18 +504,18 @@ class RequestHandler {
     if (d.HasMember("input")) {
       std::shared_ptr<Input> input = clipper::json::parse_input(input_type, d);
       auto prediction = query_processor_.predict(
-              Query{name, uid, input, latency_slo_micros, policy, models});
+          Query{name, uid, input, latency_slo_micros, policy, models});
       predictions.push_back(std::move(prediction));
-    } else { // d.HasMember("input_batch") instead
-        std::vector<std::shared_ptr<Input>> input_batch = 
-                clipper::json::parse_input_batch(input_type, d);
-        for (auto input : input_batch) {
-          auto prediction = query_processor_.predict(
-                  Query{name, uid, input, latency_slo_micros, policy, models});
-          predictions.push_back(std::move(prediction));
-        }
+    } else {  // d.HasMember("input_batch") instead
+      std::vector<std::shared_ptr<Input>> input_batch =
+          clipper::json::parse_input_batch(input_type, d);
+      for (auto input : input_batch) {
+        auto prediction = query_processor_.predict(
+            Query{name, uid, input, latency_slo_micros, policy, models});
+        predictions.push_back(std::move(prediction));
+      }
     }
-      return folly::collectAll(predictions);
+    return folly::collectAll(predictions);
   }
 
   /*

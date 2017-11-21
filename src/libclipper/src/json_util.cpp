@@ -215,9 +215,10 @@ std::vector<std::string> get_string_array(rapidjson::Value& d,
   return vals;
 }
 
-/* Getters with error handling for nested arrays of double, float, int, string */
+/* Getters with error handling for nested arrays of double, float, int, string
+ */
 std::vector<std::vector<double>> get_double_arrays(rapidjson::Value& d,
-                                     const char* key_name) {
+                                                   const char* key_name) {
   rapidjson::Value& v =
       check_kv_type_and_return(d, key_name, rapidjson::kArrayType);
   std::vector<std::vector<double>> double_arrays;
@@ -226,15 +227,15 @@ std::vector<std::vector<double>> get_double_arrays(rapidjson::Value& d,
   for (rapidjson::Value& elem_array : v.GetArray()) {
     if (!elem_array.IsArray()) {
       throw json_semantic_error("Array input of type " +
-                                  kTypeNames[elem_array.GetType()] +
-                                  " is not of type array");
+                                kTypeNames[elem_array.GetType()] +
+                                " is not of type array");
     }
     std::vector<double> double_array;
     for (rapidjson::Value& elem : elem_array.GetArray()) {
       if (!elem.IsDouble()) {
         throw json_semantic_error("Array input of type " +
-                                    kTypeNames[elem.GetType()] +
-                                    " is not of type double");
+                                  kTypeNames[elem.GetType()] +
+                                  " is not of type double");
       }
       double_array.push_back(elem.GetDouble());
     }
@@ -244,7 +245,7 @@ std::vector<std::vector<double>> get_double_arrays(rapidjson::Value& d,
 }
 
 std::vector<std::vector<float>> get_float_arrays(rapidjson::Value& d,
-                                     const char* key_name) {
+                                                 const char* key_name) {
   rapidjson::Value& v =
       check_kv_type_and_return(d, key_name, rapidjson::kArrayType);
   std::vector<std::vector<float>> float_arrays;
@@ -253,15 +254,15 @@ std::vector<std::vector<float>> get_float_arrays(rapidjson::Value& d,
   for (rapidjson::Value& elem_array : v.GetArray()) {
     if (!elem_array.IsArray()) {
       throw json_semantic_error("Array input of type " +
-                                  kTypeNames[elem_array.GetType()] +
-                                  " is not of type array");
+                                kTypeNames[elem_array.GetType()] +
+                                " is not of type array");
     }
     std::vector<float> float_array;
     for (rapidjson::Value& elem : elem_array.GetArray()) {
       if (!elem.IsFloat()) {
         throw json_semantic_error("Array input of type " +
-                                    kTypeNames[elem.GetType()] +
-                                    " is not of type float");
+                                  kTypeNames[elem.GetType()] +
+                                  " is not of type float");
       }
       float_array.push_back(elem.GetFloat());
     }
@@ -271,7 +272,7 @@ std::vector<std::vector<float>> get_float_arrays(rapidjson::Value& d,
 }
 
 std::vector<std::vector<int>> get_int_arrays(rapidjson::Value& d,
-                                     const char* key_name) {
+                                             const char* key_name) {
   rapidjson::Value& v =
       check_kv_type_and_return(d, key_name, rapidjson::kArrayType);
   std::vector<std::vector<int>> int_arrays;
@@ -280,15 +281,15 @@ std::vector<std::vector<int>> get_int_arrays(rapidjson::Value& d,
   for (rapidjson::Value& elem_array : v.GetArray()) {
     if (!elem_array.IsArray()) {
       throw json_semantic_error("Array input of type " +
-                                  kTypeNames[elem_array.GetType()] +
-                                  " is not of type array");
+                                kTypeNames[elem_array.GetType()] +
+                                " is not of type array");
     }
     std::vector<int> int_array;
     for (rapidjson::Value& elem : elem_array.GetArray()) {
       if (!elem.IsInt()) {
         throw json_semantic_error("Array input of type " +
-                                    kTypeNames[elem.GetType()] +
-                                    " is not of type int");
+                                  kTypeNames[elem.GetType()] +
+                                  " is not of type int");
       }
       int_array.push_back(elem.GetInt());
     }
@@ -297,8 +298,8 @@ std::vector<std::vector<int>> get_int_arrays(rapidjson::Value& d,
   return int_arrays;
 }
 
-std::vector<std::vector<uint8_t>> get_base64_encoded_byte_arrays(rapidjson::Value& d,
-                                     const char* key_name) {
+std::vector<std::vector<uint8_t>> get_base64_encoded_byte_arrays(
+    rapidjson::Value& d, const char* key_name) {
   rapidjson::Value& v =
       check_kv_type_and_return(d, key_name, rapidjson::kArrayType);
   std::vector<std::vector<uint8_t>> byte_arrays;
@@ -316,7 +317,7 @@ std::vector<std::vector<uint8_t>> get_base64_encoded_byte_arrays(rapidjson::Valu
     decoder.Decode(encoded_string, &decoded_string);
     std::vector<uint8_t> decoded_bytes =
         std::vector<uint8_t>(decoded_string.begin(), decoded_string.end());
-    
+
     byte_arrays.push_back(decoded_bytes);
   }
   return byte_arrays;
@@ -389,7 +390,8 @@ std::shared_ptr<Input> parse_input(InputType input_type, rapidjson::Value& d) {
   }
 }
 
-std::vector<std::shared_ptr<Input>> parse_input_batch(InputType input_type, rapidjson::Value& d) {
+std::vector<std::shared_ptr<Input>> parse_input_batch(InputType input_type,
+                                                      rapidjson::Value& d) {
   switch (input_type) {
     case InputType::Doubles: {
       auto input_batch = get_double_arrays(d, "input_batch");

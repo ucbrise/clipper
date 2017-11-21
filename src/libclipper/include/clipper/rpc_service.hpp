@@ -73,13 +73,13 @@ class RPCService {
   void stop();
 
   /*
-  * Send message takes ownership of the msg data because the caller cannot
-  * know when the message will actually be sent.
-  *
-  * \param `msg`: A vector of individual messages to send to this container.
-  * The messages will be sent as a single, multi-part ZeroMQ message so
-  * it is very efficient.
-  */
+   * Send message takes ownership of the msg data because the caller cannot
+   * know when the message will actually be sent.
+   *
+   * \param `msg`: A vector of individual messages to send to this container.
+   * The messages will be sent as a single, multi-part ZeroMQ message so
+   * it is very efficient.
+   */
   int send_message(const std::vector<std::vector<uint8_t>> msg,
                    const int zmq_connection_id);
 

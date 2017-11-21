@@ -82,7 +82,8 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputInts) {
 }
 
 TEST_F(QueryFrontendTest, TestDecodeCorrectInputIntsBatch) {
-  std::string test_json_ints = "{\"input_batch\": [[1, 2], [10, 20], [100, 200]]}";
+  std::string test_json_ints =
+      "{\"input_batch\": [[1, 2], [10, 20], [100, 200]]}";
   std::vector<std::vector<int>> expected_input{{1, 2}, {10, 20}, {100, 200}};
   std::vector<folly::Try<Response>> responses =
       rh_.decode_and_handle_predict(test_json_ints, "test", {}, "test_policy",
@@ -98,15 +99,14 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputIntsBatch) {
     EXPECT_EQ(parsed_query.label_, "test");
     EXPECT_EQ(parsed_query.latency_budget_micros_, 30000);
     EXPECT_EQ(parsed_query.selection_policy_, "test_policy");
-
   }
 }
 
 TEST_F(QueryFrontendTest, TestDecodeCorrectInputDoubles) {
   std::string test_json_doubles = "{\"input\": [1.4,2.23,3.243242,0.3223424]}";
   std::vector<folly::Try<Response>> responses =
-      rh_.decode_and_handle_predict(test_json_doubles, "test", {}, "test_policy",
-                                    30000, InputType::Doubles)
+      rh_.decode_and_handle_predict(test_json_doubles, "test", {},
+                                    "test_policy", 30000, InputType::Doubles)
           .get();
   Response response = responses[0].value();
 
@@ -122,11 +122,13 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputDoubles) {
 }
 
 TEST_F(QueryFrontendTest, TestDecodeCorrectInputDoublesBatch) {
-  std::string test_json_doubles = "{\"input_batch\": [[1.1, 2.2], [10.1, 20.2], [100.1, 200.2]]}";
-  std::vector<std::vector<double>> expected_input{{1.1, 2.2}, {10.1, 20.2}, {100.1, 200.2}};
+  std::string test_json_doubles =
+      "{\"input_batch\": [[1.1, 2.2], [10.1, 20.2], [100.1, 200.2]]}";
+  std::vector<std::vector<double>> expected_input{
+      {1.1, 2.2}, {10.1, 20.2}, {100.1, 200.2}};
   std::vector<folly::Try<Response>> responses =
-      rh_.decode_and_handle_predict(test_json_doubles, "test", {}, "test_policy",
-                                    30000, InputType::Doubles)
+      rh_.decode_and_handle_predict(test_json_doubles, "test", {},
+                                    "test_policy", 30000, InputType::Doubles)
           .get();
   for (size_t index = 0; index < responses.size(); ++index) {
     Response response = responses[index].value();
@@ -138,7 +140,6 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputDoublesBatch) {
     EXPECT_EQ(parsed_query.label_, "test");
     EXPECT_EQ(parsed_query.latency_budget_micros_, 30000);
     EXPECT_EQ(parsed_query.selection_policy_, "test_policy");
-
   }
 }
 
@@ -166,23 +167,24 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputString) {
 }
 
 TEST_F(QueryFrontendTest, TestDecodeCorrectInputStringBatch) {
-  std::string test_json_strings = "{\"input_batch\": [ \"this\", \"is\", \"a\", \"test\" ]}";
+  std::string test_json_strings =
+      "{\"input_batch\": [ \"this\", \"is\", \"a\", \"test\" ]}";
   std::vector<std::string> expected_input{"this", "is", "a", "test"};
   std::vector<folly::Try<Response>> responses =
-      rh_.decode_and_handle_predict(test_json_strings, "test", {}, "test_policy",
-                                    30000, InputType::Strings)
+      rh_.decode_and_handle_predict(test_json_strings, "test", {},
+                                    "test_policy", 30000, InputType::Strings)
           .get();
   for (size_t index = 0; index < responses.size(); ++index) {
     Response response = responses[index].value();
     Query parsed_query = response.query_;
 
     const std::string& parsed_input =
-        std::static_pointer_cast<SerializableString>(parsed_query.input_)->get_data();
+        std::static_pointer_cast<SerializableString>(parsed_query.input_)
+            ->get_data();
     EXPECT_EQ(parsed_input, expected_input[index]);
     EXPECT_EQ(parsed_query.label_, "test");
     EXPECT_EQ(parsed_query.latency_budget_micros_, 30000);
     EXPECT_EQ(parsed_query.selection_policy_, "test_policy");
-
   }
 }
 
@@ -276,8 +278,8 @@ TEST_F(QueryFrontendTest,
        TestJsonResponseForSuccessfulPredictionFormattedCorrectly) {
   std::string test_json = "{\"uid\": 1, \"input\": [1,2,3]}";
   std::vector<folly::Try<Response>> responses =
-      rh_.decode_and_handle_predict(test_json, "test", {}, "test_policy",
-                                    30000, InputType::Ints)
+      rh_.decode_and_handle_predict(test_json, "test", {}, "test_policy", 30000,
+                                    InputType::Ints)
           .get();
   Response response = responses[0].value();
 

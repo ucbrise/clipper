@@ -159,4 +159,4 @@ std::vector<VersionedModelId> ActiveContainers::get_known_models() {
   }
   return keys;
 }
-}
+}  // namespace clipper
