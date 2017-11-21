@@ -18,28 +18,9 @@
 namespace clipper {
 
 const std::string LOGGING_TAG_CONTAINERS = "CONTAINERS";
-/*
-ModelContainer::ModelContainer(VersionedModelId model, int container_id,
-                               int replica_id, InputType input_type)
-        : model_(model),
-          container_id_(container_id),
-          replica_id_(replica_id),
-          input_type_(input_type),
-          batch_size_(-1),
-          latency_hist_("container:" + model.serialize() + ":" +
-                        std::to_string(replica_id) + ":prediction_latency",
-                        "microseconds", HISTOGRAM_SAMPLE_SIZE),
-          avg_throughput_per_milli_(0),
-          throughput_buffer_(THROUGHPUT_BUFFER_CAPACITY) {
-  std::string model_str = model.serialize();
-  log_info_formatted(LOGGING_TAG_CONTAINERS,
-                     "Creating new ModelContainer for model {}, id: {}",
-                     model_str, std::to_string(container_id));
-}
-*/
 
 ModelContainer::ModelContainer(VersionedModelId model, int container_id,
-                               int replica_id, InputType input_type, boost::optional<int> batch_size)
+                               int replica_id, InputType input_type, int batch_size)
     : model_(model),
       container_id_(container_id),
       replica_id_(replica_id),
@@ -96,14 +77,8 @@ double ModelContainer::get_average_throughput_per_millisecond() {
 }
 
 size_t ModelContainer::get_batch_size(Deadline deadline) {
-  std::cout<<"this->batch_size="<<this->batch_size_<<std::endl;
   if (this->batch_size_ != -1){
-    /*
-    std::cout<< "Designated!" << std::endl;
-    std::cout<<"this->batch_size="<<this->batch_size_<<std::endl;
-    std::cout<<"this->batch_size.get()="<<this->batch_size_.get()<<std::endl;
-    */
-      return this->batch_size_.get();
+      return this->batch_size_;
   }
 
   double current_time_millis =
@@ -139,11 +114,10 @@ void ActiveContainers::add_container(VersionedModelId model, int connection_id,
                      replica_id, get_readable_input_type(input_type));
   boost::unique_lock<boost::shared_mutex> l{m_};
 
-  // Set a default batch size of 1
-  int batch_size = 1;
+  // Set a default batch size of -1
+  int batch_size = -1;
   auto batch_size_search = batch_sizes_.find(model);
   if(batch_size_search != batch_sizes_.end()) {
-    std::cout<<"MODEL_FOUND"<<std::endl;
     batch_size = batch_size_search->second;
   }
 

@@ -670,8 +670,14 @@ class RequestHandler {
     InputType input_type = clipper::parse_input_type(input_type_raw);
     std::string container_name = get_string(d, "container_name");
     std::string model_data_path = get_string(d, "model_data_path");
-    boost::optional<int> batch_size = get_int(d, "batch_size");
+    int batch_size = get_int(d, "batch_size");
 
+    // The barch_size should be either positive or -1
+    if( batch_size<0 && batch_size!= -1){
+      std::stringstream ss;
+      ss << "The batch size must be positive or -1";
+      throw clipper::ManagementOperationError(ss.str());
+    }
     // Validate strings that will be grouped before supplying to redis
     validate_group_str_for_redis(model_name, "model name");
     validate_group_str_for_redis(model_id.get_id(), "model version");

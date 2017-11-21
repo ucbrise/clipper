@@ -280,9 +280,9 @@ class ClipperConnection(object):
             for a model can be changed at any time with
             :py:meth:`clipper.ClipperConnection.set_num_replicas`.
         batch_size : int, optional
-            The user defined batch size.
-            The default value is -1, which means that the user did not define a specific batch size.
-            In this way the batch_size will be calculated via the default algorithm
+            The user-defined batch size.
+            If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
+            replicas of this model.
         Raises
         ------
         :py:exc:`clipper.UnconnectedException`
@@ -337,9 +337,9 @@ class ClipperConnection(object):
             that if you are running Clipper on Kubernetes, this registry must be accesible
             to the Kubernetes cluster in order to fetch the container from the registry.
         batch_size : int, optional
-            The user defined batch size.
-            The default value is -1, which means that the user did not define a specific batch size.
-            In this way the batch_size will be calculated via the default algorithm
+            The user-defined batch size.
+            If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
+            replicas of this model.
         Returns
         -------
         str :
@@ -446,9 +446,9 @@ class ClipperConnection(object):
             for a model can be changed at any time with
             :py:meth:`clipper.ClipperConnection.set_num_replicas`.
         batch_size : int, optional
-            The user defined batch size.
-            The default value is -1, which means that the user did not define a specific batch size.
-            In this way the batch_size will be calculated via the default algorithm
+            The user-defined batch size.
+            If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
+            replicas of this model.
 
         Raises
         ------
@@ -466,13 +466,8 @@ class ClipperConnection(object):
             raise UnconnectedException()
         version = str(version)
         _validate_versioned_model_name(name, version)
-        '''
-        self.cm.deploy_model(
-            name, version, input_type, batch_size=batch_size, image, num_replicas=num_replicas)
-        '''
-        ''' 
-        '''
-        self.cm.deploy_model(name=name, version=version, input_type=input_type, image=image, batch_size=batch_size)
+        self.cm.deploy_model(name=name, version=version, input_type=input_type, image=image, batch_size=batch_size,
+                             num_replicas=num_replicas)
         self.register_model(
             name, version, input_type, image=image, labels=labels, batch_size=batch_size)
         logger.info("Done deploying model {name}:{version}.".format(
@@ -515,9 +510,9 @@ class ClipperConnection(object):
             A list of strings annotating the model. These are ignored by Clipper
             and used purely for user annotations.
         batch_size : int, optional
-            The user defined batch size.
-            The default value is -1, which means that the user did not define a specific batch size.
-            In this way the batch_size will be calculated via the default algorithm
+            The user-defined batch size.
+            If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
+            replicas of this model.
 
         Raises
         ------

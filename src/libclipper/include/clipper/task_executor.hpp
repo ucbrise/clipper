@@ -264,12 +264,12 @@ class TaskExecutor {
     redis::subscribe_to_model_changes(redis_subscriber_,
                     [this, task_executor_valid = active_ ](const std::string &key,
                                                            const std::string &event_type) {
-                log_info(LOGGING_TAG_TASK_EXECUTOR,"subscribe_to_model_changes is called");
                 if (event_type == "hset" && *task_executor_valid) {
                     auto model_info = clipper::redis::get_model_by_key(redis_connection_, key);
                     VersionedModelId model_id = VersionedModelId(model_info["model_name"], model_info["model_version"]);
                     int batch_size = std::stoi(model_info["batch_size"]);
-                    std::cout<<"registered_batch_size"<<batch_size<<std::endl;
+                    log_info_formatted(LOGGING_TAG_TASK_EXECUTOR, "Registered batch size of {} for model {}:{}",
+                                       batch_size, model_id.get_name(), model_id.get_id());
                     active_containers_->register_batch_size(model_id, batch_size);
                   }
               }
@@ -287,14 +287,11 @@ class TaskExecutor {
             VersionedModelId vm = VersionedModelId(
                 container_info["model_name"], container_info["model_version"]);
             int replica_id = std::stoi(container_info["model_replica_id"]);
-            //#int batch_size = std::stoi(container_info["batch_size"]);
-            boost::optional<int> batch_size = -1;
-            for( auto it = container_info.begin(); it != container_info.end(); it++){
-              std::cout<<"it->first="<<it->first<<std::endl;
-              if (it->first == "batch_size"){
-                std::cout<<"batch_size_changed"<<std::endl;
-                batch_size = std::stoi(container_info[it->first]);
-              }
+            int batch_size = -1;
+            auto batch_size_search = container_info.find("batch_size");
+            if( batch_size_search != container_info.end() ){
+              // The entry exists, obtain the value and update the batch size
+              batch_size = std::stoi(container_info["batch_size"]);
             }
 
             active_containers_->add_container(

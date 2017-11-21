@@ -232,7 +232,7 @@ bool add_model(Redox& redis, const VersionedModelId& model_id,
                const InputType& input_type, const std::vector<string>& labels,
                const std::string& container_name,
                const std::string& model_data_path,
-               boost::optional<int> batch_size) {
+               int batch_size) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
     std::string model_id_key = gen_versioned_model_key(model_id);
@@ -246,7 +246,7 @@ bool add_model(Redox& redis, const VersionedModelId& model_id,
       "labels",           labels_to_str(labels),
       "container_name",   container_name,
       "model_data_path",  model_data_path,
-      "batch_size", std::to_string(batch_size.get())};
+      "batch_size", std::to_string(batch_size)};
     // clang-format on
     return send_cmd_no_reply<string>(redis, cmd_vec);
   } else {
