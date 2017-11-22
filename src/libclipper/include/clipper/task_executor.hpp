@@ -267,7 +267,11 @@ class TaskExecutor {
                 if (event_type == "hset" && *task_executor_valid) {
                     auto model_info = clipper::redis::get_model_by_key(redis_connection_, key);
                     VersionedModelId model_id = VersionedModelId(model_info["model_name"], model_info["model_version"]);
-                    int batch_size = std::stoi(model_info["batch_size"]);
+                    int batch_size = DEFAULT_BATCH_SIZE;
+                    auto batch_size_search = model_info.find("batch_size");
+                    if( batch_size_search != model_info.end()){
+                        batch_size = std::stoi(model_info["batch_size"]);
+                    }
                     log_info_formatted(LOGGING_TAG_TASK_EXECUTOR, "Registered batch size of {} for model {}:{}",
                                        batch_size, model_id.get_name(), model_id.get_id());
                     active_containers_->register_batch_size(model_id, batch_size);
@@ -287,12 +291,6 @@ class TaskExecutor {
             VersionedModelId vm = VersionedModelId(
                 container_info["model_name"], container_info["model_version"]);
             int replica_id = std::stoi(container_info["model_replica_id"]);
-            int batch_size = DEFAULT_BATCH_SIZE;
-            auto batch_size_search = container_info.find("batch_size");
-            if( batch_size_search != container_info.end() ){
-              // The entry exists, obtain the value and update the batch size
-              batch_size = std::stoi(container_info["batch_size"]);
-            }
 
             active_containers_->add_container(
                 vm, std::stoi(container_info["zmq_connection_id"]), replica_id,

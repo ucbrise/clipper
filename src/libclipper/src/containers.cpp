@@ -5,7 +5,6 @@
 #include <random>
 // uncomment to disable assert()
 // #define NDEBUG
-
 #include <cassert>
 
 #include <clipper/constants.hpp>
@@ -72,18 +71,19 @@ void ModelContainer::update_throughput(size_t batch_size,
   throughput_buffer_.push_back(new_throughput);
 }
 
+void ModelContainer::set_batch_size(int batch_size) {
+  batch_size_ = batch_size;
+}
+
 double ModelContainer::get_average_throughput_per_millisecond() {
   boost::shared_lock<boost::shared_mutex> lock(throughput_mutex_);
   return avg_throughput_per_milli_;
 }
 
 size_t ModelContainer::get_batch_size(Deadline deadline) {
-    std::cout<<"Batch_size="<<batch_size_<<std::endl;
-    std::cout<<"this->Batch_size="<<this->batch_size_<<std::endl;
     if (batch_size_ != DEFAULT_BATCH_SIZE){
-      std::cout<<"Default"<<std::endl;
       return batch_size_;
-  }
+    }
 
   double current_time_millis =
       std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -107,7 +107,8 @@ ActiveContainers::ActiveContainers()
     : containers_(
           std::unordered_map<VersionedModelId,
                              std::map<int, std::shared_ptr<ModelContainer>>>(
-              {})) {}
+              {})),
+      batch_sizes_(std::unordered_map<VersionedModelId, int>()){}
 
 void ActiveContainers::add_container(VersionedModelId model, int connection_id,
                                      int replica_id, InputType input_type) {
@@ -141,10 +142,6 @@ void ActiveContainers::add_container(VersionedModelId model, int connection_id,
     }
   }
   log_info(LOGGING_TAG_CONTAINERS, log_msg.str());
-}
-
-void ModelContainer::set_batch_size(int batch_size) {
-  batch_size_ = batch_size;
 }
 
 void ActiveContainers::register_batch_size(VersionedModelId model, int batch_size) {

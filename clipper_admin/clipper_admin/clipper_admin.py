@@ -291,7 +291,7 @@ class ClipperConnection(object):
 
         if not self.connected:
             raise UnconnectedException()
-        image = self.build_model(name, version, batch_size, model_data_path, base_image,
+        image = self.build_model(name, version, model_data_path, base_image,
                                  container_registry)
         self.deploy_model(name, version, input_type, image, labels,
                           num_replicas, batch_size)
@@ -301,8 +301,7 @@ class ClipperConnection(object):
                     version,
                     model_data_path,
                     base_image,
-                    container_registry=None,
-                    batch_size=-1):
+                    container_registry=None):
         """Build a new model container Docker image with the provided data"
 
         This method builds a new Docker image from the provided base image with the local directory specified by
@@ -336,10 +335,6 @@ class ClipperConnection(object):
             The Docker container registry to push the freshly built model to. Note
             that if you are running Clipper on Kubernetes, this registry must be accesible
             to the Kubernetes cluster in order to fetch the container from the registry.
-        batch_size : int, optional
-            The user-defined batch size.
-            If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
-            replicas of this model.
         Returns
         -------
         str :

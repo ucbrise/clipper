@@ -175,7 +175,7 @@ bool set_current_model_version(redox::Redox& redis,
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_METADATA_DB_NUM)})) {
     std::string key = gen_model_current_version_key(model_name);
-    const vector<string> cmd_vec{"SET", key, version};
+    const std::vector<std::string> cmd_vec{"SET", key, version};
 
     return send_cmd_no_reply<string>(redis, cmd_vec);
   } else {
@@ -306,7 +306,7 @@ std::vector<std::string> get_model_versions(redox::Redox& redis,
     ss << ":*";
     auto key_regex = ss.str();
     auto result =
-        send_cmd_with_reply<vector<string>>(redis, {"KEYS", key_regex});
+        send_cmd_with_reply<std::vector<std::string>>(redis, {"KEYS", key_regex});
     if (result) {
       std::vector<std::string> model_keys;
       model_keys = *result;
