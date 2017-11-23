@@ -35,4 +35,5 @@ setup(
     ],
     extras_require={
         'PySpark': ['pyspark'],
+        'TensorFlow': ['tensorflow'],
     })
