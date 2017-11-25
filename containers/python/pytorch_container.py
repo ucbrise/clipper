@@ -6,7 +6,6 @@ import json
 
 import numpy as np
 
-# sys.path.append(os.path.abspath("/lib/"))
 from clipper_admin.deployers import cloudpickle
 
 import torch
@@ -19,13 +18,10 @@ def load_predict_func(file_path):
     with open(file_path, 'r') as serialized_func_file:
         return cloudpickle.load(serialized_func_file)
 
-##### Need write code to load pytorch model here
 def load_pytorch_model(model_path):
-    print(model_path)
     model = torch.load(model_path)  
     return model
 
-##### Need write code for pytorch container here
 class PyTorchContainer(rpc.ModelContainerBase):
     def __init__(self, path, input_type):
         self.input_type = rpc.string_to_input_type(input_type)
@@ -48,7 +44,7 @@ class PyTorchContainer(rpc.ModelContainerBase):
         return [str(p) for p in preds]
 
     def predict_doubles(self, inputs):
-        preds = self.predict_func(inputs)
+        preds = self.predict_func(self.model,inputs)
         return [str(p) for p in preds]
 
     def predict_bytes(self, inputs):
