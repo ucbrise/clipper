@@ -26,7 +26,7 @@ def create_endpoint(
         registry=None,
         base_image="clipper/pytorch-container:{}".format(__version__),
         num_replicas=1):
-    """Registers an app and deploys the provided predict function with PySpark model as
+    """Registers an app and deploys the provided predict function with PyTorch model as
     a Clipper model.
     Parameters
     ----------
@@ -172,7 +172,6 @@ def deploy_pytorch_model(
 
     try:       
          torch.save(pytorch_model,torch_model_save_loc)
-         #torch.save(pytorch_model.state_dict(), torch_model_save_loc)
     except Exception as e:
         logger.warn("Error saving torch model: %s" % e)
         raise e
