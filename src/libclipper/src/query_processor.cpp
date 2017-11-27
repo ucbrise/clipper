@@ -100,13 +100,12 @@ folly::Future<Response> QueryProcessor::predict(Query query) {
         it->then([outputs_mutex, outputs_ptr](Output output) {
             std::lock_guard<std::mutex> lock(*outputs_mutex);
             outputs_ptr->push_back(output);
-          })
-            .onError([](const std::exception& e) {
-              log_error_formatted(
-                  LOGGING_TAG_QUERY_PROCESSOR,
-                  "Unexpected error while executing prediction tasks: {}",
-                  e.what());
-            }));
+          }).onError([](const std::exception& e) {
+          log_error_formatted(
+              LOGGING_TAG_QUERY_PROCESSOR,
+              "Unexpected error while executing prediction tasks: {}",
+              e.what());
+        }));
   }
 
   folly::Future<folly::Unit> all_tasks_completed_future =
