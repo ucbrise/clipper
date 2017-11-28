@@ -53,13 +53,6 @@ def parseData(line, obj, pos_label):
 def predict(spark, model, xs):
     return [str(model.predict(normalize(x))) for x in xs]
 
-###################need change
-def predict_with_local_modules(spark, model, xs):
-    return [
-        str(model.predict(normalize(x)) * mmip.COEFFICIENT * mm.COEFFICIENT)
-        for x in xs
-    ]
-
 
 def deploy_and_test_model(clipper_conn,
                           model,
