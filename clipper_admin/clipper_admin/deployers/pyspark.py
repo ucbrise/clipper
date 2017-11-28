@@ -193,7 +193,9 @@ def deploy_pyspark_model(
     spark_model_save_loc = os.path.join(serialization_dir,
                                         "pyspark_model_data")
     try:
-        if isinstance(pyspark_model, pyspark.ml.pipeline.PipelineModel):
+        if isinstance(pyspark_model,
+                      pyspark.ml.pipeline.PipelineModel) or isinstance(
+                          pyspark_model, pyspark.ml.base.Model):
             pyspark_model.save(spark_model_save_loc)
         else:
             pyspark_model.save(sc, spark_model_save_loc)
