@@ -88,9 +88,9 @@ def check_solvability_write_deps(env_path, directory, platform,
             # This call doesn't install anything; it checks the solvability of package dependencies.
             r.install(conda_deps)
         except NoPackagesFoundError as missing_packages_error:
-            missing_packages = missing_packages_error.pkgs
+            missing_packages = missing_packages_error.bad_deps
             for package in missing_packages:
-                conda_deps.remove(package)
+                conda_deps.remove(package[0].spec)
 
             # Check that the dependencies that are not missing are satisfiable
             r.install(conda_deps)
@@ -105,7 +105,7 @@ def check_solvability_write_deps(env_path, directory, platform,
         print(
             "The following packages in your conda environment aren't available in the linux-64 "
             "conda channel the container will use:")
-        print(", ".join(str(package) for package in missing_packages))
+        print(", ".join(str(package[0].spec) for package in missing_packages))
         print(
             "We will skip their installation when deploying your function. If your function uses "
             "these packages, the container will experience a runtime error when queried."
