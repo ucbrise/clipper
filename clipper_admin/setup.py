@@ -27,7 +27,7 @@ setup(
     keywords=['clipper', 'prediction', 'model', 'management'],
     install_requires=[
         'requests',
-        'subprocess32',
+        'subprocess32;python_version<"3.0"',
         'pyyaml',
         'docker',
         'kubernetes',
