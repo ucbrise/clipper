@@ -13,7 +13,10 @@ import sys
 
 def predict(addr, filename):
     url = "http://%s/image-example/predict" % addr
-    req_json = json.dumps({"input": base64.b64encode(open(filename, "rb").read())})
+    req_json = json.dumps({
+        "input":
+        base64.b64encode(open(filename, "rb").read())
+    })
     headers = {'Content-type': 'application/json'}
     start = datetime.now()
     r = requests.post(url, headers=headers, data=req_json)
@@ -23,14 +26,17 @@ def predict(addr, filename):
 
 
 def image_size(img):
-    import base64, io, os, PIL.Image, tempfile
+    import base64,
+    import io
+    import os
+    import PIL.Image
+    import tempfile
     tmp = tempfile.NamedTemporaryFile('w', delete=False, suffix='.jpg')
     tmp.write(io.BytesIO(img).getvalue())
     tmp.close()
     size = PIL.Image.open(tmp.name, 'r').size
     os.unlink(tmp.name)
     return [size]
-
 
 
 # Stop Clipper on Ctrl-C
