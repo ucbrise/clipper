@@ -103,7 +103,10 @@ rapidjson::Value& get_object(rapidjson::Value& d, const char* key_name);
 
 void parse_json(const std::string& json_content, rapidjson::Document& d);
 
-std::shared_ptr<Input> parse_input(InputType input_type, rapidjson::Value& d);
+std::vector<std::shared_ptr<Input>> parse_input(InputType input_type,
+                                                      rapidjson::Value& d);
+
+std::shared_ptr<Input> parse_single_input(InputType input_type, rapidjson::Value& d);
 
 std::vector<std::shared_ptr<Input>> parse_input_batch(InputType input_type,
                                                       rapidjson::Value& d);

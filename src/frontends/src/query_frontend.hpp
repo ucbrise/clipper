@@ -326,7 +326,7 @@ class RequestHandler {
         predictions
             .then([response,
                    app_metrics](std::vector<folly::Try<Response>> tries) {
-              std::string final_content;
+              std::stringstream final_content;
               for (auto t : tries) {
                 try {
                   Response r = t.value();
@@ -340,13 +340,13 @@ class RequestHandler {
                   app_metrics.throughput_->mark(1);
 
                   std::string content = get_prediction_response_content(r);
-                  final_content += content + "\n";
+                  final_content << content << "\n";
                 } catch (const std::exception& e) {
-                  // case: returned a response before all predictions in the
-                  // batch were ready
+                    clipper::log_error(LOGGING_TAG_QUERY_FRONTEND,
+                           "Returned response before all predictions in batch were processed");
                 }
               }
-              respond_http(final_content, "200 OK", response);
+              respond_http(final_content.str(), "200 OK", response);
             })
             .onError([response](const std::exception& e) {
               clipper::log_error_formatted(clipper::LOGGING_TAG_CLIPPER,
@@ -499,21 +499,13 @@ class RequestHandler {
     rapidjson::Document d;
     clipper::json::parse_json(json_content, d);
     long uid = 0;
-    std::vector<folly::Future<Response>> predictions;
 
-    if (d.HasMember("input")) {
-      std::shared_ptr<Input> input = clipper::json::parse_input(input_type, d);
+    std::vector<std::shared_ptr<Input>> input_batch = clipper::json::parse_input(input_type, d);
+    std::vector<folly::Future<Response>> predictions;
+    for (auto input : input_batch) {
       auto prediction = query_processor_.predict(
           Query{name, uid, input, latency_slo_micros, policy, models});
       predictions.push_back(std::move(prediction));
-    } else {  // d.HasMember("input_batch") instead
-      std::vector<std::shared_ptr<Input>> input_batch =
-          clipper::json::parse_input_batch(input_type, d);
-      for (auto input : input_batch) {
-        auto prediction = query_processor_.predict(
-            Query{name, uid, input, latency_slo_micros, policy, models});
-        predictions.push_back(std::move(prediction));
-      }
     }
     return folly::collectAll(predictions);
   }
@@ -533,7 +525,7 @@ class RequestHandler {
     rapidjson::Document d;
     clipper::json::parse_json(json_content, d);
     long uid = clipper::json::get_long(d, "uid");
-    std::shared_ptr<Input> input = clipper::json::parse_input(input_type, d);
+    std::shared_ptr<Input> input = clipper::json::parse_single_input(input_type, d);
     double y_hat = clipper::json::get_double(d, "label");
     auto update = query_processor_.update(
         FeedbackQuery{name, uid, {Feedback(input, y_hat)}, policy, models});
