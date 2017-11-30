@@ -120,9 +120,6 @@ class Logstic_Regression(nn.Module):
 
 def train_logistic_regression(model,train_loader):
     model = model
-    use_gpu = torch.cuda.is_available()
-    if use_gpu:
-        model = model.cuda()
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.001)
     for epoch in range(1000):
@@ -133,8 +130,8 @@ def train_logistic_regression(model,train_loader):
         for i, data in enumerate(train_loader, 1):
             img, label = data
             if use_gpu:
-                img = Variable(img).cuda()
-                label = Variable(label).cuda()
+                img = Variable(img)
+                label = Variable(label)
             else:
                 img = Variable(img)
                 label = Variable(label)
