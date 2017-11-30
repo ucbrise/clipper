@@ -141,7 +141,12 @@ def train_logistic_regression(model,train_loader):
 
             #Forward propagation
             out = model(img)
-            loss = criterion(out, label)
+            out = out.view(1,2)
+            if label.size() == ():
+                 label = Variable(torch.LongTensor([0]))
+                 loss = criterion(out, label)
+            else:
+                 loss = criterion(out, label.long())
             running_loss += loss.data[0] * label.size(0)
             _, pred = torch.max(out, 1)
 
