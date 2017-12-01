@@ -46,6 +46,7 @@ const char* PREDICTION_RESPONSE_KEY_USED_DEFAULT = "default";
 const char* PREDICTION_RESPONSE_KEY_DEFAULT_EXPLANATION = "default_explanation";
 const char* PREDICTION_ERROR_RESPONSE_KEY_ERROR = "error";
 const char* PREDICTION_ERROR_RESPONSE_KEY_CAUSE = "cause";
+const char* PREDICTION_BATCH_INDICATOR_KEY = "batch_predictions";
 
 const std::string PREDICTION_ERROR_NAME_JSON = "Json error";
 const std::string PREDICTION_ERROR_NAME_QUERY_PROCESSING =
@@ -490,14 +491,12 @@ class RequestHandler {
     rapidjson::Document json_response;
     json_response.SetObject();
     try {
-      clipper::json::add_json_array(json_response, "batch_predictions", query_responses);
+      clipper::json::add_json_array(json_response, PREDICTION_BATCH_INDICATOR_KEY, query_responses);
     } catch (const clipper::json::json_parse_error& e) {
-      clipper::json::add_string_array(json_response, "batch_predictions", query_responses);
+      clipper::json::add_string_array(json_response, PREDICTION_BATCH_INDICATOR_KEY, query_responses);
     }
 
-    clipper::json::add_string_array(json_response, "batch_predictions", query_responses);
     std::string content = clipper::json::to_json_string(json_response);
-
     return content;
   }
 

@@ -477,7 +477,7 @@ SHORT_TEST_ORDERING = [
 LONG_TEST_ORDERING = [
     'test_unlinked_app_returns_default_predictions',
     'test_deployed_model_queried_successfully',
-    'test_batch_queries_returned_successfully'
+    'test_batch_queries_returned_successfully',
     'test_deployed_python_closure_queried_successfully'
 ]
 
