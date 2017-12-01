@@ -394,6 +394,27 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         self.assertNotEqual(parsed_response["output"], self.default_output)
         self.assertFalse(parsed_response["default"])
 
+    def test_batch_queries_returned_successfully(self):
+        model_version = 1
+        container_name = "clipper/noop-container:{}".format(clipper_version)
+        self.clipper_conn.build_and_deploy_model(
+            self.model_name_2, model_version, self.input_type, fake_model_data,
+            container_name)
+
+        self.clipper_conn.link_model_to_app(self.app_name_2, self.model_name_2)
+        time.sleep(30)
+        addr = self.clipper_conn.get_query_addr()
+        url = "http://{addr}/{app}/predict".format(
+            addr=addr, app=self.app_name_2)
+        test_input = [[99.3, 18.9, 67.2, 34.2], [101.1, 45.6, 98.0, 99.1], \
+                      [12.3, 6.7, 42.1, 12.6], [9.01, 87.6, 70.2, 19.6]]
+        req_json = json.dumps({'input_batch': test_input})
+        headers = {'Content-type': 'application/json'}
+        response = requests.post(url, headers=headers, data=req_json)
+        parsed_response = response.json()
+        logger.info(parsed_response)
+        self.assertEqual(len(parsed_response["batch_predictions"]), len(test_input))
+
     def test_deployed_python_closure_queried_successfully(self):
         model_version = 1
 
@@ -456,6 +477,7 @@ SHORT_TEST_ORDERING = [
 LONG_TEST_ORDERING = [
     'test_unlinked_app_returns_default_predictions',
     'test_deployed_model_queried_successfully',
+    'test_batch_queries_returned_successfully'
     'test_deployed_python_closure_queried_successfully'
 ]
 

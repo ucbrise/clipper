@@ -512,6 +512,19 @@ void add_string_array(rapidjson::Document& d, const char* key_name,
   add_kv_pair(d, key_name, string_array);
 }
 
+void add_json_array(rapidjson::Document& d, const char* key_name,
+                      std::vector<std::string>& values_to_add) {
+  rapidjson::Value json_array(rapidjson::kArrayType);
+  rapidjson::Document::AllocatorType& allocator = d.GetAllocator();
+  for (std::string json_string : values_to_add) {
+    rapidjson::Document json_obj;
+    parse_json(json_string, json_obj);
+    json_array.PushBack(json_obj, allocator);
+  }
+
+  add_kv_pair(d, key_name, json_array);
+}
+
 void add_double(rapidjson::Document& d, const char* key_name, double val) {
   rapidjson::Value val_to_add(val);
   add_kv_pair(d, key_name, val_to_add);

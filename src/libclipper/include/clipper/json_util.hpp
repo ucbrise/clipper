@@ -129,6 +129,9 @@ void add_int_array(rapidjson::Document& d, const char* key_name,
 void add_string_array(rapidjson::Document& d, const char* key_name,
                       std::vector<std::string>& values_to_add);
 
+void add_json_array(rapidjson::Document& d, const char* key_name,
+                      std::vector<std::string>& values_to_add);
+
 void add_double(rapidjson::Document& d, const char* key_name, double val);
 
 void add_float(rapidjson::Document& d, const char* key_name, float val);
