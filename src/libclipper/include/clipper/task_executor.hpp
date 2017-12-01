@@ -291,10 +291,19 @@ class TaskExecutor {
             VersionedModelId vm = VersionedModelId(
                 container_info["model_name"], container_info["model_version"]);
             int replica_id = std::stoi(container_info["model_replica_id"]);
+              active_containers_->add_container(
+                      vm, std::stoi(container_info["zmq_connection_id"]), replica_id,
+                      parse_input_type(container_info["input_type"]));
 
-            active_containers_->add_container(
-                vm, std::stoi(container_info["zmq_connection_id"]), replica_id,
-                parse_input_type(container_info["input_type"]));
+            auto model_info = redis::get_model(redis_connection_, vm);
+            VersionedModelId model_id = VersionedModelId(model_info["model_name"], model_info["model_version"]);
+              int batch_size = DEFAULT_BATCH_SIZE;
+              auto batch_size_search = model_info.find("batch_size");
+              if(batch_size_search != model_info.end()){
+                batch_size = std::stoi(model_info["batch_size"]);
+                active_containers_->register_batch_size(model_id, batch_size);
+              }
+
 
             TaskExecutionThreadPool::create_queue(vm, replica_id);
             TaskExecutionThreadPool::submit_job(

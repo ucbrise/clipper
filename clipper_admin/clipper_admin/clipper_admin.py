@@ -461,10 +461,20 @@ class ClipperConnection(object):
             raise UnconnectedException()
         version = str(version)
         _validate_versioned_model_name(name, version)
-        self.cm.deploy_model(name=name, version=version, input_type=input_type, image=image, batch_size=batch_size,
-                             num_replicas=num_replicas)
+        self.cm.deploy_model(
+            name=name,
+            version=version,
+            input_type=input_type,
+            image=image,
+            batch_size=batch_size,
+            num_replicas=num_replicas)
         self.register_model(
-            name, version, input_type, image=image, labels=labels, batch_size=batch_size)
+            name,
+            version,
+            input_type,
+            image=image,
+            labels=labels,
+            batch_size=batch_size)
         logger.info("Done deploying model {name}:{version}.".format(
             name=name, version=version))
 
