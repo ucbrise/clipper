@@ -128,6 +128,7 @@ def train(model):
       		  loss = F.cross_entropy(output, Variable(torch.LongTensor([train_y[i-1]])))
       		  loss.backward()
       		  optimizer.step()
+  return model
 
 def get_test_point():
     return [np.random.randint(255) for _ in range(784)]
