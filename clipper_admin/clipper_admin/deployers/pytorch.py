@@ -97,9 +97,7 @@ def deploy_pytorch_model(
         labels=None,
         registry=None,
         num_replicas=1):
-    """Deploy a Python function with a PySpark model.
-    The function must take 3 arguments (in order): a SparkSession, the PySpark model, and a list of
-    inputs. It must return a list of strings of the same length as the list of inputs.
+    """Deploy a Python function with a PyTorch model.
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
@@ -158,7 +156,7 @@ def deploy_pytorch_model(
             version = 1,
             input_type="doubles",
             func=predict,
-            pyspark_model=model)
+            pytorch_model=model)
     """
 
 
