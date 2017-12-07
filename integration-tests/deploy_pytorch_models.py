@@ -21,6 +21,7 @@ from PIL import Image
 from torch import nn, optim
 from torch.autograd import Variable
 from torchvision import transforms
+import torch.nn.functional as F
 
 from test_utils import (create_docker_connection, BenchmarkException, headers,
                         log_clipper_state)
@@ -39,7 +40,6 @@ logger = logging.getLogger(__name__)
 app_name = "pytorch-test"
 model_name = "pytorch-model"
 
-
 def normalize(x):
     return x.astype(np.double) / 255.0
 
@@ -51,14 +51,12 @@ def objective(y, pos_label):
     else:
         return 0
 
-
-def parseData(train_path, pos_label):
+def parsedata(train_path, pos_label):
     trainData = np.genfromtxt(train_path, delimiter=',', dtype=int)
     records = trainData[:, 1:]
     labels = trainData[:, :1]
     transformedlabels = [objective(ele, pos_label) for ele in labels]
     return (records, transformedlabels)
-
 
 def predict(model, xs):
     preds = model(xs)
@@ -107,61 +105,34 @@ def test_model(clipper_conn, app, version):
         raise BenchmarkException("Error querying APP %s, MODEL %s:%d" %
                                  (app, model_name, version))
 
-# Define Logistic Regression model
-class Logstic_Regression(nn.Module):
-    def __init__(self, in_dim, n_class):
-        super(Logstic_Regression, self).__init__()
-        self.logstic = nn.Linear(in_dim, n_class)
-
+# Define a simple NN model
+class BasicNN(nn.Module):
+    def __init__(self):
+        super(BasicNN, self).__init__()
+        self.net = nn.Linear(28 * 28, 2)
     def forward(self, x):
-        out = self.logstic(x)
-        return out
-
-
-def train_logistic_regression(model,train_loader):
-    model = model
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.001)
-    for epoch in range(1000):
-        print('*' * 10)
-        print('epoch {}'.format(epoch + 1))
-        since = time.time()
-        running_loss = 0.0
-        for i, data in enumerate(train_loader, 1):
-            img, label = data
-            if use_gpu:
-                img = Variable(img)
-                label = Variable(label)
-            else:
-                img = Variable(img)
-                label = Variable(label)
-
-            #Forward propagation
-            out = model(img)
-            out = out.view(1,2)
-            if label.size() == ():
-                 label = Variable(torch.LongTensor([0]))
-                 loss = criterion(out, label)
-            else:
-                 loss = criterion(out, label.long())
-            running_loss += loss.data[0] * label.size(0)
-            _, pred = torch.max(out, 1)
-
-            #Back propagation
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-        model.eval()
-
-    return model
-
+        batch_size = x.size(0)
+        x = x.view(batch_size, -1)
+        output = self.net(x)
+        return F.softmax(output)
+      
+def train(model):
+  model.train()
+  for epoch in range(2000):
+	  for i, data in enumerate(train_loader, 1):
+		  image, j = data
+		  image = Variable(image)
+		  optimizer.zero_grad()
+      output = model(image.view(1,1,28,28))
+      loss = F.cross_entropy(output, Variable(torch.LongTensor([y_label[i-1]])))
+      loss.backward()
+      optimizer.step()
 
 def get_test_point():
     return [np.random.randint(255) for _ in range(784)]
 
-#Define a dataloader to read our data
-class myDatafolder(data.Dataset):
+#Define a dataloader to read data
+class TrainingDataset(data.Dataset):
     def __init__(self, data, label):
         self.imgs = data
         self.classes = label
@@ -172,13 +143,6 @@ class myDatafolder(data.Dataset):
         img = torch.Tensor(img)
         return img, torch.Tensor(label)
 
-    def __len__(self):
-        return len(self.imgs)
-
-    def getName(self):
-        return self.classes
-
-
 if __name__ == "__main__":
     pos_label = 3
     try:
@@ -186,8 +150,8 @@ if __name__ == "__main__":
             cleanup=True, start_clipper=True)
 
         train_path = os.path.join(cur_dir, "data/train.data")
-        (x, y) = parseData(train_path, pos_label)
-        train_loader = myDatafolder(x,y)
+        train_x, train_y = parsedata(train_path, pos_label)
+        train_loader = TrainingDataset(train_x,train_y)
 
         try:
             clipper_conn.register_application(app_name, "integers",
@@ -208,18 +172,18 @@ if __name__ == "__main__":
 
             version = 1
 
-            model = Logstic_Regression(28*28,2)
-            lr_model = train_logistic_regression(model,train_loader)
+            model = BasicNN()
+            nn_model = train(model)
 
             deploy_and_test_model(
                 clipper_conn,
-                lr_model,
+                nn_model,
                 version,
                 link_model=True)
 
             app_and_model_name = "easy-register-app-model"
             create_endpoint(clipper_conn, app_and_model_name, "integers",
-                            predict, lr_model)
+                            predict, nn_model)
             test_model(clipper_conn, app_and_model_name, 1)
 
         except BenchmarkException as e:
