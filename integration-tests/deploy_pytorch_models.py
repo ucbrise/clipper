@@ -118,15 +118,16 @@ class BasicNN(nn.Module):
       
 def train(model):
   model.train()
+  optimizer = optim.SGD(model.parameters(), lr=0.001)
   for epoch in range(2000):
 	  for i, data in enumerate(train_loader, 1):
 		  image, j = data
 		  image = Variable(image)
 		  optimizer.zero_grad()
-      output = model(image.view(1,1,28,28))
-      loss = F.cross_entropy(output, Variable(torch.LongTensor([y_label[i-1]])))
-      loss.backward()
-      optimizer.step()
+      		  output = model(image.view(1,1,28,28))
+      		  loss = F.cross_entropy(output, Variable(torch.LongTensor([train_y[i-1]])))
+      		  loss.backward()
+      		  optimizer.step()
 
 def get_test_point():
     return [np.random.randint(255) for _ in range(784)]
