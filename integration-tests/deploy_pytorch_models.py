@@ -151,6 +151,7 @@ if __name__ == "__main__":
 
         train_path = os.path.join(cur_dir, "data/train.data")
         train_x, train_y = parsedata(train_path, pos_label)
+	train_x = normalize(train_x)
         train_loader = TrainingDataset(train_x,train_y)
 
         try:
