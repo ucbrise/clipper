@@ -19,7 +19,14 @@ deserialize_model = function(model_data_path) {
     if(!(lib_dep %in% installed.packages())) {
       install.packages(lib_dep)
     }
-    library(lib_dep, character.only=TRUE)
+    tryCatch({
+      library(lib_dep, character.only=TRUE)
+    }, error = function(e) {
+      print(paste(c("Failed to install library:", lib_dep), collapse=" "))
+      print(paste("Proceeding with deserialization.",
+                  "Model inference may fail if",
+                  "this library is required!", sep=" "))
+    })
   }
   
   model_function_info <- tryCatch({
