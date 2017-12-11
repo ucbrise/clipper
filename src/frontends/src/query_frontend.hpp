@@ -343,12 +343,14 @@ class RequestHandler {
                   std::string content = get_prediction_response_content(r);
                   all_content.push_back(content);
                 } catch (const std::exception& e) {
-                    clipper::log_error(LOGGING_TAG_QUERY_FRONTEND,
-                           "Returned response before all predictions in batch were processed");
+                  clipper::log_error(LOGGING_TAG_QUERY_FRONTEND,
+                                     "Returned response before all predictions "
+                                     "in batch were processed");
                 }
               }
 
-              std::string final_content = get_batch_prediction_response_content(all_content);
+              std::string final_content =
+                  get_batch_prediction_response_content(all_content);
               respond_http(final_content, "200 OK", response);
             })
             .onError([response](const std::exception& e) {
@@ -481,19 +483,20 @@ class RequestHandler {
    *     }
    * }
    */
-   static const std::string get_batch_prediction_response_content(
+  static const std::string get_batch_prediction_response_content(
       std::vector<std::string> query_responses) {
-
-    if (query_responses.size() == 1) { 
+    if (query_responses.size() == 1) {
       return query_responses[0];
     }
 
     rapidjson::Document json_response;
     json_response.SetObject();
     try {
-      clipper::json::add_json_array(json_response, PREDICTION_BATCH_INDICATOR_KEY, query_responses);
+      clipper::json::add_json_array(
+          json_response, PREDICTION_BATCH_INDICATOR_KEY, query_responses);
     } catch (const clipper::json::json_parse_error& e) {
-      clipper::json::add_string_array(json_response, PREDICTION_BATCH_INDICATOR_KEY, query_responses);
+      clipper::json::add_string_array(
+          json_response, PREDICTION_BATCH_INDICATOR_KEY, query_responses);
     }
 
     std::string content = clipper::json::to_json_string(json_response);
@@ -536,7 +539,8 @@ class RequestHandler {
     clipper::json::parse_json(json_content, d);
     long uid = 0;
 
-    std::vector<std::shared_ptr<Input>> input_batch = clipper::json::parse_input(input_type, d);
+    std::vector<std::shared_ptr<Input>> input_batch =
+        clipper::json::parse_input(input_type, d);
     std::vector<folly::Future<Response>> predictions;
     for (auto input : input_batch) {
       auto prediction = query_processor_.predict(
@@ -561,7 +565,8 @@ class RequestHandler {
     rapidjson::Document d;
     clipper::json::parse_json(json_content, d);
     long uid = clipper::json::get_long(d, "uid");
-    std::shared_ptr<Input> input = clipper::json::parse_single_input(input_type, d);
+    std::shared_ptr<Input> input =
+        clipper::json::parse_single_input(input_type, d);
     double y_hat = clipper::json::get_double(d, "label");
     auto update = query_processor_.update(
         FeedbackQuery{name, uid, {Feedback(input, y_hat)}, policy, models});

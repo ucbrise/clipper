@@ -413,7 +413,8 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         response = requests.post(url, headers=headers, data=req_json)
         parsed_response = response.json()
         logger.info(parsed_response)
-        self.assertEqual(len(parsed_response["batch_predictions"]), len(test_input))
+        self.assertEqual(
+            len(parsed_response["batch_predictions"]), len(test_input))
 
     def test_deployed_python_closure_queried_successfully(self):
         model_version = 1
