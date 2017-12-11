@@ -341,8 +341,10 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
             cleanup=True, start_clipper=True)
         self.app_name_1 = "app3"
         self.app_name_2 = "app4"
+        self.app_name_3 = "app5"
         self.model_name_1 = "m4"
         self.model_name_2 = "m5"
+        self.model_name_3 = "m6"
         self.input_type = "doubles"
         self.default_output = "DEFAULT"
         self.latency_slo_micros = 30000
@@ -353,6 +355,10 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
         self.clipper_conn.register_application(
             self.app_name_2, self.input_type, self.default_output,
+            self.latency_slo_micros)
+
+        self.clipper_conn.register_application(
+            self.app_name_3, self.input_type, self.default_output,
             self.latency_slo_micros)
 
     @classmethod
@@ -398,14 +404,14 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         model_version = 1
         container_name = "clipper/noop-container:{}".format(clipper_version)
         self.clipper_conn.build_and_deploy_model(
-            self.model_name_2, model_version, self.input_type, fake_model_data,
+            self.model_name_3, model_version, self.input_type, fake_model_data,
             container_name)
 
-        self.clipper_conn.link_model_to_app(self.app_name_2, self.model_name_2)
+        self.clipper_conn.link_model_to_app(self.app_name_3, self.model_name_3)
         time.sleep(30)
         addr = self.clipper_conn.get_query_addr()
         url = "http://{addr}/{app}/predict".format(
-            addr=addr, app=self.app_name_2)
+            addr=addr, app=self.app_name_3)
         test_input = [[99.3, 18.9, 67.2, 34.2], [101.1, 45.6, 98.0, 99.1], \
                       [12.3, 6.7, 42.1, 12.6], [9.01, 87.6, 70.2, 19.6]]
         req_json = json.dumps({'input_batch': test_input})
