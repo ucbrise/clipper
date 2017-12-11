@@ -365,7 +365,7 @@ void parse_json(const std::string& json_content, rapidjson::Document& d) {
 }
 
 std::vector<std::shared_ptr<Input>> parse_input(InputType input_type,
-                                                      rapidjson::Value& d) {
+                                                rapidjson::Value& d) {
   if (d.HasMember("input")) {
     std::vector<std::shared_ptr<Input>> wrapped_result;
     std::shared_ptr<Input> result = parse_single_input(input_type, d);
@@ -374,11 +374,13 @@ std::vector<std::shared_ptr<Input>> parse_input(InputType input_type,
   } else if (d.HasMember("input_batch")) {
     return parse_input_batch(input_type, d);
   } else {
-    throw json_semantic_error("JSON object does not have required keys input or input_batch");
+    throw json_semantic_error(
+        "JSON object does not have required keys input or input_batch");
   }
 }
 
-std::shared_ptr<Input> parse_single_input(InputType input_type, rapidjson::Value& d) {
+std::shared_ptr<Input> parse_single_input(InputType input_type,
+                                          rapidjson::Value& d) {
   switch (input_type) {
     case InputType::Doubles: {
       std::vector<double> inputs = get_double_array(d, "input");
@@ -513,7 +515,7 @@ void add_string_array(rapidjson::Document& d, const char* key_name,
 }
 
 void add_json_array(rapidjson::Document& d, const char* key_name,
-                      std::vector<std::string>& values_to_add) {
+                    std::vector<std::string>& values_to_add) {
   rapidjson::Value json_array(rapidjson::kArrayType);
   rapidjson::Document::AllocatorType& allocator = d.GetAllocator();
   for (std::string json_string : values_to_add) {
