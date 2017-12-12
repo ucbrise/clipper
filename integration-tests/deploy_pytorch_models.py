@@ -125,7 +125,7 @@ class BasicNN(nn.Module):
 def train(model):
   model.train()
   optimizer = optim.SGD(model.parameters(), lr=0.001)
-  for epoch in range(2000):
+  for epoch in range(10):
 	  for i, data in enumerate(train_loader, 1):
 		  image, j = data
 		  optimizer.zero_grad()
