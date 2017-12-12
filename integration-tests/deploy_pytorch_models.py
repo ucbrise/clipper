@@ -60,6 +60,7 @@ def parsedata(train_path, pos_label):
 
 def predict(model, xs):
     preds = model(xs)
+    preds = [preds.data.numpy().tolist()[0]]
     return [str(p) for p in preds]
 
 def deploy_and_test_model(clipper_conn,
@@ -111,9 +112,14 @@ class BasicNN(nn.Module):
         super(BasicNN, self).__init__()
         self.net = nn.Linear(28 * 28, 2)
     def forward(self, x):
+        x = np.array(x)
+        x = torch.from_numpy(x)
+        x = Variable(x)
+        x = x.view(1,1,28,28)
+        x = x/255.0
         batch_size = x.size(0)
         x = x.view(batch_size, -1)
-        output = self.net(x)
+        output = self.net(x.float())
         return F.softmax(output)
       
 def train(model):
@@ -122,9 +128,8 @@ def train(model):
   for epoch in range(2000):
 	  for i, data in enumerate(train_loader, 1):
 		  image, j = data
-		  image = Variable(image)
 		  optimizer.zero_grad()
-      		  output = model(image.view(1,1,28,28))
+      		  output = model(image)
       		  loss = F.cross_entropy(output, Variable(torch.LongTensor([train_y[i-1]])))
       		  loss.backward()
       		  optimizer.step()
