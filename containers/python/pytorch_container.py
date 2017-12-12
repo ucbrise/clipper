@@ -10,8 +10,26 @@ from clipper_admin.deployers import cloudpickle
 
 import torch
 import importlib
+from torch import nn
+from torch.autograd import Variable
+import torch.nn.functional as F
 
 IMPORT_ERROR_RETURN_CODE = 3
+
+class BasicNN(nn.Module):
+    def __init__(self):
+        super(BasicNN, self).__init__()
+        self.net = nn.Linear(28 * 28, 2)
+    def forward(self, x):
+        x = np.array(x)
+        x = torch.from_numpy(x)
+        x = Variable(x)
+        x = x/255.0
+        x = x.view(1,1,28,28)
+        batch_size = x.size(0)
+        x = x.view(batch_size, -1)
+        output = self.net(x.float())
+        return F.softmax(output)
 
 
 def load_predict_func(file_path):
