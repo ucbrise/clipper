@@ -102,7 +102,6 @@ if __name__ == "__main__":
         print("Using default input type: doubles")
 
     model_path = os.environ["CLIPPER_MODEL_PATH"]
-    print(model_path)
 
     print("Initializing Pytorch function container")
     sys.stdout.flush()
