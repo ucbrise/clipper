@@ -16,28 +16,18 @@ import torch.nn.functional as F
 
 IMPORT_ERROR_RETURN_CODE = 3
 
-class BasicNN(nn.Module):
-    def __init__(self):
-        super(BasicNN, self).__init__()
-        self.net = nn.Linear(28 * 28, 2)
-    def forward(self, x):
-        x = np.array(x)
-        x = torch.from_numpy(x)
-        x = Variable(x)
-        x = x/255.0
-        x = x.view(1,1,28,28)
-        batch_size = x.size(0)
-        x = x.view(batch_size, -1)
-        output = self.net(x.float())
-        return F.softmax(output)
-
+PYTORCH_WEIGHTS_RELATIVE_PATH = "pytorch_weights.pkl"
+PYTORCH_MODEL_RELATIVE_PATH = "pytorch_model.pkl"
 
 def load_predict_func(file_path):
     with open(file_path, 'r') as serialized_func_file:
         return cloudpickle.load(serialized_func_file)
 
-def load_pytorch_model(model_path):
-    model = torch.load(model_path)  
+def load_pytorch_model(model_path, weights_path):
+    with open(model_path, 'r') as serialized_model_file:
+        model = cloudpickle.load(serialized_model_file)
+
+    model.load_state_dict(torch.load(weights_path))
     return model
 
 class PyTorchContainer(rpc.ModelContainerBase):
@@ -50,8 +40,9 @@ class PyTorchContainer(rpc.ModelContainerBase):
             dir=path, predict_fname=predict_fname)
         self.predict_func = load_predict_func(predict_path)
         
-        torch_model_path = os.path.join(path, "pytorch_model.pkl")
-        self.model = load_pytorch_model(torch_model_path)
+        torch_model_path = os.path.join(path, PYTORCH_MODEL_RELATIVE_PATH)
+        torch_weights_path = os.path.join(path, PYTORCH_WEIGHTS_RELATIVE_PATH)
+        self.model = load_pytorch_model(torch_model_path, torch_weights_path)
 
     def predict_ints(self, inputs):
         preds = self.predict_func(self.model, inputs)

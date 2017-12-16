@@ -8,10 +8,12 @@ import json
 
 from ..version import __version__
 from ..clipper_admin import ClipperException
-from .deployer_utils import save_python_function
+from .deployer_utils import save_python_function, serialize_object
 
 logger = logging.getLogger(__name__)
 
+PYTORCH_WEIGHTS_RELATIVE_PATH = "pytorch_weights.pkl"
+PYTORCH_MODEL_RELATIVE_PATH = "pytorch_model.pkl"
 
 def create_endpoint(
         clipper_conn,
@@ -159,21 +161,23 @@ def deploy_pytorch_model(
             pytorch_model=model)
     """
 
-
     serialization_dir = save_python_function(name, func)
-    print (serialization_dir)
     
     # save Torch model
-    torch_model_save_loc = os.path.join(serialization_dir,
-                                        "pytorch_model.pkl")
-    print (torch_model_save_loc)
+    torch_weights_save_loc = os.path.join(serialization_dir, 
+                                          PYTORCH_WEIGHTS_RELATIVE_PATH)
 
-    try:       
-         torch.save(pytorch_model,torch_model_save_loc)
+    torch_model_save_loc = os.path.join(serialization_dir,
+                                        PYTORCH_MODEL_RELATIVE_PATH)
+
+    try:
+        torch.save(pytorch_model.state_dict(), torch_weights_save_loc)
+        serialized_model = serialize_object(pytorch_model)
+        with open(torch_model_save_loc, "w") as serialized_model_file:
+            serialized_model_file.write(serialized_model)
+
     except Exception as e:
         logger.warn("Error saving torch model: %s" % e)
-        raise e
-
 
     logger.info("Torch model saved")
 

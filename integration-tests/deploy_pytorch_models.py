@@ -112,8 +112,9 @@ class BasicNN(nn.Module):
         super(BasicNN, self).__init__()
         self.net = nn.Linear(28 * 28, 2)
     def forward(self, x):
-        x = np.array(x)
-        x = torch.from_numpy(x)
+        if type(x) == np.ndarray:
+            x = torch.from_numpy(x)
+        x = x.float()
         x = Variable(x)
         x = x.view(1,1,28,28)
         x = x/255.0
@@ -158,7 +159,7 @@ if __name__ == "__main__":
 
         train_path = os.path.join(cur_dir, "data/train.data")
         train_x, train_y = parsedata(train_path, pos_label)
-	train_x = normalize(train_x)
+	    train_x = normalize(train_x)
         train_loader = TrainingDataset(train_x,train_y)
 
         try:

@@ -21,6 +21,11 @@ CONTAINER_CONDA_PLATFORM = 'linux-64'
 
 logger = logging.getLogger(__name__)
 
+def serialize_object(obj):
+    s = six.StringIO()
+    c = CloudPickler(s, 2)
+    c.dump(obj)
+    return s.getvalue()
 
 def save_python_function(name, func):
     predict_fname = "func.pkl"
