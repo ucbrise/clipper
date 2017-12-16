@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 PYTORCH_WEIGHTS_RELATIVE_PATH = "pytorch_weights.pkl"
 PYTORCH_MODEL_RELATIVE_PATH = "pytorch_model.pkl"
 
+
 def create_endpoint(
         clipper_conn,
         name,
@@ -162,9 +163,9 @@ def deploy_pytorch_model(
     """
 
     serialization_dir = save_python_function(name, func)
-    
+
     # save Torch model
-    torch_weights_save_loc = os.path.join(serialization_dir, 
+    torch_weights_save_loc = os.path.join(serialization_dir,
                                           PYTORCH_WEIGHTS_RELATIVE_PATH)
 
     torch_model_save_loc = os.path.join(serialization_dir,
