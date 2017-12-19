@@ -8,6 +8,9 @@ from datetime import datetime
 import socket
 import sys
 from collections import deque
+from multiprocessing import Pipe, Process
+from prometheus_client import start_http_server
+from prometheus_client.core import GaugeMetricFamily, REGISTRY
 
 INPUT_TYPE_BYTES = 0
 INPUT_TYPE_INTS = 1
@@ -180,7 +183,7 @@ class Server(threading.Thread):
     def get_event_history(self):
         return self.event_history.get_events()
 
-    def run(self):
+    def run(self, metric_conn):
         print("Serving predictions for {0} input type.".format(
             input_type_to_string(self.model_input_type)))
         connected = False
@@ -189,6 +192,9 @@ class Server(threading.Thread):
         poller = zmq.Poller()
         sys.stdout.flush()
         sys.stderr.flush()
+
+        pred_metric = {'count': 0}
+
         while True:
             socket = self.context.socket(zmq.DEALER)
             poller.register(socket, zmq.POLLIN)
@@ -305,6 +311,15 @@ class Server(threading.Thread):
                         t4 = datetime.now()
 
                         response.send(socket, self.event_history)
+
+                        pred_metric['model_pred_count'] += 1
+                        pred_metric['model_pred_recv_time'] = (
+                            t2 - t1).microseconds
+                        pred_metric['model_pred_parse_time'] = (
+                            t3 - t2).microseconds
+                        pred_metric['model_pred_handle_time'] = (
+                            t4 - t3).microseconds
+                        metric_conn.send(pred_metric)
 
                         print("recv: %f us, parse: %f us, handle: %f us" %
                               ((t2 - t1).microseconds, (t3 - t2).microseconds,
@@ -488,4 +503,31 @@ class RPCService:
         self.server.model_version = model_version
         self.server.model_input_type = model_input_type
         self.server.model = model
-        self.server.run()
+
+        parent_conn, child_conn = Pipe(duplex=True)
+        metrics_proc = Process(target=run_metric, args=(child_conn, ))
+        metrics_proc.start()
+        self.server.run(parent_conn)
+
+
+class MetricCollector:
+    def __init__(self, pipe_child_conn):
+        self.pipe_conn = pipe_child_conn
+
+    def collect(self):
+        curr = None
+        while self.pipe_conn.poll():
+            curr = self.pipe_conn.recv()
+        if curr:
+            for name, val in curr.items():
+                try:
+                    yield GaugeMetricFamily(name, 'help', value=val)
+                except ValueError:
+                    pass
+
+
+def run_metric(child_conn):
+    REGISTRY.register(MetricCollector(child_conn))
+    start_http_server(1390)
+    while True:
+        time.sleep(1)
