@@ -31,6 +31,7 @@ setup(
         'pyyaml',
         'docker',
         'kubernetes',
+        'prometheus_client',
         'six',
     ],
     extras_require={

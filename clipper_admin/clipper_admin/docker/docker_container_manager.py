@@ -9,9 +9,10 @@ from ..container_manager import (
     CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL,
     CLIPPER_MGMT_FRONTEND_CONTAINER_LABEL, CLIPPER_INTERNAL_RPC_PORT,
     CLIPPER_INTERNAL_QUERY_PORT, CLIPPER_INTERNAL_MANAGEMENT_PORT,
-    CLIPPER_INTERNAL_QUERY_METRIC_PORT)
+    CLIPPER_INTERNAL_METRIC_PORT)
 from ..exceptions import ClipperException
 from requests.exceptions import ConnectionError
+from .docker_metric_utils import *
 
 logger = logging.getLogger(__name__)
 
@@ -131,8 +132,8 @@ class DockerContainerManager(ContainerManager):
             cache_size=cache_size)
         query_labels = self.common_labels.copy()
         query_labels[CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL] = ""
-        query_name = "query_frontend-{}".format(
-                random.randint(0, 100000))  # generate a random name
+        query_name = "query_frontend-{}".format(random.randint(
+            0, 100000))  # generate a random name
         self.docker_client.containers.run(
             query_frontend_image,
             query_cmd,
@@ -145,69 +146,16 @@ class DockerContainerManager(ContainerManager):
             labels=query_labels,
             **self.extra_container_kwargs)
 
-        #TODO(SIMON): Delete debug line
-        # self.extra_container_kwargs['detach'] = False
-
-        query_frontend_metric_cmd = "--query_frontend_name {}".format(query_name)
-        query_frontend_metric_labels = self.common_labels.copy()
+        # Metric Section
         query_frontend_metric_name = "query_frontend_exporter-{}".format(
-                random.randint(0, 100000))
-        self.docker_client.containers.run(
-            "clipper_exporter",
-            query_frontend_metric_cmd,
-            name=query_frontend_metric_name,
-            ports={
-                '%s/tcp' % CLIPPER_INTERNAL_QUERY_METRIC_PORT:
-                    CLIPPER_INTERNAL_QUERY_METRIC_PORT
-            },
-            labels=query_frontend_metric_labels,
-            **self.extra_container_kwargs)
-
-        def ensure_clipper_tmp():
-            try:
-                os.makedirs('/tmp/clipper')
-            except OSError as e:
-                pass
-            # Change to this in py3: os.makedirs(, exist_ok=True)
-
-        ensure_clipper_tmp()
-        with open('/tmp/clipper/prometheus.yml','w') as f:
-            f.write("""
-global:
-    scrape_interval:     5s 
-    evaluation_interval: 5s 
-
-scrape_configs:
-  - job_name: 'query'
-    static_configs:
-        - targets: ['{name}:{port}']
-                """.format(name=query_frontend_metric_name, port=CLIPPER_INTERNAL_QUERY_METRIC_PORT))
-            f.flush()
-
-        metric_labels = self.common_labels.copy()
-        self.docker_client.containers.run(
-            "prom/prometheus",
-            name="metric_frontend-{}".format(
-                random.randint(0, 100000)),
-            ports={
-                '9090/tcp': 9090
-            },
-            volumes={
-                '/tmp/clipper/prometheus.yml': {
-                    'bind': '/etc/prometheus/prometheus.yml',
-                    'mode': 'ro'
-                }
-            },
-            labels=metric_labels,
-            **self.extra_container_kwargs)
-
-        #TODO:
-        #Note to self: current code works. But few things:
-        # 1. yml templating need to be fixed.
-        # 2. a formal image need to be built.
-        # 3. The code is lengthy, break it up.
-        # 4. Some configuration is hard coded.
-
+            random.randint(0, 100000))
+        run_query_frontend_metric_image(
+            query_frontend_metric_name, self.docker_client, query_name,
+            self.common_labels, self.extra_container_kwargs)
+        setup_metric_config(query_frontend_metric_name,
+                            CLIPPER_INTERNAL_METRIC_PORT)
+        run_metric_image(self.docker_client, self.common_labels,
+                         self.extra_container_kwargs)
 
         self.connect()
 
@@ -255,14 +203,22 @@ scrape_configs:
             "CLIPPER_IP": query_frontend_hostname,
             "CLIPPER_INPUT_TYPE": input_type,
         }
+
+        model_container_label = create_model_container_label(name, version)
         labels = self.common_labels.copy()
-        labels[CLIPPER_MODEL_CONTAINER_LABEL] = create_model_container_label(
-            name, version)
+        labels[CLIPPER_MODEL_CONTAINER_LABEL] = model_container_label
+
+        model_container_name = model_container_label + '-{}'.format(
+            random.randint(0, 100000))
         self.docker_client.containers.run(
             image,
+            name=model_container_name,
             environment=env_vars,
             labels=labels,
             **self.extra_container_kwargs)
+
+        update_metric_config(model_container_name,
+                             CLIPPER_INTERNAL_METRIC_PORT)
 
     def set_num_replicas(self, name, version, input_type, image, num_replicas):
         current_replicas = self._get_replicas(name, version)
