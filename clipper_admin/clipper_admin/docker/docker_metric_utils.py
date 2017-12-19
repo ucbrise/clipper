@@ -25,7 +25,7 @@ def run_query_frontend_metric_image(name, docker_client, query_name,
     query_frontend_metric_labels = common_labels.copy()
 
     docker_client.containers.run(
-        "clipper_exporter",
+        "clipper/frontend-exporter",
         query_frontend_metric_cmd,
         name=name,
         labels=query_frontend_metric_labels,
