@@ -5,6 +5,10 @@ import os
 
 
 def ensure_clipper_tmp():
+    """
+    Make sure /tmp/clipper directory exist. If not, make one.
+    :return: None
+    """
     try:
         os.makedirs('/tmp/clipper')
     except OSError as e:
@@ -13,6 +17,10 @@ def ensure_clipper_tmp():
 
 
 def get_prometheus_base_config():
+    """
+    Generate a basic configuration dictionary for prometheus
+    :return: dictionary
+    """
     conf = dict()
     conf['global'] = {'evaluation_interval': '5s', 'scrape_interval': '5s'}
     conf['scrape_configs'] = []
@@ -21,6 +29,16 @@ def get_prometheus_base_config():
 
 def run_query_frontend_metric_image(name, docker_client, query_name,
                                     common_labels, extra_container_kwargs):
+    """
+    Use docker_client to run a frontend-exporter image.
+    :param name: Name to pass in, need to be unique.
+    :param docker_client: The docker_client object.
+    :param query_name: The corresponding frontend name
+    :param common_labels: Labels to pass in.
+    :param extra_container_kwargs: Kwargs to pass in.
+    :return: None
+    """
+
     query_frontend_metric_cmd = "--query_frontend_name {}".format(query_name)
     query_frontend_metric_labels = common_labels.copy()
 
@@ -34,6 +52,13 @@ def run_query_frontend_metric_image(name, docker_client, query_name,
 
 def setup_metric_config(query_frontend_metric_name,
                         CLIPPER_INTERNAL_METRIC_PORT):
+    """
+    Write to file prometheus.yml after frontend-metric is setup.
+    :param query_frontend_metric_name: Corresponding image name
+    :param CLIPPER_INTERNAL_METRIC_PORT: Default port.
+    :return: None
+    """
+
     ensure_clipper_tmp()
 
     with open('/tmp/clipper/prometheus.yml', 'w') as f:
@@ -55,6 +80,15 @@ def setup_metric_config(query_frontend_metric_name,
 
 
 def run_metric_image(docker_client, common_labels, extra_container_kwargs):
+    """
+    Run the prometheus image.
+    :param docker_client: The docker client object
+    :param common_labels: Labels to pass in
+    :param extra_container_kwargs: Kwargs to pass in.
+    :return: None
+    """
+
+
     metric_cmd = [
         "--config.file=/etc/prometheus/prometheus.yml",
         "--storage.tsdb.path=/prometheus",
@@ -79,6 +113,12 @@ def run_metric_image(docker_client, common_labels, extra_container_kwargs):
 
 
 def update_metric_config(model_container_name, CLIPPER_INTERNAL_METRIC_PORT):
+    """
+    Update the prometheus.yml configuration file.
+    :param model_container_name: New model container_name, need to be unique.
+    :param CLIPPER_INTERNAL_METRIC_PORT: Default port
+    :return: None
+    """
     with open('/tmp/clipper/prometheus.yml', 'r') as f:
         conf = yaml.load(f)
 

@@ -527,6 +527,12 @@ class MetricCollector:
 
 
 def run_metric(child_conn):
+    """
+    This function takes a child_conn at the end of the pipe and
+    receive object to update prometheus metric.
+
+    It is recommended to be ran in a separate process. 
+    """
     REGISTRY.register(MetricCollector(child_conn))
     start_http_server(1390)
     while True:
