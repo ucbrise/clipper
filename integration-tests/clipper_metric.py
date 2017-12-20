@@ -23,6 +23,7 @@ def predict(addr, x):
     headers = {'Content-type': 'application/json'}
     r = requests.post(url, headers=headers, data=req_json)
 
+
 def feature_sum(xs):
     return [str(sum(x)) for x in xs]
 
@@ -38,14 +39,15 @@ if __name__ == '__main__':
     logger.info("Start Metric Test (0/1): Running 2 Replicas")
     clipper_conn = ClipperConnection(DockerContainerManager())
     clipper_conn.start_clipper()
-    python_deployer.create_endpoint(clipper_conn, "simple-example", "doubles",
-                                    feature_sum, num_replicas=2)
+    python_deployer.create_endpoint(
+        clipper_conn, "simple-example", "doubles", feature_sum, num_replicas=2)
     time.sleep(2)
     try:
         for _ in range(100):
             predict(clipper_conn.get_query_addr(), np.random.random(200))
             time.sleep(0.2)
-        up_response = requests.get("http://localhost:9090/api/v1/series?match[]=up").json()
+        up_response = requests.get(
+            "http://localhost:9090/api/v1/series?match[]=up").json()
         logger.debug(up_response)
         assert up_response['status'] == 'success'
         assert len(up_response['data']) == 3
