@@ -6,19 +6,25 @@ from prometheus_client import start_http_server
 from prometheus_client.core import GaugeMetricFamily, REGISTRY
 import argparse
 
-parser = argparse.ArgumentParser(description='Spin up a node exporter for query_frontend.')
-parser.add_argument('--query_frontend_name', metavar='str', type=str, required=True,
-                    help='The name of docker container in clipper_network')
+parser = argparse.ArgumentParser(
+    description='Spin up a node exporter for query_frontend.')
+parser.add_argument(
+    '--query_frontend_name',
+    metavar='str',
+    type=str,
+    required=True,
+    help='The name of docker container in clipper_network')
 args = parser.parse_args()
-
 
 query_frontend_id = args.query_frontend_name
 
-ADDRESS = 'http://{}:1337/metrics'.format(query_frontend_id) #Sub with name
+ADDRESS = 'http://{}:1337/metrics'.format(query_frontend_id)  #Sub with name
+
 
 def load_metric():
     res = requests.get(ADDRESS)
     return res.json()
+
 
 def multi_dict_unpacking(lst):
     """
@@ -28,6 +34,7 @@ def multi_dict_unpacking(lst):
     for d in lst:
         result = {**result, **d}
     return result
+
 
 def parse_metric(metrics):
     wo_type = list(itertools.chain.from_iterable(metrics.values()))
@@ -49,14 +56,14 @@ class ClipperCollector(object):
                     val = float(val)
                 else:
                     val = int(val)
-                name = name.replace(':','_').replace('-','_')
+                name = name.replace(':', '_').replace('-', '_')
                 yield GaugeMetricFamily(name, 'help', value=val)
             except ValueError:
                 pass
+
 
 if __name__ == '__main__':
     REGISTRY.register(ClipperCollector())
     start_http_server(1390)
     while True:
         time.sleep(1)
-
