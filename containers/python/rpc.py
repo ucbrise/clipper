@@ -314,7 +314,7 @@ class Server(threading.Thread):
 
                     else:
                         feedback_request = FeedbackRequest(msg_id_bytes, [])
-                        response = self.handle_feedback_request(received_msg)
+                        response = self.handle_feedback_request(feedback_request)
                         response.send(socket, self.event_history)
                         print("recv: %f us" % ((t2 - t1).microseconds))
 
