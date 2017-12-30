@@ -24,8 +24,9 @@ std::string generate_redis_key(const StateKey& key) {
   return key_stream.str();
 }
 
-StateDB::StateDB() :
-    cache_(std::unordered_map<StateKey, std::string, StateKeyHash, StateKeyEqual>(STATE_DB_CACHE_SIZE_ELEMENTS)) {
+StateDB::StateDB()
+    : cache_(std::unordered_map<StateKey, std::string, StateKeyHash,
+                                StateKeyEqual>(STATE_DB_CACHE_SIZE_ELEMENTS)) {
   Config& conf = get_config();
   while (!redis_connection_.connect(conf.get_redis_address(),
                                     conf.get_redis_port())) {
@@ -58,8 +59,9 @@ boost::optional<std::string> StateDB::get(const StateKey& key) {
 bool StateDB::put(StateKey key, std::string value) {
   std::string redis_key = generate_redis_key(key);
   const std::vector<std::string> cmd_vec{"SET", redis_key, value};
-  bool success = redis::send_cmd_no_reply<std::string>(redis_connection_, cmd_vec);
-  if(success) {
+  bool success =
+      redis::send_cmd_no_reply<std::string>(redis_connection_, cmd_vec);
+  if (success) {
     std::lock_guard<std::mutex> cache_guard(cache_mutex_);
     cache_.emplace(key, value);
   }
