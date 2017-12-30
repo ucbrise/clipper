@@ -9,6 +9,7 @@
 
 #include <boost/optional.hpp>
 #include <redox.hpp>
+#include <folly/AtomicHashMap.h>
 
 #include "constants.hpp"
 #include "datatypes.hpp"
@@ -88,8 +89,7 @@ class StateDB {
 
  private:
   redox::Redox redis_connection_;
-  std::unordered_map<StateKey, std::string, StateKeyHash, StateKeyEqual> cache_;
-  std::mutex cache_mutex_;
+  folly::AtomicHashMap<StateKey, std::string, StateKeyHash, StateKeyEqual> cache_;
 };
 
 }  // namespace clipper

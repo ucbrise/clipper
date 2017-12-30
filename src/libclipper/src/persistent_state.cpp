@@ -25,8 +25,7 @@ std::string generate_redis_key(const StateKey& key) {
 }
 
 StateDB::StateDB()
-    : cache_(std::unordered_map<StateKey, std::string, StateKeyHash,
-                                StateKeyEqual>(STATE_DB_CACHE_SIZE_ELEMENTS)) {
+    : cache_(folly::AtomicHashMap<StateKey, std::string, StateKeyHash, StateKeyEqual>(STATE_DB_CACHE_SIZE_ELEMENTS)) {
   Config& conf = get_config();
   while (!redis_connection_.connect(conf.get_redis_address(),
                                     conf.get_redis_port())) {
@@ -44,15 +43,14 @@ StateDB::StateDB()
 StateDB::~StateDB() { redis_connection_.disconnect(); }
 
 boost::optional<std::string> StateDB::get(const StateKey& key) {
-  std::unique_lock<std::mutex> lock(cache_mutex_);
   auto entry_search = cache_.find(key);
-  lock.unlock();
   if (entry_search != cache_.end()) {
     return entry_search->second;
   } else {
     std::string redis_key = generate_redis_key(key);
     const std::vector<std::string> cmd_vec{"GET", redis_key};
-    return redis::send_cmd_with_reply<std::string>(redis_connection_, cmd_vec);
+    auto result = redis::send_cmd_with_reply<std::string>(redis_connection_, cmd_vec);
+    return result;
   }
 }
 
@@ -62,7 +60,6 @@ bool StateDB::put(StateKey key, std::string value) {
   bool success =
       redis::send_cmd_no_reply<std::string>(redis_connection_, cmd_vec);
   if (success) {
-    std::lock_guard<std::mutex> cache_guard(cache_mutex_);
     cache_.emplace(key, value);
   }
   return success;
@@ -71,7 +68,6 @@ bool StateDB::put(StateKey key, std::string value) {
 bool StateDB::remove(StateKey key) {
   // We use a lock guard here because exclusive access
   // must be maintained until the entry is removed from the database
-  std::lock_guard<std::mutex> lock(cache_mutex_);
   std::string redis_key = generate_redis_key(key);
   const std::vector<std::string> cmd_vec{"DEL", redis_key};
   bool success = redis::send_cmd_no_reply<int>(redis_connection_, cmd_vec);
