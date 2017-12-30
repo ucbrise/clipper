@@ -16,9 +16,33 @@
 namespace clipper {
 
 const std::string LOGGING_TAG_STATE_DB = "STATEDB";
+constexpr size_t STATE_DB_CACHE_SIZE_ELEMENTS = 1024;
 
 // The entries in the key are query_label, user_id, model_hash
 using StateKey = std::tuple<std::string, long, long>;
+
+class StateKeyHash
+{
+ public:
+  size_t operator() (const StateKey &key) const
+  {
+    std::string str = std::get<0>(key);
+    size_t hash = boost::hash_range(str.begin(), str.end());
+    boost::hash_combine(hash, std::get<1>(key));
+    boost::hash_combine(hash, std::get<2>(key));
+    return hash;
+  }
+};
+class StateKeyEqual
+{
+ public:
+  bool operator() (StateKey const& t1, StateKey const& t2) const
+  {
+    return (std::get<0>(t1) == std::get<0>(t2))
+        && (std::get<1>(t1) == std::get<1>(t2))
+        && (std::get<2>(t1) == std::get<2>(t2));
+  }
+};
 
 // Threadsafe, non-copyable state storage
 class StateDB {
@@ -68,6 +92,8 @@ class StateDB {
 
  private:
   redox::Redox redis_connection_;
+  std::unordered_map<StateKey, std::string, StateKeyHash, StateKeyEqual> cache_;
+  std::mutex cache_mutex_;
 };
 
 }  // namespace clipper
