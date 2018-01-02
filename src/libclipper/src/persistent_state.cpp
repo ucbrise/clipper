@@ -24,8 +24,13 @@ std::string generate_redis_key(const StateKey& key) {
   return key_stream.str();
 }
 
+StateCacheEntry::StateCacheEntry(const std::string& value)
+    : entry_value_(value) {}
+
 StateDB::StateDB()
-    : cache_(folly::AtomicHashMap<StateKey, std::string, StateKeyHash, StateKeyEqual>(STATE_DB_CACHE_SIZE_ELEMENTS)) {
+    : cache_(std::unordered_map<StateKey, std::shared_ptr<StateCacheEntry>,
+                                StateKeyHash, StateKeyEqual>(
+          STATE_DB_CACHE_SIZE_ELEMENTS)) {
   Config& conf = get_config();
   while (!redis_connection_.connect(conf.get_redis_address(),
                                     conf.get_redis_port())) {
@@ -45,22 +50,42 @@ StateDB::~StateDB() { redis_connection_.disconnect(); }
 boost::optional<std::string> StateDB::get(const StateKey& key) {
   auto entry_search = cache_.find(key);
   if (entry_search != cache_.end()) {
-    return entry_search->second;
+    auto& cache_entry = entry_search->second;
+    std::lock_guard<std::mutex> entry_lock(cache_entry->entry_mtx_);
+    return cache_entry->entry_value_;
   } else {
     std::string redis_key = generate_redis_key(key);
     const std::vector<std::string> cmd_vec{"GET", redis_key};
-    auto result = redis::send_cmd_with_reply<std::string>(redis_connection_, cmd_vec);
+    auto result =
+        redis::send_cmd_with_reply<std::string>(redis_connection_, cmd_vec);
     return result;
   }
 }
 
 bool StateDB::put(StateKey key, std::string value) {
+  auto entry_search = cache_.find(key);
+  bool new_entry = (entry_search == cache_.end());
+  if (!new_entry) {
+    std::lock_guard<std::mutex> lock(entry_search->second->entry_mtx_);
+  }
   std::string redis_key = generate_redis_key(key);
   const std::vector<std::string> cmd_vec{"SET", redis_key, value};
   bool success =
       redis::send_cmd_no_reply<std::string>(redis_connection_, cmd_vec);
   if (success) {
-    cache_.emplace(key, value);
+    if (new_entry) {
+      // This method is being invoked as part of the 'add application'
+      // procedure in the query frontend. Because any subsequent feedback
+      // updates to the StateDB depend on the completion of 'add application',
+      // it's safe to add a new cache entry immediately
+      std::shared_ptr<StateCacheEntry> entry =
+          std::make_shared<StateCacheEntry>(value);
+      cache_.emplace(key, entry);
+    } else {
+      // We already hold exclusive access to the preexisting entry, so
+      // we can proceed to modify it
+      entry_search->second->entry_value_ = value;
+    }
   }
   return success;
 }

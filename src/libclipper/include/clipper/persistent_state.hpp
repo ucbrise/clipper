@@ -9,7 +9,6 @@
 
 #include <boost/optional.hpp>
 #include <redox.hpp>
-#include <folly/AtomicHashMap.h>
 
 #include "constants.hpp"
 #include "datatypes.hpp"
@@ -39,6 +38,14 @@ class StateKeyEqual {
            (std::get<1>(t1) == std::get<1>(t2)) &&
            (std::get<2>(t1) == std::get<2>(t2));
   }
+};
+
+class StateCacheEntry {
+ public:
+  explicit StateCacheEntry(const std::string& value);
+
+  std::mutex entry_mtx_;
+  std::string entry_value_;
 };
 
 // Threadsafe, non-copyable state storage
@@ -89,7 +96,9 @@ class StateDB {
 
  private:
   redox::Redox redis_connection_;
-  folly::AtomicHashMap<StateKey, std::string, StateKeyHash, StateKeyEqual> cache_;
+  std::unordered_map<StateKey, std::shared_ptr<StateCacheEntry>, StateKeyHash,
+                     StateKeyEqual>
+      cache_;
 };
 
 }  // namespace clipper
