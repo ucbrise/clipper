@@ -6,5 +6,5 @@ WORKDIR /usr/src/app
 
 RUN pip install requests prometheus_client flatten_json
 
-COPY containers/python/front_end_exporter.py .
+COPY monitoring/front_end_exporter.py .
 ENTRYPOINT ["python", "./front_end_exporter.py"]

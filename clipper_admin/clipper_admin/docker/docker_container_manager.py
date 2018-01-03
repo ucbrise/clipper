@@ -132,8 +132,8 @@ class DockerContainerManager(ContainerManager):
             cache_size=cache_size)
         query_labels = self.common_labels.copy()
         query_labels[CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL] = ""
-        query_name = "query_frontend-{}".format(random.randint(
-            0, 100000))  # generate a random name
+        query_container_id = random.randint(0, 100000)
+        query_name = "query_frontend-{}".format(query_container_id)
         self.docker_client.containers.run(
             query_frontend_image,
             query_cmd,
@@ -148,7 +148,7 @@ class DockerContainerManager(ContainerManager):
 
         # Metric Section
         query_frontend_metric_name = "query_frontend_exporter-{}".format(
-            random.randint(0, 100000))
+            query_container_id)
         run_query_frontend_metric_image(
             query_frontend_metric_name, self.docker_client, query_name,
             self.common_labels, self.extra_container_kwargs)

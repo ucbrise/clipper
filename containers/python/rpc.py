@@ -515,13 +515,15 @@ class MetricCollector:
         self.pipe_conn = pipe_child_conn
 
     def collect(self):
-        curr = None
+        lastest_metric_dict = None
         while self.pipe_conn.poll():
-            curr = self.pipe_conn.recv()
-        if curr:
-            for name, val in curr.items():
+            lastest_metric_dict = self.pipe_conn.recv()
+        if lastest_metric_dict:
+            for name, val in lastest_metric_dict.items():
                 try:
-                    yield GaugeMetricFamily(name, 'help', value=val)
+                    yield GaugeMetricFamily(name=name, 
+                                            documentation=name, # Required Argument
+                                            value=val)
                 except ValueError:
                     pass
 
