@@ -193,7 +193,7 @@ class Server(threading.Thread):
         sys.stdout.flush()
         sys.stderr.flush()
 
-        pred_metric = {'count': 0}
+        pred_metric = dict(model_pred_count=0)
 
         while True:
             socket = self.context.socket(zmq.DEALER)
