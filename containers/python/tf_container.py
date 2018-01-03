@@ -3,6 +3,7 @@ import rpc
 import os
 import sys
 import tensorflow as tf
+import glob
 
 from clipper_admin.deployers import cloudpickle
 
@@ -21,18 +22,30 @@ class TfContainer(rpc.ModelContainerBase):
         predict_path = "{dir}/{predict_fname}".format(
             dir=path, predict_fname=predict_fname)
         self.predict_func = load_predict_func(predict_path)
-        self.sess = tf.Session(
-            '',
-            tf.Graph(),
-            config=tf.ConfigProto(
-                allow_soft_placement=True, log_device_placement=True))
-        metagraph_path = os.path.join(path, "tfmodel/model.ckpt.meta")
-        checkpoint_path = os.path.join(path, "tfmodel/model.ckpt")
-        with tf.device("/gpu:0"):
-            with self.sess.graph.as_default():
-                saver = tf.train.import_meta_graph(
-                    metagraph_path, clear_devices=True)
-                saver.restore(self.sess, checkpoint_path)
+
+        frozen_graph_exists = glob.glob(os.path.join(path, "tfmodel/*.pb"))
+        if (len(frozen_graph_exists) > 0):
+            with tf.gfile.GFile(frozen_graph_exists[0], "rb") as f:
+                graph_def = tf.GraphDef()
+                graph_def.ParseFromString(f.read())
+
+            with tf.Graph().as_default() as graph:
+                tf.import_graph_def(
+                    graph_def, input_map=None, return_elements=None, name="")
+            self.sess = tf.Session(graph=graph)
+        else:
+            self.sess = tf.Session(
+                '',
+                tf.Graph(),
+                config=tf.ConfigProto(
+                    allow_soft_placement=True, log_device_placement=True))
+            metagraph_path = glob.glob(os.path.join(path, "tfmodel/*.meta"))[0]
+            checkpoint_path = metagraph_path.split(".meta")[0]
+            with tf.device("/gpu:0"):
+                with self.sess.graph.as_default():
+                    saver = tf.train.import_meta_graph(
+                        metagraph_path, clear_devices=True)
+                    saver.restore(self.sess, checkpoint_path)
 
     def predict_ints(self, inputs):
         preds = self.predict_func(self.sess, inputs)
