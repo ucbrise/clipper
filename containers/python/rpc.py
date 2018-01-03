@@ -521,9 +521,10 @@ class MetricCollector:
         if lastest_metric_dict:
             for name, val in lastest_metric_dict.items():
                 try:
-                    yield GaugeMetricFamily(name=name, 
-                                            documentation=name, # Required Argument
-                                            value=val)
+                    yield GaugeMetricFamily(
+                        name=name,
+                        documentation=name,  # Required Argument
+                        value=val)
                 except ValueError:
                     pass
 
