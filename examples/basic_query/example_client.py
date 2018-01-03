@@ -52,7 +52,10 @@ if __name__ == '__main__':
     try:
         while True:
             if batch_size > 1:
-                predict(clipper_conn.get_query_addr(), [list(np.random.random(200)) for i in range(batch_size)], batch=True)    
+                predict(
+                    clipper_conn.get_query_addr(),
+                    [list(np.random.random(200)) for i in range(batch_size)],
+                    batch=True)
             else:
                 predict(clipper_conn.get_query_addr(), np.random.random(200))
             time.sleep(0.2)
