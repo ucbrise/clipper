@@ -209,17 +209,17 @@ class DockerContainerManager(ContainerManager):
         labels[CLIPPER_MODEL_CONTAINER_LABEL] = model_container_label
 
         # Metric Section
-        # model_container_name = model_container_label + '-{}'.format(
-        #     random.randint(0, 100000))
-        # self.docker_client.containers.run(
-        #     image,
-        #     name=model_container_name,
-        #     environment=env_vars,
-        #     labels=labels,
-        #     **self.extra_container_kwargs)
+        model_container_name = model_container_label + '-{}'.format(
+            random.randint(0, 100000))
+        self.docker_client.containers.run(
+            image,
+            name=model_container_name,
+            environment=env_vars,
+            labels=labels,
+            **self.extra_container_kwargs)
 
-        # update_metric_config(model_container_name,
-        #                      CLIPPER_INTERNAL_METRIC_PORT)
+        update_metric_config(model_container_name,
+                             CLIPPER_INTERNAL_METRIC_PORT)
 
     def set_num_replicas(self, name, version, input_type, image, num_replicas):
         current_replicas = self._get_replicas(name, version)
