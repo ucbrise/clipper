@@ -147,15 +147,15 @@ class DockerContainerManager(ContainerManager):
             **self.extra_container_kwargs)
 
         # Metric Section
-        query_frontend_metric_name = "query_frontend_exporter-{}".format(
-            query_container_id)
-        run_query_frontend_metric_image(
-            query_frontend_metric_name, self.docker_client, query_name,
-            self.common_labels, self.extra_container_kwargs)
-        setup_metric_config(query_frontend_metric_name,
-                            CLIPPER_INTERNAL_METRIC_PORT)
-        run_metric_image(self.docker_client, self.common_labels,
-                         self.extra_container_kwargs)
+        # query_frontend_metric_name = "query_frontend_exporter-{}".format(
+        #     query_container_id)
+        # run_query_frontend_metric_image(
+        #     query_frontend_metric_name, self.docker_client, query_name,
+        #     self.common_labels, self.extra_container_kwargs)
+        # setup_metric_config(query_frontend_metric_name,
+        #                     CLIPPER_INTERNAL_METRIC_PORT)
+        # run_metric_image(self.docker_client, self.common_labels,
+        #                  self.extra_container_kwargs)
 
         self.connect()
 
@@ -208,17 +208,18 @@ class DockerContainerManager(ContainerManager):
         labels = self.common_labels.copy()
         labels[CLIPPER_MODEL_CONTAINER_LABEL] = model_container_label
 
-        model_container_name = model_container_label + '-{}'.format(
-            random.randint(0, 100000))
-        self.docker_client.containers.run(
-            image,
-            name=model_container_name,
-            environment=env_vars,
-            labels=labels,
-            **self.extra_container_kwargs)
+        # Metric Section
+        # model_container_name = model_container_label + '-{}'.format(
+        #     random.randint(0, 100000))
+        # self.docker_client.containers.run(
+        #     image,
+        #     name=model_container_name,
+        #     environment=env_vars,
+        #     labels=labels,
+        #     **self.extra_container_kwargs)
 
-        update_metric_config(model_container_name,
-                             CLIPPER_INTERNAL_METRIC_PORT)
+        # update_metric_config(model_container_name,
+        #                      CLIPPER_INTERNAL_METRIC_PORT)
 
     def set_num_replicas(self, name, version, input_type, image, num_replicas):
         current_replicas = self._get_replicas(name, version)
