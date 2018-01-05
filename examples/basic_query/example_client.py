@@ -10,9 +10,14 @@ import signal
 import sys
 
 
-def predict(addr, x):
+def predict(addr, x, batch=False):
     url = "http://%s/simple-example/predict" % addr
-    req_json = json.dumps({'input': list(x)})
+
+    if batch:
+        req_json = json.dumps({'input_batch': x})
+    else:
+        req_json = json.dumps({'input': list(x)})
+
     headers = {'Content-type': 'application/json'}
     start = datetime.now()
     r = requests.post(url, headers=headers, data=req_json)
@@ -40,9 +45,19 @@ if __name__ == '__main__':
     python_deployer.create_endpoint(clipper_conn, "simple-example", "doubles",
                                     feature_sum)
     time.sleep(2)
+
+    # For batch inputs set this number > 1
+    batch_size = 1
+
     try:
         while True:
-            predict(clipper_conn.get_query_addr(), np.random.random(200))
+            if batch_size > 1:
+                predict(
+                    clipper_conn.get_query_addr(),
+                    [list(np.random.random(200)) for i in range(batch_size)],
+                    batch=True)
+            else:
+                predict(clipper_conn.get_query_addr(), np.random.random(200))
             time.sleep(0.2)
     except Exception as e:
         clipper_conn.stop_all()
