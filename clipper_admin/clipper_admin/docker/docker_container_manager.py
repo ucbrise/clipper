@@ -208,6 +208,7 @@ class DockerContainerManager(ContainerManager):
         labels = self.common_labels.copy()
         labels[CLIPPER_MODEL_CONTAINER_LABEL] = model_container_label
 
+        # Metric Section
         model_container_name = model_container_label + '-{}'.format(
             random.randint(0, 100000))
         self.docker_client.containers.run(
