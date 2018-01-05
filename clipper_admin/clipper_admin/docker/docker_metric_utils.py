@@ -2,6 +2,7 @@ import yaml
 import requests
 import random
 import os
+from ..version import __version__
 
 
 def ensure_clipper_tmp():
@@ -43,7 +44,7 @@ def run_query_frontend_metric_image(name, docker_client, query_name,
     query_frontend_metric_labels = common_labels.copy()
 
     docker_client.containers.run(
-        "clipper/frontend-exporter",
+        "clipper/frontend-exporter:{}".format(__version__),
         query_frontend_metric_cmd,
         name=name,
         labels=query_frontend_metric_labels,
