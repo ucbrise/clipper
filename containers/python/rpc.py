@@ -314,6 +314,8 @@ class Server(threading.Thread):
 
                         pred_metric['model_pred_count'] += 1
 
+                        metric_conn.send(pred_metric)
+
                         print("recv: %f us, parse: %f us, handle: %f us" %
                               ((t2 - t1).microseconds, (t3 - t2).microseconds,
                                (t4 - t3).microseconds))

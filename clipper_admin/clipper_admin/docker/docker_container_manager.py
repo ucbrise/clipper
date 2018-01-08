@@ -147,15 +147,15 @@ class DockerContainerManager(ContainerManager):
             **self.extra_container_kwargs)
 
         # Metric Section
-        # query_frontend_metric_name = "query_frontend_exporter-{}".format(
-        #     query_container_id)
-        # run_query_frontend_metric_image(
-        #     query_frontend_metric_name, self.docker_client, query_name,
-        #     self.common_labels, self.extra_container_kwargs)
-        # setup_metric_config(query_frontend_metric_name,
-        #                     CLIPPER_INTERNAL_METRIC_PORT)
-        # run_metric_image(self.docker_client, self.common_labels,
-        #                  self.extra_container_kwargs)
+        query_frontend_metric_name = "query_frontend_exporter-{}".format(
+            query_container_id)
+        run_query_frontend_metric_image(
+            query_frontend_metric_name, self.docker_client, query_name,
+            self.common_labels, self.extra_container_kwargs)
+        setup_metric_config(query_frontend_metric_name,
+                            CLIPPER_INTERNAL_METRIC_PORT)
+        run_metric_image(self.docker_client, self.common_labels,
+                         self.extra_container_kwargs)
 
         self.connect()
 
