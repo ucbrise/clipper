@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 app_name = "pytorch-test"
 model_name = "pytorch-model"
 
+
 def normalize(x):
     return x.astype(np.double) / 255.0
 
@@ -51,6 +52,7 @@ def objective(y, pos_label):
     else:
         return 0
 
+
 def parsedata(train_path, pos_label):
     trainData = np.genfromtxt(train_path, delimiter=',', dtype=int)
     records = trainData[:, 1:]
@@ -58,10 +60,12 @@ def parsedata(train_path, pos_label):
     transformedlabels = [objective(ele, pos_label) for ele in labels]
     return (records, transformedlabels)
 
+
 def predict(model, xs):
     preds = model(xs)
     preds = [preds.data.numpy().tolist()[0]]
     return [str(p) for p in preds]
+
 
 def deploy_and_test_model(clipper_conn,
                           model,
@@ -106,38 +110,44 @@ def test_model(clipper_conn, app, version):
         raise BenchmarkException("Error querying APP %s, MODEL %s:%d" %
                                  (app, model_name, version))
 
+
 # Define a simple NN model
 class BasicNN(nn.Module):
     def __init__(self):
         super(BasicNN, self).__init__()
         self.net = nn.Linear(28 * 28, 2)
+
     def forward(self, x):
         if type(x) == np.ndarray:
             x = torch.from_numpy(x)
         x = x.float()
         x = Variable(x)
-        x = x.view(1,1,28,28)
-        x = x/255.0
+        x = x.view(1, 1, 28, 28)
+        x = x / 255.0
         batch_size = x.size(0)
         x = x.view(batch_size, -1)
         output = self.net(x.float())
         return F.softmax(output)
-      
+
+
 def train(model):
-  model.train()
-  optimizer = optim.SGD(model.parameters(), lr=0.001)
-  for epoch in range(10):
-      for i, data in enumerate(train_loader, 1):
-          image, j = data
-          optimizer.zero_grad()
-          output = model(image)
-          loss = F.cross_entropy(output, Variable(torch.LongTensor([train_y[i-1]])))
-          loss.backward()
-          optimizer.step()
-  return model
+    model.train()
+    optimizer = optim.SGD(model.parameters(), lr=0.001)
+    for epoch in range(10):
+        for i, data in enumerate(train_loader, 1):
+            image, j = data
+            optimizer.zero_grad()
+            output = model(image)
+            loss = F.cross_entropy(
+                output, Variable(torch.LongTensor([train_y[i - 1]])))
+            loss.backward()
+            optimizer.step()
+    return model
+
 
 def get_test_point():
     return [np.random.randint(255) for _ in range(784)]
+
 
 #Define a dataloader to read data
 class TrainingDataset(data.Dataset):
@@ -151,6 +161,7 @@ class TrainingDataset(data.Dataset):
         img = torch.Tensor(img)
         return img, torch.Tensor(label)
 
+
 if __name__ == "__main__":
     pos_label = 3
     try:
@@ -160,7 +171,7 @@ if __name__ == "__main__":
         train_path = os.path.join(cur_dir, "data/train.data")
         train_x, train_y = parsedata(train_path, pos_label)
         train_x = normalize(train_x)
-        train_loader = TrainingDataset(train_x,train_y)
+        train_loader = TrainingDataset(train_x, train_y)
 
         try:
             clipper_conn.register_application(app_name, "integers",
@@ -185,10 +196,7 @@ if __name__ == "__main__":
             nn_model = train(model)
 
             deploy_and_test_model(
-                clipper_conn,
-                nn_model,
-                version,
-                link_model=True)
+                clipper_conn, nn_model, version, link_model=True)
 
             app_and_model_name = "easy-register-app-model"
             create_endpoint(clipper_conn, app_and_model_name, "integers",

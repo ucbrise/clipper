@@ -26,12 +26,7 @@ setup(
     package_data={'clipper_admin': ['*.txt', '*/*.yaml']},
     keywords=['clipper', 'prediction', 'model', 'management'],
     install_requires=[
-        'requests',
-        'subprocess32',
-        'pyyaml',
-        'docker',
-        'kubernetes',
-        'six',
+        'requests', 'subprocess32', 'pyyaml', 'docker', 'kubernetes', 'six',
         'cloudpickle>=0.5.2'
     ],
     extras_require={
