@@ -127,13 +127,13 @@ def train(model):
   model.train()
   optimizer = optim.SGD(model.parameters(), lr=0.001)
   for epoch in range(10):
-	  for i, data in enumerate(train_loader, 1):
-		  image, j = data
-		  optimizer.zero_grad()
-      		  output = model(image)
-      		  loss = F.cross_entropy(output, Variable(torch.LongTensor([train_y[i-1]])))
-      		  loss.backward()
-      		  optimizer.step()
+      for i, data in enumerate(train_loader, 1):
+          image, j = data
+          optimizer.zero_grad()
+          output = model(image)
+          loss = F.cross_entropy(output, Variable(torch.LongTensor([train_y[i-1]])))
+          loss.backward()
+          optimizer.step()
   return model
 
 def get_test_point():
@@ -159,7 +159,7 @@ if __name__ == "__main__":
 
         train_path = os.path.join(cur_dir, "data/train.data")
         train_x, train_y = parsedata(train_path, pos_label)
-	    train_x = normalize(train_x)
+        train_x = normalize(train_x)
         train_loader = TrainingDataset(train_x,train_y)
 
         try:

@@ -5,9 +5,7 @@ import sys
 import json
 
 import numpy as np
-
-from clipper_admin.deployers import cloudpickle
-
+import cloudpickle
 import torch
 import importlib
 from torch import nn

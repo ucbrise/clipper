@@ -32,6 +32,7 @@ setup(
         'docker',
         'kubernetes',
         'six',
+        'cloudpickle>=0.5.2'
     ],
     extras_require={
         'PySpark': ['pyspark'],

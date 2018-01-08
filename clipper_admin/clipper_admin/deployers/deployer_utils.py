@@ -1,7 +1,7 @@
 from __future__ import print_function, with_statement, absolute_import
 
 import logging
-from .cloudpickle import CloudPickler
+from cloudpickle import CloudPickler
 from .module_dependency import ModuleDependencyAnalyzer
 from ..clipper_admin import CLIPPER_TEMP_DIR
 import six
