@@ -313,13 +313,6 @@ class Server(threading.Thread):
                         response.send(socket, self.event_history)
 
                         pred_metric['model_pred_count'] += 1
-                        pred_metric['model_pred_recv_time'] = (
-                            t2 - t1).microseconds
-                        pred_metric['model_pred_parse_time'] = (
-                            t3 - t2).microseconds
-                        pred_metric['model_pred_handle_time'] = (
-                            t4 - t3).microseconds
-                        metric_conn.send(pred_metric)
 
                         print("recv: %f us, parse: %f us, handle: %f us" %
                               ((t2 - t1).microseconds, (t3 - t2).microseconds,
@@ -515,11 +508,11 @@ class MetricCollector:
         self.pipe_conn = pipe_child_conn
 
     def collect(self):
-        lastest_metric_dict = None
+        latest_metric_dict = None
         while self.pipe_conn.poll():
-            lastest_metric_dict = self.pipe_conn.recv()
-        if lastest_metric_dict:
-            for name, val in lastest_metric_dict.items():
+            latest_metric_dict = self.pipe_conn.recv()
+        if latest_metric_dict:
+            for name, val in latest_metric_dict.items():
                 try:
                     yield GaugeMetricFamily(
                         name=name,
