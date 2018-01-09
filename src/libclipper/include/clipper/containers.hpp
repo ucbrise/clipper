@@ -40,8 +40,8 @@ class ModelContainer {
   VersionedModelId model_;
   int container_id_;
   int replica_id_;
-  int batch_size_;
   InputType input_type_;
+  int batch_size_;
   clipper::metrics::Histogram latency_hist_;
 
  private:
