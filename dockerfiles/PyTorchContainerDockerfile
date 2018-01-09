@@ -7,13 +7,11 @@ RUN echo deb http://ftp.de.debian.org/debian jessie-backports main >> /etc/apt/s
       && apt-get update --fix-missing \
       && apt-get install -yqq -t jessie-backports openjdk-8-jdk \
       && conda install -y --file /lib/python_container_conda_deps.txt \
-      && conda install pytorch torchvision -c pytorch
+      && conda install pytorch torchvision -c pytorch \
+      && conda install -c anaconda cloudpickle=0.5.2
 
 
 COPY containers/python/pytorch_container.py containers/python/pytorch_container_entry.sh /container/
-COPY VERSION.txt /lib/
-COPY clipper_admin/ /lib/clipper_admin
-RUN pip install /lib/clipper_admin
 
 CMD ["/container/pytorch_container_entry.sh"]
 
