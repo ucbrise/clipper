@@ -37,7 +37,6 @@ class ModelContainer {
   void send_feedback(PredictTask task);
   void set_batch_size(int batch_size);
 
-
   VersionedModelId model_;
   int container_id_;
   int replica_id_;
@@ -83,6 +82,7 @@ class ActiveContainers {
   /// Get list of all models that have at least one active replica.
   std::vector<VersionedModelId> get_known_models();
   std::unordered_map<VersionedModelId, int> batch_sizes_;
+
  private:
   // Protects the models-replicas map. Must acquire an exclusive
   // lock to modify the map and a shared_lock when accessing

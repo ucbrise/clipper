@@ -673,9 +673,10 @@ class RequestHandler {
     int batch_size = get_int(d, "batch_size");
 
     // The batch_size should be either positive or DEFAULT_BATCH_SIZE
-    if( batch_size<=0 && batch_size!= DEFAULT_BATCH_SIZE){
+    if (batch_size <= 0 && batch_size != DEFAULT_BATCH_SIZE) {
       std::stringstream ss;
-      ss << "The batch size must be positive or DEFAULT_BATCH_SIZE, which is -1";
+      ss << "The batch size must be positive or DEFAULT_BATCH_SIZE, which is "
+            "-1";
       throw clipper::ManagementOperationError(ss.str());
     }
     // Validate strings that will be grouped before supplying to redis
@@ -704,7 +705,8 @@ class RequestHandler {
         boost::make_optional<InputType>(input_type));
 
     if (clipper::redis::add_model(redis_connection_, model_id, input_type,
-                                  labels, container_name, model_data_path, batch_size)) {
+                                  labels, container_name, model_data_path,
+                                  batch_size)) {
       attempt_model_version_update(model_id.get_name(), model_id.get_id());
       std::stringstream ss;
       ss << "Successfully added model with name "

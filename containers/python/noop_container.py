@@ -4,6 +4,7 @@ import os
 import sys
 import numpy as np
 
+
 class NoopContainer(rpc.ModelContainerBase):
     def __init__(self, prediction="1.0"):
         self.prediction = prediction
