@@ -6,6 +6,7 @@ import tensorflow as tf
 import cloudpickle
 import glob
 
+
 def load_predict_func(file_path):
     with open(file_path, 'r') as serialized_func_file:
         return cloudpickle.load(serialized_func_file)
