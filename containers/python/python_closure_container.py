@@ -45,7 +45,7 @@ class PythonContainer(rpc.ModelContainerBase):
 
 
 if __name__ == "__main__":
-    print("Starting PythonContainer container")
+    print("Starting Python Closure container")
     try:
         model_name = os.environ["CLIPPER_MODEL_NAME"]
     except KeyError:
