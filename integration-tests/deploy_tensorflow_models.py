@@ -14,6 +14,7 @@ from util_package import mock_module_in_package as mmip
 import mock_module as mm
 
 import tensorflow as tf
+import argparse
 
 from test_utils import (create_docker_connection, BenchmarkException, headers,
                         log_clipper_state)
@@ -175,14 +176,61 @@ if __name__ == "__main__":
                 print("Error: %s" % response.text)
                 raise BenchmarkException("Error creating app %s" % app_name)
 
-            version = 1
             sess = train_logistic_regression(sess, X_train, y_train)
+            #  Save the TF Model .. the saved model is used for subsequent tests of serving saved models
+            saver = tf.train.Saver()
+            save_path = saver.save(sess, "data/model.ckpt")
+
+            # Deploy a TF model using the Tensorflow Session
+            version = 1
             deploy_and_test_model(
                 clipper_conn, sess, version, "integers", link_model=True)
 
+            # Deploy a TF Model using a saved Tensorflow Model
+            version += 1
+            deploy_and_test_model(
+                clipper_conn, "data", version, "integers", link_model=False)
+
+            # Freeze the Graph and save it
+            output_graph_dir = "data" + "/frozen_model.pb"
+            output_graph_file = "frozen_model.pb"
+            output_node_names = "predict_class"
+            graph = tf.get_default_graph()
+            input_graph_def = graph.as_graph_def()
+            output_graph_def = tf.graph_util.convert_variables_to_constants(
+                sess,  # The session is used to retrieve the weights
+                input_graph_def,  # The graph_def is used to retrieve the nodes
+                output_node_names.split(
+                    ","
+                )  # The output node names are used to select the usefull nodes
+            )
+            # Finally we serialize and dump the output graph to the filesystem
+            with tf.gfile.GFile(output_graph_dir, "wb") as f:
+                f.write(output_graph_def.SerializeToString())
+            print("%d ops in the final graph." % len(output_graph_def.node))
+
+            with tf.gfile.GFile(output_graph_file, "wb") as f:
+                f.write(output_graph_def.SerializeToString())
+            print("%d ops in the final graph." % len(output_graph_def.node))
+            sess.close()
+
+            # Deploy a TF Model using a Frozen Tensorflow Model in a directory
+            version += 1
+            deploy_and_test_model(
+                clipper_conn, "data", version, "integers", link_model=False)
+
+            # Deploy a TF Model using a Frozen Tensorflow Model in a file
+            version += 1
+            deploy_and_test_model(
+                clipper_conn,
+                "frozen_model.pb",
+                version,
+                "integers",
+                link_model=False)
+
             app_and_model_name = "easy-register-app-model"
             create_endpoint(clipper_conn, app_and_model_name, "integers",
-                            predict, sess)
+                            predict, "data")
             test_model(clipper_conn, app_and_model_name, 1)
 
         except BenchmarkException as e:

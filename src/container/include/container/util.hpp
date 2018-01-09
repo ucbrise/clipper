@@ -39,6 +39,6 @@ class CircularBuffer {
   std::vector<T> items_;
   const size_t capacity_;
 };
-}
+}  // namespace container
 
 #endif  // CLIPPER_UTIL_HPP
