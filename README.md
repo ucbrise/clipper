@@ -25,7 +25,7 @@ Clipper is a prediction serving system that sits between user-facing application
 
 ## Quickstart
 
-**Note: This quickstart works for the latest version of code. For a quickstart that works with the released version of Clipper available on PyPi, go to our [website](http://clipper.ai/overview/quickstart/)**
+**Note: This quickstart works for the latest version of code. For a quickstart that works with the released version of Clipper available on PyPi, go to our [website](http://clipper.ai)**
 
 > This quickstart requires [Docker](https://www.docker.com/) and only supports Python2.
 

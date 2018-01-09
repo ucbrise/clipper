@@ -136,4 +136,4 @@ TEST(ActiveContainerTests, AddMultipleContainersSameModelDifferentVersions) {
   ASSERT_EQ(firstresult->model_, vm1);
   ASSERT_EQ(firstresult->container_id_, firstconn_id);
 }
-}
+}  // namespace

@@ -46,6 +46,7 @@ const char* PREDICTION_RESPONSE_KEY_USED_DEFAULT = "default";
 const char* PREDICTION_RESPONSE_KEY_DEFAULT_EXPLANATION = "default_explanation";
 const char* PREDICTION_ERROR_RESPONSE_KEY_ERROR = "error";
 const char* PREDICTION_ERROR_RESPONSE_KEY_CAUSE = "cause";
+const char* PREDICTION_BATCH_INDICATOR_KEY = "batch_predictions";
 
 const std::string PREDICTION_ERROR_NAME_JSON = "Json error";
 const std::string PREDICTION_ERROR_NAME_QUERY_PROCESSING =
@@ -318,25 +319,39 @@ class RequestHandler {
           }
         }
 
-        folly::Future<Response> prediction = decode_and_handle_predict(
-            request->content.string(), name, versioned_models, policy,
-            latency_slo_micros, input_type);
+        folly::Future<std::vector<folly::Try<Response>>> predictions =
+            decode_and_handle_predict(request->content.string(), name,
+                                      versioned_models, policy,
+                                      latency_slo_micros, input_type);
 
-        prediction
-            .then([response, app_metrics](Response r) {
-              // Update metrics
-              if (r.output_is_default_) {
-                app_metrics.default_pred_ratio_->increment(1, 1);
-              } else {
-                app_metrics.default_pred_ratio_->increment(0, 1);
+        predictions
+            .then([response,
+                   app_metrics](std::vector<folly::Try<Response>> tries) {
+              std::vector<std::string> all_content;
+              for (auto t : tries) {
+                try {
+                  Response r = t.value();
+                  if (r.output_is_default_) {
+                    app_metrics.default_pred_ratio_->increment(1, 1);
+                  } else {
+                    app_metrics.default_pred_ratio_->increment(0, 1);
+                  }
+                  app_metrics.latency_->insert(r.duration_micros_);
+                  app_metrics.num_predictions_->increment(1);
+                  app_metrics.throughput_->mark(1);
+
+                  std::string content = get_prediction_response_content(r);
+                  all_content.push_back(content);
+                } catch (const std::exception& e) {
+                  clipper::log_error(LOGGING_TAG_QUERY_FRONTEND,
+                                     "Returned response before all predictions "
+                                     "in batch were processed");
+                }
               }
-              app_metrics.latency_->insert(r.duration_micros_);
-              app_metrics.num_predictions_->increment(1);
-              app_metrics.throughput_->mark(1);
 
-              std::string content = get_prediction_response_content(r);
-              respond_http(content, "200 OK", response);
-
+              std::string final_content =
+                  get_batch_prediction_response_content(all_content);
+              respond_http(final_content, "200 OK", response);
             })
             .onError([response](const std::exception& e) {
               clipper::log_error_formatted(clipper::LOGGING_TAG_CLIPPER,
@@ -455,6 +470,40 @@ class RequestHandler {
   }
 
   /**
+   * Obtains the json-formatted http response content for a successful query
+   *
+   * JSON format for prediction response:
+   * {
+   *   "batch_predictions" :
+   *     {
+   *        "query_id" := int,
+   *        "output" := float,
+   *        "default" := boolean
+   *        "default_explanation" := string (optional)
+   *     }
+   * }
+   */
+  static const std::string get_batch_prediction_response_content(
+      std::vector<std::string> query_responses) {
+    if (query_responses.size() == 1) {
+      return query_responses[0];
+    }
+
+    rapidjson::Document json_response;
+    json_response.SetObject();
+    try {
+      clipper::json::add_json_array(
+          json_response, PREDICTION_BATCH_INDICATOR_KEY, query_responses);
+    } catch (const clipper::json::json_parse_error& e) {
+      clipper::json::add_string_array(
+          json_response, PREDICTION_BATCH_INDICATOR_KEY, query_responses);
+    }
+
+    std::string content = clipper::json::to_json_string(json_response);
+    return content;
+  }
+
+  /**
    * Obtains the json-formatted http response content for a query
    * that could not be completed due to an error
    *
@@ -479,22 +528,26 @@ class RequestHandler {
    * JSON format for prediction query request:
    * {
    *  "input" := [double] | [int] | [string] | [byte] | [float]
+   *  "input_batch" := [[double] | [int] | [byte] | [float] | string]
    * }
    */
-  folly::Future<Response> decode_and_handle_predict(
+  folly::Future<std::vector<folly::Try<Response>>> decode_and_handle_predict(
       std::string json_content, std::string name,
       std::vector<VersionedModelId> models, std::string policy,
       long latency_slo_micros, InputType input_type) {
     rapidjson::Document d;
     clipper::json::parse_json(json_content, d);
     long uid = 0;
-    // NOTE: We will eventually support personalization again so this commented
-    // out code is intentionally left in as a placeholder.
-    // long uid = clipper::json::get_long(d, "uid");
-    std::shared_ptr<Input> input = clipper::json::parse_input(input_type, d);
-    auto prediction = query_processor_.predict(
-        Query{name, uid, input, latency_slo_micros, policy, models});
-    return prediction;
+
+    std::vector<std::shared_ptr<Input>> input_batch =
+        clipper::json::parse_input(input_type, d);
+    std::vector<folly::Future<Response>> predictions;
+    for (auto input : input_batch) {
+      auto prediction = query_processor_.predict(
+          Query{name, uid, input, latency_slo_micros, policy, models});
+      predictions.push_back(std::move(prediction));
+    }
+    return folly::collectAll(predictions);
   }
 
   /*
@@ -512,7 +565,8 @@ class RequestHandler {
     rapidjson::Document d;
     clipper::json::parse_json(json_content, d);
     long uid = clipper::json::get_long(d, "uid");
-    std::shared_ptr<Input> input = clipper::json::parse_input(input_type, d);
+    std::shared_ptr<Input> input =
+        clipper::json::parse_single_input(input_type, d);
     double y_hat = clipper::json::get_double(d, "label");
     auto update = query_processor_.update(
         FeedbackQuery{name, uid, {Feedback(input, y_hat)}, policy, models});

@@ -95,6 +95,6 @@ class ActiveContainers {
                      std::map<int, std::shared_ptr<ModelContainer>>>
       containers_;
 };
-}
+}  // namespace clipper
 
 #endif
