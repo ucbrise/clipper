@@ -3,8 +3,7 @@ import rpc
 import os
 import sys
 import tensorflow as tf
-
-from clipper_admin.deployers import cloudpickle
+import cloudpickle
 
 
 def load_predict_func(file_path):

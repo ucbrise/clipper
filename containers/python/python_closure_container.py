@@ -3,8 +3,7 @@ import rpc
 import os
 import sys
 import numpy as np
-
-from clipper_admin.deployers import cloudpickle
+import cloudpickle
 
 IMPORT_ERROR_RETURN_CODE = 3
 
