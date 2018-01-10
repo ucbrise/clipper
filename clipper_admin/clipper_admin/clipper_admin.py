@@ -466,7 +466,6 @@ class ClipperConnection(object):
             version=version,
             input_type=input_type,
             image=image,
-            batch_size=batch_size,
             num_replicas=num_replicas)
         self.register_model(
             name,
