@@ -92,7 +92,7 @@ TEST_F(RedisTest, AddModel) {
   // The model table has 8 fields, so we expect
   // to get back a map with 8 entries in it
   // (see add_model() in redis.cpp for details on what the fields are).
-  EXPECT_EQ(result.size(), static_cast<size_t>(7));
+  EXPECT_EQ(result.size(), static_cast<size_t>(8));
   ASSERT_EQ(result["model_name"], model.get_name());
   ASSERT_EQ(result["model_version"], model.get_id());
   ASSERT_FLOAT_EQ(std::stof(result["load"]), 0.0);
@@ -233,7 +233,7 @@ TEST_F(RedisTest, DeleteModel) {
   ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, labels, container_name,
                         model_path, DEFAULT_BATCH_SIZE));
   auto add_result = get_model(*redis_, model);
-  EXPECT_EQ(add_result.size(), static_cast<size_t>(7));
+  EXPECT_EQ(add_result.size(), static_cast<size_t>(8));
   ASSERT_TRUE(delete_model(*redis_, model));
   auto delete_result = get_model(*redis_, model);
   EXPECT_EQ(delete_result.size(), static_cast<size_t>(0));
