@@ -162,16 +162,7 @@ std::unordered_map<std::string, std::string> get_model(
  */
 std::vector<std::string> get_model_versions(redox::Redox& redis,
                                             const std::string& model_name);
-/**
- * Looks up model names listed in the model table. Since a call to KEYS may
- * return multiple version values associated with each model key, this method
- * de-duplicates the model names before returning.
- *
- * \return Returns a vector of model names as strings. If no model names
- * were found, then an empty vector will be returned.
- */
-std::unordered_map<std::string, std::string> get_model_by_key(
-    redox::Redox& redis, const std::string& key);
+
 /**
  * Look up the model according to key
  * \param redis should be redis_connection_
@@ -179,6 +170,17 @@ std::unordered_map<std::string, std::string> get_model_by_key(
  *
  * @return Returns a list of specifications of the model. If the
  * model was not found, an empty list will be returned.
+ */
+std::unordered_map<std::string, std::string> get_model_by_key(
+    redox::Redox& redis, const std::string& key);
+
+/**
+ * Looks up model names listed in the model table. Since a call to KEYS may
+ * return multiple version values associated with each model key, this method
+ * de-duplicates the model names before returning.
+ *
+ * \return Returns a vector of model names as strings. If no model names
+ * were found, then an empty vector will be returned.
  */
 std::vector<std::string> get_all_model_names(redox::Redox& redis);
 
