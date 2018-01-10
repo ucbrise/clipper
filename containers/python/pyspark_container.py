@@ -5,9 +5,9 @@ import sys
 import json
 
 import numpy as np
+import cloudpickle
 
 # sys.path.append(os.path.abspath("/lib/"))
-from clipper_admin.deployers import cloudpickle
 
 import pyspark
 from pyspark import SparkConf, SparkContext
@@ -35,7 +35,9 @@ def load_pyspark_model(metadata_path, spark, model_path):
         module = ".".join(splits[:-1])
         class_name = splits[-1]
         ModelClass = getattr(importlib.import_module(module), class_name)
-        if model_class == "pyspark.ml.pipeline.PipelineModel":
+        if issubclass(ModelClass,
+                      pyspark.ml.pipeline.PipelineModel) or issubclass(
+                          ModelClass, pyspark.ml.base.Model):
             model = ModelClass.load(model_path)
         else:
             model = ModelClass.load(spark.sparkContext, model_path)

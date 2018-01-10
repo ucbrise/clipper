@@ -311,7 +311,7 @@ inline void create_queue(VersionedModelId vm, int replica_id) {
   get_thread_pool().create_queue(vm, replica_id);
 }
 
-}  // namespace DefaultThreadPool
+}  // namespace TaskExecutionThreadPool
 }  // namespace clipper
 
 #endif  // CLIPPER_LIB_THREADPOOL_HPP

@@ -344,4 +344,4 @@ TEST(PredictionCacheTests, TestEntryLargerThanCacheSizeIsEvicted) {
   cache.put(model_id, input, output);
   ASSERT_FALSE(cache.fetch(model_id, input).isReady());
 }
-}
+}  // namespace

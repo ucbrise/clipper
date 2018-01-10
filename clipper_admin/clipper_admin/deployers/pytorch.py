@@ -1,14 +1,19 @@
 from __future__ import print_function, with_statement, absolute_import
-
-import logging
-import os
-import posixpath
 import shutil
-from ..version import __version__
+import torch
+import logging
+import re
+import os
+import json
 
-from .deployer_utils import save_python_function
+from ..version import __version__
+from ..clipper_admin import ClipperException
+from .deployer_utils import save_python_function, serialize_object
 
 logger = logging.getLogger(__name__)
+
+PYTORCH_WEIGHTS_RELATIVE_PATH = "pytorch_weights.pkl"
+PYTORCH_MODEL_RELATIVE_PATH = "pytorch_model.pkl"
 
 
 def create_endpoint(
@@ -16,15 +21,16 @@ def create_endpoint(
         name,
         input_type,
         func,
+        pytorch_model,
         default_output="None",
         version=1,
         slo_micros=3000000,
         labels=None,
         registry=None,
-        base_image="clipper/python-closure-container:{}".format(__version__),
+        base_image="clipper/pytorch-container:{}".format(__version__),
         num_replicas=1):
-    """Registers an application and deploys the provided predict function as a model.
-
+    """Registers an app and deploys the provided predict function with PyTorch model as
+    a Clipper model.
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
@@ -37,6 +43,8 @@ def create_endpoint(
     func : function
         The prediction function. Any state associated with the function will be
         captured via closure capture and pickled with Cloudpickle.
+    pytorch_model : pytorch model object
+        The PyTorch model to save.
     default_output : str, optional
         The default output for the application. The default output will be returned whenever
         an application is unable to receive a response from a model within the specified
@@ -60,7 +68,7 @@ def create_endpoint(
         and used purely for user annotations.
     registry : str, optional
         The Docker container registry to push the freshly built model to. Note
-        that if you are running Clipper on Kubernetes, this registry must be accessible
+        that if you are running Clipper on Kubernetes, this registry must be accesible
         to the Kubernetes cluster in order to fetch the container from the registry.
     base_image : str, optional
         The base Docker image to build the new model image from. This
@@ -74,27 +82,25 @@ def create_endpoint(
 
     clipper_conn.register_application(name, input_type, default_output,
                                       slo_micros)
-    deploy_python_closure(clipper_conn, name, version, input_type, func,
-                          base_image, labels, registry, num_replicas)
+    deploy_pytorch_model(clipper_conn, name, version, input_type, func,
+                         pytorch_model, base_image, labels, registry,
+                         num_replicas)
 
     clipper_conn.link_model_to_app(name, name)
 
 
-def deploy_python_closure(
+def deploy_pytorch_model(
         clipper_conn,
         name,
         version,
         input_type,
         func,
-        base_image="clipper/python-closure-container:{}".format(__version__),
+        pytorch_model,
+        base_image="clipper/pytorch-container:{}".format(__version__),
         labels=None,
         registry=None,
         num_replicas=1):
-    """Deploy an arbitrary Python function to Clipper.
-
-    The function should take a list of inputs of the type specified by `input_type` and
-    return a Python list or numpy array of predictions as strings.
-
+    """Deploy a Python function with a PyTorch model.
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
@@ -110,6 +116,8 @@ def deploy_python_closure(
     func : function
         The prediction function. Any state associated with the function will be
         captured via closure capture and pickled with Cloudpickle.
+    pytorch_model : pytorch model object
+        The Pytorch model to save.
     base_image : str, optional
         The base Docker image to build the new model image from. This
         image should contain all code necessary to run a Clipper model
@@ -125,52 +133,59 @@ def deploy_python_closure(
         The number of replicas of the model to create. The number of replicas
         for a model can be changed at any time with
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
-
-
     Example
     -------
-    Define a pre-processing function ``center()`` and train a model on the pre-processed input::
-
+    
         from clipper_admin import ClipperConnection, DockerContainerManager
-        from clipper_admin.deployers.python import deploy_python_closure
-        import numpy as np
-        import sklearn
+        from clipper_admin.deployers.pytorch import deploy_pytorch_model
+        from torch import nn
 
         clipper_conn = ClipperConnection(DockerContainerManager())
 
         # Connect to an already-running Clipper cluster
         clipper_conn.connect()
+        
+        model = nn.Linear(1,1)
+        
+        #define a shift function to normalize prediction inputs
+        def predict(model, inputs):
+            pred = model(shift(inputs))
+            pred = pred.data.numpy()
+            return [str(x) for x in pred]
 
-        def center(xs):
-            means = np.mean(xs, axis=0)
-            return xs - means
-
-        centered_xs = center(xs)
-        model = sklearn.linear_model.LogisticRegression()
-        model.fit(centered_xs, ys)
-
-        # Note that this function accesses the trained model via closure capture,
-        # rather than having the model passed in as an explicit argument.
-        def centered_predict(inputs):
-            centered_inputs = center(inputs)
-            # model.predict returns a list of predictions
-            preds = model.predict(centered_inputs)
-            return [str(p) for p in preds]
-
-        deploy_python_closure(
+        deploy_pytorch_model(
             clipper_conn,
             name="example",
+            version = 1,
             input_type="doubles",
-            func=centered_predict)
+            func=predict,
+            pytorch_model=model)
     """
 
     serialization_dir = save_python_function(name, func)
-    # Special handling for Windows, which uses backslash for path delimiting
-    serialization_dir = posixpath.join(*os.path.split(serialization_dir))
-    logger.info("Python closure saved")
-    # Deploy function
+
+    # save Torch model
+    torch_weights_save_loc = os.path.join(serialization_dir,
+                                          PYTORCH_WEIGHTS_RELATIVE_PATH)
+
+    torch_model_save_loc = os.path.join(serialization_dir,
+                                        PYTORCH_MODEL_RELATIVE_PATH)
+
+    try:
+        torch.save(pytorch_model.state_dict(), torch_weights_save_loc)
+        serialized_model = serialize_object(pytorch_model)
+        with open(torch_model_save_loc, "w") as serialized_model_file:
+            serialized_model_file.write(serialized_model)
+
+    except Exception as e:
+        logger.warn("Error saving torch model: %s" % e)
+
+    logger.info("Torch model saved")
+
+    # Deploy model
     clipper_conn.build_and_deploy_model(name, version, input_type,
                                         serialization_dir, base_image, labels,
                                         registry, num_replicas)
+
     # Remove temp files
     shutil.rmtree(serialization_dir)

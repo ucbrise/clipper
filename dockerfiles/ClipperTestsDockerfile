@@ -17,12 +17,12 @@ RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh \
 ENV PATH "/opt/conda/bin:$PATH"
 RUN conda install -y libgcc pyzmq
  
-RUN pip install requests subprocess32 scikit-learn numpy pyyaml docker kubernetes pyspark
+RUN pip install requests subprocess32 scikit-learn numpy pyyaml docker kubernetes pyspark tensorflow cloudpickle==0.5.2
 
 # Install maven
 ARG MAVEN_VERSION=3.5.0
 ARG SHA=beb91419245395bd69a4a6edad5ca3ec1a8b64e41457672dc687c173a495f034
-ARG BASE_URL=https://apache.osuosl.org/maven/maven-3/${MAVEN_VERSION}/binaries
+ARG BASE_URL=https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries
 
 RUN mkdir -p /usr/share/maven /usr/share/maven/ref \
   && curl -fsSL -o /tmp/apache-maven.tar.gz ${BASE_URL}/apache-maven-$MAVEN_VERSION-bin.tar.gz \
