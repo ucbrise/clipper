@@ -72,6 +72,7 @@ class ManagementFrontendTest : public ::testing::Test {
     add_string(d, "model_version", model_version);
     add_string_array(d, "labels", labels);
     add_string(d, "input_type", input_type);
+    add_int(d, "batch_size", DEFAULT_BATCH_SIZE);
     add_string(d, "container_name", container_name);
     add_string(d, "model_data_path", model_data_path);
   }
@@ -438,6 +439,7 @@ TEST_F(ManagementFrontendTest, TestAddModelCorrect) {
     "model_version": "4",
     "labels": ["label1", "label2", "label3"],
     "input_type": "integers",
+    "batch_size": -1,
     "container_name": "clipper/sklearn_cifar",
     "model_data_path": "/tmp/model/repo/m/1"
   }
@@ -447,10 +449,10 @@ TEST_F(ManagementFrontendTest, TestAddModelCorrect) {
   std::string model_name = "mymodelname";
   std::string model_version = "4";
   auto result = get_model(*redis_, VersionedModelId(model_name, model_version));
-  // The model table has 7 fields, so we expect to get back a map with 7
+  // The model table has 8 fields, so we expect to get back a map with 8
   // entries in it (see add_model() in redis.cpp for details on what the
   // fields are).
-  ASSERT_EQ(result.size(), static_cast<size_t>(7));
+  ASSERT_EQ(result.size(), static_cast<size_t>(8));
 
   // Make sure that the current model version has been updated
   // appropriately.
@@ -472,6 +474,7 @@ TEST_F(ManagementFrontendTest, TestAddLinkedModelCompatibleInputType) {
     "model_version": "4",
     "labels": ["label1", "label2", "label3"],
     "input_type": "integers",
+    "batch_size": -1,
     "container_name": "clipper/sklearn_cifar",
     "model_data_path": "/tmp/model/repo/m/4"
   }
@@ -481,10 +484,10 @@ TEST_F(ManagementFrontendTest, TestAddLinkedModelCompatibleInputType) {
   std::string model_name = "mymodelname";
   std::string model_version = "4";
   auto result = get_model(*redis_, VersionedModelId(model_name, model_version));
-  // The model table has 7 fields, so we expect to get back a map with 7
+  // The model table has 8 fields, so we expect to get back a map with 8
   // entries in it (see add_model() in redis.cpp for details on what the
   // fields are).
-  ASSERT_EQ(result.size(), static_cast<size_t>(7));
+  ASSERT_EQ(result.size(), static_cast<size_t>(8));
 
   // Make sure that the current model version has been updated
   // appropriately.
@@ -502,6 +505,7 @@ TEST_F(ManagementFrontendTest, TestAddLinkedModelCompatibleInputType) {
     "model_version": "6",
     "labels": ["label1", "label5"],
     "input_type": "ints",
+    "batch_size": -1,
     "container_name": "clipper/other_container",
     "model_data_path": "/tmp/model/repo/m/4"
   }
@@ -516,6 +520,7 @@ TEST_F(ManagementFrontendTest, TestAddDuplicateModelVersion) {
     "model_version": "4",
     "labels": ["label1", "label2", "label3"],
     "input_type": "integers",
+    "batch_size": -1,
     "container_name": "clipper/sklearn_cifar",
     "model_data_path": "/tmp/model/repo/m/4"
   }
@@ -525,10 +530,10 @@ TEST_F(ManagementFrontendTest, TestAddDuplicateModelVersion) {
   std::string model_name = "mymodelname";
   std::string model_version = "4";
   auto result = get_model(*redis_, VersionedModelId(model_name, model_version));
-  // The model table has 7 fields, so we expect to get back a map with 7
+  // The model table has 8 fields, so we expect to get back a map with 8
   // entries in it (see add_model() in redis.cpp for details on what the
   // fields are).
-  ASSERT_EQ(result.size(), static_cast<size_t>(7));
+  ASSERT_EQ(result.size(), static_cast<size_t>(8));
 
   // Make sure that the current model version has been updated
   // appropriately.
@@ -540,6 +545,7 @@ TEST_F(ManagementFrontendTest, TestAddDuplicateModelVersion) {
     "model_version": "4",
     "labels": ["label1", "label5"],
     "input_type": "doubles",
+    "batch_size": -1,
     "container_name": "clipper/other_container",
     "model_data_path": "/tmp/model/repo/m/4"
   }

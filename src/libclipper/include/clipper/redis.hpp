@@ -118,15 +118,17 @@ boost::optional<std::string> get_current_model_version(
  *
  * \param container_name should be the name of a Docker container
  * \param model_data_path should be the path on the Clipper host
- * to the serialized model data needed for the container
- *
+ * \param batch_size should be the user-defined batch size for all replicas of
+ * the model. Its default value (-1)
+ * indicates that the batch size was unspecified and that Clipper should
+ * calculate it adaptively.
  * \return Returns true if the add was successful.
  */
 bool add_model(redox::Redox& redis, const VersionedModelId& model_id,
                const InputType& input_type,
                const std::vector<std::string>& labels,
                const std::string& container_name,
-               const std::string& model_data_path);
+               const std::string& model_data_path, int batch_size);
 
 /**
  * Deletes a model from the model table if it exists.
@@ -160,7 +162,6 @@ std::unordered_map<std::string, std::string> get_model(
  */
 std::vector<std::string> get_model_versions(redox::Redox& redis,
                                             const std::string& model_name);
-
 /**
  * Looks up model names listed in the model table. Since a call to KEYS may
  * return multiple version values associated with each model key, this method
@@ -168,6 +169,16 @@ std::vector<std::string> get_model_versions(redox::Redox& redis,
  *
  * \return Returns a vector of model names as strings. If no model names
  * were found, then an empty vector will be returned.
+ */
+std::unordered_map<std::string, std::string> get_model_by_key(
+    redox::Redox& redis, const std::string& key);
+/**
+ * Look up the model according to key
+ * \param redis should be redis_connection_
+ * \param key should be the key of the model
+ *
+ * @return Returns a list of specifications of the model. If the
+ * model was not found, an empty list will be returned.
  */
 std::vector<std::string> get_all_model_names(redox::Redox& redis);
 
