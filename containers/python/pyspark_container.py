@@ -5,9 +5,9 @@ import sys
 import json
 
 import numpy as np
+import cloudpickle
 
 # sys.path.append(os.path.abspath("/lib/"))
-from clipper_admin.deployers import cloudpickle
 
 import pyspark
 from pyspark import SparkConf, SparkContext
