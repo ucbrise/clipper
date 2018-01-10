@@ -1,7 +1,7 @@
 from __future__ import print_function, with_statement, absolute_import
 
 import logging
-from .cloudpickle import CloudPickler
+from cloudpickle import CloudPickler
 from .module_dependency import ModuleDependencyAnalyzer
 from ..clipper_admin import CLIPPER_TEMP_DIR
 import six
@@ -20,6 +20,13 @@ else:
 CONTAINER_CONDA_PLATFORM = 'linux-64'
 
 logger = logging.getLogger(__name__)
+
+
+def serialize_object(obj):
+    s = six.StringIO()
+    c = CloudPickler(s, 2)
+    c.dump(obj)
+    return s.getvalue()
 
 
 def save_python_function(name, func):
