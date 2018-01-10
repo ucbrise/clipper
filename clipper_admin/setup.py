@@ -33,6 +33,7 @@ setup(
         'kubernetes',
         'prometheus_client',
         'six',
+        'cloudpickle>=0.5.2'
     ],
     extras_require={
         'PySpark': ['pyspark'],

@@ -17,7 +17,7 @@ RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh \
 ENV PATH "/opt/conda/bin:$PATH"
 RUN conda install -y libgcc pyzmq
  
-RUN pip install requests subprocess32 scikit-learn numpy pyyaml docker kubernetes pyspark tensorflow
+RUN pip install requests subprocess32 scikit-learn numpy pyyaml docker kubernetes pyspark tensorflow cloudpickle==0.5.2
 
 # Install maven
 ARG MAVEN_VERSION=3.5.0
