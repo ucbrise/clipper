@@ -19,14 +19,6 @@ ByteBuffer get_byte_buffer(std::vector<T> vector) {
   return bytes;
 }
 
-template <typename T>
-size_t serialize_to_buffer(const std::vector<T> &vector, uint8_t *buf) {
-  const uint8_t *byte_data = reinterpret_cast<const uint8_t *>(vector.data());
-  size_t amt_to_write = vector.size() * (sizeof(T) / sizeof(uint8_t));
-  memcpy(buf, byte_data, amt_to_write);
-  return amt_to_write;
-}
-
 std::string get_readable_input_type(InputType type) {
   switch (type) {
     case InputType::Bytes: return std::string("bytes");
@@ -103,42 +95,55 @@ bool Output::operator!=(const Output &rhs) const {
   return !(y_hat_ == rhs.y_hat_ && models_used_ == rhs.models_used_);
 }
 
-ByteVector::ByteVector(std::vector<uint8_t> data) : data_(std::move(data)) {}
+ByteVector::ByteVector(std::shared_ptr<uint8_t>& data, size_t size) : data_(data), size_(size) {}
+
+ByteVector::ByteVector(std::shared_ptr<void>& data, size_t size_bytes) :
+    data_(std::static_pointer_cast<uint8_t>(data)), size_(size_bytes) {}
 
 InputType ByteVector::type() const { return InputType::Bytes; }
 
-size_t ByteVector::serialize(uint8_t *buf) const {
-  return serialize_to_buffer(data_, buf);
+size_t ByteVector::serialize(std::vector<std::shared_ptr<void>> &buf) const {
+  buf.push_back(data_);
+  return size_;
 }
 
-size_t ByteVector::hash() const { return hash_vector(data_); }
+size_t ByteVector::hash() const { return boost::hash_range(data_.get(), data_.get() + size_); }
 
-size_t ByteVector::size() const { return data_.size(); }
+size_t ByteVector::size() const { return size_; }
 
-size_t ByteVector::byte_size() const { return data_.size() * sizeof(uint8_t); }
+size_t ByteVector::byte_size() const { return size_; }
 
-const std::vector<uint8_t> &ByteVector::get_data() const { return data_; }
+const std::shared_ptr<uint8_t> &ByteVector::get_data() const { return data_; }
 
-IntVector::IntVector(std::vector<int> data) : data_(std::move(data)) {}
+IntVector::IntVector(std::shared_ptr<int>& data, size_t size) : data_(data) {}
+
+IntVector::IntVector(std::shared_ptr<void>& data, size_t size_bytes) :
+    data_(std::static_pointer_cast<int>(data)), size_(static_cast<size_t>(size_bytes / sizeof(int))) {}
 
 InputType IntVector::type() const { return InputType::Ints; }
 
-size_t IntVector::serialize(uint8_t *buf) const {
-  return serialize_to_buffer(data_, buf);
+size_t IntVector::serialize(std::vector<std::shared_ptr<void>> &buf) const {
+  buf.push_back(data_);
+  return size_;
 }
 
-size_t IntVector::hash() const { return hash_vector(data_); }
+size_t IntVector::hash() const { return boost::hash_range(data_.get(), data_.get() + size_); }
 
-size_t IntVector::size() const { return data_.size(); }
+size_t IntVector::size() const { return size_; }
 
-size_t IntVector::byte_size() const { return data_.size() * sizeof(int); }
+size_t IntVector::byte_size() const { return size_ * sizeof(int); }
 
-const std::vector<int> &IntVector::get_data() const { return data_; }
+const std::shared_ptr<int> &IntVector::get_data() const { return data_; }
 
-FloatVector::FloatVector(std::vector<float> data) : data_(std::move(data)) {}
+FloatVector::FloatVector(std::shared_ptr<float>& data, size_t size)
+    : data_(data), size_(size) {}
 
-size_t FloatVector::serialize(uint8_t *buf) const {
-  return serialize_to_buffer(data_, buf);
+FloatVector::FloatVector(std::shared_ptr<void>& data, size_t size_bytes) :
+    data_(std::static_pointer_cast<float>(data)), size_(static_cast<size_t>(size_bytes / sizeof(float))) {}
+
+size_t FloatVector::serialize(std::vector<std::shared_ptr<void>> &buf) const {
+  buf.push_back(data_);
+  return size_;
 }
 
 InputType FloatVector::type() const { return InputType::Floats; }
@@ -147,59 +152,65 @@ size_t FloatVector::hash() const {
   // TODO [CLIPPER-63]: Find an alternative to hashing floats directly, as this
   // is generally a bad idea due to loss of precision from floating point
   // representations
-  return hash_vector(data_);
+  return boost::hash_range(data_.get(), data_.get() + size_);
 }
 
-size_t FloatVector::size() const { return data_.size(); }
+size_t FloatVector::size() const { return size_; }
 
-size_t FloatVector::byte_size() const { return data_.size() * sizeof(float); }
+size_t FloatVector::byte_size() const { return size_ * sizeof(float); }
 
-const std::vector<float> &FloatVector::get_data() const { return data_; }
+const std::shared_ptr<float> &FloatVector::get_data() const { return data_; }
 
-DoubleVector::DoubleVector(std::vector<double> data) : data_(std::move(data)) {}
+DoubleVector::DoubleVector(std::shared_ptr<double>& data, size_t size)
+    : data_(data), size_(size) {}
+
+DoubleVector::DoubleVector(std::shared_ptr<void>& data, size_t size_bytes)
+    : data_(std::static_pointer_cast<double>(data)), size_(static_cast<size_t>(size_bytes / sizeof(double))) {}
 
 InputType DoubleVector::type() const { return InputType::Doubles; }
 
-size_t DoubleVector::serialize(uint8_t *buf) const {
-  return serialize_to_buffer(data_, buf);
+size_t DoubleVector::serialize(std::vector<std::shared_ptr<void>> &buf) const {
+  buf.push_back(data_);
+  return size_;
 }
 
 size_t DoubleVector::hash() const {
   // TODO [CLIPPER-63]: Find an alternative to hashing doubles directly, as
   // this is generally a bad idea due to loss of precision from floating point
   // representations
-  return hash_vector(data_);
+  return boost::hash_range(data_.get(), data_.get() + size_);
 }
 
-size_t DoubleVector::size() const { return data_.size(); }
+size_t DoubleVector::size() const { return size_; }
 
-size_t DoubleVector::byte_size() const { return data_.size() * sizeof(double); }
+size_t DoubleVector::byte_size() const { return size_ * sizeof(double); }
 
-const std::vector<double> &DoubleVector::get_data() const { return data_; }
+const std::shared_ptr<double> &DoubleVector::get_data() const { return data_; }
 
-SerializableString::SerializableString(std::string data)
-    : data_(std::move(data)) {}
+SerializableString::SerializableString(std::shared_ptr<char>& data, size_t size)
+    : data_(data), size_(size) {}
+
+SerializableString::SerializableString(std::shared_ptr<void>& data, size_t size_bytes)
+    : data_(std::static_pointer_cast<char>(data)), size_(static_cast<size_t>(size_bytes / sizeof(char))) {}
 
 InputType SerializableString::type() const { return InputType::Strings; }
 
-size_t SerializableString::serialize(uint8_t *buf) const {
-  size_t amt_to_write = data_.length() + 1;
-  memcpy(buf, data_.c_str(), amt_to_write);
-  return amt_to_write;
+size_t SerializableString::serialize(std::vector<std::shared_ptr<void>> &buf) const {
+  buf.push_back(data_);
+  return size_;
 }
 
 size_t SerializableString::hash() const {
-  return std::hash<std::string>()(data_);
+  return boost::hash_range(data_.get(), data_.get() + size_);
 }
 
 size_t SerializableString::size() const { return 1; }
 
 size_t SerializableString::byte_size() const {
-  // The length of the string with an extra byte for the null terminator
-  return data_.length() + 1;
+  return size_ * sizeof(char);
 }
 
-const std::string &SerializableString::get_data() const { return data_; }
+const std::shared_ptr<char>& SerializableString::get_data() const { return data_; }
 
 rpc::PredictionRequest::PredictionRequest(InputType input_type)
     : input_type_(input_type) {}

@@ -11,7 +11,8 @@
 
 namespace clipper {
 
-using ByteBuffer = std::vector<uint8_t>;
+typedef std::pair<std::shared_ptr<void>, size_t> ByteBuffer;
+
 using QueryId = long;
 using FeedbackAck = bool;
 
@@ -88,7 +89,7 @@ class Input {
    *
    * The serialization methods are used for RPC.
    */
-  virtual size_t serialize(uint8_t *buf) const = 0;
+  virtual size_t serialize(std::vector<std::shared_ptr<void>> &buf) const = 0;
 
   virtual size_t hash() const = 0;
 
@@ -104,7 +105,8 @@ class Input {
 
 class ByteVector : public Input {
  public:
-  explicit ByteVector(std::vector<uint8_t> data);
+  explicit ByteVector(std::shared_ptr<uint8_t>& data, size_t size);
+  explicit ByteVector(std::shared_ptr<void>& data, size_t size_bytes);
 
   // Disallow copy
   ByteVector(ByteVector &other) = delete;
@@ -115,19 +117,21 @@ class ByteVector : public Input {
   ByteVector &operator=(ByteVector &&other) = default;
 
   InputType type() const override;
-  size_t serialize(uint8_t *buf) const override;
+  size_t serialize(std::vector<std::shared_ptr<void>> &buf) const override;
   size_t hash() const override;
   size_t size() const override;
   size_t byte_size() const override;
-  const std::vector<uint8_t> &get_data() const;
+  const std::shared_ptr<uint8_t> &get_data() const;
 
  private:
-  std::vector<uint8_t> data_;
+  std::shared_ptr<uint8_t> data_;
+  size_t size_;
 };
 
 class IntVector : public Input {
  public:
-  explicit IntVector(std::vector<int> data);
+  explicit IntVector(std::shared_ptr<int>& data, size_t size);
+  explicit IntVector(std::shared_ptr<void>& data, size_t size_bytes);
 
   // Disallow copy
   IntVector(IntVector &other) = delete;
@@ -138,20 +142,22 @@ class IntVector : public Input {
   IntVector &operator=(IntVector &&other) = default;
 
   InputType type() const override;
-  size_t serialize(uint8_t *buf) const override;
+  size_t serialize(std::vector<std::shared_ptr<void>> &buf) const override;
   size_t hash() const override;
   size_t size() const override;
   size_t byte_size() const override;
 
-  const std::vector<int> &get_data() const;
+  const std::shared_ptr<int> &get_data() const;
 
  private:
-  std::vector<int> data_;
+  std::shared_ptr<int> data_;
+  size_t size_;
 };
 
 class FloatVector : public Input {
  public:
-  explicit FloatVector(std::vector<float> data);
+  explicit FloatVector(std::shared_ptr<float>& data, size_t size);
+  explicit FloatVector(std::shared_ptr<void>& data, size_t size_bytes);
 
   // Disallow copy
   FloatVector(FloatVector &other) = delete;
@@ -162,19 +168,21 @@ class FloatVector : public Input {
   FloatVector &operator=(FloatVector &&other) = default;
 
   InputType type() const override;
-  size_t serialize(uint8_t *buf) const override;
+  size_t serialize(std::vector<std::shared_ptr<void>> &buf) const override;
   size_t hash() const override;
   size_t size() const override;
   size_t byte_size() const override;
-  const std::vector<float> &get_data() const;
+  const std::shared_ptr<float> &get_data() const;
 
  private:
-  std::vector<float> data_;
+  std::shared_ptr<float> data_;
+  size_t size_;
 };
 
 class DoubleVector : public Input {
  public:
-  explicit DoubleVector(std::vector<double> data);
+  explicit DoubleVector(std::shared_ptr<double>& data, size_t size);
+  explicit DoubleVector(std::shared_ptr<void>& data, size_t size_bytes);
 
   // Disallow copy
   DoubleVector(DoubleVector &other) = delete;
@@ -185,19 +193,21 @@ class DoubleVector : public Input {
   DoubleVector &operator=(DoubleVector &&other) = default;
 
   InputType type() const override;
-  size_t serialize(uint8_t *buf) const override;
+  size_t serialize(std::vector<std::shared_ptr<void>> &buf) const override;
   size_t hash() const override;
   size_t size() const override;
   size_t byte_size() const override;
-  const std::vector<double> &get_data() const;
+  const std::shared_ptr<double> &get_data() const;
 
  private:
-  std::vector<double> data_;
+  std::shared_ptr<double> data_;
+  size_t size_;
 };
 
 class SerializableString : public Input {
  public:
-  explicit SerializableString(std::string data);
+  explicit SerializableString(std::shared_ptr<char>& data, size_t size);
+  explicit SerializableString(std::shared_ptr<void>& data, size_t size_bytes);
 
   // Disallow copy
   SerializableString(SerializableString &other) = delete;
@@ -208,14 +218,15 @@ class SerializableString : public Input {
   SerializableString &operator=(SerializableString &&other) = default;
 
   InputType type() const override;
-  size_t serialize(uint8_t *buf) const override;
+  size_t serialize(std::vector<std::shared_ptr<void>> &buf) const override;
   size_t hash() const override;
   size_t size() const override;
   size_t byte_size() const override;
-  const std::string &get_data() const;
+  const std::shared_ptr<char> &get_data() const;
 
  private:
-  std::string data_;
+  std::shared_ptr<char> data_;
+  size_t size_;
 };
 
 class Query {
