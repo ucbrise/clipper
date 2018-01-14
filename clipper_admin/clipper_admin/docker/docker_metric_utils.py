@@ -80,7 +80,8 @@ def setup_metric_config(query_frontend_metric_name,
         yaml.dump(prom_config, f)
 
 
-def run_metric_image(docker_client, common_labels, extra_container_kwargs):
+def run_metric_image(docker_client, common_labels, prometheus_port,
+                     extra_container_kwargs):
     """
     Run the prometheus image.
     :param docker_client: The docker client object
@@ -101,7 +102,7 @@ def run_metric_image(docker_client, common_labels, extra_container_kwargs):
         "prom/prometheus",
         metric_cmd,
         name="metric_frontend-{}".format(random.randint(0, 100000)),
-        ports={'9090/tcp': 9090},
+        ports={'9090/tcp': prometheus_port},
         volumes={
             '/tmp/clipper/prometheus.yml': {
                 'bind': '/etc/prometheus/prometheus.yml',
