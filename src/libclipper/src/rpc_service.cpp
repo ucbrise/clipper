@@ -68,7 +68,7 @@ void RPCService::stop() {
   }
 }
 
-int RPCService::send_message(const vector<vector<uint8_t>> msg,
+int RPCService::send_message(const vector<UniquePoolPtr<uint8_t>> msg,
                              const int zmq_connection_id) {
   if (!active_) {
     log_error(LOGGING_TAG_RPC,
@@ -193,8 +193,10 @@ void RPCService::send_messages(
     int cur_msg_num = 0;
     // subtract 1 because we start counting at 0
     int last_msg_num = std::get<2>(request).size() - 1;
-    for (const std::vector<uint8_t> &m : std::get<2>(request)) {
+    for (UniquePoolPtr &m : std::get<2>(request)) {
       // send the sndmore flag unless we are on the last message part
+
+      message_t msg()
       if (cur_msg_num < last_msg_num) {
         socket.send((uint8_t *)m.data(), m.size(), ZMQ_SNDMORE);
       } else {

@@ -12,42 +12,35 @@
 
 namespace clipper {
 
-template <typename T>
-ByteBuffer get_byte_buffer(std::vector<T> vector) {
-  uint8_t *data = reinterpret_cast<uint8_t *>(vector.data());
-  ByteBuffer bytes(data, data + vector.size() * (sizeof(T) / sizeof(uint8_t)));
-  return bytes;
-}
-
-std::string get_readable_input_type(InputType type) {
+std::string get_readable_input_type(DataType type) {
   switch (type) {
-    case InputType::Bytes: return std::string("bytes");
-    case InputType::Ints: return std::string("integers");
-    case InputType::Floats: return std::string("floats");
-    case InputType::Doubles: return std::string("doubles");
-    case InputType::Strings: return std::string("strings");
-    case InputType::Invalid:
+    case DataType::Bytes: return std::string("bytes");
+    case DataType::Ints: return std::string("integers");
+    case DataType::Floats: return std::string("floats");
+    case DataType::Doubles: return std::string("doubles");
+    case DataType::Strings: return std::string("strings");
+    case DataType::Invalid:
     default: return std::string("Invalid input type");
   }
 }
 
-InputType parse_input_type(std::string type_string) {
+DataType parse_input_type(std::string type_string) {
   if (type_string == "bytes" || type_string == "byte" || type_string == "b") {
-    return InputType::Bytes;
+    return DataType::Bytes;
   } else if (type_string == "integers" || type_string == "ints" ||
              type_string == "integer" || type_string == "int" ||
              type_string == "i") {
-    return InputType::Ints;
+    return DataType::Ints;
   } else if (type_string == "floats" || type_string == "float" ||
              type_string == "f") {
-    return InputType::Floats;
+    return DataType::Floats;
   } else if (type_string == "doubles" || type_string == "double" ||
              type_string == "d") {
-    return InputType::Doubles;
+    return DataType::Doubles;
   } else if (type_string == "strings" || type_string == "string" ||
              type_string == "str" || type_string == "strs" ||
              type_string == "s") {
-    return InputType::Strings;
+    return DataType::Strings;
   } else {
     throw std::invalid_argument(type_string + " is not a valid input string");
   }
@@ -95,17 +88,14 @@ bool Output::operator!=(const Output &rhs) const {
   return !(y_hat_ == rhs.y_hat_ && models_used_ == rhs.models_used_);
 }
 
-ByteVector::ByteVector(std::shared_ptr<uint8_t>& data, size_t size) : data_(data), size_(size) {}
+ByteVector::ByteVector(UniquePoolPtr<uint8_t>& data, size_t size)
+    : data_(std::move(data)), size_(size) {}
 
-ByteVector::ByteVector(std::shared_ptr<void>& data, size_t size_bytes) :
-    data_(std::static_pointer_cast<uint8_t>(data)), size_(size_bytes) {}
+ByteVector::ByteVector(UniquePoolPtr<void>& data, size_t byte_size)
+    : data_(UniquePoolPtr<uint8_t>(static_cast<uint8_t*>(data.release()))),
+      size_(static_cast<size_t>(byte_size / sizeof(uint8_t))) {}
 
-InputType ByteVector::type() const { return InputType::Bytes; }
-
-size_t ByteVector::serialize(std::vector<std::shared_ptr<void>> &buf) const {
-  buf.push_back(data_);
-  return size_;
-}
+DataType ByteVector::type() const { return DataType::Bytes; }
 
 size_t ByteVector::hash() const { return boost::hash_range(data_.get(), data_.get() + size_); }
 
@@ -113,19 +103,23 @@ size_t ByteVector::size() const { return size_; }
 
 size_t ByteVector::byte_size() const { return size_; }
 
-const std::shared_ptr<uint8_t> &ByteVector::get_data() const { return data_; }
-
-IntVector::IntVector(std::shared_ptr<int>& data, size_t size) : data_(data) {}
-
-IntVector::IntVector(std::shared_ptr<void>& data, size_t size_bytes) :
-    data_(std::static_pointer_cast<int>(data)), size_(static_cast<size_t>(size_bytes / sizeof(int))) {}
-
-InputType IntVector::type() const { return InputType::Ints; }
-
-size_t IntVector::serialize(std::vector<std::shared_ptr<void>> &buf) const {
-  buf.push_back(data_);
+size_t ByteVector::serialize(std::vector<UniquePoolPtr<void>> &buf) {
+  buf.push_back(std::move(data_));
   return size_;
 }
+
+const void* ByteVector::get_data() {
+  return data_.release();
+}
+
+IntVector::IntVector(UniquePoolPtr<int>& data, size_t size)
+    : data_(std::move(data)), size_(size) {}
+
+IntVector::IntVector(UniquePoolPtr<void> &data, size_t byte_size)
+    : data_(UniquePoolPtr<int>(static_cast<int*>(data.release()))),
+      size_(static_cast<size_t>(byte_size / sizeof(int))) {}
+
+DataType IntVector::type() const { return DataType::Ints; }
 
 size_t IntVector::hash() const { return boost::hash_range(data_.get(), data_.get() + size_); }
 
@@ -133,24 +127,27 @@ size_t IntVector::size() const { return size_; }
 
 size_t IntVector::byte_size() const { return size_ * sizeof(int); }
 
-const std::shared_ptr<int> &IntVector::get_data() const { return data_; }
-
-FloatVector::FloatVector(std::shared_ptr<float>& data, size_t size)
-    : data_(data), size_(size) {}
-
-FloatVector::FloatVector(std::shared_ptr<void>& data, size_t size_bytes) :
-    data_(std::static_pointer_cast<float>(data)), size_(static_cast<size_t>(size_bytes / sizeof(float))) {}
-
-size_t FloatVector::serialize(std::vector<std::shared_ptr<void>> &buf) const {
-  buf.push_back(data_);
+size_t IntVector::serialize(std::vector<UniquePoolPtr<void>> &buf) {
+  buf.push_back(std::move(data_));
   return size_;
 }
 
-InputType FloatVector::type() const { return InputType::Floats; }
+const void* IntVector::get_data() {
+  return data_.release();
+}
+
+FloatVector::FloatVector(UniquePoolPtr<float>& data, size_t size)
+    : data_(std::move(data)), size_(size) {}
+
+FloatVector::FloatVector(UniquePoolPtr<void>& data, size_t byte_size)
+    : data_(UniquePoolPtr<float>(static_cast<float*>(data.release()))),
+      size_(static_cast<size_t>(byte_size / sizeof(float))) {}
+
+DataType FloatVector::type() const { return DataType::Floats; }
 
 size_t FloatVector::hash() const {
   // TODO [CLIPPER-63]: Find an alternative to hashing floats directly, as this
-  // is generally a bad idea due to loss of precision from floating point
+  // is generally a bad idea due to loss of precision from floating point)
   // representations
   return boost::hash_range(data_.get(), data_.get() + size_);
 }
@@ -159,20 +156,23 @@ size_t FloatVector::size() const { return size_; }
 
 size_t FloatVector::byte_size() const { return size_ * sizeof(float); }
 
-const std::shared_ptr<float> &FloatVector::get_data() const { return data_; }
-
-DoubleVector::DoubleVector(std::shared_ptr<double>& data, size_t size)
-    : data_(data), size_(size) {}
-
-DoubleVector::DoubleVector(std::shared_ptr<void>& data, size_t size_bytes)
-    : data_(std::static_pointer_cast<double>(data)), size_(static_cast<size_t>(size_bytes / sizeof(double))) {}
-
-InputType DoubleVector::type() const { return InputType::Doubles; }
-
-size_t DoubleVector::serialize(std::vector<std::shared_ptr<void>> &buf) const {
-  buf.push_back(data_);
+size_t FloatVector::serialize(std::vector<UniquePoolPtr<void>> &buf) {
+  buf.push_back(std::move(data_));
   return size_;
 }
+
+const void* FloatVector::get_data() {
+  return data_.release();
+}
+
+DoubleVector::DoubleVector(UniquePoolPtr<double>& data, size_t size)
+    : data_(std::move(data)), size_(size) {}
+
+DoubleVector::DoubleVector(UniquePoolPtr<void>& data, size_t size_bytes)
+    : data_(UniquePoolPtr<double>(static_cast<double*>(data.release()))),
+      size_(static_cast<size_t>(size_bytes / sizeof(double))) {}
+
+DataType DoubleVector::type() const { return DataType::Doubles; }
 
 size_t DoubleVector::hash() const {
   // TODO [CLIPPER-63]: Find an alternative to hashing doubles directly, as
@@ -185,20 +185,23 @@ size_t DoubleVector::size() const { return size_; }
 
 size_t DoubleVector::byte_size() const { return size_ * sizeof(double); }
 
-const std::shared_ptr<double> &DoubleVector::get_data() const { return data_; }
-
-SerializableString::SerializableString(std::shared_ptr<char>& data, size_t size)
-    : data_(data), size_(size) {}
-
-SerializableString::SerializableString(std::shared_ptr<void>& data, size_t size_bytes)
-    : data_(std::static_pointer_cast<char>(data)), size_(static_cast<size_t>(size_bytes / sizeof(char))) {}
-
-InputType SerializableString::type() const { return InputType::Strings; }
-
-size_t SerializableString::serialize(std::vector<std::shared_ptr<void>> &buf) const {
-  buf.push_back(data_);
+size_t DoubleVector::serialize(std::vector<UniquePoolPtr<void>> &buf) {
+  buf.push_back(std::move(data_));
   return size_;
 }
+
+const void* DoubleVector::get_data() {
+  return data_.release();
+}
+
+SerializableString::SerializableString(UniquePoolPtr<char>& data, size_t size)
+    : data_(std::move(data)), size_(size) {}
+
+SerializableString::SerializableString(UniquePoolPtr<void>& data, size_t byte_size)
+    : data_(UniquePoolPtr<char>(static_cast<char*>(data.release()))),
+      size_(static_cast<size_t>(byte_size / sizeof(char))) {}
+
+DataType SerializableString::type() const { return DataType::Strings; }
 
 size_t SerializableString::hash() const {
   return boost::hash_range(data_.get(), data_.get() + size_);
@@ -210,13 +213,20 @@ size_t SerializableString::byte_size() const {
   return size_ * sizeof(char);
 }
 
-const std::shared_ptr<char>& SerializableString::get_data() const { return data_; }
+const void* SerializableString::get_data() {
+  return data_.release();
+}
 
-rpc::PredictionRequest::PredictionRequest(InputType input_type)
+size_t SerializableString::serialize(std::vector<UniquePoolPtr<void>> &buf) {
+  buf.push_back(std::move(data_));
+  return size_;
+}
+
+rpc::PredictionRequest::PredictionRequest(DataType input_type)
     : input_type_(input_type) {}
 
 rpc::PredictionRequest::PredictionRequest(
-    std::vector<std::shared_ptr<Input>> inputs, InputType input_type)
+    std::vector<std::shared_ptr<PredictionData>> inputs, DataType input_type)
     : inputs_(inputs), input_type_(input_type) {
   for (int i = 0; i < (int)inputs.size(); i++) {
     validate_input_type(inputs[i]);
@@ -225,7 +235,7 @@ rpc::PredictionRequest::PredictionRequest(
 }
 
 void rpc::PredictionRequest::validate_input_type(
-    std::shared_ptr<Input> &input) const {
+    std::shared_ptr<PredictionData> &input) const {
   if (input->type() != input_type_) {
     std::ostringstream ss;
     ss << "Attempted to add an input of type "
@@ -237,7 +247,7 @@ void rpc::PredictionRequest::validate_input_type(
   }
 }
 
-void rpc::PredictionRequest::add_input(std::shared_ptr<Input> input) {
+void rpc::PredictionRequest::add_input(std::shared_ptr<PredictionData> input) {
   validate_input_type(input);
   inputs_.push_back(input);
   input_data_size_ += input->byte_size();
@@ -249,56 +259,47 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
         "Attempted to serialize a request with no input data!");
   }
 
-  std::vector<uint32_t> request_metadata;
-  request_metadata.emplace_back(
-      static_cast<uint32_t>(RequestType::PredictRequest));
+  size_t request_metadata_size = 1 * sizeof(uint32_t);
+  UniquePoolPtr<uint8_t> request_metadata(
+      static_cast<uint8_t *>(malloc(request_metadata_size)), free);
+  uint32_t *request_metadata_raw =
+      reinterpret_cast<uint32_t *>(request_metadata.get());
+  request_metadata_raw[0] = static_cast<uint32_t>(RequestType::PredictRequest);
 
-  std::vector<uint32_t> input_metadata;
-  input_metadata.emplace_back(static_cast<uint32_t>(input_type_));
-  input_metadata.emplace_back(static_cast<uint32_t>(inputs_.size()));
+  size_t input_metadata_size = (2 + (inputs_.size() - 1)) * sizeof(uint32_t);
+  UniquePoolPtr<uint8_t> input_metadata(
+      static_cast<uint8_t *>(malloc(input_metadata_size)), free);
+  uint32_t *input_metadata_raw =
+      reinterpret_cast<uint32_t *>(input_metadata.get());
+  input_metadata_raw[0] = static_cast<uint32_t>(input_type_);
+  input_metadata_raw[1] = static_cast<uint32_t>(inputs_.size());
 
-  uint32_t index = 0;
-  uint8_t *input_buf = (uint8_t *)malloc(input_data_size_);
-  uint8_t *input_buf_start = input_buf;
-
-  for (int i = 0; i < (int)inputs_.size(); i++) {
-    size_t amt_written = inputs_[i]->serialize(input_buf);
-    input_buf += amt_written;
-    index += inputs_[i]->size();
-    input_metadata.push_back(index);
+  std::vector<UniquePoolPtr<void>> input_bufs;
+  for (size_t i = 0; i < inputs_.size(); i++) {
+    inputs_[i]->serialize(input_bufs);
+    input_metadata_raw[i + 2] = static_cast<uint32_t>(inputs_[i]->byte_size());
   }
-  // Remove the final separation index because it results in the
-  // creation of an empty data array when deserializing
-  input_metadata.pop_back();
 
-  std::vector<ByteBuffer> serialized_request;
-  ByteBuffer serialized_input_metadata = get_byte_buffer(input_metadata);
-  ByteBuffer serialized_request_metadata = get_byte_buffer(request_metadata);
-  ByteBuffer serialized_inputs =
-      ByteBuffer(input_buf_start, input_buf_start + input_data_size_);
-
-  std::vector<long> input_metadata_size_bytes;
+  size_t input_metadata_size_buf_size = 1 * sizeof(long);
+  UniquePoolPtr<uint8_t> input_metadata_size_buf(
+      static_cast<uint8_t *>(malloc(input_metadata_size_buf_size)), free);
+  long *input_metadata_size_buf_raw =
+      reinterpret_cast<long *>(input_metadata_size_buf.get());
   // Add the size of the input metadata in bytes. This will be
   // sent prior to the input metadata to allow for proactive
   // buffer allocation in the receiving container
-  input_metadata_size_bytes.push_back(serialized_input_metadata.size());
-  ByteBuffer serialized_input_metadata_size =
-      get_byte_buffer(input_metadata_size_bytes);
+  input_metadata_size_buf_raw[0] = input_metadata_size;
 
-  std::vector<long> inputs_size_bytes;
-  // Add the size of the serialized inputs in bytes. This will be
-  // sent prior to the input data to allow for proactive
-  // buffer allocation in the receiving container
-  inputs_size_bytes.push_back(serialized_inputs.size());
-  ByteBuffer serialized_inputs_size = get_byte_buffer(inputs_size_bytes);
-
-  free(input_buf_start);
-  serialized_request.push_back(serialized_request_metadata);
-  serialized_request.push_back(serialized_input_metadata_size);
-  serialized_request.push_back(serialized_input_metadata);
-  serialized_request.push_back(serialized_inputs_size);
-  serialized_request.push_back(serialized_inputs);
-
+  std::vector<ByteBuffer> serialized_request;
+  serialized_request.emplace_back(
+      std::make_pair(request_metadata, request_metadata_size));
+  serialized_request.emplace_back(
+      std::make_pair(input_metadata_size_buf, input_metadata_size_buf_size));
+  serialized_request.emplace_back(
+      std::make_pair(input_metadata, input_metadata_size));
+  for (size_t i = 0; i < input_bufs.size(); i++) {
+    serialized_request.emplace_back(std::make_pair(input_bufs[i], input_metadata_raw[i + 2]));
+  }
   return serialized_request;
 }
 
@@ -307,13 +308,13 @@ rpc::PredictionResponse::PredictionResponse(
     : outputs_(outputs) {}
 
 rpc::PredictionResponse
-rpc::PredictionResponse::deserialize_prediction_response(ByteBuffer bytes) {
-  std::vector<std::string> outputs;
-  uint32_t *output_lengths_data = reinterpret_cast<uint32_t *>(bytes.data());
+rpc::PredictionResponse::deserialize_prediction_response(ByteBuffer response) {
+  std::vector<std::shared_ptr<char>> outputs;
+  uint32_t *output_lengths_data = reinterpret_cast<uint32_t *>(response.first);
   uint32_t num_outputs = output_lengths_data[0];
   output_lengths_data++;
   char *output_string_data = reinterpret_cast<char *>(
-      bytes.data() + sizeof(uint32_t) + (num_outputs * sizeof(uint32_t)));
+      response.first + sizeof(uint32_t) + (num_outputs * sizeof(uint32_t)));
   for (uint32_t i = 0; i < num_outputs; i++) {
     uint32_t output_length = output_lengths_data[i];
     std::string output(output_string_data, output_length);
@@ -323,15 +324,15 @@ rpc::PredictionResponse::deserialize_prediction_response(ByteBuffer bytes) {
   return PredictionResponse(outputs);
 }
 
-Query::Query(std::string label, long user_id, std::shared_ptr<Input> input,
+Query::Query(std::string label, long user_id, std::shared_ptr<PredictionData> input,
              long latency_budget_micros, std::string selection_policy,
              std::vector<VersionedModelId> candidate_models)
-    : label_(label),
+    : label_(std::move(label)),
       user_id_(user_id),
-      input_(input),
+      input_(std::move(input)),
       latency_budget_micros_(latency_budget_micros),
-      selection_policy_(selection_policy),
-      candidate_models_(candidate_models),
+      selection_policy_(std::move(selection_policy)),
+      candidate_models_(std::move(candidate_models)),
       create_time_(std::chrono::high_resolution_clock::now()) {}
 
 Response::Response(Query query, QueryId query_id, const long duration_micros,
@@ -353,23 +354,23 @@ std::string Response::debug_string() const noexcept {
   return debug;
 }
 
-Feedback::Feedback(std::shared_ptr<Input> input, double y)
-    : y_(y), input_(input) {}
+Feedback::Feedback(std::shared_ptr<PredictionData> input, double y)
+    : y_(y), input_(std::move(input)) {}
 
 FeedbackQuery::FeedbackQuery(std::string label, long user_id, Feedback feedback,
                              std::string selection_policy,
                              std::vector<VersionedModelId> candidate_models)
-    : label_(label),
+    : label_(std::move(label)),
       user_id_(user_id),
-      feedback_(feedback),
-      selection_policy_(selection_policy),
-      candidate_models_(candidate_models) {}
+      feedback_(std::move(feedback)),
+      selection_policy_(std::move(selection_policy)),
+      candidate_models_(std::move(candidate_models)) {}
 
-PredictTask::PredictTask(std::shared_ptr<Input> input, VersionedModelId model,
+PredictTask::PredictTask(std::shared_ptr<PredictionData> input, VersionedModelId model,
                          float utility, QueryId query_id,
                          long latency_slo_micros)
     : input_(std::move(input)),
-      model_(model),
+      model_(std::move(model)),
       utility_(utility),
       query_id_(query_id),
       latency_slo_micros_(latency_slo_micros) {}

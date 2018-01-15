@@ -22,3 +22,10 @@ target_link_libraries(rpcbench clipper cxxopts)
 add_executable(rpctest src/rpc_protocol_test.cpp)
 
 target_link_libraries(rpctest clipper cxxopts)
+
+##################################
+# Perf testing
+
+add_executable(perf_test src/perf_bench.cpp)
+
+target_link_libraries(perf_test clipper boost cxxopts)

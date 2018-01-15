@@ -11,12 +11,15 @@
 
 namespace clipper {
 
-typedef std::pair<std::shared_ptr<void>, size_t> ByteBuffer;
+template <typename T>
+using UniquePoolPtr = std::unique_ptr<T, void(*)(void*)>;
+
+typedef std::pair<UniquePoolPtr<void>, size_t> ByteBuffer;
 
 using QueryId = long;
 using FeedbackAck = bool;
 
-enum class InputType {
+enum class DataType {
   Invalid = -1,
   Bytes = 0,
   Ints = 1,
@@ -30,8 +33,8 @@ enum class RequestType {
   FeedbackRequest = 1,
 };
 
-std::string get_readable_input_type(InputType type);
-InputType parse_input_type(std::string type_string);
+std::string get_readable_input_type(DataType type);
+DataType parse_input_type(std::string type_string);
 
 class VersionedModelId {
  public:
@@ -77,19 +80,20 @@ class Output {
   std::vector<VersionedModelId> models_used_;
 };
 
-class Input {
+class PredictionData {
  public:
   // TODO: pure virtual or default?
-  // virtual ~Input() = default;
+  // virtual ~PredictionData() = default;
 
-  virtual InputType type() const = 0;
+  virtual DataType type() const = 0;
 
   /**
-   * Serializes input and writes resulting data to provided buffer.
+   * Serializes data and writes resulting data to provided buffer.
+   * This releases ownership of the underlying data.
    *
    * The serialization methods are used for RPC.
    */
-  virtual size_t serialize(std::vector<std::shared_ptr<void>> &buf) const = 0;
+  virtual size_t serialize(std::vector<UniquePoolPtr<void>> &buf) = 0;
 
   virtual size_t hash() const = 0;
 
@@ -101,12 +105,20 @@ class Input {
    * @return The size of the input data in bytes
    */
   virtual size_t byte_size() const = 0;
+
+  /**
+   * Releases ownership of the underlying data and returns
+   * a pointer to it
+   *
+   * @return A type-agnostic pointer to the underlying data
+   */
+  virtual const void *get_data() = 0;
 };
 
-class ByteVector : public Input {
+class ByteVector : public PredictionData {
  public:
-  explicit ByteVector(std::shared_ptr<uint8_t>& data, size_t size);
-  explicit ByteVector(std::shared_ptr<void>& data, size_t size_bytes);
+  explicit ByteVector(UniquePoolPtr<uint8_t>& data, size_t size);
+  explicit ByteVector(UniquePoolPtr<void>& data, size_t byte_size);
 
   // Disallow copy
   ByteVector(ByteVector &other) = delete;
@@ -116,22 +128,22 @@ class ByteVector : public Input {
   ByteVector(ByteVector &&other) = default;
   ByteVector &operator=(ByteVector &&other) = default;
 
-  InputType type() const override;
-  size_t serialize(std::vector<std::shared_ptr<void>> &buf) const override;
+  DataType type() const override;
   size_t hash() const override;
   size_t size() const override;
   size_t byte_size() const override;
-  const std::shared_ptr<uint8_t> &get_data() const;
+  size_t serialize(std::vector<UniquePoolPtr<void>> &buf) override;
+  const void *get_data() override;
 
  private:
-  std::shared_ptr<uint8_t> data_;
+  UniquePoolPtr<uint8_t> data_;
   size_t size_;
 };
 
-class IntVector : public Input {
+class IntVector : public PredictionData {
  public:
-  explicit IntVector(std::shared_ptr<int>& data, size_t size);
-  explicit IntVector(std::shared_ptr<void>& data, size_t size_bytes);
+  explicit IntVector(UniquePoolPtr<int>& data, size_t size);
+  explicit IntVector(UniquePoolPtr<void>& data, size_t byte_size);
 
   // Disallow copy
   IntVector(IntVector &other) = delete;
@@ -141,23 +153,22 @@ class IntVector : public Input {
   IntVector(IntVector &&other) = default;
   IntVector &operator=(IntVector &&other) = default;
 
-  InputType type() const override;
-  size_t serialize(std::vector<std::shared_ptr<void>> &buf) const override;
+  DataType type() const override;
   size_t hash() const override;
   size_t size() const override;
   size_t byte_size() const override;
-
-  const std::shared_ptr<int> &get_data() const;
+  size_t serialize(std::vector<UniquePoolPtr<void>> &buf) override;
+  const void *get_data() override;
 
  private:
-  std::shared_ptr<int> data_;
+  UniquePoolPtr<int> data_;
   size_t size_;
 };
 
-class FloatVector : public Input {
+class FloatVector : public PredictionData {
  public:
-  explicit FloatVector(std::shared_ptr<float>& data, size_t size);
-  explicit FloatVector(std::shared_ptr<void>& data, size_t size_bytes);
+  explicit FloatVector(UniquePoolPtr<float>& data, size_t size);
+  explicit FloatVector(UniquePoolPtr<void>& data, size_t byte_size);
 
   // Disallow copy
   FloatVector(FloatVector &other) = delete;
@@ -167,22 +178,22 @@ class FloatVector : public Input {
   FloatVector(FloatVector &&other) = default;
   FloatVector &operator=(FloatVector &&other) = default;
 
-  InputType type() const override;
-  size_t serialize(std::vector<std::shared_ptr<void>> &buf) const override;
+  DataType type() const override;
   size_t hash() const override;
   size_t size() const override;
   size_t byte_size() const override;
-  const std::shared_ptr<float> &get_data() const;
+  size_t serialize(std::vector<UniquePoolPtr<void>> &buf) override;
+  const void *get_data() override;
 
  private:
-  std::shared_ptr<float> data_;
+  UniquePoolPtr<float> data_;
   size_t size_;
 };
 
-class DoubleVector : public Input {
+class DoubleVector : public PredictionData {
  public:
-  explicit DoubleVector(std::shared_ptr<double>& data, size_t size);
-  explicit DoubleVector(std::shared_ptr<void>& data, size_t size_bytes);
+  explicit DoubleVector(UniquePoolPtr<double>& data, size_t size);
+  explicit DoubleVector(UniquePoolPtr<void>& data, size_t byte_size);
 
   // Disallow copy
   DoubleVector(DoubleVector &other) = delete;
@@ -192,22 +203,22 @@ class DoubleVector : public Input {
   DoubleVector(DoubleVector &&other) = default;
   DoubleVector &operator=(DoubleVector &&other) = default;
 
-  InputType type() const override;
-  size_t serialize(std::vector<std::shared_ptr<void>> &buf) const override;
+  DataType type() const override;
   size_t hash() const override;
   size_t size() const override;
   size_t byte_size() const override;
-  const std::shared_ptr<double> &get_data() const;
+  size_t serialize(std::vector<UniquePoolPtr<void>> &buf) override;
+  const void *get_data() override;
 
  private:
-  std::shared_ptr<double> data_;
+  UniquePoolPtr<double> data_;
   size_t size_;
 };
 
-class SerializableString : public Input {
+class SerializableString : public PredictionData {
  public:
-  explicit SerializableString(std::shared_ptr<char>& data, size_t size);
-  explicit SerializableString(std::shared_ptr<void>& data, size_t size_bytes);
+  explicit SerializableString(UniquePoolPtr<char>& data, size_t size);
+  explicit SerializableString(UniquePoolPtr<void>& data, size_t byte_size);
 
   // Disallow copy
   SerializableString(SerializableString &other) = delete;
@@ -217,15 +228,15 @@ class SerializableString : public Input {
   SerializableString(SerializableString &&other) = default;
   SerializableString &operator=(SerializableString &&other) = default;
 
-  InputType type() const override;
-  size_t serialize(std::vector<std::shared_ptr<void>> &buf) const override;
+  DataType type() const override;
   size_t hash() const override;
   size_t size() const override;
   size_t byte_size() const override;
-  const std::shared_ptr<char> &get_data() const;
+  size_t serialize(std::vector<UniquePoolPtr<void>> &buf) override;
+  const void *get_data() override;
 
  private:
-  std::shared_ptr<char> data_;
+  UniquePoolPtr<char> data_;
   size_t size_;
 };
 
@@ -233,7 +244,7 @@ class Query {
  public:
   ~Query() = default;
 
-  Query(std::string label, long user_id, std::shared_ptr<Input> input,
+  Query(std::string label, long user_id, std::shared_ptr<PredictionData> input,
         long latency_budget_micros, std::string selection_policy,
         std::vector<VersionedModelId> candidate_models);
 
@@ -252,7 +263,7 @@ class Query {
   // REST endpoints.
   std::string label_;
   long user_id_;
-  std::shared_ptr<Input> input_;
+  std::shared_ptr<PredictionData> input_;
   // TODO change this to a deadline instead of a duration
   long latency_budget_micros_;
   std::string selection_policy_;
@@ -289,7 +300,7 @@ class Response {
 class Feedback {
  public:
   ~Feedback() = default;
-  Feedback(std::shared_ptr<Input> input, double y);
+  Feedback(std::shared_ptr<PredictionData> input, double y);
 
   Feedback(const Feedback &) = default;
   Feedback &operator=(const Feedback &) = default;
@@ -298,7 +309,7 @@ class Feedback {
   Feedback &operator=(Feedback &&) = default;
 
   double y_;
-  std::shared_ptr<Input> input_;
+  std::shared_ptr<PredictionData> input_;
 };
 
 class FeedbackQuery {
@@ -328,7 +339,7 @@ class PredictTask {
  public:
   ~PredictTask() = default;
 
-  PredictTask(std::shared_ptr<Input> input, VersionedModelId model,
+  PredictTask(std::shared_ptr<PredictionData> input, VersionedModelId model,
               float utility, QueryId query_id, long latency_slo_micros);
 
   PredictTask(const PredictTask &other) = default;
@@ -339,7 +350,7 @@ class PredictTask {
 
   PredictTask &operator=(PredictTask &&other) = default;
 
-  std::shared_ptr<Input> input_;
+  std::shared_ptr<PredictionData> input_;
   VersionedModelId model_;
   float utility_;
   QueryId query_id_;
@@ -374,9 +385,9 @@ namespace rpc {
 
 class PredictionRequest {
  public:
-  explicit PredictionRequest(InputType input_type);
-  explicit PredictionRequest(std::vector<std::shared_ptr<Input>> inputs,
-                             InputType input_type);
+  explicit PredictionRequest(DataType input_type);
+  explicit PredictionRequest(std::vector<std::shared_ptr<PredictionData>> inputs,
+                             DataType input_type);
 
   // Disallow copy
   PredictionRequest(PredictionRequest &other) = delete;
@@ -386,14 +397,14 @@ class PredictionRequest {
   PredictionRequest(PredictionRequest &&other) = default;
   PredictionRequest &operator=(PredictionRequest &&other) = default;
 
-  void add_input(std::shared_ptr<Input> input);
+  void add_input(std::shared_ptr<PredictionData> input);
   std::vector<ByteBuffer> serialize();
 
  private:
-  void validate_input_type(std::shared_ptr<Input> &input) const;
+  void validate_input_type(std::shared_ptr<PredictionData> &input) const;
 
-  std::vector<std::shared_ptr<Input>> inputs_;
-  InputType input_type_;
+  std::vector<std::shared_ptr<PredictionData>> inputs_;
+  DataType input_type_;
   size_t input_data_size_ = 0;
 };
 
