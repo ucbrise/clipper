@@ -182,12 +182,13 @@ void RPCService::send_messages(
     int last_msg_num = std::get<2>(request).size() - 1;
     for (const ByteBuffer &m : std::get<2>(request)) {
       // send the sndmore flag unless we are on the last message part
-      auto data_ptr = m.first;
-      message_t msg(m.first.get(), m.second, &RPCService::zmq_continuation, NULL);
+      message_t msg(m.first.get(), m.second, &RPCService::zmq_continuation);
       if (cur_msg_num < last_msg_num) {
+        log_info_formatted("INTERM", "DATA {} SIZE {}", static_cast<uint32_t*>(msg.data())[0], msg.size());
         socket.send(msg, ZMQ_SNDMORE);
       } else {
-        socket.send(msg, 0);
+        log_info_formatted("LAST", "DATA {} SIZE {}", static_cast<double*>(msg.data())[2], msg.size());
+        socket.send(msg);
       }
       cur_msg_num += 1;
     }

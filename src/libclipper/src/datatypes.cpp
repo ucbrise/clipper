@@ -253,8 +253,8 @@ void rpc::PredictionRequest::validate_input_type(
 
 void rpc::PredictionRequest::add_input(SharedPoolPtr<PredictionData>& input) {
   validate_input_type(input);
-  inputs_.push_back(std::move(input));
   input_data_size_ += input->byte_size();
+  inputs_.push_back(std::move(input));
 }
 
 std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
@@ -264,17 +264,13 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
   }
 
   size_t request_metadata_size = 1 * sizeof(uint32_t);
-  std::shared_ptr<uint8_t> request_metadata(
-      static_cast<uint8_t *>(malloc(request_metadata_size)), free);
-  uint32_t *request_metadata_raw =
-      reinterpret_cast<uint32_t *>(request_metadata.get());
+  SharedPoolPtr<void> request_metadata(malloc(request_metadata_size), free);
+  uint32_t *request_metadata_raw = static_cast<uint32_t *>(request_metadata.get());
   request_metadata_raw[0] = static_cast<uint32_t>(RequestType::PredictRequest);
 
-  size_t input_metadata_size = (2 + (inputs_.size() - 1)) * sizeof(uint32_t);
-  std::shared_ptr<uint8_t> input_metadata(
-      static_cast<uint8_t *>(malloc(input_metadata_size)), free);
-  uint32_t *input_metadata_raw =
-      reinterpret_cast<uint32_t *>(input_metadata.get());
+  size_t input_metadata_size = (2 + inputs_.size()) * sizeof(uint32_t);
+  SharedPoolPtr<void> input_metadata(malloc(input_metadata_size), free);
+  uint32_t *input_metadata_raw = static_cast<uint32_t *>(input_metadata.get());
   input_metadata_raw[0] = static_cast<uint32_t>(input_type_);
   input_metadata_raw[1] = static_cast<uint32_t>(inputs_.size());
 
@@ -284,11 +280,11 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
     input_metadata_raw[i + 2] = static_cast<uint32_t>(inputs_[i]->byte_size());
   }
 
-  size_t input_metadata_size_buf_size = 1 * sizeof(long);
+  uint32_t input_metadata_size_buf_size = 1 * sizeof(uint32_t);
   std::shared_ptr<uint8_t> input_metadata_size_buf(
       static_cast<uint8_t *>(malloc(input_metadata_size_buf_size)), free);
-  long *input_metadata_size_buf_raw =
-      reinterpret_cast<long *>(input_metadata_size_buf.get());
+  uint32_t *input_metadata_size_buf_raw =
+      reinterpret_cast<uint32_t *>(input_metadata_size_buf.get());
   // Add the size of the input metadata in bytes. This will be
   // sent prior to the input metadata to allow for proactive
   // buffer allocation in the receiving container
@@ -303,7 +299,13 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
       std::make_pair(input_metadata, input_metadata_size));
   for (size_t i = 0; i < input_bufs.size(); i++) {
     serialized_request.emplace_back(std::make_pair(input_bufs[i], input_metadata_raw[i + 2]));
+    auto double_ptr = std::static_pointer_cast<double>(input_bufs[i]).get();
+    log_info_formatted(LOGGING_TAG_CLIPPER, "DOUBLES: {} {} {}", double_ptr[0], double_ptr[1], double_ptr[2]);
   }
+  for(size_t i = 0; i < 3; i++) {
+    log_info_formatted(LOGGING_TAG_CLIPPER, "{} {} {}", input_metadata_raw[0], input_metadata_raw[1], input_metadata_raw[2]);
+  }
+  log_info_formatted(LOGGING_TAG_CLIPPER, "MDAT SIZE: {}", input_metadata_size);
   return serialized_request;
 }
 

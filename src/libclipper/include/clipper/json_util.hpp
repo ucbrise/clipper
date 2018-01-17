@@ -70,6 +70,8 @@ int get_int(rapidjson::Value& d, const char* key_name);
 
 std::string get_string(rapidjson::Value& d, const char* key_name);
 
+std::vector<std::string> get_string_array(rapidjson::Value& d, const char* key_name);
+
 /* Getters with error handling for arrays of byte, double, float, int, char */
 
 /**

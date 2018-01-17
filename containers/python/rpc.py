@@ -261,22 +261,26 @@ class Server(threading.Thread):
                     # list of byte arrays
                     request_header = socket.recv()
                     request_type = struct.unpack("<I", request_header)[0]
+                    print(request_type)
 
                     if request_type == REQUEST_TYPE_PREDICT:
                         input_header_size = socket.recv()
                         input_header = socket.recv()
-                        raw_content_size = socket.recv()
-                        raw_content = socket.recv()
 
                         t2 = datetime.now()
 
                         parsed_input_header = np.frombuffer(
-                            input_header, dtype=np.int32)
+                            input_header, dtype=np.uint32)
+
+                        print(parsed_input_header)
+
                         input_type, input_size, input_sizes = parsed_input_header[
                             0], parsed_input_header[1], parsed_input_header[2:]
 
+                        print("AHHH")
+
                         inputs = []
-                        for _ in range(num_inputs):
+                        for _ in range(input_size):
                             input_item = socket.recv()
                             input_item = np.frombuffer(input_item, dtype=input_type_to_dtype(input_type))
                             inputs.append(input_item)
@@ -317,6 +321,8 @@ class Server(threading.Thread):
                         response = self.handle_feedback_request(received_msg)
                         response.send(socket, self.event_history)
                         print("recv: %f s" % ((t2 - t1).total_seconds()))
+                else:
+                    print("MSG TYPE ERROR")
 
                 sys.stdout.flush()
                 sys.stderr.flush()
