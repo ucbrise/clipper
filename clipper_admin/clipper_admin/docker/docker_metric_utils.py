@@ -89,7 +89,6 @@ def run_metric_image(docker_client, common_labels, prometheus_port,
     :param extra_container_kwargs: Kwargs to pass in.
     :return: None
     """
-
     metric_cmd = [
         "--config.file=/etc/prometheus/prometheus.yml",
         "--storage.tsdb.path=/prometheus",
