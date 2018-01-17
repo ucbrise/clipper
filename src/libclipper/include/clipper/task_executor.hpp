@@ -81,11 +81,9 @@ using CachePage = std::pair<long, long>;
 class PredictionCache {
  public:
   PredictionCache(size_t size_bytes);
-  folly::Future<Output> fetch(const VersionedModelId &model,
-                              const std::shared_ptr<Input> &input);
+  folly::Future<Output> fetch(const VersionedModelId &model, SharedPoolPtr<PredictionData> &input);
 
-  void put(const VersionedModelId &model, const std::shared_ptr<Input> &input,
-           const Output &output);
+  void put(const VersionedModelId &model, SharedPoolPtr<PredictionData> &input, const Output &output);
 
  private:
   size_t hash(const VersionedModelId &model, size_t input_hash) const;
@@ -188,12 +186,12 @@ class InflightMessage {
   InflightMessage(
       const std::chrono::time_point<std::chrono::system_clock> send_time,
       const int container_id, const VersionedModelId model,
-      const int replica_id, const std::shared_ptr<Input> input)
-      : send_time_(send_time),
+      const int replica_id, const SharedPoolPtr<PredictionData> input)
+      : send_time_(std::move(send_time)),
         container_id_(container_id),
-        model_(model),
+        model_(std::move(model)),
         replica_id_(replica_id),
-        input_(input) {}
+        input_(std::move(input)) {}
 
   // Default copy and move constructors
   InflightMessage(const InflightMessage &) = default;
@@ -207,7 +205,7 @@ class InflightMessage {
   int container_id_;
   VersionedModelId model_;
   int replica_id_;
-  std::shared_ptr<Input> input_;
+  SharedPoolPtr<PredictionData> input_;
 };
 
 class TaskExecutor {
@@ -233,7 +231,7 @@ class TaskExecutor {
                      "TaskExecutor has been destroyed.");
           }
         },
-        [ this, task_executor_valid = active_ ](rpc::RPCResponse response) {
+        [ this, task_executor_valid = active_ ](rpc::RPCResponse& response) {
           if (*task_executor_valid) {
             on_response_recv(std::move(response));
           } else {

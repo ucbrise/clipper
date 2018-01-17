@@ -24,8 +24,8 @@
 using clipper::Response;
 using clipper::FeedbackAck;
 using clipper::VersionedModelId;
+using clipper::PredictionData;
 using clipper::InputType;
-using clipper::Input;
 using clipper::Output;
 using clipper::Query;
 using clipper::Feedback;
@@ -539,8 +539,8 @@ class RequestHandler {
     clipper::json::parse_json(json_content, d);
     long uid = 0;
 
-    std::vector<std::shared_ptr<Input>> input_batch =
-        clipper::json::parse_input(input_type, d);
+    std::vector<PredictionData> input_batch =
+        clipper::json::parse_inputs(input_type, d);
     std::vector<folly::Future<Response>> predictions;
     for (auto input : input_batch) {
       auto prediction = query_processor_.predict(
@@ -565,8 +565,7 @@ class RequestHandler {
     rapidjson::Document d;
     clipper::json::parse_json(json_content, d);
     long uid = clipper::json::get_long(d, "uid");
-    std::shared_ptr<Input> input =
-        clipper::json::parse_single_input(input_type, d);
+    PredictionData input = clipper::json::parse_single_input(input_type, d);
     double y_hat = clipper::json::get_double(d, "label");
     auto update = query_processor_.update(
         FeedbackQuery{name, uid, {Feedback(input, y_hat)}, policy, models});

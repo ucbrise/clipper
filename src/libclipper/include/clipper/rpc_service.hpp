@@ -27,10 +27,10 @@ namespace rpc {
 
 const std::string LOGGING_TAG_RPC = "RPC";
 
-using RPCResponse = std::pair<const int, UniquePoolPtr<void>>;
+using RPCResponse = std::pair<const int, std::vector<UniquePoolPtr<void>>>;
 /// Tuple of zmq_connection_id, message_id, vector of messages, creation time
 using RPCRequest =
-    std::tuple<const int, const int, const std::vector<UniquePoolPtr<uint8_t>>,
+    std::tuple<const int, const int, const std::vector<ByteBuffer>,
                const long>;
 
 enum class RPCEvent {
@@ -65,7 +65,7 @@ class RPCService {
   void start(
       const string ip, const int port,
       std::function<void(VersionedModelId, int)> &&container_ready_callback,
-      std::function<void(RPCResponse)> &&new_response_callback);
+      std::function<void(RPCResponse&)> &&new_response_callback);
   /**
    * Stops the RPC Service. This is called implicitly within the RPCService
    * destructor.
@@ -80,13 +80,19 @@ class RPCService {
   * The messages will be sent as a single, multi-part ZeroMQ message so
   * it is very efficient.
   */
-  int send_message(const std::vector<UniquePoolPtr<uint8_t>> msg,
+  int send_message(const std::vector<ByteBuffer> msg,
                    const int zmq_connection_id);
 
  private:
   void manage_service(const string address);
   void send_messages(socket_t &socket,
                      boost::bimap<int, vector<uint8_t>> &connections);
+  /**
+   * Function called by ZMQ after it finishes
+   * sending data that it owned as a result
+   * of a call to `zmq_msg_init_data`
+   */
+  static void zmq_continuation(void *data, void *hint);
 
   void receive_message(
       socket_t &socket, boost::bimap<int, vector<uint8_t>> &connections,
@@ -106,7 +112,6 @@ class RPCService {
   void shutdown_service(socket_t &socket);
   std::thread rpc_thread_;
   shared_ptr<Queue<RPCRequest>> request_queue_;
-  shared_ptr<Queue<RPCResponse>> response_queue_;
   // Flag indicating whether rpc service is active
   std::atomic_bool active_;
   // The next available message id
@@ -115,7 +120,8 @@ class RPCService {
   std::shared_ptr<metrics::Histogram> msg_queueing_hist_;
 
   std::function<void(VersionedModelId, int)> container_ready_callback_;
-  std::function<void(RPCResponse)> new_response_callback_;
+  std::function<void(RPCResponse&)> new_response_callback_;
+
 };
 
 }  // namespace rpc

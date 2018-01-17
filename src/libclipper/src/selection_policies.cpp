@@ -21,16 +21,25 @@ DefaultOutputSelectionState::DefaultOutputSelectionState(
     std::string serialized_state)
     : default_output_(deserialize(serialized_state)) {}
 
+std::string DefaultOutputSelectionState::parse_y_hat(const SharedPoolPtr<PredictionData>& output_y_hat) {
+  auto default_data = std::dynamic_pointer_cast<SerializableString>(output_y_hat);
+  char* default_str_content = static_cast<char*>(default_data->get_data().get());
+  std::string default_str(default_str_content, default_str_content + default_data->size());
+  return default_str;
+}
+
 std::string DefaultOutputSelectionState::serialize() const {
   rapidjson::Document d;
   d.SetObject();
-  json::add_string(d, "y_hat", default_output_.y_hat_);
+  std::string default_str = parse_y_hat(default_output_.y_hat_);
+  json::add_string(d, "y_hat", default_str);
   return json::to_json_string(d);
 }
 std::string DefaultOutputSelectionState::get_debug_string() const {
   rapidjson::Document d;
   d.SetObject();
-  json::add_string(d, "y_hat", default_output_.y_hat_);
+  std::string default_str = parse_y_hat(default_output_.y_hat_);
+  json::add_string(d, "y_hat", default_str);
   std::vector<std::string> empty_vec;
   json::add_string_array(d, "models_used", empty_vec);
   return json::to_json_string(d);

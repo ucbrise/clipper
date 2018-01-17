@@ -109,6 +109,7 @@ class DefaultOutputSelectionState : public SelectionState {
 
  private:
   static Output deserialize(std::string serialized_state);
+  static std::string parse_y_hat(const SharedPoolPtr<PredictionData>& output_y_hat);
 };
 
 class DefaultOutputSelectionPolicy : public SelectionPolicy {

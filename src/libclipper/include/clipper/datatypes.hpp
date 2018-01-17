@@ -6,15 +6,18 @@
 #include <string>
 #include <vector>
 
-#include <boost/functional/hash.hpp>
 #include <boost/optional.hpp>
+#include <boost/functional/hash.hpp>
 
 namespace clipper {
 
 template <typename T>
 using UniquePoolPtr = std::unique_ptr<T, void(*)(void*)>;
+template <typename T>
+using SharedPoolPtr = std::shared_ptr<T>;
 
-typedef std::pair<UniquePoolPtr<void>, size_t> ByteBuffer;
+typedef std::pair<SharedPoolPtr<void>, size_t> ByteBuffer;
+typedef uint32_t PredictionDataHash;
 
 using QueryId = long;
 using FeedbackAck = bool;
@@ -27,6 +30,9 @@ enum class DataType {
   Doubles = 3,
   Strings = 4,
 };
+
+typedef DataType InputType;
+typedef DataType OutputType;
 
 enum class RequestType {
   PredictRequest = 0,
@@ -59,27 +65,6 @@ class VersionedModelId {
   std::string id_;
 };
 
-class Output {
- public:
-  Output(const std::string y_hat,
-         const std::vector<VersionedModelId> models_used);
-
-  ~Output() = default;
-
-  explicit Output() = default;
-  Output(const Output &) = default;
-  Output &operator=(const Output &) = default;
-
-  Output(Output &&) = default;
-  Output &operator=(Output &&) = default;
-
-  bool operator==(const Output &rhs) const;
-  bool operator!=(const Output &rhs) const;
-
-  std::string y_hat_;
-  std::vector<VersionedModelId> models_used_;
-};
-
 class PredictionData {
  public:
   // TODO: pure virtual or default?
@@ -87,15 +72,7 @@ class PredictionData {
 
   virtual DataType type() const = 0;
 
-  /**
-   * Serializes data and writes resulting data to provided buffer.
-   * This releases ownership of the underlying data.
-   *
-   * The serialization methods are used for RPC.
-   */
-  virtual size_t serialize(std::vector<UniquePoolPtr<void>> &buf) = 0;
-
-  virtual size_t hash() const = 0;
+  virtual PredictionDataHash hash() = 0;
 
   /**
    * @return The number of elements in the input
@@ -106,145 +83,132 @@ class PredictionData {
    */
   virtual size_t byte_size() const = 0;
 
-  /**
-   * Releases ownership of the underlying data and returns
-   * a pointer to it
-   *
-   * @return A type-agnostic pointer to the underlying data
-   */
-  virtual const void *get_data() = 0;
+  virtual SharedPoolPtr<void> get_data() const = 0;
 };
+
+template <class ...Args>
+SharedPoolPtr<PredictionData> create_prediction_data(Args&& ...args);
 
 class ByteVector : public PredictionData {
  public:
-  explicit ByteVector(UniquePoolPtr<uint8_t>& data, size_t size);
-  explicit ByteVector(UniquePoolPtr<void>& data, size_t byte_size);
-
-  // Disallow copy
-  ByteVector(ByteVector &other) = delete;
-  ByteVector &operator=(ByteVector &other) = delete;
-
-  // move constructors
-  ByteVector(ByteVector &&other) = default;
-  ByteVector &operator=(ByteVector &&other) = default;
-
   DataType type() const override;
-  size_t hash() const override;
+  PredictionDataHash hash() override;
   size_t size() const override;
   size_t byte_size() const override;
-  size_t serialize(std::vector<UniquePoolPtr<void>> &buf) override;
-  const void *get_data() override;
+  SharedPoolPtr<void> get_data() const override;
 
  private:
-  UniquePoolPtr<uint8_t> data_;
+  explicit ByteVector(UniquePoolPtr<void> data, size_t byte_size);
+  explicit ByteVector(UniquePoolPtr<uint8_t> data, size_t size);
+
+  template <class ...Args>
+  friend SharedPoolPtr<ByteVector> create_prediction_data(Args&& ...args)
+  {
+    return SharedPoolPtr<ByteVector>(new ByteVector(std::forward<Args>(args)...));
+  }
+
+  SharedPoolPtr<uint8_t> data_;
   size_t size_;
+  boost::optional<PredictionDataHash> hash_;
 };
 
 class IntVector : public PredictionData {
  public:
-  explicit IntVector(UniquePoolPtr<int>& data, size_t size);
-  explicit IntVector(UniquePoolPtr<void>& data, size_t byte_size);
-
-  // Disallow copy
-  IntVector(IntVector &other) = delete;
-  IntVector &operator=(IntVector &other) = delete;
-
-  // move constructors
-  IntVector(IntVector &&other) = default;
-  IntVector &operator=(IntVector &&other) = default;
-
   DataType type() const override;
-  size_t hash() const override;
+  PredictionDataHash hash() override;
   size_t size() const override;
   size_t byte_size() const override;
-  size_t serialize(std::vector<UniquePoolPtr<void>> &buf) override;
-  const void *get_data() override;
+  SharedPoolPtr<void> get_data() const override;
 
  private:
-  UniquePoolPtr<int> data_;
+  explicit IntVector(UniquePoolPtr<int> data, size_t size);
+  explicit IntVector(UniquePoolPtr<void> data, size_t byte_size);
+
+  template <class ...Args>
+  friend SharedPoolPtr<IntVector> create_prediction_data(Args&& ...args)
+  {
+    return SharedPoolPtr<IntVector>(new IntVector(std::forward<Args>(args)...));
+  }
+
+  SharedPoolPtr<int> data_;
   size_t size_;
+  boost::optional<PredictionDataHash> hash_;
 };
 
 class FloatVector : public PredictionData {
  public:
-  explicit FloatVector(UniquePoolPtr<float>& data, size_t size);
-  explicit FloatVector(UniquePoolPtr<void>& data, size_t byte_size);
-
-  // Disallow copy
-  FloatVector(FloatVector &other) = delete;
-  FloatVector &operator=(FloatVector &other) = delete;
-
-  // move constructors
-  FloatVector(FloatVector &&other) = default;
-  FloatVector &operator=(FloatVector &&other) = default;
-
   DataType type() const override;
-  size_t hash() const override;
+  PredictionDataHash hash() override;
   size_t size() const override;
   size_t byte_size() const override;
-  size_t serialize(std::vector<UniquePoolPtr<void>> &buf) override;
-  const void *get_data() override;
+  SharedPoolPtr<void> get_data() const override;
 
  private:
-  UniquePoolPtr<float> data_;
+  explicit FloatVector(UniquePoolPtr<float> data, size_t size);
+  explicit FloatVector(UniquePoolPtr<void> data, size_t byte_size);
+
+  template <class ...Args>
+  friend SharedPoolPtr<FloatVector> create_prediction_data(Args&& ...args)
+  {
+    return SharedPoolPtr<FloatVector>(new FloatVector(std::forward<Args>(args)...));
+  }
+
+  SharedPoolPtr<float> data_;
   size_t size_;
+  boost::optional<PredictionDataHash> hash_;
 };
 
 class DoubleVector : public PredictionData {
  public:
-  explicit DoubleVector(UniquePoolPtr<double>& data, size_t size);
-  explicit DoubleVector(UniquePoolPtr<void>& data, size_t byte_size);
-
-  // Disallow copy
-  DoubleVector(DoubleVector &other) = delete;
-  DoubleVector &operator=(DoubleVector &other) = delete;
-
-  // move constructors
-  DoubleVector(DoubleVector &&other) = default;
-  DoubleVector &operator=(DoubleVector &&other) = default;
-
   DataType type() const override;
-  size_t hash() const override;
+  PredictionDataHash hash() override;
   size_t size() const override;
   size_t byte_size() const override;
-  size_t serialize(std::vector<UniquePoolPtr<void>> &buf) override;
-  const void *get_data() override;
+  SharedPoolPtr<void> get_data() const override;
 
  private:
-  UniquePoolPtr<double> data_;
+  explicit DoubleVector(UniquePoolPtr<double> data, size_t size);
+  explicit DoubleVector(UniquePoolPtr<void> data, size_t byte_size);
+
+  template <class ...Args>
+  friend SharedPoolPtr<DoubleVector> create_prediction_data(Args&& ...args)
+  {
+    return SharedPoolPtr<DoubleVector>(new DoubleVector(std::forward<Args>(args)...));
+  }
+
+  SharedPoolPtr<double> data_;
   size_t size_;
+  boost::optional<PredictionDataHash> hash_;
 };
 
 class SerializableString : public PredictionData {
  public:
-  explicit SerializableString(UniquePoolPtr<char>& data, size_t size);
-  explicit SerializableString(UniquePoolPtr<void>& data, size_t byte_size);
-
-  // Disallow copy
-  SerializableString(SerializableString &other) = delete;
-  SerializableString &operator=(SerializableString &other) = delete;
-
-  // move constructors
-  SerializableString(SerializableString &&other) = default;
-  SerializableString &operator=(SerializableString &&other) = default;
-
   DataType type() const override;
-  size_t hash() const override;
+  PredictionDataHash hash() override;
   size_t size() const override;
   size_t byte_size() const override;
-  size_t serialize(std::vector<UniquePoolPtr<void>> &buf) override;
-  const void *get_data() override;
+  SharedPoolPtr<void> get_data() const override;
 
  private:
-  UniquePoolPtr<char> data_;
+  explicit SerializableString(UniquePoolPtr<char> data, size_t size);
+  explicit SerializableString(UniquePoolPtr<void> data, size_t byte_size);
+
+  template <class ...Args>
+  friend SharedPoolPtr<SerializableString> create_prediction_data(Args&& ...args)
+  {
+    return SharedPoolPtr<SerializableString>(new SerializableString(std::forward<Args>(args)...));
+  }
+
+  SharedPoolPtr<char> data_;
   size_t size_;
+  boost::optional<PredictionDataHash> hash_;
 };
 
 class Query {
  public:
   ~Query() = default;
 
-  Query(std::string label, long user_id, std::shared_ptr<PredictionData> input,
+  Query(std::string label, long user_id, SharedPoolPtr<PredictionData> input,
         long latency_budget_micros, std::string selection_policy,
         std::vector<VersionedModelId> candidate_models);
 
@@ -263,12 +227,36 @@ class Query {
   // REST endpoints.
   std::string label_;
   long user_id_;
-  std::shared_ptr<PredictionData> input_;
+  SharedPoolPtr<PredictionData> input_;
   // TODO change this to a deadline instead of a duration
   long latency_budget_micros_;
   std::string selection_policy_;
   std::vector<VersionedModelId> candidate_models_;
   std::chrono::time_point<std::chrono::high_resolution_clock> create_time_;
+};
+
+class Output {
+ public:
+  Output(const SharedPoolPtr<PredictionData> y_hat,
+         const std::vector<VersionedModelId> models_used);
+
+  Output(const std::string y_hat,
+         const std::vector<VersionedModelId> models_used);
+
+  ~Output() = default;
+
+  explicit Output() = default;
+  Output(const Output &) = default;
+  Output &operator=(const Output &) = default;
+
+  Output(Output &&) = default;
+  Output &operator=(Output &&) = default;
+
+  bool operator==(const Output &rhs) const;
+  bool operator!=(const Output &rhs) const;
+
+  SharedPoolPtr<PredictionData> y_hat_;
+  std::vector<VersionedModelId> models_used_;
 };
 
 class Response {
@@ -300,7 +288,7 @@ class Response {
 class Feedback {
  public:
   ~Feedback() = default;
-  Feedback(std::shared_ptr<PredictionData> input, double y);
+  Feedback(SharedPoolPtr<PredictionData> input, double y);
 
   Feedback(const Feedback &) = default;
   Feedback &operator=(const Feedback &) = default;
@@ -309,7 +297,7 @@ class Feedback {
   Feedback &operator=(Feedback &&) = default;
 
   double y_;
-  std::shared_ptr<PredictionData> input_;
+  SharedPoolPtr<PredictionData> input_;
 };
 
 class FeedbackQuery {
@@ -339,7 +327,7 @@ class PredictTask {
  public:
   ~PredictTask() = default;
 
-  PredictTask(std::shared_ptr<PredictionData> input, VersionedModelId model,
+  PredictTask(SharedPoolPtr<PredictionData> input, VersionedModelId model,
               float utility, QueryId query_id, long latency_slo_micros);
 
   PredictTask(const PredictTask &other) = default;
@@ -350,7 +338,7 @@ class PredictTask {
 
   PredictTask &operator=(PredictTask &&other) = default;
 
-  std::shared_ptr<PredictionData> input_;
+  SharedPoolPtr<PredictionData> input_;
   VersionedModelId model_;
   float utility_;
   QueryId query_id_;
@@ -386,7 +374,7 @@ namespace rpc {
 class PredictionRequest {
  public:
   explicit PredictionRequest(DataType input_type);
-  explicit PredictionRequest(std::vector<std::shared_ptr<PredictionData>> inputs,
+  explicit PredictionRequest(std::vector<SharedPoolPtr<PredictionData>>& inputs,
                              DataType input_type);
 
   // Disallow copy
@@ -397,20 +385,20 @@ class PredictionRequest {
   PredictionRequest(PredictionRequest &&other) = default;
   PredictionRequest &operator=(PredictionRequest &&other) = default;
 
-  void add_input(std::shared_ptr<PredictionData> input);
+  void add_input(SharedPoolPtr<PredictionData>& input);
   std::vector<ByteBuffer> serialize();
 
  private:
-  void validate_input_type(std::shared_ptr<PredictionData> &input) const;
+  void validate_input_type(SharedPoolPtr<PredictionData> &input) const;
 
-  std::vector<std::shared_ptr<PredictionData>> inputs_;
+  std::vector<SharedPoolPtr<PredictionData>> inputs_;
   DataType input_type_;
   size_t input_data_size_ = 0;
 };
 
 class PredictionResponse {
  public:
-  PredictionResponse(const std::vector<std::string> outputs);
+  PredictionResponse(const std::vector<SharedPoolPtr<PredictionData>> outputs);
 
   // Disallow copy
   PredictionResponse(PredictionResponse &other) = delete;
@@ -420,9 +408,9 @@ class PredictionResponse {
   PredictionResponse(PredictionResponse &&other) = default;
   PredictionResponse &operator=(PredictionResponse &&other) = default;
 
-  static PredictionResponse deserialize_prediction_response(ByteBuffer bytes);
+  static PredictionResponse deserialize_prediction_response(std::vector<UniquePoolPtr<void>>& response);
 
-  std::vector<std::string> outputs_;
+  std::vector<SharedPoolPtr<PredictionData>> outputs_;
 };
 
 }  // namespace rpc

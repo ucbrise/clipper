@@ -31,7 +31,6 @@ constexpr int INITIAL_REPLICA_ID_SIZE = 100;
 
 RPCService::RPCService()
     : request_queue_(std::make_shared<Queue<RPCRequest>>()),
-      response_queue_(std::make_shared<Queue<RPCResponse>>()),
       active_(false),
       // The version of the unordered_map constructor that allows
       // you to specify your own hash function also requires you
@@ -47,7 +46,7 @@ RPCService::~RPCService() { stop(); }
 void RPCService::start(
     const string ip, const int port,
     std::function<void(VersionedModelId, int)> &&container_ready_callback,
-    std::function<void(RPCResponse)> &&new_response_callback) {
+    std::function<void(RPCResponse&)> &&new_response_callback) {
   container_ready_callback_ = container_ready_callback;
   new_response_callback_ = new_response_callback;
   if (active_) {
@@ -68,7 +67,7 @@ void RPCService::stop() {
   }
 }
 
-int RPCService::send_message(const vector<UniquePoolPtr<uint8_t>> msg,
+int RPCService::send_message(const vector<ByteBuffer> msg,
                              const int zmq_connection_id) {
   if (!active_) {
     log_error(LOGGING_TAG_RPC,
@@ -86,18 +85,6 @@ int RPCService::send_message(const vector<UniquePoolPtr<uint8_t>> msg,
                      current_time_micros);
   request_queue_->push(request);
   return id;
-}
-
-vector<RPCResponse> RPCService::try_get_responses(const int max_num_responses) {
-  vector<RPCResponse> responses;
-  for (int i = 0; i < max_num_responses; i++) {
-    if (auto response = response_queue_->try_pop()) {
-      responses.push_back(*response);
-    } else {
-      break;
-    }
-  }
-  return responses;
 }
 
 void RPCService::manage_service(const string address) {
@@ -193,18 +180,23 @@ void RPCService::send_messages(
     int cur_msg_num = 0;
     // subtract 1 because we start counting at 0
     int last_msg_num = std::get<2>(request).size() - 1;
-    for (UniquePoolPtr &m : std::get<2>(request)) {
+    for (const ByteBuffer &m : std::get<2>(request)) {
       // send the sndmore flag unless we are on the last message part
-
-      message_t msg()
+      auto data_ptr = m.first;
+      message_t msg(m.first.get(), m.second, &RPCService::zmq_continuation, NULL);
       if (cur_msg_num < last_msg_num) {
-        socket.send((uint8_t *)m.data(), m.size(), ZMQ_SNDMORE);
+        socket.send(msg, ZMQ_SNDMORE);
       } else {
-        socket.send((uint8_t *)m.data(), m.size(), 0);
+        socket.send(msg, 0);
       }
       cur_msg_num += 1;
     }
   }
+}
+
+void RPCService::zmq_continuation(void* /* data */, void* /* hint */) {
+  // We deliberately avoid freeing data, as it may be
+  // used by other prediction tasks for the same query
 }
 
 void RPCService::receive_message(
@@ -276,22 +268,33 @@ void RPCService::receive_message(
     case MessageType::ContainerContent: {
       // This message is a response to a container query
       message_t msg_id;
-      message_t msg_content;
+      message_t msg_num_outputs;
+      message_t msg_output_byte_sizes;
       socket.recv(&msg_id, 0);
-      socket.recv(&msg_content, 0);
-      if (!new_connection) {
-        int id = static_cast<int *>(msg_id.data())[0];
-        vector<uint8_t> content(
-            (uint8_t *)msg_content.data(),
-            (uint8_t *)msg_content.data() + msg_content.size());
-        RPCResponse response(id, content);
+      socket.recv(&msg_num_outputs, 0);
+      socket.recv(&msg_output_byte_sizes, 0);
+
+      uint32_t num_outputs = static_cast<uint32_t*>(msg_id.data())[0];
+      vector<UniquePoolPtr<void>> content;
+      content.reserve(num_outputs);
+      uint32_t* output_byte_sizes = static_cast<uint32_t*>(msg_output_byte_sizes.data());
+
+      for (uint32_t i = 0; i < num_outputs; ++i) {
+        UniquePoolPtr<void> output(malloc(output_byte_sizes[i]), free);
+        socket.recv(output.get(), output_byte_sizes[i], 0);
+        content.push_back(std::move(output));
+      }
+
+      if(!new_connection) {
+        int id = static_cast<int*>(msg_id.data())[0];
+        RPCResponse response(id, std::move(content));
 
         auto container_info_entry =
             connections_containers_map.find(connection_id);
         if (container_info_entry == connections_containers_map.end()) {
           throw std::runtime_error(
               "Failed to find container that was previously registered via "
-              "RPC");
+                  "RPC");
         }
         std::pair<VersionedModelId, int> container_info =
             container_info_entry->second;
@@ -299,11 +302,9 @@ void RPCService::receive_message(
         VersionedModelId vm = container_info.first;
         int replica_id = container_info.second;
         TaskExecutionThreadPool::submit_job(vm, replica_id,
-                                            new_response_callback_, response);
+                                            new_response_callback_, std::move(response));
         TaskExecutionThreadPool::submit_job(
             vm, replica_id, container_ready_callback_, vm, replica_id);
-
-        response_queue_->push(response);
       }
     } break;
     case MessageType::Heartbeat:
