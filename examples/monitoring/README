@@ -1,0 +1,5 @@
+This example demonstrates Clipper's metric monitoring functionality.
+
+Steps:
+1. Run `python2 query.py`
+2. Run `python init_grafana.py` and follow the instruction.
