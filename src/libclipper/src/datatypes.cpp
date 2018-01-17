@@ -86,7 +86,7 @@ Output::Output(const std::string y_hat, const std::vector<VersionedModelId> mode
   size_t y_hat_size = y_hat.size() * sizeof(char);
   UniquePoolPtr<char> y_hat_content(static_cast<char*>(malloc(y_hat_size)), free);
   memcpy(y_hat_content.get(), y_hat.data(), y_hat_size);
-  y_hat_ = create_prediction_data(y_hat_content, y_hat.size());
+  y_hat_ = SerializableString::create(std::move(y_hat_content), y_hat.size());
   models_used_ = models_used;
 }
 
@@ -211,7 +211,7 @@ DataType SerializableString::type() const { return DataType::Strings; }
 
 PredictionDataHash SerializableString::hash() {
   if (!hash_) {
-    hash_ = CityHash32(reinterpret_cast<char *>(data_.get()), size_ * sizeof(uint8_t));
+    hash_ = CityHash32(data_.get(), size_ * sizeof(uint8_t));
   }
   return hash_.get();
 }
@@ -317,8 +317,8 @@ rpc::PredictionResponse::deserialize_prediction_response(std::vector<UniquePoolP
   uint32_t *output_lengths_data = static_cast<uint32_t*>(length_data.get());
   for(size_t i = 1; i < response.size(); i++) {
     auto &output_data = response[i];
-    SharedPoolPtr<char> shared_data(static_cast<char*>(output_data.release()), output_data.get_deleter());
-    SharedPoolPtr<PredictionData> parsed_output = create_prediction_data(shared_data, output_lengths_data[i - 1]);
+    SharedPoolPtr<PredictionData> parsed_output =
+        SerializableString::create(std::move(output_data), output_lengths_data[i - 1]);
     outputs.push_back(std::move(parsed_output));
   }
   return PredictionResponse(outputs);

@@ -268,20 +268,20 @@ void RPCService::receive_message(
     case MessageType::ContainerContent: {
       // This message is a response to a container query
       message_t msg_id;
-      message_t msg_num_outputs;
-      message_t msg_output_byte_sizes;
+      message_t msg_output_header;
       socket.recv(&msg_id, 0);
-      socket.recv(&msg_num_outputs, 0);
-      socket.recv(&msg_output_byte_sizes, 0);
+      socket.recv(&msg_output_header, 0);
 
-      uint32_t num_outputs = static_cast<uint32_t*>(msg_id.data())[0];
+      uint32_t* output_header = static_cast<uint32_t*>(msg_id.data());
+      uint32_t num_outputs = output_header[0];
+      output_header++;
+
       vector<UniquePoolPtr<void>> content;
       content.reserve(num_outputs);
-      uint32_t* output_byte_sizes = static_cast<uint32_t*>(msg_output_byte_sizes.data());
 
       for (uint32_t i = 0; i < num_outputs; ++i) {
-        UniquePoolPtr<void> output(malloc(output_byte_sizes[i]), free);
-        socket.recv(output.get(), output_byte_sizes[i], 0);
+        UniquePoolPtr<void> output(malloc(output_header[i]), free);
+        socket.recv(output.get(), output_header[i], 0);
         content.push_back(std::move(output));
       }
 

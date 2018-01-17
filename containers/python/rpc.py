@@ -272,8 +272,14 @@ class Server(threading.Thread):
 
                         parsed_input_header = np.frombuffer(
                             input_header, dtype=np.int32)
-                        input_type, input_size, splits = parsed_input_header[
+                        input_type, input_size, input_sizes = parsed_input_header[
                             0], parsed_input_header[1], parsed_input_header[2:]
+
+                        inputs = []
+                        for _ in range(num_inputs):
+                            input_item = socket.recv()
+                            input_item = np.frombuffer(input_item, dtype=input_type_to_dtype(input_type))
+                            inputs.append(input_item)
 
                         if int(input_type) != int(self.model_input_type):
                             print((
@@ -284,22 +290,6 @@ class Server(threading.Thread):
                                     received=input_type_to_string(
                                         int(input_type))))
                             raise
-
-                        if input_type == INPUT_TYPE_STRINGS:
-                            # If we're processing string inputs, we delimit them using
-                            # the null terminator included in their serialized representation,
-                            # ignoring the extraneous final null terminator by
-                            # using a -1 slice
-                            inputs = np.array(
-                                raw_content.split('\0')[:-1],
-                                dtype=input_type_to_dtype(input_type))
-                        else:
-                            inputs = np.array(
-                                np.split(
-                                    np.frombuffer(
-                                        raw_content,
-                                        dtype=input_type_to_dtype(input_type)),
-                                    splits))
 
                         t3 = datetime.now()
 
@@ -316,9 +306,9 @@ class Server(threading.Thread):
 
                         metric_conn.send(pred_metric)
 
-                        print("recv: %f us, parse: %f us, handle: %f us" %
-                              ((t2 - t1).microseconds, (t3 - t2).microseconds,
-                               (t4 - t3).microseconds))
+                        print("recv: %f s, parse: %f s, handle: %f s" %
+                              ((t2 - t1).total_seconds(), (t3 - t2).total_seconds(),
+                               (t4 - t3).total_seconds()))
                         sys.stdout.flush()
                         sys.stderr.flush()
 
@@ -326,7 +316,7 @@ class Server(threading.Thread):
                         feedback_request = FeedbackRequest(msg_id_bytes, [])
                         response = self.handle_feedback_request(received_msg)
                         response.send(socket, self.event_history)
-                        print("recv: %f us" % ((t2 - t1).microseconds))
+                        print("recv: %f s" % ((t2 - t1).total_seconds()))
 
                 sys.stdout.flush()
                 sys.stderr.flush()
@@ -369,30 +359,19 @@ class PredictionRequest:
 
 
 class PredictionResponse():
-    output_buffer = bytearray(1024)
+    header_buffer = bytearray(1024)
 
-    def __init__(self, msg_id, num_outputs, total_string_length):
+    def __init__(self, msg_id):
         """
         Parameters
         ----------
         msg_id : bytes
             The message id associated with the PredictRequest
             for which this is a response
-        num_outputs : int
-            The number of outputs to be included in the prediction response
-        max_outputs_size_bytes:
-            The total length of the string content
         """
         self.msg_id = msg_id
-        self.num_outputs = num_outputs
-        self.expand_buffer_if_necessary(
-            total_string_length * MAXIMUM_UTF_8_CHAR_LENGTH_BYTES)
-        self.memview = memoryview(PredictionResponse.output_buffer)
-        struct.pack_into("<I", PredictionResponse.output_buffer, 0,
-                         num_outputs)
-        self.string_content_end_position = BYTES_PER_INT + (
-            BYTES_PER_INT * num_outputs)
-        self.current_output_sizes_position = BYTES_PER_INT
+        self.outputs = []
+        self.num_outputs = 0
 
     def add_output(self, output):
         """
@@ -401,27 +380,45 @@ class PredictionResponse():
         output : string
         """
         output = unicode(output, "utf-8").encode("utf-8")
-        output_len = len(output)
-        struct.pack_into("<I", PredictionResponse.output_buffer,
-                         self.current_output_sizes_position, output_len)
-        self.current_output_sizes_position += BYTES_PER_INT
-        self.memview[self.string_content_end_position:
-                     self.string_content_end_position + output_len] = output
-        self.string_content_end_position += output_len
+        self.outputs.append(output)
+        self.num_outputs += 1
 
     def send(self, socket, event_history):
+        assert self.num_outputs > 0
+        output_header = self._create_output_header()
         socket.send("", flags=zmq.SNDMORE)
         socket.send(
             struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT),
             flags=zmq.SNDMORE)
         socket.send(self.msg_id, flags=zmq.SNDMORE)
-        socket.send(PredictionResponse.output_buffer[
-            0:self.string_content_end_position])
+        socket.send(output_header, flags=zmq.SNDMORE)
+        for idx in range(self.num_outputs):
+            if idx == self.num_outputs - 1:
+                # Don't use the `SNDMORE` flag if
+                # this is the last output being sent
+                socket.send(self.outputs[idx])
+            else:
+                socket.send(self.outputs[idx], flags=zmq.SNDMORE)
+
         event_history.insert(EVENT_HISTORY_SENT_CONTAINER_CONTENT)
 
-    def expand_buffer_if_necessary(self, size):
-        if len(PredictionResponse.output_buffer) < size:
-            PredictionResponse.output_buffer = bytearray(size * 2)
+    def _expand_buffer_if_necessary(self, size):
+        if len(PredictionResponse.header_buffer) < size:
+            PredictionResponse.header_buffer = bytearray(size * 2)
+
+    def _create_output_header(self):
+        header_length = BYTES_PER_INT * (len(outputs) + 1)
+        self._expand_buffer_if_necessary(header_length)
+
+        header_idx = 0
+        struct.pack_into("<I", PredictionResponse.header_buffer, header_idx, self.num_outputs)
+        header_idx += BYTES_PER_INT
+        for idx in range(len(self.outputs)):
+            struct.pack_into("<I", PredictionResponse.header_buffer, header_idx, header_length)
+            header_length += BYTES_PER_INT
+
+        return PredictionResponse.header_buffer[:header_length]
+
 
 
 class FeedbackRequest():

@@ -431,23 +431,23 @@ SharedPoolPtr<PredictionData> parse_single_input(DataType input_type, rapidjson:
   switch (input_type) {
     case DataType::Doubles: {
       InputParseResult<double> input = get_double_array(d, "input");
-      return create_prediction_data(input.first, input.second);
+      return DoubleVector::create(std::move(input.first), input.second);
     }
     case DataType::Floats: {
       InputParseResult<float> input = get_float_array(d, "input");
-      return create_prediction_data(input.first, input.second);
+      return FloatVector::create(std::move(input.first), input.second);
     }
     case DataType::Ints: {
       InputParseResult<int> input = get_int_array(d, "input");
-      return create_prediction_data(input.first, input.second);
+      return IntVector::create(std::move(input.first), input.second);
     }
     case DataType::Strings: {
       InputParseResult<char> input = get_char_array(d, "input");
-      return create_prediction_data(input.first, input.second);
+      return SerializableString::create(std::move(input.first), input.second);
     }
     case DataType::Bytes: {
       InputParseResult<uint8_t> input = get_base64_encoded_byte_array(d, "input");
-      return create_prediction_data(input.first, input.second);
+      return ByteVector::create(std::move(input).first, input.second);
     }
     default: throw std::invalid_argument("input_type is not a valid type");
   }
@@ -459,31 +459,31 @@ std::vector<SharedPoolPtr<PredictionData>> parse_input_batch(DataType input_type
     case DataType::Doubles: {
       auto input_batch = get_double_arrays(d, "input_batch");
       for (auto &input : input_batch) {
-        result.push_back(create_prediction_data(input.first, input.second));
+        result.push_back(DoubleVector::create(std::move(input.first), input.second));
       }
     }
     case DataType::Floats: {
       auto input_batch = get_float_arrays(d, "input_batch");
       for (auto &input : input_batch) {
-        result.push_back(create_prediction_data(input.first, input.second));
+        result.push_back(FloatVector::create(std::move(input.first), input.second));
       }
     }
     case DataType::Ints: {
       auto input_batch = get_int_arrays(d, "input_batch");
       for (auto &input : input_batch) {
-        result.push_back(create_prediction_data(input.first, input.second));
+        result.push_back(IntVector::create(std::move(input.first), input.second));
       }
     }
     case DataType::Strings: {
       auto input_batch = get_char_arrays(d, "input_batch");
       for (auto &input : input_batch) {
-        result.push_back(create_prediction_data(input.first, input.second));
+        result.push_back(SerializableString::create(std::move(input.first), input.second));
       }
     }
     case DataType::Bytes: {
       auto input_batch = get_base64_encoded_byte_arrays(d, "input_batch");
       for (auto &input : input_batch) {
-        result.push_back(create_prediction_data(input.first, input.second));
+        result.push_back(ByteVector::create(std::move(input.first), input.second));
       }
     }
     default: throw std::invalid_argument("input_type is not a valid type");

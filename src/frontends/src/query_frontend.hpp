@@ -426,6 +426,11 @@ class RequestHandler {
     server_.add_endpoint(update_endpoint, "POST", update_fn);
   }
 
+  static const std::string parse_output_y_hat(SharedPoolPtr<PredictionData> &y_hat) {
+    char* str_content = static_cast<char*>(y_hat->get_data().get());
+    return std::string(str_content, str_content + y_hat->size());
+  }
+
   /**
    * Obtains the json-formatted http response content for a successful query
    *
@@ -443,19 +448,20 @@ class RequestHandler {
     json_response.SetObject();
     clipper::json::add_long(json_response, PREDICTION_RESPONSE_KEY_QUERY_ID,
                             query_response.query_id_);
+    std::string y_hat_str = parse_output_y_hat(query_response.output_.y_hat_);
     try {
       // Attempt to parse the string output as JSON
       // and, if possible, nest it in object form within the
       // query response
       rapidjson::Document json_y_hat;
-      clipper::json::parse_json(query_response.output_.y_hat_, json_y_hat);
+      clipper::json::parse_json(y_hat_str, json_y_hat);
       clipper::json::add_object(json_response, PREDICTION_RESPONSE_KEY_OUTPUT,
                                 json_y_hat);
     } catch (const clipper::json::json_parse_error& e) {
       // If the string output is not JSON-formatted, include
       // it as a JSON-safe string value in the query response
       clipper::json::add_string(json_response, PREDICTION_RESPONSE_KEY_OUTPUT,
-                                query_response.output_.y_hat_);
+                                y_hat_str);
     }
     clipper::json::add_bool(json_response, PREDICTION_RESPONSE_KEY_USED_DEFAULT,
                             query_response.output_is_default_);
@@ -539,7 +545,7 @@ class RequestHandler {
     clipper::json::parse_json(json_content, d);
     long uid = 0;
 
-    std::vector<PredictionData> input_batch =
+    std::vector<SharedPoolPtr<PredictionData>> input_batch =
         clipper::json::parse_inputs(input_type, d);
     std::vector<folly::Future<Response>> predictions;
     for (auto input : input_batch) {
@@ -565,7 +571,7 @@ class RequestHandler {
     rapidjson::Document d;
     clipper::json::parse_json(json_content, d);
     long uid = clipper::json::get_long(d, "uid");
-    PredictionData input = clipper::json::parse_single_input(input_type, d);
+    SharedPoolPtr<PredictionData> input = clipper::json::parse_single_input(input_type, d);
     double y_hat = clipper::json::get_double(d, "label");
     auto update = query_processor_.update(
         FeedbackQuery{name, uid, {Feedback(input, y_hat)}, policy, models});

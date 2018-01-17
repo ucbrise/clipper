@@ -105,11 +105,11 @@ size_t ModelContainer::get_batch_size(Deadline deadline) {
 }
 
 ActiveContainers::ActiveContainers()
-    : containers_(
+    : batch_sizes_(std::unordered_map<VersionedModelId, int>()),
+      containers_(
           std::unordered_map<VersionedModelId,
                              std::map<int, std::shared_ptr<ModelContainer>>>(
-              {})),
-      batch_sizes_(std::unordered_map<VersionedModelId, int>()) {}
+              {})) {}
 
 void ActiveContainers::add_container(VersionedModelId model, int connection_id,
                                      int replica_id, InputType input_type) {
