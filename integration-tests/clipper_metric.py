@@ -30,7 +30,8 @@ def feature_sum(xs):
 
 
 def get_metrics_config():
-    config_path = os.path.join(os.path.abspath("%s/../monitoring" % cur_dir), 'metrics_config.yaml')
+    config_path = os.path.join(
+        os.path.abspath("%s/../monitoring" % cur_dir), 'metrics_config.yaml')
     with open(config_path, 'r') as f:
         conf = yaml.load(f)
     return conf
@@ -57,7 +58,8 @@ if __name__ == '__main__':
     gen_match_query = lambda name: "http://localhost:9090/api/v1/series?match[]={}".format(name)
 
     logging.basicConfig(
-        format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+        format=
+        '%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
         datefmt='%y-%m-%d:%H:%M:%S',
         level=0)
 
@@ -67,8 +69,7 @@ if __name__ == '__main__':
     clipper_conn = ClipperConnection(DockerContainerManager(redis_port=6380))
     clipper_conn.start_clipper()
     python_deployer.create_endpoint(
-        clipper_conn, "simple-example", "doubles", feature_sum, num_replicas=2
-    )
+        clipper_conn, "simple-example", "doubles", feature_sum, num_replicas=2)
     time.sleep(2)
     try:
         logger.info("Making 100 predictions; Should takes 50 seconds.")

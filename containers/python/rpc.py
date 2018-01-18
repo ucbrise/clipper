@@ -320,7 +320,8 @@ class Server(threading.Thread):
                         model_container_metric['recv_time_us'] = recv_time
                         model_container_metric['parse_time_us'] = parse_time
                         model_container_metric['handle_time_us'] = handle_time
-                        model_container_metric['end_to_end_latency_us'] = (recv_time + parse_time + handle_time)
+                        model_container_metric['end_to_end_latency_us'] = (
+                            recv_time + parse_time + handle_time)
                         metric_conn.send(model_container_metric)
 
                         print("recv: %f us, parse: %f us, handle: %f us" %
@@ -539,7 +540,7 @@ class MetricCollector:
             if not metric_type and not metric_description:
                 raise Exception(
                     "{}: Metric Type and Metric Description are Required in Config File.".
-                        format(name))
+                    format(name))
 
             if metric_type == 'Counter':
                 self.metrics[name] = Counter(prefix + name, metric_description)
@@ -547,10 +548,10 @@ class MetricCollector:
                 self.metrics[name] = Gauge(prefix + name, metric_description)
             elif metric_type == 'Histogram':
                 if 'bucket' in spec.keys():
-                    buckets = np.linspace(*spec['bucket']).tolist()+[float("inf")]
-                    self.metrics[name] = Histogram(prefix + name,
-                                               metric_description,
-                                               buckets=buckets)
+                    buckets = np.linspace(
+                        *spec['bucket']).tolist() + [float("inf")]
+                    self.metrics[name] = Histogram(
+                        prefix + name, metric_description, buckets=buckets)
                 else:
                     self.metrics[name] = Histogram(prefix + name,
                                                    metric_description)
@@ -565,7 +566,8 @@ class MetricCollector:
 
     def collect(self):
         while True:
-            latest_metric_dict = self.pipe_conn.recv()  # This call is blocking.
+            latest_metric_dict = self.pipe_conn.recv(
+            )  # This call is blocking.
             for name, value in latest_metric_dict.items():
                 metric = self.metrics[name]
                 if self.name_to_type[name] == 'Counter':
@@ -575,7 +577,9 @@ class MetricCollector:
                 elif self.name_to_type[name] == 'Histogram' or self.name_to_type[name] == 'Summary':
                     metric.observe(value)
                 else:
-                    raise Exception("Unknown Metric Type for {}. See config file.".format(name))
+                    raise Exception(
+                        "Unknown Metric Type for {}. See config file.".format(
+                            name))
 
 
 def run_metric(child_conn):

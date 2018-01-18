@@ -33,8 +33,8 @@ if __name__ == '__main__':
 
     with open('Clipper_DataSource.json', 'r') as f:
         datasource = json.load(f)
-    requests.post('http://admin:admin@localhost:3000/api/datasources',
-                  data=datasource)
+    requests.post(
+        'http://admin:admin@localhost:3000/api/datasources', data=datasource)
     print('(3/3) Clipper Data Source Added')
 
     print(
