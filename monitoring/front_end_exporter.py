@@ -18,7 +18,7 @@ args = parser.parse_args()
 
 query_frontend_id = args.query_frontend_name
 
-ADDRESS = 'http://{}:1337/metrics'.format(query_frontend_id)  #Sub with name
+ADDRESS = 'http://{}:1337/metrics'.format(query_frontend_id)
 
 
 def load_metric():
@@ -32,7 +32,8 @@ def multi_dict_unpacking(lst):
     """
     result = {}
     for d in lst:
-        result = {**result, **d}
+        for key, val in d.items():
+            result[key] = val
     return result
 
 
