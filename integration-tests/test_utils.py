@@ -108,9 +108,9 @@ def create_kubernetes_connection(cleanup=True, start_clipper=True):
 
 def log_clipper_state(cl):
     pp = pprint.PrettyPrinter(indent=4)
-    logger.info("\nAPPLICATIONS:\n{app_str}".format(app_str=pp.pformat(
-        cl.get_all_apps(verbose=True))))
-    logger.info("\nMODELS:\n{model_str}".format(model_str=pp.pformat(
-        cl.get_all_models(verbose=True))))
-    logger.info("\nCONTAINERS:\n{cont_str}".format(cont_str=pp.pformat(
-        cl.get_all_model_replicas(verbose=True))))
+    logger.info("\nAPPLICATIONS:\n{app_str}".format(
+        app_str=pp.pformat(cl.get_all_apps(verbose=True))))
+    logger.info("\nMODELS:\n{model_str}".format(
+        model_str=pp.pformat(cl.get_all_models(verbose=True))))
+    logger.info("\nCONTAINERS:\n{cont_str}".format(
+        cont_str=pp.pformat(cl.get_all_model_replicas(verbose=True))))
