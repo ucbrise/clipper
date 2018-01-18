@@ -58,6 +58,11 @@ if [ $num_py_violations -eq 0 ]; then
     echo "Passed Python PEP8 check"
 else
     echo "Found $num_py_violations Python PEP8 format violations"
+
+    echo "Current yapf version"
+
+    git submodule status | grep "yapf" | echo
+
     find . -name '*.py' -print | egrep -v "yapf|ycm|googletest" \
         | xargs python $CLIPPER_ROOT/bin/yapf/yapf -d
     exit 1
