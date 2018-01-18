@@ -67,8 +67,7 @@ if __name__ == '__main__':
     clipper_conn = ClipperConnection(DockerContainerManager(redis_port=6380))
     clipper_conn.start_clipper()
     python_deployer.create_endpoint(
-        clipper_conn, "simple-example", "doubles", feature_sum, num_replicas=2,
-        base_image="python-closure-container"  # TODO:REMOVE THIS
+        clipper_conn, "simple-example", "doubles", feature_sum, num_replicas=2
     )
     time.sleep(2)
     try:
