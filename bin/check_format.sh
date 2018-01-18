@@ -63,6 +63,10 @@ else
 
     git submodule status | grep "yapf" | cat
 
+    echo "Current python version"
+
+    python --version | cat
+
     find . -name '*.py' -print | egrep -v "yapf|ycm|googletest" \
         | xargs python $CLIPPER_ROOT/bin/yapf/yapf -d
     exit 1
