@@ -27,7 +27,8 @@ namespace rpc {
 
 const std::string LOGGING_TAG_RPC = "RPC";
 
-using RPCResponse = std::pair<const int, std::vector<UniquePoolPtr<void>>>;
+/// Tuple of msg_id, vector of model outputs
+using RPCResponse = std::pair<const int, std::vector<ByteBuffer>>;
 /// Tuple of zmq_connection_id, message_id, vector of messages, creation time
 using RPCRequest =
     std::tuple<const int, const int, std::vector<ByteBuffer>, const long>;

@@ -193,7 +193,7 @@ void RPCService::send_messages(
         log_info_formatted("INTERM", "DATA {} SIZE {}", static_cast<uint32_t*>(msg.data())[0], msg.size());
         socket.send(msg, ZMQ_SNDMORE);
       } else {
-        log_info_formatted("LAST", "DATA {} SIZE {}", static_cast<double*>(msg.data())[2], msg.size());
+        log_info_formatted("LAST", "DATA {} SIZE {}", static_cast<double*>(msg.data())[0], msg.size());
         socket.send(msg);
       }
       cur_msg_num += 1;
@@ -274,21 +274,25 @@ void RPCService::receive_message(
     case MessageType::ContainerContent: {
       // This message is a response to a container query
       message_t msg_id;
+      message_t msg_output_header_size;
       message_t msg_output_header;
       socket.recv(&msg_id, 0);
+      socket.recv(&msg_output_header_size, 0);
       socket.recv(&msg_output_header, 0);
 
-      uint32_t* output_header = static_cast<uint32_t*>(msg_id.data());
+      uint32_t* output_header = static_cast<uint32_t*>(msg_output_header.data());
       uint32_t num_outputs = output_header[0];
       output_header++;
 
-      vector<UniquePoolPtr<void>> content;
+      vector<ByteBuffer> content;
       content.reserve(num_outputs);
 
       for (uint32_t i = 0; i < num_outputs; ++i) {
-        UniquePoolPtr<void> output(malloc(output_header[i]), free);
+        uint32_t& output_size = output_header[i];
+        UniquePoolPtr<void> output(malloc(output_size), free);
         socket.recv(output.get(), output_header[i], 0);
-        content.push_back(std::move(output));
+        content.push_back(std::make_pair(ByteBufferPtr<void>(std::move(output)), output_size));
+        log_info(LOGGING_TAG_RPC, "Received output!");
       }
 
       if(!new_connection) {

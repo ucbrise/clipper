@@ -16,7 +16,7 @@ using UniquePoolPtr = std::unique_ptr<T, void(*)(void*)>;
 template <typename T>
 using SharedPoolPtr = std::shared_ptr<T>;
 
-typedef uint32_t PredictionDataHash;
+typedef uint64_t PredictionDataHash;
 
 using QueryId = long;
 using FeedbackAck = bool;
@@ -132,6 +132,7 @@ class ByteVector : public PredictionData {
  private:
   explicit ByteVector(UniquePoolPtr<void> data, size_t byte_size);
   explicit ByteVector(UniquePoolPtr<uint8_t> data, size_t size);
+  explicit ByteVector(void* data, size_t byte_size);
 
   SharedPoolPtr<uint8_t> data_;
   size_t size_;
@@ -154,6 +155,7 @@ class IntVector : public PredictionData {
  private:
   explicit IntVector(UniquePoolPtr<int> data, size_t size);
   explicit IntVector(UniquePoolPtr<void> data, size_t byte_size);
+  explicit IntVector(void* data, size_t byte_size);
 
   SharedPoolPtr<int> data_;
   size_t size_;
@@ -176,6 +178,7 @@ class FloatVector : public PredictionData {
  private:
   explicit FloatVector(UniquePoolPtr<float> data, size_t size);
   explicit FloatVector(UniquePoolPtr<void> data, size_t byte_size);
+  explicit FloatVector(void* data, size_t byte_size);
 
   SharedPoolPtr<float> data_;
   size_t size_;
@@ -198,6 +201,7 @@ class DoubleVector : public PredictionData {
  private:
   explicit DoubleVector(UniquePoolPtr<double> data, size_t size);
   explicit DoubleVector(UniquePoolPtr<void> data, size_t byte_size);
+  explicit DoubleVector(void* data, size_t byte_size);
 
   SharedPoolPtr<double> data_;
   size_t size_;
@@ -220,6 +224,7 @@ class SerializableString : public PredictionData {
  private:
   explicit SerializableString(UniquePoolPtr<char> data, size_t size);
   explicit SerializableString(UniquePoolPtr<void> data, size_t byte_size);
+  explicit SerializableString(void* data, size_t byte_size);
 
   SharedPoolPtr<char> data_;
   size_t size_;
@@ -430,7 +435,7 @@ class PredictionResponse {
   PredictionResponse(PredictionResponse &&other) = default;
   PredictionResponse &operator=(PredictionResponse &&other) = default;
 
-  static PredictionResponse deserialize_prediction_response(std::vector<UniquePoolPtr<void>>& response);
+  static PredictionResponse deserialize_prediction_response(std::vector<ByteBuffer> response);
 
   std::vector<SharedPoolPtr<PredictionData>> outputs_;
 };

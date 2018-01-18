@@ -10,6 +10,7 @@
 #include <clipper/datatypes.hpp>
 #include <clipper/logging.hpp>
 #include <clipper/util.hpp>
+#include <clipper/memory.hpp>
 
 namespace clipper {
 
@@ -102,14 +103,17 @@ ByteVector::ByteVector(UniquePoolPtr<uint8_t> data, size_t size)
     : data_(std::move(data)), size_(size) {}
 
 ByteVector::ByteVector(UniquePoolPtr<void> data, size_t byte_size)
-    : data_(SharedPoolPtr<uint8_t>(static_cast<uint8_t*>(data.release()), data.get_deleter())),
+    : ByteVector(data.release(), byte_size) {}
+
+ByteVector::ByteVector(void* data, size_t byte_size)
+    : data_(SharedPoolPtr<uint8_t>(static_cast<uint8_t*>(data), MemoryManager::free_memory)),
       size_(static_cast<size_t>(byte_size / sizeof(uint8_t))) {}
 
 DataType ByteVector::type() const { return DataType::Bytes; }
 
 PredictionDataHash ByteVector::hash() {
   if (!hash_) {
-    hash_ = CityHash32(reinterpret_cast<char *>(data_.get()), size_ * sizeof(uint8_t));
+    hash_ = CityHash64(reinterpret_cast<char *>(data_.get()), size_ * sizeof(uint8_t));
   }
   return hash_.get();
 }
@@ -126,14 +130,17 @@ IntVector::IntVector(UniquePoolPtr<int> data, size_t size)
     : data_(std::move(data)), size_(size) {}
 
 IntVector::IntVector(UniquePoolPtr<void> data, size_t byte_size)
-    : data_(SharedPoolPtr<int>(static_cast<int*>(data.release()), data.get_deleter())),
+    : IntVector(data.release(), byte_size) {}
+
+IntVector::IntVector(void* data, size_t byte_size)
+    : data_(SharedPoolPtr<int>(static_cast<int*>(data), MemoryManager::free_memory)),
       size_(static_cast<size_t>(byte_size / sizeof(int))) {}
 
 DataType IntVector::type() const { return DataType::Ints; }
 
 PredictionDataHash IntVector::hash() {
   if (!hash_) {
-    hash_ = CityHash32(reinterpret_cast<char *>(data_.get()), size_ * sizeof(uint8_t));
+    hash_ = CityHash64(reinterpret_cast<char *>(data_.get()), size_ * sizeof(int));
   }
   return hash_.get();
 }
@@ -150,7 +157,10 @@ FloatVector::FloatVector(UniquePoolPtr<float> data, size_t size)
     : data_(std::move(data)), size_(size) {}
 
 FloatVector::FloatVector(UniquePoolPtr<void> data, size_t byte_size)
-    : data_(SharedPoolPtr<float>(static_cast<float*>(data.release()), data.get_deleter())),
+    : FloatVector(data.release(), byte_size) {}
+
+FloatVector::FloatVector(void* data, size_t byte_size)
+    : data_(SharedPoolPtr<float>(static_cast<float*>(data), MemoryManager::free_memory)),
       size_(static_cast<size_t>(byte_size / sizeof(float))) {}
 
 DataType FloatVector::type() const { return DataType::Floats; }
@@ -160,7 +170,7 @@ PredictionDataHash FloatVector::hash() {
   // is generally a bad idea due to loss of precision from floating point)
   // representations
   if (!hash_) {
-    hash_ = CityHash32(reinterpret_cast<char *>(data_.get()), size_ * sizeof(uint8_t));
+    hash_ = CityHash64(reinterpret_cast<char *>(data_.get()), size_ * sizeof(float));
   }
   return hash_.get();
 }
@@ -176,8 +186,11 @@ SharedPoolPtr<void> FloatVector::get_data() const {
 DoubleVector::DoubleVector(UniquePoolPtr<double> data, size_t size)
     : data_(std::move(data)), size_(size) {}
 
-DoubleVector::DoubleVector(UniquePoolPtr<void> data, size_t size_bytes)
-    : data_(SharedPoolPtr<double>(static_cast<double*>(data.release()), data.get_deleter())),
+DoubleVector::DoubleVector(UniquePoolPtr<void> data, size_t byte_size)
+    : DoubleVector(data.release(), byte_size) {}
+
+DoubleVector::DoubleVector(void* data, size_t size_bytes)
+    : data_(SharedPoolPtr<double>(static_cast<double*>(data), MemoryManager::free_memory)),
       size_(static_cast<size_t>(size_bytes / sizeof(double))) {}
 
 DataType DoubleVector::type() const { return DataType::Doubles; }
@@ -187,7 +200,7 @@ PredictionDataHash DoubleVector::hash() {
   // this is generally a bad idea due to loss of precision from floating point
   // representations
   if (!hash_) {
-    hash_ = CityHash32(reinterpret_cast<char *>(data_.get()), size_ * sizeof(uint8_t));
+    hash_ = CityHash64(reinterpret_cast<char *>(data_.get()), size_ * sizeof(double));
   }
   return hash_.get();
 }
@@ -204,14 +217,17 @@ SerializableString::SerializableString(UniquePoolPtr<char> data, size_t size)
     : data_(std::move(data)), size_(size) {}
 
 SerializableString::SerializableString(UniquePoolPtr<void> data, size_t byte_size)
-    : data_(SharedPoolPtr<char>(static_cast<char*>(data.release()), data.get_deleter())),
+    : SerializableString(data.release(), byte_size) {}
+
+SerializableString::SerializableString(void* data, size_t byte_size)
+    : data_(SharedPoolPtr<char>(static_cast<char*>(data), MemoryManager::free_memory)),
       size_(static_cast<size_t>(byte_size / sizeof(char))) {}
 
 DataType SerializableString::type() const { return DataType::Strings; }
 
 PredictionDataHash SerializableString::hash() {
   if (!hash_) {
-    hash_ = CityHash32(data_.get(), size_ * sizeof(uint8_t));
+    hash_ = CityHash64(data_.get(), size_ * sizeof(char));
   }
   return hash_.get();
 }
@@ -254,7 +270,7 @@ void rpc::PredictionRequest::validate_input_type(
 void rpc::PredictionRequest::add_input(SharedPoolPtr<PredictionData>& input) {
   validate_input_type(input);
   input_data_size_ += input->byte_size();
-  inputs_.push_back(std::move(input));
+  inputs_.push_back(input);
 }
 
 std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
@@ -307,14 +323,11 @@ rpc::PredictionResponse::PredictionResponse(const std::vector<SharedPoolPtr<Pred
     : outputs_(std::move(outputs)) {}
 
 rpc::PredictionResponse
-rpc::PredictionResponse::deserialize_prediction_response(std::vector<UniquePoolPtr<void>>& response) {
+rpc::PredictionResponse::deserialize_prediction_response(std::vector<ByteBuffer> response) {
   std::vector<SharedPoolPtr<PredictionData>> outputs;
-  UniquePoolPtr<void>& length_data = response[0];
-  uint32_t *output_lengths_data = static_cast<uint32_t*>(length_data.get());
-  for(size_t i = 1; i < response.size(); i++) {
-    auto &output_data = response[i];
+  for(auto &output : response) {
     SharedPoolPtr<PredictionData> parsed_output =
-        SerializableString::create(std::move(output_data), output_lengths_data[i - 1]);
+        SerializableString::create(output.first.get(), output.second);
     outputs.push_back(std::move(parsed_output));
   }
   return PredictionResponse(outputs);

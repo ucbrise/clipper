@@ -203,6 +203,7 @@ class Server(threading.Thread):
                     poller.poll(SOCKET_POLLING_TIMEOUT_MILLIS))
                 if socket not in receivable_sockets or receivable_sockets[socket] != zmq.POLLIN:
                     # Failed to receive a message before the specified polling timeout
+                    print("Continue polling...")
                     if connected:
                         curr_time = datetime.now()
                         time_delta = curr_time - last_activity_time_millis
@@ -315,8 +316,6 @@ class Server(threading.Thread):
                         response = self.handle_feedback_request(received_msg)
                         response.send(socket, self.event_history)
                         print("recv: %f s" % ((t2 - t1).total_seconds()))
-                else:
-                    print("MSG TYPE ERROR")
 
                 sys.stdout.flush()
                 sys.stderr.flush()
@@ -384,13 +383,26 @@ class PredictionResponse:
         self.num_outputs += 1
 
     def send(self, socket, event_history):
+        """
+        Sends the encapsulated response data via
+        the specified socket
+
+        Parameters
+        ----------
+        socket : zmq.Socket
+        event_history : EventHistory
+            The RPC event history that should be
+            updated as a result of this operation
+        """
         assert self.num_outputs > 0
-        output_header = self._create_output_header()
+        output_header, header_length_bytes = self._create_output_header()
         socket.send("", flags=zmq.SNDMORE)
         socket.send(
             struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT),
             flags=zmq.SNDMORE)
         socket.send(self.msg_id, flags=zmq.SNDMORE)
+        socket.send(struct.pack("<I", header_length_bytes), 
+            flags=zmq.SNDMORE)
         socket.send(output_header, flags=zmq.SNDMORE)
         for idx in range(self.num_outputs):
             if idx == self.num_outputs - 1:
@@ -403,13 +415,29 @@ class PredictionResponse:
         event_history.insert(EVENT_HISTORY_SENT_CONTAINER_CONTENT)
 
     def _expand_buffer_if_necessary(self, size):
+        """
+        If necessary, expands the reusable output
+        header buffer to accomodate content of the
+        specified size
+
+        size : int
+            The size, in bytes, that the buffer must be 
+            able to store
+        """
         if len(PredictionResponse.header_buffer) < size:
             PredictionResponse.header_buffer = bytearray(size * 2)
 
     def _create_output_header(self):
+        """
+        Returns
+        ----------
+        (bytearray, int)
+            A tuple with the output header as the first
+            element and the header length as the second
+            element
+        """
         header_length = BYTES_PER_INT * (len(self.outputs) + 1)
         self._expand_buffer_if_necessary(header_length)
-
         header_idx = 0
         struct.pack_into("<I", PredictionResponse.header_buffer, header_idx, self.num_outputs)
         header_idx += BYTES_PER_INT
@@ -417,7 +445,7 @@ class PredictionResponse:
             struct.pack_into("<I", PredictionResponse.header_buffer, header_idx, header_length)
             header_length += BYTES_PER_INT
 
-        return PredictionResponse.header_buffer[:header_length]
+        return PredictionResponse.header_buffer[:header_length], header_length
 
 
 
