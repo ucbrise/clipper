@@ -67,7 +67,7 @@ void RPCService::stop() {
   }
 }
 
-int RPCService::send_message(const vector<ByteBuffer> msg,
+int RPCService::send_message(vector<ByteBuffer> msg,
                              const int zmq_connection_id) {
   if (!active_) {
     log_error(LOGGING_TAG_RPC,
@@ -81,9 +81,8 @@ int RPCService::send_message(const vector<ByteBuffer> msg,
       std::chrono::duration_cast<std::chrono::microseconds>(
           std::chrono::system_clock::now().time_since_epoch())
           .count();
-  RPCRequest request(zmq_connection_id, id, std::move(msg),
-                     current_time_micros);
-  request_queue_->push(request);
+  RPCRequest request(zmq_connection_id, id, std::move(msg), current_time_micros);
+  request_queue_->push(std::move(request));
   return id;
 }
 
@@ -170,19 +169,26 @@ void RPCService::send_messages(
     static_cast<int *>(type_message.data())[0] =
         static_cast<int>(MessageType::ContainerContent);
     message_t id_message(sizeof(int));
-    memcpy(id_message.data(), &std::get<1>(request), sizeof(int));
+    static_cast<int *>(id_message.data())[0] = std::get<1>(request);
     vector<uint8_t> routing_identity = connection->second;
 
     socket.send(routing_identity.data(), routing_identity.size(), ZMQ_SNDMORE);
     socket.send("", 0, ZMQ_SNDMORE);
     socket.send(type_message, ZMQ_SNDMORE);
     socket.send(id_message, ZMQ_SNDMORE);
-    int cur_msg_num = 0;
+    size_t cur_msg_num = 0;
     // subtract 1 because we start counting at 0
-    int last_msg_num = std::get<2>(request).size() - 1;
-    for (const ByteBuffer &m : std::get<2>(request)) {
+    size_t last_msg_num = std::get<2>(request).size() - 1;
+    for (ByteBuffer &m : std::get<2>(request)) {
       // send the sndmore flag unless we are on the last message part
-      message_t msg(m.first.get(), m.second, &RPCService::zmq_continuation);
+      ByteBufferPtr<void> &data_ptr = m.first;
+      zmq_free_fn* free_fn = NULL;
+      if(data_ptr.unique()) {
+        // TODO(Corey): Handle the case where the pointer may have a custom deleter.
+        // Custom deletion behavior will not exist until memory pools are introduced
+        free_fn = &RPCService::zmq_continuation;
+      }
+      message_t msg(data_ptr.get(), m.second, free_fn);
       if (cur_msg_num < last_msg_num) {
         log_info_formatted("INTERM", "DATA {} SIZE {}", static_cast<uint32_t*>(msg.data())[0], msg.size());
         socket.send(msg, ZMQ_SNDMORE);
@@ -195,9 +201,8 @@ void RPCService::send_messages(
   }
 }
 
-void RPCService::zmq_continuation(void* /* data */, void* /* hint */) {
-  // We deliberately avoid freeing data, as it may be
-  // used by other prediction tasks for the same query
+void RPCService::zmq_continuation(void *data, void* /* hint */) {
+  free(data);
 }
 
 void RPCService::receive_message(

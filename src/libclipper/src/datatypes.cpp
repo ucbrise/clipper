@@ -264,12 +264,12 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
   }
 
   size_t request_metadata_size = 1 * sizeof(uint32_t);
-  SharedPoolPtr<void> request_metadata(malloc(request_metadata_size), free);
+  UniquePoolPtr<void> request_metadata(malloc(request_metadata_size), free);
   uint32_t *request_metadata_raw = static_cast<uint32_t *>(request_metadata.get());
   request_metadata_raw[0] = static_cast<uint32_t>(RequestType::PredictRequest);
 
   size_t input_metadata_size = (2 + inputs_.size()) * sizeof(uint32_t);
-  SharedPoolPtr<void> input_metadata(malloc(input_metadata_size), free);
+  UniquePoolPtr<void> input_metadata(malloc(input_metadata_size), free);
   uint32_t *input_metadata_raw = static_cast<uint32_t *>(input_metadata.get());
   input_metadata_raw[0] = static_cast<uint32_t>(input_type_);
   input_metadata_raw[1] = static_cast<uint32_t>(inputs_.size());
@@ -281,8 +281,7 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
   }
 
   uint32_t input_metadata_size_buf_size = 1 * sizeof(uint32_t);
-  std::shared_ptr<uint8_t> input_metadata_size_buf(
-      static_cast<uint8_t *>(malloc(input_metadata_size_buf_size)), free);
+  UniquePoolPtr<void> input_metadata_size_buf(malloc(input_metadata_size_buf_size), free);
   uint32_t *input_metadata_size_buf_raw =
       reinterpret_cast<uint32_t *>(input_metadata_size_buf.get());
   // Add the size of the input metadata in bytes. This will be
@@ -292,20 +291,15 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
 
   std::vector<ByteBuffer> serialized_request;
   serialized_request.emplace_back(
-      std::make_pair(request_metadata, request_metadata_size));
+      std::make_pair(ByteBufferPtr<void>(std::move(request_metadata)), request_metadata_size));
   serialized_request.emplace_back(
-      std::make_pair(input_metadata_size_buf, input_metadata_size_buf_size));
+      std::make_pair(ByteBufferPtr<void>(std::move(input_metadata_size_buf)), input_metadata_size_buf_size));
   serialized_request.emplace_back(
-      std::make_pair(input_metadata, input_metadata_size));
+      std::make_pair(ByteBufferPtr<void>(std::move(input_metadata)), input_metadata_size));
   for (size_t i = 0; i < input_bufs.size(); i++) {
-    serialized_request.emplace_back(std::make_pair(input_bufs[i], input_metadata_raw[i + 2]));
-    auto double_ptr = std::static_pointer_cast<double>(input_bufs[i]).get();
-    log_info_formatted(LOGGING_TAG_CLIPPER, "DOUBLES: {} {} {}", double_ptr[0], double_ptr[1], double_ptr[2]);
+    serialized_request.emplace_back(
+        std::make_pair(ByteBufferPtr<void>(std::move(input_bufs[i])), input_metadata_raw[i + 2]));
   }
-  for(size_t i = 0; i < 3; i++) {
-    log_info_formatted(LOGGING_TAG_CLIPPER, "{} {} {}", input_metadata_raw[0], input_metadata_raw[1], input_metadata_raw[2]);
-  }
-  log_info_formatted(LOGGING_TAG_CLIPPER, "MDAT SIZE: {}", input_metadata_size);
   return serialized_request;
 }
 

@@ -144,9 +144,7 @@ class Server(threading.Thread):
                                   % type(outputs[0]))
         for o in outputs:
             total_length += len(o)
-        response = PredictionResponse(prediction_request.msg_id,
-                                      len(prediction_request.inputs),
-                                      total_length)
+        response = PredictionResponse(prediction_request.msg_id)
         for output in outputs:
             response.add_output(output)
 
@@ -261,7 +259,6 @@ class Server(threading.Thread):
                     # list of byte arrays
                     request_header = socket.recv()
                     request_type = struct.unpack("<I", request_header)[0]
-                    print(request_type)
 
                     if request_type == REQUEST_TYPE_PREDICT:
                         input_header_size = socket.recv()
@@ -272,12 +269,9 @@ class Server(threading.Thread):
                         parsed_input_header = np.frombuffer(
                             input_header, dtype=np.uint32)
 
-                        print(parsed_input_header)
 
                         input_type, input_size, input_sizes = parsed_input_header[
                             0], parsed_input_header[1], parsed_input_header[2:]
-
-                        print("AHHH")
 
                         inputs = []
                         for _ in range(input_size):
@@ -364,7 +358,7 @@ class PredictionRequest:
         return self.inputs
 
 
-class PredictionResponse():
+class PredictionResponse:
     header_buffer = bytearray(1024)
 
     def __init__(self, msg_id):
@@ -413,7 +407,7 @@ class PredictionResponse():
             PredictionResponse.header_buffer = bytearray(size * 2)
 
     def _create_output_header(self):
-        header_length = BYTES_PER_INT * (len(outputs) + 1)
+        header_length = BYTES_PER_INT * (len(self.outputs) + 1)
         self._expand_buffer_if_necessary(header_length)
 
         header_idx = 0

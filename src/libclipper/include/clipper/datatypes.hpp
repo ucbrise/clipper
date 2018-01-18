@@ -16,7 +16,6 @@ using UniquePoolPtr = std::unique_ptr<T, void(*)(void*)>;
 template <typename T>
 using SharedPoolPtr = std::shared_ptr<T>;
 
-typedef std::pair<SharedPoolPtr<void>, size_t> ByteBuffer;
 typedef uint32_t PredictionDataHash;
 
 using QueryId = long;
@@ -41,6 +40,37 @@ enum class RequestType {
 
 std::string get_readable_input_type(DataType type);
 DataType parse_input_type(std::string type_string);
+
+template <class T>
+class ByteBufferPtr {
+ public:
+  explicit ByteBufferPtr(UniquePoolPtr<T> unique_ptr) :
+      unique_ptr_(std::move(unique_ptr)), shared_ptr_(NULL, free) {}
+  explicit ByteBufferPtr(SharedPoolPtr<T> shared_ptr) :
+      unique_ptr_(NULL, free), shared_ptr_(std::move(shared_ptr)) {};
+
+  T* get() {
+    if(unique_ptr_) {
+      return unique_ptr_.release();
+    } else {
+      return shared_ptr_.get();
+    }
+  }
+
+  bool unique() const {
+    if(unique_ptr_) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+ private:
+  UniquePoolPtr<T> unique_ptr_;
+  SharedPoolPtr<T> shared_ptr_;
+};
+
+typedef std::pair<ByteBufferPtr<void>, size_t> ByteBuffer;
 
 class VersionedModelId {
  public:
