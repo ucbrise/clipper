@@ -46,11 +46,7 @@ if __name__ == '__main__':
     clipper_conn.start_clipper()
     print("Starting Clipper")
     python_deployer.create_endpoint(
-        clipper_conn,
-        "simple-example",
-        "doubles",
-        feature_sum,
-        num_replicas=2)
+        clipper_conn, "simple-example", "doubles", feature_sum, num_replicas=2)
     time.sleep(2)
     print("Staring Prediction")
 
