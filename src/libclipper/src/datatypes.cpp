@@ -284,22 +284,22 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
   uint32_t *request_metadata_raw = static_cast<uint32_t *>(request_metadata.get());
   request_metadata_raw[0] = static_cast<uint32_t>(RequestType::PredictRequest);
 
-  size_t input_metadata_size = (2 + inputs_.size()) * sizeof(uint32_t);
+  size_t input_metadata_size = (2 + inputs_.size()) * sizeof(uint64_t);
   UniquePoolPtr<void> input_metadata(malloc(input_metadata_size), free);
-  uint32_t *input_metadata_raw = static_cast<uint32_t *>(input_metadata.get());
-  input_metadata_raw[0] = static_cast<uint32_t>(input_type_);
-  input_metadata_raw[1] = static_cast<uint32_t>(inputs_.size());
+  uint64_t *input_metadata_raw = static_cast<uint64_t *>(input_metadata.get());
+  input_metadata_raw[0] = static_cast<uint64_t>(input_type_);
+  input_metadata_raw[1] = static_cast<uint64_t>(inputs_.size());
 
   std::vector<SharedPoolPtr<void>> input_bufs;
   for (size_t i = 0; i < inputs_.size(); i++) {
     input_bufs.push_back(inputs_[i]->get_data());
-    input_metadata_raw[i + 2] = static_cast<uint32_t>(inputs_[i]->byte_size());
+    input_metadata_raw[i + 2] = inputs_[i]->byte_size();
   }
 
-  uint32_t input_metadata_size_buf_size = 1 * sizeof(uint32_t);
+  uint64_t input_metadata_size_buf_size = 1 * sizeof(uint64_t);
   UniquePoolPtr<void> input_metadata_size_buf(malloc(input_metadata_size_buf_size), free);
-  uint32_t *input_metadata_size_buf_raw =
-      reinterpret_cast<uint32_t *>(input_metadata_size_buf.get());
+  uint64_t *input_metadata_size_buf_raw =
+      reinterpret_cast<uint64_t *>(input_metadata_size_buf.get());
   // Add the size of the input metadata in bytes. This will be
   // sent prior to the input metadata to allow for proactive
   // buffer allocation in the receiving container

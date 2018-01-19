@@ -177,7 +177,7 @@ class RPC {
     bool connected = false;
     std::chrono::time_point<Clock> last_activity_time;
 
-    std::vector<int> input_header_buffer;
+    std::vector<uint32_t> input_header_buffer;
     std::vector<D> input_buffer;
     InputParser<D> input_parser(input_buffer);
     std::vector<uint8_t> output_buffer;
@@ -304,18 +304,18 @@ class RPC {
   void handle_predict_request(Model<Input<D>>& model,
                               InputParser<D>& input_parser,
                               zmq::socket_t& socket,
-                              std::vector<int>& input_header_buffer,
+                              std::vector<uint32_t>& input_header_buffer,
                               std::vector<uint8_t>& output_buffer,
                               int msg_id) const {
     zmq::message_t msg_input_header_size;
     socket.recv(&msg_input_header_size, 0);
-    long input_header_size_bytes =
-        static_cast<long*>(msg_input_header_size.data())[0];
+    uint64_t input_header_size_bytes =
+        static_cast<uint64_t*>(msg_input_header_size.data())[0];
 
     // Resize input header buffer if necessary
-    if (static_cast<long>((input_header_buffer.size() / sizeof(long))) <
+    if (static_cast<uint64_t>((input_header_buffer.size() / sizeof(uint64_t))) <
         input_header_size_bytes) {
-      input_header_buffer.resize(2 * (input_header_size_bytes) / sizeof(long));
+      input_header_buffer.resize(2 * (input_header_size_bytes) / sizeof(uint64_t));
     }
 
     // Receive input header
@@ -331,15 +331,17 @@ class RPC {
       throw std::runtime_error(ss.str());
     }
 
-    zmq::message_t msg_raw_content_size;
-    socket.recv(&msg_raw_content_size, 0);
-    long input_content_size_bytes =
-        static_cast<long*>(msg_raw_content_size.data())[0];
+    uint64_t num_inputs = input_header_buffer[1];
+    uint64_t input_content_size_bytes =
+        std::accumulate(input_header_buffer.begin() + 2, input_header_buffer.begin() + num_inputs);
 
-    std::vector<D>& input_data_buffer =
-        input_parser.get_data_buffer(input_content_size_bytes);
-    // Receive input content
-    socket.recv(input_data_buffer.data(), input_content_size_bytes, 0);
+    std::vector<D>& input_data_buffer = input_parser.get_data_buffer(input_content_size_bytes);
+    D* data_ptr = input_data_buffer.data();
+    for(uint32_t i = 0; i < num_inputs; i++) {
+      uint64_t input_size_bytes = input_header_buffer[i + 2];
+      socket.recv(data_ptr, input_size_bytes, 0);
+      data_ptr += input_size_bytes;
+    }
 
     PerformanceTimer::log_elapsed("Recv");
 

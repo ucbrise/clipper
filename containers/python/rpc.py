@@ -268,7 +268,7 @@ class Server(threading.Thread):
                         t2 = datetime.now()
 
                         parsed_input_header = np.frombuffer(
-                            input_header, dtype=np.uint32)
+                            input_header, dtype=np.uint64)
 
 
                         input_type, input_size, input_sizes = parsed_input_header[
