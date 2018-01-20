@@ -441,8 +441,8 @@ class PredictionResponse:
         header_idx = 0
         struct.pack_into("<I", PredictionResponse.header_buffer, header_idx, self.num_outputs)
         header_idx += BYTES_PER_INT
-        for idx in range(len(self.outputs)):
-            struct.pack_into("<I", PredictionResponse.header_buffer, header_idx, header_length)
+        for output in self.outputs:
+            struct.pack_into("<I", PredictionResponse.header_buffer, header_idx, len(output))
             header_length += BYTES_PER_INT
 
         return PredictionResponse.header_buffer[:header_length], header_length
