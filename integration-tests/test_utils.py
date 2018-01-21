@@ -52,7 +52,7 @@ def find_unbound_port():
         try:
             sock.bind(("127.0.0.1", port))
             # Make sure we clean up after binding
-            sock.shutdown()
+            sock.shutdown(socket.SHUT_RDWR)
             sock.close()
             return port
         except socket.error:
