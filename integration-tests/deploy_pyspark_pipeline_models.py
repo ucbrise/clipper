@@ -58,9 +58,9 @@ def run_test():
         .appName("clipper-pyspark")\
         .getOrCreate()
 
-    training = spark.createDataFrame([(0, "a b c d e spark", 1.0), (
-        1, "b d", 0.0), (2, "spark f g h", 1.0), (3, "hadoop mapreduce", 0.0)],
-                                     columns + ["label"])
+    training = spark.createDataFrame(
+        [(0, "a b c d e spark", 1.0), (1, "b d", 0.0), (2, "spark f g h", 1.0),
+         (3, "hadoop mapreduce", 0.0)], columns + ["label"])
 
     # Configure an ML pipeline, which consists of three stages: tokenizer, hashingTF, and lr.
     tokenizer = Tokenizer(inputCol="text", outputCol="words")
@@ -73,8 +73,9 @@ def run_test():
     model = pipeline.fit(training)
 
     # Prepare test documents, which are unlabeled (id, text) tuples.
-    test = spark.createDataFrame([(4, "spark i j k"), (5, "l m n"), (
-        6, "spark hadoop spark"), (7, "apache hadoop")], columns)
+    test = spark.createDataFrame([(4, "spark i j k"), (5, "l m n"),
+                                  (6, "spark hadoop spark"),
+                                  (7, "apache hadoop")], columns)
 
     # Make predictions on test documents and print columns of interest.
     prediction = model.transform(test)

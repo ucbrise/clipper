@@ -3,8 +3,7 @@ import rpc
 import os
 import sys
 import numpy as np
-
-from clipper_admin.deployers import cloudpickle
+import cloudpickle
 
 IMPORT_ERROR_RETURN_CODE = 3
 
@@ -46,7 +45,7 @@ class PythonContainer(rpc.ModelContainerBase):
 
 
 if __name__ == "__main__":
-    print("Starting PythonContainer container")
+    print("Starting Python Closure container")
     try:
         model_name = os.environ["CLIPPER_MODEL_NAME"]
     except KeyError:

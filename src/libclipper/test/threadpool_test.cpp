@@ -156,4 +156,4 @@ TEST(ThreadPoolTests, TestQueueIdHash) {
   ASSERT_NE(ThreadPool::get_queue_id(VersionedModelId("m", "1"), 1),
             ThreadPool::get_queue_id(VersionedModelId("j", "1"), 1));
 }
-}
+}  // namespace

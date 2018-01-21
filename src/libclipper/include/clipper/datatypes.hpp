@@ -417,5 +417,5 @@ struct hash<clipper::VersionedModelId> {
     return seed;
   }
 };
-}
+}  // namespace std
 #endif  // CLIPPER_LIB_DATATYPES_H
