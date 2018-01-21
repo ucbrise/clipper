@@ -203,7 +203,6 @@ class Server(threading.Thread):
                     poller.poll(SOCKET_POLLING_TIMEOUT_MILLIS))
                 if socket not in receivable_sockets or receivable_sockets[socket] != zmq.POLLIN:
                     # Failed to receive a message before the specified polling timeout
-                    print("Continue polling...")
                     if connected:
                         curr_time = datetime.now()
                         time_delta = curr_time - last_activity_time_millis
