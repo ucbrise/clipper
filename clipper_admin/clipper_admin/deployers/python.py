@@ -22,7 +22,8 @@ def create_endpoint(
         labels=None,
         registry=None,
         base_image="clipper/python-closure-container:{}".format(__version__),
-        num_replicas=1):
+        num_replicas=1,
+        batch_size=-1):
     """Registers an application and deploys the provided predict function as a model.
 
     Parameters
@@ -70,12 +71,16 @@ def create_endpoint(
         The number of replicas of the model to create. The number of replicas
         for a model can be changed at any time with
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
+    batch_size : int, optional
+        The user-defined batch size.
+        If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
+        replicas of this model.
     """
 
     clipper_conn.register_application(name, input_type, default_output,
                                       slo_micros)
     deploy_python_closure(clipper_conn, name, version, input_type, func,
-                          base_image, labels, registry, num_replicas)
+                          base_image, labels, registry, num_replicas, batch_size)
 
     clipper_conn.link_model_to_app(name, name)
 
@@ -125,7 +130,10 @@ def deploy_python_closure(
         The number of replicas of the model to create. The number of replicas
         for a model can be changed at any time with
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
-
+    batch_size : int, optional
+        The user-defined batch size.
+        If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
+        replicas of this model.
 
     Example
     -------
@@ -171,6 +179,6 @@ def deploy_python_closure(
     # Deploy function
     clipper_conn.build_and_deploy_model(name, version, input_type,
                                         serialization_dir, base_image, labels,
-                                        registry, num_replicas)
+                                        registry, num_replicas, batch_size)
     # Remove temp files
     shutil.rmtree(serialization_dir)

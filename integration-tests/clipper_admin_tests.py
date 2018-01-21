@@ -352,9 +352,11 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         self.app_name_1 = "app3"
         self.app_name_2 = "app4"
         self.app_name_3 = "app5"
+        self.app_name_4 = "app6"
         self.model_name_1 = "m4"
         self.model_name_2 = "m5"
         self.model_name_3 = "m6"
+        self.model_name_4 = "m7"
         self.input_type = "doubles"
         self.default_output = "DEFAULT"
         self.latency_slo_micros = 30000
@@ -369,6 +371,10 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
         self.clipper_conn.register_application(
             self.app_name_3, self.input_type, self.default_output,
+            self.latency_slo_micros)
+
+        self.clipper_conn.register_application(
+            self.app_name_4, self.input_type, self.default_output,
             self.latency_slo_micros)
 
     @classmethod
@@ -432,6 +438,31 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         self.assertEqual(
             len(parsed_response["batch_predictions"]), len(test_input))
 
+    def test_fixed_batch_size_model_processes_specified_query_batch_size_when_saturated(self):
+        model_version = 1
+
+        def predict_func(inputs):
+            batch_size = len(inputs)
+            return [str(batch_size) for _ in inputs]
+
+        fixed_batch_size = 17
+        total_num_queries = fixed_batch_size * 20
+        deploy_python_closure(self.clipper_conn, self.model_name_4,
+                              model_version, input_type, predict_func, batch_size=fixed_batch_size)
+        self.clipper_conn.link_model_to_app(self.app_name_4, self.model_name_4)
+        time.sleep(60)
+
+        addr = self.clipper_conn.get_query_addr()
+        url = "http://{addr}/{app}/predict".format(
+            addr=addr, app=self.app_name_4)
+        test_input = [[float(x) for x in range(20)] for _ in range(total_num_queries)]
+        req_json = json.dumps({'input_batch': test_input})
+        headers = {'Content-type': 'application/json'}
+        response = requests.post(url, headers=headers, data=req_json)
+        parsed_response = response.json()
+        for prediction in parsed_response["batch_predictions"]:
+            logger.info(prediction)
+
     def test_deployed_python_closure_queried_successfully(self):
         model_version = 1
 
@@ -492,10 +523,11 @@ SHORT_TEST_ORDERING = [
 ]
 
 LONG_TEST_ORDERING = [
-    'test_unlinked_app_returns_default_predictions',
-    'test_deployed_model_queried_successfully',
-    'test_batch_queries_returned_successfully',
-    'test_deployed_python_closure_queried_successfully'
+    # 'test_unlinked_app_returns_default_predictions',
+    # 'test_deployed_model_queried_successfully',
+    # 'test_batch_queries_returned_successfully',
+    # 'test_deployed_python_closure_queried_successfully',
+    'test_fixed_batch_size_model_processes_specified_query_batch_size_when_saturated'
 ]
 
 if __name__ == '__main__':
