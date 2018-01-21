@@ -17,14 +17,17 @@ IMPORT_ERROR_RETURN_CODE = 3
 
 PYTORCH_MODEL_RELATIVE_PATH = "pytorch_model.onnx"
 
+
 def load_predict_func(file_path):
     with open(file_path, 'r') as serialized_func_file:
         return cloudpickle.load(serialized_func_file)
 
+
 def load_onnx_into_caffe2_model(model_path):
     model = onnx.load(model_path)
-    prepared_backend = onnx_caffe2.backend.prepare(model,device="CPU")
+    prepared_backend = onnx_caffe2.backend.prepare(model, device="CPU")
     return prepared_backend
+
 
 class Caffe2Container(rpc.ModelContainerBase):
     def __init__(self, path, input_type):

@@ -12,6 +12,7 @@ from .deployer_utils import save_python_function, serialize_object
 
 logger = logging.getLogger(__name__)
 
+
 def create_endpoint(
         clipper_conn,
         name,
@@ -82,8 +83,8 @@ def create_endpoint(
     clipper_conn.register_application(name, input_type, default_output,
                                       slo_micros)
     deploy_caffe2_model(clipper_conn, name, version, input_type, inputs, func,
-                         pytorch_model, base_image, labels, registry,
-                         num_replicas)
+                        pytorch_model, base_image, labels, registry,
+                        num_replicas)
 
     clipper_conn.link_model_to_app(name, name)
 
@@ -140,10 +141,8 @@ def deploy_caffe2_model(
     serialization_dir = save_python_function(name, func)
 
     try:
-        torch_out = torch.onnx._export(pytorch_model,         
-                                       inputs,
-                                       "pytorch_model.onnx",
-                                       export_params=True)
+        torch_out = torch.onnx._export(
+            pytorch_model, inputs, "pytorch_model.onnx", export_params=True)
 
     except Exception as e:
         logger.warn("Error serializing torch model: %s" % e)

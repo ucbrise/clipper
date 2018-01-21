@@ -40,8 +40,10 @@ logger = logging.getLogger(__name__)
 app_name = "caffe2-test"
 model_name = "caffe2-model"
 
+
 def normalize(x):
     return x.astype(np.double) / 255.0
+
 
 def objective(y, pos_label):
     # prediction objective
@@ -50,12 +52,14 @@ def objective(y, pos_label):
     else:
         return 0
 
+
 def parsedata(train_path, pos_label):
     trainData = np.genfromtxt(train_path, delimiter=',', dtype=int)
     records = trainData[:, 1:]
     labels = trainData[:, :1]
     transformedlabels = [objective(ele, pos_label) for ele in labels]
     return (records, transformedlabels)
+
 
 def predict(model, inputs):
     preds = model.run(np.array(inputs).astype(np.float32))
@@ -64,12 +68,12 @@ def predict(model, inputs):
 
 def deploy_and_test_model(clipper_conn,
                           model,
-			  inputs,
+                          inputs,
                           version,
                           link_model=False,
                           predict_fn=predict):
-    deploy_caffe2_model(clipper_conn, model_name, version, "integers",inputs,
-                         predict_fn, model)
+    deploy_caffe2_model(clipper_conn, model_name, version, "integers", inputs,
+                        predict_fn, model)
 
     time.sleep(5)
 
@@ -106,19 +110,21 @@ def test_model(clipper_conn, app, version):
         raise BenchmarkException("Error querying APP %s, MODEL %s:%d" %
                                  (app, model_name, version))
 
+
 # Define a simple NN model
 class BasicNN(nn.Module):
     def __init__(self):
         super(BasicNN, self).__init__()
         self.net = nn.Linear(28 * 28, 2)
+
     def forward(self, x):
         if type(x) == np.ndarray:
             x = torch.from_numpy(x)
         x = x.float()
         if type(x) == type(torch.randn(1)):
             x = Variable(x)
-        x = x.view(1,1,28,28)
-        x = x/255.0
+        x = x.view(1, 1, 28, 28)
+        x = x / 255.0
         batch_size = x.size(0)
         x = x.view(batch_size, -1)
         output = self.net(x.float())
@@ -126,17 +132,19 @@ class BasicNN(nn.Module):
 
 
 def train(model):
-  model.train()
-  optimizer = optim.SGD(model.parameters(), lr=0.001)
-  for epoch in range(10):
-	  for i, data in enumerate(train_loader, 1):
-		  image, j = data
-		  optimizer.zero_grad()
-      		  output = model(image)
-      		  loss = F.cross_entropy(output, Variable(torch.LongTensor([train_y[i-1]])))
-      		  loss.backward()
-      		  optimizer.step()
-  return model
+    model.train()
+    optimizer = optim.SGD(model.parameters(), lr=0.001)
+    for epoch in range(10):
+        for i, data in enumerate(train_loader, 1):
+            image, j = data
+            optimizer.zero_grad()
+            output = model(image)
+            loss = F.cross_entropy(output,
+                                   Variable(
+                                       torch.LongTensor([train_y[i - 1]])))
+            loss.backward()
+            optimizer.step()
+    return model
 
 
 def get_test_point():
@@ -164,8 +172,8 @@ if __name__ == "__main__":
 
         train_path = os.path.join(cur_dir, "data/train.data")
         train_x, train_y = parsedata(train_path, pos_label)
-	train_x = normalize(train_x)
-        train_loader = TrainingDataset(train_x,train_y)
+        train_x = normalize(train_x)
+        train_loader = TrainingDataset(train_x, train_y)
 
         try:
             clipper_conn.register_application(app_name, "integers",
@@ -188,18 +196,14 @@ if __name__ == "__main__":
 
             model = BasicNN()
             nn_model = train(model)
-            
-	    inputs = Variable(torch.randn(len(get_test_point())))
+
+            inputs = Variable(torch.randn(len(get_test_point())))
             deploy_and_test_model(
-                clipper_conn,
-                nn_model,	
-		inputs,
-                version,
-                link_model=True)
+                clipper_conn, nn_model, inputs, version, link_model=True)
 
             app_and_model_name = "easy-register-app-model"
-            create_endpoint(clipper_conn, app_and_model_name, "integers",inputs,
-                            predict, nn_model)
+            create_endpoint(clipper_conn, app_and_model_name, "integers",
+                            inputs, predict, nn_model)
             test_model(clipper_conn, app_and_model_name, 1)
 
         except BenchmarkException as e:
