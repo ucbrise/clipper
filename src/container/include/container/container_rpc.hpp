@@ -256,8 +256,8 @@ class RPC {
 
             switch (request_type) {
               case RequestType::PredictRequest:
-                handle_predict_request(model, socket, input_data_buffer,
-                                       input_header_buffer, output_buffer,
+                handle_predict_request(model, socket, input_header_buffer,
+                                       input_data_buffer, output_header_buffer,
                                        msg_id);
                 break;
 

@@ -292,7 +292,6 @@ void RPCService::receive_message(
         UniquePoolPtr<void> output(malloc(output_size), free);
         socket.recv(output.get(), output_header[i], 0);
         content.push_back(std::make_pair(ByteBufferPtr<void>(std::move(output)), output_size));
-        log_info(LOGGING_TAG_RPC, "Received output!");
       }
 
       if(!new_connection) {
