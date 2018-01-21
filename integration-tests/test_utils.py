@@ -32,7 +32,7 @@ class BenchmarkException(Exception):
 
 
 # range of ports where available ports can be found
-PORT_RANGE = [34256, 40000]
+PORT_RANGE = [34256, 50000]
 
 
 def get_docker_client():
@@ -51,9 +51,12 @@ def find_unbound_port():
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             sock.bind(("127.0.0.1", port))
+            # Make sure we clean up after binding
+            sock.shutdown()
+            sock.close()
             return port
         except socket.error:
-            logger.debug(
+            logger.info(
                 "randomly generated port %d is bound. Trying again." % port)
 
 
