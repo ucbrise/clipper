@@ -23,11 +23,11 @@ def signal_handler(signal, frame):
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal_handler)
 
-    print("(1/3) Initiating Grafana")
+    print("(1/3) Initializing Grafana")
     client = docker.from_env()
     container = client.containers.run(
         "grafana/grafana", ports={'3000/tcp': 3000}, detach=True)
-    print("(2/3) Grafana Initiated ")
+    print("(2/3) Grafana Initialized")
 
     time.sleep(3)
 

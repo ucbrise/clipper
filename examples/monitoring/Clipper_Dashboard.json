@@ -21,7 +21,7 @@
   "rows": [
     {
       "collapse": false,
-      "height": 250,
+      "height": 247,
       "panels": [
         {
           "aliasColors": {},
@@ -52,12 +52,12 @@
           "renderer": "flot",
           "seriesOverrides": [],
           "spaceLength": 10,
-          "span": 6,
+          "span": 10,
           "stack": false,
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg(clipper_mc_end_to_end_latency_us_bucket) by (le)",
+              "expr": "avg(clipper_mc_end_to_end_latency_ms_bucket) by (le)",
               "format": "time_series",
               "intervalFactor": 2,
               "refId": "A"
@@ -66,7 +66,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Average End-to-End Latency Histogram (us)",
+          "title": "Average End-to-End Latency Histogram (ms)",
           "tooltip": {
             "shared": false,
             "sort": 0,
@@ -147,7 +147,7 @@
               "to": "null"
             }
           ],
-          "span": 6,
+          "span": 2,
           "sparkline": {
             "fillColor": "rgba(31, 118, 189, 0.18)",
             "full": false,
@@ -221,16 +221,38 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(clipper_mc_end_to_end_latency_us_sum[10m])/rate(clipper_mc_end_to_end_latency_us_count[10m])",
+              "expr": "avg(rate(clipper_mc_end_to_end_latency_ms_sum[10m])/rate(clipper_mc_end_to_end_latency_ms_count[10m]))",
               "format": "time_series",
               "intervalFactor": 2,
+              "legendFormat": "End to End",
               "refId": "A"
+            },
+            {
+              "expr": "avg(rate(clipper_mc_recv_time_ms_sum[10m])/rate(clipper_mc_recv_time_ms_count[10m]))",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "Receive Time",
+              "refId": "B"
+            },
+            {
+              "expr": "avg(rate(clipper_mc_parse_time_ms_sum[10m])/rate(clipper_mc_parse_time_ms_count[10m]))",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "Parse Time",
+              "refId": "C"
+            },
+            {
+              "expr": "avg(rate(clipper_mc_handle_time_ms_sum[10m])/rate(clipper_mc_handle_time_ms_count[10m]))",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "Handle Time",
+              "refId": "D"
             }
           ],
           "thresholds": [],
           "timeFrom": "10m",
           "timeShift": null,
-          "title": "Average End-to-End Latency (us)",
+          "title": "Average Latency (ms)",
           "tooltip": {
             "shared": true,
             "sort": 0,

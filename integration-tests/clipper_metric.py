@@ -45,7 +45,7 @@ def get_matched_query(metric_name):
     return res
 
 
-def check_three_node_healthy(res, node_num):
+def parse_res_and_assert_node(res, node_num):
     assert res['status'] == 'success'
     assert len(res['data']) == node_num
 
@@ -79,7 +79,7 @@ if __name__ == '__main__':
 
         logger.info("Test 1: Checking status of 3 node exporter")
         up_response = get_matched_query('up')
-        check_three_node_healthy(up_response, node_num=3)
+        parse_res_and_assert_node(up_response, node_num=3)
         logger.info("Test 1 Passed")
 
         logger.info("Test 2: Checking Model Container Metrics")
@@ -92,7 +92,7 @@ if __name__ == '__main__':
                 name += '_sum'
 
             res = get_matched_query(name)
-            check_three_node_healthy(res, node_num=2)
+            parse_res_and_assert_node(res, node_num=2)
         logger.info("Test 2 Passed")
 
         logger.info("Metric Test Done, Cleaning up...")

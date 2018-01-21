@@ -1,5 +1,4 @@
-# This Configuration files details the all metrics Clipper is collecting.
-
+# This configuration file details all the metrics Clipper collects.
 # Four Metric Type {Counter | Gauge | Histogram | Summary},
 # see: https://prometheus.io/docs/concepts/metric_types/
 # Note: Favor Histogram over Summary for its efficiency in client side.
@@ -13,25 +12,25 @@ Model Container:
     type: Counter
     description: The number of prediction made in this model container
 
-  end_to_end_latency_us:
+  end_to_end_latency_ms:
     type: Histogram
     description: The time in ms takes from receive RPC call to send off prediction.
-    bucket: [0, 500, 5] # This will be interpreted as np.linspace(0, 500, 5) + inf
+    bucket: [5, 10, 20, 35, 50, 75, 100, 150, 200, 250, 300, 400, 500]
 
-  recv_time_us:
+  recv_time_ms:
     type: Histogram
     description: The time in ms takes to receive RPC call.
-    bucket: [0, 100, 5]
+    bucket: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 
-  parse_time_us:
+  parse_time_ms:
     type: Histogram
     description: The time in ms takes to parse RPC call.
-    bucket: [0, 100, 5]
+    bucket: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 
-  handle_time_us:
+  handle_time_ms:
     type: Histogram
     description: The time in ms takes to make prediction.
-    bucket: [0, 100, 5]
+    bucket: [5, 10, 20, 35, 50, 75, 100, 150, 200, 250, 300, 400, 500]
 
 
 
