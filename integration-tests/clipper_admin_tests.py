@@ -455,7 +455,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         addr = self.clipper_conn.get_query_addr()
         url = "http://{addr}/{app}/predict".format(
             addr=addr, app=self.app_name_4)
-        test_input = [[float(x) for x in range(20)] for _ in range(total_num_queries)]
+        test_input = [[float(x) + (j * .001) for x in range(20)] for j in range(total_num_queries)]
         req_json = json.dumps({'input_batch': test_input})
         headers = {'Content-type': 'application/json'}
         response = requests.post(url, headers=headers, data=req_json)
