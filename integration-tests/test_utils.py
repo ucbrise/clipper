@@ -52,9 +52,11 @@ def find_unbound_port():
         try:
             sock.bind(("127.0.0.1", port))
             # Make sure we clean up after binding
-            sock.close()
+            # sock.close()
+            del sock
             return port
-        except socket.error:
+        except socket.error as e:
+            logger.info("Socket error: {}".format(e))
             logger.info(
                 "randomly generated port %d is bound. Trying again." % port)
 
