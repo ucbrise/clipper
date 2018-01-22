@@ -482,10 +482,13 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
         def predict_func(inputs):
             batch_size = len(inputs)
+            # Add a short sleep to ensure that
+            # requests queue 
+            time.sleep(.1)
             return [str(batch_size) for _ in inputs]
 
         fixed_batch_size = 9
-        total_num_queries = fixed_batch_size * 20
+        total_num_queries = fixed_batch_size * 50
         deploy_python_closure(
             self.clipper_conn,
             self.model_name_4,
@@ -499,7 +502,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         addr = self.clipper_conn.get_query_addr()
         url = "http://{addr}/{app}/predict".format(
             addr=addr, app=self.app_name_4)
-        test_input = [[float(x) + (j * .001) for x in range(20)]
+        test_input = [[float(x) + (j * .001) for x in range(5)]
                       for j in range(total_num_queries)]
         req_json = json.dumps({'input_batch': test_input})
         headers = {'Content-type': 'application/json'}
