@@ -49,7 +49,9 @@ class Tester {
     rpc_->start(
         "127.0.0.1", RPC_SERVICE_PORT,
         [](VersionedModelId /*model*/, int /*container_id*/) {},
-        [this](rpc::RPCResponse response) { on_response_received(response); });
+        [this](rpc::RPCResponse &response) {
+          on_response_received(std::move(response));
+        });
     Config &conf = get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
@@ -113,13 +115,13 @@ class Tester {
                 log_start_time.time_since_epoch())
                 .count()) /
         1000;
-    std::vector<double> data;
-    data.push_back(log_start_time_millis);
-    std::shared_ptr<Input> input = std::make_shared<DoubleVector>(data);
+    UniquePoolPtr<double> data(static_cast<double*>(malloc(sizeof(double))), free);
+    data.get()[0] = log_start_time_millis;
+    SharedPoolPtr<PredictionData> input = DoubleVector::create(std::move(data), 1);
     rpc::PredictionRequest request(InputType::Doubles);
     request.add_input(input);
     auto serialized_request = request.serialize();
-    int msg_id = rpc_->send_message(serialized_request, container_id);
+    int msg_id = rpc_->send_message(std::move(serialized_request), container_id);
     return msg_id;
   }
 
@@ -193,8 +195,10 @@ class Tester {
       // Container has not yet been validated
       rpc::PredictionResponse prediction_response =
           rpc::PredictionResponse::deserialize_prediction_response(
-              response.second);
-      std::string event_history_str = prediction_response.outputs_[0];
+              std::move(response.second));
+      auto event_history_data = prediction_response.outputs_[0];
+      char* event_history_ptr = static_cast<char*>(event_history_data->get_data().get());
+      std::string event_history_str(event_history_ptr, event_history_ptr + event_history_data->size());
       rapidjson::Document d;
       json::parse_json(event_history_str, d);
       auto events = d.GetArray();
