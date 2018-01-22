@@ -94,7 +94,8 @@ def deploy_python_closure(
         base_image="clipper/python-closure-container:{}".format(__version__),
         labels=None,
         registry=None,
-        num_replicas=1):
+        num_replicas=1,
+        batch_size=-1):
     """Deploy an arbitrary Python function to Clipper.
 
     The function should take a list of inputs of the type specified by `input_type` and
