@@ -511,7 +511,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
             if batch_size == fixed_batch_size:
                 num_max_batch_queries += 1
 
-        assertGreaterEqual(num_max_batch_queries, int(total_num_queries * .7))
+        self.assertGreaterEqual(num_max_batch_queries, int(total_num_queries * .7))
 
 
 SHORT_TEST_ORDERING = [
