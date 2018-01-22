@@ -476,7 +476,8 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
         self.assertTrue(received_non_default_prediction)
 
-    def test_fixed_batch_size_model_processes_specified_query_batch_size_when_saturated(self):
+    def test_fixed_batch_size_model_processes_specified_query_batch_size_when_saturated(
+            self):
         model_version = 1
 
         def predict_func(inputs):
@@ -485,15 +486,21 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
         fixed_batch_size = 9
         total_num_queries = fixed_batch_size * 20
-        deploy_python_closure(self.clipper_conn, self.model_name_4,
-                              model_version, self.input_type, predict_func, batch_size=fixed_batch_size)
+        deploy_python_closure(
+            self.clipper_conn,
+            self.model_name_4,
+            model_version,
+            self.input_type,
+            predict_func,
+            batch_size=fixed_batch_size)
         self.clipper_conn.link_model_to_app(self.app_name_4, self.model_name_4)
         time.sleep(60)
 
         addr = self.clipper_conn.get_query_addr()
         url = "http://{addr}/{app}/predict".format(
             addr=addr, app=self.app_name_4)
-        test_input = [[float(x) + (j * .001) for x in range(20)] for j in range(total_num_queries)]
+        test_input = [[float(x) + (j * .001) for x in range(20)]
+                      for j in range(total_num_queries)]
         req_json = json.dumps({'input_batch': test_input})
         headers = {'Content-type': 'application/json'}
         response = requests.post(url, headers=headers, data=req_json)
@@ -503,7 +510,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
             batch_size = int(prediction["output"])
             if batch_size == fixed_batch_size:
                 num_max_batch_queries += 1
-        
+
         assertGreaterEqual(num_max_batch_queries, int(total_num_queries * .7))
 
 
