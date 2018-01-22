@@ -482,9 +482,6 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
         def predict_func(inputs):
             batch_size = len(inputs)
-            # Add a short sleep to ensure that
-            # requests queue 
-            time.sleep(.1)
             return [str(batch_size) for _ in inputs]
 
         fixed_batch_size = 9
@@ -514,7 +511,8 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
             if batch_size == fixed_batch_size:
                 num_max_batch_queries += 1
 
-        self.assertGreaterEqual(num_max_batch_queries, int(total_num_queries * .7))
+        self.assertGreaterEqual(num_max_batch_queries, 
+                                int(total_num_queries * .7))
 
 
 SHORT_TEST_ORDERING = [
