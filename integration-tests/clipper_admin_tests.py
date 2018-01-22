@@ -448,7 +448,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         fixed_batch_size = 17
         total_num_queries = fixed_batch_size * 20
         deploy_python_closure(self.clipper_conn, self.model_name_4,
-                              model_version, input_type, predict_func, batch_size=fixed_batch_size)
+                              model_version, self.input_type, predict_func, batch_size=fixed_batch_size)
         self.clipper_conn.link_model_to_app(self.app_name_4, self.model_name_4)
         time.sleep(60)
 
@@ -473,7 +473,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
         input_type = "doubles"
         deploy_python_closure(self.clipper_conn, self.model_name_1,
-                              model_version, self.input_type, predict_func)
+                              model_version, input_type, predict_func)
 
         self.clipper_conn.link_model_to_app(self.app_name_1, self.model_name_1)
         time.sleep(60)
