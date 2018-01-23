@@ -313,11 +313,8 @@ class RPC {
     uint64_t input_header_size_bytes =
         static_cast<uint64_t*>(msg_input_header_size.data())[0];
 
-    // Resize input header buffer if necessary
-    if (static_cast<uint64_t>((input_header_buffer.size() / sizeof(uint64_t))) <
-        input_header_size_bytes) {
-      input_header_buffer.resize(2 * (input_header_size_bytes) / sizeof(uint64_t));
-    }
+    // Resize input header buffer if necessary;
+    resize_if_necessary(input_header_buffer, input_header_size_bytes);
 
     // Receive input header
     socket.recv(input_header_buffer.data(), input_header_size_bytes, 0);
@@ -396,7 +393,7 @@ class RPC {
   uint64_t create_output_header(std::vector<std::string>& outputs,
                             std::vector<uint64_t>& output_header_buffer) const {
     uint64_t num_outputs = outputs.size();
-    uint64_t output_header_size = (num_outputs + 1) * sizeof(uint32_t);
+    uint64_t output_header_size = (num_outputs + 1) * sizeof(uint64_t);
     resize_if_necessary(output_header_buffer, output_header_size);
     uint64_t* output_header_data = output_header_buffer.data();
     output_header_data[0] = num_outputs;
