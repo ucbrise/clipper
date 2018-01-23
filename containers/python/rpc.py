@@ -318,13 +318,13 @@ class Server(threading.Thread):
                         model_container_metric = {}
                         model_container_metric['pred_total'] = 1
                         model_container_metric[
-                            'recv_time_ms'] = recv_time / 1000
+                            'recv_time_ms'] = recv_time / 1000.0
                         model_container_metric[
-                            'parse_time_ms'] = parse_time / 1000
+                            'parse_time_ms'] = parse_time / 1000.0
                         model_container_metric[
-                            'handle_time_ms'] = handle_time / 1000
+                            'handle_time_ms'] = handle_time / 1000.0
                         model_container_metric['end_to_end_latency_ms'] = (
-                            recv_time + parse_time + handle_time) / 1000
+                            recv_time + parse_time + handle_time) / 1000.0
                         metric_conn.send(model_container_metric)
 
                         print("recv: %f us, parse: %f us, handle: %f us" %

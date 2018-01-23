@@ -48,7 +48,7 @@ if __name__ == '__main__':
     python_deployer.create_endpoint(
         clipper_conn, "simple-example", "doubles", feature_sum, num_replicas=2)
     time.sleep(2)
-    print("Staring Prediction")
+    print("Starting Prediction")
 
     # For batch inputs set this number > 1
     batch_size = 1

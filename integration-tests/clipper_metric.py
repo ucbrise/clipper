@@ -50,8 +50,12 @@ def parse_res_and_assert_node(res, node_num):
     assert len(res['data']) == node_num
 
 
-def log_docker_ps():
-    logger.info(subprocess.check_output(['docker', 'ps']).decode('ascii'))
+def log_docker_ps(clipper_conn):
+    container_runing = clipper_conn.cm.docker_client.containers.list()
+    logger.info('Current docker status')
+    for cont in container_runing:
+        logger.info('Name {}, Image {}, Status {}, Label {}'.format(
+            cont.name, cont.image, cont.status, cont.labels))
 
 
 if __name__ == '__main__':
@@ -72,7 +76,9 @@ if __name__ == '__main__':
         clipper_conn, "simple-example", "doubles", feature_sum, num_replicas=2)
     time.sleep(2)
     try:
-        logger.info("Making 100 predictions; Should takes 50 seconds.")
+        logger.info(
+            "Making 100 predictions using two model container; Should takes 25 seconds."
+        )
         for _ in range(100):
             predict(clipper_conn.get_query_addr(), np.random.random(200))
             time.sleep(0.2)
@@ -98,7 +104,7 @@ if __name__ == '__main__':
         logger.info("Metric Test Done, Cleaning up...")
         clipper_conn.stop_all()
     except Exception as e:
-        log_docker_ps()
+        log_docker_ps(clipper_conn)
         logger.error(e)
         log_clipper_state(clipper_conn)
         clipper_conn.stop_all()
