@@ -74,9 +74,23 @@ def create_docker_connection(cleanup=True, start_clipper=True):
         docker_client = get_docker_client()
         docker_client.containers.prune(filters={"label": CLIPPER_DOCKER_LABEL})
     if start_clipper:
-        logging.info("Starting Clipper")
-        cl.start_clipper()
-        time.sleep(1)
+        # Try to start Clipper in a retry loop here to address flaky tests
+        # as described in https://github.com/ucbrise/clipper/issues/352
+        while True:
+            try:
+                logging.info("Starting Clipper")
+                cl.start_clipper()
+                time.sleep(1)
+                break
+            except docker.errors.APIError as e:
+                logging.info("Problem starting Clipper: {}\nTrying again.".format(e))
+                cl.stop_all()
+                cm = DockerContainerManager(
+                    clipper_query_port=find_unbound_port(),
+                    clipper_management_port=find_unbound_port(),
+                    clipper_rpc_port=find_unbound_port(),
+                    redis_port=find_unbound_port())
+                cl = ClipperConnection(cm)
     else:
         cl.connect()
     return cl
