@@ -508,7 +508,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         num_max_batch_queries = 0
         for prediction in parsed_response["batch_predictions"]:
             batch_size = int(prediction["output"])
-            if batch_size != self.default_output && batch_size == fixed_batch_size:
+            if batch_size != self.default_output and batch_size == fixed_batch_size:
                 num_max_batch_queries += 1
 
         self.assertGreaterEqual(num_max_batch_queries,
