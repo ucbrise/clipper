@@ -83,7 +83,8 @@ def create_docker_connection(cleanup=True, start_clipper=True):
                 time.sleep(1)
                 break
             except docker.errors.APIError as e:
-                logging.info("Problem starting Clipper: {}\nTrying again.".format(e))
+                logging.info(
+                    "Problem starting Clipper: {}\nTrying again.".format(e))
                 cl.stop_all()
                 cm = DockerContainerManager(
                     clipper_query_port=find_unbound_port(),
