@@ -7,6 +7,7 @@ import time
 from datetime import datetime
 import socket
 import sys
+import os
 import yaml
 from collections import deque
 from multiprocessing import Pipe, Process
@@ -530,7 +531,15 @@ class MetricCollector:
         self._load_config()
 
     def _load_config(self):
-        with open('metrics_config.yaml', 'r') as f:
+        config_file_path = 'metrics_config.yaml'
+
+        # Make sure we are inside /container, where the config file lives.
+        cwd = os.path.split(os.getcwd())[1]
+        if cwd != 'container':
+            config_file_path = os.path.join(os.getcwd(), 'container',
+                                            config_file_path)
+
+        with open(config_file_path, 'r') as f:
             config = yaml.load(f)
         config = config['Model Container']
 
