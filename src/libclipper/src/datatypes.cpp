@@ -232,7 +232,7 @@ PredictionDataHash SerializableString::hash() {
   return hash_.get();
 }
 
-size_t SerializableString::size() const { return 1; }
+size_t SerializableString::size() const { return size_; }
 
 size_t SerializableString::byte_size() const {
   return size_ * sizeof(char);

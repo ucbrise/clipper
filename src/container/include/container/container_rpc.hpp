@@ -331,7 +331,7 @@ class RPC {
 
     uint64_t num_inputs = input_header_buffer[1];
     uint64_t input_content_size_bytes =
-        std::accumulate(input_header_buffer.begin() + 2, input_header_buffer.begin() + num_inputs, 0);
+        std::accumulate(input_header_buffer.begin() + 2, input_header_buffer.begin() + 2 + num_inputs, 0);
 
     std::vector<Input<D>> inputs;
     inputs.reserve(num_inputs);
@@ -362,25 +362,30 @@ class RPC {
     uint64_t output_header_size =
         create_output_header(outputs, output_header_buffer);
 
-    zmq::message_t msg_message_type(sizeof(int));
-    static_cast<int*>(msg_message_type.data())[0] =
-        static_cast<int>(rpc::MessageType::ContainerContent);
+    zmq::message_t msg_message_type(sizeof(uint32_t));
+    static_cast<uint32_t*>(msg_message_type.data())[0] =
+        static_cast<uint32_t>(rpc::MessageType::ContainerContent);
 
-    zmq::message_t msg_message_id(sizeof(int));
-    static_cast<int*>(msg_message_id.data())[0] = msg_id;
+    zmq::message_t msg_message_id(sizeof(uint32_t));
+    static_cast<uint32_t*>(msg_message_id.data())[0] = msg_id;
+
+    zmq::message_t msg_header_size(sizeof(sizeof(uint64_t)));
+    static_cast<uint64_t*>(msg_header_size.data())[0] = output_header_size;
 
     socket.send("", 0, ZMQ_SNDMORE);
     socket.send(msg_message_type, ZMQ_SNDMORE);
     socket.send(msg_message_id, ZMQ_SNDMORE);
+    socket.send(msg_header_size, ZMQ_SNDMORE);
     socket.send(output_header_buffer.data(), output_header_size, ZMQ_SNDMORE);
+    uint64_t last_msg_num = num_outputs - 1;
     for (uint64_t i = 0; i < num_outputs; i++) {
       std::string &output = outputs[i];
-      if (i == num_outputs - 1) {
+      if (i < last_msg_num) {
+        socket.send(output.begin(), output.end(), ZMQ_SNDMORE);
+      } else {
         // If this is the last output, we don't want to use
         // the 'SNDMORE' flag
         socket.send(output.begin(), output.end(), 0);
-      } else {
-        socket.send(output.begin(), output.end(), ZMQ_SNDMORE);
       }
     }
 

@@ -28,10 +28,10 @@ namespace rpc {
 const std::string LOGGING_TAG_RPC = "RPC";
 
 /// Tuple of msg_id, vector of model outputs
-using RPCResponse = std::pair<const int, std::vector<ByteBuffer>>;
+using RPCResponse = std::pair<const uint32_t, std::vector<ByteBuffer>>;
 /// Tuple of zmq_connection_id, message_id, vector of messages, creation time
 using RPCRequest =
-    std::tuple<const int, const int, std::vector<ByteBuffer>, const long>;
+    std::tuple<const uint32_t, const uint32_t, std::vector<ByteBuffer>, const long>;
 
 enum class RPCEvent {
   SentHeartbeat = 1,
@@ -81,7 +81,7 @@ class RPCService {
   * it is very efficient.
   */
   int send_message(std::vector<ByteBuffer> msg,
-                   const int zmq_connection_id);
+                   const uint32_t zmq_connection_id);
 
  private:
   void manage_service(const string address);
@@ -104,7 +104,7 @@ class RPCService {
       std::unordered_map<std::vector<uint8_t>, std::pair<VersionedModelId, int>,
                          std::function<size_t(const std::vector<uint8_t> &vec)>>
           &connections_containers_map,
-      int &zmq_connection_id, std::shared_ptr<redox::Redox> redis_connection);
+      uint32_t &zmq_connection_id, std::shared_ptr<redox::Redox> redis_connection);
 
   void send_heartbeat_response(socket_t &socket,
                                const vector<uint8_t> &connection_id,

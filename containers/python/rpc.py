@@ -400,7 +400,7 @@ class PredictionResponse:
             struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT),
             flags=zmq.SNDMORE)
         socket.send(self.msg_id, flags=zmq.SNDMORE)
-        socket.send(struct.pack("<I", header_length_bytes), 
+        socket.send(struct.pack("<Q", header_length_bytes), 
             flags=zmq.SNDMORE)
         socket.send(output_header, flags=zmq.SNDMORE)
         for idx in range(self.num_outputs):
@@ -438,10 +438,10 @@ class PredictionResponse:
         header_length = BYTES_PER_INT * (len(self.outputs) + 1)
         self._expand_buffer_if_necessary(header_length)
         header_idx = 0
-        struct.pack_into("<I", PredictionResponse.header_buffer, header_idx, self.num_outputs)
+        struct.pack_into("<Q", PredictionResponse.header_buffer, header_idx, self.num_outputs)
         header_idx += BYTES_PER_INT
         for output in self.outputs:
-            struct.pack_into("<I", PredictionResponse.header_buffer, header_idx, len(output))
+            struct.pack_into("<Q", PredictionResponse.header_buffer, header_idx, len(output))
             header_length += BYTES_PER_INT
 
         return PredictionResponse.header_buffer[:header_length], header_length

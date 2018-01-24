@@ -68,7 +68,7 @@ void RPCService::stop() {
 }
 
 int RPCService::send_message(vector<ByteBuffer> msg,
-                             const int zmq_connection_id) {
+                             const uint32_t zmq_connection_id) {
   if (!active_) {
     log_error(LOGGING_TAG_RPC,
               "Cannot send message to inactive RPCService instance",
@@ -104,7 +104,7 @@ void RPCService::manage_service(const string address) {
   socket.bind(address);
   // Indicate that we will poll our zmq service socket for new inbound messages
   zmq::pollitem_t items[] = {{socket, 0, ZMQ_POLLIN, 0}};
-  int zmq_connection_id = 0;
+  uint32_t zmq_connection_id = 0;
   auto redis_connection = std::make_shared<redox::Redox>();
   Config &conf = get_config();
   while (!redis_connection->connect(conf.get_redis_address(),
@@ -190,10 +190,8 @@ void RPCService::send_messages(
       }
       message_t msg(data_ptr.get(), m.second, free_fn);
       if (cur_msg_num < last_msg_num) {
-        log_info_formatted("INTERM", "DATA {} SIZE {}", static_cast<uint32_t*>(msg.data())[0], msg.size());
         socket.send(msg, ZMQ_SNDMORE);
       } else {
-        log_info_formatted("LAST", "DATA {} SIZE {}", static_cast<double*>(msg.data())[0], msg.size());
         socket.send(msg);
       }
       cur_msg_num += 1;
@@ -210,7 +208,7 @@ void RPCService::receive_message(
     std::unordered_map<std::vector<uint8_t>, std::pair<VersionedModelId, int>,
                        std::function<size_t(const std::vector<uint8_t> &vec)>>
         &connections_containers_map,
-    int &zmq_connection_id, std::shared_ptr<redox::Redox> redis_connection) {
+    uint32_t &zmq_connection_id, std::shared_ptr<redox::Redox> redis_connection) {
   message_t msg_routing_identity;
   message_t msg_delimiter;
   message_t msg_type;
@@ -280,22 +278,22 @@ void RPCService::receive_message(
       socket.recv(&msg_output_header_size, 0);
       socket.recv(&msg_output_header, 0);
 
-      uint32_t* output_header = static_cast<uint32_t*>(msg_output_header.data());
-      uint32_t num_outputs = output_header[0];
+      uint64_t* output_header = static_cast<uint64_t*>(msg_output_header.data());
+      uint64_t num_outputs = output_header[0];
       output_header++;
 
       vector<ByteBuffer> content;
       content.reserve(num_outputs);
 
-      for (uint32_t i = 0; i < num_outputs; ++i) {
-        uint32_t& output_size = output_header[i];
+      for (uint64_t i = 0; i < num_outputs; ++i) {
+        uint64_t& output_size = output_header[i];
         UniquePoolPtr<void> output(malloc(output_size), free);
         socket.recv(output.get(), output_header[i], 0);
-        content.push_back(std::make_pair(ByteBufferPtr<void>(std::move(output)), output_size));
+        content.emplace_back(std::make_pair(ByteBufferPtr<void>(std::move(output)), output_size));
       }
 
       if(!new_connection) {
-        int id = static_cast<int*>(msg_id.data())[0];
+        uint32_t id = static_cast<uint32_t*>(msg_id.data())[0];
         RPCResponse response(id, std::move(content));
 
         auto container_info_entry =
