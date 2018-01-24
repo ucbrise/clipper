@@ -6,16 +6,13 @@ import json
 
 import numpy as np
 import cloudpickle
-import torch
+import mxnet.model as model
 import importlib
-from torch import nn
-from torch.autograd import Variable
-import torch.nn.functional as F
+
 
 IMPORT_ERROR_RETURN_CODE = 3
 
-PYTORCH_WEIGHTS_RELATIVE_PATH = "pytorch_weights.pkl"
-PYTORCH_MODEL_RELATIVE_PATH = "pytorch_model.pkl"
+MXNET_MODEL_RELATIVE_PATH = "mxnet_model"
 
 
 def load_predict_func(file_path):
@@ -24,11 +21,8 @@ def load_predict_func(file_path):
 
 
 # load mxnet model from serialized dir
-def load_pytorch_model(model_path, weights_path):
-    with open(model_path, 'r') as serialized_model_file:
-        model = cloudpickle.load(serialized_model_file)
-
-    model.load_state_dict(torch.load(weights_path))
+def load_mxnet_model(model_path):
+    model = model.FeedForward.load(prefix=model_path, 1)
     return model
 
 
@@ -42,10 +36,9 @@ class MXNetContainer(rpc.ModelContainerBase):
             dir=path, predict_fname=predict_fname)
         self.predict_func = load_predict_func(predict_path)
 
-        # load mxnet model from serialized dir
-        torch_model_path = os.path.join(path, PYTORCH_MODEL_RELATIVE_PATH)
-        torch_weights_path = os.path.join(path, PYTORCH_WEIGHTS_RELATIVE_PATH)
-        self.model = load_pytorch_model(torch_model_path, torch_weights_path)
+        # load mxnet model from serialized dir 
+        mxnet_model_path = os.path.join(path, MXNET_MODEL_RELATIVE_PATH)
+        self.model = load_mxnet_model(mxnet_model_path)
 
     def predict_ints(self, inputs):
         preds = self.predict_func(self.model, inputs)
