@@ -1,6 +1,6 @@
 from __future__ import print_function, with_statement, absolute_import
 import shutil
-import torch
+import mxnet as mx
 import logging
 import re
 import os
@@ -12,8 +12,7 @@ from .deployer_utils import save_python_function, serialize_object
 
 logger = logging.getLogger(__name__)
 
-PYTORCH_WEIGHTS_RELATIVE_PATH = "pytorch_weights.pkl"
-PYTORCH_MODEL_RELATIVE_PATH = "pytorch_model.pkl" # change this
+PYTORCH_MODEL_RELATIVE_PATH = "mxnet_model" 
 
 
 def create_endpoint(
@@ -100,7 +99,7 @@ def deploy_mxnet_model(
         labels=None,
         registry=None,
         num_replicas=1):
-    """Deploy a Python function with a PyTorch model.
+    """Deploy a Python function with a MXNet model.
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
@@ -137,15 +136,27 @@ def deploy_mxnet_model(
     -------
     
         from clipper_admin import ClipperConnection, DockerContainerManager
-        from clipper_admin.deployers.pytorch import deploy_mxnet_model
-        from torch import nn
+        from clipper_admin.deployers.mxnet import deploy_mxnet_model
+        import mxnet as mx
 
         clipper_conn = ClipperConnection(DockerContainerManager())
 
         # Connect to an already-running Clipper cluster
         clipper_conn.connect()
         
-        model = nn.Linear(1,1)
+        # Example taken from https://mxnet.incubator.apache.org/api/python/model.html#model-api-reference
+        # Configure a two layer neural network
+        data = mx.symbol.Variable('data')
+        fc1 = mx.symbol.FullyConnected(data, act1 = mx.symbol.Activation(fc1, name='relu1', act_type='relu')
+        fc2 = mx.symbol.FullyConnected(act1, name='fc2', num_hidden=64)
+        softmax = mx.symbol.SoftmaxOutput(fc2, name='sm')
+        # create a model
+        model = mx.model.FeedForward.create(
+             softmax,
+             X=data_set,
+             num_epoch=num_epoch,
+             learning_rate=0.01)name='fc1', num_hidden=128)
+        
         
         #define a shift function to normalize prediction inputs
         def predict(model, inputs):
@@ -153,30 +164,25 @@ def deploy_mxnet_model(
             pred = pred.data.numpy()
             return [str(x) for x in pred]
 
-        deploy_pytorch_model(
+        deploy_mxnet_model(
             clipper_conn,
             name="example",
             version = 1,
             input_type="doubles",
             func=predict,
-            pytorch_model=model)
+            mxnet_model=model)
     """
 
     serialization_dir = save_python_function(name, func)
 
     # save MXNet model
-    torch_weights_save_loc = os.path.join(serialization_dir,
-                                          PYTORCH_WEIGHTS_RELATIVE_PATH)
-
-    torch_model_save_loc = os.path.join(serialization_dir,
-                                        PYTORCH_MODEL_RELATIVE_PATH)
+    mxnet_model_save_loc = os.path.join(serialization_dir,
+                                        MXNET_MODEL_RELATIVE_PATH)
 
     try:
-        torch.save(mxnet_model.state_dict(), torch_weights_save_loc)
-        serialized_model = serialize_object(mxnet_model)
-        with open(mxnet_model_save_loc, "w") as serialized_model_file:
-            serialized_model_file.write(serialized_model)
-
+        mxnet_model.save(mxnet_model, prefix=mxnet_model_save_loc, 1)
+        # Saves model in two files: <serialization_dir>/mxnet_model.json will be saved for symbol,
+        # <serialization_dir>/mxnet_model.params will be saved for parameters.
     except Exception as e:
         logger.warn("Error saving MXNet model: %s" % e)
 
