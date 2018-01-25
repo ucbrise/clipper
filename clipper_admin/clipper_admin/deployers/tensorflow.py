@@ -209,10 +209,18 @@ def deploy_tensorflow_model(
                     raise e
             else:
                 # Check if all the 4 files are present
-                if glob.glob(os.path.join(tf_sess_or_saved_model_path, "/*.meta")) and glob.glob(
-                        os.path.join(tf_sess_or_saved_model_path, "/*.index")) and glob.glob(
-                            os.path.join(tf_sess_or_saved_model_path, "/checkpoint")) and glob.glob(
-                                os.path.join(tf_sess_or_saved_model_path, "/*.data")):
+                if glob.glob(
+                        os.path.join(tf_sess_or_saved_model_path, "/*.meta")
+                ) and glob.glob(
+                        os.path.join(
+                            tf_sess_or_saved_model_path,
+                            "/*.index")) and glob.glob(
+                                os.path.join(
+                                    tf_sess_or_saved_model_path,
+                                    "/checkpoint")) and glob.glob(
+                                        os.path.join(
+                                            tf_sess_or_saved_model_path,
+                                            "/*.data")):
                     try:
                         shutil.copytree(tf_sess_or_saved_model_path,
                                         os.path.join(serialization_dir,
