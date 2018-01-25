@@ -222,7 +222,7 @@ InputParseResult<int> get_int_array(rapidjson::Value& d, const char* key_name) {
 
   size_t arr_idx = 0;
   for (rapidjson::Value& elem : v.GetArray()) {
-    if (!elem.IsFloat()) {
+    if (!elem.IsInt()) {
       throw json_semantic_error("Array input of type " +
           kTypeNames[elem.GetType()] +
           " is not of type int");
