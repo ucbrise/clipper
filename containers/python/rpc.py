@@ -41,7 +41,7 @@ EVENT_HISTORY_SENT_CONTAINER_CONTENT = 5
 EVENT_HISTORY_RECEIVED_CONTAINER_CONTENT = 6
 
 MAXIMUM_UTF_8_CHAR_LENGTH_BYTES = 4
-BYTES_PER_INT = 4
+BYTES_PER_LONG = 8
 
 
 def string_to_input_type(input_str):
@@ -435,14 +435,14 @@ class PredictionResponse:
             element and the header length as the second
             element
         """
-        header_length = BYTES_PER_INT * (len(self.outputs) + 1)
+        header_length = BYTES_PER_LONG * (len(self.outputs) + 1)
         self._expand_buffer_if_necessary(header_length)
         header_idx = 0
         struct.pack_into("<Q", PredictionResponse.header_buffer, header_idx, self.num_outputs)
-        header_idx += BYTES_PER_INT
+        header_idx += BYTES_PER_LONG
         for output in self.outputs:
             struct.pack_into("<Q", PredictionResponse.header_buffer, header_idx, len(output))
-            header_length += BYTES_PER_INT
+            header_length += BYTES_PER_LONG
 
         return PredictionResponse.header_buffer[:header_length], header_length
 
