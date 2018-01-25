@@ -12,6 +12,7 @@
 #include <sstream>
 #include <thread>
 #include <atomic>
+#include <numeric>
 
 #include <Rcpp.h>
 #include "zmq.hpp"
@@ -183,9 +184,9 @@ class RPC {
     bool connected = false;
     std::chrono::time_point<Clock> last_activity_time;
 
-    std::vector<int> input_header_buffer;
-    std::vector<D> input_buffer;
-    InputParser<D> input_parser(input_buffer);
+    std::vector<uint64_t> input_header_buffer;
+    std::vector<D> input_data_buffer;
+    std::vector<uint64_t> output_header_buffer;
     std::vector<uint8_t> output_buffer;
 
     while (true) {
@@ -261,8 +262,8 @@ class RPC {
 
             switch (request_type) {
               case RequestType::PredictRequest:
-                handle_predict_request(model, input_parser, socket,
-                                       input_header_buffer, output_buffer,
+                handle_predict_request(model, socket, input_header_buffer,
+                                       input_data_buffer, output_header_buffer,
                                        msg_id);
                 break;
 
@@ -308,21 +309,18 @@ class RPC {
 
   template <typename D>
   void handle_predict_request(Model<Input<D>>& model,
-                              InputParser<D>& input_parser,
                               zmq::socket_t& socket,
-                              std::vector<int>& input_header_buffer,
-                              std::vector<uint8_t>& output_buffer,
+                              std::vector<uint64_t>& input_header_buffer,
+                              std::vector<D>& input_data_buffer,
+                              std::vector<uint64_t>& output_header_buffer,
                               int msg_id) const {
     zmq::message_t msg_input_header_size;
     socket.recv(&msg_input_header_size, 0);
-    long input_header_size_bytes =
-        static_cast<long*>(msg_input_header_size.data())[0];
+    uint64_t input_header_size_bytes =
+        static_cast<uint64_t*>(msg_input_header_size.data())[0];
 
     // Resize input header buffer if necessary
-    if (static_cast<long>((input_header_buffer.size() / sizeof(long))) <
-        input_header_size_bytes) {
-      input_header_buffer.resize(2 * (input_header_size_bytes) / sizeof(long));
-    }
+    resize_if_necessary(input_header_buffer, input_header_size_bytes);
 
     // Receive input header
     socket.recv(input_header_buffer.data(), input_header_size_bytes, 0);
@@ -337,91 +335,92 @@ class RPC {
       throw std::runtime_error(ss.str());
     }
 
-    zmq::message_t msg_raw_content_size;
-    socket.recv(&msg_raw_content_size, 0);
-    long input_content_size_bytes =
-        static_cast<long*>(msg_raw_content_size.data())[0];
+    uint64_t num_inputs = input_header_buffer[1];
+    uint64_t input_content_size_bytes =
+        std::accumulate(input_header_buffer.begin() + 2, input_header_buffer.begin() + 2 + num_inputs, 0);
 
-    std::vector<D>& input_data_buffer =
-        input_parser.get_data_buffer(input_content_size_bytes);
-    // Receive input content
-    socket.recv(input_data_buffer.data(), input_content_size_bytes, 0);
+    std::vector<Input<D>> inputs;
+    inputs.reserve(num_inputs);
+    resize_if_necessary(input_data_buffer, input_content_size_bytes);
 
-    PerformanceTimer::log_elapsed("Recv");
+    D* data_ptr = input_data_buffer.data();
+    for(uint32_t i = 0; i < num_inputs; i++) {
+      uint64_t input_size_bytes = input_header_buffer[i + 2];
+      socket.recv(data_ptr, input_size_bytes, 0);
+      inputs.push_back(Input<D>(data_ptr, input_size_bytes));
+      data_ptr += input_size_bytes;
+    }
 
-    std::vector<Input<D>> inputs =
-        input_parser.get_inputs(input_header_buffer, input_content_size_bytes);
-
-    PerformanceTimer::log_elapsed("Parse");
+    PerformanceTimer::log_elapsed("Recv and Parse");
 
     // Make predictions
     std::vector<std::string> outputs = model.predict(inputs);
 
-    if (outputs.size() != inputs.size()) {
+    // Send outputs as a prediction response
+    uint64_t num_outputs = outputs.size();
+    if (num_outputs != inputs.size()) {
       std::stringstream ss;
       ss << "Number of model outputs: " << outputs.size()
          << " does not equal the number of inputs: " << inputs.size();
       throw std::runtime_error(ss.str());
     }
 
-    // Send the outputs as a prediction response
+    uint64_t output_header_size = 
+        create_output_header(outputs, output_header_buffer);
 
-    int num_outputs = static_cast<int>(outputs.size());
+    zmq::message_t msg_message_type(sizeof(uint32_t));
+    static_cast<uint32_t*>(msg_message_type.data())[0] =
+        static_cast<uint32_t>(MessageType::ContainerContent);
 
-    // The output buffer begins with the number of outputs
-    // encoded as an integer
-    long response_size_bytes = sizeof(int);
+    zmq::message_t msg_message_id(sizeof(uint32_t));
+    static_cast<uint32_t*>(msg_message_id.data())[0] = msg_id;
 
-    for (int i = 0; i < num_outputs; i++) {
-      int output_length = static_cast<int>(outputs[i].length());
-      // The output buffer contains the size of each output
-      // encoded as an integer
-      response_size_bytes += sizeof(int);
-      response_size_bytes += output_length;
-    }
-
-    if (static_cast<long>(output_buffer.size()) < response_size_bytes) {
-      output_buffer.resize(2 * response_size_bytes);
-    }
-
-    int* output_int_view = reinterpret_cast<int*>(output_buffer.data());
-    output_int_view[0] = num_outputs;
-    // Advance the integer output buffer to the correct position
-    // for the output lengths content
-    output_int_view++;
-
-    uint8_t* output_byte_view =
-        reinterpret_cast<uint8_t*>(output_buffer.data());
-    // Advance the byte output buffer to the correct position for the
-    // output content
-    output_byte_view += sizeof(int) + (num_outputs * sizeof(int));
-
-    for (int i = 0; i < num_outputs; i++) {
-      int output_length = static_cast<int>(outputs[i].length());
-      output_int_view[i] = output_length;
-      memcpy(output_byte_view, outputs[i].data(), output_length);
-      output_byte_view += output_length;
-    }
-
-    zmq::message_t msg_message_type(sizeof(int));
-    static_cast<int*>(msg_message_type.data())[0] =
-        static_cast<int>(MessageType::ContainerContent);
-
-    zmq::message_t msg_message_id(sizeof(int));
-    static_cast<int*>(msg_message_id.data())[0] = msg_id;
-
-    zmq::message_t msg_prediction_response(output_buffer.data(),
-                                           response_size_bytes, NULL);
+    zmq::message_t msg_header_size(sizeof(sizeof(uint64_t)));
+    static_cast<uint64_t*>(msg_header_size.data())[0] = output_header_size;
 
     socket.send("", 0, ZMQ_SNDMORE);
     socket.send(msg_message_type, ZMQ_SNDMORE);
     socket.send(msg_message_id, ZMQ_SNDMORE);
-    socket.send(msg_prediction_response, 0);
+    socket.send(msg_header_size, ZMQ_SNDMORE);
+    socket.send(output_header_buffer.data(), output_header_size, ZMQ_SNDMORE);
+    uint64_t last_msg_num = num_outputs - 1;
+    for (uint64_t i = 0; i < num_outputs; i++) {
+      std::string &output = outputs[i];
+      if (i < last_msg_num) {
+        socket.send(output.begin(), output.end(), ZMQ_SNDMORE);
+      } else {
+        // If this is the last output, we don't want to use
+        // the 'SNDMORE' flag
+        socket.send(output.begin(), output.end(), 0);
+      }
+    }
+
     log_event(RPCEvent::SentContainerContent);
 
     PerformanceTimer::log_elapsed("Handle");
     Rcpp::Rcout << PerformanceTimer::get_log() << std::endl;
   }
+
+  uint64_t create_output_header(std::vector<std::string>& outputs,
+                                std::vector<uint64_t>& output_header_buffer) const {
+    uint64_t num_outputs = outputs.size();
+    uint64_t output_header_size = (num_outputs + 1) * sizeof(uint64_t);
+    resize_if_necessary(output_header_buffer, output_header_size);
+    uint64_t* output_header_data = output_header_buffer.data();
+    output_header_data[0] = num_outputs;
+    for(uint64_t i = 0; i < num_outputs; i++) {
+      output_header_data[i + 1] = outputs[i].size();
+    }
+    return output_header_size;
+  }
+
+  template <typename D>
+  void resize_if_necessary(std::vector<D>& buffer, uint64_t required_buffer_size) const {
+    if ((buffer.size() * sizeof(D)) < required_buffer_size) {
+      buffer.reserve((2 * required_buffer_size) / sizeof(D));
+    }
+  }
+  
 };
 
 }  // namespace container
