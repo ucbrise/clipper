@@ -2,6 +2,7 @@
 #include <boost/functional/hash.hpp>
 
 #include <chrono>
+#include <cstdint>
 #include <iostream>
 
 #include <redox.hpp>
@@ -28,16 +29,19 @@ namespace clipper {
 namespace rpc {
 
 constexpr int INITIAL_REPLICA_ID_SIZE = 100;
+constexpr int CONTACTING_GAP_TOLORANCE = 30;
+constexpr double CONTAINER_EXISTENCE_CHECK_FREQUENCY = 0.2;
 
 RPCService::RPCService()
     : request_queue_(std::make_shared<Queue<RPCRequest>>()),
       response_queue_(std::make_shared<Queue<RPCResponse>>()),
       active_(false),
+      last_check_time_(std::chrono::system_clock::now()),
       // The version of the unordered_map constructor that allows
       // you to specify your own hash function also requires you
       // to provide the initial size of the map. We define the initial
       // size of the map somewhat arbitrarily as 100.
-      replica_ids_(std::unordered_map<VersionedModelId, int>({})) {
+      replica_ids_(std::unordered_map<VersionedModelId, int>({})){
   msg_queueing_hist_ = metrics::MetricsRegistry::get_metrics().create_histogram(
       "internal:rpc_request_queueing_delay", "microseconds", 2056);
 }
@@ -141,14 +145,32 @@ void RPCService::manage_service(const string address) {
       // TODO: Balance message sending and receiving fairly
       // Note: We only receive one message per event loop iteration
       log_info(LOGGING_TAG_RPC, "Found message to receive");
-
       receive_message(socket, connections, connections_containers_map,
                       zmq_connection_id, redis_connection);
+      auto current_time = std::chrono::system_clock::now();
+      std::chrono::duration<double> time_pass_since_last_check = current_time - last_check_time_;
+      if(time_pass_since_last_check.count() > CONTAINER_EXISTENCE_CHECK_FREQUENCY){
+         check_containers_existence(receiving_history_);
+         last_check_time_ = current_time;
+      }
     }
     // Note: We send all queued messages per event loop iteration
     send_messages(socket, connections);
   }
   shutdown_service(socket);
+}
+
+void RPCService::check_containers_existence(std::map<const vector<uint8_t>, std::chrono::system_clock::time_point> receiving_history_){
+    std::map<const vector<uint8_t>, std::chrono::system_clock::time_point>::iterator it;
+    std::chrono::system_clock::time_point current_time;
+    std::chrono::duration<double> time_elapsed_since_last_contact;
+    for(it = receiving_history_.begin(); it!=receiving_history_.end(); it++){
+        current_time = std::chrono::system_clock::now();
+        time_elapsed_since_last_contact = current_time - it->second;
+        if(time_elapsed_since_last_contact.count() > CONTACTING_GAP_TOLORANCE){
+            log_info(LOGGING_TAG_RPC, "lost contact with a container");
+        }
+    }
 }
 
 void RPCService::shutdown_service(socket_t &socket) {
@@ -269,8 +291,10 @@ void RPCService::receive_message(
 
         TaskExecutionThreadPool::create_queue(model, cur_replica_id);
         zmq_connection_id += 1;
+        document_receive_time(connection_id);
       }
     } break;
+
     case MessageType::ContainerContent: {
       // This message is a response to a container query
       message_t msg_id;
@@ -302,12 +326,20 @@ void RPCService::receive_message(
             vm, replica_id, container_ready_callback_, vm, replica_id);
 
         response_queue_->push(response);
+        document_receive_time(connection_id);
       }
     } break;
-    case MessageType::Heartbeat:
+
+    case MessageType::Heartbeat:{
       send_heartbeat_response(socket, connection_id, new_connection);
-      break;
+      document_receive_time(connection_id);
+    } break;
+
   }
+}
+
+void RPCService::document_receive_time(const vector<uint8_t> connection_id){
+  receiving_history_[connection_id] = std::chrono::system_clock::now();
 }
 
 void RPCService::send_heartbeat_response(socket_t &socket,

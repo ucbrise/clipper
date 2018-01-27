@@ -5,6 +5,7 @@
 #include <queue>
 #include <string>
 #include <vector>
+#include <chrono>
 
 #include <boost/bimap.hpp>
 #include <redox.hpp>
@@ -85,8 +86,13 @@ class RPCService {
 
  private:
   void manage_service(const string address);
+
+  void check_containers_existence(std::map<const vector<uint8_t>, std::chrono::system_clock::time_point> receiving_history_);
+
   void send_messages(socket_t &socket,
                      boost::bimap<int, vector<uint8_t>> &connections);
+
+  void document_receive_time(const vector<uint8_t> connection_id);
 
   void receive_message(
       socket_t &socket, boost::bimap<int, vector<uint8_t>> &connections,
@@ -111,9 +117,11 @@ class RPCService {
   std::atomic_bool active_;
   // The next available message id
   int message_id_ = 0;
+  std::chrono::system_clock::time_point last_check_time_;
   std::unordered_map<VersionedModelId, int> replica_ids_;
   std::shared_ptr<metrics::Histogram> msg_queueing_hist_;
-
+  //std::vector<std::pair<const vector<uint8_t>, std::chrono::system_clock::time_point>> receiving_history_;
+  std::map<const vector<uint8_t>, std::chrono::system_clock::time_point> receiving_history_;
   std::function<void(VersionedModelId, int)> container_ready_callback_;
   std::function<void(RPCResponse)> new_response_callback_;
 };
