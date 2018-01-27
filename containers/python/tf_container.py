@@ -6,7 +6,6 @@ import tensorflow as tf
 import cloudpickle
 import glob
 
-from tensorflow.python.platform import gfile
 from tensorflow.python.saved_model import loader
 
 def load_predict_func(file_path):
