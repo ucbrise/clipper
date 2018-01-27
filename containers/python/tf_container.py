@@ -27,7 +27,9 @@ class TfContainer(rpc.ModelContainerBase):
         if (len(frozen_graph_exists) > 0):
             with tf.Graph().as_default() as graph:
                 self.sess = tf.Session(graph=graph)
-                loader.load(self.sess, ['serve'], os.path.join(path, "tfmodel"))
+                loader.load(self.sess, 
+                            [tf.saved_model.tag_constants.SERVING], 
+                            os.path.join(path, "tfmodel"))
         else:
             self.sess = tf.Session(
                 '',
