@@ -40,6 +40,14 @@ class StateKeyEqual {
   }
 };
 
+class StateCacheEntry {
+ public:
+  explicit StateCacheEntry(const std::string& value);
+
+  std::mutex entry_mtx_;
+  std::string entry_value_;
+};
+
 // Threadsafe, non-copyable state storage
 class StateDB {
  public:
@@ -88,9 +96,9 @@ class StateDB {
 
  private:
   redox::Redox redis_connection_;
-  std::unordered_map<StateKey, std::string, StateKeyHash, StateKeyEqual> cache_;
-  std::mutex cache_mtx_;
-  std::mutex db_write_mtx_;
+  std::unordered_map<StateKey, std::shared_ptr<StateCacheEntry>, StateKeyHash,
+                     StateKeyEqual>
+      cache_;
 };
 
 }  // namespace clipper
