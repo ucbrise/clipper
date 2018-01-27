@@ -43,9 +43,10 @@ class StateKeyEqual {
 class StateCacheEntry {
  public:
   explicit StateCacheEntry(const std::string& value);
+  explicit StateCacheEntry();
 
-  std::mutex entry_mtx_;
-  std::string entry_value_;
+  std::mutex mtx_;
+  boost::optional<std::string> value_;
 };
 
 // Threadsafe, non-copyable state storage
@@ -99,6 +100,7 @@ class StateDB {
   std::unordered_map<StateKey, std::shared_ptr<StateCacheEntry>, StateKeyHash,
                      StateKeyEqual>
       cache_;
+  std::mutex cache_mtx_;
 };
 
 }  // namespace clipper
