@@ -160,6 +160,7 @@ public class RPC<I extends DataVector<?>> {
               if (inputHeaderBuffer == null || inputHeaderBufferSize < inputHeaderSize) {
                 inputHeaderBufferSize = inputHeaderSize * 2;
                 inputHeaderBuffer = ByteBuffer.allocateDirect(inputHeaderBufferSize);
+                inputHeaderBuffer.order(ByteOrder.LITTLE_ENDIAN);
               }
               inputHeaderBuffer.rewind();
               inputHeaderBuffer.limit(inputHeaderBufferSize);
@@ -171,16 +172,18 @@ public class RPC<I extends DataVector<?>> {
               LongBuffer inputHeader =
                       inputHeaderBuffer.slice().order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
 
-              DataType inputType = DataType.fromCode((int) inputHeader.get());
-              long numInputs = inputHeader.get();
+              DataType inputType = DataType.fromCode((int) inputHeader.get(0));
+              long numInputs = inputHeader.get(1);
+
               int inputContentSizeBytes = 0;
               for (int i = 0; i < numInputs; ++i) {
-                inputContentSizeBytes += inputHeader.get(i);
+                inputContentSizeBytes += inputHeader.get(i + 2);
               }
 
               if (inputContentBufferSize < inputContentSizeBytes) {
-                inputContentBufferSize = (inputContentSizeBytes) * 2;
+                inputContentBufferSize = inputContentSizeBytes * 2;
                 inputContentBuffer = ByteBuffer.allocateDirect(inputContentBufferSize);
+                inputContentBuffer.order(ByteOrder.LITTLE_ENDIAN);
               }
               inputContentBuffer.rewind();
 
@@ -188,11 +191,12 @@ public class RPC<I extends DataVector<?>> {
               int bufferPosition = 0;
               for (int i = 0; i < numInputs; ++i) {
                 inputContentBuffer.position(bufferPosition);
-                int inputSizeBytes = (int) inputHeader.get(i);
+                int inputSizeBytes = (int) inputHeader.get(i + 2);
                 socket.recvZeroCopy(inputContentBuffer, inputSizeBytes, -1);
                 inputContentBuffer.position(bufferPosition);
-                inputContentBuffer.limit(bufferPosition + inputSizeBytes);
-                I input = inputVectorParser.constructDataVector(inputContentBuffer.slice(), inputSizeBytes);
+                ByteBuffer inputBuffer = sliceOrdered(inputContentBuffer);
+                inputBuffer.limit(inputSizeBytes);
+                I input = inputVectorParser.constructDataVector(inputBuffer, inputSizeBytes);
                 inputs.add(input);
                 bufferPosition += inputSizeBytes;
               }
@@ -221,6 +225,10 @@ public class RPC<I extends DataVector<?>> {
         }
       }
     }
+  }
+
+  private ByteBuffer sliceOrdered(ByteBuffer buffer) {
+    return buffer.slice().order(ByteOrder.LITTLE_ENDIAN);
   }
 
   private void validateRequestInputType(ClipperModel<I> model, DataType inputType)
@@ -254,7 +262,7 @@ public class RPC<I extends DataVector<?>> {
     }
 
     if (outputHeaderBuffer == null || outputHeaderBufferSize < outputHeaderSizeBytes) {
-      outputHeaderBufferSize = outputHeaderBufferSize * 2;
+      outputHeaderBufferSize = outputHeaderSizeBytes * 2;
       outputHeaderBuffer = ByteBuffer.allocateDirect(outputHeaderBufferSize);
       outputHeaderBuffer.order(ByteOrder.LITTLE_ENDIAN);
     }
@@ -262,7 +270,7 @@ public class RPC<I extends DataVector<?>> {
     outputHeaderBuffer.limit(outputHeaderSizeBytes);
 
     if (outputContentBuffer == null || outputContentBufferSize < outputContentMaxSizeBytes) {
-      outputContentBufferSize = outputContentBufferSize * 2;
+      outputContentBufferSize = outputContentMaxSizeBytes * 2;
       outputContentBuffer = ByteBuffer.allocateDirect(outputContentBufferSize);
       outputContentBuffer.order(ByteOrder.LITTLE_ENDIAN);
     }

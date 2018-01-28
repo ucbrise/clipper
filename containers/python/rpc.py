@@ -270,11 +270,11 @@ class Server(threading.Thread):
                             input_header, dtype=np.uint64)
 
 
-                        input_type, input_size, input_sizes = parsed_input_header[
+                        input_type, num_inputs, input_sizes = parsed_input_header[
                             0], parsed_input_header[1], parsed_input_header[2:]
 
                         inputs = []
-                        for _ in range(input_size):
+                        for _ in range(num_inputs):
                             input_item = socket.recv()
                             input_item = np.frombuffer(input_item, dtype=input_type_to_dtype(input_type))
                             inputs.append(input_item)
