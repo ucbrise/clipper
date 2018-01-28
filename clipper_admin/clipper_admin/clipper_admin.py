@@ -224,8 +224,9 @@ class ClipperConnection(object):
             logger.error(msg)
             raise ClipperException(msg)
         else:
-            logger.info("Model {model} is now linked to application {app}".
-                        format(model=model_name, app=app_name))
+            logger.info(
+                "Model {model} is now linked to application {app}".format(
+                    model=model_name, app=app_name))
 
     def build_and_deploy_model(self,
                                name,
@@ -280,7 +281,9 @@ class ClipperConnection(object):
             for a model can be changed at any time with
             :py:meth:`clipper.ClipperConnection.set_num_replicas`.
         batch_size : int, optional
-            The user-defined batch size.
+            The user-defined query batch size for the model. Replicas of the model will attempt
+            to process at most `batch_size` queries simultaneously. They may process smaller 
+            batches if `batch_size` queries are not immediately available.
             If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
             replicas of this model.
         Raises
@@ -380,8 +383,9 @@ class ClipperConnection(object):
                 image = "{reg}/{image}".format(
                     reg=container_registry, image=image)
             docker_client = docker.from_env()
-            logger.info("Building model Docker image with model data from {}".
-                        format(model_data_path))
+            logger.info(
+                "Building model Docker image with model data from {}".format(
+                    model_data_path))
             docker_client.images.build(
                 fileobj=context_file, custom_context=True, tag=image)
 
@@ -441,7 +445,9 @@ class ClipperConnection(object):
             for a model can be changed at any time with
             :py:meth:`clipper.ClipperConnection.set_num_replicas`.
         batch_size : int, optional
-            The user-defined batch size.
+            The user-defined query batch size for the model. Replicas of the model will attempt
+            to process at most `batch_size` queries simultaneously. They may process smaller 
+            batches if `batch_size` queries are not immediately available.
             If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
             replicas of this model.
 
@@ -514,7 +520,9 @@ class ClipperConnection(object):
             A list of strings annotating the model. These are ignored by Clipper
             and used purely for user annotations.
         batch_size : int, optional
-            The user-defined batch size.
+            The user-defined query batch size for the model. Replicas of the model will attempt
+            to process at most `batch_size` queries simultaneously. They may process smaller 
+            batches if `batch_size` queries are not immediately available.
             If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
             replicas of this model.
 
@@ -553,8 +561,9 @@ class ClipperConnection(object):
             logger.error(msg)
             raise ClipperException(msg)
         else:
-            logger.info("Successfully registered model {name}:{version}".
-                        format(name=name, version=version))
+            logger.info(
+                "Successfully registered model {name}:{version}".format(
+                    name=name, version=version))
 
     def get_current_model_version(self, name):
         """Get the current model version for the specified model.
@@ -737,8 +746,9 @@ class ClipperConnection(object):
         if r.status_code == requests.codes.ok:
             app_info = r.json()
             if len(app_info) == 0:
-                logger.warning("Application {} is not registered with Clipper".
-                               format(name))
+                logger.warning(
+                    "Application {} is not registered with Clipper".format(
+                        name))
                 return None
             return app_info
         else:
