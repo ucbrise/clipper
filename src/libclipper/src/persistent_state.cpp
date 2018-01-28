@@ -105,7 +105,7 @@ bool StateDB::put(StateKey key, std::string value) {
     }
   }
   entry->num_writers_--;
-  if(entry->num_writers_ == 0) {
+  if (entry->num_writers_ == 0) {
     entry->cv_.notify_all();
   }
   return success;
