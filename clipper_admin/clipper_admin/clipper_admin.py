@@ -281,9 +281,15 @@ class ClipperConnection(object):
             for a model can be changed at any time with
             :py:meth:`clipper.ClipperConnection.set_num_replicas`.
         batch_size : int, optional
+<<<<<<< HEAD
             The user-defined query batch size for the model. Replicas of the model will attempt to process at most
             `batch_size` queries simultaneously. They may process smaller  batches if `batch_size` queries are not
             immediately available.
+=======
+            The user-defined query batch size for the model. Replicas of the model will attempt
+            to process at most `batch_size` queries simultaneously. They may process smaller 
+            batches if `batch_size` queries are not immediately available.
+>>>>>>> 606ad512172145d0aa93a9d559c663278a300485
             If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
             replicas of this model.
         Raises
@@ -445,9 +451,15 @@ class ClipperConnection(object):
             for a model can be changed at any time with
             :py:meth:`clipper.ClipperConnection.set_num_replicas`.
         batch_size : int, optional
+<<<<<<< HEAD
             The user-defined query batch size for the model. Replicas of the model will attempt to process at most
             `batch_size` queries simultaneously. They may process smaller  batches if `batch_size` queries are not
             immediately available.
+=======
+            The user-defined query batch size for the model. Replicas of the model will attempt
+            to process at most `batch_size` queries simultaneously. They may process smaller 
+            batches if `batch_size` queries are not immediately available.
+>>>>>>> 606ad512172145d0aa93a9d559c663278a300485
             If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
             replicas of this model.
 
@@ -520,9 +532,15 @@ class ClipperConnection(object):
             A list of strings annotating the model. These are ignored by Clipper
             and used purely for user annotations.
         batch_size : int, optional
+<<<<<<< HEAD
             The user-defined query batch size for the model. Replicas of the model will attempt to process at most
             `batch_size` queries simultaneously. They may process smaller  batches if `batch_size` queries are not
             immediately available.
+=======
+            The user-defined query batch size for the model. Replicas of the model will attempt
+            to process at most `batch_size` queries simultaneously. They may process smaller 
+            batches if `batch_size` queries are not immediately available.
+>>>>>>> 606ad512172145d0aa93a9d559c663278a300485
             If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
             replicas of this model.
 
