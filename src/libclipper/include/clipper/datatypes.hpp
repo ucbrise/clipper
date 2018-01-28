@@ -113,6 +113,16 @@ class PredictionData {
    */
   virtual size_t byte_size() const = 0;
 
+  friend SharedPoolPtr<void> get_data(const SharedPoolPtr<PredictionData>& data_item) {
+    return data_item->get_data();
+  }
+
+  friend UniquePoolPtr<void> get_data(UniquePoolPtr<PredictionData> data_item) {
+    void* raw_data = data_item->get_data().get();
+    return UniquePoolPtr<void>(raw_data, free);
+  }
+
+ private:
   virtual SharedPoolPtr<void> get_data() const = 0;
 };
 
@@ -122,7 +132,6 @@ class ByteVector : public PredictionData {
   PredictionDataHash hash() override;
   size_t size() const override;
   size_t byte_size() const override;
-  SharedPoolPtr<void> get_data() const override;
 
   template <class ...Args>
   static SharedPoolPtr<ByteVector> create(Args&& ...args) {
@@ -133,6 +142,8 @@ class ByteVector : public PredictionData {
   explicit ByteVector(UniquePoolPtr<void> data, size_t byte_size);
   explicit ByteVector(UniquePoolPtr<uint8_t> data, size_t size);
   explicit ByteVector(void* data, size_t byte_size);
+
+  SharedPoolPtr<void> get_data() const override;
 
   SharedPoolPtr<uint8_t> data_;
   size_t size_;
@@ -145,7 +156,6 @@ class IntVector : public PredictionData {
   PredictionDataHash hash() override;
   size_t size() const override;
   size_t byte_size() const override;
-  SharedPoolPtr<void> get_data() const override;
 
   template <class ...Args>
   static SharedPoolPtr<IntVector> create(Args&& ...args) {
@@ -156,6 +166,8 @@ class IntVector : public PredictionData {
   explicit IntVector(UniquePoolPtr<int> data, size_t size);
   explicit IntVector(UniquePoolPtr<void> data, size_t byte_size);
   explicit IntVector(void* data, size_t byte_size);
+
+  SharedPoolPtr<void> get_data() const override;
 
   SharedPoolPtr<int> data_;
   size_t size_;
@@ -168,7 +180,6 @@ class FloatVector : public PredictionData {
   PredictionDataHash hash() override;
   size_t size() const override;
   size_t byte_size() const override;
-  SharedPoolPtr<void> get_data() const override;
 
   template <class ...Args>
   static SharedPoolPtr<FloatVector> create(Args&& ...args) {
@@ -179,6 +190,8 @@ class FloatVector : public PredictionData {
   explicit FloatVector(UniquePoolPtr<float> data, size_t size);
   explicit FloatVector(UniquePoolPtr<void> data, size_t byte_size);
   explicit FloatVector(void* data, size_t byte_size);
+
+  SharedPoolPtr<void> get_data() const override;
 
   SharedPoolPtr<float> data_;
   size_t size_;
@@ -191,7 +204,6 @@ class DoubleVector : public PredictionData {
   PredictionDataHash hash() override;
   size_t size() const override;
   size_t byte_size() const override;
-  SharedPoolPtr<void> get_data() const override;
 
   template <class ...Args>
   static SharedPoolPtr<DoubleVector> create(Args&& ...args) {
@@ -202,6 +214,8 @@ class DoubleVector : public PredictionData {
   explicit DoubleVector(UniquePoolPtr<double> data, size_t size);
   explicit DoubleVector(UniquePoolPtr<void> data, size_t byte_size);
   explicit DoubleVector(void* data, size_t byte_size);
+
+  SharedPoolPtr<void> get_data() const override;
 
   SharedPoolPtr<double> data_;
   size_t size_;
@@ -214,7 +228,6 @@ class SerializableString : public PredictionData {
   PredictionDataHash hash() override;
   size_t size() const override;
   size_t byte_size() const override;
-  SharedPoolPtr<void> get_data() const override;
 
   template <class ...Args>
   static SharedPoolPtr<SerializableString> create(Args&& ...args) {
@@ -225,6 +238,8 @@ class SerializableString : public PredictionData {
   explicit SerializableString(UniquePoolPtr<char> data, size_t size);
   explicit SerializableString(UniquePoolPtr<void> data, size_t byte_size);
   explicit SerializableString(void* data, size_t byte_size);
+
+  SharedPoolPtr<void> get_data() const override;
 
   SharedPoolPtr<char> data_;
   size_t size_;

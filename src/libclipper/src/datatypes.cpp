@@ -292,7 +292,8 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
 
   std::vector<SharedPoolPtr<void>> input_bufs;
   for (size_t i = 0; i < inputs_.size(); i++) {
-    input_bufs.push_back(inputs_[i]->get_data());
+    auto input_data = get_data(inputs_[i]);
+    input_bufs.push_back(input_data);
     input_metadata_raw[i + 2] = inputs_[i]->byte_size();
   }
 
