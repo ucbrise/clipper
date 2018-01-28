@@ -8,11 +8,14 @@ MAINTAINER Dan Crankshaw <dscrankshaw@gmail.com>
 RUN mkdir -p /model \
       && apt-get update \
       && apt-get install -y libzmq3 libzmq3-dev \
-      && conda install -y pyzmq
+      && conda install -y pyzmq \
+      && pip install prometheus_client pyyaml
 
 WORKDIR /container
 
 COPY containers/python/__init__.py containers/python/rpc.py /container/
+
+COPY monitoring/metrics_config.yaml /container/
 
 ENV CLIPPER_MODEL_PATH=/model
 

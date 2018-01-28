@@ -519,7 +519,7 @@ void add_json_array(rapidjson::Document& d, const char* key_name,
   rapidjson::Value json_array(rapidjson::kArrayType);
   rapidjson::Document::AllocatorType& allocator = d.GetAllocator();
   for (std::string json_string : values_to_add) {
-    rapidjson::Document json_obj;
+    rapidjson::Document json_obj(&allocator);
     parse_json(json_string, json_obj);
     json_array.PushBack(json_obj, allocator);
   }
