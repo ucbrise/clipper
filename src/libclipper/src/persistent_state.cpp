@@ -25,10 +25,10 @@ std::string generate_redis_key(const StateKey& key) {
 }
 
 StateCacheEntry::StateCacheEntry(const std::string& value)
-    : value_(boost::optional<std::string>(value)) {}
+    : value_(boost::optional<std::string>(value)), num_writers_(0) {}
 
 StateCacheEntry::StateCacheEntry()
-    : value_(boost::optional<std::string>()) {}
+    : value_(boost::optional<std::string>()), num_writers_(0) {}
 
 StateDB::StateDB()
     : cache_(std::unordered_map<StateKey, std::shared_ptr<StateCacheEntry>,
@@ -55,15 +55,15 @@ boost::optional<std::string> StateDB::get(const StateKey& key) {
   std::shared_ptr<StateCacheEntry> entry;
   auto entry_search = cache_.find(key);
   if (entry_search != cache_.end()) {
-    cache_lock.unlock();
     entry = entry_search->second;
   } else {
     entry = std::make_shared<StateCacheEntry>();
     cache_.emplace(key, entry);
-    cache_lock.unlock();
   }
-  std::lock_guard<std::mutex> entry_lock(entry->mtx_);
-  if(entry->value_) {
+  cache_lock.unlock();
+  std::unique_lock<std::mutex> entry_lock(entry->mtx_);
+  entry->cv_.wait(entry_lock, [entry] { return entry->num_writers_ == 0; });
+  if (entry->value_) {
     return entry->value_.get();
   } else {
     std::string redis_key = generate_redis_key(key);
@@ -79,21 +79,28 @@ bool StateDB::put(StateKey key, std::string value) {
   std::unique_lock<std::mutex> cache_lock(cache_mtx_);
   std::shared_ptr<StateCacheEntry> entry;
   auto entry_search = cache_.find(key);
-  if(entry_search == cache_.end()) {
-    auto entry = std::make_shared<StateCacheEntry>();
-    cache_.emplace(entry);
+  if (entry_search == cache_.end()) {
+    entry = std::make_shared<StateCacheEntry>();
+    cache_.emplace(key, entry);
   } else {
     entry = entry_search->second;
   }
+  auto write_time = std::chrono::system_clock::now();
+  entry->num_writers_++;
   cache_lock.unlock();
   std::lock_guard<std::mutex> entry_lock(entry->mtx_);
-  std::string redis_key = generate_redis_key(key);
-  const std::vector<std::string> cmd_vec{"SET", redis_key, value};
-  bool success =
-      redis::send_cmd_no_reply<std::string>(redis_connection_, cmd_vec);
-  if(success) {
-    entry->value_ = value;
+  bool success = false;
+  if (entry->last_written_ < write_time) {
+    std::string redis_key = generate_redis_key(key);
+    const std::vector<std::string> cmd_vec{"SET", redis_key, value};
+    success = redis::send_cmd_no_reply<std::string>(redis_connection_, cmd_vec);
+    if (success) {
+      entry->value_ = value;
+      entry->last_written_ = write_time;
+    }
   }
+  entry->num_writers_--;
+  entry->cv_.notify_all();
   return success;
 }
 

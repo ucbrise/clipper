@@ -2,6 +2,7 @@
 #define CLIPPER_LIB_PERSISTENT_STATE_HPP
 
 #include <atomic>
+#include <chrono>
 #include <functional>
 #include <shared_mutex>
 #include <tuple>
@@ -46,7 +47,10 @@ class StateCacheEntry {
   explicit StateCacheEntry();
 
   std::mutex mtx_;
+  std::condition_variable cv_;
   boost::optional<std::string> value_;
+  std::atomic<uint32_t> num_writers_;
+  std::chrono::time_point<std::chrono::system_clock> last_written_;
 };
 
 // Threadsafe, non-copyable state storage
