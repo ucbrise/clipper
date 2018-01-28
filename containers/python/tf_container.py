@@ -8,6 +8,7 @@ import glob
 
 from tensorflow.python.saved_model import loader
 
+
 def load_predict_func(file_path):
     with open(file_path, 'r') as serialized_func_file:
         return cloudpickle.load(serialized_func_file)
@@ -27,8 +28,7 @@ class TfContainer(rpc.ModelContainerBase):
         if (len(frozen_graph_exists) > 0):
             with tf.Graph().as_default() as graph:
                 self.sess = tf.Session(graph=graph)
-                loader.load(self.sess, 
-                            [tf.saved_model.tag_constants.SERVING], 
+                loader.load(self.sess, [tf.saved_model.tag_constants.SERVING],
                             os.path.join(path, "tfmodel"))
         else:
             self.sess = tf.Session(
