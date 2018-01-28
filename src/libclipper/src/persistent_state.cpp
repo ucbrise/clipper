@@ -90,6 +90,11 @@ bool StateDB::put(StateKey key, std::string value) {
   cache_lock.unlock();
   std::lock_guard<std::mutex> entry_lock(entry->mtx_);
   bool success = false;
+  // It's possible that an additional "put" call
+  // occurred after the cache lock was released
+  // and before the entry lock was acquired. We
+  // should only proceed to write the entry if
+  // this is the most recent "put" operation
   if (entry->last_written_ < write_time) {
     std::string redis_key = generate_redis_key(key);
     const std::vector<std::string> cmd_vec{"SET", redis_key, value};
@@ -100,7 +105,9 @@ bool StateDB::put(StateKey key, std::string value) {
     }
   }
   entry->num_writers_--;
-  entry->cv_.notify_all();
+  if(entry->num_writers_ == 0) {
+    entry->cv_.notify_all();
+  }
   return success;
 }
 
