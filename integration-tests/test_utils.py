@@ -32,7 +32,7 @@ class BenchmarkException(Exception):
 
 
 # range of ports where available ports can be found
-PORT_RANGE = [34256, 40000]
+PORT_RANGE = [34256, 50000]
 
 
 def get_docker_client():
@@ -51,9 +51,12 @@ def find_unbound_port():
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             sock.bind(("127.0.0.1", port))
+            # Make sure we clean up after binding
+            del sock
             return port
-        except socket.error:
-            logger.debug(
+        except socket.error as e:
+            logger.info("Socket error: {}".format(e))
+            logger.info(
                 "randomly generated port %d is bound. Trying again." % port)
 
 
@@ -70,9 +73,24 @@ def create_docker_connection(cleanup=True, start_clipper=True):
         docker_client = get_docker_client()
         docker_client.containers.prune(filters={"label": CLIPPER_DOCKER_LABEL})
     if start_clipper:
-        logging.info("Starting Clipper")
-        cl.start_clipper()
-        time.sleep(1)
+        # Try to start Clipper in a retry loop here to address flaky tests
+        # as described in https://github.com/ucbrise/clipper/issues/352
+        while True:
+            try:
+                logging.info("Starting Clipper")
+                cl.start_clipper()
+                time.sleep(1)
+                break
+            except docker.errors.APIError as e:
+                logging.info(
+                    "Problem starting Clipper: {}\nTrying again.".format(e))
+                cl.stop_all()
+                cm = DockerContainerManager(
+                    clipper_query_port=find_unbound_port(),
+                    clipper_management_port=find_unbound_port(),
+                    clipper_rpc_port=find_unbound_port(),
+                    redis_port=find_unbound_port())
+                cl = ClipperConnection(cm)
     else:
         cl.connect()
     return cl
@@ -108,9 +126,9 @@ def create_kubernetes_connection(cleanup=True, start_clipper=True):
 
 def log_clipper_state(cl):
     pp = pprint.PrettyPrinter(indent=4)
-    logger.info("\nAPPLICATIONS:\n{app_str}".format(app_str=pp.pformat(
-        cl.get_all_apps(verbose=True))))
-    logger.info("\nMODELS:\n{model_str}".format(model_str=pp.pformat(
-        cl.get_all_models(verbose=True))))
-    logger.info("\nCONTAINERS:\n{cont_str}".format(cont_str=pp.pformat(
-        cl.get_all_model_replicas(verbose=True))))
+    logger.info("\nAPPLICATIONS:\n{app_str}".format(
+        app_str=pp.pformat(cl.get_all_apps(verbose=True))))
+    logger.info("\nMODELS:\n{model_str}".format(
+        model_str=pp.pformat(cl.get_all_models(verbose=True))))
+    logger.info("\nCONTAINERS:\n{cont_str}".format(
+        cont_str=pp.pformat(cl.get_all_model_replicas(verbose=True))))

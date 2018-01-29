@@ -51,7 +51,7 @@ if __name__ == "__main__":
             print(err)
         raise ClipperException()
 
-    # Note: This container manager is only necessary for 
+    # Note: This container manager is only necessary for
     # creating a connection object that can be used to build the model
     cm = DockerContainerManager()
 

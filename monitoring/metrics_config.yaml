@@ -1,0 +1,48 @@
+# This configuration file details all the metrics Clipper collects.
+# Four Metric Type {Counter | Gauge | Histogram | Summary},
+# see: https://prometheus.io/docs/concepts/metric_types/
+# Note: Favor Histogram over Summary for its efficiency in client side.
+#       Summary data model requires computation within the exporter.
+#       While Histogram handles the computation within Prometheus server.
+
+Model Container:
+  prefix: mc
+
+  pred_total:
+    type: Counter
+    description: The number of prediction made in this model container
+
+  end_to_end_latency_ms:
+    type: Histogram
+    description: The time in ms takes from receive RPC call to send off prediction.
+    bucket: [5, 10, 20, 35, 50, 75, 100, 150, 200, 250, 300, 400, 500]
+
+  recv_time_ms:
+    type: Histogram
+    description: The time in ms takes to receive RPC call.
+    bucket: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+
+  parse_time_ms:
+    type: Histogram
+    description: The time in ms takes to parse RPC call.
+    bucket: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+
+  handle_time_ms:
+    type: Histogram
+    description: The time in ms takes to make prediction.
+    bucket: [5, 10, 20, 35, 50, 75, 100, 150, 200, 250, 300, 400, 500]
+
+
+
+Query Frontend: # Not Implemented
+  prefix: qf
+
+  query_total:
+    type: Counter
+    description: The number of prediction make in current query frontend
+
+Management Frontend: # Not Implemented
+  prefix: mf
+
+Redis Cache: # Not Implemented
+  prefix: redis
