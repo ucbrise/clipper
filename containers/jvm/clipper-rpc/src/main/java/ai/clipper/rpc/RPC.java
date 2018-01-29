@@ -18,7 +18,6 @@ public class RPC<I extends DataVector<?>> {
   private static final long SOCKET_POLLING_TIMEOUT_MILLIS = 5000;
   private static final long SOCKET_ACTIVITY_TIMEOUT_MILLIS = 30000;
   private static final int EVENT_HISTORY_BUFFER_SIZE = 30;
-  private static final int BYTES_PER_INT = 4;
 
   private final DataVectorParser<?, I> inputVectorParser;
   private final RPCEventHistory eventHistory;
@@ -291,6 +290,7 @@ public class RPC<I extends DataVector<?>> {
       long outputLength = prediction.encodeUTF8ToBuffer(outputContentBuffer);
       outputContentBuffer.position(outputContentBufferPosition);
       ByteBuffer outputBuffer = outputContentBuffer.slice();
+      outputBuffer.order(ByteOrder.LITTLE_ENDIAN);
       outputBuffer.limit((int) outputLength);
       outputBuffers[i] = outputBuffer;
       outputLengths[i] = (int) outputLength;
@@ -302,13 +302,16 @@ public class RPC<I extends DataVector<?>> {
     socket.send("", ZMQ.SNDMORE);
     socket.send(
             DataUtils.getBytesFromInts(ContainerMessageType.ContainerContent.getCode()), ZMQ.SNDMORE);
-    ByteBuffer b = ByteBuffer.allocate(2 * BYTES_PER_INT);
-    b.order(ByteOrder.LITTLE_ENDIAN);
-    b.putLong(msgId);
-    b.position(BYTES_PER_INT);
-    byte[] msgIdByteArr = b.slice().array();
+    ByteBuffer msgIdBuf = ByteBuffer.allocate(Integer.BYTES);
+    msgIdBuf.order(ByteOrder.LITTLE_ENDIAN);
+    msgIdBuf.putInt((int) msgId);
+    byte[] msgIdByteArr = msgIdBuf.array();
+    ByteBuffer headerSizeBuf = ByteBuffer.allocate(Long.BYTES);
+    headerSizeBuf.order(ByteOrder.LITTLE_ENDIAN);
+    headerSizeBuf.putLong(outputHeaderSizeBytes);
+    byte[] headerSizeByteArr = headerSizeBuf.array();
     socket.send(msgIdByteArr, ZMQ.SNDMORE);
-
+    socket.send(headerSizeByteArr, ZMQ.SNDMORE);
     socket.sendZeroCopy(outputHeaderBuffer, outputHeaderSizeBytes, ZMQ.SNDMORE);
     int lastOutputMsgNum = predictions.size() - 1;
     for(int i = 0; i < predictions.size(); i++) {
