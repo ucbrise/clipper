@@ -128,6 +128,9 @@ class PredictionData {
 
 class ByteVector : public PredictionData {
  public:
+  explicit ByteVector(UniquePoolPtr<void> data, size_t byte_size);
+  explicit ByteVector(UniquePoolPtr<uint8_t> data, size_t size);
+
   DataType type() const override;
   PredictionDataHash hash() override;
   size_t size() const override;
@@ -144,8 +147,6 @@ class ByteVector : public PredictionData {
   }
 
  private:
-  explicit ByteVector(UniquePoolPtr<void> data, size_t byte_size);
-  explicit ByteVector(UniquePoolPtr<uint8_t> data, size_t size);
   explicit ByteVector(void* data, size_t byte_size);
 
   SharedPoolPtr<void> get_data() const override;
@@ -157,6 +158,9 @@ class ByteVector : public PredictionData {
 
 class IntVector : public PredictionData {
  public:
+  explicit IntVector(UniquePoolPtr<int> data, size_t size);
+  explicit IntVector(UniquePoolPtr<void> data, size_t byte_size);
+
   DataType type() const override;
   PredictionDataHash hash() override;
   size_t size() const override;
@@ -173,8 +177,6 @@ class IntVector : public PredictionData {
   }
 
  private:
-  explicit IntVector(UniquePoolPtr<int> data, size_t size);
-  explicit IntVector(UniquePoolPtr<void> data, size_t byte_size);
   explicit IntVector(void* data, size_t byte_size);
 
   SharedPoolPtr<void> get_data() const override;
@@ -186,6 +188,9 @@ class IntVector : public PredictionData {
 
 class FloatVector : public PredictionData {
  public:
+  explicit FloatVector(UniquePoolPtr<float> data, size_t size);
+  explicit FloatVector(UniquePoolPtr<void> data, size_t byte_size);
+
   DataType type() const override;
   PredictionDataHash hash() override;
   size_t size() const override;
@@ -202,8 +207,6 @@ class FloatVector : public PredictionData {
   }
 
  private:
-  explicit FloatVector(UniquePoolPtr<float> data, size_t size);
-  explicit FloatVector(UniquePoolPtr<void> data, size_t byte_size);
   explicit FloatVector(void* data, size_t byte_size);
 
   SharedPoolPtr<void> get_data() const override;
@@ -215,6 +218,9 @@ class FloatVector : public PredictionData {
 
 class DoubleVector : public PredictionData {
  public:
+  explicit DoubleVector(UniquePoolPtr<double> data, size_t size);
+  explicit DoubleVector(UniquePoolPtr<void> data, size_t byte_size);
+
   DataType type() const override;
   PredictionDataHash hash() override;
   size_t size() const override;
@@ -231,8 +237,6 @@ class DoubleVector : public PredictionData {
   }
 
  private:
-  explicit DoubleVector(UniquePoolPtr<double> data, size_t size);
-  explicit DoubleVector(UniquePoolPtr<void> data, size_t byte_size);
   explicit DoubleVector(void* data, size_t byte_size);
 
   SharedPoolPtr<void> get_data() const override;
@@ -244,6 +248,10 @@ class DoubleVector : public PredictionData {
 
 class SerializableString : public PredictionData {
  public:
+  explicit SerializableString(UniquePoolPtr<char> data, size_t size);
+  explicit SerializableString(UniquePoolPtr<void> data, size_t byte_size);
+  explicit SerializableString(std::string data);
+
   DataType type() const override;
   PredictionDataHash hash() override;
   size_t size() const override;
@@ -260,8 +268,6 @@ class SerializableString : public PredictionData {
   }
 
  private:
-  explicit SerializableString(UniquePoolPtr<char> data, size_t size);
-  explicit SerializableString(UniquePoolPtr<void> data, size_t byte_size);
   explicit SerializableString(void* data, size_t byte_size);
 
   SharedPoolPtr<void> get_data() const override;
@@ -441,8 +447,8 @@ namespace rpc {
 class PredictionRequest {
  public:
   explicit PredictionRequest(DataType input_type);
-//  explicit PredictionRequest(std::vector<SharedPoolPtr<PredictionData>>& inputs,
-//                             DataType input_type);
+  explicit PredictionRequest(std::vector<SharedPoolPtr<PredictionData>>& inputs, DataType input_type);
+  explicit PredictionRequest(std::vector<UniquePoolPtr<PredictionData>> inputs, DataType input_type);
 
   // Disallow copy
   PredictionRequest(PredictionRequest &other) = delete;

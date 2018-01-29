@@ -41,9 +41,9 @@ public class SerializableString extends DataVector<String> {
   public static class Parser extends DataVectorParser<String, SerializableString> {
     @Override
     public SerializableString constructDataVector(ByteBuffer data, long byteSize) {
-      CharBuffer charData = data.asCharBuffer();
-      charData.limit((int) byteSize);
-      return new SerializableString(charData.toString());
+      data.limit((int) byteSize);
+      String content = StandardCharsets.UTF_8.decode(data).toString();
+      return new SerializableString(content);
     }
   }
 }

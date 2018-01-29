@@ -10,7 +10,6 @@
 #include <clipper/datatypes.hpp>
 #include <clipper/logging.hpp>
 #include <clipper/util.hpp>
-#include <clipper/memory.hpp>
 
 namespace clipper {
 
@@ -106,7 +105,7 @@ ByteVector::ByteVector(UniquePoolPtr<void> data, size_t byte_size)
     : ByteVector(data.release(), byte_size) {}
 
 ByteVector::ByteVector(void* data, size_t byte_size)
-    : data_(SharedPoolPtr<uint8_t>(static_cast<uint8_t*>(data), MemoryManager::free_memory)),
+    : data_(SharedPoolPtr<uint8_t>(static_cast<uint8_t*>(data), free)),
       size_(static_cast<size_t>(byte_size / sizeof(uint8_t))) {}
 
 DataType ByteVector::type() const { return DataType::Bytes; }
@@ -133,7 +132,7 @@ IntVector::IntVector(UniquePoolPtr<void> data, size_t byte_size)
     : IntVector(data.release(), byte_size) {}
 
 IntVector::IntVector(void* data, size_t byte_size)
-    : data_(SharedPoolPtr<int>(static_cast<int*>(data), MemoryManager::free_memory)),
+    : data_(SharedPoolPtr<int>(static_cast<int*>(data), free)),
       size_(static_cast<size_t>(byte_size / sizeof(int))) {}
 
 DataType IntVector::type() const { return DataType::Ints; }
@@ -160,7 +159,7 @@ FloatVector::FloatVector(UniquePoolPtr<void> data, size_t byte_size)
     : FloatVector(data.release(), byte_size) {}
 
 FloatVector::FloatVector(void* data, size_t byte_size)
-    : data_(SharedPoolPtr<float>(static_cast<float*>(data), MemoryManager::free_memory)),
+    : data_(SharedPoolPtr<float>(static_cast<float*>(data), free)),
       size_(static_cast<size_t>(byte_size / sizeof(float))) {}
 
 DataType FloatVector::type() const { return DataType::Floats; }
@@ -190,7 +189,7 @@ DoubleVector::DoubleVector(UniquePoolPtr<void> data, size_t byte_size)
     : DoubleVector(data.release(), byte_size) {}
 
 DoubleVector::DoubleVector(void* data, size_t size_bytes)
-    : data_(SharedPoolPtr<double>(static_cast<double*>(data), MemoryManager::free_memory)),
+    : data_(SharedPoolPtr<double>(static_cast<double*>(data), free)),
       size_(static_cast<size_t>(size_bytes / sizeof(double))) {}
 
 DataType DoubleVector::type() const { return DataType::Doubles; }
@@ -219,8 +218,15 @@ SerializableString::SerializableString(UniquePoolPtr<char> data, size_t size)
 SerializableString::SerializableString(UniquePoolPtr<void> data, size_t byte_size)
     : SerializableString(data.release(), byte_size) {}
 
+SerializableString::SerializableString(std::string data) {
+  size_ = data.size();
+  size_t byte_size = size_ * sizeof(char);
+  data_ = SharedPoolPtr<char>(static_cast<char*>(malloc(byte_size)), free);
+  memcpy(data_.get(), data.data(), byte_size);
+}
+
 SerializableString::SerializableString(void* data, size_t byte_size)
-    : data_(SharedPoolPtr<char>(static_cast<char*>(data), MemoryManager::free_memory)),
+    : data_(SharedPoolPtr<char>(static_cast<char*>(data), free)),
       size_(static_cast<size_t>(byte_size / sizeof(char))) {}
 
 DataType SerializableString::type() const { return DataType::Strings; }
@@ -245,14 +251,21 @@ SharedPoolPtr<void> SerializableString::get_data() const {
 rpc::PredictionRequest::PredictionRequest(DataType input_type)
     : input_type_(input_type) {}
 
-//rpc::PredictionRequest::PredictionRequest(
-//    std::vector<SharedPoolPtr<PredictionData>> &inputs, DataType input_type)
-//    : inputs_(std::move(inputs)), input_type_(input_type) {
-//  for (int i = 0; i < (int)inputs.size(); i++) {
-//    validate_input_type(inputs[i]);
-//    input_data_size_ += inputs[i]->byte_size();
-//  }
-//}
+rpc::PredictionRequest::PredictionRequest(std::vector<UniquePoolPtr<clipper::PredictionData>> inputs,
+                                          DataType input_type)
+    : input_type_(input_type) {
+  for(auto &input : inputs) {
+    add_input(std::move(input));
+  }
+}
+
+rpc::PredictionRequest::PredictionRequest(std::vector<SharedPoolPtr<clipper::PredictionData>> &inputs,
+                                          DataType input_type)
+    : input_type_(input_type) {
+  for(auto &input : inputs) {
+    add_input(input);
+  }
+}
 
 void rpc::PredictionRequest::validate_input_type(InputType input_type) const {
   if (input_type != input_type_) {

@@ -41,62 +41,52 @@ std::string get_thread_id() {
 }
 
 template <typename T, class N>
-std::vector<std::shared_ptr<Input>> get_primitive_inputs(
-    int message_size, int input_len, InputType type, std::vector<T> data_vector,
-    std::vector<std::shared_ptr<N>> input_vector) {
-  input_vector.clear();
-  std::vector<std::shared_ptr<Input>> generic_input_vector;
+std::vector<UniquePoolPtr<PredictionData>> get_primitive_inputs(
+    int message_size, int input_len, InputType type) {
+  std::vector<UniquePoolPtr<PredictionData>> inputs;
   for (int k = 0; k < message_size; ++k) {
+    UniquePoolPtr<T> input_data(malloc(input_len * sizeof(T)), free);
     for (int j = 0; j < input_len; ++j) {
       if (type == InputType::Bytes) {
         uint8_t *bytes = reinterpret_cast<uint8_t *>(&j);
         for (int i = 0; i < (int)(sizeof(int) / sizeof(uint8_t)); i++) {
-          data_vector.push_back(*(bytes + i));
+          input_data[i] = *(bytes + i);
         }
       } else {
-        data_vector.push_back(static_cast<T>(j));
+        input_data[i] = static_cast<T>(j);
       }
     }
-    std::shared_ptr<N> input = std::make_shared<N>(data_vector);
-    generic_input_vector.push_back(std::dynamic_pointer_cast<Input>(input));
-    data_vector.clear();
+    UniquePoolPtr<N> input = std::make_unique<N>(std::move(input_data), input_len);
+    inputs.push_back(std::move(input));
   }
-  return generic_input_vector;
+  return inputs;
 }
 
 rpc::PredictionRequest generate_bytes_request(int message_size) {
-  std::vector<uint8_t> type_vec;
-  std::vector<std::shared_ptr<ByteVector>> input_vec;
-  std::vector<std::shared_ptr<Input>> inputs = get_primitive_inputs(
-      message_size, 784, InputType::Bytes, type_vec, input_vec);
-  rpc::PredictionRequest request(inputs, InputType::Bytes);
+  std::vector<UniquePoolPtr<PredictionData>> inputs =
+      get_primitive_inputs<uint8_t, ByteVector>(message_size, 784, InputType::Bytes);
+  rpc::PredictionRequest request(std::move(inputs), InputType::Bytes);
   return request;
 }
 
 rpc::PredictionRequest generate_floats_request(int message_size) {
-  std::vector<float> type_vec;
-  std::vector<std::shared_ptr<FloatVector>> input_vec;
-  std::vector<std::shared_ptr<Input>> inputs = get_primitive_inputs(
-      message_size, 784, InputType::Floats, type_vec, input_vec);
-  rpc::PredictionRequest request(inputs, InputType::Floats);
+  std::vector<UniquePoolPtr<PredictionData>> inputs =
+      get_primitive_inputs<float, FloatVector>(message_size, 784, InputType::Floats);
+  rpc::PredictionRequest request(std::move(inputs), InputType::Floats);
   return request;
 }
 
 rpc::PredictionRequest generate_ints_request(int message_size) {
-  std::vector<int> type_vec;
-  std::vector<std::shared_ptr<IntVector>> input_vec;
-  std::vector<std::shared_ptr<Input>> inputs = get_primitive_inputs(
-      message_size, 784, InputType::Ints, type_vec, input_vec);
-  rpc::PredictionRequest request(inputs, InputType::Ints);
+  std::vector<UniquePoolPtr<PredictionData>> inputs =
+      get_primitive_inputs<int, IntVector>(message_size, 784, InputType::Ints);
+  rpc::PredictionRequest request(std::move(inputs), InputType::Ints);
   return request;
 }
 
 rpc::PredictionRequest generate_doubles_request(int message_size) {
-  std::vector<double> type_vec;
-  std::vector<std::shared_ptr<DoubleVector>> input_vec;
-  std::vector<std::shared_ptr<Input>> inputs = get_primitive_inputs(
-      message_size, 784, InputType::Doubles, type_vec, input_vec);
-  rpc::PredictionRequest request(inputs, InputType::Doubles);
+  std::vector<UniquePoolPtr<PredictionData>> inputs =
+      get_primitive_inputs<double, DoubleVector>(message_size, 784, InputType::Doubles);
+  rpc::PredictionRequest request(std::move(inputs), InputType::Doubles);
   return request;
 }
 
@@ -104,9 +94,8 @@ rpc::PredictionRequest generate_string_request(int message_size) {
   rpc::PredictionRequest request(InputType::Strings);
   for (int i = 0; i < message_size; ++i) {
     std::string str = gen_random_string(150);
-    std::shared_ptr<SerializableString> input =
-        std::make_shared<SerializableString>(str);
-    request.add_input(input);
+    UniquePoolPtr<PredictionData> input = SerializableString::create_unique(str);
+    request.add_input(std::move(input));
   }
   return request;
 }

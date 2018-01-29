@@ -59,7 +59,6 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
   bool prevent_cache_hits = get_bool(PREVENT_CACHE_HITS, config);
 
   int num_datapoints = static_cast<int>(data.size());
-  std::vector<double> query_vec;
   std::default_random_engine generator;
   std::poisson_distribution<int> distribution(batch_delay_micros);
   long delay_micros;
@@ -68,15 +67,16 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
   for (int j = 0; j < num_batches; j++) {
     for (int i = 0; i < request_batch_size; i++) {
       query_num = j * request_batch_size + i;
-      query_vec = data[query_num % num_datapoints];
+      auto &query_vec = data[query_num % num_datapoints];
+      SharedPoolPtr<double> query_data(static_cast<double*>(malloc(query_vec.size() * sizeof(double))), free);
 
       if (prevent_cache_hits) {
         // Modify it to be epoch and thread-specific
-        query_vec[0] = query_num / num_datapoints;
-        query_vec[1] = thread_id;
+        query_data[0] = query_num / num_datapoints;
+        query_data[1] = thread_id;
       }
 
-      std::shared_ptr<Input> input = std::make_shared<DoubleVector>(query_vec);
+      SharedPoolPtr<PredictionData> input = DoubleVector::create_shared(query_data);
       Query q = {TEST_APPLICATION_LABEL,
                  UID,
                  input,

@@ -276,7 +276,10 @@ class Server(threading.Thread):
                         inputs = []
                         for _ in range(num_inputs):
                             input_item = socket.recv()
-                            input_item = np.frombuffer(input_item, dtype=input_type_to_dtype(input_type))
+                            if input_type == INPUT_TYPE_STRINGS:
+                                input_item = str(input_item)
+                            else:
+                                input_item = np.frombuffer(input_item, dtype=input_type_to_dtype(input_type))
                             inputs.append(input_item)
 
                         if int(input_type) != int(self.model_input_type):

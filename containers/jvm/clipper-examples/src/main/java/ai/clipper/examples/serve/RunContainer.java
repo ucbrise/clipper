@@ -3,6 +3,7 @@ package ai.clipper.examples.serve;
 import ai.clipper.examples.container.NoOpModel;
 import ai.clipper.container.data.*;
 import ai.clipper.container.ClipperModel;
+import ai.clipper.examples.container.NoOpStringModel;
 import ai.clipper.rpc.RPC;
 
 import java.net.UnknownHostException;
@@ -22,7 +23,12 @@ public class RunContainer {
     int clipperPort = Integer.valueOf(args[3]);
     DataType inputType = DataType.fromCode(Integer.valueOf(args[4]));
 
-    ClipperModel model = new NoOpModel(inputType);
+    ClipperModel model;
+    if (inputType == DataType.Strings) {
+      model = new NoOpStringModel();
+    } else {
+      model = new NoOpModel(inputType);
+    }
     runContainer(model, getParserForInputType(inputType), clipperAddress, clipperPort, modelName,
         modelVersion);
   }

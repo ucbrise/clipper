@@ -192,6 +192,8 @@ void RPCService::send_messages(
       if (cur_msg_num < last_msg_num) {
         socket.send(msg, ZMQ_SNDMORE);
       } else {
+        char* str_content = static_cast<char*>(msg.data());
+        std::string content(str_content, str_content + m.second);
         socket.send(msg);
       }
       cur_msg_num += 1;
