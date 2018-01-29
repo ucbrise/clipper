@@ -23,6 +23,7 @@ class RPCTestModel extends ClipperModel<DoubleVector> {
     for (DoubleVector inputVector : inputs) {
       double clipperTimestamp = inputVector.getData().get();
       RPCEvent[] eventHistory = rpc.getEventHistory();
+      System.out.println(clipperTimestamp);
       // Begin building a JSON array
       StringBuilder eventCodeJson = new StringBuilder("[");
       boolean addedEvent = false;

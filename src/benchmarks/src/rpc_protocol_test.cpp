@@ -117,9 +117,9 @@ class Tester {
         1000;
     UniquePoolPtr<double> data(static_cast<double*>(malloc(sizeof(double))), free);
     data.get()[0] = log_start_time_millis;
-    SharedPoolPtr<PredictionData> input = DoubleVector::create(std::move(data), 1);
+    UniquePoolPtr<PredictionData> input = DoubleVector::create_unique(std::move(data), 1);
     rpc::PredictionRequest request(InputType::Doubles);
-    request.add_input(input);
+    request.add_input(std::move(input));
     auto serialized_request = request.serialize();
     int msg_id = rpc_->send_message(std::move(serialized_request), container_id);
     return msg_id;
@@ -197,7 +197,7 @@ class Tester {
           rpc::PredictionResponse::deserialize_prediction_response(
               std::move(response.second));
       auto event_history_data = prediction_response.outputs_[0];
-      char* event_history_ptr = static_cast<char*>(event_history_data->get_data().get());
+      char* event_history_ptr = static_cast<char*>(get_data(event_history_data).get());
       std::string event_history_str(event_history_ptr, event_history_ptr + event_history_data->size());
       rapidjson::Document d;
       json::parse_json(event_history_str, d);

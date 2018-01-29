@@ -87,7 +87,7 @@ Output::Output(const std::string y_hat, const std::vector<VersionedModelId> mode
   size_t y_hat_size = y_hat.size() * sizeof(char);
   UniquePoolPtr<char> y_hat_content(static_cast<char*>(malloc(y_hat_size)), free);
   memcpy(y_hat_content.get(), y_hat.data(), y_hat_size);
-  y_hat_ = SerializableString::create(std::move(y_hat_content), y_hat.size());
+  y_hat_ = SerializableString::create_shared(std::move(y_hat_content), y_hat.size());
   models_used_ = models_used;
 }
 
@@ -245,21 +245,20 @@ SharedPoolPtr<void> SerializableString::get_data() const {
 rpc::PredictionRequest::PredictionRequest(DataType input_type)
     : input_type_(input_type) {}
 
-rpc::PredictionRequest::PredictionRequest(
-    std::vector<SharedPoolPtr<PredictionData>> &inputs, DataType input_type)
-    : inputs_(std::move(inputs)), input_type_(input_type) {
-  for (int i = 0; i < (int)inputs.size(); i++) {
-    validate_input_type(inputs[i]);
-    input_data_size_ += inputs[i]->byte_size();
-  }
-}
+//rpc::PredictionRequest::PredictionRequest(
+//    std::vector<SharedPoolPtr<PredictionData>> &inputs, DataType input_type)
+//    : inputs_(std::move(inputs)), input_type_(input_type) {
+//  for (int i = 0; i < (int)inputs.size(); i++) {
+//    validate_input_type(inputs[i]);
+//    input_data_size_ += inputs[i]->byte_size();
+//  }
+//}
 
-void rpc::PredictionRequest::validate_input_type(
-    SharedPoolPtr<PredictionData> &input) const {
-  if (input->type() != input_type_) {
+void rpc::PredictionRequest::validate_input_type(InputType input_type) const {
+  if (input_type != input_type_) {
     std::ostringstream ss;
     ss << "Attempted to add an input of type "
-       << get_readable_input_type(input->type())
+       << get_readable_input_type(input_type)
        << " to a prediction request with input type "
        << get_readable_input_type(input_type_);
     log_error(LOGGING_TAG_CLIPPER, ss.str());
@@ -267,10 +266,21 @@ void rpc::PredictionRequest::validate_input_type(
   }
 }
 
-void rpc::PredictionRequest::add_input(SharedPoolPtr<PredictionData>& input) {
-  validate_input_type(input);
+void rpc::PredictionRequest::add_input(const SharedPoolPtr<PredictionData>& input) {
+  validate_input_type(input->type());
   input_data_size_ += input->byte_size();
-  inputs_.push_back(input);
+  SharedPoolPtr<void> input_data = get_data(input);
+  ByteBufferPtr<void> buffer_data(input_data);
+  inputs_.push_back(std::make_pair(std::move(buffer_data), input->byte_size()));
+}
+
+void rpc::PredictionRequest::add_input(UniquePoolPtr<PredictionData> input) {
+  validate_input_type(input->type());
+  size_t byte_size = input->byte_size();
+  input_data_size_ += byte_size;
+  UniquePoolPtr<void> input_data = get_data(std::move(input));
+  ByteBufferPtr<void> buffer_data(std::move(input_data));
+  inputs_.push_back(std::make_pair(std::move(buffer_data), byte_size));
 }
 
 std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
@@ -290,11 +300,8 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
   input_metadata_raw[0] = static_cast<uint64_t>(input_type_);
   input_metadata_raw[1] = static_cast<uint64_t>(inputs_.size());
 
-  std::vector<SharedPoolPtr<void>> input_bufs;
   for (size_t i = 0; i < inputs_.size(); i++) {
-    auto input_data = get_data(inputs_[i]);
-    input_bufs.push_back(input_data);
-    input_metadata_raw[i + 2] = inputs_[i]->byte_size();
+    input_metadata_raw[i + 2] = inputs_[i].second;
   }
 
   uint64_t input_metadata_size_buf_size = 1 * sizeof(uint64_t);
@@ -313,9 +320,9 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
       std::make_pair(ByteBufferPtr<void>(std::move(input_metadata_size_buf)), input_metadata_size_buf_size));
   serialized_request.emplace_back(
       std::make_pair(ByteBufferPtr<void>(std::move(input_metadata)), input_metadata_size));
-  for (size_t i = 0; i < input_bufs.size(); i++) {
+  for (size_t i = 0; i < inputs_.size(); i++) {
     serialized_request.emplace_back(
-        std::make_pair(ByteBufferPtr<void>(std::move(input_bufs[i])), input_metadata_raw[i + 2]));
+        std::make_pair(ByteBufferPtr<void>(std::move(inputs_[i].first)), input_metadata_raw[i + 2]));
   }
   return serialized_request;
 }
@@ -328,7 +335,7 @@ rpc::PredictionResponse::deserialize_prediction_response(std::vector<ByteBuffer>
   std::vector<SharedPoolPtr<PredictionData>> outputs;
   for(auto &output : response) {
     SharedPoolPtr<PredictionData> parsed_output =
-        SerializableString::create(output.first.get(), output.second);
+        SerializableString::create_shared(output.first.get(), output.second);
     outputs.push_back(std::move(parsed_output));
   }
   return PredictionResponse(outputs);

@@ -134,8 +134,13 @@ class ByteVector : public PredictionData {
   size_t byte_size() const override;
 
   template <class ...Args>
-  static SharedPoolPtr<ByteVector> create(Args&& ...args) {
+  static SharedPoolPtr<ByteVector> create_shared(Args&& ...args) {
     return SharedPoolPtr<ByteVector>(new ByteVector(std::forward<Args>(args)...));
+  }
+
+  template <class ...Args>
+  static UniquePoolPtr<ByteVector> create_unique(Args&& ...args) {
+    return UniquePoolPtr<ByteVector>(new ByteVector(std::forward<Args>(args)...), free);
   }
 
  private:
@@ -158,8 +163,13 @@ class IntVector : public PredictionData {
   size_t byte_size() const override;
 
   template <class ...Args>
-  static SharedPoolPtr<IntVector> create(Args&& ...args) {
+  static SharedPoolPtr<IntVector> create_shared(Args&& ...args) {
     return SharedPoolPtr<IntVector>(new IntVector(std::forward<Args>(args)...));
+  }
+
+  template <class ...Args>
+  static UniquePoolPtr<IntVector> create_unique(Args&& ...args) {
+    return UniquePoolPtr<IntVector>(new IntVector(std::forward<Args>(args)...), free);
   }
 
  private:
@@ -182,8 +192,13 @@ class FloatVector : public PredictionData {
   size_t byte_size() const override;
 
   template <class ...Args>
-  static SharedPoolPtr<FloatVector> create(Args&& ...args) {
+  static SharedPoolPtr<FloatVector> create_shared(Args&& ...args) {
     return SharedPoolPtr<FloatVector>(new FloatVector(std::forward<Args>(args)...));
+  }
+
+  template <class ...Args>
+  static UniquePoolPtr<FloatVector> create_unique(Args&& ...args) {
+    return UniquePoolPtr<FloatVector>(new FloatVector(std::forward<Args>(args)...), free);
   }
 
  private:
@@ -206,8 +221,13 @@ class DoubleVector : public PredictionData {
   size_t byte_size() const override;
 
   template <class ...Args>
-  static SharedPoolPtr<DoubleVector> create(Args&& ...args) {
+  static SharedPoolPtr<DoubleVector> create_shared(Args&& ...args) {
     return SharedPoolPtr<DoubleVector>(new DoubleVector(std::forward<Args>(args)...));
+  }
+
+  template <class ...Args>
+  static UniquePoolPtr<DoubleVector> create_unique(Args&& ...args) {
+    return UniquePoolPtr<DoubleVector>(new DoubleVector(std::forward<Args>(args)...), free);
   }
 
  private:
@@ -230,8 +250,13 @@ class SerializableString : public PredictionData {
   size_t byte_size() const override;
 
   template <class ...Args>
-  static SharedPoolPtr<SerializableString> create(Args&& ...args) {
+  static SharedPoolPtr<SerializableString> create_shared(Args&& ...args) {
     return SharedPoolPtr<SerializableString>(new SerializableString(std::forward<Args>(args)...));
+  }
+
+  template <class ...Args>
+  static UniquePoolPtr<SerializableString> create_unique(Args&& ...args) {
+    return UniquePoolPtr<SerializableString>(new SerializableString(std::forward<Args>(args)...), free);
   }
 
  private:
@@ -416,8 +441,8 @@ namespace rpc {
 class PredictionRequest {
  public:
   explicit PredictionRequest(DataType input_type);
-  explicit PredictionRequest(std::vector<SharedPoolPtr<PredictionData>>& inputs,
-                             DataType input_type);
+//  explicit PredictionRequest(std::vector<SharedPoolPtr<PredictionData>>& inputs,
+//                             DataType input_type);
 
   // Disallow copy
   PredictionRequest(PredictionRequest &other) = delete;
@@ -427,13 +452,16 @@ class PredictionRequest {
   PredictionRequest(PredictionRequest &&other) = default;
   PredictionRequest &operator=(PredictionRequest &&other) = default;
 
-  void add_input(SharedPoolPtr<PredictionData>& input);
+  void add_input(const SharedPoolPtr<PredictionData>& input);
+  void add_input(UniquePoolPtr<PredictionData> input);
   std::vector<ByteBuffer> serialize();
 
  private:
-  void validate_input_type(SharedPoolPtr<PredictionData> &input) const;
+  // Pair of input data, data size in bytes
+  using Input = std::pair<ByteBufferPtr<void>, size_t>;
+  void validate_input_type(InputType input_type) const;
 
-  std::vector<SharedPoolPtr<PredictionData>> inputs_;
+  std::vector<Input> inputs_;
   DataType input_type_;
   size_t input_data_size_ = 0;
 };
