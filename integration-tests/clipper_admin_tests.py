@@ -187,8 +187,9 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertIsNotNone(model_info)
         self.assertEqual(type(model_info), dict)
         docker_client = get_docker_client()
-        containers = docker_client.containers.list(
-            filters={"ancestor": container_name})
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
         self.assertEqual(len(containers), 1)
 
     def test_set_num_replicas_for_deployed_model_succeeds(self):
@@ -223,8 +224,9 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             container_name,
             num_replicas=2)
         docker_client = get_docker_client()
-        containers = docker_client.containers.list(
-            filters={"ancestor": container_name})
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
         self.assertEqual(len(containers), 2)
 
         self.clipper_conn.build_and_deploy_model(
@@ -234,13 +236,15 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             fake_model_data,
             container_name,
             num_replicas=3)
-        containers = docker_client.containers.list(
-            filters={"ancestor": container_name})
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
         self.assertEqual(len(containers), 5)
 
         self.clipper_conn.stop_inactive_model_versions([model_name])
-        containers = docker_client.containers.list(
-            filters={"ancestor": container_name})
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
         self.assertEqual(len(containers), 3)
 
     def test_stop_models(self):
@@ -258,14 +262,16 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
                     num_replicas=1)
 
         docker_client = get_docker_client()
-        containers = docker_client.containers.list(
-            filters={"ancestor": container_name})
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
         self.assertEqual(len(containers), len(mnames) * len(versions))
 
         # stop all versions of models jimmypage, robertplant
         self.clipper_conn.stop_models(mnames[:2])
-        containers = docker_client.containers.list(
-            filters={"ancestor": container_name})
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
         self.assertEqual(len(containers), len(mnames[2:]) * len(versions))
 
         # After calling this method, the remaining models should be:
@@ -274,13 +280,15 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             "jpj": ["ii", "iv"],
             "johnbohnam": ["i", "iv", "iii"],
         })
-        containers = docker_client.containers.list(
-            filters={"ancestor": container_name})
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
         self.assertEqual(len(containers), 3)
 
         self.clipper_conn.stop_all_model_containers()
-        containers = docker_client.containers.list(
-            filters={"ancestor": container_name})
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
         self.assertEqual(len(containers), 0)
 
     def test_python_closure_deploys_successfully(self):
@@ -298,10 +306,11 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertIsNotNone(model_info)
 
         docker_client = get_docker_client()
-        containers = docker_client.containers.list(filters={
-            "ancestor":
-            "clipper/python-closure-container:{}".format(clipper_version)
-        })
+        containers = docker_client.containers.list(
+            filters={
+                "ancestor":
+                "clipper/python-closure-container:{}".format(clipper_version)
+            })
         self.assertGreaterEqual(len(containers), 1)
 
     def test_register_py_endpoint(self):
@@ -327,10 +336,11 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertIsNotNone(linked_models)
 
         docker_client = get_docker_client()
-        containers = docker_client.containers.list(filters={
-            "ancestor":
-            "clipper/python-closure-container:{}".format(clipper_version)
-        })
+        containers = docker_client.containers.list(
+            filters={
+                "ancestor":
+                "clipper/python-closure-container:{}".format(clipper_version)
+            })
         self.assertEqual(len(containers), 1)
 
 
@@ -341,8 +351,12 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
             cleanup=True, start_clipper=True)
         self.app_name_1 = "app3"
         self.app_name_2 = "app4"
+        self.app_name_3 = "app5"
+        self.app_name_4 = "app6"
         self.model_name_1 = "m4"
         self.model_name_2 = "m5"
+        self.model_name_3 = "m6"
+        self.model_name_4 = "m7"
         self.input_type = "doubles"
         self.default_output = "DEFAULT"
         self.latency_slo_micros = 30000
@@ -353,6 +367,14 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
         self.clipper_conn.register_application(
             self.app_name_2, self.input_type, self.default_output,
+            self.latency_slo_micros)
+
+        self.clipper_conn.register_application(
+            self.app_name_3, self.input_type, self.default_output,
+            self.latency_slo_micros)
+
+        self.clipper_conn.register_application(
+            self.app_name_4, self.input_type, self.default_output,
             self.latency_slo_micros)
 
     @classmethod
@@ -394,6 +416,28 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         self.assertNotEqual(parsed_response["output"], self.default_output)
         self.assertFalse(parsed_response["default"])
 
+    def test_batch_queries_returned_successfully(self):
+        model_version = 1
+        container_name = "clipper/noop-container:{}".format(clipper_version)
+        self.clipper_conn.build_and_deploy_model(
+            self.model_name_3, model_version, self.input_type, fake_model_data,
+            container_name)
+
+        self.clipper_conn.link_model_to_app(self.app_name_3, self.model_name_3)
+        time.sleep(30)
+        addr = self.clipper_conn.get_query_addr()
+        url = "http://{addr}/{app}/predict".format(
+            addr=addr, app=self.app_name_3)
+        test_input = [[99.3, 18.9, 67.2, 34.2], [101.1, 45.6, 98.0, 99.1], \
+                      [12.3, 6.7, 42.1, 12.6], [9.01, 87.6, 70.2, 19.6]]
+        req_json = json.dumps({'input_batch': test_input})
+        headers = {'Content-type': 'application/json'}
+        response = requests.post(url, headers=headers, data=req_json)
+        parsed_response = response.json()
+        logger.info(parsed_response)
+        self.assertEqual(
+            len(parsed_response["batch_predictions"]), len(test_input))
+
     def test_deployed_python_closure_queried_successfully(self):
         model_version = 1
 
@@ -432,6 +476,45 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
         self.assertTrue(received_non_default_prediction)
 
+    def test_fixed_batch_size_model_processes_specified_query_batch_size_when_saturated(
+            self):
+        model_version = 1
+
+        def predict_func(inputs):
+            batch_size = len(inputs)
+            return [str(batch_size) for _ in inputs]
+
+        fixed_batch_size = 9
+        total_num_queries = fixed_batch_size * 50
+        deploy_python_closure(
+            self.clipper_conn,
+            self.model_name_4,
+            model_version,
+            self.input_type,
+            predict_func,
+            batch_size=fixed_batch_size)
+        self.clipper_conn.link_model_to_app(self.app_name_4, self.model_name_4)
+        time.sleep(60)
+
+        addr = self.clipper_conn.get_query_addr()
+        url = "http://{addr}/{app}/predict".format(
+            addr=addr, app=self.app_name_4)
+        test_input = [[float(x) + (j * .001) for x in range(5)]
+                      for j in range(total_num_queries)]
+        req_json = json.dumps({'input_batch': test_input})
+        headers = {'Content-type': 'application/json'}
+        response = requests.post(url, headers=headers, data=req_json)
+        parsed_response = response.json()
+        num_max_batch_queries = 0
+        for prediction in parsed_response["batch_predictions"]:
+            batch_size = prediction["output"]
+            if batch_size != self.default_output and int(
+                    batch_size) == fixed_batch_size:
+                num_max_batch_queries += 1
+
+        self.assertGreaterEqual(num_max_batch_queries,
+                                int(total_num_queries * .7))
+
 
 SHORT_TEST_ORDERING = [
     'test_register_model_correct',
@@ -456,7 +539,9 @@ SHORT_TEST_ORDERING = [
 LONG_TEST_ORDERING = [
     'test_unlinked_app_returns_default_predictions',
     'test_deployed_model_queried_successfully',
-    'test_deployed_python_closure_queried_successfully'
+    'test_batch_queries_returned_successfully',
+    'test_deployed_python_closure_queried_successfully',
+    'test_fixed_batch_size_model_processes_specified_query_batch_size_when_saturated'
 ]
 
 if __name__ == '__main__':

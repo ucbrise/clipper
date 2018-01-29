@@ -320,7 +320,7 @@ TEST_F(RedisToJsonTest, TestRedisModelMetadataToJson) {
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
   ASSERT_TRUE(add_model(*redis_, model, parse_input_type(input_type), labels,
-                        container_name, model_path));
+                        container_name, model_path, DEFAULT_BATCH_SIZE));
 
   std::unordered_map<std::string, std::string> model_metadata =
       get_model(*redis_, model);

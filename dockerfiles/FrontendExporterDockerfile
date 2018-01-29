@@ -1,0 +1,10 @@
+# This ARG isn't used but prevents warnings in the build script
+ARG CODE_VERSION
+FROM python:3
+
+WORKDIR /usr/src/app
+
+RUN pip install requests prometheus_client flatten_json
+
+COPY monitoring/front_end_exporter.py .
+ENTRYPOINT ["python", "./front_end_exporter.py"]

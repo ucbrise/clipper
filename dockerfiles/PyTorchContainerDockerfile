@@ -8,11 +8,12 @@ RUN echo deb http://ftp.de.debian.org/debian jessie-backports main >> /etc/apt/s
       && apt-get install -yqq -t jessie-backports openjdk-8-jdk \
       && conda config --set ssl_verify no \
       && conda install -y --file /lib/python_container_conda_deps.txt \
-      && pip install pyspark \
+      && conda install pytorch torchvision -c pytorch \
       && conda install -c anaconda cloudpickle=0.5.2
 
-COPY containers/python/pyspark_container.py containers/python/pyspark_container_entry.sh /container/
 
-CMD ["/container/pyspark_container_entry.sh"]
+COPY containers/python/pytorch_container.py containers/python/pytorch_container_entry.sh /container/
+
+CMD ["/container/pytorch_container_entry.sh"]
 
 # vim: set filetype=dockerfile:

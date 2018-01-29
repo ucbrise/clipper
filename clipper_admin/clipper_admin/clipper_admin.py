@@ -224,8 +224,9 @@ class ClipperConnection(object):
             logger.error(msg)
             raise ClipperException(msg)
         else:
-            logger.info("Model {model} is now linked to application {app}".
-                        format(model=model_name, app=app_name))
+            logger.info(
+                "Model {model} is now linked to application {app}".format(
+                    model=model_name, app=app_name))
 
     def build_and_deploy_model(self,
                                name,
@@ -235,7 +236,8 @@ class ClipperConnection(object):
                                base_image,
                                labels=None,
                                container_registry=None,
-                               num_replicas=1):
+                               num_replicas=1,
+                               batch_size=-1):
         """Build a new model container Docker image with the provided data and deploy it as
         a model to Clipper.
 
@@ -278,7 +280,12 @@ class ClipperConnection(object):
             The number of replicas of the model to create. The number of replicas
             for a model can be changed at any time with
             :py:meth:`clipper.ClipperConnection.set_num_replicas`.
-
+        batch_size : int, optional
+            The user-defined query batch size for the model. Replicas of the model will attempt
+            to process at most `batch_size` queries simultaneously. They may process smaller 
+            batches if `batch_size` queries are not immediately available.
+            If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
+            replicas of this model.
         Raises
         ------
         :py:exc:`clipper.UnconnectedException`
@@ -290,7 +297,7 @@ class ClipperConnection(object):
         image = self.build_model(name, version, model_data_path, base_image,
                                  container_registry)
         self.deploy_model(name, version, input_type, image, labels,
-                          num_replicas)
+                          num_replicas, batch_size)
 
     def build_model(self,
                     name,
@@ -331,7 +338,6 @@ class ClipperConnection(object):
             The Docker container registry to push the freshly built model to. Note
             that if you are running Clipper on Kubernetes, this registry must be accesible
             to the Kubernetes cluster in order to fetch the container from the registry.
-
         Returns
         -------
         str :
@@ -377,8 +383,9 @@ class ClipperConnection(object):
                 image = "{reg}/{image}".format(
                     reg=container_registry, image=image)
             docker_client = docker.from_env()
-            logger.info("Building model Docker image with model data from {}".
-                        format(model_data_path))
+            logger.info(
+                "Building model Docker image with model data from {}".format(
+                    model_data_path))
             docker_client.images.build(
                 fileobj=context_file, custom_context=True, tag=image)
 
@@ -392,7 +399,8 @@ class ClipperConnection(object):
                      input_type,
                      image,
                      labels=None,
-                     num_replicas=1):
+                     num_replicas=1,
+                     batch_size=-1):
         """Deploys the model in the provided Docker image to Clipper.
 
         Deploying a model to Clipper does a few things.
@@ -436,6 +444,12 @@ class ClipperConnection(object):
             The number of replicas of the model to create. The number of replicas
             for a model can be changed at any time with
             :py:meth:`clipper.ClipperConnection.set_num_replicas`.
+        batch_size : int, optional
+            The user-defined query batch size for the model. Replicas of the model will attempt
+            to process at most `batch_size` queries simultaneously. They may process smaller 
+            batches if `batch_size` queries are not immediately available.
+            If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
+            replicas of this model.
 
         Raises
         ------
@@ -454,9 +468,18 @@ class ClipperConnection(object):
         version = str(version)
         _validate_versioned_model_name(name, version)
         self.cm.deploy_model(
-            name, version, input_type, image, num_replicas=num_replicas)
+            name=name,
+            version=version,
+            input_type=input_type,
+            image=image,
+            num_replicas=num_replicas)
         self.register_model(
-            name, version, input_type, image=image, labels=labels)
+            name,
+            version,
+            input_type,
+            image=image,
+            labels=labels,
+            batch_size=batch_size)
         logger.info("Done deploying model {name}:{version}.".format(
             name=name, version=version))
 
@@ -465,7 +488,8 @@ class ClipperConnection(object):
                        version,
                        input_type,
                        image=None,
-                       labels=None):
+                       labels=None,
+                       batch_size=-1):
         """Registers a new model version with Clipper.
 
         This method does not launch any model containers, it only registers the model description
@@ -495,6 +519,12 @@ class ClipperConnection(object):
         labels : list(str), optional
             A list of strings annotating the model. These are ignored by Clipper
             and used purely for user annotations.
+        batch_size : int, optional
+            The user-defined query batch size for the model. Replicas of the model will attempt
+            to process at most `batch_size` queries simultaneously. They may process smaller 
+            batches if `batch_size` queries are not immediately available.
+            If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
+            replicas of this model.
 
         Raises
         ------
@@ -518,7 +548,9 @@ class ClipperConnection(object):
             "input_type": input_type,
             "container_name": image,
             "model_data_path": "DEPRECATED",
+            "batch_size": batch_size
         })
+
         headers = {'Content-type': 'application/json'}
         logger.debug(req_json)
         r = requests.post(url, headers=headers, data=req_json)
@@ -529,8 +561,9 @@ class ClipperConnection(object):
             logger.error(msg)
             raise ClipperException(msg)
         else:
-            logger.info("Successfully registered model {name}:{version}".
-                        format(name=name, version=version))
+            logger.info(
+                "Successfully registered model {name}:{version}".format(
+                    name=name, version=version))
 
     def get_current_model_version(self, name):
         """Get the current model version for the specified model.
@@ -713,8 +746,9 @@ class ClipperConnection(object):
         if r.status_code == requests.codes.ok:
             app_info = r.json()
             if len(app_info) == 0:
-                logger.warning("Application {} is not registered with Clipper".
-                               format(name))
+                logger.warning(
+                    "Application {} is not registered with Clipper".format(
+                        name))
                 return None
             return app_info
         else:

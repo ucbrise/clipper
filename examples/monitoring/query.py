@@ -1,4 +1,6 @@
 from __future__ import print_function
+import sys
+sys.path.insert(0, '../../clipper_admin')
 from clipper_admin import ClipperConnection, DockerContainerManager
 from clipper_admin.deployers import python as python_deployer
 import json
@@ -42,9 +44,11 @@ if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal_handler)
     clipper_conn = ClipperConnection(DockerContainerManager())
     clipper_conn.start_clipper()
-    python_deployer.create_endpoint(clipper_conn, "simple-example", "doubles",
-                                    feature_sum)
+    print("Starting Clipper")
+    python_deployer.create_endpoint(
+        clipper_conn, "simple-example", "doubles", feature_sum, num_replicas=2)
     time.sleep(2)
+    print("Starting Prediction")
 
     # For batch inputs set this number > 1
     batch_size = 1
