@@ -11,11 +11,10 @@ import sys
 
 
 def predict(addr, x, batch=False):
-    url = "http://%s/app2/predict" % addr
+    url = "http://%s/simple-example/predict" % addr
 
     if batch:
         req_json = json.dumps({'input_batch': x})
-        print(req_json)
     else:
         req_json = json.dumps({'input': list(x)})
 
@@ -42,21 +41,20 @@ def signal_handler(signal, frame):
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal_handler)
     clipper_conn = ClipperConnection(DockerContainerManager())
-    clipper_conn.connect()
-    # clipper_conn.start_clipper()
-    # python_deployer.create_endpoint(clipper_conn, "simple-example", "str",
-    #                                 feature_sum)
+    clipper_conn.start_clipper()
+    python_deployer.create_endpoint(clipper_conn, "simple-example", "doubles",
+                                    feature_sum)
     time.sleep(2)
 
     # For batch inputs set this number > 1
-    batch_size = 10
+    batch_size = 1
 
     try:
         while True:
             if batch_size > 1:
                 predict(
                     clipper_conn.get_query_addr(),
-                    [str(i) for i in range(batch_size)],
+                    [list(np.random.random(200)) for i in range(batch_size)],
                     batch=True)
             else:
                 predict(clipper_conn.get_query_addr(), np.random.random(200))

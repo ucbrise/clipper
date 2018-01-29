@@ -191,9 +191,9 @@ public class RPC<I extends DataVector<?>> {
               for (int i = 0; i < numInputs; ++i) {
                 inputContentBuffer.position(bufferPosition);
                 int inputSizeBytes = (int) inputHeader.get(i + 2);
-                socket.recvZeroCopy(inputContentBuffer, inputSizeBytes, -1);
-                inputContentBuffer.position(bufferPosition);
                 ByteBuffer inputBuffer = sliceOrdered(inputContentBuffer);
+                socket.recvZeroCopy(inputBuffer, inputSizeBytes, -1);
+                inputBuffer.position(0);
                 inputBuffer.limit(inputSizeBytes);
                 I input = inputVectorParser.constructDataVector(inputBuffer, inputSizeBytes);
                 inputs.add(input);
