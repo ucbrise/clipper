@@ -92,7 +92,7 @@ int RPCService::send_message(const vector<vector<uint8_t>> msg,
 }
 
 vector<RPCResponse> RPCService::try_get_responses(const int max_num_responses) {
-  std::vector<RPCResponse> vec(response_queue_->size_approx());
+  std::vector<RPCResponse> vec(max_num_responses);
   size_t num_dequeued =
       response_queue_->try_dequeue_bulk(vec.begin(), vec.size());
   vec.resize(num_dequeued);
@@ -161,16 +161,16 @@ void RPCService::shutdown_service(socket_t &socket) {
 
 void RPCService::send_messages(
     socket_t &socket, boost::bimap<int, vector<uint8_t>> &connections) {
-  while (request_queue_->size_approx() > 0) {
+  int queue_size = request_queue_->size_approx();
+  std::vector<RPCRequest> requests(queue_size);
+  size_t num_requests =
+      request_queue_->try_dequeue_bulk(requests.begin(), queue_size);
+  for (size_t i = 0; i < num_requests; i++) {
+    RPCRequest &request = requests[i];
     long current_time_micros =
         std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::system_clock::now().time_since_epoch())
             .count();
-    RPCRequest request;
-    bool found = request_queue_->try_dequeue(request);
-    if (!found) {  // nothing left in queue
-      break;
-    }
     msg_queueing_hist_->insert(current_time_micros - std::get<3>(request));
     boost::bimap<int, vector<uint8_t>>::left_const_iterator connection =
         connections.left.find(std::get<0>(request));
