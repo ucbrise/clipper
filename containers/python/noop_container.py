@@ -25,7 +25,7 @@ class NoopContainer(rpc.ModelContainerBase):
         return self._predict(inputs)
 
     def predict_strings(self, inputs):
-        return [str(len(inp)) for inp in inputs]
+        return self._predict(inputs)
 
 if __name__ == "__main__":
     try:
