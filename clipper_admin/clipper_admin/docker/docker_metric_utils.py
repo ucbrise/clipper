@@ -98,7 +98,7 @@ def run_metric_image(docker_client, common_labels, prometheus_port,
     ]
     metric_labels = common_labels.copy()
     docker_client.containers.run(
-        "prom/prometheus",
+        "prom/prometheus:v2.1.0",
         metric_cmd,
         name="metric_frontend-{}".format(random.randint(0, 100000)),
         ports={'9090/tcp': prometheus_port},
