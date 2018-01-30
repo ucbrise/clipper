@@ -6,7 +6,7 @@ import json
 
 import numpy as np
 import cloudpickle
-import mxnet.model as model
+import mxnet as mx
 import importlib
 
 
@@ -22,7 +22,7 @@ def load_predict_func(file_path):
 
 # load mxnet model from serialized dir
 def load_mxnet_model(model_path):
-    model = model.FeedForward.load(prefix=model_path, 1)
+    model = mx.model.FeedForward.load(prefix=model_path, 1)
     return model
 
 
