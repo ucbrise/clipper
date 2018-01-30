@@ -430,10 +430,10 @@ void parse_json(const std::string& json_content, rapidjson::Document& d) {
   }
 }
 
-std::vector<SharedPoolPtr<PredictionData>> parse_inputs(DataType input_type, rapidjson::Value& d) {
+std::vector<std::shared_ptr<PredictionData>> parse_inputs(DataType input_type, rapidjson::Value& d) {
   if (d.HasMember("input")) {
-    std::vector<SharedPoolPtr<PredictionData>> wrapped_result;
-    SharedPoolPtr<PredictionData> result = parse_single_input(input_type, d);
+    std::vector<std::shared_ptr<PredictionData>> wrapped_result;
+    std::shared_ptr<PredictionData> result = parse_single_input(input_type, d);
     wrapped_result.push_back(std::move(result));
     return wrapped_result;
   } else if (d.HasMember("input_batch")) {
@@ -444,63 +444,63 @@ std::vector<SharedPoolPtr<PredictionData>> parse_inputs(DataType input_type, rap
   }
 }
 
-SharedPoolPtr<PredictionData> parse_single_input(DataType input_type, rapidjson::Value& d) {
+std::shared_ptr<PredictionData> parse_single_input(DataType input_type, rapidjson::Value& d) {
   switch (input_type) {
     case DataType::Doubles: {
       InputParseResult<double> input = get_double_array(d, "input");
-      return DoubleVector::create_shared(std::move(input.first), input.second);
+      return std::make_shared<DoubleVector>(std::move(input.first), input.second);
     }
     case DataType::Floats: {
       InputParseResult<float> input = get_float_array(d, "input");
-      return FloatVector::create_shared(std::move(input.first), input.second);
+      return std::make_shared<FloatVector>(std::move(input.first), input.second);
     }
     case DataType::Ints: {
       InputParseResult<int> input = get_int_array(d, "input");
-      return IntVector::create_shared(std::move(input.first), input.second);
+      return std::make_shared<IntVector>(std::move(input.first), input.second);
     }
     case DataType::Strings: {
       InputParseResult<char> input = get_char_array(d, "input");
-      return SerializableString::create_shared(std::move(input.first), input.second);
+      return std::make_shared<SerializableString>(std::move(input.first), input.second);
     }
     case DataType::Bytes: {
       InputParseResult<uint8_t> input = get_base64_encoded_byte_array(d, "input");
-      return ByteVector::create_shared(std::move(input).first, input.second);
+      return std::make_shared<ByteVector>(std::move(input.first), input.second);
     }
     default: throw std::invalid_argument("input_type is not a valid type");
   }
 }
 
-std::vector<SharedPoolPtr<PredictionData>> parse_input_batch(DataType input_type, rapidjson::Value& d) {
-  std::vector<SharedPoolPtr<PredictionData>> result;
+std::vector<std::shared_ptr<PredictionData>> parse_input_batch(DataType input_type, rapidjson::Value& d) {
+  std::vector<std::shared_ptr<PredictionData>> result;
   switch (input_type) {
     case DataType::Doubles: {
       auto input_batch = get_double_arrays(d, "input_batch");
       for (auto &input : input_batch) {
-        result.push_back(DoubleVector::create_shared(std::move(input.first), input.second));
+        result.push_back(std::make_shared<DoubleVector>(std::move(input.first), input.second));
       }
     }
     case DataType::Floats: {
       auto input_batch = get_float_arrays(d, "input_batch");
       for (auto &input : input_batch) {
-        result.push_back(FloatVector::create_shared(std::move(input.first), input.second));
+        result.push_back(std::make_shared<FloatVector>(std::move(input.first), input.second));
       }
     }
     case DataType::Ints: {
       auto input_batch = get_int_arrays(d, "input_batch");
       for (auto &input : input_batch) {
-        result.push_back(IntVector::create_shared(std::move(input.first), input.second));
+        result.push_back(std::make_shared<IntVector>(std::move(input.first), input.second));
       }
     }
     case DataType::Strings: {
       auto input_batch = get_char_arrays(d, "input_batch");
       for (auto &input : input_batch) {
-        result.push_back(SerializableString::create_shared(std::move(input.first), input.second));
+        result.push_back(std::make_shared<SerializableString>(std::move(input.first), input.second));
       }
     }
     case DataType::Bytes: {
       auto input_batch = get_base64_encoded_byte_arrays(d, "input_batch");
       for (auto &input : input_batch) {
-        result.push_back(ByteVector::create_shared(std::move(input.first), input.second));
+        result.push_back(std::make_shared<ByteVector>(std::move(input.first), input.second));
       }
     }
     default: throw std::invalid_argument("input_type is not a valid type");

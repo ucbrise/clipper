@@ -426,7 +426,7 @@ class RequestHandler {
     server_.add_endpoint(update_endpoint, "POST", update_fn);
   }
 
-  static const std::string parse_output_y_hat(SharedPoolPtr<PredictionData> &y_hat) {
+  static const std::string parse_output_y_hat(std::shared_ptr<PredictionData> &y_hat) {
     char* str_content = static_cast<char*>(get_data(y_hat).get());
     return std::string(str_content, str_content + y_hat->size());
   }
@@ -545,7 +545,7 @@ class RequestHandler {
     clipper::json::parse_json(json_content, d);
     long uid = 0;
 
-    std::vector<SharedPoolPtr<PredictionData>> input_batch =
+    std::vector<std::shared_ptr<PredictionData>> input_batch =
         clipper::json::parse_inputs(input_type, d);
     std::vector<folly::Future<Response>> predictions;
     for (auto input : input_batch) {
@@ -571,7 +571,7 @@ class RequestHandler {
     rapidjson::Document d;
     clipper::json::parse_json(json_content, d);
     long uid = clipper::json::get_long(d, "uid");
-    SharedPoolPtr<PredictionData> input = clipper::json::parse_single_input(input_type, d);
+    std::shared_ptr<PredictionData> input = clipper::json::parse_single_input(input_type, d);
     double y_hat = clipper::json::get_double(d, "label");
     auto update = query_processor_.update(
         FeedbackQuery{name, uid, {Feedback(input, y_hat)}, policy, models});

@@ -117,7 +117,7 @@ class Tester {
         1000;
     UniquePoolPtr<double> data(static_cast<double*>(malloc(sizeof(double))), free);
     data.get()[0] = log_start_time_millis;
-    UniquePoolPtr<PredictionData> input = DoubleVector::create_unique(std::move(data), 1);
+    std::unique_ptr<PredictionData> input = std::make_unique<DoubleVector>(std::move(data), 1);
     rpc::PredictionRequest request(InputType::Doubles);
     request.add_input(std::move(input));
     auto serialized_request = request.serialize();

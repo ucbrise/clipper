@@ -77,16 +77,13 @@ bool VersionedModelId::operator!=(const VersionedModelId &rhs) const {
   return !(name_ == rhs.name_ && id_ == rhs.id_);
 }
 
-Output::Output(const SharedPoolPtr<PredictionData> y_hat,
+Output::Output(const std::shared_ptr<PredictionData> y_hat,
                const std::vector<VersionedModelId> models_used)
     : y_hat_(y_hat), models_used_(models_used) {}
 
 
 Output::Output(const std::string y_hat, const std::vector<VersionedModelId> models_used) {
-  size_t y_hat_size = y_hat.size() * sizeof(char);
-  UniquePoolPtr<char> y_hat_content(static_cast<char*>(malloc(y_hat_size)), free);
-  memcpy(y_hat_content.get(), y_hat.data(), y_hat_size);
-  y_hat_ = SerializableString::create_shared(std::move(y_hat_content), y_hat.size());
+  y_hat_ = std::make_shared<SerializableString>(y_hat);
   models_used_ = models_used;
 }
 
@@ -251,7 +248,7 @@ SharedPoolPtr<void> SerializableString::get_data() const {
 rpc::PredictionRequest::PredictionRequest(DataType input_type)
     : input_type_(input_type) {}
 
-rpc::PredictionRequest::PredictionRequest(std::vector<UniquePoolPtr<clipper::PredictionData>> inputs,
+rpc::PredictionRequest::PredictionRequest(std::vector<std::unique_ptr<clipper::PredictionData>> inputs,
                                           DataType input_type)
     : input_type_(input_type) {
   for(auto &input : inputs) {
@@ -259,7 +256,7 @@ rpc::PredictionRequest::PredictionRequest(std::vector<UniquePoolPtr<clipper::Pre
   }
 }
 
-rpc::PredictionRequest::PredictionRequest(std::vector<SharedPoolPtr<clipper::PredictionData>> &inputs,
+rpc::PredictionRequest::PredictionRequest(std::vector<std::shared_ptr<clipper::PredictionData>> &inputs,
                                           DataType input_type)
     : input_type_(input_type) {
   for(auto &input : inputs) {
@@ -279,7 +276,7 @@ void rpc::PredictionRequest::validate_input_type(InputType input_type) const {
   }
 }
 
-void rpc::PredictionRequest::add_input(const SharedPoolPtr<PredictionData>& input) {
+void rpc::PredictionRequest::add_input(const std::shared_ptr<PredictionData>& input) {
   validate_input_type(input->type());
   input_data_size_ += input->byte_size();
   SharedPoolPtr<void> input_data = get_data(input);
@@ -287,7 +284,7 @@ void rpc::PredictionRequest::add_input(const SharedPoolPtr<PredictionData>& inpu
   inputs_.push_back(std::make_pair(std::move(buffer_data), input->byte_size()));
 }
 
-void rpc::PredictionRequest::add_input(UniquePoolPtr<PredictionData> input) {
+void rpc::PredictionRequest::add_input(std::unique_ptr<PredictionData> input) {
   validate_input_type(input->type());
   size_t byte_size = input->byte_size();
   input_data_size_ += byte_size;
@@ -340,21 +337,21 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
   return serialized_request;
 }
 
-rpc::PredictionResponse::PredictionResponse(const std::vector<SharedPoolPtr<PredictionData>> outputs)
+rpc::PredictionResponse::PredictionResponse(const std::vector<std::shared_ptr<PredictionData>> outputs)
     : outputs_(std::move(outputs)) {}
 
 rpc::PredictionResponse
 rpc::PredictionResponse::deserialize_prediction_response(std::vector<ByteBuffer> response) {
-  std::vector<SharedPoolPtr<PredictionData>> outputs;
+  std::vector<std::shared_ptr<PredictionData>> outputs;
   for(auto &output : response) {
-    SharedPoolPtr<PredictionData> parsed_output =
-        SerializableString::create_shared(output.first.get(), output.second);
+    std::shared_ptr<PredictionData> parsed_output =
+        std::make_shared<SerializableString>(output.first.get(), output.second);
     outputs.push_back(std::move(parsed_output));
   }
   return PredictionResponse(outputs);
 }
 
-Query::Query(std::string label, long user_id, SharedPoolPtr<PredictionData> input,
+Query::Query(std::string label, long user_id, std::shared_ptr<PredictionData> input,
              long latency_budget_micros, std::string selection_policy,
              std::vector<VersionedModelId> candidate_models)
     : label_(std::move(label)),
@@ -384,7 +381,7 @@ std::string Response::debug_string() const noexcept {
   return debug;
 }
 
-Feedback::Feedback(SharedPoolPtr<PredictionData> input, double y)
+Feedback::Feedback(std::shared_ptr<PredictionData> input, double y)
     : y_(y), input_(std::move(input)) {}
 
 FeedbackQuery::FeedbackQuery(std::string label, long user_id, Feedback feedback,
@@ -396,7 +393,7 @@ FeedbackQuery::FeedbackQuery(std::string label, long user_id, Feedback feedback,
       selection_policy_(std::move(selection_policy)),
       candidate_models_(std::move(candidate_models)) {}
 
-PredictTask::PredictTask(SharedPoolPtr<PredictionData> input, VersionedModelId model,
+PredictTask::PredictTask(std::shared_ptr<PredictionData> input, VersionedModelId model,
                          float utility, QueryId query_id,
                          long latency_slo_micros)
     : input_(std::move(input)),

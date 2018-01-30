@@ -115,11 +115,11 @@ rapidjson::Value& get_object(rapidjson::Value& d, const char* key_name);
 
 void parse_json(const std::string& json_content, rapidjson::Document& d);
 
-std::vector<SharedPoolPtr<PredictionData>> parse_inputs(DataType input_type, rapidjson::Value& d);
+std::vector<std::shared_ptr<PredictionData>> parse_inputs(DataType input_type, rapidjson::Value& d);
 
-SharedPoolPtr<PredictionData> parse_single_input(DataType input_type, rapidjson::Value& d);
+std::shared_ptr<PredictionData> parse_single_input(DataType input_type, rapidjson::Value& d);
 
-std::vector<SharedPoolPtr<PredictionData>> parse_input_batch(DataType input_type, rapidjson::Value& d);
+std::vector<std::shared_ptr<PredictionData>> parse_input_batch(DataType input_type, rapidjson::Value& d);
 
 /* Utilities for serialization into JSON */
 void add_kv_pair(rapidjson::Document& d, const char* key_name,

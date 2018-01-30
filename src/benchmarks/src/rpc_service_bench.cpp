@@ -41,50 +41,51 @@ std::string get_thread_id() {
 }
 
 template <typename T, class N>
-std::vector<UniquePoolPtr<PredictionData>> get_primitive_inputs(
+std::vector<std::unique_ptr<PredictionData>> get_primitive_inputs(
     int message_size, int input_len, InputType type) {
-  std::vector<UniquePoolPtr<PredictionData>> inputs;
+  std::vector<std::unique_ptr<PredictionData>> inputs;
   for (int k = 0; k < message_size; ++k) {
-    UniquePoolPtr<T> input_data(malloc(input_len * sizeof(T)), free);
+    UniquePoolPtr<T> input_data(static_cast<T*>(malloc(input_len * sizeof(T))), free);
+    T* input_data_raw = input_data.get();
     for (int j = 0; j < input_len; ++j) {
       if (type == InputType::Bytes) {
         uint8_t *bytes = reinterpret_cast<uint8_t *>(&j);
         for (int i = 0; i < (int)(sizeof(int) / sizeof(uint8_t)); i++) {
-          input_data[i] = *(bytes + i);
+          input_data_raw[j] = *(bytes + i);
         }
       } else {
-        input_data[i] = static_cast<T>(j);
+        input_data_raw[j] = static_cast<T>(j);
       }
     }
-    UniquePoolPtr<N> input = std::make_unique<N>(std::move(input_data), input_len);
+    std::unique_ptr<PredictionData> input = std::make_unique<N>(std::move(input_data), input_len);
     inputs.push_back(std::move(input));
   }
   return inputs;
 }
 
 rpc::PredictionRequest generate_bytes_request(int message_size) {
-  std::vector<UniquePoolPtr<PredictionData>> inputs =
+  std::vector<std::unique_ptr<PredictionData>> inputs =
       get_primitive_inputs<uint8_t, ByteVector>(message_size, 784, InputType::Bytes);
   rpc::PredictionRequest request(std::move(inputs), InputType::Bytes);
   return request;
 }
 
 rpc::PredictionRequest generate_floats_request(int message_size) {
-  std::vector<UniquePoolPtr<PredictionData>> inputs =
+  std::vector<std::unique_ptr<PredictionData>> inputs =
       get_primitive_inputs<float, FloatVector>(message_size, 784, InputType::Floats);
   rpc::PredictionRequest request(std::move(inputs), InputType::Floats);
   return request;
 }
 
 rpc::PredictionRequest generate_ints_request(int message_size) {
-  std::vector<UniquePoolPtr<PredictionData>> inputs =
+  std::vector<std::unique_ptr<PredictionData>> inputs =
       get_primitive_inputs<int, IntVector>(message_size, 784, InputType::Ints);
   rpc::PredictionRequest request(std::move(inputs), InputType::Ints);
   return request;
 }
 
 rpc::PredictionRequest generate_doubles_request(int message_size) {
-  std::vector<UniquePoolPtr<PredictionData>> inputs =
+  std::vector<std::unique_ptr<PredictionData>> inputs =
       get_primitive_inputs<double, DoubleVector>(message_size, 784, InputType::Doubles);
   rpc::PredictionRequest request(std::move(inputs), InputType::Doubles);
   return request;
@@ -94,7 +95,7 @@ rpc::PredictionRequest generate_string_request(int message_size) {
   rpc::PredictionRequest request(InputType::Strings);
   for (int i = 0; i < message_size; ++i) {
     std::string str = gen_random_string(150);
-    UniquePoolPtr<PredictionData> input = SerializableString::create_unique(str);
+    std::unique_ptr<PredictionData> input = std::make_unique<SerializableString>(str);
     request.add_input(std::move(input));
   }
   return request;
@@ -121,7 +122,7 @@ class Benchmarker {
 
   void start() {
     rpc_->start("*", RPC_SERVICE_PORT, [](VersionedModelId, int) {},
-                [this](rpc::RPCResponse response) {
+                [this](rpc::RPCResponse& response) {
                   on_response_recv(std::move(response));
                 });
 
@@ -226,7 +227,7 @@ class Benchmarker {
   std::atomic<long> cur_msg_start_time_millis_;
   std::atomic<int> benchmark_container_id_;
   rpc::PredictionRequest request_;
-  int cur_message_id_;
+  uint32_t cur_message_id_;
 };
 
 int main(int argc, char *argv[]) {

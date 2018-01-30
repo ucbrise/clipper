@@ -81,9 +81,9 @@ using CachePage = std::pair<long, long>;
 class PredictionCache {
  public:
   PredictionCache(size_t size_bytes);
-  folly::Future<Output> fetch(const VersionedModelId &model, SharedPoolPtr<PredictionData> &input);
+  folly::Future<Output> fetch(const VersionedModelId &model, std::shared_ptr<PredictionData> &input);
 
-  void put(const VersionedModelId &model, SharedPoolPtr<PredictionData> &input, const Output &output);
+  void put(const VersionedModelId &model, std::shared_ptr<PredictionData> &input, const Output &output);
 
  private:
   size_t hash(const VersionedModelId &model, size_t input_hash) const;
@@ -186,7 +186,7 @@ class InflightMessage {
   InflightMessage(
       const std::chrono::time_point<std::chrono::system_clock> send_time,
       const int container_id, const VersionedModelId model,
-      const int replica_id, const SharedPoolPtr<PredictionData> input)
+      const int replica_id, const std::shared_ptr<PredictionData> input)
       : send_time_(std::move(send_time)),
         container_id_(container_id),
         model_(std::move(model)),
@@ -205,7 +205,7 @@ class InflightMessage {
   int container_id_;
   VersionedModelId model_;
   int replica_id_;
-  SharedPoolPtr<PredictionData> input_;
+  std::shared_ptr<PredictionData> input_;
 };
 
 class TaskExecutor {
