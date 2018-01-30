@@ -39,9 +39,11 @@ def signal_handler(signal, frame):
     clipper_conn.stop_all()
     sys.exit(0)
 
+
 def produce_query_arr_for_ms(ms):
-    size = int(ms*8000) ## Use python sum, scale linearly. 
+    size = int(ms * 8000)  ## Use python sum, scale linearly.
     return np.random.random(size)
+
 
 def fizz_buzz(i):
     if i % 15 == 0:
@@ -52,6 +54,7 @@ def fizz_buzz(i):
         return produce_query_arr_for_ms(50)
     else:
         return produce_query_arr_for_ms(10)
+
 
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal_handler)
@@ -64,7 +67,7 @@ if __name__ == '__main__':
     print("Starting Prediction")
 
     try:
-        counter = 0 
+        counter = 0
         while True:
             print(counter)
             predict(clipper_conn.get_query_addr(), fizz_buzz(counter))

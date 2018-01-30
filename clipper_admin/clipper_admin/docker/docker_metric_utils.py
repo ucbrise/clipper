@@ -6,6 +6,7 @@ from ..version import __version__
 
 PROM_VERSION = "master"
 
+
 def ensure_clipper_tmp():
     """
     Make sure /tmp/clipper directory exist. If not, make one.
