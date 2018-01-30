@@ -14,14 +14,7 @@ sys.path.insert(0, os.path.abspath('%s/util_direct_import/' % cur_dir))
 from util_package import mock_module_in_package as mmip
 import mock_module as mm
 
-import torch
-from torch.utils.data import DataLoader
-import torch.utils.data as data
-from PIL import Image
-from torch import nn, optim
-from torch.autograd import Variable
-from torchvision import transforms
-import torch.nn.functional as F
+import mxnet as mx
 
 from test_utils import (create_docker_connection, BenchmarkException, headers,
                         log_clipper_state)
@@ -37,33 +30,12 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-app_name = "pytorch-test"
-model_name = "pytorch-model"
-
-
-def normalize(x):
-    return x.astype(np.double) / 255.0
-
-
-def objective(y, pos_label):
-    # prediction objective
-    if y == pos_label:
-        return 1
-    else:
-        return 0
-
-
-def parsedata(train_path, pos_label):
-    trainData = np.genfromtxt(train_path, delimiter=',', dtype=int)
-    records = trainData[:, 1:]
-    labels = trainData[:, :1]
-    transformedlabels = [objective(ele, pos_label) for ele in labels]
-    return (records, transformedlabels)
-
+app_name = "mxnet-test"
+model_name = "mxnet-model"
 
 def predict(model, xs):
-    preds = model(xs)
-    preds = [preds.data.numpy().tolist()[0]]
+    preds = model.predict(xs)
+    preds = [preds.tolist()[0]]
     return [str(p) for p in preds]
 
 
@@ -72,7 +44,7 @@ def deploy_and_test_model(clipper_conn,
                           version,
                           link_model=False,
                           predict_fn=predict):
-    deploy_pytorch_model(clipper_conn, model_name, version, "integers",
+    deploy_mxnet_model(clipper_conn, model_name, version, "integers",
                          predict_fn, model)
 
     time.sleep(5)
@@ -111,57 +83,9 @@ def test_model(clipper_conn, app, version):
                                  (app, model_name, version))
 
 
-# Define a simple NN model
-class BasicNN(nn.Module):
-    def __init__(self):
-        super(BasicNN, self).__init__()
-        self.net = nn.Linear(28 * 28, 2)
-
-    def forward(self, x):
-        if type(x) == np.ndarray:
-            x = torch.from_numpy(x)
-        x = x.float()
-        x = Variable(x)
-        x = x.view(1, 1, 28, 28)
-        x = x / 255.0
-        batch_size = x.size(0)
-        x = x.view(batch_size, -1)
-        output = self.net(x.float())
-        return F.softmax(output)
-
-
-def train(model):
-    model.train()
-    optimizer = optim.SGD(model.parameters(), lr=0.001)
-    for epoch in range(10):
-        for i, data in enumerate(train_loader, 1):
-            image, j = data
-            optimizer.zero_grad()
-            output = model(image)
-            loss = F.cross_entropy(output,
-                                   Variable(
-                                       torch.LongTensor([train_y[i - 1]])))
-            loss.backward()
-            optimizer.step()
-    return model
-
 
 def get_test_point():
     return [np.random.randint(255) for _ in range(784)]
-
-
-#Define a dataloader to read data
-class TrainingDataset(data.Dataset):
-    def __init__(self, data, label):
-        self.imgs = data
-        self.classes = label
-
-    def __getitem__(self, index):
-        img = self.imgs[index]
-        label = self.classes[index]
-        img = torch.Tensor(img)
-        return img, torch.Tensor(label)
-
 
 if __name__ == "__main__":
     pos_label = 3
@@ -170,9 +94,7 @@ if __name__ == "__main__":
             cleanup=True, start_clipper=True)
 
         train_path = os.path.join(cur_dir, "data/train.data")
-        train_x, train_y = parsedata(train_path, pos_label)
-        train_x = normalize(train_x)
-        train_loader = TrainingDataset(train_x, train_y)
+        data_iter = mx.io.CSVIter(data_csv=train_path, data_shape=(784,), batch_size=1)
 
         try:
             clipper_conn.register_application(app_name, "integers",
@@ -193,15 +115,22 @@ if __name__ == "__main__":
 
             version = 1
 
-            model = BasicNN()
-            nn_model = train(model)
+            # Create a MXNet model
+            # Configure a two layer neuralnetwork
+            data = mx.symbol.Variable('data')
+            fc1 = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128)
+            act1 = mx.symbol.Activation(fc1, name='relu1', act_type='relu')
+            fc2 = mx.symbol.FullyConnected(act1, name='fc2', num_hidden=64)
+            softmax = mx.symbol.SoftmaxOutput(fc2, name='sm')
+            
+            mxnet_model = mx.model.FeedForward(softmax)
 
             deploy_and_test_model(
-                clipper_conn, nn_model, version, link_model=True)
+                clipper_conn, mxnet_model, version, link_model=True)
 
             app_and_model_name = "easy-register-app-model"
             create_endpoint(clipper_conn, app_and_model_name, "integers",
-                            predict, nn_model)
+                            predict, mxnet_model)
             test_model(clipper_conn, app_and_model_name, 1)
 
         except BenchmarkException as e:

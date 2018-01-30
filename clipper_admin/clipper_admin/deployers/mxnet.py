@@ -12,7 +12,7 @@ from .deployer_utils import save_python_function, serialize_object
 
 logger = logging.getLogger(__name__)
 
-PYTORCH_MODEL_RELATIVE_PATH = "mxnet_model" 
+MXNET_MODEL_RELATIVE_PATH = "mxnet_model" 
 
 
 def create_endpoint(
@@ -144,25 +144,19 @@ def deploy_mxnet_model(
         # Connect to an already-running Clipper cluster
         clipper_conn.connect()
         
-        # Example taken from https://mxnet.incubator.apache.org/api/python/model.html#model-api-reference
-        # Configure a two layer neural network
         data = mx.symbol.Variable('data')
-        fc1 = mx.symbol.FullyConnected(data, act1 = mx.symbol.Activation(fc1, name='relu1', act_type='relu')
+        fc1 = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128)
+        act1 = mx.symbol.Activation(fc1, name='relu1', act_type='relu')
         fc2 = mx.symbol.FullyConnected(act1, name='fc2', num_hidden=64)
         softmax = mx.symbol.SoftmaxOutput(fc2, name='sm')
-        # create a model
-        model = mx.model.FeedForward.create(
-             softmax,
-             X=data_set,
-             num_epoch=num_epoch,
-             learning_rate=0.01)name='fc1', num_hidden=128)
+        
+        mxnet_model = mx.model.FeedForward(softmax)
         
         
-        #define a shift function to normalize prediction inputs
-        def predict(model, inputs):
-            pred = model(shift(inputs))
-            pred = pred.data.numpy()
-            return [str(x) for x in pred]
+        def predict(model, xs):
+            preds = model.predict(xs)
+            preds = [preds.tolist()[0]]
+            return [str(p) for p in preds]
 
         deploy_mxnet_model(
             clipper_conn,
