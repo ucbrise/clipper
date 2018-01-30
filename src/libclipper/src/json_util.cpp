@@ -291,7 +291,7 @@ std::vector<InputParseResult<double>> get_double_arrays(rapidjson::Value& d,
     double* arr_data = arr.get();
 
     size_t arr_idx = 0;
-    for (rapidjson::Value& elem : v.GetArray()) {
+    for (rapidjson::Value& elem : elem_array.GetArray()) {
       if (!elem.IsDouble()) {
         throw json_semantic_error("Array input of type " +
             kTypeNames[elem.GetType()] +
@@ -323,7 +323,7 @@ std::vector<InputParseResult<float>> get_float_arrays(rapidjson::Value& d,
     float* arr_data = arr.get();
 
     size_t arr_idx = 0;
-    for (rapidjson::Value& elem : v.GetArray()) {
+    for (rapidjson::Value& elem : elem_array.GetArray()) {
       if (!elem.IsFloat()) {
         throw json_semantic_error("Array input of type " +
             kTypeNames[elem.GetType()] +
@@ -355,7 +355,7 @@ std::vector<InputParseResult<int>> get_int_arrays(rapidjson::Value& d,
     int* arr_data = arr.get();
 
     size_t arr_idx = 0;
-    for (rapidjson::Value& elem : v.GetArray()) {
+    for (rapidjson::Value& elem : elem_array.GetArray()) {
       if (!elem.IsInt()) {
         throw json_semantic_error("Array input of type " +
             kTypeNames[elem.GetType()] +

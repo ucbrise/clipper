@@ -188,7 +188,6 @@ void RPCService::send_messages(
         // TODO(Corey): Handle the case where the pointer may have a custom deleter.
         free_fn = &RPCService::zmq_continuation;
       }
-      log_info_formatted(LOGGING_TAG_RPC, "START: {}", data_start);
       message_t msg(static_cast<uint8_t*>(get_raw(std::move(data_ptr))) + data_start, data_size, free_fn);
       if (cur_msg_num < last_msg_num) {
         // send the sndmore flag unless we are on the last message part
