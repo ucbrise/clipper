@@ -180,20 +180,20 @@ void RPCService::send_messages(
     // subtract 1 because we start counting at 0
     size_t last_msg_num = std::get<2>(request).size() - 1;
     for (ByteBuffer &m : std::get<2>(request)) {
-      // send the sndmore flag unless we are on the last message part
-      ByteBufferPtr<void> &data_ptr = m.first;
+      ByteBufferPtr<void> &data_ptr = std::get<0>(m);
+      size_t data_start = std::get<1>(m);
+      size_t data_size = std::get<2>(m);
       zmq_free_fn* free_fn = NULL;
       if(data_ptr.unique()) {
         // TODO(Corey): Handle the case where the pointer may have a custom deleter.
-        // Custom deletion behavior will not exist until memory pools are introduced
         free_fn = &RPCService::zmq_continuation;
       }
-      message_t msg(data_ptr.get(), m.second, free_fn);
+      log_info_formatted(LOGGING_TAG_RPC, "START: {}", data_start);
+      message_t msg(static_cast<uint8_t*>(get_raw(std::move(data_ptr))) + data_start, data_size, free_fn);
       if (cur_msg_num < last_msg_num) {
+        // send the sndmore flag unless we are on the last message part
         socket.send(msg, ZMQ_SNDMORE);
       } else {
-        char* str_content = static_cast<char*>(msg.data());
-        std::string content(str_content, str_content + m.second);
         socket.send(msg);
       }
       cur_msg_num += 1;
@@ -283,15 +283,19 @@ void RPCService::receive_message(
       uint64_t* output_header = static_cast<uint64_t*>(msg_output_header.data());
       uint64_t num_outputs = output_header[0];
       output_header++;
-
+      uint64_t output_data_size =
+          static_cast<uint64_t>(std::accumulate(output_header, output_header + num_outputs, 0));
+      SharedPoolPtr<void> output_data(malloc(output_data_size), free);
+      uint8_t *output_data_raw = static_cast<uint8_t*>(output_data.get());
       vector<ByteBuffer> content;
       content.reserve(num_outputs);
-
+      size_t curr_start = 0;
       for (uint64_t i = 0; i < num_outputs; ++i) {
         uint64_t& output_size = output_header[i];
-        UniquePoolPtr<void> output(malloc(output_size), free);
-        socket.recv(output.get(), output_header[i], 0);
-        content.emplace_back(std::make_pair(ByteBufferPtr<void>(std::move(output)), output_size));
+        socket.recv(output_data_raw, output_header[i], 0);
+        output_data_raw += output_size;
+        curr_start += output_size;
+        content.emplace_back(std::make_tuple(ByteBufferPtr<void>(output_data), curr_start, output_size));
       }
 
       if(!new_connection) {

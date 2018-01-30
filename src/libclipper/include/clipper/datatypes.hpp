@@ -49,14 +49,6 @@ class ByteBufferPtr {
   explicit ByteBufferPtr(SharedPoolPtr<T> shared_ptr) :
       unique_ptr_(NULL, free), shared_ptr_(std::move(shared_ptr)) {};
 
-  T* get() {
-    if(unique_ptr_) {
-      return unique_ptr_.release();
-    } else {
-      return shared_ptr_.get();
-    }
-  }
-
   bool unique() const {
     if(unique_ptr_) {
       return true;
@@ -65,12 +57,37 @@ class ByteBufferPtr {
     }
   }
 
+  friend T* get_raw(ByteBufferPtr<T> ptr) {
+    return ptr.get_raw();
+  }
+
+  friend SharedPoolPtr<T> get_shared(ByteBufferPtr<T> ptr) {
+    return ptr.get_shared();
+  }
+
  private:
+  T* get_raw() {
+    if(unique_ptr_) {
+      return unique_ptr_.release();
+    } else {
+      return shared_ptr_.get();
+    }
+  }
+
+  SharedPoolPtr<T> get_shared() {
+    if (unique_ptr_) {
+      return SharedPoolPtr<T>(unique_ptr_.release(), unique_ptr_.get_deleter());
+    } else {
+      return shared_ptr_;
+    }
+  }
+
   UniquePoolPtr<T> unique_ptr_;
   SharedPoolPtr<T> shared_ptr_;
 };
 
-typedef std::pair<ByteBufferPtr<void>, size_t> ByteBuffer;
+// Pair of input data, data start index, data size in bytes
+typedef std::tuple<ByteBufferPtr<void>, size_t, size_t> ByteBuffer;
 
 class VersionedModelId {
  public:
@@ -105,6 +122,19 @@ class PredictionData {
   virtual PredictionDataHash hash() = 0;
 
   /**
+   * The index marking the beginning of the input data
+   * content, relative to the input's data pointer
+   */
+  virtual size_t start() const = 0;
+
+  /**
+   * The byte index marking the beginning of the input data
+   * content, relative to a byte representation of the
+   * input's data pointer
+   */
+  virtual size_t start_byte() const = 0;
+
+  /**
    * @return The number of elements in the input
    */
   virtual size_t size() const = 0;
@@ -128,12 +158,16 @@ class PredictionData {
 
 class ByteVector : public PredictionData {
  public:
-  explicit ByteVector(UniquePoolPtr<void> data, size_t byte_size);
   explicit ByteVector(UniquePoolPtr<uint8_t> data, size_t size);
+  explicit ByteVector(SharedPoolPtr<uint8_t> data, size_t start, size_t size);
+  explicit ByteVector(UniquePoolPtr<void> data, size_t byte_size);
+  explicit ByteVector(SharedPoolPtr<void> data, size_t start_byte, size_t byte_size);
   explicit ByteVector(void* data, size_t byte_size);
 
   DataType type() const override;
   PredictionDataHash hash() override;
+  size_t start() const override;
+  size_t start_byte() const override;
   size_t size() const override;
   size_t byte_size() const override;
 
@@ -141,6 +175,7 @@ class ByteVector : public PredictionData {
   SharedPoolPtr<void> get_data() const override;
 
   SharedPoolPtr<uint8_t> data_;
+  size_t start_;
   size_t size_;
   boost::optional<PredictionDataHash> hash_;
 };
@@ -148,11 +183,15 @@ class ByteVector : public PredictionData {
 class IntVector : public PredictionData {
  public:
   explicit IntVector(UniquePoolPtr<int> data, size_t size);
+  explicit IntVector(SharedPoolPtr<int> data, size_t start, size_t size);
   explicit IntVector(UniquePoolPtr<void> data, size_t byte_size);
+  explicit IntVector(SharedPoolPtr<void> data, size_t start_byte, size_t byte_size);
   explicit IntVector(void* data, size_t byte_size);
 
   DataType type() const override;
   PredictionDataHash hash() override;
+  size_t start() const override;
+  size_t start_byte() const override;
   size_t size() const override;
   size_t byte_size() const override;
 
@@ -160,6 +199,7 @@ class IntVector : public PredictionData {
   SharedPoolPtr<void> get_data() const override;
 
   SharedPoolPtr<int> data_;
+  size_t start_;
   size_t size_;
   boost::optional<PredictionDataHash> hash_;
 };
@@ -167,11 +207,15 @@ class IntVector : public PredictionData {
 class FloatVector : public PredictionData {
  public:
   explicit FloatVector(UniquePoolPtr<float> data, size_t size);
+  explicit FloatVector(SharedPoolPtr<float> data, size_t start, size_t size);
   explicit FloatVector(UniquePoolPtr<void> data, size_t byte_size);
+  explicit FloatVector(SharedPoolPtr<void> data, size_t start_byte, size_t byte_size);
   explicit FloatVector(void* data, size_t byte_size);
 
   DataType type() const override;
   PredictionDataHash hash() override;
+  size_t start() const override;
+  size_t start_byte() const override;
   size_t size() const override;
   size_t byte_size() const override;
 
@@ -179,6 +223,7 @@ class FloatVector : public PredictionData {
   SharedPoolPtr<void> get_data() const override;
 
   SharedPoolPtr<float> data_;
+  size_t start_;
   size_t size_;
   boost::optional<PredictionDataHash> hash_;
 };
@@ -186,11 +231,15 @@ class FloatVector : public PredictionData {
 class DoubleVector : public PredictionData {
  public:
   explicit DoubleVector(UniquePoolPtr<double> data, size_t size);
+  explicit DoubleVector(SharedPoolPtr<double> data, size_t start, size_t size);
   explicit DoubleVector(UniquePoolPtr<void> data, size_t byte_size);
+  explicit DoubleVector(SharedPoolPtr<void> data, size_t start_byte, size_t byte_size);
   explicit DoubleVector(void* data, size_t byte_size);
 
   DataType type() const override;
   PredictionDataHash hash() override;
+  size_t start() const override ;
+  size_t start_byte() const override;
   size_t size() const override;
   size_t byte_size() const override;
 
@@ -198,6 +247,7 @@ class DoubleVector : public PredictionData {
   SharedPoolPtr<void> get_data() const override;
 
   SharedPoolPtr<double> data_;
+  size_t start_;
   size_t size_;
   boost::optional<PredictionDataHash> hash_;
 };
@@ -205,12 +255,16 @@ class DoubleVector : public PredictionData {
 class SerializableString : public PredictionData {
  public:
   explicit SerializableString(UniquePoolPtr<char> data, size_t size);
+  explicit SerializableString(SharedPoolPtr<char> data, size_t start, size_t size);
   explicit SerializableString(UniquePoolPtr<void> data, size_t byte_size);
+  explicit SerializableString(SharedPoolPtr<void> data, size_t start_byte, size_t byte_size);
   explicit SerializableString(void* data, size_t byte_size);
   explicit SerializableString(std::string data);
 
   DataType type() const override;
   PredictionDataHash hash() override;
+  size_t start() const override;
+  size_t start_byte() const override;
   size_t size() const override;
   size_t byte_size() const override;
 
@@ -218,6 +272,7 @@ class SerializableString : public PredictionData {
   SharedPoolPtr<void> get_data() const override;
 
   SharedPoolPtr<char> data_;
+  size_t start_;
   size_t size_;
   boost::optional<PredictionDataHash> hash_;
 };
@@ -408,11 +463,9 @@ class PredictionRequest {
   std::vector<ByteBuffer> serialize();
 
  private:
-  // Pair of input data, data size in bytes
-  using Input = std::pair<ByteBufferPtr<void>, size_t>;
   void validate_input_type(InputType input_type) const;
 
-  std::vector<Input> inputs_;
+  std::vector<ByteBuffer> input_data_items_;
   DataType input_type_;
   size_t input_data_size_ = 0;
 };
