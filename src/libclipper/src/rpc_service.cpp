@@ -29,8 +29,8 @@ namespace clipper {
 namespace rpc {
 
 constexpr int INITIAL_REPLICA_ID_SIZE = 100;
-constexpr int CONTACTING_GAP_TOLORANCE = 30;
-constexpr double CONTAINER_EXISTENCE_CHECK_FREQUENCY = 0.2;
+constexpr long CONTAINER_ACTIVITY_TIMEOUT = 30000;
+constexpr long CONTAINER_EXISTENCE_CHECK_FREQUENCY = 10000;
 
 RPCService::RPCService()
     : request_queue_(std::make_shared<Queue<RPCRequest>>()),
@@ -141,18 +141,19 @@ void RPCService::manage_service(const string address) {
       poll_timeout = 1;
     }
     zmq_poll(items, 1, poll_timeout);
+
+    auto current_time = std::chrono::system_clock::now();
+    if(std::chrono::duration_cast<std::chrono::milliseconds>(current_time - last_check_time_).count() > CONTAINER_EXISTENCE_CHECK_FREQUENCY){
+        check_container_activity();
+        last_check_time_ = current_time;
+    }
+
     if (items[0].revents & ZMQ_POLLIN) {
       // TODO: Balance message sending and receiving fairly
       // Note: We only receive one message per event loop iteration
       log_info(LOGGING_TAG_RPC, "Found message to receive");
       receive_message(socket, connections, connections_containers_map,
                       zmq_connection_id, redis_connection);
-      auto current_time = std::chrono::system_clock::now();
-      std::chrono::duration<double> time_pass_since_last_check = current_time - last_check_time_;
-      if(time_pass_since_last_check.count() > CONTAINER_EXISTENCE_CHECK_FREQUENCY){
-         check_containers_existence(receiving_history_);
-         last_check_time_ = current_time;
-      }
     }
     // Note: We send all queued messages per event loop iteration
     send_messages(socket, connections);
@@ -160,14 +161,12 @@ void RPCService::manage_service(const string address) {
   shutdown_service(socket);
 }
 
-void RPCService::check_containers_existence(std::map<const vector<uint8_t>, std::chrono::system_clock::time_point> receiving_history_){
+void RPCService::check_container_activity(){
     std::map<const vector<uint8_t>, std::chrono::system_clock::time_point>::iterator it;
     std::chrono::system_clock::time_point current_time;
-    std::chrono::duration<double> time_elapsed_since_last_contact;
     for(it = receiving_history_.begin(); it!=receiving_history_.end(); it++){
         current_time = std::chrono::system_clock::now();
-        time_elapsed_since_last_contact = current_time - it->second;
-        if(time_elapsed_since_last_contact.count() > CONTACTING_GAP_TOLORANCE){
+        if(std::chrono::duration_cast<std::chrono::milliseconds>(current_time - it->second).count() > CONTAINER_ACTIVITY_TIMEOUT){
             log_info(LOGGING_TAG_RPC, "lost contact with a container");
         }
     }

@@ -87,7 +87,7 @@ class RPCService {
  private:
   void manage_service(const string address);
 
-  void check_containers_existence(std::map<const vector<uint8_t>, std::chrono::system_clock::time_point> receiving_history_);
+  void check_container_activity();
 
   void send_messages(socket_t &socket,
                      boost::bimap<int, vector<uint8_t>> &connections);
