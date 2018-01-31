@@ -4,7 +4,7 @@ import random
 import os
 from ..version import __version__
 
-PROM_VERSION = "master"
+PROM_VERSION = "v2.1.0"
 
 
 def ensure_clipper_tmp():
