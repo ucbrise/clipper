@@ -481,8 +481,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         model_version = 1
 
         def predict_func(inputs):
-            import time
-            time.sleep(.2)
+            time.sleep(.5)
             batch_size = len(inputs)
             return [str(batch_size) for _ in inputs]
 
