@@ -85,7 +85,7 @@ def test_model(clipper_conn, app, version):
 
 
 def get_test_point():
-    return [np.random.randint(255) for _ in range(784)]
+    return [np.random.randint(255) for _ in range(785)]
 
 if __name__ == "__main__":
     pos_label = 3
@@ -94,7 +94,7 @@ if __name__ == "__main__":
             cleanup=True, start_clipper=True)
 
         train_path = os.path.join(cur_dir, "data/train.data")
-        data_iter = mx.io.CSVIter(data_csv=train_path, data_shape=(784,), batch_size=1)
+        data_iter = mx.io.CSVIter(data_csv=train_path, data_shape=(785,), batch_size=1)
 
         try:
             clipper_conn.register_application(app_name, "integers",
