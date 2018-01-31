@@ -6,7 +6,7 @@ import json
 
 import numpy as np
 
-from clipper_admin.deployers import cloudpickle
+import cloudpickle
 
 import onnx
 import onnx_caffe2.backend
