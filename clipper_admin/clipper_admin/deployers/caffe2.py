@@ -27,8 +27,8 @@ def create_endpoint(
         registry=None,
         base_image="clipper/caffe2-container:{}".format(__version__),
         num_replicas=1):
-    """Registers an app and deploys the provided predict function with Caffe2 model as
-    a Clipper model.
+    """This function deploys the prediction function with a PyTorch model. 
+    It serializes the PyTorch model in Onnx format and creates a container that loads it as a Caffe2 model. 
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
@@ -101,7 +101,8 @@ def deploy_caffe2_model(
         labels=None,
         registry=None,
         num_replicas=1):
-    """Deploy a Python function with a Caffe2 model.
+    """This function deploys the prediction function with a PyTorch model. 
+    It serializes the PyTorch model in Onnx format and creates a container that loads it as a Caffe2 model. 
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
