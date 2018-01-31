@@ -361,7 +361,6 @@ std::vector<InputParseResult<int>> get_int_arrays(rapidjson::Value& d,
             kTypeNames[elem.GetType()] +
             " is not of type int");
       }
-      log_info_formatted(LOGGING_TAG_CLIPPER, "INT VALUE: {}", elem.GetInt());
       arr_data[arr_idx] = elem.GetInt();
       arr_idx++;
     }
