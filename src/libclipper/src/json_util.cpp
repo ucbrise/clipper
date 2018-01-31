@@ -381,9 +381,9 @@ std::vector<InputParseResult<char>> get_char_arrays(rapidjson::Value& d,
           kTypeNames[elem.GetType()] +
           " is not of type string");
     }
-    size_t arr_size = v.GetStringLength();
+    size_t arr_size = elem.GetStringLength();
     UniquePoolPtr<char> arr(static_cast<char*>(malloc(arr_size * sizeof(char))), free);
-    memcpy(arr.get(), v.GetString(), arr_size * sizeof(char));
+    memcpy(arr.get(), elem.GetString(), arr_size * sizeof(char));
     vals.push_back(std::make_pair(std::move(arr), arr_size));
   }
   return vals;
