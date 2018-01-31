@@ -263,8 +263,8 @@ std::vector<InputParseResult<uint8_t>> get_base64_encoded_byte_arrays(
       throw json_semantic_error("PredictionData of type " + kTypeNames[elem.GetType()] +
           " is not of type base64-encoded string");
     }
-    const char* encoded_string = v.GetString();
-    size_t encoded_length = v.GetStringLength();
+    const char* encoded_string = elem.GetString();
+    size_t encoded_length = elem.GetStringLength();
     size_t decoded_length = static_cast<size_t>(decoder.DecodedLength(encoded_string, encoded_length));
     UniquePoolPtr<uint8_t> decoded_bytes(static_cast<uint8_t*>(malloc(decoded_length * sizeof(uint8_t))), free);
     decoder.Decode(encoded_string, encoded_length, reinterpret_cast<char*>(decoded_bytes.get()), decoded_length);
@@ -286,7 +286,7 @@ std::vector<InputParseResult<double>> get_double_arrays(rapidjson::Value& d,
                                 kTypeNames[elem_array.GetType()] +
                                 " is not of type array");
     }
-    size_t arr_size = v.GetArray().Size();
+    size_t arr_size = elem_array.Size();
     UniquePoolPtr<double> arr(static_cast<double*>(malloc(arr_size * sizeof(double))), free);
     double* arr_data = arr.get();
 
@@ -318,7 +318,7 @@ std::vector<InputParseResult<float>> get_float_arrays(rapidjson::Value& d,
                                 kTypeNames[elem_array.GetType()] +
                                 " is not of type array");
     }
-    size_t arr_size = v.GetArray().Size();
+    size_t arr_size = elem_array.Size();
     UniquePoolPtr<float> arr(static_cast<float*>(malloc(arr_size * sizeof(float))), free);
     float* arr_data = arr.get();
 
@@ -350,7 +350,7 @@ std::vector<InputParseResult<int>> get_int_arrays(rapidjson::Value& d,
                                 kTypeNames[elem_array.GetType()] +
                                 " is not of type array");
     }
-    size_t arr_size = v.GetArray().Size();
+    size_t arr_size = elem_array.Size();
     UniquePoolPtr<int> arr(static_cast<int*>(malloc(arr_size * sizeof(int))), free);
     int* arr_data = arr.get();
 
@@ -361,6 +361,7 @@ std::vector<InputParseResult<int>> get_int_arrays(rapidjson::Value& d,
             kTypeNames[elem.GetType()] +
             " is not of type int");
       }
+      log_info_formatted(LOGGING_TAG_CLIPPER, "INT VALUE: {}", elem.GetInt());
       arr_data[arr_idx] = elem.GetInt();
       arr_idx++;
     }
