@@ -291,10 +291,10 @@ void RPCService::receive_message(
       size_t curr_start = 0;
       for (uint64_t i = 0; i < num_outputs; ++i) {
         uint64_t& output_size = output_header[i];
-        socket.recv(output_data_raw, output_header[i], 0);
+        socket.recv(output_data_raw, output_size, 0);
+        content.emplace_back(std::make_tuple(ByteBufferPtr<void>(output_data), curr_start, output_size));
         output_data_raw += output_size;
         curr_start += output_size;
-        content.emplace_back(std::make_tuple(ByteBufferPtr<void>(output_data), curr_start, output_size));
       }
 
       if(!new_connection) {

@@ -478,31 +478,31 @@ std::vector<std::shared_ptr<PredictionData>> parse_input_batch(DataType input_ty
       for (auto &input : input_batch) {
         result.push_back(std::make_shared<DoubleVector>(std::move(input.first), input.second));
       }
-    }
+    } break;
     case DataType::Floats: {
       auto input_batch = get_float_arrays(d, "input_batch");
       for (auto &input : input_batch) {
         result.push_back(std::make_shared<FloatVector>(std::move(input.first), input.second));
       }
-    }
+    } break;
     case DataType::Ints: {
       auto input_batch = get_int_arrays(d, "input_batch");
       for (auto &input : input_batch) {
         result.push_back(std::make_shared<IntVector>(std::move(input.first), input.second));
       }
-    }
+    } break;
     case DataType::Strings: {
       auto input_batch = get_char_arrays(d, "input_batch");
       for (auto &input : input_batch) {
         result.push_back(std::make_shared<SerializableString>(std::move(input.first), input.second));
       }
-    }
+    } break;
     case DataType::Bytes: {
       auto input_batch = get_base64_encoded_byte_arrays(d, "input_batch");
       for (auto &input : input_batch) {
         result.push_back(std::make_shared<ByteVector>(std::move(input.first), input.second));
       }
-    }
+    } break;
     default: throw std::invalid_argument("input_type is not a valid type");
   }
   return result;

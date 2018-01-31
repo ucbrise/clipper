@@ -411,6 +411,8 @@ rpc::PredictionResponse::deserialize_prediction_response(std::vector<ByteBuffer>
     SharedPoolPtr<void> output_data = get_shared(std::move(std::get<0>(output)));
     size_t output_start = std::get<1>(output);
     size_t output_size = std::get<2>(output);
+    char* output_str_data = static_cast<char*>(output_data.get());
+    std::string output_str(output_str_data + output_start, output_str_data + output_start + output_size);
     std::shared_ptr<PredictionData> parsed_output =
         std::make_shared<SerializableString>(output_data, output_start, output_size);
     outputs.push_back(std::move(parsed_output));

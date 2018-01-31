@@ -415,7 +415,7 @@ class PredictionResponse:
             struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT),
             flags=zmq.SNDMORE)
         socket.send(self.msg_id, flags=zmq.SNDMORE)
-        socket.send(struct.pack("<Q", header_length_bytes), 
+        socket.send(struct.pack("<Q", header_length_bytes),
             flags=zmq.SNDMORE)
         socket.send(output_header, flags=zmq.SNDMORE)
         for idx in range(self.num_outputs):
@@ -435,7 +435,7 @@ class PredictionResponse:
         specified size
 
         size : int
-            The size, in bytes, that the buffer must be 
+            The size, in bytes, that the buffer must be
             able to store
         """
         if len(PredictionResponse.header_buffer) < size:
@@ -457,7 +457,7 @@ class PredictionResponse:
         header_idx += BYTES_PER_LONG
         for output in self.outputs:
             struct.pack_into("<Q", PredictionResponse.header_buffer, header_idx, len(output))
-            header_length += BYTES_PER_LONG
+            header_idx += BYTES_PER_LONG
 
         return PredictionResponse.header_buffer[:header_length], header_length
 
