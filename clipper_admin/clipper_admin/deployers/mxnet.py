@@ -174,7 +174,9 @@ def deploy_mxnet_model(
                                         MXNET_MODEL_RELATIVE_PATH)
 
     try:
-        mxnet_model.save(mxnet_model, prefix=mxnet_model_save_loc, 1)
+        print("trying to save mxnet model\n\n\n")
+        print(mxnet_model)
+        mxnet_model.save(prefix=mxnet_model_save_loc, epoch=1)
         # Saves model in two files: <serialization_dir>/mxnet_model.json will be saved for symbol,
         # <serialization_dir>/mxnet_model.params will be saved for parameters.
     except Exception as e:
