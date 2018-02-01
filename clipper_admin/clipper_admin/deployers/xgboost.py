@@ -2,6 +2,7 @@ from __future__ import print_function, with_statement, absolute_import
 import shutil
 import xgboost as xgb
 import logging
+import re
 import os
 
 from ..version import __version__
@@ -184,14 +185,15 @@ def deploy_xgboost_model(
         xgboost_model=model)
     """
     
-    model_class = type(xgboost_model)
-                            if model_class is not "Booster":
-                                raise ClipperException(
-                                                       "xgboost_model argument was not a xgboost object")
+    model_class = re.search("xgboost.core.Booster",
+                            str(type(xgb.Booster()))).group(0).strip("'")
+    if model_class is not "Booster":
+        raise ClipperException(
+            "xgboost_model argument was not a xgboost object")
 
     # save predict function
     serialization_dir = save_python_function(name, func)
-    # save Spark model
+    # save XGBoost model
     xgboost_model_save_loc = os.path.join(serialization_dir,
                                     "xgboost_model_data")
     try:
