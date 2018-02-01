@@ -11,6 +11,7 @@ import re
 import os
 import tarfile
 import six
+import yaml
 
 from .container_manager import CONTAINERLESS_MODEL_IMAGE
 from .exceptions import ClipperException, UnconnectedException
@@ -73,7 +74,8 @@ class ClipperConnection(object):
                 __version__),
             mgmt_frontend_image='clipper/management_frontend:{}'.format(
                 __version__),
-            cache_size=DEFAULT_PREDICTION_CACHE_SIZE_BYTES):
+            cache_size=DEFAULT_PREDICTION_CACHE_SIZE_BYTES,
+            config_file=None):
         """Start a new Clipper cluster and connect to it.
 
         This command will start a new Clipper instance using the container manager provided when
@@ -91,11 +93,26 @@ class ClipperConnection(object):
             compability and preserve the expected behavior of the system.
         cache_size : int, optional
             The size of Clipper's prediction cache in bytes. Default cache size is 32 MiB.
-
+        config_file: str(optional)
+            File for the configuration of the application or model
         Raises
         ------
         :py:exc:`clipper.ClipperException`
         """
+        if(config_file is not None):
+           with open(config_file, "r") as stream:
+                config = yaml.load(stream)
+                for key in config:
+                    name = config[key]["name"]
+                    version = config[key]["version"]
+                    input_type = config[key]["input_type"]
+                    obj_type = config[key]["obj_type"]
+                    config_image = config[key]["image"]
+                    slo = config[key]["slo"]
+                    if(obj_type == "application"):
+                        self.register_application(name, input_type, "DEFAULT", slo)
+                    elif(obj_type == "model"):
+                        self.deploy_model(name, version, input_type, config_image)
         try:
             self.cm.start_clipper(query_frontend_image, mgmt_frontend_image,
                                   cache_size)
