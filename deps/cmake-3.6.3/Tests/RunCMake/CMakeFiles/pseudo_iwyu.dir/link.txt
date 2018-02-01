@@ -1,1 +1,0 @@
-/Library/Developer/CommandLineTools/usr/bin/gcc  -Qunused-arguments  -Wl,-search_paths_first -Wl,-headerpad_max_install_names  CMakeFiles/pseudo_iwyu.dir/pseudo_iwyu.c.o  -o pseudo_iwyu  
