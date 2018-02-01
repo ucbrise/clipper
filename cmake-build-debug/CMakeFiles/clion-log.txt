@@ -1,0 +1,25 @@
+/Applications/CLion.app/Contents/bin/cmake/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /Users/tim/Documents/Clipper_proj/clipper
+-- Found ZeroMQ: /usr/local/lib/libzmq.dylib (found version "4.2.2") 
+-- Boost version: 1.65.1
+-- Found the following Boost libraries:
+--   thread
+--   system
+--   chrono
+--   date_time
+--   atomic
+-- Found ZeroMQ: /usr/local/lib/libzmq.dylib (found suitable version "4.2.2", minimum required is "4.1") 
+Building for x86_64
+-- Configuring done
+CMake Warning (dev):
+  Policy CMP0042 is not set: MACOSX_RPATH is enabled by default.  Run "cmake
+  --help-policy CMP0042" for policy details.  Use the cmake_policy command to
+  set the policy and suppress this warning.
+
+  MACOSX_RPATH is not specified for the following targets:
+
+   redox
+
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- Generating done
+-- Build files have been written to: /Users/tim/Documents/Clipper_proj/clipper/cmake-build-debug
