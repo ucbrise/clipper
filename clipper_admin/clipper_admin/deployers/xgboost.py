@@ -40,7 +40,7 @@ def create_endpoint(
         One of "integers", "floats", "doubles", "bytes", or "strings".
         func : function
         The prediction function. Any state associated with the function will be
-        captured via closure capture and pickled with pickle.
+        captured via closure capture and pickled with cloudpickle.
         xgboost_model : xgboost.Booster object
         The XGBoost model to save.
         default_output : str, optional
@@ -99,17 +99,16 @@ def deploy_xgboost_model(
         version,
         input_type,
         func,
-        pyspark_model,
+        xgboost_model,
         sc,
-        base_image="clipper/pyspark-container:{}".format(__version__),
+        base_image="clipper/xgboost-container:{}".format(__version__),
         labels=None,
         registry=None,
         num_replicas=1,
         batch_size=-1):
     """Deploy a Python function with a XGBoost model.
     
-    The function must take 1 argument: data in the form of a DMatrix. It should also be able to support optional parameters: output_margin (bool),
-    ntree_limit (int), pred_leaf (bool), pred_contribs (bool), approx_contribs (bool). It must return an np array.
+    The function must take 2 arguments (in order): an XGBoost model, and data in the form of a DMatrix.
     
     Parameters
     ----------
@@ -125,7 +124,7 @@ def deploy_xgboost_model(
     One of "integers", "floats", "doubles", "bytes", or "strings".
     func : function
     The prediction function. Any state associated with the function will be
-    captured via closure capture and pickled with pickle.
+    captured via closure capture and pickled with cloudpickle.
     xgboost_model : xgboost.Booster object
     The XGBoost model to save.
     base_image : str, optional
