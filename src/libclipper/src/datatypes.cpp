@@ -129,7 +129,7 @@ size_t ByteVector::start_byte() const { return start_ * sizeof(uint8_t); }
 
 size_t ByteVector::size() const { return size_; }
 
-size_t ByteVector::byte_size() const { return size_; }
+size_t ByteVector::byte_size() const { return size_ * sizeof(uint8_t); }
 
 SharedPoolPtr<void> ByteVector::get_data() const {
   return data_;
@@ -376,7 +376,7 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
   input_metadata_raw[1] = static_cast<uint64_t>(input_data_items_.size());
 
   for (size_t i = 0; i < input_data_items_.size(); i++) {
-    input_metadata_raw[i + 2] = std::get<1>(input_data_items_[i]);
+    input_metadata_raw[i + 2] = std::get<2>(input_data_items_[i]);
   }
 
   uint64_t input_metadata_size_buf_size = 1 * sizeof(uint64_t);
