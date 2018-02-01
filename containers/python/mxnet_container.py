@@ -22,7 +22,7 @@ def load_predict_func(file_path):
 
 # load mxnet model from serialized dir
 def load_mxnet_model(model_path):
-    model = mx.model.FeedForward.load(prefix=model_path, 1)
+    model = mx.mod.Module.load(prefix=model_path, epoch=1)
     return model
 
 
