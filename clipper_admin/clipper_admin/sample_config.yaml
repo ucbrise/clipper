@@ -1,0 +1,23 @@
+Model1:
+  obj_type: "model"
+  input_type: "integers"
+  version: "1.2.7"
+  image: "test-model:1"
+
+Application1:
+  obj_type: "application"
+  input_type: "doubles"
+  slo: 10000
+  default_value: "not received"
+
+Model2:
+  obj_type: "model"
+  input_type: "floats"
+  version: "1.2.7"
+  image: "train-model:2"
+
+Application2:
+  obj_type: "application"
+  input_type: "bytes"
+  slo: 5000
+  default_value: "undetected"

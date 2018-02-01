@@ -99,20 +99,6 @@ class ClipperConnection(object):
         ------
         :py:exc:`clipper.ClipperException`
         """
-        if(config_file is not None):
-           with open(config_file, "r") as stream:
-                config = yaml.load(stream)
-                for key in config:
-                    name = config[key]["name"]
-                    version = config[key]["version"]
-                    input_type = config[key]["input_type"]
-                    obj_type = config[key]["obj_type"]
-                    config_image = config[key]["image"]
-                    slo = config[key]["slo"]
-                    if(obj_type == "application"):
-                        self.register_application(name, input_type, "DEFAULT", slo)
-                    elif(obj_type == "model"):
-                        self.deploy_model(name, version, input_type, config_image)
         try:
             self.cm.start_clipper(query_frontend_image, mgmt_frontend_image,
                                   cache_size)
@@ -130,6 +116,24 @@ class ClipperConnection(object):
         except ClipperException as e:
             logger.warning("Error starting Clipper: {}".format(e.msg))
             raise e
+
+        def parse_configuration(file):
+            if(file):
+                with open(file, "r") as stream:
+                    config = yaml.load(stream)
+                    for name in config:
+                        obj_type = config[name]["obj_type"]
+                        input_type = config[name]["input_type"]
+                        if(obj_type == "application"):
+                            slo = config[name]["slo"]
+                            default_value = config[name]["default_value"]
+                            self.register_application(name, input_type, default_value, slo)
+                        elif(obj_type == "model"):
+                            config_image = config[name]["image"]
+                            version = config[name]["version"]
+                            self.deploy_model(name, version, input_type, config_image)
+
+        parse_configuration(config_file)
 
     def connect(self):
         """Connect to a running Clipper cluster."""
