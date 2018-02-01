@@ -1,7 +1,7 @@
 from __future__ import print_function
 import sys
-sys.path.insert(0, '../../clipper_admin')
-from clipper_admin import ClipperConnection, DockerContainerManager
+sys.path.insert(0, '../../../clipper_admin')
+from clipper_admin import ClipperConnection, KubernetesContainerManager
 from clipper_admin.deployers import python as python_deployer
 import json
 import requests
@@ -11,6 +11,8 @@ import numpy as np
 import signal
 import sys
 
+
+KUBE_API_IP = '10.96.0.1'
 
 def predict(addr, x, batch=False):
     url = "http://%s/simple-example/predict" % addr
@@ -35,7 +37,7 @@ def feature_sum(xs):
 # Stop Clipper on Ctrl-C
 def signal_handler(signal, frame):
     print("Stopping Clipper...")
-    clipper_conn = ClipperConnection(DockerContainerManager())
+    clipper_conn = ClipperConnection(KubernetesContainerManager(KUBE_API_IP, useInternalIP=True))
     clipper_conn.stop_all()
     sys.exit(0)
 
@@ -58,7 +60,7 @@ def fizz_buzz(i):
 
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal_handler)
-    clipper_conn = ClipperConnection(DockerContainerManager())
+    clipper_conn = ClipperConnection(KubernetesContainerManager(KUBE_API_IP, useInternalIP=True))
     clipper_conn.start_clipper()
     print("Starting Clipper")
     python_deployer.create_endpoint(

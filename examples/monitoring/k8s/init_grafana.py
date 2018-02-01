@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
     time.sleep(3)
 
-    with open('Clipper_DataSource.json', 'r') as f:
+    with open('../grafana_templates/Clipper_DataSource.json', 'r') as f:
         datasource = json.load(f)
     requests.post(
         'http://admin:admin@localhost:3000/api/datasources', data=datasource)
@@ -41,7 +41,7 @@ if __name__ == '__main__':
         'Please login to http://localhost:3000 using username and password "admin"'
     )
     print('''
-        After Login, Click "Home" -> "Import Dashboard" -> "Upload json File" -> "Clipper_Dashboard.json"
+        After Login, Click "Home" -> "Import Dashboard" -> "Upload json File" -> "grafana_templates/Clipper_Dashboard.json"
         ''')
 
     while True:
