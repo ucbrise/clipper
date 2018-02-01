@@ -120,10 +120,14 @@ if __name__ == "__main__":
             data = mx.symbol.Variable('data')
             fc1 = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128)
             act1 = mx.symbol.Activation(fc1, name='relu1', act_type='relu')
-            fc2 = mx.symbol.FullyConnected(act1, name='fc2', num_hidden=64)
-            softmax = mx.symbol.SoftmaxOutput(fc2, name='sm')
+            fc2 = mx.symbol.FullyConnected(act1, name='fc2', num_hidden=10)
+            softmax = mx.symbol.SoftmaxOutput(fc2, name='softmax')
             
-            mxnet_model = mx.model.FeedForward(softmax)
+            # Initialize the module and fit it
+            mxnet_model = mx.mod.Module(softmax)
+            mxnet_model.bind(data_shapes=data_iter.provide_data, label_shapes=data_iter.provide_label)
+            mxnet_model.init_params()
+            mxnet_model.fit(data_iter, num_epoch=1)
 
             deploy_and_test_model(
                 clipper_conn, mxnet_model, version, link_model=True)
