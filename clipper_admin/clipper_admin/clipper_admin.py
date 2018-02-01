@@ -11,6 +11,9 @@ import re
 import os
 import tarfile
 import six
+from cloudpickle import CloudPickler
+import pickle
+import numpy as np
 
 from .container_manager import CONTAINERLESS_MODEL_IMAGE
 from .exceptions import ClipperException, UnconnectedException
@@ -1181,3 +1184,53 @@ class ClipperConnection(object):
         """
         self.cm.stop_all()
         logger.info("Stopped all Clipper cluster and all model containers")
+
+    def test_predict_function(self, query, func, input_type):
+        """Tests that the user's function has the correct signature and can be properly saved and loaded.
+
+        The function should take a dict request object like the query frontend expects JSON, 
+        the predict function, and the input type for the model.
+
+        Parameters
+        ----------
+        query: JSON or list of dicts
+            Input that the user sends to the query frontend
+        func: function
+            Predict function that the user's model is using
+        input_type: str
+            The input_type to be associated with the registered app and deployed model.
+            One of "integers", "floats", "doubles", "bytes", or "strings".
+        """
+        query_data = list(x for x in list(query.values()))
+        
+        if type(query_data[0][0]) == list:
+            query_data = query_data[0]
+
+        flattened_data = [item for sublist in query_data for item in sublist]
+
+        if input_type == "integers":
+            for x in flattened_data:
+                if type(x) != int:
+                    return "Invalid input type"
+        if input_type == "doubles":
+            for x in flattened_data:
+                if type(x) != float:
+                    return "Invalid input type"
+        if input_type == "strings":
+            for x in flattened_data:
+                if type(x) != str:
+                    return "Invalid input type"
+
+        s = six.StringIO()
+        c = CloudPickler(s, 2)
+        c.dump(func)
+        serialized_func = s.getvalue()
+        reloaded_func = pickle.loads(serialized_func)
+
+        try:
+            assert reloaded_func
+        except AssertionError as e:
+            return 'Function does not properly serialize and reload'
+
+        numpy_data = list(np.array(x) for x in query_data)
+        return reloaded_func(numpy_data)
