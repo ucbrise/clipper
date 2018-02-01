@@ -133,7 +133,10 @@ class Server(threading.Thread):
         """
         predict_fn = self.get_prediction_function()
         total_length = 0
-        outputs = predict_fn(prediction_request.inputs)
+        if self.batch_mode:
+            outputs = predict_fn(prediction_request.inputs)
+        else:
+            outputs = [predict_fn(i) for i in prediction_request.inputs]
         # Type check the outputs:
         if not type(outputs) == list:
             raise PredictionError("Model did not return a list")
@@ -510,6 +513,14 @@ class RPCService:
         self.server.model_version = model_version
         self.server.model_input_type = model_input_type
         self.server.model = model
+
+        batch_mode = True
+        if "CLIPPER_BATCH_MODE" in os.environ:
+            batch_mode = os.environ["CLIPPER_BATCH_MODE"]
+        else:
+            print("Defaulting to batch_mode=True")
+
+        self.server.batch_mode = batch_mode
 
         child_conn, parent_conn = Pipe(duplex=False)
         metrics_proc = Process(target=run_metric, args=(child_conn, ))

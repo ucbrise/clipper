@@ -231,7 +231,8 @@ std::vector<std::string> get_linked_models(redox::Redox& redis,
 bool add_model(Redox& redis, const VersionedModelId& model_id,
                const InputType& input_type, const std::vector<string>& labels,
                const std::string& container_name,
-               const std::string& model_data_path, int batch_size) {
+               const std::string& model_data_path,
+               int batch_size, bool batch_mode=true) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
     std::string model_id_key = gen_versioned_model_key(model_id);
@@ -245,7 +246,8 @@ bool add_model(Redox& redis, const VersionedModelId& model_id,
       "labels",           labels_to_str(labels),
       "container_name",   container_name,
       "model_data_path",  model_data_path,
-      "batch_size", std::to_string(batch_size)};
+      "batch_size", std::to_string(batch_size),
+      "batch_mode", std::to_string(batch_mode)};
     // clang-format on
     return send_cmd_no_reply<string>(redis, cmd_vec);
   } else {

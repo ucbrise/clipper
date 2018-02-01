@@ -75,6 +75,7 @@ class ManagementFrontendTest : public ::testing::Test {
     add_int(d, "batch_size", DEFAULT_BATCH_SIZE);
     add_string(d, "container_name", container_name);
     add_string(d, "model_data_path", model_data_path);
+    add_bool(d, "batch_mode", DEFAULT_BATCH_MODE);
   }
 
   std::string get_add_model_request_json(std::string& model_name,
@@ -441,7 +442,8 @@ TEST_F(ManagementFrontendTest, TestAddModelCorrect) {
     "input_type": "integers",
     "batch_size": -1,
     "container_name": "clipper/sklearn_cifar",
-    "model_data_path": "/tmp/model/repo/m/1"
+    "model_data_path": "/tmp/model/repo/m/1",
+    "batch_mode": true
   }
   )";
 
@@ -476,7 +478,8 @@ TEST_F(ManagementFrontendTest, TestAddLinkedModelCompatibleInputType) {
     "input_type": "integers",
     "batch_size": -1,
     "container_name": "clipper/sklearn_cifar",
-    "model_data_path": "/tmp/model/repo/m/4"
+    "model_data_path": "/tmp/model/repo/m/4",
+    "batch_mode": true
   }
   )";
 
@@ -507,7 +510,8 @@ TEST_F(ManagementFrontendTest, TestAddLinkedModelCompatibleInputType) {
     "input_type": "ints",
     "batch_size": -1,
     "container_name": "clipper/other_container",
-    "model_data_path": "/tmp/model/repo/m/4"
+    "model_data_path": "/tmp/model/repo/m/4",
+    "batch_mode": true
   }
   )";
   ASSERT_NO_THROW(rh_.add_model(add_new_model_json));
@@ -522,7 +526,8 @@ TEST_F(ManagementFrontendTest, TestAddDuplicateModelVersion) {
     "input_type": "integers",
     "batch_size": -1,
     "container_name": "clipper/sklearn_cifar",
-    "model_data_path": "/tmp/model/repo/m/4"
+    "model_data_path": "/tmp/model/repo/m/4",
+    "batch_mode": true
   }
   )";
 
@@ -547,7 +552,8 @@ TEST_F(ManagementFrontendTest, TestAddDuplicateModelVersion) {
     "input_type": "doubles",
     "batch_size": -1,
     "container_name": "clipper/other_container",
-    "model_data_path": "/tmp/model/repo/m/4"
+    "model_data_path": "/tmp/model/repo/m/4",
+    "batch_mode": true
   }
   )";
 

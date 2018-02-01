@@ -361,15 +361,15 @@ TEST_F(QueryFrontendTest, TestReadModelsAtStartup) {
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
   ASSERT_TRUE(add_model(*redis_, model1, InputType::Ints, labels,
-                        container_name, model_path, DEFAULT_BATCH_SIZE));
+                        container_name, model_path, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_MODE));
   VersionedModelId model2 = VersionedModelId("m", "2");
   std::string model_path2 = "/tmp/models/m/2";
   ASSERT_TRUE(add_model(*redis_, model2, InputType::Ints, labels,
-                        container_name, model_path2, DEFAULT_BATCH_SIZE));
+                        container_name, model_path2, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_MODE));
   VersionedModelId model3 = VersionedModelId("n", "3");
   std::string model_path3 = "/tmp/models/n/3";
   ASSERT_TRUE(add_model(*redis_, model3, InputType::Ints, labels,
-                        container_name, model_path3, DEFAULT_BATCH_SIZE));
+                        container_name, model_path3, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_MODE));
 
   // Set m@v2 and n@v3 as current model versions
   set_current_model_version(*redis_, "m", "2");
@@ -421,7 +421,7 @@ TEST_F(QueryFrontendTest, TestReadInvalidModelVersionAtStartup) {
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
   ASSERT_TRUE(add_model(*redis_, model1, InputType::Ints, labels,
-                        container_name, model_path, DEFAULT_BATCH_SIZE));
+                        container_name, model_path, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_MODE));
   // Not setting the version number will cause get_current_model_version()
   // to return -1, and the RequestHandler should then throw a runtime_error.
   ASSERT_THROW(RequestHandler<QueryProcessor>("127.0.0.1", 1337, 8),

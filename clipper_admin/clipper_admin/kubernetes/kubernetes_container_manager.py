@@ -165,7 +165,7 @@ class KubernetesContainerManager(ContainerManager):
                 "Could not connect to Clipper Kubernetes cluster. "
                 "Reason: {}".format(e))
 
-    def deploy_model(self, name, version, input_type, image, num_replicas=1):
+    def deploy_model(self, name, version, input_type, image, num_replicas=1, bacth_mode=True):
         with _pass_conflicts():
             deployment_name = get_model_deployment_name(name, version)
             body = {
@@ -206,6 +206,9 @@ class KubernetesContainerManager(ContainerManager):
                                 }, {
                                     'name': 'CLIPPER_INPUT_TYPE',
                                     'value': input_type
+                                }, {
+                                    'name': 'CLIPPER_BATCH_MODE',
+                                    'value': batch_mode
                                 }]
                             }]
                         }
@@ -222,7 +225,7 @@ class KubernetesContainerManager(ContainerManager):
 
         return response.spec.replicas
 
-    def set_num_replicas(self, name, version, input_type, image, num_replicas):
+    def set_num_replicas(self, name, version, input_type, image, num_replicas, batch_mode):
         # NOTE: assumes `metadata.name` can identify the model deployment.
         deployment_name = get_model_deployment_name(name, version)
 
