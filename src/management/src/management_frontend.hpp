@@ -702,7 +702,7 @@ class RequestHandler {
 
     check_updated_model_consistent_with_app_links(
         VersionedModelId(model_name, model_version),
-        boost::make_optional<InputType>(input_type));
+        boost::optional<InputType>(input_type));
 
     if (clipper::redis::add_model(redis_connection_, model_id, input_type,
                                   labels, container_name, model_data_path,

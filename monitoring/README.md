@@ -6,5 +6,4 @@ We use prometheus as the metric tracking system. Once you spin up a clipper quer
 Please note that Prometheus UI is for debug purpose only. You can view certain metric and graph the timeseries. But for better visualization, we recommend [Grafana](https://grafana.com/). Grafana has default support for Prometheus Client. 
 
 ## Avaliable Metrics
-For now, the following metrics are avaliable, in the corresponding Prometheus data type:
-- [x] model_pred_count (Guage)
+See `metrics_config.yaml` for the metrics detail and description
