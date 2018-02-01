@@ -142,12 +142,6 @@ void RPCService::manage_service(const string address) {
     }
     zmq_poll(items, 1, poll_timeout);
 
-    auto current_time = std::chrono::system_clock::now();
-    if(std::chrono::duration_cast<std::chrono::milliseconds>(current_time - last_check_time_).count() > CONTAINER_EXISTENCE_CHECK_FREQUENCY){
-        check_container_activity();
-        last_check_time_ = current_time;
-    }
-
     if (items[0].revents & ZMQ_POLLIN) {
       // TODO: Balance message sending and receiving fairly
       // Note: We only receive one message per event loop iteration
@@ -157,6 +151,11 @@ void RPCService::manage_service(const string address) {
     }
     // Note: We send all queued messages per event loop iteration
     send_messages(socket, connections);
+    auto current_time = std::chrono::system_clock::now();
+    if(std::chrono::duration_cast<std::chrono::milliseconds>(current_time - last_check_time_).count() > CONTAINER_EXISTENCE_CHECK_FREQUENCY){
+      check_container_activity();
+      last_check_time_ = current_time;
+    }
   }
   shutdown_service(socket);
 }

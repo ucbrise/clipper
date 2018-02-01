@@ -1,2 +1,0 @@
-/Library/Developer/CommandLineTools/usr/bin/ar qc libredox_staticd.a  CMakeFiles/redox_static.dir/src/client.cpp.o CMakeFiles/redox_static.dir/src/command.cpp.o CMakeFiles/redox_static.dir/src/subscriber.cpp.o CMakeFiles/redox_static.dir/src/utils/logger.cpp.o
-/Library/Developer/CommandLineTools/usr/bin/ranlib libredox_staticd.a
