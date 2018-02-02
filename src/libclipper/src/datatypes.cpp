@@ -345,7 +345,12 @@ void rpc::PredictionRequest::add_input(const std::shared_ptr<PredictionData>& in
   input_data_size_ += input->byte_size();
   SharedPoolPtr<void> input_data = get_data(input);
   ByteBufferPtr<void> buffer_data(input_data);
+  ByteBufferPtr<void> buf2(input_data);
   input_data_items_.push_back(std::make_tuple(std::move(buffer_data), input->start_byte(), input->byte_size()));
+  char* str_data = static_cast<char*>(get_raw(std::move(buf2)));
+  std::string item(str_data + input->start_byte(), str_data + input->start_byte() + input->byte_size());
+  log_info_formatted(LOGGING_TAG_CLIPPER, "{}", static_cast<void*>(str_data + input->start_byte()));
+  log_info_formatted(LOGGING_TAG_CLIPPER, "{}", str_data + input->start_byte());
 }
 
 void rpc::PredictionRequest::add_input(std::unique_ptr<PredictionData> input) {
@@ -395,8 +400,17 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
       std::make_tuple(ByteBufferPtr<void>(std::move(input_metadata_size_buf)), 0, input_metadata_size_buf_size));
   serialized_request.emplace_back(
       std::make_tuple(ByteBufferPtr<void>(std::move(input_metadata)), 0, input_metadata_size));
-  for (size_t i = 0; i < input_data_items_.size(); i++) {
-    serialized_request.emplace_back(std::move(input_data_items_[i]));
+  for (auto &item : input_data_items_) {
+    //auto &item = input_data_items_[i];
+
+    char* ptr = static_cast<char*>(get_raw(std::move(std::get<0>(item))));
+    size_t start = std::get<1>(item);
+    size_t size = std::get<2>(item);
+
+    log_info_formatted(LOGGING_TAG_CLIPPER, "{}", static_cast<void*>(ptr + start));
+    log_info_formatted(LOGGING_TAG_CLIPPER, "{}", ptr + start);
+
+    //serialized_request.emplace_back(std::move(input_data_items_[i]));
   }
   return serialized_request;
 }
