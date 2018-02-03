@@ -401,16 +401,7 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
   serialized_request.emplace_back(
       std::make_tuple(ByteBufferPtr<void>(std::move(input_metadata)), 0, input_metadata_size));
   for (auto &item : input_data_items_) {
-    //auto &item = input_data_items_[i];
-
-    char* ptr = static_cast<char*>(get_raw(std::move(std::get<0>(item))));
-    size_t start = std::get<1>(item);
-    size_t size = std::get<2>(item);
-
-    log_info_formatted(LOGGING_TAG_CLIPPER, "{}", static_cast<void*>(ptr + start));
-    log_info_formatted(LOGGING_TAG_CLIPPER, "{}", ptr + start);
-
-    //serialized_request.emplace_back(std::move(input_data_items_[i]));
+    serialized_request.emplace_back(std::move(item));
   }
   return serialized_request;
 }

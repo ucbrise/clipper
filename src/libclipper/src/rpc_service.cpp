@@ -29,6 +29,17 @@ namespace rpc {
 
 constexpr int INITIAL_REPLICA_ID_SIZE = 100;
 
+void RPCDataStore::add_data(SharedPoolPtr<void> data) {
+  std::lock_guard<std::mutex> lock(mtx_);
+  void* data_ptr = data.get();
+  data_items_.emplace(data_ptr, std::move(data));
+}
+
+void RPCDataStore::remove_data(void *data) {
+  std::lock_guard<std::mutex> lock(mtx_);
+  data_items_.erase(data);
+}
+
 RPCService::RPCService()
     : request_queue_(std::make_shared<Queue<RPCRequest>>()),
       active_(false),
@@ -181,14 +192,24 @@ void RPCService::send_messages(
     size_t last_msg_num = std::get<2>(request).size() - 1;
     for (ByteBuffer &m : std::get<2>(request)) {
       ByteBufferPtr<void> &data_ptr = std::get<0>(m);
+
+      auto shared_data = get_shared(std::move(data_ptr));
+      outbound_data_store_.add_data(shared_data);
+
       size_t data_start = std::get<1>(m);
       size_t data_size = std::get<2>(m);
-      zmq_free_fn* free_fn = NULL;
-      if(data_ptr.unique()) {
-        // TODO(Corey): Handle the case where the pointer may have a custom deleter.
-        free_fn = &RPCService::zmq_continuation;
-      }
-      message_t msg(static_cast<uint8_t*>(get_raw(std::move(data_ptr))) + data_start, data_size, free_fn);
+
+      message_t msg(static_cast<uint8_t*>(shared_data.get()) + data_start, data_size, &RPCService::zmq_continuation, &outbound_data_store_);
+//      zmq_free_fn* free_fn = NULL;
+//      if(data_ptr.unique()) {
+//        // TODO(Corey): Handle the case where the pointer may have a custom deleter.
+//        free_fn = &RPCService::zmq_continuation;
+//      }
+//      message_t msg(static_cast<uint8_t*>(get_raw(std::move(data_ptr))) + data_start, data_size, free_fn);
+
+
+
+
       if (cur_msg_num < last_msg_num) {
         // send the sndmore flag unless we are on the last message part
         socket.send(msg, ZMQ_SNDMORE);
@@ -200,8 +221,9 @@ void RPCService::send_messages(
   }
 }
 
-void RPCService::zmq_continuation(void *data, void* /* hint */) {
-  free(data);
+void RPCService::zmq_continuation(void *data, void* hint) {
+  auto data_store = static_cast<RPCDataStore*>(hint);
+  data_store->remove_data(data);
 }
 
 void RPCService::receive_message(

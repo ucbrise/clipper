@@ -50,6 +50,16 @@ enum class MessageType {
 
 enum class HeartbeatType { KeepAlive = 0, RequestContainerMetadata = 1 };
 
+class RPCDataStore {
+ public:
+  void add_data(SharedPoolPtr<void> data);
+  void remove_data(void* data);
+
+ private:
+  std::mutex mtx_;
+  std::unordered_map<void*, SharedPoolPtr<void>> data_items_;
+};
+
 class RPCService {
  public:
   explicit RPCService();
@@ -122,6 +132,8 @@ class RPCService {
 
   std::function<void(VersionedModelId, int)> container_ready_callback_;
   std::function<void(RPCResponse&)> new_response_callback_;
+
+  RPCDataStore outbound_data_store_;
 };
 
 }  // namespace rpc
