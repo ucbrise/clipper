@@ -18,88 +18,20 @@
   "hideControls": false,
   "id": 1,
   "links": [],
+  "refresh": false,
   "rows": [
     {
       "collapse": false,
-      "height": 247,
+      "height": 234,
       "panels": [
         {
-          "aliasColors": {},
-          "bars": true,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "Clipper",
-          "fill": 1,
-          "id": 1,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "total": false,
-            "values": false
-          },
-          "lines": false,
-          "linewidth": 1,
+          "content": "# Fizz-Buzz Feature Sum Model\n\nThis dashboard demonstrates Clipper serving two \"Fizz-Buzz\" feature sum model. \n\nFor each prediction #i: the time to make the prediction (client side end-to-end) is\n- Long ~600ms: i divisible by 15. \n- Medium ~300ms:  i divisible by 5.\n- Short ~ 150:  i divisible by 3.\n- Very Short ~50ms: Other",
+          "id": 6,
           "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "span": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "avg(clipper_mc_end_to_end_latency_ms_bucket) by (le)",
-              "format": "time_series",
-              "intervalFactor": 2,
-              "refId": "A"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "Average End-to-End Latency Histogram (ms)",
-          "tooltip": {
-            "shared": false,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "series",
-            "name": null,
-            "show": true,
-            "values": [
-              "current"
-            ]
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ]
+          "mode": "markdown",
+          "span": 6,
+          "title": "About",
+          "type": "text"
         },
         {
           "cacheTimeout": null,
@@ -157,13 +89,14 @@
           "tableColumn": "",
           "targets": [
             {
-              "expr": "sum(clipper_mc_pred_total)",
+              "expr": "app_simple_example_num_predictions_count",
               "format": "time_series",
               "intervalFactor": 2,
               "refId": "A"
             }
           ],
           "thresholds": "",
+          "timeFrom": null,
           "title": "Total Prediction Made",
           "type": "singlestat",
           "valueFontSize": "80%",
@@ -175,6 +108,84 @@
             }
           ],
           "valueName": "avg"
+        },
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "Clipper",
+          "fill": 1,
+          "id": 5,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": false,
+            "total": false,
+            "values": false
+          },
+          "lines": false,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "span": 4,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "clipper_mc_pred_total",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "{{job}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Prediction Count by Model Container",
+          "tooltip": {
+            "shared": false,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "series",
+            "name": null,
+            "show": true,
+            "values": [
+              "current"
+            ]
+          },
+          "yaxes": [
+            {
+              "decimals": null,
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ]
         }
       ],
       "repeat": null,
@@ -186,7 +197,180 @@
     },
     {
       "collapse": false,
-      "height": 250,
+      "height": 198,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": true,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "Clipper",
+          "fill": 1,
+          "id": 4,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": false,
+            "total": false,
+            "values": false
+          },
+          "lines": false,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "span": 12,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "avg(clipper_mc_handle_time_ms_bucket{le=\"10.0\"}) - avg(clipper_mc_handle_time_ms_bucket{le=\"5.0\"})",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "5 - 10",
+              "refId": "A"
+            },
+            {
+              "expr": "avg(clipper_mc_handle_time_ms_bucket{le=\"20.0\"}) - avg(clipper_mc_handle_time_ms_bucket{le=\"10.0\"})",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "10 - 20",
+              "refId": "B"
+            },
+            {
+              "expr": "avg(clipper_mc_handle_time_ms_bucket{le=\"35.0\"}) - avg(clipper_mc_handle_time_ms_bucket{le=\"20.0\"})",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "20 - 35",
+              "refId": "C"
+            },
+            {
+              "expr": "avg(clipper_mc_handle_time_ms_bucket{le=\"50.0\"}) - avg(clipper_mc_handle_time_ms_bucket{le=\"35.0\"})",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "35 - 50",
+              "refId": "D"
+            },
+            {
+              "expr": "avg(clipper_mc_handle_time_ms_bucket{le=\"75.0\"}) - avg(clipper_mc_handle_time_ms_bucket{le=\"50.0\"})",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "50 - 75",
+              "refId": "E"
+            },
+            {
+              "expr": "avg(clipper_mc_handle_time_ms_bucket{le=\"100.0\"}) - avg(clipper_mc_handle_time_ms_bucket{le=\"75.0\"})",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "75 - 100",
+              "refId": "F"
+            },
+            {
+              "expr": "avg(clipper_mc_handle_time_ms_bucket{le=\"150.0\"}) - avg(clipper_mc_handle_time_ms_bucket{le=\"100.0\"})",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "100 - 150",
+              "refId": "G"
+            },
+            {
+              "expr": "avg(clipper_mc_handle_time_ms_bucket{le=\"200.0\"}) - avg(clipper_mc_handle_time_ms_bucket{le=\"150.0\"})",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "150 - 200",
+              "refId": "H"
+            },
+            {
+              "expr": "avg(clipper_mc_handle_time_ms_bucket{le=\"250.0\"}) - avg(clipper_mc_handle_time_ms_bucket{le=\"200.0\"})",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "200 - 250",
+              "refId": "I"
+            },
+            {
+              "expr": "avg(clipper_mc_handle_time_ms_bucket{le=\"300.0\"}) - avg(clipper_mc_handle_time_ms_bucket{le=\"250.0\"})",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "250 - 300",
+              "refId": "J"
+            },
+            {
+              "expr": "avg(clipper_mc_handle_time_ms_bucket{le=\"400.0\"}) - avg(clipper_mc_handle_time_ms_bucket{le=\"300.0\"})",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "300 - 400",
+              "refId": "K"
+            },
+            {
+              "expr": "avg(clipper_mc_handle_time_ms_bucket{le=\"500.0\"}) - avg(clipper_mc_handle_time_ms_bucket{le=\"400.0\"})",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "400 - 500",
+              "refId": "L"
+            },
+            {
+              "expr": "avg(clipper_mc_handle_time_ms_bucket{le=\"+Inf\"}) - avg(clipper_mc_handle_time_ms_bucket{le=\"500.0\"})",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "500 - ",
+              "refId": "M"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Average Handle Time Histogram (ms)",
+          "tooltip": {
+            "shared": false,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "series",
+            "name": null,
+            "show": true,
+            "values": [
+              "current"
+            ]
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ]
+        }
+      ],
+      "repeat": null,
+      "repeatIteration": null,
+      "repeatRowId": null,
+      "showTitle": false,
+      "title": "Dashboard Row",
+      "titleSize": "h6"
+    },
+    {
+      "collapse": false,
+      "height": 263,
       "panels": [
         {
           "aliasColors": {},
@@ -194,7 +378,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "Clipper",
-          "description": "For the past 10 minutes",
+          "description": "Sample over 30 sec range",
           "fill": 1,
           "id": 3,
           "legend": {
@@ -216,33 +400,33 @@
           "renderer": "flot",
           "seriesOverrides": [],
           "spaceLength": 10,
-          "span": 12,
+          "span": 6,
           "stack": false,
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg(rate(clipper_mc_end_to_end_latency_ms_sum[10m])/rate(clipper_mc_end_to_end_latency_ms_count[10m]))",
+              "expr": "avg(rate(clipper_mc_end_to_end_latency_ms_sum[30s])/rate(clipper_mc_end_to_end_latency_ms_count[30s]))",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "End to End",
               "refId": "A"
             },
             {
-              "expr": "avg(rate(clipper_mc_recv_time_ms_sum[10m])/rate(clipper_mc_recv_time_ms_count[10m]))",
+              "expr": "avg(rate(clipper_mc_recv_time_ms_sum[30s])/rate(clipper_mc_recv_time_ms_count[30s]))",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "Receive Time",
               "refId": "B"
             },
             {
-              "expr": "avg(rate(clipper_mc_parse_time_ms_sum[10m])/rate(clipper_mc_parse_time_ms_count[10m]))",
+              "expr": "avg(rate(clipper_mc_parse_time_ms_sum[30s])/rate(clipper_mc_parse_time_ms_count[30s]))",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "Parse Time",
               "refId": "C"
             },
             {
-              "expr": "avg(rate(clipper_mc_handle_time_ms_sum[10m])/rate(clipper_mc_handle_time_ms_count[10m]))",
+              "expr": "avg(rate(clipper_mc_handle_time_ms_sum[30s])/rate(clipper_mc_handle_time_ms_count[30s]))",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "Handle Time",
@@ -250,7 +434,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": "10m",
+          "timeFrom": null,
           "timeShift": null,
           "title": "Average Latency (ms)",
           "tooltip": {
@@ -284,6 +468,96 @@
               "show": true
             }
           ]
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "Clipper",
+          "fill": 1,
+          "id": 7,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "span": 6,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "avg(histogram_quantile(0.99, rate(clipper_mc_end_to_end_latency_ms_bucket[10m])))",
+              "format": "time_series",
+              "instant": false,
+              "intervalFactor": 2,
+              "legendFormat": "99th Percentile",
+              "refId": "A"
+            },
+            {
+              "expr": "avg(histogram_quantile(0.95, rate(clipper_mc_end_to_end_latency_ms_bucket[10m])))",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "95th Percentile",
+              "refId": "B"
+            },
+            {
+              "expr": "avg(histogram_quantile(0.5, rate(clipper_mc_end_to_end_latency_ms_bucket[10m])))",
+              "format": "time_series",
+              "intervalFactor": 2,
+              "legendFormat": "50th Percentile",
+              "refId": "C"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Model Containers: Average End-to-end Latency",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "ms",
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ]
         }
       ],
       "repeat": null,
@@ -301,7 +575,7 @@
     "list": []
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-5m",
     "to": "now"
   },
   "timepicker": {

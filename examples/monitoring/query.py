@@ -40,6 +40,22 @@ def signal_handler(signal, frame):
     sys.exit(0)
 
 
+def produce_query_arr_for_ms(ms):
+    size = int(ms * 8000)  ## Use python sum, scale linearly.
+    return np.random.random(size)
+
+
+def fizz_buzz(i):
+    if i % 15 == 0:
+        return produce_query_arr_for_ms(200)
+    elif i % 5 == 0:
+        return produce_query_arr_for_ms(100)
+    elif i % 3 == 0:
+        return produce_query_arr_for_ms(50)
+    else:
+        return produce_query_arr_for_ms(10)
+
+
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal_handler)
     clipper_conn = ClipperConnection(DockerContainerManager())
@@ -50,18 +66,12 @@ if __name__ == '__main__':
     time.sleep(2)
     print("Starting Prediction")
 
-    # For batch inputs set this number > 1
-    batch_size = 1
-
     try:
+        counter = 0
         while True:
-            if batch_size > 1:
-                predict(
-                    clipper_conn.get_query_addr(),
-                    [list(np.random.random(200)) for i in range(batch_size)],
-                    batch=True)
-            else:
-                predict(clipper_conn.get_query_addr(), np.random.random(200))
+            print(counter)
+            predict(clipper_conn.get_query_addr(), fizz_buzz(counter))
+            counter += 1
             time.sleep(0.2)
     except Exception as e:
         clipper_conn.stop_all()
