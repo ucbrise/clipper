@@ -3,7 +3,7 @@ FROM clipper/py-rpc:${CODE_VERSION}
 
 MAINTAINER Dan Crankshaw <dscrankshaw@gmail.com>
 
-RUN conda install tensorflow
+RUN conda install -c conda-forge tensorflow
 
 COPY containers/python/tf_cifar_container.py /container/
 

@@ -25,6 +25,7 @@ class DockerContainerManager(ContainerManager):
                  clipper_rpc_port=7000,
                  redis_ip=None,
                  redis_port=6379,
+                 prometheus_port=9090,
                  docker_network="clipper_network",
                  extra_container_kwargs={}):
         """
@@ -63,6 +64,7 @@ class DockerContainerManager(ContainerManager):
         else:
             self.external_redis = True
         self.redis_port = redis_port
+        self.prometheus_port = prometheus_port
         if docker_network is "host":
             raise ClipperException(
                 "DockerContainerManager does not support running Clipper on the "
@@ -156,7 +158,7 @@ class DockerContainerManager(ContainerManager):
         setup_metric_config(query_frontend_metric_name,
                             CLIPPER_INTERNAL_METRIC_PORT)
         run_metric_image(self.docker_client, self.common_labels,
-                         self.extra_container_kwargs)
+                         self.prometheus_port, self.extra_container_kwargs)
 
         self.connect()
 

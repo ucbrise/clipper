@@ -4,6 +4,8 @@ import random
 import os
 from ..version import __version__
 
+PROM_VERSION = "v2.1.0"
+
 
 def ensure_clipper_tmp():
     """
@@ -80,7 +82,8 @@ def setup_metric_config(query_frontend_metric_name,
         yaml.dump(prom_config, f)
 
 
-def run_metric_image(docker_client, common_labels, extra_container_kwargs):
+def run_metric_image(docker_client, common_labels, prometheus_port,
+                     extra_container_kwargs):
     """
     Run the prometheus image.
     :param docker_client: The docker client object
@@ -88,7 +91,6 @@ def run_metric_image(docker_client, common_labels, extra_container_kwargs):
     :param extra_container_kwargs: Kwargs to pass in.
     :return: None
     """
-
     metric_cmd = [
         "--config.file=/etc/prometheus/prometheus.yml",
         "--storage.tsdb.path=/prometheus",
@@ -98,10 +100,10 @@ def run_metric_image(docker_client, common_labels, extra_container_kwargs):
     ]
     metric_labels = common_labels.copy()
     docker_client.containers.run(
-        "prom/prometheus",
+        "prom/prometheus:{}".format(PROM_VERSION),
         metric_cmd,
         name="metric_frontend-{}".format(random.randint(0, 100000)),
-        ports={'9090/tcp': 9090},
+        ports={'9090/tcp': prometheus_port},
         volumes={
             '/tmp/clipper/prometheus.yml': {
                 'bind': '/etc/prometheus/prometheus.yml',
