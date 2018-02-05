@@ -241,10 +241,10 @@ build_images () {
     ###########################################################################
 
     # Build Clipper core images
-    create_image lib_base ClipperLibBaseDockerfile $private
-    create_image query_frontend QueryFrontendDockerfile $public
-    create_image management_frontend ManagementFrontendDockerfile $public
-    create_image unittests ClipperTestsDockerfile  $private
+    #create_image lib_base ClipperLibBaseDockerfile $private
+    #create_image query_frontend QueryFrontendDockerfile $public
+    #create_image management_frontend ManagementFrontendDockerfile $public
+    #create_image unittests ClipperTestsDockerfile  $private
 
     # Build containers
     #create_image spark-scala-container SparkScalaContainerDockerfile $public
@@ -263,7 +263,7 @@ build_images () {
     #create_image mxnet-container MXNetContainerDockerfile $public
 
     # Build Metric Monitor image - no dependency
-    create_image frontend-exporter FrontendExporterDockerfile $public
+    #create_image frontend-exporter FrontendExporterDockerfile $public
 }
 
 
