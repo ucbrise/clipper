@@ -82,10 +82,10 @@ def create_endpoint(
     clipper_conn.register_application(name, input_type, default_output,
                                       slo_micros)
     deploy_mxnet_model(clipper_conn, name, version, input_type, func,
-                         mxnet_model, base_image, labels, registry,
-                         num_replicas)
+                       mxnet_model, base_image, labels, registry, num_replicas)
 
     clipper_conn.link_model_to_app(name, name)
+
 
 def deploy_mxnet_model(
         clipper_conn,
@@ -182,9 +182,14 @@ def deploy_mxnet_model(
         # Saves model in two files: <serialization_dir>/mxnet_model.json will be saved for symbol,
         # <serialization_dir>/mxnet_model.params will be saved for parameters.
 
+        # Deploy model
+        clipper_conn.build_and_deploy_model(name, version, input_type,
+                                            serialization_dir, base_image,
+                                            labels, registry, num_replicas)
+
     except Exception as e:
         print(e)
-        logger.warn("Error saving MXNet model: %s" % e)
+        logger.error("Error saving MXNet model: %s" % e)
 
     logger.info("MXNet model saved")
 
