@@ -188,15 +188,9 @@ def deploy_mxnet_model(
                                             labels, registry, num_replicas)
 
     except Exception as e:
-        print(e)
         logger.error("Error saving MXNet model: %s" % e)
 
     logger.info("MXNet model saved")
-
-    # Deploy model
-    clipper_conn.build_and_deploy_model(name, version, input_type,
-                                        serialization_dir, base_image, labels,
-                                        registry, num_replicas)
 
     # Remove temp files
     shutil.rmtree(serialization_dir)
