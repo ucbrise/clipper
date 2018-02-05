@@ -12,7 +12,7 @@ from .deployer_utils import save_python_function, serialize_object
 
 logger = logging.getLogger(__name__)
 
-MXNET_MODEL_RELATIVE_PATH = "mxnet_model" 
+MXNET_MODEL_RELATIVE_PATH = "mxnet_model"
 
 
 def create_endpoint(
@@ -28,7 +28,7 @@ def create_endpoint(
         registry=None,
         base_image="clipper/mxnet-container:{}".format(__version__),
         num_replicas=1):
-    """Registers an app and deploys the provided predict function with PyTorch model as
+    """Registers an app and deploys the provided predict function with MXNet model as
     a Clipper model.
     Parameters
     ----------
@@ -87,7 +87,6 @@ def create_endpoint(
 
     clipper_conn.link_model_to_app(name, name)
 
-
 def deploy_mxnet_model(
         clipper_conn,
         name,
@@ -134,7 +133,7 @@ def deploy_mxnet_model(
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
     Example
     -------
-    
+
         from clipper_admin import ClipperConnection, DockerContainerManager
         from clipper_admin.deployers.mxnet import deploy_mxnet_model
         import mxnet as mx
@@ -143,16 +142,21 @@ def deploy_mxnet_model(
 
         # Connect to an already-running Clipper cluster
         clipper_conn.connect()
-        
+
+        # Create a MXNet model
+        # Configure a two layer neuralnetwork
         data = mx.symbol.Variable('data')
         fc1 = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128)
         act1 = mx.symbol.Activation(fc1, name='relu1', act_type='relu')
-        fc2 = mx.symbol.FullyConnected(act1, name='fc2', num_hidden=64)
-        softmax = mx.symbol.SoftmaxOutput(fc2, name='sm')
-        
-        mxnet_model = mx.model.FeedForward(softmax)
-        
-        
+        fc2 = mx.symbol.FullyConnected(act1, name='fc2', num_hidden=10)
+        softmax = mx.symbol.SoftmaxOutput(fc2, name='softmax')
+
+        # Initialize the module and fit it
+        mxnet_model = mx.mod.Module(softmax)
+        mxnet_model.bind(data_shapes=data_iter.provide_data, label_shapes=data_iter.provide_label)
+        mxnet_model.init_params()
+        mxnet_model.fit(data_iter, num_epoch=1)
+
         def predict(model, xs):
             preds = model.predict(xs)
             preds = [preds.tolist()[0]]
@@ -174,10 +178,10 @@ def deploy_mxnet_model(
                                         MXNET_MODEL_RELATIVE_PATH)
 
     try:
-        mxnet_model.save_checkpoint(prefix=mxnet_model_save_loc, epoch=1)
+        mxnet_model.save_checkpoint(prefix=mxnet_model_save_loc, epoch=0)
         # Saves model in two files: <serialization_dir>/mxnet_model.json will be saved for symbol,
         # <serialization_dir>/mxnet_model.params will be saved for parameters.
-            
+
     except Exception as e:
         print(e)
         logger.warn("Error saving MXNet model: %s" % e)
