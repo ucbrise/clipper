@@ -26,11 +26,17 @@ def load_mxnet_model(model_path):
     #home_dir = os.path.expanduser("~")
     #train_path = os.path.join(home_dir, "clipper/integration-tests/data/train.data")
     #train_path = "/home/ubuntu/clipper/integration-tests/data/train.data"
-    data_iter = mx.io.CSVIter(data_csv="train.data", data_shape=(785, ), batch_size=1)
+    data_iter = mx.io.CSVIter(
+        data_csv="train.data", data_shape=(785, ), batch_size=1)
 
-    sym, arg_params, aux_params = mx.model.load_checkpoint(prefix=model_path, epoch=0)
+    sym, arg_params, aux_params = mx.model.load_checkpoint(
+        prefix=model_path, epoch=0)
     mxnet_model = mx.mod.Module(symbol=sym)
-    mxnet_model.fit(train_data=data_iter, arg_params=arg_params, aux_params=aux_params, num_epoch=0)
+    mxnet_model.fit(
+        train_data=data_iter,
+        arg_params=arg_params,
+        aux_params=aux_params,
+        num_epoch=0)
 
     #mxnet_model = mx.mod.Module(symbol=sym)
     #mxnet_model.bind(data_iter.provide_data, data_iter.provide_label)
