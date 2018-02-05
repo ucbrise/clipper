@@ -2,6 +2,7 @@ import yaml
 import requests
 import random
 import os
+from ..exceptions import ClipperException
 from ..version import __version__
 
 PROM_VERSION = "v2.1.0"
@@ -114,15 +115,24 @@ def run_metric_image(docker_client, common_labels, prometheus_port,
         **extra_container_kwargs)
 
 
-def update_metric_config(model_container_name, CLIPPER_INTERNAL_METRIC_PORT):
+def add_to_metric_config(model_container_name, CLIPPER_INTERNAL_METRIC_PORT):
     """
-    Update the prometheus.yml configuration file.
-    :param model_container_name: New model container_name, need to be unique.
+    Add a new model container to the prometheus.yml configuration file.
+    :param model_container_name: New model container name, need to be unique.
     :param CLIPPER_INTERNAL_METRIC_PORT: Default port
     :return: None
+
+    Raises
+        ------
+        :py:exc:`clipper.ClipperException`
     """
     with open('/tmp/clipper/prometheus.yml', 'r') as f:
         conf = yaml.load(f)
+
+    for config in conf['scrape_configs']:
+        if config['job_name'] == model_container_name:
+            raise ClipperException('{} is added already on the metric configs'.
+                                   format(model_container_name))
 
     new_job_dict = {
         'job_name':
@@ -136,6 +146,26 @@ def update_metric_config(model_container_name, CLIPPER_INTERNAL_METRIC_PORT):
         }]
     }
     conf['scrape_configs'].append(new_job_dict)
+
+    with open('/tmp/clipper/prometheus.yml', 'w') as f:
+        yaml.dump(conf, f)
+
+    requests.post('http://localhost:9090/-/reload')
+
+
+def delete_from_metric_config(model_container_name):
+    """
+    Delete the stored model container from the prometheus.yml configuration file.
+    :param model_container_name: the model container name to be deleted.
+    :return: None
+    """
+    with open('/tmp/clipper/prometheus.yml', 'r') as f:
+        conf = yaml.load(f)
+
+    for i, config in enumerate(conf['scrape_configs']):
+        if config['job_name'] == model_container_name:
+            conf['scrape_configs'].pop(i)
+            break
 
     with open('/tmp/clipper/prometheus.yml', 'w') as f:
         yaml.dump(conf, f)
