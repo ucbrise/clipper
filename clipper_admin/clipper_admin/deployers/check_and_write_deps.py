@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 from conda.core.index import get_index
 from conda.base.context import context
 from conda.exceptions import UnsatisfiableError, NoPackagesFoundError
+from requests.exceptions import ChunkedEncodingError
 import conda.resolve
 import conda_env.specs as specs
 import sys
@@ -66,7 +67,15 @@ def check_solvability_write_deps(env_path, directory, platform,
         on the container os. Otherwise returns False.
     """
 
-    index = get_index(platform=platform)
+    def get_packages_index(tries=5):
+        for n in range(tries):
+            try:
+                return get_index(platform=platform)
+            except ChunkedEncodingError as e:
+                if n == tries - 1:
+                    raise e
+
+    index = get_packages_index()
     r = conda.resolve.Resolve(index)
     spec = specs.detect(filename=env_path)
     env = spec.environment
