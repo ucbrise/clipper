@@ -4,6 +4,8 @@ import random
 import os
 from ..version import __version__
 
+PROM_VERSION = "v2.1.0"
+
 
 def ensure_clipper_tmp():
     """
@@ -98,7 +100,7 @@ def run_metric_image(docker_client, common_labels, prometheus_port,
     ]
     metric_labels = common_labels.copy()
     docker_client.containers.run(
-        "prom/prometheus",
+        "prom/prometheus:{}".format(PROM_VERSION),
         metric_cmd,
         name="metric_frontend-{}".format(random.randint(0, 100000)),
         ports={'9090/tcp': prometheus_port},
