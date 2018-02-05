@@ -37,7 +37,6 @@ model_name = "mxnet-model"
 def predict(model, xs):
     data_iter = mx.io.NDArrayIter(xs)
     preds = model.predict(data_iter)
-    #preds = [preds.tolist()[0]]
     preds = [preds[0]]
     return [str(p) for p in preds]
 
@@ -129,8 +128,6 @@ if __name__ == "__main__":
 
             # Initialize the module and fit it
             mxnet_model = mx.mod.Module(softmax)
-            #mxnet_model.bind(data_shapes=data_iter.provide_data, label_shapes=data_iter.provide_label)
-            #mxnet_model.init_params()
             mxnet_model.fit(data_iter, num_epoch=0)
 
             deploy_and_test_model(
@@ -142,7 +139,6 @@ if __name__ == "__main__":
             test_model(clipper_conn, app_and_model_name, 1)
 
         except BenchmarkException as e:
-            #log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
             clipper_conn = create_docker_connection(
                 cleanup=True, start_clipper=False)

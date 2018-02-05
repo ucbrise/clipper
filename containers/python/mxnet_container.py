@@ -21,11 +21,6 @@ def load_predict_func(file_path):
 
 # load mxnet model from serialized dir
 def load_mxnet_model(model_path):
-    #mxnet_model = mx.mod.Module.load(prefix=model_path, epoch=1)
-    #cur_dir = os.path.dirname(os.path.abspath(__file__))
-    #home_dir = os.path.expanduser("~")
-    #train_path = os.path.join(home_dir, "clipper/integration-tests/data/train.data")
-    #train_path = "/home/ubuntu/clipper/integration-tests/data/train.data"
     data_iter = mx.io.CSVIter(
         data_csv="train.data", data_shape=(785, ), batch_size=1)
 
@@ -38,11 +33,6 @@ def load_mxnet_model(model_path):
         aux_params=aux_params,
         num_epoch=0)
 
-    #mxnet_model = mx.mod.Module(symbol=sym)
-    #mxnet_model.bind(data_iter.provide_data, data_iter.provide_label)
-    #mxnet_model.set_params(arg_params, aux_params)
-    #mxnet_model.fit(fitParams=new FitParams().setArgParams(arg_params).setAuxParams(aux_params).\
-    #                setBeginEpoch(1))
     return mxnet_model
 
 
