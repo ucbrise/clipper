@@ -13,7 +13,7 @@ RUN echo deb http://ftp.de.debian.org/debian jessie-backports main >> /etc/apt/s
       && conda install -c anaconda cloudpickle=0.5.2
 
 
-COPY containers/python/mxnet_container.py containers/python/mxnet_container_entry.sh /container/
+COPY containers/python/mxnet_container.py containers/python/mxnet_container_entry.sh containers/python/train.data /container/
 
 CMD ["/container/mxnet_container_entry.sh"]
 
