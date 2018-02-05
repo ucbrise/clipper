@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 app_name = "mxnet-test"
 model_name = "mxnet-model"
 
+
 def predict(model, xs):
     preds = model.predict(xs)
     preds = [preds.tolist()[0]]
@@ -45,7 +46,7 @@ def deploy_and_test_model(clipper_conn,
                           link_model=False,
                           predict_fn=predict):
     deploy_mxnet_model(clipper_conn, model_name, version, "integers",
-                         predict_fn, model)
+                       predict_fn, model)
 
     time.sleep(5)
 
@@ -83,9 +84,9 @@ def test_model(clipper_conn, app, version):
                                  (app, model_name, version))
 
 
-
 def get_test_point():
     return [np.random.randint(255) for _ in range(785)]
+
 
 if __name__ == "__main__":
     pos_label = 3
@@ -94,7 +95,8 @@ if __name__ == "__main__":
             cleanup=True, start_clipper=True)
 
         train_path = os.path.join(cur_dir, "data/train.data")
-        data_iter = mx.io.CSVIter(data_csv=train_path, data_shape=(785,), batch_size=1)
+        data_iter = mx.io.CSVIter(
+            data_csv=train_path, data_shape=(785, ), batch_size=1)
 
         try:
             clipper_conn.register_application(app_name, "integers",
