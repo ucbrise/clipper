@@ -37,6 +37,7 @@ void RPCDataStore::add_data(SharedPoolPtr<void> data) {
 
 void RPCDataStore::remove_data(void *data) {
   std::lock_guard<std::mutex> lock(mtx_);
+  auto search = data_items_.find(data);
   data_items_.erase(data);
 }
 
@@ -191,24 +192,16 @@ void RPCService::send_messages(
     // subtract 1 because we start counting at 0
     size_t last_msg_num = std::get<2>(request).size() - 1;
     for (ByteBuffer &m : std::get<2>(request)) {
-      ByteBufferPtr<void> &data_ptr = std::get<0>(m);
-
-      auto shared_data = get_shared(std::move(data_ptr));
-      outbound_data_store_.add_data(shared_data);
+      SharedPoolPtr<void> data_ptr = std::get<0>(m);
+      outbound_data_store_.add_data(data_ptr);
 
       size_t data_start = std::get<1>(m);
       size_t data_size = std::get<2>(m);
 
-      message_t msg(static_cast<uint8_t*>(shared_data.get()) + data_start, data_size, &RPCService::zmq_continuation, &outbound_data_store_);
-//      zmq_free_fn* free_fn = NULL;
-//      if(data_ptr.unique()) {
-//        // TODO(Corey): Handle the case where the pointer may have a custom deleter.
-//        free_fn = &RPCService::zmq_continuation;
-//      }
-//      message_t msg(static_cast<uint8_t*>(get_raw(std::move(data_ptr))) + data_start, data_size, free_fn);
-
-
-
+      message_t msg(static_cast<uint8_t*>(data_ptr.get()) + data_start,
+                    data_size,
+                    &RPCService::zmq_continuation,
+                    &outbound_data_store_);
 
       if (cur_msg_num < last_msg_num) {
         // send the sndmore flag unless we are on the last message part
@@ -314,7 +307,7 @@ void RPCService::receive_message(
       for (uint64_t i = 0; i < num_outputs; ++i) {
         uint64_t& output_size = output_header[i];
         socket.recv(output_data_raw, output_size, 0);
-        content.emplace_back(std::make_tuple(ByteBufferPtr<void>(output_data), curr_start, output_size));
+        content.emplace_back(std::make_tuple(output_data, curr_start, output_size));
         output_data_raw += output_size;
         curr_start += output_size;
       }

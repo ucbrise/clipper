@@ -41,53 +41,8 @@ enum class RequestType {
 std::string get_readable_input_type(DataType type);
 DataType parse_input_type(std::string type_string);
 
-template <class T>
-class ByteBufferPtr {
- public:
-  explicit ByteBufferPtr(UniquePoolPtr<T> unique_ptr) :
-      unique_ptr_(std::move(unique_ptr)), shared_ptr_(NULL, free) {}
-  explicit ByteBufferPtr(SharedPoolPtr<T> shared_ptr) :
-      unique_ptr_(NULL, free), shared_ptr_(std::move(shared_ptr)) {};
-
-  bool unique() const {
-    if(unique_ptr_) {
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  friend T* get_raw(ByteBufferPtr<T> ptr) {
-    return ptr.get_raw();
-  }
-
-  friend SharedPoolPtr<T> get_shared(ByteBufferPtr<T> ptr) {
-    return ptr.get_shared();
-  }
-
- private:
-  T* get_raw() {
-    if(unique_ptr_) {
-      return unique_ptr_.release();
-    } else {
-      return shared_ptr_.get();
-    }
-  }
-
-  SharedPoolPtr<T> get_shared() {
-    if (unique_ptr_) {
-      return SharedPoolPtr<T>(unique_ptr_.release(), unique_ptr_.get_deleter());
-    } else {
-      return shared_ptr_;
-    }
-  }
-
-  UniquePoolPtr<T> unique_ptr_;
-  SharedPoolPtr<T> shared_ptr_;
-};
-
 // Pair of input data, data start index, data size in bytes
-typedef std::tuple<ByteBufferPtr<void>, size_t, size_t> ByteBuffer;
+typedef std::tuple<SharedPoolPtr<void>, size_t, size_t> ByteBuffer;
 
 class VersionedModelId {
  public:
