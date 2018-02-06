@@ -120,6 +120,7 @@ boost::optional<std::string> get_current_model_version(
  * \param model_data_path should be the path on the Clipper host
  * \param batch_size should be the user-defined batch size for all replicas of
  * the model. Its default value (-1)
+ * \param batch_mode should be the mode that the model is running in. Its default value is True
  * indicates that the batch size was unspecified and that Clipper should
  * calculate it adaptively.
  * \return Returns true if the add was successful.
@@ -128,7 +129,9 @@ bool add_model(redox::Redox& redis, const VersionedModelId& model_id,
                const InputType& input_type,
                const std::vector<std::string>& labels,
                const std::string& container_name,
-               const std::string& model_data_path, int batch_size);
+               const std::string& model_data_path,
+               int batch_size,
+               bool batch_mode);
 
 /**
  * Deletes a model from the model table if it exists.

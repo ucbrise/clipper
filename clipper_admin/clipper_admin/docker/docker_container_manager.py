@@ -166,7 +166,7 @@ class DockerContainerManager(ContainerManager):
         # No extra connection steps to take on connection
         return
 
-    def deploy_model(self, name, version, input_type, image, num_replicas=1):
+    def deploy_model(self, name, version, input_type, image, num_replicas=1, batch_mode=True):
         # Parameters
         # ----------
         # image : str
@@ -174,7 +174,7 @@ class DockerContainerManager(ContainerManager):
         #     registry, the registry name must be prepended to the image. For example,
         #     "localhost:5000/my_model_name:my_model_version" or
         #     "quay.io/my_namespace/my_model_name:my_model_version"
-        self.set_num_replicas(name, version, input_type, image, num_replicas)
+        self.set_num_replicas(name, version, input_type, image, num_replicas, batch_mode)
 
     def _get_replicas(self, name, version):
         containers = self.docker_client.containers.list(
@@ -189,7 +189,7 @@ class DockerContainerManager(ContainerManager):
     def get_num_replicas(self, name, version):
         return len(self._get_replicas(name, version))
 
-    def _add_replica(self, name, version, input_type, image):
+    def _add_replica(self, name, version, input_type, image, batch_mode):
 
         containers = self.docker_client.containers.list(
             filters={
@@ -207,6 +207,7 @@ class DockerContainerManager(ContainerManager):
             # in same docker network as the query frontend
             "CLIPPER_IP": query_frontend_hostname,
             "CLIPPER_INPUT_TYPE": input_type,
+            "CLIPPER_BATCH_MODE": batch_mode
         }
 
         model_container_label = create_model_container_label(name, version)
@@ -226,7 +227,7 @@ class DockerContainerManager(ContainerManager):
         add_to_metric_config(model_container_name,
                              CLIPPER_INTERNAL_METRIC_PORT)
 
-    def set_num_replicas(self, name, version, input_type, image, num_replicas):
+    def set_num_replicas(self, name, version, input_type, image, num_replicas, batch_mode):
         current_replicas = self._get_replicas(name, version)
         if len(current_replicas) < num_replicas:
             num_missing = num_replicas - len(current_replicas)
@@ -238,7 +239,7 @@ class DockerContainerManager(ContainerManager):
                     version=version,
                     missing=(num_missing)))
             for _ in range(num_missing):
-                self._add_replica(name, version, input_type, image)
+                self._add_replica(name, version, input_type, image, batch_mode)
         elif len(current_replicas) > num_replicas:
             num_extra = len(current_replicas) - num_replicas
             logger.info(

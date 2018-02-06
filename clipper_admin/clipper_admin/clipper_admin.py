@@ -237,7 +237,8 @@ class ClipperConnection(object):
                                labels=None,
                                container_registry=None,
                                num_replicas=1,
-                               batch_size=-1):
+                               batch_size=-1,
+                               batch_mode=True):
         """Build a new model container Docker image with the provided data and deploy it as
         a model to Clipper.
 
@@ -282,10 +283,14 @@ class ClipperConnection(object):
             :py:meth:`clipper.ClipperConnection.set_num_replicas`.
         batch_size : int, optional
             The user-defined query batch size for the model. Replicas of the model will attempt
-            to process at most `batch_size` queries simultaneously. They may process smaller 
+            to process at most `batch_size` queries simultaneously. They may process smaller
             batches if `batch_size` queries are not immediately available.
             If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
             replicas of this model.
+        batch_mode : bool, optional
+            Specifies whether the model is a batch model or a single input model. If it is a single input model
+            (batch_mode is False), the RPC server embedded in the model calls the model in a for loop to allow the model to operate
+            on a single input at a time. By default, batch_mode is set to True.
         Raises
         ------
         :py:exc:`clipper.UnconnectedException`
@@ -297,7 +302,7 @@ class ClipperConnection(object):
         image = self.build_model(name, version, model_data_path, base_image,
                                  container_registry)
         self.deploy_model(name, version, input_type, image, labels,
-                          num_replicas, batch_size)
+                          num_replicas, batch_size, batch_mode)
 
     def build_model(self,
                     name,
@@ -400,7 +405,8 @@ class ClipperConnection(object):
                      image,
                      labels=None,
                      num_replicas=1,
-                     batch_size=-1):
+                     batch_size=-1,
+                     batch_mode=True):
         """Deploys the model in the provided Docker image to Clipper.
 
         Deploying a model to Clipper does a few things.
@@ -446,10 +452,14 @@ class ClipperConnection(object):
             :py:meth:`clipper.ClipperConnection.set_num_replicas`.
         batch_size : int, optional
             The user-defined query batch size for the model. Replicas of the model will attempt
-            to process at most `batch_size` queries simultaneously. They may process smaller 
+            to process at most `batch_size` queries simultaneously. They may process smaller
             batches if `batch_size` queries are not immediately available.
             If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
             replicas of this model.
+        batch_mode : bool, optional
+            Specifies whether the model is a batch model or a single input model. If it is a single input model
+            (batch_mode is False), the RPC server embedded in the model calls the model in a for loop to allow the model to operate
+            on a single input at a time. By default, batch_mode is set to True.
 
         Raises
         ------
@@ -472,14 +482,16 @@ class ClipperConnection(object):
             version=version,
             input_type=input_type,
             image=image,
-            num_replicas=num_replicas)
+            num_replicas=num_replicas,
+            batch_mode=batch_mode)
         self.register_model(
             name,
             version,
             input_type,
             image=image,
             labels=labels,
-            batch_size=batch_size)
+            batch_size=batch_size,
+            batch_mode=batch_mode)
         logger.info("Done deploying model {name}:{version}.".format(
             name=name, version=version))
 
@@ -489,7 +501,8 @@ class ClipperConnection(object):
                        input_type,
                        image=None,
                        labels=None,
-                       batch_size=-1):
+                       batch_size=-1,
+                       batch_mode=True):
         """Registers a new model version with Clipper.
 
         This method does not launch any model containers, it only registers the model description
@@ -521,10 +534,14 @@ class ClipperConnection(object):
             and used purely for user annotations.
         batch_size : int, optional
             The user-defined query batch size for the model. Replicas of the model will attempt
-            to process at most `batch_size` queries simultaneously. They may process smaller 
+            to process at most `batch_size` queries simultaneously. They may process smaller
             batches if `batch_size` queries are not immediately available.
             If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
             replicas of this model.
+        batch_mode : bool, optional
+            Specifies whether the model is a batch model or a single input model. If it is a single input model
+            (batch_mode is False), the RPC server embedded in the model calls the model in a for loop to allow the model to operate
+            on a single input at a time. By default, batch_mode is set to True.
 
         Raises
         ------
@@ -548,7 +565,8 @@ class ClipperConnection(object):
             "input_type": input_type,
             "container_name": image,
             "model_data_path": "DEPRECATED",
-            "batch_size": batch_size
+            "batch_size": batch_size,
+            "batch_mode": batch_mode
         })
 
         headers = {'Content-type': 'application/json'}
@@ -642,6 +660,8 @@ class ClipperConnection(object):
             the currently deployed version will be used.
         num_replicas : int, optional
             The desired number of replicas.
+        batch_mode : bool, optional
+            Indicates whether the model is being run in batch mode or single input mode
 
         Raises
         ------
@@ -658,9 +678,10 @@ class ClipperConnection(object):
         if model_data is not None:
             input_type = model_data["input_type"]
             image = model_data["container_name"]
+            batch_mode = model_data["batch_mode"]
             if image != CONTAINERLESS_MODEL_IMAGE:
                 self.cm.set_num_replicas(name, version, input_type, image,
-                                         num_replicas)
+                                         num_replicas, batch_mode)
             else:
                 msg = ("Cannot resize the replica set for containerless model "
                        "{name}:{version}").format(

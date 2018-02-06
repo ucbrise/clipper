@@ -121,7 +121,8 @@ const std::string ADD_MODEL_JSON_SCHEMA = R"(
    "labels" := [string],
    "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
    "container_name" := string,
-   "model_data_path" := string
+   "model_data_path" := string,
+   "batch_mode" := bool
   }
 )";
 
@@ -652,7 +653,8 @@ class RequestHandler {
    *  "labels" := [string]
    *  "input_type" := "integers" | "bytes" | "floats" | "doubles" | "strings",
    *  "container_name" := string,
-   *  "model_data_path" := string
+   *  "model_data_path" := string,
+   *  "batch_mode" := bool
    * }
    *
    * \return A string describing the operation's success
@@ -671,6 +673,12 @@ class RequestHandler {
     std::string container_name = get_string(d, "container_name");
     std::string model_data_path = get_string(d, "model_data_path");
     int batch_size = get_int(d, "batch_size");
+    try {
+      bool batch_mode = get_bool(d, "batch_mode");
+    }
+    catch(...) {
+      bool batch_mode = true;
+    }
 
     // The batch_size should be either positive or DEFAULT_BATCH_SIZE
     if (batch_size <= 0 && batch_size != DEFAULT_BATCH_SIZE) {
@@ -706,7 +714,7 @@ class RequestHandler {
 
     if (clipper::redis::add_model(redis_connection_, model_id, input_type,
                                   labels, container_name, model_data_path,
-                                  batch_size)) {
+                                  batch_size, batch_mode)) {
       attempt_model_version_update(model_id.get_name(), model_id.get_id());
       std::stringstream ss;
       ss << "Successfully added model with name "

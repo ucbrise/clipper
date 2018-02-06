@@ -87,12 +87,12 @@ TEST_F(RedisTest, AddModel) {
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
   ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, labels, container_name,
-                        model_path, DEFAULT_BATCH_SIZE));
+                        model_path, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_MODE));
   auto result = get_model(*redis_, model);
-  // The model table has 8 fields, so we expect
-  // to get back a map with 8 entries in it
+  // The model table has 9 fields, so we expect
+  // to get back a map with 9 entries in it
   // (see add_model() in redis.cpp for details on what the fields are).
-  EXPECT_EQ(result.size(), static_cast<size_t>(8));
+  EXPECT_EQ(result.size(), static_cast<size_t>(9));
   ASSERT_EQ(result["model_name"], model.get_name());
   ASSERT_EQ(result["model_version"], model.get_id());
   ASSERT_FLOAT_EQ(std::stof(result["load"]), 0.0);
@@ -120,9 +120,9 @@ TEST_F(RedisTest, AddModelLinks) {
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
   ASSERT_TRUE(add_model(*redis_, model_1, input_type, labels, container_name,
-                        model_path, DEFAULT_BATCH_SIZE));
+                        model_path, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_MODE));
   ASSERT_TRUE(add_model(*redis_, model_2, input_type, labels, container_name,
-                        model_path, DEFAULT_BATCH_SIZE));
+                        model_path, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_MODE));
 
   std::vector<std::string> model_names =
       std::vector<std::string>{model_name_1, model_name_2};
@@ -153,15 +153,15 @@ TEST_F(RedisTest, GetModelVersions) {
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
   ASSERT_TRUE(add_model(*redis_, model1, InputType::Ints, labels,
-                        container_name, model_path, DEFAULT_BATCH_SIZE));
+                        container_name, model_path, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_MODE));
   VersionedModelId model2 = VersionedModelId("m", "2");
   std::string model_path2 = "/tmp/models/m/2";
   ASSERT_TRUE(add_model(*redis_, model2, InputType::Ints, labels,
-                        container_name, model_path2, DEFAULT_BATCH_SIZE));
+                        container_name, model_path2, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_MODE));
   VersionedModelId model4 = VersionedModelId("m", "4");
   std::string model_path4 = "/tmp/models/m/4";
   ASSERT_TRUE(add_model(*redis_, model4, InputType::Ints, labels,
-                        container_name, model_path4, DEFAULT_BATCH_SIZE));
+                        container_name, model_path4, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_MODE));
 
   std::vector<std::string> versions = get_model_versions(*redis_, "m");
   ASSERT_EQ(versions.size(), (size_t)3);
@@ -177,15 +177,15 @@ TEST_F(RedisTest, GetAllModelNames) {
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
   ASSERT_TRUE(add_model(*redis_, model1, InputType::Ints, labels,
-                        container_name, model_path, DEFAULT_BATCH_SIZE));
+                        container_name, model_path, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_MODE));
   VersionedModelId model2 = VersionedModelId("m", "2");
   std::string model_path2 = "/tmp/models/m/2";
   ASSERT_TRUE(add_model(*redis_, model2, InputType::Ints, labels,
-                        container_name, model_path2, DEFAULT_BATCH_SIZE));
+                        container_name, model_path2, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_MODE));
   VersionedModelId model3 = VersionedModelId("n", "3");
   std::string model_path3 = "/tmp/models/n/3";
   ASSERT_TRUE(add_model(*redis_, model3, InputType::Ints, labels,
-                        container_name, model_path3, DEFAULT_BATCH_SIZE));
+                        container_name, model_path3, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_MODE));
 
   // get_all_model_names() should return the de-duplicated model names
   std::vector<std::string> names = get_all_model_names(*redis_);
@@ -202,15 +202,15 @@ TEST_F(RedisTest, GetAllModels) {
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
   ASSERT_TRUE(add_model(*redis_, model1, InputType::Ints, labels,
-                        container_name, model_path, DEFAULT_BATCH_SIZE));
+                        container_name, model_path, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_MODE));
   VersionedModelId model2 = VersionedModelId("m", "2");
   std::string model_path2 = "/tmp/models/m/2";
   ASSERT_TRUE(add_model(*redis_, model2, InputType::Ints, labels,
-                        container_name, model_path2, DEFAULT_BATCH_SIZE));
+                        container_name, model_path2, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_MODE));
   VersionedModelId model3 = VersionedModelId("n", "3");
   std::string model_path3 = "/tmp/models/n/3";
   ASSERT_TRUE(add_model(*redis_, model3, InputType::Ints, labels,
-                        container_name, model_path3, DEFAULT_BATCH_SIZE));
+                        container_name, model_path3, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_MODE));
 
   // get_all_model_names() should return the de-duplicated model names
   std::vector<VersionedModelId> models = get_all_models(*redis_);
@@ -231,9 +231,9 @@ TEST_F(RedisTest, DeleteModel) {
   std::string container_name = "clipper/test_container";
   std::string model_path = "/tmp/models/m/1";
   ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, labels, container_name,
-                        model_path, DEFAULT_BATCH_SIZE));
+                        model_path, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_MODE));
   auto add_result = get_model(*redis_, model);
-  EXPECT_EQ(add_result.size(), static_cast<size_t>(8));
+  EXPECT_EQ(add_result.size(), static_cast<size_t>(9));
   ASSERT_TRUE(delete_model(*redis_, model));
   auto delete_result = get_model(*redis_, model);
   EXPECT_EQ(delete_result.size(), static_cast<size_t>(0));
@@ -390,7 +390,7 @@ TEST_F(RedisTest, SubscriptionDetectModelAdd) {
   // give Redis some time to register the subscription
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
   ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, labels, container_name,
-                        model_path, DEFAULT_BATCH_SIZE));
+                        model_path, DEFAULT_BATCH_SIZE, DEFAULT_BATCH_MODE));
   std::unique_lock<std::mutex> l(notification_mutex);
   bool result = notification_recv.wait_for(l, std::chrono::milliseconds(1000),
                                            [&recv]() { return recv == true; });

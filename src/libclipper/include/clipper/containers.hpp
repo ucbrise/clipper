@@ -3,6 +3,7 @@
 #define CLIPPER_LIB_CONTAINERS_HPP
 
 constexpr int DEFAULT_BATCH_SIZE = -1;
+constexpr bool DEFAULT_BATCH_MODE = true;
 
 #include <memory>
 #include <unordered_map>
