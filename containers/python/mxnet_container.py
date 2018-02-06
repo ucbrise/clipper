@@ -20,18 +20,18 @@ def load_predict_func(file_path):
 
 
 # load mxnet model from serialized dir
-def load_mxnet_model(model_path):
-    data_iter = mx.io.CSVIter(
-        data_csv="train.data", data_shape=(785, ), batch_size=1)
+def load_mxnet_model(path):
+    mxnet_model_path = os.path.join(path, MXNET_MODEL_RELATIVE_PATH)
+
+    data_shapes = json.load(
+        open(os.path.join(path, "mxnet_model_metadata.json")))
 
     sym, arg_params, aux_params = mx.model.load_checkpoint(
         prefix=model_path, epoch=0)
+
     mxnet_model = mx.mod.Module(symbol=sym)
-    mxnet_model.fit(
-        train_data=data_iter,
-        arg_params=arg_params,
-        aux_params=aux_params,
-        num_epoch=0)
+    mxnet_model.bind(data_shapes["data_shapes"])
+    mxnet_model.set_params(arg_params, aux_params)
 
     return mxnet_model
 
@@ -47,8 +47,7 @@ class MXNetContainer(rpc.ModelContainerBase):
         self.predict_func = load_predict_func(predict_path)
 
         # load mxnet model from serialized dir
-        mxnet_model_path = os.path.join(path, MXNET_MODEL_RELATIVE_PATH)
-        self.model = load_mxnet_model(mxnet_model_path)
+        self.model = load_mxnet_model(path)
 
     def predict_ints(self, inputs):
         preds = self.predict_func(self.model, inputs)

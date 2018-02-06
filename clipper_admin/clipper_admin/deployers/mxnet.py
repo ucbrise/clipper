@@ -21,6 +21,7 @@ def create_endpoint(
         input_type,
         func,
         mxnet_model,
+        data_shapes,
         default_output="None",
         version=1,
         slo_micros=3000000,
@@ -82,7 +83,8 @@ def create_endpoint(
     clipper_conn.register_application(name, input_type, default_output,
                                       slo_micros)
     deploy_mxnet_model(clipper_conn, name, version, input_type, func,
-                       mxnet_model, base_image, labels, registry, num_replicas)
+                       mxnet_model, data_shapes, base_image, labels, registry,
+                       num_replicas)
 
     clipper_conn.link_model_to_app(name, name)
 
@@ -94,6 +96,7 @@ def deploy_mxnet_model(
         input_type,
         func,
         mxnet_model,
+        data_shapes,
         base_image="clipper/mxnet-container:{}".format(__version__),
         labels=None,
         registry=None,
@@ -116,6 +119,12 @@ def deploy_mxnet_model(
         captured via closure capture and pickled with Cloudpickle.
     mxnet_model : mxnet model object
         The MXNet model to save.
+    data_shapes : list(int)
+        List of integers representing the dimensions of data used for model prediction
+        NOTE: Clipper may provide the model with variable size input batches. Because MXNet can't
+              handle variable size input batches, we recommend setting batch size for input data
+              to 1, or dynamically reshaping the model with every prediction based on the current
+              input batch size.
     base_image : str, optional
         The base Docker image to build the new model image from. This
         image should contain all code necessary to run a Clipper model
@@ -157,11 +166,6 @@ def deploy_mxnet_model(
         mxnet_model.init_params()
         mxnet_model.fit(data_iter, num_epoch=1)
 
-        def predict(model, xs):
-            preds = model.predict(xs)
-            preds = [preds.tolist()[0]]
-            return [str(p) for p in preds]
-
         deploy_mxnet_model(
             clipper_conn,
             name="example",
@@ -178,9 +182,16 @@ def deploy_mxnet_model(
                                         MXNET_MODEL_RELATIVE_PATH)
 
     try:
-        mxnet_model.save_checkpoint(prefix=mxnet_model_save_loc, epoch=0)
+
         # Saves model in two files: <serialization_dir>/mxnet_model.json will be saved for symbol,
         # <serialization_dir>/mxnet_model.params will be saved for parameters.
+        mxnet_model.save_checkpoint(prefix=mxnet_model_save_loc, epoch=0)
+
+        # Saves data_shapes to mxnet_model_metadata.json
+        with open(
+                os.path.join(serialization_dir, "mxnet_model_metadata.json"),
+                "w") as f:
+            json.dump({"data_shapes": data_shapes}, f)
 
         # Deploy model
         clipper_conn.build_and_deploy_model(name, version, input_type,

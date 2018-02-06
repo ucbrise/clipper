@@ -43,11 +43,12 @@ def predict(model, xs):
 
 def deploy_and_test_model(clipper_conn,
                           model,
+                          data_shapes,
                           version,
                           link_model=False,
                           predict_fn=predict):
     deploy_mxnet_model(clipper_conn, model_name, version, "integers",
-                       predict_fn, model)
+                       predict_fn, model, data_shapes)
 
     time.sleep(5)
 
@@ -130,12 +131,18 @@ if __name__ == "__main__":
             mxnet_model = mx.mod.Module(softmax)
             mxnet_model.fit(data_iter, num_epoch=0)
 
+            train_data_shape = [1, 785]
+
             deploy_and_test_model(
-                clipper_conn, mxnet_model, version, link_model=True)
+                clipper_conn,
+                mxnet_model,
+                train_data_shape,
+                version,
+                link_model=True)
 
             app_and_model_name = "easy-register-app-model"
             create_endpoint(clipper_conn, app_and_model_name, "integers",
-                            predict, mxnet_model)
+                            predict, mxnet_model, train_data_shape)
             test_model(clipper_conn, app_and_model_name, 1)
 
         except BenchmarkException as e:
