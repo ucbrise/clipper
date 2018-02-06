@@ -1,0 +1,2 @@
+/Library/Developer/CommandLineTools/usr/bin/ar qc libcontainer_libd.a  CMakeFiles/container_lib.dir/src/container_rpc.cpp.o
+/Library/Developer/CommandLineTools/usr/bin/ranlib libcontainer_libd.a
