@@ -1,3 +1,0 @@
-/Users/tim/Documents/Clipper_proj/clipper/cmake-build-debug/googletest-download/CMakeFiles/rebuild_cache.dir
-/Users/tim/Documents/Clipper_proj/clipper/cmake-build-debug/googletest-download/CMakeFiles/edit_cache.dir
-/Users/tim/Documents/Clipper_proj/clipper/cmake-build-debug/googletest-download/CMakeFiles/googletest-download.dir
