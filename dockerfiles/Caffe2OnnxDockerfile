@@ -15,10 +15,10 @@ RUN echo deb http://ftp.de.debian.org/debian jessie-backports main >> /etc/apt/s
       && conda install -c jjh_pytorch pytorch \
       && conda install -c jjh_pytorch torchvision
 
-COPY containers/python/caffe2_container.py containers/python/caffe2_container_entry.sh /container/
+COPY containers/python/caffe2_onnx_container.py containers/python/caffe2_onnx_container_entry.sh /container/
 COPY clipper_admin/ /lib/clipper_admin
 RUN pip install /lib/clipper_admin
 
-CMD ["/container/caffe2_container_entry.sh"]
+CMD ["/container/caffe2_onnx_container_entry.sh"]
 
 # vim: set filetype=dockerfile:
