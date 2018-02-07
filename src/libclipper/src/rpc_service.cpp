@@ -31,14 +31,12 @@ namespace rpc {
 constexpr int INITIAL_REPLICA_ID_SIZE = 100;
 constexpr long CONTAINER_ACTIVITY_TIMEOUT_MILLS = 40000;
 constexpr long CONTAINER_EXISTENCE_CHECK_FREQUENCY_MILLS = 10000;
-constexpr long LOST_CONTACT_FIRE_LOG_FREQUQNCY_MILLS = 10000;
 
 RPCService::RPCService()
     : request_queue_(std::make_shared<Queue<RPCRequest>>()),
       response_queue_(std::make_shared<Queue<RPCResponse>>()),
       active_(false),
       last_check_time_(std::chrono::system_clock::now()),
-      last_fire_log_time_(std::chrono::system_clock::now()),
       // The version of the unordered_map constructor that allows
       // you to specify your own hash function also requires you
       // to provide the initial size of the map. We define the initial
@@ -154,10 +152,7 @@ void RPCService::manage_service(const string address) {
     // Note: We send all queued messages per event loop iteration
     send_messages(socket, connections);
     auto current_time = std::chrono::system_clock::now();
-    if(std::chrono::duration_cast<std::chrono::milliseconds>(current_time - last_fire_log_time_).count() > LOST_CONTACT_FIRE_LOG_FREQUQNCY_MILLS){
-      fire_lost_contact_log();
-      last_fire_log_time_ = current_time;
-    }
+
     if(std::chrono::duration_cast<std::chrono::milliseconds>(current_time - last_check_time_).count() > CONTAINER_EXISTENCE_CHECK_FREQUENCY_MILLS){
       check_container_activity();
       last_check_time_ = current_time;
@@ -174,13 +169,8 @@ void RPCService::check_container_activity(){
         if(std::chrono::duration_cast<std::chrono::milliseconds>(current_time - it->second).count() > CONTAINER_ACTIVITY_TIMEOUT_MILLS){
           log_info(LOGGING_TAG_RPC, "lost contact with a container");
           receiving_history_.erase(it);
-          fire_log_trigger = true;
         }
     }
-}
-
-void RPCService::fire_lost_contact_log(){
-  log_info(LOGGING_TAG_RPC, "F:lost contact with a container");
 }
 
 void RPCService::shutdown_service(socket_t &socket) {

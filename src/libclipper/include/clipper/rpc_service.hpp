@@ -89,8 +89,6 @@ class RPCService {
 
   void check_container_activity();
 
-  void fire_lost_contact_log();
-
   void send_messages(socket_t &socket,
                      boost::bimap<int, vector<uint8_t>> &connections);
 
@@ -121,7 +119,6 @@ class RPCService {
   int message_id_ = 0;
   std::chrono::system_clock::time_point last_check_time_;
   std::chrono::system_clock::time_point last_fire_log_time_;
-  bool fire_log_trigger = false;
   std::unordered_map<VersionedModelId, int> replica_ids_;
   std::shared_ptr<metrics::Histogram> msg_queueing_hist_;
   std::map<const vector<uint8_t>, std::chrono::system_clock::time_point> receiving_history_;
