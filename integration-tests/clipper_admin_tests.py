@@ -375,7 +375,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
         self.clipper_conn.register_application(
             self.app_name_4, self.input_type, self.default_output,
-            self.latency_slo_micros)
+            slo_micros=30000000)
 
     @classmethod
     def tearDownClass(self):
