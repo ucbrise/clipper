@@ -374,8 +374,10 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
             self.latency_slo_micros)
 
         self.clipper_conn.register_application(
-            self.app_name_4, self.input_type, self.default_output,
-            self.latency_slo_micros)
+            self.app_name_4,
+            self.input_type,
+            self.default_output,
+            slo_micros=30000000)
 
     @classmethod
     def tearDownClass(self):
@@ -481,6 +483,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         model_version = 1
 
         def predict_func(inputs):
+            time.sleep(.5)
             batch_size = len(inputs)
             return [str(batch_size) for _ in inputs]
 
