@@ -28,7 +28,7 @@ from test_utils import (create_docker_connection, BenchmarkException, headers,
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
 
-from clipper_admin.deployers.caffe2 import deploy_caffe2_model, create_endpoint
+from clipper_admin.deployers.onnx import deploy_pytorch_model, create_pytorch_endpoint
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
@@ -72,7 +72,7 @@ def deploy_and_test_model(clipper_conn,
                           version,
                           link_model=False,
                           predict_fn=predict):
-    deploy_caffe2_model(clipper_conn, model_name, version, "integers", inputs,
+    deploy_pytorch_model(clipper_conn, model_name, version, "integers", inputs,
                         predict_fn, model)
 
     time.sleep(5)
@@ -202,7 +202,7 @@ if __name__ == "__main__":
                 clipper_conn, nn_model, inputs, version, link_model=True)
 
             app_and_model_name = "easy-register-app-model"
-            create_endpoint(clipper_conn, app_and_model_name, "integers",
+            create_pytorch_endpoint(clipper_conn, app_and_model_name, "integers",
                             inputs, predict, nn_model)
             test_model(clipper_conn, app_and_model_name, 1)
 
