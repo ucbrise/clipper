@@ -374,7 +374,9 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
             self.latency_slo_micros)
 
         self.clipper_conn.register_application(
-            self.app_name_4, self.input_type, self.default_output,
+            self.app_name_4,
+            self.input_type,
+            self.default_output,
             slo_micros=30000000)
 
     @classmethod
