@@ -96,7 +96,7 @@ def deploy_mxnet_model(
         input_type,
         func,
         mxnet_model,
-        data_shapes,
+        mxnet_input_shape,
         base_image="clipper/mxnet-container:{}".format(__version__),
         labels=None,
         registry=None,
@@ -119,8 +119,10 @@ def deploy_mxnet_model(
         captured via closure capture and pickled with Cloudpickle.
     mxnet_model : mxnet model object
         The MXNet model to save.
-    data_shapes : list(int)
-        List of integers representing the dimensions of data used for model prediction
+    mxnet_input_shape : list(int)
+        List of integers representing the dimensions of data used for model prediction.
+        Required because loading serialized MXNet models requires the shape of the data used
+        to train the model.
         NOTE: Clipper may provide the model with variable size input batches. Because MXNet can't
               handle variable size input batches, we recommend setting batch size for input data
               to 1, or dynamically reshaping the model with every prediction based on the current
@@ -162,8 +164,6 @@ def deploy_mxnet_model(
 
         # Initialize the module and fit it
         mxnet_model = mx.mod.Module(softmax)
-        mxnet_model.bind(data_shapes=data_iter.provide_data, label_shapes=data_iter.provide_label)
-        mxnet_model.init_params()
         mxnet_model.fit(data_iter, num_epoch=1)
 
         deploy_mxnet_model(
@@ -172,7 +172,8 @@ def deploy_mxnet_model(
             version = 1,
             input_type="doubles",
             func=predict,
-            mxnet_model=model)
+            mxnet_model=model,
+            mxnet_input_shape=data_shape)
     """
 
     serialization_dir = save_python_function(name, func)
@@ -191,7 +192,7 @@ def deploy_mxnet_model(
         with open(
                 os.path.join(serialization_dir, "mxnet_model_metadata.json"),
                 "w") as f:
-            json.dump({"data_shapes": data_shapes}, f)
+            json.dump({"data_shapes": mxnet_input_shape}, f)
 
         # Deploy model
         clipper_conn.build_and_deploy_model(name, version, input_type,
