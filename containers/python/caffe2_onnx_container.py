@@ -15,7 +15,7 @@ import importlib
 
 IMPORT_ERROR_RETURN_CODE = 3
 
-PYTORCH_MODEL_RELATIVE_PATH = "pytorch_model.onnx"
+MODEL_RELATIVE_PATH = "model.onnx"
 
 
 def load_predict_func(file_path):
@@ -39,7 +39,7 @@ class Caffe2Container(rpc.ModelContainerBase):
             dir=path, predict_fname=predict_fname)
         self.predict_func = load_predict_func(predict_path)
 
-        onnx_path = os.path.join(path, PYTORCH_MODEL_RELATIVE_PATH)
+        onnx_path = os.path.join(path, MODEL_RELATIVE_PATH)
 
         self.model = load_onnx_into_caffe2_model(onnx_path)
 
@@ -102,7 +102,7 @@ if __name__ == "__main__":
 
     model_path = os.environ["CLIPPER_MODEL_PATH"]
 
-    print("Initializing Caffe2 function container")
+    print("Initializing Caffe2 ONNX container")
     sys.stdout.flush()
     sys.stderr.flush()
 
