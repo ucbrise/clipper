@@ -2,7 +2,7 @@
 
 IMPORT_ERROR_RETURN_CODE=3
 
-echo "Attempting to run Caffe2 container without installing dependencies"
+echo "Attempting to run Caffe2 ONNX container without installing dependencies"
 echo "Contents of /model"
 ls /model/
 /bin/bash -c "exec python /container/caffe2_container.py"
