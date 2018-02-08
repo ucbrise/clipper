@@ -164,7 +164,7 @@ def deploy_pytorch_model(
     # Deploy model
     clipper_conn.build_and_deploy_model(name, version, input_type,
                                         serialization_dir, base_image, labels,
-                                        registry, num_replicas)
+                                        registry, num_replicas, onnx_backend)
 
     # Remove temp files
     shutil.rmtree(serialization_dir)
