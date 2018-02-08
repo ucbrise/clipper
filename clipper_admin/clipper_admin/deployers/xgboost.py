@@ -190,7 +190,7 @@ def deploy_xgboost_model(
             "xgboost_model argument was not a xgboost object")
 
     # save predict function
-    serialization_dir = save_python_function(name, func, use_pickle=True)
+    serialization_dir = save_python_function(name, func)
     # save XGBoost model
     xgboost_model_save_loc = os.path.join(serialization_dir,
                                     "xgboost_model_data")
