@@ -15,9 +15,32 @@ Model2:
   input_type: "floats"
   version: "1.2.7"
   image: "train-model:2"
+  labels: ["second model configured", "working successfully"]
+  num_replicas: 2
 
 Application2:
   obj_type: "application"
   input_type: "bytes"
   slo: 5000
   default_value: "undetected"
+
+Model3:
+  obj_type: "model"
+  input_type: "doubles"
+  version: "4.8.9"
+  image: "test-model:2"
+  num_replicas: 3
+
+Application3:
+  obj_type: "application"
+  input_type: "integers"
+  slo: 2000
+  default_value: "message not received"
+
+links:
+  link1:
+    app_name: "Application1"
+    model_name: "Model2"
+  link2:
+    app_name: "Application3"
+    model_name: "Model1"

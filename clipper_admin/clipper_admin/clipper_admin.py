@@ -117,21 +117,39 @@ class ClipperConnection(object):
             logger.warning("Error starting Clipper: {}".format(e.msg))
             raise e
 
-        def parse_configuration(file):
-            if(file):
-                with open(file, "r") as stream:
+        def parse_configuration(config_path):
+            """ if a configuration file exists,
+            parse it and accordingly deploy models and applications
+
+            Parameters
+            ----------
+            config_path : str
+                Path to the configuration file.
+            """
+            if(config_path):
+                with open(config_path, "r") as stream:
                     config = yaml.load(stream)
                     for name in config:
-                        obj_type = config[name]["obj_type"]
-                        input_type = config[name]["input_type"]
-                        if(obj_type == "application"):
-                            slo = config[name]["slo"]
-                            default_value = config[name]["default_value"]
-                            self.register_application(name, input_type, default_value, slo)
-                        elif(obj_type == "model"):
-                            config_image = config[name]["image"]
-                            version = config[name]["version"]
-                            self.deploy_model(name, version, input_type, config_image)
+                        if(name == "links"):
+                            for link in config[name]:
+                                self.link_model_to_app(config[name][link]["app_name"], config[name][link]["model_name"])
+                        else:
+                            obj_type = config[name]["obj_type"]
+                            input_type = config[name]["input_type"]
+                            if(obj_type == "application"):
+                                slo = config[name]["slo"]
+                                default_value = config[name]["default_value"]
+                                self.register_application(name, input_type, default_value, slo)
+                            elif(obj_type == "model"):
+                                config_image = config[name]["image"]
+                                version = config[name]["version"]
+                                labels = None
+                                if("labels" in config[name]):
+                                    labels = config[name]["labels"]
+                                num_replicas = 1
+                                if("num_replicas" in config[name]):
+                                    num_replicas = config[name]["num_replicas"]
+                                self.deploy_model(name, version, input_type, config_image, labels, num_replicas)
 
         parse_configuration(config_file)
 
