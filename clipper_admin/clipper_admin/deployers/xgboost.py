@@ -100,7 +100,6 @@ def deploy_xgboost_model(
         input_type,
         func,
         xgboost_model,
-        sc,
         base_image="clipper/xgboost-container:{}".format(__version__),
         labels=None,
         registry=None,
