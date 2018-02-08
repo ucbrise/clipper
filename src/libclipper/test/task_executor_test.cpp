@@ -18,10 +18,10 @@ namespace {
  * predict tasks for testing (i.e. task queuing order stability)
  */
 PredictTask create_predict_task(long query_id, long latency_slo_millis) {
-  std::vector<double> data;
+  UniquePoolPtr<double> data(static_cast<double*>(malloc(sizeof(double))), free);
+  data.get()[0] = 1.0;
   VersionedModelId model_id = VersionedModelId("test", "1");
-  data.push_back(1.0);
-  std::shared_ptr<Input> input = std::make_shared<DoubleVector>(data);
+  std::shared_ptr<PredictionData> input = std::make_shared<DoubleVector>(std::move(data), 1);
   PredictTask task(input, model_id, 1.0, query_id, latency_slo_millis);
   return task;
 }
@@ -126,13 +126,15 @@ TEST(ModelQueueTests, TestGetBatchRemovesTasksWithElapsedDeadline) {
 
 TEST(PredictionCacheTests,
      TestOutputDataSizeDoesNotIncreaseBeyondMaximumCacheSize) {
-  std::vector<std::shared_ptr<Input>> inputs;
+  std::vector<std::shared_ptr<PredictionData>> inputs;
   std::vector<Output> outputs;
   size_t cache_size = 0;
   for (int i = 0; i < 4; ++i) {
-    inputs.push_back(std::make_shared<IntVector>(std::vector<int>{i}));
+    UniquePoolPtr<int> input_data(static_cast<int*>(malloc(sizeof(int))), free);
+    input_data.get()[0] = i;
+    inputs.push_back(std::make_shared<IntVector>(std::move(input_data), 1));
     Output output(std::to_string(i), std::vector<VersionedModelId>{});
-    size_t output_size = output.y_hat_.size();
+    size_t output_size = output.y_hat_->size();
     outputs.push_back(output);
     cache_size += output_size;
   }
@@ -144,8 +146,10 @@ TEST(PredictionCacheTests,
     ASSERT_TRUE(output_future.isReady());
     ASSERT_EQ(output_future.get().y_hat_, outputs[i].y_hat_);
   }
-  std::shared_ptr<Input> last_input =
-      std::make_shared<IntVector>(std::vector<int>{5});
+  UniquePoolPtr<int> last_input_data(static_cast<int*>(malloc(sizeof(int))), free);
+  last_input_data.get()[0] = 5;
+  std::shared_ptr<PredictionData> last_input =
+      std::make_shared<IntVector>(std::move(last_input_data), 1);
   cache.put(model_id, last_input, outputs[0]);
   auto last_output_future = cache.fetch(model_id, last_input);
   ASSERT_TRUE(last_output_future.isReady());
@@ -174,20 +178,25 @@ TEST(PredictionCacheTests,
   ASSERT_EQ(large_output_text.size(), small_output_text.size() * 2);
 
   std::vector<Output> small_outputs;
-  std::vector<std::shared_ptr<Input>> small_inputs;
+  std::vector<std::shared_ptr<PredictionData>> small_inputs;
   for (int i = 0; i < 5; ++i) {
-    std::shared_ptr<Input> input =
-        std::make_shared<IntVector>(std::vector<int>{i});
+    UniquePoolPtr<int> input_data(static_cast<int*>(malloc(sizeof(int))), free);
+    input_data.get()[0] = i;
+    std::shared_ptr<PredictionData> input =
+        std::make_shared<IntVector>(std::move(input_data), 1);
     Output output(small_output_text, std::vector<VersionedModelId>{});
     small_inputs.push_back(input);
     small_outputs.push_back(output);
   }
 
   std::vector<Output> large_outputs;
-  std::vector<std::shared_ptr<Input>> large_inputs;
+  std::vector<std::shared_ptr<PredictionData>> large_inputs;
   for (int i = 0; i < 2; ++i) {
-    std::shared_ptr<Input> input =
-        std::make_shared<IntVector>(std::vector<int>{i, i});
+    UniquePoolPtr<int> input_data(static_cast<int*>(malloc(2 * sizeof(int))), free);
+    input_data.get()[0] = i;
+    input_data.get()[1] = i;
+    std::shared_ptr<PredictionData> input =
+        std::make_shared<IntVector>(std::move(input_data), 2);
     Output output(large_output_text, std::vector<VersionedModelId>{});
     large_inputs.push_back(input);
     large_outputs.push_back(output);
@@ -247,8 +256,10 @@ TEST(PredictionCacheTests,
   // large_outputs[1] at page buffer index 2. The cache should now contain
   // entries corresponding to small outputs at vector indices 0-4, as well as
   // an additional entry corresponding to small_outputs[0] that we just inserted
-  std::shared_ptr<Input> last_small_input =
-      std::make_shared<IntVector>(std::vector<int>{6});
+  UniquePoolPtr<int> last_small_input_data(static_cast<int*>(malloc(sizeof(int))), free);
+  last_small_input_data.get()[0] = 6;
+  std::shared_ptr<PredictionData> last_small_input =
+      std::make_shared<IntVector>(std::move(last_small_input_data), 1);
   cache.put(model_id, last_small_input, small_outputs[0]);
   ASSERT_FALSE(cache.fetch(model_id, large_inputs[1]).isReady());
   for (int i = 0; i < 5; ++i) {
@@ -266,8 +277,11 @@ TEST(PredictionCacheTests,
   // an additional entries corresponding to: large_outputs[0] that (just
   // inserted)
   // and small_outputs[0] (inserted in the previous step)
-  std::shared_ptr<Input> last_large_input =
-      std::make_shared<IntVector>(std::vector<int>{3, 3});
+  UniquePoolPtr<int> last_large_input_data(static_cast<int*>(malloc(2 * sizeof(int))), free);
+  last_large_input_data.get()[0] = 3;
+  last_large_input_data.get()[1] = 3;
+  std::shared_ptr<PredictionData> last_large_input =
+      std::make_shared<IntVector>(std::move(last_large_input_data), 2);
   cache.put(model_id, last_large_input, large_outputs[0]);
   ASSERT_FALSE(cache.fetch(model_id, large_inputs[0]).isReady());
   for (int i = 1; i < 5; ++i) {
@@ -281,8 +295,10 @@ TEST(PredictionCacheTests,
 }
 
 TEST(PredictionCacheTests, TestIncompleteFuturesAreCompletedOnPut) {
-  std::shared_ptr<Input> input =
-      std::make_shared<IntVector>(std::vector<int>{10});
+  UniquePoolPtr<int> input_data(static_cast<int*>(malloc(sizeof(int))), free);
+  input_data.get()[0] = 10;
+  std::shared_ptr<PredictionData> input =
+      std::make_shared<IntVector>(std::move(input_data), 1);
   std::string output_text("1234");
   Output output(output_text, std::vector<VersionedModelId>{});
 
@@ -321,8 +337,10 @@ TEST(PredictionCacheTests, TestIncompleteFuturesAreCompletedOnPut) {
   output_future = cache3.fetch(model_id, input);
   ASSERT_FALSE(output_future.isReady());
   for (int i = 0; i < 5; ++i) {
-    std::shared_ptr<Input> new_input =
-        std::make_shared<IntVector>(std::vector<int>{i});
+    UniquePoolPtr<int> new_input_data(static_cast<int*>(malloc(sizeof(int))) , free);
+    new_input_data.get()[0] = i;
+    std::shared_ptr<PredictionData> new_input =
+        std::make_shared<IntVector>(std::move(new_input_data), 1);
     Output new_output("12", std::vector<VersionedModelId>{});
     cache3.put(model_id, new_input, new_output);
   }
@@ -338,8 +356,10 @@ TEST(PredictionCacheTests, TestIncompleteFuturesAreCompletedOnPut) {
 TEST(PredictionCacheTests, TestEntryLargerThanCacheSizeIsEvicted) {
   VersionedModelId model_id("TEST", "1");
   PredictionCache cache(0);
-  std::shared_ptr<Input> input =
-      std::make_shared<IntVector>(std::vector<int>{0});
+  UniquePoolPtr<int> input_data(static_cast<int*>(malloc(sizeof(int))), free);
+  input_data.get()[0] = 0;
+  std::shared_ptr<PredictionData> input =
+      std::make_shared<IntVector>(std::move(input_data), 1);
   Output output("text", std::vector<VersionedModelId>{});
   cache.put(model_id, input, output);
   ASSERT_FALSE(cache.fetch(model_id, input).isReady());
