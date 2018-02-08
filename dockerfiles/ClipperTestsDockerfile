@@ -65,7 +65,6 @@ COPY ./ /clipper
 RUN cd /clipper/src/libs/spdlog \
     && git apply ../patches/make_spdlog_compile_linux.patch
 
-
 ENTRYPOINT ["/clipper/bin/ci_checks.sh"]
 
 # vim: set filetype=dockerfile:
