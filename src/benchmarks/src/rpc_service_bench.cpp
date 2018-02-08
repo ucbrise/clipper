@@ -95,7 +95,7 @@ rpc::PredictionRequest generate_string_request(int message_size) {
   rpc::PredictionRequest request(InputType::Strings);
   for (int i = 0; i < message_size; ++i) {
     std::string str = gen_random_string(150);
-    std::unique_ptr<PredictionData> input = std::make_unique<SerializableString>(str);
+    std::unique_ptr<PredictionData> input = to_serializable_string(str);
     request.add_input(std::move(input));
   }
   return request;

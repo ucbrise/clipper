@@ -285,9 +285,8 @@ TEST(InputSerializationTests, StringSerialization) {
   clipper::rpc::PredictionRequest request(InputType::Strings);
   std::vector<std::string> data_items = get_string_data();
   for (size_t i = 0; i < data_items.size(); ++i) {
-    std::shared_ptr<SerializableString> serializable_str =
-        std::make_shared<SerializableString>(data_items[i]);
-    request.add_input(serializable_str);
+    std::unique_ptr<PredictionData> serialized_item = to_serializable_string(data_items[i]);
+    request.add_input(std::move(serialized_item));
   }
 
   std::vector<clipper::ByteBuffer> serialized_request = request.serialize();
@@ -587,20 +586,20 @@ TEST(InputHashTests, SerializableStringsHashCorrectly) {
   std::string cat_string_copy = cat_string;
   std::string tac_string = "TAC";
 
-  ASSERT_EQ(SerializableString(cat_string).hash(),
-            SerializableString(cat_string_copy).hash());
-  ASSERT_NE(SerializableString(cat_string).hash(),
-            SerializableString(tac_string).hash());
+  ASSERT_EQ(to_serializable_string(cat_string)->hash(),
+            to_serializable_string(cat_string_copy)->hash());
+  ASSERT_NE(to_serializable_string(cat_string)->hash(),
+            to_serializable_string(tac_string)->hash());
   // The strings "CATS" and "CAT" are not equal, so they should have different
   // hashes
-  ASSERT_NE(SerializableString(cat_string + "S").hash(),
-            SerializableString(cat_string).hash());
+  ASSERT_NE(to_serializable_string(cat_string + "S")->hash(),
+            to_serializable_string(cat_string)->hash());
   std::reverse(tac_string.rbegin(), tac_string.rend());
   // The reverse of the string "TAC" is "CAT", so cat_string and the reverse of
   // tac_string
   // should have identical hashes
-  ASSERT_EQ(SerializableString(cat_string).hash(),
-            SerializableString(tac_string).hash());
+  ASSERT_EQ(to_serializable_string(cat_string)->hash(),
+            to_serializable_string(tac_string)->hash());
 }
 
 TEST(OutputDeserializationTests, PredictionResponseDeserialization) {

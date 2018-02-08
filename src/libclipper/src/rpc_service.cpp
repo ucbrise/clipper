@@ -37,7 +37,6 @@ void RPCDataStore::add_data(SharedPoolPtr<void> data) {
 
 void RPCDataStore::remove_data(void *data) {
   std::lock_guard<std::mutex> lock(mtx_);
-  auto search = data_items_.find(data);
   data_items_.erase(data);
 }
 

@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include <city.h>
+
 #include <boost/optional.hpp>
 #include <boost/functional/hash.hpp>
 
@@ -111,126 +113,112 @@ class PredictionData {
   virtual SharedPoolPtr<void> get_data() const = 0;
 };
 
-class ByteVector : public PredictionData {
- public:
-  explicit ByteVector(UniquePoolPtr<uint8_t> data, size_t size);
-  explicit ByteVector(SharedPoolPtr<uint8_t> data, size_t start, size_t size);
-  explicit ByteVector(UniquePoolPtr<void> data, size_t byte_size);
-  explicit ByteVector(SharedPoolPtr<void> data, size_t start_byte, size_t byte_size);
-  explicit ByteVector(void* data, size_t byte_size);
+template <typename D>
+struct VectorDataType {
+  static const DataType type = DataType::Invalid;
+};
 
-  DataType type() const override;
-  PredictionDataHash hash() override;
-  size_t start() const override;
-  size_t start_byte() const override;
-  size_t size() const override;
-  size_t byte_size() const override;
+template <>
+struct VectorDataType<uint8_t> {
+  static const DataType type = DataType::Bytes;
+};
+
+template <>
+struct VectorDataType<int> {
+  static const DataType type = DataType::Ints;
+};
+
+template <>
+struct VectorDataType<float> {
+  static const DataType type = DataType::Floats;
+};
+
+template <>
+struct VectorDataType<double> {
+  static const DataType type = DataType::Doubles;
+};
+
+template <>
+struct VectorDataType<char> {
+  static const DataType type = DataType::Strings;
+};
+
+template <typename D>
+class DataVector : public PredictionData {
+ public:
+  explicit DataVector(UniquePoolPtr<D> data, size_t size)
+    : data_(std::move(data)), start_(0), size_(size) {}
+
+  explicit DataVector(SharedPoolPtr<D> data, size_t start, size_t size)
+    : data_(std::move(data)), start_(start), size_(size) {}
+
+  explicit DataVector(UniquePoolPtr<void> data, size_t byte_size)
+    : DataVector(data.release(), byte_size) {}
+
+  explicit DataVector(SharedPoolPtr<void> data, size_t start_byte, size_t byte_size)
+    : data_(std::static_pointer_cast<D>(std::move(data))),
+      start_(start_byte / sizeof(D)),
+      size_(byte_size / sizeof(D)) {}
+
+  explicit DataVector(void* data, size_t byte_size)
+    : data_(SharedPoolPtr<D>(static_cast<D*>(data), free)),
+      start_(0),
+      size_(byte_size / sizeof(D)) {}
+
+  DataType type() const override {
+    return VectorDataType<D>::type;
+  }
+
+  PredictionDataHash hash() override {
+    if (!hash_) {
+      hash_ = CityHash64(reinterpret_cast<char *>(data_.get() + start_), size_ * sizeof(D));
+    }
+    return hash_.get();
+  }
+
+  size_t start() const override {
+    return start_;
+  }
+
+  size_t start_byte() const override {
+    return start_ * sizeof(D);
+  }
+
+  size_t size() const override {
+    return size_;
+  }
+
+  size_t byte_size() const override {
+    return size_ * sizeof(D);
+  }
+
+  friend SharedPoolPtr<D> get_data(const std::shared_ptr<DataVector<D>>& data_item) {
+    return data_item->data_;
+  }
+
+  friend UniquePoolPtr<D> get_data(std::unique_ptr<DataVector<D>> data_item) {
+    D* raw_data = data_item->data_.get();
+    return UniquePoolPtr<D>(raw_data, free);
+  }
 
  private:
-  SharedPoolPtr<void> get_data() const override;
+  SharedPoolPtr<void> get_data() const override {
+    return data_;
+  }
 
-  SharedPoolPtr<uint8_t> data_;
+  SharedPoolPtr<D> data_;
   size_t start_;
   size_t size_;
   boost::optional<PredictionDataHash> hash_;
 };
 
-class IntVector : public PredictionData {
- public:
-  explicit IntVector(UniquePoolPtr<int> data, size_t size);
-  explicit IntVector(SharedPoolPtr<int> data, size_t start, size_t size);
-  explicit IntVector(UniquePoolPtr<void> data, size_t byte_size);
-  explicit IntVector(SharedPoolPtr<void> data, size_t start_byte, size_t byte_size);
-  explicit IntVector(void* data, size_t byte_size);
+typedef DataVector<uint8_t> ByteVector;
+typedef DataVector<int> IntVector;
+typedef DataVector<float> FloatVector;
+typedef DataVector<double> DoubleVector;
+typedef DataVector<char> SerializableString;
 
-  DataType type() const override;
-  PredictionDataHash hash() override;
-  size_t start() const override;
-  size_t start_byte() const override;
-  size_t size() const override;
-  size_t byte_size() const override;
-
- private:
-  SharedPoolPtr<void> get_data() const override;
-
-  SharedPoolPtr<int> data_;
-  size_t start_;
-  size_t size_;
-  boost::optional<PredictionDataHash> hash_;
-};
-
-class FloatVector : public PredictionData {
- public:
-  explicit FloatVector(UniquePoolPtr<float> data, size_t size);
-  explicit FloatVector(SharedPoolPtr<float> data, size_t start, size_t size);
-  explicit FloatVector(UniquePoolPtr<void> data, size_t byte_size);
-  explicit FloatVector(SharedPoolPtr<void> data, size_t start_byte, size_t byte_size);
-  explicit FloatVector(void* data, size_t byte_size);
-
-  DataType type() const override;
-  PredictionDataHash hash() override;
-  size_t start() const override;
-  size_t start_byte() const override;
-  size_t size() const override;
-  size_t byte_size() const override;
-
- private:
-  SharedPoolPtr<void> get_data() const override;
-
-  SharedPoolPtr<float> data_;
-  size_t start_;
-  size_t size_;
-  boost::optional<PredictionDataHash> hash_;
-};
-
-class DoubleVector : public PredictionData {
- public:
-  explicit DoubleVector(UniquePoolPtr<double> data, size_t size);
-  explicit DoubleVector(SharedPoolPtr<double> data, size_t start, size_t size);
-  explicit DoubleVector(UniquePoolPtr<void> data, size_t byte_size);
-  explicit DoubleVector(SharedPoolPtr<void> data, size_t start_byte, size_t byte_size);
-  explicit DoubleVector(void* data, size_t byte_size);
-
-  DataType type() const override;
-  PredictionDataHash hash() override;
-  size_t start() const override ;
-  size_t start_byte() const override;
-  size_t size() const override;
-  size_t byte_size() const override;
-
- private:
-  SharedPoolPtr<void> get_data() const override;
-
-  SharedPoolPtr<double> data_;
-  size_t start_;
-  size_t size_;
-  boost::optional<PredictionDataHash> hash_;
-};
-
-class SerializableString : public PredictionData {
- public:
-  explicit SerializableString(UniquePoolPtr<char> data, size_t size);
-  explicit SerializableString(SharedPoolPtr<char> data, size_t start, size_t size);
-  explicit SerializableString(UniquePoolPtr<void> data, size_t byte_size);
-  explicit SerializableString(SharedPoolPtr<void> data, size_t start_byte, size_t byte_size);
-  explicit SerializableString(void* data, size_t byte_size);
-  explicit SerializableString(std::string data);
-
-  DataType type() const override;
-  PredictionDataHash hash() override;
-  size_t start() const override;
-  size_t start_byte() const override;
-  size_t size() const override;
-  size_t byte_size() const override;
-
- private:
-  SharedPoolPtr<void> get_data() const override;
-
-  SharedPoolPtr<char> data_;
-  size_t start_;
-  size_t size_;
-  boost::optional<PredictionDataHash> hash_;
-};
+std::unique_ptr<SerializableString> to_serializable_string(const std::string &str);
 
 class Query {
  public:
