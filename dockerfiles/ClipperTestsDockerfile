@@ -67,6 +67,5 @@ RUN cd /clipper/src/libs/spdlog \
 
 
 ENTRYPOINT ["/clipper/bin/ci_checks.sh"]
-ENTRYPOINT ["bash"]
 
 # vim: set filetype=dockerfile:

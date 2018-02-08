@@ -21,7 +21,7 @@ def create_endpoint(
         input_type,
         func,
         mxnet_model,
-        data_shapes,
+        mxnet_data_shapes,
         default_output="None",
         version=1,
         slo_micros=3000000,
@@ -45,6 +45,8 @@ def create_endpoint(
         captured via closure capture and pickled with Cloudpickle.
     mxnet_model : mxnet model object
         The MXNet model to save.
+    mxnet_data_shapes : list(int)
+        Dimensions of data used to train MXNet model.
     default_output : str, optional
         The default output for the application. The default output will be returned whenever
         an application is unable to receive a response from a model within the specified
@@ -83,7 +85,7 @@ def create_endpoint(
     clipper_conn.register_application(name, input_type, default_output,
                                       slo_micros)
     deploy_mxnet_model(clipper_conn, name, version, input_type, func,
-                       mxnet_model, data_shapes, base_image, labels, registry,
+                       mxnet_model, mxnet_data_shapes, base_image, labels, registry,
                        num_replicas)
 
     clipper_conn.link_model_to_app(name, name)
@@ -96,7 +98,7 @@ def deploy_mxnet_model(
         input_type,
         func,
         mxnet_model,
-        mxnet_input_shape,
+        mxnet_data_shapes,
         base_image="clipper/mxnet-container:{}".format(__version__),
         labels=None,
         registry=None,
@@ -119,10 +121,12 @@ def deploy_mxnet_model(
         captured via closure capture and pickled with Cloudpickle.
     mxnet_model : mxnet model object
         The MXNet model to save.
-    mxnet_input_shape : list(int)
+    mxnet_data_shapes : list(int)
         List of integers representing the dimensions of data used for model prediction.
-        Required because loading serialized MXNet models requires the shape of the data used
-        to train the model.
+        Required because loading serialized MXNet models involves binding, which requires
+        the shape of the data used to train the model.
+        https://mxnet.incubator.apache.org/api/python/module.html#mxnet.module.BaseModule.bind
+
         NOTE: Clipper may provide the model with variable size input batches. Because MXNet can't
               handle variable size input batches, we recommend setting batch size for input data
               to 1, or dynamically reshaping the model with every prediction based on the current
@@ -173,7 +177,7 @@ def deploy_mxnet_model(
             input_type="doubles",
             func=predict,
             mxnet_model=model,
-            mxnet_input_shape=data_shape)
+            mxnet_data_shapes=data_shape)
     """
 
     serialization_dir = save_python_function(name, func)
@@ -192,7 +196,7 @@ def deploy_mxnet_model(
         with open(
                 os.path.join(serialization_dir, "mxnet_model_metadata.json"),
                 "w") as f:
-            json.dump({"data_shapes": mxnet_input_shape}, f)
+            json.dump({"data_shapes": mxnet_data_shapes}, f)
 
         # Deploy model
         clipper_conn.build_and_deploy_model(name, version, input_type,
