@@ -11,15 +11,6 @@ target_include_directories(container_lib PUBLIC
         PRIVATE src)
 
 ##################################
-# Container test suite
-
-add_executable(container_tests EXCLUDE_FROM_ALL
-        src/container_tests.cpp
-        )
-target_link_libraries(container_tests gtest gmock_main container_lib)
-add_dependencies(unittests container_tests)
-
-##################################
 # Container executable for rpc testing
 
 add_executable(container_rpc_test EXCLUDE_FROM_ALL
