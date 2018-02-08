@@ -9,6 +9,7 @@ import os
 import sys
 import shutil
 import tempfile
+import pickle
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 if sys.version < '3':
     import subprocess32 as subprocess
@@ -29,7 +30,7 @@ def serialize_object(obj):
     return s.getvalue()
 
 
-def save_python_function(name, func):
+def save_python_function(name, func, use_pickle=False):
     predict_fname = "func.pkl"
     environment_fname = "environment.yml"
     conda_dep_fname = "conda_dependencies.txt"
@@ -37,10 +38,13 @@ def save_python_function(name, func):
     local_modules_folder_name = "modules"
 
     # Serialize function
-    s = six.StringIO()
-    c = CloudPickler(s, 2)
-    c.dump(func)
-    serialized_prediction_function = s.getvalue()
+    if not use_pickle:
+        s = six.StringIO()
+        c = CloudPickler(s, 2)
+        c.dump(func)
+        serialized_prediction_function = s.getvalue()
+    else:
+        serialized_prediction_function = pickle.dumps(func, 2)
 
     # Set up serialization directory
     if not os.path.exists(CLIPPER_TEMP_DIR):
@@ -73,8 +77,9 @@ def save_python_function(name, func):
             "See http://docs.clipper.ai/en/release-0.2/index.html#pure-python-functions for more information."
         )
 
-    # Export modules used by predict_function not captured in anaconda or pip
-    export_local_modules(c.modules, serialization_dir, conda_dep_fname,
+    if not use_pickle:
+        # Export modules used by predict_function not captured in anaconda or pip
+        export_local_modules(c.modules, serialization_dir, conda_dep_fname,
                          pip_dep_fname, local_modules_folder_name)
     logger.info("Supplied local modules")
 
