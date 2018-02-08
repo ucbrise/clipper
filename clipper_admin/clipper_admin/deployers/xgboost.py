@@ -84,13 +84,13 @@ def create_endpoint(
         replicas of this model.
         """
     
-        clipper_conn.register_application(name, input_type, default_output,
+    clipper_conn.register_application(name, input_type, default_output,
                                       slo_micros)
-                                      deploy_xgboost_model(clipper_conn, name, version, input_type, func,
+    deploy_xgboost_model(clipper_conn, name, version, input_type, func,
                                                            base_image, labels, registry,
                                                            num_replicas, batch_size)
                                       
-        clipper_conn.link_model_to_app(name, name)
+    clipper_conn.link_model_to_app(name, name)
 
 
 def deploy_xgboost_model(
