@@ -146,7 +146,7 @@ def deploy_pytorch_model(
     """
     if base_image is None:
         if onnx_backend is "caffe2":
-                base_image = "clipper/caffe2-container:{}".format(__version__)
+                base_image = "clipper/caffe2-onnx-container:{}".format(__version__)
         else:
                 logger.error("{backend} ONNX backend is not currently supported.".format(backend=onnx_backend))
 
