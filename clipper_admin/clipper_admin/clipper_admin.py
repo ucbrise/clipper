@@ -1200,9 +1200,9 @@ class ClipperConnection(object):
         Parameters
         ----------
         query: JSON or list of dicts
-            Input that the user sends to the query frontend
+            Inputs to test the prediction function on.
         func: function
-            Predict function that the user's model is using
+            Predict function to test.
         input_type: str
             The input_type to be associated with the registered app and deployed model.
             One of "integers", "floats", "doubles", "bytes", or "strings".
@@ -1213,16 +1213,31 @@ class ClipperConnection(object):
             query_data = query_data[0]
 
         flattened_data = [item for sublist in query_data for item in sublist]
+        numpy_data = None
+
+        if input_type == "bytes":
+            numpy_data = list(np.int8(x) for x in query_data)
+            for x in flattened_data:
+                if type(x) != bytes:
+                    return "Invalid input type"
 
         if input_type == "integers":
+            numpy_data = list(np.int32(x) for x in query_data)
             for x in flattened_data:
                 if type(x) != int:
                     return "Invalid input type"
-        if input_type == "doubles":
+
+        if input_type == "floats" or input_type == "doubles":
+            if input_type == "floats":
+                numpy_data = list(np.float32(x) for x in query_data)
+            else:
+                numpy_data = list(np.float64(x) for x in query_data)
             for x in flattened_data:
                 if type(x) != float:
                     return "Invalid input type"
-        if input_type == "strings":
+
+        if input_type == "string":
+            numpy_data = list(np.str_(x) for x in query_data)
             for x in flattened_data:
                 if type(x) != str:
                     return "Invalid input type"
@@ -1236,7 +1251,7 @@ class ClipperConnection(object):
         try:
             assert reloaded_func
         except AssertionError as e:
-            return 'Function does not properly serialize and reload'
+            logger.error("Function does not properly serialize and reload")
+            return "Function does not properly serialize and reload"
 
-        numpy_data = list(np.array(x) for x in query_data)
         return reloaded_func(numpy_data)

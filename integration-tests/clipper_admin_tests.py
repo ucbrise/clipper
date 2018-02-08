@@ -11,6 +11,7 @@ import sys
 import os
 import json
 import time
+import numpy as np
 import requests
 import tempfile
 import shutil
@@ -25,6 +26,7 @@ import clipper_admin as cl
 from clipper_admin.deployers.python import create_endpoint as create_py_endpoint
 from clipper_admin.deployers.python import deploy_python_closure
 from clipper_admin import __version__ as clipper_version
+from clipper_admin import test_predict_function
 
 sys.path.insert(0, os.path.abspath('%s/util_direct_import/' % cur_dir))
 from util_package import mock_module_in_package as mmip
@@ -343,6 +345,20 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             })
         self.assertEqual(len(containers), 1)
 
+    def test_test_predict_function(self):
+        def predict_func(xs):
+            return [sum(x) for x in xs]
+
+        deploy_python_closure(self.clipper_conn, name="sum-model", version=1, input_type="doubles", func=predict_func)
+        self.clipper_conn.link_model_to_app(app_name="hello-world", model_name="sum-model")
+        
+        headers = {"Content-type": "application/json"}
+        test_input = list(np.random.random(10))
+        pred = requests.post("http://localhost:1337/hello-world/predict", headers=headers, data=json.dumps({"input": test_input})).json()
+        test_predict_result = test_predict_function(self.clipper_conn, query={"input": test_input}, func=predict_func, input_type="doubles")
+
+        self.assertEqual(pred, test_predict_result)
+
 
 class ClipperManagerTestCaseLong(unittest.TestCase):
     @classmethod
@@ -534,6 +550,7 @@ SHORT_TEST_ORDERING = [
     'test_stop_models',
     'test_python_closure_deploys_successfully',
     'test_register_py_endpoint',
+    'test_test_predict_function'
 ]
 
 LONG_TEST_ORDERING = [
