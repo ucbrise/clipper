@@ -27,7 +27,8 @@ def create_pytorch_endpoint(
         registry=None,
         base_image=None,
         num_replicas=1,
-        onnx_backend="caffe2"):
+        onnx_backend="caffe2",
+        batch_size=-1):
     """This function deploys the prediction function with a PyTorch model. 
     It serializes the PyTorch model in Onnx format and creates a container that loads it as a Caffe2 model. 
     Parameters
@@ -104,7 +105,8 @@ def deploy_pytorch_model(
         labels=None,
         registry=None,
         num_replicas=1,
-        onnx_backend="caffe2"):
+        onnx_backend="caffe2",
+        batch_size=-1):
     """This function deploys the prediction function with a PyTorch model. 
     It serializes the PyTorch model in Onnx format and creates a container that loads it as a Caffe2 model. 
     Parameters
@@ -164,7 +166,7 @@ def deploy_pytorch_model(
     # Deploy model
     clipper_conn.build_and_deploy_model(name, version, input_type,
                                         serialization_dir, base_image, labels,
-                                        registry, num_replicas, onnx_backend)
+                                        registry, num_replicas, batch_size)
 
     # Remove temp files
     shutil.rmtree(serialization_dir)
