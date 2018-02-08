@@ -8,6 +8,7 @@ RUN echo deb http://ftp.de.debian.org/debian jessie-backports main >> /etc/apt/s
       && apt-get install -yqq -t jessie-backports openjdk-8-jdk \
       && conda config --set ssl_verify no \
       && conda install -y --file /lib/python_container_conda_deps.txt \
+      && conda install -c anaconda cloudpickle=0.5.2 \
       && conda install -c conda-forge xgboost
 
 COPY containers/python/xgboost_container.py containers/python/xgboost_container_entry.sh /container/
