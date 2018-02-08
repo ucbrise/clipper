@@ -184,8 +184,8 @@ def deploy_xgboost_model(
     """
     
     model_class = re.search("xgboost.core.Booster",
-                            str(type(xgb.Booster()))).group(0).strip("'")
-    if model_class is not "Booster":
+                            str(type(xgboost_model))).group(0).strip("'")
+    if model_class != "xgboost.core.Booster":
         raise ClipperException(
             "xgboost_model argument was not a xgboost object")
 
