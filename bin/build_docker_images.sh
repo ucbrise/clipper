@@ -251,10 +251,12 @@ build_images () {
     create_image r-container-base RContainerDockerfile $public
 
     # First build Python base image
+    create_image py3-rpc Py3RPCDockerfile $public
     create_image py-rpc RPCDockerfile $public
     create_image sum-container SumDockerfile  $private
     create_image noop-container NoopDockerfile $public
     create_image python-closure-container PyClosureContainerDockerfile $public
+    create_image python3-closure-container Py3ClosureContainerDockerfile $public
     create_image pyspark-container PySparkContainerDockerfile $public
     create_image tf_cifar_container TensorFlowCifarDockerfile $public
     create_image tf-container TensorFlowDockerfile $public

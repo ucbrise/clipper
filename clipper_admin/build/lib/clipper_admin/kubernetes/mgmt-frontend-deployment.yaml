@@ -1,0 +1,24 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    ai.clipper.container.label: ""
+    ai.clipper.name: mgmt-frontend
+  name: mgmt-frontend
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        ai.clipper.container.label: ""
+        ai.clipper.name: mgmt-frontend
+    spec:
+      containers:
+      - args:
+        - "--redis_ip=$(REDIS_SERVICE_HOST)"
+        - "--redis_port=$(REDIS_SERVICE_PORT)"
+        image: clipper/management_frontend
+        name: mgmt-frontend
+        ports:
+        - containerPort: 1338
+      restartPolicy: Always

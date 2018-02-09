@@ -1,12 +1,13 @@
 from __future__ import print_function, with_statement, absolute_import
-
-import sys
-import logging
-import os
-import posixpath
 import shutil
-from ..version import __version__
+import pyspark
+import logging
+import re
+import os
+import json
 
+from ..version import __version__
+from ..clipper_admin import ClipperException
 from .deployer_utils import save_python_function
 
 logger = logging.getLogger(__name__)
@@ -17,15 +18,17 @@ def create_endpoint(
         name,
         input_type,
         func,
+        pyspark_model,
+        sc,
         default_output="None",
         version=1,
         slo_micros=3000000,
         labels=None,
         registry=None,
-        base_image="default"
+        base_image="clipper/pyspark-container:{}".format(__version__),
         num_replicas=1):
-
-    """Registers an application and deploys the provided predict function as a model.
+    """Registers an app and deploys the provided predict function with PySpark model as
+    a Clipper model.
 
     Parameters
     ----------
@@ -39,6 +42,10 @@ def create_endpoint(
     func : function
         The prediction function. Any state associated with the function will be
         captured via closure capture and pickled with Cloudpickle.
+    pyspark_model : pyspark.mllib.* or pyspark.ml.pipeline.PipelineModel object
+        The PySpark model to save.
+    sc : SparkContext,
+        The current SparkContext. This is needed to save the PySpark model.
     default_output : str, optional
         The default output for the application. The default output will be returned whenever
         an application is unable to receive a response from a model within the specified
@@ -62,7 +69,7 @@ def create_endpoint(
         and used purely for user annotations.
     registry : str, optional
         The Docker container registry to push the freshly built model to. Note
-        that if you are running Clipper on Kubernetes, this registry must be accessible
+        that if you are running Clipper on Kubernetes, this registry must be accesible
         to the Kubernetes cluster in order to fetch the container from the registry.
     base_image : str, optional
         The base Docker image to build the new model image from. This
@@ -74,29 +81,31 @@ def create_endpoint(
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
     """
 
-
     clipper_conn.register_application(name, input_type, default_output,
                                       slo_micros)
-    deploy_python_closure(clipper_conn, name, version, input_type, func,
-                          base_image, labels, registry, num_replicas)
+    deploy_pyspark_model(clipper_conn, name, version, input_type, func,
+                         pyspark_model, sc, base_image, labels, registry,
+                         num_replicas)
 
     clipper_conn.link_model_to_app(name, name)
 
 
-def deploy_python_closure(
+def deploy_pyspark_model(
         clipper_conn,
         name,
         version,
         input_type,
         func,
-        base_image="default"
+        pyspark_model,
+        sc,
+        base_image="clipper/pyspark-container:{}".format(__version__),
         labels=None,
         registry=None,
         num_replicas=1):
-    """Deploy an arbitrary Python function to Clipper.
+    """Deploy a Python function with a PySpark model.
 
-    The function should take a list of inputs of the type specified by `input_type` and
-    return a Python list or numpy array of predictions as strings.
+    The function must take 3 arguments (in order): a SparkSession, the PySpark model, and a list of
+    inputs. It must return a list of strings of the same length as the list of inputs.
 
     Parameters
     ----------
@@ -113,6 +122,10 @@ def deploy_python_closure(
     func : function
         The prediction function. Any state associated with the function will be
         captured via closure capture and pickled with Cloudpickle.
+    pyspark_model : pyspark.mllib.* or pyspark.ml.pipeline.PipelineModel object
+        The PySpark model to save.
+    sc : SparkContext,
+        The current SparkContext. This is needed to save the PySpark model.
     base_image : str, optional
         The base Docker image to build the new model image from. This
         image should contain all code necessary to run a Clipper model
@@ -132,55 +145,76 @@ def deploy_python_closure(
 
     Example
     -------
-    Define a pre-processing function ``center()`` and train a model on the pre-processed input::
+    Define a pre-processing function ``shift()`` and to normalize prediction inputs::
 
         from clipper_admin import ClipperConnection, DockerContainerManager
-        from clipper_admin.deployers.python import deploy_python_closure
-        import numpy as np
-        import sklearn
+        from clipper_admin.deployers.pyspark import deploy_pyspark_model
+        from pyspark.mllib.classification import LogisticRegressionWithSGD
+        from pyspark.sql import SparkSession
+
+        spark = SparkSession\
+                .builder\
+                .appName("clipper-pyspark")\
+                .getOrCreate()
+
+        sc = spark.sparkContext
 
         clipper_conn = ClipperConnection(DockerContainerManager())
 
         # Connect to an already-running Clipper cluster
         clipper_conn.connect()
 
-        def center(xs):
-            means = np.mean(xs, axis=0)
-            return xs - means
+        # Loading a training dataset omitted...
+        model = LogisticRegressionWithSGD.train(trainRDD, iterations=10)
 
-        centered_xs = center(xs)
-        model = sklearn.linear_model.LogisticRegression()
-        model.fit(centered_xs, ys)
+        # Note that this function accesses the trained PySpark model via an explicit
+        # argument, but other state can be captured via closure capture if necessary.
+        def predict(spark, model, inputs):
+            return [str(model.predict(shift(x))) for x in inputs]
 
-        # Note that this function accesses the trained model via closure capture,
-        # rather than having the model passed in as an explicit argument.
-        def centered_predict(inputs):
-            centered_inputs = center(inputs)
-            # model.predict returns a list of predictions
-            preds = model.predict(centered_inputs)
-            return [str(p) for p in preds]
-
-        deploy_python_closure(
+        deploy_pyspark_model(
             clipper_conn,
             name="example",
             input_type="doubles",
-            func=centered_predict)
+            func=predict,
+            pyspark_model=model,
+            sc=sc)
     """
 
+    model_class = re.search("pyspark.*'",
+                            str(type(pyspark_model))).group(0).strip("'")
+    if model_class is None:
+        raise ClipperException(
+            "pyspark_model argument was not a pyspark object")
 
+    # save predict function
     serialization_dir = save_python_function(name, func)
-    # Special handling for Windows, which uses backslash for path delimiting
-    serialization_dir = posixpath.join(*os.path.split(serialization_dir))
-    logger.info("Python closure saved")
-    # Check if Python 2 or Python 3 image
-    if sys.version_info[0] < 3:
-        base_image="clipper/python-closure-container:{}".format(__version__)
-    else:
-        base_image="clipper/python3-closure-container:{}".format(__version__)
+    # save Spark model
+    spark_model_save_loc = os.path.join(serialization_dir,
+                                        "pyspark_model_data")
+    try:
+        if isinstance(pyspark_model,
+                      pyspark.ml.pipeline.PipelineModel) or isinstance(
+                          pyspark_model, pyspark.ml.base.Model):
+            pyspark_model.save(spark_model_save_loc)
+        else:
+            pyspark_model.save(sc, spark_model_save_loc)
+    except Exception as e:
+        logger.warn("Error saving spark model: %s" % e)
+        raise e
 
-    # Deploy function
+    # extract the pyspark class name. This will be something like
+    # pyspark.mllib.classification.LogisticRegressionModel
+    with open(os.path.join(serialization_dir, "metadata.json"),
+              "w") as metadata_file:
+        json.dump({"model_class": model_class}, metadata_file)
+
+    logger.info("Spark model saved")
+
+    # Deploy model
     clipper_conn.build_and_deploy_model(name, version, input_type,
                                         serialization_dir, base_image, labels,
                                         registry, num_replicas)
+
     # Remove temp files
     shutil.rmtree(serialization_dir)

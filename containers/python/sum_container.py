@@ -22,6 +22,7 @@ class SumContainer(rpc.ModelContainerBase):
         return [str(sum(item)) for item in inputs]
 
     def predict_strings(self, inputs):
+        print(inputs)
         return [str(len(item)) for item in inputs]
 
 
