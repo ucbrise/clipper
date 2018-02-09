@@ -30,8 +30,8 @@ PredictTask create_predict_task(long query_id, long latency_slo_millis) {
 
 bool y_hats_equal(std::shared_ptr<PredictionData> y_hat_a,
                   std::shared_ptr<PredictionData> y_hat_b) {
-  int* y_hat_a_data = static_cast<int*>(get_data(y_hat_a).get());
-  int* y_hat_b_data = static_cast<int*>(get_data(y_hat_b).get());
+  int* y_hat_a_data = get_data<int>(y_hat_a).get();
+  int* y_hat_b_data = get_data<int>(y_hat_b).get();
   if (y_hat_a->type() != y_hat_b->type() ||
       y_hat_a->size() != y_hat_b->size()) {
     return false;

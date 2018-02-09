@@ -138,7 +138,7 @@ void rpc::PredictionRequest::add_input(
     const std::shared_ptr<PredictionData> &input) {
   validate_input_type(input->type());
   input_data_size_ += input->byte_size();
-  SharedPoolPtr<void> input_data = get_data(input);
+  SharedPoolPtr<void> input_data = get_data<void>(input);
   input_data_items_.push_back(std::make_tuple(
       std::move(input_data), input->start_byte(), input->byte_size()));
 }

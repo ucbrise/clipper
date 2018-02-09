@@ -100,15 +100,17 @@ class PredictionData {
    */
   virtual size_t byte_size() const = 0;
 
-  friend SharedPoolPtr<void> get_data(
+  template <typename D>
+  friend SharedPoolPtr<D> get_data(
       const std::shared_ptr<PredictionData> &data_item) {
-    return data_item->get_data();
+    return std::static_pointer_cast<D>(data_item->get_data());
   }
 
-  friend UniquePoolPtr<void> get_data(
+  template <typename D>
+  friend UniquePoolPtr<D> get_data(
       std::unique_ptr<PredictionData> data_item) {
-    void *raw_data = data_item->get_data().get();
-    return UniquePoolPtr<void>(raw_data, free);
+    D *raw_data = static_cast<D*>(data_item->get_data().get());
+    return UniquePoolPtr<D>(raw_data, free);
   }
 
  private:
