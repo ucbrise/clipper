@@ -22,9 +22,8 @@ def create_endpoint(
         slo_micros=3000000,
         labels=None,
         registry=None,
-        base_image="default",
-        num_replicas=1,
-        batch_size=-1):
+        base_image="default"
+        num_replicas=1):
 
     """Registers an application and deploys the provided predict function as a model.
 
@@ -73,20 +72,13 @@ def create_endpoint(
         The number of replicas of the model to create. The number of replicas
         for a model can be changed at any time with
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
-    batch_size : int, optional
-        The user-defined query batch size for the model. Replicas of the model will attempt
-        to process at most `batch_size` queries simultaneously. They may process smaller
-        batches if `batch_size` queries are not immediately available.
-        If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
-        replicas of this model.
     """
 
 
     clipper_conn.register_application(name, input_type, default_output,
                                       slo_micros)
     deploy_python_closure(clipper_conn, name, version, input_type, func,
-                          base_image, labels, registry, num_replicas,
-                          batch_size)
+                          base_image, labels, registry, num_replicas)
 
     clipper_conn.link_model_to_app(name, name)
 
@@ -100,8 +92,7 @@ def deploy_python_closure(
         base_image="default"
         labels=None,
         registry=None,
-        num_replicas=1,
-        batch_size=-1):
+        num_replicas=1):
     """Deploy an arbitrary Python function to Clipper.
 
     The function should take a list of inputs of the type specified by `input_type` and
@@ -137,12 +128,7 @@ def deploy_python_closure(
         The number of replicas of the model to create. The number of replicas
         for a model can be changed at any time with
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
-    batch_size : int, optional
-        The user-defined query batch size for the model. Replicas of the model will attempt
-        to process at most `batch_size` queries simultaneously. They may process smaller
-        batches if `batch_size` queries are not immediately available.
-        If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
-        replicas of this model.
+
 
     Example
     -------
@@ -195,6 +181,6 @@ def deploy_python_closure(
     # Deploy function
     clipper_conn.build_and_deploy_model(name, version, input_type,
                                         serialization_dir, base_image, labels,
-                                        registry, num_replicas, batch_size)
+                                        registry, num_replicas)
     # Remove temp files
     shutil.rmtree(serialization_dir)

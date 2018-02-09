@@ -344,7 +344,10 @@ class Server(threading.Thread):
                 sys.stderr.flush()
 
     def send_container_metadata(self, socket):
-        socket.send("", zmq.SNDMORE)
+        try:
+            socket.send("", zmq.SNDMORE)
+        except:
+            socket.send("".encode('utf-8'), zmq.SNDMORE)
         socket.send(struct.pack("<I", MESSAGE_TYPE_NEW_CONTAINER), zmq.SNDMORE)
         socket.send_string(self.model_name, zmq.SNDMORE)
         socket.send_string(str(self.model_version), zmq.SNDMORE)
@@ -355,7 +358,10 @@ class Server(threading.Thread):
         sys.stderr.flush()
 
     def send_heartbeat(self, socket):
-        socket.send("", zmq.SNDMORE)
+        try:
+            socket.send("", zmq.SNDMORE)
+        except TypeError:
+            socket.send_string("", zmq.SNDMORE)
         socket.send(struct.pack("<I", MESSAGE_TYPE_HEARTBEAT))
         self.event_history.insert(EVENT_HISTORY_SENT_HEARTBEAT)
         print("Sent heartbeat!")
@@ -412,7 +418,10 @@ class PredictionResponse():
         ----------
         output : string
         """
-        output = unicode(output, "utf-8").encode("utf-8")
+        if not isinstance(output, str):
+            output = unicode(output, "utf-8").encode("utf-8")      
+        else:
+            output = output.encode('utf-8')      
         output_len = len(output)
         struct.pack_into("<I", PredictionResponse.output_buffer,
                          self.current_output_sizes_position, output_len)
@@ -422,7 +431,10 @@ class PredictionResponse():
         self.string_content_end_position += output_len
 
     def send(self, socket, event_history):
-        socket.send("", flags=zmq.SNDMORE)
+        try:
+            socket.send("", flags=zmq.SNDMORE)
+        except TypeError:
+            socket.send_string("", flags=zmq.SNDMORE)
         socket.send(
             struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT),
             flags=zmq.SNDMORE)

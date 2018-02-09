@@ -1,0 +1,25 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    ai.clipper.container.label: ""
+    ai.clipper.name: query-frontend
+  name: query-frontend
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        ai.clipper.container.label: ""
+        ai.clipper.name: query-frontend
+    spec:
+      containers:
+      - args:
+        - "--redis_ip=$(REDIS_SERVICE_HOST)"
+        - "--redis_port=$(REDIS_SERVICE_PORT)"
+        image: clipper/query_frontend
+        name: query-frontend
+        ports:
+        - containerPort: 7000
+        - containerPort: 1337
+      restartPolicy: Always
