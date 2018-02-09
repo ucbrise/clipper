@@ -269,7 +269,6 @@ class Server(threading.Thread):
                         parsed_input_header = np.frombuffer(
                             input_header, dtype=np.uint64)
 
-
                         input_type, num_inputs, input_sizes = parsed_input_header[
                             0], parsed_input_header[1], parsed_input_header[2:]
 
@@ -279,7 +278,9 @@ class Server(threading.Thread):
                             if input_type == INPUT_TYPE_STRINGS:
                                 input_item = str(input_item)
                             else:
-                                input_item = np.frombuffer(input_item, dtype=input_type_to_dtype(input_type))
+                                input_item = np.frombuffer(
+                                    input_item,
+                                    dtype=input_type_to_dtype(input_type))
                             inputs.append(input_item)
 
                         if int(input_type) != int(self.model_input_type):
@@ -415,8 +416,7 @@ class PredictionResponse:
             struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT),
             flags=zmq.SNDMORE)
         socket.send(self.msg_id, flags=zmq.SNDMORE)
-        socket.send(struct.pack("<Q", header_length_bytes),
-            flags=zmq.SNDMORE)
+        socket.send(struct.pack("<Q", header_length_bytes), flags=zmq.SNDMORE)
         socket.send(output_header, flags=zmq.SNDMORE)
         for idx in range(self.num_outputs):
             if idx == self.num_outputs - 1:
@@ -453,14 +453,15 @@ class PredictionResponse:
         header_length = BYTES_PER_LONG * (len(self.outputs) + 1)
         self._expand_buffer_if_necessary(header_length)
         header_idx = 0
-        struct.pack_into("<Q", PredictionResponse.header_buffer, header_idx, self.num_outputs)
+        struct.pack_into("<Q", PredictionResponse.header_buffer, header_idx,
+                         self.num_outputs)
         header_idx += BYTES_PER_LONG
         for output in self.outputs:
-            struct.pack_into("<Q", PredictionResponse.header_buffer, header_idx, len(output))
+            struct.pack_into("<Q", PredictionResponse.header_buffer,
+                             header_idx, len(output))
             header_idx += BYTES_PER_LONG
 
         return PredictionResponse.header_buffer[:header_length], header_length
-
 
 
 class FeedbackRequest():

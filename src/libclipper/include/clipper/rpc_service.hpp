@@ -30,8 +30,8 @@ const std::string LOGGING_TAG_RPC = "RPC";
 /// Tuple of msg_id, vector of model outputs
 using RPCResponse = std::pair<const uint32_t, std::vector<ByteBuffer>>;
 /// Tuple of zmq_connection_id, message_id, vector of messages, creation time
-using RPCRequest =
-    std::tuple<const uint32_t, const uint32_t, std::vector<ByteBuffer>, const long>;
+using RPCRequest = std::tuple<const uint32_t, const uint32_t,
+                              std::vector<ByteBuffer>, const long>;
 
 enum class RPCEvent {
   SentHeartbeat = 1,
@@ -53,11 +53,11 @@ enum class HeartbeatType { KeepAlive = 0, RequestContainerMetadata = 1 };
 class RPCDataStore {
  public:
   void add_data(SharedPoolPtr<void> data);
-  void remove_data(void* data);
+  void remove_data(void *data);
 
  private:
   std::mutex mtx_;
-  std::unordered_map<void*, SharedPoolPtr<void>> data_items_;
+  std::unordered_map<void *, SharedPoolPtr<void>> data_items_;
 };
 
 class RPCService {
@@ -75,7 +75,7 @@ class RPCService {
   void start(
       const string ip, const int port,
       std::function<void(VersionedModelId, int)> &&container_ready_callback,
-      std::function<void(RPCResponse&)> &&new_response_callback);
+      std::function<void(RPCResponse &)> &&new_response_callback);
   /**
    * Stops the RPC Service. This is called implicitly within the RPCService
    * destructor.
@@ -114,7 +114,8 @@ class RPCService {
       std::unordered_map<std::vector<uint8_t>, std::pair<VersionedModelId, int>,
                          std::function<size_t(const std::vector<uint8_t> &vec)>>
           &connections_containers_map,
-      uint32_t &zmq_connection_id, std::shared_ptr<redox::Redox> redis_connection);
+      uint32_t &zmq_connection_id,
+      std::shared_ptr<redox::Redox> redis_connection);
 
   void send_heartbeat_response(socket_t &socket,
                                const vector<uint8_t> &connection_id,
@@ -131,7 +132,7 @@ class RPCService {
   std::shared_ptr<metrics::Histogram> msg_queueing_hist_;
 
   std::function<void(VersionedModelId, int)> container_ready_callback_;
-  std::function<void(RPCResponse&)> new_response_callback_;
+  std::function<void(RPCResponse &)> new_response_callback_;
 
   RPCDataStore outbound_data_store_;
 };

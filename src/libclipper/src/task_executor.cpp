@@ -86,7 +86,8 @@ void PredictionCache::put(const VersionedModelId &model,
 }
 
 void PredictionCache::insert_entry(const long key, CacheEntry &value) {
-  size_t entry_size_bytes = value.completed_ ? value.value_.y_hat_->byte_size() : 0;
+  size_t entry_size_bytes =
+      value.completed_ ? value.value_.y_hat_->byte_size() : 0;
   if (entry_size_bytes <= max_size_bytes_) {
     evict_entries(size_bytes_ + entry_size_bytes - max_size_bytes_);
     page_buffer_.insert(page_buffer_.begin() + page_buffer_index_, key);

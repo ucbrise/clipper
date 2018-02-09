@@ -81,9 +81,11 @@ using CachePage = std::pair<long, long>;
 class PredictionCache {
  public:
   PredictionCache(size_t size_bytes);
-  folly::Future<Output> fetch(const VersionedModelId &model, std::shared_ptr<PredictionData> &input);
+  folly::Future<Output> fetch(const VersionedModelId &model,
+                              std::shared_ptr<PredictionData> &input);
 
-  void put(const VersionedModelId &model, std::shared_ptr<PredictionData> &input, const Output &output);
+  void put(const VersionedModelId &model,
+           std::shared_ptr<PredictionData> &input, const Output &output);
 
  private:
   size_t hash(const VersionedModelId &model, size_t input_hash) const;
@@ -231,7 +233,7 @@ class TaskExecutor {
                      "TaskExecutor has been destroyed.");
           }
         },
-        [ this, task_executor_valid = active_ ](rpc::RPCResponse& response) {
+        [ this, task_executor_valid = active_ ](rpc::RPCResponse & response) {
           if (*task_executor_valid) {
             on_response_recv(std::move(response));
           } else {

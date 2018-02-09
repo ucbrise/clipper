@@ -81,10 +81,9 @@ Output::Output(const std::shared_ptr<PredictionData> y_hat,
                const std::vector<VersionedModelId> models_used)
     : y_hat_(y_hat), models_used_(models_used) {}
 
-
-Output::Output(const std::string y_hat, const std::vector<VersionedModelId> models_used)
-  : y_hat_(to_serializable_string(y_hat)), models_used_(models_used) {
-}
+Output::Output(const std::string y_hat,
+               const std::vector<VersionedModelId> models_used)
+    : y_hat_(to_serializable_string(y_hat)), models_used_(models_used) {}
 
 bool Output::operator==(const Output &rhs) const {
   return (y_hat_ == rhs.y_hat_ && models_used_ == rhs.models_used_);
@@ -94,9 +93,10 @@ bool Output::operator!=(const Output &rhs) const {
   return !(y_hat_ == rhs.y_hat_ && models_used_ == rhs.models_used_);
 }
 
-std::unique_ptr<SerializableString> to_serializable_string(const std::string &str) {
+std::unique_ptr<SerializableString> to_serializable_string(
+    const std::string &str) {
   size_t byte_size = str.size() * sizeof(char);
-  UniquePoolPtr<char> data(static_cast<char*>(malloc(byte_size)), free);
+  UniquePoolPtr<char> data(static_cast<char *>(malloc(byte_size)), free);
   memcpy(data.get(), str.data(), byte_size);
   return std::make_unique<SerializableString>(std::move(data), str.size());
 }
@@ -104,18 +104,20 @@ std::unique_ptr<SerializableString> to_serializable_string(const std::string &st
 rpc::PredictionRequest::PredictionRequest(DataType input_type)
     : input_type_(input_type) {}
 
-rpc::PredictionRequest::PredictionRequest(std::vector<std::unique_ptr<clipper::PredictionData>> inputs,
-                                          DataType input_type)
+rpc::PredictionRequest::PredictionRequest(
+    std::vector<std::unique_ptr<clipper::PredictionData>> inputs,
+    DataType input_type)
     : input_type_(input_type) {
-  for(auto &input : inputs) {
+  for (auto &input : inputs) {
     add_input(std::move(input));
   }
 }
 
-rpc::PredictionRequest::PredictionRequest(std::vector<std::shared_ptr<clipper::PredictionData>> &inputs,
-                                          DataType input_type)
+rpc::PredictionRequest::PredictionRequest(
+    std::vector<std::shared_ptr<clipper::PredictionData>> &inputs,
+    DataType input_type)
     : input_type_(input_type) {
-  for(auto &input : inputs) {
+  for (auto &input : inputs) {
     add_input(input);
   }
 }
@@ -132,11 +134,13 @@ void rpc::PredictionRequest::validate_input_type(InputType input_type) const {
   }
 }
 
-void rpc::PredictionRequest::add_input(const std::shared_ptr<PredictionData>& input) {
+void rpc::PredictionRequest::add_input(
+    const std::shared_ptr<PredictionData> &input) {
   validate_input_type(input->type());
   input_data_size_ += input->byte_size();
   SharedPoolPtr<void> input_data = get_data(input);
-  input_data_items_.push_back(std::make_tuple(std::move(input_data), input->start_byte(), input->byte_size()));
+  input_data_items_.push_back(std::make_tuple(
+      std::move(input_data), input->start_byte(), input->byte_size()));
 }
 
 void rpc::PredictionRequest::add_input(std::unique_ptr<PredictionData> input) {
@@ -145,7 +149,8 @@ void rpc::PredictionRequest::add_input(std::unique_ptr<PredictionData> input) {
   size_t byte_size = input->byte_size();
   input_data_size_ += byte_size;
   UniquePoolPtr<void> input_data = get_data(std::move(input));
-  input_data_items_.push_back(std::make_tuple(std::move(input_data), start_byte, byte_size));
+  input_data_items_.push_back(
+      std::make_tuple(std::move(input_data), start_byte, byte_size));
 }
 
 std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
@@ -156,10 +161,12 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
 
   size_t request_metadata_size = 1 * sizeof(uint32_t);
   UniquePoolPtr<void> request_metadata(malloc(request_metadata_size), free);
-  uint32_t *request_metadata_raw = static_cast<uint32_t *>(request_metadata.get());
+  uint32_t *request_metadata_raw =
+      static_cast<uint32_t *>(request_metadata.get());
   request_metadata_raw[0] = static_cast<uint32_t>(RequestType::PredictRequest);
 
-  size_t input_metadata_size = (2 + input_data_items_.size()) * sizeof(uint64_t);
+  size_t input_metadata_size =
+      (2 + input_data_items_.size()) * sizeof(uint64_t);
   UniquePoolPtr<void> input_metadata(malloc(input_metadata_size), free);
   uint64_t *input_metadata_raw = static_cast<uint64_t *>(input_metadata.get());
   input_metadata_raw[0] = static_cast<uint64_t>(input_type_);
@@ -170,7 +177,8 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
   }
 
   uint64_t input_metadata_size_buf_size = 1 * sizeof(uint64_t);
-  UniquePoolPtr<void> input_metadata_size_buf(malloc(input_metadata_size_buf_size), free);
+  UniquePoolPtr<void> input_metadata_size_buf(
+      malloc(input_metadata_size_buf_size), free);
   uint64_t *input_metadata_size_buf_raw =
       reinterpret_cast<uint64_t *>(input_metadata_size_buf.get());
   // Add the size of the input metadata in bytes. This will be
@@ -181,8 +189,8 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
   std::vector<ByteBuffer> serialized_request;
   serialized_request.emplace_back(
       std::make_tuple(std::move(request_metadata), 0, request_metadata_size));
-  serialized_request.emplace_back(
-      std::make_tuple(std::move(input_metadata_size_buf), 0, input_metadata_size_buf_size));
+  serialized_request.emplace_back(std::make_tuple(
+      std::move(input_metadata_size_buf), 0, input_metadata_size_buf_size));
   serialized_request.emplace_back(
       std::make_tuple(std::move(input_metadata), 0, input_metadata_size));
   for (auto &item : input_data_items_) {
@@ -191,27 +199,32 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
   return serialized_request;
 }
 
-rpc::PredictionResponse::PredictionResponse(const std::vector<std::shared_ptr<PredictionData>> outputs)
+rpc::PredictionResponse::PredictionResponse(
+    const std::vector<std::shared_ptr<PredictionData>> outputs)
     : outputs_(std::move(outputs)) {}
 
 rpc::PredictionResponse
-rpc::PredictionResponse::deserialize_prediction_response(std::vector<ByteBuffer> response) {
+rpc::PredictionResponse::deserialize_prediction_response(
+    std::vector<ByteBuffer> response) {
   std::vector<std::shared_ptr<PredictionData>> outputs;
-  for(auto &output : response) {
+  for (auto &output : response) {
     SharedPoolPtr<void> output_data = std::get<0>(output);
     size_t output_start = std::get<1>(output);
     size_t output_size = std::get<2>(output);
-    char* output_str_data = static_cast<char*>(output_data.get());
-    std::string output_str(output_str_data + output_start, output_str_data + output_start + output_size);
+    char *output_str_data = static_cast<char *>(output_data.get());
+    std::string output_str(output_str_data + output_start,
+                           output_str_data + output_start + output_size);
     std::shared_ptr<PredictionData> parsed_output =
-        std::make_shared<SerializableString>(output_data, output_start, output_size);
+        std::make_shared<SerializableString>(output_data, output_start,
+                                             output_size);
     outputs.push_back(std::move(parsed_output));
   }
   return PredictionResponse(outputs);
 }
 
-Query::Query(std::string label, long user_id, std::shared_ptr<PredictionData> input,
-             long latency_budget_micros, std::string selection_policy,
+Query::Query(std::string label, long user_id,
+             std::shared_ptr<PredictionData> input, long latency_budget_micros,
+             std::string selection_policy,
              std::vector<VersionedModelId> candidate_models)
     : label_(std::move(label)),
       user_id_(user_id),
@@ -235,8 +248,8 @@ std::string Response::debug_string() const noexcept {
   std::string debug;
   debug.append("Query id: ");
   debug.append(std::to_string(query_id_));
-  //debug.append(" Output: ");
-  //debug.append(output_.y_hat_);
+  // debug.append(" Output: ");
+  // debug.append(output_.y_hat_);
   return debug;
 }
 
@@ -252,9 +265,9 @@ FeedbackQuery::FeedbackQuery(std::string label, long user_id, Feedback feedback,
       selection_policy_(std::move(selection_policy)),
       candidate_models_(std::move(candidate_models)) {}
 
-PredictTask::PredictTask(std::shared_ptr<PredictionData> input, VersionedModelId model,
-                         float utility, QueryId query_id,
-                         long latency_slo_micros)
+PredictTask::PredictTask(std::shared_ptr<PredictionData> input,
+                         VersionedModelId model, float utility,
+                         QueryId query_id, long latency_slo_micros)
     : input_(std::move(input)),
       model_(std::move(model)),
       utility_(utility),

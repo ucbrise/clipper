@@ -75,8 +75,8 @@ rapidjson::Value& check_kv_type_is_bool_and_return(rapidjson::Value& d,
 bool get_bool(rapidjson::Value& d, const char* key_name) {
   rapidjson::Value& v = check_kv_type_is_bool_and_return(d, key_name);
   if (!v.IsBool()) {
-    throw json_semantic_error("PredictionData of type " + kTypeNames[v.GetType()] +
-                              " is not of type bool");
+    throw json_semantic_error("PredictionData of type " +
+                              kTypeNames[v.GetType()] + " is not of type bool");
   }
   return v.GetBool();
 }
@@ -85,7 +85,8 @@ double get_double(rapidjson::Value& d, const char* key_name) {
   rapidjson::Value& v =
       check_kv_type_and_return(d, key_name, rapidjson::kNumberType);
   if (!v.IsDouble()) {
-    throw json_semantic_error("PredictionData of type " + kTypeNames[v.GetType()] +
+    throw json_semantic_error("PredictionData of type " +
+                              kTypeNames[v.GetType()] +
                               " is not of type double");
   }
   return v.GetDouble();
@@ -95,7 +96,8 @@ float get_float(rapidjson::Value& d, const char* key_name) {
   rapidjson::Value& v =
       check_kv_type_and_return(d, key_name, rapidjson::kNumberType);
   if (!v.IsFloat()) {
-    throw json_semantic_error("PredictionData of type " + kTypeNames[v.GetType()] +
+    throw json_semantic_error("PredictionData of type " +
+                              kTypeNames[v.GetType()] +
                               " is not of type float");
   }
   return v.GetFloat();
@@ -105,8 +107,8 @@ long get_long(rapidjson::Value& d, const char* key_name) {
   rapidjson::Value& v =
       check_kv_type_and_return(d, key_name, rapidjson::kNumberType);
   if (!v.IsInt64()) {
-    throw json_semantic_error("PredictionData of type " + kTypeNames[v.GetType()] +
-                              " is not of type long");
+    throw json_semantic_error("PredictionData of type " +
+                              kTypeNames[v.GetType()] + " is not of type long");
   }
   return static_cast<long>(v.GetInt64());
 }
@@ -115,8 +117,8 @@ int get_int(rapidjson::Value& d, const char* key_name) {
   rapidjson::Value& v =
       check_kv_type_and_return(d, key_name, rapidjson::kNumberType);
   if (!v.IsInt()) {
-    throw json_semantic_error("PredictionData of type " + kTypeNames[v.GetType()] +
-                              " is not of type int");
+    throw json_semantic_error("PredictionData of type " +
+                              kTypeNames[v.GetType()] + " is not of type int");
   }
   return v.GetInt();
 }
@@ -126,7 +128,7 @@ std::string get_string(rapidjson::Value& d, const char* key_name) {
       check_kv_type_and_return(d, key_name, rapidjson::kStringType);
   if (!v.IsString()) {
     throw json_semantic_error("Input of type " + kTypeNames[v.GetType()] +
-        " is not of type string");
+                              " is not of type string");
   }
   return std::string(v.GetString());
 }
@@ -140,8 +142,8 @@ std::vector<std::string> get_string_array(rapidjson::Value& d,
   for (rapidjson::Value& elem : v.GetArray()) {
     if (!elem.IsString()) {
       throw json_semantic_error("Array input of type " +
-          kTypeNames[elem.GetType()] +
-          " is not of type string");
+                                kTypeNames[elem.GetType()] +
+                                " is not of type string");
     }
     vals.push_back(elem.GetString());
   }
@@ -149,31 +151,36 @@ std::vector<std::string> get_string_array(rapidjson::Value& d,
 }
 
 InputParseResult<uint8_t> get_base64_encoded_byte_array(rapidjson::Value& d,
-                                                   const char* key_name) {
+                                                        const char* key_name) {
   rapidjson::Value& v =
       check_kv_type_and_return(d, key_name, rapidjson::kStringType);
   if (!v.IsString()) {
-    throw json_semantic_error("PredictionData of type " + kTypeNames[v.GetType()] +
+    throw json_semantic_error("PredictionData of type " +
+                              kTypeNames[v.GetType()] +
                               " is not of type base64-encoded string");
   }
   Base64 decoder;
   const char* encoded_string = v.GetString();
   size_t encoded_length = v.GetStringLength();
-  size_t decoded_length = static_cast<size_t>(decoder.DecodedLength(encoded_string, encoded_length));
-  UniquePoolPtr<uint8_t> decoded_bytes(static_cast<uint8_t*>(malloc(decoded_length * sizeof(uint8_t))), free);
-  decoder.Decode(encoded_string, encoded_length, reinterpret_cast<char*>(decoded_bytes.get()), decoded_length);
+  size_t decoded_length = static_cast<size_t>(
+      decoder.DecodedLength(encoded_string, encoded_length));
+  UniquePoolPtr<uint8_t> decoded_bytes(
+      static_cast<uint8_t*>(malloc(decoded_length * sizeof(uint8_t))), free);
+  decoder.Decode(encoded_string, encoded_length,
+                 reinterpret_cast<char*>(decoded_bytes.get()), decoded_length);
 
   return std::make_pair(std::move(decoded_bytes), decoded_length);
 }
 
 /* Getters with error handling for arrays of byte, double, float, int */
 InputParseResult<double> get_double_array(rapidjson::Value& d,
-                                     const char* key_name) {
+                                          const char* key_name) {
   rapidjson::Value& v =
       check_kv_type_and_return(d, key_name, rapidjson::kArrayType);
 
   size_t arr_size = v.GetArray().Size();
-  UniquePoolPtr<double> arr(static_cast<double*>(malloc(arr_size * sizeof(double))), free);
+  UniquePoolPtr<double> arr(
+      static_cast<double*>(malloc(arr_size * sizeof(double))), free);
   double* arr_data = arr.get();
 
   size_t arr_idx = 0;
@@ -190,20 +197,22 @@ InputParseResult<double> get_double_array(rapidjson::Value& d,
   return std::make_pair(std::move(arr), arr_size);
 }
 
-InputParseResult<float> get_float_array(rapidjson::Value& d, const char* key_name) {
+InputParseResult<float> get_float_array(rapidjson::Value& d,
+                                        const char* key_name) {
   rapidjson::Value& v =
       check_kv_type_and_return(d, key_name, rapidjson::kArrayType);
 
   size_t arr_size = v.GetArray().Size();
-  UniquePoolPtr<float> arr(static_cast<float*>(malloc(arr_size * sizeof(float))), free);
+  UniquePoolPtr<float> arr(
+      static_cast<float*>(malloc(arr_size * sizeof(float))), free);
   float* arr_data = arr.get();
 
   size_t arr_idx = 0;
   for (rapidjson::Value& elem : v.GetArray()) {
     if (!elem.IsFloat()) {
       throw json_semantic_error("Array input of type " +
-          kTypeNames[elem.GetType()] +
-          " is not of type float");
+                                kTypeNames[elem.GetType()] +
+                                " is not of type float");
     }
     arr_data[arr_idx] = elem.GetFloat();
     arr_idx++;
@@ -217,15 +226,16 @@ InputParseResult<int> get_int_array(rapidjson::Value& d, const char* key_name) {
       check_kv_type_and_return(d, key_name, rapidjson::kArrayType);
 
   size_t arr_size = v.GetArray().Size();
-  UniquePoolPtr<int> arr(static_cast<int*>(malloc(arr_size * sizeof(int))), free);
+  UniquePoolPtr<int> arr(static_cast<int*>(malloc(arr_size * sizeof(int))),
+                         free);
   int* arr_data = arr.get();
 
   size_t arr_idx = 0;
   for (rapidjson::Value& elem : v.GetArray()) {
     if (!elem.IsInt()) {
       throw json_semantic_error("Array input of type " +
-          kTypeNames[elem.GetType()] +
-          " is not of type int");
+                                kTypeNames[elem.GetType()] +
+                                " is not of type int");
     }
     arr_data[arr_idx] = elem.GetInt();
     arr_idx++;
@@ -234,21 +244,25 @@ InputParseResult<int> get_int_array(rapidjson::Value& d, const char* key_name) {
   return std::make_pair(std::move(arr), arr_size);
 }
 
-InputParseResult<char> get_char_array(rapidjson::Value& d, const char* key_name) {
+InputParseResult<char> get_char_array(rapidjson::Value& d,
+                                      const char* key_name) {
   rapidjson::Value& v =
       check_kv_type_and_return(d, key_name, rapidjson::kStringType);
   if (!v.IsString()) {
-    throw json_semantic_error("PredictionData of type " + kTypeNames[v.GetType()] +
-        " is not of type string");
+    throw json_semantic_error("PredictionData of type " +
+                              kTypeNames[v.GetType()] +
+                              " is not of type string");
   }
   size_t arr_size = v.GetStringLength();
-  UniquePoolPtr<char> arr(static_cast<char*>(malloc(arr_size * sizeof(char))), free);
+  UniquePoolPtr<char> arr(static_cast<char*>(malloc(arr_size * sizeof(char))),
+                          free);
   memcpy(arr.get(), v.GetString(), arr_size * sizeof(char));
   return std::make_pair(std::move(arr), arr_size);
 }
 
 /*
- * Getters with error handling for nested arrays of byte, double, float, int, char
+ * Getters with error handling for nested arrays of byte, double, float, int,
+ * char
  */
 std::vector<InputParseResult<uint8_t>> get_base64_encoded_byte_arrays(
     rapidjson::Value& d, const char* key_name) {
@@ -260,21 +274,27 @@ std::vector<InputParseResult<uint8_t>> get_base64_encoded_byte_arrays(
 
   for (rapidjson::Value& elem : v.GetArray()) {
     if (!elem.IsString()) {
-      throw json_semantic_error("PredictionData of type " + kTypeNames[elem.GetType()] +
-          " is not of type base64-encoded string");
+      throw json_semantic_error("PredictionData of type " +
+                                kTypeNames[elem.GetType()] +
+                                " is not of type base64-encoded string");
     }
     const char* encoded_string = elem.GetString();
     size_t encoded_length = elem.GetStringLength();
-    size_t decoded_length = static_cast<size_t>(decoder.DecodedLength(encoded_string, encoded_length));
-    UniquePoolPtr<uint8_t> decoded_bytes(static_cast<uint8_t*>(malloc(decoded_length * sizeof(uint8_t))), free);
-    decoder.Decode(encoded_string, encoded_length, reinterpret_cast<char*>(decoded_bytes.get()), decoded_length);
-    byte_arrays.push_back(std::make_pair(std::move(decoded_bytes), decoded_length));
+    size_t decoded_length = static_cast<size_t>(
+        decoder.DecodedLength(encoded_string, encoded_length));
+    UniquePoolPtr<uint8_t> decoded_bytes(
+        static_cast<uint8_t*>(malloc(decoded_length * sizeof(uint8_t))), free);
+    decoder.Decode(encoded_string, encoded_length,
+                   reinterpret_cast<char*>(decoded_bytes.get()),
+                   decoded_length);
+    byte_arrays.push_back(
+        std::make_pair(std::move(decoded_bytes), decoded_length));
   }
   return byte_arrays;
 }
 
 std::vector<InputParseResult<double>> get_double_arrays(rapidjson::Value& d,
-                                                   const char* key_name) {
+                                                        const char* key_name) {
   rapidjson::Value& v =
       check_kv_type_and_return(d, key_name, rapidjson::kArrayType);
   std::vector<InputParseResult<double>> double_arrays;
@@ -287,15 +307,16 @@ std::vector<InputParseResult<double>> get_double_arrays(rapidjson::Value& d,
                                 " is not of type array");
     }
     size_t arr_size = elem_array.Size();
-    UniquePoolPtr<double> arr(static_cast<double*>(malloc(arr_size * sizeof(double))), free);
+    UniquePoolPtr<double> arr(
+        static_cast<double*>(malloc(arr_size * sizeof(double))), free);
     double* arr_data = arr.get();
 
     size_t arr_idx = 0;
     for (rapidjson::Value& elem : elem_array.GetArray()) {
       if (!elem.IsDouble()) {
         throw json_semantic_error("Array input of type " +
-            kTypeNames[elem.GetType()] +
-            " is not of type double");
+                                  kTypeNames[elem.GetType()] +
+                                  " is not of type double");
       }
       arr_data[arr_idx] = elem.GetDouble();
       arr_idx++;
@@ -306,7 +327,7 @@ std::vector<InputParseResult<double>> get_double_arrays(rapidjson::Value& d,
 }
 
 std::vector<InputParseResult<float>> get_float_arrays(rapidjson::Value& d,
-                                                 const char* key_name) {
+                                                      const char* key_name) {
   rapidjson::Value& v =
       check_kv_type_and_return(d, key_name, rapidjson::kArrayType);
   std::vector<InputParseResult<float>> float_arrays;
@@ -319,15 +340,16 @@ std::vector<InputParseResult<float>> get_float_arrays(rapidjson::Value& d,
                                 " is not of type array");
     }
     size_t arr_size = elem_array.Size();
-    UniquePoolPtr<float> arr(static_cast<float*>(malloc(arr_size * sizeof(float))), free);
+    UniquePoolPtr<float> arr(
+        static_cast<float*>(malloc(arr_size * sizeof(float))), free);
     float* arr_data = arr.get();
 
     size_t arr_idx = 0;
     for (rapidjson::Value& elem : elem_array.GetArray()) {
       if (!elem.IsFloat()) {
         throw json_semantic_error("Array input of type " +
-            kTypeNames[elem.GetType()] +
-            " is not of type float");
+                                  kTypeNames[elem.GetType()] +
+                                  " is not of type float");
       }
       arr_data[arr_idx] = elem.GetFloat();
       arr_idx++;
@@ -338,7 +360,7 @@ std::vector<InputParseResult<float>> get_float_arrays(rapidjson::Value& d,
 }
 
 std::vector<InputParseResult<int>> get_int_arrays(rapidjson::Value& d,
-                                             const char* key_name) {
+                                                  const char* key_name) {
   rapidjson::Value& v =
       check_kv_type_and_return(d, key_name, rapidjson::kArrayType);
   std::vector<InputParseResult<int>> int_arrays;
@@ -351,15 +373,16 @@ std::vector<InputParseResult<int>> get_int_arrays(rapidjson::Value& d,
                                 " is not of type array");
     }
     size_t arr_size = elem_array.Size();
-    UniquePoolPtr<int> arr(static_cast<int*>(malloc(arr_size * sizeof(int))), free);
+    UniquePoolPtr<int> arr(static_cast<int*>(malloc(arr_size * sizeof(int))),
+                           free);
     int* arr_data = arr.get();
 
     size_t arr_idx = 0;
     for (rapidjson::Value& elem : elem_array.GetArray()) {
       if (!elem.IsInt()) {
         throw json_semantic_error("Array input of type " +
-            kTypeNames[elem.GetType()] +
-            " is not of type int");
+                                  kTypeNames[elem.GetType()] +
+                                  " is not of type int");
       }
       arr_data[arr_idx] = elem.GetInt();
       arr_idx++;
@@ -370,7 +393,7 @@ std::vector<InputParseResult<int>> get_int_arrays(rapidjson::Value& d,
 }
 
 std::vector<InputParseResult<char>> get_char_arrays(rapidjson::Value& d,
-                                       const char* key_name) {
+                                                    const char* key_name) {
   rapidjson::Value& v =
       check_kv_type_and_return(d, key_name, rapidjson::kArrayType);
   std::vector<InputParseResult<char>> vals;
@@ -378,11 +401,12 @@ std::vector<InputParseResult<char>> get_char_arrays(rapidjson::Value& d,
   for (rapidjson::Value& elem : v.GetArray()) {
     if (!elem.IsString()) {
       throw json_semantic_error("Array input of type " +
-          kTypeNames[elem.GetType()] +
-          " is not of type string");
+                                kTypeNames[elem.GetType()] +
+                                " is not of type string");
     }
     size_t arr_size = elem.GetStringLength();
-    UniquePoolPtr<char> arr(static_cast<char*>(malloc(arr_size * sizeof(char))), free);
+    UniquePoolPtr<char> arr(static_cast<char*>(malloc(arr_size * sizeof(char))),
+                            free);
     memcpy(arr.get(), elem.GetString(), arr_size * sizeof(char));
     vals.push_back(std::make_pair(std::move(arr), arr_size));
   }
@@ -430,7 +454,8 @@ void parse_json(const std::string& json_content, rapidjson::Document& d) {
   }
 }
 
-std::vector<std::shared_ptr<PredictionData>> parse_inputs(DataType input_type, rapidjson::Value& d) {
+std::vector<std::shared_ptr<PredictionData>> parse_inputs(DataType input_type,
+                                                          rapidjson::Value& d) {
   if (d.HasMember("input")) {
     std::vector<std::shared_ptr<PredictionData>> wrapped_result;
     std::shared_ptr<PredictionData> result = parse_single_input(input_type, d);
@@ -444,15 +469,18 @@ std::vector<std::shared_ptr<PredictionData>> parse_inputs(DataType input_type, r
   }
 }
 
-std::shared_ptr<PredictionData> parse_single_input(DataType input_type, rapidjson::Value& d) {
+std::shared_ptr<PredictionData> parse_single_input(DataType input_type,
+                                                   rapidjson::Value& d) {
   switch (input_type) {
     case DataType::Doubles: {
       InputParseResult<double> input = get_double_array(d, "input");
-      return std::make_shared<DoubleVector>(std::move(input.first), input.second);
+      return std::make_shared<DoubleVector>(std::move(input.first),
+                                            input.second);
     }
     case DataType::Floats: {
       InputParseResult<float> input = get_float_array(d, "input");
-      return std::make_shared<FloatVector>(std::move(input.first), input.second);
+      return std::make_shared<FloatVector>(std::move(input.first),
+                                           input.second);
     }
     case DataType::Ints: {
       InputParseResult<int> input = get_int_array(d, "input");
@@ -460,47 +488,55 @@ std::shared_ptr<PredictionData> parse_single_input(DataType input_type, rapidjso
     }
     case DataType::Strings: {
       InputParseResult<char> input = get_char_array(d, "input");
-      return std::make_shared<SerializableString>(std::move(input.first), input.second);
+      return std::make_shared<SerializableString>(std::move(input.first),
+                                                  input.second);
     }
     case DataType::Bytes: {
-      InputParseResult<uint8_t> input = get_base64_encoded_byte_array(d, "input");
+      InputParseResult<uint8_t> input =
+          get_base64_encoded_byte_array(d, "input");
       return std::make_shared<ByteVector>(std::move(input.first), input.second);
     }
     default: throw std::invalid_argument("input_type is not a valid type");
   }
 }
 
-std::vector<std::shared_ptr<PredictionData>> parse_input_batch(DataType input_type, rapidjson::Value& d) {
+std::vector<std::shared_ptr<PredictionData>> parse_input_batch(
+    DataType input_type, rapidjson::Value& d) {
   std::vector<std::shared_ptr<PredictionData>> result;
   switch (input_type) {
     case DataType::Doubles: {
       auto input_batch = get_double_arrays(d, "input_batch");
-      for (auto &input : input_batch) {
-        result.push_back(std::make_shared<DoubleVector>(std::move(input.first), input.second));
+      for (auto& input : input_batch) {
+        result.push_back(std::make_shared<DoubleVector>(std::move(input.first),
+                                                        input.second));
       }
     } break;
     case DataType::Floats: {
       auto input_batch = get_float_arrays(d, "input_batch");
-      for (auto &input : input_batch) {
-        result.push_back(std::make_shared<FloatVector>(std::move(input.first), input.second));
+      for (auto& input : input_batch) {
+        result.push_back(std::make_shared<FloatVector>(std::move(input.first),
+                                                       input.second));
       }
     } break;
     case DataType::Ints: {
       auto input_batch = get_int_arrays(d, "input_batch");
-      for (auto &input : input_batch) {
-        result.push_back(std::make_shared<IntVector>(std::move(input.first), input.second));
+      for (auto& input : input_batch) {
+        result.push_back(
+            std::make_shared<IntVector>(std::move(input.first), input.second));
       }
     } break;
     case DataType::Strings: {
       auto input_batch = get_char_arrays(d, "input_batch");
-      for (auto &input : input_batch) {
-        result.push_back(std::make_shared<SerializableString>(std::move(input.first), input.second));
+      for (auto& input : input_batch) {
+        result.push_back(std::make_shared<SerializableString>(
+            std::move(input.first), input.second));
       }
     } break;
     case DataType::Bytes: {
       auto input_batch = get_base64_encoded_byte_arrays(d, "input_batch");
-      for (auto &input : input_batch) {
-        result.push_back(std::make_shared<ByteVector>(std::move(input.first), input.second));
+      for (auto& input : input_batch) {
+        result.push_back(
+            std::make_shared<ByteVector>(std::move(input.first), input.second));
       }
     } break;
     default: throw std::invalid_argument("input_type is not a valid type");

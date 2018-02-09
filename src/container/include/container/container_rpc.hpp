@@ -3,9 +3,9 @@
 
 #include <chrono>
 #include <mutex>
+#include <numeric>
 #include <sstream>
 #include <thread>
-#include <numeric>
 
 #include <boost/circular_buffer.hpp>
 #include <zmq.hpp>
@@ -302,8 +302,7 @@ class RPC {
   }
 
   template <typename D>
-  void handle_predict_request(Model<Input<D>>& model,
-                              zmq::socket_t& socket,
+  void handle_predict_request(Model<Input<D>>& model, zmq::socket_t& socket,
                               std::vector<uint64_t>& input_header_buffer,
                               std::vector<D>& input_data_buffer,
                               std::vector<uint64_t>& output_header_buffer,
@@ -331,14 +330,15 @@ class RPC {
 
     uint64_t num_inputs = input_header_buffer[1];
     uint64_t input_content_size_bytes =
-        std::accumulate(input_header_buffer.begin() + 2, input_header_buffer.begin() + 2 + num_inputs, 0);
+        std::accumulate(input_header_buffer.begin() + 2,
+                        input_header_buffer.begin() + 2 + num_inputs, 0);
 
     std::vector<Input<D>> inputs;
     inputs.reserve(num_inputs);
     resize_if_necessary(input_data_buffer, input_content_size_bytes);
 
     D* data_ptr = input_data_buffer.data();
-    for(uint32_t i = 0; i < num_inputs; i++) {
+    for (uint32_t i = 0; i < num_inputs; i++) {
       uint64_t input_size_bytes = input_header_buffer[i + 2];
       socket.recv(data_ptr, input_size_bytes, 0);
       inputs.push_back(Input<D>(data_ptr, input_size_bytes));
@@ -379,7 +379,7 @@ class RPC {
     socket.send(output_header_buffer.data(), output_header_size, ZMQ_SNDMORE);
     uint64_t last_msg_num = num_outputs - 1;
     for (uint64_t i = 0; i < num_outputs; i++) {
-      std::string &output = outputs[i];
+      std::string& output = outputs[i];
       if (i < last_msg_num) {
         socket.send(output.begin(), output.end(), ZMQ_SNDMORE);
       } else {
@@ -395,26 +395,27 @@ class RPC {
     log_info(LOGGING_TAG_CONTAINER, PerformanceTimer::get_log());
   }
 
-  uint64_t create_output_header(std::vector<std::string>& outputs,
-                            std::vector<uint64_t>& output_header_buffer) const {
+  uint64_t create_output_header(
+      std::vector<std::string>& outputs,
+      std::vector<uint64_t>& output_header_buffer) const {
     uint64_t num_outputs = outputs.size();
     uint64_t output_header_size = (num_outputs + 1) * sizeof(uint64_t);
     resize_if_necessary(output_header_buffer, output_header_size);
     uint64_t* output_header_data = output_header_buffer.data();
     output_header_data[0] = num_outputs;
-    for(uint64_t i = 0; i < num_outputs; i++) {
+    for (uint64_t i = 0; i < num_outputs; i++) {
       output_header_data[i + 1] = outputs[i].size();
     }
     return output_header_size;
   }
 
   template <typename D>
-  void resize_if_necessary(std::vector<D>& buffer, uint64_t required_buffer_size) const {
+  void resize_if_necessary(std::vector<D>& buffer,
+                           uint64_t required_buffer_size) const {
     if ((buffer.size() * sizeof(D)) < required_buffer_size) {
       buffer.reserve((2 * required_buffer_size) / sizeof(D));
     }
   }
-
 };
 
 }  // namespace container

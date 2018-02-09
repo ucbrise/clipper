@@ -426,9 +426,11 @@ class RequestHandler {
     server_.add_endpoint(update_endpoint, "POST", update_fn);
   }
 
-  static const std::string parse_output_y_hat(std::shared_ptr<PredictionData> &y_hat) {
+  static const std::string parse_output_y_hat(
+      std::shared_ptr<PredictionData>& y_hat) {
     char* str_content = static_cast<char*>(get_data(y_hat).get());
-    return std::string(str_content + y_hat->start(), str_content + y_hat->start() + y_hat->size());
+    return std::string(str_content + y_hat->start(),
+                       str_content + y_hat->start() + y_hat->size());
   }
 
   /**
@@ -571,7 +573,8 @@ class RequestHandler {
     rapidjson::Document d;
     clipper::json::parse_json(json_content, d);
     long uid = clipper::json::get_long(d, "uid");
-    std::shared_ptr<PredictionData> input = clipper::json::parse_single_input(input_type, d);
+    std::shared_ptr<PredictionData> input =
+        clipper::json::parse_single_input(input_type, d);
     double y_hat = clipper::json::get_double(d, "label");
     auto update = query_processor_.update(
         FeedbackQuery{name, uid, {Feedback(input, y_hat)}, policy, models});

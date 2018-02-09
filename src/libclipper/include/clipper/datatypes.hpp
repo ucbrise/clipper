@@ -8,13 +8,13 @@
 
 #include <city.h>
 
-#include <boost/optional.hpp>
 #include <boost/functional/hash.hpp>
+#include <boost/optional.hpp>
 
 namespace clipper {
 
 template <typename T>
-using UniquePoolPtr = std::unique_ptr<T, void(*)(void*)>;
+using UniquePoolPtr = std::unique_ptr<T, void (*)(void *)>;
 template <typename T>
 using SharedPoolPtr = std::shared_ptr<T>;
 
@@ -100,12 +100,14 @@ class PredictionData {
    */
   virtual size_t byte_size() const = 0;
 
-  friend SharedPoolPtr<void> get_data(const std::shared_ptr<PredictionData>& data_item) {
+  friend SharedPoolPtr<void> get_data(
+      const std::shared_ptr<PredictionData> &data_item) {
     return data_item->get_data();
   }
 
-  friend UniquePoolPtr<void> get_data(std::unique_ptr<PredictionData> data_item) {
-    void* raw_data = data_item->get_data().get();
+  friend UniquePoolPtr<void> get_data(
+      std::unique_ptr<PredictionData> data_item) {
+    void *raw_data = data_item->get_data().get();
     return UniquePoolPtr<void>(raw_data, free);
   }
 
@@ -147,64 +149,55 @@ template <typename D>
 class DataVector : public PredictionData {
  public:
   explicit DataVector(UniquePoolPtr<D> data, size_t size)
-    : data_(std::move(data)), start_(0), size_(size) {}
+      : data_(std::move(data)), start_(0), size_(size) {}
 
   explicit DataVector(SharedPoolPtr<D> data, size_t start, size_t size)
-    : data_(std::move(data)), start_(start), size_(size) {}
+      : data_(std::move(data)), start_(start), size_(size) {}
 
   explicit DataVector(UniquePoolPtr<void> data, size_t byte_size)
-    : DataVector(data.release(), byte_size) {}
+      : DataVector(data.release(), byte_size) {}
 
-  explicit DataVector(SharedPoolPtr<void> data, size_t start_byte, size_t byte_size)
-    : data_(std::static_pointer_cast<D>(std::move(data))),
-      start_(start_byte / sizeof(D)),
-      size_(byte_size / sizeof(D)) {}
+  explicit DataVector(SharedPoolPtr<void> data, size_t start_byte,
+                      size_t byte_size)
+      : data_(std::static_pointer_cast<D>(std::move(data))),
+        start_(start_byte / sizeof(D)),
+        size_(byte_size / sizeof(D)) {}
 
-  explicit DataVector(void* data, size_t byte_size)
-    : data_(SharedPoolPtr<D>(static_cast<D*>(data), free)),
-      start_(0),
-      size_(byte_size / sizeof(D)) {}
+  explicit DataVector(void *data, size_t byte_size)
+      : data_(SharedPoolPtr<D>(static_cast<D *>(data), free)),
+        start_(0),
+        size_(byte_size / sizeof(D)) {}
 
-  DataType type() const override {
-    return VectorDataType<D>::type;
-  }
+  DataType type() const override { return VectorDataType<D>::type; }
 
   PredictionDataHash hash() override {
     if (!hash_) {
-      hash_ = CityHash64(reinterpret_cast<char *>(data_.get() + start_), size_ * sizeof(D));
+      hash_ = CityHash64(reinterpret_cast<char *>(data_.get() + start_),
+                         size_ * sizeof(D));
     }
     return hash_.get();
   }
 
-  size_t start() const override {
-    return start_;
-  }
+  size_t start() const override { return start_; }
 
-  size_t start_byte() const override {
-    return start_ * sizeof(D);
-  }
+  size_t start_byte() const override { return start_ * sizeof(D); }
 
-  size_t size() const override {
-    return size_;
-  }
+  size_t size() const override { return size_; }
 
-  size_t byte_size() const override {
-    return size_ * sizeof(D);
-  }
+  size_t byte_size() const override { return size_ * sizeof(D); }
 
-  friend SharedPoolPtr<D> get_data(const std::shared_ptr<DataVector<D>>& data_item) {
+  friend SharedPoolPtr<D> get_data(
+      const std::shared_ptr<DataVector<D>> &data_item) {
     return data_item->data_;
   }
 
   friend UniquePoolPtr<D> get_data(std::unique_ptr<DataVector<D>> data_item) {
-    D* raw_data = data_item->data_.get();
+    D *raw_data = data_item->data_.get();
     return UniquePoolPtr<D>(raw_data, free);
   }
 
  private:
-  SharedPoolPtr<void> get_data() const override {
-    return data_;
-  }
+  SharedPoolPtr<void> get_data() const override { return data_; }
 
   SharedPoolPtr<D> data_;
   size_t start_;
@@ -218,7 +211,8 @@ typedef DataVector<float> FloatVector;
 typedef DataVector<double> DoubleVector;
 typedef DataVector<char> SerializableString;
 
-std::unique_ptr<SerializableString> to_serializable_string(const std::string &str);
+std::unique_ptr<SerializableString> to_serializable_string(
+    const std::string &str);
 
 class Query {
  public:
@@ -390,8 +384,11 @@ namespace rpc {
 class PredictionRequest {
  public:
   explicit PredictionRequest(DataType input_type);
-  explicit PredictionRequest(std::vector<std::shared_ptr<PredictionData>>& inputs, DataType input_type);
-  explicit PredictionRequest(std::vector<std::unique_ptr<PredictionData>> inputs, DataType input_type);
+  explicit PredictionRequest(
+      std::vector<std::shared_ptr<PredictionData>> &inputs,
+      DataType input_type);
+  explicit PredictionRequest(
+      std::vector<std::unique_ptr<PredictionData>> inputs, DataType input_type);
 
   // Disallow copy
   PredictionRequest(PredictionRequest &other) = delete;
@@ -401,7 +398,7 @@ class PredictionRequest {
   PredictionRequest(PredictionRequest &&other) = default;
   PredictionRequest &operator=(PredictionRequest &&other) = default;
 
-  void add_input(const std::shared_ptr<PredictionData>& input);
+  void add_input(const std::shared_ptr<PredictionData> &input);
   void add_input(std::unique_ptr<PredictionData> input);
   std::vector<ByteBuffer> serialize();
 
@@ -415,7 +412,8 @@ class PredictionRequest {
 
 class PredictionResponse {
  public:
-  PredictionResponse(const std::vector<std::shared_ptr<PredictionData>> outputs);
+  PredictionResponse(
+      const std::vector<std::shared_ptr<PredictionData>> outputs);
 
   // Disallow copy
   PredictionResponse(PredictionResponse &other) = delete;
@@ -425,7 +423,8 @@ class PredictionResponse {
   PredictionResponse(PredictionResponse &&other) = default;
   PredictionResponse &operator=(PredictionResponse &&other) = default;
 
-  static PredictionResponse deserialize_prediction_response(std::vector<ByteBuffer> response);
+  static PredictionResponse deserialize_prediction_response(
+      std::vector<ByteBuffer> response);
 
   std::vector<std::shared_ptr<PredictionData>> outputs_;
 };

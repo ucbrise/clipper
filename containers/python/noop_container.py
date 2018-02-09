@@ -27,6 +27,7 @@ class NoopContainer(rpc.ModelContainerBase):
     def predict_strings(self, inputs):
         return self._predict(inputs)
 
+
 if __name__ == "__main__":
     try:
         model_name = os.environ["CLIPPER_MODEL_NAME"]

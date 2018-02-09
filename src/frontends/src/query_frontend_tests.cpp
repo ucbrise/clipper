@@ -75,7 +75,8 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputInts) {
       std::dynamic_pointer_cast<IntVector>(parsed_query.input_);
   int* data = get_data(parsed_input).get();
   std::vector<int> parsed_input_data(
-      data + parsed_input->start(), data + parsed_input->start() + parsed_input->size());
+      data + parsed_input->start(),
+      data + parsed_input->start() + parsed_input->size());
 
   std::vector<int> expected_input_data{1, 2, 3, 4};
   EXPECT_EQ(parsed_input_data, expected_input_data);
@@ -87,7 +88,8 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputInts) {
 TEST_F(QueryFrontendTest, TestDecodeCorrectInputIntsBatch) {
   std::string test_json_ints =
       "{\"input_batch\": [[1, 2], [10, 20], [100, 200]]}";
-  std::vector<std::vector<int>> expected_input_data{{1, 2}, {10, 20}, {100, 200}};
+  std::vector<std::vector<int>> expected_input_data{
+      {1, 2}, {10, 20}, {100, 200}};
   std::vector<folly::Try<Response>> responses =
       rh_.decode_and_handle_predict(test_json_ints, "test", {}, "test_policy",
                                     30000, InputType::Ints)
@@ -100,7 +102,8 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputIntsBatch) {
         std::dynamic_pointer_cast<IntVector>(parsed_query.input_);
     int* data = get_data(parsed_input).get();
     std::vector<int> parsed_input_data(
-        data + parsed_input->start(), data + parsed_input->start() + parsed_input->size());
+        data + parsed_input->start(),
+        data + parsed_input->start() + parsed_input->size());
 
     EXPECT_EQ(parsed_input_data, expected_input_data[index]);
     EXPECT_EQ(parsed_query.label_, "test");
@@ -123,7 +126,8 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputDoubles) {
       std::dynamic_pointer_cast<DoubleVector>(parsed_query.input_);
   double* data = get_data(parsed_input).get();
   std::vector<double> parsed_input_data(
-      data + parsed_input->start(), data + parsed_input->start() + parsed_input->size());
+      data + parsed_input->start(),
+      data + parsed_input->start() + parsed_input->size());
 
   std::vector<double> expected_input_data{1.4, 2.23, 3.243242, 0.3223424};
   EXPECT_EQ(parsed_input_data, expected_input_data);
@@ -149,7 +153,8 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputDoublesBatch) {
         std::dynamic_pointer_cast<DoubleVector>(parsed_query.input_);
     double* data = get_data(parsed_input).get();
     std::vector<double> parsed_input_data(
-        data + parsed_input->start(), data + parsed_input->start() + parsed_input->size());
+        data + parsed_input->start(),
+        data + parsed_input->start() + parsed_input->size());
 
     EXPECT_EQ(parsed_input_data, expected_input_data[index]);
     EXPECT_EQ(parsed_query.label_, "test");
@@ -174,7 +179,8 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputString) {
       std::dynamic_pointer_cast<SerializableString>(parsed_query.input_);
   char* data = get_data(parsed_input).get();
   std::string parsed_input_data(
-      data + parsed_input->start(), data + parsed_input->start() + parsed_input->size());
+      data + parsed_input->start(),
+      data + parsed_input->start() + parsed_input->size());
 
   std::string expected_input_data(
       "hello world. This is a test string with punctionation!@#$Y#;}#");
@@ -200,7 +206,8 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputStringBatch) {
         std::dynamic_pointer_cast<SerializableString>(parsed_query.input_);
     char* data = get_data(parsed_input).get();
     std::string parsed_input_data(
-        data + parsed_input->start(), data + parsed_input->start() + parsed_input->size());
+        data + parsed_input->start(),
+        data + parsed_input->start() + parsed_input->size());
 
     EXPECT_EQ(parsed_input_data, expected_input_data[index]);
     EXPECT_EQ(parsed_query.label_, "test");

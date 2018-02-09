@@ -127,7 +127,16 @@ TEST(DefaultOutputSelectionStateTest, Serialization) {
   DefaultOutputSelectionState state{output};
   std::string serialized_output = state.serialize();
   DefaultOutputSelectionState deserialized_state{serialized_output};
-  ASSERT_EQ(output.y_hat_, deserialized_state.default_output_.y_hat_);
+  auto& output_y_hat = output.y_hat_;
+  auto& default_y_hat = deserialized_state.default_output_.y_hat_;
+  ASSERT_EQ(output_y_hat->type(), default_y_hat->type());
+  ASSERT_EQ(output_y_hat->byte_size(), default_y_hat->byte_size());
+  ASSERT_EQ(output_y_hat->size(), default_y_hat->size());
+  char* output_y_hat_data = static_cast<char*>(get_data(output_y_hat).get());
+  char* default_y_hat_data = static_cast<char*>(get_data(default_y_hat).get());
+  for (size_t i = 0; i < output_y_hat->size(); i++) {
+    ASSERT_EQ(output_y_hat_data[i], default_y_hat_data[i]);
+  }
 }
 
 }  // namespace

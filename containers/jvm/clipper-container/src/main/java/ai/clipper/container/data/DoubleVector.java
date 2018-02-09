@@ -4,7 +4,6 @@ import java.nio.ByteBuffer;
 import java.nio.DoubleBuffer;
 
 public class DoubleVector extends DataVector<DoubleBuffer> {
-
   public DoubleVector(DoubleBuffer data) {
     super(data);
   }
@@ -18,4 +17,3 @@ public class DoubleVector extends DataVector<DoubleBuffer> {
     }
   }
 }
-

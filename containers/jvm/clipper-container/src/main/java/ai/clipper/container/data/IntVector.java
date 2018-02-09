@@ -4,7 +4,6 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
 public class IntVector extends DataVector<IntBuffer> {
-
   public IntVector(IntBuffer data) {
     super(data);
   }

@@ -21,10 +21,12 @@ DefaultOutputSelectionState::DefaultOutputSelectionState(
     std::string serialized_state)
     : default_output_(deserialize(serialized_state)) {}
 
-std::string DefaultOutputSelectionState::parse_y_hat(const std::shared_ptr<PredictionData>& default_y_hat) {
+std::string DefaultOutputSelectionState::parse_y_hat(
+    const std::shared_ptr<PredictionData>& default_y_hat) {
   auto default_data = get_data(default_y_hat);
   char* default_str_content = static_cast<char*>(default_data.get());
-  std::string default_str(default_str_content, default_str_content + default_y_hat->size());
+  std::string default_str(default_str_content,
+                          default_str_content + default_y_hat->size());
   return default_str;
 }
 

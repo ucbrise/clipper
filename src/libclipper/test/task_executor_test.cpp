@@ -18,12 +18,30 @@ namespace {
  * predict tasks for testing (i.e. task queuing order stability)
  */
 PredictTask create_predict_task(long query_id, long latency_slo_millis) {
-  UniquePoolPtr<double> data(static_cast<double*>(malloc(sizeof(double))), free);
+  UniquePoolPtr<double> data(static_cast<double*>(malloc(sizeof(double))),
+                             free);
   data.get()[0] = 1.0;
   VersionedModelId model_id = VersionedModelId("test", "1");
-  std::shared_ptr<PredictionData> input = std::make_shared<DoubleVector>(std::move(data), 1);
+  std::shared_ptr<PredictionData> input =
+      std::make_shared<DoubleVector>(std::move(data), 1);
   PredictTask task(input, model_id, 1.0, query_id, latency_slo_millis);
   return task;
+}
+
+bool y_hats_equal(std::shared_ptr<PredictionData> y_hat_a,
+                  std::shared_ptr<PredictionData> y_hat_b) {
+  int* y_hat_a_data = static_cast<int*>(get_data(y_hat_a).get());
+  int* y_hat_b_data = static_cast<int*>(get_data(y_hat_b).get());
+  if (y_hat_a->type() != y_hat_b->type() ||
+      y_hat_a->size() != y_hat_b->size()) {
+    return false;
+  }
+  for (size_t i = 0; i < y_hat_a->size(); i++) {
+    if (y_hat_a_data[i] != y_hat_b_data[i]) {
+      return false;
+    }
+  }
+  return true;
 }
 
 TEST(TaskExecutorTests, TestDeadlineComparisonsWorkCorrectly) {
@@ -144,16 +162,17 @@ TEST(PredictionCacheTests,
     cache.put(model_id, inputs[i], outputs[i]);
     auto output_future = cache.fetch(model_id, inputs[i]);
     ASSERT_TRUE(output_future.isReady());
-    ASSERT_EQ(output_future.get().y_hat_, outputs[i].y_hat_);
+    ASSERT_TRUE(y_hats_equal(output_future.get().y_hat_, outputs[i].y_hat_));
   }
-  UniquePoolPtr<int> last_input_data(static_cast<int*>(malloc(sizeof(int))), free);
+  UniquePoolPtr<int> last_input_data(static_cast<int*>(malloc(sizeof(int))),
+                                     free);
   last_input_data.get()[0] = 5;
   std::shared_ptr<PredictionData> last_input =
       std::make_shared<IntVector>(std::move(last_input_data), 1);
   cache.put(model_id, last_input, outputs[0]);
   auto last_output_future = cache.fetch(model_id, last_input);
   ASSERT_TRUE(last_output_future.isReady());
-  ASSERT_EQ(last_output_future.get().y_hat_, outputs[0].y_hat_);
+  ASSERT_TRUE(y_hats_equal(last_output_future.get().y_hat_, outputs[0].y_hat_));
   // Inserting a fifth entry should have brought the cache size above the
   // maximum
   // threshold. In accordance with the clock eviction policy, the output
@@ -167,7 +186,7 @@ TEST(PredictionCacheTests,
   for (int i = 1; i < 4; ++i) {
     auto output_future = cache.fetch(model_id, inputs[i]);
     ASSERT_TRUE(output_future.isReady());
-    ASSERT_EQ(output_future.get().y_hat_, outputs[i].y_hat_);
+    ASSERT_TRUE(y_hats_equal(output_future.get().y_hat_, outputs[i].y_hat_));
   }
 }
 
@@ -192,7 +211,8 @@ TEST(PredictionCacheTests,
   std::vector<Output> large_outputs;
   std::vector<std::shared_ptr<PredictionData>> large_inputs;
   for (int i = 0; i < 2; ++i) {
-    UniquePoolPtr<int> input_data(static_cast<int*>(malloc(2 * sizeof(int))), free);
+    UniquePoolPtr<int> input_data(static_cast<int*>(malloc(2 * sizeof(int))),
+                                  free);
     input_data.get()[0] = i;
     input_data.get()[1] = i;
     std::shared_ptr<PredictionData> input =
@@ -208,16 +228,18 @@ TEST(PredictionCacheTests,
   cache.put(model_id, large_inputs[0], large_outputs[0]);
   cache.put(model_id, large_inputs[1], large_outputs[1]);
   for (int i = 0; i < 3; ++i) {
-    cache.put(model_id, small_inputs[i], small_outputs[1]);
+    cache.put(model_id, small_inputs[i], small_outputs[i]);
   }
 
   // The cache should contain both large output entries
   auto first_large_output_future = cache.fetch(model_id, large_inputs[0]);
   ASSERT_TRUE(first_large_output_future.isReady());
-  ASSERT_EQ(first_large_output_future.get().y_hat_, large_outputs[0].y_hat_);
+  ASSERT_TRUE(y_hats_equal(first_large_output_future.get().y_hat_,
+                           large_outputs[0].y_hat_));
   auto second_large_output_future = cache.fetch(model_id, large_inputs[1]);
   ASSERT_TRUE(second_large_output_future.isReady());
-  ASSERT_EQ(second_large_output_future.get().y_hat_, large_outputs[1].y_hat_);
+  ASSERT_TRUE(y_hats_equal(second_large_output_future.get().y_hat_,
+                           large_outputs[1].y_hat_));
 
   // The cache should contain the three previously-inserted small output
   // entries, but it
@@ -225,7 +247,8 @@ TEST(PredictionCacheTests,
   for (int i = 0; i < 3; ++i) {
     auto small_output_future = cache.fetch(model_id, small_inputs[i]);
     ASSERT_TRUE(small_output_future.isReady());
-    ASSERT_EQ(small_output_future.get().y_hat_, small_outputs[i].y_hat_);
+    ASSERT_TRUE(y_hats_equal(small_output_future.get().y_hat_,
+                             small_outputs[i].y_hat_));
   }
   ASSERT_FALSE(cache.fetch(model_id, small_inputs[3]).isReady());
   ASSERT_FALSE(cache.fetch(model_id, small_inputs[4]).isReady());
@@ -249,14 +272,16 @@ TEST(PredictionCacheTests,
   for (int i = 0; i < 5; ++i) {
     auto small_output_future = cache.fetch(model_id, small_inputs[i]);
     ASSERT_TRUE(small_output_future.isReady());
-    ASSERT_EQ(small_output_future.get().y_hat_, small_outputs[i].y_hat_);
+    ASSERT_TRUE(y_hats_equal(small_output_future.get().y_hat_,
+                             small_outputs[i].y_hat_));
   }
 
   // Inserting an additional small output should evict the entry containing
   // large_outputs[1] at page buffer index 2. The cache should now contain
   // entries corresponding to small outputs at vector indices 0-4, as well as
   // an additional entry corresponding to small_outputs[0] that we just inserted
-  UniquePoolPtr<int> last_small_input_data(static_cast<int*>(malloc(sizeof(int))), free);
+  UniquePoolPtr<int> last_small_input_data(
+      static_cast<int*>(malloc(sizeof(int))), free);
   last_small_input_data.get()[0] = 6;
   std::shared_ptr<PredictionData> last_small_input =
       std::make_shared<IntVector>(std::move(last_small_input_data), 1);
@@ -265,11 +290,13 @@ TEST(PredictionCacheTests,
   for (int i = 0; i < 5; ++i) {
     auto small_output_future = cache.fetch(model_id, small_inputs[i]);
     ASSERT_TRUE(small_output_future.isReady());
-    ASSERT_EQ(small_output_future.get().y_hat_, small_outputs[i].y_hat_);
+    ASSERT_TRUE(y_hats_equal(small_output_future.get().y_hat_,
+                             small_outputs[i].y_hat_));
   }
   auto last_small_output_future = cache.fetch(model_id, last_small_input);
   ASSERT_TRUE(last_small_output_future.isReady());
-  ASSERT_EQ(last_small_output_future.get().y_hat_, small_outputs[0].y_hat_);
+  ASSERT_TRUE(y_hats_equal(last_small_output_future.get().y_hat_,
+                           small_outputs[0].y_hat_));
 
   // Inserting an additional small large input should evict the entry containing
   // small_outputs[0] at page buffer index 3. The cache should now contain
@@ -277,7 +304,8 @@ TEST(PredictionCacheTests,
   // an additional entries corresponding to: large_outputs[0] that (just
   // inserted)
   // and small_outputs[0] (inserted in the previous step)
-  UniquePoolPtr<int> last_large_input_data(static_cast<int*>(malloc(2 * sizeof(int))), free);
+  UniquePoolPtr<int> last_large_input_data(
+      static_cast<int*>(malloc(2 * sizeof(int))), free);
   last_large_input_data.get()[0] = 3;
   last_large_input_data.get()[1] = 3;
   std::shared_ptr<PredictionData> last_large_input =
@@ -287,11 +315,13 @@ TEST(PredictionCacheTests,
   for (int i = 1; i < 5; ++i) {
     auto small_output_future = cache.fetch(model_id, small_inputs[i]);
     ASSERT_TRUE(small_output_future.isReady());
-    ASSERT_EQ(small_output_future.get().y_hat_, small_outputs[i].y_hat_);
+    ASSERT_TRUE(y_hats_equal(small_output_future.get().y_hat_,
+                             small_outputs[i].y_hat_));
   }
   auto last_large_output_future = cache.fetch(model_id, last_large_input);
   ASSERT_TRUE(last_large_output_future.isReady());
-  ASSERT_EQ(last_large_output_future.get().y_hat_, large_outputs[0].y_hat_);
+  ASSERT_TRUE(y_hats_equal(last_large_output_future.get().y_hat_,
+                           large_outputs[0].y_hat_));
 }
 
 TEST(PredictionCacheTests, TestIncompleteFuturesAreCompletedOnPut) {
@@ -314,7 +344,9 @@ TEST(PredictionCacheTests, TestIncompleteFuturesAreCompletedOnPut) {
   for (int i = 0; i < 5; ++i) {
     output_future = cache1.fetch(model_id, input);
     ASSERT_TRUE(output_future.isReady());
-    ASSERT_EQ(output_future.get().y_hat_, output.y_hat_);
+    auto output_future_y_hat = output_future.get().y_hat_;
+    auto& output_y_hat = output.y_hat_;
+    ASSERT_TRUE(y_hats_equal(output_future_y_hat, output_y_hat));
   }
 
   ASSERT_GT(output_text.size(), 1UL);
@@ -327,7 +359,7 @@ TEST(PredictionCacheTests, TestIncompleteFuturesAreCompletedOnPut) {
   // subsequent lookups should fail
   cache2.put(model_id, input, output);
   ASSERT_TRUE(output_future.isReady());
-  ASSERT_EQ(output_future.get().y_hat_, output.y_hat_);
+  ASSERT_TRUE(y_hats_equal(output_future.get().y_hat_, output.y_hat_));
   for (int i = 0; i < 5; ++i) {
     output_future = cache2.fetch(model_id, input);
     ASSERT_FALSE(output_future.isReady());
@@ -337,7 +369,8 @@ TEST(PredictionCacheTests, TestIncompleteFuturesAreCompletedOnPut) {
   output_future = cache3.fetch(model_id, input);
   ASSERT_FALSE(output_future.isReady());
   for (int i = 0; i < 5; ++i) {
-    UniquePoolPtr<int> new_input_data(static_cast<int*>(malloc(sizeof(int))) , free);
+    UniquePoolPtr<int> new_input_data(static_cast<int*>(malloc(sizeof(int))),
+                                      free);
     new_input_data.get()[0] = i;
     std::shared_ptr<PredictionData> new_input =
         std::make_shared<IntVector>(std::move(new_input_data), 1);
@@ -350,7 +383,7 @@ TEST(PredictionCacheTests, TestIncompleteFuturesAreCompletedOnPut) {
   // still complete the output future that we obtained prior to the additional
   // insertions
   ASSERT_TRUE(output_future.isReady());
-  ASSERT_EQ(output_future.get().y_hat_, output.y_hat_);
+  ASSERT_TRUE(y_hats_equal(output_future.get().y_hat_, output.y_hat_));
 }
 
 TEST(PredictionCacheTests, TestEntryLargerThanCacheSizeIsEvicted) {

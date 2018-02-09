@@ -31,7 +31,7 @@ constexpr int INITIAL_REPLICA_ID_SIZE = 100;
 
 void RPCDataStore::add_data(SharedPoolPtr<void> data) {
   std::lock_guard<std::mutex> lock(mtx_);
-  void* data_ptr = data.get();
+  void *data_ptr = data.get();
   data_items_.emplace(data_ptr, std::move(data));
 }
 
@@ -57,7 +57,7 @@ RPCService::~RPCService() { stop(); }
 void RPCService::start(
     const string ip, const int port,
     std::function<void(VersionedModelId, int)> &&container_ready_callback,
-    std::function<void(RPCResponse&)> &&new_response_callback) {
+    std::function<void(RPCResponse &)> &&new_response_callback) {
   container_ready_callback_ = container_ready_callback;
   new_response_callback_ = new_response_callback;
   if (active_) {
@@ -92,7 +92,8 @@ int RPCService::send_message(vector<ByteBuffer> msg,
       std::chrono::duration_cast<std::chrono::microseconds>(
           std::chrono::system_clock::now().time_since_epoch())
           .count();
-  RPCRequest request(zmq_connection_id, id, std::move(msg), current_time_micros);
+  RPCRequest request(zmq_connection_id, id, std::move(msg),
+                     current_time_micros);
   request_queue_->push(std::move(request));
   return id;
 }
@@ -100,8 +101,8 @@ int RPCService::send_message(vector<ByteBuffer> msg,
 void RPCService::manage_service(const string address) {
   // Map from container id to unique routing id for zeromq
   // Note that zeromq socket id is a byte vector
-  log_info_formatted(LOGGING_TAG_RPC, "RPC thread started at address: ",
-                     address);
+  log_info_formatted(LOGGING_TAG_RPC,
+                     "RPC thread started at address: ", address);
   boost::bimap<int, vector<uint8_t>> connections;
   // Initializes a map to associate the ZMQ connection IDs
   // of connected containers with their metadata, including
@@ -197,9 +198,8 @@ void RPCService::send_messages(
       size_t data_start = std::get<1>(m);
       size_t data_size = std::get<2>(m);
 
-      message_t msg(static_cast<uint8_t*>(data_ptr.get()) + data_start,
-                    data_size,
-                    &RPCService::zmq_continuation,
+      message_t msg(static_cast<uint8_t *>(data_ptr.get()) + data_start,
+                    data_size, &RPCService::zmq_continuation,
                     &outbound_data_store_);
 
       if (cur_msg_num < last_msg_num) {
@@ -213,8 +213,8 @@ void RPCService::send_messages(
   }
 }
 
-void RPCService::zmq_continuation(void *data, void* hint) {
-  auto data_store = static_cast<RPCDataStore*>(hint);
+void RPCService::zmq_continuation(void *data, void *hint) {
+  auto data_store = static_cast<RPCDataStore *>(hint);
   data_store->remove_data(data);
 }
 
@@ -223,7 +223,8 @@ void RPCService::receive_message(
     std::unordered_map<std::vector<uint8_t>, std::pair<VersionedModelId, int>,
                        std::function<size_t(const std::vector<uint8_t> &vec)>>
         &connections_containers_map,
-    uint32_t &zmq_connection_id, std::shared_ptr<redox::Redox> redis_connection) {
+    uint32_t &zmq_connection_id,
+    std::shared_ptr<redox::Redox> redis_connection) {
   message_t msg_routing_identity;
   message_t msg_delimiter;
   message_t msg_type;
@@ -293,26 +294,28 @@ void RPCService::receive_message(
       socket.recv(&msg_output_header_size, 0);
       socket.recv(&msg_output_header, 0);
 
-      uint64_t* output_header = static_cast<uint64_t*>(msg_output_header.data());
+      uint64_t *output_header =
+          static_cast<uint64_t *>(msg_output_header.data());
       uint64_t num_outputs = output_header[0];
       output_header++;
-      uint64_t output_data_size =
-          static_cast<uint64_t>(std::accumulate(output_header, output_header + num_outputs, 0));
+      uint64_t output_data_size = static_cast<uint64_t>(
+          std::accumulate(output_header, output_header + num_outputs, 0));
       SharedPoolPtr<void> output_data(malloc(output_data_size), free);
-      uint8_t *output_data_raw = static_cast<uint8_t*>(output_data.get());
+      uint8_t *output_data_raw = static_cast<uint8_t *>(output_data.get());
       vector<ByteBuffer> content;
       content.reserve(num_outputs);
       size_t curr_start = 0;
       for (uint64_t i = 0; i < num_outputs; ++i) {
-        uint64_t& output_size = output_header[i];
+        uint64_t &output_size = output_header[i];
         socket.recv(output_data_raw, output_size, 0);
-        content.emplace_back(std::make_tuple(output_data, curr_start, output_size));
+        content.emplace_back(
+            std::make_tuple(output_data, curr_start, output_size));
         output_data_raw += output_size;
         curr_start += output_size;
       }
 
-      if(!new_connection) {
-        uint32_t id = static_cast<uint32_t*>(msg_id.data())[0];
+      if (!new_connection) {
+        uint32_t id = static_cast<uint32_t *>(msg_id.data())[0];
         RPCResponse response(id, std::move(content));
 
         auto container_info_entry =
@@ -320,15 +323,15 @@ void RPCService::receive_message(
         if (container_info_entry == connections_containers_map.end()) {
           throw std::runtime_error(
               "Failed to find container that was previously registered via "
-                  "RPC");
+              "RPC");
         }
         std::pair<VersionedModelId, int> container_info =
             container_info_entry->second;
 
         VersionedModelId vm = container_info.first;
         int replica_id = container_info.second;
-        TaskExecutionThreadPool::submit_job(vm, replica_id,
-                                            new_response_callback_, std::move(response));
+        TaskExecutionThreadPool::submit_job(
+            vm, replica_id, new_response_callback_, std::move(response));
         TaskExecutionThreadPool::submit_job(
             vm, replica_id, container_ready_callback_, vm, replica_id);
       }

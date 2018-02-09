@@ -70,7 +70,8 @@ int get_int(rapidjson::Value& d, const char* key_name);
 
 std::string get_string(rapidjson::Value& d, const char* key_name);
 
-std::vector<std::string> get_string_array(rapidjson::Value& d, const char* key_name);
+std::vector<std::string> get_string_array(rapidjson::Value& d,
+                                          const char* key_name);
 
 /* Getters with error handling for arrays of byte, double, float, int, char */
 
@@ -79,15 +80,18 @@ std::vector<std::string> get_string_array(rapidjson::Value& d, const char* key_n
  * representation
  */
 InputParseResult<uint8_t> get_base64_encoded_byte_array(rapidjson::Value& d,
-                                                   const char* key_name);
+                                                        const char* key_name);
 
-InputParseResult<double> get_double_array(rapidjson::Value& d, const char* key_name);
+InputParseResult<double> get_double_array(rapidjson::Value& d,
+                                          const char* key_name);
 
-InputParseResult<float> get_float_array(rapidjson::Value& d, const char* key_name);
+InputParseResult<float> get_float_array(rapidjson::Value& d,
+                                        const char* key_name);
 
 InputParseResult<int> get_int_array(rapidjson::Value& d, const char* key_name);
 
-InputParseResult<char> get_char_array(rapidjson::Value& d, const char* key_name);
+InputParseResult<char> get_char_array(rapidjson::Value& d,
+                                      const char* key_name);
 
 /* Getters with error handling for:
  * - nested arrays of byte, double, float, int
@@ -97,16 +101,16 @@ std::vector<InputParseResult<uint8_t>> get_base64_encoded_byte_arrays(
     rapidjson::Value& d, const char* key_name);
 
 std::vector<InputParseResult<double>> get_double_arrays(rapidjson::Value& d,
-                                                   const char* key_name);
+                                                        const char* key_name);
 
 std::vector<InputParseResult<float>> get_float_arrays(rapidjson::Value& d,
-                                                 const char* key_name);
+                                                      const char* key_name);
 
 std::vector<InputParseResult<int>> get_int_arrays(rapidjson::Value& d,
-                                             const char* key_name);
+                                                  const char* key_name);
 
 std::vector<InputParseResult<char>> get_char_arrays(rapidjson::Value& d,
-                                     const char* key_name);
+                                                    const char* key_name);
 
 std::vector<VersionedModelId> get_candidate_models(rapidjson::Value& d,
                                                    const char* key_name);
@@ -115,11 +119,14 @@ rapidjson::Value& get_object(rapidjson::Value& d, const char* key_name);
 
 void parse_json(const std::string& json_content, rapidjson::Document& d);
 
-std::vector<std::shared_ptr<PredictionData>> parse_inputs(DataType input_type, rapidjson::Value& d);
+std::vector<std::shared_ptr<PredictionData>> parse_inputs(DataType input_type,
+                                                          rapidjson::Value& d);
 
-std::shared_ptr<PredictionData> parse_single_input(DataType input_type, rapidjson::Value& d);
+std::shared_ptr<PredictionData> parse_single_input(DataType input_type,
+                                                   rapidjson::Value& d);
 
-std::vector<std::shared_ptr<PredictionData>> parse_input_batch(DataType input_type, rapidjson::Value& d);
+std::vector<std::shared_ptr<PredictionData>> parse_input_batch(
+    DataType input_type, rapidjson::Value& d);
 
 /* Utilities for serialization into JSON */
 void add_kv_pair(rapidjson::Document& d, const char* key_name,
