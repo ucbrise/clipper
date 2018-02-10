@@ -10,6 +10,7 @@
 #include <clipper/datatypes.hpp>
 #include <clipper/logging.hpp>
 #include <clipper/util.hpp>
+#include <clipper/memory.hpp>
 
 namespace clipper {
 
@@ -95,9 +96,8 @@ bool Output::operator!=(const Output &rhs) const {
 
 std::unique_ptr<SerializableString> to_serializable_string(
     const std::string &str) {
-  size_t byte_size = str.size() * sizeof(char);
-  UniquePoolPtr<char> data(static_cast<char *>(malloc(byte_size)), free);
-  memcpy(data.get(), str.data(), byte_size);
+  UniquePoolPtr<char> data = memory::allocate_unique<char>(str.size());
+  memcpy(data.get(), str.data(), str.size() * sizeof(char));
   return std::make_unique<SerializableString>(std::move(data), str.size());
 }
 

@@ -14,6 +14,7 @@
 #include <clipper/logging.hpp>
 #include <clipper/redis.hpp>
 #include <clipper/rpc_service.hpp>
+#include <clipper/memory.hpp>
 
 using namespace clipper;
 
@@ -114,8 +115,7 @@ class Tester {
                 log_start_time.time_since_epoch())
                 .count()) /
         1000;
-    UniquePoolPtr<double> data(static_cast<double *>(malloc(sizeof(double))),
-                               free);
+    UniquePoolPtr<double> data = memory::allocate_unique<double>(1);
     data.get()[0] = log_start_time_millis;
     std::unique_ptr<PredictionData> input =
         std::make_unique<DoubleVector>(std::move(data), 1);

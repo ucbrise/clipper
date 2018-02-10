@@ -13,6 +13,7 @@
 #include <clipper/rpc_service.hpp>
 #include <clipper/task_executor.hpp>
 #include <clipper/util.hpp>
+#include <clipper/memory.hpp>
 
 using namespace clipper;
 
@@ -45,8 +46,7 @@ std::vector<std::unique_ptr<PredictionData>> get_primitive_inputs(
     int message_size, int input_len, InputType type) {
   std::vector<std::unique_ptr<PredictionData>> inputs;
   for (int k = 0; k < message_size; ++k) {
-    UniquePoolPtr<T> input_data(static_cast<T *>(malloc(input_len * sizeof(T))),
-                                free);
+    UniquePoolPtr<T> input_data = memory::allocate_unique<T>(input_len);
     T *input_data_raw = input_data.get();
     for (int j = 0; j < input_len; ++j) {
       if (type == InputType::Bytes) {

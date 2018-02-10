@@ -7,6 +7,7 @@
 #include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/task_executor.hpp>
+#include <clipper/memory.hpp>
 
 using namespace clipper;
 
@@ -18,8 +19,7 @@ namespace {
  * predict tasks for testing (i.e. task queuing order stability)
  */
 PredictTask create_predict_task(long query_id, long latency_slo_millis) {
-  UniquePoolPtr<double> data(static_cast<double*>(malloc(sizeof(double))),
-                             free);
+  UniquePoolPtr<double> data = memory::allocate_unique<double>(1);
   data.get()[0] = 1.0;
   VersionedModelId model_id = VersionedModelId("test", "1");
   std::shared_ptr<PredictionData> input =
@@ -148,7 +148,7 @@ TEST(PredictionCacheTests,
   std::vector<Output> outputs;
   size_t cache_size = 0;
   for (int i = 0; i < 4; ++i) {
-    UniquePoolPtr<int> input_data(static_cast<int*>(malloc(sizeof(int))), free);
+    UniquePoolPtr<int> input_data = memory::allocate_unique<int>(1);
     input_data.get()[0] = i;
     inputs.push_back(std::make_shared<IntVector>(std::move(input_data), 1));
     Output output(std::to_string(i), std::vector<VersionedModelId>{});
@@ -164,8 +164,7 @@ TEST(PredictionCacheTests,
     ASSERT_TRUE(output_future.isReady());
     ASSERT_TRUE(y_hats_equal(output_future.get().y_hat_, outputs[i].y_hat_));
   }
-  UniquePoolPtr<int> last_input_data(static_cast<int*>(malloc(sizeof(int))),
-                                     free);
+  UniquePoolPtr<int> last_input_data = memory::allocate_unique<int>(1);
   last_input_data.get()[0] = 5;
   std::shared_ptr<PredictionData> last_input =
       std::make_shared<IntVector>(std::move(last_input_data), 1);
@@ -199,7 +198,7 @@ TEST(PredictionCacheTests,
   std::vector<Output> small_outputs;
   std::vector<std::shared_ptr<PredictionData>> small_inputs;
   for (int i = 0; i < 5; ++i) {
-    UniquePoolPtr<int> input_data(static_cast<int*>(malloc(sizeof(int))), free);
+    UniquePoolPtr<int> input_data = memory::allocate_unique<int>(1);
     input_data.get()[0] = i;
     std::shared_ptr<PredictionData> input =
         std::make_shared<IntVector>(std::move(input_data), 1);
@@ -211,8 +210,7 @@ TEST(PredictionCacheTests,
   std::vector<Output> large_outputs;
   std::vector<std::shared_ptr<PredictionData>> large_inputs;
   for (int i = 0; i < 2; ++i) {
-    UniquePoolPtr<int> input_data(static_cast<int*>(malloc(2 * sizeof(int))),
-                                  free);
+    UniquePoolPtr<int> input_data = memory::allocate_unique<int>(2);
     input_data.get()[0] = i;
     input_data.get()[1] = i;
     std::shared_ptr<PredictionData> input =
@@ -280,8 +278,7 @@ TEST(PredictionCacheTests,
   // large_outputs[1] at page buffer index 2. The cache should now contain
   // entries corresponding to small outputs at vector indices 0-4, as well as
   // an additional entry corresponding to small_outputs[0] that we just inserted
-  UniquePoolPtr<int> last_small_input_data(
-      static_cast<int*>(malloc(sizeof(int))), free);
+  UniquePoolPtr<int> last_small_input_data = memory::allocate_unique<int>(1);
   last_small_input_data.get()[0] = 6;
   std::shared_ptr<PredictionData> last_small_input =
       std::make_shared<IntVector>(std::move(last_small_input_data), 1);
@@ -304,8 +301,7 @@ TEST(PredictionCacheTests,
   // an additional entries corresponding to: large_outputs[0] that (just
   // inserted)
   // and small_outputs[0] (inserted in the previous step)
-  UniquePoolPtr<int> last_large_input_data(
-      static_cast<int*>(malloc(2 * sizeof(int))), free);
+  UniquePoolPtr<int> last_large_input_data = memory::allocate_unique<int>(2);
   last_large_input_data.get()[0] = 3;
   last_large_input_data.get()[1] = 3;
   std::shared_ptr<PredictionData> last_large_input =
@@ -325,7 +321,7 @@ TEST(PredictionCacheTests,
 }
 
 TEST(PredictionCacheTests, TestIncompleteFuturesAreCompletedOnPut) {
-  UniquePoolPtr<int> input_data(static_cast<int*>(malloc(sizeof(int))), free);
+  UniquePoolPtr<int> input_data = memory::allocate_unique<int>(1);
   input_data.get()[0] = 10;
   std::shared_ptr<PredictionData> input =
       std::make_shared<IntVector>(std::move(input_data), 1);
@@ -369,8 +365,7 @@ TEST(PredictionCacheTests, TestIncompleteFuturesAreCompletedOnPut) {
   output_future = cache3.fetch(model_id, input);
   ASSERT_FALSE(output_future.isReady());
   for (int i = 0; i < 5; ++i) {
-    UniquePoolPtr<int> new_input_data(static_cast<int*>(malloc(sizeof(int))),
-                                      free);
+    UniquePoolPtr<int> new_input_data = memory::allocate_unique<int>(1);
     new_input_data.get()[0] = i;
     std::shared_ptr<PredictionData> new_input =
         std::make_shared<IntVector>(std::move(new_input_data), 1);
@@ -389,7 +384,7 @@ TEST(PredictionCacheTests, TestIncompleteFuturesAreCompletedOnPut) {
 TEST(PredictionCacheTests, TestEntryLargerThanCacheSizeIsEvicted) {
   VersionedModelId model_id("TEST", "1");
   PredictionCache cache(0);
-  UniquePoolPtr<int> input_data(static_cast<int*>(malloc(sizeof(int))), free);
+  UniquePoolPtr<int> input_data = memory::allocate_unique<int>(1);
   input_data.get()[0] = 0;
   std::shared_ptr<PredictionData> input =
       std::make_shared<IntVector>(std::move(input_data), 1);
