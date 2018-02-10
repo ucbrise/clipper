@@ -132,10 +132,10 @@ TEST(DefaultOutputSelectionStateTest, Serialization) {
   ASSERT_EQ(output_y_hat->type(), default_y_hat->type());
   ASSERT_EQ(output_y_hat->byte_size(), default_y_hat->byte_size());
   ASSERT_EQ(output_y_hat->size(), default_y_hat->size());
-  char* output_y_hat_data = static_cast<char*>(get_data(output_y_hat).get());
-  char* default_y_hat_data = static_cast<char*>(get_data(default_y_hat).get());
+  SharedPoolPtr<char> output_y_hat_data = get_data<char>(output_y_hat);
+  SharedPoolPtr<char> default_y_hat_data = get_data<char>(default_y_hat);
   for (size_t i = 0; i < output_y_hat->size(); i++) {
-    ASSERT_EQ(output_y_hat_data[i], default_y_hat_data[i]);
+    ASSERT_EQ(output_y_hat_data.get()[i], default_y_hat_data.get()[i]);
   }
 }
 

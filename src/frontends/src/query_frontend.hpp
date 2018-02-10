@@ -428,9 +428,9 @@ class RequestHandler {
 
   static const std::string parse_output_y_hat(
       std::shared_ptr<PredictionData>& y_hat) {
-    char* str_content = static_cast<char*>(get_data(y_hat).get());
-    return std::string(str_content + y_hat->start(),
-                       str_content + y_hat->start() + y_hat->size());
+    SharedPoolPtr<char> str_content = clipper::get_data<char>(y_hat);
+    return std::string(str_content.get() + y_hat->start(),
+                       str_content.get() + y_hat->start() + y_hat->size());
   }
 
   /**

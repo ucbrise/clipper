@@ -118,6 +118,14 @@ class PredictionData {
 };
 
 template <typename D>
+SharedPoolPtr<D> get_data(
+    const std::shared_ptr<PredictionData> &data_item);
+
+template <typename D>
+UniquePoolPtr<D> get_data(
+    std::unique_ptr<PredictionData> data_item);
+
+template <typename D>
 struct VectorDataType {
   static const DataType type = DataType::Invalid;
 };

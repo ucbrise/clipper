@@ -666,11 +666,10 @@ TEST(OutputDeserializationTests, PredictionResponseDeserialization) {
   auto& response_output = response_outputs[0];
   ASSERT_EQ(response_output->type(), DataType::Strings);
   ASSERT_EQ(response_output->size(), output.size());
-  char* response_output_data =
-      static_cast<char*>(get_data(response_output).get());
+  SharedPoolPtr<char> response_output_data = get_data<char>(response_output);
   std::string parsed_response_output(
-      response_output_data + response_output->start(),
-      response_output_data + response_output->start() +
+      response_output_data.get() + response_output->start(),
+      response_output_data.get() + response_output->start() +
           response_output->size());
   ASSERT_EQ(output, parsed_response_output);
 }

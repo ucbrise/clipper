@@ -198,11 +198,11 @@ class Tester {
       rpc::PredictionResponse prediction_response =
           rpc::PredictionResponse::deserialize_prediction_response(
               std::move(response.second));
-      auto event_history_data = prediction_response.outputs_[0];
-      char *event_history_ptr =
-          static_cast<char *>(get_data(event_history_data).get());
+      auto event_history = prediction_response.outputs_[0];
+      SharedPoolPtr<char> event_history_data = get_data<char>(event_history);
       std::string event_history_str(
-          event_history_ptr, event_history_ptr + event_history_data->size());
+          event_history_data.get() + event_history->start(),
+          event_history_data.get() + event_history->start() + event_history->size());
       rapidjson::Document d;
       json::parse_json(event_history_str, d);
       auto events = d.GetArray();

@@ -148,7 +148,7 @@ void rpc::PredictionRequest::add_input(std::unique_ptr<PredictionData> input) {
   size_t start_byte = input->start_byte();
   size_t byte_size = input->byte_size();
   input_data_size_ += byte_size;
-  UniquePoolPtr<void> input_data = get_data(std::move(input));
+  UniquePoolPtr<void> input_data = get_data<void>(std::move(input));
   input_data_items_.push_back(
       std::make_tuple(std::move(input_data), start_byte, byte_size));
 }
