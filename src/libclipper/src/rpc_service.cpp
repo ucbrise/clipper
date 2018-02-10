@@ -140,7 +140,6 @@ void RPCService::manage_service(const string address) {
       poll_timeout = 1;
     }
     zmq_poll(items, 1, poll_timeout);
-
     if (items[0].revents & ZMQ_POLLIN) {
       // TODO: Balance message sending and receiving fairly
       // Note: We only receive one message per event loop iteration
@@ -296,7 +295,6 @@ void RPCService::receive_message(
         zmq_connection_id += 1;
       }
     } break;
-
     case MessageType::ContainerContent: {
       // This message is a response to a container query
       message_t msg_id;
@@ -330,7 +328,6 @@ void RPCService::receive_message(
         response_queue_->push(response);
       }
     } break;
-
     case MessageType::Heartbeat: {
       send_heartbeat_response(socket, connection_id, new_connection);
     } break;
