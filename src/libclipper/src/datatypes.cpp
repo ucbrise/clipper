@@ -9,8 +9,8 @@
 #include <clipper/constants.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/logging.hpp>
-#include <clipper/util.hpp>
 #include <clipper/memory.hpp>
+#include <clipper/util.hpp>
 
 namespace clipper {
 

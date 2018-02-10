@@ -29,9 +29,8 @@ UniquePoolPtr<D> allocate_unique(size_t size) {
   return UniquePoolPtr<D>(static_cast<D*>(malloc(size * sizeof(D))), free);
 }
 
+}  // namespace memory
 
-} // namespace memory
+}  // namespace clipper
 
-} // namespace clipper
-
-#endif //CLIPPER_MEMORY_HPP
+#endif  // CLIPPER_MEMORY_HPP

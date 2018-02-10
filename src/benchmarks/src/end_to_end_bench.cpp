@@ -11,8 +11,8 @@
 #include <clipper/datatypes.hpp>
 #include <clipper/json_util.hpp>
 #include <clipper/logging.hpp>
-#include <clipper/query_processor.hpp>
 #include <clipper/memory.hpp>
+#include <clipper/query_processor.hpp>
 
 #include "bench_utils.hpp"
 
@@ -69,7 +69,8 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
     for (int i = 0; i < request_batch_size; i++) {
       query_num = j * request_batch_size + i;
       auto &query_vec = data[query_num % num_datapoints];
-      UniquePoolPtr<double> query_data = memory::allocate_unique<double>(query_vec.size());
+      UniquePoolPtr<double> query_data =
+          memory::allocate_unique<double>(query_vec.size());
       memcpy(query_data.get(), query_vec.data(),
              query_vec.size() * sizeof(double));
       double *query_data_raw = query_data.get();

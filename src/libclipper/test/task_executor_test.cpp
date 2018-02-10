@@ -6,8 +6,8 @@
 
 #include <clipper/containers.hpp>
 #include <clipper/datatypes.hpp>
-#include <clipper/task_executor.hpp>
 #include <clipper/memory.hpp>
+#include <clipper/task_executor.hpp>
 
 using namespace clipper;
 

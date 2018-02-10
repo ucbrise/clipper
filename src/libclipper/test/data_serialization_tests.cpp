@@ -23,7 +23,8 @@ template <typename T>
 std::vector<std::pair<SharedPoolPtr<T>, size_t>> get_primitive_data_items() {
   std::vector<std::pair<SharedPoolPtr<T>, size_t>> data_items;
   for (int i = 0; i < NUM_PRIMITIVE_INPUTS; i++) {
-    SharedPoolPtr<T> data_item = memory::allocate_shared<T>(PRIMITIVE_INPUT_SIZE_ELEMS);
+    SharedPoolPtr<T> data_item =
+        memory::allocate_shared<T>(PRIMITIVE_INPUT_SIZE_ELEMS);
     T* data_item_raw = data_item.get();
     for (uint8_t j = 0; j < PRIMITIVE_INPUT_SIZE_ELEMS; j++) {
       // Differentiate vectors by populating them with the index j under
@@ -457,7 +458,8 @@ TEST(InputHashTests, IntVectorsHashCorrectly) {
   ASSERT_NE(IntVector(first_item_data, 0, first_item_size - 1).hash(),
             IntVector(second_item_data, 0, second_item_size).hash());
   size_t new_item_size = second_item_size + 1;
-  SharedPoolPtr<int> new_item_data = memory::allocate_shared<int>(new_item_size);
+  SharedPoolPtr<int> new_item_data =
+      memory::allocate_shared<int>(new_item_size);
   memcpy(new_item_data.get(), second_item_data.get(), second_item_size);
   new_item_data.get()[new_item_size - 1] = 500;
   // Adding the element 500, which is not present in the first item, to the
@@ -505,7 +507,8 @@ TEST(InputHashTests, FloatVectorsHashCorrectly) {
   ASSERT_NE(FloatVector(first_item_data, 0, first_item_size - 1).hash(),
             FloatVector(second_item_data, 0, second_item_size).hash());
   size_t new_item_size = second_item_size + 1;
-  SharedPoolPtr<float> new_item_data = memory::allocate_shared<float>(new_item_size);
+  SharedPoolPtr<float> new_item_data =
+      memory::allocate_shared<float>(new_item_size);
   memcpy(new_item_data.get(), second_item_data.get(), second_item_size);
   new_item_data.get()[new_item_size - 1] = 500;
   // Adding the element 500, which is not present in the first item, to the
@@ -553,7 +556,8 @@ TEST(InputHashTests, DoubleVectorsHashCorrectly) {
   ASSERT_NE(DoubleVector(first_item_data, 0, first_item_size - 1).hash(),
             DoubleVector(second_item_data, 0, second_item_size).hash());
   size_t new_item_size = second_item_size + 1;
-  SharedPoolPtr<double> new_item_data = memory::allocate_shared<double>(new_item_size);
+  SharedPoolPtr<double> new_item_data =
+      memory::allocate_shared<double>(new_item_size);
   memcpy(new_item_data.get(), second_item_data.get(), second_item_size);
   new_item_data.get()[new_item_size - 1] = 500;
   // Adding the element 500, which is not present in the first item, to the
@@ -600,7 +604,8 @@ TEST(InputHashTests, ByteVectorsHashCorrectly) {
   ASSERT_NE(ByteVector(first_item_data, 0, first_item_size - 1).hash(),
             ByteVector(second_item_data, 0, second_item_size).hash());
   size_t new_item_size = second_item_size + 1;
-  SharedPoolPtr<uint8_t> new_item_data = memory::allocate_shared<uint8_t>(new_item_size);
+  SharedPoolPtr<uint8_t> new_item_data =
+      memory::allocate_shared<uint8_t>(new_item_size);
   memcpy(new_item_data.get(), second_item_data.get(), second_item_size);
   new_item_data.get()[new_item_size - 1] = 200;
   // Adding the element 200, which is not present in the first item, to the

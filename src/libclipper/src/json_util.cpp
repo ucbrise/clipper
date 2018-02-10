@@ -14,8 +14,8 @@
 
 #include <clipper/datatypes.hpp>
 #include <clipper/json_util.hpp>
-#include <clipper/redis.hpp>
 #include <clipper/memory.hpp>
+#include <clipper/redis.hpp>
 
 using clipper::PredictionData;
 using clipper::DataType;
@@ -165,7 +165,8 @@ InputParseResult<uint8_t> get_base64_encoded_byte_array(rapidjson::Value& d,
   size_t encoded_length = v.GetStringLength();
   size_t decoded_length = static_cast<size_t>(
       decoder.DecodedLength(encoded_string, encoded_length));
-  UniquePoolPtr<uint8_t> decoded_bytes = memory::allocate_unique<uint8_t>(decoded_length);
+  UniquePoolPtr<uint8_t> decoded_bytes =
+      memory::allocate_unique<uint8_t>(decoded_length);
   decoder.Decode(encoded_string, encoded_length,
                  reinterpret_cast<char*>(decoded_bytes.get()), decoded_length);
 
@@ -278,7 +279,8 @@ std::vector<InputParseResult<uint8_t>> get_base64_encoded_byte_arrays(
     size_t encoded_length = elem.GetStringLength();
     size_t decoded_length = static_cast<size_t>(
         decoder.DecodedLength(encoded_string, encoded_length));
-    UniquePoolPtr<uint8_t> decoded_bytes = memory::allocate_unique<uint8_t>(decoded_length);
+    UniquePoolPtr<uint8_t> decoded_bytes =
+        memory::allocate_unique<uint8_t>(decoded_length);
     decoder.Decode(encoded_string, encoded_length,
                    reinterpret_cast<char*>(decoded_bytes.get()),
                    decoded_length);
