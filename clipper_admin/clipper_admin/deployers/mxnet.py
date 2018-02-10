@@ -85,8 +85,8 @@ def create_endpoint(
     clipper_conn.register_application(name, input_type, default_output,
                                       slo_micros)
     deploy_mxnet_model(clipper_conn, name, version, input_type, func,
-                       mxnet_model, mxnet_data_shapes, base_image, labels, registry,
-                       num_replicas)
+                       mxnet_model, mxnet_data_shapes, base_image, labels,
+                       registry, num_replicas)
 
     clipper_conn.link_model_to_app(name, name)
 
