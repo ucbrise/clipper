@@ -117,8 +117,7 @@ class RPCService {
   std::atomic_bool active_;
   // The next available message id
   int message_id_ = 0;
-  std::chrono::system_clock::time_point last_check_time_;
-  std::chrono::system_clock::time_point last_fire_log_time_;
+  std::chrono::system_clock::time_point last_activity_check_time_;
   std::unordered_map<VersionedModelId, int> replica_ids_;
   std::shared_ptr<metrics::Histogram> msg_queueing_hist_;
   std::map<const vector<uint8_t>, std::chrono::system_clock::time_point> receiving_history_;

@@ -2,7 +2,6 @@
 #include <boost/functional/hash.hpp>
 
 #include <chrono>
-#include <cstdint>
 #include <iostream>
 
 #include <redox.hpp>
@@ -149,14 +148,13 @@ void RPCService::manage_service(const string address) {
       receive_message(socket, connections, connections_containers_map,
                       zmq_connection_id, redis_connection);
     }
+    auto current_time = std::chrono::system_clock::now();
+    if(std::chrono::duration_cast<std::chrono::milliseconds>(current_time - last_activity_check_time_).count() > CONTAINER_EXISTENCE_CHECK_FREQUENCY_MILLS){
+      check_container_activity();
+      last_activity_check_time_ = current_time;
+    }
     // Note: We send all queued messages per event loop iteration
     send_messages(socket, connections);
-    auto current_time = std::chrono::system_clock::now();
-
-    if(std::chrono::duration_cast<std::chrono::milliseconds>(current_time - last_check_time_).count() > CONTAINER_EXISTENCE_CHECK_FREQUENCY_MILLS){
-      check_container_activity();
-      last_check_time_ = current_time;
-    }
   }
   shutdown_service(socket);
 }
