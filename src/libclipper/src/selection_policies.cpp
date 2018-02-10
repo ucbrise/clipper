@@ -24,8 +24,9 @@ DefaultOutputSelectionState::DefaultOutputSelectionState(
 std::string DefaultOutputSelectionState::parse_y_hat(
     const std::shared_ptr<PredictionData>& default_y_hat) {
   auto default_data = get_data<char>(default_y_hat);
-  std::string default_str(default_data.get() + default_y_hat->start(),
-                          default_data.get() + default_y_hat->start() + default_y_hat->size());
+  std::string default_str(
+      default_data.get() + default_y_hat->start(),
+      default_data.get() + default_y_hat->start() + default_y_hat->size());
   return default_str;
 }
 

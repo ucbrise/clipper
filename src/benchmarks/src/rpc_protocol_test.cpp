@@ -202,7 +202,8 @@ class Tester {
       SharedPoolPtr<char> event_history_data = get_data<char>(event_history);
       std::string event_history_str(
           event_history_data.get() + event_history->start(),
-          event_history_data.get() + event_history->start() + event_history->size());
+          event_history_data.get() + event_history->start() +
+              event_history->size());
       rapidjson::Document d;
       json::parse_json(event_history_str, d);
       auto events = d.GetArray();

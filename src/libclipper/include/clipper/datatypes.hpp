@@ -107,9 +107,8 @@ class PredictionData {
   }
 
   template <typename D>
-  friend UniquePoolPtr<D> get_data(
-      std::unique_ptr<PredictionData> data_item) {
-    D *raw_data = static_cast<D*>(data_item->get_data().get());
+  friend UniquePoolPtr<D> get_data(std::unique_ptr<PredictionData> data_item) {
+    D *raw_data = static_cast<D *>(data_item->get_data().get());
     return UniquePoolPtr<D>(raw_data, free);
   }
 
@@ -118,12 +117,10 @@ class PredictionData {
 };
 
 template <typename D>
-SharedPoolPtr<D> get_data(
-    const std::shared_ptr<PredictionData> &data_item);
+SharedPoolPtr<D> get_data(const std::shared_ptr<PredictionData> &data_item);
 
 template <typename D>
-UniquePoolPtr<D> get_data(
-    std::unique_ptr<PredictionData> data_item);
+UniquePoolPtr<D> get_data(std::unique_ptr<PredictionData> data_item);
 
 template <typename D>
 struct VectorDataType {
