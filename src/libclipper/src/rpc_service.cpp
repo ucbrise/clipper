@@ -40,7 +40,7 @@ RPCService::RPCService()
       // you to specify your own hash function also requires you
       // to provide the initial size of the map. We define the initial
       // size of the map somewhat arbitrarily as 100.
-      replica_ids_(std::unordered_map<VersionedModelId, int>({})){
+      replica_ids_(std::unordered_map<VersionedModelId, int>({})) {
   msg_queueing_hist_ = metrics::MetricsRegistry::get_metrics().create_histogram(
       "internal:rpc_request_queueing_delay", "microseconds", 2056);
 }
@@ -106,8 +106,8 @@ vector<RPCResponse> RPCService::try_get_responses(const int max_num_responses) {
 void RPCService::manage_service(const string address) {
   // Map from container id to unique routing id for zeromq
   // Note that zeromq socket id is a byte vector
-  log_info_formatted(LOGGING_TAG_RPC, "RPC thread started at address: ",
-                     address);
+  log_info_formatted(LOGGING_TAG_RPC,
+                     "RPC thread started at address: ", address);
   boost::bimap<int, vector<uint8_t>> connections;
   // Initializes a map to associate the ZMQ connection IDs
   // of connected containers with their metadata, including
@@ -149,7 +149,9 @@ void RPCService::manage_service(const string address) {
                       zmq_connection_id, redis_connection);
     }
     auto current_time = std::chrono::system_clock::now();
-    if(std::chrono::duration_cast<std::chrono::milliseconds>(current_time - last_activity_check_time_).count() > CONTAINER_EXISTENCE_CHECK_FREQUENCY_MILLS){
+    if (std::chrono::duration_cast<std::chrono::milliseconds>(
+            current_time - last_activity_check_time_)
+            .count() > CONTAINER_EXISTENCE_CHECK_FREQUENCY_MILLS) {
       check_container_activity();
       last_activity_check_time_ = current_time;
     }
@@ -159,16 +161,19 @@ void RPCService::manage_service(const string address) {
   shutdown_service(socket);
 }
 
-void RPCService::check_container_activity(){
-    std::map<const vector<uint8_t>, std::chrono::system_clock::time_point>::iterator it;
-    std::chrono::system_clock::time_point current_time;
-    for(it = receiving_history_.begin(); it!=receiving_history_.end(); it++){
-        current_time = std::chrono::system_clock::now();
-        if(std::chrono::duration_cast<std::chrono::milliseconds>(current_time - it->second).count() > CONTAINER_ACTIVITY_TIMEOUT_MILLS){
-          log_info(LOGGING_TAG_RPC, "lost contact with a container");
-          receiving_history_.erase(it);
-        }
+void RPCService::check_container_activity() {
+  std::map<const vector<uint8_t>,
+           std::chrono::system_clock::time_point>::iterator it;
+  std::chrono::system_clock::time_point current_time;
+  for (it = receiving_history_.begin(); it != receiving_history_.end(); it++) {
+    current_time = std::chrono::system_clock::now();
+    if (std::chrono::duration_cast<std::chrono::milliseconds>(current_time -
+                                                              it->second)
+            .count() > CONTAINER_ACTIVITY_TIMEOUT_MILLS) {
+      log_info(LOGGING_TAG_RPC, "lost contact with a container");
+      receiving_history_.erase(it);
     }
+  }
 }
 
 void RPCService::shutdown_service(socket_t &socket) {
@@ -326,14 +331,13 @@ void RPCService::receive_message(
       }
     } break;
 
-    case MessageType::Heartbeat:{
+    case MessageType::Heartbeat: {
       send_heartbeat_response(socket, connection_id, new_connection);
     } break;
-
   }
 }
 
-void RPCService::document_receive_time(const vector<uint8_t> connection_id){
+void RPCService::document_receive_time(const vector<uint8_t> connection_id) {
   receiving_history_[connection_id] = std::chrono::system_clock::now();
 }
 

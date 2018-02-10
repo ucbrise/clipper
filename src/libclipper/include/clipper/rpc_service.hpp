@@ -1,11 +1,11 @@
 #ifndef CLIPPER_RPC_SERVICE_HPP
 #define CLIPPER_RPC_SERVICE_HPP
 
+#include <chrono>
 #include <list>
 #include <queue>
 #include <string>
 #include <vector>
-#include <chrono>
 
 #include <boost/bimap.hpp>
 #include <redox.hpp>
@@ -120,7 +120,8 @@ class RPCService {
   std::chrono::system_clock::time_point last_activity_check_time_;
   std::unordered_map<VersionedModelId, int> replica_ids_;
   std::shared_ptr<metrics::Histogram> msg_queueing_hist_;
-  std::map<const vector<uint8_t>, std::chrono::system_clock::time_point> receiving_history_;
+  std::map<const vector<uint8_t>, std::chrono::system_clock::time_point>
+      receiving_history_;
   std::function<void(VersionedModelId, int)> container_ready_callback_;
   std::function<void(RPCResponse)> new_response_callback_;
 };
