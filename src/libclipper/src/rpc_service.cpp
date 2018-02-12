@@ -35,7 +35,7 @@ RPCService::RPCService()
     : request_queue_(std::make_shared<Queue<RPCRequest>>()),
       response_queue_(std::make_shared<Queue<RPCResponse>>()),
       active_(false),
-      last_check_time_(std::chrono::system_clock::now()),
+      last_activity_check_time_(std::chrono::system_clock::now()),
       // The version of the unordered_map constructor that allows
       // you to specify your own hash function also requires you
       // to provide the initial size of the map. We define the initial
