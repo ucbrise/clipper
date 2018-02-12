@@ -46,7 +46,15 @@ def create_endpoint(
     mxnet_model : mxnet model object
         The MXNet model to save.
     mxnet_data_shapes : list(int)
-        Dimensions of data used to train MXNet model.
+        List of integers representing the dimensions of data used for model prediction.
+        Required because loading serialized MXNet models involves binding, which requires
+        the shape of the data used to train the model.
+        https://mxnet.incubator.apache.org/api/python/module.html#mxnet.module.BaseModule.bind
+
+        NOTE: Clipper may provide the model with variable size input batches. Because MXNet can't
+              handle variable size input batches, we recommend setting batch size for input data
+              to 1, or dynamically reshaping the model with every prediction based on the current
+              input batch size.
     default_output : str, optional
         The default output for the application. The default output will be returned whenever
         an application is unable to receive a response from a model within the specified
