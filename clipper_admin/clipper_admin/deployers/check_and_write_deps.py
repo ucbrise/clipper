@@ -1,7 +1,8 @@
 from __future__ import absolute_import, division, print_function
-from conda.api import get_index
+from conda.core.index import get_index
 from conda.base.context import context
 from conda.exceptions import UnsatisfiableError, NoPackagesFoundError
+from requests.exceptions import ChunkedEncodingError
 import conda.resolve
 import conda_env.specs as specs
 import sys
@@ -66,7 +67,15 @@ def check_solvability_write_deps(env_path, directory, platform,
         on the container os. Otherwise returns False.
     """
 
-    index = get_index(platform=platform)
+    def get_packages_index(tries=5):
+        for n in range(tries):
+            try:
+                return get_index(platform=platform)
+            except ChunkedEncodingError as e:
+                if n == tries - 1:
+                    raise e
+
+    index = get_packages_index()
     r = conda.resolve.Resolve(index)
     spec = specs.detect(filename=env_path)
     env = spec.environment
@@ -90,7 +99,7 @@ def check_solvability_write_deps(env_path, directory, platform,
         except NoPackagesFoundError as missing_packages_error:
             missing_packages = missing_packages_error.bad_deps
             for package in missing_packages:
-                conda_deps.remove(package[0].spec)
+                conda_deps.remove(str(package))
 
             # Check that the dependencies that are not missing are satisfiable
             r.install(conda_deps)
@@ -105,7 +114,7 @@ def check_solvability_write_deps(env_path, directory, platform,
         print(
             "The following packages in your conda environment aren't available in the linux-64 "
             "conda channel the container will use:")
-        print(", ".join(str(package[0].spec) for package in missing_packages))
+        print(", ".join(str(package) for package in missing_packages))
         print(
             "We will skip their installation when deploying your function. If your function uses "
             "these packages, the container will experience a runtime error when queried."

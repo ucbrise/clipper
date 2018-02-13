@@ -4,8 +4,7 @@
 #include <chrono>
 #include <iostream>
 
-#include <redox.hpp>
-
+#include <concurrentqueue.h>
 #include <clipper/config.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/logging.hpp>
@@ -15,13 +14,14 @@
 #include <clipper/task_executor.hpp>
 #include <clipper/threadpool.hpp>
 #include <clipper/util.hpp>
+#include <redox.hpp>
 
-using zmq::socket_t;
-using zmq::message_t;
-using zmq::context_t;
 using std::shared_ptr;
 using std::string;
 using std::vector;
+using zmq::context_t;
+using zmq::message_t;
+using zmq::socket_t;
 
 namespace clipper {
 
@@ -41,7 +41,8 @@ void RPCDataStore::remove_data(void *data) {
 }
 
 RPCService::RPCService()
-    : request_queue_(std::make_shared<Queue<RPCRequest>>()),
+    : request_queue_(std::make_shared<moodycamel::ConcurrentQueue<RPCRequest>>(
+          sizeof(RPCRequest) * 10000)),
       active_(false),
       // The version of the unordered_map constructor that allows
       // you to specify your own hash function also requires you
@@ -94,7 +95,8 @@ int RPCService::send_message(vector<ByteBuffer> msg,
           .count();
   RPCRequest request(zmq_connection_id, id, std::move(msg),
                      current_time_micros);
-  request_queue_->push(std::move(request));
+
+  request_queue_->enqueue(request);
   return id;
 }
 
@@ -131,7 +133,7 @@ void RPCService::manage_service(const string address) {
     // send. If there are messages to send, don't let the poll block at all.
     // If there no messages to send, let the poll block for 1 ms.
     int poll_timeout = 0;
-    if (request_queue_->size() == 0) {
+    if (request_queue_->size_approx() == 0) {
       poll_timeout = 1;
     }
     zmq_poll(items, 1, poll_timeout);
@@ -160,12 +162,16 @@ void RPCService::shutdown_service(socket_t &socket) {
 
 void RPCService::send_messages(
     socket_t &socket, boost::bimap<int, vector<uint8_t>> &connections) {
-  while (request_queue_->size() > 0) {
+  int queue_size = request_queue_->size_approx();
+  std::vector<RPCRequest> requests(queue_size);
+  size_t num_requests =
+      request_queue_->try_dequeue_bulk(requests.begin(), queue_size);
+  for (size_t i = 0; i < num_requests; i++) {
+    RPCRequest &request = requests[i];
     long current_time_micros =
         std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::system_clock::now().time_since_epoch())
             .count();
-    RPCRequest request = request_queue_->pop();
     msg_queueing_hist_->insert(current_time_micros - std::get<3>(request));
     boost::bimap<int, vector<uint8_t>>::left_const_iterator connection =
         connections.left.find(std::get<0>(request));

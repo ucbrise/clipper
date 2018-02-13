@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include <concurrentqueue.h>
 #include <boost/bimap.hpp>
 #include <redox.hpp>
 #include <zmq.hpp>
@@ -15,11 +16,11 @@
 #include <clipper/metrics.hpp>
 #include <clipper/util.hpp>
 
-using zmq::socket_t;
-using std::string;
-using std::shared_ptr;
-using std::vector;
 using std::list;
+using std::shared_ptr;
+using std::string;
+using std::vector;
+using zmq::socket_t;
 
 namespace clipper {
 
@@ -29,10 +30,10 @@ const std::string LOGGING_TAG_RPC = "RPC";
 static constexpr uint32_t RPC_VERSION = 3;
 
 /// Tuple of msg_id, vector of model outputs
-using RPCResponse = std::pair<const uint32_t, std::vector<ByteBuffer>>;
+using RPCResponse = std::pair<uint32_t, std::vector<ByteBuffer>>;
 /// Tuple of zmq_connection_id, message_id, vector of messages, creation time
-using RPCRequest = std::tuple<const uint32_t, const uint32_t,
-                              std::vector<ByteBuffer>, const long>;
+using RPCRequest = std::tuple<uint32_t, uint32_t,
+                              std::vector<ByteBuffer>, long>;
 
 enum class RPCEvent {
   SentHeartbeat = 1,
@@ -84,13 +85,13 @@ class RPCService {
   void stop();
 
   /*
-  * Send message takes ownership of the msg data because the caller cannot
-  * know when the message will actually be sent.
-  *
-  * \param `msg`: A vector of individual messages to send to this container.
-  * The messages will be sent as a single, multi-part ZeroMQ message so
-  * it is very efficient.
-  */
+   * Send message takes ownership of the msg data because the caller cannot
+   * know when the message will actually be sent.
+   *
+   * \param `msg`: A vector of individual messages to send to this container.
+   * The messages will be sent as a single, multi-part ZeroMQ message so
+   * it is very efficient.
+   */
   int send_message(std::vector<ByteBuffer> msg,
                    const uint32_t zmq_connection_id);
 
@@ -124,7 +125,7 @@ class RPCService {
 
   void shutdown_service(socket_t &socket);
   std::thread rpc_thread_;
-  shared_ptr<Queue<RPCRequest>> request_queue_;
+  shared_ptr<moodycamel::ConcurrentQueue<RPCRequest>> request_queue_;
   // Flag indicating whether rpc service is active
   std::atomic_bool active_;
   // The next available message id

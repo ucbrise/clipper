@@ -58,6 +58,16 @@ target_include_directories(base64 INTERFACE
         $<INSTALL_INTERFACE:base64>)
 export(TARGETS base64 FILE Base64Config.cmake)
 
+##########################################
+### Concurrent Queue
+##########################################
+
+add_library(cqueue INTERFACE)
+target_include_directories(cqueue INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/concurrent_queue>
+        $<INSTALL_INTERFACE:cqueue>)
+export(TARGETS cqueue FILE ConcurrentQueueConfig.cmake)
+
 add_subdirectory(redox)
 
 add_subdirectory(rapidjson)

@@ -193,39 +193,20 @@ if __name__ == "__main__":
             deploy_and_test_model(
                 clipper_conn, "data", version, "integers", link_model=False)
 
-            # Freeze the Graph and save it
-            output_graph_dir = "data" + "/frozen_model.pb"
-            output_graph_file = "frozen_model.pb"
-            output_node_names = "predict_class"
-            graph = tf.get_default_graph()
-            input_graph_def = graph.as_graph_def()
-            output_graph_def = tf.graph_util.convert_variables_to_constants(
-                sess,  # The session is used to retrieve the weights
-                input_graph_def,  # The graph_def is used to retrieve the nodes
-                output_node_names.split(
-                    ","
-                )  # The output node names are used to select the usefull nodes
-            )
-            # Finally we serialize and dump the output graph to the filesystem
-            with tf.gfile.GFile(output_graph_dir, "wb") as f:
-                f.write(output_graph_def.SerializeToString())
-            print("%d ops in the final graph." % len(output_graph_def.node))
+            # export a TF Model and save it
+            builder = tf.saved_model.builder.SavedModelBuilder(
+                "data/export_dir")
+            builder.add_meta_graph_and_variables(
+                sess, [tf.saved_model.tag_constants.SERVING])
+            builder.save()
 
-            with tf.gfile.GFile(output_graph_file, "wb") as f:
-                f.write(output_graph_def.SerializeToString())
-            print("%d ops in the final graph." % len(output_graph_def.node))
             sess.close()
 
             # Deploy a TF Model using a Frozen Tensorflow Model in a directory
             version += 1
             deploy_and_test_model(
-                clipper_conn, "data", version, "integers", link_model=False)
-
-            # Deploy a TF Model using a Frozen Tensorflow Model in a file
-            version += 1
-            deploy_and_test_model(
                 clipper_conn,
-                "frozen_model.pb",
+                "data/export_dir",
                 version,
                 "integers",
                 link_model=False)
