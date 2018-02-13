@@ -49,7 +49,7 @@ static inline std::string get_readable_input_type(InputType type) {
     case InputType::Strings: return std::string("strings");
     case InputType::Invalid:
     default:
-      std::string("Invalid input type");
+      return std::string("Invalid input type");
   }
 }
 

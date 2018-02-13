@@ -177,15 +177,18 @@ void RPCService::send_messages(
       continue;
     }
 
-    message_t type_message(sizeof(int));
-    static_cast<int *>(type_message.data())[0] =
-        static_cast<int>(MessageType::ContainerContent);
-    message_t id_message(sizeof(int));
-    static_cast<int *>(id_message.data())[0] = std::get<1>(request);
+    message_t version_message(sizeof(uint32_t));
+    static_cast<uint32_t *>(version_message.data())[0] = RPC_VERSION;
+    message_t type_message(sizeof(uint32_t));
+    static_cast<uint32_t *>(type_message.data())[0] =
+        static_cast<uint32_t>(MessageType::ContainerContent);
+    message_t id_message(sizeof(uint32_t));
+    static_cast<uint32_t *>(id_message.data())[0] = std::get<1>(request);
     vector<uint8_t> routing_identity = connection->second;
 
     socket.send(routing_identity.data(), routing_identity.size(), ZMQ_SNDMORE);
     socket.send("", 0, ZMQ_SNDMORE);
+    socket.send(version_message, ZMQ_SNDMORE);
     socket.send(type_message, ZMQ_SNDMORE);
     socket.send(id_message, ZMQ_SNDMORE);
     size_t cur_msg_num = 0;
@@ -345,15 +348,18 @@ void RPCService::receive_message(
 void RPCService::send_heartbeat_response(socket_t &socket,
                                          const vector<uint8_t> &connection_id,
                                          bool request_container_metadata) {
-  message_t type_message(sizeof(int));
-  message_t heartbeat_type_message(sizeof(int));
-  static_cast<int *>(type_message.data())[0] =
-      static_cast<int>(MessageType::Heartbeat);
-  static_cast<int *>(heartbeat_type_message.data())[0] = static_cast<int>(
+  message_t version_message(sizeof(uint32_t));
+  static_cast<uint32_t *>(version_message.data())[0] = RPC_VERSION;
+  message_t type_message(sizeof(uint32_t));
+  message_t heartbeat_type_message(sizeof(uint32_t));
+  static_cast<uint32_t *>(type_message.data())[0] =
+      static_cast<uint32_t>(MessageType::Heartbeat);
+  static_cast<uint32_t *>(heartbeat_type_message.data())[0] = static_cast<int>(
       request_container_metadata ? HeartbeatType::RequestContainerMetadata
                                  : HeartbeatType::KeepAlive);
   socket.send(connection_id.data(), connection_id.size(), ZMQ_SNDMORE);
   socket.send("", 0, ZMQ_SNDMORE);
+  socket.send(version_message, ZMQ_SNDMORE);
   socket.send(type_message, ZMQ_SNDMORE);
   socket.send(heartbeat_type_message);
 }

@@ -26,6 +26,7 @@ namespace clipper {
 namespace rpc {
 
 const std::string LOGGING_TAG_RPC = "RPC";
+static constexpr uint32_t RPC_VERSION = 3;
 
 /// Tuple of msg_id, vector of model outputs
 using RPCResponse = std::pair<const uint32_t, std::vector<ByteBuffer>>;

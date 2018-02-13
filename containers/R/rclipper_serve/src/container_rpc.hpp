@@ -27,6 +27,7 @@ using Clock = std::chrono::system_clock;
 
 namespace container {
 
+constexpr uint32_t RPC_VERSION = 3;
 constexpr long SOCKET_POLLING_TIMEOUT_MILLIS = 5000;
 constexpr long SOCKET_ACTIVITY_TIMEOUT_MILLIS = 30000;
 constexpr long EVENT_LOG_CAPACITY = 100;
@@ -161,6 +162,15 @@ class RPC {
     serve_model(model, model_name, model_version, clipper_address);
   }
 
+  void validate_rpc_version(const uint32_t received_version) {
+      if (received_version != RPC_VERSION) {
+          std::stringstream ss;
+          ss << "Received an RPC message with version: " << received_version
+             << " that does not match container version: " << RPC_VERSION;
+          throw std::runtime_error(ss.str());
+      }
+  }
+
   /**
  * @return `true` if the received heartbeat is a request for container metadata.
  * `false` otherwise.
@@ -226,12 +236,17 @@ class RPC {
         PerformanceTimer::start_timing();
 
         zmq::message_t msg_delimiter;
+        zmq::message_t msg_rpc_version_bytes;
         zmq::message_t msg_msg_type_bytes;
 
         socket.recv(&msg_delimiter, 0);
+        socket.recv(&msg_rpc_version_bytes, 0);
         socket.recv(&msg_msg_type_bytes, 0);
 
-        int message_type_code = static_cast<int*>(msg_msg_type_bytes.data())[0];
+        uint32_t rpc_version = static_cast<uint32_t*>(msg_rpc_version_bytes.data())[0];
+        validate_rpc_version(rpc_version);
+
+        uint32_t message_type_code = static_cast<uint32_t*>(msg_msg_type_bytes.data())[0];
         MessageType message_type =
             static_cast<MessageType>(message_type_code);
 
@@ -254,9 +269,9 @@ class RPC {
             socket.recv(&msg_request_id, 0);
             socket.recv(&msg_request_header, 0);
 
-            int msg_id = static_cast<int*>(msg_request_id.data())[0];
-            int request_type_code =
-                static_cast<int*>(msg_request_header.data())[0];
+            uint32_t msg_id = static_cast<uint32_t*>(msg_request_id.data())[0];
+            uint32_t request_type_code =
+                static_cast<uint32_t*>(msg_request_header.data())[0];
             RequestType request_type =
                 static_cast<RequestType>(request_type_code);
 

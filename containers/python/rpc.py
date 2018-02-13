@@ -14,6 +14,8 @@ from multiprocessing import Pipe, Process
 from prometheus_client import start_http_server
 from prometheus_client.core import Counter, Gauge, Histogram, Summary
 
+RPC_VERSION = 3
+
 INPUT_TYPE_BYTES = 0
 INPUT_TYPE_INTS = 1
 INPUT_TYPE_FLOATS = 2
@@ -122,6 +124,11 @@ class Server(threading.Thread):
         self.clipper_port = clipper_port
         self.event_history = EventHistory(EVENT_HISTORY_BUFFER_SIZE)
 
+    def validate_rpc_version(self, received_version):
+        if received_version != RPC_VERSION:
+            raise Exception("Received an RPC message with version: {clv} that does not match container version: {mcv}"
+                    .format(clv=received_version, mcv=RPC_VERSION))
+
     def handle_prediction_request(self, prediction_request):
         """
         Returns
@@ -229,6 +236,9 @@ class Server(threading.Thread):
                 t1 = datetime.now()
                 # Receive delimiter between routing identity and content
                 socket.recv()
+                rpc_version_bytes = socket.recv()
+                rpc_version = struct.unpack("<I", rpc_version_bytes)[0]
+                self.validate_rpc_version(rpc_version)
                 msg_type_bytes = socket.recv()
                 msg_type = struct.unpack("<I", msg_type_bytes)[0]
                 if msg_type == MESSAGE_TYPE_HEARTBEAT:
