@@ -235,10 +235,12 @@ class RPC {
         socket.recv(&msg_rpc_type_bytes, 0);
         socket.recv(&msg_msg_type_bytes, 0);
 
-        uint32_t rpc_version = static_cast<uint32_t*>(msg_rpc_type_bytes.data())[0];
+        uint32_t rpc_version =
+            static_cast<uint32_t*>(msg_rpc_type_bytes.data())[0];
         validate_rpc_version(rpc_version);
 
-        uint32_t message_type_code = static_cast<uint32_t*>(msg_msg_type_bytes.data())[0];
+        uint32_t message_type_code =
+            static_cast<uint32_t*>(msg_msg_type_bytes.data())[0];
         rpc::MessageType message_type =
             static_cast<rpc::MessageType>(message_type_code);
 

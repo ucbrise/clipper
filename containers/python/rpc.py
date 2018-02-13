@@ -126,8 +126,9 @@ class Server(threading.Thread):
 
     def validate_rpc_version(self, received_version):
         if received_version != RPC_VERSION:
-            raise Exception("Received an RPC message with version: {clv} that does not match container version: {mcv}"
-                    .format(clv=received_version, mcv=RPC_VERSION))
+            raise Exception(
+                "Received an RPC message with version: {clv} that does not match container version: {mcv}"
+                .format(clv=received_version, mcv=RPC_VERSION))
 
     def handle_prediction_request(self, prediction_request):
         """

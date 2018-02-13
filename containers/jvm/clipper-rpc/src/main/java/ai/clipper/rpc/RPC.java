@@ -71,11 +71,10 @@ public class RPC<I extends DataVector<?>> {
   }
 
   private void validateRpcVersion(long receivedVersion) throws Exception {
-    if(receivedVersion != RPC_VERSION) {
-      throw new Exception(
-              String.format("Received a message with RPC version: %d that does not match container version: %d",
-                            receivedVersion,
-                            RPC_VERSION));
+    if (receivedVersion != RPC_VERSION) {
+      throw new Exception(String.format(
+          "Received a message with RPC version: %d that does not match container version: %d",
+          receivedVersion, RPC_VERSION));
     }
   }
 
