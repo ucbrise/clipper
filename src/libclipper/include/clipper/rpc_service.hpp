@@ -32,8 +32,8 @@ static constexpr uint32_t RPC_VERSION = 3;
 /// Tuple of msg_id, vector of model outputs
 using RPCResponse = std::pair<uint32_t, std::vector<ByteBuffer>>;
 /// Tuple of zmq_connection_id, message_id, vector of messages, creation time
-using RPCRequest = std::tuple<uint32_t, uint32_t,
-                              std::vector<ByteBuffer>, long>;
+using RPCRequest =
+    std::tuple<uint32_t, uint32_t, std::vector<ByteBuffer>, long>;
 
 enum class RPCEvent {
   SentHeartbeat = 1,
