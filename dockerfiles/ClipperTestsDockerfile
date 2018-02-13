@@ -1,10 +1,10 @@
 ARG CODE_VERSION
 FROM clipper/lib_base:${CODE_VERSION}
 
-# install docker
+# install docker and other apt-installable dependencies
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install --fix-missing -y \
       wget apt-transport-https ca-certificates curl software-properties-common \
-      openjdk-8-jdk clang-format \
+      openjdk-8-jdk clang-format redis-server \
       && curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
       && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
       && apt-get update \
