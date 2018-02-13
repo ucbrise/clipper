@@ -35,18 +35,18 @@ sha_tag=`git rev-parse --verify --short HEAD`
 
 ######## Utilities for managing versioning ############
 # From https://github.com/cloudflare/semver_bash/blob/c1133faf0efe17767b654b213f212c326df73fa3/semver.sh
-# LICENSE:
+# LICENSE: 
 # Copyright (c) 2013, Ray Bejjani
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
+# modification, are permitted provided that the following conditions are met: 
 #
 # 1. Redistributions of source code must retain the above copyright notice, this
-#    list of conditions and the following disclaimer.
+#    list of conditions and the following disclaimer. 
 # 2. Redistributions in binary form must reproduce the above copyright notice,
 #    this list of conditions and the following disclaimer in the documentation
-#    and/or other materials provided with the distribution.
+#    and/or other materials provided with the distribution. 
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -60,7 +60,7 @@ sha_tag=`git rev-parse --verify --short HEAD`
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 # The views and conclusions contained in the software and documentation are those
-# of the authors and should not be interpreted as representing official policies,
+# of the authors and should not be interpreted as representing official policies, 
 # either expressed or implied, of the FreeBSD Project.
 
 function semverParseInto() {
@@ -131,7 +131,7 @@ function semverLT() {
     if [[ $MAJOR_A -le $MAJOR_B  && $MINOR_A -lt $MINOR_B ]]; then
         return 0
     fi
-
+    
     if [[ $MAJOR_A -le $MAJOR_B  && $MINOR_A -le $MINOR_B && $PATCH_A -lt $PATCH_B ]]; then
         return 0
     fi
@@ -202,7 +202,7 @@ create_image () {
 
     local public=$3        # Push the built images to Docker Hub under
                             # the clipper namespace. Must have credentials.
-
+                     
     echo "Building $namespace/$image:$sha_tag from file $dockerfile"
     time docker build --build-arg CODE_VERSION=$sha_tag -t $namespace/$image:$sha_tag \
         -f dockerfiles/$dockerfile $CLIPPER_ROOT
@@ -242,26 +242,26 @@ build_images () {
 
     # Build Clipper core images
     create_image lib_base ClipperLibBaseDockerfile $private
-#    create_image query_frontend QueryFrontendDockerfile $public
-#    create_image management_frontend ManagementFrontendDockerfile $public
-#    create_image unittests ClipperTestsDockerfile  $private
+    create_image query_frontend QueryFrontendDockerfile $public
+    create_image management_frontend ManagementFrontendDockerfile $public
+    create_image unittests ClipperTestsDockerfile  $private
 
     # Build containers
-#    create_image spark-scala-container SparkScalaContainerDockerfile $public
-#    create_image r-container-base RContainerDockerfile $public
+    create_image spark-scala-container SparkScalaContainerDockerfile $public
+    create_image r-container-base RContainerDockerfile $public
 
     # First build Python base image
-#    create_image py-rpc RPCDockerfile $public
-#    create_image sum-container SumDockerfile  $private
-#    create_image noop-container NoopDockerfile $public
-#    create_image python-closure-container PyClosureContainerDockerfile $public
-#    create_image pyspark-container PySparkContainerDockerfile $public
-#    create_image tf_cifar_container TensorFlowCifarDockerfile $public
-#    create_image tf-container TensorFlowDockerfile $public
-#    create_image pytorch-container PyTorchContainerDockerfile $public
+    create_image py-rpc RPCDockerfile $public
+    create_image sum-container SumDockerfile  $private
+    create_image noop-container NoopDockerfile $public
+    create_image python-closure-container PyClosureContainerDockerfile $public
+    create_image pyspark-container PySparkContainerDockerfile $public
+    create_image tf_cifar_container TensorFlowCifarDockerfile $public
+    create_image tf-container TensorFlowDockerfile $public
+    create_image pytorch-container PyTorchContainerDockerfile $public
 
     # Build Metric Monitor image - no dependency
-#    create_image frontend-exporter FrontendExporterDockerfile $public
+    create_image frontend-exporter FrontendExporterDockerfile $public
 }
 
 
