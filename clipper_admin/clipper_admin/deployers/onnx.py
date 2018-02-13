@@ -81,14 +81,14 @@ def create_pytorch_endpoint(
         for a model can be changed at any time with
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
     onnx_backend : str, optional
-        The provided onnx backend.
+        The provided onnx backend.Caffe2 is the only currently supported ONNX backend.
     """
 
     clipper_conn.register_application(name, input_type, default_output,
                                       slo_micros)
     deploy_pytorch_model(clipper_conn, name, version, input_type, inputs, func,
                         pytorch_model, base_image, labels, registry,
-                        num_replicas,onnx_backend)
+                        num_replicas, onnx_backend)
 
     clipper_conn.link_model_to_app(name, name)
 
@@ -144,7 +144,7 @@ def deploy_pytorch_model(
         for a model can be changed at any time with
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
     onnx_backend : str, optional
-        The provided onnx backend.
+        The provided onnx backend.Caffe2 is the only currently supported ONNX backend.
     """
     if base_image is None:
         if onnx_backend is "caffe2":
@@ -161,7 +161,7 @@ def deploy_pytorch_model(
     except Exception as e:
         logger.error("Error serializing PyTorch model to ONNX: {e}".format(e=e))
 
-    logger.info("Torch model has be serialized to ONNX foamat")
+    logger.info("Torch model has be serialized to ONNX format")
 
     # Deploy model
     clipper_conn.build_and_deploy_model(name, version, input_type,
