@@ -15,6 +15,7 @@ import org.zeromq.ZMQ;
 
 public class RPC<I extends DataVector<?>> {
   private static String CONNECTION_ADDRESS = "tcp://%s:%s";
+  private static final long RPC_VERSION = 3;
   private static final long SOCKET_POLLING_TIMEOUT_MILLIS = 5000;
   private static final long SOCKET_ACTIVITY_TIMEOUT_MILLIS = 30000;
   private static final int EVENT_HISTORY_BUFFER_SIZE = 30;
@@ -69,6 +70,15 @@ public class RPC<I extends DataVector<?>> {
     return eventHistory.getEvents();
   }
 
+  private void validateRpcVersion(long receivedVersion) throws Exception {
+    if(receivedVersion != RPC_VERSION) {
+      throw new Exception(
+              String.format("Received a message with RPC version: %d that does not match container version: %d",
+                            receivedVersion,
+                            RPC_VERSION));
+    }
+  }
+
   private void serveModel(ClipperModel<I> model, String modelName, int modelVersion,
       final ZMQ.Context context, String ip, int port)
       throws NoSuchFieldException, IllegalArgumentException {
@@ -113,7 +123,16 @@ public class RPC<I extends DataVector<?>> {
         PerformanceTimer.startTiming();
         // Receive delimiter between routing identity and content
         socket.recv();
+        byte[] rpcVersionMessage = socket.recv();
         byte[] typeMessage = socket.recv();
+        List<Long> parsedVersionMessage = DataUtils.getUnsignedIntsFromBytes(rpcVersionMessage);
+        long rpcVersion = parsedVersionMessage.get(0);
+        try {
+          validateRpcVersion(rpcVersion);
+        } catch (Exception e) {
+          e.printStackTrace();
+          System.exit(1);
+        }
         List<Long> parsedTypeMessage = DataUtils.getUnsignedIntsFromBytes(typeMessage);
         ContainerMessageType messageType =
             ContainerMessageType.fromCode(parsedTypeMessage.get(0).intValue());
