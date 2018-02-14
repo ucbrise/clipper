@@ -29,8 +29,8 @@ def create_pytorch_endpoint(
         num_replicas=1,
         onnx_backend="caffe2",
         batch_size=-1):
-    """This function deploys the prediction function with a PyTorch model. 
-    It serializes the PyTorch model in Onnx format and creates a container that loads it as a Caffe2 model. 
+    """This function deploys the prediction function with a PyTorch model.
+    It serializes the PyTorch model in Onnx format and creates a container that loads it as a Caffe2 model.
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
@@ -87,8 +87,8 @@ def create_pytorch_endpoint(
     clipper_conn.register_application(name, input_type, default_output,
                                       slo_micros)
     deploy_pytorch_model(clipper_conn, name, version, input_type, inputs, func,
-                        pytorch_model, base_image, labels, registry,
-                        num_replicas, onnx_backend)
+                         pytorch_model, base_image, labels, registry,
+                         num_replicas, onnx_backend)
 
     clipper_conn.link_model_to_app(name, name)
 
@@ -107,8 +107,8 @@ def deploy_pytorch_model(
         num_replicas=1,
         onnx_backend="caffe2",
         batch_size=-1):
-    """This function deploys the prediction function with a PyTorch model. 
-    It serializes the PyTorch model in Onnx format and creates a container that loads it as a Caffe2 model. 
+    """This function deploys the prediction function with a PyTorch model.
+    It serializes the PyTorch model in Onnx format and creates a container that loads it as a Caffe2 model.
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
@@ -121,7 +121,7 @@ def deploy_pytorch_model(
     input_type : str
         The input_type to be associated with the registered app and deployed model.
         One of "integers", "floats", "doubles", "bytes", or "strings".
-    inputs : 
+    inputs :
         input of func.
     func : function
         The prediction function. Any state associated with the function will be
@@ -148,9 +148,11 @@ def deploy_pytorch_model(
     """
     if base_image is None:
         if onnx_backend is "caffe2":
-                base_image = "clipper/caffe2-onnx-container:{}".format(__version__)
+            base_image = "clipper/caffe2-onnx-container:{}".format(__version__)
         else:
-                logger.error("{backend} ONNX backend is not currently supported.".format(backend=onnx_backend))
+            logger.error(
+                "{backend} ONNX backend is not currently supported.".format(
+                    backend=onnx_backend))
 
     serialization_dir = save_python_function(name, func)
 
@@ -159,7 +161,9 @@ def deploy_pytorch_model(
             pytorch_model, inputs, "model.onnx", export_params=True)
 
     except Exception as e:
-        logger.error("Error serializing PyTorch model to ONNX: {e}".format(e=e))
+        logger.error(
+            "Error serializing PyTorch model to ONNX: {e}".format(
+                e=e))
 
     logger.info("Torch model has be serialized to ONNX format")
 
