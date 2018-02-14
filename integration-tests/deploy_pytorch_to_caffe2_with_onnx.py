@@ -73,7 +73,7 @@ def deploy_and_test_model(clipper_conn,
                           link_model=False,
                           predict_fn=predict):
     deploy_pytorch_model(clipper_conn, model_name, version, "integers", inputs,
-                        predict_fn, model, onnx_backend="caffe2")
+                         predict_fn, model, onnx_backend="caffe2")
 
     time.sleep(5)
 
@@ -118,10 +118,10 @@ class BasicNN(nn.Module):
         self.net = nn.Linear(28 * 28, 2)
 
     def forward(self, x):
-        if type(x) == np.ndarray:
+        if isinstance(x, np.ndarray):
             x = torch.from_numpy(x)
         x = x.float()
-        if type(x) == type(torch.randn(1)):
+        if isinstance(x, type(torch.randn(1))):
             x = Variable(x)
         x = x.view(1, 1, 28, 28)
         x = x / 255.0
@@ -151,7 +151,7 @@ def get_test_point():
     return [np.random.randint(255) for _ in range(784)]
 
 
-#Define a dataloader to read data
+# Define a dataloader to read data
 class TrainingDataset(data.Dataset):
     def __init__(self, data, label):
         self.imgs = data
@@ -203,7 +203,7 @@ if __name__ == "__main__":
 
             app_and_model_name = "easy-register-app-model"
             create_pytorch_endpoint(clipper_conn, app_and_model_name, "integers",
-                            inputs, predict, nn_model, onnx_backend="caffe2")
+                                    inputs, predict, nn_model, onnx_backend="caffe2")
             test_model(clipper_conn, app_and_model_name, 1)
 
         except BenchmarkException as e:
