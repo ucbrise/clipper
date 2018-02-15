@@ -50,11 +50,6 @@ def create_endpoint(
         Required because loading serialized MXNet models involves binding, which requires
         the shape of the data used to train the model.
         https://mxnet.incubator.apache.org/api/python/module.html#mxnet.module.BaseModule.bind
-
-        NOTE: Clipper may provide the model with variable size input batches. Because MXNet can't
-              handle variable size input batches, we recommend setting batch size for input data
-              to 1, or dynamically reshaping the model with every prediction based on the current
-              input batch size.
     default_output : str, optional
         The default output for the application. The default output will be returned whenever
         an application is unable to receive a response from a model within the specified
@@ -88,6 +83,14 @@ def create_endpoint(
         The number of replicas of the model to create. The number of replicas
         for a model can be changed at any time with
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
+
+    Note
+    ----
+    Regarding `mxnet_data_shapes` parameter:
+    Clipper may provide the model with variable size input batches. Because MXNet can't
+    handle variable size input batches, we recommend setting batch size for input data
+    to 1, or dynamically reshaping the model with every prediction based on the current
+    input batch size.
     """
 
     clipper_conn.register_application(name, input_type, default_output,
@@ -134,11 +137,6 @@ def deploy_mxnet_model(
         Required because loading serialized MXNet models involves binding, which requires
         the shape of the data used to train the model.
         https://mxnet.incubator.apache.org/api/python/module.html#mxnet.module.BaseModule.bind
-
-        NOTE: Clipper may provide the model with variable size input batches. Because MXNet can't
-              handle variable size input batches, we recommend setting batch size for input data
-              to 1, or dynamically reshaping the model with every prediction based on the current
-              input batch size.
     base_image : str, optional
         The base Docker image to build the new model image from. This
         image should contain all code necessary to run a Clipper model
@@ -154,6 +152,15 @@ def deploy_mxnet_model(
         The number of replicas of the model to create. The number of replicas
         for a model can be changed at any time with
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
+
+    Note
+    ----
+    Regarding `mxnet_data_shapes` parameter:
+    Clipper may provide the model with variable size input batches. Because MXNet can't
+    handle variable size input batches, we recommend setting batch size for input data
+    to 1, or dynamically reshaping the model with every prediction based on the current
+    input batch size.
+
     Example
     -------
 
@@ -177,6 +184,8 @@ def deploy_mxnet_model(
         # Initialize the module and fit it
         mxnet_model = mx.mod.Module(softmax)
         mxnet_model.fit(data_iter, num_epoch=1)
+
+        data_shape = [1, 785]
 
         deploy_mxnet_model(
             clipper_conn,
