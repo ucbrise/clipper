@@ -72,8 +72,15 @@ def deploy_and_test_model(clipper_conn,
                           version,
                           link_model=False,
                           predict_fn=predict):
-    deploy_pytorch_model(clipper_conn, model_name, version, "integers", inputs,
-                         predict_fn, model, onnx_backend="caffe2")
+    deploy_pytorch_model(
+        clipper_conn,
+        model_name,
+        version,
+        "integers",
+        inputs,
+        predict_fn,
+        model,
+        onnx_backend="caffe2")
 
     time.sleep(5)
 
@@ -202,8 +209,14 @@ if __name__ == "__main__":
                 clipper_conn, nn_model, inputs, version, link_model=True)
 
             app_and_model_name = "easy-register-app-model"
-            create_pytorch_endpoint(clipper_conn, app_and_model_name, "integers",
-                                    inputs, predict, nn_model, onnx_backend="caffe2")
+            create_pytorch_endpoint(
+                clipper_conn,
+                app_and_model_name,
+                "integers",
+                inputs,
+                predict,
+                nn_model,
+                onnx_backend="caffe2")
             test_model(clipper_conn, app_and_model_name, 1)
 
         except BenchmarkException as e:
