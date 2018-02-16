@@ -250,7 +250,7 @@ class DockerContainerManager(ContainerManager):
                 logger.info("Checking to make sure %s is running" % name)
                 container = self.docker_client.containers.get(name)
                 while container.attrs.get("State").get("Status") != "running":
-                    time.sleep(5)
+                    time.sleep(3)
 
         elif len(current_replicas) > num_replicas:
             num_extra = len(current_replicas) - num_replicas
