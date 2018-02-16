@@ -13,22 +13,21 @@ from .deployer_utils import save_python_function, serialize_object
 logger = logging.getLogger(__name__)
 
 
-def create_pytorch_endpoint(
-        clipper_conn,
-        name,
-        input_type,
-        inputs,
-        func,
-        pytorch_model,
-        default_output="None",
-        version=1,
-        slo_micros=3000000,
-        labels=None,
-        registry=None,
-        base_image=None,
-        num_replicas=1,
-        onnx_backend="caffe2",
-        batch_size=-1):
+def create_pytorch_endpoint(clipper_conn,
+                            name,
+                            input_type,
+                            inputs,
+                            func,
+                            pytorch_model,
+                            default_output="None",
+                            version=1,
+                            slo_micros=3000000,
+                            labels=None,
+                            registry=None,
+                            base_image=None,
+                            num_replicas=1,
+                            onnx_backend="caffe2",
+                            batch_size=-1):
     """This function deploys the prediction function with a PyTorch model.
     It serializes the PyTorch model in Onnx format and creates a container that loads it as a Caffe2 model.
     Parameters
@@ -93,20 +92,19 @@ def create_pytorch_endpoint(
     clipper_conn.link_model_to_app(name, name)
 
 
-def deploy_pytorch_model(
-        clipper_conn,
-        name,
-        version,
-        input_type,
-        inputs,
-        func,
-        pytorch_model,
-        base_image=None,
-        labels=None,
-        registry=None,
-        num_replicas=1,
-        onnx_backend="caffe2",
-        batch_size=-1):
+def deploy_pytorch_model(clipper_conn,
+                         name,
+                         version,
+                         input_type,
+                         inputs,
+                         func,
+                         pytorch_model,
+                         base_image=None,
+                         labels=None,
+                         registry=None,
+                         num_replicas=1,
+                         onnx_backend="caffe2",
+                         batch_size=-1):
     """This function deploys the prediction function with a PyTorch model.
     It serializes the PyTorch model in Onnx format and creates a container that loads it as a Caffe2 model.
     Parameters
@@ -162,8 +160,7 @@ def deploy_pytorch_model(
 
     except Exception as e:
         logger.error(
-            "Error serializing PyTorch model to ONNX: {e}".format(
-                e=e))
+            "Error serializing PyTorch model to ONNX: {e}".format(e=e))
 
     logger.info("Torch model has be serialized to ONNX format")
 
