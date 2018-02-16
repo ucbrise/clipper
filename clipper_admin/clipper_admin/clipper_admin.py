@@ -11,6 +11,7 @@ import re
 import os
 import tarfile
 import six
+import yaml
 
 from .container_manager import CONTAINERLESS_MODEL_IMAGE
 from .exceptions import ClipperException, UnconnectedException
@@ -73,7 +74,8 @@ class ClipperConnection(object):
                 __version__),
             mgmt_frontend_image='clipper/management_frontend:{}'.format(
                 __version__),
-            cache_size=DEFAULT_PREDICTION_CACHE_SIZE_BYTES):
+            cache_size=DEFAULT_PREDICTION_CACHE_SIZE_BYTES,
+            config_file=None):
         """Start a new Clipper cluster and connect to it.
 
         This command will start a new Clipper instance using the container manager provided when
@@ -91,7 +93,8 @@ class ClipperConnection(object):
             compability and preserve the expected behavior of the system.
         cache_size : int, optional
             The size of Clipper's prediction cache in bytes. Default cache size is 32 MiB.
-
+        config_file: str(optional)
+            File for the configuration of the application or model
         Raises
         ------
         :py:exc:`clipper.ClipperException`
@@ -113,6 +116,42 @@ class ClipperConnection(object):
         except ClipperException as e:
             logger.warning("Error starting Clipper: {}".format(e.msg))
             raise e
+
+        def parse_configuration(config_path):
+            """ if a configuration file exists,
+            parse it and accordingly deploy models and applications
+
+            Parameters
+            ----------
+            config_path : str
+                Path to the configuration file.
+            """
+            if(config_path):
+                with open(config_path, "r") as stream:
+                    config = yaml.load(stream)
+                    for name in config:
+                        if(name == "links"):
+                            for link in config[name]:
+                                self.link_model_to_app(config[name][link]["app_name"], config[name][link]["model_name"])
+                        else:
+                            obj_type = config[name]["obj_type"]
+                            input_type = config[name]["input_type"]
+                            if(obj_type == "application"):
+                                slo = config[name]["slo"]
+                                default_value = config[name]["default_value"]
+                                self.register_application(name, input_type, default_value, slo)
+                            elif(obj_type == "model"):
+                                config_image = config[name]["image"]
+                                version = config[name]["version"]
+                                labels = None
+                                if("labels" in config[name]):
+                                    labels = config[name]["labels"]
+                                num_replicas = 1
+                                if("num_replicas" in config[name]):
+                                    num_replicas = config[name]["num_replicas"]
+                                self.deploy_model(name, version, input_type, config_image, labels, num_replicas)
+
+        parse_configuration(config_file)
 
     def connect(self):
         """Connect to a running Clipper cluster."""
