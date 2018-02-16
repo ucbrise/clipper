@@ -11,9 +11,9 @@ import numpy as np
 import signal
 import sys
 
-
 KUBE_API_IP = None
 assert KUBE_API_IP, "KUBE_API_IP Missing"
+
 
 def predict(addr, x, batch=False):
     url = "http://%s/simple-noop-app/predict" % addr
@@ -38,23 +38,24 @@ def feature_sum(xs):
 # Stop Clipper on Ctrl-C
 def signal_handler(signal, frame):
     print("Stopping Clipper...")
-    clipper_conn = ClipperConnection(
-        KubernetesContainerManager(KUBE_API_IP))
+    clipper_conn = ClipperConnection(KubernetesContainerManager(KUBE_API_IP))
     clipper_conn.stop_all()
     sys.exit(0)
+
 
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal_handler)
     clipper_conn = ClipperConnection(KubernetesContainerManager(KUBE_API_IP))
     clipper_conn.start_clipper()
     print("Starting Clipper")
-    clipper_conn.register_application("simple-noop-app", "doubles", "default_pred",
-                                      100000)
-    clipper_conn.deploy_model(name='simple-fizz-buzz-model',
-                              version='1',
-                              input_type='doubles',
-                              image='simonmok/fizz-buzz:latest',
-                              num_replicas=2)
+    clipper_conn.register_application("simple-noop-app", "doubles",
+                                      "default_pred", 100000)
+    clipper_conn.deploy_model(
+        name='simple-fizz-buzz-model',
+        version='1',
+        input_type='doubles',
+        image='simonmok/fizz-buzz:latest',
+        num_replicas=2)
     clipper_conn.link_model_to_app("simple-noop-app", 'simple-fizz-buzz-model')
     time.sleep(2)
     print("Starting Prediction")

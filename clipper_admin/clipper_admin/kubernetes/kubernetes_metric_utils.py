@@ -32,9 +32,7 @@ def _create_prometheus_configmap(_k8s_v1):
         data = yaml.load(f)
 
     with _pass_conflicts():
-        _k8s_v1.create_namespaced_config_map(
-            body=data,
-            namespace='default')
+        _k8s_v1.create_namespaced_config_map(body=data, namespace='default')
 
 
 def _create_prometheus_depolyment(_k8s_beta):
@@ -42,9 +40,7 @@ def _create_prometheus_depolyment(_k8s_beta):
         data = yaml.load(f)
 
     with _pass_conflicts():
-        _k8s_beta.create_namespaced_deployment(
-            body=data,
-            namespace='default')
+        _k8s_beta.create_namespaced_deployment(body=data, namespace='default')
 
 
 def _create_prometheus_service(_k8s_v1):
@@ -52,9 +48,7 @@ def _create_prometheus_service(_k8s_v1):
         data = yaml.load(f)
 
     with _pass_conflicts():
-        _k8s_v1.create_namespaced_service(
-            body=data,
-            namespace='default')
+        _k8s_v1.create_namespaced_service(body=data, namespace='default')
 
 
 def start_metric(_k8s_v1, _k8s_beta):

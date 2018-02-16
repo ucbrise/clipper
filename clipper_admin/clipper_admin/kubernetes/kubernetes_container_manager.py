@@ -83,7 +83,7 @@ class KubernetesContainerManager(ContainerManager):
                             os.path.join(cur_dir,
                                          '{}-deployment.yaml'.format(name)))),
                     namespace='default')
-            
+
             with _pass_conflicts():
                 body = yaml.load(
                     open(
@@ -114,44 +114,44 @@ class KubernetesContainerManager(ContainerManager):
                     "image"] = img
                 self._k8s_beta.create_namespaced_deployment(
                     body=body, namespace='default')
-            
+
             with _pass_conflicts():
                 body = yaml.load(
                     open(
                         os.path.join(cur_dir, '{}-service.yaml'.format(name))))
                 self._k8s_v1.create_namespaced_service(
                     body=body, namespace='default')
-        
+
         start_metric(self._k8s_v1, self._k8s_beta)
 
         self.connect()
 
     def connect(self):
         nodes = self._k8s_v1.list_node()
-        
+
         external_node_hosts = []
         for node in nodes.items:
             for addr in node.status.addresses:
                 if addr.type == "ExternalDNS":
                     external_node_hosts.append(addr.address)
-        
+
         if len(external_node_hosts) == 0 and (self.useInternalIP):
             msg = "No external node addresses found.Using Internal IP address"
             logger.warn(msg)
             for addr in node.status.addresses:
                 if addr.type == "InternalIP":
                     external_node_hosts.append(addr.address)
-        
+
         if len(external_node_hosts) == 0:
             msg = "Error connecting to Kubernetes cluster. No external node addresses found"
             logger.error(msg)
             raise ClipperException(msg)
-        
+
         self.external_node_hosts = external_node_hosts
         logger.info("Found {num_nodes} nodes: {nodes}".format(
             num_nodes=len(external_node_hosts),
             nodes=", ".join(external_node_hosts)))
-        
+
         try:
             mgmt_frontend_ports = self._k8s_v1.read_namespaced_service(
                 name="mgmt-frontend", namespace='default').spec.ports
@@ -160,7 +160,7 @@ class KubernetesContainerManager(ContainerManager):
                     self.clipper_management_port = p.node_port
                     logger.info("Setting Clipper mgmt port to {}".format(
                         self.clipper_management_port))
-            
+
             query_frontend_ports = self._k8s_v1.read_namespaced_service(
                 name="query-frontend", namespace='default').spec.ports
             for p in query_frontend_ports:
@@ -206,7 +206,7 @@ class KubernetesContainerManager(ContainerManager):
                                 image,
                                 'ports': [{
                                     'containerPort': 80
-                                },{
+                                }, {
                                     'containerPort': 1390
                                 }],
                                 'env': [{
@@ -333,8 +333,7 @@ class KubernetesContainerManager(ContainerManager):
                 label_selector=CLIPPER_MODEL_CONTAINER_LABEL)
 
             self._k8s_v1.delete_collection_namespaced_config_map(
-                namespace='default', label_selector=CLIPPER_DOCKER_LABEL
-            )
+                namespace='default', label_selector=CLIPPER_DOCKER_LABEL)
         except ApiException as e:
             logging.warn(
                 "Exception deleting kubernetes resources: {}".format(e))
