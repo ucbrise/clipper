@@ -4,8 +4,7 @@
 #include <chrono>
 #include <iostream>
 
-#include <redox.hpp>
-
+#include <concurrentqueue.h>
 #include <clipper/config.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/logging.hpp>
@@ -15,13 +14,14 @@
 #include <clipper/task_executor.hpp>
 #include <clipper/threadpool.hpp>
 #include <clipper/util.hpp>
+#include <redox.hpp>
 
-using zmq::socket_t;
-using zmq::message_t;
-using zmq::context_t;
 using std::shared_ptr;
 using std::string;
 using std::vector;
+using zmq::context_t;
+using zmq::message_t;
+using zmq::socket_t;
 
 namespace clipper {
 
@@ -30,8 +30,11 @@ namespace rpc {
 constexpr int INITIAL_REPLICA_ID_SIZE = 100;
 
 RPCService::RPCService()
-    : request_queue_(std::make_shared<Queue<RPCRequest>>()),
-      response_queue_(std::make_shared<Queue<RPCResponse>>()),
+    : request_queue_(std::make_shared<moodycamel::ConcurrentQueue<RPCRequest>>(
+          sizeof(RPCRequest) * 10000)),
+      response_queue_(
+          std::make_shared<moodycamel::ConcurrentQueue<RPCResponse>>(
+              sizeof(RPCResponse) * 10000)),
       active_(false),
       // The version of the unordered_map constructor that allows
       // you to specify your own hash function also requires you
@@ -84,20 +87,16 @@ int RPCService::send_message(const vector<vector<uint8_t>> msg,
           .count();
   RPCRequest request(zmq_connection_id, id, std::move(msg),
                      current_time_micros);
-  request_queue_->push(request);
+  request_queue_->enqueue(request);
   return id;
 }
 
 vector<RPCResponse> RPCService::try_get_responses(const int max_num_responses) {
-  vector<RPCResponse> responses;
-  for (int i = 0; i < max_num_responses; i++) {
-    if (auto response = response_queue_->try_pop()) {
-      responses.push_back(*response);
-    } else {
-      break;
-    }
-  }
-  return responses;
+  std::vector<RPCResponse> vec(max_num_responses);
+  size_t num_dequeued =
+      response_queue_->try_dequeue_bulk(vec.begin(), vec.size());
+  vec.resize(num_dequeued);
+  return vec;
 }
 
 void RPCService::manage_service(const string address) {
@@ -133,7 +132,7 @@ void RPCService::manage_service(const string address) {
     // send. If there are messages to send, don't let the poll block at all.
     // If there no messages to send, let the poll block for 1 ms.
     int poll_timeout = 0;
-    if (request_queue_->size() == 0) {
+    if (request_queue_->size_approx() == 0) {
       poll_timeout = 1;
     }
     zmq_poll(items, 1, poll_timeout);
@@ -162,12 +161,16 @@ void RPCService::shutdown_service(socket_t &socket) {
 
 void RPCService::send_messages(
     socket_t &socket, boost::bimap<int, vector<uint8_t>> &connections) {
-  while (request_queue_->size() > 0) {
+  int queue_size = request_queue_->size_approx();
+  std::vector<RPCRequest> requests(queue_size);
+  size_t num_requests =
+      request_queue_->try_dequeue_bulk(requests.begin(), queue_size);
+  for (size_t i = 0; i < num_requests; i++) {
+    RPCRequest &request = requests[i];
     long current_time_micros =
         std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::system_clock::now().time_since_epoch())
             .count();
-    RPCRequest request = request_queue_->pop();
     msg_queueing_hist_->insert(current_time_micros - std::get<3>(request));
     boost::bimap<int, vector<uint8_t>>::left_const_iterator connection =
         connections.left.find(std::get<0>(request));
@@ -301,7 +304,7 @@ void RPCService::receive_message(
         TaskExecutionThreadPool::submit_job(
             vm, replica_id, container_ready_callback_, vm, replica_id);
 
-        response_queue_->push(response);
+        response_queue_->enqueue(response);
       }
     } break;
     case MessageType::Heartbeat:
