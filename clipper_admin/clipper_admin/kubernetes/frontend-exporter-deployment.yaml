@@ -1,0 +1,23 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    ai.clipper.container.label: ""
+    ai.clipper.name: frontend-exporter
+  name: frontend-exporter
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        ai.clipper.container.label: ""
+        ai.clipper.name: frontend-exporter
+    spec:
+      containers:
+      - args:
+        - "--query_frontend_name" #This next item in args list is to be appended in the code
+        image: "clipper/frontend-exporter" 
+        name: frontend-exporter
+        ports:
+        - containerPort: 1390
+      restartPolicy: Always
