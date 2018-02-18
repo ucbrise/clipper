@@ -3,7 +3,7 @@ from ..container_manager import (create_model_container_label,
                                  ContainerManager, CLIPPER_DOCKER_LABEL,
                                  CLIPPER_MODEL_CONTAINER_LABEL)
 from ..exceptions import ClipperException
-from .kubernetes_metric_utils import start_metric
+from .kubernetes_metric_utils import start_prometheus, start_frontend_exporter
 
 from contextlib import contextmanager
 from kubernetes import client, config
@@ -122,7 +122,7 @@ class KubernetesContainerManager(ContainerManager):
                 self._k8s_v1.create_namespaced_service(
                     body=body, namespace='default')
 
-        start_metric(self._k8s_v1, self._k8s_beta)
+        start_prometheus(self._k8s_v1, self._k8s_beta)
 
         self.connect()
 
@@ -170,6 +170,10 @@ class KubernetesContainerManager(ContainerManager):
                         self.clipper_query_port))
                 elif p.name == "7000":
                     self.clipper_rpc_port = p.node_port
+
+            query_addr = "{}:{}".format(self.external_node_hosts[0], self.clipper_query_port)
+            start_frontend_exporter(self._k8s_beta, query_addr)
+
         except ApiException as e:
             logging.warn(
                 "Exception connecting to Clipper Kubernetes cluster: {}".

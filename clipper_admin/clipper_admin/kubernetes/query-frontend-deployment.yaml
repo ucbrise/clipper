@@ -22,11 +22,4 @@ spec:
         ports:
         - containerPort: 7000
         - containerPort: 1337
-      - args:
-        - "--query_frontend_name"
-        - "query-frontend"
-        image: "clipper/frontend-exporter:develop"
-        name: frontend-exporter
-        ports:
-        - containerPort: 1390
       restartPolicy: Always
