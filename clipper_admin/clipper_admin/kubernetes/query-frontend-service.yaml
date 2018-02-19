@@ -14,8 +14,5 @@ spec:
   - name: "1337"
     port: 1337
     targetPort: 1337
-  - name: "1390"
-    port: 1390
-    targetPort: 1390
   selector:
     ai.clipper.name: query-frontend
