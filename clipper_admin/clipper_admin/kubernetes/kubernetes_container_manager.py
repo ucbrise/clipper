@@ -117,7 +117,6 @@ class KubernetesContainerManager(ContainerManager):
                         os.path.join(cur_dir, '{}-service.yaml'.format(name))))
                 self._k8s_v1.create_namespaced_service(
                     body=body, namespace='default')
-
         self.connect()
 
     def connect(self):
@@ -158,7 +157,6 @@ class KubernetesContainerManager(ContainerManager):
                         self.clipper_query_port))
                 elif p.name == "7000":
                     self.clipper_rpc_port = p.node_port
-
         except ApiException as e:
             logging.warn(
                 "Exception connecting to Clipper Kubernetes cluster: {}".
