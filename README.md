@@ -153,8 +153,6 @@ To file a bug or request a feature, please file a GitHub issue. Pull requests ar
 
 ## The Team
 
-GitHub usernames are in parentheses.
-
 + [Dan Crankshaw](https://github.com/dcrankshaw)
 + [Corey Zumar](https://github.com/Corey-Zumar)
 + [Joey Gonzalez](https://github.com/jegonzal)
