@@ -126,30 +126,57 @@ class ClipperConnection(object):
             config_path : str
                 Path to the configuration file.
             """
-            if(config_path):
+            if (config_path):
                 with open(config_path, "r") as stream:
                     config = yaml.load(stream)
-                    for name in config:
-                        if(name == "links"):
-                            for link in config[name]:
-                                self.link_model_to_app(config[name][link]["app_name"], config[name][link]["model_name"])
-                        else:
-                            obj_type = config[name]["obj_type"]
-                            input_type = config[name]["input_type"]
-                            if(obj_type == "application"):
-                                slo = config[name]["slo"]
-                                default_value = config[name]["default_value"]
-                                self.register_application(name, input_type, default_value, slo)
-                            elif(obj_type == "model"):
-                                config_image = config[name]["image"]
-                                version = config[name]["version"]
+                    if ("links" in config):
+                        for link in config["links"]:
+                            try:
+                                self.link_model_to_app(
+                                    config["links"][link]["app_name"],
+                                    config["links"][link]["model_name"])
+                            except ClipperException as e:
+                                print("required parameters not found")
+                                raise e
+                    if ("applications" in config):
+                        for application in config["applications"]:
+                            try:
+                                input_type = config["applications"][
+                                    application]["input_type"]
+                                slo = config["applications"][application][
+                                    "slo"]
+                                default_value = config["applications"][
+                                    application]["default_value"]
+                                self.register_application(
+                                    application, input_type, default_value,
+                                    slo)
+                            except ClipperException as e:
+                                print("required parameters not found")
+                                raise e
+                    if ("models" in config):
+                        for model in config["models"]:
+                            try:
+                                config_image = config["models"][model]["image"]
+                                input_type = config["models"][model][
+                                    "input_type"]
+                                version = config["models"][model]["version"]
                                 labels = None
-                                if("labels" in config[name]):
-                                    labels = config[name]["labels"]
+                                if ("labels" in config["models"][model]):
+                                    labels = config["models"][model]["labels"]
                                 num_replicas = 1
-                                if("num_replicas" in config[name]):
-                                    num_replicas = config[name]["num_replicas"]
-                                self.deploy_model(name, version, input_type, config_image, labels, num_replicas)
+                                if ("num_replicas" in config["models"][model]):
+                                    num_replicas = config["models"][model][
+                                        "num_replicas"]
+                                batch_size = -1
+                                if ("batch_size" in config["models"][model]):
+                                    batch_size = config["models"][model][
+                                        "batch_size"]
+                                self.deploy_model(model, version, input_type,
+                                                  config_image, labels,
+                                                  num_replicas, batch_size)
+                            except ClipperException as e:
+                                print("required parameters not found")
+                                raise e
 
         parse_configuration(config_file)
 
