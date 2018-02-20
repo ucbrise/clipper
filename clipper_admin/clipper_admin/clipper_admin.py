@@ -1197,6 +1197,8 @@ class ClipperConnection(object):
         The function should take a dict request object like the query frontend expects JSON, 
         the predict function, and the input type for the model.
 
+        For example, the function can be called like: clipper_conn.test_predict_function({"input": [1.0, 2.0, 3.0]}, predict_func, "doubles")
+
         Parameters
         ----------
         query: JSON or list of dicts
@@ -1208,11 +1210,18 @@ class ClipperConnection(object):
             One of "integers", "floats", "doubles", "bytes", or "strings".
         """
         query_data = list(x for x in list(query.values()))
-        
-        if type(query_data[0][0]) == list:
+        query_key = list(query.keys())
+
+        if query_key[0] == "input_batch":
             query_data = query_data[0]
 
-        flattened_data = [item for sublist in query_data for item in sublist]
+        try:
+            flattened_data = [
+                item for sublist in query_data for item in sublist
+            ]
+        except TypeError as e:
+            return "Invalid input type or JSON key"
+
         numpy_data = None
 
         if input_type == "bytes":

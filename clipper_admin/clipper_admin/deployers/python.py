@@ -4,8 +4,6 @@ import logging
 import os
 import posixpath
 import shutil
-import pickle
-import numpy as np
 from ..version import __version__
 
 from .deployer_utils import save_python_function
@@ -88,6 +86,7 @@ def create_endpoint(
                           batch_size)
 
     clipper_conn.link_model_to_app(name, name)
+
 
 def deploy_python_closure(
         clipper_conn,
