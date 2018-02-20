@@ -1,6 +1,6 @@
 from __future__ import print_function, with_statement, absolute_import
 import shutil
-import pyspark
+import mxnet as mx
 import logging
 import re
 import os
@@ -8,9 +8,11 @@ import json
 
 from ..version import __version__
 from ..clipper_admin import ClipperException
-from .deployer_utils import save_python_function
+from .deployer_utils import save_python_function, serialize_object
 
 logger = logging.getLogger(__name__)
+
+MXNET_MODEL_RELATIVE_PATH = "mxnet_model"
 
 
 def create_endpoint(
@@ -18,19 +20,17 @@ def create_endpoint(
         name,
         input_type,
         func,
-        pyspark_model,
-        sc,
+        mxnet_model,
+        mxnet_data_shapes,
         default_output="None",
         version=1,
         slo_micros=3000000,
         labels=None,
         registry=None,
-        base_image="clipper/pyspark-container:{}".format(__version__),
-        num_replicas=1,
-        batch_size=-1):
-    """Registers an app and deploys the provided predict function with PySpark model as
+        base_image="clipper/mxnet-container:{}".format(__version__),
+        num_replicas=1):
+    """Registers an app and deploys the provided predict function with MXNet model as
     a Clipper model.
-
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
@@ -43,10 +43,13 @@ def create_endpoint(
     func : function
         The prediction function. Any state associated with the function will be
         captured via closure capture and pickled with Cloudpickle.
-    pyspark_model : pyspark.mllib.* or pyspark.ml.pipeline.PipelineModel object
-        The PySpark model to save.
-    sc : SparkContext,
-        The current SparkContext. This is needed to save the PySpark model.
+    mxnet_model : mxnet model object
+        The MXNet model to save.
+    mxnet_data_shapes : list(int)
+        List of integers representing the dimensions of data used for model prediction.
+        Required because loading serialized MXNet models involves binding, which requires
+        the shape of the data used to train the model.
+        https://mxnet.incubator.apache.org/api/python/module.html#mxnet.module.BaseModule.bind
     default_output : str, optional
         The default output for the application. The default output will be returned whenever
         an application is unable to receive a response from a model within the specified
@@ -80,41 +83,38 @@ def create_endpoint(
         The number of replicas of the model to create. The number of replicas
         for a model can be changed at any time with
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
-    batch_size : int, optional
-        The user-defined query batch size for the model. Replicas of the model will attempt
-        to process at most `batch_size` queries simultaneously. They may process smaller 
-        batches if `batch_size` queries are not immediately available.
-        If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
-        replicas of this model.
+
+    Note
+    ----
+    Regarding `mxnet_data_shapes` parameter:
+    Clipper may provide the model with variable size input batches. Because MXNet can't
+    handle variable size input batches, we recommend setting batch size for input data
+    to 1, or dynamically reshaping the model with every prediction based on the current
+    input batch size.
     """
 
     clipper_conn.register_application(name, input_type, default_output,
                                       slo_micros)
-    deploy_pyspark_model(clipper_conn, name, version, input_type, func,
-                         pyspark_model, sc, base_image, labels, registry,
-                         num_replicas, batch_size)
+    deploy_mxnet_model(clipper_conn, name, version, input_type, func,
+                       mxnet_model, mxnet_data_shapes, base_image, labels,
+                       registry, num_replicas)
 
     clipper_conn.link_model_to_app(name, name)
 
 
-def deploy_pyspark_model(
+def deploy_mxnet_model(
         clipper_conn,
         name,
         version,
         input_type,
         func,
-        pyspark_model,
-        sc,
-        base_image="clipper/pyspark-container:{}".format(__version__),
+        mxnet_model,
+        mxnet_data_shapes,
+        base_image="clipper/mxnet-container:{}".format(__version__),
         labels=None,
         registry=None,
-        num_replicas=1,
-        batch_size=-1):
-    """Deploy a Python function with a PySpark model.
-
-    The function must take 3 arguments (in order): a SparkSession, the PySpark model, and a list of
-    inputs. It must return a list of strings of the same length as the list of inputs.
-
+        num_replicas=1):
+    """Deploy a Python function with a MXNet model.
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
@@ -130,10 +130,13 @@ def deploy_pyspark_model(
     func : function
         The prediction function. Any state associated with the function will be
         captured via closure capture and pickled with Cloudpickle.
-    pyspark_model : pyspark.mllib.* or pyspark.ml.pipeline.PipelineModel object
-        The PySpark model to save.
-    sc : SparkContext,
-        The current SparkContext. This is needed to save the PySpark model.
+    mxnet_model : mxnet model object
+        The MXNet model to save.
+    mxnet_data_shapes : list(int)
+        List of integers representing the dimensions of data used for model prediction.
+        Required because loading serialized MXNet models involves binding, which requires
+        the shape of the data used to train the model.
+        https://mxnet.incubator.apache.org/api/python/module.html#mxnet.module.BaseModule.bind
     base_image : str, optional
         The base Docker image to build the new model image from. This
         image should contain all code necessary to run a Clipper model
@@ -149,85 +152,78 @@ def deploy_pyspark_model(
         The number of replicas of the model to create. The number of replicas
         for a model can be changed at any time with
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
-    batch_size : int, optional
-        The user-defined query batch size for the model. Replicas of the model will attempt
-        to process at most `batch_size` queries simultaneously. They may process smaller 
-        batches if `batch_size` queries are not immediately available.
-        If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
-        replicas of this model.
+
+    Note
+    ----
+    Regarding `mxnet_data_shapes` parameter:
+    Clipper may provide the model with variable size input batches. Because MXNet can't
+    handle variable size input batches, we recommend setting batch size for input data
+    to 1, or dynamically reshaping the model with every prediction based on the current
+    input batch size.
 
     Example
     -------
-    Define a pre-processing function ``shift()`` and to normalize prediction inputs::
 
         from clipper_admin import ClipperConnection, DockerContainerManager
-        from clipper_admin.deployers.pyspark import deploy_pyspark_model
-        from pyspark.mllib.classification import LogisticRegressionWithSGD
-        from pyspark.sql import SparkSession
-
-        spark = SparkSession\
-                .builder\
-                .appName("clipper-pyspark")\
-                .getOrCreate()
-
-        sc = spark.sparkContext
+        from clipper_admin.deployers.mxnet import deploy_mxnet_model
+        import mxnet as mx
 
         clipper_conn = ClipperConnection(DockerContainerManager())
 
         # Connect to an already-running Clipper cluster
         clipper_conn.connect()
 
-        # Loading a training dataset omitted...
-        model = LogisticRegressionWithSGD.train(trainRDD, iterations=10)
+        # Create a MXNet model
+        # Configure a two layer neuralnetwork
+        data = mx.symbol.Variable('data')
+        fc1 = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128)
+        act1 = mx.symbol.Activation(fc1, name='relu1', act_type='relu')
+        fc2 = mx.symbol.FullyConnected(act1, name='fc2', num_hidden=10)
+        softmax = mx.symbol.SoftmaxOutput(fc2, name='softmax')
 
-        # Note that this function accesses the trained PySpark model via an explicit
-        # argument, but other state can be captured via closure capture if necessary.
-        def predict(spark, model, inputs):
-            return [str(model.predict(shift(x))) for x in inputs]
+        # Initialize the module and fit it
+        mxnet_model = mx.mod.Module(softmax)
+        mxnet_model.fit(data_iter, num_epoch=1)
 
-        deploy_pyspark_model(
+        data_shape = [1, 785]
+
+        deploy_mxnet_model(
             clipper_conn,
             name="example",
+            version = 1,
             input_type="doubles",
             func=predict,
-            pyspark_model=model,
-            sc=sc)
+            mxnet_model=model,
+            mxnet_data_shapes=data_shape)
     """
 
-    model_class = re.search("pyspark.*'",
-                            str(type(pyspark_model))).group(0).strip("'")
-    if model_class is None:
-        raise ClipperException(
-            "pyspark_model argument was not a pyspark object")
-
-    # save predict function
     serialization_dir = save_python_function(name, func)
-    # save Spark model
-    spark_model_save_loc = os.path.join(serialization_dir,
-                                        "pyspark_model_data")
+
+    # save MXNet model
+    mxnet_model_save_loc = os.path.join(serialization_dir,
+                                        MXNET_MODEL_RELATIVE_PATH)
+
     try:
-        if isinstance(pyspark_model,
-                      pyspark.ml.pipeline.PipelineModel) or isinstance(
-                          pyspark_model, pyspark.ml.base.Model):
-            pyspark_model.save(spark_model_save_loc)
-        else:
-            pyspark_model.save(sc, spark_model_save_loc)
+
+        # Saves model in two files: <serialization_dir>/mxnet_model.json will be saved for symbol,
+        # <serialization_dir>/mxnet_model.params will be saved for parameters.
+        mxnet_model.save_checkpoint(prefix=mxnet_model_save_loc, epoch=0)
+
+        # Saves data_shapes to mxnet_model_metadata.json
+        with open(
+                os.path.join(serialization_dir, "mxnet_model_metadata.json"),
+                "w") as f:
+            json.dump({"data_shapes": mxnet_data_shapes}, f)
+
+        # Deploy model
+        clipper_conn.build_and_deploy_model(name, version, input_type,
+                                            serialization_dir, base_image,
+                                            labels, registry, num_replicas)
+
     except Exception as e:
-        logger.warn("Error saving spark model: %s" % e)
-        raise e
+        logger.error("Error saving MXNet model: %s" % e)
 
-    # extract the pyspark class name. This will be something like
-    # pyspark.mllib.classification.LogisticRegressionModel
-    with open(os.path.join(serialization_dir, "metadata.json"),
-              "w") as metadata_file:
-        json.dump({"model_class": model_class}, metadata_file)
-
-    logger.info("Spark model saved")
-
-    # Deploy model
-    clipper_conn.build_and_deploy_model(name, version, input_type,
-                                        serialization_dir, base_image, labels,
-                                        registry, num_replicas, batch_size)
+    logger.info("MXNet model saved")
 
     # Remove temp files
     shutil.rmtree(serialization_dir)
