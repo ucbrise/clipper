@@ -24,6 +24,8 @@ docker tag clipper/query_frontend:$tag 568959175238.dkr.ecr.us-west-1.amazonaws.
 docker push 568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/query_frontend:$tag
 docker tag clipper/management_frontend:$tag 568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/management_frontend:$tag
 docker push 568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/management_frontend:$tag
+docker tag clipper/frontend-exporter:$tag 568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/frontend-exporter:$tag
+docker push 568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/frontend-exporter:$tag
 
 # Run tests
 docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp \
