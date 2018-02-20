@@ -16,7 +16,9 @@ frontend_exporter_deployment_path = os.path.join(
 
 logger = logging.getLogger(__name__)
 
-CLIPPER_FRONTEND_EXPORTER_IMAGE = "clipper/frontend-exporter:{}".format(__version__)
+CLIPPER_FRONTEND_EXPORTER_IMAGE = "clipper/frontend-exporter:{}".format(
+    __version__)
+
 
 @contextmanager
 def _pass_conflicts():
@@ -29,6 +31,7 @@ def _pass_conflicts():
             pass
         else:
             raise e
+
 
 def _create_prometheus_configmap(_k8s_v1):
     with open(prom_configmap_path, 'r') as f:
@@ -61,7 +64,8 @@ def _create_frontend_exporter_depolyment(_k8s_beta, query_addr):
     data['spec']['template']['spec']['containers'][0]['args'].append(
         query_addr)
 
-    data['spec']['template']['spec']['containers'][0]['image'] = CLIPPER_FRONTEND_EXPORTER_IMAGE
+    data['spec']['template']['spec']['containers'][0][
+        'image'] = CLIPPER_FRONTEND_EXPORTER_IMAGE
 
     with _pass_conflicts():
         _k8s_beta.create_namespaced_deployment(body=data, namespace='default')
