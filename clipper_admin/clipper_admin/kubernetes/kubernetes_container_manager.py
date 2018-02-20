@@ -159,9 +159,6 @@ class KubernetesContainerManager(ContainerManager):
                 elif p.name == "7000":
                     self.clipper_rpc_port = p.node_port
 
-            query_addr = "{}:{}".format(self.external_node_hosts[0], self.clipper_query_port)
-            start_frontend_exporter(self._k8s_beta, query_addr)
-
         except ApiException as e:
             logging.warn(
                 "Exception connecting to Clipper Kubernetes cluster: {}".
