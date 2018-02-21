@@ -171,6 +171,14 @@ class KubernetesContainerManager(ContainerManager):
                 elif p.name == "7000":
                     self.clipper_rpc_port = p.node_port
 
+            metrics_ports = self._k8s_v1.read_namespaced_service(
+                name="metrics", namespace='default').spec.ports
+            for p in metrics_ports:
+                if p.name == "9090":
+                    self.clipper_metric_port = p.node_port
+                    logger.info("Setting Clipper metric port to {}".format(
+                        self.clipper_metric_port))
+
             query_addr = "{}:{}".format(self.external_node_hosts[0],
                                         self.clipper_query_port)
             start_frontend_exporter(self._k8s_beta, query_addr)
@@ -201,6 +209,10 @@ class KubernetesContainerManager(ContainerManager):
                                 create_model_container_label(name, version),
                                 CLIPPER_DOCKER_LABEL:
                                 ""
+                            },
+                            'annotations': {
+                                "prometheus.io/scrape": "true",
+                                "prometheus.io/port": "1390"
                             }
                         },
                         'spec': {
@@ -354,6 +366,12 @@ class KubernetesContainerManager(ContainerManager):
     def get_query_addr(self):
         return "{host}:{port}".format(
             host=self.external_node_hosts[0], port=self.clipper_query_port)
+    
+    def get_metric_addr(self):
+        return "{host}:{port}".format(
+            host=self.external_node_hosts[0],
+            port=self.clipper_metric_port
+        )
 
 
 def get_model_deployment_name(name, version):

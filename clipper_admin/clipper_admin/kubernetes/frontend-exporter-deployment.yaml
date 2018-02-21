@@ -9,6 +9,8 @@ spec:
   replicas: 1
   template:
     metadata:
+      annotations:
+        "prometheus.io/scrape": "true"
       labels:
         ai.clipper.container.label: ""
         ai.clipper.name: frontend-exporter
