@@ -7,4 +7,4 @@ Steps:
 
 For Kubernetes:
 
-- You can find the metric address via `KubernetesContainerManager::get_metric_addr` function. 
+- You can find the metric address via `KubernetesContainerManager.get_metric_addr` function. 

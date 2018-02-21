@@ -8,7 +8,7 @@ import json
 from ..version import __version__
 
 _cur_dir = os.path.dirname(os.path.abspath(__file__))
-prom_depolyment_path = os.path.join(_cur_dir, 'prom_depolyment.yml')
+prom_deployment_path = os.path.join(_cur_dir, 'prom_deployment.yml')
 prom_service_path = os.path.join(_cur_dir, 'prom_service.yml')
 prom_configmap_path = os.path.join(_cur_dir, 'prom_configmap.yml')
 frontend_exporter_deployment_path = os.path.join(
@@ -41,8 +41,8 @@ def _create_prometheus_configmap(_k8s_v1):
         _k8s_v1.create_namespaced_config_map(body=data, namespace='default')
 
 
-def _create_prometheus_depolyment(_k8s_beta):
-    with open(prom_depolyment_path, 'r') as f:
+def _create_prometheus_deployment(_k8s_beta):
+    with open(prom_deployment_path, 'r') as f:
         data = yaml.load(f)
 
     with _pass_conflicts():
@@ -57,25 +57,7 @@ def _create_prometheus_service(_k8s_v1):
         _k8s_v1.create_namespaced_service(body=data, namespace='default')
 
 
-def _create_frontend_exporter_depolyment(_k8s_beta, query_addr):
-    with open(frontend_exporter_deployment_path, 'r') as f:
-        data = yaml.load(f)
-
-    data['spec']['template']['spec']['containers'][0]['args'].append(
-        query_addr)
-
-    data['spec']['template']['spec']['containers'][0][
-        'image'] = CLIPPER_FRONTEND_EXPORTER_IMAGE
-
-    with _pass_conflicts():
-        _k8s_beta.create_namespaced_deployment(body=data, namespace='default')
-
-
 def start_prometheus(_k8s_v1, _k8s_beta):
     _create_prometheus_configmap(_k8s_v1)
-    _create_prometheus_depolyment(_k8s_beta)
+    _create_prometheus_deployment(_k8s_beta)
     _create_prometheus_service(_k8s_v1)
-
-
-def start_frontend_exporter(_k8s_beta, query_addr):
-    _create_frontend_exporter_depolyment(_k8s_beta, query_addr)

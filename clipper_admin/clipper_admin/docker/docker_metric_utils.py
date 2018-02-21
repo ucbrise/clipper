@@ -46,7 +46,6 @@ def run_query_frontend_metric_image(name, docker_client, query_name,
 
     query_frontend_metric_cmd = "--query_frontend_name {}:{}".format(
         query_name, CLIPPER_INTERNAL_QUERY_PORT)
-
     query_frontend_metric_labels = common_labels.copy()
 
     docker_client.containers.run(

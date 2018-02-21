@@ -66,8 +66,7 @@ if __name__ == '__main__':
         "simple-example",
         "doubles",
         feature_sum,
-        num_replicas=2,
-        base_image="simonmok/py-rpc")
+        num_replicas=2)
     time.sleep(2)
     print("Starting Prediction")
 

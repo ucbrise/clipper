@@ -3,7 +3,7 @@ from ..container_manager import (create_model_container_label,
                                  ContainerManager, CLIPPER_DOCKER_LABEL,
                                  CLIPPER_MODEL_CONTAINER_LABEL)
 from ..exceptions import ClipperException
-from .kubernetes_metric_utils import start_prometheus, start_frontend_exporter
+from .kubernetes_metric_utils import start_prometheus, CLIPPER_FRONTEND_EXPORTER_IMAGE
 
 from contextlib import contextmanager
 from kubernetes import client, config
@@ -108,6 +108,7 @@ class KubernetesContainerManager(ContainerManager):
                     if name is 'query-frontend':
                         args.append(
                             "--prediction_cache_size={}".format(cache_size))
+                        data['spec']['template']['spec']['containers'][1]['image'] = CLIPPER_FRONTEND_EXPORTER_IMAGE
                     body["spec"]["template"]["spec"]["containers"][0][
                         "args"] = args
                 body["spec"]["template"]["spec"]["containers"][0][
@@ -178,10 +179,6 @@ class KubernetesContainerManager(ContainerManager):
                     self.clipper_metric_port = p.node_port
                     logger.info("Setting Clipper metric port to {}".format(
                         self.clipper_metric_port))
-
-            query_addr = "{}:{}".format(self.external_node_hosts[0],
-                                        self.clipper_query_port)
-            start_frontend_exporter(self._k8s_beta, query_addr)
 
         except ApiException as e:
             logging.warn(
