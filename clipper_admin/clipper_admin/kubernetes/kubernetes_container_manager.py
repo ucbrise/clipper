@@ -108,7 +108,7 @@ class KubernetesContainerManager(ContainerManager):
                     if name is 'query-frontend':
                         args.append(
                             "--prediction_cache_size={}".format(cache_size))
-                        data['spec']['template']['spec']['containers'][1][
+                        body['spec']['template']['spec']['containers'][1][
                             'image'] = CLIPPER_FRONTEND_EXPORTER_IMAGE
                     body["spec"]["template"]["spec"]["containers"][0][
                         "args"] = args
