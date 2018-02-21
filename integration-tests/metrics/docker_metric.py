@@ -23,6 +23,7 @@ from clipper_admin.deployers import python as python_deployer
 
 DOCKER_METRIC_ADDR = 'localhost:9090'
 
+
 def predict(addr, x):
     url = "http://%s/simple-example/predict" % addr
     req_json = json.dumps({'input': list(x)})
@@ -68,7 +69,8 @@ if __name__ == '__main__':
             time.sleep(0.2)
 
         logger.info("Test 1: Checking status of 3 node exporter")
-        up_response = get_matched_query(query_request_template.format(DOCKER_METRIC_ADDR, 'up'))
+        up_response = get_matched_query(
+            query_request_template.format(DOCKER_METRIC_ADDR, 'up'))
         parse_res_and_assert_node(up_response, node_num=3)
         logger.info("Test 1 Passed")
 
@@ -81,7 +83,8 @@ if __name__ == '__main__':
             if spec['type'] == 'Histogram' or spec['type'] == 'Summary':
                 name += '_sum'
 
-            res = get_matched_query(query_request_template.format(DOCKER_METRIC_ADDR, name))
+            res = get_matched_query(
+                query_request_template.format(DOCKER_METRIC_ADDR, name))
             parse_res_and_assert_node(res, node_num=2)
         logger.info("Test 2 Passed")
 

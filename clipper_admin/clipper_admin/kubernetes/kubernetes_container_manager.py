@@ -366,12 +366,10 @@ class KubernetesContainerManager(ContainerManager):
     def get_query_addr(self):
         return "{host}:{port}".format(
             host=self.external_node_hosts[0], port=self.clipper_query_port)
-    
+
     def get_metric_addr(self):
         return "{host}:{port}".format(
-            host=self.external_node_hosts[0],
-            port=self.clipper_metric_port
-        )
+            host=self.external_node_hosts[0], port=self.clipper_metric_port)
 
 
 def get_model_deployment_name(name, version):

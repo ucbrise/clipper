@@ -54,7 +54,7 @@ if __name__ == '__main__':
 
     logger.info("Start K8s Metric Test (0/1): Running 2 Replicas")
     clipper_conn = clipper_conn = create_kubernetes_connection(
-            cleanup=True, start_clipper=True)
+        cleanup=True, start_clipper=True)
     time.sleep(10)
     print(clipper_conn.cm.get_query_addr())
     print(clipper_conn.inspect_instance())
@@ -63,7 +63,11 @@ if __name__ == '__main__':
     metric_addr = clipper_conn.cm.get_metric_addr()
 
     python_deployer.create_endpoint(
-        clipper_conn, "simple-example", "doubles", feature_sum, num_replicas=2,
+        clipper_conn,
+        "simple-example",
+        "doubles",
+        feature_sum,
+        num_replicas=2,
         registry="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper")
     time.sleep(2)
     try:
@@ -75,7 +79,8 @@ if __name__ == '__main__':
             time.sleep(0.2)
 
         logger.info("Test 1: Checking status of 3 node exporter")
-        up_response = get_matched_query(query_request_template.format(metric_addr, 'up'))
+        up_response = get_matched_query(
+            query_request_template.format(metric_addr, 'up'))
         parse_res_and_assert_node(up_response, node_num=3)
         logger.info("Test 1 Passed")
 
@@ -88,7 +93,8 @@ if __name__ == '__main__':
             if spec['type'] == 'Histogram' or spec['type'] == 'Summary':
                 name += '_sum'
 
-            res = get_matched_query(query_request_template.format(metric_addr, name))
+            res = get_matched_query(
+                query_request_template.format(metric_addr, name))
             parse_res_and_assert_node(res, node_num=2)
         logger.info("Test 2 Passed")
 

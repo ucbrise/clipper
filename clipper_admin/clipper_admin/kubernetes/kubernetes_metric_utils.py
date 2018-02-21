@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 CLIPPER_FRONTEND_EXPORTER_IMAGE = "clipper/frontend-exporter:{}".format(
     __version__)
 
+
 @contextmanager
 def _pass_conflicts():
     try:
