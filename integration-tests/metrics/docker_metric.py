@@ -12,11 +12,12 @@ import numpy as np
 import requests
 import yaml
 
-sys.path.insert(0, '../')
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+
+sys.path.insert(0, '{}/../'.format(cur_dir))
 from test_utils import log_clipper_state
 from metric_utils import parse_res_and_assert_node, get_matched_query, get_metrics_config
 
-cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../../clipper_admin" % cur_dir))
 from clipper_admin import ClipperConnection, DockerContainerManager
 from clipper_admin.deployers import python as python_deployer
