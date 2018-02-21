@@ -18,7 +18,7 @@ args = parser.parse_args()
 
 query_frontend_id = args.query_frontend_name
 
-ADDRESS = 'http://{}:1337/metrics'.format(query_frontend_id)
+ADDRESS = 'http://{}/metrics'.format(query_frontend_id)
 
 
 def load_metric():
