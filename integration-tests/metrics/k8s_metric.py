@@ -28,6 +28,8 @@ def predict(addr, x):
     req_json = json.dumps({'input': list(x)})
     headers = {'Content-type': 'application/json'}
     r = requests.post(url, headers=headers, data=req_json)
+    if r.status_code == requests.codes.ok:
+        print(r.json())
 
 
 def feature_sum(xs):
@@ -70,12 +72,12 @@ if __name__ == '__main__':
         feature_sum,
         num_replicas=2,
         registry="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper")
-    time.sleep(2)
+    time.sleep(20)
     try:
         logger.info(
-            "Making 100 predictions using two model container; Should takes 25 seconds."
+            "Making 50 predictions using two model container; Should takes 12 seconds."
         )
-        for _ in range(100):
+        for _ in range(50):
             predict(query_addr, np.random.random(200))
             time.sleep(0.2)
 
