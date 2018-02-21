@@ -42,6 +42,7 @@ def save_python_function(name, func):
     c.dump(func)
     serialized_prediction_function = s.getvalue()
 
+
     # Set up serialization directory
     if not os.path.exists(CLIPPER_TEMP_DIR):
         os.makedirs(CLIPPER_TEMP_DIR)

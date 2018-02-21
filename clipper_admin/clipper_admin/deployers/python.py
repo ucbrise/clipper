@@ -97,7 +97,7 @@ def deploy_python_closure(
         version,
         input_type,
         func,
-        base_image="default"
+        base_image="default",
         labels=None,
         registry=None,
         num_replicas=1,
@@ -187,6 +187,7 @@ def deploy_python_closure(
     serialization_dir = posixpath.join(*os.path.split(serialization_dir))
     logger.info("Python closure saved")
     # Check if Python 2 or Python 3 image
+
     if sys.version_info[0] < 3:
         base_image="clipper/python-closure-container:{}".format(__version__)
     else:
