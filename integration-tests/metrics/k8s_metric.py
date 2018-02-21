@@ -19,7 +19,7 @@ from test_utils import log_clipper_state, create_kubernetes_connection
 from metric_utils import parse_res_and_assert_node, get_matched_query, get_metrics_config
 
 sys.path.insert(0, os.path.abspath("%s/../../clipper_admin" % cur_dir))
-from clipper_admin import ClipperConnection
+from clipper_admin import ClipperConnection, KubernetesContainerManager
 from clipper_admin.deployers import python as python_deployer
 
 
@@ -56,9 +56,11 @@ if __name__ == '__main__':
     logger = logging.getLogger(__name__)
 
     logger.info("Start K8s Metric Test (0/1): Running 2 Replicas")
+
     clipper_conn = create_kubernetes_connection(
         cleanup=True, start_clipper=True)
     time.sleep(10)
+
     print(clipper_conn.cm.get_query_addr())
     print(clipper_conn.inspect_instance())
 
@@ -81,10 +83,11 @@ if __name__ == '__main__':
         model_name,
         1,
         "doubles",
-        '../data',
-        "clipper/noop-container:{}".format('develop'),
+        'data',
+        "clipper/noop-container",
         num_replicas=2,
-        container_registry="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper")
+        container_registry=
+        "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper")
     clipper_conn.link_model_to_app(app_name, model_name)
 
     time.sleep(20)
