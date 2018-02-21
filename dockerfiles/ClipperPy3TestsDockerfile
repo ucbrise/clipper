@@ -1,0 +1,31 @@
+ARG CODE_VERSION
+FROM clipper/lib_base:${CODE_VERSION}
+
+# install docker
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install --fix-missing -y \
+      wget apt-transport-https ca-certificates curl software-properties-common \
+      openjdk-8-jdk clang-format \
+      && curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
+      && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+      && apt-get update \
+      && apt-get install -y docker-ce
+
+RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh \
+    && wget --quiet 'https://repo.continuum.io/archive/Anaconda3-5.1.0-Linux-x86_64.sh' -O /tmp/anaconda3.sh \
+    && /bin/bash /tmp/anaconda3.sh -b -p /opt/conda \
+    && rm /tmp/anaconda3.sh
+ENV PATH "/opt/conda/bin:$PATH"
+RUN conda install -y libgcc pyzmq
+ 
+RUN pip install requests subprocess32 scikit-learn numpy pyyaml docker cloudpickle==0.5.2
+
+COPY ./ /clipper
+
+# Patch Clipper
+RUN cd /clipper/src/libs/spdlog \
+    && git apply ../patches/make_spdlog_compile_linux.patch
+
+
+ENTRYPOINT ["/clipper/bin/ci_checks.sh"]
+
+# vim: set filetype=dockerfile:
