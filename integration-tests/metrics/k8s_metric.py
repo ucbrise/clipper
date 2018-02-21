@@ -13,15 +13,14 @@ import requests
 import yaml
 
 sys.path.insert(0, '../')
-from test_utils import log_clipper_state
+from test_utils import log_clipper_state, create_kubernetes_connection
 from metric_utils import parse_res_and_assert_node, get_matched_query, get_metrics_config
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../../clipper_admin" % cur_dir))
-from clipper_admin import ClipperConnection, DockerContainerManager
+from clipper_admin import ClipperConnection
 from clipper_admin.deployers import python as python_deployer
 
-DOCKER_METRIC_ADDR = 'localhost:9090'
 
 def predict(addr, x):
     url = "http://%s/simple-example/predict" % addr
@@ -53,22 +52,30 @@ if __name__ == '__main__':
 
     logger = logging.getLogger(__name__)
 
-    logger.info("Start Docker Metric Test (0/1): Running 2 Replicas")
-    clipper_conn = ClipperConnection(DockerContainerManager(redis_port=6380))
-    clipper_conn.start_clipper()
+    logger.info("Start K8s Metric Test (0/1): Running 2 Replicas")
+    clipper_conn = clipper_conn = create_kubernetes_connection(
+            cleanup=True, start_clipper=True)
+    time.sleep(10)
+    print(clipper_conn.cm.get_query_addr())
+    print(clipper_conn.inspect_instance())
+
+    query_addr = clipper_conn.cm.get_query_addr()
+    metric_addr = clipper_conn.cm.get_metric_addr()
+
     python_deployer.create_endpoint(
-        clipper_conn, "simple-example", "doubles", feature_sum, num_replicas=2)
+        clipper_conn, "simple-example", "doubles", feature_sum, num_replicas=2,
+        registry="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper")
     time.sleep(2)
     try:
         logger.info(
             "Making 100 predictions using two model container; Should takes 25 seconds."
         )
         for _ in range(100):
-            predict(clipper_conn.get_query_addr(), np.random.random(200))
+            predict(query_addr, np.random.random(200))
             time.sleep(0.2)
 
         logger.info("Test 1: Checking status of 3 node exporter")
-        up_response = get_matched_query(query_request_template.format(DOCKER_METRIC_ADDR, 'up'))
+        up_response = get_matched_query(query_request_template.format(metric_addr, 'up'))
         parse_res_and_assert_node(up_response, node_num=3)
         logger.info("Test 1 Passed")
 
@@ -81,14 +88,13 @@ if __name__ == '__main__':
             if spec['type'] == 'Histogram' or spec['type'] == 'Summary':
                 name += '_sum'
 
-            res = get_matched_query(query_request_template.format(DOCKER_METRIC_ADDR, name))
+            res = get_matched_query(query_request_template.format(metric_addr, name))
             parse_res_and_assert_node(res, node_num=2)
         logger.info("Test 2 Passed")
 
-        logger.info("Docker Metric Test Done, Cleaning up...")
+        logger.info("K8s Metric Test Done, Cleaning up...")
         clipper_conn.stop_all()
     except Exception as e:
-        log_docker_ps(clipper_conn)
         logger.error(e)
         log_clipper_state(clipper_conn)
         clipper_conn.stop_all()
