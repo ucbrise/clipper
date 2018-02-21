@@ -65,13 +65,24 @@ if __name__ == '__main__':
     query_addr = clipper_conn.cm.get_query_addr()
     metric_addr = clipper_conn.cm.get_metric_addr()
 
-    python_deployer.create_endpoint(
-        clipper_conn,
-        "simple-example",
+    # python_deployer.create_endpoint(
+    #     clipper_conn,
+    #     "simple-example",
+    #     "doubles",
+    #     feature_sum,
+    #     num_replicas=2,
+    #     registry="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper")
+
+    clipper_conn.build_and_deploy_model(
+        'simple-example',
+        '1.0',
         "doubles",
-        feature_sum,
-        num_replicas=2,
-        registry="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper")
+        '../data',
+        "clipper/noop-container:{}".format('develop'),
+        num_replicas=1,
+        container_registry=
+        "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper")
+
     time.sleep(20)
     try:
         logger.info(
