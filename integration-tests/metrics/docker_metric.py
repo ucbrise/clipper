@@ -10,10 +10,10 @@ import time
 import numpy as np
 import requests
 import yaml
-from test_utils import (log_clipper_state)
+from ..test_utils import (log_clipper_state)
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
+sys.path.insert(0, os.path.abspath("%s/../../clipper_admin" % cur_dir))
 from clipper_admin import ClipperConnection, DockerContainerManager
 from clipper_admin.deployers import python as python_deployer
 
@@ -69,7 +69,7 @@ if __name__ == '__main__':
 
     logger = logging.getLogger(__name__)
 
-    logger.info("Start Metric Test (0/1): Running 2 Replicas")
+    logger.info("Start Docker Metric Test (0/1): Running 2 Replicas")
     clipper_conn = ClipperConnection(DockerContainerManager(redis_port=6380))
     clipper_conn.start_clipper()
     python_deployer.create_endpoint(
@@ -101,7 +101,7 @@ if __name__ == '__main__':
             parse_res_and_assert_node(res, node_num=2)
         logger.info("Test 2 Passed")
 
-        logger.info("Metric Test Done, Cleaning up...")
+        logger.info("Docker Metric Test Done, Cleaning up...")
         clipper_conn.stop_all()
     except Exception as e:
         log_docker_ps(clipper_conn)
