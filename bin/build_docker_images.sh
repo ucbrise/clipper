@@ -246,6 +246,8 @@ build_images () {
     create_image management_frontend ManagementFrontendDockerfile $public
     create_image dev ClipperDevDockerfile  $public
     create_image unittests ClipperTestsDockerfile  $private
+    create_image unittests ClipperPy3TestsDockerfile  $private
+
 
     # Build containers
     create_image spark-scala-container SparkScalaContainerDockerfile $public
