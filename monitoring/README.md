@@ -13,5 +13,10 @@ See `metrics_config.yaml` for the metrics detail and description. This configura
 ## Scrape Target Discovery
 In Docker, we add scrape targets as the service is setup and an new replica added. The scrape configuration file is saved in `tmp/clipper`. 
 
-In Kubernetes, prometheus can utilize Kubernetes's service discovery mechanism. The scrape target will be acquired automatically. 
+In Kubernetes, prometheus can utilize Kubernetes's service discovery mechanism. The scrape target will be acquired automatically. In more detail, any pods with annotation 
 
+```yaml
+'prometheus.io/scrape': 'true'
+```
+
+will be scraped. 
