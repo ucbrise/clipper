@@ -120,8 +120,8 @@ class AppMetrics {
 template <class QP>
 class RequestHandler {
  public:
-  RequestHandler(std::string address, int portno, int num_threads)
-      : server_(address, portno, num_threads), query_processor_() {
+  RequestHandler(std::string address, int portno)
+      : server_(address, portno), query_processor_() {
     clipper::Config& conf = clipper::get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
