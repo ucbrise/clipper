@@ -1,6 +1,7 @@
 from __future__ import print_function
 import rpc
 import os
+import pickle
 import sys
 
 import numpy as np
@@ -21,7 +22,7 @@ def load_predict_func(file_path):
 def load_xgboost_model(model_path):
     print("Loading XGBoost model from %s" % (model_path))
     try:
-        model = xgb.Booster(model_file=model_path)
+        model = pickle.load(open(model_path + '/xgboost_model_data.pickle.dat', 'rb'))
     except xgb.core.XGBoostError:
         print("Failed to load XGBoost model from %s" % (model_path))
         sys.exit(1)
@@ -104,7 +105,7 @@ if __name__ == "__main__":
     sys.stderr.flush()
 
     try:
-        model = XGBoost(model_path, input_type)
+        model = XGBoostContainer(model_path, input_type)
         rpc_service = rpc.RPCService()
         rpc_service.start(model, ip, port, model_name, model_version,
                           input_type)

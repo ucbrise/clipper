@@ -31,7 +31,7 @@ model_name = "xgboost-model"
 
 
 def predict(model, xs):
-    return [str(model.predict(x)) for x in xs]
+    return [str(model.predict(xgb.DMatrix(xs)))]
 
 def deploy_and_test_model(clipper_conn,
                           model,
@@ -105,10 +105,9 @@ if __name__ == "__main__":
                 raise BenchmarkException("Error creating app %s" % app_name)
 
             version = 1
-            dtrain = xgb.DMatrix(str(train_path))
-            dtest = xgb.DMatrix(str(test_path))
+            dtrain = xgb.DMatrix(get_test_point(), label=[0])
             param = {'max_depth': 2, 'eta': 1, 'silent': 1, 'objective': 'binary:logistic'}
-            watchlist = [(dtest, 'eval'), (dtrain, 'train')]
+            watchlist = [(dtrain, 'train')]
             num_round = 2
             bst = xgb.train(param, dtrain, num_round, watchlist)
             deploy_and_test_model(

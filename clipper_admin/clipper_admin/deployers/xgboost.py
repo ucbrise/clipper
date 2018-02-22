@@ -4,6 +4,7 @@ import xgboost as xgb
 import logging
 import re
 import os
+import pickle
 
 from ..version import __version__
 from ..clipper_admin import ClipperException
@@ -193,9 +194,9 @@ def deploy_xgboost_model(
     serialization_dir = save_python_function(name, func)
     # save XGBoost model
     xgboost_model_save_loc = os.path.join(serialization_dir,
-                                    "xgboost_model_data")
+                                    "xgboost_model_data.pickle.dat")
     try:
-        xgboost_model.save_model(xgboost_model_save_loc)
+        pickle.dump(xgboost_model, open(xgboost_model_save_loc, "wb"))
     except Exception as e:
         logger.warn("Error saving xgboost model: %s" % e)
         raise e
