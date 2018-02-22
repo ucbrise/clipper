@@ -33,3 +33,4 @@ spec:
         ports:
         - containerPort: 1390
       restartPolicy: Always
+      

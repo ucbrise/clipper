@@ -20,7 +20,6 @@ from metric_utils import parse_res_and_assert_node, get_matched_query, get_metri
 
 sys.path.insert(0, os.path.abspath("%s/../../clipper_admin" % cur_dir))
 from clipper_admin import ClipperConnection, KubernetesContainerManager
-from clipper_admin.deployers import python as python_deployer
 
 
 def predict(addr, x):
@@ -66,14 +65,6 @@ if __name__ == '__main__':
 
     query_addr = clipper_conn.cm.get_query_addr()
     metric_addr = clipper_conn.cm.get_metric_addr()
-
-    # python_deployer.create_endpoint(
-    #     clipper_conn,
-    #     "simple-example",
-    #     "doubles",
-    #     feature_sum,
-    #     num_replicas=2,
-    #     registry="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper")
 
     app_name = 'simple-example'
     model_name = 'simple-example'
