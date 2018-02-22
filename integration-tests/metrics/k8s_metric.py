@@ -81,7 +81,7 @@ if __name__ == '__main__':
         "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper")
     clipper_conn.link_model_to_app(app_name, model_name)
 
-    time.sleep(20)
+    time.sleep(30)
     try:
         logger.info(
             "Making 50 predictions using two model container; Should takes 12 seconds."
