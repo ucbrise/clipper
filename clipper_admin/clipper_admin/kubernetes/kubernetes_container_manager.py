@@ -214,6 +214,9 @@ class KubernetesContainerManager(ContainerManager):
             }
             self._k8s_beta.create_namespaced_deployment(
                 body=body, namespace='default')
+            logger.info("Created namespaced deployment")
+            print(self._k8s_beta.read_namespaced_deployment_status(name=deployment_name,
+                                                             namespace='default'))
 
     def get_num_replicas(self, name, version):
         deployment_name = get_model_deployment_name(name, version)
@@ -226,6 +229,7 @@ class KubernetesContainerManager(ContainerManager):
         # NOTE: assumes `metadata.name` can identify the model deployment.
         deployment_name = get_model_deployment_name(name, version)
 
+        print("im in set num replicas")
         self._k8s_beta.patch_namespaced_deployment_scale(
             name=deployment_name,
             namespace='default',
