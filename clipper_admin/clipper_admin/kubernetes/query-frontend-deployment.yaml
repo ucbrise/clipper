@@ -30,6 +30,7 @@ spec:
         - "query-frontend:1337"
         image: "clipper/frontend-exporter" 
         name: frontend-exporter
+        imagePullPolicy: Always
         ports:
         - containerPort: 1390
       restartPolicy: Always
