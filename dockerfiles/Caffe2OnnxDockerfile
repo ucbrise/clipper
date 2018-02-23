@@ -8,12 +8,10 @@ RUN echo deb http://ftp.de.debian.org/debian jessie-backports main >> /etc/apt/s
       && apt-get install -yqq -t jessie-backports openjdk-8-jdk \
       && conda install -y --file /lib/python_container_conda_deps.txt \
       && conda install -c anaconda cloudpickle=0.5.2 \
-      && conda install -c ezyang onnx\
-      && conda install -c conda-forge protobuf==3.4.0 \
-      && conda install -c ezyang/label/devgpu caffe2 \
-      && conda install -c ezyang onnx-caffe2 \
-      && conda install -c jjh_pytorch pytorch \
-      && conda install -c jjh_pytorch torchvision
+      && conda install -c conda-forge onnx \
+      && conda install -c caffe2 caffe2 \
+      && pip install onnx-caffe2 \
+      && conda install -c pytorch pytorch torchvision
 
 COPY containers/python/caffe2_onnx_container.py containers/python/caffe2_onnx_container_entry.sh /container/
 COPY clipper_admin/ /lib/clipper_admin
