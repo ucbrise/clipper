@@ -81,6 +81,12 @@ def create_pytorch_endpoint(clipper_conn,
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
     onnx_backend : str, optional
         The provided onnx backend.Caffe2 is the only currently supported ONNX backend.
+    batch_size : int, optional
+        The user-defined query batch size for the model. Replicas of the model will attempt
+        to process at most `batch_size` queries simultaneously. They may process smaller 
+        batches if `batch_size` queries are not immediately available.
+        If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
+        replicas of this model.
     """
 
     clipper_conn.register_application(name, input_type, default_output,
@@ -143,6 +149,12 @@ def deploy_pytorch_model(clipper_conn,
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
     onnx_backend : str, optional
         The provided onnx backend.Caffe2 is the only currently supported ONNX backend.
+    batch_size : int, optional
+        The user-defined query batch size for the model. Replicas of the model will attempt
+        to process at most `batch_size` queries simultaneously. They may process smaller 
+        batches if `batch_size` queries are not immediately available.
+        If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
+        replicas of this model.
     """
     if base_image is None:
         if onnx_backend is "caffe2":
@@ -157,17 +169,16 @@ def deploy_pytorch_model(clipper_conn,
     try:
         torch_out = torch.onnx._export(
             pytorch_model, inputs, "model.onnx", export_params=True)
+        # Deploy model
+        clipper_conn.build_and_deploy_model(name, version, input_type,
+                                            serialization_dir, base_image, labels,
+                                            registry, num_replicas, batch_size)
 
     except Exception as e:
         logger.error(
             "Error serializing PyTorch model to ONNX: {e}".format(e=e))
 
     logger.info("Torch model has be serialized to ONNX format")
-
-    # Deploy model
-    clipper_conn.build_and_deploy_model(name, version, input_type,
-                                        serialization_dir, base_image, labels,
-                                        registry, num_replicas, batch_size)
 
     # Remove temp files
     shutil.rmtree(serialization_dir)
