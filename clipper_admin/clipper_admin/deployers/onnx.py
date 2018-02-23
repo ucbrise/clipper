@@ -170,9 +170,9 @@ def deploy_pytorch_model(clipper_conn,
         torch_out = torch.onnx._export(
             pytorch_model, inputs, "model.onnx", export_params=True)
         # Deploy model
-        clipper_conn.build_and_deploy_model(name, version, input_type,
-                                            serialization_dir, base_image, labels,
-                                            registry, num_replicas, batch_size)
+        clipper_conn.build_and_deploy_model(
+            name, version, input_type, serialization_dir, base_image, labels,
+            registry, num_replicas, batch_size)
 
     except Exception as e:
         logger.error(
