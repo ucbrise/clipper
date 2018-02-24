@@ -18,4 +18,6 @@ _build/
 dependency-reduced-pom.xml
 *.iml
 
+k8s_starter.py
+
 docker-compose.yml

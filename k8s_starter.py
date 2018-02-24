@@ -4,6 +4,8 @@ import requests, json, numpy as np
 
 clipper_conn = ClipperConnection(KubernetesContainerManager("https://api.chester-dev.clipper-k8s-dev.com"))
 try:
+
+    clipper_conn.stop_all()
     clipper_conn.start_clipper()
     #clipper_conn.stop_all()
     clipper_conn.register_application(name="hello-world",
@@ -16,13 +18,13 @@ try:
 
     python_deployer.deploy_python_closure(clipper_conn, name="sum-model",
                                         version=1, input_type="doubles",
-                                        func=feature_sum, registry="chesterleung/k8s_tester", num_replicas=2)
+                                        func=feature_sum, registry="chesterleung", num_replicas=2)
     clipper_conn.link_model_to_app(app_name="hello-world", model_name="sum-model")
     headers = {"Content-type": "application/json"}
     print("Predictions:")
     print(requests.post("http://%s/hello-world/predict" % addr, headers=headers, data=json.dumps({"input": list(np.random.random(10))})).json())
 
-    clipper_conn.stop_all()
+    #clipper_conn.stop_all()
 except Exception as e:
     print(e)
-    clipper_conn.stop_all()
+    #clipper_conn.stop_all()
