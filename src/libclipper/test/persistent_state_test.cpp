@@ -51,4 +51,15 @@ TEST_F(StateDBTest, TestManyPutGet) {
   ASSERT_EQ(db_.num_entries(), 0);
 }
 
+TEST_F(StateDBTest, TestPutRemoveGet) {
+  StateKey key = std::make_tuple("Corey", 13622, 32432432);
+  ASSERT_FALSE(db_.get(key));
+  ASSERT_TRUE(db_.put(key, "valuestring"));
+  ASSERT_EQ(db_.num_entries(), 1);
+  auto v = db_.get(key);
+  ASSERT_TRUE(v);
+  ASSERT_TRUE(db_.remove(key));
+  ASSERT_FALSE(db_.get(key));
+}
+
 }  // namespace

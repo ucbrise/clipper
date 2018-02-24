@@ -259,6 +259,8 @@ build_images () {
     create_image tf_cifar_container TensorFlowCifarDockerfile $public
     create_image tf-container TensorFlowDockerfile $public
     create_image pytorch-container PyTorchContainerDockerfile $public
+    create_image caffe2-onnx-container Caffe2OnnxDockerfile $public
+    create_image mxnet-container MXNetContainerDockerfile $public
 
     # Build Metric Monitor image - no dependency
     create_image frontend-exporter FrontendExporterDockerfile $public
