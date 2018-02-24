@@ -7,10 +7,12 @@ import time
 from datetime import datetime
 import socket
 import sys
+import os
+import yaml
 from collections import deque
 from multiprocessing import Pipe, Process
 from prometheus_client import start_http_server
-from prometheus_client.core import GaugeMetricFamily, REGISTRY
+from prometheus_client.core import Counter, Gauge, Histogram, Summary
 
 INPUT_TYPE_BYTES = 0
 INPUT_TYPE_INTS = 1
@@ -193,8 +195,6 @@ class Server(threading.Thread):
         sys.stdout.flush()
         sys.stderr.flush()
 
-        pred_metric = dict(model_pred_count=0)
-
         while True:
             socket = self.context.socket(zmq.DEALER)
             poller.register(socket, zmq.POLLIN)
@@ -312,13 +312,25 @@ class Server(threading.Thread):
 
                         response.send(socket, self.event_history)
 
-                        pred_metric['model_pred_count'] += 1
+                        recv_time = (t2 - t1).microseconds
+                        parse_time = (t3 - t2).microseconds
+                        handle_time = (t4 - t3).microseconds
 
-                        metric_conn.send(pred_metric)
+                        model_container_metric = {}
+                        model_container_metric['pred_total'] = 1
+                        model_container_metric[
+                            'recv_time_ms'] = recv_time / 1000.0
+                        model_container_metric[
+                            'parse_time_ms'] = parse_time / 1000.0
+                        model_container_metric[
+                            'handle_time_ms'] = handle_time / 1000.0
+                        model_container_metric['end_to_end_latency_ms'] = (
+                            recv_time + parse_time + handle_time) / 1000.0
+                        metric_conn.send(model_container_metric)
 
                         print("recv: %f us, parse: %f us, handle: %f us" %
-                              ((t2 - t1).microseconds, (t3 - t2).microseconds,
-                               (t4 - t3).microseconds))
+                              (recv_time, parse_time, handle_time))
+
                         sys.stdout.flush()
                         sys.stderr.flush()
 
@@ -499,29 +511,86 @@ class RPCService:
         self.server.model_input_type = model_input_type
         self.server.model = model
 
-        parent_conn, child_conn = Pipe(duplex=True)
+        child_conn, parent_conn = Pipe(duplex=False)
         metrics_proc = Process(target=run_metric, args=(child_conn, ))
         metrics_proc.start()
         self.server.run(parent_conn)
 
 
 class MetricCollector:
+    """
+    Note this is no longer a Prometheus Collector.
+    Instead, this is simply a class to encapsulate metric recording.
+    """
+
     def __init__(self, pipe_child_conn):
         self.pipe_conn = pipe_child_conn
+        self.metrics = {}
+        self.name_to_type = {}
+
+        self._load_config()
+
+    def _load_config(self):
+        config_file_path = 'metrics_config.yaml'
+
+        # Make sure we are inside /container, where the config file lives.
+        cwd = os.path.split(os.getcwd())[1]
+        if cwd != 'container':
+            config_file_path = os.path.join(os.getcwd(), 'container',
+                                            config_file_path)
+
+        with open(config_file_path, 'r') as f:
+            config = yaml.load(f)
+        config = config['Model Container']
+
+        prefix = 'clipper_{}_'.format(config.pop('prefix'))
+
+        for name, spec in config.items():
+            metric_type = spec.get('type')
+            metric_description = spec.get('description')
+
+            if not metric_type and not metric_description:
+                raise Exception(
+                    "{}: Metric Type and Metric Description are Required in Config File.".
+                    format(name))
+
+            if metric_type == 'Counter':
+                self.metrics[name] = Counter(prefix + name, metric_description)
+            elif metric_type == 'Gauge':
+                self.metrics[name] = Gauge(prefix + name, metric_description)
+            elif metric_type == 'Histogram':
+                if 'bucket' in spec.keys():
+                    buckets = spec['bucket'] + [float("inf")]
+                    self.metrics[name] = Histogram(
+                        prefix + name, metric_description, buckets=buckets)
+                else:
+                    self.metrics[name] = Histogram(prefix + name,
+                                                   metric_description)
+            elif metric_type == 'Summary':
+                self.metrics[name] = Summary(prefix + name, metric_description)
+            else:
+                raise Exception(
+                    "Unknown Metric Type: {}. See config file.".format(
+                        metric_type))
+
+            self.name_to_type[name] = metric_type
 
     def collect(self):
-        latest_metric_dict = None
-        while self.pipe_conn.poll():
-            latest_metric_dict = self.pipe_conn.recv()
-        if latest_metric_dict:
-            for name, val in latest_metric_dict.items():
-                try:
-                    yield GaugeMetricFamily(
-                        name=name,
-                        documentation=name,  # Required Argument
-                        value=val)
-                except ValueError:
-                    pass
+        while True:
+            latest_metric_dict = self.pipe_conn.recv(
+            )  # This call is blocking.
+            for name, value in latest_metric_dict.items():
+                metric = self.metrics[name]
+                if self.name_to_type[name] == 'Counter':
+                    metric.inc(value)
+                elif self.name_to_type[name] == 'Gauge':
+                    metric.set(value)
+                elif self.name_to_type[name] == 'Histogram' or self.name_to_type[name] == 'Summary':
+                    metric.observe(value)
+                else:
+                    raise Exception(
+                        "Unknown Metric Type for {}. See config file.".format(
+                            name))
 
 
 def run_metric(child_conn):
@@ -529,9 +598,8 @@ def run_metric(child_conn):
     This function takes a child_conn at the end of the pipe and
     receive object to update prometheus metric.
 
-    It is recommended to be ran in a separate process. 
+    It is recommended to be ran in a separate process.
     """
-    REGISTRY.register(MetricCollector(child_conn))
+    collector = MetricCollector(child_conn)
     start_http_server(1390)
-    while True:
-        time.sleep(1)
+    collector.collect()

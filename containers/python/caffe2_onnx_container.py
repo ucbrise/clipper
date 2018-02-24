@@ -2,11 +2,20 @@ from __future__ import print_function
 import rpc
 import os
 import sys
-import tensorflow as tf
-import cloudpickle
-import glob
+import json
 
-from tensorflow.python.saved_model import loader
+import numpy as np
+
+import cloudpickle
+
+import onnx
+import onnx_caffe2.backend
+
+import importlib
+
+IMPORT_ERROR_RETURN_CODE = 3
+
+MODEL_RELATIVE_PATH = "model.onnx"
 
 
 def load_predict_func(file_path):
@@ -14,7 +23,13 @@ def load_predict_func(file_path):
         return cloudpickle.load(serialized_func_file)
 
 
-class TfContainer(rpc.ModelContainerBase):
+def load_onnx_into_caffe2_model(model_path):
+    model = onnx.load(model_path)
+    prepared_backend = onnx_caffe2.backend.prepare(model, device="CPU")
+    return prepared_backend
+
+
+class Caffe2Container(rpc.ModelContainerBase):
     def __init__(self, path, input_type):
         self.input_type = rpc.string_to_input_type(input_type)
         modules_folder_path = "{dir}/modules/".format(dir=path)
@@ -24,49 +39,33 @@ class TfContainer(rpc.ModelContainerBase):
             dir=path, predict_fname=predict_fname)
         self.predict_func = load_predict_func(predict_path)
 
-        frozen_graph_exists = glob.glob(os.path.join(path, "tfmodel/*.pb"))
-        if (len(frozen_graph_exists) > 0):
-            with tf.Graph().as_default() as graph:
-                self.sess = tf.Session(graph=graph)
-                loader.load(self.sess, [tf.saved_model.tag_constants.SERVING],
-                            os.path.join(path, "tfmodel"))
-        else:
-            self.sess = tf.Session(
-                '',
-                tf.Graph(),
-                config=tf.ConfigProto(
-                    allow_soft_placement=True, log_device_placement=True))
-            metagraph_path = glob.glob(os.path.join(path, "tfmodel/*.meta"))[0]
-            checkpoint_path = metagraph_path.split(".meta")[0]
-            with tf.device("/gpu:0"):
-                with self.sess.graph.as_default():
-                    saver = tf.train.import_meta_graph(
-                        metagraph_path, clear_devices=True)
-                    saver.restore(self.sess, checkpoint_path)
+        onnx_path = os.path.join(path, MODEL_RELATIVE_PATH)
+
+        self.model = load_onnx_into_caffe2_model(onnx_path)
 
     def predict_ints(self, inputs):
-        preds = self.predict_func(self.sess, inputs)
+        preds = self.predict_func(self.model, inputs)
         return [str(p) for p in preds]
 
     def predict_floats(self, inputs):
-        preds = self.predict_func(self.sess, inputs)
+        preds = self.predict_func(self.model, inputs)
         return [str(p) for p in preds]
 
     def predict_doubles(self, inputs):
-        preds = self.predict_func(self.sess, inputs)
+        preds = self.predict_func(self.model, inputs)
         return [str(p) for p in preds]
 
     def predict_bytes(self, inputs):
-        preds = self.predict_func(self.sess, inputs)
+        preds = self.predict_func(self.model, inputs)
         return [str(p) for p in preds]
 
     def predict_strings(self, inputs):
-        preds = self.predict_func(self.sess, inputs)
+        preds = self.predict_func(self.model, inputs)
         return [str(p) for p in preds]
 
 
 if __name__ == "__main__":
-    print("Starting TensorFlow container")
+    print("Starting Caffe2Container container")
     try:
         model_name = os.environ["CLIPPER_MODEL_NAME"]
     except KeyError:
@@ -92,7 +91,8 @@ if __name__ == "__main__":
     if "CLIPPER_PORT" in os.environ:
         port = int(os.environ["CLIPPER_PORT"])
     else:
-        print("Connecting to Clipper with default port: 7000")
+        print("Connecting to Clipper with default port: {port}".format(
+            port=port))
 
     input_type = "doubles"
     if "CLIPPER_INPUT_TYPE" in os.environ:
@@ -100,11 +100,16 @@ if __name__ == "__main__":
     else:
         print("Using default input type: doubles")
 
-    model_dir_path = os.environ["CLIPPER_MODEL_PATH"]
-    model_files = os.listdir(model_dir_path)
-    assert len(model_files) >= 2
-    fname = os.path.splitext(model_files[0])[0]
-    full_fname = os.path.join(model_dir_path, fname)
-    model = TfContainer(model_dir_path, input_type)
-    rpc_service = rpc.RPCService()
-    rpc_service.start(model, ip, port, model_name, model_version, input_type)
+    model_path = os.environ["CLIPPER_MODEL_PATH"]
+
+    print("Initializing Caffe2 ONNX container")
+    sys.stdout.flush()
+    sys.stderr.flush()
+
+    try:
+        model = Caffe2Container(model_path, input_type)
+        rpc_service = rpc.RPCService()
+        rpc_service.start(model, ip, port, model_name, model_version,
+                          input_type)
+    except ImportError:
+        sys.exit(IMPORT_ERROR_RETURN_CODE)

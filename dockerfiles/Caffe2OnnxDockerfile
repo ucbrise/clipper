@@ -1,0 +1,22 @@
+ARG CODE_VERSION
+FROM clipper/py-rpc:${CODE_VERSION}
+
+COPY clipper_admin/clipper_admin/python_container_conda_deps.txt /lib/
+
+RUN echo deb http://ftp.de.debian.org/debian jessie-backports main >> /etc/apt/sources.list \
+      && apt-get update --fix-missing \
+      && apt-get install -yqq -t jessie-backports openjdk-8-jdk \
+      && conda install -y --file /lib/python_container_conda_deps.txt \
+      && conda install -c anaconda cloudpickle=0.5.2 \
+      && conda install -c conda-forge onnx \
+      && conda install -c caffe2 caffe2 \
+      && pip install onnx-caffe2 \
+      && conda install -c pytorch pytorch torchvision
+
+COPY containers/python/caffe2_onnx_container.py containers/python/caffe2_onnx_container_entry.sh /container/
+COPY clipper_admin/ /lib/clipper_admin
+RUN pip install /lib/clipper_admin
+
+CMD ["/container/caffe2_onnx_container_entry.sh"]
+
+# vim: set filetype=dockerfile:

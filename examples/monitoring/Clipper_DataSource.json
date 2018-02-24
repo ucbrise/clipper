@@ -1,0 +1,15 @@
+{
+	"name":"Clipper",
+	"type":"prometheus",
+	"typeLogoUrl":"public/app/plugins/datasource/prometheus/img/prometheus_logo.svg",
+	"access":"direct",
+	"url":"http://localhost:9090",
+	"password":"",
+	"user":"",
+	"database":"",
+	"basicAuth":false,
+	"isDefault":true,
+	"jsonData":{
+		"timeInterval":"5s"
+	}
+}

@@ -1,6 +1,6 @@
 from __future__ import print_function, with_statement, absolute_import
 import shutil
-import pyspark
+import torch
 import logging
 import re
 import os
@@ -8,29 +8,28 @@ import json
 
 from ..version import __version__
 from ..clipper_admin import ClipperException
-from .deployer_utils import save_python_function
+from .deployer_utils import save_python_function, serialize_object
 
 logger = logging.getLogger(__name__)
 
 
-def create_endpoint(
-        clipper_conn,
-        name,
-        input_type,
-        func,
-        pyspark_model,
-        sc,
-        default_output="None",
-        version=1,
-        slo_micros=3000000,
-        labels=None,
-        registry=None,
-        base_image="clipper/pyspark-container:{}".format(__version__),
-        num_replicas=1,
-        batch_size=-1):
-    """Registers an app and deploys the provided predict function with PySpark model as
-    a Clipper model.
-
+def create_pytorch_endpoint(clipper_conn,
+                            name,
+                            input_type,
+                            inputs,
+                            func,
+                            pytorch_model,
+                            default_output="None",
+                            version=1,
+                            slo_micros=3000000,
+                            labels=None,
+                            registry=None,
+                            base_image=None,
+                            num_replicas=1,
+                            onnx_backend="caffe2",
+                            batch_size=-1):
+    """This function deploys the prediction function with a PyTorch model.
+    It serializes the PyTorch model in Onnx format and creates a container that loads it as a Caffe2 model.
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
@@ -40,13 +39,13 @@ def create_endpoint(
     input_type : str
         The input_type to be associated with the registered app and deployed model.
         One of "integers", "floats", "doubles", "bytes", or "strings".
+    inputs :
+        input of func.
     func : function
         The prediction function. Any state associated with the function will be
         captured via closure capture and pickled with Cloudpickle.
-    pyspark_model : pyspark.mllib.* or pyspark.ml.pipeline.PipelineModel object
-        The PySpark model to save.
-    sc : SparkContext,
-        The current SparkContext. This is needed to save the PySpark model.
+    pytorch_model : pytorch model object
+        The PyTorch model to save.
     default_output : str, optional
         The default output for the application. The default output will be returned whenever
         an application is unable to receive a response from a model within the specified
@@ -80,6 +79,8 @@ def create_endpoint(
         The number of replicas of the model to create. The number of replicas
         for a model can be changed at any time with
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
+    onnx_backend : str, optional
+        The provided onnx backend.Caffe2 is the only currently supported ONNX backend.
     batch_size : int, optional
         The user-defined query batch size for the model. Replicas of the model will attempt
         to process at most `batch_size` queries simultaneously. They may process smaller 
@@ -90,31 +91,28 @@ def create_endpoint(
 
     clipper_conn.register_application(name, input_type, default_output,
                                       slo_micros)
-    deploy_pyspark_model(clipper_conn, name, version, input_type, func,
-                         pyspark_model, sc, base_image, labels, registry,
-                         num_replicas, batch_size)
+    deploy_pytorch_model(clipper_conn, name, version, input_type, inputs, func,
+                         pytorch_model, base_image, labels, registry,
+                         num_replicas, onnx_backend)
 
     clipper_conn.link_model_to_app(name, name)
 
 
-def deploy_pyspark_model(
-        clipper_conn,
-        name,
-        version,
-        input_type,
-        func,
-        pyspark_model,
-        sc,
-        base_image="clipper/pyspark-container:{}".format(__version__),
-        labels=None,
-        registry=None,
-        num_replicas=1,
-        batch_size=-1):
-    """Deploy a Python function with a PySpark model.
-
-    The function must take 3 arguments (in order): a SparkSession, the PySpark model, and a list of
-    inputs. It must return a list of strings of the same length as the list of inputs.
-
+def deploy_pytorch_model(clipper_conn,
+                         name,
+                         version,
+                         input_type,
+                         inputs,
+                         func,
+                         pytorch_model,
+                         base_image=None,
+                         labels=None,
+                         registry=None,
+                         num_replicas=1,
+                         onnx_backend="caffe2",
+                         batch_size=-1):
+    """This function deploys the prediction function with a PyTorch model.
+    It serializes the PyTorch model in Onnx format and creates a container that loads it as a Caffe2 model.
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
@@ -127,13 +125,13 @@ def deploy_pyspark_model(
     input_type : str
         The input_type to be associated with the registered app and deployed model.
         One of "integers", "floats", "doubles", "bytes", or "strings".
+    inputs :
+        input of func.
     func : function
         The prediction function. Any state associated with the function will be
         captured via closure capture and pickled with Cloudpickle.
-    pyspark_model : pyspark.mllib.* or pyspark.ml.pipeline.PipelineModel object
-        The PySpark model to save.
-    sc : SparkContext,
-        The current SparkContext. This is needed to save the PySpark model.
+    pytorch_model : pytorch model object
+        The Pytorch model to save.
     base_image : str, optional
         The base Docker image to build the new model image from. This
         image should contain all code necessary to run a Clipper model
@@ -149,85 +147,38 @@ def deploy_pyspark_model(
         The number of replicas of the model to create. The number of replicas
         for a model can be changed at any time with
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
+    onnx_backend : str, optional
+        The provided onnx backend.Caffe2 is the only currently supported ONNX backend.
     batch_size : int, optional
         The user-defined query batch size for the model. Replicas of the model will attempt
         to process at most `batch_size` queries simultaneously. They may process smaller 
         batches if `batch_size` queries are not immediately available.
         If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
         replicas of this model.
-
-    Example
-    -------
-    Define a pre-processing function ``shift()`` and to normalize prediction inputs::
-
-        from clipper_admin import ClipperConnection, DockerContainerManager
-        from clipper_admin.deployers.pyspark import deploy_pyspark_model
-        from pyspark.mllib.classification import LogisticRegressionWithSGD
-        from pyspark.sql import SparkSession
-
-        spark = SparkSession\
-                .builder\
-                .appName("clipper-pyspark")\
-                .getOrCreate()
-
-        sc = spark.sparkContext
-
-        clipper_conn = ClipperConnection(DockerContainerManager())
-
-        # Connect to an already-running Clipper cluster
-        clipper_conn.connect()
-
-        # Loading a training dataset omitted...
-        model = LogisticRegressionWithSGD.train(trainRDD, iterations=10)
-
-        # Note that this function accesses the trained PySpark model via an explicit
-        # argument, but other state can be captured via closure capture if necessary.
-        def predict(spark, model, inputs):
-            return [str(model.predict(shift(x))) for x in inputs]
-
-        deploy_pyspark_model(
-            clipper_conn,
-            name="example",
-            input_type="doubles",
-            func=predict,
-            pyspark_model=model,
-            sc=sc)
     """
-
-    model_class = re.search("pyspark.*'",
-                            str(type(pyspark_model))).group(0).strip("'")
-    if model_class is None:
-        raise ClipperException(
-            "pyspark_model argument was not a pyspark object")
-
-    # save predict function
-    serialization_dir = save_python_function(name, func)
-    # save Spark model
-    spark_model_save_loc = os.path.join(serialization_dir,
-                                        "pyspark_model_data")
-    try:
-        if isinstance(pyspark_model,
-                      pyspark.ml.pipeline.PipelineModel) or isinstance(
-                          pyspark_model, pyspark.ml.base.Model):
-            pyspark_model.save(spark_model_save_loc)
+    if base_image is None:
+        if onnx_backend is "caffe2":
+            base_image = "clipper/caffe2-onnx-container:{}".format(__version__)
         else:
-            pyspark_model.save(sc, spark_model_save_loc)
+            logger.error(
+                "{backend} ONNX backend is not currently supported.".format(
+                    backend=onnx_backend))
+
+    serialization_dir = save_python_function(name, func)
+
+    try:
+        torch_out = torch.onnx._export(
+            pytorch_model, inputs, "model.onnx", export_params=True)
+        # Deploy model
+        clipper_conn.build_and_deploy_model(
+            name, version, input_type, serialization_dir, base_image, labels,
+            registry, num_replicas, batch_size)
+
     except Exception as e:
-        logger.warn("Error saving spark model: %s" % e)
-        raise e
+        logger.error(
+            "Error serializing PyTorch model to ONNX: {e}".format(e=e))
 
-    # extract the pyspark class name. This will be something like
-    # pyspark.mllib.classification.LogisticRegressionModel
-    with open(os.path.join(serialization_dir, "metadata.json"),
-              "w") as metadata_file:
-        json.dump({"model_class": model_class}, metadata_file)
-
-    logger.info("Spark model saved")
-
-    # Deploy model
-    clipper_conn.build_and_deploy_model(name, version, input_type,
-                                        serialization_dir, base_image, labels,
-                                        registry, num_replicas, batch_size)
+    logger.info("Torch model has be serialized to ONNX format")
 
     # Remove temp files
     shutil.rmtree(serialization_dir)
