@@ -13,6 +13,10 @@ import json
 import yaml
 import os
 import time
+from multiprocessing import Process, Manager
+from ..version import __version__
+
+
 
 logger = logging.getLogger(__name__)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
@@ -30,6 +34,19 @@ def _pass_conflicts():
         else:
             raise e
 
+class RoundRobinBalancer():
+    def __init__(self, num_assignees):
+        self.counter = 0
+        self.num = num_assignees
+    def assign(self):
+        old_counter = self.counter
+        self.counter += 1
+        self.counter %= self.num
+        return old_counter
+    def set_assignee_count(self, count, override = False):
+        if (self.num != count or override):
+            self.num = count
+            self.counter = 0
 
 class KubernetesContainerManager(ContainerManager):
     def __init__(self,
@@ -70,9 +87,19 @@ class KubernetesContainerManager(ContainerManager):
         self._k8s_v1 = client.CoreV1Api()
         self._k8s_beta = client.ExtensionsV1beta1Api()
 
+
+        self.state_is_Unchanged = True
+        manager = Manager()
+        self.query_to_model = manager.dict()
+        self.balancer = RoundRobinBalancer(0)
+
+
+
     def start_clipper(self, query_frontend_image, mgmt_frontend_image,
-                      cache_size):
-        # If an existing Redis service isn't provided, start one
+                      cache_size, num_replicas = 1):
+
+        polling = Process(target = self.poll_for_query_frontend_Change)
+
         if self.redis_ip is None:
             name = 'redis'
             with _pass_conflicts():
@@ -109,6 +136,7 @@ class KubernetesContainerManager(ContainerManager):
                         "args"] = args
                 body["spec"]["template"]["spec"]["containers"][0][
                     "image"] = img
+
                 self._k8s_beta.create_namespaced_deployment(
                     body=body, namespace='default')
             with _pass_conflicts():
@@ -118,6 +146,61 @@ class KubernetesContainerManager(ContainerManager):
                 self._k8s_v1.create_namespaced_service(
                     body=body, namespace='default')
         self.connect()
+
+        deployment_name = "query-frontend"
+
+        self._k8s_beta.patch_namespaced_deployment_scale(
+            name=deployment_name,
+            namespace='default',
+            body={
+                'spec': {
+                    'replicas': num_replicas,
+                }
+            })
+        self.state_is_Unchanged = True
+
+
+        polling.start()
+
+    def reassign_models_to_new_containers(self, lost_ip, new_ip):
+
+        logger.info("Query frontend has crashed: Old ip is {} and new ip is {}".format(lost_ip, new_ip))
+
+        models = self.query_to_model[lost_ip]
+
+        logger.info("We are now going to redeploy {} models".format(len(models)))
+
+        for x in range(len(models)):
+            m = models[x]
+
+            self.deploy_model(m[1] + "-0", __version__, "ints", m[0], 1, new_ip)
+
+    def poll_for_query_frontend_Change(self):
+
+        time.sleep(10)
+
+        endpoints = self._k8s_v1.read_namespaced_endpoints(name="query-frontend", namespace="default")
+        current_state = [addr.ip for addr in endpoints.subsets[0].addresses]
+        query_frontend_ips = current_state
+
+        logger.info("Original state is {}".format(current_state))
+
+        while self.state_is_Unchanged and set(query_frontend_ips) == set(current_state):
+            time.sleep(5)
+            endpoints = self._k8s_v1.read_namespaced_endpoints(name="query-frontend", namespace="default")
+            query_frontend_ips = [addr.ip for addr in endpoints.subsets[0].addresses]
+
+        if self.state_is_Unchanged:
+            time.sleep(10)
+            endpoints = self._k8s_v1.read_namespaced_endpoints(name="query-frontend", namespace="default")
+            query_frontend_ips = [addr.ip for addr in endpoints.subsets[0].addresses]
+            logger.info("Current State is {}".format(query_frontend_ips))
+            self.reassign_models_to_new_containers(list(set(current_state) - set(query_frontend_ips))[0],
+                                                   list(set(query_frontend_ips) - set(current_state))[0])
+
+        self.poll_for_query_frontend_Change()
+
+
 
     def connect(self):
         nodes = self._k8s_v1.list_node()
@@ -165,55 +248,82 @@ class KubernetesContainerManager(ContainerManager):
                 "Could not connect to Clipper Kubernetes cluster. "
                 "Reason: {}".format(e))
 
-    def deploy_model(self, name, version, input_type, image, num_replicas=1):
+    def deploy_model(self, name, version, input_type, image, num_replicas=1, new_ip=None):
         with _pass_conflicts():
-            deployment_name = get_model_deployment_name(name, version)
-            body = {
-                'apiVersion': 'extensions/v1beta1',
-                'kind': 'Deployment',
-                'metadata': {
-                    "name": deployment_name
-                },
-                'spec': {
-                    'replicas': num_replicas,
-                    'template': {
-                        'metadata': {
-                            'labels': {
-                                CLIPPER_MODEL_CONTAINER_LABEL:
-                                create_model_container_label(name, version),
-                                CLIPPER_DOCKER_LABEL:
-                                ""
-                            }
-                        },
-                        'spec': {
-                            'containers': [{
-                                'name':
-                                deployment_name,
-                                'image':
-                                image,
-                                'ports': [{
-                                    'containerPort': 80
-                                }],
-                                'env': [{
-                                    'name': 'CLIPPER_MODEL_NAME',
-                                    'value': name
-                                }, {
-                                    'name': 'CLIPPER_MODEL_VERSION',
-                                    'value': str(version)
-                                }, {
-                                    'name': 'CLIPPER_IP',
-                                    'value': 'query-frontend'
-                                }, {
-                                    'name': 'CLIPPER_INPUT_TYPE',
-                                    'value': input_type
+            endpoints = self._k8s_v1.read_namespaced_endpoints(name="query-frontend", namespace="default")
+            query_frontend_ips = [addr.ip for addr in endpoints.subsets[0].addresses]
+            self.balancer.set_assignee_count(len(query_frontend_ips), override = num_replicas > 1)
+            original_name = name
+            name = get_model_deployment_name(name, version)
+            for x in range(num_replicas):
+                if (new_ip == None):
+                    deployment_name = original_name + str(x)
+                else:
+                    deployment_name = original_name
+
+                if (new_ip == None):
+                    clipper_ip = query_frontend_ips[self.balancer.assign()]
+                else:
+                    clipper_ip = new_ip
+
+
+                body = {
+                    'apiVersion': 'extensions/v1beta1',
+                    'kind': 'Deployment',
+                    'metadata': {
+                        "name": deployment_name
+                    },
+                    'spec': {
+                        'replicas': 1,
+                        'template': {
+                            'metadata': {
+                                'labels': {
+                                    CLIPPER_MODEL_CONTAINER_LABEL:
+                                    create_model_container_label(name, version),
+                                    CLIPPER_DOCKER_LABEL:
+                                    ""
+                                }
+                            },
+                            'spec': {
+                                'containers': [{
+                                    'name':
+                                    deployment_name,
+                                    'image':
+                                    image,
+                                    'ports': [{
+                                        'containerPort': 80
+                                    }],
+                                    'env': [{
+                                        'name': 'CLIPPER_MODEL_NAME',
+                                        'value': name
+                                    }, {
+                                        'name': 'CLIPPER_MODEL_VERSION',
+                                        'value': str(version)
+                                    }, {
+                                        'name': 'CLIPPER_IP',
+                                        # 'value': 'query-frontend'
+                                        'value': clipper_ip
+                                    }, {
+                                        'name': 'CLIPPER_INPUT_TYPE',
+                                        'value': input_type
+                                    }]
                                 }]
-                            }]
+                            }
                         }
                     }
                 }
-            }
-            self._k8s_beta.create_namespaced_deployment(
-                body=body, namespace='default')
+
+                if clipper_ip in self.query_to_model:
+                    temp = self.query_to_model[clipper_ip]
+                    temp.append([image, deployment_name, name])
+                    self.query_to_model[clipper_ip] = temp
+                else:
+                    self.query_to_model[clipper_ip] = [[image, deployment_name, original_name]]
+
+
+
+                self._k8s_beta.create_namespaced_deployment(
+                    body=body, namespace='default')
 
     def get_num_replicas(self, name, version):
         deployment_name = get_model_deployment_name(name, version)
