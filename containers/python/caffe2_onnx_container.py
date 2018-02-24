@@ -5,13 +5,17 @@ import sys
 import json
 
 import numpy as np
+
 import cloudpickle
-import mxnet as mx
+
+import onnx
+import onnx_caffe2.backend
+
 import importlib
 
 IMPORT_ERROR_RETURN_CODE = 3
 
-MXNET_MODEL_RELATIVE_PATH = "mxnet_model"
+MODEL_RELATIVE_PATH = "model.onnx"
 
 
 def load_predict_func(file_path):
@@ -19,24 +23,13 @@ def load_predict_func(file_path):
         return cloudpickle.load(serialized_func_file)
 
 
-# load mxnet model from serialized dir
-def load_mxnet_model(path):
-    mxnet_model_path = os.path.join(path, MXNET_MODEL_RELATIVE_PATH)
-
-    data_shapes = json.load(
-        open(os.path.join(path, "mxnet_model_metadata.json")))
-
-    sym, arg_params, aux_params = mx.model.load_checkpoint(
-        prefix=model_path, epoch=0)
-
-    mxnet_model = mx.mod.Module(symbol=sym)
-    mxnet_model.bind(data_shapes["data_shapes"])
-    mxnet_model.set_params(arg_params, aux_params)
-
-    return mxnet_model
+def load_onnx_into_caffe2_model(model_path):
+    model = onnx.load(model_path)
+    prepared_backend = onnx_caffe2.backend.prepare(model, device="CPU")
+    return prepared_backend
 
 
-class MXNetContainer(rpc.ModelContainerBase):
+class Caffe2Container(rpc.ModelContainerBase):
     def __init__(self, path, input_type):
         self.input_type = rpc.string_to_input_type(input_type)
         modules_folder_path = "{dir}/modules/".format(dir=path)
@@ -46,13 +39,9 @@ class MXNetContainer(rpc.ModelContainerBase):
             dir=path, predict_fname=predict_fname)
         self.predict_func = load_predict_func(predict_path)
 
-        # load mxnet model from serialized dir
-<<<<<<< HEAD
-        mxnet_model_path = os.path.join(path, MXNET_MODEL_RELATIVE_PATH)
-        self.model = load_mxnet_model(mxnet_model_path)
-=======
-        self.model = load_mxnet_model(path)
->>>>>>> upstream/develop
+        onnx_path = os.path.join(path, MODEL_RELATIVE_PATH)
+
+        self.model = load_onnx_into_caffe2_model(onnx_path)
 
     def predict_ints(self, inputs):
         preds = self.predict_func(self.model, inputs)
@@ -76,7 +65,7 @@ class MXNetContainer(rpc.ModelContainerBase):
 
 
 if __name__ == "__main__":
-    print("Starting MXNetContainer container")
+    print("Starting Caffe2Container container")
     try:
         model_name = os.environ["CLIPPER_MODEL_NAME"]
     except KeyError:
@@ -113,12 +102,12 @@ if __name__ == "__main__":
 
     model_path = os.environ["CLIPPER_MODEL_PATH"]
 
-    print("Initializing MXNet function container")
+    print("Initializing Caffe2 ONNX container")
     sys.stdout.flush()
     sys.stderr.flush()
 
     try:
-        model = MXNetContainer(model_path, input_type)
+        model = Caffe2Container(model_path, input_type)
         rpc_service = rpc.RPCService()
         rpc_service.start(model, ip, port, model_name, model_version,
                           input_type)
