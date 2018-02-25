@@ -66,6 +66,7 @@ class ClipperConnection(object):
         """
         self.connected = False
         self.cm = container_manager
+        self.replicas = 1
 
     def start_clipper(
             self,
@@ -73,7 +74,8 @@ class ClipperConnection(object):
                 __version__),
             mgmt_frontend_image='clipper/management_frontend:{}'.format(
                 __version__),
-            cache_size=DEFAULT_PREDICTION_CACHE_SIZE_BYTES):
+            cache_size=DEFAULT_PREDICTION_CACHE_SIZE_BYTES,
+            num_replicas = 1):
         """Start a new Clipper cluster and connect to it.
 
         This command will start a new Clipper instance using the container manager provided when
@@ -97,13 +99,15 @@ class ClipperConnection(object):
         :py:exc:`clipper.ClipperException`
         """
         try:
+            self.replicas = num_replicas
+
             self.cm.start_clipper(query_frontend_image, mgmt_frontend_image,
-                                  cache_size)
+                                  cache_size, num_replicas)
             while True:
                 try:
                     url = "http://{host}/metrics".format(
                         host=self.cm.get_query_addr())
-                    requests.get(url, timeout=5)
+                    requests.get(url, timeout=100)
                     break
                 except RequestException as e:
                     logger.info("Clipper still initializing.")
@@ -386,8 +390,8 @@ class ClipperConnection(object):
             logger.info(
                 "Building model Docker image with model data from {}".format(
                     model_data_path))
-            docker_client.images.build(
-                fileobj=context_file, custom_context=True, tag=image)
+            logger.info(docker_client.images.build(
+                fileobj=context_file, custom_context=True, tag=image))
 
         logger.info("Pushing model Docker image to {}".format(image))
         docker_client.images.push(repository=image)
