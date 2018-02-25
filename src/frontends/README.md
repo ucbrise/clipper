@@ -30,10 +30,11 @@ Image Size | Batch Size | Mean | Standard Deviation | Min | 50th Percentile | 95
 256 x 256|16|13107.75|12470.16|7|134.5|4409.0|4525.99|4580
 256 x 256|32|24632.81|23670.84|7|136|4522.95|11658.96|11793
 512 x 512|1|1846.3|1665.09|4|22|1395.95|1405.99|1408
+512 x 512|4|4347.47|41.35|4138|4342.5|4414.9|4463.93|4593
 512 x 512|8|8657.9|1219.86|4314|8946|9083.9|9187.3|9285
 512 x 512|16|22087.22|9568.29|4314|9105.5|21445.95|21636.88|22000
-512 x 512|4|4347.47|41.35|4138|4342.5|4414.9|4463.93|4593
 512 x 512|32|39613.25|25768.15|4182|4415|47206.95|47354.97|47454
 
-And here is a nice graph to visualize the average results, where the $$x$$-axis is one dimension of the image size in pixels (i.e. 32 corresponds to a 32 x 32 image):
-![graph](graph.jpg)
+And here is a line plot to visualize the average results, where the *x*-axis is one dimension of the image size in pixels (i.e. 32 corresponds to a 32 x 32 image):<br/>
+
+![alt text](graph.png)
