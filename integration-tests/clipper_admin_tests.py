@@ -26,7 +26,7 @@ import clipper_admin as cl
 from clipper_admin.deployers.python import create_endpoint as create_py_endpoint
 from clipper_admin.deployers.python import deploy_python_closure
 from clipper_admin import __version__ as clipper_version
-from clipper_admin.clipper_admin import test_predict_function
+from cl import test_predict_function
 
 sys.path.insert(0, os.path.abspath('%s/util_direct_import/' % cur_dir))
 from util_package import mock_module_in_package as mmip
