@@ -84,9 +84,9 @@ if __name__ == '__main__':
     time.sleep(30)
     try:
         logger.info(
-            "Making 50 predictions using two model container; Should takes 12 seconds."
+            "Making 100 predictions using two model container; Should takes 24 seconds."
         )
-        for _ in range(50):
+        for _ in range(100):
             predict(query_addr, np.random.random(200))
             time.sleep(0.2)
 
