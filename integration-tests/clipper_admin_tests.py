@@ -348,8 +348,12 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         def predict_func(xs):
             return [sum(x) for x in xs]
 
-        clipper_conn.register_application(name="hello-world", input_type="doubles", default_output="-1.0", slo_micros=100000)
-        
+        clipper_conn.register_application(
+            name="hello-world",
+            input_type="doubles",
+            default_output="-1.0",
+            slo_micros=100000)
+
         deploy_python_closure(
             self.clipper_conn,
             name="sum-model",
