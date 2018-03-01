@@ -218,7 +218,6 @@ class KubernetesContainerManager(ContainerManager):
             while self._k8s_beta.read_namespaced_deployment_status(
                 name=deployment_name, namespace='default').status.available_replicas \
                    != num_replicas:
-                logger.info("Waiting for deployment")
                 time.sleep(3)
 
     def get_num_replicas(self, name, version):
@@ -245,7 +244,6 @@ class KubernetesContainerManager(ContainerManager):
         while self._k8s_beta.read_namespaced_deployment_status(
             name=deployment_name, namespace='default').status.available_replicas \
                 != num_replicas:
-            logger.info("Waiting for deployment")
             time.sleep(3)
 
     def get_logs(self, logging_dir):

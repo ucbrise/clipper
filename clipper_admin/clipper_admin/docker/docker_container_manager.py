@@ -244,10 +244,10 @@ class DockerContainerManager(ContainerManager):
 
             model_container_names = []
             for _ in range(num_missing):
-                name = self._add_replica(name, version, input_type, image)
-                model_container_names.append(name)
+                container_name = self._add_replica(name, version, input_type, image)
+                model_container_names.append(container_name)
+
             for name in model_container_names:
-                logger.info("Checking to make sure %s is running" % name)
                 container = self.docker_client.containers.get(name)
                 while container.attrs.get("State").get("Status") != "running":
                     time.sleep(3)
