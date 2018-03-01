@@ -244,7 +244,8 @@ class DockerContainerManager(ContainerManager):
 
             model_container_names = []
             for _ in range(num_missing):
-                container_name = self._add_replica(name, version, input_type, image)
+                container_name = self._add_replica(name, version, input_type,
+                                                   image)
                 model_container_names.append(container_name)
 
             for name in model_container_names:
