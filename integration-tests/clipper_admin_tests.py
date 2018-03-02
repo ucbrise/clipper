@@ -363,12 +363,14 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.clipper_conn.link_model_to_app(
             app_name="hello-world", model_name="sum-model")
 
+        addr = self.clipper_conn.get_query_addr()
+        url = "http://{addr}/hello-world/predict".format(
+            addr=addr, app='hello-world')
+
         headers = {"Content-type": "application/json"}
         test_input = list(np.random.random(10))
         pred = requests.post(
-            "http://localhost:1337/hello-world/predict",
-            headers=headers,
-            data=json.dumps({
+            url, headers=headers, data=json.dumps({
                 "input": test_input
             })).json()
         test_predict_result = self.clipper_conn.test_predict_function(
@@ -382,7 +384,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             list(np.random.random(10))
         ]
         batch_pred = requests.post(
-            "http://localhost:1337/hello-world/predict",
+            url,
             headers=headers,
             data=json.dumps({
                 "input_batch": test_batch_input
