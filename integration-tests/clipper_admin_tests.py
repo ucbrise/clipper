@@ -367,6 +367,9 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         url = "http://{addr}/hello-world/predict".format(
             addr=addr, app='hello-world')
 
+        self.clipper_conn.link_model_to_app(
+            app_name="hello-world", model_name="sum-model")
+
         headers = {"Content-type": "application/json"}
         test_input = [1.1, 2.2, 3.3]
         pred = requests.post(
