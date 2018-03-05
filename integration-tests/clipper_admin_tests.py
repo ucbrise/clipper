@@ -348,6 +348,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         def predict_func(xs):
             return [sum(x) for x in xs]
 
+        self.clipper_conn.stop_all()
         self.clipper_conn.start_clipper()
 
         self.clipper_conn.register_application(
