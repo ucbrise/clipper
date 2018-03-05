@@ -2,7 +2,7 @@
 
 The latency in processing JSON has been recorded. This processing involves `malloc()` calls as well as invocations of the C++ library RapidJSON. More specifically, we profiled a Clipper application with input type `float` using six image sizes (28 x 28, 32 x 32 (CIFAR), 64 x 64, 128 x 128, 256 x 256 (ImageNet), and 512 x 512—equivalently, 3136, 4096, 16384, 65536, 262144, and 1048576 respectively in bytes) and five batch sizes (1, 4, 8, 16, 32). For each combination of image and batch size, we ran 500 requests. The profiling was done on a m4.4xlarge Amazon EC2 instance. Here are the raw results for only `malloc()` call latency, in microseconds:
 
-Image Size (KB) | Batch Size | Mean | Standard Deviation | Min | 50th Percentile | 95th Percentile | 99th Percentile | Max
+Image Size (KB) | Batch Size | Mean Latency (μs) | Standard Deviation Latency (μs) | Min Latency (μs) | 50th Percentile Latency (μs) | 95th Percentile Latency (μs) | 99th Percentile Latency (μs) | Max Latency (μs)
 --- | --- | --- | --- | --- | --- | --- | --- | ---
 3.14|1|0.49|0.5|0|1|1.0|1.0|1
 3.14|4|1.3|0.8|0|1|2.0|4.99|6
@@ -40,7 +40,7 @@ Here is a line plot to visualize the average results above (in microseconds):<br
 
 And here are the raw results for total parsing latency, also in microseconds: 
 
-Image Size (KB) | Batch Size | Mean | Standard Deviation | Min | 50th Percentile | 95th Percentile | 99th Percentile | Max
+Image Size (KB) | Batch Size | Mean Latency (μs) | Standard Deviation Latency (μs) | Min Latency (μs) | 50th Percentile Latency (μs) | 95th Percentile Latency (μs) | 99th Percentile Latency (μs) | Max Latency (μs)
 --- | --- | --- | --- | --- | --- | --- | --- | ---
 3.14|1|5.63|0.51|5|6|6.0|6.99|8
 3.14|4|16.18|0.64|16|16|17.0|19.0|21
