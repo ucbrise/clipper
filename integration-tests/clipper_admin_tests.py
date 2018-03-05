@@ -368,7 +368,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             addr=addr, app='hello-world')
 
         headers = {"Content-type": "application/json"}
-        test_input = list(np.random.random(10))
+        test_input = [1.1, 2.2, 3.3]
         pred = requests.post(
             url, headers=headers, data=json.dumps({
                 "input": test_input
@@ -379,10 +379,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             input_type="doubles")
         self.assertEqual(pred, test_predict_result)
 
-        test_batch_input = [
-            list(np.random.random(10)),
-            list(np.random.random(10))
-        ]
+        test_batch_input = [[1.1, 2.2, 3.3], [4.4, 5.5, 6.6]]
         batch_pred = requests.post(
             url,
             headers=headers,
