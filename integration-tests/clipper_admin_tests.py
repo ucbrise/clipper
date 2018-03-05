@@ -348,6 +348,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         def predict_func(xs):
             return [sum(x) for x in xs]
 
+        self.clipper_conn.start_clipper()
+
         self.clipper_conn.register_application(
             name="hello-world",
             input_type="doubles",
@@ -366,9 +368,6 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         addr = self.clipper_conn.get_query_addr()
         url = "http://{addr}/hello-world/predict".format(
             addr=addr, app='hello-world')
-
-        self.clipper_conn.link_model_to_app(
-            app_name="hello-world", model_name="sum-model")
 
         headers = {"Content-type": "application/json"}
         test_input = [1.1, 2.2, 3.3]
