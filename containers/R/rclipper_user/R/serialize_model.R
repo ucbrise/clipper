@@ -116,9 +116,21 @@
       input_cd_deps = CodeDepends::getInputs(input)
       input_file_deps = .get_file_dependencies(input_cd_deps)
       if(length(input_file_deps) > 0) {
-        # We can't assign a dictionary key to an empty vector,
-        # so only make the assignment if we found file dependencies
-        all_file_dependencies[[input_name]] <<- input_file_deps
+        if(is.character(input) && length(input) == 1) {
+          # If the input is a string with recognized file dependencies,
+          # we should regard the entire string as a file path. CodeDepends
+          # does not always do this correctly, so we implement the proper
+          # behavior here
+          all_file_dependencies[[input_name]] <<- input
+        } else {
+          # The input is not a individual file path. We proceed
+          # to rely directly on the file dependencies located by
+          # CodeDepends
+          #
+          # We can't assign a dictionary key to an empty vector,
+          # so only make the assignment if we found file dependencies
+          all_file_dependencies[[input_name]] <<- input_file_deps
+        }
       }
     }
     
