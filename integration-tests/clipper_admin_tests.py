@@ -349,6 +349,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             return [sum(x) for x in xs]
 
         self.clipper_conn.stop_all()
+        self.clipper_conn.connect()
         self.clipper_conn.start_clipper()
 
         self.clipper_conn.register_application(
