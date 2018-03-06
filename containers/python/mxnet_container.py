@@ -47,12 +47,7 @@ class MXNetContainer(rpc.ModelContainerBase):
         self.predict_func = load_predict_func(predict_path)
 
         # load mxnet model from serialized dir
-<<<<<<< HEAD
-        mxnet_model_path = os.path.join(path, MXNET_MODEL_RELATIVE_PATH)
-        self.model = load_mxnet_model(mxnet_model_path)
-=======
         self.model = load_mxnet_model(path)
->>>>>>> upstream/develop
 
     def predict_ints(self, inputs):
         preds = self.predict_func(self.model, inputs)

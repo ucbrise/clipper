@@ -43,19 +43,12 @@ def predict(model, xs):
 
 def deploy_and_test_model(clipper_conn,
                           model,
-<<<<<<< HEAD
-=======
                           data_shapes,
->>>>>>> upstream/develop
                           version,
                           link_model=False,
                           predict_fn=predict):
     deploy_mxnet_model(clipper_conn, model_name, version, "integers",
-<<<<<<< HEAD
-                       predict_fn, model)
-=======
                        predict_fn, model, data_shapes)
->>>>>>> upstream/develop
 
     time.sleep(5)
 
@@ -138,12 +131,6 @@ if __name__ == "__main__":
             mxnet_model = mx.mod.Module(softmax)
             mxnet_model.fit(data_iter, num_epoch=0)
 
-            deploy_and_test_model(
-                clipper_conn, mxnet_model, version, link_model=True)
-
-            app_and_model_name = "easy-register-app-model"
-            create_endpoint(clipper_conn, app_and_model_name, "integers",
-                            predict, mxnet_model)
             train_data_shape = [1, 785]
 
             deploy_and_test_model(

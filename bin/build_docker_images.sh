@@ -241,10 +241,10 @@ build_images () {
     ###########################################################################
 
     # Build Clipper core images
-    #create_image lib_base ClipperLibBaseDockerfile $private
-    #create_image query_frontend QueryFrontendDockerfile $public
-    #create_image management_frontend ManagementFrontendDockerfile $public
-    #create_image unittests ClipperTestsDockerfile  $private
+    create_image lib_base ClipperLibBaseDockerfile $private
+    create_image query_frontend QueryFrontendDockerfile $public
+    create_image management_frontend ManagementFrontendDockerfile $public
+    create_image unittests ClipperTestsDockerfile  $private
 
     # Build containers
     create_image spark-scala-container SparkScalaContainerDockerfile $public

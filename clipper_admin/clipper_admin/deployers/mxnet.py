@@ -83,6 +83,7 @@ def create_endpoint(
         The number of replicas of the model to create. The number of replicas
         for a model can be changed at any time with
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
+
     Note
     ----
     Regarding `mxnet_data_shapes` parameter:
@@ -151,6 +152,7 @@ def deploy_mxnet_model(
         The number of replicas of the model to create. The number of replicas
         for a model can be changed at any time with
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
+
     Note
     ----
     Regarding `mxnet_data_shapes` parameter:
@@ -158,14 +160,19 @@ def deploy_mxnet_model(
     handle variable size input batches, we recommend setting batch size for input data
     to 1, or dynamically reshaping the model with every prediction based on the current
     input batch size.
+
     Example
     -------
+
         from clipper_admin import ClipperConnection, DockerContainerManager
         from clipper_admin.deployers.mxnet import deploy_mxnet_model
         import mxnet as mx
+
         clipper_conn = ClipperConnection(DockerContainerManager())
+
         # Connect to an already-running Clipper cluster
         clipper_conn.connect()
+
         # Create a MXNet model
         # Configure a two layer neuralnetwork
         data = mx.symbol.Variable('data')
@@ -173,10 +180,13 @@ def deploy_mxnet_model(
         act1 = mx.symbol.Activation(fc1, name='relu1', act_type='relu')
         fc2 = mx.symbol.FullyConnected(act1, name='fc2', num_hidden=10)
         softmax = mx.symbol.SoftmaxOutput(fc2, name='softmax')
+
         # Initialize the module and fit it
         mxnet_model = mx.mod.Module(softmax)
         mxnet_model.fit(data_iter, num_epoch=1)
+
         data_shape = [1, 785]
+
         deploy_mxnet_model(
             clipper_conn,
             name="example",
