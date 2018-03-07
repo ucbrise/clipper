@@ -172,7 +172,7 @@ void ActiveContainers::remove_container(VersionedModelId model, int replica_id) 
               << ", container_id: " << r.second->container_id_ << "\n";
     }
   }
-  log_info(LOGGING_TAG_CONTAINERS, log.msg.str())
+  log_info(LOGGING_TAG_CONTAINERS, log_msg.str())
 }
 
 void ActiveContainers::register_batch_size(VersionedModelId model,
