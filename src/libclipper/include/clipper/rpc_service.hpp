@@ -88,7 +88,9 @@ class RPCService {
  private:
   void manage_service(const string address);
 
-  void check_container_activity();
+  void check_container_activity(std::unordered_map<std::vector<uint8_t>, std::pair<VersionedModelId, int>, 
+        std::function<size_t(const std::vector<uint8_t> &vec)>>
+        &connections_containers_map);
 
   void send_messages(socket_t &socket,
                      boost::bimap<int, vector<uint8_t>> &connections);
@@ -125,6 +127,7 @@ class RPCService {
       receiving_history_;
   std::function<void(VersionedModelId, int)> container_ready_callback_;
   std::function<void(RPCResponse)> new_response_callback_;
+  std::function<void(VersionedModelId, int)> inactive_container_callback_;
 };
 
 }  // namespace rpc
