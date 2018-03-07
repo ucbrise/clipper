@@ -57,7 +57,7 @@ void RPCService::start(
     std::function<void(VersionedModelId, int)> &&inactive_container_callback) {
   container_ready_callback_ = container_ready_callback;
   new_response_callback_ = new_response_callback;
-  inactive_container_callback_ = inactive_container_callback
+  inactive_container_callback_ = inactive_container_callback;
   if (active_) {
     throw std::runtime_error(
         "Attempted to start RPC Service when it is already running!");
