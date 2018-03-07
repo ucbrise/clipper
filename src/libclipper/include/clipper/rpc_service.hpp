@@ -66,7 +66,8 @@ class RPCService {
   void start(
       const string ip, const int port,
       std::function<void(VersionedModelId, int)> &&container_ready_callback,
-      std::function<void(RPCResponse)> &&new_response_callback);
+      std::function<void(RPCResponse)> &&new_response_callback,
+      std::function<void(VersionedModelId, int)> &&inactive_container_callback);
   /**
    * Stops the RPC Service. This is called implicitly within the RPCService
    * destructor.

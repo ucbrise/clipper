@@ -53,9 +53,11 @@ RPCService::~RPCService() { stop(); }
 void RPCService::start(
     const string ip, const int port,
     std::function<void(VersionedModelId, int)> &&container_ready_callback,
-    std::function<void(RPCResponse)> &&new_response_callback) {
+    std::function<void(RPCResponse)> &&new_response_callback,
+    std::function<void(VersionedModelId, int)> &&inactive_container_callback) {
   container_ready_callback_ = container_ready_callback;
   new_response_callback_ = new_response_callback;
+  inactive_container_callback_ = inactive_container_callback
   if (active_) {
     throw std::runtime_error(
         "Attempted to start RPC Service when it is already running!");
@@ -150,7 +152,7 @@ void RPCService::manage_service(const string address) {
     if (std::chrono::duration_cast<std::chrono::milliseconds>(
             current_time - last_activity_check_time_)
             .count() > CONTAINER_EXISTENCE_CHECK_FREQUENCY_MILLS) {
-      check_container_activity();
+      check_container_activity(connections_containers_map);
       last_activity_check_time_ = current_time;
     }
     // Note: We send all queued messages per event loop iteration
@@ -159,7 +161,11 @@ void RPCService::manage_service(const string address) {
   shutdown_service(socket);
 }
 
-void RPCService::check_container_activity() {
+void RPCService::check_container_activity(
+  std::unordered_map<std::vector<uint8_t>, std::pair<VersionedModelId, int>, 
+        std::function<size_t(const std::vector<uint8_t> &vec)>>
+        &connections_containers_map) {
+
   std::map<const vector<uint8_t>,
            std::chrono::system_clock::time_point>::iterator it;
   std::chrono::system_clock::time_point current_time;
@@ -168,6 +174,26 @@ void RPCService::check_container_activity() {
     if (std::chrono::duration_cast<std::chrono::milliseconds>(current_time -
                                                               it->second)
             .count() > CONTAINER_ACTIVITY_TIMEOUT_MILLS) {
+      /** if the amount of time that has elapsed between the current time and the time of last
+      receiving from the container is greater than the threshold, then we want to 
+      call the inactive_container_callback_ */
+
+      const vector<uint8_t> connection_id = it->first;
+      auto container_info_entry =
+            connections_containers_map.find(connection_id);
+        if (container_info_entry == connections_containers_map.end()) {
+          throw std::runtime_error(
+              "Failed to find container that was previously registered via "
+              "RPC");
+        }
+        std::pair<VersionedModelId, int> container_info =
+            container_info_entry->second;
+
+        VersionedModelId vm = container_info.first;
+        int replica_id = container_info.second;
+      TaskExecutionThreadPool::submit_job(
+            vm, replica_id, inactive_container_callback_, vm, replica_id);
+      
       log_info(LOGGING_TAG_RPC, "lost contact with a container");
       receiving_history_.erase(it);
     }

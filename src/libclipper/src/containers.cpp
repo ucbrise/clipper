@@ -145,6 +145,36 @@ void ActiveContainers::add_container(VersionedModelId model, int connection_id,
   log_info(LOGGING_TAG_CONTAINERS, log_msg.str());
 }
 
+void ActiveContainers::remove_container(VersionedModelId model, int replica_id) {
+  log_info_formatted(LOGGING_TAG_CONTAINERS,
+                      "Removing container - model: {}, version: {}, replica ID: {}", 
+                      model.get_name(), model.get_id(), replica_id);
+  boost::unique_lock<boost::shared_mutex> l{m_};
+
+  int initialSize = containers_[model].size();
+
+  for(auto it = containers_[model].begin(); it!=containers_[model].end(); ) {
+    if(it->first == replica_id) {
+      it = containers_[model].erase(it);
+    }
+    else {
+      ++it;
+    }
+  }
+
+  assert(containers_[model].size() == initialSize-1);
+  std::stringstream log_msg;
+  log_msg << "\nActive containers\n";
+  for(auto model : containers_) {
+    log_msg << "\tModel: " << model.first.serialize() << "\n";
+    for(auto r : model.second) {
+      log_msg << "\t\trep_id: " << r.first
+              << ", container_id: " << r.second->container_id_ << "\n";
+    }
+  }
+  log_info(LOGGING_TAG_CONTAINERS, log.msg.str())
+}
+
 void ActiveContainers::register_batch_size(VersionedModelId model,
                                            int batch_size) {
   auto batch_size_entry = batch_sizes_.find(model);

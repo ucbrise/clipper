@@ -70,6 +70,9 @@ class ActiveContainers {
 
   void add_container(VersionedModelId model, int connection_id, int replica_id,
                      InputType input_type);
+
+  void remove_container(VersionedModelId mode, int replica_id);
+
   void register_batch_size(VersionedModelId model, int batch_size);
 
   /// This method returns the active container specified by the

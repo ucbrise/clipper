@@ -242,6 +242,16 @@ class TaskExecutor {
                      "TaskExecutor has been destroyed.");
           }
 
+        },
+        [this, task_executor_valid = active_ ](VersionedModelId model, int replica_id) {
+          if (*task_executor_valid) {
+            on_remove_container(model, replica_id);
+          }
+          else {
+            log_info(LOGGING_TAG_TASK_EXECUTOR,
+                      "Not running on_remove_container callback because "
+                      "TaskExecutor has been destroyed.");
+          }
         });
     Config &conf = get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
@@ -447,7 +457,11 @@ class TaskExecutor {
     l.unlock();
 
     std::vector<PredictTask> batch = current_model_queue->get_batch([container](
-        Deadline deadline) { return container->get_batch_size(deadline); });
+        Deadline deadline) { 
+      if(container) {
+        return container->get_batch_size(deadline); 
+      }
+    });
 
     if (batch.size() > 0) {
       // move the lock up here, so that nothing can pull from the
@@ -541,6 +555,11 @@ class TaskExecutor {
         }
       }
     }
+  }
+
+  void on_remove_container(VersionedModelId model_id, int replica_id) {
+    //remove the given model_id from active_containers_
+    active_containers_->remove_container(model_id, replica_id);
   }
 };
 
