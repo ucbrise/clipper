@@ -9,6 +9,9 @@ spec:
   replicas: 1
   template:
     metadata:
+      annotations:
+        "prometheus.io/scrape": "true"
+        "prometheus.io/port": "1390"
       labels:
         ai.clipper.container.label: ""
         ai.clipper.name: query-frontend
@@ -22,4 +25,13 @@ spec:
         ports:
         - containerPort: 7000
         - containerPort: 1337
+      - args:
+        - "--query_frontend_name" 
+        - "query-frontend:1337"
+        image: "clipper/frontend-exporter" 
+        name: frontend-exporter
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 1390
       restartPolicy: Always
+      
