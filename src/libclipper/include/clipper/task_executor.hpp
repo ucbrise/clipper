@@ -458,9 +458,7 @@ class TaskExecutor {
 
     std::vector<PredictTask> batch = current_model_queue->get_batch([container](
         Deadline deadline) { 
-      if(container) {
         return container->get_batch_size(deadline); 
-      }
     });
 
     if (batch.size() > 0) {
