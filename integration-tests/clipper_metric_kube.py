@@ -1,5 +1,5 @@
 # This integration test is taken straight fron `kubernetes_integration_test.py
-# With the setting 1 app, 1 model, 2 replica. 
+# With the setting 1 app, 1 model, 2 replica.
 # Adding container monitoring check
 
 from __future__ import absolute_import, division, print_function
@@ -40,7 +40,7 @@ def deploy_model(clipper_conn, name, version, link=False):
         "doubles",
         fake_model_data,
         "clipper/noop-container:{}".format(clipper_version),
-        num_replicas=2, # We set it to 2 for metric purpose.
+        num_replicas=2,  # We set it to 2 for metric purpose.
         container_registry=
         "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper")
     time.sleep(10)
@@ -104,19 +104,22 @@ def create_and_test_app(clipper_conn, name, num_models):
             deploy_model(clipper_conn, name, i)
         time.sleep(1)
 
+
 #### Metric Helper
 def get_matched_query(addr, keyword):
     query = "{}/api/v1/series?match[]={}".format(addr, keyword)
-    
+
     logger.info("Querying: {}".format(query))
     res = requests.get(query).json()
     logger.info(res)
 
     return res
 
+
 def parse_res_and_assert_node(res, node_num):
     assert res['status'] == 'success'
     assert len(res['data']) == node_num
+
 
 def get_metrics_config():
     config_path = os.path.join(
@@ -125,18 +128,20 @@ def get_metrics_config():
         conf = yaml.load(f)
     return conf
 
+
 def check_target_health(metric_addr):
     query = metric_addr + '/api/v1/targets'
     logger.info("Querying: {}".format(query))
     res = requests.get(query).json()
     logger.info(res)
     assert res['status'] == 'success'
-    
+
     active_targets = res['data']['activeTargets']
     assert len(active_targets) == 3, 'Wrong number of targets'
-    
+
     for target in active_targets:
         assert target['health'] == 'up', "Target {} is not up!".format(target)
+
 
 if __name__ == "__main__":
     num_apps = 1
@@ -157,23 +162,23 @@ if __name__ == "__main__":
         print(clipper_conn.cm.get_query_addr())
         print(clipper_conn.inspect_instance())
         try:
-            logger.info("Set up: with %d apps and %d models" %
-                        (num_apps, num_models))
+            logger.info("Set up: with %d apps and %d models" % (num_apps,
+                                                                num_models))
             for a in range(num_apps):
                 create_and_test_app(clipper_conn, "testapp%s" % a, num_models)
 
             # Start Metric Check
             metric_api_addr = clipper_conn.cm.get_metric_addr()
-            
+
             # Account for InvalidSchema: No connection adapters were found
             if not metric_api_addr.startswith('http://'):
-                metric_api_addr = 'http://' + metric_api_addr 
-            
+                metric_api_addr = 'http://' + metric_api_addr
+
             logger.info("Test 1: Checking status of 3 node exporter")
-            
+
             # Sleep & retry is need to for kubelet to setup networking
             #  It takes about 2 minutes for the network to get back on track
-            #  for the frontend-exporter to expose metrics correct. 
+            #  for the frontend-exporter to expose metrics correct.
             retry_count = MAX_RETRY
             while retry_count:
                 try:
@@ -183,11 +188,11 @@ if __name__ == "__main__":
                     print("Exception noted. Will retry again in 60 seconds.")
                     print(e)
                     retry_count -= 1
-                    if retry_count == 0: # a.k.a. the last retry
+                    if retry_count == 0:  # a.k.a. the last retry
                         raise e
                     else:
                         time.sleep(69)
-                        pass # try again. 
+                        pass  # try again.
 
             logger.info("Test 1 Passed")
 

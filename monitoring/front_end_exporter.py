@@ -22,6 +22,7 @@ ADDRESS = 'http://{}/metrics'.format(query_frontend_id)
 
 print("Scraping {}".format(ADDRESS))
 
+
 def load_metric():
     try:
         res = requests.get(ADDRESS)

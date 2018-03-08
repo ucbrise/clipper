@@ -49,18 +49,20 @@ def parse_res_and_assert_node(res, node_num):
     assert res['status'] == 'success'
     assert len(res['data']) == node_num
 
+
 def check_target_health(metric_addr):
     query = metric_addr + '/api/v1/targets'
     logger.info("Querying: {}".format(query))
     res = requests.get(query).json()
     logger.info(res)
     assert res['status'] == 'success'
-    
+
     active_targets = res['data']['activeTargets']
     assert len(active_targets) == 3, 'Wrong number of targets'
-    
+
     for target in active_targets:
         assert target['health'] == 'up', "Target {} is not up!".format(target)
+
 
 def log_docker_ps(clipper_conn):
     container_runing = clipper_conn.cm.docker_client.containers.list()
