@@ -20,10 +20,16 @@ query_frontend_id = args.query_frontend_name
 
 ADDRESS = 'http://{}/metrics'.format(query_frontend_id)
 
+print("Scraping {}".format(ADDRESS))
+
 
 def load_metric():
-    res = requests.get(ADDRESS)
-    return res.json()
+    try:
+        res = requests.get(ADDRESS)
+        return res.json()
+    except Exception as e:
+        print("Scrape Failed! Error: {}\n".format(e))
+        return dict()
 
 
 def multi_dict_unpacking(lst):
@@ -38,6 +44,10 @@ def multi_dict_unpacking(lst):
 
 
 def parse_metric(metrics):
+    if not len(metrics):
+        # Return empty dictionary if it's empty
+        return metrics
+
     wo_type = list(itertools.chain.from_iterable(metrics.values()))
     wo_type_flattened = list(itertools.chain([flatten(d) for d in wo_type]))
     wo_type_joined = multi_dict_unpacking(wo_type_flattened)
