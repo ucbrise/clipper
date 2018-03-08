@@ -1,6 +1,6 @@
 from __future__ import print_function
 import sys
-sys.path.insert(0, '../../clipper_admin')
+sys.path.insert(0, '../../../clipper_admin')
 from clipper_admin import ClipperConnection, DockerContainerManager
 from clipper_admin.deployers import python as python_deployer
 import json

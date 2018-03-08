@@ -50,6 +50,7 @@ def deploy_model(clipper_conn, name, version, link=False):
         num_defaults = 0
         addr = clipper_conn.get_query_addr()
         for i in range(num_preds):
+            time.sleep(0.2)
             response = requests.post(
                 "http://%s/%s/predict" % (addr, app_name),
                 headers=headers,
