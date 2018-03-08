@@ -26,6 +26,8 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+MAX_RETRY = 4
+
 # TODO: Add kubernetes specific checks that use kubernetes API
 
 
@@ -105,10 +107,6 @@ def create_and_test_app(clipper_conn, name, num_models):
 #### Metric Helper
 def get_matched_query(addr, keyword):
     query = "{}/api/v1/series?match[]={}".format(addr, keyword)
-
-    # Account for InvalidSchema: No connection adapters were found
-    if not query.startswith('http://'):
-        query = 'http://' + query 
     
     logger.info("Querying: {}".format(query))
     res = requests.get(query).json()
@@ -126,6 +124,19 @@ def get_metrics_config():
     with open(config_path, 'r') as f:
         conf = yaml.load(f)
     return conf
+
+def check_target_health(metric_addr):
+    query = metric_addr + '/api/v1/targets'
+    logger.info("Querying: {}".format(query))
+    res = requests.get(query).json()
+    logger.info(res)
+    assert res['status'] == 'success'
+    
+    active_targets = res['data']['activeTargets']
+    assert len(active_targets) == 3, 'Wrong number of targets'
+    
+    for target in active_targets:
+        assert target['health'] == 'up', "Target {} is not up!".format(target)
 
 if __name__ == "__main__":
     num_apps = 1
@@ -154,9 +165,30 @@ if __name__ == "__main__":
             # Start Metric Check
             metric_api_addr = clipper_conn.cm.get_metric_addr()
             
+            # Account for InvalidSchema: No connection adapters were found
+            if not metric_api_addr.startswith('http://'):
+                metric_api_addr = 'http://' + metric_api_addr 
+            
             logger.info("Test 1: Checking status of 3 node exporter")
-            up_response = get_matched_query(metric_api_addr, 'up')
-            parse_res_and_assert_node(up_response, node_num=3)
+            
+            # Sleep & retry is need to for kubelet to setup networking
+            #  It takes about 2 minutes for the network to get back on track
+            #  for the frontend-exporter to expose metrics correct. 
+            retry_count = MAX_RETRY
+            while retry_count:
+                try:
+                    check_target_health(metric_api_addr)
+                    retry_count = 0
+                except AssertionError as e:
+                    print("Exception noted. Will retry again in 60 seconds.")
+                    print(e)
+                    retry_count -= 1
+                    if retry_count == 0: # a.k.a. the last retry
+                        raise e
+                    else:
+                        time.sleep(69)
+                        pass # try again. 
+
             logger.info("Test 1 Passed")
 
             logger.info("Test 2: Checking Model Container Metrics")
