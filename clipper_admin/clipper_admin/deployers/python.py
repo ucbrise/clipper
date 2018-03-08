@@ -73,7 +73,7 @@ def create_endpoint(
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
     batch_size : int, optional
         The user-defined query batch size for the model. Replicas of the model will attempt
-        to process at most `batch_size` queries simultaneously. They may process smaller 
+        to process at most `batch_size` queries simultaneously. They may process smaller
         batches if `batch_size` queries are not immediately available.
         If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
         replicas of this model.
@@ -136,7 +136,7 @@ def deploy_python_closure(
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
     batch_size : int, optional
         The user-defined query batch size for the model. Replicas of the model will attempt
-        to process at most `batch_size` queries simultaneously. They may process smaller 
+        to process at most `batch_size` queries simultaneously. They may process smaller
         batches if `batch_size` queries are not immediately available.
         If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
         replicas of this model.
