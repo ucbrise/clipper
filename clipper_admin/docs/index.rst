@@ -1,6 +1,9 @@
 API Documentation
 ==================
 
+You can checkout our REST API documentation about managing models here:
+<http://simon-mo.com/clipper_api_gen/>
+
 Clipper Connection
 -------------------
 
