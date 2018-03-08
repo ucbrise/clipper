@@ -373,10 +373,10 @@ class ClipperConnection(object):
             run_cmd = 'RUN pip install '
             for index in range(len(pkgs_to_install)):
                 run_cmd += pkgs_to_install[index]
-                    if index < len(pkgs_to_install) - 1:
-                        run_cmd += ' '
-                    else:
-                        run_cmd += '\n'
+                if index < len(pkgs_to_install) - 1:
+                    run_cmd += ' '
+                else:
+                    run_cmd += '\n'
         with tempfile.NamedTemporaryFile(
                 mode="w+b", suffix="tar") as context_file:
             # Create build context tarfile

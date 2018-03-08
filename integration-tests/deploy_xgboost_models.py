@@ -7,6 +7,7 @@ import numpy as np
 import time
 import logging
 import xgboost as xgb
+import pickle
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -18,6 +19,8 @@ from test_utils import (create_docker_connection, BenchmarkException, headers,
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
 from clipper_admin.deployers.xgboost import deploy_xgboost_model, create_endpoint
+
+from clipper_admin.deployers.deployer_utils import save_python_function
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
@@ -38,8 +41,17 @@ def deploy_and_test_model(clipper_conn,
                           version,
                           link_model=False,
                           predict_fn=predict):
-    deploy_xgboost_model(clipper_conn, model_name, version, "integers",
-                         predict_fn, model)
+    serialization_dir = save_python_function('xgboost_model', predict_fn)
+    xgboost_model_save_loc = os.path.join(serialization_dir,
+        "xgboost_model_data.pickle.dat")
+    try:
+        pickle.dump(model, open(xgboost_model_save_loc, "wb"))
+    except Exception as e:
+        logger.warn("Error saving xgboost model: %s" % e)
+        raise e
+    base_image = None
+    clipper_conn.build_and_deploy_model('xgboost_model', version, "integers",
+                        serialization_dir, base_image, pkgs_to_install=['xgboost'])
 
     time.sleep(5)
 
