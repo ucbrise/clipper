@@ -23,11 +23,11 @@ ADDRESS = 'http://{}/metrics'.format(query_frontend_id)
 print("Scraping {}".format(ADDRESS))
 
 def load_metric():
-    res = requests.get(ADDRESS)
-    if res.status_code == requests.codes.ok:
+    try:
+        res = requests.get(ADDRESS)
         return res.json()
-    else:
-        print("Scrape Failed! {}".format(res.text))
+    except Exception as e:
+        print("Scrape Failed! Error: {}\n".format(e))
         return dict()
 
 
