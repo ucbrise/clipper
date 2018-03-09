@@ -39,7 +39,7 @@ def deploy_and_test_model(clipper_conn,
     
     base_image = 'clipper/python-closure-container:develop'
     clipper_conn.build_and_deploy_model(model_name, version, "integers",
-                        serialization_dir, base_image, pkgs_to_install=['xgboost', 'psycopg2'])
+                        serialization_dir, base_image, pkgs_to_install=['xgboost'])
 
     time.sleep(5)
 
