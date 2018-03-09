@@ -1,11 +1,14 @@
 from __future__ import absolute_import, print_function
 import os
 import sys
+if sys.version == '3':
+    sys.exit(0)
 import requests
 import json
 import numpy as np
 import time
 import logging
+
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 

@@ -20,6 +20,6 @@ RUN conda install -y libgcc pyzmq
 RUN pip install requests scikit-learn numpy pyyaml docker cloudpickle==0.5.2
 
 
-ENTRYPOINT ["/clipper/bin/ci_checks.sh"]
+ENTRYPOINT ["/clipper/bin/run_unittests.sh", "-i"]
 
 # vim: set filetype=dockerfile:
