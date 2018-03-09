@@ -215,6 +215,11 @@ class KubernetesContainerManager(ContainerManager):
             self._k8s_beta.create_namespaced_deployment(
                 body=body, namespace='default')
 
+            while self._k8s_beta.read_namespaced_deployment_status(
+                name=deployment_name, namespace='default').status.available_replicas \
+                   != num_replicas:
+                time.sleep(3)
+
     def get_num_replicas(self, name, version):
         deployment_name = get_model_deployment_name(name, version)
         response = self._k8s_beta.read_namespaced_deployment_scale(
@@ -234,6 +239,12 @@ class KubernetesContainerManager(ContainerManager):
                     'replicas': num_replicas,
                 }
             })
+
+
+        while self._k8s_beta.read_namespaced_deployment_status(
+            name=deployment_name, namespace='default').status.available_replicas \
+                != num_replicas:
+            time.sleep(3)
 
     def get_logs(self, logging_dir):
         logging_dir = os.path.abspath(os.path.expanduser(logging_dir))
