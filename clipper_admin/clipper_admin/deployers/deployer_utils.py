@@ -48,7 +48,7 @@ def save_python_function(name, func):
     if sys.version < '3':
         with open(func_file_path, "w") as serialized_function_file:
             serialized_function_file.write(serialized_prediction_function)
-    else: 
+    else:
         with open(func_file_path, "wb") as serialized_function_file:
             serialized_function_file.write(serialized_prediction_function)
     logging.info("Serialized and supplied predict function")

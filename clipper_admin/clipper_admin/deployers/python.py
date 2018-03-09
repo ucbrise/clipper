@@ -187,7 +187,6 @@ def deploy_python_closure(
             func=centered_predict)
     """
 
-
     serialization_dir = save_python_function(name, func)
     # Special handling for Windows, which uses backslash for path delimiting
     serialization_dir = posixpath.join(*os.path.split(serialization_dir))
@@ -195,9 +194,9 @@ def deploy_python_closure(
     # Check if Python 2 or Python 3 image
 
     if sys.version_info[0] < 3:
-        base_image="clipper/python-closure-container:{}".format(__version__)
+        base_image = "clipper/python-closure-container:{}".format(__version__)
     else:
-        base_image="clipper/python3-closure-container:{}".format(__version__)
+        base_image = "clipper/python3-closure-container:{}".format(__version__)
 
     # Deploy function
     clipper_conn.build_and_deploy_model(

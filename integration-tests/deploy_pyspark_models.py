@@ -9,7 +9,6 @@ import numpy as np
 import time
 import logging
 
-
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
 from pyspark.mllib.classification import LogisticRegressionWithSGD
