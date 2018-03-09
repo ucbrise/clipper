@@ -370,7 +370,7 @@ class ClipperConnection(object):
 
         run_cmd = ''
         if pkgs_to_install:
-            run_cmd = 'RUN pip install '
+            run_cmd = 'RUN apt-get -y install build_essential && pip install '
             for index in range(len(pkgs_to_install)):
                 run_cmd += pkgs_to_install[index]
                 if index < len(pkgs_to_install) - 1:
@@ -385,8 +385,8 @@ class ClipperConnection(object):
                 context_tar.add(model_data_path)
                 # From https://stackoverflow.com/a/740854/814642
                 df_contents = six.StringIO(
-                    "FROM {container_name}\nCOPY {data_path} /model/\n{run_command}".format(
-                        container_name=base_image, data_path=model_data_path), run_command=run_cmd)
+                    ("FROM {container_name}\nCOPY {data_path} /model/\n"+run_cmd).format(
+                        container_name=base_image, data_path=model_data_path))
                 df_tarinfo = tarfile.TarInfo('Dockerfile')
                 df_contents.seek(0, os.SEEK_END)
                 df_tarinfo.size = df_contents.tell()

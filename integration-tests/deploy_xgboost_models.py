@@ -41,7 +41,7 @@ def deploy_and_test_model(clipper_conn,
                           version,
                           link_model=False,
                           predict_fn=predict):
-    serialization_dir = save_python_function('xgboost_model', predict_fn)
+    serialization_dir = save_python_function(model_name, predict_fn)
     xgboost_model_save_loc = os.path.join(serialization_dir,
         "xgboost_model_data.pickle.dat")
     try:
@@ -49,8 +49,8 @@ def deploy_and_test_model(clipper_conn,
     except Exception as e:
         logger.warn("Error saving xgboost model: %s" % e)
         raise e
-    base_image = None
-    clipper_conn.build_and_deploy_model('xgboost_model', version, "integers",
+    base_image = 'python_closure_container:develop'
+    clipper_conn.build_and_deploy_model(model_name, version, "integers",
                         serialization_dir, base_image, pkgs_to_install=['xgboost'])
 
     time.sleep(5)
