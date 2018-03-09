@@ -1209,6 +1209,8 @@ class ClipperConnection(object):
             The input_type to be associated with the registered app and deployed model.
             One of "integers", "floats", "doubles", "bytes", or "strings".
         """
+        if not self.connected:
+            self.connect()
         query_data = list(x for x in list(query.values()))
         query_key = list(query.keys())
 
