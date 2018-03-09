@@ -12,20 +12,18 @@ from .deployer_utils import save_python_function
 logger = logging.getLogger(__name__)
 
 
-def create_endpoint(
-        clipper_conn,
-        name,
-        input_type,
-        func,
-        default_output="None",
-        version=1,
-        slo_micros=3000000,
-        labels=None,
-        registry=None,
-        base_image="default",
-        num_replicas=1,
-        batch_size=-1):
-
+def create_endpoint(clipper_conn,
+                    name,
+                    input_type,
+                    func,
+                    default_output="None",
+                    version=1,
+                    slo_micros=3000000,
+                    labels=None,
+                    registry=None,
+                    base_image="default",
+                    num_replicas=1,
+                    batch_size=-1):
     """Registers an application and deploys the provided predict function as a model.
 
     Parameters
@@ -90,17 +88,16 @@ def create_endpoint(
     clipper_conn.link_model_to_app(name, name)
 
 
-def deploy_python_closure(
-        clipper_conn,
-        name,
-        version,
-        input_type,
-        func,
-        base_image="default",
-        labels=None,
-        registry=None,
-        num_replicas=1,
-        batch_size=-1):
+def deploy_python_closure(clipper_conn,
+                          name,
+                          version,
+                          input_type,
+                          func,
+                          base_image="default",
+                          labels=None,
+                          registry=None,
+                          num_replicas=1,
+                          batch_size=-1):
     """Deploy an arbitrary Python function to Clipper.
 
     The function should take a list of inputs of the type specified by `input_type` and
@@ -180,7 +177,6 @@ def deploy_python_closure(
             func=centered_predict)
     """
 
-
     serialization_dir = save_python_function(name, func)
     # Special handling for Windows, which uses backslash for path delimiting
     serialization_dir = posixpath.join(*os.path.split(serialization_dir))
@@ -188,9 +184,9 @@ def deploy_python_closure(
     # Check if Python 2 or Python 3 image
 
     if sys.version_info[0] < 3:
-        base_image="clipper/python-closure-container:{}".format(__version__)
+        base_image = "clipper/python-closure-container:{}".format(__version__)
     else:
-        base_image="clipper/python3-closure-container:{}".format(__version__)
+        base_image = "clipper/python3-closure-container:{}".format(__version__)
 
     # Deploy function
     clipper_conn.build_and_deploy_model(name, version, input_type,

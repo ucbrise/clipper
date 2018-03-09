@@ -9,7 +9,6 @@ import numpy as np
 import time
 import logging
 
-
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
 sys.path.insert(0, os.path.abspath('%s/util_direct_import/' % cur_dir))

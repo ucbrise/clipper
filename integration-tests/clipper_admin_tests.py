@@ -310,13 +310,15 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             containers = docker_client.containers.list(
                 filters={
                     "ancestor":
-                    "clipper/python-closure-container:{}".format(clipper_version)
+                    "clipper/python-closure-container:{}".format(
+                        clipper_version)
                 })
-        else: 
+        else:
             containers = docker_client.containers.list(
                 filters={
                     "ancestor":
-                    "clipper/python3-closure-container:{}".format(clipper_version)
+                    "clipper/python3-closure-container:{}".format(
+                        clipper_version)
                 })
         self.assertGreaterEqual(len(containers), 1)
 
@@ -347,13 +349,15 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             containers = docker_client.containers.list(
                 filters={
                     "ancestor":
-                    "clipper/python-closure-container:{}".format(clipper_version)
+                    "clipper/python-closure-container:{}".format(
+                        clipper_version)
                 })
-        else: 
+        else:
             containers = docker_client.containers.list(
                 filters={
                     "ancestor":
-                    "clipper/python3-closure-container:{}".format(clipper_version)
+                    "clipper/python3-closure-container:{}".format(
+                        clipper_version)
                 })
         self.assertEqual(len(containers), 1)
 

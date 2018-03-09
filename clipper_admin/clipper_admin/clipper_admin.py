@@ -26,8 +26,6 @@ from .container_manager import CONTAINERLESS_MODEL_IMAGE
 from .exceptions import ClipperException, UnconnectedException
 from .version import __version__
 
-
-
 DEFAULT_LABEL = []
 DEFAULT_PREDICTION_CACHE_SIZE_BYTES = 33554432
 CLIPPER_TEMP_DIR = "/tmp/clipper"
@@ -381,8 +379,11 @@ class ClipperConnection(object):
                 # From https://stackoverflow.com/a/740854/814642
                 try:
                     df_contents = StringIO(
-                        str.encode("FROM {container_name}\nCOPY {data_path} /model/\n".format(
-                            container_name=base_image, data_path=model_data_path)))
+                        str.encode(
+                            "FROM {container_name}\nCOPY {data_path} /model/\n".
+                            format(
+                                container_name=base_image,
+                                data_path=model_data_path)))
                     df_tarinfo = tarfile.TarInfo('Dockerfile')
                     df_contents.seek(0, os.SEEK_END)
                     df_tarinfo.size = df_contents.tell()
@@ -390,8 +391,10 @@ class ClipperConnection(object):
                     context_tar.addfile(df_tarinfo, df_contents)
                 except TypeError:
                     df_contents = StringIO(
-                    "FROM {container_name}\nCOPY {data_path} /model/\n".format(
-                        container_name=base_image, data_path=model_data_path))
+                        "FROM {container_name}\nCOPY {data_path} /model/\n".
+                        format(
+                            container_name=base_image,
+                            data_path=model_data_path))
                     df_tarinfo = tarfile.TarInfo('Dockerfile')
                     df_contents.seek(0, os.SEEK_END)
                     df_tarinfo.size = df_contents.tell()

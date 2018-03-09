@@ -358,7 +358,7 @@ class Server(threading.Thread):
         sys.stderr.flush()
 
     def send_heartbeat(self, socket):
-        if sys.version < '3'
+        if sys.version < '3':
             socket.send("", zmq.SNDMORE)
         else:
             socket.send_string("", zmq.SNDMORE)
@@ -419,9 +419,9 @@ class PredictionResponse():
         output : string
         """
         if not isinstance(output, str):
-            output = unicode(output, "utf-8").encode("utf-8")      
+            output = unicode(output, "utf-8").encode("utf-8")
         else:
-            output = output.encode('utf-8')      
+            output = output.encode('utf-8')
         output_len = len(output)
         struct.pack_into("<I", PredictionResponse.output_buffer,
                          self.current_output_sizes_position, output_len)
