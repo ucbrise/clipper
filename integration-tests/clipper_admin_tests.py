@@ -391,7 +391,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             query={"input_batch": test_batch_input},
             func=predict_func,
             input_type="doubles")
-        batch_predictions = batch_pred['batch_predictions']
+        batch_predictions = batch_pred[
+            'batch_predictions']  # different dict structure
         batch_pred_outputs = [batch['output'] for batch in batch_predictions]
         self.assertEqual(batch_pred_outputs, test_batch_predict_result)
 
