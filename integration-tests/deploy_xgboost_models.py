@@ -32,26 +32,16 @@ logger = logging.getLogger(__name__)
 app_name = "xgboost-test"
 model_name = "xgboost-model"
 
-
-def predict(model, xs):
-    return [str(model.predict(xgb.DMatrix(xs)))]
-
 def deploy_and_test_model(clipper_conn,
                           model,
                           version,
-                          link_model=False,
-                          predict_fn=predict):
+                          predict_fn,
+                          link_model=False):
     serialization_dir = save_python_function(model_name, predict_fn)
-    xgboost_model_save_loc = os.path.join(serialization_dir,
-        "xgboost_model_data.pickle.dat")
-    try:
-        pickle.dump(model, open(xgboost_model_save_loc, "wb"))
-    except Exception as e:
-        logger.warn("Error saving xgboost model: %s" % e)
-        raise e
-    base_image = 'python_closure_container:develop'
+    
+    base_image = 'clipper/python-closure-container:develop'
     clipper_conn.build_and_deploy_model(model_name, version, "integers",
-                        serialization_dir, base_image, pkgs_to_install=['xgboost'])
+                        serialization_dir, base_image, pkgs_to_install=['xgboost', 'psycopg2'])
 
     time.sleep(5)
 
@@ -122,12 +112,14 @@ if __name__ == "__main__":
             watchlist = [(dtrain, 'train')]
             num_round = 2
             bst = xgb.train(param, dtrain, num_round, watchlist)
+            def predict(xs):
+                return [str(bst.predict(xgb.DMatrix(xs)))]
             deploy_and_test_model(
                 clipper_conn,
                 bst,
                 version,
-                link_model=True,
-                predict_fn=predict)
+                predict,
+                link_model=True)
         except BenchmarkException as e:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")

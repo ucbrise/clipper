@@ -370,7 +370,7 @@ class ClipperConnection(object):
 
         run_cmd = ''
         if pkgs_to_install:
-            run_cmd = 'RUN apt-get -y install build_essential && pip install '
+            run_cmd = 'RUN apt-get -y install build-essential && pip install '
             for index in range(len(pkgs_to_install)):
                 run_cmd += pkgs_to_install[index]
                 if index < len(pkgs_to_install) - 1:
