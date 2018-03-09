@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 import docker
 import logging
 import os
+import sys
 import random
 import time
 from ..container_manager import (
@@ -283,10 +284,10 @@ class DockerContainerManager(ContainerManager):
             log_file_name = "image_{image}:container_{id}.log".format(
                 image=c.image.short_id, id=c.short_id)
             log_file = os.path.join(logging_dir, log_file_name)
-            try:
+            if sys.version < '3':
                 with open(log_file, "w") as lf:
                     lf.write(c.logs(stdout=True, stderr=True))
-            except TypeError:
+            else:
                 with open(log_file, "wb") as lf:
                     lf.write(c.logs(stdout=True, stderr=True))
             log_files.append(log_file)

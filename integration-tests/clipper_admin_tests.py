@@ -306,11 +306,18 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertIsNotNone(model_info)
 
         docker_client = get_docker_client()
-        containers = docker_client.containers.list(
-            filters={
-                "ancestor":
-                "clipper/python-closure-container:{}".format(clipper_version)
-            })
+        if sys.version < '3':
+            containers = docker_client.containers.list(
+                filters={
+                    "ancestor":
+                    "clipper/python-closure-container:{}".format(clipper_version)
+                })
+        else: 
+            containers = docker_client.containers.list(
+                filters={
+                    "ancestor":
+                    "clipper/python3-closure-container:{}".format(clipper_version)
+                })
         self.assertGreaterEqual(len(containers), 1)
 
     def test_register_py_endpoint(self):
@@ -336,11 +343,18 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertIsNotNone(linked_models)
 
         docker_client = get_docker_client()
-        containers = docker_client.containers.list(
-            filters={
-                "ancestor":
-                "clipper/python-closure-container:{}".format(clipper_version)
-            })
+        if sys.version < '3':
+            containers = docker_client.containers.list(
+                filters={
+                    "ancestor":
+                    "clipper/python-closure-container:{}".format(clipper_version)
+                })
+        else: 
+            containers = docker_client.containers.list(
+                filters={
+                    "ancestor":
+                    "clipper/python3-closure-container:{}".format(clipper_version)
+                })
         self.assertEqual(len(containers), 1)
 
 
@@ -520,22 +534,22 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
 
 SHORT_TEST_ORDERING = [
-    #'test_register_model_correct',
-    #'test_register_application_correct',
-    #'test_link_not_registered_model_to_app_fails',
-    #'test_get_model_links_when_none_exist_returns_empty_list',
-    #'test_link_registered_model_to_app_succeeds',
-    #'get_app_info_for_registered_app_returns_info_dictionary',
-    #'get_app_info_for_nonexistent_app_returns_none',
-    #'test_set_num_replicas_for_external_model_fails',
-    #'test_model_version_sets_correctly',
-    #'test_get_logs_creates_log_files',
-    #'test_inspect_instance_returns_json_dict',
-    #'test_model_deploys_successfully',
-    #'test_set_num_replicas_for_deployed_model_succeeds',
-    #'test_remove_inactive_containers_succeeds',
-    #'test_stop_models',
-    #'test_python_closure_deploys_successfully',
+    'test_register_model_correct',
+    'test_register_application_correct',
+    'test_link_not_registered_model_to_app_fails',
+    'test_get_model_links_when_none_exist_returns_empty_list',
+    'test_link_registered_model_to_app_succeeds',
+    'get_app_info_for_registered_app_returns_info_dictionary',
+    'get_app_info_for_nonexistent_app_returns_none',
+    'test_set_num_replicas_for_external_model_fails',
+    'test_model_version_sets_correctly',
+    'test_get_logs_creates_log_files',
+    'test_inspect_instance_returns_json_dict',
+    'test_model_deploys_successfully',
+    'test_set_num_replicas_for_deployed_model_succeeds',
+    'test_remove_inactive_containers_succeeds',
+    'test_stop_models',
+    'test_python_closure_deploys_successfully',
     'test_register_py_endpoint',
 ]
 

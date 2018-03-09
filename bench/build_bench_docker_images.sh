@@ -25,6 +25,7 @@ fi
 # Assume local clipper/py-rpc base image (if exists) or pulled image is correct
 
 docker build -t clipper/py-rpc:$tag -f ./RPCDockerfile ./
+docker build -t clipper/py3-rpc:$tag -f ./Py3RPCDockerfile ./
 if [ $# -eq 0 ]; then
 	time docker build build --build-arg CODE_VERSION=$tag -t clipper/sum-bench:$tag -f dockerfiles/SumBenchDockerfile ./
 	time docker build build --build-arg CODE_VERSION=$tag -t clipper/noop-bench:$tag -f dockerfiles/NoopBenchDockerfile ./

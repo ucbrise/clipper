@@ -245,7 +245,7 @@ build_images () {
     create_image query_frontend QueryFrontendDockerfile $public
     create_image management_frontend ManagementFrontendDockerfile $public
     create_image unittests ClipperTestsDockerfile  $private
-    create_image unittests ClipperPy3TestsDockerfile  $private
+    create_image py3tests ClipperPy3TestsDockerfile  $private
 
 
     # Build containers

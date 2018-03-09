@@ -4,17 +4,23 @@ import logging
 from cloudpickle import CloudPickler
 from .module_dependency import ModuleDependencyAnalyzer
 from ..clipper_admin import CLIPPER_TEMP_DIR
-import six
 import os
 import sys
 import shutil
 import tempfile
 cur_dir = os.path.dirname(os.path.abspath(__file__))
+
+
 if sys.version < '3':
     import subprocess32 as subprocess
+    try:
+        from cStringIO import StringIO
+    except ImportError:
+        from StringIO import StringIO
     PY3 = False
 else:
     import subprocess
+    from io import BytesIO as StringIO
     PY3 = True
 
 CONTAINER_CONDA_PLATFORM = 'linux-64'
@@ -23,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 def serialize_object(obj):
-    s = six.StringIO()
+    s = StringIO()
     c = CloudPickler(s, 2)
     c.dump(obj)
     return s.getvalue()
@@ -37,11 +43,10 @@ def save_python_function(name, func):
     local_modules_folder_name = "modules"
 
     # Serialize function
-    s = six.StringIO()
+    s = StringIO()
     c = CloudPickler(s, 2)
     c.dump(func)
     serialized_prediction_function = s.getvalue()
-
 
     # Set up serialization directory
     if not os.path.exists(CLIPPER_TEMP_DIR):
@@ -81,8 +86,12 @@ def save_python_function(name, func):
 
     # Write out function serialization
     func_file_path = os.path.join(serialization_dir, predict_fname)
-    with open(func_file_path, "w") as serialized_function_file:
-        serialized_function_file.write(serialized_prediction_function)
+    if sys.version < '3':
+        with open(func_file_path, "w") as serialized_function_file:
+            serialized_function_file.write(serialized_prediction_function)
+    else: 
+        with open(func_file_path, "wb") as serialized_function_file:
+            serialized_function_file.write(serialized_prediction_function)
     logging.info("Serialized and supplied predict function")
     return serialization_dir
 

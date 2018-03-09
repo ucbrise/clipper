@@ -344,9 +344,9 @@ class Server(threading.Thread):
                 sys.stderr.flush()
 
     def send_container_metadata(self, socket):
-        try:
+        if sys.version < '3':
             socket.send("", zmq.SNDMORE)
-        except:
+        else:
             socket.send("".encode('utf-8'), zmq.SNDMORE)
         socket.send(struct.pack("<I", MESSAGE_TYPE_NEW_CONTAINER), zmq.SNDMORE)
         socket.send_string(self.model_name, zmq.SNDMORE)
@@ -358,9 +358,9 @@ class Server(threading.Thread):
         sys.stderr.flush()
 
     def send_heartbeat(self, socket):
-        try:
+        if sys.version < '3'
             socket.send("", zmq.SNDMORE)
-        except TypeError:
+        else:
             socket.send_string("", zmq.SNDMORE)
         socket.send(struct.pack("<I", MESSAGE_TYPE_HEARTBEAT))
         self.event_history.insert(EVENT_HISTORY_SENT_HEARTBEAT)
@@ -431,9 +431,9 @@ class PredictionResponse():
         self.string_content_end_position += output_len
 
     def send(self, socket, event_history):
-        try:
+        if sys.version < '3':
             socket.send("", flags=zmq.SNDMORE)
-        except TypeError:
+        else:
             socket.send_string("", flags=zmq.SNDMORE)
         socket.send(
             struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT),

@@ -16,14 +16,8 @@ RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh \
     && rm /tmp/anaconda3.sh
 ENV PATH "/opt/conda/bin:$PATH"
 RUN conda install -y libgcc pyzmq
- 
-RUN pip install requests subprocess32 scikit-learn numpy pyyaml docker cloudpickle==0.5.2
 
-COPY ./ /clipper
-
-# Patch Clipper
-RUN cd /clipper/src/libs/spdlog \
-    && git apply ../patches/make_spdlog_compile_linux.patch
+RUN pip install requests scikit-learn numpy pyyaml docker cloudpickle==0.5.2
 
 
 ENTRYPOINT ["/clipper/bin/ci_checks.sh"]
