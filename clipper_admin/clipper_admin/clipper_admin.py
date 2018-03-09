@@ -10,14 +10,26 @@ import time
 import re
 import os
 import tarfile
-import six
 from cloudpickle import CloudPickler
 import pickle
 import numpy as np
+import sys
+
+if sys.version_info < (3, 0):
+    try:
+        from cStringIO import StringIO
+    except ImportError:
+        from StringIO import StringIO
+    PY3 = False
+else:
+    from io import BytesIO as StringIO
+    PY3 = True
 
 from .container_manager import CONTAINERLESS_MODEL_IMAGE
 from .exceptions import ClipperException, UnconnectedException
 from .version import __version__
+
+
 
 DEFAULT_LABEL = []
 DEFAULT_PREDICTION_CACHE_SIZE_BYTES = 33554432
@@ -402,6 +414,7 @@ class ClipperConnection(object):
                     fileobj=context_file, mode="w") as context_tar:
                 context_tar.add(model_data_path)
                 # From https://stackoverflow.com/a/740854/814642
+<<<<<<< 8c65184eb1e344b91e89629000410763271fbf01
                 df_contents = six.StringIO(
                     "FROM {container_name}\nCOPY {data_path} /model/\n{run_command}\n".
                     format(
@@ -413,6 +426,26 @@ class ClipperConnection(object):
                 df_tarinfo.size = df_contents.tell()
                 df_contents.seek(0)
                 context_tar.addfile(df_tarinfo, df_contents)
+=======
+                try:
+                    df_contents = StringIO(
+                        str.encode("FROM {container_name}\nCOPY {data_path} /model/\n".format(
+                            container_name=base_image, data_path=model_data_path)))
+                    df_tarinfo = tarfile.TarInfo('Dockerfile')
+                    df_contents.seek(0, os.SEEK_END)
+                    df_tarinfo.size = df_contents.tell()
+                    df_contents.seek(0)
+                    context_tar.addfile(df_tarinfo, df_contents)
+                except TypeError:
+                    df_contents = StringIO(
+                    "FROM {container_name}\nCOPY {data_path} /model/\n".format(
+                        container_name=base_image, data_path=model_data_path))
+                    df_tarinfo = tarfile.TarInfo('Dockerfile')
+                    df_contents.seek(0, os.SEEK_END)
+                    df_tarinfo.size = df_contents.tell()
+                    df_contents.seek(0)
+                    context_tar.addfile(df_tarinfo, df_contents)
+>>>>>>> progress
             # Exit Tarfile context manager to finish the tar file
             # Seek back to beginning of file for reading
             context_file.seek(0)

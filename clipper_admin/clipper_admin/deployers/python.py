@@ -84,7 +84,6 @@ def create_endpoint(
         The names must be strings.
     """
 
-
     clipper_conn.register_application(name, input_type, default_output,
                                       slo_micros)
     deploy_python_closure(clipper_conn, name, version, input_type, func,

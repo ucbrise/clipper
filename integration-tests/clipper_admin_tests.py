@@ -314,11 +314,18 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertIsNotNone(model_info)
 
         docker_client = get_docker_client()
-        containers = docker_client.containers.list(
-            filters={
-                "ancestor":
-                "clipper/python-closure-container:{}".format(clipper_version)
-            })
+        if sys.version < '3':
+            containers = docker_client.containers.list(
+                filters={
+                    "ancestor":
+                    "clipper/python-closure-container:{}".format(clipper_version)
+                })
+        else: 
+            containers = docker_client.containers.list(
+                filters={
+                    "ancestor":
+                    "clipper/python3-closure-container:{}".format(clipper_version)
+                })
         self.assertGreaterEqual(len(containers), 1)
 
     def test_register_py_endpoint(self):
@@ -344,11 +351,18 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertIsNotNone(linked_models)
 
         docker_client = get_docker_client()
-        containers = docker_client.containers.list(
-            filters={
-                "ancestor":
-                "clipper/python-closure-container:{}".format(clipper_version)
-            })
+        if sys.version < '3':
+            containers = docker_client.containers.list(
+                filters={
+                    "ancestor":
+                    "clipper/python-closure-container:{}".format(clipper_version)
+                })
+        else: 
+            containers = docker_client.containers.list(
+                filters={
+                    "ancestor":
+                    "clipper/python3-closure-container:{}".format(clipper_version)
+                })
         self.assertEqual(len(containers), 1)
 
     def test_test_predict_function(self):
