@@ -378,7 +378,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             query={"input": test_input},
             func=predict_func,
             input_type="doubles")
-        self.assertEqual([pred['output']], test_predict_result)
+        self.assertEqual([pred['output']],
+                         test_predict_result)  # tests single input
 
         test_batch_input = [[1.1, 2.2, 3.3], [4.4, 5.5, 6.6]]
         batch_pred = requests.post(
@@ -393,7 +394,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             input_type="doubles")
         batch_predictions = batch_pred['batch_predictions']
         batch_pred_outputs = [batch['output'] for batch in batch_predictions]
-        self.assertEqual(batch_pred_outputs, test_batch_predict_result)
+        self.assertEqual(batch_pred_outputs,
+                         test_batch_predict_result)  # tests batch input
 
 
 class ClipperManagerTestCaseLong(unittest.TestCase):
