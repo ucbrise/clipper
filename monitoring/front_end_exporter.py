@@ -30,7 +30,7 @@ def load_metric():
         res = requests.get(ADDRESS)
         return res.json()
     except Exception as e:
-        print("Scrape Failed! Error: {}\n".format(e))
+        logger.warning("Scrape Failed! Error: {}\n".format(e))
         return dict()
 
 
