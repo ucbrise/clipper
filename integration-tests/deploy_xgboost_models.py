@@ -18,7 +18,7 @@ from test_utils import (create_docker_connection, BenchmarkException, headers,
                         log_clipper_state)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
-from clipper_admin.deployers.python import deploy_python_model, create_endpoint
+from clipper_admin.deployers.python import deploy_python_closure, create_endpoint
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
@@ -35,7 +35,7 @@ def deploy_and_test_model(clipper_conn,
                           version,
                           predict_fn,
                           link_model=False):
-    deploy_python_model(clipper_conn, model_name, version, "integers",
+    deploy_python_closure(clipper_conn, model_name, version, "integers",
                         predict_fn, pkgs_to_install=['xgboost'])
     time.sleep(5)
 
@@ -81,8 +81,6 @@ if __name__ == "__main__":
         clipper_conn = create_docker_connection(
             cleanup=True, start_clipper=True)
 
-        train_path = os.path.join(cur_dir, "data/agaricus.txt.train")
-        test_path = os.path.join(cur_dir, "data/agaricus.txt.test")
         try:
             clipper_conn.register_application(app_name, "integers",
                                               "default_pred", 100000)
