@@ -98,7 +98,8 @@ def deploy_python_closure(
         labels=None,
         registry=None,
         num_replicas=1,
-        batch_size=-1):
+        batch_size=-1,
+        pkgs_to_install=None):
     """Deploy an arbitrary Python function to Clipper.
 
     The function should take a list of inputs of the type specified by `input_type` and
@@ -140,6 +141,9 @@ def deploy_python_closure(
         batches if `batch_size` queries are not immediately available.
         If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
         replicas of this model.
+    pkgs_to_install : list (of strings), optional
+        A list of the names of packages to install, using pip, in the container.
+        The names must be strings.
 
     Example
     -------
@@ -185,6 +189,7 @@ def deploy_python_closure(
     # Deploy function
     clipper_conn.build_and_deploy_model(name, version, input_type,
                                         serialization_dir, base_image, labels,
-                                        registry, num_replicas, batch_size)
+                                        registry, num_replicas, batch_size,
+                                        pkgs_to_install)
     # Remove temp files
     shutil.rmtree(serialization_dir)

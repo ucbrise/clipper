@@ -113,7 +113,8 @@ def deploy_mxnet_model(
         base_image="clipper/mxnet-container:{}".format(__version__),
         labels=None,
         registry=None,
-        num_replicas=1):
+        num_replicas=1,
+        pkgs_to_install=None):
     """Deploy a Python function with a MXNet model.
     Parameters
     ----------
@@ -152,6 +153,9 @@ def deploy_mxnet_model(
         The number of replicas of the model to create. The number of replicas
         for a model can be changed at any time with
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
+    pkgs_to_install : list (of strings), optional
+        A list of the names of packages to install, using pip, in the container.
+        The names must be strings.
 
     Note
     ----
@@ -218,7 +222,8 @@ def deploy_mxnet_model(
         # Deploy model
         clipper_conn.build_and_deploy_model(name, version, input_type,
                                             serialization_dir, base_image,
-                                            labels, registry, num_replicas)
+                                            labels, registry, num_replicas,
+                                            pkgs_to_install)
 
     except Exception as e:
         logger.error("Error saving MXNet model: %s" % e)
