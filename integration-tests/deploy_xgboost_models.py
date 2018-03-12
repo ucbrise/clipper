@@ -18,7 +18,7 @@ from test_utils import (create_docker_connection, BenchmarkException, headers,
                         log_clipper_state)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
-from clipper_admin.deployers.python import deploy_python_closure, create_endpoint
+from clipper_admin.deployers.python import deploy_python_closure
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
