@@ -18,7 +18,7 @@ from test_utils import (create_docker_connection, BenchmarkException, headers,
                         log_clipper_state)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
-from clipper_admin.deployers.deployer_utils import save_python_function
+from clipper_admin.deployers.python import deploy_python_model, create_endpoint
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
@@ -35,12 +35,8 @@ def deploy_and_test_model(clipper_conn,
                           version,
                           predict_fn,
                           link_model=False):
-    serialization_dir = save_python_function(model_name, predict_fn)
-    
-    base_image = 'clipper/python-closure-container:develop'
-    clipper_conn.build_and_deploy_model(model_name, version, "integers",
-                        serialization_dir, base_image, pkgs_to_install=['xgboost'])
-
+    deploy_python_model(clipper_conn, model_name, version, "integers",
+                        predict_fn, pkgs_to_install=['xgboost'])
     time.sleep(5)
 
     if link_model:
