@@ -9,7 +9,7 @@ RUN echo deb http://ftp.de.debian.org/debian jessie-backports main >> /etc/apt/s
       && conda config --set ssl_verify no \
       && conda install -c anaconda cloudpickle=0.5.2 \
       && conda install -y --file /lib/python_container_conda_deps.txt \
-      && pip install mxnet==1.0.0 \
+      && pip install mxnet \
       && apt-get install -y graphviz \
       && pip install graphviz
 

@@ -17,10 +17,11 @@ RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh \
 ENV PATH "/opt/conda/bin:$PATH"
 RUN conda config --set ssl_verify no \
     && conda install -c anaconda cloudpickle=0.5.2 \
-    && conda install -y libgcc pyzmq libsodium
+    && conda install -y libgcc pyzmq libsodium pyspark \
+    && conda install -c conda-forge onnx \
+    && conda install pytorch torchvision -c pytorch
  
-RUN pip install requests subprocess32 scikit-learn numpy pyyaml docker kubernetes tensorflow
-RUN conda install pyspark
+RUN pip install requests subprocess32 scikit-learn numpy pyyaml docker kubernetes tensorflow mxnet
 
 # Install maven
 ARG MAVEN_VERSION=3.5.0
