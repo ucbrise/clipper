@@ -8,7 +8,7 @@ If you are using `KubernetesContainerManager`, You can query the metric address 
 Please note that Prometheus UI is for debug purpose only. You can view certain metric and graph the timeseries. But for better visualization, we recommend [Grafana](https://grafana.com/). Grafana has default support for Prometheus Client. Feel free to checkout `examples/monitoring` for example of displaying Clipper metrics in Grafana.
 
 ## Avaliable Metrics
-See `metrics_config.yaml` for the metrics detail and description. This configuration file is used in the creation of `RPC.py` container
+See `metrics_config.yaml` for the metrics detail and description. This configuration file is used in the creation of `rpc.py` container
 
 ## Scrape Target Discovery
 In Docker, we add scrape targets as the service is setup and an new replica added. The scrape configuration file is saved in `tmp/clipper`. 
