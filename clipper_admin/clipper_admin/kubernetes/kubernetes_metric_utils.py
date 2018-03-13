@@ -8,9 +8,9 @@ import json
 from ..version import __version__
 
 _cur_dir = os.path.dirname(os.path.abspath(__file__))
-prom_deployment_path = os.path.join(_cur_dir, 'prom_deployment.yml')
-prom_service_path = os.path.join(_cur_dir, 'prom_service.yml')
-prom_configmap_path = os.path.join(_cur_dir, 'prom_configmap.yml')
+prom_deployment_path = os.path.join(_cur_dir, 'prom_deployment.yaml')
+prom_service_path = os.path.join(_cur_dir, 'prom_service.yaml')
+prom_configmap_path = os.path.join(_cur_dir, 'prom_configmap.yaml')
 frontend_exporter_deployment_path = os.path.join(
     _cur_dir, 'frontend-exporter-deployment.yaml')
 
