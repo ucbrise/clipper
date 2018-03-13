@@ -196,7 +196,7 @@ Prediction requests are serialized in a similar fashion to prediction responses.
 2. This is the **first** message part in a **prediction response** and the **second** message part in a **prediction request**. This message part consists of a 64-bit unsigned integer containing the length of the prediction request metadata header (defined in field **3**).
 
 3. The next ZeroMQ message part contains a metadata header. This is a list of 64-bit unsigned integers.
-    * The metadata header begins with a 64-bit unsigned integer specifying the type of prediction data contained in the request. This unsigned integer can assume values 0-4, as defined in point two of **Initializing a Connection**.
+    * The metadata header begins with a 64-bit unsigned integer specifying the type of prediction data contained in the request. This unsigned integer can assume values 0-4, as defined in the **RPC Messages** section under the **New Container Message** subheader.
  
     * The next 64-bit unsigned integer in the metadata header is the number of prediction data items included in the serialized content.
  
