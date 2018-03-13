@@ -46,7 +46,8 @@ def _create_prometheus_deployment(_k8s_beta):
     with open(prom_deployment_path, 'r') as f:
         data = yaml.load(f)
 
-    data['spec']['template']['spec']['containers'][0]['image'] = "prom/prometheus:{version}".fomrat(version=PROM_VERSION)
+    data['spec']['template']['spec']['containers'][0][
+        'image'] = "prom/prometheus:{version}".fomrat(version=PROM_VERSION)
 
     with _pass_conflicts():
         _k8s_beta.create_namespaced_deployment(body=data, namespace='default')
