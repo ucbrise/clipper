@@ -31,12 +31,12 @@ MAX_RETRY = 4
 # TODO: Add kubernetes specific checks that use kubernetes API
 
 
-def deploy_model(clipper_conn, name, version, link=False):
-    app_name = "{}-app-metric".format(name)
-    model_name = "{}-model-metric".format(name)
+def deploy_model(clipper_conn, name, link=False):
+    app_name = "{}-app".format(name)
+    model_name = "{}-model".format(name)
     clipper_conn.build_and_deploy_model(
         model_name,
-        version,
+        1,
         "doubles",
         fake_model_data,
         "clipper/noop-container:{}".format(clipper_version),
@@ -51,7 +51,7 @@ def deploy_model(clipper_conn, name, version, link=False):
     success = False
     num_tries = 0
 
-    while not success and num_tries < 5:
+    while not success and num_tries < MAX_RETRY:
         time.sleep(30)
         num_preds = 25
         num_defaults = 0
@@ -79,8 +79,8 @@ def deploy_model(clipper_conn, name, version, link=False):
                                  (app_name, model_name, version))
 
 
-def create_and_test_app(clipper_conn, name, num_models):
-    app_name = "{}-app-metric".format(name)
+def create_and_test_app(clipper_conn, name):
+    app_name = "{}-app".format(name)
     clipper_conn.register_application(app_name, "doubles", "default_pred",
                                       100000)
     time.sleep(1)
@@ -97,12 +97,8 @@ def create_and_test_app(clipper_conn, name, num_models):
         logger.error("Error: %s" % response.text)
         raise BenchmarkException("Error creating app %s" % app_name)
 
-    for i in range(num_models):
-        if i == 0:
-            deploy_model(clipper_conn, name, i, link=True)
-        else:
-            deploy_model(clipper_conn, name, i)
-        time.sleep(1)
+    deploy_model(clipper_conn, name, link=True)
+
 
 
 #### Metric Helper
@@ -144,29 +140,13 @@ def check_target_health(metric_addr):
 
 
 if __name__ == "__main__":
-    num_apps = 1
-    num_models = 1
-    try:
-        if len(sys.argv) > 1:
-            num_apps = int(sys.argv[1])
-        if len(sys.argv) > 2:
-            num_models = int(sys.argv[2])
-    except IndexError:
-        # it's okay to pass here, just use the default values
-        # for num_apps and num_models
-        pass
     try:
         clipper_conn = create_kubernetes_connection(
             cleanup=True, start_clipper=True)
         time.sleep(10)
         print(clipper_conn.cm.get_query_addr())
-        print(clipper_conn.inspect_instance())
         try:
-            logger.info("Set up: with %d apps and %d models" % (num_apps,
-                                                                num_models))
-            for a in range(num_apps):
-                create_and_test_app(clipper_conn, "metric-testapp%s" % a,
-                                    num_models)
+            create_and_test_app(clipper_conn, "kube-metric")
 
             # Start Metric Check
             metric_api_addr = clipper_conn.cm.get_metric_addr()
