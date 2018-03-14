@@ -1,31 +1,35 @@
 from __future__ import print_function, with_statement, absolute_import
-
-import logging
-import os
-import posixpath
 import shutil
-from ..version import __version__
+import torch
+import logging
+import re
+import os
+import json
 
-from .deployer_utils import save_python_function
+from ..version import __version__
+from ..clipper_admin import ClipperException
+from .deployer_utils import save_python_function, serialize_object
 
 logger = logging.getLogger(__name__)
 
 
-def create_endpoint(
-        clipper_conn,
-        name,
-        input_type,
-        func,
-        default_output="None",
-        version=1,
-        slo_micros=3000000,
-        labels=None,
-        registry=None,
-        base_image="clipper/python-closure-container:{}".format(__version__),
-        num_replicas=1,
-        batch_size=-1):
-    """Registers an application and deploys the provided predict function as a model.
-
+def create_pytorch_endpoint(clipper_conn,
+                            name,
+                            input_type,
+                            inputs,
+                            func,
+                            pytorch_model,
+                            default_output="None",
+                            version=1,
+                            slo_micros=3000000,
+                            labels=None,
+                            registry=None,
+                            base_image=None,
+                            num_replicas=1,
+                            onnx_backend="caffe2",
+                            batch_size=-1):
+    """This function deploys the prediction function with a PyTorch model.
+    It serializes the PyTorch model in Onnx format and creates a container that loads it as a Caffe2 model.
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
@@ -35,9 +39,13 @@ def create_endpoint(
     input_type : str
         The input_type to be associated with the registered app and deployed model.
         One of "integers", "floats", "doubles", "bytes", or "strings".
+    inputs :
+        input of func.
     func : function
         The prediction function. Any state associated with the function will be
         captured via closure capture and pickled with Cloudpickle.
+    pytorch_model : pytorch model object
+        The PyTorch model to save.
     default_output : str, optional
         The default output for the application. The default output will be returned whenever
         an application is unable to receive a response from a model within the specified
@@ -61,7 +69,7 @@ def create_endpoint(
         and used purely for user annotations.
     registry : str, optional
         The Docker container registry to push the freshly built model to. Note
-        that if you are running Clipper on Kubernetes, this registry must be accessible
+        that if you are running Clipper on Kubernetes, this registry must be accesible
         to the Kubernetes cluster in order to fetch the container from the registry.
     base_image : str, optional
         The base Docker image to build the new model image from. This
@@ -71,9 +79,11 @@ def create_endpoint(
         The number of replicas of the model to create. The number of replicas
         for a model can be changed at any time with
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
+    onnx_backend : str, optional
+        The provided onnx backend.Caffe2 is the only currently supported ONNX backend.
     batch_size : int, optional
         The user-defined query batch size for the model. Replicas of the model will attempt
-        to process at most `batch_size` queries simultaneously. They may process smaller
+        to process at most `batch_size` queries simultaneously. They may process smaller 
         batches if `batch_size` queries are not immediately available.
         If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
         replicas of this model.
@@ -81,29 +91,28 @@ def create_endpoint(
 
     clipper_conn.register_application(name, input_type, default_output,
                                       slo_micros)
-    deploy_python_closure(clipper_conn, name, version, input_type, func,
-                          base_image, labels, registry, num_replicas,
-                          batch_size)
+    deploy_pytorch_model(clipper_conn, name, version, input_type, inputs, func,
+                         pytorch_model, base_image, labels, registry,
+                         num_replicas, onnx_backend)
 
     clipper_conn.link_model_to_app(name, name)
 
 
-def deploy_python_closure(
-        clipper_conn,
-        name,
-        version,
-        input_type,
-        func,
-        base_image="clipper/python-closure-container:{}".format(__version__),
-        labels=None,
-        registry=None,
-        num_replicas=1,
-        batch_size=-1):
-    """Deploy an arbitrary Python function to Clipper.
-
-    The function should take a list of inputs of the type specified by `input_type` and
-    return a Python list or numpy array of predictions as strings.
-
+def deploy_pytorch_model(clipper_conn,
+                         name,
+                         version,
+                         input_type,
+                         inputs,
+                         func,
+                         pytorch_model,
+                         base_image=None,
+                         labels=None,
+                         registry=None,
+                         num_replicas=1,
+                         onnx_backend="caffe2",
+                         batch_size=-1):
+    """This function deploys the prediction function with a PyTorch model.
+    It serializes the PyTorch model in Onnx format and creates a container that loads it as a Caffe2 model.
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
@@ -116,9 +125,13 @@ def deploy_python_closure(
     input_type : str
         The input_type to be associated with the registered app and deployed model.
         One of "integers", "floats", "doubles", "bytes", or "strings".
+    inputs :
+        input of func.
     func : function
         The prediction function. Any state associated with the function will be
         captured via closure capture and pickled with Cloudpickle.
+    pytorch_model : pytorch model object
+        The Pytorch model to save.
     base_image : str, optional
         The base Docker image to build the new model image from. This
         image should contain all code necessary to run a Clipper model
@@ -134,57 +147,38 @@ def deploy_python_closure(
         The number of replicas of the model to create. The number of replicas
         for a model can be changed at any time with
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
+    onnx_backend : str, optional
+        The provided onnx backend.Caffe2 is the only currently supported ONNX backend.
     batch_size : int, optional
         The user-defined query batch size for the model. Replicas of the model will attempt
-        to process at most `batch_size` queries simultaneously. They may process smaller
+        to process at most `batch_size` queries simultaneously. They may process smaller 
         batches if `batch_size` queries are not immediately available.
         If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
         replicas of this model.
-
-    Example
-    -------
-    Define a pre-processing function ``center()`` and train a model on the pre-processed input::
-
-        from clipper_admin import ClipperConnection, DockerContainerManager
-        from clipper_admin.deployers.python import deploy_python_closure
-        import numpy as np
-        import sklearn
-
-        clipper_conn = ClipperConnection(DockerContainerManager())
-
-        # Connect to an already-running Clipper cluster
-        clipper_conn.connect()
-
-        def center(xs):
-            means = np.mean(xs, axis=0)
-            return xs - means
-
-        centered_xs = center(xs)
-        model = sklearn.linear_model.LogisticRegression()
-        model.fit(centered_xs, ys)
-
-        # Note that this function accesses the trained model via closure capture,
-        # rather than having the model passed in as an explicit argument.
-        def centered_predict(inputs):
-            centered_inputs = center(inputs)
-            # model.predict returns a list of predictions
-            preds = model.predict(centered_inputs)
-            return [str(p) for p in preds]
-
-        deploy_python_closure(
-            clipper_conn,
-            name="example",
-            input_type="doubles",
-            func=centered_predict)
     """
+    if base_image is None:
+        if onnx_backend is "caffe2":
+            base_image = "clipper/caffe2-onnx-container:{}".format(__version__)
+        else:
+            logger.error(
+                "{backend} ONNX backend is not currently supported.".format(
+                    backend=onnx_backend))
 
     serialization_dir = save_python_function(name, func)
-    # Special handling for Windows, which uses backslash for path delimiting
-    serialization_dir = posixpath.join(*os.path.split(serialization_dir))
-    logger.info("Python closure saved")
-    # Deploy function
-    clipper_conn.build_and_deploy_model(name, version, input_type,
-                                        serialization_dir, base_image, labels,
-                                        registry, num_replicas, batch_size)
+
+    try:
+        torch_out = torch.onnx._export(
+            pytorch_model, inputs, "model.onnx", export_params=True)
+        # Deploy model
+        clipper_conn.build_and_deploy_model(
+            name, version, input_type, serialization_dir, base_image, labels,
+            registry, num_replicas, batch_size)
+
+    except Exception as e:
+        logger.error(
+            "Error serializing PyTorch model to ONNX: {e}".format(e=e))
+
+    logger.info("Torch model has be serialized to ONNX format")
+
     # Remove temp files
     shutil.rmtree(serialization_dir)
