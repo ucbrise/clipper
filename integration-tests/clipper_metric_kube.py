@@ -80,7 +80,7 @@ def deploy_model(clipper_conn, name, version, link=False):
 
 
 def create_and_test_app(clipper_conn, name, num_models):
-    app_name = "%s-app" % name
+    app_name = "{}-app-metric".format(name)
     clipper_conn.register_application(app_name, "doubles", "default_pred",
                                       100000)
     time.sleep(1)
