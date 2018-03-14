@@ -100,7 +100,6 @@ def create_and_test_app(clipper_conn, name):
     deploy_model(clipper_conn, name, link=True)
 
 
-
 #### Metric Helper
 def get_matched_query(addr, keyword):
     query = "{}/api/v1/series?match[]={}".format(addr, keyword)
