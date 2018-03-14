@@ -131,7 +131,7 @@ if __name__ == "__main__":
             mxnet_model = mx.mod.Module(softmax)
             mxnet_model.fit(data_iter, num_epoch=0)
 
-            train_data_shape = [1, 785]
+            train_data_shape = data_iter.provide_data
 
             deploy_and_test_model(
                 clipper_conn,
