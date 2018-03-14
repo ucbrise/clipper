@@ -32,8 +32,8 @@ MAX_RETRY = 4
 
 
 def deploy_model(clipper_conn, name, version, link=False):
-    app_name = "%s-app" % name
-    model_name = "%s-model" % name
+    app_name = "{}-app-metric" % name
+    model_name = "{}-model-metric" % name
     clipper_conn.build_and_deploy_model(
         model_name,
         version,
@@ -165,7 +165,7 @@ if __name__ == "__main__":
             logger.info("Set up: with %d apps and %d models" % (num_apps,
                                                                 num_models))
             for a in range(num_apps):
-                create_and_test_app(clipper_conn, "testapp%s" % a, num_models)
+                create_and_test_app(clipper_conn, "metric-testapp%s" % a, num_models)
 
             # Start Metric Check
             metric_api_addr = clipper_conn.cm.get_metric_addr()
