@@ -131,10 +131,15 @@ class ClipperConnection(object):
                     if ("applications" in config):
                         for application in config["applications"]:
                             try:
-                                input_type = config["applications"][application]["input_type"]
-                                slo = config["applications"][application]["slo"]
-                                default_value = config["applications"][application]["default_value"]
-                                self.register_application(application, input_type, default_value,slo)
+                                input_type = config["applications"][
+                                    application]["input_type"]
+                                slo = config["applications"][application][
+                                    "slo"]
+                                default_value = config["applications"][
+                                    application]["default_value"]
+                                self.register_application(
+                                    application, input_type, default_value,
+                                    slo)
                             except ClipperException as e:
                                 print("required parameters not found")
                                 raise e
@@ -145,17 +150,20 @@ class ClipperConnection(object):
                         for model in config["models"]:
                             try:
                                 config_image = config["models"][model]["image"]
-                                input_type = config["models"][model]["input_type"]
+                                input_type = config["models"][model][
+                                    "input_type"]
                                 version = config["models"][model]["version"]
                                 labels = None
                                 if ("labels" in config["models"][model]):
                                     labels = config["models"][model]["labels"]
                                 num_replicas = 1
                                 if ("num_replicas" in config["models"][model]):
-                                    num_replicas = config["models"][model]["num_replicas"]
+                                    num_replicas = config["models"][model][
+                                        "num_replicas"]
                                 batch_size = -1
                                 if ("batch_size" in config["models"][model]):
-                                    batch_size = config["models"][model]["batch_size"]
+                                    batch_size = config["models"][model][
+                                        "batch_size"]
                                 self.deploy_model(model, version, input_type,
                                                   config_image, labels,
                                                   num_replicas, batch_size)
@@ -177,7 +185,6 @@ class ClipperConnection(object):
                             except KeyError, f:
                                 print("required parameters not found")
                                 raise ClipperException(KeyError)
-
 
         parse_configuration(config_file)
 
@@ -1258,7 +1265,7 @@ class ClipperConnection(object):
     def test_predict_function(self, query, func, input_type):
         """Tests that the user's function has the correct signature and can be properly saved and loaded.
 
-        The function should take a dict request object like the query frontend expects JSON, 
+        The function should take a dict request object like the query frontend expects JSON,
         the predict function, and the input type for the model.
 
         For example, the function can be called like: clipper_conn.test_predict_function({"input": [1.0, 2.0, 3.0]}, predict_func, "doubles")
