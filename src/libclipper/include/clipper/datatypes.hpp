@@ -328,12 +328,16 @@ class PredictTask {
 
   PredictTask &operator=(PredictTask &&other) = default;
 
+  void make_artificial();
+  bool is_artificial();
+
   std::shared_ptr<Input> input_;
   VersionedModelId model_;
   float utility_;
   QueryId query_id_;
   long latency_slo_micros_;
   std::chrono::time_point<std::chrono::system_clock> recv_time_;
+  bool artificial_;
 };
 
 /// NOTE: If a feedback task is scheduled, the task scheduler

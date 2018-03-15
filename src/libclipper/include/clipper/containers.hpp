@@ -1,4 +1,3 @@
-
 #ifndef CLIPPER_LIB_CONTAINERS_HPP
 #define CLIPPER_LIB_CONTAINERS_HPP
 
@@ -32,8 +31,7 @@ class ModelContainer {
   ModelContainer &operator=(ModelContainer &&) = default;
 
   size_t get_batch_size(Deadline deadline);
-  double get_average_throughput_per_millisecond();
-  void update_throughput(size_t batch_size, long total_latency);
+  void add_processing_datapoint(size_t batch_size, long total_latency);
   void send_feedback(PredictTask task);
   void set_batch_size(int batch_size);
 
@@ -45,13 +43,28 @@ class ModelContainer {
   clipper::metrics::Histogram latency_hist_;
 
  private:
+  // Pair of batch size, model processing latency
+  using ProcessingDatapoint = std::pair<size_t, long>;
   bool connected_{true};
   Queue<FeedbackTask> feedback_queue_;
-  boost::shared_mutex throughput_mutex_;
-  double avg_throughput_per_milli_;
-  boost::circular_buffer<double> throughput_buffer_;
-  static const size_t THROUGHPUT_BUFFER_CAPACITY = 100;
-  static const size_t HISTOGRAM_SAMPLE_SIZE = 100;
+  boost::shared_mutex datapoints_mutex_;
+  boost::circular_buffer<ProcessingDatapoint> processing_datapoints_;
+
+  size_t max_batch_size_;
+  long max_latency_;
+  std::normal_distribution<double> exploration_distribution_;
+
+  // Exploration and estimation parameters
+  // for adaptive batching
+  double explore_dist_mu_ = .1;
+  double explore_dist_std_ = .05;
+  double estimate_decay_ = .95;
+
+  static const size_t DATAPOINTS_BUFFER_CAPACITY = 256;
+  static const size_t HISTOGRAM_SAMPLE_SIZE = 256;
+
+  size_t explore();
+  size_t estimate(Deadline deadline);
 };
 
 /// This is a lightweight wrapper around the map of active containers

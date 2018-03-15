@@ -361,7 +361,12 @@ PredictTask::PredictTask(std::shared_ptr<Input> input, VersionedModelId model,
       model_(model),
       utility_(utility),
       query_id_(query_id),
-      latency_slo_micros_(latency_slo_micros) {}
+      latency_slo_micros_(latency_slo_micros),
+      artificial_(false) {}
+
+void PredictTask::make_artificial() { artificial_ = true; }
+
+bool PredictTask::is_artificial() { return artificial_; }
 
 FeedbackTask::FeedbackTask(Feedback feedback, VersionedModelId model,
                            QueryId query_id, long latency_slo_micros)

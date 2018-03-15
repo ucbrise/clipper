@@ -138,17 +138,25 @@ class ModelQueue {
   }
 
   std::vector<PredictTask> get_batch(
-      std::function<int(Deadline)> &&get_batch_size) {
+      std::function<size_t(Deadline)> &&get_batch_size) {
     std::unique_lock<std::mutex> lock(queue_mutex_);
     remove_tasks_with_elapsed_deadlines();
     queue_not_empty_condition_.wait(lock, [this]() { return !queue_.empty(); });
     remove_tasks_with_elapsed_deadlines();
     Deadline deadline = queue_.top().first;
-    int max_batch_size = get_batch_size(deadline);
+    size_t max_batch_size = get_batch_size(deadline);
     std::vector<PredictTask> batch;
-    while (batch.size() < (size_t)max_batch_size && queue_.size() > 0) {
+    while (batch.size() < max_batch_size && queue_.size() > 0) {
       batch.push_back(queue_.top().second);
       queue_.pop();
+    }
+    size_t batch_differential = max_batch_size - batch.size();
+    if (batch_differential > 0) {
+      // Artificially inject queries to create
+      // a full batch
+      auto last_task = batch.back();
+      last_task.make_artificial();
+      std::fill_n(std::back_inserter(batch), batch_differential, last_task);
     }
     return batch;
   }

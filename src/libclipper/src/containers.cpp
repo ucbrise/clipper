@@ -1,4 +1,4 @@
-
+#include <algorithm>
 #include <chrono>
 #include <iostream>
 #include <memory>
@@ -27,19 +27,22 @@ ModelContainer::ModelContainer(VersionedModelId model, int container_id,
       replica_id_(replica_id),
       input_type_(input_type),
       batch_size_(batch_size),
+      max_batch_size_(1),
+      max_latency_(0),
+      exploration_distribution_(std::normal_distribution<double>(
+          explore_dist_mu_, explore_dist_std_)),
       latency_hist_("container:" + model.serialize() + ":" +
                         std::to_string(replica_id) + ":prediction_latency",
                     "microseconds", HISTOGRAM_SAMPLE_SIZE),
-      avg_throughput_per_milli_(0),
-      throughput_buffer_(THROUGHPUT_BUFFER_CAPACITY) {
+      processing_datapoints_(DATAPOINTS_BUFFER_CAPACITY) {
   std::string model_str = model.serialize();
   log_info_formatted(LOGGING_TAG_CONTAINERS,
                      "Creating new ModelContainer for model {}, id: {}",
                      model_str, std::to_string(container_id));
 }
 
-void ModelContainer::update_throughput(size_t batch_size,
-                                       long total_latency_micros) {
+void ModelContainer::add_processing_datapoint(size_t batch_size,
+                                              long total_latency_micros) {
   if (batch_size <= 0 || total_latency_micros <= 0) {
     throw std::invalid_argument(
         "Batch size and latency must be positive for throughput updates!");
@@ -47,38 +50,14 @@ void ModelContainer::update_throughput(size_t batch_size,
 
   latency_hist_.insert(total_latency_micros);
 
-  boost::unique_lock<boost::shared_mutex> lock(throughput_mutex_);
-  double new_throughput = 1000 * (static_cast<double>(batch_size) /
-                                  static_cast<double>(total_latency_micros));
-  double old_total_throughput =
-      avg_throughput_per_milli_ * throughput_buffer_.size();
-  if (throughput_buffer_.size() == throughput_buffer_.capacity()) {
-    // If the throughput buffer is already at maximum capacity,
-    // we replace the oldest throughput sample with
-    // the latest throughput and recalculate the average
-    double oldest_throughput = throughput_buffer_.front();
-    double new_total_throughput =
-        (old_total_throughput - oldest_throughput + new_throughput);
-    avg_throughput_per_milli_ =
-        new_total_throughput / static_cast<double>(throughput_buffer_.size());
-  } else {
-    // If the throughput buffer is not yet at capacity,
-    // we add the latest throughput sample to the buffer
-    // and incorporate it into the average
-    avg_throughput_per_milli_ =
-        (old_total_throughput + new_throughput) /
-        static_cast<double>(throughput_buffer_.size() + 1);
-  }
-  throughput_buffer_.push_back(new_throughput);
+  boost::unique_lock<boost::shared_mutex> lock(datapoints_mutex_);
+  processing_datapoints_.push_back(
+      std::make_pair(batch_size, total_latency_micros));
+  max_latency_ = std::max(total_latency_micros, max_latency_);
 }
 
 void ModelContainer::set_batch_size(int batch_size) {
   batch_size_ = batch_size;
-}
-
-double ModelContainer::get_average_throughput_per_millisecond() {
-  boost::shared_lock<boost::shared_mutex> lock(throughput_mutex_);
-  return avg_throughput_per_milli_;
 }
 
 size_t ModelContainer::get_batch_size(Deadline deadline) {
@@ -86,23 +65,24 @@ size_t ModelContainer::get_batch_size(Deadline deadline) {
     return batch_size_;
   }
 
-  double current_time_millis =
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-          std::chrono::system_clock::now().time_since_epoch())
-          .count();
-  double deadline_millis =
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-          deadline.time_since_epoch())
-          .count();
-  double remaining_time_millis = deadline_millis - current_time_millis;
-  boost::shared_lock<boost::shared_mutex> lock(throughput_mutex_);
-  int batch_size =
-      static_cast<int>(avg_throughput_per_milli_ * remaining_time_millis);
-  if (batch_size < 1) {
-    batch_size = 1;
+  size_t curr_batch_size;
+  if (deadline <= max_latency_) {
+    curr_batch_size = explore();
+  } else {
+    curr_batch_size = estimate(deadline);
   }
-  return batch_size;
+  max_batch_size_ = std::max(curr_batch_size, max_batch_size_);
+  return curr_batch_size;
 }
+
+size_t ModelContainer::explore() {
+  if (max_batch_size_ < 10) {
+    return max_batch_size_ + 1;
+  } else {
+  }
+}
+
+size_t ModelContainer::estimate(Deadline deadline) {}
 
 ActiveContainers::ActiveContainers()
     : containers_(
