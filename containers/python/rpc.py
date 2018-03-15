@@ -511,6 +511,10 @@ class RPCService:
         self.server.model_input_type = model_input_type
         self.server.model = model
 
+        # Create a file named model_is_ready.check in $HOME dir to show that model and container
+        # are ready
+        os.system("touch ~/model_is_ready.check")
+
         child_conn, parent_conn = Pipe(duplex=False)
         metrics_proc = Process(target=run_metric, args=(child_conn, ))
         metrics_proc.start()
