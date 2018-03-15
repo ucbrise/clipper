@@ -77,7 +77,7 @@ class ClipperConnection(object):
             mgmt_frontend_image='clipper/management_frontend:{}'.format(
                 __version__),
             cache_size=DEFAULT_PREDICTION_CACHE_SIZE_BYTES,
-            config_file = None):
+            config_file=None):
         """Start a new Clipper cluster and connect to it.
 
         This command will start a new Clipper instance using the container manager provided when
@@ -135,10 +135,15 @@ class ClipperConnection(object):
                     if ("applications" in config):
                         for application in config["applications"]:
                             try:
-                                input_type = config["applications"][application]["input_type"]
-                                slo = config["applications"][application]["slo"]
-                                default_value = config["applications"][application]["default_value"]
-                                self.register_application(application, input_type, default_value,slo)
+                                input_type = config["applications"][
+                                    application]["input_type"]
+                                slo = config["applications"][application][
+                                    "slo"]
+                                default_value = config["applications"][
+                                    application]["default_value"]
+                                self.register_application(
+                                    application, input_type, default_value,
+                                    slo)
                             except ClipperException as e:
                                 print("required parameters not found")
                                 raise e
@@ -149,17 +154,20 @@ class ClipperConnection(object):
                         for model in config["models"]:
                             try:
                                 config_image = config["models"][model]["image"]
-                                input_type = config["models"][model]["input_type"]
+                                input_type = config["models"][model][
+                                    "input_type"]
                                 version = config["models"][model]["version"]
                                 labels = None
                                 if ("labels" in config["models"][model]):
                                     labels = config["models"][model]["labels"]
                                 num_replicas = 1
                                 if ("num_replicas" in config["models"][model]):
-                                    num_replicas = config["models"][model]["num_replicas"]
+                                    num_replicas = config["models"][model][
+                                        "num_replicas"]
                                 batch_size = -1
                                 if ("batch_size" in config["models"][model]):
-                                    batch_size = config["models"][model]["batch_size"]
+                                    batch_size = config["models"][model][
+                                        "batch_size"]
                                 self.deploy_model(model, version, input_type,
                                                   config_image, labels,
                                                   num_replicas, batch_size)
@@ -181,7 +189,6 @@ class ClipperConnection(object):
                             except KeyError, f:
                                 print("required parameters not found")
                                 raise ClipperException(KeyError)
-
 
         parse_configuration(config_file)
 
