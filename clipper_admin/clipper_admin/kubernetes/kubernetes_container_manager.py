@@ -13,7 +13,9 @@ import json
 import yaml
 import os
 import time
-from multiprocessing import Process, Manager
+from multiprocessing import Process, Manager, Value
+import grequests
+import requests
 from ..version import __version__
 
 
@@ -49,6 +51,9 @@ class RoundRobinBalancer():
             self.counter = 0
 
 class KubernetesContainerManager(ContainerManager):
+
+    model_lock = Value('i', 1)
+
     def __init__(self,
                  kubernetes_api_ip,
                  redis_ip=None,
@@ -88,9 +93,9 @@ class KubernetesContainerManager(ContainerManager):
         self._k8s_beta = client.ExtensionsV1beta1Api()
 
 
-        self.state_is_Unchanged = True
-        manager = Manager()
-        self.query_to_model = manager.dict()
+        # self.state_is_Unchanged = True
+        # manager = Manager()
+        # self.query_to_model = manager.dict()
         self.balancer = RoundRobinBalancer(0)
 
 
@@ -98,7 +103,7 @@ class KubernetesContainerManager(ContainerManager):
     def start_clipper(self, query_frontend_image, mgmt_frontend_image,
                       cache_size, num_replicas = 1):
 
-        polling = Process(target = self.poll_for_query_frontend_Change)
+        # polling = Process(target = self.poll_for_query_frontend_Change)
 
         if self.redis_ip is None:
             name = 'redis'
@@ -157,48 +162,48 @@ class KubernetesContainerManager(ContainerManager):
                     'replicas': num_replicas,
                 }
             })
-        self.state_is_Unchanged = True
 
 
-        polling.start()
 
-    def reassign_models_to_new_containers(self, lost_ip, new_ip):
+         # polling.start()
 
-        logger.info("Query frontend has crashed: Old ip is {} and new ip is {}".format(lost_ip, new_ip))
-
-        models = self.query_to_model[lost_ip]
-
-        logger.info("We are now going to redeploy {} models".format(len(models)))
-
-        for x in range(len(models)):
-            m = models[x]
-
-            self.deploy_model(m[1] + "-0", __version__, "ints", m[0], 1, new_ip)
-
-    def poll_for_query_frontend_Change(self):
-
-        time.sleep(10)
-
-        endpoints = self._k8s_v1.read_namespaced_endpoints(name="query-frontend", namespace="default")
-        current_state = [addr.ip for addr in endpoints.subsets[0].addresses]
-        query_frontend_ips = current_state
-
-        logger.info("Original state is {}".format(current_state))
-
-        while self.state_is_Unchanged and set(query_frontend_ips) == set(current_state):
-            time.sleep(5)
-            endpoints = self._k8s_v1.read_namespaced_endpoints(name="query-frontend", namespace="default")
-            query_frontend_ips = [addr.ip for addr in endpoints.subsets[0].addresses]
-
-        if self.state_is_Unchanged:
-            time.sleep(10)
-            endpoints = self._k8s_v1.read_namespaced_endpoints(name="query-frontend", namespace="default")
-            query_frontend_ips = [addr.ip for addr in endpoints.subsets[0].addresses]
-            logger.info("Current State is {}".format(query_frontend_ips))
-            self.reassign_models_to_new_containers(list(set(current_state) - set(query_frontend_ips))[0],
-                                                   list(set(query_frontend_ips) - set(current_state))[0])
-
-        self.poll_for_query_frontend_Change()
+    # def reassign_models_to_new_containers(self, lost_ip, new_ip):
+    #
+    #     logger.info("Query frontend has crashed: Old ip is {} and new ip is {}".format(lost_ip, new_ip))
+    #
+    #     models = self.query_to_model[lost_ip]
+    #
+    #     logger.info("We are now going to redeploy {} models".format(len(models)))
+    #
+    #     for x in range(len(models)):
+    #         m = models[x]
+    #
+    #         self.deploy_model(m[1], __version__, "ints", m[0], 1, new_ip)
+    #
+    # def poll_for_query_frontend_Change(self):
+    #
+    #     time.sleep(10)
+    #
+    #     endpoints = self._k8s_v1.read_namespaced_endpoints(name="query-frontend", namespace="default")
+    #     current_state = [addr.ip for addr in endpoints.subsets[0].addresses]
+    #     query_frontend_ips = current_state
+    #
+    #     logger.info("Original state is {}".format(current_state))
+    #
+    #     while set(query_frontend_ips) == set(current_state):
+    #         time.sleep(5)
+    #         endpoints = self._k8s_v1.read_namespaced_endpoints(name="query-frontend", namespace="default")
+    #         query_frontend_ips = [addr.ip for addr in endpoints.subsets[0].addresses]
+    #
+    #
+    #     time.sleep(10)
+    #     endpoints = self._k8s_v1.read_namespaced_endpoints(name="query-frontend", namespace="default")
+    #     query_frontend_ips = [addr.ip for addr in endpoints.subsets[0].addresses]
+    #     logger.info("Current State is {}".format(query_frontend_ips))
+    #     self.reassign_models_to_new_containers(list(set(current_state) - set(query_frontend_ips))[0],
+    #                                            list(set(query_frontend_ips) - set(current_state))[0])
+    #
+    #     self.poll_for_query_frontend_Change()
 
 
 
@@ -250,16 +255,24 @@ class KubernetesContainerManager(ContainerManager):
 
     def deploy_model(self, name, version, input_type, image, num_replicas=1, new_ip=None):
         with _pass_conflicts():
+
+            with KubernetesContainerManager.model_lock.get_lock():
+                KubernetesContainerManager.model_lock.value = 1
+
+
             endpoints = self._k8s_v1.read_namespaced_endpoints(name="query-frontend", namespace="default")
             query_frontend_ips = [addr.ip for addr in endpoints.subsets[0].addresses]
+
             self.balancer.set_assignee_count(len(query_frontend_ips), override = num_replicas > 1)
+
             original_name = name
             name = get_model_deployment_name(name, version)
+
             for x in range(num_replicas):
                 if (new_ip == None):
                     deployment_name = original_name + str(x)
                 else:
-                    deployment_name = original_name
+                    deployment_name = original_name + "-0"
 
                 if (new_ip == None):
                     clipper_ip = query_frontend_ips[self.balancer.assign()]
@@ -313,17 +326,39 @@ class KubernetesContainerManager(ContainerManager):
                     }
                 }
 
-                if clipper_ip in self.query_to_model:
-                    temp = self.query_to_model[clipper_ip]
-                    temp.append([image, deployment_name, name])
-                    self.query_to_model[clipper_ip] = temp
-                else:
-                    self.query_to_model[clipper_ip] = [[image, deployment_name, original_name]]
+                # if clipper_ip in self.query_to_model:
+                #     temp = self.query_to_model[clipper_ip]
+                #     temp.append([image, deployment_name, name])
+                #     self.query_to_model[clipper_ip] = temp
+                # else:
+                #     self.query_to_model[clipper_ip] = [[image, deployment_name]]
 
 
+                model_mapping = {}
+                model_mapping['query_frontend'] = clipper_ip
+                model_mapping['model_info'] = [image, deployment_name]
+                serialized_mapping = json.dumps(model_mapping)
+
+                # endpoints = self._k8s_v1.read_namespaced_endpoints(name="mgmt-frontend", namespace="default")
+                # mgmt_ip = [addr.ip for addr in endpoints.subsets[0].addresses][0]
+
+                url = "http://{}:5000/get_query_to_model_mapping".format('127.0.0.1')
+
+                # rs = grequests.post(url, data = model_mapping, headers={'Accept-Encoding':'none', 'Content-Type':'application/json'})
+                # rs = grequests.post(url, data = serialized_mapping)
+                # response = grequests.map([rs])
+
+                r = requests.post(url, json=model_mapping)
 
                 self._k8s_beta.create_namespaced_deployment(
                     body=body, namespace='default')
+
+            logger.info("Finished deploying model")
+
+            with KubernetesContainerManager.model_lock.get_lock():
+                KubernetesContainerManager.model_lock.value = 0
+
+
 
     def get_num_replicas(self, name, version):
         deployment_name = get_model_deployment_name(name, version)
