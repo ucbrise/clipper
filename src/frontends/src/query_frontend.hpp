@@ -304,8 +304,8 @@ class RequestHandler {
 
     auto predict_fn = [this, name, input_type, policy, latency_slo_micros,
                        app_metrics](
-                          std::shared_ptr<HttpServer::Response> response,
-                          std::shared_ptr<HttpServer::Request> request) {
+        std::shared_ptr<HttpServer::Response> response,
+        std::shared_ptr<HttpServer::Request> request) {
       try {
         std::vector<std::string> models = get_linked_models_for_app(name);
         std::vector<VersionedModelId> versioned_models;
@@ -389,8 +389,8 @@ class RequestHandler {
     server_.add_endpoint(predict_endpoint, "POST", predict_fn);
 
     auto update_fn = [this, name, input_type, policy](
-                         std::shared_ptr<HttpServer::Response> response,
-                         std::shared_ptr<HttpServer::Request> request) {
+        std::shared_ptr<HttpServer::Response> response,
+        std::shared_ptr<HttpServer::Request> request) {
       try {
         std::vector<std::string> models = get_linked_models_for_app(name);
         std::vector<VersionedModelId> versioned_models;
