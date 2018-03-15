@@ -45,10 +45,11 @@ def create_endpoint(
         captured via closure capture and pickled with Cloudpickle.
     mxnet_model : mxnet model object
         The MXNet model to save.
-    mxnet_data_shapes : list(int)
-        List of integers representing the dimensions of data used for model prediction.
-        Required because loading serialized MXNet models involves binding, which requires
         the shape of the data used to train the model.
+    mxnet_data_shapes : list of DataDesc objects
+        List of DataDesc objects representing the name, shape, type and layout information
+        of data used for model prediction.
+        Required because loading serialized MXNet models involves binding, which requires
         https://mxnet.incubator.apache.org/api/python/module.html#mxnet.module.BaseModule.bind
     default_output : str, optional
         The default output for the application. The default output will be returned whenever
@@ -91,6 +92,8 @@ def create_endpoint(
     handle variable size input batches, we recommend setting batch size for input data
     to 1, or dynamically reshaping the model with every prediction based on the current
     input batch size.
+    More information regarding a DataDesc object can be found here:
+    https://mxnet.incubator.apache.org/versions/0.11.0/api/python/io.html#mxnet.io.DataDesc
     """
 
     clipper_conn.register_application(name, input_type, default_output,
@@ -132,8 +135,9 @@ def deploy_mxnet_model(
         captured via closure capture and pickled with Cloudpickle.
     mxnet_model : mxnet model object
         The MXNet model to save.
-    mxnet_data_shapes : list(int)
-        List of integers representing the dimensions of data used for model prediction.
+    mxnet_data_shapes : list of DataDesc objects
+        List of DataDesc objects representing the name, shape, type and layout information
+        of data used for model prediction.
         Required because loading serialized MXNet models involves binding, which requires
         the shape of the data used to train the model.
         https://mxnet.incubator.apache.org/api/python/module.html#mxnet.module.BaseModule.bind
@@ -160,6 +164,8 @@ def deploy_mxnet_model(
     handle variable size input batches, we recommend setting batch size for input data
     to 1, or dynamically reshaping the model with every prediction based on the current
     input batch size.
+    More information regarding a DataDesc object can be found here:
+    https://mxnet.incubator.apache.org/versions/0.11.0/api/python/io.html#mxnet.io.DataDesc
 
     Example
     -------
@@ -185,7 +191,7 @@ def deploy_mxnet_model(
         mxnet_model = mx.mod.Module(softmax)
         mxnet_model.fit(data_iter, num_epoch=1)
 
-        data_shape = [1, 785]
+        data_shape = data_iter.provide_data
 
         deploy_mxnet_model(
             clipper_conn,
