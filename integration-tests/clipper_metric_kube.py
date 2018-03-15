@@ -28,8 +28,6 @@ logger = logging.getLogger(__name__)
 
 MAX_RETRY = 4
 
-# TODO: Add kubernetes specific checks that use kubernetes API
-
 
 def deploy_model(clipper_conn, name, link=False):
     app_name = "{}-app".format(name)
