@@ -76,7 +76,8 @@ class ClipperConnection(object):
                 __version__),
             mgmt_frontend_image='clipper/management_frontend:{}'.format(
                 __version__),
-            cache_size=DEFAULT_PREDICTION_CACHE_SIZE_BYTES):
+            cache_size=DEFAULT_PREDICTION_CACHE_SIZE_BYTES,
+            config_file = None):
         """Start a new Clipper cluster and connect to it.
 
         This command will start a new Clipper instance using the container manager provided when
@@ -94,7 +95,10 @@ class ClipperConnection(object):
             compability and preserve the expected behavior of the system.
         cache_size : int, optional
             The size of Clipper's prediction cache in bytes. Default cache size is 32 MiB.
-
+        config_file : str, optional
+            Path to a configuration file. If the path is present, Clipper will deploy models,
+            register applications, and create links as specified by the file. The file 
+            'sample_config.yaml' is an example of a configuration file.
         Raises
         ------
         :py:exc:`clipper.ClipperException`
@@ -131,15 +135,10 @@ class ClipperConnection(object):
                     if ("applications" in config):
                         for application in config["applications"]:
                             try:
-                                input_type = config["applications"][
-                                    application]["input_type"]
-                                slo = config["applications"][application][
-                                    "slo"]
-                                default_value = config["applications"][
-                                    application]["default_value"]
-                                self.register_application(
-                                    application, input_type, default_value,
-                                    slo)
+                                input_type = config["applications"][application]["input_type"]
+                                slo = config["applications"][application]["slo"]
+                                default_value = config["applications"][application]["default_value"]
+                                self.register_application(application, input_type, default_value,slo)
                             except ClipperException as e:
                                 print("required parameters not found")
                                 raise e
@@ -150,20 +149,17 @@ class ClipperConnection(object):
                         for model in config["models"]:
                             try:
                                 config_image = config["models"][model]["image"]
-                                input_type = config["models"][model][
-                                    "input_type"]
+                                input_type = config["models"][model]["input_type"]
                                 version = config["models"][model]["version"]
                                 labels = None
                                 if ("labels" in config["models"][model]):
                                     labels = config["models"][model]["labels"]
                                 num_replicas = 1
                                 if ("num_replicas" in config["models"][model]):
-                                    num_replicas = config["models"][model][
-                                        "num_replicas"]
+                                    num_replicas = config["models"][model]["num_replicas"]
                                 batch_size = -1
                                 if ("batch_size" in config["models"][model]):
-                                    batch_size = config["models"][model][
-                                        "batch_size"]
+                                    batch_size = config["models"][model]["batch_size"]
                                 self.deploy_model(model, version, input_type,
                                                   config_image, labels,
                                                   num_replicas, batch_size)
@@ -185,6 +181,7 @@ class ClipperConnection(object):
                             except KeyError, f:
                                 print("required parameters not found")
                                 raise ClipperException(KeyError)
+
 
         parse_configuration(config_file)
 
@@ -1265,7 +1262,7 @@ class ClipperConnection(object):
     def test_predict_function(self, query, func, input_type):
         """Tests that the user's function has the correct signature and can be properly saved and loaded.
 
-        The function should take a dict request object like the query frontend expects JSON,
+        The function should take a dict request object like the query frontend expects JSON, 
         the predict function, and the input type for the model.
 
         For example, the function can be called like: clipper_conn.test_predict_function({"input": [1.0, 2.0, 3.0]}, predict_func, "doubles")
