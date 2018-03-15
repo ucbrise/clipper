@@ -38,7 +38,7 @@ class ContainerManager(object):
 
     @abc.abstractmethod
     def start_clipper(self, query_frontend_image, mgmt_frontend_image,
-                      cache_size):
+                      cache_size, num_replicas = 1):
         # NOTE: An implementation of this interface should be connected to a running
         # Clipper instance when this method returns. ClipperConnection will not
         # call ContainerManager.connect() separately after calling start_clipper(), so
@@ -47,6 +47,8 @@ class ContainerManager(object):
         # For example, KubernetesContainerManager calls self.connect() at the end of
         # start_clipper().
         return
+
+
 
     @abc.abstractmethod
     def connect(self):
