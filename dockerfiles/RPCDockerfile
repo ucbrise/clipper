@@ -7,9 +7,20 @@ MAINTAINER Dan Crankshaw <dscrankshaw@gmail.com>
 
 RUN mkdir -p /model \
       && apt-get update \
-      && apt-get install -y libzmq3 libzmq3-dev \
-      && conda install -y pyzmq \
-      && pip install prometheus_client pyyaml
+      && apt-get install -y libzmq3 libzmq3-dev build-essential
+
+RUN conda install -y pyzmq \
+      && pip install prometheus_client pyyaml jsonschema redis psutil flask
+
+RUN wget http://download.redis.io/redis-stable.tar.gz\
+      && tar xvzf redis-stable.tar.gz \
+      && cd redis-stable \
+      && make
+
+COPY clipper_admin /clipper_src/
+
+RUN cd /clipper_src \
+    && pip install .
 
 WORKDIR /container
 
