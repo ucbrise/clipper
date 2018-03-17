@@ -224,10 +224,9 @@ def deploy_mxnet_model(
             json.dump({"data_shapes": mxnet_data_shapes}, f)
 
         # Deploy model
-        clipper_conn.build_and_deploy_model(name, version, input_type,
-                                            serialization_dir, base_image,
-                                            labels, registry, num_replicas,
-                                            pkgs_to_install)
+        clipper_conn.build_and_deploy_model(
+            name, version, input_type, serialization_dir, base_image, labels,
+            registry, num_replicas, pkgs_to_install)
 
     except Exception as e:
         logger.error("Error saving MXNet model: %s" % e)

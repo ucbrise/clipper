@@ -25,13 +25,19 @@ logger = logging.getLogger(__name__)
 app_name = "xgboost-test"
 model_name = "xgboost-model"
 
+
 def deploy_and_test_model(clipper_conn,
                           model,
                           version,
                           predict_fn,
                           link_model=False):
-    deploy_python_closure(clipper_conn, model_name, version, "integers",
-                        predict_fn, pkgs_to_install=['xgboost'])
+    deploy_python_closure(
+        clipper_conn,
+        model_name,
+        version,
+        "integers",
+        predict_fn,
+        pkgs_to_install=['xgboost'])
     time.sleep(5)
 
     if link_model:
@@ -67,8 +73,10 @@ def test_model(clipper_conn, app, version):
         raise BenchmarkException("Error querying APP %s, MODEL %s:%d" %
                                  (app, model_name, version))
 
+
 def get_test_point():
     return [np.random.randint(255) for _ in range(784)]
+
 
 if __name__ == "__main__":
     pos_label = 3
@@ -95,18 +103,21 @@ if __name__ == "__main__":
 
             version = 1
             dtrain = xgb.DMatrix(get_test_point(), label=[0])
-            param = {'max_depth': 2, 'eta': 1, 'silent': 1, 'objective': 'binary:logistic'}
+            param = {
+                'max_depth': 2,
+                'eta': 1,
+                'silent': 1,
+                'objective': 'binary:logistic'
+            }
             watchlist = [(dtrain, 'train')]
             num_round = 2
             bst = xgb.train(param, dtrain, num_round, watchlist)
+
             def predict(xs):
                 return [str(bst.predict(xgb.DMatrix(xs)))]
+
             deploy_and_test_model(
-                clipper_conn,
-                bst,
-                version,
-                predict,
-                link_model=True)
+                clipper_conn, bst, version, predict, link_model=True)
         except BenchmarkException as e:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")

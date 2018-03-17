@@ -259,10 +259,9 @@ def deploy_tensorflow_model(
         logger.info("TensorFlow model copied to: tfmodel ")
 
     # Deploy model
-    clipper_conn.build_and_deploy_model(name, version, input_type,
-                                        serialization_dir, base_image, labels,
-                                        registry, num_replicas, batch_size,
-                                        pkgs_to_install)
+    clipper_conn.build_and_deploy_model(
+        name, version, input_type, serialization_dir, base_image, labels,
+        registry, num_replicas, batch_size, pkgs_to_install)
 
     # Remove temp files
     shutil.rmtree(serialization_dir)
