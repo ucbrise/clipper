@@ -11,6 +11,7 @@ import sys
 import os
 import json
 import time
+import numpy as np
 import requests
 import tempfile
 import shutil
@@ -343,6 +344,59 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             })
         self.assertEqual(len(containers), 1)
 
+    def test_test_predict_function(self):
+        def predict_func(xs):
+            return [sum(x) for x in xs]
+
+        self.clipper_conn.register_application(
+            name="hello-world",
+            input_type="doubles",
+            default_output="-1.0",
+            slo_micros=100000)
+
+        deploy_python_closure(
+            self.clipper_conn,
+            name="sum-model",
+            version=1,
+            input_type="doubles",
+            func=predict_func)
+        self.clipper_conn.link_model_to_app(
+            app_name="hello-world", model_name="sum-model")
+        time.sleep(60)
+
+        addr = self.clipper_conn.get_query_addr()
+        url = "http://{addr}/hello-world/predict".format(
+            addr=addr, app='hello-world')
+
+        headers = {"Content-type": "application/json"}
+        test_input = [1.1, 2.2, 3.3]
+        pred = requests.post(
+            url, headers=headers, data=json.dumps({
+                "input": test_input
+            })).json()
+        test_predict_result = self.clipper_conn.test_predict_function(
+            query={"input": test_input},
+            func=predict_func,
+            input_type="doubles")
+        self.assertEqual([pred['output']],
+                         test_predict_result)  # tests single input
+
+        test_batch_input = [[1.1, 2.2, 3.3], [4.4, 5.5, 6.6]]
+        batch_pred = requests.post(
+            url,
+            headers=headers,
+            data=json.dumps({
+                "input_batch": test_batch_input
+            })).json()
+        test_batch_predict_result = self.clipper_conn.test_predict_function(
+            query={"input_batch": test_batch_input},
+            func=predict_func,
+            input_type="doubles")
+        batch_predictions = batch_pred['batch_predictions']
+        batch_pred_outputs = [batch['output'] for batch in batch_predictions]
+        self.assertEqual(batch_pred_outputs,
+                         test_batch_predict_result)  # tests batch input
+
 
 class ClipperManagerTestCaseLong(unittest.TestCase):
     @classmethod
@@ -520,23 +574,20 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
 
 SHORT_TEST_ORDERING = [
-    'test_register_model_correct',
-    'test_register_application_correct',
+    'test_register_model_correct', 'test_register_application_correct',
     'test_link_not_registered_model_to_app_fails',
     'test_get_model_links_when_none_exist_returns_empty_list',
     'test_link_registered_model_to_app_succeeds',
     'get_app_info_for_registered_app_returns_info_dictionary',
     'get_app_info_for_nonexistent_app_returns_none',
     'test_set_num_replicas_for_external_model_fails',
-    'test_model_version_sets_correctly',
-    'test_get_logs_creates_log_files',
+    'test_model_version_sets_correctly', 'test_get_logs_creates_log_files',
     'test_inspect_instance_returns_json_dict',
     'test_model_deploys_successfully',
     'test_set_num_replicas_for_deployed_model_succeeds',
-    'test_remove_inactive_containers_succeeds',
-    'test_stop_models',
-    'test_python_closure_deploys_successfully',
-    'test_register_py_endpoint',
+    'test_remove_inactive_containers_succeeds', 'test_stop_models',
+    'test_python_closure_deploys_successfully', 'test_register_py_endpoint',
+    'test_test_predict_function'
 ]
 
 LONG_TEST_ORDERING = [
