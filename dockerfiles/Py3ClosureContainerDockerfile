@@ -2,11 +2,11 @@ ARG CODE_VERSION
 FROM clipper/py3-rpc:${CODE_VERSION}
 
 COPY clipper_admin/clipper_admin/python3_container_conda_deps.txt /lib/
-RUN conda install -y --file /lib/python3_container_conda_deps.txt
-RUN conda install -c anaconda3 cloudpickle=0.5.2
+RUN conda config --set ssl_verify no \
+    && conda install -c anaconda3 cloudpickle=0.5.2 \
+    && conda install -y --file /lib/python3_container_conda_deps.txt
 
 COPY containers/python/python_closure_container.py containers/python/python_closure_container_entry.sh /container/
-
 
 CMD ["/container/python_closure_container_entry.sh"]
 
