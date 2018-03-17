@@ -1,4 +1,3 @@
-from __future__ import absolute_import, print_function
 import os
 import sys
 import requests
@@ -7,12 +6,8 @@ import numpy as np
 import time
 import logging
 import xgboost as xgb
-import pickle
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
-
-sys.path.insert(0, os.path.abspath('%s/util_direct_import/' % cur_dir))
-from util_package import mock_module_in_package as mmip
 
 from test_utils import (create_docker_connection, BenchmarkException, headers,
                         log_clipper_state)
