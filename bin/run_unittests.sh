@@ -173,34 +173,34 @@ else
 fi
 
 case $args in
-    -a | --all )            set_test_environment
-                            run_all_tests
-                            ;;
-    -l | --libclipper )     set_test_environment
-                            run_libclipper_tests
-                            ;;
-    -m | --management )     set_test_environment
-                            run_management_tests
-                            ;;
-    -f | --frontend )       set_test_environment
-                            run_frontend_tests
-                            ;;
-    -j | --jvm-container )  set_test_environment
-                            run_jvm_container_tests
-                            ;;
-    -c | --cpp-container )  set_test_environment
-                            run_cpp_container_tests
-                            ;;
-    -rc | --r-container )   set_test_environment
-                            run_r_container_tests
-                            ;;
-    -r | --rpc-container )  set_test_environment
-                            run_rpc_container_tests
-                            ;;
-    -i | --integration_tests )  #set_test_environment
-                            run_integration_tests
-                            ;;
-    -h | --help )           usage
-                            ;;
-    * )                     usage
+    -a | --all )                set_test_environment
+                                run_all_tests
+                                ;;
+    -l | --libclipper )         set_test_environment
+                                run_libclipper_tests
+                                ;;
+    -m | --management )         set_test_environment
+                                run_management_tests
+                                ;;
+    -f | --frontend )           set_test_environment
+                                run_frontend_tests
+                                ;;
+    -j | --jvm-container )      set_test_environment
+                                run_jvm_container_tests
+                                ;;
+    -c | --cpp-container )      set_test_environment
+                                run_cpp_container_tests
+                                ;;
+    -rc | --r-container )       set_test_environment
+                                run_r_container_tests
+                                ;;
+    -r | --rpc-container )      set_test_environment
+                                run_rpc_container_tests
+                                ;;
+    -i | --integration_tests )  set_test_environment
+                                run_integration_tests
+                                ;;
+    -h | --help )               usage
+                                ;;
+    * )                         usage
 esac
