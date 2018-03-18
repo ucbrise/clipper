@@ -41,4 +41,4 @@ docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /
     -e CLIPPER_K8S_CLIENT_CERT=$CLIPPER_K8S_CLIENT_CERT \
     -e CLIPPER_K8S_CLIENT_KEY=$CLIPPER_K8S_CLIENT_KEY \
     -e CLIPPER_K8S_PASSWORD=$CLIPPER_K8S_PASSWORD \
-    clipper/py3tests:$tag #fix this 
+    clipper/py3tests:$tag
