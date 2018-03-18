@@ -93,7 +93,7 @@ def _init_logger():
 
 def start_redis_daemon():
     cmd = [
-        '/redis-stable/src/redis-server', '--unixsocket', '/tmp/redis.sock',
+        'redis-server', '--unixsocket', '/tmp/redis.sock',
         '--daemonize', 'yes'
     ]
     call(cmd)
