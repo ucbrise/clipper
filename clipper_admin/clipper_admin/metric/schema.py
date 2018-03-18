@@ -8,6 +8,7 @@ class Prom_Type(str, Enum):
     h = 'Histogram'
     s = 'Summary'
 
+versions = ['0.3.0']
 
 add_schema = {
     'properties': {
@@ -52,7 +53,8 @@ schema = {
             'type': 'string'
         },
         'version': {
-            'type': 'number'
+            'type': 'string',
+            'enum': versions
         },
         'data': {
             'oneOf': [add_schema, report_schema]
