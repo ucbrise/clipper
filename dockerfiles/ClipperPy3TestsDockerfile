@@ -25,7 +25,7 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s
       && chmod +x kubectl \
       && mv kubectl /usr/local/bin/
 
-RUN pip install requests scikit-learn numpy pyyaml docker cloudpickle==0.5.2
+RUN pip install requests scikit-learn numpy pyyaml docker
 
 COPY ./ /clipper
 
