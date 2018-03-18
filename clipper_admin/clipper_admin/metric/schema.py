@@ -3,6 +3,9 @@ from enum import Enum
 
 
 class Prom_Type(str, Enum):
+    """
+    Enum is here to prevent mispelled Prometheus data types. 
+    """
     g = 'Gauge'
     c = 'Counter'
     h = 'Histogram'

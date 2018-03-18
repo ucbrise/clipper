@@ -11,6 +11,10 @@ from config import CHANNEL_NAME, DEFAULT_BUCKETS, UNIX_SOCKET_PATH
 
 
 class Metric:
+    """
+    Metric class abstract away the complexity of dealing with Prometheus 
+    data types. 
+    """
     def __init__(self, name, metric_type, description, buckets):
         self.name = name
         self.type = metric_type
@@ -49,6 +53,9 @@ def report_metric(name, val, metric_pool):
 
 
 def handle_messege(messege_dict, metric_pool):
+    """
+    Handle a messege dictionary, dispatch request to add or report call
+    """
     endpoint = messege_dict['endpoint']
     data = messege_dict['data']
 
