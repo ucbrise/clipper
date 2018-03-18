@@ -21,15 +21,15 @@
 
 #include <server_http.hpp>
 
-using clipper::Response;
+using clipper::Feedback;
 using clipper::FeedbackAck;
-using clipper::VersionedModelId;
-using clipper::InputType;
+using clipper::FeedbackQuery;
 using clipper::Input;
+using clipper::InputType;
 using clipper::Output;
 using clipper::Query;
-using clipper::Feedback;
-using clipper::FeedbackQuery;
+using clipper::Response;
+using clipper::VersionedModelId;
 using clipper::json::json_parse_error;
 using clipper::json::json_semantic_error;
 using clipper::redis::labels_to_str;
@@ -120,8 +120,8 @@ class AppMetrics {
 template <class QP>
 class RequestHandler {
  public:
-  RequestHandler(std::string address, int portno, int num_threads)
-      : server_(address, portno, num_threads), query_processor_() {
+  RequestHandler(std::string address, int portno)
+      : server_(address, portno), query_processor_() {
     clipper::Config& conf = clipper::get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
