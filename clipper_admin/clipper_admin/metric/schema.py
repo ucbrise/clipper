@@ -11,6 +11,7 @@ class Prom_Type(str, Enum):
     h = 'Histogram'
     s = 'Summary'
 
+
 versions = ['0.3.0']
 
 add_schema = {

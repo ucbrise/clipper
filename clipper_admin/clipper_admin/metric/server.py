@@ -15,6 +15,7 @@ class Metric:
     Metric class abstract away the complexity of dealing with Prometheus 
     data types. 
     """
+
     def __init__(self, name, metric_type, description, buckets):
         self.name = name
         self.type = metric_type
@@ -100,8 +101,7 @@ def _init_logger():
 
 def start_redis_daemon():
     cmd = [
-        'redis-server', '--unixsocket', '/tmp/redis.sock',
-        '--daemonize', 'yes'
+        'redis-server', '--unixsocket', '/tmp/redis.sock', '--daemonize', 'yes'
     ]
     call(cmd)
 

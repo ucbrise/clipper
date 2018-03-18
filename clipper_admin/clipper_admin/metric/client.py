@@ -8,6 +8,7 @@ from config import CHANNEL_NAME, DEFAULT_BUCKETS, UNIX_SOCKET_PATH, API_VERSION
 r = redis.Redis(unix_socket_path=UNIX_SOCKET_PATH)
 metric_pool = set()
 
+
 def _send_to_redis(messege_dict):
     r.publish(CHANNEL_NAME, json.dumps(messege_dict))
 
@@ -30,7 +31,9 @@ def add_metric(name, metric_type, description, buckets=DEFAULT_BUCKETS):
         If it's not specificed and the metric_type is 'Histogram', the default buckets
         [5, 10, 20, 35, 50, 75, 100, 150, 200, 250, 300, 400, 500] will be used. 
     """
-    assert metric_type in set(Prom_Type), "metric type needs to be one of {}".format(list(Prom_Type))
+    assert metric_type in set(
+        Prom_Type), "metric type needs to be one of {}".format(
+            list(Prom_Type))
 
     if name in metric_pool:
         return
