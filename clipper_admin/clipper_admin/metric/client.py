@@ -6,7 +6,7 @@ from schema import Prom_Type
 from config import CHANNEL_NAME, DEFAULT_BUCKETS, UNIX_SOCKET_PATH, API_VERSION
 
 r = redis.Redis(unix_socket_path=UNIX_SOCKET_PATH)
-
+metric_pool = set()
 
 def _send_to_redis(messege_dict):
     r.publish(CHANNEL_NAME, json.dumps(messege_dict))
@@ -14,6 +14,9 @@ def _send_to_redis(messege_dict):
 
 def add_metric(name, metric_type, description, buckets=DEFAULT_BUCKETS):
     assert metric_type in set(Prom_Type)
+
+    if name in metric_pool:
+        return
 
     messege_dict = {
         'version': API_VERSION,
@@ -29,6 +32,7 @@ def add_metric(name, metric_type, description, buckets=DEFAULT_BUCKETS):
         messege_dict['data']['bucket'] = buckets
 
     _send_to_redis(messege_dict)
+    metric_pool.add(name)
 
 
 def report_metric(name, val):
