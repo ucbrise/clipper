@@ -107,11 +107,11 @@ def test_model(clipper_conn, app, version):
         if response.status_code == requests.codes.ok and result["default"]:
             num_defaults += 1
         elif response.status_code != requests.codes.ok:
-            print(result)
+            logger.error(result)
             raise BenchmarkException(response.text)
 
     if num_defaults > 0:
-        print("Error: %d/%d predictions were default" % (num_defaults,
+        logger.error("Error: %d/%d predictions were default" % (num_defaults,
                                                          num_preds))
     if num_defaults > num_preds / 2:
         raise BenchmarkException("Error querying APP %s, MODEL %s:%d" %
@@ -196,7 +196,7 @@ if __name__ == "__main__":
                 }))
             result = response.json()
             if response.status_code != requests.codes.ok:
-                print("Error: %s" % response.text)
+                logger.error("Error: %s" % response.text)
                 raise BenchmarkException("Error creating app %s" % app_name)
 
             version = 1
