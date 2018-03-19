@@ -312,6 +312,28 @@ inline void create_queue(VersionedModelId vm, int replica_id) {
 }
 
 }  // namespace TaskExecutionThreadPool
+
+
+namespace GarbageCollectionThreadPool {
+  /**
+ * Convenience method to get the task execution thread pool for the application.
+ */
+  inline ThreadPool& get_thread_pool(void) {
+    static ThreadPool garbageCollectionPool;
+    return garbageCollectionPool;
+  }
+
+  /**
+ * Submit a job to the task execution thread pool.
+ */
+  template <typename Func, typename... Args>
+  inline auto submit_job(VersionedModelId vm, int replica_id, Func&& func,
+                          Args&&... args) {
+    return get_thread_pool().submit(vm, replica_id, std::forward<Func>(func),
+                                    std::forward<Args>(args)...);
+  }
+}
+
 }  // namespace clipper
 
 #endif  // CLIPPER_LIB_THREADPOOL_HPP

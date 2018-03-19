@@ -357,6 +357,11 @@ class TaskExecutor {
       // add each task to the queue corresponding to its associated model
       boost::shared_lock<boost::shared_mutex> lock(model_queues_mutex_);
       auto model_queue_entry = model_queues_.find(t.model_);
+      if(active_containers_->get_replicas_for_model(t.model_).size()==0) {
+        log_error_formatted(LOGGING_TAG_TASK_EXECUTOR,
+                            "No active model containers for model: {} : {}",
+                            t.model_.get_name(), t.model_.get_id())
+      }
       if (model_queue_entry != model_queues_.end()) {
         output_futures.push_back(cache_->fetch(t.model_, t.input_));
         if (!output_futures.back().isReady()) {
