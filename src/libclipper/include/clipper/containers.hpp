@@ -82,7 +82,7 @@ class ActiveContainers {
   std::shared_ptr<ModelContainer> get_model_replica(
       const VersionedModelId &model, const int replica_id);
 
-  std::map<int, std::shared_ptr<ModelContainer>> ActiveContainers::get_replicas_for_model(
+  std::map<int, std::shared_ptr<ModelContainer>> get_replicas_for_model(
       const VersionedModelId &model);
 
   /// Get list of all models that have at least one active replica.
