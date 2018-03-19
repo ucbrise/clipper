@@ -360,7 +360,7 @@ class TaskExecutor {
       if(active_containers_->get_replicas_for_model(t.model_).size()==0) {
         log_error_formatted(LOGGING_TAG_TASK_EXECUTOR,
                             "No active model containers for model: {} : {}",
-                            t.model_.get_name(), t.model_.get_id())
+                            t.model_.get_name(), t.model_.get_id());
       }
       if (model_queue_entry != model_queues_.end()) {
         output_futures.push_back(cache_->fetch(t.model_, t.input_));
