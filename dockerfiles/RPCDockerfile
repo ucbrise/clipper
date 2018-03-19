@@ -1,6 +1,6 @@
 # This ARG isn't used but prevents warnings in the build script
 ARG CODE_VERSION
-FROM continuumio/anaconda3:5.1.0
+FROM continuumio/anaconda:5.1.0
 
 MAINTAINER Dan Crankshaw <dscrankshaw@gmail.com>
 
@@ -9,11 +9,13 @@ RUN mkdir -p /model \
       && apt-get update \
       && apt-get install -y libzmq3 libzmq3-dev \
       && conda install -y pyzmq \
-      && pip install prometheus_client
+      && pip install prometheus_client pyyaml
 
 WORKDIR /container
 
 COPY containers/python/__init__.py containers/python/rpc.py /container/
+
+COPY monitoring/metrics_config.yaml /container/
 
 ENV CLIPPER_MODEL_PATH=/model
 

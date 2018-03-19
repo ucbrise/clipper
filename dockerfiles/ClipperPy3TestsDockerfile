@@ -16,7 +16,8 @@ RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh \
     && rm /tmp/anaconda3.sh
 
 ENV PATH "/opt/conda/bin:$PATH"
-RUN conda config --set ssl_verify no \
+RUN conda update -n base conda \
+    && conda config --set ssl_verify no \
     && conda install -c anaconda cloudpickle=0.5.2 \
     && conda install -y libgcc pyzmq libsodium
 
