@@ -1,6 +1,6 @@
 # This ARG isn't used but prevents warnings in the build script
 ARG CODE_VERSION
-FROM continuumio/anaconda3:latest
+FROM continuumio/anaconda3:5.1.0
 
 MAINTAINER Dan Crankshaw <dscrankshaw@gmail.com>
 
