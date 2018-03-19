@@ -4,7 +4,7 @@ FROM clipper/py-rpc:${CODE_VERSION}
 COPY clipper_admin/clipper_admin/python_container_conda_deps.txt /lib/
 
 RUN conda config --set ssl_verify no \
-	&& pip install cloudpickle==0.5.2 \
+	&& conda install -c anaconda cloudpickle=0.5.2 \
 	&& conda install -y --file /lib/python_container_conda_deps.txt \
 	&& conda install tensorflow
 
