@@ -61,12 +61,15 @@ void ModelContainer::set_batch_size(int batch_size) {
 }
 
 size_t ModelContainer::get_batch_size(Deadline deadline) {
+  long long budget = std::chrono::duration_cast<std::chrono::microseconds>(
+                         deadline - std::chrono::system_clock::now())
+                         .count();
   if (batch_size_ != DEFAULT_BATCH_SIZE) {
     return batch_size_;
   }
 
   size_t curr_batch_size;
-  if (deadline <= max_latency_) {
+  if (budget <= max_latency_) {
     curr_batch_size = explore();
   } else {
     curr_batch_size = estimate(deadline);

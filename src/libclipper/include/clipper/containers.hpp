@@ -4,6 +4,7 @@
 constexpr int DEFAULT_BATCH_SIZE = -1;
 
 #include <memory>
+#include <random>
 #include <unordered_map>
 
 #include <boost/circular_buffer.hpp>

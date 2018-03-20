@@ -522,7 +522,8 @@ class TaskExecutor {
       std::shared_ptr<ModelContainer> processing_container =
           active_containers_->get_model_replica(cur_model, cur_replica_id);
 
-      processing_container->update_throughput(batch_size, batch_latency_micros);
+      // processing_container->update_throughput(batch_size,
+      // batch_latency_micros);
 
       boost::optional<ModelMetrics> cur_model_metric;
       auto cur_model_metric_entry = model_metrics_.find(cur_model);
