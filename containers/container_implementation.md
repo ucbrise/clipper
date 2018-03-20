@@ -64,8 +64,8 @@ The following is an example construction of a *container content message* in Pyt
    for idx in range(len(container_content)):
        serialized_content_part = container_content[idx]
        if idx == len(container_content) - 1:
-           # Don't send the `SNDMORE` flag if this
-           # is the last message part
+           # Don't forget to remove the `SNDMORE` flag 
+           # if this is the last message part
            flags = 0
        else:
            flags = zmq.SNDMORE
