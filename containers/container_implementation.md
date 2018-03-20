@@ -14,7 +14,7 @@ Model containers communicate with Clipper using RPC messages of several types. E
 ### Versioning and inbound/outbound messages
 Messages that a container receives from Clipper are referred to as **inbound** messages, and messages that a container sends to Clipper are referred to as **outbound** messages.
 
-All inbound messages begin with an **RPC version tag**, represented as an unsigned, 32-bit integer. This version tag is the first part of the inbound message after the [empty delimeter frame](http://zguide.zeromq.org/php:chapter3#The-Simple-Reply-Envelope). Containers should ensure that the version tag matches the RPC version of their container and gracefully exit if a version discrepancy is detected.
+All inbound messages begin with an **RPC version tag**, represented as an unsigned, 32-bit integer. This version tag is the first part of the inbound message after the [empty delimiter frame](http://zguide.zeromq.org/php:chapter3#The-Simple-Reply-Envelope). Containers should ensure that the version tag matches the RPC version of their container and gracefully exit if a version discrepancy is detected.
 
 ### The current RPC version is: 3
     
