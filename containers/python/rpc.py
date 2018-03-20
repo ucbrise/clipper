@@ -477,8 +477,8 @@ class ModelContainerBase(object):
 
 
 class RPCService:
-    def __init__(self):
-        pass
+    def __init__(self, collect_metric=True):
+        self.collect_metric = collect_metric
 
     def get_event_history(self):
         if self.server:
@@ -512,8 +512,9 @@ class RPCService:
         self.server.model = model
 
         # Start metric collection
-        start_metric_server()
-        add_metrics()
+        if self.collect_metric:
+            start_metric_server()
+            add_metrics()
 
         self.server.run()
 

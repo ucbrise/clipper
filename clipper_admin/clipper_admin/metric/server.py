@@ -107,6 +107,9 @@ def start_redis_daemon():
 
 
 def redis_daemon_exist():
+    # We can just check of 'redis-server' process because the default
+    # situation is that we are in a container without any other python2
+    # process.
     pids = psutil.pids()
     process_names = [psutil.Process(pid).name() for pid in pids]
     return 'redis-server' in process_names
