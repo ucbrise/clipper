@@ -6,20 +6,20 @@
 #ifndef CLIPPER_CONTAINER_RPC_HPP
 #define CLIPPER_CONTAINER_RPC_HPP
 
+#include <atomic>
 #include <chrono>
 #include <iostream>
 #include <mutex>
+#include <numeric>
 #include <sstream>
 #include <thread>
-#include <atomic>
-#include <numeric>
 
 #include <Rcpp.h>
 #include "zmq.hpp"
 
 #include "container_parsing.hpp"
-#include "datatypes.hpp"
 #include "container_util.hpp"
+#include "datatypes.hpp"
 
 const std::string LOGGING_TAG_CONTAINER = "CONTAINER";
 
@@ -81,16 +81,13 @@ class Model {
   virtual std::vector<std::string> predict(
       const std::vector<I> inputs) const = 0;
 
-  InputType get_input_type() {
-    return input_type_;
-  }
+  InputType get_input_type() { return input_type_; }
 
  private:
   const InputType input_type_;
-
 };
 
-//This is not thread safe
+// This is not thread safe
 class PerformanceTimer {
  public:
   static void start_timing() {
@@ -158,17 +155,17 @@ class RPC {
     const std::string clipper_address =
         "tcp://" + clipper_ip + ":" + std::to_string(clipper_port);
     Rcpp::Rcout << "Starting container RPC with clipper ip: " << clipper_ip
-              << " and port: " << clipper_port << std::endl;
+                << " and port: " << clipper_port << std::endl;
     serve_model(model, model_name, model_version, clipper_address);
   }
 
   void validate_rpc_version(const uint32_t received_version) {
-      if (received_version != RPC_VERSION) {
-          std::stringstream ss;
-          ss << "Received an RPC message with version: " << received_version
-             << " that does not match container version: " << RPC_VERSION;
-          throw std::runtime_error(ss.str());
-      }
+    if (received_version != RPC_VERSION) {
+      std::stringstream ss;
+      ss << "Received an RPC message with version: " << received_version
+         << " that does not match container version: " << RPC_VERSION;
+      throw std::runtime_error(ss.str());
+    }
   }
 
   /**
@@ -220,7 +217,8 @@ class RPC {
                     .count();
             if (time_since_last_activity_millis >=
                 SOCKET_ACTIVITY_TIMEOUT_MILLIS) {
-              Rcpp::Rcout << "Connection timed out, reconnecting..." << std::endl;
+              Rcpp::Rcout << "Connection timed out, reconnecting..."
+                          << std::endl;
               connected = false;
               break;
             } else {
@@ -243,12 +241,13 @@ class RPC {
         socket.recv(&msg_rpc_version_bytes, 0);
         socket.recv(&msg_msg_type_bytes, 0);
 
-        uint32_t rpc_version = static_cast<uint32_t*>(msg_rpc_version_bytes.data())[0];
+        uint32_t rpc_version =
+            static_cast<uint32_t*>(msg_rpc_version_bytes.data())[0];
         validate_rpc_version(rpc_version);
 
-        uint32_t message_type_code = static_cast<uint32_t*>(msg_msg_type_bytes.data())[0];
-        MessageType message_type =
-            static_cast<MessageType>(message_type_code);
+        uint32_t message_type_code =
+            static_cast<uint32_t*>(msg_msg_type_bytes.data())[0];
+        MessageType message_type = static_cast<MessageType>(message_type_code);
 
         switch (message_type) {
           case MessageType::Heartbeat: {
@@ -300,15 +299,16 @@ class RPC {
 
           case MessageType::NewContainer:
             log_event(RPCEvent::ReceivedContainerMetadata);
-            Rcpp::Rcout << "Error! Received erroneous new container message from "
-                         "Clipper!"
-                      << std::endl;
+            Rcpp::Rcout
+                << "Error! Received erroneous new container message from "
+                   "Clipper!"
+                << std::endl;
           default: {
-                std::stringstream ss;
-                ss << "Received RPC message of an unknown message type "
-                      "corresponding to integer code "
-                   << message_type_code;
-                throw std::runtime_error(ss.str());
+            std::stringstream ss;
+            ss << "Received RPC message of an unknown message type "
+                  "corresponding to integer code "
+               << message_type_code;
+            throw std::runtime_error(ss.str());
           }
         }
       }
@@ -323,8 +323,7 @@ class RPC {
   }
 
   template <typename D>
-  void handle_predict_request(Model<Input<D>>& model,
-                              zmq::socket_t& socket,
+  void handle_predict_request(Model<Input<D>>& model, zmq::socket_t& socket,
                               std::vector<uint64_t>& input_header_buffer,
                               std::vector<D>& input_data_buffer,
                               std::vector<uint64_t>& output_header_buffer,
@@ -352,14 +351,15 @@ class RPC {
 
     uint64_t num_inputs = input_header_buffer[1];
     uint64_t input_content_size_bytes =
-        std::accumulate(input_header_buffer.begin() + 2, input_header_buffer.begin() + 2 + num_inputs, 0);
+        std::accumulate(input_header_buffer.begin() + 2,
+                        input_header_buffer.begin() + 2 + num_inputs, 0);
 
     std::vector<Input<D>> inputs;
     inputs.reserve(num_inputs);
     resize_if_necessary(input_data_buffer, input_content_size_bytes);
 
     D* data_ptr = input_data_buffer.data();
-    for(uint32_t i = 0; i < num_inputs; i++) {
+    for (uint32_t i = 0; i < num_inputs; i++) {
       uint64_t input_size_bytes = input_header_buffer[i + 2];
       socket.recv(data_ptr, input_size_bytes, 0);
       inputs.push_back(Input<D>(data_ptr, input_size_bytes));
@@ -380,7 +380,7 @@ class RPC {
       throw std::runtime_error(ss.str());
     }
 
-    uint64_t output_header_size = 
+    uint64_t output_header_size =
         create_output_header(outputs, output_header_buffer);
 
     zmq::message_t msg_message_type(sizeof(uint32_t));
@@ -390,7 +390,7 @@ class RPC {
     zmq::message_t msg_message_id(sizeof(uint32_t));
     static_cast<uint32_t*>(msg_message_id.data())[0] = msg_id;
 
-    zmq::message_t msg_header_size(sizeof(sizeof(uint64_t)));
+    zmq::message_t msg_header_size(sizeof(uint64_t));
     static_cast<uint64_t*>(msg_header_size.data())[0] = output_header_size;
 
     socket.send("", 0, ZMQ_SNDMORE);
@@ -400,7 +400,7 @@ class RPC {
     socket.send(output_header_buffer.data(), output_header_size, ZMQ_SNDMORE);
     uint64_t last_msg_num = num_outputs - 1;
     for (uint64_t i = 0; i < num_outputs; i++) {
-      std::string &output = outputs[i];
+      std::string& output = outputs[i];
       if (i < last_msg_num) {
         socket.send(output.begin(), output.end(), ZMQ_SNDMORE);
       } else {
@@ -416,26 +416,27 @@ class RPC {
     Rcpp::Rcout << PerformanceTimer::get_log() << std::endl;
   }
 
-  uint64_t create_output_header(std::vector<std::string>& outputs,
-                                std::vector<uint64_t>& output_header_buffer) const {
+  uint64_t create_output_header(
+      std::vector<std::string>& outputs,
+      std::vector<uint64_t>& output_header_buffer) const {
     uint64_t num_outputs = outputs.size();
     uint64_t output_header_size = (num_outputs + 1) * sizeof(uint64_t);
     resize_if_necessary(output_header_buffer, output_header_size);
     uint64_t* output_header_data = output_header_buffer.data();
     output_header_data[0] = num_outputs;
-    for(uint64_t i = 0; i < num_outputs; i++) {
+    for (uint64_t i = 0; i < num_outputs; i++) {
       output_header_data[i + 1] = outputs[i].size();
     }
     return output_header_size;
   }
 
   template <typename D>
-  void resize_if_necessary(std::vector<D>& buffer, uint64_t required_buffer_size) const {
+  void resize_if_necessary(std::vector<D>& buffer,
+                           uint64_t required_buffer_size) const {
     if ((buffer.size() * sizeof(D)) < required_buffer_size) {
       buffer.reserve((2 * required_buffer_size) / sizeof(D));
     }
   }
-  
 };
 
 }  // namespace container

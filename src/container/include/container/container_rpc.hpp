@@ -384,7 +384,7 @@ class RPC {
     zmq::message_t msg_message_id(sizeof(uint32_t));
     static_cast<uint32_t*>(msg_message_id.data())[0] = msg_id;
 
-    zmq::message_t msg_header_size(sizeof(sizeof(uint64_t)));
+    zmq::message_t msg_header_size(sizeof(uint64_t));
     static_cast<uint64_t*>(msg_header_size.data())[0] = output_header_size;
 
     socket.send("", 0, ZMQ_SNDMORE);
