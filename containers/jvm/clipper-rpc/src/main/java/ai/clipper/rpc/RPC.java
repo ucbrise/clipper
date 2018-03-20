@@ -72,8 +72,8 @@ public class RPC<I extends DataVector<?>> {
 
   private void validateRpcVersion(long receivedVersion) throws Exception {
     if (receivedVersion != RPC_VERSION) {
-      throw new Exception(String.format(
-          "Received a message with RPC version: %d that does not match container version: %d",
+      System.out.println(String.format(
+          "ERROR: Received a message with RPC version: %d that does not match container version: %d",
           receivedVersion, RPC_VERSION));
     }
   }
@@ -357,7 +357,8 @@ public class RPC<I extends DataVector<?>> {
         DataUtils.getBytesFromInts(ContainerMessageType.NewContainer.getCode()), ZMQ.SNDMORE);
     socket.send(modelName, ZMQ.SNDMORE);
     socket.send(String.valueOf(modelVersion), ZMQ.SNDMORE);
-    socket.send(String.valueOf(model.getInputType().getCode()));
+    socket.send(String.valueOf(model.getInputType().getCode()), ZMQ.SNDMORE);
+    socket.send(DataUtils.getBytesFromLongs(RPC_VERSION), 0);
     eventHistory.insert(RPCEventType.SentContainerMetadata);
     System.out.println("Sent container metadata!");
   }

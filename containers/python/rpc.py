@@ -126,8 +126,8 @@ class Server(threading.Thread):
 
     def validate_rpc_version(self, received_version):
         if received_version != RPC_VERSION:
-            raise Exception(
-                "Received an RPC message with version: {clv} that does not match container version: {mcv}"
+            print(
+                "ERROR: Received an RPC message with version: {clv} that does not match container version: {mcv}"
                 .format(clv=received_version, mcv=RPC_VERSION))
 
     def handle_prediction_request(self, prediction_request):
@@ -239,6 +239,7 @@ class Server(threading.Thread):
                 socket.recv()
                 rpc_version_bytes = socket.recv()
                 rpc_version = struct.unpack("<I", rpc_version_bytes)[0]
+                self.validate_rpc_version(rpc_version)
                 msg_type_bytes = socket.recv()
                 msg_type = struct.unpack("<I", msg_type_bytes)[0]
                 if msg_type == MESSAGE_TYPE_HEARTBEAT:
@@ -251,7 +252,6 @@ class Server(threading.Thread):
                                                    heartbeat_type_bytes)[0]
                     if heartbeat_type == HEARTBEAT_TYPE_REQUEST_CONTAINER_METADATA:
                         self.send_container_metadata(socket)
-                    self.validate_rpc_version(rpc_version)
                     continue
                 elif msg_type == MESSAGE_TYPE_NEW_CONTAINER:
                     self.event_history.insert(
@@ -261,7 +261,6 @@ class Server(threading.Thread):
                     )
                     continue
                 elif msg_type == MESSAGE_TYPE_CONTAINER_CONTENT:
-                    self.validate_rpc_version(rpc_version)
                     self.event_history.insert(
                         EVENT_HISTORY_RECEIVED_CONTAINER_CONTENT)
                     msg_id_bytes = socket.recv()
@@ -339,7 +338,6 @@ class Server(threading.Thread):
                         sys.stderr.flush()
 
                     else:
-                        self.validate_rpc_version(rpc_version)
                         feedback_request = FeedbackRequest(msg_id_bytes, [])
                         response = self.handle_feedback_request(received_msg)
                         response.send(socket, self.event_history)
