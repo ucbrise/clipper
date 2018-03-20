@@ -8,7 +8,7 @@ Maintainer: Corey Zumar <czumar@eecs.berkeley.edu>
 Description: Containerizes and deploys R closures to Clipper
 License: Apache 2.0
 Depends:
-	CodeDepends (>= 0.5-3),
+    CodeDepends (>= 0.5-3),
     histry (>= 0.1.2)
 Suggests: knitr,
     rmarkdown
