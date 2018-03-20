@@ -189,7 +189,7 @@ RPC requests sent from Clipper to model containers are divided into two categori
 
 ### Serializing Prediction Requests/Responses
 
-Prediction requests are serialized in a similar fashion to prediction responses. The only difference is that prediction requests contain begin with an extra field.
+Prediction requests are serialized in a similar fashion to prediction responses. The only difference is that prediction requests begin with an extra field.
 
 1. **Prediction requests only:** Prediction requests begin with a request type header. The header is represented as a 32-bit unsigned integer sent as a single ZeroMQ message part. The value of this integer will be 0, indicating that the request is a prediction request.
 
