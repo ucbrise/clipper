@@ -521,11 +521,8 @@ class RPCService:
 def add_metrics():
     config_file_path = 'metrics_config.yaml'
 
-    # Make sure we are inside /container, where the config file lives.
-    cwd = os.path.split(os.getcwd())[1]
-    if cwd != 'container':
-        config_file_path = os.path.join(os.getcwd(), 'container',
-                                        config_file_path)
+    config_file_path = os.path.join(
+        os.path.split(os.path.realpath(__file__))[0], config_file_path)
 
     with open(config_file_path, 'r') as f:
         config = yaml.load(f)
