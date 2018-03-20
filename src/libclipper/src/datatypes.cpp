@@ -194,7 +194,7 @@ std::vector<ByteBuffer> rpc::PredictionRequest::serialize() {
   serialized_request.emplace_back(
       std::make_tuple(std::move(input_metadata), 0, input_metadata_size));
   for (auto &item : input_data_items_) {
-    serialized_request.emplace_back(std::move(item));
+    serialized_request.emplace_back(item);
   }
   return serialized_request;
 }
