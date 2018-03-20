@@ -166,7 +166,7 @@ void RPCService::send_messages(
   std::vector<RPCRequest> requests(queue_size);
   size_t num_requests =
       request_queue_->try_dequeue_bulk(requests.begin(), queue_size);
-  for (size_t i = 0; i < num_requests; i++) {
+  for (size_t i = 0; i < num_requests; ++i) {
     RPCRequest &request = requests[i];
     long current_time_micros =
         std::chrono::duration_cast<std::chrono::microseconds>(
@@ -306,7 +306,7 @@ void RPCService::receive_message(
       uint64_t *output_header =
           static_cast<uint64_t *>(msg_output_header.data());
       uint64_t num_outputs = output_header[0];
-      output_header++;
+      output_header += 1;
       uint64_t output_data_size = static_cast<uint64_t>(
           std::accumulate(output_header, output_header + num_outputs, 0));
       SharedPoolPtr<void> output_data(malloc(output_data_size), free);

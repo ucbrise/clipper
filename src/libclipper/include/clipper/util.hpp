@@ -31,7 +31,7 @@ class Queue {
   Queue(Queue&&) = delete;
   Queue& operator=(Queue&&) = delete;
 
-  void push(T x) {
+  void push(const T x) {
     boost::unique_lock<boost::shared_mutex> l(m_);
     xs_.push(std::move(x));
     data_available_.notify_one();
