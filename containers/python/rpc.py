@@ -331,7 +331,7 @@ class Server(threading.Thread):
                             recv_time + parse_time + handle_time) / 1000.0
                         metric_conn.send(model_container_metric)
 
-                        print("recv: %f us, parse: %f us, handle: %f us" %
+                        print("recv: %f s, parse: %f s, handle: %f s" %
                               (recv_time, parse_time, handle_time))
 
                         sys.stdout.flush()
