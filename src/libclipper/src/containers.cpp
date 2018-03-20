@@ -218,14 +218,14 @@ std::shared_ptr<ModelContainer> ActiveContainers::get_model_replica(
 std::map<int, std::shared_ptr<ModelContainer>> ActiveContainers::get_replicas_for_model(
       const VersionedModelId &model) {
 
-  boost::shared_loc<boost::shared_mutex> l{m_};
+  boost::shared_lock<boost::shared_mutex> l{m_};
 
   auto replicas_map_entry = containers_.find(model);
     if (replicas_map_entry == containers_.end()) {
     log_error_formatted(LOGGING_TAG_CONTAINERS,
-                        "Requested replica {} for model {} NOT FOUND",
-                        replica_id, model.serialize());
-    return nullptr;
+                        "Requested model {} NOT FOUND",
+                        model.serialize());
+    return {};
   }
 
   return replicas_map_entry->second;

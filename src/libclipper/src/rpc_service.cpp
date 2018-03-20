@@ -193,8 +193,8 @@ void RPCService::check_container_activity(
         int replica_id = container_info.second;
       // TaskExecutionThreadPool::submit_job(
       //       vm, replica_id, inactive_container_callback_, vm, replica_id);
-        GarbageCollectionThreadPool::submit_job(
-              vm, replica_id, inactive_container_callback_, vm, replica_id);
+        gc_threadpool_.submit_job(
+              gc_model_id_, gc_replica_id_, inactive_container_callback_, vm, replica_id);
       
       log_info(LOGGING_TAG_RPC, "lost contact with a container");
       receiving_history_.erase(it);
