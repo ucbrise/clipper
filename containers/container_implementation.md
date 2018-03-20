@@ -14,7 +14,7 @@ Model containers communicate with Clipper using RPC messages of several types. E
 ### Versioning and inbound/outbound messages
 Messages that a container receives from Clipper are referred to as **inbound** messages, and messages that a container sends to Clipper are referred to as **outbound** messages.
 
-All inbound messages begin with an **RPC version tag**, represented as an unsigned, 32-bit integer. This version tag is the first part of the inbound message after the [empty delimeter frame](http://zguide.zeromq.org/php:chapter3#The-Simple-Reply-Envelope). Containers should ensure that the version tag matches the RPC version of their container and gracefully exit if a version discrepancy is detected.
+All inbound messages begin with an **RPC version tag**, represented as an unsigned, 32-bit integer. This version tag is the first part of the inbound message after the [empty delimiter frame](http://zguide.zeromq.org/php:chapter3#The-Simple-Reply-Envelope). Containers should ensure that the version tag matches the RPC version of their container and gracefully exit if a version discrepancy is detected.
 
 ### The current RPC version is: 3
     
@@ -52,7 +52,7 @@ The following is an example construction of a *new container message* in Python:
 #### Container Content Messages
 Once Clipper has registered a container, these content messages are exchanged between the container and Clipper in order to serve prediction requests. These messages contain serialized queries (from Clipper) or serialized responses (from the container). For more information on query-response serialization, see the "Serializing Prediction Requests" and "Serializing Prediction Responses" sections below. Beyond the required empty frame and **Message Type** field, *container content messages* contain the following strictly-ordered fields:
 
-  * **Message Id**: A unique identifier, encoded as an unsigned integer, corresponding to the container content message. When handling a prediction request sent via a *contaner content message* from Clipper, the response *container content message* must specify the same **Message Id** as the request message. Clipper will use this identifier to correctly construct request-response pairs in order to return a query result.
+  * **Message Id**: A unique identifier, encoded as an unsigned integer, corresponding to the container content message. When handling a prediction request sent via a *container content message* from Clipper, the response *container content message* must specify the same **Message Id** as the request message. Clipper will use this identifier to correctly construct request-response pairs in order to return a query result.
   * **Multi-part Message Content**: A series of message parts containing byte content that represents either a serialized prediction request (in the case of inbound messages from Clipper) or a serialized prediction response (in the case of outbound messages from the container).
 
 The following is an example construction of a *container content message* in Python:
@@ -64,8 +64,8 @@ The following is an example construction of a *container content message* in Pyt
    for idx in range(len(container_content)):
        serialized_content_part = container_content[idx]
        if idx == len(container_content) - 1:
-           # Don't send the `SNDMORE` flag if this
-           # is the last message part
+           # Don't forget to remove the `SNDMORE` flag 
+           # if this is the last message part
            flags = 0
        else:
            flags = zmq.SNDMORE
@@ -189,14 +189,14 @@ RPC requests sent from Clipper to model containers are divided into two categori
 
 ### Serializing Prediction Requests/Responses
 
-Prediction requests are serialized in a similar fashion to prediction responses. The only difference is that prediction requests contain begin with an extra field.
+Prediction requests are serialized in a similar fashion to prediction responses. The only difference is that prediction requests begin with an extra field.
 
 1. **Prediction requests only:** Prediction requests begin with a request type header. The header is represented as a 32-bit unsigned integer sent as a single ZeroMQ message part. The value of this integer will be 0, indicating that the request is a prediction request.
 
 2. This is the **first** message part in a **prediction response** and the **second** message part in a **prediction request**. This message part consists of a 64-bit unsigned integer containing the length of the prediction request metadata header (defined in field **3**).
 
 3. The next ZeroMQ message part contains a metadata header. This is a list of 64-bit unsigned integers.
-    * The metadata header begins with a 64-bit unsigned integer specifying the type of prediction data contained in the request. This unsigned integer can assume values 0-4, as defined in point two of **Initializing a Connection**.
+    * The metadata header begins with a 64-bit unsigned integer specifying the type of prediction data contained in the request. This unsigned integer can assume values 0-4, as defined in the **RPC Messages** section under the **New Container Message** subheader.
  
     * The next 64-bit unsigned integer in the metadata header is the number of prediction data items included in the serialized content.
  
