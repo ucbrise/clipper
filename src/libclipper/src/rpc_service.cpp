@@ -253,29 +253,59 @@ void RPCService::receive_message(
   bool new_connection = (connection == connections.right.end());
   switch (type) {
     case MessageType::NewContainer: {
-      message_t model_name;
-      message_t model_version;
-      message_t model_input_type;
-      socket.recv(&model_name, 0);
-      socket.recv(&model_version, 0);
-      socket.recv(&model_input_type, 0);
-      if (new_connection) {
+      message_t msg_model_name;
+      message_t msg_model_version;
+      message_t msg_model_input_type;
+      socket.recv(&msg_model_name, 0);
+      socket.recv(&msg_model_version, 0);
+      socket.recv(&msg_model_input_type, 0);
+
+      int contains_rpc_version;
+      size_t contains_rpc_version_size = sizeof(contains_rpc_version);
+      zmq_getsockopt(&socket, ZMQ_RCVMORE, &contains_rpc_version,
+                     &contains_rpc_version_size);
+
+      boost::optional<uint32_t> model_rpc_version;
+
+      if (contains_rpc_version) {
+        message_t msg_model_rpc_version;
+        socket.recv(&msg_model_rpc_version, 0);
+        model_rpc_version =
+            static_cast<uint32_t *>(msg_model_rpc_version.data())[0];
+      }
+
+      std::string model_name(static_cast<char *>(msg_model_name.data()),
+                             msg_model_name.size());
+      std::string model_version(static_cast<char *>(msg_model_version.data()),
+                                msg_model_version.size());
+
+      if (!model_rpc_version) {
+        log_error_formatted(
+            LOGGING_TAG_RPC,
+            "Received a new connection for a model {}:{} that did not specify "
+            "an RPC version. Clipper expects RPC version: {}",
+            RPC_VERSION);
+      } else if (model_rpc_version.get() != RPC_VERSION) {
+        log_error_formatted(
+            LOGGING_TAG_RPC,
+            "Received a new connection for a model {}:{} running the wrong RPC "
+            "version. Clipper expects version: {}, but the model is running "
+            "version: {}",
+            model_name, model_version, RPC_VERSION, model_rpc_version.get());
+      } else if (new_connection) {
         // We have a new connection with container metadata, process it
         // accordingly
         connections.insert(boost::bimap<int, vector<uint8_t>>::value_type(
             zmq_connection_id, connection_id));
         log_info(LOGGING_TAG_RPC, "New container connected");
-        std::string name(static_cast<char *>(model_name.data()),
-                         model_name.size());
-        std::string version(static_cast<char *>(model_version.data()),
-                            model_version.size());
-        std::string input_type_str(static_cast<char *>(model_input_type.data()),
-                                   model_input_type.size());
+        std::string input_type_str(
+            static_cast<char *>(msg_model_input_type.data()),
+            msg_model_input_type.size());
 
-        InputType input_type =
+        InputType model_input_type =
             static_cast<InputType>(std::stoi(input_type_str));
 
-        VersionedModelId model = VersionedModelId(name, version);
+        VersionedModelId model = VersionedModelId(model_name, model_version);
         log_info(LOGGING_TAG_RPC, "Container added");
 
         // Note that if the map does not have an entry for this model,
@@ -285,7 +315,7 @@ void RPCService::receive_message(
         int cur_replica_id = replica_ids_[model];
         replica_ids_[model] = cur_replica_id + 1;
         redis::add_container(*redis_connection, model, cur_replica_id,
-                             zmq_connection_id, input_type);
+                             zmq_connection_id, model_input_type);
         connections_containers_map.emplace(
             connection_id,
             std::pair<VersionedModelId, int>(model, cur_replica_id));

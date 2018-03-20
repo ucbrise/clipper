@@ -239,7 +239,6 @@ class Server(threading.Thread):
                 socket.recv()
                 rpc_version_bytes = socket.recv()
                 rpc_version = struct.unpack("<I", rpc_version_bytes)[0]
-                self.validate_rpc_version(rpc_version)
                 msg_type_bytes = socket.recv()
                 msg_type = struct.unpack("<I", msg_type_bytes)[0]
                 if msg_type == MESSAGE_TYPE_HEARTBEAT:
@@ -252,6 +251,7 @@ class Server(threading.Thread):
                                                    heartbeat_type_bytes)[0]
                     if heartbeat_type == HEARTBEAT_TYPE_REQUEST_CONTAINER_METADATA:
                         self.send_container_metadata(socket)
+                    self.validate_rpc_version(rpc_version)
                     continue
                 elif msg_type == MESSAGE_TYPE_NEW_CONTAINER:
                     self.event_history.insert(
@@ -261,6 +261,7 @@ class Server(threading.Thread):
                     )
                     continue
                 elif msg_type == MESSAGE_TYPE_CONTAINER_CONTENT:
+                    self.validate_rpc_version(rpc_version)
                     self.event_history.insert(
                         EVENT_HISTORY_RECEIVED_CONTAINER_CONTENT)
                     msg_id_bytes = socket.recv()
@@ -338,6 +339,7 @@ class Server(threading.Thread):
                         sys.stderr.flush()
 
                     else:
+                        self.validate_rpc_version(rpc_version)
                         feedback_request = FeedbackRequest(msg_id_bytes, [])
                         response = self.handle_feedback_request(received_msg)
                         response.send(socket, self.event_history)
@@ -351,7 +353,8 @@ class Server(threading.Thread):
         socket.send(struct.pack("<I", MESSAGE_TYPE_NEW_CONTAINER), zmq.SNDMORE)
         socket.send_string(self.model_name, zmq.SNDMORE)
         socket.send_string(str(self.model_version), zmq.SNDMORE)
-        socket.send_string(str(self.model_input_type))
+        socket.send_string(str(self.model_input_type), zmq.SNDMORE)
+        socket.send(struct.pack("<I", RPC_VERSION))
         self.event_history.insert(EVENT_HISTORY_SENT_CONTAINER_METADATA)
         print("Sent container metadata!")
         sys.stdout.flush()
