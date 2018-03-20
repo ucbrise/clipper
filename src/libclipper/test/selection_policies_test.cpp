@@ -134,7 +134,7 @@ TEST(DefaultOutputSelectionStateTest, Serialization) {
   ASSERT_EQ(output_y_hat->size(), default_y_hat->size());
   SharedPoolPtr<char> output_y_hat_data = get_data<char>(output_y_hat);
   SharedPoolPtr<char> default_y_hat_data = get_data<char>(default_y_hat);
-  for (size_t i = 0; i < output_y_hat->size(); i++) {
+  for (size_t i = 0; i < output_y_hat->size(); ++i) {
     ASSERT_EQ(output_y_hat_data.get()[i], default_y_hat_data.get()[i]);
   }
 }

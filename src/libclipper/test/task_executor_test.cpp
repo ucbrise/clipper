@@ -36,7 +36,7 @@ bool y_hats_equal(std::shared_ptr<PredictionData> y_hat_a,
       y_hat_a->size() != y_hat_b->size()) {
     return false;
   }
-  for (size_t i = 0; i < y_hat_a->size(); i++) {
+  for (size_t i = 0; i < y_hat_a->size(); ++i) {
     if (y_hat_a_data[i] != y_hat_b_data[i]) {
       return false;
     }
