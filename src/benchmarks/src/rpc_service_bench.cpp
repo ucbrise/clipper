@@ -122,8 +122,9 @@ class Benchmarker {
  public:
   Benchmarker(int num_messages, int message_size, InputType input_type)
       : num_messages_(num_messages),
-        rpc_(std::make_unique<rpc::RPCService>()),
-        request_(create_request(input_type, message_size)) {}
+        message_size_(message_size),
+        input_type_(input_type),
+        rpc_(std::make_unique<rpc::RPCService>()) {}
 
   void start() {
     rpc_->start("*", RPC_SERVICE_PORT, [](VersionedModelId, int) {},
@@ -186,8 +187,9 @@ class Benchmarker {
         std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::system_clock::now().time_since_epoch())
             .count();
+    auto request = create_request(input_type_, message_size_);
     cur_message_id_ =
-        rpc_->send_message(request_.serialize(), benchmark_container_id_);
+        rpc_->send_message(request.serialize(), benchmark_container_id_);
   }
 
   void on_response_recv(rpc::RPCResponse response) {
@@ -225,13 +227,14 @@ class Benchmarker {
   std::shared_ptr<metrics::Histogram> msg_latency_hist_;
   std::shared_ptr<metrics::Meter> throughput_meter_;
   int num_messages_;
+  int message_size_;
+  InputType input_type_;
   redox::Redox redis_connection_;
   redox::Subscriber redis_subscriber_;
   std::atomic<int> messages_completed_{0};
   std::unique_ptr<rpc::RPCService> rpc_;
   std::atomic<long> cur_msg_start_time_millis_;
   std::atomic<int> benchmark_container_id_;
-  rpc::PredictionRequest request_;
   uint32_t cur_message_id_;
 };
 
