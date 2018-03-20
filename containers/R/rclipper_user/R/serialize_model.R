@@ -70,7 +70,10 @@
   all_cd_dependencies = list()
   execution_history = histry::histry()
   for(expr in execution_history) {
-    if(TRUE) {
+    expr_str = toString(expr)
+    if(grepl(obj_name, expr_str)) {
+      # The current expression contains the object name,
+      # so we should analyze its dependencies
       cd_dependencies = CodeDepends::getInputs(expr)
       # This is a bit hacky. `CodeDepends` doesn't always
       # return the same data type. Either a class extending
