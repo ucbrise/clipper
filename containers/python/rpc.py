@@ -547,7 +547,6 @@ def add_metrics():
 def start_metric_server():
     server_py_path = os.path.join(
         metric.__file__.rsplit('/', 1)[0], 'server.py')
-    metric.server.start_redis_daemon()
 
     DEBUG = False
     cmd = ['python', server_py_path]
