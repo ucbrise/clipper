@@ -156,10 +156,10 @@ class RPC {
 
   void validate_rpc_version(const uint32_t received_version) {
     if (received_version != rpc::RPC_VERSION) {
-      std::stringstream ss;
-      ss << "Received an RPC message with version: " << received_version
-         << " that does not match container version: " << rpc::RPC_VERSION;
-      throw std::runtime_error(ss.str());
+      log_error_formatted(LOGGING_TAG_CONTAINER,
+                          "Received an RPC message with version: {} that does "
+                          "not match container version: {}",
+                          received_version, rpc::RPC_VERSION);
     }
   }
 
