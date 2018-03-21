@@ -9,6 +9,7 @@ import socket
 import sys
 import os
 import yaml
+import logger
 from collections import deque
 from multiprocessing import Pipe, Process
 from prometheus_client import start_http_server
@@ -45,6 +46,7 @@ EVENT_HISTORY_RECEIVED_CONTAINER_CONTENT = 6
 MAXIMUM_UTF_8_CHAR_LENGTH_BYTES = 4
 BYTES_PER_INT = 4
 
+logger = logging.getLogger(__name__)
 
 def string_to_input_type(input_str):
     input_str = input_str.strip().lower()
@@ -514,7 +516,11 @@ class RPCService:
         child_conn, parent_conn = Pipe(duplex=False)
         metrics_proc = Process(target=run_metric, args=(child_conn, ))
         metrics_proc.start()
-        self.server.run(parent_conn)
+        try:
+            self.server.run(parent_conn)
+        except Exception as e:
+            os.system("rm ~/model_is_ready.check")
+            logger.error(e)
 
 
 class MetricCollector:
