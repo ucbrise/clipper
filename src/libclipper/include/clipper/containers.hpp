@@ -7,6 +7,9 @@ constexpr int DEFAULT_BATCH_SIZE = -1;
 #include <random>
 #include <unordered_map>
 
+#include <dlib/matrix.h>
+#include <dlib/svm.h>
+
 #include <boost/circular_buffer.hpp>
 
 #include <clipper/datatypes.hpp>
@@ -44,8 +47,10 @@ class ModelContainer {
   clipper::metrics::Histogram latency_hist_;
 
  private:
-  // Pair of batch size, model processing latency
-  using ProcessingDatapoint = std::pair<size_t, long>;
+  // Pair of model processing latency, batch size,
+  using Latency = dlib::matrix<long, 1, 1>;
+  using BatchSize = long;
+  using ProcessingDatapoint = std::pair<Latency, BatchSize>;
   bool connected_{true};
   Queue<FeedbackTask> feedback_queue_;
   boost::shared_mutex datapoints_mutex_;

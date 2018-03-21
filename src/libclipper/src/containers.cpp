@@ -13,6 +13,8 @@
 #include <clipper/metrics.hpp>
 #include <clipper/util.hpp>
 
+#include <dlib/matrix.h>
+#include <dlib/svm.h>
 #include <boost/circular_buffer.hpp>
 
 namespace clipper {

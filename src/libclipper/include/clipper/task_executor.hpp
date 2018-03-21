@@ -218,6 +218,32 @@ class InflightMessage {
   std::shared_ptr<Input> input_;
 };
 
+namespace TaskExecutionThreadPool {
+/**
+ * Convenience method to get the task execution thread pool for the
+ * application.
+ */
+inline ModelQueueThreadPool &get_thread_pool(void) {
+  static ModelQueueThreadPool taskExecutionPool;
+  return taskExecutionPool;
+}
+
+/**
+ * Submit a job to the task execution thread pool.
+ */
+template <typename Func, typename... Args>
+inline auto submit_job(VersionedModelId vm, int replica_id, Func &&func,
+                       Args &&... args) {
+  return get_thread_pool().submit(vm, replica_id, std::forward<Func>(func),
+                                  std::forward<Args>(args)...);
+}
+
+inline void create_queue(VersionedModelId vm, int replica_id) {
+  get_thread_pool().create_queue(vm, replica_id);
+}
+
+}  // namespace TaskExecutionThreadPool
+
 class TaskExecutor {
  public:
   ~TaskExecutor() { active_->store(false); };
