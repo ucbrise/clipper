@@ -1,10 +1,8 @@
 # This ARG isn't used but prevents warnings in the build script
 ARG CODE_VERSION
-FROM continuumio/anaconda:5.1.0
+FROM continuumio/anaconda:5.0.1
 
 MAINTAINER Dan Crankshaw <dscrankshaw@gmail.com>
-
-RUN conda update -n base conda
 
 RUN mkdir -p /model \
       && apt-get update \
