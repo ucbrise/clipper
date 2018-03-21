@@ -186,7 +186,7 @@ class Server(threading.Thread):
     def get_event_history(self):
         return self.event_history.get_events()
 
-    def run(self):
+    def run(self, collect_metric=True):
         print("Serving predictions for {0} input type.".format(
             input_type_to_string(self.model_input_type)))
         connected = False
@@ -317,16 +317,18 @@ class Server(threading.Thread):
                         parse_time = (t3 - t2).microseconds
                         handle_time = (t4 - t3).microseconds
 
-                        metric.report_metric('clipper_mc_pred_total', 1)
-                        metric.report_metric('clipper_mc_recv_time_ms',
-                                             recv_time / 1000.0)
-                        metric.report_metric('clipper_mc_parse_time_ms',
-                                             parse_time / 1000.0)
-                        metric.report_metric('clipper_mc_handle_time_ms',
-                                             handle_time / 1000.0)
-                        metric.report_metric(
-                            'clipper_mc_end_to_end_latency_ms',
-                            (recv_time + parse_time + handle_time) / 1000.0)
+                        if collect_metric:
+                            metric.report_metric('clipper_mc_pred_total', 1)
+                            metric.report_metric('clipper_mc_recv_time_ms',
+                                                 recv_time / 1000.0)
+                            metric.report_metric('clipper_mc_parse_time_ms',
+                                                 parse_time / 1000.0)
+                            metric.report_metric('clipper_mc_handle_time_ms',
+                                                 handle_time / 1000.0)
+                            metric.report_metric(
+                                'clipper_mc_end_to_end_latency_ms',
+                                (recv_time + parse_time + handle_time) /
+                                1000.0)
 
                         print("recv: %f us, parse: %f us, handle: %f us" %
                               (recv_time, parse_time, handle_time))
@@ -516,7 +518,7 @@ class RPCService:
             start_metric_server()
             add_metrics()
 
-        self.server.run()
+        self.server.run(collect_metric=self.collect_metric)
 
 
 def add_metrics():
