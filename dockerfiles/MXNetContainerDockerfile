@@ -15,8 +15,6 @@ RUN echo deb http://ftp.de.debian.org/debian jessie-backports main >> /etc/apt/s
 
 COPY containers/python/mxnet_container.py containers/python/mxnet_container_entry.sh /container/
 
-HEALTHCHECK --interval=3s --timeout=3s --retries=1 CMD test -f /model_is_ready.check || exit 1
-
 CMD ["/container/mxnet_container_entry.sh"]
 
 # vim: set filetype=dockerfile:
