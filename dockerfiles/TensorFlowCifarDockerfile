@@ -9,4 +9,5 @@ COPY containers/python/tf_cifar_container.py /container/
 
 CMD ["python", "/container/tf_cifar_container.py"]
 
+HEALTHCHECK --interval=3s --timeout=3s --retries=1 CMD test -f model_is_ready.check
 # vim: set filetype=dockerfile:

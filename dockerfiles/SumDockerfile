@@ -5,4 +5,5 @@ COPY containers/python/sum_container.py /container/
 
 CMD ["python", "/container/sum_container.py"]
 
+HEALTHCHECK --interval=3s --timeout=3s --retries=1 CMD test -f model_is_ready.check
 # vim: set filetype=dockerfile:

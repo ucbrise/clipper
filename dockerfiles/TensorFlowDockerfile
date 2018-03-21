@@ -12,4 +12,5 @@ COPY containers/python/tf_container.py containers/python/tf_container_entry.sh /
 
 CMD ["/container/tf_container_entry.sh"]
 
+HEALTHCHECK --interval=3s --timeout=3s --retries=1 CMD test -f model_is_ready.check
 # vim: set filetype=dockerfile:

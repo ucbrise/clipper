@@ -10,4 +10,5 @@ COPY containers/python/python_closure_container.py containers/python/python_clos
 
 ENTRYPOINT ["/container/python_closure_container_entry.sh"]
 
+HEALTHCHECK --interval=3s --timeout=3s --retries=1 CMD test -f model_is_ready.check
 # vim: set filetype=dockerfile:
