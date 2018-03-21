@@ -266,7 +266,7 @@ class ModelQueueThreadPool : public ThreadPool {
               Args&&... args) {
     size_t queue_id = get_queue_id(vm, replica_id);
     try {
-      submit(queue_id, func, args...);
+      ThreadPool::submit(queue_id, func, args...);
     } catch (ThreadPoolError& e) {
       log_error_formatted(LOGGING_TAG_THREADPOOL,
                           "Failed to submit task for model {}, replica {}",
@@ -328,7 +328,7 @@ class FixedSizeThreadPool : public ThreadPool {
    */
   template <typename Func, typename... Args>
   auto submit(Func&& func, Args&&... args) {
-    submit(queue_id_, func, args...);
+    ThreadPool::submit(queue_id_, func, args...);
   }
 
  private:
