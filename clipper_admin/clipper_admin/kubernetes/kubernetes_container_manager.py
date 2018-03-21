@@ -222,6 +222,12 @@ class KubernetesContainerManager(ContainerManager):
                                 deployment_name,
                                 'image':
                                 image,
+                                'args': 'touch /model_is_ready.check',
+                                'readinessProbe': [
+                                    'exec': {'command': 'test -f /model_is_ready.check'},
+                                    'initialDelaySeconds': 3,
+                                    'periodSeconds': 3
+                                ],
                                 'ports': [{
                                     'containerPort': 80
                                 }, {
@@ -251,6 +257,9 @@ class KubernetesContainerManager(ContainerManager):
             while self._k8s_beta.read_namespaced_deployment_status(
                 name=deployment_name, namespace='default').status.available_replicas \
                    != num_replicas:
+
+                print(self._k8s_beta.read_namespaced_deployment_status(name=deployment_name, namespace='default').status)
+                print(self._k8s_beta.list_pod_for_all_namespaces())
                 time.sleep(3)
 
     def get_num_replicas(self, name, version):
