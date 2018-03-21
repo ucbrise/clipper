@@ -4,6 +4,8 @@ FROM continuumio/anaconda:5.1.0
 
 MAINTAINER Dan Crankshaw <dscrankshaw@gmail.com>
 
+RUN conda update -n base conda
+
 RUN mkdir -p /model \
       && apt-get update \
       && apt-get install -y libzmq3 libzmq3-dev redis-server\
