@@ -48,6 +48,7 @@ BYTES_PER_INT = 4
 
 logger = logging.getLogger(__name__)
 
+
 def string_to_input_type(input_str):
     input_str = input_str.strip().lower()
     byte_strs = ["b", "bytes", "byte"]
