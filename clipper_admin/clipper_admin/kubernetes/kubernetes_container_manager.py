@@ -200,7 +200,7 @@ class KubernetesContainerManager(ContainerManager):
                 'kind': 'Deployment',
                 'metadata': {
                     "name": deployment_name,
-                    "labels": {"test": "readiness"}
+                    "label": {"test" :"readiness"},
                 },
                 'spec': {
                     'replicas': num_replicas,
@@ -214,7 +214,8 @@ class KubernetesContainerManager(ContainerManager):
                             },
                             'annotations': {
                                 "prometheus.io/scrape": "true",
-                                "prometheus.io/port": "1390"
+                                "prometheus.io/port": "1390",
+                                "test": "readiness",
                             }
                         },
                         'spec': {
@@ -223,13 +224,16 @@ class KubernetesContainerManager(ContainerManager):
                                 deployment_name,
                                 'image':
                                 image,
-                                #'command': ['/bin/sh'],
-                                #'args': ['-c', 'touch /model_is_ready.check'],
-                                #'readinessProbe': {
-                                #    'exec': {'command': ['test -f /container/model_is_ready.check']},
-                                #    'initialDelaySeconds': 3,
-                                #    'periodSeconds': 3
-                                #},
+                                'imagePullPolicy': 'Always',
+                                'readinessProbe': {
+                                    'exec': {
+                                        'command': [
+                                            'cat',
+                                            '/model_is_ready.check'
+                                        ]},
+                                    'initialDelaySeconds': 3,
+                                    'periodSeconds': 3
+                                },
                                 'ports': [{
                                     'containerPort': 80
                                 }, {
@@ -259,8 +263,6 @@ class KubernetesContainerManager(ContainerManager):
             while self._k8s_beta.read_namespaced_deployment_status(
                 name=deployment_name, namespace='default').status.available_replicas \
                    != num_replicas:
-
-                print(self._k8s_beta.read_namespaced_deployment_status(name=deployment_name, namespace='default').status)
                 time.sleep(3)
 
     def get_num_replicas(self, name, version):
