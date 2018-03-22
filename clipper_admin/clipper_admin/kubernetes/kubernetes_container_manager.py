@@ -200,7 +200,9 @@ class KubernetesContainerManager(ContainerManager):
                 'kind': 'Deployment',
                 'metadata': {
                     "name": deployment_name,
-                    "label": {"test" :"readiness"},
+                    "label": {
+                        "test": "readiness"
+                    },
                 },
                 'spec': {
                     'replicas': num_replicas,
@@ -209,8 +211,7 @@ class KubernetesContainerManager(ContainerManager):
                             'labels': {
                                 CLIPPER_MODEL_CONTAINER_LABEL:
                                 create_model_container_label(name, version),
-                                CLIPPER_DOCKER_LABEL:
-                                ""
+                                CLIPPER_DOCKER_LABEL: ""
                             },
                             'annotations': {
                                 "prometheus.io/scrape": "true",
@@ -224,13 +225,13 @@ class KubernetesContainerManager(ContainerManager):
                                 deployment_name,
                                 'image':
                                 image,
-                                'imagePullPolicy': 'Always',
+                                'imagePullPolicy':
+                                'Always',
                                 'readinessProbe': {
                                     'exec': {
-                                        'command': [
-                                            'cat',
-                                            '/model_is_ready.check'
-                                        ]},
+                                        'command':
+                                        ['cat', '/model_is_ready.check']
+                                    },
                                     'initialDelaySeconds': 3,
                                     'periodSeconds': 3
                                 },
