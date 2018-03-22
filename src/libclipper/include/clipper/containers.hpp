@@ -14,6 +14,7 @@ constexpr int DEFAULT_BATCH_SIZE = -1;
 
 #include <clipper/datatypes.hpp>
 #include <clipper/metrics.hpp>
+#include <clipper/threadpool.hpp>
 #include <clipper/util.hpp>
 
 namespace clipper {
@@ -21,6 +22,26 @@ namespace clipper {
 // We use the system clock for the deadline time point
 // due to its cross-platform consistency (consistent epoch, resolution)
 using Deadline = std::chrono::time_point<std::chrono::system_clock>;
+
+namespace EstimatorFittingThreadPool {
+/**
+ * Convenience method to get the task execution thread pool for the
+ * application.
+ */
+inline FixedSizeThreadPool &get_thread_pool(void) {
+  static FixedSizeThreadPool estimator_fitting_pool(1);
+  return estimator_fitting_pool;
+}
+
+/**
+ * Submit a job to be run by the thread pool.
+ */
+template <typename Func, typename... Args>
+auto submit_job(Func &&func, Args &&... args) {
+  get_thread_pool().submit(func, args...);
+}
+
+}  // namespace EstimatorFittingThreadPool
 
 class ModelContainer {
  public:
@@ -48,9 +69,12 @@ class ModelContainer {
 
  private:
   // Pair of model processing latency, batch size,
-  using Latency = dlib::matrix<long, 1, 1>;
-  using BatchSize = long;
-  using ProcessingDatapoint = std::pair<Latency, BatchSize>;
+  using EstimatorLatency = dlib::matrix<double, 1, 1>;
+  using EstimatorBatchSize = double;
+  using EstimatorKernel = dlib::polynomial_kernel<EstimatorLatency>;
+  using Estimator = dlib::decision_function<EstimatorKernel>;
+  using ProcessingDatapoint = std::pair<EstimatorLatency, EstimatorBatchSize>;
+
   bool connected_{true};
   Queue<FeedbackTask> feedback_queue_;
   boost::shared_mutex datapoints_mutex_;
@@ -58,19 +82,24 @@ class ModelContainer {
 
   size_t max_batch_size_;
   long max_latency_;
-  std::normal_distribution<double> exploration_distribution_;
+  Estimator estimator_;
+  dlib::krr_trainer<EstimatorKernel> estimator_trainer;
+  std::mutex estimator_mtx_;
 
   // Exploration and estimation parameters
   // for adaptive batching
-  double explore_dist_mu_ = .1;
-  double explore_dist_std_ = .05;
-  double estimate_decay_ = .95;
+  double explore_dist_mu_;
+  double explore_dist_std_;
+  double estimate_decay_;
+  std::normal_distribution<double> exploration_distribution_;
+  std::default_random_engine exploration_engine_;
 
   static const size_t DATAPOINTS_BUFFER_CAPACITY = 256;
   static const size_t HISTOGRAM_SAMPLE_SIZE = 256;
 
+  void fit_estimator();
   size_t explore();
-  size_t estimate(Deadline deadline);
+  size_t estimate(long long budget);
 };
 
 /// This is a lightweight wrapper around the map of active containers

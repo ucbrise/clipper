@@ -11,6 +11,7 @@
 #include <clipper/containers.hpp>
 #include <clipper/logging.hpp>
 #include <clipper/metrics.hpp>
+#include <clipper/threadpool.hpp>
 #include <clipper/util.hpp>
 
 #include <dlib/matrix.h>
@@ -29,14 +30,26 @@ ModelContainer::ModelContainer(VersionedModelId model, int container_id,
       replica_id_(replica_id),
       input_type_(input_type),
       batch_size_(batch_size),
-      max_batch_size_(1),
-      max_latency_(0),
-      exploration_distribution_(std::normal_distribution<double>(
-          explore_dist_mu_, explore_dist_std_)),
       latency_hist_("container:" + model.serialize() + ":" +
                         std::to_string(replica_id) + ":prediction_latency",
                     "microseconds", HISTOGRAM_SAMPLE_SIZE),
-      processing_datapoints_(DATAPOINTS_BUFFER_CAPACITY) {
+      processing_datapoints_(DATAPOINTS_BUFFER_CAPACITY),
+      max_batch_size_(1),
+      max_latency_(0),
+      estimator_trainer(dlib::krr_trainer<EstimatorKernel>()),
+      explore_dist_mu_(.1),
+      explore_dist_std_(.05),
+      estimate_decay_(.8),
+      exploration_distribution_(std::normal_distribution<double>(
+          explore_dist_mu_, explore_dist_std_)),
+      exploration_engine_(std::default_random_engine(
+          std::chrono::system_clock::now().time_since_epoch().count())) {
+  size_t gamma = 1;
+  size_t coef = 0;
+  size_t degree = 4;
+
+  estimator_trainer.set_kernel(EstimatorKernel(gamma, coef, degree));
+
   std::string model_str = model.serialize();
   log_info_formatted(LOGGING_TAG_CONTAINERS,
                      "Creating new ModelContainer for model {}, id: {}",
@@ -47,15 +60,19 @@ void ModelContainer::add_processing_datapoint(size_t batch_size,
                                               long total_latency_micros) {
   if (batch_size <= 0 || total_latency_micros <= 0) {
     throw std::invalid_argument(
-        "Batch size and latency must be positive for throughput updates!");
+        "Invalid processing datapoint: Batch size and latency must be "
+        "positive.");
   }
 
   latency_hist_.insert(total_latency_micros);
 
   boost::unique_lock<boost::shared_mutex> lock(datapoints_mutex_);
+  EstimatorLatency new_lat(static_cast<double>(total_latency_micros));
   processing_datapoints_.push_back(
-      std::make_pair(batch_size, total_latency_micros));
+      std::make_pair(new_lat, static_cast<double>(batch_size)));
   max_latency_ = std::max(total_latency_micros, max_latency_);
+
+  EstimatorFittingThreadPool::submit_job([this]() { fit_estimator(); });
 }
 
 void ModelContainer::set_batch_size(int batch_size) {
@@ -74,20 +91,39 @@ size_t ModelContainer::get_batch_size(Deadline deadline) {
   if (budget <= max_latency_) {
     curr_batch_size = explore();
   } else {
-    curr_batch_size = estimate(deadline);
+    curr_batch_size = estimate(budget);
   }
   max_batch_size_ = std::max(curr_batch_size, max_batch_size_);
   return curr_batch_size;
+}
+
+void ModelContainer::fit_estimator() {
+  std::vector<EstimatorLatency> x_vals;
+  std::vector<EstimatorBatchSize> y_vals;
+
+  for (const auto &datapoint : processing_datapoints_) {
+    x_vals.push_back(datapoint.first);
+    y_vals.push_back(datapoint.second);
+  }
+
+  auto new_estimator = estimator_trainer.train(x_vals, y_vals);
+  std::lock_guard<std::mutex> lock(estimator_mtx_);
+  estimator_ = new_estimator;
 }
 
 size_t ModelContainer::explore() {
   if (max_batch_size_ < 10) {
     return max_batch_size_ + 1;
   } else {
+    double expansion_factor = exploration_distribution_(exploration_engine_);
+    return static_cast<size_t>((1 + expansion_factor) * max_batch_size_);
   }
 }
 
-size_t ModelContainer::estimate(Deadline deadline) {}
+size_t ModelContainer::estimate(long long budget) {
+  std::lock_guard<std::mutex> lock(estimator_mtx_);
+  return estimator_(EstimatorLatency(budget));
+}
 
 ActiveContainers::ActiveContainers()
     : containers_(
