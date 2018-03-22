@@ -18,7 +18,4 @@ _build/
 dependency-reduced-pom.xml
 *.iml
 
-k8s_starter.py
-integration-tests/replica_test.py
 docker-compose.yml
-venv/
