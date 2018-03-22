@@ -7,8 +7,8 @@ clipper_conn = ClipperConnection(
 try:
 
     clipper_conn.stop_all()
+    clipper_conn.stop_all_model_containers()
     clipper_conn.start_clipper()
-    #clipper_conn.stop_all()
     clipper_conn.register_application(
         name="hello-world",
         input_type="doubles",
@@ -39,7 +39,5 @@ try:
             "input": list(np.random.random(10))
         })).json())
 
-    #clipper_conn.stop_all()
 except Exception as e:
     print(e)
-    #clipper_conn.stop_all()
