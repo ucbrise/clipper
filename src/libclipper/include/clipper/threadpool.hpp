@@ -161,6 +161,13 @@ class ThreadPool {
  public:
   ThreadPool(void) : done_{false}, queues_{}, threads_{} {}
 
+  explicit ThreadPool(std::vector<std::pair<VersionedModelId, int>> v) : done_{false}, queues_{}, threads_{} {
+    //iterate through vector and cerate queue for each pair
+    for(auto t : v) {
+      this->create_queue(t.first, t.second);
+    }
+  }
+
   /**
    * Non-copyable.
    */
@@ -314,25 +321,31 @@ inline void create_queue(VersionedModelId vm, int replica_id) {
 }  // namespace TaskExecutionThreadPool
 
 
-// namespace GarbageCollectionThreadPool {
-//   /**
-//  * Convenience method to get the task execution thread pool for the application.
-//  */
-//   inline ThreadPool& get_thread_pool(void) {
-//     static ThreadPool garbageCollectionPool;
-//     return garbageCollectionPool;
-//   }
+namespace GarbageCollectionThreadPool {
+  /**
+ * Convenience method to get the task execution thread pool for the application.
+ */
 
-//   *
-//  * Submit a job to the task execution thread pool.
+  static VersionedModelId gc_model_id("GC_Clipper_internal", "1");
+  static constexpr int gc_replica_id = 1;
+  static std::vector<std::pair<VersionedModelId, int>> gc_vec = {std::make_pair(gc_model_id, gc_replica_id)};
+
+  inline ThreadPool& get_thread_pool(void) {
+
+    static ThreadPool garbageCollectionPool(gc_vec);
+    return garbageCollectionPool;
+  }
+
+  *
+ * Submit a job to the task execution thread pool.
  
-//   template <typename Func, typename... Args>
-//   inline auto submit_job(VersionedModelId vm, int replica_id, Func&& func,
-//                           Args&&... args) {
-//     return get_thread_pool().submit(vm, replica_id, std::forward<Func>(func),
-//                                     std::forward<Args>(args)...);
-//   }
-// }
+  template <typename Func, typename... Args>
+  inline auto submit_job(Func&& func,
+                          Args&&... args) {
+    return get_thread_pool().submit(gc_model_id, gc_replica_id, std::forward<Func>(func),
+                                    std::forward<Args>(args)...);
+  }
+}
 
 }  // namespace clipper
 
