@@ -576,9 +576,6 @@ class TaskExecutor {
           cache_->put(completed_msg.model_, completed_msg.input_,
                       Output{parsed_response.outputs_[batch_num],
                              {completed_msg.model_}});
-          log_info(LOGGING_TAG_TASK_EXECUTOR, "PLACED IN CACHE");
-        } else {
-          log_info(LOGGING_TAG_TASK_EXECUTOR, "DID NOT PLACE IN CACHE");
         }
         auto task_latency = current_time - completed_msg.send_time_;
         long task_latency_micros =

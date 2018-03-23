@@ -308,7 +308,7 @@ class ModelQueueThreadPool : public ThreadPool {
 class FixedSizeThreadPool : public ThreadPool {
  public:
   FixedSizeThreadPool(const size_t num_threads) : ThreadPool(), queue_id_(1) {
-    if (num_threads > 0) {
+    if (num_threads <= 0) {
       throw std::runtime_error(
           "Attempted to construct threadpool with no threads");
     }
