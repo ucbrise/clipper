@@ -336,6 +336,8 @@ class PredictTask {
   QueryId query_id_;
   long latency_slo_micros_;
   std::chrono::time_point<std::chrono::system_clock> recv_time_;
+
+ private:
   bool artificial_;
 };
 

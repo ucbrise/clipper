@@ -569,9 +569,14 @@ class TaskExecutor {
       }
       for (size_t batch_num = 0; batch_num < batch_size; ++batch_num) {
         InflightMessage completed_msg = keys[batch_num];
-        cache_->put(completed_msg.model_, completed_msg.input_,
-                    Output{parsed_response.outputs_[batch_num],
-                           {completed_msg.model_}});
+        if (!completed_msg.discard_result_) {
+          cache_->put(completed_msg.model_, completed_msg.input_,
+                      Output{parsed_response.outputs_[batch_num],
+                             {completed_msg.model_}});
+          log_info(LOGGING_TAG_TASK_EXECUTOR, "PLACED IN CACHE");
+        } else {
+          log_info(LOGGING_TAG_TASK_EXECUTOR, "DID NOT PLACE IN CACHE");
+        }
         auto task_latency = current_time - completed_msg.send_time_;
         long task_latency_micros =
             std::chrono::duration_cast<std::chrono::microseconds>(task_latency)

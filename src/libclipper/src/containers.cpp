@@ -88,7 +88,7 @@ size_t ModelContainer::get_batch_size(Deadline deadline) {
   }
 
   size_t curr_batch_size;
-  if (budget <= max_latency_) {
+  if (budget > max_latency_) {
     curr_batch_size = explore();
   } else {
     curr_batch_size = estimate(budget);
