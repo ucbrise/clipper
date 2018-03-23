@@ -99,28 +99,33 @@ size_t ModelContainer::get_batch_size(Deadline deadline) {
 }
 
 void ModelContainer::fit_estimator() {
-  size_t num_datapoints = processing_datapoints_.size();
+  try {
+    size_t num_datapoints = processing_datapoints_.size();
 
-  std::vector<EstimatorLatency> x_vals;
-  x_vals.reserve(num_datapoints);
-  std::vector<EstimatorBatchSize> y_vals;
-  y_vals.reserve(num_datapoints);
+    std::vector<EstimatorLatency> x_vals;
+    x_vals.reserve(num_datapoints);
+    std::vector<EstimatorBatchSize> y_vals;
+    y_vals.reserve(num_datapoints);
 
-  for (size_t i = 0; i < num_datapoints; ++i) {
-    EstimatorLatency point_lat;
-    EstimatorBatchSize point_bs;
-    std::tie(point_lat, point_bs) = processing_datapoints_[i];
-    x_vals.push_back(std::move(point_lat));
-    y_vals.push_back(std::move(point_bs));
+    for (size_t i = 0; i < num_datapoints; ++i) {
+      EstimatorLatency point_lat;
+      EstimatorBatchSize point_bs;
+      std::tie(point_lat, point_bs) = processing_datapoints_[i];
+      x_vals.push_back(std::move(point_lat));
+      y_vals.push_back(std::move(point_bs));
+    }
+
+    auto new_estimator = estimator_trainer.train(x_vals, y_vals);
+    std::lock_guard<std::mutex> lock(estimator_mtx_);
+    estimator_ = new_estimator;
+    EstimatorLatency test_lat;
+    test_lat(0) = 1000000.0;
+    double estimate = estimator_(test_lat);
+    log_info_formatted(LOGGING_TAG_CONTAINERS, "ESTIMATE: {}", estimate);
+  } catch (std::runtime_error &e) {
+    log_error_formatted(LOGGING_TAG_CONTAINERS, "ESTIMATION ERROR: {}",
+                        e.what());
   }
-
-  auto new_estimator = estimator_trainer.train(x_vals, y_vals);
-  std::lock_guard<std::mutex> lock(estimator_mtx_);
-  estimator_ = new_estimator;
-  EstimatorLatency test_lat;
-  test_lat(0) = 1000000.0;
-  double estimate = estimator_(test_lat);
-  log_info_formatted(LOGGING_TAG_CONTAINERS, "ESTIMATE: {}", estimate);
 }
 
 size_t ModelContainer::explore() {
