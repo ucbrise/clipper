@@ -138,11 +138,16 @@ class ModelQueue {
   }
 
   std::vector<PredictTask> get_batch(
+      std::shared_ptr<ModelContainer> requesting_container,
       std::function<int(Deadline)> &&get_batch_size) {
+
     std::unique_lock<std::mutex> lock(queue_mutex_);
     remove_tasks_with_elapsed_deadlines();
     queue_not_empty_condition_.wait(lock, [this]() { return !queue_.empty(); });
     remove_tasks_with_elapsed_deadlines();
+    if(!requesting_container.is_active()) {
+      return batch;
+    }
     Deadline deadline = queue_.top().first;
     int max_batch_size = get_batch_size(deadline);
     std::vector<PredictTask> batch;
@@ -361,10 +366,10 @@ class TaskExecutor {
       
       if (model_queue_entry != model_queues_.end()) {
 
-        auto cache_result = cache_ ->fetch(t.model_, t.input_);
+        auto cache_result = cache_->fetch(t.model_, t.input_);
 
         if(cache_result.isReady()) {
-          output_futures.push_back(cache_result);
+          output_futures.push_back(std::move(cache_result));
           boost::shared_lock<boost::shared_mutex> model_metrics_lock(
               model_metrics_mutex_);
           auto cur_model_metric_entry = model_metrics_.find(t.model_);
@@ -380,7 +385,7 @@ class TaskExecutor {
                             "No active model containers for model: {} : {}",
                             t.model_.get_name(), t.model_.get_id());
           } else {
-              output_futures.push_back(cache_result);
+              output_futures.push_back(std::move(cache_result));
               t.recv_time_ = std::chrono::system_clock::now();
               model_queue_entry->second->add_task(t);
               log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
@@ -473,7 +478,7 @@ class TaskExecutor {
     // goes out of scope.
     l.unlock();
 
-    std::vector<PredictTask> batch = current_model_queue->get_batch([container](
+    std::vector<PredictTask> batch = current_model_queue->get_batch(container, [container](
         Deadline deadline) { 
         return container->get_batch_size(deadline); 
     });

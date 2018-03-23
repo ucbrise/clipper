@@ -27,6 +27,7 @@ ModelContainer::ModelContainer(VersionedModelId model, int container_id,
       replica_id_(replica_id),
       input_type_(input_type),
       batch_size_(batch_size),
+
       latency_hist_("container:" + model.serialize() + ":" +
                         std::to_string(replica_id) + ":prediction_latency",
                     "microseconds", HISTOGRAM_SAMPLE_SIZE),
@@ -36,6 +37,14 @@ ModelContainer::ModelContainer(VersionedModelId model, int container_id,
   log_info_formatted(LOGGING_TAG_CONTAINERS,
                      "Creating new ModelContainer for model {}, id: {}",
                      model_str, std::to_string(container_id));
+}
+
+void ModelContainer::set_inactive() {
+  connected_ = false;
+}
+
+bool ModelContainer::is_active() {
+  return connected_;
 }
 
 void ModelContainer::update_throughput(size_t batch_size,
@@ -155,6 +164,7 @@ void ActiveContainers::remove_container(VersionedModelId model, int replica_id) 
 
   for(auto it = containers_[model].begin(); it!=containers_[model].end(); ) {
     if(it->first == replica_id) {
+      it->second.set_inactive();
       it = containers_[model].erase(it);
     }
     else {

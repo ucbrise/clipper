@@ -36,6 +36,8 @@ class ModelContainer {
   void update_throughput(size_t batch_size, long total_latency);
   void send_feedback(PredictTask task);
   void set_batch_size(int batch_size);
+  void set_inactive();
+  bool is_active();
 
   VersionedModelId model_;
   int container_id_;
@@ -45,7 +47,7 @@ class ModelContainer {
   clipper::metrics::Histogram latency_hist_;
 
  private:
-  bool connected_{true};
+  std::atomic_bool connected_{true};
   Queue<FeedbackTask> feedback_queue_;
   boost::shared_mutex throughput_mutex_;
   double avg_throughput_per_milli_;
