@@ -69,11 +69,11 @@ class ModelContainer {
   clipper::metrics::Histogram latency_hist_;
 
  private:
-  // Pair of model processing latency, batch size,
   using EstimatorLatency = dlib::matrix<double, 1, 1>;
   using EstimatorBatchSize = double;
   using EstimatorKernel = dlib::polynomial_kernel<EstimatorLatency>;
   using Estimator = dlib::decision_function<EstimatorKernel>;
+  // Pair of model processing latency, batch size,
   using ProcessingDatapoint = std::pair<EstimatorLatency, EstimatorBatchSize>;
 
   bool connected_{true};

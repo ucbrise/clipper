@@ -67,7 +67,8 @@ void ModelContainer::add_processing_datapoint(
   latency_hist_.insert(processing_latency_micros);
 
   boost::unique_lock<boost::shared_mutex> lock(datapoints_mutex_);
-  EstimatorLatency new_lat(static_cast<double>(processing_latency_micros));
+  EstimatorLatency new_lat;
+  new_lat(0) = static_cast<double>(processing_latency_micros);
   processing_datapoints_.push_back(
       std::make_pair(new_lat, static_cast<double>(batch_size)));
   max_latency_ = std::max(processing_latency_micros, max_latency_);
@@ -98,18 +99,27 @@ size_t ModelContainer::get_batch_size(Deadline deadline) {
 }
 
 void ModelContainer::fit_estimator() {
-  std::vector<EstimatorLatency> x_vals;
-  std::vector<EstimatorBatchSize> y_vals;
+  size_t num_datapoints = processing_datapoints_.size();
 
-  for (const auto &datapoint : processing_datapoints_) {
-    x_vals.push_back(datapoint.first);
-    y_vals.push_back(datapoint.second);
+  std::vector<EstimatorLatency> x_vals;
+  x_vals.reserve(num_datapoints);
+  std::vector<EstimatorBatchSize> y_vals;
+  y_vals.reserve(num_datapoints);
+
+  for (size_t i = 0; i < num_datapoints; ++i) {
+    EstimatorLatency point_lat;
+    EstimatorBatchSize point_bs;
+    std::tie(point_lat, point_bs) = processing_datapoints_[i];
+    x_vals.push_back(std::move(point_lat));
+    y_vals.push_back(std::move(point_bs));
   }
 
   auto new_estimator = estimator_trainer.train(x_vals, y_vals);
   std::lock_guard<std::mutex> lock(estimator_mtx_);
   estimator_ = new_estimator;
-  double estimate = estimator_(EstimatorLatency(1000000.0));
+  EstimatorLatency test_lat;
+  test_lat(0) = 1000000.0;
+  double estimate = estimator_(test_lat);
   log_info_formatted(LOGGING_TAG_CONTAINERS, "ESTIMATE: {}", estimate);
 }
 

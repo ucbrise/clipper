@@ -3,6 +3,7 @@ import rpc
 import os
 import sys
 import numpy as np
+import time
 
 
 class NoopContainer(rpc.ModelContainerBase):
@@ -11,6 +12,7 @@ class NoopContainer(rpc.ModelContainerBase):
 
     def _predict(self, inputs):
         print(len(inputs))
+        time.sleep(.01 * len(inputs))
         return [self.prediction] * len(inputs)
 
     def predict_ints(self, inputs):
