@@ -256,8 +256,6 @@ class ThreadPool {
 
 class ModelQueueThreadPool : public ThreadPool {
  public:
-  ModelQueueThreadPool() : ThreadPool() {}
-
   /**
    * Submit a job to be run by the thread pool.
    */
