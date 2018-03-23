@@ -72,7 +72,7 @@ void ModelContainer::add_processing_datapoint(
       std::make_pair(new_lat, static_cast<double>(batch_size)));
   max_latency_ = std::max(processing_latency_micros, max_latency_);
 
-  EstimatorFittingThreadPool::submit_job([this]() { fit_estimator(); });
+  // EstimatorFittingThreadPool::submit_job([this]() { fit_estimator(); });
 }
 
 void ModelContainer::set_batch_size(int batch_size) {

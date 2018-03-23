@@ -154,7 +154,11 @@ class ModelQueue {
     if (batch_differential > 0) {
       // Artificially inject queries to create
       // a full batch
-      PredictTask last_task(batch.back(), true);
+      //
+      // Create a copy of the last task in the batch and make it artifical
+      PredictTask last_task = batch.back();
+      last_task.artificial_ = true;
+
       std::fill_n(std::back_inserter(batch), batch_differential, last_task);
     }
     return batch;
@@ -499,8 +503,7 @@ class TaskExecutor {
       for (auto b : batch) {
         prediction_request.add_input(b.input_);
         cur_batch.emplace_back(current_time, container->container_id_, b.model_,
-                               container->replica_id_, b.input_,
-                               b.is_artificial());
+                               container->replica_id_, b.input_, b.artificial_);
         query_ids_in_batch << b.query_id_ << " ";
       }
       int message_id = rpc_->send_message(prediction_request.serialize(),

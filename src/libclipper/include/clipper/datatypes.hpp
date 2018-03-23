@@ -318,9 +318,10 @@ class PredictTask {
   ~PredictTask() = default;
 
   PredictTask(std::shared_ptr<Input> input, VersionedModelId model,
-              float utility, QueryId query_id, long latency_slo_micros);
+              float utility, QueryId query_id, long latency_slo_micros,
+              bool artificial = false);
 
-  PredictTask(const PredictTask &other, bool make_artificial = false);
+  PredictTask(const PredictTask &other) = default;
 
   PredictTask &operator=(const PredictTask &other) = default;
 
@@ -328,16 +329,12 @@ class PredictTask {
 
   PredictTask &operator=(PredictTask &&other) = default;
 
-  bool is_artificial();
-
   std::shared_ptr<Input> input_;
   VersionedModelId model_;
   float utility_;
   QueryId query_id_;
   long latency_slo_micros_;
   std::chrono::time_point<std::chrono::system_clock> recv_time_;
-
- private:
   bool artificial_;
 };
 
