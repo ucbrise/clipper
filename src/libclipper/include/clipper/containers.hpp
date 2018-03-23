@@ -56,7 +56,8 @@ class ModelContainer {
   ModelContainer &operator=(ModelContainer &&) = default;
 
   size_t get_batch_size(Deadline deadline);
-  void add_processing_datapoint(size_t batch_size, long total_latency);
+  void add_processing_datapoint(size_t batch_size,
+                                long long processing_latency_micros);
   void send_feedback(PredictTask task);
   void set_batch_size(int batch_size);
 
@@ -81,7 +82,7 @@ class ModelContainer {
   boost::circular_buffer<ProcessingDatapoint> processing_datapoints_;
 
   size_t max_batch_size_;
-  long max_latency_;
+  long long max_latency_;
   Estimator estimator_;
   dlib::krr_trainer<EstimatorKernel> estimator_trainer;
   std::mutex estimator_mtx_;

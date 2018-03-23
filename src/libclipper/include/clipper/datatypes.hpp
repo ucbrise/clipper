@@ -320,7 +320,7 @@ class PredictTask {
   PredictTask(std::shared_ptr<Input> input, VersionedModelId model,
               float utility, QueryId query_id, long latency_slo_micros);
 
-  PredictTask(const PredictTask &other) = default;
+  PredictTask(const PredictTask &other, bool make_artificial = false);
 
   PredictTask &operator=(const PredictTask &other) = default;
 
@@ -328,7 +328,6 @@ class PredictTask {
 
   PredictTask &operator=(PredictTask &&other) = default;
 
-  void make_artificial();
   bool is_artificial();
 
   std::shared_ptr<Input> input_;

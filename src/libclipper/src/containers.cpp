@@ -56,21 +56,21 @@ ModelContainer::ModelContainer(VersionedModelId model, int container_id,
                      model_str, std::to_string(container_id));
 }
 
-void ModelContainer::add_processing_datapoint(size_t batch_size,
-                                              long total_latency_micros) {
-  if (batch_size <= 0 || total_latency_micros <= 0) {
+void ModelContainer::add_processing_datapoint(
+    size_t batch_size, long long processing_latency_micros) {
+  if (batch_size <= 0 || processing_latency_micros <= 0) {
     throw std::invalid_argument(
         "Invalid processing datapoint: Batch size and latency must be "
         "positive.");
   }
 
-  latency_hist_.insert(total_latency_micros);
+  latency_hist_.insert(processing_latency_micros);
 
   boost::unique_lock<boost::shared_mutex> lock(datapoints_mutex_);
-  EstimatorLatency new_lat(static_cast<double>(total_latency_micros));
+  EstimatorLatency new_lat(static_cast<double>(processing_latency_micros));
   processing_datapoints_.push_back(
       std::make_pair(new_lat, static_cast<double>(batch_size)));
-  max_latency_ = std::max(total_latency_micros, max_latency_);
+  max_latency_ = std::max(processing_latency_micros, max_latency_);
 
   EstimatorFittingThreadPool::submit_job([this]() { fit_estimator(); });
 }

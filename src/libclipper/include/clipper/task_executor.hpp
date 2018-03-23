@@ -154,8 +154,7 @@ class ModelQueue {
     if (batch_differential > 0) {
       // Artificially inject queries to create
       // a full batch
-      auto last_task = batch.back();
-      last_task.make_artificial();
+      PredictTask last_task(batch.back(), true);
       std::fill_n(std::back_inserter(batch), batch_differential, last_task);
     }
     return batch;
@@ -196,12 +195,14 @@ class InflightMessage {
   InflightMessage(
       const std::chrono::time_point<std::chrono::system_clock> send_time,
       const int container_id, const VersionedModelId model,
-      const int replica_id, const std::shared_ptr<Input> input)
+      const int replica_id, const std::shared_ptr<Input> input,
+      const bool discard_result)
       : send_time_(send_time),
         container_id_(container_id),
         model_(model),
         replica_id_(replica_id),
-        input_(input) {}
+        input_(input),
+        discard_result_(discard_result) {}
 
   // Default copy and move constructors
   InflightMessage(const InflightMessage &) = default;
@@ -216,6 +217,7 @@ class InflightMessage {
   VersionedModelId model_;
   int replica_id_;
   std::shared_ptr<Input> input_;
+  bool discard_result_;
 };
 
 namespace TaskExecutionThreadPool {
@@ -497,7 +499,8 @@ class TaskExecutor {
       for (auto b : batch) {
         prediction_request.add_input(b.input_);
         cur_batch.emplace_back(current_time, container->container_id_, b.model_,
-                               container->replica_id_, b.input_);
+                               container->replica_id_, b.input_,
+                               b.is_artificial());
         query_ids_in_batch << b.query_id_ << " ";
       }
       int message_id = rpc_->send_message(prediction_request.serialize(),
@@ -528,7 +531,7 @@ class TaskExecutor {
         rpc::PredictionResponse::deserialize_prediction_response(
             response.second);
     assert(parsed_response.outputs_.size() == keys.size());
-    int batch_size = keys.size();
+    size_t batch_size = keys.size();
     throughput_meter_->mark(batch_size);
     std::chrono::time_point<std::chrono::system_clock> current_time =
         std::chrono::system_clock::now();
@@ -537,7 +540,7 @@ class TaskExecutor {
       const VersionedModelId &cur_model = first_message.model_;
       const int cur_replica_id = first_message.replica_id_;
       auto batch_latency = current_time - first_message.send_time_;
-      long batch_latency_micros =
+      long long batch_latency_micros =
           std::chrono::duration_cast<std::chrono::microseconds>(batch_latency)
               .count();
 
@@ -550,6 +553,9 @@ class TaskExecutor {
 
       // processing_container->update_throughput(batch_size,
       // batch_latency_micros);
+      //
+      processing_container->add_processing_datapoint(batch_size,
+                                                     batch_latency_micros);
 
       boost::optional<ModelMetrics> cur_model_metric;
       auto cur_model_metric_entry = model_metrics_.find(cur_model);
@@ -561,7 +567,7 @@ class TaskExecutor {
         (*cur_model_metric).num_predictions_->increment(batch_size);
         (*cur_model_metric).batch_size_->insert(batch_size);
       }
-      for (int batch_num = 0; batch_num < batch_size; ++batch_num) {
+      for (size_t batch_num = 0; batch_num < batch_size; ++batch_num) {
         InflightMessage completed_msg = keys[batch_num];
         cache_->put(completed_msg.model_, completed_msg.input_,
                     Output{parsed_response.outputs_[batch_num],
