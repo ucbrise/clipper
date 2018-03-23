@@ -336,9 +336,9 @@ namespace GarbageCollectionThreadPool {
     return garbageCollectionPool;
   }
 
-  *
+  /**
  * Submit a job to the task execution thread pool.
- 
+ */
   template <typename Func, typename... Args>
   inline auto submit_job(Func&& func,
                           Args&&... args) {

@@ -222,7 +222,7 @@ class TaskExecutor {
         model_queues_({}),
         model_metrics_({}) {
     log_info(LOGGING_TAG_TASK_EXECUTOR, "TaskExecutor started");
-    gc_threadpool_.create_queue(gc_model_id_, gc_replica_id_);
+    //gc_threadpool_.create_queue(gc_model_id_, gc_replica_id_);
     rpc_->start(
         "*", RPC_SERVICE_PORT, [ this, task_executor_valid = active_ ](
                                    VersionedModelId model, int replica_id) {
@@ -358,26 +358,31 @@ class TaskExecutor {
       // add each task to the queue corresponding to its associated model
       boost::shared_lock<boost::shared_mutex> lock(model_queues_mutex_);
       auto model_queue_entry = model_queues_.find(t.model_);
-      if(active_containers_->get_replicas_for_model(t.model_).size()==0) {
-        log_error_formatted(LOGGING_TAG_TASK_EXECUTOR,
-                            "No active model containers for model: {} : {}",
-                            t.model_.get_name(), t.model_.get_id());
-      }
+      
       if (model_queue_entry != model_queues_.end()) {
         output_futures.push_back(cache_->fetch(t.model_, t.input_));
+
         if (!output_futures.back().isReady()) {
-          t.recv_time_ = std::chrono::system_clock::now();
-          model_queue_entry->second->add_task(t);
-          log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
+
+          if(active_containers_->get_replicas_for_model(t.model_).size()==0) {
+              log_error_formatted(LOGGING_TAG_TASK_EXECUTOR,
+                            "No active model containers for model: {} : {}",
+                            t.model_.get_name(), t.model_.get_id());
+          } else {
+              t.recv_time_ = std::chrono::system_clock::now();
+              model_queue_entry->second->add_task(t);
+              log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
                              "Adding task to queue. QueryID: {}, model: {}",
                              t.query_id_, t.model_.serialize());
-          boost::shared_lock<boost::shared_mutex> model_metrics_lock(
-              model_metrics_mutex_);
-          auto cur_model_metric_entry = model_metrics_.find(t.model_);
-          if (cur_model_metric_entry != model_metrics_.end()) {
-            auto cur_model_metric = cur_model_metric_entry->second;
-            cur_model_metric.cache_hit_ratio_->increment(0, 1);
+              boost::shared_lock<boost::shared_mutex> model_metrics_lock(
+                            model_metrics_mutex_);
+              auto cur_model_metric_entry = model_metrics_.find(t.model_);
+              if (cur_model_metric_entry != model_metrics_.end()) {
+                  auto cur_model_metric = cur_model_metric_entry->second;
+                  cur_model_metric.cache_hit_ratio_->increment(0, 1);
+              }
           }
+
         } else {
           boost::shared_lock<boost::shared_mutex> model_metrics_lock(
               model_metrics_mutex_);
