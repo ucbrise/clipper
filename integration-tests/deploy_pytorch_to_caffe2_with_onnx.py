@@ -112,7 +112,7 @@ def test_model(clipper_conn, app, version):
 
     if num_defaults > 0:
         logger.error("Error: %d/%d predictions were default" % (num_defaults,
-                                                         num_preds))
+                                                                num_preds))
     if num_defaults > num_preds / 2:
         raise BenchmarkException("Error querying APP %s, MODEL %s:%d" %
                                  (app, model_name, version))
