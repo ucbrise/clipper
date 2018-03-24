@@ -50,6 +50,20 @@ def parse_res_and_assert_node(res, node_num):
     assert len(res['data']) == node_num
 
 
+def check_target_health(metric_addr):
+    query = metric_addr + '/api/v1/targets'
+    logger.info("Querying: {}".format(query))
+    res = requests.get(query).json()
+    logger.info(res)
+    assert res['status'] == 'success'
+
+    active_targets = res['data']['activeTargets']
+    assert len(active_targets) == 3, 'Wrong number of targets'
+
+    for target in active_targets:
+        assert target['health'] == 'up', "Target {} is not up!".format(target)
+
+
 def log_docker_ps(clipper_conn):
     container_runing = clipper_conn.cm.docker_client.containers.list()
     logger.info('Current docker status')
@@ -59,6 +73,7 @@ def log_docker_ps(clipper_conn):
 
 
 if __name__ == '__main__':
+    metric_addr = "http://localhost:9090"
     gen_match_query = lambda name: "http://localhost:9090/api/v1/series?match[]={}".format(name)
 
     logging.basicConfig(
@@ -84,8 +99,7 @@ if __name__ == '__main__':
             time.sleep(0.2)
 
         logger.info("Test 1: Checking status of 3 node exporter")
-        up_response = get_matched_query('up')
-        parse_res_and_assert_node(up_response, node_num=3)
+        check_target_health(metric_addr)
         logger.info("Test 1 Passed")
 
         logger.info("Test 2: Checking Model Container Metrics")
