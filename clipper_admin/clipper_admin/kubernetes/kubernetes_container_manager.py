@@ -211,7 +211,8 @@ class KubernetesContainerManager(ContainerManager):
                             'labels': {
                                 CLIPPER_MODEL_CONTAINER_LABEL:
                                 create_model_container_label(name, version),
-                                CLIPPER_DOCKER_LABEL: ""
+                                CLIPPER_DOCKER_LABEL:
+                                ""
                             },
                             'annotations': {
                                 "prometheus.io/scrape": "true",
