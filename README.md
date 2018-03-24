@@ -153,14 +153,12 @@ To file a bug or request a feature, please file a GitHub issue. Pull requests ar
 
 ## The Team
 
-GitHub usernames are in parentheses.
-
-+ Dan Crankshaw (`dcrankshaw`)
-+ Corey Zumar (`Corey-Zumar`)
-+ Joey Gonzalez (`jegonzal`)
-+ Nishad Singh (`nishadsingh1`)
-+ Alexey Tumanov (`atumanov`)
-+ Feynman Liang (`feynmanliang`)
++ [Dan Crankshaw](https://github.com/dcrankshaw)
++ [Corey Zumar](https://github.com/Corey-Zumar)
++ [Joey Gonzalez](https://github.com/jegonzal)
++ [Nishad Singh](https://github.com/nishadsingh1)
++ [Alexey Tumanov](https://github.com/atumanov)
++ [Feynman Liang](https://github.com/feynmanliang)
 
 You can contact us at <clipper-dev@googlegroups.com>
 
