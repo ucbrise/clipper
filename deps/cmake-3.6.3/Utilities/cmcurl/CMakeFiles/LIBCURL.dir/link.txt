@@ -1,0 +1,1 @@
+/Applications/Xcode.app/Contents/Developer/usr/bin/gcc    -w -Wl,-search_paths_first -Wl,-headerpad_max_install_names  CMakeFiles/LIBCURL.dir/curltest.c.o  -o LIBCURL  lib/libcmcurl.a -framework CoreFoundation -framework Security ../cmzlib/libcmzlib.a 

@@ -85,6 +85,18 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             self.clipper_conn.link_model_to_app(app_name, not_deployed_model)
         self.assertTrue("No model with name" in str(context.exception))
 
+    def test_delete_application_correct(self):
+        nput_type = "doubles"
+        default_output = "DEFAULT"
+        slo_micros = 30000
+        app_name = "testapp"
+        self.clipper_conn.register_application(app_name, input_type,
+                                               default_output, slo_micros)
+        self.clipper_conn.delete_application(app_name)
+        registered_applications = self.clipper_conn.get_all_apps()
+        self.assertEqual(len(registered_applications), 0)
+        self.assertTrue(app_name not in registered_applications)
+
     def test_get_model_links_when_none_exist_returns_empty_list(self):
         app_name = "testapp"
         input_type = "doubles"

@@ -1,0 +1,1 @@
+/Applications/Xcode.app/Contents/Developer/usr/bin/gcc   -Wl,-search_paths_first -Wl,-headerpad_max_install_names  CMakeFiles/pseudo_tidy.dir/pseudo_tidy.c.o  -o pseudo_tidy  
