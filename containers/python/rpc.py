@@ -13,7 +13,7 @@ from collections import deque
 from subprocess import Popen, PIPE
 from prometheus_client import start_http_server
 from prometheus_client.core import Counter, Gauge, Histogram, Summary
-import clipper_admin.metric as metric
+import clipper_admin.metrics as metrics
 
 INPUT_TYPE_BYTES = 0
 INPUT_TYPE_INTS = 1
@@ -186,7 +186,7 @@ class Server(threading.Thread):
     def get_event_history(self):
         return self.event_history.get_events()
 
-    def run(self, collect_metric=True):
+    def run(self, collect_metrics=True):
         print("Serving predictions for {0} input type.".format(
             input_type_to_string(self.model_input_type)))
         connected = False
@@ -317,15 +317,15 @@ class Server(threading.Thread):
                         parse_time = (t3 - t2).microseconds
                         handle_time = (t4 - t3).microseconds
 
-                        if collect_metric:
-                            metric.report_metric('clipper_mc_pred_total', 1)
-                            metric.report_metric('clipper_mc_recv_time_ms',
-                                                 recv_time / 1000.0)
-                            metric.report_metric('clipper_mc_parse_time_ms',
-                                                 parse_time / 1000.0)
-                            metric.report_metric('clipper_mc_handle_time_ms',
-                                                 handle_time / 1000.0)
-                            metric.report_metric(
+                        if collect_metrics:
+                            metrics.report_metric('clipper_mc_pred_total', 1)
+                            metrics.report_metric('clipper_mc_recv_time_ms',
+                                                  recv_time / 1000.0)
+                            metrics.report_metric('clipper_mc_parse_time_ms',
+                                                  parse_time / 1000.0)
+                            metrics.report_metric('clipper_mc_handle_time_ms',
+                                                  handle_time / 1000.0)
+                            metrics.report_metric(
                                 'clipper_mc_end_to_end_latency_ms',
                                 (recv_time + parse_time + handle_time) /
                                 1000.0)
@@ -479,8 +479,8 @@ class ModelContainerBase(object):
 
 
 class RPCService:
-    def __init__(self, collect_metric=True):
-        self.collect_metric = collect_metric
+    def __init__(self, collect_metrics=True):
+        self.collect_metrics = collect_metrics
 
     def get_event_history(self):
         if self.server:
@@ -514,11 +514,11 @@ class RPCService:
         self.server.model = model
 
         # Start metric collection
-        if self.collect_metric:
+        if self.collect_metrics:
             start_metric_server()
             add_metrics()
 
-        self.server.run(collect_metric=self.collect_metric)
+        self.server.run(collect_metrics=self.collect_metrics)
 
 
 def add_metrics():
@@ -541,14 +541,14 @@ def add_metrics():
 
         if metric_type == 'Histogram' and 'bucket' in spec.keys():
             buckets = spec['bucket'] + [float("inf")]
-            metric.add_metric(name, metric_type, metric_description, buckets)
+            metrics.add_metric(name, metric_type, metric_description, buckets)
         else:  # This case include default histogram buckets + all other
-            metric.add_metric(name, metric_type, metric_description)
+            metrics.add_metric(name, metric_type, metric_description)
 
 
 def start_metric_server():
     server_py_path = os.path.join(
-        metric.__file__.rsplit('/', 1)[0], 'server.py')
+        metrics.__file__.rsplit('/', 1)[0], 'server.py')
 
     DEBUG = False
     cmd = ['python', server_py_path]

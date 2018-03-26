@@ -21,7 +21,7 @@ setup(
     license=license,
     packages=[
         "clipper_admin", "clipper_admin.docker", "clipper_admin.kubernetes",
-        "clipper_admin.deployers", "clipper_admin.metric"
+        "clipper_admin.deployers", "clipper_admin.metrics"
     ],
     package_data={'clipper_admin': ['*.txt', '*/*.yaml']},
     keywords=['clipper', 'prediction', 'model', 'management'],

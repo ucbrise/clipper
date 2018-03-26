@@ -14,7 +14,7 @@ from collections import deque
 from random import shuffle
 from time import time, sleep
 
-import clipper_admin.metric as metric
+import clipper_admin.metrics as metrics
 
 with open('vectorizer.pickle', 'rb') as f:
     vectorizer = pickle.load(f)
@@ -25,28 +25,28 @@ with open('email_msg.pickle', 'rb') as f:
 
 
 def predict_spam(inp):
-    metric.add_metric('custom_vectorization_time_ms', 'Histogram',
-                      'Time it takes to use tfidf transform',
-                      [0.1, 0.5, 0.8, 1.0, 1.2])
-    metric.add_metric('custom_lr_time_ms', 'Histogram',
-                      'Time it takes to use logistic regression',
-                      [0.03, 0.05, 0.06, 0.1])
-    metric.add_metric('custom_choice_probability', 'Histogram',
-                      'The logistic regressor probability output',
-                      [0.5, 0.7, 0.9, 1.0])
-    metric.add_metric('custom_spam_option_counter', 'Counter',
-                      'The number of spam classified')
-    metric.add_metric('custom_ham_option_counter', 'Counter',
-                      'The number of ham classfied')
-    metric.add_metric('custom_char_count', 'Histogram',
-                      'The number of characters',
-                      [10, 50, 100, 300, 500, 800, 1200, 2000])
-    metric.add_metric('custom_word_count', 'Histogram', 'The number of words',
-                      [10, 50, 100, 150, 200])
+    metrics.add_metric('custom_vectorization_time_ms', 'Histogram',
+                       'Time it takes to use tfidf transform',
+                       [0.1, 0.5, 0.8, 1.0, 1.2])
+    metrics.add_metric('custom_lr_time_ms', 'Histogram',
+                       'Time it takes to use logistic regression',
+                       [0.03, 0.05, 0.06, 0.1])
+    metrics.add_metric('custom_choice_probability', 'Histogram',
+                       'The logistic regressor probability output',
+                       [0.5, 0.7, 0.9, 1.0])
+    metrics.add_metric('custom_spam_option_counter', 'Counter',
+                       'The number of spam classified')
+    metrics.add_metric('custom_ham_option_counter', 'Counter',
+                       'The number of ham classfied')
+    metrics.add_metric('custom_char_count', 'Histogram',
+                       'The number of characters',
+                       [10, 50, 100, 300, 500, 800, 1200, 2000])
+    metrics.add_metric('custom_word_count', 'Histogram', 'The number of words',
+                       [10, 50, 100, 150, 200])
 
     string = inp[0]
-    metric.report_metric('custom_char_count', len(string))
-    metric.report_metric('custom_word_count', len(string.split()))
+    metrics.report_metric('custom_char_count', len(string))
+    metrics.report_metric('custom_word_count', len(string.split()))
 
     t1 = time()
     vect = vectorizer.transform(inp).toarray()
@@ -55,13 +55,13 @@ def predict_spam(inp):
     t3 = time()
     prob = lr.predict_proba(vect)[0, result]
 
-    metric.report_metric('custom_vectorization_time_ms', (t2 - t1) * 1000)
-    metric.report_metric('custom_lr_time_ms', (t3 - t2) * 1000)
-    metric.report_metric('custom_choice_probability', prob)
+    metrics.report_metric('custom_vectorization_time_ms', (t2 - t1) * 1000)
+    metrics.report_metric('custom_lr_time_ms', (t3 - t2) * 1000)
+    metrics.report_metric('custom_choice_probability', prob)
     if int(result) == 1:
-        metric.report_metric('custom_spam_option_counter', 1.0)
+        metrics.report_metric('custom_spam_option_counter', 1.0)
     else:
-        metric.report_metric('custom_ham_option_counter', 1.0)
+        metrics.report_metric('custom_ham_option_counter', 1.0)
 
     return list(result)
 

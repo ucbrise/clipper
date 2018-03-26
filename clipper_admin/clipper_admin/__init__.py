@@ -6,4 +6,3 @@ from .clipper_admin import *
 from . import deployers
 from .version import __version__
 from .exceptions import ClipperException, UnconnectedException
-from . import metric
