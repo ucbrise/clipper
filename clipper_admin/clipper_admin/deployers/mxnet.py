@@ -28,7 +28,8 @@ def create_endpoint(
         labels=None,
         registry=None,
         base_image="clipper/mxnet-container:{}".format(__version__),
-        num_replicas=1):
+        num_replicas=1,
+        pkgs_to_install=None):
     """Registers an app and deploys the provided predict function with MXNet model as
     a Clipper model.
     Parameters
@@ -83,6 +84,9 @@ def create_endpoint(
         The number of replicas of the model to create. The number of replicas
         for a model can be changed at any time with
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
+    pkgs_to_install : list (of strings), optional
+        A list of the names of packages to install, using pip, in the container.
+        The names must be strings.
 
     Note
     ----
@@ -97,7 +101,7 @@ def create_endpoint(
                                       slo_micros)
     deploy_mxnet_model(clipper_conn, name, version, input_type, func,
                        mxnet_model, mxnet_data_shapes, base_image, labels,
-                       registry, num_replicas)
+                       registry, num_replicas, pkgs_to_install)
 
     clipper_conn.link_model_to_app(name, name)
 
@@ -113,7 +117,8 @@ def deploy_mxnet_model(
         base_image="clipper/mxnet-container:{}".format(__version__),
         labels=None,
         registry=None,
-        num_replicas=1):
+        num_replicas=1,
+        pkgs_to_install=None):
     """Deploy a Python function with a MXNet model.
     Parameters
     ----------
@@ -152,6 +157,9 @@ def deploy_mxnet_model(
         The number of replicas of the model to create. The number of replicas
         for a model can be changed at any time with
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
+    pkgs_to_install : list (of strings), optional
+        A list of the names of packages to install, using pip, in the container.
+        The names must be strings.
 
     Note
     ----
@@ -216,9 +224,9 @@ def deploy_mxnet_model(
             json.dump({"data_shapes": mxnet_data_shapes}, f)
 
         # Deploy model
-        clipper_conn.build_and_deploy_model(name, version, input_type,
-                                            serialization_dir, base_image,
-                                            labels, registry, num_replicas)
+        clipper_conn.build_and_deploy_model(
+            name, version, input_type, serialization_dir, base_image, labels,
+            registry, num_replicas, pkgs_to_install)
 
     except Exception as e:
         logger.error("Error saving MXNet model: %s" % e)
