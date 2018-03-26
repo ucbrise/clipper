@@ -36,7 +36,9 @@ ModelContainer::ModelContainer(VersionedModelId model, int container_id,
       processing_datapoints_(DATAPOINTS_BUFFER_CAPACITY),
       max_batch_size_(1),
       max_latency_(0),
-      estimator_trainer(dlib::krr_trainer<EstimatorKernel>()),
+      // estimator_trainer_(
+      //     dlib::krls<EstimatorKernel>(EstimatorKernel(1, 1, 2), .00001, 50)),
+      estimator_trainer_(dlib::rls(.8)),
       explore_dist_mu_(.1),
       explore_dist_std_(.05),
       estimate_decay_(.8),
@@ -44,11 +46,7 @@ ModelContainer::ModelContainer(VersionedModelId model, int container_id,
           explore_dist_mu_, explore_dist_std_)),
       exploration_engine_(std::default_random_engine(
           std::chrono::system_clock::now().time_since_epoch().count())) {
-  size_t gamma = 1;
-  size_t coef = 0;
-  size_t degree = 4;
-
-  estimator_trainer.set_kernel(EstimatorKernel(gamma, coef, degree));
+  // estimator_trainer_.set_kernel(EstimatorKernel(gamma, coef, degree));
 
   std::string model_str = model.serialize();
   log_info_formatted(LOGGING_TAG_CONTAINERS,
@@ -107,20 +105,29 @@ void ModelContainer::fit_estimator() {
     std::vector<EstimatorBatchSize> y_vals;
     y_vals.reserve(num_datapoints);
 
-    for (size_t i = 0; i < num_datapoints; ++i) {
-      EstimatorLatency point_lat;
-      EstimatorBatchSize point_bs;
-      std::tie(point_lat, point_bs) = processing_datapoints_[i];
-      x_vals.push_back(std::move(point_lat));
-      y_vals.push_back(std::move(point_bs));
-    }
+    // for (size_t i = 0; i < num_datapoints; ++i) {
+    //   EstimatorLatency point_lat;
+    //   EstimatorBatchSize point_bs;
+    //   std::tie(point_lat, point_bs) = processing_datapoints_[i];
+    //   log_error_formatted(LOGGING_TAG_CONTAINERS, "PT: {}, {}", point_bs,
+    //                       point_lat(0));
+    //   estimator_trainer_.train(point_lat, point_bs);
+    //   // x_vals.push_back(std::move(point_lat));
+    //   // y_vals.push_back(std::move(raw_lat));
+    // }
+    //
 
-    auto new_estimator = estimator_trainer.train(x_vals, y_vals);
+    EstimatorLatency point_lat;
+    EstimatorBatchSize point_bs;
+    std::tie(point_lat, point_bs) = processing_datapoints_.back();
+    estimator_trainer_.train(point_lat, point_bs);
+
+    // auto new_estimator = estimator_trainer_.train(x_vals, y_vals);
     std::lock_guard<std::mutex> lock(estimator_mtx_);
-    estimator_ = new_estimator;
+    // estimator_ = new_estimator;
     EstimatorLatency test_lat;
-    test_lat(0) = 1000000.0;
-    double estimate = estimator_(test_lat);
+    test_lat(0) = 600000.0;
+    double estimate = estimator_trainer_(test_lat);
     log_info_formatted(LOGGING_TAG_CONTAINERS, "ESTIMATE: {}", estimate);
   } catch (std::runtime_error &e) {
     log_error_formatted(LOGGING_TAG_CONTAINERS, "ESTIMATION ERROR: {}",

@@ -84,7 +84,7 @@ class ModelContainer {
   size_t max_batch_size_;
   long long max_latency_;
   Estimator estimator_;
-  dlib::krr_trainer<EstimatorKernel> estimator_trainer;
+  dlib::rls estimator_trainer_;
   std::mutex estimator_mtx_;
 
   // Exploration and estimation parameters
