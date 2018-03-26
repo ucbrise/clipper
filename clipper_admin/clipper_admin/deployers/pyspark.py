@@ -27,7 +27,8 @@ def create_endpoint(
         registry=None,
         base_image="clipper/pyspark-container:{}".format(__version__),
         num_replicas=1,
-        batch_size=-1):
+        batch_size=-1,
+        pkgs_to_install=None):
     """Registers an app and deploys the provided predict function with PySpark model as
     a Clipper model.
 
@@ -86,13 +87,16 @@ def create_endpoint(
         batches if `batch_size` queries are not immediately available.
         If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
         replicas of this model.
+    pkgs_to_install : list (of strings), optional
+        A list of the names of packages to install, using pip, in the container.
+        The names must be strings.
     """
 
     clipper_conn.register_application(name, input_type, default_output,
                                       slo_micros)
     deploy_pyspark_model(clipper_conn, name, version, input_type, func,
                          pyspark_model, sc, base_image, labels, registry,
-                         num_replicas, batch_size)
+                         num_replicas, batch_size, pkgs_to_install)
 
     clipper_conn.link_model_to_app(name, name)
 
@@ -109,7 +113,8 @@ def deploy_pyspark_model(
         labels=None,
         registry=None,
         num_replicas=1,
-        batch_size=-1):
+        batch_size=-1,
+        pkgs_to_install=None):
     """Deploy a Python function with a PySpark model.
 
     The function must take 3 arguments (in order): a SparkSession, the PySpark model, and a list of
@@ -155,6 +160,9 @@ def deploy_pyspark_model(
         batches if `batch_size` queries are not immediately available.
         If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
         replicas of this model.
+    pkgs_to_install : list (of strings), optional
+        A list of the names of packages to install, using pip, in the container.
+        The names must be strings.
 
     Example
     -------
@@ -225,9 +233,9 @@ def deploy_pyspark_model(
     logger.info("Spark model saved")
 
     # Deploy model
-    clipper_conn.build_and_deploy_model(name, version, input_type,
-                                        serialization_dir, base_image, labels,
-                                        registry, num_replicas, batch_size)
+    clipper_conn.build_and_deploy_model(
+        name, version, input_type, serialization_dir, base_image, labels,
+        registry, num_replicas, batch_size, pkgs_to_install)
 
     # Remove temp files
     shutil.rmtree(serialization_dir)
