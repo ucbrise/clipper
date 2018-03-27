@@ -60,7 +60,8 @@ RUN R -e "install.packages('versions', repos='http://cran.us.r-project.org')" \
     && R -e "versions::install.versions('Rcpp', version='0.12.11')" \
     && R -e "versions::install.versions('optparse', version='1.4.4')" \
     && R -e "versions::install.versions('stringr', version='1.2.0')" \
-    && R -e "versions::install.versions('CodeDepends', version='0.5-3')"
+    && R -e "versions::install.versions('CodeDepends', version='0.5-3')" \
+    && R -e "versions::install.versions('histry', '0.1.2')"
 
 COPY ./ /clipper
 
