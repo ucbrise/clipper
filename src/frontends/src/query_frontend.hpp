@@ -23,7 +23,6 @@
 
 using clipper::Feedback;
 using clipper::FeedbackAck;
-using clipper::VersionedModelId;
 using clipper::PredictionData;
 using clipper::FeedbackQuery;
 using clipper::InputType;
