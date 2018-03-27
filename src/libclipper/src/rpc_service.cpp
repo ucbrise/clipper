@@ -107,8 +107,8 @@ vector<RPCResponse> RPCService::try_get_responses(const int max_num_responses) {
 void RPCService::manage_service(const string address) {
   // Map from container id to unique routing id for zeromq
   // Note that zeromq socket id is a byte vector
-  log_info_formatted(LOGGING_TAG_RPC, "RPC thread started at address: ",
-                     address);
+  log_info_formatted(LOGGING_TAG_RPC,
+                     "RPC thread started at address: ", address);
   boost::bimap<int, vector<uint8_t>> connections;
   // Initializes a map to associate the ZMQ connection IDs
   // of connected containers with their metadata, including
@@ -162,10 +162,9 @@ void RPCService::manage_service(const string address) {
 }
 
 void RPCService::check_container_activity(
-  std::unordered_map<std::vector<uint8_t>, std::pair<VersionedModelId, int>, 
-        std::function<size_t(const std::vector<uint8_t> &vec)>>
+    std::unordered_map<std::vector<uint8_t>, std::pair<VersionedModelId, int>,
+                       std::function<size_t(const std::vector<uint8_t> &vec)>>
         &connections_containers_map) {
-
   std::map<const vector<uint8_t>,
            std::chrono::system_clock::time_point>::iterator it;
   std::chrono::system_clock::time_point current_time;
@@ -174,28 +173,28 @@ void RPCService::check_container_activity(
     if (std::chrono::duration_cast<std::chrono::milliseconds>(current_time -
                                                               it->second)
             .count() > CONTAINER_ACTIVITY_TIMEOUT_MILLS) {
-      /** if the amount of time that has elapsed between the current time and the time of last
-      receiving from the container is greater than the threshold, then we want to 
+      /** if the amount of time that has elapsed between the current time and
+      the time of last
+      receiving from the container is greater than the threshold, then we want
+      to
       call the inactive_container_callback_ */
 
       const vector<uint8_t> connection_id = it->first;
       auto container_info_entry =
-            connections_containers_map.find(connection_id);
-        if (container_info_entry == connections_containers_map.end()) {
-          throw std::runtime_error(
-              "Failed to find container that was previously registered via "
-              "RPC");
-        }
-        std::pair<VersionedModelId, int> container_info =
-            container_info_entry->second;
+          connections_containers_map.find(connection_id);
+      if (container_info_entry == connections_containers_map.end()) {
+        throw std::runtime_error(
+            "Failed to find container that was previously registered via "
+            "RPC");
+      }
+      std::pair<VersionedModelId, int> container_info =
+          container_info_entry->second;
 
-        VersionedModelId vm = container_info.first;
-        int replica_id = container_info.second;
-      // TaskExecutionThreadPool::submit_job(
-      //       vm, replica_id, inactive_container_callback_, vm, replica_id);
-        GarbageCollectionThreadPool::submit_job(
-              inactive_container_callback_, vm, replica_id);
-      
+      VersionedModelId vm = container_info.first;
+      int replica_id = container_info.second;
+      GarbageCollectionThreadPool::submit_job(inactive_container_callback_, vm,
+                                              replica_id);
+
       log_info(LOGGING_TAG_RPC, "lost contact with a container");
       receiving_history_.erase(it);
     }
