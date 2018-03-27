@@ -62,7 +62,7 @@ RUN R -e "install.packages('versions', repos='http://cran.us.r-project.org')" \
     && R -e "versions::install.versions('stringr', version='1.2.0')" \
     && R -e "versions::install.versions('CodeDepends', version='0.5-3')" \
     && R -e "versions::install.versions('histry', '0.1.2')" \
-    && R -e "versions::install.versions('randomForest', '4.6-14')"
+    && R -e "versions::install.versions('randomForest', '4.6-12')"
 
 COPY ./ /clipper
 
