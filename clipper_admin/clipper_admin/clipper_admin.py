@@ -11,6 +11,9 @@ import re
 import os
 import tarfile
 import six
+from cloudpickle import CloudPickler
+import pickle
+import numpy as np
 
 from .container_manager import CONTAINERLESS_MODEL_IMAGE
 from .exceptions import ClipperException, UnconnectedException
@@ -237,7 +240,8 @@ class ClipperConnection(object):
                                labels=None,
                                container_registry=None,
                                num_replicas=1,
-                               batch_size=-1):
+                               batch_size=-1,
+                               pkgs_to_install=None):
         """Build a new model container Docker image with the provided data and deploy it as
         a model to Clipper.
 
@@ -282,10 +286,13 @@ class ClipperConnection(object):
             :py:meth:`clipper.ClipperConnection.set_num_replicas`.
         batch_size : int, optional
             The user-defined query batch size for the model. Replicas of the model will attempt
-            to process at most `batch_size` queries simultaneously. They may process smaller 
+            to process at most `batch_size` queries simultaneously. They may process smaller
             batches if `batch_size` queries are not immediately available.
             If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
             replicas of this model.
+        pkgs_to_install : list (of strings), optional
+            A list of the names of packages to install, using pip, in the container.
+            The names must be strings.
         Raises
         ------
         :py:exc:`clipper.UnconnectedException`
@@ -295,7 +302,7 @@ class ClipperConnection(object):
         if not self.connected:
             raise UnconnectedException()
         image = self.build_model(name, version, model_data_path, base_image,
-                                 container_registry)
+                                 container_registry, pkgs_to_install)
         self.deploy_model(name, version, input_type, image, labels,
                           num_replicas, batch_size)
 
@@ -304,7 +311,8 @@ class ClipperConnection(object):
                     version,
                     model_data_path,
                     base_image,
-                    container_registry=None):
+                    container_registry=None,
+                    pkgs_to_install=None):
         """Build a new model container Docker image with the provided data"
 
         This method builds a new Docker image from the provided base image with the local directory specified by
@@ -338,6 +346,9 @@ class ClipperConnection(object):
             The Docker container registry to push the freshly built model to. Note
             that if you are running Clipper on Kubernetes, this registry must be accesible
             to the Kubernetes cluster in order to fetch the container from the registry.
+        pkgs_to_install : list (of strings), optional
+            A list of the names of packages to install, using pip, in the container.
+            The names must be strings.
         Returns
         -------
         str :
@@ -360,6 +371,11 @@ class ClipperConnection(object):
 
         _validate_versioned_model_name(name, version)
 
+        run_cmd = ''
+        if pkgs_to_install:
+            run_as_lst = 'RUN apt-get -y install build-essential && pip install'.split(
+                ' ')
+            run_cmd = ' '.join(run_as_lst + pkgs_to_install)
         with tempfile.NamedTemporaryFile(
                 mode="w+b", suffix="tar") as context_file:
             # Create build context tarfile
@@ -368,8 +384,11 @@ class ClipperConnection(object):
                 context_tar.add(model_data_path)
                 # From https://stackoverflow.com/a/740854/814642
                 df_contents = six.StringIO(
-                    "FROM {container_name}\nCOPY {data_path} /model/\n".format(
-                        container_name=base_image, data_path=model_data_path))
+                    "FROM {container_name}\nCOPY {data_path} /model/\n{run_command}\n".
+                    format(
+                        container_name=base_image,
+                        data_path=model_data_path,
+                        run_command=run_cmd))
                 df_tarinfo = tarfile.TarInfo('Dockerfile')
                 df_contents.seek(0, os.SEEK_END)
                 df_tarinfo.size = df_contents.tell()
@@ -446,7 +465,7 @@ class ClipperConnection(object):
             :py:meth:`clipper.ClipperConnection.set_num_replicas`.
         batch_size : int, optional
             The user-defined query batch size for the model. Replicas of the model will attempt
-            to process at most `batch_size` queries simultaneously. They may process smaller 
+            to process at most `batch_size` queries simultaneously. They may process smaller
             batches if `batch_size` queries are not immediately available.
             If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
             replicas of this model.
@@ -521,7 +540,7 @@ class ClipperConnection(object):
             and used purely for user annotations.
         batch_size : int, optional
             The user-defined query batch size for the model. Replicas of the model will attempt
-            to process at most `batch_size` queries simultaneously. They may process smaller 
+            to process at most `batch_size` queries simultaneously. They may process smaller
             batches if `batch_size` queries are not immediately available.
             If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
             replicas of this model.
@@ -1187,3 +1206,79 @@ class ClipperConnection(object):
         """
         self.cm.stop_all()
         logger.info("Stopped all Clipper cluster and all model containers")
+
+    def test_predict_function(self, query, func, input_type):
+        """Tests that the user's function has the correct signature and can be properly saved and loaded.
+
+        The function should take a dict request object like the query frontend expects JSON, 
+        the predict function, and the input type for the model.
+
+        For example, the function can be called like: clipper_conn.test_predict_function({"input": [1.0, 2.0, 3.0]}, predict_func, "doubles")
+
+        Parameters
+        ----------
+        query: JSON or list of dicts
+            Inputs to test the prediction function on.
+        func: function
+            Predict function to test.
+        input_type: str
+            The input_type to be associated with the registered app and deployed model.
+            One of "integers", "floats", "doubles", "bytes", or "strings".
+        """
+        if not self.connected:
+            self.connect()
+        query_data = list(x for x in list(query.values()))
+        query_key = list(query.keys())
+
+        if query_key[0] == "input_batch":
+            query_data = query_data[0]
+
+        try:
+            flattened_data = [
+                item for sublist in query_data for item in sublist
+            ]
+        except TypeError as e:
+            return "Invalid input type or JSON key"
+
+        numpy_data = None
+
+        if input_type == "bytes":
+            numpy_data = list(np.int8(x) for x in query_data)
+            for x in flattened_data:
+                if type(x) != bytes:
+                    return "Invalid input type"
+
+        if input_type == "integers":
+            numpy_data = list(np.int32(x) for x in query_data)
+            for x in flattened_data:
+                if type(x) != int:
+                    return "Invalid input type"
+
+        if input_type == "floats" or input_type == "doubles":
+            if input_type == "floats":
+                numpy_data = list(np.float32(x) for x in query_data)
+            else:
+                numpy_data = list(np.float64(x) for x in query_data)
+            for x in flattened_data:
+                if type(x) != float:
+                    return "Invalid input type"
+
+        if input_type == "string":
+            numpy_data = list(np.str_(x) for x in query_data)
+            for x in flattened_data:
+                if type(x) != str:
+                    return "Invalid input type"
+
+        s = six.StringIO()
+        c = CloudPickler(s, 2)
+        c.dump(func)
+        serialized_func = s.getvalue()
+        reloaded_func = pickle.loads(serialized_func)
+
+        try:
+            assert reloaded_func
+        except AssertionError as e:
+            logger.error("Function does not properly serialize and reload")
+            return "Function does not properly serialize and reload"
+
+        return reloaded_func(numpy_data)

@@ -5,6 +5,7 @@ import time
 from prometheus_client import start_http_server
 from prometheus_client.core import GaugeMetricFamily, REGISTRY
 import argparse
+import logging
 
 parser = argparse.ArgumentParser(
     description='Spin up a node exporter for query_frontend.')
@@ -16,14 +17,24 @@ parser.add_argument(
     help='The name of docker container in clipper_network')
 args = parser.parse_args()
 
-query_frontend_id = args.query_frontend_name
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+    datefmt='%y-%m-%d:%H:%M:%S',
+    level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-ADDRESS = 'http://{}:1337/metrics'.format(query_frontend_id)
+query_frontend_id = args.query_frontend_name
+ADDRESS = 'http://{}/metrics'.format(query_frontend_id)
+logger.info("Scraping {}".format(ADDRESS))
 
 
 def load_metric():
-    res = requests.get(ADDRESS)
-    return res.json()
+    try:
+        res = requests.get(ADDRESS)
+        return res.json()
+    except Exception as e:
+        logger.warning("Scrape Failed! Error: {}\n".format(e))
+        return dict()
 
 
 def multi_dict_unpacking(lst):
@@ -38,6 +49,10 @@ def multi_dict_unpacking(lst):
 
 
 def parse_metric(metrics):
+    if len(metrics) == 0:
+        # Return empty dictionary if it's empty
+        return metrics
+
     wo_type = list(itertools.chain.from_iterable(metrics.values()))
     wo_type_flattened = list(itertools.chain([flatten(d) for d in wo_type]))
     wo_type_joined = multi_dict_unpacking(wo_type_flattened)

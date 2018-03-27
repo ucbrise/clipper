@@ -35,8 +35,8 @@ class BenchSetup():
 
     def get_cifar_data(self):
         train_x, train_y = cifar_utils.filter_data(*cifar_utils.load_cifar(
-            self.cifar_dir_path, cifar_filename="cifar_train.data",
-            norm=False))
+            self.cifar_dir_path, cifar_filename="cifar_train.data", norm=False)
+                                                   )
         test_x, test_y = cifar_utils.filter_data(*cifar_utils.load_cifar(
             self.cifar_dir_path, cifar_filename="cifar_test.data", norm=False))
 

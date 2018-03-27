@@ -3,6 +3,7 @@ import docker
 import logging
 import os
 import random
+import time
 from ..container_manager import (
     create_model_container_label, parse_model_container_label,
     ContainerManager, CLIPPER_DOCKER_LABEL, CLIPPER_MODEL_CONTAINER_LABEL,
@@ -226,6 +227,9 @@ class DockerContainerManager(ContainerManager):
         add_to_metric_config(model_container_name,
                              CLIPPER_INTERNAL_METRIC_PORT)
 
+        # Return model_container_name so we can check if it's up and running later
+        return model_container_name
+
     def set_num_replicas(self, name, version, input_type, image, num_replicas):
         current_replicas = self._get_replicas(name, version)
         if len(current_replicas) < num_replicas:
@@ -237,8 +241,18 @@ class DockerContainerManager(ContainerManager):
                     name=name,
                     version=version,
                     missing=(num_missing)))
+
+            model_container_names = []
             for _ in range(num_missing):
-                self._add_replica(name, version, input_type, image)
+                container_name = self._add_replica(name, version, input_type,
+                                                   image)
+                model_container_names.append(container_name)
+
+            for name in model_container_names:
+                container = self.docker_client.containers.get(name)
+                while container.attrs.get("State").get("Status") != "running":
+                    time.sleep(3)
+
         elif len(current_replicas) > num_replicas:
             num_extra = len(current_replicas) - num_replicas
             logger.info(
