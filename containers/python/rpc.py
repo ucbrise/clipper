@@ -516,7 +516,6 @@ class RPCService:
 
         # Create a file named model_is_ready.check to show that model and container
         # are ready
-        # os.system("touch model_is_ready.check")
         with open("/model_is_ready.check", "w") as f:
             f.write("READY")
         child_conn, parent_conn = Pipe(duplex=False)
@@ -525,7 +524,7 @@ class RPCService:
         try:
             self.server.run(parent_conn)
         except Exception as e:
-            os.system("rm model_is_ready.check")
+            os.remove("/model_is_ready.check")
             logger.error(e)
 
 

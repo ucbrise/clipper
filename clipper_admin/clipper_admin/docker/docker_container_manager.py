@@ -5,7 +5,6 @@ import os
 import random
 import time
 import json
-import subprocess
 from ..container_manager import (
     create_model_container_label, parse_model_container_label,
     ContainerManager, CLIPPER_DOCKER_LABEL, CLIPPER_MODEL_CONTAINER_LABEL,
