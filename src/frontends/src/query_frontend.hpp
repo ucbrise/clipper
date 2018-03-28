@@ -83,6 +83,20 @@ std::string json_error_msg(const std::string& exception_msg,
   return ss.str();
 }
 
+/* Create error class for if an invalid model version id is passed in to 
+ * json query. */
+class version_id_error: public std::runtime_error {
+ public:
+  version_id_error(const std::string msg) : std::runtime_error(msg), msg_(msg) {}
+
+  const char *what() const noexcept {
+    return msg_.c_str();
+}
+
+ private:
+  const std::string msg_;
+};
+
 class AppMetrics {
  public:
   explicit AppMetrics(std::string app_name)
@@ -283,6 +297,16 @@ class RequestHandler {
     return linked_models_for_apps_[name];
   }
 
+
+  /*
+   * JSON format for prediction query request:
+   * {
+   *  "input" := [double] | [int] | [string] | [byte] | [float]
+   *  "input_batch" := [[double] | [int] | [byte] | [float] | string]
+   *  "version" := string (optional)
+   * }
+   */
+
   void add_application(std::string name, InputType input_type,
                        std::string policy, std::string default_output,
                        long latency_slo_micros) {
@@ -307,20 +331,36 @@ class RequestHandler {
         std::shared_ptr<HttpServer::Response> response,
         std::shared_ptr<HttpServer::Request> request) {
       try {
-        std::vector<std::string> models = get_linked_models_for_app(name);
+        rapidjson::Document d;
+        clipper::json::parse_json(request->content.string(), d);
         std::vector<VersionedModelId> versioned_models;
-        {
-          std::unique_lock<std::mutex> l(current_model_versions_mutex_);
+        std::vector<std::string> models;
+        if (d::version) {
+          models = get_model_versions(redis_connection, name);
           for (auto m : models) {
-            auto version = current_model_versions_.find(m);
-            if (version != current_model_versions_.end()) {
-              versioned_models.emplace_back(m, version->second);
+            if (m == d::version) {
+              versioned_models = VersionedModelId(name, m);
+              break;
+            }
+            if (versioned_models == NULL) {
+              throw new version_id_error("Requested model doesn't exist."); 
             }
           }
-        }
+        } else {
+          models = get_linked_models_for_app(name);
+          {
+            std::unique_lock<std::mutex> (current_model_versions_mutex_);
+            for (auto m : models) {
+              auto version = current_model_versions_.find(m);
+              if (version != current_model_versions_.end()) {
+                versioned_models.emplace_back(m, version->second);
+              }
+            }
+          }
+        }   
 
         folly::Future<std::vector<folly::Try<Response>>> predictions =
-            decode_and_handle_predict(request->content.string(), name,
+            decode_and_handle_predict(d, name,
                                       versioned_models, policy,
                                       latency_slo_micros, input_type);
 
@@ -383,6 +423,9 @@ class RequestHandler {
         std::string json_error_response = get_prediction_error_response_content(
             PREDICTION_ERROR_NAME_QUERY_PROCESSING, error_msg);
         respond_http(json_error_response, "400 Bad Request", response);
+      } catch (const version_id_error& e) {
+        std::string error_msg = e.what();
+        respond_http(error_msg, "400 Bad Request", "Please give a valid version id.")
       }
     };
     std::string predict_endpoint = "^/" + name + "/predict$";
@@ -524,19 +567,10 @@ class RequestHandler {
     return clipper::json::to_json_string(error_response);
   }
 
-  /*
-   * JSON format for prediction query request:
-   * {
-   *  "input" := [double] | [int] | [string] | [byte] | [float]
-   *  "input_batch" := [[double] | [int] | [byte] | [float] | string]
-   * }
-   */
   folly::Future<std::vector<folly::Try<Response>>> decode_and_handle_predict(
-      std::string json_content, std::string name,
+      rapidjson::Document d, std::string name,
       std::vector<VersionedModelId> models, std::string policy,
       long latency_slo_micros, InputType input_type) {
-    rapidjson::Document d;
-    clipper::json::parse_json(json_content, d);
     long uid = 0;
 
     std::vector<std::shared_ptr<Input>> input_batch =
