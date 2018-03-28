@@ -17,6 +17,7 @@
 
 #include <dlib/matrix.h>
 #include <dlib/svm.h>
+#include <spline.h>
 #include <boost/circular_buffer.hpp>
 
 namespace clipper {
@@ -43,12 +44,6 @@ ModelContainer::ModelContainer(VersionedModelId model, int container_id,
           explore_dist_mu_, explore_dist_std_)),
       exploration_engine_(std::default_random_engine(
           std::chrono::system_clock::now().time_since_epoch().count())) {
-  uint32_t gamma = 0.0;
-  uint32_t coef = 1.0;
-  uint32_t degree = 3;
-
-  estimator_trainer_.set_kernel(EstimatorKernel(gamma, coef, degree));
-
   std::string model_str = model.serialize();
   log_info_formatted(LOGGING_TAG_CONTAINERS,
                      "Creating new ModelContainer for model {}, id: {}",
@@ -85,8 +80,14 @@ void ModelContainer::add_processing_datapoint(
 
   max_latency_ = std::max(processing_latency_micros, max_latency_);
 
-  EstimatorFittingThreadPool::submit_job(model_, replica_id_,
-                                         [this]() { fit_estimator(); });
+  EstimatorFittingThreadPool::submit_job(model_, replica_id_, [this]() {
+    try {
+      fit_estimator();
+    } catch (std::exception const &ex) {
+      log_error_formatted(LOGGING_TAG_CONTAINERS, "FITTING EXCEPTION: {}",
+                          ex.what());
+    }
+  });
 }
 
 ModelContainer::LatencyInfo ModelContainer::update_mean_std(
@@ -95,14 +96,14 @@ ModelContainer::LatencyInfo ModelContainer::update_mean_std(
   double mu = std::get<1>(info);
   double std = std::get<2>(info);
 
-  double old_s = std::pow(std * info_size, 2);
+  double old_s = std::pow(std, 2) * info_size;
 
   mu = ((mu * info_size) + new_latency) / (info_size + 1);
   info_size += 1;
 
-  double new_s =
-      old_s + ((info_size / std::max(1.0, info_size - 1)) * (mu - new_latency));
-  std = std::sqrt(new_s);
+  double new_s = old_s + ((info_size / std::max(1.0, info_size - 1)) *
+                          std::pow((mu - new_latency), 2));
+  std = std::sqrt(new_s / std::max(1.0, info_size));
 
   return std::make_tuple(info_size, mu, std);
 }
@@ -125,6 +126,8 @@ size_t ModelContainer::get_batch_size(Deadline deadline) {
   } else {
     curr_batch_size = estimate(budget);
   }
+  log_error_formatted(LOGGING_TAG_CONTAINERS, "SELECTED BATCH SIZE: {}",
+                      curr_batch_size);
   max_batch_size_ = std::max(curr_batch_size, max_batch_size_);
   return curr_batch_size;
 }
@@ -146,7 +149,8 @@ void ModelContainer::fit_estimator() {
   // processing latency at each batch size
 
   double pooled_std_num = 0;
-  double pooled_std_denom = -1 * num_datapoints;
+  double pooled_std_denom = -1 * static_cast<double>(num_datapoints);
+  double num_valid_stds = 0;
 
   for (auto &entry : processing_datapoints_) {
     LatencyInfo &latency_info = entry.second;
@@ -157,19 +161,23 @@ void ModelContainer::fit_estimator() {
     pooled_std_denom += info_size;
   }
 
-  double pooled_std = pooled_std_num / std::max(1.0, pooled_std_denom);
+  double pooled_std =
+      std::sqrt(pooled_std_num / std::max(1.0, pooled_std_denom));
 
   // Using the pooled variance, obtain the
   // estimated p99 latency for each batch size
 
   EstimatorLatency fitting_lat;
-
   for (auto &entry : processing_datapoints_) {
     EstimatorBatchSize batch_size = entry.first;
     LatencyInfo &latency_info = entry.second;
     double lats_mean = std::get<1>(latency_info);
     double upper_bound_lat = lats_mean + (LATENCY_Z_SCORE * pooled_std);
-    fitting_lat(0) = upper_bound_lat;
+    // Scale the upper bound latency in order to moderate the regularization
+    // term associated with ridge regression
+    fitting_lat(0) = upper_bound_lat * REGRESSION_DATA_SCALE_FACTOR;
+    log_error_formatted(LOGGING_TAG_CONTAINERS, "{},{},{}", fitting_lat(0),
+                        batch_size, pooled_std);
     x_vals.push_back(fitting_lat);
     y_vals.push_back(std::move(batch_size));
   }
@@ -177,15 +185,24 @@ void ModelContainer::fit_estimator() {
   datapoints_lock.unlock();
 
   estimator_ = estimator_trainer_.train(x_vals, y_vals);
-  // estimator_ = new_estimator;
+
   EstimatorLatency test_lat;
-  test_lat(0) = 600000.0;
+  test_lat(0) = 100;
   double estimate = estimator_(test_lat);
   log_info_formatted(LOGGING_TAG_CONTAINERS, "ESTIMATE: {}", estimate);
 }
 
 size_t ModelContainer::explore() {
-  if (max_batch_size_ < 10) {
+  auto mb_search =
+      processing_datapoints_.find(static_cast<double>(max_batch_size_));
+  if (mb_search != processing_datapoints_.end() &&
+      std::get<0>(mb_search->second) <
+          BATCH_SAMPLE_SIZE_EXPLORATION_THRESHOLD) {
+    // We don't have a large enough latency sample
+    // corresponding to the maximum batch size, so
+    // we won't update the maximum
+    return max_batch_size_;
+  } else if (max_batch_size_ < 10) {
     return max_batch_size_ + 1;
   } else {
     double expansion_factor = exploration_distribution_(exploration_engine_);
@@ -195,7 +212,11 @@ size_t ModelContainer::explore() {
 
 size_t ModelContainer::estimate(long long budget) {
   std::lock_guard<std::mutex> lock(estimator_mtx_);
-  return estimator_(EstimatorLatency(budget));
+  EstimatorLatency estimator_budget;
+  estimator_budget(0) =
+      static_cast<double>(budget) * REGRESSION_DATA_SCALE_FACTOR;
+  double estimate = estimator_(estimator_budget);
+  return static_cast<size_t>(std::max(1.0, std::floor(estimate)));
 }
 
 ActiveContainers::ActiveContainers()

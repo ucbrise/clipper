@@ -51,7 +51,8 @@ class ModelContainer {
  private:
   using EstimatorLatency = dlib::matrix<double, 1, 1>;
   using EstimatorBatchSize = double;
-  using EstimatorKernel = dlib::polynomial_kernel<EstimatorLatency>;
+  // using EstimatorKernel = dlib::polynomial_kernel<EstimatorLatency>;
+  using EstimatorKernel = dlib::linear_kernel<EstimatorLatency>;
   using Estimator = dlib::decision_function<EstimatorKernel>;
   // Tuple of num latencies, mean latency, latency std
   using LatencyInfo = std::tuple<double, double, double>;
@@ -66,7 +67,7 @@ class ModelContainer {
   size_t max_batch_size_;
   long long max_latency_;
   Estimator estimator_;
-  dlib::krr_trainer<EstimatorKernel> estimator_trainer_;
+  dlib::rr_trainer<EstimatorKernel> estimator_trainer_;
   std::mutex estimator_mtx_;
 
   // Exploration and estimation parameters
@@ -77,8 +78,10 @@ class ModelContainer {
   std::normal_distribution<double> exploration_distribution_;
   std::default_random_engine exploration_engine_;
 
-  static const size_t HISTOGRAM_SAMPLE_SIZE = 256;
-  static const uint32_t LATENCY_Z_SCORE = 3;
+  static constexpr size_t HISTOGRAM_SAMPLE_SIZE = 256;
+  static constexpr uint32_t BATCH_SAMPLE_SIZE_EXPLORATION_THRESHOLD = 5;
+  static constexpr uint32_t LATENCY_Z_SCORE = 3;
+  static constexpr double REGRESSION_DATA_SCALE_FACTOR = .001;
 
   void fit_estimator();
   size_t explore();
