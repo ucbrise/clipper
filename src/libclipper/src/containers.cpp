@@ -17,7 +17,6 @@
 
 #include <dlib/matrix.h>
 #include <dlib/svm.h>
-#include <spline.h>
 #include <boost/circular_buffer.hpp>
 
 namespace clipper {
@@ -185,11 +184,6 @@ void ModelContainer::fit_estimator() {
   datapoints_lock.unlock();
 
   estimator_ = estimator_trainer_.train(x_vals, y_vals);
-
-  EstimatorLatency test_lat;
-  test_lat(0) = 100;
-  double estimate = estimator_(test_lat);
-  log_info_formatted(LOGGING_TAG_CONTAINERS, "ESTIMATE: {}", estimate);
 }
 
 size_t ModelContainer::explore() {
