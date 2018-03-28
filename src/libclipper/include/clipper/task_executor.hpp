@@ -199,23 +199,14 @@ class InflightMessage {
   InflightMessage(
       const std::chrono::time_point<std::chrono::system_clock> send_time,
       const int container_id, const VersionedModelId model,
-<<<<<<< HEAD
-      const int replica_id, const std::shared_ptr<Input> input,
+      const int replica_id, const std::shared_ptr<PredictionData> input,
       const bool discard_result)
-      : send_time_(send_time),
-=======
-      const int replica_id, const std::shared_ptr<PredictionData> input)
       : send_time_(std::move(send_time)),
->>>>>>> rpc_perf_port
         container_id_(container_id),
         model_(std::move(model)),
         replica_id_(replica_id),
-<<<<<<< HEAD
-        input_(input),
+        input_(std::move(input)),
         discard_result_(discard_result) {}
-=======
-        input_(std::move(input)) {}
->>>>>>> rpc_perf_port
 
   // Default copy and move constructors
   InflightMessage(const InflightMessage &) = default;
@@ -229,12 +220,8 @@ class InflightMessage {
   int container_id_;
   VersionedModelId model_;
   int replica_id_;
-<<<<<<< HEAD
-  std::shared_ptr<Input> input_;
-  bool discard_result_;
-=======
   std::shared_ptr<PredictionData> input_;
->>>>>>> rpc_perf_port
+  bool discard_result_;
 };
 
 class TaskExecutor {
