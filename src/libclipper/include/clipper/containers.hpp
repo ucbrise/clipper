@@ -23,26 +23,6 @@ namespace clipper {
 // due to its cross-platform consistency (consistent epoch, resolution)
 using Deadline = std::chrono::time_point<std::chrono::system_clock>;
 
-namespace EstimatorFittingThreadPool {
-/**
- * Convenience method to get the task execution thread pool for the
- * application.
- */
-inline FixedSizeThreadPool &get_thread_pool(void) {
-  static FixedSizeThreadPool estimator_fitting_pool(1);
-  return estimator_fitting_pool;
-}
-
-/**
- * Submit a job to be run by the thread pool.
- */
-template <typename Func, typename... Args>
-auto submit_job(Func &&func, Args &&... args) {
-  get_thread_pool().submit(func, args...);
-}
-
-}  // namespace EstimatorFittingThreadPool
-
 class ModelContainer {
  public:
   ~ModelContainer() = default;
@@ -73,18 +53,20 @@ class ModelContainer {
   using EstimatorBatchSize = double;
   using EstimatorKernel = dlib::polynomial_kernel<EstimatorLatency>;
   using Estimator = dlib::decision_function<EstimatorKernel>;
-  // Pair of model processing latency, batch size,
-  using ProcessingDatapoint = std::pair<EstimatorLatency, EstimatorBatchSize>;
+  // Tuple of num latencies, mean latency, latency std
+  using LatencyInfo = std::tuple<double, double, double>;
+
+  LatencyInfo update_mean_std(LatencyInfo &info, double new_latency);
 
   bool connected_{true};
   Queue<FeedbackTask> feedback_queue_;
-  boost::shared_mutex datapoints_mutex_;
-  boost::circular_buffer<ProcessingDatapoint> processing_datapoints_;
+  boost::shared_mutex datapoints_mtx_;
+  std::unordered_map<EstimatorBatchSize, LatencyInfo> processing_datapoints_;
 
   size_t max_batch_size_;
   long long max_latency_;
   Estimator estimator_;
-  dlib::rls estimator_trainer_;
+  dlib::krr_trainer<EstimatorKernel> estimator_trainer_;
   std::mutex estimator_mtx_;
 
   // Exploration and estimation parameters
@@ -95,8 +77,8 @@ class ModelContainer {
   std::normal_distribution<double> exploration_distribution_;
   std::default_random_engine exploration_engine_;
 
-  static const size_t DATAPOINTS_BUFFER_CAPACITY = 256;
   static const size_t HISTOGRAM_SAMPLE_SIZE = 256;
+  static const uint32_t LATENCY_Z_SCORE = 3;
 
   void fit_estimator();
   size_t explore();

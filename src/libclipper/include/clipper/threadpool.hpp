@@ -333,6 +333,57 @@ class FixedSizeThreadPool : public ThreadPool {
   size_t queue_id_ = 1;
 };
 
+namespace TaskExecutionThreadPool {
+/**
+ * Convenience method to get the task execution thread pool for the
+ * application.
+ */
+inline ModelQueueThreadPool& get_thread_pool(void) {
+  static ModelQueueThreadPool taskExecutionPool;
+  return taskExecutionPool;
+}
+
+/**
+ * Submit a job to the task execution thread pool.
+ */
+template <typename Func, typename... Args>
+inline auto submit_job(VersionedModelId vm, int replica_id, Func&& func,
+                       Args&&... args) {
+  return get_thread_pool().submit(vm, replica_id, std::forward<Func>(func),
+                                  std::forward<Args>(args)...);
+}
+
+inline void create_queue(VersionedModelId vm, int replica_id) {
+  get_thread_pool().create_queue(vm, replica_id);
+}
+
+}  // namespace TaskExecutionThreadPool
+
+namespace EstimatorFittingThreadPool {
+/**
+ * Convenience method to get the task execution thread pool for the
+ * application.
+ */
+inline ModelQueueThreadPool& get_thread_pool(void) {
+  static ModelQueueThreadPool estimator_fitting_pool;
+  return estimator_fitting_pool;
+}
+
+/**
+ * Submit a job to be run by the thread pool.
+ */
+template <typename Func, typename... Args>
+auto submit_job(VersionedModelId vm, int replica_id, Func&& func,
+                Args&&... args) {
+  get_thread_pool().submit(vm, replica_id, func, args...);
+}
+
+inline void create_queue(VersionedModelId vm, int replica_id) {
+  get_thread_pool().create_queue(vm, replica_id);
+}
+
+}  // namespace EstimatorFittingThreadPool
+
 }  // namespace clipper
 
 #endif  // CLIPPER_LIB_THREADPOOL_HPP
