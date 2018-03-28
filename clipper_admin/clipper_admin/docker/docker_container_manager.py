@@ -11,6 +11,7 @@ from ..container_manager import (
     CLIPPER_INTERNAL_QUERY_PORT, CLIPPER_INTERNAL_MANAGEMENT_PORT,
     CLIPPER_INTERNAL_METRIC_PORT)
 from ..exceptions import ClipperException
+import requests
 from requests.exceptions import ConnectionError
 from .docker_metric_utils import *
 
@@ -166,6 +167,22 @@ class DockerContainerManager(ContainerManager):
         # No extra connection steps to take on connection
         return
 
+    def upload_model_data(self, model_data_list):
+        model_mapping = {}
+
+        for model_data in model_data_list:
+            model_mapping['model_info'] = {"image": model_data['image'],
+                                           "name": model_data['name'],
+                                           "version": model_data['version'],
+                                           "input_type": model_data['input_type']
+                                           }
+            url = "http://{}/get_query_to_model_mapping".format('127.0.0.1:5000')
+            # url = "http://{}/get_query_to_model_mapping".format(model_data[self.get_admin_addr()])
+
+            r = requests.post(url, json=model_mapping)
+
+        logger.info("Posted successfully")
+
     def deploy_model(self, name, version, input_type, image, num_replicas=1):
         # Parameters
         # ----------
@@ -175,6 +192,15 @@ class DockerContainerManager(ContainerManager):
         #     "localhost:5000/my_model_name:my_model_version" or
         #     "quay.io/my_namespace/my_model_name:my_model_version"
         self.set_num_replicas(name, version, input_type, image, num_replicas)
+
+        ret = {"name": name,
+               "version": version,
+               "input_type": input_type,
+               "image": image,
+               'num_replicas': num_replicas,
+               "admin_addr": self.get_admin_addr()
+               }
+        self.upload_model_data([ret])
 
     def _get_replicas(self, name, version):
         containers = self.docker_client.containers.list(

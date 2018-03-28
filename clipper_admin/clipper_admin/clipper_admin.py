@@ -13,6 +13,8 @@ import tarfile
 import six
 
 from .container_manager import CONTAINERLESS_MODEL_IMAGE
+from .kubernetes.kubernetes_container_manager import KubernetesContainerManager
+from .docker.docker_container_manager import DockerContainerManager
 from .exceptions import ClipperException, UnconnectedException
 from .version import __version__
 
@@ -114,6 +116,7 @@ class ClipperConnection(object):
                     time.sleep(1)
             logger.info("Clipper is running")
             self.connected = True
+            self.alert_management_upon_start()
         except ClipperException as e:
             logger.warning("Error starting Clipper: {}".format(e.msg))
             raise e
@@ -1076,6 +1079,41 @@ class ClipperConnection(object):
         if not self.connected:
             raise UnconnectedException()
         return self.cm.get_query_addr()
+
+    @staticmethod
+    def upload_model_data(model_data_list):
+
+        model_mapping = {}
+        if model_data_list and "query_frontend" in model_data_list[0]:
+            for model_data in model_data_list:
+                model_mapping['query_frontend'] = model_data['query_frontend']
+                model_mapping['model_info'] = {"image": model_data['image'],
+                                               "name": model_data['name'],
+                                               "version": model_data['version'],
+                                               "input_type": model_data['input_type']
+                                               }
+            url = "http://{}/get_query_to_model_mapping".format('127.0.0.1:5000')
+            # url = "http://{}/get_query_to_model_mapping".format(model_data['admin_addr'])
+
+            r = requests.post(url, json=model_mapping)
+
+        logger.info("Posted successfully")
+
+    def alert_management_upon_start(self):
+        url = "http://{}/begin_polling".format('127.0.0.1:5000')
+        # url = "http://{}/begin_polling".format(model_data['admin_addr'])
+
+        type = None
+        if isinstance(self.cm, KubernetesContainerManager):
+            type = "kubernetes"
+        elif isinstance(self.cm, DockerContainerManager):
+            type = "docker"
+
+        if type:
+            data = {}
+            data['type'] = type
+            r = requests.post(url, json=json.dumps(data))
+
 
     def stop_models(self, model_names):
         """Stops all versions of the specified models.

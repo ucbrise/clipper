@@ -11,5 +11,8 @@ spec:
   - name: "1338"
     port: 1338
     targetPort: 1338
+  - name: "1339"
+    port: 1339
+    targetPort: 1339
   selector:
     ai.clipper.name: mgmt-frontend

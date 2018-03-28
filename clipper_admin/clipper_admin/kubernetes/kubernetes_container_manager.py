@@ -14,9 +14,9 @@ import yaml
 import os
 import time
 from multiprocessing import Process, Manager, Value
-import grequests
 import requests
-from ..version import __version__
+import gevent
+import traceback
 
 
 
@@ -52,7 +52,7 @@ class RoundRobinBalancer():
 
 class KubernetesContainerManager(ContainerManager):
 
-    model_lock = Value('i', 1)
+    # model_lock = Value('i', 1)
 
     def __init__(self,
                  kubernetes_api_ip,
@@ -253,32 +253,51 @@ class KubernetesContainerManager(ContainerManager):
                 "Could not connect to Clipper Kubernetes cluster. "
                 "Reason: {}".format(e))
 
+    def upload_model_data(self, model_data_list):
+        model_mapping = {}
+        for model_data in model_data_list:
+            model_mapping['query_frontend'] = model_data['query_frontend']
+            model_mapping['model_info'] = {"image": model_data['image'],
+                                           "name": model_data['name'],
+                                           "version": model_data['version'],
+                                           "input_type": model_data['input_type']
+                                           }
+            url = "http://{}/get_query_to_model_mapping".format('127.0.0.1:5000')
+            # url = "http://{}/get_query_to_model_mapping".format(self.get_admin_addr())
+
+            r = requests.post(url, json=model_mapping)
+
+        logger.info("Posted successfully")
+
     def deploy_model(self, name, version, input_type, image, num_replicas=1, new_ip=None):
         with _pass_conflicts():
 
-            with KubernetesContainerManager.model_lock.get_lock():
-                KubernetesContainerManager.model_lock.value = 1
+            # with KubernetesContainerManager.model_lock.get_lock():
+            #     KubernetesContainerManager.model_lock.value = 1
 
 
             endpoints = self._k8s_v1.read_namespaced_endpoints(name="query-frontend", namespace="default")
             query_frontend_ips = [addr.ip for addr in endpoints.subsets[0].addresses]
+
 
             self.balancer.set_assignee_count(len(query_frontend_ips), override = num_replicas > 1)
 
             original_name = name
             name = get_model_deployment_name(name, version)
 
-            for x in range(num_replicas):
-                if (new_ip == None):
-                    deployment_name = original_name + str(x)
-                else:
-                    deployment_name = original_name + "-0"
+            ret = []
 
-                if (new_ip == None):
+            for x in range(num_replicas):
+                if not new_ip:
+                    deployment_name = "{}-{}-{}".format(original_name, x, version)
                     clipper_ip = query_frontend_ips[self.balancer.assign()]
                 else:
                     clipper_ip = new_ip
-
+                    try:
+                        self.stop_models([original_name])
+                    except Exception as e:
+                        traceback.print_exc()
+                    deployment_name = "{}{}".format(original_name, '-r')
 
                 body = {
                     'apiVersion': 'extensions/v1beta1',
@@ -326,39 +345,25 @@ class KubernetesContainerManager(ContainerManager):
                     }
                 }
 
-                # if clipper_ip in self.query_to_model:
-                #     temp = self.query_to_model[clipper_ip]
-                #     temp.append([image, deployment_name, name])
-                #     self.query_to_model[clipper_ip] = temp
-                # else:
-                #     self.query_to_model[clipper_ip] = [[image, deployment_name]]
 
+                ret_dict = {"image": image,
+                            "name": deployment_name,
+                            "version": version,
+                            "input_type": input_type,
+                            "query_frontend": clipper_ip,
+                            "admin_addr": self.get_admin_addr()}
 
-                model_mapping = {}
-                model_mapping['query_frontend'] = clipper_ip
-                model_mapping['model_info'] = [image, deployment_name]
-                serialized_mapping = json.dumps(model_mapping)
-
-                # endpoints = self._k8s_v1.read_namespaced_endpoints(name="mgmt-frontend", namespace="default")
-                # mgmt_ip = [addr.ip for addr in endpoints.subsets[0].addresses][0]
-
-                url = "http://{}:5000/get_query_to_model_mapping".format('127.0.0.1')
-
-                # rs = grequests.post(url, data = model_mapping, headers={'Accept-Encoding':'none', 'Content-Type':'application/json'})
-                # rs = grequests.post(url, data = serialized_mapping)
-                # response = grequests.map([rs])
-
-                r = requests.post(url, json=model_mapping)
+                ret.append(ret_dict)
 
                 self._k8s_beta.create_namespaced_deployment(
                     body=body, namespace='default')
 
             logger.info("Finished deploying model")
 
-            with KubernetesContainerManager.model_lock.get_lock():
-                KubernetesContainerManager.model_lock.value = 0
+            # with KubernetesContainerManager.model_lock.get_lock():
+            #     KubernetesContainerManager.model_lock.value = 0
 
-
+        self.upload_model_data(ret)
 
     def get_num_replicas(self, name, version):
         deployment_name = get_model_deployment_name(name, version)

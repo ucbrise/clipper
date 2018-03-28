@@ -100,6 +100,10 @@ class ContainerManager(object):
         return
 
     @abc.abstractmethod
+    def upload_model_data(self, model_data):
+        return
+
+    @abc.abstractmethod
     def stop_all_model_containers(self):
         return
 

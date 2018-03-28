@@ -21,6 +21,13 @@ spec:
         name: mgmt-frontend
         ports:
         - containerPort: 1338
+      - args:
+        - "--redis_ip=$(REDIS_SERVICE_HOST)"
+        - "--redis_port=$(REDIS_SERVICE_PORT)"
+        image: rbala19/mgv2
+        name: mgv2
+        ports:
+        - containerPort: 1339
       restartPolicy: Always
 
 
