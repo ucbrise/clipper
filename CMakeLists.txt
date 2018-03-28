@@ -29,6 +29,14 @@ set(FOLLY_LINK_FLAGS "-lglog -lcrypto -lssl")
 set_property(TARGET folly PROPERTY
     INTERFACE_LINK_LIBRARIES ${FOLLY_LINK_FLAGS} ${FOLLY_LIBRARY})
 
+# Include CityHash as an imported target
+find_package(cityhash REQUIRED)
+add_library(cityhash INTERFACE IMPORTED)
+set_property(TARGET cityhash PROPERTY
+        INTERFACE_INCLUDE_DIRECTORIES ${CITYHASH_INCLUDE_DIR})
+set_property(TARGET cityhash PROPERTY
+        INTERFACE_LINK_LIBRARIES ${CITYHASH_LIBRARIES})
+
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra -Werror -Wno-deprecated-declarations -Wno-unsupported-friend")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra -Wno-deprecated-declarations")
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")

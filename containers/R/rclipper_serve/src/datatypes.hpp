@@ -49,14 +49,14 @@ static inline std::string get_readable_input_type(InputType type) {
     case InputType::Strings: return std::string("strings");
     case InputType::Invalid:
     default:
-      std::string("Invalid input type");
+      return std::string("Invalid input type");
   }
 }
 
 template <typename D>
 class Input {
  public:
-  Input(const D* data, size_t length) : data_(data), length_(length) {}
+  Input(const D* data, size_t length_bytes) : data_(data), length_(length_bytes / sizeof(D)) {}
 
   const D* get_data() const { return data_; }
 

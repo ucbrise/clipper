@@ -8,6 +8,7 @@
 #include <clipper/config.hpp>
 #include <clipper/datatypes.hpp>
 #include <clipper/logging.hpp>
+#include <clipper/memory.hpp>
 #include <clipper/metrics.hpp>
 #include <clipper/redis.hpp>
 #include <clipper/rpc_service.hpp>
@@ -41,62 +42,57 @@ std::string get_thread_id() {
 }
 
 template <typename T, class N>
-std::vector<std::shared_ptr<Input>> get_primitive_inputs(
-    int message_size, int input_len, InputType type, std::vector<T> data_vector,
-    std::vector<std::shared_ptr<N>> input_vector) {
-  input_vector.clear();
-  std::vector<std::shared_ptr<Input>> generic_input_vector;
+std::vector<std::unique_ptr<PredictionData>> get_primitive_inputs(
+    int message_size, int input_len, InputType type) {
+  std::vector<std::unique_ptr<PredictionData>> inputs;
   for (int k = 0; k < message_size; ++k) {
+    UniquePoolPtr<T> input_data = memory::allocate_unique<T>(input_len);
+    T *input_data_raw = input_data.get();
     for (int j = 0; j < input_len; ++j) {
       if (type == InputType::Bytes) {
         uint8_t *bytes = reinterpret_cast<uint8_t *>(&j);
         for (int i = 0; i < (int)(sizeof(int) / sizeof(uint8_t)); i++) {
-          data_vector.push_back(*(bytes + i));
+          input_data_raw[j] = *(bytes + i);
         }
       } else {
-        data_vector.push_back(static_cast<T>(j));
+        input_data_raw[j] = static_cast<T>(j);
       }
     }
-    std::shared_ptr<N> input = std::make_shared<N>(data_vector);
-    generic_input_vector.push_back(std::dynamic_pointer_cast<Input>(input));
-    data_vector.clear();
+    std::unique_ptr<PredictionData> input =
+        std::make_unique<N>(std::move(input_data), input_len);
+    inputs.push_back(std::move(input));
   }
-  return generic_input_vector;
+  return inputs;
 }
 
 rpc::PredictionRequest generate_bytes_request(int message_size) {
-  std::vector<uint8_t> type_vec;
-  std::vector<std::shared_ptr<ByteVector>> input_vec;
-  std::vector<std::shared_ptr<Input>> inputs = get_primitive_inputs(
-      message_size, 784, InputType::Bytes, type_vec, input_vec);
-  rpc::PredictionRequest request(inputs, InputType::Bytes);
+  std::vector<std::unique_ptr<PredictionData>> inputs =
+      get_primitive_inputs<uint8_t, ByteVector>(message_size, 784,
+                                                InputType::Bytes);
+  rpc::PredictionRequest request(std::move(inputs), InputType::Bytes);
   return request;
 }
 
 rpc::PredictionRequest generate_floats_request(int message_size) {
-  std::vector<float> type_vec;
-  std::vector<std::shared_ptr<FloatVector>> input_vec;
-  std::vector<std::shared_ptr<Input>> inputs = get_primitive_inputs(
-      message_size, 784, InputType::Floats, type_vec, input_vec);
-  rpc::PredictionRequest request(inputs, InputType::Floats);
+  std::vector<std::unique_ptr<PredictionData>> inputs =
+      get_primitive_inputs<float, FloatVector>(message_size, 784,
+                                               InputType::Floats);
+  rpc::PredictionRequest request(std::move(inputs), InputType::Floats);
   return request;
 }
 
 rpc::PredictionRequest generate_ints_request(int message_size) {
-  std::vector<int> type_vec;
-  std::vector<std::shared_ptr<IntVector>> input_vec;
-  std::vector<std::shared_ptr<Input>> inputs = get_primitive_inputs(
-      message_size, 784, InputType::Ints, type_vec, input_vec);
-  rpc::PredictionRequest request(inputs, InputType::Ints);
+  std::vector<std::unique_ptr<PredictionData>> inputs =
+      get_primitive_inputs<int, IntVector>(message_size, 784, InputType::Ints);
+  rpc::PredictionRequest request(std::move(inputs), InputType::Ints);
   return request;
 }
 
 rpc::PredictionRequest generate_doubles_request(int message_size) {
-  std::vector<double> type_vec;
-  std::vector<std::shared_ptr<DoubleVector>> input_vec;
-  std::vector<std::shared_ptr<Input>> inputs = get_primitive_inputs(
-      message_size, 784, InputType::Doubles, type_vec, input_vec);
-  rpc::PredictionRequest request(inputs, InputType::Doubles);
+  std::vector<std::unique_ptr<PredictionData>> inputs =
+      get_primitive_inputs<double, DoubleVector>(message_size, 784,
+                                                 InputType::Doubles);
+  rpc::PredictionRequest request(std::move(inputs), InputType::Doubles);
   return request;
 }
 
@@ -104,9 +100,8 @@ rpc::PredictionRequest generate_string_request(int message_size) {
   rpc::PredictionRequest request(InputType::Strings);
   for (int i = 0; i < message_size; ++i) {
     std::string str = gen_random_string(150);
-    std::shared_ptr<SerializableString> input =
-        std::make_shared<SerializableString>(str);
-    request.add_input(input);
+    std::unique_ptr<PredictionData> input = to_serializable_string(str);
+    request.add_input(std::move(input));
   }
   return request;
 }
@@ -132,7 +127,7 @@ class Benchmarker {
 
   void start() {
     rpc_->start("*", RPC_SERVICE_PORT, [](VersionedModelId, int) {},
-                [this](rpc::RPCResponse response) {
+                [this](rpc::RPCResponse &response) {
                   on_response_recv(std::move(response));
                 });
 
@@ -237,7 +232,7 @@ class Benchmarker {
   std::atomic<long> cur_msg_start_time_millis_;
   std::atomic<int> benchmark_container_id_;
   rpc::PredictionRequest request_;
-  int cur_message_id_;
+  uint32_t cur_message_id_;
 };
 
 int main(int argc, char *argv[]) {

@@ -42,7 +42,7 @@ class QueryFrontendTest : public ::testing::Test {
   std::shared_ptr<redox::Subscriber> subscriber_;
 
   QueryFrontendTest()
-      : rh_("0.0.0.0", 1337, 8),
+      : rh_("0.0.0.0", 1337),
         redis_(std::make_shared<redox::Redox>()),
         subscriber_(std::make_shared<redox::Subscriber>()) {
     Config& conf = get_config();
@@ -71,11 +71,15 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputInts) {
   Response response = responses[0].value();
 
   Query parsed_query = response.query_;
+  std::shared_ptr<IntVector> parsed_input =
+      std::dynamic_pointer_cast<IntVector>(parsed_query.input_);
+  int* data = get_data(parsed_input).get();
+  std::vector<int> parsed_input_data(
+      data + parsed_input->start(),
+      data + parsed_input->start() + parsed_input->size());
 
-  const std::vector<int>& parsed_input =
-      std::static_pointer_cast<IntVector>(parsed_query.input_)->get_data();
-  std::vector<int> expected_input{1, 2, 3, 4};
-  EXPECT_EQ(parsed_input, expected_input);
+  std::vector<int> expected_input_data{1, 2, 3, 4};
+  EXPECT_EQ(parsed_input_data, expected_input_data);
   EXPECT_EQ(parsed_query.label_, "test");
   EXPECT_EQ(parsed_query.latency_budget_micros_, 30000);
   EXPECT_EQ(parsed_query.selection_policy_, "test_policy");
@@ -84,7 +88,8 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputInts) {
 TEST_F(QueryFrontendTest, TestDecodeCorrectInputIntsBatch) {
   std::string test_json_ints =
       "{\"input_batch\": [[1, 2], [10, 20], [100, 200]]}";
-  std::vector<std::vector<int>> expected_input{{1, 2}, {10, 20}, {100, 200}};
+  std::vector<std::vector<int>> expected_input_data{
+      {1, 2}, {10, 20}, {100, 200}};
   std::vector<folly::Try<Response>> responses =
       rh_.decode_and_handle_predict(test_json_ints, "test", {}, "test_policy",
                                     30000, InputType::Ints)
@@ -93,9 +98,14 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputIntsBatch) {
     Response response = responses[index].value();
     Query parsed_query = response.query_;
 
-    const std::vector<int>& parsed_input =
-        std::static_pointer_cast<IntVector>(parsed_query.input_)->get_data();
-    EXPECT_EQ(parsed_input, expected_input[index]);
+    std::shared_ptr<IntVector> parsed_input =
+        std::dynamic_pointer_cast<IntVector>(parsed_query.input_);
+    int* data = get_data(parsed_input).get();
+    std::vector<int> parsed_input_data(
+        data + parsed_input->start(),
+        data + parsed_input->start() + parsed_input->size());
+
+    EXPECT_EQ(parsed_input_data, expected_input_data[index]);
     EXPECT_EQ(parsed_query.label_, "test");
     EXPECT_EQ(parsed_query.latency_budget_micros_, 30000);
     EXPECT_EQ(parsed_query.selection_policy_, "test_policy");
@@ -112,10 +122,15 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputDoubles) {
 
   Query parsed_query = response.query_;
 
-  const std::vector<double>& parsed_input =
-      std::static_pointer_cast<DoubleVector>(parsed_query.input_)->get_data();
-  std::vector<double> expected_input{1.4, 2.23, 3.243242, 0.3223424};
-  EXPECT_EQ(parsed_input, expected_input);
+  std::shared_ptr<DoubleVector> parsed_input =
+      std::dynamic_pointer_cast<DoubleVector>(parsed_query.input_);
+  double* data = get_data(parsed_input).get();
+  std::vector<double> parsed_input_data(
+      data + parsed_input->start(),
+      data + parsed_input->start() + parsed_input->size());
+
+  std::vector<double> expected_input_data{1.4, 2.23, 3.243242, 0.3223424};
+  EXPECT_EQ(parsed_input_data, expected_input_data);
   EXPECT_EQ(parsed_query.label_, "test");
   EXPECT_EQ(parsed_query.latency_budget_micros_, 30000);
   EXPECT_EQ(parsed_query.selection_policy_, "test_policy");
@@ -124,7 +139,7 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputDoubles) {
 TEST_F(QueryFrontendTest, TestDecodeCorrectInputDoublesBatch) {
   std::string test_json_doubles =
       "{\"input_batch\": [[1.1, 2.2], [10.1, 20.2], [100.1, 200.2]]}";
-  std::vector<std::vector<double>> expected_input{
+  std::vector<std::vector<double>> expected_input_data{
       {1.1, 2.2}, {10.1, 20.2}, {100.1, 200.2}};
   std::vector<folly::Try<Response>> responses =
       rh_.decode_and_handle_predict(test_json_doubles, "test", {},
@@ -134,9 +149,14 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputDoublesBatch) {
     Response response = responses[index].value();
     Query parsed_query = response.query_;
 
-    const std::vector<double>& parsed_input =
-        std::static_pointer_cast<DoubleVector>(parsed_query.input_)->get_data();
-    EXPECT_EQ(parsed_input, expected_input[index]);
+    std::shared_ptr<DoubleVector> parsed_input =
+        std::dynamic_pointer_cast<DoubleVector>(parsed_query.input_);
+    double* data = get_data(parsed_input).get();
+    std::vector<double> parsed_input_data(
+        data + parsed_input->start(),
+        data + parsed_input->start() + parsed_input->size());
+
+    EXPECT_EQ(parsed_input_data, expected_input_data[index]);
     EXPECT_EQ(parsed_query.label_, "test");
     EXPECT_EQ(parsed_query.latency_budget_micros_, 30000);
     EXPECT_EQ(parsed_query.selection_policy_, "test_policy");
@@ -155,12 +175,16 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputString) {
 
   Query parsed_query = response.query_;
 
-  const std::string& parsed_input =
-      std::static_pointer_cast<SerializableString>(parsed_query.input_)
-          ->get_data();
-  std::string expected_input(
+  std::shared_ptr<SerializableString> parsed_input =
+      std::dynamic_pointer_cast<SerializableString>(parsed_query.input_);
+  char* data = get_data(parsed_input).get();
+  std::string parsed_input_data(
+      data + parsed_input->start(),
+      data + parsed_input->start() + parsed_input->size());
+
+  std::string expected_input_data(
       "hello world. This is a test string with punctionation!@#$Y#;}#");
-  EXPECT_EQ(parsed_input, expected_input);
+  EXPECT_EQ(parsed_input_data, expected_input_data);
   EXPECT_EQ(parsed_query.label_, "test");
   EXPECT_EQ(parsed_query.latency_budget_micros_, 30000);
   EXPECT_EQ(parsed_query.selection_policy_, "test_policy");
@@ -169,7 +193,7 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputString) {
 TEST_F(QueryFrontendTest, TestDecodeCorrectInputStringBatch) {
   std::string test_json_strings =
       "{\"input_batch\": [ \"this\", \"is\", \"a\", \"test\" ]}";
-  std::vector<std::string> expected_input{"this", "is", "a", "test"};
+  std::vector<std::string> expected_input_data{"this", "is", "a", "test"};
   std::vector<folly::Try<Response>> responses =
       rh_.decode_and_handle_predict(test_json_strings, "test", {},
                                     "test_policy", 30000, InputType::Strings)
@@ -178,10 +202,14 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputStringBatch) {
     Response response = responses[index].value();
     Query parsed_query = response.query_;
 
-    const std::string& parsed_input =
-        std::static_pointer_cast<SerializableString>(parsed_query.input_)
-            ->get_data();
-    EXPECT_EQ(parsed_input, expected_input[index]);
+    std::shared_ptr<SerializableString> parsed_input =
+        std::dynamic_pointer_cast<SerializableString>(parsed_query.input_);
+    char* data = get_data(parsed_input).get();
+    std::string parsed_input_data(
+        data + parsed_input->start(),
+        data + parsed_input->start() + parsed_input->size());
+
+    EXPECT_EQ(parsed_input_data, expected_input_data[index]);
     EXPECT_EQ(parsed_query.label_, "test");
     EXPECT_EQ(parsed_query.latency_budget_micros_, 30000);
     EXPECT_EQ(parsed_query.selection_policy_, "test_policy");
@@ -348,7 +376,7 @@ TEST_F(QueryFrontendTest, TestReadApplicationsAtStartup) {
   ASSERT_TRUE(add_application(*redis_, name2, input_type2, policy2,
                               default_output2, latency_slo_micros2));
 
-  RequestHandler<MockQueryProcessor> rh2_("127.0.0.1", 1337, 8);
+  RequestHandler<MockQueryProcessor> rh2_("127.0.0.1", 1337);
   size_t two_apps = rh2_.num_applications();
   EXPECT_EQ(two_apps, (size_t)2);
 }
@@ -377,7 +405,7 @@ TEST_F(QueryFrontendTest, TestReadModelsAtStartup) {
   std::unordered_map<std::string, std::string> expected_models = {{"m", "2"},
                                                                   {"n", "3"}};
 
-  RequestHandler<MockQueryProcessor> rh2_("127.0.0.1", 1337, 8);
+  RequestHandler<MockQueryProcessor> rh2_("127.0.0.1", 1337);
   EXPECT_EQ(rh2_.get_current_model_versions(), expected_models);
 }
 
@@ -400,7 +428,7 @@ TEST_F(QueryFrontendTest, TestReadModelLinksAtStartup) {
 
   std::vector<std::string> expected_app1_linked_models = {"m1", "m2", "m3"};
 
-  RequestHandler<MockQueryProcessor> rh2_("127.0.0.1", 1337, 8);
+  RequestHandler<MockQueryProcessor> rh2_("127.0.0.1", 1337);
 
   std::vector<std::string> app1_linked_models =
       rh2_.get_linked_models_for_app(app_name_1);
@@ -424,7 +452,7 @@ TEST_F(QueryFrontendTest, TestReadInvalidModelVersionAtStartup) {
                         container_name, model_path, DEFAULT_BATCH_SIZE));
   // Not setting the version number will cause get_current_model_version()
   // to return -1, and the RequestHandler should then throw a runtime_error.
-  ASSERT_THROW(RequestHandler<QueryProcessor>("127.0.0.1", 1337, 8),
+  ASSERT_THROW(RequestHandler<QueryProcessor>("127.0.0.1", 1337),
                std::runtime_error);
 }
 

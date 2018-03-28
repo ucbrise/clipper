@@ -243,7 +243,13 @@ TEST(JsonUtilTests, TestParseNestedObject) {
   parse_json(source_json, d);
 
   rapidjson::Value& nested_object = get_object(d, "nested_object");
-  EXPECT_EQ(get_double_array(nested_object, "double_array"), double_array);
+  auto parsed_array_content = get_double_array(nested_object, "double_array");
+  UniquePoolPtr<double>& parsed_array_data = parsed_array_content.first;
+  size_t parsed_array_size = parsed_array_content.second;
+  ASSERT_EQ(parsed_array_size, double_array.size());
+  for (size_t i = 0; i < parsed_array_size; ++i) {
+    EXPECT_EQ(parsed_array_data.get()[i], double_array[i]);
+  }
   rapidjson::Value& twice_nested_object =
       get_object(nested_object, "twice_nested_object");
   EXPECT_EQ(get_double(twice_nested_object, "double_val"), double_val);
@@ -270,9 +276,13 @@ TEST(JsonUtilTests, TestBase64DecodingYieldsOriginalString) {
   d.SetObject();
   std::string key_name = "test_key";
   json::add_string(d, key_name.data(), encoded_string);
-  std::vector<uint8_t> decoded_bytes =
+  auto decoded_byte_data =
       json::get_base64_encoded_byte_array(d, key_name.data());
-  std::string decoded_string(decoded_bytes.begin(), decoded_bytes.end());
+  UniquePoolPtr<uint8_t>& decoded_bytes = decoded_byte_data.first;
+  size_t decoded_bytes_size = decoded_byte_data.second;
+  char* decoded_content = reinterpret_cast<char*>(decoded_bytes.get());
+  std::string decoded_string(decoded_content,
+                             decoded_content + decoded_bytes_size);
   ASSERT_EQ(raw_string, decoded_string);
 }
 

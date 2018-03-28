@@ -14,6 +14,8 @@ from multiprocessing import Pipe, Process
 from prometheus_client import start_http_server
 from prometheus_client.core import Counter, Gauge, Histogram, Summary
 
+RPC_VERSION = 3
+
 INPUT_TYPE_BYTES = 0
 INPUT_TYPE_INTS = 1
 INPUT_TYPE_FLOATS = 2
@@ -43,7 +45,7 @@ EVENT_HISTORY_SENT_CONTAINER_CONTENT = 5
 EVENT_HISTORY_RECEIVED_CONTAINER_CONTENT = 6
 
 MAXIMUM_UTF_8_CHAR_LENGTH_BYTES = 4
-BYTES_PER_INT = 4
+BYTES_PER_LONG = 8
 
 
 def string_to_input_type(input_str):
@@ -122,6 +124,12 @@ class Server(threading.Thread):
         self.clipper_port = clipper_port
         self.event_history = EventHistory(EVENT_HISTORY_BUFFER_SIZE)
 
+    def validate_rpc_version(self, received_version):
+        if received_version != RPC_VERSION:
+            print(
+                "ERROR: Received an RPC message with version: {clv} that does not match container version: {mcv}"
+                .format(clv=received_version, mcv=RPC_VERSION))
+
     def handle_prediction_request(self, prediction_request):
         """
         Returns
@@ -146,9 +154,7 @@ class Server(threading.Thread):
                                   % type(outputs[0]))
         for o in outputs:
             total_length += len(o)
-        response = PredictionResponse(prediction_request.msg_id,
-                                      len(prediction_request.inputs),
-                                      total_length)
+        response = PredictionResponse(prediction_request.msg_id)
         for output in outputs:
             response.add_output(output)
 
@@ -231,6 +237,9 @@ class Server(threading.Thread):
                 t1 = datetime.now()
                 # Receive delimiter between routing identity and content
                 socket.recv()
+                rpc_version_bytes = socket.recv()
+                rpc_version = struct.unpack("<I", rpc_version_bytes)[0]
+                self.validate_rpc_version(rpc_version)
                 msg_type_bytes = socket.recv()
                 msg_type = struct.unpack("<I", msg_type_bytes)[0]
                 if msg_type == MESSAGE_TYPE_HEARTBEAT:
@@ -265,15 +274,25 @@ class Server(threading.Thread):
                     if request_type == REQUEST_TYPE_PREDICT:
                         input_header_size = socket.recv()
                         input_header = socket.recv()
-                        raw_content_size = socket.recv()
-                        raw_content = socket.recv()
 
                         t2 = datetime.now()
 
                         parsed_input_header = np.frombuffer(
-                            input_header, dtype=np.int32)
-                        input_type, input_size, splits = parsed_input_header[
+                            input_header, dtype=np.uint64)
+
+                        input_type, num_inputs, input_sizes = parsed_input_header[
                             0], parsed_input_header[1], parsed_input_header[2:]
+
+                        inputs = []
+                        for _ in range(num_inputs):
+                            input_item = socket.recv()
+                            if input_type == INPUT_TYPE_STRINGS:
+                                input_item = str(input_item)
+                            else:
+                                input_item = np.frombuffer(
+                                    input_item,
+                                    dtype=input_type_to_dtype(input_type))
+                            inputs.append(input_item)
 
                         if int(input_type) != int(self.model_input_type):
                             print((
@@ -284,22 +303,6 @@ class Server(threading.Thread):
                                     received=input_type_to_string(
                                         int(input_type))))
                             raise
-
-                        if input_type == INPUT_TYPE_STRINGS:
-                            # If we're processing string inputs, we delimit them using
-                            # the null terminator included in their serialized representation,
-                            # ignoring the extraneous final null terminator by
-                            # using a -1 slice
-                            inputs = np.array(
-                                raw_content.split('\0')[:-1],
-                                dtype=input_type_to_dtype(input_type))
-                        else:
-                            inputs = np.array(
-                                np.split(
-                                    np.frombuffer(
-                                        raw_content,
-                                        dtype=input_type_to_dtype(input_type)),
-                                    splits))
 
                         t3 = datetime.now()
 
@@ -312,9 +315,9 @@ class Server(threading.Thread):
 
                         response.send(socket, self.event_history)
 
-                        recv_time = (t2 - t1).microseconds
-                        parse_time = (t3 - t2).microseconds
-                        handle_time = (t4 - t3).microseconds
+                        recv_time = (t2 - t1).total_seconds()
+                        parse_time = (t3 - t2).total_seconds()
+                        handle_time = (t4 - t3).total_seconds()
 
                         model_container_metric = {}
                         model_container_metric['pred_total'] = 1
@@ -328,7 +331,7 @@ class Server(threading.Thread):
                             recv_time + parse_time + handle_time) / 1000.0
                         metric_conn.send(model_container_metric)
 
-                        print("recv: %f us, parse: %f us, handle: %f us" %
+                        print("recv: %f s, parse: %f s, handle: %f s" %
                               (recv_time, parse_time, handle_time))
 
                         sys.stdout.flush()
@@ -338,7 +341,7 @@ class Server(threading.Thread):
                         feedback_request = FeedbackRequest(msg_id_bytes, [])
                         response = self.handle_feedback_request(received_msg)
                         response.send(socket, self.event_history)
-                        print("recv: %f us" % ((t2 - t1).microseconds))
+                        print("recv: %f s" % ((t2 - t1).total_seconds()))
 
                 sys.stdout.flush()
                 sys.stderr.flush()
@@ -348,7 +351,8 @@ class Server(threading.Thread):
         socket.send(struct.pack("<I", MESSAGE_TYPE_NEW_CONTAINER), zmq.SNDMORE)
         socket.send_string(self.model_name, zmq.SNDMORE)
         socket.send_string(str(self.model_version), zmq.SNDMORE)
-        socket.send_string(str(self.model_input_type))
+        socket.send_string(str(self.model_input_type), zmq.SNDMORE)
+        socket.send(struct.pack("<I", RPC_VERSION))
         self.event_history.insert(EVENT_HISTORY_SENT_CONTAINER_METADATA)
         print("Sent container metadata!")
         sys.stdout.flush()
@@ -380,31 +384,20 @@ class PredictionRequest:
         return self.inputs
 
 
-class PredictionResponse():
-    output_buffer = bytearray(1024)
+class PredictionResponse:
+    header_buffer = bytearray(1024)
 
-    def __init__(self, msg_id, num_outputs, total_string_length):
+    def __init__(self, msg_id):
         """
         Parameters
         ----------
         msg_id : bytes
             The message id associated with the PredictRequest
             for which this is a response
-        num_outputs : int
-            The number of outputs to be included in the prediction response
-        max_outputs_size_bytes:
-            The total length of the string content
         """
         self.msg_id = msg_id
-        self.num_outputs = num_outputs
-        self.expand_buffer_if_necessary(
-            total_string_length * MAXIMUM_UTF_8_CHAR_LENGTH_BYTES)
-        self.memview = memoryview(PredictionResponse.output_buffer)
-        struct.pack_into("<I", PredictionResponse.output_buffer, 0,
-                         num_outputs)
-        self.string_content_end_position = BYTES_PER_INT + (
-            BYTES_PER_INT * num_outputs)
-        self.current_output_sizes_position = BYTES_PER_INT
+        self.outputs = []
+        self.num_outputs = 0
 
     def add_output(self, output):
         """
@@ -413,27 +406,74 @@ class PredictionResponse():
         output : string
         """
         output = unicode(output, "utf-8").encode("utf-8")
-        output_len = len(output)
-        struct.pack_into("<I", PredictionResponse.output_buffer,
-                         self.current_output_sizes_position, output_len)
-        self.current_output_sizes_position += BYTES_PER_INT
-        self.memview[self.string_content_end_position:
-                     self.string_content_end_position + output_len] = output
-        self.string_content_end_position += output_len
+        self.outputs.append(output)
+        self.num_outputs += 1
 
     def send(self, socket, event_history):
+        """
+        Sends the encapsulated response data via
+        the specified socket
+
+        Parameters
+        ----------
+        socket : zmq.Socket
+        event_history : EventHistory
+            The RPC event history that should be
+            updated as a result of this operation
+        """
+        assert self.num_outputs > 0
+        output_header, header_length_bytes = self._create_output_header()
         socket.send("", flags=zmq.SNDMORE)
         socket.send(
             struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT),
             flags=zmq.SNDMORE)
         socket.send(self.msg_id, flags=zmq.SNDMORE)
-        socket.send(PredictionResponse.output_buffer[
-            0:self.string_content_end_position])
+        socket.send(struct.pack("<Q", header_length_bytes), flags=zmq.SNDMORE)
+        socket.send(output_header, flags=zmq.SNDMORE)
+        for idx in range(self.num_outputs):
+            if idx == self.num_outputs - 1:
+                # Don't use the `SNDMORE` flag if
+                # this is the last output being sent
+                socket.send(self.outputs[idx])
+            else:
+                socket.send(self.outputs[idx], flags=zmq.SNDMORE)
+
         event_history.insert(EVENT_HISTORY_SENT_CONTAINER_CONTENT)
 
-    def expand_buffer_if_necessary(self, size):
-        if len(PredictionResponse.output_buffer) < size:
-            PredictionResponse.output_buffer = bytearray(size * 2)
+    def _expand_buffer_if_necessary(self, size):
+        """
+        If necessary, expands the reusable output
+        header buffer to accomodate content of the
+        specified size
+
+        size : int
+            The size, in bytes, that the buffer must be
+            able to store
+        """
+        if len(PredictionResponse.header_buffer) < size:
+            PredictionResponse.header_buffer = bytearray(size * 2)
+
+    def _create_output_header(self):
+        """
+        Returns
+        ----------
+        (bytearray, int)
+            A tuple with the output header as the first
+            element and the header length as the second
+            element
+        """
+        header_length = BYTES_PER_LONG * (len(self.outputs) + 1)
+        self._expand_buffer_if_necessary(header_length)
+        header_idx = 0
+        struct.pack_into("<Q", PredictionResponse.header_buffer, header_idx,
+                         self.num_outputs)
+        header_idx += BYTES_PER_LONG
+        for output in self.outputs:
+            struct.pack_into("<Q", PredictionResponse.header_buffer,
+                             header_idx, len(output))
+            header_idx += BYTES_PER_LONG
+
+        return PredictionResponse.header_buffer[:header_length], header_length
 
 
 class FeedbackRequest():

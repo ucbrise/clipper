@@ -2,7 +2,6 @@ package ai.clipper.examples.container;
 
 import ai.clipper.container.data.DataType;
 import ai.clipper.container.data.DataVector;
-import ai.clipper.container.data.FloatVector;
 import ai.clipper.container.ClipperModel;
 import ai.clipper.container.data.SerializableString;
 
