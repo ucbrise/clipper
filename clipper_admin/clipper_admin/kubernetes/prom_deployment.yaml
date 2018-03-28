@@ -1,0 +1,37 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    ai.clipper.container.label: ""
+    ai.clipper.name: metrics
+  name: metrics
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        ai.clipper.container.label: ""
+        ai.clipper.name: metrics
+    spec:
+      containers:
+      - image: prom/prometheus #The version will be appended in kubernetes_metric_utils
+        args: 
+        - "--config.file=/etc/prometheus/prometheus.yml"
+        - "--storage.tsdb.path=/prometheus"
+        - "--web.console.libraries=/etc/prometheus/console_libraries"
+        - "--web.console.templates=/etc/prometheus/consoles"
+        - "--web.enable-lifecycle"
+        name: metrics
+        ports:
+        - containerPort: 1390
+        volumeMounts:
+        - name: config-volume #This name needs to match the one under "volumes"
+          mountPath: /etc/prometheus
+      volumes:
+        - name: config-volume
+          configMap:
+            name: prometheus-config #This name needs to match the configmap created in the same namespace
+            items:
+            - key: prom_config.yml #The name of the "data" field inside configmap
+              path: prometheus.yml #Write the a file called prometheus.yml inside mountPath
+      restartPolicy: Always
