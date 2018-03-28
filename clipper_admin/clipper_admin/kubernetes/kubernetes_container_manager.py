@@ -212,18 +212,12 @@ class KubernetesContainerManager(ContainerManager):
                                 CLIPPER_MODEL_CONTAINER_LABEL:
                                 create_model_container_label(name, version),
                                 CLIPPER_DOCKER_LABEL:
-<<<<<<< HEAD
                                 "",
-                                "test":
-                                "readiness",
-=======
-                                ""
                             },
                             'annotations': {
                                 "prometheus.io/scrape": "true",
                                 "prometheus.io/port": "1390",
                                 "test": "readiness",
->>>>>>> 660e9913ddeed792d6cb2d4a8debea98c9c8942b
                             }
                         },
                         'spec': {
