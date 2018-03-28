@@ -42,6 +42,8 @@ python $DIR/construct_kube_config.py $KUBECONFIG
 
 # Test K8s cluster access
 kubectl get nodes
+# Set kubectl proxy for k8s tests later
+kubectl proxy --port 8080
 
 $DIR/check_format.sh
 $DIR/run_unittests.sh
