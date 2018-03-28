@@ -71,6 +71,8 @@ class KubernetesContainerManager(ContainerManager):
         if kubernetes_proxy_addr is not None:
             self.kubernetes_proxy_addr = kubernetes_proxy_addr
             self.use_k8s_proxy = True
+        else:
+            self.use_k8s_proxy = False
 
         self.redis_ip = redis_ip
         self.redis_port = redis_port
