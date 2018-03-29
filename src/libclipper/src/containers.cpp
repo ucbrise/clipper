@@ -38,7 +38,7 @@ ModelContainer::ModelContainer(VersionedModelId model, int container_id,
       max_latency_(0),
       explore_dist_mu_(.1),
       explore_dist_std_(.05),
-      estimate_decay_(.8),
+      budget_decay_(.9),
       exploration_distribution_(std::normal_distribution<double>(
           explore_dist_mu_, explore_dist_std_)),
       exploration_engine_(std::default_random_engine(
@@ -112,15 +112,18 @@ void ModelContainer::set_batch_size(int batch_size) {
 }
 
 size_t ModelContainer::get_batch_size(Deadline deadline) {
-  long long budget = std::chrono::duration_cast<std::chrono::microseconds>(
-                         deadline - std::chrono::system_clock::now())
-                         .count();
+  double budget =
+      static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(
+                              deadline - std::chrono::system_clock::now())
+                              .count());
+  budget = budget * budget_decay_;
+
   if (batch_size_ != DEFAULT_BATCH_SIZE) {
     return batch_size_;
   }
 
   size_t curr_batch_size;
-  if (budget > max_latency_) {
+  if (budget > static_cast<double>(max_latency_)) {
     curr_batch_size = explore();
   } else {
     curr_batch_size = estimate(budget);
@@ -204,7 +207,7 @@ size_t ModelContainer::explore() {
   }
 }
 
-size_t ModelContainer::estimate(long long budget) {
+size_t ModelContainer::estimate(double budget) {
   std::lock_guard<std::mutex> lock(estimator_mtx_);
   EstimatorLatency estimator_budget;
   estimator_budget(0) =

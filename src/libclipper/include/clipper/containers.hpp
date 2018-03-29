@@ -74,7 +74,7 @@ class ModelContainer {
   // for adaptive batching
   double explore_dist_mu_;
   double explore_dist_std_;
-  double estimate_decay_;
+  double budget_decay_;
   std::normal_distribution<double> exploration_distribution_;
   std::default_random_engine exploration_engine_;
 
@@ -85,7 +85,7 @@ class ModelContainer {
 
   void fit_estimator();
   size_t explore();
-  size_t estimate(long long budget);
+  size_t estimate(double budget);
 };
 
 /// This is a lightweight wrapper around the map of active containers
