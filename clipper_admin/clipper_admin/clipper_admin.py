@@ -97,8 +97,9 @@ class ClipperConnection(object):
             The size of Clipper's prediction cache in bytes. Default cache size is 32 MiB.
         config_file : str, optional
             Path to a configuration file. If the path is present, Clipper will deploy models,
-            register applications, and create links as specified by the file. The file 
-            'sample_config.yaml' is an example of a configuration file.
+            register applications, and create links as specified by the file. This file is for configuring
+            the state of the entire Clipper Cluster. The file 'sample_config.yaml', found in the
+            'clipper/examples/tutorial' directory, is an example of a configuration file.
         Raises
         ------
         :py:exc:`clipper.ClipperException`
@@ -121,76 +122,8 @@ class ClipperConnection(object):
             logger.warning("Error starting Clipper: {}".format(e.msg))
             raise e
 
-        def parse_configuration(config_path):
-            """ if a configuration file exists,
-            parse it and accordingly deploy models and applications
-            Parameters
-            ----------
-            config_path : str
-                Path to the configuration file.
-            """
-            if (config_path):
-                with open(config_path, "r") as stream:
-                    config = yaml.load(stream)
-                    if ("applications" in config):
-                        for application in config["applications"]:
-                            try:
-                                input_type = config["applications"][
-                                    application]["input_type"]
-                                slo = config["applications"][application][
-                                    "slo"]
-                                default_value = config["applications"][
-                                    application]["default_value"]
-                                self.register_application(
-                                    application, input_type, default_value,
-                                    slo)
-                            except ClipperException as e:
-                                print("required parameters not found")
-                                raise e
-                            except KeyError, f:
-                                print("required parameters not found")
-                                raise ClipperException(KeyError)
-                    if ("models" in config):
-                        for model in config["models"]:
-                            try:
-                                config_image = config["models"][model]["image"]
-                                input_type = config["models"][model][
-                                    "input_type"]
-                                version = config["models"][model]["version"]
-                                labels = None
-                                if ("labels" in config["models"][model]):
-                                    labels = config["models"][model]["labels"]
-                                num_replicas = 1
-                                if ("num_replicas" in config["models"][model]):
-                                    num_replicas = config["models"][model][
-                                        "num_replicas"]
-                                batch_size = -1
-                                if ("batch_size" in config["models"][model]):
-                                    batch_size = config["models"][model][
-                                        "batch_size"]
-                                self.deploy_model(model, version, input_type,
-                                                  config_image, labels,
-                                                  num_replicas, batch_size)
-                            except ClipperException as e:
-                                print("required parameters not found")
-                                raise e
-                            except KeyError, f:
-                                print("required parameters not found")
-                                raise ClipperException(KeyError)
-                    if ("links" in config):
-                        for link in config["links"]:
-                            try:
-                                self.link_model_to_app(
-                                    config["links"][link]["app_name"],
-                                    config["links"][link]["model_name"])
-                            except ClipperException as e:
-                                print("required parameters not found")
-                                raise e
-                            except KeyError, f:
-                                print("required parameters not found")
-                                raise ClipperException(KeyError)
-
-        parse_configuration(config_file)
+        if(config_file):
+            _parse_configuration(config_file)
 
     def connect(self):
         """Connect to a running Clipper cluster."""
@@ -199,6 +132,66 @@ class ClipperConnection(object):
         self.connected = True
         logger.info("Successfully connected to Clipper cluster at {}".format(
             self.cm.get_query_addr()))
+
+    def _parse_configuration(config_path):
+        """ This functions parses a configuration file
+        and accordingly deploy models, applications, and links.
+        Parameters
+        ----------
+        config_path : str
+            Path to the configuration file.
+        """
+        with open(config_path, "r") as stream:
+            config = yaml.load(stream)
+            if ("applications" in config):
+                for application in config["applications"]:
+                    try:
+                        input_type = config["applications"][application]["input_type"]
+                        slo = config["applications"][application]["slo"]
+                        default_value = config["applications"][application]["default_value"]
+                        self.register_application(application, input_type, default_value, slo)
+                    except ClipperException as e:
+                        logger.error("required parameters not found")
+                        raise e
+                    except KeyError as f:
+                        logger.error("required parameters not found")
+                        raise ClipperException(KeyError)
+            if ("models" in config):
+                for model in config["models"]:
+                    try:
+                        config_image = config["models"][model]["image"]
+                        input_type = config["models"][model]["input_type"]
+                        version = config["models"][model]["version"]
+                        labels = None
+                        if ("labels" in config["models"][model]):
+                            labels = config["models"][model]["labels"]
+                        num_replicas = 1
+                        if ("num_replicas" in config["models"][model]):
+                            num_replicas = config["models"][model]["num_replicas"]
+                        batch_size = -1
+                        if ("batch_size" in config["models"][model]):
+                            batch_size = config["models"][model]["batch_size"]
+                        self.deploy_model(model, version, input_type,
+                                          config_image, labels,
+                                          num_replicas, batch_size)
+                    except ClipperException as e:
+                        logger.error("required parameters not found")
+                        raise e
+                    except KeyError as f:
+                        logger.error("required parameters not found")
+                        raise ClipperException(KeyError)
+            if ("links" in config):
+                for link in config["links"]:
+                    try:
+                        self.link_model_to_app(
+                            config["links"][link]["app_name"],
+                            config["links"][link]["model_name"])
+                    except ClipperException as e:
+                        logger.error("required parameters not found")
+                        raise e
+                    except KeyError as f:
+                        logger.error("required parameters not found")
+                        raise ClipperException(KeyError)
 
     def register_application(self, name, input_type, default_output,
                              slo_micros):
