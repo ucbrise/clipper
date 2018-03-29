@@ -1,0 +1,42 @@
+models:
+  model1:
+    input_type: "integers"
+    version: "1"
+    image: "test-model:1"
+  model2:
+    input_type: "floats"
+    version: "2"
+    image: "train-model:2"
+    labels: ["second model configured", "working successfully"]
+    num_replicas: 2
+  model3:
+    input_type: "doubles"
+    version: "4"
+    image: "test-model:2"
+    num_replicas: 3
+    batch_size: 2
+
+applications:
+  application1:
+    obj_type: "application"
+    input_type: "doubles"
+    slo: 10000
+    default_value: "not received"
+  application2:
+    obj_type: "application"
+    input_type: "bytes"
+    slo: 5000
+    default_value: "undetected"
+  application3:
+    obj_type: "application"
+    input_type: "integers"
+    slo: 2000
+    default_value: "message not received"
+
+links:
+  link1:
+    app_name: "application1"
+    model_name: "model3"
+  link2:
+    app_name: "application3"
+    model_name: "model1"
