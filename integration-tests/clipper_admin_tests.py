@@ -665,7 +665,7 @@ if __name__ == '__main__':
 
     if args.run_config or args.run_all:
         for test in CONFIG_TEST_ORDERING:
-            suite.addTest(ClipperManagerTestCaseLong(test))
+            suite.addTest(ClipperManagerTestCaseConfigFile(test))
 
     result = unittest.TextTestRunner(verbosity=2).run(suite)
     sys.exit(not result.wasSuccessful())
