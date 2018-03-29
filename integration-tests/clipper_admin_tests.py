@@ -396,7 +396,64 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         batch_pred_outputs = [batch['output'] for batch in batch_predictions]
         self.assertEqual(batch_pred_outputs,
                          test_batch_predict_result)  # tests batch input
+      
+      def test_version_query(self):
+        def predict_func1(xs):
+            return [sum(x) for x in xs]
 
+        def predict_func2(xs):
+            return [sum(x*x) for x in xs]
+        
+        self.clipper_conn.register_application(
+            name="hello-world",
+            input_type="doubles",
+            default_output="1.0",
+            slo_micros=100000)
+
+        deploy_python_closure(
+            self.clipper_conn,
+            name="m",
+            version=1,
+            input_type="doubles",
+            func=predict_func1)
+        self.clipper_conn.link_model_to_app(
+            app_name="hello-world", model_name="m")
+
+        time.sleep(60)
+
+        deploy_python_closure(
+            self.clipper_conn,
+            name="m",
+            version=2,
+            input_type="doubles",
+            func=predict_func2)
+        self.clipper_conn.link_model_to_app(
+            app_name="hello-world", model_name="m")
+
+        time.sleep(60)
+        
+        addr = self.clipper_conn.get_query_addr()
+        url = "http://{addr}/hello-world/predict".format(
+            addr=addr, app='hello-world')
+
+        headers = {"Content-type": "application/json"}
+        test_input = [1.0, 2.0, 3.0]
+        pred1 = requests.post(
+            url, headers=headers, data=json.dumps({
+                "input": test_input
+                "version": 1
+            })).json()
+        
+        self.assertEqual([pred1['output']],
+                         predict_func1(test_input))
+        
+        pred2 = requests.post(
+            url, headers=headers, data=json.dumps({
+                "input": test_input
+            })).json()
+        
+        self.assertEqual([pred2['output']],
+                         predict_func2(test_input))
 
 class ClipperManagerTestCaseLong(unittest.TestCase):
     @classmethod
