@@ -27,7 +27,8 @@ def create_pytorch_endpoint(clipper_conn,
                             base_image=None,
                             num_replicas=1,
                             onnx_backend="caffe2",
-                            batch_size=-1):
+                            batch_size=-1,
+                            pkgs_to_install=None):
     """This function deploys the prediction function with a PyTorch model.
     It serializes the PyTorch model in Onnx format and creates a container that loads it as a Caffe2 model.
     Parameters
@@ -87,13 +88,16 @@ def create_pytorch_endpoint(clipper_conn,
         batches if `batch_size` queries are not immediately available.
         If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
         replicas of this model.
+    pkgs_to_install : list (of strings), optional
+        A list of the names of packages to install, using pip, in the container.
+        The names must be strings.
     """
 
     clipper_conn.register_application(name, input_type, default_output,
                                       slo_micros)
     deploy_pytorch_model(clipper_conn, name, version, input_type, inputs, func,
                          pytorch_model, base_image, labels, registry,
-                         num_replicas, onnx_backend)
+                         num_replicas, onnx_backend, pkgs_to_install)
 
     clipper_conn.link_model_to_app(name, name)
 
@@ -110,7 +114,8 @@ def deploy_pytorch_model(clipper_conn,
                          registry=None,
                          num_replicas=1,
                          onnx_backend="caffe2",
-                         batch_size=-1):
+                         batch_size=-1,
+                         pkgs_to_install=None):
     """This function deploys the prediction function with a PyTorch model.
     It serializes the PyTorch model in Onnx format and creates a container that loads it as a Caffe2 model.
     Parameters
@@ -155,6 +160,9 @@ def deploy_pytorch_model(clipper_conn,
         batches if `batch_size` queries are not immediately available.
         If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
         replicas of this model.
+    pkgs_to_install : list (of strings), optional
+        A list of the names of packages to install, using pip, in the container.
+        The names must be strings.
     """
     if base_image is None:
         if onnx_backend is "caffe2":
@@ -172,7 +180,7 @@ def deploy_pytorch_model(clipper_conn,
         # Deploy model
         clipper_conn.build_and_deploy_model(
             name, version, input_type, serialization_dir, base_image, labels,
-            registry, num_replicas, batch_size)
+            registry, num_replicas, batch_size, pkgs_to_install)
 
     except Exception as e:
         logger.error(
