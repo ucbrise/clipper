@@ -122,7 +122,7 @@ class ClipperConnection(object):
             logger.warning("Error starting Clipper: {}".format(e.msg))
             raise e
 
-        if(config_file):
+        if (config_file):
             _parse_configuration(config_file)
 
     def connect(self):
@@ -146,10 +146,13 @@ class ClipperConnection(object):
             if ("applications" in config):
                 for application in config["applications"]:
                     try:
-                        input_type = config["applications"][application]["input_type"]
+                        input_type = config["applications"][application][
+                            "input_type"]
                         slo = config["applications"][application]["slo"]
-                        default_value = config["applications"][application]["default_value"]
-                        self.register_application(application, input_type, default_value, slo)
+                        default_value = config["applications"][application][
+                            "default_value"]
+                        self.register_application(application, input_type,
+                                                  default_value, slo)
                     except ClipperException as e:
                         logger.error("required parameters not found")
                         raise e
@@ -167,13 +170,14 @@ class ClipperConnection(object):
                             labels = config["models"][model]["labels"]
                         num_replicas = 1
                         if ("num_replicas" in config["models"][model]):
-                            num_replicas = config["models"][model]["num_replicas"]
+                            num_replicas = config["models"][model][
+                                "num_replicas"]
                         batch_size = -1
                         if ("batch_size" in config["models"][model]):
                             batch_size = config["models"][model]["batch_size"]
                         self.deploy_model(model, version, input_type,
-                                          config_image, labels,
-                                          num_replicas, batch_size)
+                                          config_image, labels, num_replicas,
+                                          batch_size)
                     except ClipperException as e:
                         logger.error("required parameters not found")
                         raise e

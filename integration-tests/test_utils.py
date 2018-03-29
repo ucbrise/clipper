@@ -60,7 +60,9 @@ def find_unbound_port():
                 "randomly generated port %d is bound. Trying again." % port)
 
 
-def create_docker_connection(cleanup=True, start_clipper=True, config_file=None):
+def create_docker_connection(cleanup=True,
+                             start_clipper=True,
+                             config_file=None):
     logging.info("Creating DockerContainerManager")
     cm = DockerContainerManager(
         clipper_query_port=find_unbound_port(),

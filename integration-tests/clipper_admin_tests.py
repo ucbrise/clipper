@@ -38,15 +38,21 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+
 class ClipperManagerTestCaseConfigFile(unittest.TestCase):
-	def testConfigFile(self):
-		self.clipper_conn = create_docker_connection(cleanup=True, start_clipper=True, config_file="../examples/tutorial/sample_config.yaml")
-		self.assertIsNotNone(self.clipper_conn.get_model_info("model1", "1"))
-		registered_applications = self.clipper_conn.get_all_apps()
-		self.assertGreaterEqual(len(registered_applications), 1)
-        self.assertTrue("application1" in registered_applications)
-        result = self.clipper_conn.get_linked_models("application3")
-        self.assertEqual(["model1"], result)
+    def testConfigFile(self):
+        self.clipper_conn = create_docker_connection(
+            cleanup=True,
+            start_clipper=True,
+            config_file="../examples/tutorial/sample_config.yaml")
+        self.assertIsNotNone(self.clipper_conn.get_model_info("model1", "1"))
+        registered_applications = self.clipper_conn.get_all_apps()
+        self.assertGreaterEqual(len(registered_applications), 1)
+
+    self.assertTrue("application1" in registered_applications)
+    result = self.clipper_conn.get_linked_models("application3")
+    self.assertEqual(["model1"], result)
+
 
 class ClipperManagerTestCaseShort(unittest.TestCase):
     @classmethod
