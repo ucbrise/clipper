@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 
 class ClipperManagerTestCaseConfigFile(unittest.TestCase):
-    def testConfigFile(self):
+    def test_config_file(self):
         self.clipper_conn = create_docker_connection(
             cleanup=True,
             start_clipper=True,
@@ -48,10 +48,11 @@ class ClipperManagerTestCaseConfigFile(unittest.TestCase):
         self.assertIsNotNone(self.clipper_conn.get_model_info("model1", "1"))
         registered_applications = self.clipper_conn.get_all_apps()
         self.assertGreaterEqual(len(registered_applications), 1)
-
-    self.assertTrue("application1" in registered_applications)
-    result = self.clipper_conn.get_linked_models("application3")
-    self.assertEqual(["model1"], result)
+        self.assertTrue("application1" in registered_applications)
+        result = self.clipper_conn.get_linked_models("application3")
+        self.assertEqual(["model1"], result)
+        self.clipper_conn = create_docker_connection(
+            cleanup=True, start_clipper=False)
 
 
 class ClipperManagerTestCaseShort(unittest.TestCase):
@@ -613,6 +614,8 @@ LONG_TEST_ORDERING = [
     'test_fixed_batch_size_model_processes_specified_query_batch_size_when_saturated'
 ]
 
+CONFIG_TEST_ORDERING = ['test_config_file']
+
 if __name__ == '__main__':
     description = (
         "Runs clipper manager tests. If no arguments are specified, all tests are "
@@ -631,6 +634,12 @@ if __name__ == '__main__':
         dest="run_long",
         help="Run the long suite of test cases")
     parser.add_argument(
+        "-c",
+        "--config",
+        action="store_true",
+        dest="run_config",
+        help="Run the config suite of test cases")
+    parser.add_argument(
         "-a",
         "--all",
         action="store_true",
@@ -638,10 +647,11 @@ if __name__ == '__main__':
         help="Run all test cases")
     args = parser.parse_args()
 
-    # If neither the short nor the long argument is specified,
+    # If neither the short, config, nor the long argument is specified,
     # we will run all tests
     args.run_all = args.run_all or ((not args.run_short) and
-                                    (not args.run_long))
+                                    (not args.run_long) and
+                                    (not args.run_config))
 
     suite = unittest.TestSuite()
 
@@ -651,6 +661,10 @@ if __name__ == '__main__':
 
     if args.run_long or args.run_all:
         for test in LONG_TEST_ORDERING:
+            suite.addTest(ClipperManagerTestCaseLong(test))
+
+    if args.run_config or args.run_all:
+        for test in CONFIG_TEST_ORDERING:
             suite.addTest(ClipperManagerTestCaseLong(test))
 
     result = unittest.TextTestRunner(verbosity=2).run(suite)
