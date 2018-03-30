@@ -399,10 +399,10 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
       
       def test_version_query(self):
         def predict_func1(xs):
-            return [sum(x) for x in xs]
+            return 1
 
         def predict_func2(xs):
-            return [sum(x*x) for x in xs]
+            return 2
         
         self.clipper_conn.register_application(
             name="hello-world",
@@ -444,16 +444,14 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
                 "version": 1
             })).json()
         
-        self.assertEqual([pred1['output']],
-                         predict_func1(test_input))
+        self.assertEqual([pred1['output']], 1)
         
         pred2 = requests.post(
             url, headers=headers, data=json.dumps({
                 "input": test_input
             })).json()
         
-        self.assertEqual([pred2['output']],
-                         predict_func2(test_input))
+        self.assertEqual([pred2['output']], 2)
 
 class ClipperManagerTestCaseLong(unittest.TestCase):
     @classmethod

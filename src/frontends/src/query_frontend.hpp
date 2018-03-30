@@ -297,17 +297,6 @@ class RequestHandler {
     return linked_models_for_apps_[name];
   }
 
-
-  /*
-   * JSON format for prediction query request:
-   * {
-   *  "input" := [double] | [int] | [string] | [byte] | [float]
-   *  "input_batch" := [[double] | [int] | [byte] | [float] | string]
-   *  "version" := string (optional)
-   * }
-   */
-
-  void add_application(std::string name, InputType input_type,
                        std::string policy, std::string default_output,
                        long latency_slo_micros) {
     // TODO: QueryProcessor should handle this. We need to decide how the
@@ -325,6 +314,15 @@ class RequestHandler {
     }
 
     AppMetrics app_metrics(name);
+    
+    /*
+   * JSON format for prediction query request:
+   * {
+   *  "input" := [double] | [int] | [string] | [byte] | [float]
+   *  "input_batch" := [[double] | [int] | [byte] | [float] | string]
+   *  "version" := string (optional)
+   * }
+   */
 
     auto predict_fn = [this, name, input_type, policy, latency_slo_micros,
                        app_metrics](
@@ -333,7 +331,7 @@ class RequestHandler {
       try {
         rapidjson::Document d;
         clipper::json::parse_json(request->content.string(), d);
-        std::vector<VersionedModelId> versioned_models;
+        std::vector<VersionedModelId> versioned_models = null;
         std::vector<std::string> models;
         if (d::version) {
           models = get_model_versions(redis_connection, name);
@@ -342,7 +340,7 @@ class RequestHandler {
               versioned_models = VersionedModelId(name, m);
               break;
             }
-            if (versioned_models == NULL) {
+            if (versioned_models == null) {
               throw new version_id_error("Requested model doesn't exist."); 
             }
           }
