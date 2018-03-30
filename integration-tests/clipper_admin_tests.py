@@ -72,7 +72,6 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         registered_model_info = self.clipper_conn.get_model_info(
             model_name, "v1")
         self.assertIsNotNone(registered_model_info)
-
         self.clipper_conn.register_model(model_name, "v2", input_type)
         registered_model_info = self.clipper_conn.get_model_info(
             model_name, "v2")
