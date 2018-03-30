@@ -335,7 +335,7 @@ class RequestHandler {
         std::vector<VersionedModelId> versioned_models = {};
         std::vector<std::string> models;
         std::string version = clipper::json::get_string(d, "version");
-        if (version != NULL) {
+        if (!version.empty()) {
           models = clipper::redis::get_model_versions(redis_connection_, name);
           for (auto m : models) {
             if (m.compare(version) == 0) {
