@@ -441,7 +441,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         pred1 = requests.post(
             url, headers=headers, data=json.dumps({
                 "input": test_input
-                "version": 1
+                "version": "1"
             })).json()
         
         self.assertEqual([pred1['output']], 1)

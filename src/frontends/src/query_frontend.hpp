@@ -332,17 +332,18 @@ class RequestHandler {
       try {
         rapidjson::Document d;
         clipper::json::parse_json(request->content.string(), d);
-        std::vector<VersionedModelId> versioned_models = null;
+        std::vector<VersionedModelId> versioned_models = NULL;
         std::vector<std::string> models;
-        if (d::version) {
-          models = get_model_versions(redis_connection, name);
+        std::string version = clipper::json::get_string(d, "version")
+        if (version != NULL) {
+          models = clipper::redis::get_model_versions(redis_connection_, name);
           for (auto m : models) {
-            if (m == d::version) {
-              versioned_models = VersionedModelId(name, m);
+            if (m.compare(version) == 0) {
+              versioned_models = clipper::VersionedModelId::VersionedModelId(name, m);
               break;
             }
-            if (versioned_models == null) {
-              throw new version_id_error("Requested model doesn't exist."); 
+            if (versioned_models == NULL) {
+              throw version_id_error("Requested model does not exist."); 
             }
           }
         } else {
@@ -424,7 +425,7 @@ class RequestHandler {
         respond_http(json_error_response, "400 Bad Request", response);
       } catch (const version_id_error& e) {
         std::string error_msg = e.what();
-        respond_http(error_msg, "400 Bad Request", "Please give a valid version id.")
+        respond_http(error_msg, "400 Bad Request", response);
       }
     };
     std::string predict_endpoint = "^/" + name + "/predict$";
