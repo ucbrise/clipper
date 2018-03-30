@@ -297,6 +297,7 @@ class RequestHandler {
     return linked_models_for_apps_[name];
   }
 
+  void add_application(std::string name, InputType input_type,
                        std::string policy, std::string default_output,
                        long latency_slo_micros) {
     // TODO: QueryProcessor should handle this. We need to decide how the
