@@ -2,13 +2,10 @@ from __future__ import print_function, with_statement, absolute_import
 import shutil
 import torch
 import logging
-import re
 import os
-import json
 
 from ..version import __version__
-from ..clipper_admin import ClipperException
-from .deployer_utils import save_python_function, serialize_object
+from .deployer_utils import save_python_function
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +27,9 @@ def create_pytorch_endpoint(clipper_conn,
                             batch_size=-1,
                             pkgs_to_install=None):
     """This function deploys the prediction function with a PyTorch model.
-    It serializes the PyTorch model in Onnx format and creates a container that loads it as a Caffe2 model.
+    It serializes the PyTorch model in Onnx format and creates a container that loads it as a
+    Caffe2 model.
+
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
@@ -84,10 +83,10 @@ def create_pytorch_endpoint(clipper_conn,
         The provided onnx backend.Caffe2 is the only currently supported ONNX backend.
     batch_size : int, optional
         The user-defined query batch size for the model. Replicas of the model will attempt
-        to process at most `batch_size` queries simultaneously. They may process smaller 
+        to process at most `batch_size` queries simultaneously. They may process smaller
         batches if `batch_size` queries are not immediately available.
-        If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
-        replicas of this model.
+        If the default value of -1 is used, Clipper will adaptively calculate the batch size for
+        individual replicas of this model.
     pkgs_to_install : list (of strings), optional
         A list of the names of packages to install, using pip, in the container.
         The names must be strings.
@@ -97,7 +96,7 @@ def create_pytorch_endpoint(clipper_conn,
                                       slo_micros)
     deploy_pytorch_model(clipper_conn, name, version, input_type, inputs, func,
                          pytorch_model, base_image, labels, registry,
-                         num_replicas, onnx_backend, pkgs_to_install)
+                         num_replicas, onnx_backend, batch_size, pkgs_to_install)
 
     clipper_conn.link_model_to_app(name, name)
 
@@ -117,7 +116,8 @@ def deploy_pytorch_model(clipper_conn,
                          batch_size=-1,
                          pkgs_to_install=None):
     """This function deploys the prediction function with a PyTorch model.
-    It serializes the PyTorch model in Onnx format and creates a container that loads it as a Caffe2 model.
+    It serializes the PyTorch model in Onnx format and creates a container that loads it as a
+    Caffe2 model.
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
@@ -156,10 +156,10 @@ def deploy_pytorch_model(clipper_conn,
         The provided onnx backend.Caffe2 is the only currently supported ONNX backend.
     batch_size : int, optional
         The user-defined query batch size for the model. Replicas of the model will attempt
-        to process at most `batch_size` queries simultaneously. They may process smaller 
+        to process at most `batch_size` queries simultaneously. They may process smaller
         batches if `batch_size` queries are not immediately available.
-        If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
-        replicas of this model.
+        If the default value of -1 is used, Clipper will adaptively calculate the batch size for
+        individual replicas of this model.
     pkgs_to_install : list (of strings), optional
         A list of the names of packages to install, using pip, in the container.
         The names must be strings.
@@ -175,8 +175,9 @@ def deploy_pytorch_model(clipper_conn,
     serialization_dir = save_python_function(name, func)
 
     try:
-        torch_out = torch.onnx._export(
-            pytorch_model, inputs, "model.onnx", export_params=True)
+        torch.onnx._export(
+            pytorch_model, inputs, os.path.join(serialization_dir, "model.onnx"),
+            export_params=True)
         # Deploy model
         clipper_conn.build_and_deploy_model(
             name, version, input_type, serialization_dir, base_image, labels,
