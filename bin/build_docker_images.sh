@@ -249,8 +249,8 @@ build_images () {
     # # Build containers
     # create_image spark-scala-container SparkScalaContainerDockerfile $public
     # create_image r-container-base RContainerDockerfile $public
-
-    # First build Python base image
+    #
+    # # First build Python base image
     # create_image py-rpc RPCDockerfile $public
     # create_image sum-container SumDockerfile  $private
     # create_image noop-container NoopDockerfile $public

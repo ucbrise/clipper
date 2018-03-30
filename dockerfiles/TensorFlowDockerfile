@@ -5,8 +5,8 @@ COPY clipper_admin/clipper_admin/python_container_conda_deps.txt /lib/
 
 RUN conda config --set ssl_verify no \
 	&& conda install -c anaconda cloudpickle=0.5.2 \
-	&& conda install -y --file /lib/python_container_conda_deps.txt \
-	&& conda install tensorflow
+	&& conda install -y --file /lib/python_container_conda_deps.txt
+RUN conda install tensorflow
 
 COPY containers/python/tf_container.py containers/python/tf_container_entry.sh /container/
 

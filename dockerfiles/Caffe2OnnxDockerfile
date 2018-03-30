@@ -6,10 +6,8 @@ COPY clipper_admin/clipper_admin/python_container_conda_deps.txt /lib/
 RUN conda config --set ssl_verify no \
       && conda install -c anaconda cloudpickle=0.5.2
 RUN conda install -y --file /lib/python_container_conda_deps.txt
-      # && conda install -c conda-forge onnx \
 RUN conda install -c caffe2 caffe2
 RUN conda install -c ezyang onnx
-      # && pip install onnx-caffe2 \
 RUN conda install -c pytorch pytorch
 RUN conda install -c pytorch torchvision
 

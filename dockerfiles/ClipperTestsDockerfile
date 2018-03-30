@@ -15,11 +15,13 @@ RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh \
     && /bin/bash /tmp/anaconda.sh -b -p /opt/conda \
     && rm /tmp/anaconda.sh
 ENV PATH "/opt/conda/bin:$PATH"
-RUN conda config --set ssl_verify no \
-    && conda install -c anaconda cloudpickle=0.5.2 \
-    && conda install -y libgcc pyzmq libsodium pyspark \
-    && conda install -c conda-forge onnx \
-    && conda install pytorch torchvision -c pytorch
+
+RUN conda update -n base conda
+RUN conda config --set ssl_verify no
+RUN conda install -c anaconda cloudpickle=0.5.2
+RUN conda install -y libgcc
+RUN conda install -y pyzmq
+RUN conda install -y libsodium
  
 RUN pip install requests subprocess32 scikit-learn numpy pyyaml docker kubernetes tensorflow mxnet
 

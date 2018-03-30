@@ -7,9 +7,17 @@ MAINTAINER Dan Crankshaw <dscrankshaw@gmail.com>
 
 RUN mkdir -p /model \
       && apt-get update \
-      && apt-get install -y libzmq3 libzmq3-dev \
-      && conda install -y pyzmq \
-      && pip install prometheus_client pyyaml
+      && apt-get install -y libzmq5 libzmq5-dev redis-server\
+      && conda update -n base conda \
+      && conda config --set ssl_verify no \
+      && conda install -c anaconda cloudpickle=0.5.2 \
+      && conda install -y libgcc pyzmq libsodium \
+      && pip install prometheus_client pyyaml jsonschema redis psutil flask
+
+COPY clipper_admin /clipper_src/
+
+RUN cd /clipper_src \
+    && pip install .
 
 WORKDIR /container
 
