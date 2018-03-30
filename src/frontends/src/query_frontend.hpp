@@ -332,7 +332,7 @@ class RequestHandler {
       try {
         rapidjson::Document d;
         clipper::json::parse_json(request->content.string(), d);
-        std::vector<VersionedModelId> versioned_models;
+        std::vector<VersionedModelId> versioned_models = {};
         std::vector<std::string> models;
         std::string version = clipper::json::get_string(d, "version");
         if (version != NULL) {
@@ -342,7 +342,7 @@ class RequestHandler {
               versioned_models = clipper::VersionedModelId::VersionedModelId(name, m);
               break;
             }
-            if (versioned_models == NULL) {
+            if (versioned_models.empty()) {
               throw version_id_error("Requested model does not exist."); 
             }
           }
