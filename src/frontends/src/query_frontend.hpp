@@ -332,9 +332,9 @@ class RequestHandler {
       try {
         rapidjson::Document d;
         clipper::json::parse_json(request->content.string(), d);
-        std::vector<VersionedModelId> versioned_models = NULL;
+        std::vector<VersionedModelId> versioned_models;
         std::vector<std::string> models;
-        std::string version = clipper::json::get_string(d, "version")
+        std::string version = clipper::json::get_string(d, "version");
         if (version != NULL) {
           models = clipper::redis::get_model_versions(redis_connection_, name);
           for (auto m : models) {
