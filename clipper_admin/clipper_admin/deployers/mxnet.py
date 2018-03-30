@@ -1,14 +1,11 @@
 from __future__ import print_function, with_statement, absolute_import
 import shutil
-import mxnet as mx
 import logging
-import re
 import os
 import json
 
 from ..version import __version__
-from ..clipper_admin import ClipperException
-from .deployer_utils import save_python_function, serialize_object
+from .deployer_utils import save_python_function
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +26,7 @@ def create_endpoint(
         registry=None,
         base_image="clipper/mxnet-container:{}".format(__version__),
         num_replicas=1,
+        batch_size=-1,
         pkgs_to_install=None):
     """Registers an app and deploys the provided predict function with MXNet model as
     a Clipper model.
@@ -85,6 +83,12 @@ def create_endpoint(
         The number of replicas of the model to create. The number of replicas
         for a model can be changed at any time with
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
+    batch_size : int, optional
+        The user-defined query batch size for the model. Replicas of the model will attempt
+        to process at most `batch_size` queries simultaneously. They may process smaller
+        batches if `batch_size` queries are not immediately available.
+        If the default value of -1 is used, Clipper will adaptively calculate the batch size for
+        individual replicas of this model.
     pkgs_to_install : list (of strings), optional
         A list of the names of packages to install, using pip, in the container.
         The names must be strings.
@@ -104,7 +108,7 @@ def create_endpoint(
                                       slo_micros)
     deploy_mxnet_model(clipper_conn, name, version, input_type, func,
                        mxnet_model, mxnet_data_shapes, base_image, labels,
-                       registry, num_replicas, pkgs_to_install)
+                       registry, num_replicas, batch_size, pkgs_to_install)
 
     clipper_conn.link_model_to_app(name, name)
 
@@ -121,6 +125,7 @@ def deploy_mxnet_model(
         labels=None,
         registry=None,
         num_replicas=1,
+        batch_size=-1,
         pkgs_to_install=None):
     """Deploy a Python function with a MXNet model.
     Parameters
@@ -161,6 +166,12 @@ def deploy_mxnet_model(
         The number of replicas of the model to create. The number of replicas
         for a model can be changed at any time with
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
+    batch_size : int, optional
+        The user-defined query batch size for the model. Replicas of the model will attempt
+        to process at most `batch_size` queries simultaneously. They may process smaller
+        batches if `batch_size` queries are not immediately available.
+        If the default value of -1 is used, Clipper will adaptively calculate the batch size for
+        individual replicas of this model.
     pkgs_to_install : list (of strings), optional
         A list of the names of packages to install, using pip, in the container.
         The names must be strings.
@@ -232,7 +243,7 @@ def deploy_mxnet_model(
         # Deploy model
         clipper_conn.build_and_deploy_model(
             name, version, input_type, serialization_dir, base_image, labels,
-            registry, num_replicas, pkgs_to_install)
+            registry, num_replicas, batch_size, pkgs_to_install)
 
     except Exception as e:
         logger.error("Error saving MXNet model: %s" % e)

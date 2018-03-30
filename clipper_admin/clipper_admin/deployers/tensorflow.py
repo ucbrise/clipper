@@ -2,13 +2,10 @@ from __future__ import print_function, with_statement, absolute_import
 import shutil
 import tensorflow as tf
 import logging
-import re
 import os
-import json
 import glob
 
 from ..version import __version__
-from ..clipper_admin import ClipperException
 from .deployer_utils import save_python_function
 from tensorflow import Session
 
@@ -80,10 +77,10 @@ def create_endpoint(clipper_conn,
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
     batch_size : int, optional
         The user-defined query batch size for the model. Replicas of the model will attempt
-        to process at most `batch_size` queries simultaneously. They may process smaller 
+        to process at most `batch_size` queries simultaneously. They may process smaller
         batches if `batch_size` queries are not immediately available.
-        If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
-        replicas of this model.
+        If the default value of -1 is used, Clipper will adaptively calculate the batch size for
+        individual replicas of this model.
     pkgs_to_install : list (of strings), optional
         A list of the names of packages to install, using pip, in the container.
         The names must be strings.
@@ -147,10 +144,10 @@ def deploy_tensorflow_model(
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
     batch_size : int, optional
         The user-defined query batch size for the model. Replicas of the model will attempt
-        to process at most `batch_size` queries simultaneously. They may process smaller 
+        to process at most `batch_size` queries simultaneously. They may process smaller
         batches if `batch_size` queries are not immediately available.
-        If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
-        replicas of this model.
+        If the default value of -1 is used, Clipper will adaptively calculate the batch size for
+        individual replicas of this model.
     pkgs_to_install : list (of strings), optional
         A list of the names of packages to install, using pip, in the container.
         The names must be strings.
@@ -196,13 +193,16 @@ def deploy_tensorflow_model(
         # Check if its a frozen Graph or a saved tensorflow Model
 
         # A typical Tensorflow model contains 4 files:
-        #  model-ckpt.meta: This contains the complete graph. [This contains a serialized MetaGraphDef protocol buffer.
-        #  model-ckpt.data-0000-of-00001: This contains all the values of variables(weights, biases, placeholders,gradients, hyper-parameters etc).
+        #  model-ckpt.meta: This contains the complete graph.
+        #                   [This contains a serialized MetaGraphDef protocol buffer.
+        #  model-ckpt.data-0000-of-00001: This contains all the values of variables(weights, biases,
+        #                                 placeholders,gradients, hyper-parameters etc).
         #  model-ckpt.index: metadata.
         #  checkpoint: All checkpoint information
 
         # Frozen Graph
-        # Single encapsulated file(.pb extension) without un-necessary meta-data, gradients and un-necessary training variables
+        # Single encapsulated file(.pb extension) without un-necessary meta-data, gradients and
+        # un-necessary training variables
 
         if os.path.isdir(tf_sess_or_saved_model_path):
             # Directory - Check for Frozen Graph or a Saved Tensorflow Model
@@ -238,8 +238,8 @@ def deploy_tensorflow_model(
         else:
             # File provided ...check if file exists and a frozen model
             # Check if a frozen model exists or else error out
-            if (os.path.isfile(tf_sess_or_saved_model_path)
-                ) and tf_sess_or_saved_model_path.lower().endswith(('.pb')):
+            if (os.path.isfile(tf_sess_or_saved_model_path) and
+                    tf_sess_or_saved_model_path.lower().endswith(('.pb'))):
                 os.makedirs(os.path.join(serialization_dir, "tfmodel"))
                 try:
                     shutil.copyfile(
