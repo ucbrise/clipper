@@ -220,6 +220,7 @@ if __name__ == "__main__":
             test_model(clipper_conn, app_and_model_name, 1)
 
         except BenchmarkException as e:
+            sys.exit(1)
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
             clipper_conn = create_docker_connection(
