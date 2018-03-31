@@ -260,7 +260,8 @@ class ClipperConnection(object):
                                labels=None,
                                container_registry=None,
                                num_replicas=1,
-                               batch_size=-1):
+                               batch_size=-1,
+                               pkgs_to_install=None):
         """Build a new model container Docker image with the provided data and deploy it as
         a model to Clipper.
 
@@ -309,6 +310,9 @@ class ClipperConnection(object):
             batches if `batch_size` queries are not immediately available.
             If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
             replicas of this model.
+        pkgs_to_install : list (of strings), optional
+            A list of the names of packages to install, using pip, in the container.
+            The names must be strings.
         Raises
         ------
         :py:exc:`clipper.UnconnectedException`
@@ -318,7 +322,7 @@ class ClipperConnection(object):
         if not self.connected:
             raise UnconnectedException()
         image = self.build_model(name, version, model_data_path, base_image,
-                                 container_registry)
+                                 container_registry, pkgs_to_install)
         self.deploy_model(name, version, input_type, image, labels,
                           num_replicas, batch_size)
 
@@ -327,7 +331,8 @@ class ClipperConnection(object):
                     version,
                     model_data_path,
                     base_image,
-                    container_registry=None):
+                    container_registry=None,
+                    pkgs_to_install=None):
         """Build a new model container Docker image with the provided data"
 
         This method builds a new Docker image from the provided base image with the local directory specified by
@@ -361,6 +366,9 @@ class ClipperConnection(object):
             The Docker container registry to push the freshly built model to. Note
             that if you are running Clipper on Kubernetes, this registry must be accesible
             to the Kubernetes cluster in order to fetch the container from the registry.
+        pkgs_to_install : list (of strings), optional
+            A list of the names of packages to install, using pip, in the container.
+            The names must be strings.
         Returns
         -------
         str :
@@ -383,6 +391,11 @@ class ClipperConnection(object):
 
         _validate_versioned_model_name(name, version)
 
+        run_cmd = ''
+        if pkgs_to_install:
+            run_as_lst = 'RUN apt-get -y install build-essential && pip install'.split(
+                ' ')
+            run_cmd = ' '.join(run_as_lst + pkgs_to_install)
         with tempfile.NamedTemporaryFile(
                 mode="w+b", suffix="tar") as context_file:
             # Create build context tarfile
@@ -391,8 +404,11 @@ class ClipperConnection(object):
                 context_tar.add(model_data_path)
                 # From https://stackoverflow.com/a/740854/814642
                 df_contents = six.StringIO(
-                    "FROM {container_name}\nCOPY {data_path} /model/\n".format(
-                        container_name=base_image, data_path=model_data_path))
+                    "FROM {container_name}\nCOPY {data_path} /model/\n{run_command}\n".
+                    format(
+                        container_name=base_image,
+                        data_path=model_data_path,
+                        run_command=run_cmd))
                 df_tarinfo = tarfile.TarInfo('Dockerfile')
                 df_contents.seek(0, os.SEEK_END)
                 df_tarinfo.size = df_contents.tell()
