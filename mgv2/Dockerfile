@@ -11,8 +11,4 @@ RUN pip install /clipper_admin
 RUN pip install requests\
 && pip install -r /mgv2/requirements.txt
 
-ENV HOME /home
-
-COPY ./mgv2/config /home/.kube/
-
 ENTRYPOINT ["python", "/mgv2/mgv2.py"]

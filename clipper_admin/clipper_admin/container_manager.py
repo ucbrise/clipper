@@ -9,6 +9,7 @@ CLIPPER_INTERNAL_METRIC_PORT = 1390
 
 CLIPPER_DOCKER_LABEL = "ai.clipper.container.label"
 CLIPPER_MODEL_CONTAINER_LABEL = "ai.clipper.model_container.label"
+CLIPPER_QUERY_FRONTEND_IP_LABEL = "ai.clipper.query_frontend_ip.label"
 CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL = "ai.clipper.query_frontend.label"
 CLIPPER_MGMT_FRONTEND_CONTAINER_LABEL = "ai.clipper.management_frontend.label"
 CONTAINERLESS_MODEL_IMAGE = "NO_CONTAINER"
@@ -100,7 +101,7 @@ class ContainerManager(object):
         return
 
     @abc.abstractmethod
-    def upload_model_data(self, model_data):
+    def get_container_manager_type(self):
         return
 
     @abc.abstractmethod
@@ -114,6 +115,10 @@ class ContainerManager(object):
 
     @abc.abstractmethod
     def get_admin_addr(self):
+        return
+
+    @abc.abstractmethod
+    def get_adminv2_addr(self):
         return
 
     @abc.abstractmethod

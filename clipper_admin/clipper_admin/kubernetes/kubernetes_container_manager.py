@@ -1,7 +1,8 @@
 from __future__ import absolute_import, division, print_function
 from ..container_manager import (create_model_container_label,
                                  ContainerManager, CLIPPER_DOCKER_LABEL,
-                                 CLIPPER_MODEL_CONTAINER_LABEL)
+                                 CLIPPER_MODEL_CONTAINER_LABEL,
+                                 CLIPPER_QUERY_FRONTEND_IP_LABEL)
 from ..exceptions import ClipperException
 
 from contextlib import contextmanager
@@ -13,8 +14,6 @@ import json
 import yaml
 import os
 import time
-from multiprocessing import Process, Manager, Value
-import requests
 import gevent
 import traceback
 
@@ -35,20 +34,6 @@ def _pass_conflicts():
             pass
         else:
             raise e
-
-class RoundRobinBalancer():
-    def __init__(self, num_assignees):
-        self.counter = 0
-        self.num = num_assignees
-    def assign(self):
-        old_counter = self.counter
-        self.counter += 1
-        self.counter %= self.num
-        return old_counter
-    def set_assignee_count(self, count, override = False):
-        if (self.num != count or override):
-            self.num = count
-            self.counter = 0
 
 class KubernetesContainerManager(ContainerManager):
 
@@ -96,14 +81,11 @@ class KubernetesContainerManager(ContainerManager):
         # self.state_is_Unchanged = True
         # manager = Manager()
         # self.query_to_model = manager.dict()
-        self.balancer = RoundRobinBalancer(0)
-
 
 
     def start_clipper(self, query_frontend_image, mgmt_frontend_image,
                       cache_size, num_replicas = 1):
-
-        # polling = Process(target = self.poll_for_query_frontend_Change)
+        # If an existing Redis service isn't provided, start one
 
         if self.redis_ip is None:
             name = 'redis'
@@ -141,6 +123,8 @@ class KubernetesContainerManager(ContainerManager):
                         "args"] = args
                 body["spec"]["template"]["spec"]["containers"][0][
                     "image"] = img
+                if name is 'query-frontend':
+                    body["spec"]["replicas"] = num_replicas
 
                 self._k8s_beta.create_namespaced_deployment(
                     body=body, namespace='default')
@@ -162,48 +146,6 @@ class KubernetesContainerManager(ContainerManager):
                     'replicas': num_replicas,
                 }
             })
-
-
-
-         # polling.start()
-
-    # def reassign_models_to_new_containers(self, lost_ip, new_ip):
-    #
-    #     logger.info("Query frontend has crashed: Old ip is {} and new ip is {}".format(lost_ip, new_ip))
-    #
-    #     models = self.query_to_model[lost_ip]
-    #
-    #     logger.info("We are now going to redeploy {} models".format(len(models)))
-    #
-    #     for x in range(len(models)):
-    #         m = models[x]
-    #
-    #         self.deploy_model(m[1], __version__, "ints", m[0], 1, new_ip)
-    #
-    # def poll_for_query_frontend_Change(self):
-    #
-    #     time.sleep(10)
-    #
-    #     endpoints = self._k8s_v1.read_namespaced_endpoints(name="query-frontend", namespace="default")
-    #     current_state = [addr.ip for addr in endpoints.subsets[0].addresses]
-    #     query_frontend_ips = current_state
-    #
-    #     logger.info("Original state is {}".format(current_state))
-    #
-    #     while set(query_frontend_ips) == set(current_state):
-    #         time.sleep(5)
-    #         endpoints = self._k8s_v1.read_namespaced_endpoints(name="query-frontend", namespace="default")
-    #         query_frontend_ips = [addr.ip for addr in endpoints.subsets[0].addresses]
-    #
-    #
-    #     time.sleep(10)
-    #     endpoints = self._k8s_v1.read_namespaced_endpoints(name="query-frontend", namespace="default")
-    #     query_frontend_ips = [addr.ip for addr in endpoints.subsets[0].addresses]
-    #     logger.info("Current State is {}".format(query_frontend_ips))
-    #     self.reassign_models_to_new_containers(list(set(current_state) - set(query_frontend_ips))[0],
-    #                                            list(set(query_frontend_ips) - set(current_state))[0])
-    #
-    #     self.poll_for_query_frontend_Change()
 
 
 
@@ -236,6 +178,10 @@ class KubernetesContainerManager(ContainerManager):
                     self.clipper_management_port = p.node_port
                     logger.info("Setting Clipper mgmt port to {}".format(
                         self.clipper_management_port))
+                elif p.name == "1339":
+                    self.clipper_mgv2_port = p.node_port
+                    logger.info("Setting Clipper mgv2 port to {}".format(
+                        self.clipper_mgv2_port))
             query_frontend_ports = self._k8s_v1.read_namespaced_service(
                 name="query-frontend", namespace='default').spec.ports
             for p in query_frontend_ports:
@@ -253,21 +199,6 @@ class KubernetesContainerManager(ContainerManager):
                 "Could not connect to Clipper Kubernetes cluster. "
                 "Reason: {}".format(e))
 
-    def upload_model_data(self, model_data_list):
-        model_mapping = {}
-        for model_data in model_data_list:
-            model_mapping['query_frontend'] = model_data['query_frontend']
-            model_mapping['model_info'] = {"image": model_data['image'],
-                                           "name": model_data['name'],
-                                           "version": model_data['version'],
-                                           "input_type": model_data['input_type']
-                                           }
-            url = "http://{}/get_query_to_model_mapping".format('127.0.0.1:5000')
-            # url = "http://{}/get_query_to_model_mapping".format(self.get_admin_addr())
-
-            r = requests.post(url, json=model_mapping)
-
-        logger.info("Posted successfully")
 
     def deploy_model(self, name, version, input_type, image, num_replicas=1, new_ip=None):
         with _pass_conflicts():
@@ -279,25 +210,31 @@ class KubernetesContainerManager(ContainerManager):
             endpoints = self._k8s_v1.read_namespaced_endpoints(name="query-frontend", namespace="default")
             query_frontend_ips = [addr.ip for addr in endpoints.subsets[0].addresses]
 
-
-            self.balancer.set_assignee_count(len(query_frontend_ips), override = num_replicas > 1)
-
             original_name = name
             name = get_model_deployment_name(name, version)
 
             ret = []
 
-            for x in range(num_replicas):
+            iter_list = []
+            if new_ip:
+                iter_list.append(new_ip)
+            else:
+                iter_list = query_frontend_ips
+
+            for ip in iter_list:
+                clipper_ip = ip
                 if not new_ip:
-                    deployment_name = "{}-{}-{}".format(original_name, x, version)
-                    clipper_ip = query_frontend_ips[self.balancer.assign()]
+                    formatted_ip = ip.replace(".", "-")
+                    deployment_name = "{}--{}-{}".format(original_name, formatted_ip, version)
                 else:
-                    clipper_ip = new_ip
+                    formatted_ip = clipper_ip.replace(".", "-")
                     try:
-                        self.stop_models([original_name])
+                        self.stop_models_on_dead_ip(clipper_ip)
                     except Exception as e:
                         traceback.print_exc()
-                    deployment_name = "{}{}".format(original_name, '-r')
+
+                    original_name_prefix = original_name.split('--')[0]
+                    deployment_name = "{}--{}-{}-{}".format(original_name_prefix, formatted_ip, version, "r")
 
                 body = {
                     'apiVersion': 'extensions/v1beta1',
@@ -313,7 +250,9 @@ class KubernetesContainerManager(ContainerManager):
                                     CLIPPER_MODEL_CONTAINER_LABEL:
                                     create_model_container_label(name, version),
                                     CLIPPER_DOCKER_LABEL:
-                                    ""
+                                    "",
+                                    CLIPPER_QUERY_FRONTEND_IP_LABEL:
+                                    ip.replace(".", "-")
                                 }
                             },
                             'spec': {
@@ -363,7 +302,7 @@ class KubernetesContainerManager(ContainerManager):
             # with KubernetesContainerManager.model_lock.get_lock():
             #     KubernetesContainerManager.model_lock.value = 0
 
-        self.upload_model_data(ret)
+        return ret
 
     def get_num_replicas(self, name, version):
         deployment_name = get_model_deployment_name(name, version)
@@ -414,6 +353,9 @@ class KubernetesContainerManager(ContainerManager):
                 log_files.append(log_file)
         return log_files
 
+    def get_container_manager_type(self):
+        return "kubernetes"
+
     def stop_models(self, models):
         # Stops all deployments of pods running Clipper models with the specified
         # names and versions.
@@ -429,6 +371,19 @@ class KubernetesContainerManager(ContainerManager):
             logger.warn(
                 "Exception deleting kubernetes deployments: {}".format(e))
             raise e
+
+    def stop_models_on_dead_ip(self, ip):
+        try:
+            self._k8s_beta.delete_collection_namespaced_deployment(
+                namespace='default',
+                label_selector="{label}:{val}".format(
+                    label=CLIPPER_QUERY_FRONTEND_IP_LABEL,
+                    val=ip.replace(".", "-")))
+        except ApiException as e:
+            logger.warn(
+                "Exception deleting kubernetes deployments: {}".format(e))
+            raise e
+
 
     def stop_all_model_containers(self):
         try:
@@ -477,6 +432,11 @@ class KubernetesContainerManager(ContainerManager):
         return "{host}:{port}".format(
             host=self.external_node_hosts[0],
             port=self.clipper_management_port)
+
+    def get_adminv2_addr(self):
+        return "{host}:{port}".format(
+            host=self.external_node_hosts[0],
+            port=self.clipper_mgv2_port)
 
     def get_query_addr(self):
         return "{host}:{port}".format(

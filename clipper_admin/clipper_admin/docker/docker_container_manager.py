@@ -23,6 +23,7 @@ class DockerContainerManager(ContainerManager):
                  docker_ip_address="localhost",
                  clipper_query_port=1337,
                  clipper_management_port=1338,
+                 clipper_mgv2_port=1339,
                  clipper_rpc_port=7000,
                  redis_ip=None,
                  redis_port=6379,
@@ -58,6 +59,7 @@ class DockerContainerManager(ContainerManager):
         self.public_hostname = docker_ip_address
         self.clipper_query_port = clipper_query_port
         self.clipper_management_port = clipper_management_port
+        self.clipper_mgv2_port = clipper_mgv2_port
         self.clipper_rpc_port = clipper_rpc_port
         self.redis_ip = redis_ip
         if redis_ip is None:
@@ -167,21 +169,6 @@ class DockerContainerManager(ContainerManager):
         # No extra connection steps to take on connection
         return
 
-    def upload_model_data(self, model_data_list):
-        model_mapping = {}
-
-        for model_data in model_data_list:
-            model_mapping['model_info'] = {"image": model_data['image'],
-                                           "name": model_data['name'],
-                                           "version": model_data['version'],
-                                           "input_type": model_data['input_type']
-                                           }
-            url = "http://{}/get_query_to_model_mapping".format('127.0.0.1:5000')
-            # url = "http://{}/get_query_to_model_mapping".format(model_data[self.get_admin_addr()])
-
-            r = requests.post(url, json=model_mapping)
-
-        logger.info("Posted successfully")
 
     def deploy_model(self, name, version, input_type, image, num_replicas=1):
         # Parameters
@@ -200,7 +187,7 @@ class DockerContainerManager(ContainerManager):
                'num_replicas': num_replicas,
                "admin_addr": self.get_admin_addr()
                }
-        self.upload_model_data([ret])
+        return ret
 
     def _get_replicas(self, name, version):
         containers = self.docker_client.containers.list(
@@ -300,6 +287,9 @@ class DockerContainerManager(ContainerManager):
             log_files.append(log_file)
         return log_files
 
+    def get_container_manager_type(self):
+        return "docker"
+
     def stop_models(self, models):
         containers = self.docker_client.containers.list(
             filters={
@@ -330,6 +320,10 @@ class DockerContainerManager(ContainerManager):
     def get_admin_addr(self):
         return "{host}:{port}".format(
             host=self.public_hostname, port=self.clipper_management_port)
+
+    def get_adminv2_addr(self):
+        return "{host}:{port}".format(
+            host=self.public_hostname, port=self.clipper_mgv2_port)
 
     def get_query_addr(self):
         return "{host}:{port}".format(

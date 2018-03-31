@@ -13,8 +13,6 @@ import tarfile
 import six
 
 from .container_manager import CONTAINERLESS_MODEL_IMAGE
-from .kubernetes.kubernetes_container_manager import KubernetesContainerManager
-from .docker.docker_container_manager import DockerContainerManager
 from .exceptions import ClipperException, UnconnectedException
 from .version import __version__
 
@@ -474,12 +472,13 @@ class ClipperConnection(object):
             raise UnconnectedException()
         version = str(version)
         _validate_versioned_model_name(name, version)
-        self.cm.deploy_model(
+        model_data_list = self.cm.deploy_model(
             name=name,
             version=version,
             input_type=input_type,
             image=image,
             num_replicas=num_replicas)
+        self.upload_model_data(model_data_list)
         self.register_model(
             name,
             version,
@@ -487,6 +486,7 @@ class ClipperConnection(object):
             image=image,
             labels=labels,
             batch_size=batch_size)
+
         logger.info("Done deploying model {name}:{version}.".format(
             name=name, version=version))
 
@@ -1080,10 +1080,12 @@ class ClipperConnection(object):
             raise UnconnectedException()
         return self.cm.get_query_addr()
 
-    @staticmethod
-    def upload_model_data(model_data_list):
+    def upload_model_data(self, model_data_list):
 
         model_mapping = {}
+        # url = "http://{}/get_query_to_model_mapping".format('127.0.0.1:5000')
+        url = "http://{}/get_query_to_model_mapping".format(self.cm.get_adminv2_addr())
+
         if model_data_list and "query_frontend" in model_data_list[0]:
             for model_data in model_data_list:
                 model_mapping['query_frontend'] = model_data['query_frontend']
@@ -1092,22 +1094,17 @@ class ClipperConnection(object):
                                                "version": model_data['version'],
                                                "input_type": model_data['input_type']
                                                }
-            url = "http://{}/get_query_to_model_mapping".format('127.0.0.1:5000')
-            # url = "http://{}/get_query_to_model_mapping".format(model_data['admin_addr'])
 
-            r = requests.post(url, json=model_mapping)
+
+                r = requests.post(url, json=model_mapping)
 
         logger.info("Posted successfully")
 
     def alert_management_upon_start(self):
-        url = "http://{}/begin_polling".format('127.0.0.1:5000')
-        # url = "http://{}/begin_polling".format(model_data['admin_addr'])
+        # url = "http://{}/begin_polling".format('127.0.0.1:5000')
+        url = "http://{}/begin_polling".format(self.cm.get_adminv2_addr())
 
-        type = None
-        if isinstance(self.cm, KubernetesContainerManager):
-            type = "kubernetes"
-        elif isinstance(self.cm, DockerContainerManager):
-            type = "docker"
+        type = self.cm.get_container_manager_type()
 
         if type:
             data = {}
