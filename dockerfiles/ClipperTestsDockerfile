@@ -8,22 +8,29 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install --fix-missi
       && curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
       && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
       && apt-get update \
-      && apt-get install -y docker-ce
+      && apt-get install -y docker-ce \
+      && apt-get install -y python python-dev python-pip libsodium18 \
+      && rm -rf /var/lib/apt/lists/*
 
-RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh \
-    && wget --quiet 'https://repo.continuum.io/archive/Anaconda2-5.0.1-Linux-x86_64.sh' -O /tmp/anaconda.sh \
-    && /bin/bash /tmp/anaconda.sh -b -p /opt/conda \
-    && rm /tmp/anaconda.sh
-ENV PATH "/opt/conda/bin:$PATH"
+
+# RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh \
+#     && wget --quiet 'https://repo.continuum.io/archive/Anaconda2-5.0.1-Linux-x86_64.sh' -O /tmp/anaconda.sh \
+#     && /bin/bash /tmp/anaconda.sh -b -p /opt/conda \
+#     && rm /tmp/anaconda.sh
+# ENV PATH "/opt/conda/bin:$PATH"
+
+
+RUN pip install cloudpickle==0.5.* pyzmq==17.0.* requests==2.18.* subprocess32==3.2.* scikit-learn==0.19.* \
+  numpy==1.14.* pyyaml==3.12.* docker==3.1.* kubernetes==5.0.* tensorflow==1.6.* mxnet==1.1.*
 
 # RUN conda update -n base conda
-RUN conda config --set ssl_verify no
-RUN conda install -c anaconda cloudpickle=0.5.2
-RUN conda install -y libgcc
-RUN conda install -y pyzmq
-RUN conda install -y libsodium
+# RUN conda config --set ssl_verify no
+# RUN conda install -c anaconda cloudpickle=0.5.2
+# RUN conda install -y libgcc
+# RUN conda install -y pyzmq
+# RUN conda install -y libsodium
  
-RUN pip install requests subprocess32 scikit-learn numpy pyyaml docker kubernetes tensorflow mxnet
+# RUN pip install requests subprocess32 scikit-learn numpy pyyaml docker kubernetes tensorflow mxnet
 
 # Install maven
 ARG MAVEN_VERSION=3.5.0

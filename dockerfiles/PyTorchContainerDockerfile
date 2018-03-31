@@ -1,15 +1,11 @@
 ARG CODE_VERSION
 FROM clipper/py-rpc:${CODE_VERSION}
 
-COPY clipper_admin/clipper_admin/python_container_conda_deps.txt /lib/
+RUN pip install http://download.pytorch.org/whl/cu80/torch-0.3.1-cp27-cp27mu-linux_x86_64.whl \
+      && pip install torchvision 
 
-RUN conda config --set ssl_verify no \
-      && conda install -y --file /lib/python_container_conda_deps.txt \
-      && conda install pytorch torchvision -c pytorch 
+COPY containers/python/pytorch_container.py containers/python/container_entry.sh /container/
 
-
-COPY containers/python/pytorch_container.py containers/python/pytorch_container_entry.sh /container/
-
-CMD ["/container/pytorch_container_entry.sh"]
+CMD ["/container/container_entry.sh", "pytorch-container", "/container/pytorch_container.py"]
 
 # vim: set filetype=dockerfile:

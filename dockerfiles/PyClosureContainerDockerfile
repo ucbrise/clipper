@@ -1,13 +1,9 @@
 ARG CODE_VERSION
 FROM clipper/py-rpc:${CODE_VERSION}
 
-COPY clipper_admin/clipper_admin/python_container_conda_deps.txt /lib/
-RUN conda config --set ssl_verify no \
-  && conda install -y -c anaconda cloudpickle=0.5.2 \
-  && conda install -y --file /lib/python_container_conda_deps.txt
+COPY containers/python/python_closure_container.py \
+       containers/python/container_entry.sh /container/
 
-COPY containers/python/python_closure_container.py containers/python/python_closure_container_entry.sh /container/
-
-ENTRYPOINT ["/container/python_closure_container_entry.sh"]
+ENTRYPOINT ["/container/container_entry.sh", "py-closure-container", "/container/python_closure_container.py"]
 
 # vim: set filetype=dockerfile:

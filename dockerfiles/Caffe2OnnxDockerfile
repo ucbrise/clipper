@@ -1,19 +1,36 @@
+# This ARG isn't used but prevents warnings in the build script
 ARG CODE_VERSION
-FROM clipper/py-rpc:${CODE_VERSION}
+FROM clipper/caffe2-base:3-31-18-snapshot
 
-COPY clipper_admin/clipper_admin/python_container_conda_deps.txt /lib/
+# NOTE: Because we want to cache the caffe2 binary, we use the caffe2 docker image
+# as the base image. As a result, we copy the contents of Py2RPCDockerFile here.
+
+RUN mkdir -p /model \
+      && apt-get update \
+      && apt-get install -y libzmq5 libzmq5-dev redis-server libsodium18 build-essential
+
+RUN pip install cloudpickle==0.5.* pyzmq==17.0.* prometheus_client==0.1.* \
+    pyyaml==3.12.* jsonschema==2.6.* redis==2.10.* psutil==5.4.* flask==0.12.2
+
+COPY clipper_admin /clipper_admin/
+
+RUN cd /clipper_admin \
+    && pip install .
+
+WORKDIR /container
+
+COPY containers/python/__init__.py containers/python/rpc.py /container/
+
+COPY monitoring/metrics_config.yaml /container/
+
+ENV CLIPPER_MODEL_PATH=/model
 
 RUN pip install onnx
 RUN python -c "import onnx"
-RUN conda install -c caffe2 caffe2
-RUN conda install -c pytorch pytorch
-RUN conda install -c pytorch torchvision
-RUN conda install -y --file /lib/python_container_conda_deps.txt
+  
 
-COPY containers/python/caffe2_onnx_container.py containers/python/caffe2_onnx_container_entry.sh /container/
-COPY clipper_admin/ /lib/clipper_admin
-RUN pip install /lib/clipper_admin
+COPY containers/python/caffe2_onnx_container.py containers/python/container_entry.sh /container/
 
-CMD ["/container/caffe2_onnx_container_entry.sh"]
+CMD ["/container/container_entry.sh", "caffe2-onnx-container", caffe2-onnx]
 
 # vim: set filetype=dockerfile:

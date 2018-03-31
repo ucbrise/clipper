@@ -1,11 +1,12 @@
 # This ARG isn't used but prevents warnings in the build script
 ARG CODE_VERSION
-FROM ubuntu:16.04
+# FROM ubuntu:16.04
+FROM debian:stretch-slim
 
 RUN apt-get update && apt-get install -y g++ automake autoconf autoconf-archive libtool libboost-all-dev \
     libevent-dev libdouble-conversion-dev libgoogle-glog-dev libgflags-dev liblz4-dev \
     liblzma-dev libsnappy-dev make zlib1g-dev binutils-dev libjemalloc-dev libssl-dev \
-    pkg-config libiberty-dev git cmake libev-dev libhiredis-dev libzmq5 libzmq5-dev
+    pkg-config libiberty-dev git cmake libev-dev libhiredis-dev libzmq5 libzmq5-dev build-essential
 
 ## Install Folly
 RUN git clone https://github.com/facebook/folly \

@@ -1,15 +1,10 @@
 ARG CODE_VERSION
 FROM clipper/py-rpc:${CODE_VERSION}
 
-COPY clipper_admin/clipper_admin/python_container_conda_deps.txt /lib/
+RUN  pip install mxnet==1.1.*
 
-RUN conda config --set ssl_verify no \
-      && conda install -c anaconda cloudpickle=0.5.2 \
-      && conda install -y --file /lib/python_container_conda_deps.txt \
-      && pip install mxnet
+COPY containers/python/mxnet_container.py containers/python/container_entry.sh /container/
 
-COPY containers/python/mxnet_container.py containers/python/mxnet_container_entry.sh /container/
-
-CMD ["/container/mxnet_container_entry.sh"]
+CMD ["/container/container_entry.sh", "mxnet-container", "/container/mxnet_container.py"]
 
 # vim: set filetype=dockerfile:
