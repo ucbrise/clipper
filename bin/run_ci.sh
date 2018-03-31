@@ -27,7 +27,7 @@ docker push 568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/management_fron
 
 # Run tests
 docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp \
-    -v /home/jenkins/.docker:/root/.docker \
+    -v /home/ubuntu/.docker:/root/.docker \
     -e CLIPPER_K8S_CERT_AUTH=$CLIPPER_K8S_CERT_AUTH \
     -e CLIPPER_K8S_CLIENT_CERT=$CLIPPER_K8S_CLIENT_CERT \
     -e CLIPPER_K8S_CLIENT_KEY=$CLIPPER_K8S_CLIENT_KEY \
