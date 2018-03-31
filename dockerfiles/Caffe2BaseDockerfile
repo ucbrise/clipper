@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN git clone --recursive https://github.com/caffe2/caffe2.git && cd caffe2 \
     && git submodule update --init && mkdir build && cd build && cmake .. \
-    && make -j8 install
+    && make install
 
 RUN cd ~ && python -c 'from caffe2.python import core' 2>/dev/null && echo "Success" || echo "Failure"
 
