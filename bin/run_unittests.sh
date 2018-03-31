@@ -201,8 +201,7 @@ case $args in
     -r | --rpc-container )  set_test_environment
                             run_rpc_container_tests
                             ;;
-    -i | --integration_tests )  set_test_environment
-                            run_integration_tests
+    -i | --integration_tests ) run_integration_tests
                             ;;
     -h | --help )           usage
                             ;;

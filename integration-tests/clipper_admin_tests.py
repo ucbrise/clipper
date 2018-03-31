@@ -493,9 +493,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         model_version = 1
 
         def predict_func(inputs):
-            return [
-                str(len(x)) for x in inputs
-            ]
+            return [str(len(x)) for x in inputs]
 
         input_type = "doubles"
         deploy_python_closure(self.clipper_conn, self.model_name_1,
@@ -520,9 +518,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
                 time.sleep(20)
             else:
                 received_non_default_prediction = True
-                self.assertEqual(
-                    int(output),
-                    len(test_input))
+                self.assertEqual(int(output), len(test_input))
                 break
 
         self.assertTrue(received_non_default_prediction)

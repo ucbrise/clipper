@@ -173,11 +173,7 @@ if __name__ == "__main__":
 
             version += 1
             deploy_and_test_model(
-                sc,
-                clipper_conn,
-                lr_model,
-                version,
-                predict_fn=predict)
+                sc, clipper_conn, lr_model, version, predict_fn=predict)
         except BenchmarkException:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
