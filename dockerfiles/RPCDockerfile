@@ -7,7 +7,7 @@ MAINTAINER Dan Crankshaw <dscrankshaw@gmail.com>
 
 RUN mkdir -p /model \
       && apt-get update \
-      && apt-get install -y libzmq3 libzmq3-dev \
+      && apt-get install -y libzmq5 libzmq3-dev \
       && conda install -y pyzmq \
       && pip install prometheus_client pyyaml
 
