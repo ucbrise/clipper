@@ -4,7 +4,7 @@ FROM python:3.6-slim-stretch
 
 RUN mkdir -p /usr/src/app
 
-RUN pip install requests==2.18.* prometheus_client=0.1.* flatten_json==0.1.*
+RUN pip install requests==2.18.* prometheus_client==0.1.* flatten_json==0.1.*
 
 COPY monitoring/front_end_exporter.py /usr/src/app
 ENTRYPOINT ["python", "/usr/src/app/front_end_exporter.py"]

@@ -244,11 +244,12 @@ build_images () {
     create_image lib_base ClipperLibBaseDockerfile $private
     create_image query_frontend QueryFrontendDockerfile $public
     create_image management_frontend ManagementFrontendDockerfile $public
+    create_image dev ClipperDevDockerfile  $public
     create_image unittests ClipperTestsDockerfile  $private
 
     # Build containers
-    # create_image spark-scala-container SparkScalaContainerDockerfile $public
-    # create_image r-container-base RContainerDockerfile $public
+    create_image spark-scala-container SparkScalaContainerDockerfile $public
+    create_image r-container-base RContainerDockerfile $public
     
     # First build Python base image
     create_image py-rpc Py2RPCDockerfile $public

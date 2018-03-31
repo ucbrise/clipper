@@ -1,6 +1,5 @@
 # This ARG isn't used but prevents warnings in the build script
 ARG CODE_VERSION
-# FROM ubuntu:16.04
 FROM debian:stretch-slim
 
 RUN apt-get update && apt-get install -y g++ automake autoconf autoconf-archive libtool libboost-all-dev \

@@ -1,34 +1,22 @@
-# This ARG isn't used but prevents warnings in the build script
 ARG CODE_VERSION
-FROM clipper/caffe2-base:3-31-18-snapshot
+FROM clipper/py-rpc:${CODE_VERSION}
 
-# NOTE: Because we want to cache the caffe2 binary, we use the caffe2 docker image
-# as the base image. As a result, we copy the contents of Py2RPCDockerFile here.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+       build-essential cmake git libgoogle-glog-dev libgtest-dev libiomp-dev libleveldb-dev \
+       liblmdb-dev libopencv-dev libsnappy-dev libprotobuf-dev \
+       protobuf-compiler python-dev libgflags-dev && pip install future==0.16.* protobuf==3.5.*
 
-RUN mkdir -p /model \
-      && apt-get update \
-      && apt-get install -y libzmq5 libzmq5-dev redis-server libsodium18 build-essential
+RUN git clone --recursive https://github.com/caffe2/caffe2.git && cd caffe2 \
+    && git submodule update --init && mkdir build && cd build && cmake .. -DUSE_MPI=OFF \
+    && make -j8 install
 
-RUN pip install cloudpickle==0.5.* pyzmq==17.0.* prometheus_client==0.1.* \
-    pyyaml==3.12.* jsonschema==2.6.* redis==2.10.* psutil==5.4.* flask==0.12.2
+ENV LD_LIBRARY_PATH=/usr/local/lib/ 
 
-COPY clipper_admin /clipper_admin/
-
-RUN cd /clipper_admin \
-    && pip install .
-
-WORKDIR /container
-
-COPY containers/python/__init__.py containers/python/rpc.py /container/
-
-COPY monitoring/metrics_config.yaml /container/
-
-ENV CLIPPER_MODEL_PATH=/model
+RUN cd ~ && python -c 'from caffe2.python import core'
 
 RUN pip install onnx
 RUN python -c "import onnx"
   
-
 COPY containers/python/caffe2_onnx_container.py containers/python/container_entry.sh /container/
 
 CMD ["/container/container_entry.sh", "caffe2-onnx-container", caffe2-onnx]
