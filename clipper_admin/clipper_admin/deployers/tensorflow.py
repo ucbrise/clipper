@@ -238,8 +238,8 @@ def deploy_tensorflow_model(
         else:
             # File provided ...check if file exists and a frozen model
             # Check if a frozen model exists or else error out
-            if (os.path.isfile(tf_sess_or_saved_model_path) and
-                    tf_sess_or_saved_model_path.lower().endswith(('.pb'))):
+            if (os.path.isfile(tf_sess_or_saved_model_path)
+                    and tf_sess_or_saved_model_path.lower().endswith(('.pb'))):
                 os.makedirs(os.path.join(serialization_dir, "tfmodel"))
                 try:
                     shutil.copyfile(

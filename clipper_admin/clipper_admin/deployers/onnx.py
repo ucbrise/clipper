@@ -96,7 +96,8 @@ def create_pytorch_endpoint(clipper_conn,
                                       slo_micros)
     deploy_pytorch_model(clipper_conn, name, version, input_type, inputs, func,
                          pytorch_model, base_image, labels, registry,
-                         num_replicas, onnx_backend, batch_size, pkgs_to_install)
+                         num_replicas, onnx_backend, batch_size,
+                         pkgs_to_install)
 
     clipper_conn.link_model_to_app(name, name)
 
@@ -176,7 +177,9 @@ def deploy_pytorch_model(clipper_conn,
 
     try:
         torch.onnx._export(
-            pytorch_model, inputs, os.path.join(serialization_dir, "model.onnx"),
+            pytorch_model,
+            inputs,
+            os.path.join(serialization_dir, "model.onnx"),
             export_params=True)
         # Deploy model
         clipper_conn.build_and_deploy_model(
