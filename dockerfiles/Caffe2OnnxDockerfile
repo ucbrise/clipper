@@ -19,6 +19,6 @@ RUN python -c "import onnx"
   
 COPY containers/python/caffe2_onnx_container.py containers/python/container_entry.sh /container/
 
-CMD ["/container/container_entry.sh", "caffe2-onnx-container", caffe2-onnx]
+CMD ["/container/container_entry.sh", "caffe2-onnx", "/container/caffe2_onnx_container.py"]
 
 # vim: set filetype=dockerfile:
