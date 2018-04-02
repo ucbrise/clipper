@@ -2,8 +2,7 @@
 ARG CODE_VERSION
 FROM python:2.7.14-slim-stretch
 
-MAINTAINER Dan Crankshaw <dscrankshaw@gmail.com>
-
+LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
 RUN mkdir -p /model \
       && apt-get update \
@@ -12,10 +11,6 @@ RUN mkdir -p /model \
 RUN pip install cloudpickle==0.5.* pyzmq==17.0.* prometheus_client==0.1.* \
     pyyaml==3.12.* jsonschema==2.6.* redis==2.10.* psutil==5.4.* flask==0.12.2 \
     numpy==1.14.*
-
-
-# RUN conda install -y pyzmq libsodium
-# RUN pip install prometheus_client pyyaml jsonschema redis psutil flask
 
 COPY clipper_admin /clipper_admin/
 

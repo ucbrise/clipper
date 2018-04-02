@@ -1,6 +1,8 @@
 ARG CODE_VERSION
 FROM clipper/dev:${CODE_VERSION}
 
+LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
+
 RUN pip install awscli==1.14.*
 
 COPY ./ /clipper

@@ -1,7 +1,8 @@
 # This ARG isn't used but prevents warnings in the build script
 ARG CODE_VERSION
+FROM r-base:3.4.4
 
-FROM r-base
+LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
 RUN apt-get update && apt-get --yes install git libzmq3-dev libtool libtool-bin libsodium-dev pkg-config build-essential autoconf automake
 

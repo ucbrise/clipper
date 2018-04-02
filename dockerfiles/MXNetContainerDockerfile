@@ -1,6 +1,8 @@
 ARG CODE_VERSION
 FROM clipper/py-rpc:${CODE_VERSION}
 
+LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
+
 RUN  pip install mxnet==1.1.*
 
 COPY containers/python/mxnet_container.py containers/python/container_entry.sh /container/

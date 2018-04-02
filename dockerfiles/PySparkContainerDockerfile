@@ -1,6 +1,8 @@
 ARG CODE_VERSION
 FROM clipper/py-rpc:${CODE_VERSION}
 
+LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
+
 # Install Java using https://github.com/docker-library/openjdk/blob/1506887e16eba85b37dcf0a5ff8c9c2abe3fa9b7/8-jdk/slim/Dockerfile
 # as a template
 RUN apt-get update && apt-get install -y --no-install-recommends \

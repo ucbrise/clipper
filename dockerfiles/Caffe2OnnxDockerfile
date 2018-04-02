@@ -1,6 +1,8 @@
 ARG CODE_VERSION
 FROM clipper/py-rpc:${CODE_VERSION}
 
+LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
        build-essential cmake git libgoogle-glog-dev libgtest-dev libiomp-dev libleveldb-dev \
        liblmdb-dev libopencv-dev libsnappy-dev libprotobuf-dev \

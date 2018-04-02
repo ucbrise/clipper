@@ -1,7 +1,7 @@
 ARG CODE_VERSION
 FROM clipper/lib_base:${CODE_VERSION}
 
-# Build Clipper
+LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
 COPY ./ /clipper
 
