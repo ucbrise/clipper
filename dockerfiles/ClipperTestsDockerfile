@@ -1,6 +1,8 @@
 ARG CODE_VERSION
 FROM clipper/dev:${CODE_VERSION}
 
+RUN pip install awscli==1.14.*
+
 COPY ./ /clipper
 
 # Patch Clipper
