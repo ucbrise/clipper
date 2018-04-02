@@ -99,7 +99,7 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s
       && mv kubectl /usr/local/bin/
 
 # Install R
-RUN apt-get update && apt-get install -y --no-install-recommends r-base && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends r-base libxml2-dev && rm -rf /var/lib/apt/lists/*
 
 RUN R -e "install.packages('versions', repos='http://cran.us.r-project.org')" \
     && R -e "versions::install.versions('jsonlite', version='1.5')" \
