@@ -153,7 +153,7 @@ class ModelQueue {
         queue_.pop();
       }
     }
-    lock.release();
+    lock.unlock();
     if (!queue_.empty()) {
       queue_not_empty_condition_.notify_one();
     }
