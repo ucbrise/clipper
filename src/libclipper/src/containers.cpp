@@ -164,7 +164,7 @@ void ActiveContainers::remove_container(VersionedModelId model, int replica_id) 
 
   for(auto it = containers_[model].begin(); it!=containers_[model].end(); ) {
     if(it->first == replica_id) {
-      it->second.set_inactive();
+      (it->second)->set_inactive();
       it = containers_[model].erase(it);
     }
     else {
