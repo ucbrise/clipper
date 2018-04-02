@@ -144,12 +144,12 @@ class ModelQueue {
     remove_tasks_with_elapsed_deadlines();
     queue_not_empty_condition_.wait(lock, [this]() { return !queue_.empty(); });
     remove_tasks_with_elapsed_deadlines();
-    if (!requesting_container.is_active()) {
+    std::vector<PredictTask> batch;
+    if (!requesting_container->is_active()) {
       return batch;
     }
     Deadline deadline = queue_.top().first;
     int max_batch_size = get_batch_size(deadline);
-    std::vector<PredictTask> batch;
     while (batch.size() < (size_t)max_batch_size && queue_.size() > 0) {
       batch.push_back(queue_.top().second);
       queue_.pop();
