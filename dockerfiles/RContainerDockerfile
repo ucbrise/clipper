@@ -23,6 +23,14 @@ RUN R -e "install.packages('versions', repos='http://cran.us.r-project.org')" \
     && R -e "versions::install.versions('optparse', version='1.4.4')" \
     && R -e "versions::install.versions('stringr', version='1.2.0')"
 
+# R will return an exit code of 0 even if an install fails, so now we need to check whether the packages
+# were successfully installed. The versions library has a "installed.versions()" method that checks
+# the version of each listed package. It will return NA if a package has no installed version
+# (and therefore is not installed). The command uses sed to find the 3rd line (https://stackoverflow.com/a/7996841/814642)
+# then greps for NA in that line and checks that NA occurs 0 times.
+RUN INSTALLED=$(R -q -e "versions::installed.versions(c('jsonlite', 'Rcpp', 'optparse', 'stringr'), '/usr/local/lib/R/site-library')" \
+      | sed -n '3p' | grep -o NA | wc -l) && test $INSTALLED -eq "0"
+
 RUN R CMD INSTALL rclipper_serve
 
 ENTRYPOINT ["/r_container_entrypoint.sh"]
