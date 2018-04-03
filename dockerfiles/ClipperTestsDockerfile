@@ -1,69 +1,9 @@
 ARG CODE_VERSION
-FROM clipper/lib_base:${CODE_VERSION}
+FROM clipper/dev:${CODE_VERSION}
 
-# install docker and other apt-installable dependencies
-RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install --fix-missing -y \
-      wget apt-transport-https ca-certificates curl software-properties-common \
-      openjdk-8-jdk clang-format redis-server \
-      && curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
-      && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
-      && apt-get update \
-      && apt-get install -y docker-ce
+LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
-RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh \
-    && wget --quiet 'https://repo.continuum.io/archive/Anaconda2-5.1.0-Linux-x86_64.sh' -O /tmp/anaconda.sh \
-    && /bin/bash /tmp/anaconda.sh -b -p /opt/conda \
-    && rm /tmp/anaconda.sh
-
-ENV PATH "/opt/conda/bin:$PATH"
-
-RUN conda update -n base conda \
-    && conda config --set ssl_verify no \
-    && conda install -c anaconda cloudpickle=0.5.2 \
-    && conda install -y libgcc pyzmq libsodium
- 
-RUN pip install requests subprocess32 scikit-learn numpy pyyaml docker kubernetes tensorflow redis prometheus_client
-RUN conda install pyspark
-
-# Install maven
-ARG MAVEN_VERSION=3.5.0
-ARG SHA=beb91419245395bd69a4a6edad5ca3ec1a8b64e41457672dc687c173a495f034
-ARG BASE_URL=https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries
-
-RUN mkdir -p /usr/share/maven /usr/share/maven/ref \
-  && curl -fsSL -o /tmp/apache-maven.tar.gz ${BASE_URL}/apache-maven-$MAVEN_VERSION-bin.tar.gz \
-  && echo "${SHA}  /tmp/apache-maven.tar.gz" | sha256sum -c - \
-  && tar -xzf /tmp/apache-maven.tar.gz -C /usr/share/maven --strip-components=1 \
-  && rm -f /tmp/apache-maven.tar.gz \
-  && ln -s /usr/share/maven/bin/mvn /usr/bin/mvn \
-  && git clone https://github.com/zeromq/jzmq.git /root/jzmq \
-  && cd /root/jzmq/jzmq-jni \
-  && ./autogen.sh \
-  && ./configure \
-  && make \
-  && make install
-
-ENV MAVEN_HOME /usr/share/maven
-ENV MAVEN_CONFIG /root/.m2
-ENV JZMQ_HOME /usr/local/lib/
-
-# Install kubectl
-RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl \
-      && chmod +x kubectl \
-      && mv kubectl /usr/local/bin/
-
-# Install R
-RUN echo "deb http://cran.rstudio.com/bin/linux/ubuntu xenial/" >> /etc/apt/sources.list \
-      && gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9 \
-      && gpg -a --export E084DAB9 | apt-key add - \
-      && apt-get update && apt-get install -y r-base
-
-RUN R -e "install.packages('versions', repos='http://cran.us.r-project.org')" \
-    && R -e "versions::install.versions('jsonlite', version='1.5')" \
-    && R -e "versions::install.versions('Rcpp', version='0.12.11')" \
-    && R -e "versions::install.versions('optparse', version='1.4.4')" \
-    && R -e "versions::install.versions('stringr', version='1.2.0')" \
-    && R -e "versions::install.versions('CodeDepends', version='0.5-3')"
+RUN pip install awscli==1.14.*
 
 COPY ./ /clipper
 
