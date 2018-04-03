@@ -35,14 +35,3 @@ versions::install.versions('stringr', version='1.2.0'),
          error = function(err) {
            quit(status=11) 
          })
-tryCatch(
-versions::install.versions('CodeDepends', version='0.5-3'),
-         warning = function(warn) {
-           quit(status=11) 
-         },
-         error = function(err) {
-           quit(status=11) 
-         })
-
-
-

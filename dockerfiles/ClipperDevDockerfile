@@ -103,21 +103,9 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s
 # Install R
 RUN apt-get update && apt-get install -y --no-install-recommends r-base libxml2-dev && rm -rf /var/lib/apt/lists/*
 
-RUN R -e "install.packages('versions', repos='http://cran.us.r-project.org')" \
-    && R -e "versions::install.versions('jsonlite', version='1.5')" \
-    && R -e "versions::install.versions('Rcpp', version='0.12.11')" \
-    && R -e "versions::install.versions('optparse', version='1.4.4')" \
-    && R -e "versions::install.versions('stringr', version='1.2.0')" \
-    && R -e "versions::install.versions('CodeDepends', version='0.5-3')"
+COPY containers/R/tests/install_test_dependencies.R /install_test_dependencies.R
 
-# R will return an exit code of 0 even if an install fails, so now we need to check whether the packages
-# were successfully installed. The versions library has a "installed.versions()" method that checks
-# the version of each listed package. It will return NA if a package has no installed version
-# (and therefore is not installed). The command uses sed to find the 3rd line (https://stackoverflow.com/a/7996841/814642)
-# then greps for NA in that line and checks that NA occurs 0 times.
-RUN INSTALLED=$(R -q -e "versions::installed.versions(c('jsonlite', 'Rcpp', 'optparse', 'stringr', 'CodeDepends'), '/usr/local/lib/R/site-library')" \
-      | sed -n '3p' | grep -o NA | wc -l) && test $INSTALLED -eq "0"
-
+RUN Rscript /install_test_dependencies.R
 
 ENTRYPOINT ["bash"]
 
