@@ -339,7 +339,7 @@ class RequestHandler {
           models = clipper::redis::get_model_versions(redis_connection_, name);
           for (auto m : models) {
             if (m.compare(version) == 0) {
-              versioned_models = clipper::VersionedModelId::VersionedModelId(name, m);
+              versioned_models = {clipper::VersionedModelId(name, m)};
               break;
             }
             if (versioned_models.empty()) {
@@ -360,7 +360,7 @@ class RequestHandler {
         }   
 
         folly::Future<std::vector<folly::Try<Response>>> predictions =
-            decode_and_handle_predict(d, name,
+            decode_and_handle_predict(std::move(d), name,
                                       versioned_models, policy,
                                       latency_slo_micros, input_type);
 
