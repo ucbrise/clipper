@@ -192,10 +192,9 @@ class ClipperConnection(object):
         if not self.connected:
             raise UnconnectedException()
 
-        url = "http://{host}/admin/delete_app".format(host=self.cm.get_admin_addr())
-        req_json = json.dumps({
-            "name": name
-        })
+        url = "http://{host}/admin/delete_app".format(
+            host=self.cm.get_admin_addr())
+        req_json = json.dumps({"name": name})
         headers = {"Content-type": "application/json"}
         r = requests.post(url, headers=headers, data=req_json)
         logger.debug(r.text)

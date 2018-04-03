@@ -351,12 +351,13 @@ class ServerBase {
   // Use this function to delete endpoints while the service is running
   void delete_endpoint(std::string res_name, std::string res_method) {
     std::unique_lock<std::mutex> l(mu);
+
     // Delete application name from resource map, if it exists
-    if (resource.find(res_method) != resource.end()) {
-      auto res_map = resource[res_method];
-      if (res_map.find(res_name) != res_map.end()) {
-        auto to_delete = res_map.find(res_name);
-        res_map.erase(to_delete);
+    if (resource.find(res_name) != resource.end()) {
+      auto method_map = &resource[res_name];
+      if (method_map->find(res_method) != method_map->end()) {
+        auto to_delete = method_map->find(res_method);
+        method_map->erase(to_delete);
       }
     }
 
@@ -370,20 +371,24 @@ class ServerBase {
       }
     }
 
-    auto name_vec = it->second;
-    auto to_erase = name_vec.end();
-
     if (it != opt_resource.end()) {
-      for (auto name_it = name_vec.begin(); name_it != name_vec.end();
+      auto name_vec = &it->second;
+      auto to_erase = name_vec->end();
+
+      // Strip regex symbols (first and last characters) from resource name
+      res_name = res_name.substr(1, res_name.size() - 2);
+
+      for (auto name_it = name_vec->begin(); name_it != name_vec->end();
            name_it++) {
         REGEX_NS::smatch sm_res;
+
         if(REGEX_NS::regex_match(res_name, sm_res, name_it->first)) {
           to_erase = name_it;
           break;
         }
       }
+      name_vec->erase(to_erase);
     }
-    name_vec.erase(to_erase);
   }
 
   size_t num_endpoints() {

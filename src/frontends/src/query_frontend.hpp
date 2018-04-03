@@ -431,7 +431,7 @@ class RequestHandler {
 
   void delete_application(std::string name) {
     std::string predict_endpoint = "^/" + name + "/predict$";
-    server_.delete_endpoint(name, "POST");
+    server_.delete_endpoint(predict_endpoint, "POST");
     std::string update_endpoint = "^/" + name + "/update$";
     server_.delete_endpoint(update_endpoint, "POST");
   }
