@@ -206,6 +206,10 @@ def deploy_mxnet_model(
         fc2 = mx.symbol.FullyConnected(act1, name='fc2', num_hidden=10)
         softmax = mx.symbol.SoftmaxOutput(fc2, name='softmax')
 
+        # Load some training data
+        data_iter = mx.io.CSVIter(
+            data_csv="/path/to/train_data.csv", data_shape=(785, ), batch_size=1)
+
         # Initialize the module and fit it
         mxnet_model = mx.mod.Module(softmax)
         mxnet_model.fit(data_iter, num_epoch=1)
