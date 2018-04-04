@@ -10,8 +10,8 @@ r = redis.Redis(unix_socket_path=UNIX_SOCKET_PATH)
 metric_pool = set()
 
 
-def _send_to_redis(messege_dict):
-    r.publish(CHANNEL_NAME, json.dumps(messege_dict))
+def _send_to_redis(message_dict):
+    r.publish(CHANNEL_NAME, json.dumps(message_dict))
 
 
 def add_metric(name, metric_type, description, buckets=DEFAULT_BUCKETS):
@@ -39,7 +39,7 @@ def add_metric(name, metric_type, description, buckets=DEFAULT_BUCKETS):
     if name in metric_pool:
         return
 
-    messege_dict = {
+    message_dict = {
         'version': API_VERSION,
         'endpoint': 'add',
         'data': {
@@ -50,9 +50,9 @@ def add_metric(name, metric_type, description, buckets=DEFAULT_BUCKETS):
     }
 
     if metric_type == 'Histogram':
-        messege_dict['data']['bucket'] = buckets
+        message_dict['data']['bucket'] = buckets
 
-    _send_to_redis(messege_dict)
+    _send_to_redis(message_dict)
     metric_pool.add(name)
 
 
@@ -73,7 +73,7 @@ def report_metric(name, val):
     Please use clipper_admin.metric.add_metric to add this metric"
                                .format(name))
 
-    messege_dict = {
+    message_dict = {
         'version': API_VERSION,
         'endpoint': 'report',
         'data': {
@@ -82,4 +82,4 @@ def report_metric(name, val):
         }
     }
 
-    _send_to_redis(messege_dict)
+    _send_to_redis(message_dict)

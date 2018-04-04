@@ -14,8 +14,8 @@ from config import CHANNEL_NAME, DEFAULT_BUCKETS, UNIX_SOCKET_PATH
 
 class Metric:
     """
-    Metric class abstract away the complexity of dealing with Prometheus 
-    data types. 
+    Metric class abstract away the complexity of dealing with Prometheus
+    data types.
     """
 
     def __init__(self, name, metric_type, description, buckets):
@@ -55,12 +55,12 @@ def report_metric(name, val, metric_pool):
             name, metric_pool.keys()))
 
 
-def handle_messege(messege_dict, metric_pool):
+def handle_message(message_dict, metric_pool):
     """
-    Handle a messege dictionary, dispatch request to add or report call
+    Handle a message dictionary, dispatch request to add or report call
     """
-    endpoint = messege_dict['endpoint']
-    data = messege_dict['data']
+    endpoint = message_dict['endpoint']
+    data = message_dict['data']
 
     if endpoint == 'add':
         add_metric(data['name'], data['type'], data['description'],
@@ -73,22 +73,24 @@ def start_server():
     logger = _init_logger()
 
     start_http_server(1390)
+    logger.info("Metric Server Started!")
 
     r = redis.Redis(unix_socket_path=UNIX_SOCKET_PATH)
     sub = r.pubsub(ignore_subscribe_messages=True)
     sub.subscribe(CHANNEL_NAME)
+    logger.info("Redis Connected! Waiting for messages...")
 
     metric_pool = {}
-    for messege in sub.listen():  # Blocking, will run forever
-        logger.debug(messege)
+    for message in sub.listen():  # Blocking, will run forever
+        logger.debug(message)
         try:
-            messege_dict = json.loads(messege['data'])
-            validate_schema(messege_dict)
-            handle_messege(messege_dict, metric_pool)
+            message_dict = json.loads(message['data'])
+            validate_schema(message_dict)
+            handle_message(message_dict, metric_pool)
         except (KeyError, ValueError, ValidationError) as e:
             # Here, we catch errors in
-            # (1) messege['data'], the redis queue is not sending correct
-            #     messege in expected format.
+            # (1) message['data'], the redis queue is not sending correct
+            #     message in expected format.
             # (2) json.loads, the json string is corrupted.
             # (3) validate_schema will throw ValidationError if schema
             #     validation failed.
@@ -127,8 +129,7 @@ def redis_daemon_exist():
 
 
 if __name__ == '__main__':
-    if not redis_daemon_exist():
-        start_redis_daemon()
+    start_redis_daemon()
 
     # This snippet of code spin up a debug server
     # that sends the log to 1392. Don't forget to add

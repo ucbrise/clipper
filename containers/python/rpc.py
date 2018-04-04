@@ -547,11 +547,9 @@ def add_metrics():
 
 
 def start_metric_server():
-    server_py_path = os.path.join(
-        metrics.__file__.rsplit('/', 1)[0], 'server.py')
 
     DEBUG = False
-    cmd = ['python', server_py_path]
+    cmd = ['python', '-m', 'clipper_admin.metrics.server']
     if DEBUG:
         cmd.append('DEBUG')
 
