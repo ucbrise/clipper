@@ -26,9 +26,16 @@ setup(
     package_data={'clipper_admin': ['*.txt', '*/*.yaml']},
     keywords=['clipper', 'prediction', 'model', 'management'],
     install_requires=[
-        'requests', 'numpy', 'subprocess32; python_version<"3"', 'pyyaml', 'docker', 'kubernetes>=6.0.0',
-        'prometheus_client', 'cloudpickle>=0.5.2', 'redis', 'enum34; python_version<"3.4"',
-        'psutil', 'jsonschema'
+        'requests',
+        'numpy',
+        'subprocess32; python_version<"3"',
+        'pyyaml',
+        'docker',
+        'kubernetes',
+        'prometheus_client',
+        'six',
+        'cloudpickle>=0.5',
+        'enum34; python_version<"3.4"',
     ],
     extras_require={
         'PySpark': ['pyspark'],

@@ -135,9 +135,9 @@ class DockerContainerManager(ContainerManager):
 
         query_cmd = ("--redis_ip={redis_ip} --redis_port={redis_port} "
                      "--prediction_cache_size={cache_size}").format(
-            redis_ip=self.redis_ip,
-            redis_port=self.redis_port,
-            cache_size=cache_size)
+                         redis_ip=self.redis_ip,
+                         redis_port=self.redis_port,
+                         cache_size=cache_size)
         query_labels = self.common_labels.copy()
         query_labels[CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL] = ""
         query_container_id = random.randint(0, 100000)
