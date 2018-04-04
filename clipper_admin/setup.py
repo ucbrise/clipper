@@ -27,8 +27,7 @@ setup(
     keywords=['clipper', 'prediction', 'model', 'management'],
     install_requires=[
         'requests', 'subprocess32', 'pyyaml', 'docker', 'kubernetes',
-        'prometheus_client', 'six', 'cloudpickle>=0.5.2', 'redis',
-        'enum34'
+        'prometheus_client', 'six', 'cloudpickle>=0.5.2', 'redis', 'enum34'
     ],
     extras_require={
         'PySpark': ['pyspark'],

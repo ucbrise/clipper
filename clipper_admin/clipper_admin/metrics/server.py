@@ -94,7 +94,7 @@ def start_server():
             #     validation failed.
             #
             # Note:
-            # (2) leads to json ValueError in python2, 
+            # (2) leads to json ValueError in python2,
             #     JSONEncoderError in python3
             logger.error(e)
 
