@@ -197,11 +197,6 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.clipper_conn.build_and_deploy_model(
             model_name, version, input_type, fake_model_data, container_name)
 
-        # Debug Docker
-        from subprocess import call
-        call(['docker', 'ps'])
-        call(['docker', 'stats'])
-
         # Version defaults to current version
         self.clipper_conn.set_num_replicas(model_name, 4)
         time.sleep(1)
