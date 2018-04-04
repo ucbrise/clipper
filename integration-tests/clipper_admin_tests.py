@@ -189,7 +189,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertEqual(len(containers), 1)
 
     def test_set_num_replicas_for_deployed_model_succeeds(self):
-        model_name = "set-num-reps-model"
+        model_name = "set-num-reps-model-test"
         input_type = "doubles"
         version = "v1"
         container_name = "clipper/noop-container:{}".format(clipper_version)
