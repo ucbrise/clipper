@@ -245,11 +245,12 @@ build_images () {
     create_image query_frontend QueryFrontendDockerfile $public
     create_image management_frontend ManagementFrontendDockerfile $public
     create_image dev ClipperDevDockerfile  $public
+    create_image py3-dev ClipperPy3DevDockerfile  $public
     create_image unittests ClipperTestsDockerfile  $private
     create_image py3tests ClipperPy3TestsDockerfile  $private
 
 
-    # Build containers
+    # Build containers for other languages
     create_image spark-scala-container SparkScalaContainerDockerfile $public
     create_image r-container-base RContainerDockerfile $public
 
