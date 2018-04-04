@@ -37,9 +37,10 @@ docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /
 
 # Python 3 unittests
 docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp \
-    -v /home/jenkins/.docker:/root/.docker \
     -e CLIPPER_K8S_CERT_AUTH=$CLIPPER_K8S_CERT_AUTH \
     -e CLIPPER_K8S_CLIENT_CERT=$CLIPPER_K8S_CLIENT_CERT \
     -e CLIPPER_K8S_CLIENT_KEY=$CLIPPER_K8S_CLIENT_KEY \
     -e CLIPPER_K8S_PASSWORD=$CLIPPER_K8S_PASSWORD \
+    -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+    -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
     clipper/py3tests:$tag

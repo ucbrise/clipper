@@ -8,7 +8,7 @@ import tempfile
 import sys
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
-if sys.version < '3':
+if sys.version_info < (3, 0):
     try:
         from cStringIO import StringIO
     except ImportError:
@@ -45,7 +45,7 @@ def save_python_function(name, func):
 
     # Write out function serialization
     func_file_path = os.path.join(serialization_dir, predict_fname)
-    if sys.version < '3':
+    if sys.version_info < (3, 0):
         with open(func_file_path, "w") as serialized_function_file:
             serialized_function_file.write(serialized_prediction_function)
     else:

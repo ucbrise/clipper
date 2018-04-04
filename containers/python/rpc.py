@@ -344,7 +344,7 @@ class Server(threading.Thread):
                 sys.stderr.flush()
 
     def send_container_metadata(self, socket):
-        if sys.version < '3':
+        if sys.version_info < (3, 0):
             socket.send("", zmq.SNDMORE)
         else:
             socket.send("".encode('utf-8'), zmq.SNDMORE)
@@ -358,7 +358,7 @@ class Server(threading.Thread):
         sys.stderr.flush()
 
     def send_heartbeat(self, socket):
-        if sys.version < '3':
+        if sys.version_info < (3, 0):
             socket.send("", zmq.SNDMORE)
         else:
             socket.send_string("", zmq.SNDMORE)
@@ -431,7 +431,7 @@ class PredictionResponse():
         self.string_content_end_position += output_len
 
     def send(self, socket, event_history):
-        if sys.version < '3':
+        if sys.version_info < (3, 0):
             socket.send("", flags=zmq.SNDMORE)
         else:
             socket.send_string("", flags=zmq.SNDMORE)

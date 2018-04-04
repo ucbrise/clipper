@@ -3,7 +3,7 @@ FROM clipper/py3-dev:${CODE_VERSION}
 
 LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
-RUN pip install awscli==1.14.*
+RUN pip3 install awscli==1.14.*
 
 COPY ./ /clipper
 

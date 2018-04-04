@@ -14,7 +14,7 @@ import sys
 from cloudpickle import CloudPickler
 import pickle
 import numpy as np
-if sys.version < '3':
+if sys.version_info < (3, 0):
     try:
         from cStringIO import StringIO
     except ImportError:

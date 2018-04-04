@@ -50,7 +50,8 @@ class DockerContainerManager(ContainerManager):
             The Redis port. If ``redis_ip`` is set to None, Clipper will start Redis on this port.
             If ``redis_ip`` is provided, Clipper will connect to Redis on this port.
         docker_network : str, optional
-            The docker network to attach the containers to. You can read more about Docker networking in the
+            The docker network to attach the containers to. You can read more about Docker
+            networking in the
             `Docker User Guide <https://docs.docker.com/engine/userguide/networking/>`_.
         extra_container_kwargs : dict
             Any additional keyword arguments to pass to the call to
@@ -96,7 +97,7 @@ class DockerContainerManager(ContainerManager):
         try:
             self.docker_client.networks.create(
                 self.docker_network, check_duplicate=True)
-        except docker.errors.APIError as e:
+        except docker.errors.APIError:
             logger.debug(
                 "{nw} network already exists".format(nw=self.docker_network))
         except ConnectionError:
@@ -131,7 +132,8 @@ class DockerContainerManager(ContainerManager):
             labels=mgmt_labels,
             **self.extra_container_kwargs)
 
-        query_cmd = "--redis_ip={redis_ip} --redis_port={redis_port} --prediction_cache_size={cache_size}".format(
+        query_cmd = ("--redis_ip={redis_ip} --redis_port={redis_port} "
+                     "--prediction_cache_size={cache_size}").format(
             redis_ip=self.redis_ip,
             redis_port=self.redis_port,
             cache_size=cache_size)
@@ -284,7 +286,7 @@ class DockerContainerManager(ContainerManager):
             log_file_name = "image_{image}:container_{id}.log".format(
                 image=c.image.short_id, id=c.short_id)
             log_file = os.path.join(logging_dir, log_file_name)
-            if sys.version < '3':
+            if sys.version_info < (3, 0):
                 with open(log_file, "w") as lf:
                     lf.write(c.logs(stdout=True, stderr=True))
             else:

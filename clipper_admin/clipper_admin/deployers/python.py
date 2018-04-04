@@ -194,7 +194,7 @@ def deploy_python_closure(
     # Check if Python 2 or Python 3 image
 
     if base_image == "default":
-        if sys.version_info[0] < 3:
+        if sys.version_info < (3, 0):
             base_image = "clipper/python-closure-container:{}".format(__version__)
         else:
             base_image = "clipper/python3-closure-container:{}".format(__version__)
