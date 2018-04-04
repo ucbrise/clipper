@@ -11,10 +11,6 @@ import logging
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
-sys.path.insert(0, os.path.abspath('%s/util_direct_import/' % cur_dir))
-from util_package import mock_module_in_package as mmip
-import mock_module as mm
-
 from pyspark.mllib.classification import LogisticRegressionWithSGD
 from pyspark.mllib.classification import SVMWithSGD
 from pyspark.mllib.tree import RandomForest
@@ -58,13 +54,6 @@ def parseData(line, obj, pos_label):
 
 def predict(spark, model, xs):
     return [str(model.predict(normalize(x))) for x in xs]
-
-
-def predict_with_local_modules(spark, model, xs):
-    return [
-        str(model.predict(normalize(x)) * mmip.COEFFICIENT * mm.COEFFICIENT)
-        for x in xs
-    ]
 
 
 def deploy_and_test_model(sc,
@@ -169,7 +158,7 @@ if __name__ == "__main__":
                 lr_model,
                 version,
                 link_model=True,
-                predict_fn=predict_with_local_modules)
+                predict_fn=predict)
 
             version += 1
             svm_model = train_svm(trainRDD)
@@ -186,12 +175,8 @@ if __name__ == "__main__":
 
             version += 1
             deploy_and_test_model(
-                sc,
-                clipper_conn,
-                lr_model,
-                version,
-                predict_fn=predict_with_local_modules)
-        except BenchmarkException as e:
+                sc, clipper_conn, lr_model, version, predict_fn=predict)
+        except BenchmarkException:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
             clipper_conn = create_docker_connection(
@@ -201,7 +186,7 @@ if __name__ == "__main__":
             spark.stop()
             clipper_conn = create_docker_connection(
                 cleanup=True, start_clipper=False)
-    except Exception as e:
+    except Exception:
         logger.exception("Exception")
         clipper_conn = create_docker_connection(
             cleanup=True, start_clipper=False)

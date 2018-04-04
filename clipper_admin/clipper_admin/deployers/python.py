@@ -12,18 +12,20 @@ from .deployer_utils import save_python_function
 logger = logging.getLogger(__name__)
 
 
-def create_endpoint(clipper_conn,
-                    name,
-                    input_type,
-                    func,
-                    default_output="None",
-                    version=1,
-                    slo_micros=3000000,
-                    labels=None,
-                    registry=None,
-                    base_image="default",
-                    num_replicas=1,
-                    batch_size=-1):
+def create_endpoint(
+        clipper_conn,
+        name,
+        input_type,
+        func,
+        default_output="None",
+        version=1,
+        slo_micros=3000000,
+        labels=None,
+        registry=None,
+        base_image="default",
+        num_replicas=1,
+        batch_size=-1,
+        pkgs_to_install=None):
     """Registers an application and deploys the provided predict function as a model.
 
     Parameters
@@ -75,29 +77,34 @@ def create_endpoint(clipper_conn,
         The user-defined query batch size for the model. Replicas of the model will attempt
         to process at most `batch_size` queries simultaneously. They may process smaller
         batches if `batch_size` queries are not immediately available.
-        If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
-        replicas of this model.
+        If the default value of -1 is used, Clipper will adaptively calculate the batch size for
+        individual replicas of this model.
+    pkgs_to_install : list (of strings), optional
+        A list of the names of packages to install, using pip, in the container.
+        The names must be strings.
     """
 
     clipper_conn.register_application(name, input_type, default_output,
                                       slo_micros)
     deploy_python_closure(clipper_conn, name, version, input_type, func,
                           base_image, labels, registry, num_replicas,
-                          batch_size)
+                          batch_size, pkgs_to_install)
 
     clipper_conn.link_model_to_app(name, name)
 
 
-def deploy_python_closure(clipper_conn,
-                          name,
-                          version,
-                          input_type,
-                          func,
-                          base_image="default",
-                          labels=None,
-                          registry=None,
-                          num_replicas=1,
-                          batch_size=-1):
+def deploy_python_closure(
+        clipper_conn,
+        name,
+        version,
+        input_type,
+        func,
+        base_image="default",
+        labels=None,
+        registry=None,
+        num_replicas=1,
+        batch_size=-1,
+        pkgs_to_install=None):
     """Deploy an arbitrary Python function to Clipper.
 
     The function should take a list of inputs of the type specified by `input_type` and
@@ -137,8 +144,11 @@ def deploy_python_closure(clipper_conn,
         The user-defined query batch size for the model. Replicas of the model will attempt
         to process at most `batch_size` queries simultaneously. They may process smaller
         batches if `batch_size` queries are not immediately available.
-        If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
-        replicas of this model.
+        If the default value of -1 is used, Clipper will adaptively calculate the batch size for
+        individual replicas of this model.
+    pkgs_to_install : list (of strings), optional
+        A list of the names of packages to install, using pip, in the container.
+        The names must be strings.
 
     Example
     -------
@@ -183,14 +193,15 @@ def deploy_python_closure(clipper_conn,
     logger.info("Python closure saved")
     # Check if Python 2 or Python 3 image
 
-    if sys.version_info[0] < 3:
-        base_image = "clipper/python-closure-container:{}".format(__version__)
-    else:
-        base_image = "clipper/python3-closure-container:{}".format(__version__)
+    if base_image == "default":
+        if sys.version_info[0] < 3:
+            base_image = "clipper/python-closure-container:{}".format(__version__)
+        else:
+            base_image = "clipper/python3-closure-container:{}".format(__version__)
 
     # Deploy function
-    clipper_conn.build_and_deploy_model(name, version, input_type,
-                                        serialization_dir, base_image, labels,
-                                        registry, num_replicas, batch_size)
+    clipper_conn.build_and_deploy_model(
+        name, version, input_type, serialization_dir, base_image, labels,
+        registry, num_replicas, batch_size, pkgs_to_install)
     # Remove temp files
     shutil.rmtree(serialization_dir)
