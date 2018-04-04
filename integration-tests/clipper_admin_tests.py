@@ -197,18 +197,10 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.clipper_conn.build_and_deploy_model(
             model_name, version, input_type, fake_model_data, container_name)
 
-        # Debug Memory
-        import psutil
-        for proc in psutil.process_iter():
-            if 'docker' in proc.name():
-                try:
-                    print(proc.name(), '____', proc.memory_info())
-                except psutil.AccessDenied:
-                    print('access denied for {}'.format(proc.name()))
-
         # Debug Docker
         from subprocess import call
         call(['docker', 'ps'])
+        call(['docker', 'stats'])
 
         # Version defaults to current version
         self.clipper_conn.set_num_replicas(model_name, 4)
