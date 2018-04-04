@@ -1,5 +1,7 @@
+from . import __version__
 from jsonschema import validate
 from enum import Enum
+
 
 
 class Prom_Type(str, Enum):
@@ -12,7 +14,7 @@ class Prom_Type(str, Enum):
     s = 'Summary'
 
 
-versions = ['0.3.0']
+versions = [__version__]
 
 add_schema = {
     'properties': {
@@ -69,13 +71,13 @@ schema = {
 }
 
 
-def validate_schema(messege_dict):
+def validate_schema(message_dict):
     inner_schema = {'add': add_schema, 'report': report_schema}
 
-    validate(messege_dict, schema)
-    endpoint = messege_dict['endpoint']
+    validate(message_dict, schema)
+    endpoint = message_dict['endpoint']
 
     # This line will error if validate fails
-    validate(messege_dict['data'], inner_schema[endpoint])
+    validate(message_dict['data'], inner_schema[endpoint])
 
     return True

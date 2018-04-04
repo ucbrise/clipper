@@ -3,11 +3,10 @@ import redis
 import json
 import logging
 import sys
-from subprocess import call
+from subprocess32 import call
 import psutil
 from schema import validate_schema, Prom_Type
 
-from json import JSONDecodeError
 from jsonschema import ValidationError
 
 from config import CHANNEL_NAME, DEFAULT_BUCKETS, UNIX_SOCKET_PATH
@@ -86,13 +85,17 @@ def start_server():
             messege_dict = json.loads(messege['data'])
             validate_schema(messege_dict)
             handle_messege(messege_dict, metric_pool)
-        except (KeyError, JSONDecodeError, ValidationError) as e:
+        except (KeyError, ValueError, ValidationError) as e:
             # Here, we catch errors in
             # (1) messege['data'], the redis queue is not sending correct
             #     messege in expected format.
             # (2) json.loads, the json string is corrupted.
             # (3) validate_schema will throw ValidationError if schema
             #     validation failed.
+            #
+            # Note:
+            # (2) leads to json ValueError in python2, 
+            #     JSONEncoderError in python3
             logger.error(e)
 
 
