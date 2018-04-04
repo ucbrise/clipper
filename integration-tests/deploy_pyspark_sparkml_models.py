@@ -1,7 +1,7 @@
 from __future__ import absolute_import, print_function
 import os
 import sys
-if sys.version == '3':
+if sys.version_info >= (3, 0):
     sys.exit(0)
 import requests
 import json

@@ -314,7 +314,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertIsNotNone(model_info)
 
         docker_client = get_docker_client()
-        if sys.version < '3':
+        if sys.version_info < (3, 0):
             containers = docker_client.containers.list(
                 filters={
                     "ancestor":
@@ -353,7 +353,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertIsNotNone(linked_models)
 
         docker_client = get_docker_client()
-        if sys.version < '3':
+        if sys.version_info < (3, 0):
             containers = docker_client.containers.list(
                 filters={
                     "ancestor":
