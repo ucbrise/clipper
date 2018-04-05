@@ -1,10 +1,14 @@
 # This ARG isn't used but prevents warnings in the build script
 ARG CODE_VERSION
-FROM python:3
+FROM python:3.6-slim-stretch
 
-WORKDIR /usr/src/app
+LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
-RUN pip install requests prometheus_client flatten_json
+RUN mkdir -p /usr/src/app
 
-COPY monitoring/front_end_exporter.py .
-ENTRYPOINT ["python", "./front_end_exporter.py"]
+RUN pip install requests==2.18.* prometheus_client==0.1.* flatten_json==0.1.*
+
+COPY monitoring/front_end_exporter.py /usr/src/app
+ENTRYPOINT ["python", "/usr/src/app/front_end_exporter.py"]
+
+# vim: set filetype=dockerfile:

@@ -1,23 +1,27 @@
 ARG CODE_VERSION
 FROM clipper/py-rpc:${CODE_VERSION}
 
-COPY clipper_admin/clipper_admin/python_container_conda_deps.txt /lib/
+LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
-RUN echo deb http://ftp.de.debian.org/debian jessie-backports main >> /etc/apt/sources.list \
-      && apt-get update --fix-missing \
-      && apt-get install -yqq -t jessie-backports openjdk-8-jdk \
-      && conda config --set ssl_verify no \
-      && conda install -c anaconda cloudpickle=0.5.2 \
-      && conda install -y --file /lib/python_container_conda_deps.txt \
-      && conda install -c conda-forge onnx \
-      && conda install -c caffe2 caffe2 \
-      && pip install onnx-caffe2 \
-      && conda install -c pytorch pytorch torchvision
+RUN apt-get update && apt-get install -y --no-install-recommends \
+       build-essential cmake git libgoogle-glog-dev libgtest-dev libiomp-dev libleveldb-dev \
+       liblmdb-dev libopencv-dev libsnappy-dev libprotobuf-dev \
+       protobuf-compiler python-dev libgflags-dev && pip install future==0.16.* protobuf==3.5.*
 
-COPY containers/python/caffe2_onnx_container.py containers/python/caffe2_onnx_container_entry.sh /container/
-COPY clipper_admin/ /lib/clipper_admin
-RUN pip install /lib/clipper_admin
+RUN git clone --recursive https://github.com/caffe2/caffe2.git && cd caffe2 \
+    && git checkout 409e96d9ebd9963e10fd1eaa0a02cfbb8623650e \
+    && git submodule update --init && mkdir build && cd build && cmake .. -DUSE_MPI=OFF \
+    && make -j8 install
 
-CMD ["/container/caffe2_onnx_container_entry.sh"]
+ENV LD_LIBRARY_PATH=/usr/local/lib/ 
+
+RUN cd ~ && python -c 'from caffe2.python import core'
+
+RUN pip install onnx
+RUN python -c "import onnx"
+  
+COPY containers/python/caffe2_onnx_container.py containers/python/container_entry.sh /container/
+
+CMD ["/container/container_entry.sh", "caffe2-onnx", "/container/caffe2_onnx_container.py"]
 
 # vim: set filetype=dockerfile:
