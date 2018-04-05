@@ -9,18 +9,10 @@ import logging
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
-sys.path.insert(0, os.path.abspath('%s/util_direct_import/' % cur_dir))
-
-from util_package import mock_module_in_package as mmip
-import mock_module as mm
-
 import torch
-from torch.utils.data import DataLoader
 import torch.utils.data as data
-from PIL import Image
 from torch import nn, optim
 from torch.autograd import Variable
-from torchvision import transforms
 import torch.nn.functional as F
 
 from test_utils import (create_docker_connection, BenchmarkException, headers,
@@ -134,8 +126,8 @@ def train(model):
     model.train()
     optimizer = optim.SGD(model.parameters(), lr=0.001)
     for epoch in range(10):
-        for i, data in enumerate(train_loader, 1):
-            image, j = data
+        for i, d in enumerate(train_loader, 1):
+            image, j = d
             optimizer.zero_grad()
             output = model(image)
             loss = F.cross_entropy(output,
@@ -150,7 +142,7 @@ def get_test_point():
     return [np.random.randint(255) for _ in range(784)]
 
 
-#Define a dataloader to read data
+# Define a dataloader to read data
 class TrainingDataset(data.Dataset):
     def __init__(self, data, label):
         self.imgs = data
@@ -204,7 +196,7 @@ if __name__ == "__main__":
                             predict, nn_model)
             test_model(clipper_conn, app_and_model_name, 1)
 
-        except BenchmarkException as e:
+        except BenchmarkException:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
             clipper_conn = create_docker_connection(
@@ -213,7 +205,7 @@ if __name__ == "__main__":
         else:
             clipper_conn = create_docker_connection(
                 cleanup=True, start_clipper=False)
-    except Exception as e:
+    except Exception:
         logger.exception("Exception")
         clipper_conn = create_docker_connection(
             cleanup=True, start_clipper=False)
