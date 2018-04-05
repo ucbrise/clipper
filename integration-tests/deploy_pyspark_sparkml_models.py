@@ -9,10 +9,6 @@ import logging
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
-sys.path.insert(0, os.path.abspath('%s/util_direct_import/' % cur_dir))
-from util_package import mock_module_in_package as mmip
-import mock_module as mm
-
 from pyspark.ml.linalg import Vectors
 from pyspark.sql import SparkSession, Row
 from pyspark.ml.classification import LogisticRegression
@@ -152,7 +148,7 @@ if __name__ == "__main__":
             lr_model = train_logistic_regression(trainDf)
             deploy_and_test_model(
                 sc, clipper_conn, lr_model, version, link_model=True)
-        except BenchmarkException as e:
+        except BenchmarkException:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
             clipper_conn = create_docker_connection(
@@ -162,7 +158,7 @@ if __name__ == "__main__":
             spark.stop()
             clipper_conn = create_docker_connection(
                 cleanup=True, start_clipper=False)
-    except Exception as e:
+    except Exception:
         logger.exception("Exception")
         clipper_conn = create_docker_connection(
             cleanup=True, start_clipper=False)
