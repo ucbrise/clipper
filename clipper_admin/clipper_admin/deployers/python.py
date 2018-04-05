@@ -6,6 +6,7 @@ import os
 import posixpath
 import shutil
 from ..version import __version__
+from ..exceptions import ClipperException
 
 from .deployer_utils import save_python_function
 
@@ -189,17 +190,27 @@ def deploy_python_closure(clipper_conn,
     # Special handling for Windows, which uses backslash for path delimiting
     serialization_dir = posixpath.join(*os.path.split(serialization_dir))
     logger.info("Python closure saved")
-    # Check if Python 2 or Python 3 image
 
+    # Check if Python 2 or Python 3 image
     if base_image == "default":
         if sys.version_info < (3, 0):
             logger.info("Using Python 2 base image")
             base_image = "clipper/python-closure-container:{}".format(
                 __version__)
-        else:
-            logger.info("Using Python 3 base image")
-            base_image = "clipper/python3-closure-container:{}".format(
+        elif sys.version_info == (3, 5):
+            logger.info("Using Python 3.5 base image")
+            base_image = "clipper/python35-closure-container:{}".format(
                 __version__)
+        elif sys.version_info == (3, 6):
+            logger.info("Using Python 3.6 base image")
+            base_image = "clipper/python36-closure-container:{}".format(
+                __version__)
+        else:
+            msg = "Python closure deployer only supports Python 2.7, 3.5, and 3.6"
+            logger.error(msg)
+            # Remove temp files
+            shutil.rmtree(serialization_dir)
+            raise ClipperException(msg)
 
     # Deploy function
     clipper_conn.build_and_deploy_model(

@@ -1,5 +1,5 @@
 ARG CODE_VERSION
-FROM clipper/py3-dev:${CODE_VERSION}
+FROM clipper/py35-dev:${CODE_VERSION}
 
 LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
@@ -11,6 +11,6 @@ COPY ./ /clipper
 RUN cd /clipper/src/libs/spdlog \
     && git apply ../patches/make_spdlog_compile_linux.patch
 
-ENTRYPOINT ["/clipper/bin/run_unittests.sh", "-i"]
+ENTRYPOINT ["/clipper/bin/ci_checks.sh", "false"]
 
 # vim: set filetype=dockerfile:
