@@ -1,5 +1,5 @@
 ARG CODE_VERSION
-FROM clipper/py3-rpc:${CODE_VERSION}
+FROM clipper/py36-rpc:${CODE_VERSION}
 
 LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
