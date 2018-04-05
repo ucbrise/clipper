@@ -241,29 +241,29 @@ build_images () {
     ###########################################################################
 
     # Build Clipper core images
-    #create_image lib_base ClipperLibBaseDockerfile $private
-    #create_image query_frontend QueryFrontendDockerfile $public
-    #create_image management_frontend ManagementFrontendDockerfile $public
-    #create_image unittests ClipperTestsDockerfile  $private
+    create_image lib_base ClipperLibBaseDockerfile $private
+    create_image query_frontend QueryFrontendDockerfile $public
+    create_image management_frontend ManagementFrontendDockerfile $public
+    create_image unittests ClipperTestsDockerfile  $private
 
     # Build containers
-    #create_image spark-scala-container SparkScalaContainerDockerfile $public
-   # create_image r-container-base RContainerDockerfile $public
+    create_image spark-scala-container SparkScalaContainerDockerfile $public
+    create_image r-container-base RContainerDockerfile $public
 
     # First build Python base image
     create_image py-rpc RPCDockerfile $public
-    #create_image sum-container SumDockerfile  $private
-    #create_image noop-container NoopDockerfile $public
+    create_image sum-container SumDockerfile  $private
+    create_image noop-container NoopDockerfile $public
     create_image python-closure-container PyClosureContainerDockerfile $public
-    #create_image pyspark-container PySparkContainerDockerfile $public
-    #create_image tf_cifar_container TensorFlowCifarDockerfile $public
-    #create_image tf-container TensorFlowDockerfile $public
-    #create_image pytorch-container PyTorchContainerDockerfile $public
-    #create_image caffe2-onnx-container Caffe2OnnxDockerfile $public
-    #create_image mxnet-container MXNetContainerDockerfile $public
+    create_image pyspark-container PySparkContainerDockerfile $public
+    create_image tf_cifar_container TensorFlowCifarDockerfile $public
+    create_image tf-container TensorFlowDockerfile $public
+    create_image pytorch-container PyTorchContainerDockerfile $public
+    create_image caffe2-onnx-container Caffe2OnnxDockerfile $public
+    create_image mxnet-container MXNetContainerDockerfile $public
 
     # Build Metric Monitor image - no dependency
-    #create_image frontend-exporter FrontendExporterDockerfile $public
+    create_image frontend-exporter FrontendExporterDockerfile $public
 }
 
 
