@@ -1,13 +1,19 @@
 ARG CODE_VERSION
 FROM clipper/py-rpc:${CODE_VERSION}
 
-LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
+COPY clipper_admin/clipper_admin/python_container_conda_deps.txt /lib/
 
-RUN pip install http://download.pytorch.org/whl/cu80/torch-0.3.1-cp27-cp27mu-linux_x86_64.whl \
-      && pip install torchvision 
+RUN echo deb http://ftp.de.debian.org/debian jessie-backports main >> /etc/apt/sources.list \
+      && apt-get update --fix-missing \
+      && apt-get install -yqq -t jessie-backports openjdk-8-jdk \
+      && conda config --set ssl_verify no \
+      && conda install -c anaconda cloudpickle=0.5.2 \
+      && conda install -y --file /lib/python_container_conda_deps.txt \
+      && conda install pytorch torchvision -c pytorch 
 
-COPY containers/python/pytorch_container.py containers/python/container_entry.sh /container/
 
-CMD ["/container/container_entry.sh", "pytorch-container", "/container/pytorch_container.py"]
+COPY containers/python/pytorch_container.py containers/python/pytorch_container_entry.sh /container/
+
+CMD ["/container/pytorch_container_entry.sh"]
 
 # vim: set filetype=dockerfile:

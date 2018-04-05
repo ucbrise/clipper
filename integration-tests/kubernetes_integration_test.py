@@ -50,17 +50,14 @@ def deploy_model(clipper_conn, name, version, link=False):
         num_defaults = 0
         addr = clipper_conn.get_query_addr()
         for i in range(num_preds):
-            try:
-                response = requests.post(
-                    "http://%s/%s/predict" % (addr, app_name),
-                    headers=headers,
-                    data=json.dumps({
-                        'input': list(np.random.random(30))
-                    }))
-                result = response.json()
-                if response.status_code == requests.codes.ok and result["default"]:
-                    num_defaults += 1
-            except requests.RequestException:
+            response = requests.post(
+                "http://%s/%s/predict" % (addr, app_name),
+                headers=headers,
+                data=json.dumps({
+                    'input': list(np.random.random(30))
+                }))
+            result = response.json()
+            if response.status_code == requests.codes.ok and result["default"]:
                 num_defaults += 1
         if num_defaults > 0:
             logger.error("Error: %d/%d predictions were default" %
@@ -134,12 +131,12 @@ if __name__ == "__main__":
             log_clipper_state(clipper_conn)
             logger.info("SUCCESS")
             clipper_conn.stop_all()
-        except BenchmarkException:
+        except BenchmarkException as e:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
             create_kubernetes_connection(cleanup=True, start_clipper=False)
             sys.exit(1)
-        except ClipperException:
+        except ClipperException as e:
             log_clipper_state(clipper_conn)
             logger.exception("ClipperException")
             create_kubernetes_connection(cleanup=True, start_clipper=False)

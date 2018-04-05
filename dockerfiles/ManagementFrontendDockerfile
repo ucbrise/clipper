@@ -1,8 +1,6 @@
 ARG CODE_VERSION
 FROM clipper/lib_base:${CODE_VERSION}
 
-LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
-
 COPY ./ /clipper
 
 RUN cd /clipper/src/libs/spdlog \
@@ -11,7 +9,7 @@ RUN cd /clipper/src/libs/spdlog \
     && ./configure --cleanup-quiet \
     && ./configure --release \
     && cd release \
-    && make -j4 management_frontend
+    && make management_frontend
 
 ENTRYPOINT ["/clipper/release/src/management/management_frontend"]
 

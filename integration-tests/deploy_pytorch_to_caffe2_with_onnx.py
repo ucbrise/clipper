@@ -9,10 +9,18 @@ import logging
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
+sys.path.insert(0, os.path.abspath('%s/util_direct_import/' % cur_dir))
+
+from util_package import mock_module_in_package as mmip
+import mock_module as mm
+
 import torch
+from torch.utils.data import DataLoader
 import torch.utils.data as data
+from PIL import Image
 from torch import nn, optim
 from torch.autograd import Variable
+from torchvision import transforms
 import torch.nn.functional as F
 
 from test_utils import (create_docker_connection, BenchmarkException, headers,
@@ -99,12 +107,12 @@ def test_model(clipper_conn, app, version):
         if response.status_code == requests.codes.ok and result["default"]:
             num_defaults += 1
         elif response.status_code != requests.codes.ok:
-            logger.error(result)
+            print(result)
             raise BenchmarkException(response.text)
 
     if num_defaults > 0:
-        logger.error("Error: %d/%d predictions were default" % (num_defaults,
-                                                                num_preds))
+        print("Error: %d/%d predictions were default" % (num_defaults,
+                                                         num_preds))
     if num_defaults > num_preds / 2:
         raise BenchmarkException("Error querying APP %s, MODEL %s:%d" %
                                  (app, model_name, version))
@@ -134,8 +142,8 @@ def train(model):
     model.train()
     optimizer = optim.SGD(model.parameters(), lr=0.001)
     for epoch in range(10):
-        for i, d in enumerate(train_loader, 1):
-            image, j = d
+        for i, data in enumerate(train_loader, 1):
+            image, j = data
             optimizer.zero_grad()
             output = model(image)
             loss = F.cross_entropy(output,
@@ -188,7 +196,7 @@ if __name__ == "__main__":
                 }))
             result = response.json()
             if response.status_code != requests.codes.ok:
-                logger.error("Error: %s" % response.text)
+                print("Error: %s" % response.text)
                 raise BenchmarkException("Error creating app %s" % app_name)
 
             version = 1
@@ -211,8 +219,7 @@ if __name__ == "__main__":
                 onnx_backend="caffe2")
             test_model(clipper_conn, app_and_model_name, 1)
 
-        except BenchmarkException:
-            sys.exit(1)
+        except BenchmarkException as e:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
             clipper_conn = create_docker_connection(
@@ -221,7 +228,7 @@ if __name__ == "__main__":
         else:
             clipper_conn = create_docker_connection(
                 cleanup=True, start_clipper=False)
-    except Exception:
+    except Exception as e:
         logger.exception("Exception")
         clipper_conn = create_docker_connection(
             cleanup=True, start_clipper=False)

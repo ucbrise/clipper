@@ -22,9 +22,6 @@ cd $DIR/..
 tag=$(<VERSION.txt)
 cd -
 
-# Log in to Kubernetes Docker repo
-$DIR/aws_docker_repo_login.sh
-
 # Test docker login
 docker pull 568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/query_frontend:$tag
 

@@ -1,7 +1,7 @@
 ARG CODE_VERSION
 FROM clipper/lib_base:${CODE_VERSION}
 
-LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
+# Build Clipper
 
 COPY ./ /clipper
 
@@ -11,7 +11,7 @@ RUN cd /clipper/src/libs/spdlog \
     && ./configure --cleanup-quiet \
     && ./configure --release \
     && cd release \
-    && make -j4 query_frontend
+    && make query_frontend
 
 ENTRYPOINT ["/clipper/release/src/frontends/query_frontend"]
 
