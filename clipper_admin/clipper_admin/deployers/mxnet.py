@@ -1,14 +1,11 @@
 from __future__ import print_function, with_statement, absolute_import
 import shutil
-import mxnet as mx
 import logging
-import re
 import os
 import json
 
 from ..version import __version__
-from ..clipper_admin import ClipperException
-from .deployer_utils import save_python_function, serialize_object
+from .deployer_utils import save_python_function
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +25,9 @@ def create_endpoint(
         labels=None,
         registry=None,
         base_image="clipper/mxnet-container:{}".format(__version__),
-        num_replicas=1):
+        num_replicas=1,
+        batch_size=-1,
+        pkgs_to_install=None):
     """Registers an app and deploys the provided predict function with MXNet model as
     a Clipper model.
     Parameters
@@ -45,10 +44,11 @@ def create_endpoint(
         captured via closure capture and pickled with Cloudpickle.
     mxnet_model : mxnet model object
         The MXNet model to save.
-    mxnet_data_shapes : list(int)
-        List of integers representing the dimensions of data used for model prediction.
-        Required because loading serialized MXNet models involves binding, which requires
         the shape of the data used to train the model.
+    mxnet_data_shapes : list of DataDesc objects
+        List of DataDesc objects representing the name, shape, type and layout information
+        of data used for model prediction.
+        Required because loading serialized MXNet models involves binding, which requires
         https://mxnet.incubator.apache.org/api/python/module.html#mxnet.module.BaseModule.bind
     default_output : str, optional
         The default output for the application. The default output will be returned whenever
@@ -83,6 +83,15 @@ def create_endpoint(
         The number of replicas of the model to create. The number of replicas
         for a model can be changed at any time with
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
+    batch_size : int, optional
+        The user-defined query batch size for the model. Replicas of the model will attempt
+        to process at most `batch_size` queries simultaneously. They may process smaller
+        batches if `batch_size` queries are not immediately available.
+        If the default value of -1 is used, Clipper will adaptively calculate the batch size for
+        individual replicas of this model.
+    pkgs_to_install : list (of strings), optional
+        A list of the names of packages to install, using pip, in the container.
+        The names must be strings.
 
     Note
     ----
@@ -91,13 +100,15 @@ def create_endpoint(
     handle variable size input batches, we recommend setting batch size for input data
     to 1, or dynamically reshaping the model with every prediction based on the current
     input batch size.
+    More information regarding a DataDesc object can be found here:
+    https://mxnet.incubator.apache.org/versions/0.11.0/api/python/io.html#mxnet.io.DataDesc
     """
 
     clipper_conn.register_application(name, input_type, default_output,
                                       slo_micros)
     deploy_mxnet_model(clipper_conn, name, version, input_type, func,
                        mxnet_model, mxnet_data_shapes, base_image, labels,
-                       registry, num_replicas)
+                       registry, num_replicas, batch_size, pkgs_to_install)
 
     clipper_conn.link_model_to_app(name, name)
 
@@ -113,7 +124,9 @@ def deploy_mxnet_model(
         base_image="clipper/mxnet-container:{}".format(__version__),
         labels=None,
         registry=None,
-        num_replicas=1):
+        num_replicas=1,
+        batch_size=-1,
+        pkgs_to_install=None):
     """Deploy a Python function with a MXNet model.
     Parameters
     ----------
@@ -132,8 +145,9 @@ def deploy_mxnet_model(
         captured via closure capture and pickled with Cloudpickle.
     mxnet_model : mxnet model object
         The MXNet model to save.
-    mxnet_data_shapes : list(int)
-        List of integers representing the dimensions of data used for model prediction.
+    mxnet_data_shapes : list of DataDesc objects
+        List of DataDesc objects representing the name, shape, type and layout information
+        of data used for model prediction.
         Required because loading serialized MXNet models involves binding, which requires
         the shape of the data used to train the model.
         https://mxnet.incubator.apache.org/api/python/module.html#mxnet.module.BaseModule.bind
@@ -152,6 +166,15 @@ def deploy_mxnet_model(
         The number of replicas of the model to create. The number of replicas
         for a model can be changed at any time with
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
+    batch_size : int, optional
+        The user-defined query batch size for the model. Replicas of the model will attempt
+        to process at most `batch_size` queries simultaneously. They may process smaller
+        batches if `batch_size` queries are not immediately available.
+        If the default value of -1 is used, Clipper will adaptively calculate the batch size for
+        individual replicas of this model.
+    pkgs_to_install : list (of strings), optional
+        A list of the names of packages to install, using pip, in the container.
+        The names must be strings.
 
     Note
     ----
@@ -160,6 +183,8 @@ def deploy_mxnet_model(
     handle variable size input batches, we recommend setting batch size for input data
     to 1, or dynamically reshaping the model with every prediction based on the current
     input batch size.
+    More information regarding a DataDesc object can be found here:
+    https://mxnet.incubator.apache.org/versions/0.11.0/api/python/io.html#mxnet.io.DataDesc
 
     Example
     -------
@@ -181,11 +206,15 @@ def deploy_mxnet_model(
         fc2 = mx.symbol.FullyConnected(act1, name='fc2', num_hidden=10)
         softmax = mx.symbol.SoftmaxOutput(fc2, name='softmax')
 
+        # Load some training data
+        data_iter = mx.io.CSVIter(
+            data_csv="/path/to/train_data.csv", data_shape=(785, ), batch_size=1)
+
         # Initialize the module and fit it
         mxnet_model = mx.mod.Module(softmax)
         mxnet_model.fit(data_iter, num_epoch=1)
 
-        data_shape = [1, 785]
+        data_shape = data_iter.provide_data
 
         deploy_mxnet_model(
             clipper_conn,
@@ -216,9 +245,9 @@ def deploy_mxnet_model(
             json.dump({"data_shapes": mxnet_data_shapes}, f)
 
         # Deploy model
-        clipper_conn.build_and_deploy_model(name, version, input_type,
-                                            serialization_dir, base_image,
-                                            labels, registry, num_replicas)
+        clipper_conn.build_and_deploy_model(
+            name, version, input_type, serialization_dir, base_image, labels,
+            registry, num_replicas, batch_size, pkgs_to_install)
 
     except Exception as e:
         logger.error("Error saving MXNet model: %s" % e)
