@@ -206,7 +206,8 @@ def deploy_python_closure(clipper_conn,
             base_image = "clipper/python36-closure-container:{}".format(
                 __version__)
         else:
-            msg = "Python closure deployer only supports Python 2.7, 3.5, and 3.6"
+            msg = ("Python closure deployer only supports Python 2.7, 3.5, and 3.6. "
+                   "Detected {}").format(sys.version_info)
             logger.error(msg)
             # Remove temp files
             shutil.rmtree(serialization_dir)

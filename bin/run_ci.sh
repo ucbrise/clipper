@@ -26,14 +26,14 @@ docker tag clipper/management_frontend:$tag 568959175238.dkr.ecr.us-west-1.amazo
 docker push 568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/management_frontend:$tag
 
 # Run tests
-docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp \
-    -e CLIPPER_K8S_CERT_AUTH=$CLIPPER_K8S_CERT_AUTH \
-    -e CLIPPER_K8S_CLIENT_CERT=$CLIPPER_K8S_CLIENT_CERT \
-    -e CLIPPER_K8S_CLIENT_KEY=$CLIPPER_K8S_CLIENT_KEY \
-    -e CLIPPER_K8S_PASSWORD=$CLIPPER_K8S_PASSWORD \
-    -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-    -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-    clipper/unittests:$tag
+# docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp \
+#     -e CLIPPER_K8S_CERT_AUTH=$CLIPPER_K8S_CERT_AUTH \
+#     -e CLIPPER_K8S_CLIENT_CERT=$CLIPPER_K8S_CLIENT_CERT \
+#     -e CLIPPER_K8S_CLIENT_KEY=$CLIPPER_K8S_CLIENT_KEY \
+#     -e CLIPPER_K8S_PASSWORD=$CLIPPER_K8S_PASSWORD \
+#     -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+#     -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+#     clipper/unittests:$tag
 
 # Python 3 unittests
 docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp \
