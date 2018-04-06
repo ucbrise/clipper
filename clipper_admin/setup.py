@@ -21,7 +21,7 @@ setup(
     license=license,
     packages=[
         "clipper_admin", "clipper_admin.docker", "clipper_admin.kubernetes",
-        "clipper_admin.deployers"
+        "clipper_admin.deployers", "clipper_admin.metrics"
     ],
     package_data={'clipper_admin': ['*.txt', '*/*.yaml']},
     keywords=['clipper', 'prediction', 'model', 'management'],
@@ -33,9 +33,11 @@ setup(
         'docker',
         'kubernetes',
         'prometheus_client',
-        'six',
         'cloudpickle>=0.5',
         'enum34; python_version<"3.4"',
+        'redis',
+        'psutil',
+        'jsonschema'
     ],
     extras_require={
         'PySpark': ['pyspark'],
