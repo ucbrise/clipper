@@ -11,7 +11,6 @@ import sys
 import os
 import json
 import time
-import numpy as np
 import requests
 import tempfile
 import shutil
@@ -26,10 +25,6 @@ import clipper_admin as cl
 from clipper_admin.deployers.python import create_endpoint as create_py_endpoint
 from clipper_admin.deployers.python import deploy_python_closure
 from clipper_admin import __version__ as clipper_version
-
-sys.path.insert(0, os.path.abspath('%s/util_direct_import/' % cur_dir))
-from util_package import mock_module_in_package as mmip
-import mock_module as mm
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
@@ -496,7 +491,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         addr = self.clipper_conn.get_query_addr()
         url = "http://{addr}/{app}/predict".format(
             addr=addr, app=self.app_name_3)
-        test_input = [[99.3, 18.9, 67.2, 34.2], [101.1, 45.6, 98.0, 99.1], \
+        test_input = [[99.3, 18.9, 67.2, 34.2], [101.1, 45.6, 98.0, 99.1],
                       [12.3, 6.7, 42.1, 12.6], [9.01, 87.6, 70.2, 19.6]]
         req_json = json.dumps({'input_batch': test_input})
         headers = {'Content-type': 'application/json'}
@@ -510,9 +505,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         model_version = 1
 
         def predict_func(inputs):
-            return [
-                str(mm.COEFFICIENT * mmip.COEFFICIENT * len(x)) for x in inputs
-            ]
+            return [str(len(x)) for x in inputs]
 
         input_type = "doubles"
         deploy_python_closure(self.clipper_conn, self.model_name_1,
@@ -537,9 +530,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
                 time.sleep(20)
             else:
                 received_non_default_prediction = True
-                self.assertEqual(
-                    int(output),
-                    mm.COEFFICIENT * mmip.COEFFICIENT * len(test_input))
+                self.assertEqual(int(output), len(test_input))
                 break
 
         self.assertTrue(received_non_default_prediction)
