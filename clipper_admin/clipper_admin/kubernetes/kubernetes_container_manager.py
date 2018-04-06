@@ -383,7 +383,7 @@ class KubernetesContainerManager(ContainerManager):
 
     def get_admin_addr(self):
         if self.use_k8s_proxy:
-            return ("http://{proxy_addr}/api/v1/namespaces/{ns}/"
+            return ("{proxy_addr}/api/v1/namespaces/{ns}/"
                     "services/mgmt-frontend:{port}/proxy").format(
                         proxy_addr=self.kubernetes_proxy_addr,
                         ns="default",
@@ -396,7 +396,7 @@ class KubernetesContainerManager(ContainerManager):
 
     def get_query_addr(self):
         if self.use_k8s_proxy:
-            return ("http://{proxy_addr}/api/v1/namespaces/{ns}/"
+            return ("{proxy_addr}/api/v1/namespaces/{ns}/"
                     "services/query-frontend:{port}/proxy").format(
                         proxy_addr=self.kubernetes_proxy_addr,
                         ns="default",
@@ -407,7 +407,7 @@ class KubernetesContainerManager(ContainerManager):
 
     def get_metric_addr(self):
         if self.use_k8s_proxy:
-            return ("http://{proxy_addr}/api/v1/namespaces/{ns}/"
+            return ("{proxy_addr}/api/v1/namespaces/{ns}/"
                     "services/metrics:{port}/proxy").format(
                         proxy_addr=self.kubernetes_proxy_addr,
                         ns="default",
