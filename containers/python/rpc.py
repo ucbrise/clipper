@@ -10,7 +10,10 @@ import sys
 import os
 import yaml
 from collections import deque
-from subprocess32 import Popen, PIPE
+if sys.version_info < (3, 0):
+    from subprocess32 import Popen, PIPE
+else:
+    from subprocess import Popen, PIPE
 from prometheus_client import start_http_server
 from prometheus_client.core import Counter, Gauge, Histogram, Summary
 import clipper_admin.metrics as metrics
