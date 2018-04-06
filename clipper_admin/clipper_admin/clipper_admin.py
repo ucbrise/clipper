@@ -76,7 +76,8 @@ class ClipperConnection(object):
                 __version__),
             mgmt_frontend_image='clipper/management_frontend:{}'.format(
                 __version__),
-            cache_size=DEFAULT_PREDICTION_CACHE_SIZE_BYTES):
+            cache_size=DEFAULT_PREDICTION_CACHE_SIZE_BYTES,
+            num_frontend_replicas=1):
         """Start a new Clipper cluster and connect to it.
 
         This command will start a new Clipper instance using the container manager provided when
@@ -101,7 +102,7 @@ class ClipperConnection(object):
         """
         try:
             self.cm.start_clipper(query_frontend_image, mgmt_frontend_image,
-                                  cache_size)
+                                  cache_size, num_frontend_replicas)
             while True:
                 try:
                     url = "http://{host}/metrics".format(

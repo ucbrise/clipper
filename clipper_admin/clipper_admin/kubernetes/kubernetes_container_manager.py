@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
-from ..container_manager import (create_model_container_label,
-                                 ContainerManager, CLIPPER_DOCKER_LABEL,
-                                 CLIPPER_MODEL_CONTAINER_LABEL)
+from ..container_manager import (
+    create_model_container_label, ContainerManager, CLIPPER_DOCKER_LABEL,
+    CLIPPER_MODEL_CONTAINER_LABEL, CLIPPER_QUERY_FRONTEND_ID_LABEL)
 from ..exceptions import ClipperException
 from .kubernetes_metric_utils import start_prometheus, CLIPPER_FRONTEND_EXPORTER_IMAGE
 
@@ -14,6 +14,7 @@ import json
 import yaml
 import os
 import time
+from six.moves import range
 
 logger = logging.getLogger(__name__)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
@@ -71,8 +72,13 @@ class KubernetesContainerManager(ContainerManager):
         self._k8s_v1 = client.CoreV1Api()
         self._k8s_beta = client.ExtensionsV1beta1Api()
 
-    def start_clipper(self, query_frontend_image, mgmt_frontend_image,
-                      cache_size):
+    def start_clipper(self,
+                      query_frontend_image,
+                      mgmt_frontend_image,
+                      cache_size,
+                      num_frontend_replicas=1):
+        self.num_frontend_replicas = num_frontend_replicas
+
         # If an existing Redis service isn't provided, start one
         if self.redis_ip is None:
             name = 'redis'
@@ -114,11 +120,43 @@ class KubernetesContainerManager(ContainerManager):
                     "image"] = img
 
                 if name is 'query-frontend':
-                    body['spec']['template']['spec']['containers'][1][
-                        'image'] = CLIPPER_FRONTEND_EXPORTER_IMAGE
+                    # Create multiple query frontend
+                    for query_frontend_id in range(num_frontend_replicas):
+                        # Create single query frontend depolyment
+                        body['metadata']['name'] = 'query-frontend-{}'.format(
+                            query_frontend_id)
+                        body['spec']['template']['metadata']['labels'][
+                            CLIPPER_QUERY_FRONTEND_ID_LABEL] = str(
+                                query_frontend_id)
 
-                self._k8s_beta.create_namespaced_deployment(
-                    body=body, namespace='default')
+                        body['spec']['template']['spec']['containers'][1][
+                            'image'] = CLIPPER_FRONTEND_EXPORTER_IMAGE
+
+                        self._k8s_beta.create_namespaced_deployment(
+                            body=body, namespace='default')
+
+                        # Create single query frontend rpc service
+                        # Don't confuse this with query frontend service, which
+                        #   is created after the loop as a single user facing
+                        #   service.
+                        rpc_service_body = yaml.load(
+                            open(
+                                os.path.join(
+                                    cur_dir,
+                                    '{}-rpc-service.yaml'.format(name))))
+                        rpc_service_body['metadata'][
+                            'name'] = 'query-frontend-{}'.format(
+                                query_frontend_id)
+                        rpc_service_body['spec']['selector'][
+                            CLIPPER_QUERY_FRONTEND_ID_LABEL] = str(
+                                query_frontend_id)
+
+                        self._k8s_v1.create_namespaced_service(
+                            body=rpc_service_body, namespace='default')
+
+                else:
+                    self._k8s_beta.create_namespaced_deployment(
+                        body=body, namespace='default')
 
             with _pass_conflicts():
                 body = yaml.load(
@@ -194,67 +232,74 @@ class KubernetesContainerManager(ContainerManager):
 
     def deploy_model(self, name, version, input_type, image, num_replicas=1):
         with _pass_conflicts():
-            deployment_name = get_model_deployment_name(name, version)
-            body = {
-                'apiVersion': 'extensions/v1beta1',
-                'kind': 'Deployment',
-                'metadata': {
-                    "name": deployment_name
-                },
-                'spec': {
-                    'replicas': num_replicas,
-                    'template': {
-                        'metadata': {
-                            'labels': {
-                                CLIPPER_MODEL_CONTAINER_LABEL:
-                                create_model_container_label(name, version),
-                                CLIPPER_DOCKER_LABEL:
-                                ""
+            for query_frontend_id in range(self.num_frontend_replicas):
+                deployment_name = get_model_deployment_name(
+                    name, version, query_frontend_id)
+                body = {
+                    'apiVersion': 'extensions/v1beta1',
+                    'kind': 'Deployment',
+                    'metadata': {
+                        "name": deployment_name
+                    },
+                    'spec': {
+                        'replicas': num_replicas,
+                        'template': {
+                            'metadata': {
+                                'labels': {
+                                    CLIPPER_MODEL_CONTAINER_LABEL:
+                                    create_model_container_label(
+                                        name, version),
+                                    CLIPPER_DOCKER_LABEL:
+                                    ""
+                                },
+                                'annotations': {
+                                    "prometheus.io/scrape": "true",
+                                    "prometheus.io/port": "1390"
+                                }
                             },
-                            'annotations': {
-                                "prometheus.io/scrape": "true",
-                                "prometheus.io/port": "1390"
-                            }
-                        },
-                        'spec': {
-                            'containers': [{
-                                'name':
-                                deployment_name,
-                                'image':
-                                image,
-                                'ports': [{
-                                    'containerPort': 80
-                                }, {
-                                    'containerPort': 1390
-                                }],
-                                'env': [{
-                                    'name': 'CLIPPER_MODEL_NAME',
-                                    'value': name
-                                }, {
-                                    'name': 'CLIPPER_MODEL_VERSION',
-                                    'value': str(version)
-                                }, {
-                                    'name': 'CLIPPER_IP',
-                                    'value': 'query-frontend'
-                                }, {
-                                    'name': 'CLIPPER_INPUT_TYPE',
-                                    'value': input_type
+                            'spec': {
+                                'containers': [{
+                                    'name':
+                                    deployment_name,
+                                    'image':
+                                    image,
+                                    'ports': [{
+                                        'containerPort': 80
+                                    }, {
+                                        'containerPort': 1390
+                                    }],
+                                    'env': [{
+                                        'name': 'CLIPPER_MODEL_NAME',
+                                        'value': name
+                                    }, {
+                                        'name': 'CLIPPER_MODEL_VERSION',
+                                        'value': str(version)
+                                    }, {
+                                        'name':
+                                        'CLIPPER_IP',
+                                        'value':
+                                        'query-frontend-{}'.format(
+                                            query_frontend_id)
+                                    }, {
+                                        'name': 'CLIPPER_INPUT_TYPE',
+                                        'value': input_type
+                                    }]
                                 }]
-                            }]
+                            }
                         }
                     }
                 }
-            }
-            self._k8s_beta.create_namespaced_deployment(
-                body=body, namespace='default')
+                self._k8s_beta.create_namespaced_deployment(
+                    body=body, namespace='default')
 
-            while self._k8s_beta.read_namespaced_deployment_status(
-                name=deployment_name, namespace='default').status.available_replicas \
-                   != num_replicas:
-                time.sleep(3)
+                while self._k8s_beta.read_namespaced_deployment_status(
+                    name=deployment_name, namespace='default').status.available_replicas \
+                    != num_replicas:
+                    time.sleep(3)
 
     def get_num_replicas(self, name, version):
-        deployment_name = get_model_deployment_name(name, version)
+        deployment_name = get_model_deployment_name(
+            name, version, query_frontend_id=0)
         response = self._k8s_beta.read_namespaced_deployment_scale(
             name=deployment_name, namespace='default')
 
@@ -262,22 +307,24 @@ class KubernetesContainerManager(ContainerManager):
 
     def set_num_replicas(self, name, version, input_type, image, num_replicas):
         # NOTE: assumes `metadata.name` can identify the model deployment.
-        deployment_name = get_model_deployment_name(name, version)
+        for query_frontend_id in range(self.num_frontend_replicas):
+            deployment_name = get_model_deployment_name(
+                name, version, query_frontend_id)
 
-        self._k8s_beta.patch_namespaced_deployment_scale(
-            name=deployment_name,
-            namespace='default',
-            body={
-                'spec': {
-                    'replicas': num_replicas,
-                }
-            })
+            self._k8s_beta.patch_namespaced_deployment_scale(
+                name=deployment_name,
+                namespace='default',
+                body={
+                    'spec': {
+                        'replicas': num_replicas,
+                    }
+                })
 
 
-        while self._k8s_beta.read_namespaced_deployment_status(
-            name=deployment_name, namespace='default').status.available_replicas \
-                != num_replicas:
-            time.sleep(3)
+            while self._k8s_beta.read_namespaced_deployment_status(
+                name=deployment_name, namespace='default').status.available_replicas \
+                    != num_replicas:
+                time.sleep(3)
 
     def get_logs(self, logging_dir):
         logging_dir = os.path.abspath(os.path.expanduser(logging_dir))
@@ -384,5 +431,6 @@ class KubernetesContainerManager(ContainerManager):
             host=self.external_node_hosts[0], port=self.clipper_metric_port)
 
 
-def get_model_deployment_name(name, version):
-    return "{name}-{version}-deployment".format(name=name, version=version)
+def get_model_deployment_name(name, version, query_frontend_id):
+    return "{name}-{version}-deployment-at-{query_frontend_id}".format(
+        name=name, version=version, query_frontend_id=query_frontend_id)

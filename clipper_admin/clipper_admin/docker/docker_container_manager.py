@@ -90,8 +90,18 @@ class DockerContainerManager(ContainerManager):
 
         self.extra_container_kwargs.update(container_args)
 
-    def start_clipper(self, query_frontend_image, mgmt_frontend_image,
-                      cache_size):
+    def start_clipper(self,
+                      query_frontend_image,
+                      mgmt_frontend_image,
+                      cache_size,
+                      num_frontend_replicas=1):
+        if num_frontend_replicas != 1:
+            msg = "Docker container manager's query frontend scale-out \
+            hasn't been implemented. Please set num_frontend_replicas=1 \
+            or use Kubernetes."
+
+            raise ClipperException(msg)
+
         try:
             self.docker_client.networks.create(
                 self.docker_network, check_duplicate=True)

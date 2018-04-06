@@ -96,7 +96,9 @@ def create_docker_connection(cleanup=True, start_clipper=True):
     return cl
 
 
-def create_kubernetes_connection(cleanup=True, start_clipper=True):
+def create_kubernetes_connection(cleanup=True,
+                                 start_clipper=True,
+                                 num_frontend_replicas=1):
     logging.info("Creating KubernetesContainerManager")
     kubernetes_ip = "https://api.cluster.clipper-k8s-testing.com"
     logging.info("Kubernetes IP: %s" % kubernetes_ip)
@@ -114,7 +116,8 @@ def create_kubernetes_connection(cleanup=True, start_clipper=True):
             format(clipper_version),
             mgmt_frontend_image=
             "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/management_frontend:{}".
-            format(clipper_version))
+            format(clipper_version),
+            num_frontend_replicas=num_frontend_replicas)
         time.sleep(1)
     else:
         try:
