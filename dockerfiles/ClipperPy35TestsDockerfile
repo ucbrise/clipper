@@ -11,6 +11,8 @@ COPY ./ /clipper
 RUN cd /clipper/src/libs/spdlog \
     && git apply ../patches/make_spdlog_compile_linux.patch
 
+RUN pip3 install -e /clipper/clipper_admin
+
 ENTRYPOINT ["/clipper/bin/ci_checks.sh", "false"]
 
 # vim: set filetype=dockerfile:
