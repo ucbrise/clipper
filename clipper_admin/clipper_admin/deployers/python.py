@@ -191,23 +191,26 @@ def deploy_python_closure(clipper_conn,
     serialization_dir = posixpath.join(*os.path.split(serialization_dir))
     logger.info("Python closure saved")
 
+    py_minor_version = (sys.version_info.major, sys.version_info.minor)
     # Check if Python 2 or Python 3 image
     if base_image == "default":
-        if sys.version_info < (3, 0):
+        if py_minor_version < (3, 0):
             logger.info("Using Python 2 base image")
             base_image = "clipper/python-closure-container:{}".format(
                 __version__)
-        elif sys.version_info == (3, 5):
+        elif py_minor_version == (3, 5):
             logger.info("Using Python 3.5 base image")
             base_image = "clipper/python35-closure-container:{}".format(
                 __version__)
-        elif sys.version_info == (3, 6):
+        elif py_minor_version == (3, 6):
             logger.info("Using Python 3.6 base image")
             base_image = "clipper/python36-closure-container:{}".format(
                 __version__)
         else:
-            msg = ("Python closure deployer only supports Python 2.7, 3.5, and 3.6. "
-                   "Detected {}").format(sys.version_info)
+            msg = (
+                "Python closure deployer only supports Python 2.7, 3.5, and 3.6. "
+                "Detected {major}.{minor}").format(
+                    major=sys.version_info.major, minor=sys.version_info.minor)
             logger.error(msg)
             # Remove temp files
             shutil.rmtree(serialization_dir)
