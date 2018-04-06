@@ -1,20 +1,12 @@
 ARG CODE_VERSION
 FROM clipper/py-rpc:${CODE_VERSION}
 
-COPY clipper_admin/clipper_admin/python_container_conda_deps.txt /lib/
+LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
-RUN echo deb http://ftp.de.debian.org/debian jessie-backports main >> /etc/apt/sources.list \
-      && apt-get update --fix-missing \
-      && apt-get install -yqq -t jessie-backports openjdk-8-jdk \
-      && conda config --set ssl_verify no \
-      && conda install -c anaconda cloudpickle=0.5.2 \
-      && conda install -y --file /lib/python_container_conda_deps.txt \
-      && pip install mxnet==1.0.0 \
-      && apt-get install -y graphviz \
-      && pip install graphviz
+RUN  pip install mxnet==1.1.*
 
-COPY containers/python/mxnet_container.py containers/python/mxnet_container_entry.sh /container/
+COPY containers/python/mxnet_container.py containers/python/container_entry.sh /container/
 
-CMD ["/container/mxnet_container_entry.sh"]
+CMD ["/container/container_entry.sh", "mxnet-container", "/container/mxnet_container.py"]
 
 # vim: set filetype=dockerfile:
