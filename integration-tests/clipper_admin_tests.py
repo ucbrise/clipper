@@ -302,20 +302,36 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertIsNotNone(model_info)
 
         docker_client = get_docker_client()
-        if sys.version_info < (3, 0):
+        py_minor_version = (sys.version_info.major, sys.version_info.minor)
+        if py_minor_version < (3, 0):
             containers = docker_client.containers.list(
                 filters={
                     "ancestor":
                     "clipper/python-closure-container:{}".format(
                         clipper_version)
                 })
-        else:
+
+        elif py_minor_version == (3, 5):
             containers = docker_client.containers.list(
                 filters={
                     "ancestor":
-                    "clipper/python3-closure-container:{}".format(
+                    "clipper/python35-closure-container:{}".format(
                         clipper_version)
                 })
+        elif py_minor_version == (3, 6):
+            containers = docker_client.containers.list(
+                filters={
+                    "ancestor":
+                    "clipper/python36-closure-container:{}".format(
+                        clipper_version)
+                })
+        else:
+            msg = (
+                "Python closure deployer only supports Python 2.7, 3.5, and 3.6. "
+                "Detected {major}.{minor}").format(
+                    major=sys.version_info.major, minor=sys.version_info.minor)
+            logger.error(msg)
+
         self.assertGreaterEqual(len(containers), 1)
 
     def test_register_py_endpoint(self):
@@ -341,20 +357,35 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertIsNotNone(linked_models)
 
         docker_client = get_docker_client()
-        if sys.version_info < (3, 0):
+        py_minor_version = (sys.version_info.major, sys.version_info.minor)
+        if py_minor_version < (3, 0):
             containers = docker_client.containers.list(
                 filters={
                     "ancestor":
                     "clipper/python-closure-container:{}".format(
                         clipper_version)
                 })
-        else:
+
+        elif py_minor_version == (3, 5):
             containers = docker_client.containers.list(
                 filters={
                     "ancestor":
-                    "clipper/python3-closure-container:{}".format(
+                    "clipper/python35-closure-container:{}".format(
                         clipper_version)
                 })
+        elif py_minor_version == (3, 6):
+            containers = docker_client.containers.list(
+                filters={
+                    "ancestor":
+                    "clipper/python36-closure-container:{}".format(
+                        clipper_version)
+                })
+        else:
+            msg = (
+                "Python closure deployer only supports Python 2.7, 3.5, and 3.6. "
+                "Detected {major}.{minor}").format(
+                    major=sys.version_info.major, minor=sys.version_info.minor)
+            logger.error(msg)
         self.assertEqual(len(containers), 1)
 
     def test_test_predict_function(self):

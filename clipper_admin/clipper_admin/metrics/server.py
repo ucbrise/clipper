@@ -88,7 +88,10 @@ def start_server():
     for message in sub.listen():  # Blocking, will run forever
         logger.debug(message)
         try:
-            message_dict = json.loads(message['data'])
+            if sys.version_info < (3, 0):
+                message_dict = json.loads(message['data'])
+            else:
+                message_dict = json.loads(message['data'].decode('utf-8'))
             validate_schema(message_dict)
             handle_message(message_dict, metric_pool)
         except (KeyError, ValueError, ValidationError) as e:
