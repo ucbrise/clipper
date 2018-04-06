@@ -9,15 +9,10 @@ import logging
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
-sys.path.insert(0, os.path.abspath('%s/util_direct_import/' % cur_dir))
-
-from util_package import mock_module_in_package as mmip
-import mock_module as mm
-
 import mxnet as mx
 
-from test_utils import (create_docker_connection, BenchmarkException, headers,
-                        log_clipper_state)
+from test_utils import create_docker_connection, BenchmarkException, headers
+
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
 
@@ -131,7 +126,7 @@ if __name__ == "__main__":
             mxnet_model = mx.mod.Module(softmax)
             mxnet_model.fit(data_iter, num_epoch=0)
 
-            train_data_shape = [1, 785]
+            train_data_shape = data_iter.provide_data
 
             deploy_and_test_model(
                 clipper_conn,
@@ -145,7 +140,7 @@ if __name__ == "__main__":
                             predict, mxnet_model, train_data_shape)
             test_model(clipper_conn, app_and_model_name, 1)
 
-        except BenchmarkException as e:
+        except BenchmarkException:
             logger.exception("BenchmarkException")
             clipper_conn = create_docker_connection(
                 cleanup=True, start_clipper=False)
@@ -153,7 +148,7 @@ if __name__ == "__main__":
         else:
             clipper_conn = create_docker_connection(
                 cleanup=True, start_clipper=False)
-    except Exception as e:
+    except Exception:
         logger.exception("Exception")
         clipper_conn = create_docker_connection(
             cleanup=True, start_clipper=False)

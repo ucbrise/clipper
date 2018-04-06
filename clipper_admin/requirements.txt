@@ -6,3 +6,4 @@ kubernetes==3.0.0
 six==1.10.0
 mock
 prometheus_client
+redis
