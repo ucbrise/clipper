@@ -9,7 +9,7 @@ import numpy as np
 import cloudpickle
 
 import onnx
-import onnx_caffe2.backend
+import caffe2.python.onnx.backend
 
 import importlib
 
@@ -25,7 +25,7 @@ def load_predict_func(file_path):
 
 def load_onnx_into_caffe2_model(model_path):
     model = onnx.load(model_path)
-    prepared_backend = onnx_caffe2.backend.prepare(model, device="CPU")
+    prepared_backend = caffe2.python.onnx.backend.prepare(model, device="CPU")
     return prepared_backend
 
 

@@ -9,12 +9,7 @@ import logging
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
-sys.path.insert(0, os.path.abspath('%s/util_direct_import/' % cur_dir))
-from util_package import mock_module_in_package as mmip
-import mock_module as mm
-
 import tensorflow as tf
-import argparse
 
 from test_utils import (create_docker_connection, BenchmarkException, headers,
                         log_clipper_state)
@@ -126,7 +121,7 @@ def train_logistic_regression(sess, X_train, y_train):
     b = tf.Variable(tf.zeros([2]), name="biases")
     y_hat = tf.matmul(x, W) + b
 
-    pred = tf.argmax(tf.nn.softmax(y_hat), 1, name="predict_class")  # Softmax
+    tf.argmax(tf.nn.softmax(y_hat), 1, name="predict_class")  # Softmax
 
     loss = tf.reduce_mean(
         tf.nn.softmax_cross_entropy_with_logits(logits=y_hat, labels=y))
@@ -179,7 +174,8 @@ if __name__ == "__main__":
                 raise BenchmarkException("Error creating app %s" % app_name)
 
             sess = train_logistic_regression(sess, X_train, y_train)
-            #  Save the TF Model .. the saved model is used for subsequent tests of serving saved models
+            # Save the TF Model .. the saved model is used for subsequent tests of
+            # serving saved models
             saver = tf.train.Saver()
             save_path = saver.save(sess, "data/model.ckpt")
 
@@ -216,7 +212,7 @@ if __name__ == "__main__":
                             predict, "data")
             test_model(clipper_conn, app_and_model_name, 1)
 
-        except BenchmarkException as e:
+        except BenchmarkException:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
             clipper_conn = create_docker_connection(
@@ -225,7 +221,7 @@ if __name__ == "__main__":
         else:
             clipper_conn = create_docker_connection(
                 cleanup=True, start_clipper=False)
-    except Exception as e:
+    except Exception:
         logger.exception("Exception")
         clipper_conn = create_docker_connection(
             cleanup=True, start_clipper=False)

@@ -35,6 +35,6 @@ if __name__ == "__main__":
     input_type = "doubles"
     model_version = 1
 
-    rpc_service = rpc.RPCService()
+    rpc_service = rpc.RPCService(collect_metrics=False)
     model = RPCTestContainer(rpc_service)
     rpc_service.start(model, ip, port, model_name, model_version, input_type)

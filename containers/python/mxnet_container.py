@@ -20,14 +20,14 @@ def load_predict_func(file_path):
 
 
 # load mxnet model from serialized dir
-def load_mxnet_model(path):
-    mxnet_model_path = os.path.join(path, MXNET_MODEL_RELATIVE_PATH)
+def load_mxnet_model(model_path):
+    mxnet_model_path = os.path.join(model_path, MXNET_MODEL_RELATIVE_PATH)
 
     data_shapes = json.load(
-        open(os.path.join(path, "mxnet_model_metadata.json")))
+        open(os.path.join(model_path, "mxnet_model_metadata.json")))
 
     sym, arg_params, aux_params = mx.model.load_checkpoint(
-        prefix=model_path, epoch=0)
+        prefix=mxnet_model_path, epoch=0)
 
     mxnet_model = mx.mod.Module(symbol=sym)
     mxnet_model.bind(data_shapes["data_shapes"])
