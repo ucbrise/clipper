@@ -38,7 +38,7 @@ ModelContainer::ModelContainer(VersionedModelId model, int container_id,
       max_latency_(0),
       explore_dist_mu_(.1),
       explore_dist_std_(.05),
-      budget_decay_(.9),
+      budget_decay_(.92),
       exploration_distribution_(std::normal_distribution<double>(
           explore_dist_mu_, explore_dist_std_)),
       exploration_engine_(std::default_random_engine(
@@ -116,6 +116,10 @@ size_t ModelContainer::get_batch_size(Deadline deadline) {
       static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(
                               deadline - std::chrono::system_clock::now())
                               .count());
+  // Decay the provided latency budget by a pre-specified factor
+  // in order to provide enough slack for delivering the response
+  // to the user and/or coping with an anomolously high
+  // processing latency
   budget = budget * budget_decay_;
 
   if (batch_size_ != DEFAULT_BATCH_SIZE) {
@@ -128,8 +132,6 @@ size_t ModelContainer::get_batch_size(Deadline deadline) {
   } else {
     curr_batch_size = estimate(budget);
   }
-  log_error_formatted(LOGGING_TAG_CONTAINERS, "SELECTED BATCH SIZE: {}",
-                      curr_batch_size);
   max_batch_size_ = std::max(curr_batch_size, max_batch_size_);
   return curr_batch_size;
 }
@@ -149,6 +151,10 @@ void ModelContainer::fit_estimator() {
   // variance across all batch sizes. This will
   // be used to obtain an estimate for the p99
   // processing latency at each batch size
+  //
+  // Pooled variance (https://en.wikipedia.org/wiki/Pooled_variance)
+  // is used under the empirically tested assumption that latency variance
+  // does not change significantly with batch size
 
   double pooled_std_num = 0;
   double pooled_std_denom = -1 * static_cast<double>(num_datapoints);
@@ -157,10 +163,12 @@ void ModelContainer::fit_estimator() {
   for (auto &entry : processing_datapoints_) {
     LatencyInfo &latency_info = entry.second;
     double info_size = std::get<0>(latency_info);
-    double lats_std = std::get<2>(latency_info);
-    double lats_var = std::pow(lats_std, 2);
-    pooled_std_num += (info_size - 1) * lats_var;
-    pooled_std_denom += info_size;
+    if (info_size >= MINIMUM_BATCH_SAMPLE_SIZE) {
+      double lats_std = std::get<2>(latency_info);
+      double lats_var = std::pow(lats_std, 2);
+      pooled_std_num += (info_size - 1) * lats_var;
+      pooled_std_denom += info_size;
+    }
   }
 
   double pooled_std =
@@ -178,8 +186,6 @@ void ModelContainer::fit_estimator() {
     // Scale the upper bound latency in order to moderate the regularization
     // term associated with ridge regression
     fitting_lat(0) = upper_bound_lat * REGRESSION_DATA_SCALE_FACTOR;
-    log_error_formatted(LOGGING_TAG_CONTAINERS, "{},{},{}", fitting_lat(0),
-                        batch_size, pooled_std);
     x_vals.push_back(fitting_lat);
     y_vals.push_back(std::move(batch_size));
   }
@@ -193,11 +199,10 @@ size_t ModelContainer::explore() {
   auto mb_search =
       processing_datapoints_.find(static_cast<double>(max_batch_size_));
   if (mb_search != processing_datapoints_.end() &&
-      std::get<0>(mb_search->second) <
-          BATCH_SAMPLE_SIZE_EXPLORATION_THRESHOLD) {
+      std::get<0>(mb_search->second) < MINIMUM_BATCH_SAMPLE_SIZE) {
     // We don't have a large enough latency sample
     // corresponding to the maximum batch size, so
-    // we won't update the maximum
+    // we won't update the maximum size
     return max_batch_size_;
   } else if (max_batch_size_ < 10) {
     return max_batch_size_ + 1;
