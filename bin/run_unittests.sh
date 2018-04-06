@@ -136,6 +136,9 @@ function run_integration_tests {
   python ../integration-tests/deploy_pyspark_sparkml_models.py
   python ../integration-tests/kubernetes_integration_test.py
   python ../integration-tests/deploy_tensorflow_models.py
+  python ../integration-tests/deploy_mxnet_models.py 
+  python ../integration-tests/deploy_pytorch_models.py 
+  python ../integration-tests/deploy_pytorch_to_caffe2_with_onnx.py
   ../integration-tests/r_integration_test/rclipper_test.sh
   python ../integration-tests/clipper_metric_docker.py 
   python ../integration-tests/clipper_metric_kube.py 
@@ -187,8 +190,7 @@ case $args in
     -r | --rpc-container )  set_test_environment
                             run_rpc_container_tests
                             ;;
-    -i | --integration_tests )  set_test_environment
-                            run_integration_tests
+    -i | --integration_tests ) run_integration_tests
                             ;;
     -h | --help )           usage
                             ;;
