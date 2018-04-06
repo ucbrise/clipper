@@ -204,8 +204,8 @@ class ClipperConnection(object):
             logger.error(msg)
             raise ClipperException(msg)
         else:
-            logger.info("Application {app} was successfully deleted").format(
-                app=name)
+            logger.info("Application {app} was successfully deleted".format(
+                app=name))
 
     def link_model_to_app(self, app_name, model_name):
         """Routes requests from the specified app to be evaluted by the specified model.

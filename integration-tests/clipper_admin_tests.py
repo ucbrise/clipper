@@ -86,7 +86,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertTrue("No model with name" in str(context.exception))
 
     def test_delete_application_correct(self):
-        nput_type = "doubles"
+        input_type = "doubles"
         default_output = "DEFAULT"
         slo_micros = 30000
         app_name = "testapp"
@@ -599,7 +599,7 @@ SHORT_TEST_ORDERING = [
     'test_set_num_replicas_for_deployed_model_succeeds',
     'test_remove_inactive_containers_succeeds', 'test_stop_models',
     'test_python_closure_deploys_successfully', 'test_register_py_endpoint',
-    'test_test_predict_function'
+    'test_test_predict_function', 'test_delete_application_correct'
 ]
 
 LONG_TEST_ORDERING = [
