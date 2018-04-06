@@ -204,7 +204,7 @@ size_t ModelContainer::explore() {
     // corresponding to the maximum batch size, so
     // we won't update the maximum size
     return max_batch_size_;
-  } else if (max_batch_size_ < 10) {
+  } else if (max_batch_size_ < ADDITIVE_EXPANSION_THRESHOLD) {
     return max_batch_size_ + 1;
   } else {
     double expansion_factor = exploration_distribution_(exploration_engine_);

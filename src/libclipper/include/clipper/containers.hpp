@@ -89,6 +89,7 @@ class ModelContainer {
   static constexpr uint32_t MINIMUM_BATCH_SAMPLE_SIZE = 5;
   static constexpr uint32_t LATENCY_Z_SCORE = 3;
   static constexpr double REGRESSION_DATA_SCALE_FACTOR = .001;
+  static constexpr size_t ADDITIVE_EXPANSION_THRESHOLD = 10;
 
   void fit_estimator();
   size_t explore();
