@@ -1,6 +1,8 @@
 ARG CODE_VERSION
 FROM clipper/py-rpc:${CODE_VERSION}
 
+LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
+
 COPY containers/python/noop_container.py /container/
 COPY bench/setup_noop_bench_docker.sh /bench/
 COPY bench/set_bench_env_vars.sh /bench/
