@@ -248,7 +248,6 @@ class DockerContainerManager(ContainerManager):
                 container_name = self._add_replica(name, version, input_type,
                                                    image)
                 model_container_names.append(container_name)
-
             for name in model_container_names:
                 container = self.docker_client.containers.get(name)
                 while container.attrs.get("State").get("Status") != "running" or \
