@@ -391,14 +391,14 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         batch_pred_outputs = [batch['output'] for batch in batch_predictions]
         self.assertEqual(batch_pred_outputs,
                          test_batch_predict_result)  # tests batch input
-      
-      def test_version_query(self):
+
+    def test_version_query(self):
         def predict_func1(xs):
-            return 1
+            return [str("1") for _ in xs]
 
         def predict_func2(xs):
-            return 2
-        
+            return [str("2") for _ in xs]
+
         self.clipper_conn.register_application(
             name="hello-world",
             input_type="doubles",
@@ -426,7 +426,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             app_name="hello-world", model_name="m")
 
         time.sleep(60)
-        
+
         addr = self.clipper_conn.get_query_addr()
         url = "http://{addr}/hello-world/predict".format(
             addr=addr, app='hello-world')
@@ -434,19 +434,22 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         headers = {"Content-type": "application/json"}
         test_input = [1.0, 2.0, 3.0]
         pred1 = requests.post(
-            url, headers=headers, data=json.dumps({
-                "input": test_input
+            url,
+            headers=headers,
+            data=json.dumps({
+                "input": test_input,
                 "version": "1"
             })).json()
-        
-        self.assertEqual([pred1['output']], 1)
-        
+
+        self.assertEqual([pred1['output']], "1")
+
         pred2 = requests.post(
             url, headers=headers, data=json.dumps({
                 "input": test_input
             })).json()
-        
-        self.assertEqual([pred2['output']], 2)
+
+        self.assertEqual([pred2['output']], "2")
+
 
 class ClipperManagerTestCaseLong(unittest.TestCase):
     @classmethod
@@ -633,7 +636,7 @@ SHORT_TEST_ORDERING = [
     'test_set_num_replicas_for_deployed_model_succeeds',
     'test_remove_inactive_containers_succeeds', 'test_stop_models',
     'test_python_closure_deploys_successfully', 'test_register_py_endpoint',
-    'test_test_predict_function'
+    'test_test_predict_function', 'test_version_query'
 ]
 
 LONG_TEST_ORDERING = [

@@ -83,15 +83,14 @@ std::string json_error_msg(const std::string& exception_msg,
   return ss.str();
 }
 
-/* Create error class for if an invalid model version id is passed in to 
+/* Create error class for if an invalid model version id is passed in to
  * json query. */
-class version_id_error: public std::runtime_error {
+class version_id_error : public std::runtime_error {
  public:
-  version_id_error(const std::string msg) : std::runtime_error(msg), msg_(msg) {}
+  version_id_error(const std::string msg)
+      : std::runtime_error(msg), msg_(msg) {}
 
-  const char *what() const noexcept {
-    return msg_.c_str();
-}
+  const char* what() const noexcept { return msg_.c_str(); }
 
  private:
   const std::string msg_;
@@ -315,7 +314,7 @@ class RequestHandler {
     }
 
     AppMetrics app_metrics(name);
-    
+
     /*
    * JSON format for prediction query request:
    * {
@@ -337,19 +336,20 @@ class RequestHandler {
         std::string version = clipper::json::get_string(d, "version");
         if (!version.empty()) {
           models = clipper::redis::get_model_versions(redis_connection_, name);
+          std::unique_lock<std::mutex> l(current_model_versions_mutex_);
           for (auto m : models) {
-            if (m.compare(version) == 0) {
+            if (m.compare(version) == 1) {
               versioned_models = {clipper::VersionedModelId(name, m)};
               break;
             }
             if (versioned_models.empty()) {
-              throw version_id_error("Requested model does not exist."); 
+              throw version_id_error("Requested model does not exist.");
             }
           }
         } else {
           models = get_linked_models_for_app(name);
           {
-            std::unique_lock<std::mutex> (current_model_versions_mutex_);
+            std::unique_lock<std::mutex> l(current_model_versions_mutex_);
             for (auto m : models) {
               auto version = current_model_versions_.find(m);
               if (version != current_model_versions_.end()) {
@@ -357,12 +357,11 @@ class RequestHandler {
               }
             }
           }
-        }   
+        }
 
         folly::Future<std::vector<folly::Try<Response>>> predictions =
-            decode_and_handle_predict(std::move(d), name,
-                                      versioned_models, policy,
-                                      latency_slo_micros, input_type);
+            decode_and_handle_predict(std::move(d), name, versioned_models,
+                                      policy, latency_slo_micros, input_type);
 
         predictions
             .then([response,
