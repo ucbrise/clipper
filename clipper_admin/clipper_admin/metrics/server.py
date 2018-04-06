@@ -1,15 +1,19 @@
+from __future__ import absolute_import
 from prometheus_client import start_http_server, Gauge, Counter, Histogram, Summary
 import redis
 import json
 import logging
 import sys
-from subprocess32 import call
+if sys.version_info < (3, 0):
+    from subprocess32 import call
+else:
+    from subprocess import call
 import psutil
-from schema import validate_schema, Prom_Type
+from .schema import validate_schema, Prom_Type
 
 from jsonschema import ValidationError
 
-from config import CHANNEL_NAME, DEFAULT_BUCKETS, UNIX_SOCKET_PATH
+from .config import CHANNEL_NAME, DEFAULT_BUCKETS, UNIX_SOCKET_PATH
 
 
 class Metric:
