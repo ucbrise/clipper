@@ -22,9 +22,3 @@ target_link_libraries(rpcbench clipper cxxopts)
 add_executable(rpctest src/rpc_protocol_test.cpp)
 
 target_link_libraries(rpctest clipper cxxopts)
-
-##################################
-# Kernel Regression Performance Testing
-add_executable(test_kridge src/fitting_perf_test.cpp)
-
-target_link_libraries(test_kridge dlib cxxopts)
