@@ -26,6 +26,6 @@ int main(int argc, char* argv[]) {
   conf.ready();
 
   query_frontend::RequestHandler<clipper::QueryProcessor> rh(
-      "0.0.0.0", clipper::QUERY_FRONTEND_PORT, 1);
+      "0.0.0.0", clipper::QUERY_FRONTEND_PORT);
   rh.start_listening();
 }

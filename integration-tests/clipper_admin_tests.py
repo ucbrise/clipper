@@ -26,10 +26,6 @@ from clipper_admin.deployers.python import create_endpoint as create_py_endpoint
 from clipper_admin.deployers.python import deploy_python_closure
 from clipper_admin import __version__ as clipper_version
 
-sys.path.insert(0, os.path.abspath('%s/util_direct_import/' % cur_dir))
-from util_package import mock_module_in_package as mmip
-import mock_module as mm
-
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
     datefmt='%y-%m-%d:%H:%M:%S',
@@ -343,6 +339,59 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             })
         self.assertEqual(len(containers), 1)
 
+    def test_test_predict_function(self):
+        def predict_func(xs):
+            return [sum(x) for x in xs]
+
+        self.clipper_conn.register_application(
+            name="hello-world",
+            input_type="doubles",
+            default_output="-1.0",
+            slo_micros=100000)
+
+        deploy_python_closure(
+            self.clipper_conn,
+            name="sum-model",
+            version=1,
+            input_type="doubles",
+            func=predict_func)
+        self.clipper_conn.link_model_to_app(
+            app_name="hello-world", model_name="sum-model")
+        time.sleep(60)
+
+        addr = self.clipper_conn.get_query_addr()
+        url = "http://{addr}/hello-world/predict".format(
+            addr=addr, app='hello-world')
+
+        headers = {"Content-type": "application/json"}
+        test_input = [1.1, 2.2, 3.3]
+        pred = requests.post(
+            url, headers=headers, data=json.dumps({
+                "input": test_input
+            })).json()
+        test_predict_result = self.clipper_conn.test_predict_function(
+            query={"input": test_input},
+            func=predict_func,
+            input_type="doubles")
+        self.assertEqual([pred['output']],
+                         test_predict_result)  # tests single input
+
+        test_batch_input = [[1.1, 2.2, 3.3], [4.4, 5.5, 6.6]]
+        batch_pred = requests.post(
+            url,
+            headers=headers,
+            data=json.dumps({
+                "input_batch": test_batch_input
+            })).json()
+        test_batch_predict_result = self.clipper_conn.test_predict_function(
+            query={"input_batch": test_batch_input},
+            func=predict_func,
+            input_type="doubles")
+        batch_predictions = batch_pred['batch_predictions']
+        batch_pred_outputs = [batch['output'] for batch in batch_predictions]
+        self.assertEqual(batch_pred_outputs,
+                         test_batch_predict_result)  # tests batch input
+
 
 class ClipperManagerTestCaseLong(unittest.TestCase):
     @classmethod
@@ -430,7 +479,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         addr = self.clipper_conn.get_query_addr()
         url = "http://{addr}/{app}/predict".format(
             addr=addr, app=self.app_name_3)
-        test_input = [[99.3, 18.9, 67.2, 34.2], [101.1, 45.6, 98.0, 99.1], \
+        test_input = [[99.3, 18.9, 67.2, 34.2], [101.1, 45.6, 98.0, 99.1],
                       [12.3, 6.7, 42.1, 12.6], [9.01, 87.6, 70.2, 19.6]]
         req_json = json.dumps({'input_batch': test_input})
         headers = {'Content-type': 'application/json'}
@@ -444,9 +493,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         model_version = 1
 
         def predict_func(inputs):
-            return [
-                str(mm.COEFFICIENT * mmip.COEFFICIENT * len(x)) for x in inputs
-            ]
+            return [str(len(x)) for x in inputs]
 
         input_type = "doubles"
         deploy_python_closure(self.clipper_conn, self.model_name_1,
@@ -471,9 +518,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
                 time.sleep(20)
             else:
                 received_non_default_prediction = True
-                self.assertEqual(
-                    int(output),
-                    mm.COEFFICIENT * mmip.COEFFICIENT * len(test_input))
+                self.assertEqual(int(output), len(test_input))
                 break
 
         self.assertTrue(received_non_default_prediction)
@@ -520,23 +565,20 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
 
 SHORT_TEST_ORDERING = [
-    'test_register_model_correct',
-    'test_register_application_correct',
+    'test_register_model_correct', 'test_register_application_correct',
     'test_link_not_registered_model_to_app_fails',
     'test_get_model_links_when_none_exist_returns_empty_list',
     'test_link_registered_model_to_app_succeeds',
     'get_app_info_for_registered_app_returns_info_dictionary',
     'get_app_info_for_nonexistent_app_returns_none',
     'test_set_num_replicas_for_external_model_fails',
-    'test_model_version_sets_correctly',
-    'test_get_logs_creates_log_files',
+    'test_model_version_sets_correctly', 'test_get_logs_creates_log_files',
     'test_inspect_instance_returns_json_dict',
     'test_model_deploys_successfully',
     'test_set_num_replicas_for_deployed_model_succeeds',
-    'test_remove_inactive_containers_succeeds',
-    'test_stop_models',
-    'test_python_closure_deploys_successfully',
-    'test_register_py_endpoint',
+    'test_remove_inactive_containers_succeeds', 'test_stop_models',
+    'test_python_closure_deploys_successfully', 'test_register_py_endpoint',
+    'test_test_predict_function'
 ]
 
 LONG_TEST_ORDERING = [

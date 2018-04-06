@@ -24,11 +24,11 @@
 #include <clipper/util.hpp>
 
 using HttpServer = SimpleWeb::Server<SimpleWeb::HTTP>;
-using clipper::VersionedModelId;
 using clipper::InputType;
+using clipper::VersionedModelId;
+using clipper::json::add_bool;
 using clipper::json::add_string;
 using clipper::json::add_string_array;
-using clipper::json::add_bool;
 using clipper::json::get_bool;
 using clipper::json::get_candidate_models;
 using clipper::json::get_int;
@@ -38,8 +38,8 @@ using clipper::json::json_parse_error;
 using clipper::json::json_semantic_error;
 using clipper::json::parse_json;
 using clipper::json::redis_app_metadata_to_json;
-using clipper::json::redis_model_metadata_to_json;
 using clipper::json::redis_container_metadata_to_json;
+using clipper::json::redis_model_metadata_to_json;
 using clipper::json::set_string_array;
 using clipper::json::to_json_string;
 using clipper::redis::prohibited_group_strings;
@@ -158,8 +158,7 @@ std::string json_error_msg(const std::string& exception_msg,
 
 class RequestHandler {
  public:
-  RequestHandler(int portno, int num_threads)
-      : server_(portno, num_threads), state_db_{} {
+  RequestHandler(int portno) : server_(portno), state_db_{} {
     clipper::Config& conf = clipper::get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
