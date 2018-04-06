@@ -382,8 +382,7 @@ class ClipperConnection(object):
 
         run_cmd = ''
         if pkgs_to_install:
-            run_as_lst = 'RUN apt-get -y install build-essential && pip install'.split(
-                ' ')
+            run_as_lst = 'RUN apt-get -y install build-essential && pip install'.split(' ')
             run_cmd = ' '.join(run_as_lst + pkgs_to_install)
         with tempfile.NamedTemporaryFile(
                 mode="w+b", suffix="tar") as context_file:
@@ -407,7 +406,7 @@ class ClipperConnection(object):
                     context_tar.addfile(df_tarinfo, df_contents)
                 except TypeError:
                     df_contents = StringIO(
-                        "FROM {container_name}\nCOPY {data_path} /model/{run_command}\n\n".
+                        "FROM {container_name}\nCOPY {data_path} /model/\n{run_command}\n".
                         format(
                             container_name=base_image,
                             data_path=model_data_path,
@@ -428,11 +427,14 @@ class ClipperConnection(object):
             logger.info(
                 "Building model Docker image with model data from {}".format(
                     model_data_path))
-            docker_client.images.build(
+            image_result, build_logs = docker_client.images.build(
                 fileobj=context_file, custom_context=True, tag=image)
+            for b in build_logs:
+                logger.info(b)
 
         logger.info("Pushing model Docker image to {}".format(image))
-        docker_client.images.push(repository=image)
+        for line in docker_client.images.push(repository=image, stream=True):
+            logger.info(line)
         return image
 
     def deploy_model(self,
