@@ -229,7 +229,6 @@ class TaskExecutor {
         model_queues_({}),
         model_metrics_({}) {
     log_info(LOGGING_TAG_TASK_EXECUTOR, "TaskExecutor started");
-    // gc_threadpool_.create_queue(gc_model_id_, gc_replica_id_);
     rpc_->start(
         "*", RPC_SERVICE_PORT, [ this, task_executor_valid = active_ ](
                                    VersionedModelId model, int replica_id) {
@@ -436,9 +435,7 @@ class TaskExecutor {
       model_queues_;
   boost::shared_mutex model_metrics_mutex_;
   std::unordered_map<VersionedModelId, ModelMetrics> model_metrics_;
-  // ThreadPool gc_threadpool_;
-  // VersionedModelId gc_model_id_{"clipper_internal_garbage_collection", "1"};
-  // static constexpr int gc_replica_id_ = 1;
+
   static constexpr int INITIAL_MODEL_QUEUES_MAP_SIZE = 100;
 
   bool create_model_queue_if_necessary(const VersionedModelId &model_id) {
