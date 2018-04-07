@@ -1,4 +1,3 @@
-
 #ifndef CLIPPER_LIB_CONTAINERS_HPP
 #define CLIPPER_LIB_CONTAINERS_HPP
 
@@ -92,6 +91,8 @@ class ActiveContainers {
   std::unordered_map<VersionedModelId, int> batch_sizes_;
 
  private:
+  void log_active_containers();
+
   // Protects the models-replicas map. Must acquire an exclusive
   // lock to modify the map and a shared_lock when accessing
   // replicas. The replica ModelContainer entries are independently threadsafe.
