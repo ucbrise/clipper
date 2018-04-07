@@ -442,17 +442,27 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
                          test_batch_predict_result)  # tests batch input
 
     def test_build_model_with_custom_packages(self):
-        self.clipper_conn.build_model("buildmodeltest", "py2", fake_model_data,
-                                      "clipper/python-closure-container:{}".format(clipper_version),
-                                      None, pkgs_to_install=["sympy==1.1.*"])
-        self.clipper_conn.build_model("buildmodeltest", "py35", fake_model_data,
-                                      "clipper/python35-closure-container:{}".format(
-                                          clipper_version),
-                                      None, pkgs_to_install=["sympy==1.1.*"])
-        self.clipper_conn.build_model("buildmodeltest", "py36", fake_model_data,
-                                      "clipper/python35-closure-container:{}".format(
-                                          clipper_version),
-                                      None, pkgs_to_install=["sympy==1.1.*"])
+        self.clipper_conn.build_model(
+            "buildmodeltest",
+            "py2",
+            fake_model_data,
+            "clipper/python-closure-container:{}".format(clipper_version),
+            None,
+            pkgs_to_install=["sympy==1.1.*"])
+        self.clipper_conn.build_model(
+            "buildmodeltest",
+            "py35",
+            fake_model_data,
+            "clipper/python35-closure-container:{}".format(clipper_version),
+            None,
+            pkgs_to_install=["sympy==1.1.*"])
+        self.clipper_conn.build_model(
+            "buildmodeltest",
+            "py36",
+            fake_model_data,
+            "clipper/python35-closure-container:{}".format(clipper_version),
+            None,
+            pkgs_to_install=["sympy==1.1.*"])
 
 
 class ClipperManagerTestCaseLong(unittest.TestCase):
@@ -626,7 +636,6 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
                                 int(total_num_queries * .7))
 
 
-
 SHORT_TEST_ORDERING = [
     'test_register_model_correct', 'test_register_application_correct',
     'test_link_not_registered_model_to_app_fails',
@@ -641,8 +650,7 @@ SHORT_TEST_ORDERING = [
     'test_set_num_replicas_for_deployed_model_succeeds',
     'test_remove_inactive_containers_succeeds', 'test_stop_models',
     'test_python_closure_deploys_successfully', 'test_register_py_endpoint',
-    'test_test_predict_function',
-    'test_build_model_with_custom_packages'
+    'test_test_predict_function', 'test_build_model_with_custom_packages'
 ]
 
 LONG_TEST_ORDERING = [
