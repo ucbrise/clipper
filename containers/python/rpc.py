@@ -520,14 +520,6 @@ class RPCService:
         # are ready
         with open("/model_is_ready.check", "w") as f:
             f.write("READY")
-        child_conn, parent_conn = Pipe(duplex=False)
-        metrics_proc = Process(target=run_metric, args=(child_conn, ))
-        metrics_proc.start()
-        try:
-            self.server.run(parent_conn)
-        except Exception as e:
-            os.remove("/model_is_ready.check")
-            logger.error(e)
         if self.collect_metrics:
             start_metric_server()
             add_metrics()
