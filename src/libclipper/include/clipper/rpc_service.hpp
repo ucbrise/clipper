@@ -34,6 +34,11 @@ using RPCResponse = std::pair<int, vector<uint8_t>>;
 using RPCRequest =
     std::tuple<int, int, std::vector<std::vector<uint8_t>>, long>;
 
+// Tuple of model id, replica id, and last activity time associated
+// with each container that has connected (sent metadata) to clipper
+using ConnectedContainerInfo =
+    std::tuple<VersionedModelId, int, std::chrono::system_clock::time_point>;
+
 enum class RPCEvent {
   SentHeartbeat = 1,
   ReceivedHeartbeat = 2,
@@ -88,22 +93,26 @@ class RPCService {
  private:
   void manage_service(const string address);
 
-  void check_container_activity(std::unordered_map<std::vector<uint8_t>, std::pair<VersionedModelId, int>, 
-        std::function<size_t(const std::vector<uint8_t> &vec)>>
-        &connections_containers_map);
+  void check_container_activity(
+      std::unordered_map<std::vector<uint8_t>, ConnectedContainerInfo,
+                         std::function<size_t(const std::vector<uint8_t> &vec)>>
+          &connections_containers_map);
 
   void send_messages(socket_t &socket,
                      boost::bimap<int, vector<uint8_t>> &connections);
 
-  void document_receive_time(const vector<uint8_t> connection_id);
-
+  void document_receive_time(
+      std::unordered_map<std::vector<uint8_t>, ConnectedContainerInfo,
+                         std::function<size_t(const std::vector<uint8_t> &vec)>>
+          &connections_containers_map,
+      const vector<uint8_t> connection_id);
   void receive_message(
       socket_t &socket, boost::bimap<int, vector<uint8_t>> &connections,
       // This is a mapping from a ZMQ connection id
       // to metadata associated with the container using
       // this connection. Values are pairs of
       // model id and integer replica id
-      std::unordered_map<std::vector<uint8_t>, std::pair<VersionedModelId, int>,
+      std::unordered_map<std::vector<uint8_t>, ConnectedContainerInfo,
                          std::function<size_t(const std::vector<uint8_t> &vec)>>
           &connections_containers_map,
       int &zmq_connection_id, std::shared_ptr<redox::Redox> redis_connection);
@@ -123,11 +132,13 @@ class RPCService {
   std::chrono::system_clock::time_point last_activity_check_time_;
   std::unordered_map<VersionedModelId, int> replica_ids_;
   std::shared_ptr<metrics::Histogram> msg_queueing_hist_;
-  std::map<const vector<uint8_t>, std::chrono::system_clock::time_point>
-      receiving_history_;
   std::function<void(VersionedModelId, int)> container_ready_callback_;
   std::function<void(RPCResponse)> new_response_callback_;
   std::function<void(VersionedModelId, int)> inactive_container_callback_;
+
+  static constexpr int INITIAL_REPLICA_ID_SIZE = 100;
+  static constexpr long CONTAINER_ACTIVITY_TIMEOUT_MILLS = 30000;
+  static constexpr long CONTAINER_EXISTENCE_CHECK_FREQUENCY_MILLS = 10000;
 };
 
 }  // namespace rpc
