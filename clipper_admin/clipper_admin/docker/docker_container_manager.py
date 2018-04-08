@@ -5,6 +5,7 @@ import os
 import sys
 import random
 import time
+import json
 from ..container_manager import (
     create_model_container_label, parse_model_container_label,
     ContainerManager, CLIPPER_DOCKER_LABEL, CLIPPER_MODEL_CONTAINER_LABEL,
@@ -250,10 +251,10 @@ class DockerContainerManager(ContainerManager):
                 container_name = self._add_replica(name, version, input_type,
                                                    image)
                 model_container_names.append(container_name)
-
             for name in model_container_names:
                 container = self.docker_client.containers.get(name)
-                while container.attrs.get("State").get("Status") != "running":
+                while container.attrs.get("State").get("Status") != "running" or \
+                        self.docker_client.api.inspect_container(name).get("State").get("Health").get("Status") != "healthy":
                     time.sleep(3)
 
         elif len(current_replicas) > num_replicas:
