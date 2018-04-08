@@ -1,6 +1,7 @@
 package ai.clipper.rpc;
 
 import java.io.IOException;
+import java.io.File;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -38,6 +39,14 @@ public class RPC<I extends DataVector<?>> {
   public void start(final ClipperModel<I> model, final String modelName, int modelVersion,
       final String host, final int port) throws UnknownHostException {
     InetAddress address = InetAddress.getByName(host);
+
+    try {
+      File file = new File("/model_is_ready.check");
+      file.createNewFile();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+
     String ip = address.getHostAddress();
     final ZMQ.Context context = ZMQ.context(1);
 
