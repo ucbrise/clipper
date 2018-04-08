@@ -30,6 +30,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+
 deploy_regex_str = "[a-z0-9]([-a-z0-9]*[a-z0-9])?\Z"
 deployment_regex = re.compile(deploy_regex_str)
 
