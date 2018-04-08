@@ -104,7 +104,7 @@ if __name__ == "__main__":
         time.sleep(10)
         print(clipper_conn.cm.get_query_addr())
         try:
-            create_and_test_app(clipper_conn, "kube-frontends")
+            create_and_test_app(clipper_conn, "testapp0")
 
             logger.info("Begin Kubernetes Multiple Frontend Test")
 
