@@ -74,7 +74,7 @@ def deploy_model(clipper_conn, name, link=False):
 
     if not success:
         raise BenchmarkException("Error querying APP %s, MODEL %s:%d" %
-                                 (app_name, model_name, version))
+                                 (app_name, model_name, 1))
 
 
 def create_and_test_app(clipper_conn, name):
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     try:
         clipper_conn = create_kubernetes_connection(
             cleanup=True, start_clipper=True)
-        time.sleep(10)
+        time.sleep(30)
         print(clipper_conn.cm.get_query_addr())
         try:
             create_and_test_app(clipper_conn, "kube-metric")

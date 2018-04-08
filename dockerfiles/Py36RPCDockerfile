@@ -20,4 +20,6 @@ COPY containers/python/__init__.py containers/python/rpc.py /container/
 
 ENV CLIPPER_MODEL_PATH=/model
 
+HEALTHCHECK --interval=3s --timeout=3s --retries=1 CMD test -f /model_is_ready.check || exit 1
+
 # vim: set filetype=dockerfile:
