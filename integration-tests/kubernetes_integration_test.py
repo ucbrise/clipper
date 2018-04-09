@@ -133,7 +133,7 @@ if __name__ == "__main__":
             shutil.rmtree(tmp_log_dir)
             log_clipper_state(clipper_conn)
             logger.info("SUCCESS")
-            clipper_conn.stop_all()
+            create_kubernetes_connection(cleanup=True, start_clipper=False)
         except BenchmarkException:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
