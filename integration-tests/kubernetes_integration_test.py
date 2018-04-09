@@ -116,7 +116,7 @@ if __name__ == "__main__":
     try:
         clipper_conn = create_kubernetes_connection(
             cleanup=True, start_clipper=True)
-        time.sleep(10)
+        time.sleep(60)
         print(clipper_conn.cm.get_query_addr())
         print(clipper_conn.inspect_instance())
         try:
