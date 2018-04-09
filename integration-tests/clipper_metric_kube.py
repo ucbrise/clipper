@@ -140,7 +140,7 @@ if __name__ == "__main__":
     try:
         clipper_conn = create_kubernetes_connection(
             cleanup=True, start_clipper=True)
-        time.sleep(30)
+        time.sleep(60)
         print(clipper_conn.cm.get_query_addr())
         try:
             create_and_test_app(clipper_conn, "kube-metric")
