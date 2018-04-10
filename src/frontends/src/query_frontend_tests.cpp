@@ -84,9 +84,12 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputInts) {
 TEST_F(QueryFrontendTest, TestDecodeCorrectInputIntsBatch) {
   std::string test_json_ints =
       "{\"input_batch\": [[1, 2], [10, 20], [100, 200]]}";
+  rapidjson::Document d;
+  clipper::json::parse_json(test_json_ints, d);
+
   std::vector<std::vector<int>> expected_input{{1, 2}, {10, 20}, {100, 200}};
   std::vector<folly::Try<Response>> responses =
-      rh_.decode_and_handle_predict(test_json_ints, "test", {}, "test_policy",
+      rh_.decode_and_handle_predict(d, "test", {}, "test_policy",
                                     30000, InputType::Ints)
           .get();
   for (size_t index = 0; index < responses.size(); ++index) {
@@ -104,8 +107,11 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputIntsBatch) {
 
 TEST_F(QueryFrontendTest, TestDecodeCorrectInputDoubles) {
   std::string test_json_doubles = "{\"input\": [1.4,2.23,3.243242,0.3223424]}";
+  rapidjson::Document d;
+  clipper::json::parse_json(test_json_doubles, d);
+
   std::vector<folly::Try<Response>> responses =
-      rh_.decode_and_handle_predict(test_json_doubles, "test", {},
+      rh_.decode_and_handle_predict(d, "test", {},
                                     "test_policy", 30000, InputType::Doubles)
           .get();
   Response response = responses[0].value();
@@ -124,10 +130,13 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputDoubles) {
 TEST_F(QueryFrontendTest, TestDecodeCorrectInputDoublesBatch) {
   std::string test_json_doubles =
       "{\"input_batch\": [[1.1, 2.2], [10.1, 20.2], [100.1, 200.2]]}";
+  rapidjson::Document d;
+  clipper::json::parse_json(test_json_doubles, d);
+
   std::vector<std::vector<double>> expected_input{
       {1.1, 2.2}, {10.1, 20.2}, {100.1, 200.2}};
   std::vector<folly::Try<Response>> responses =
-      rh_.decode_and_handle_predict(test_json_doubles, "test", {},
+      rh_.decode_and_handle_predict(d, "test", {},
                                     "test_policy", 30000, InputType::Doubles)
           .get();
   for (size_t index = 0; index < responses.size(); ++index) {
@@ -147,8 +156,11 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputString) {
   std::string test_json_string =
       "{\"input\": \"hello world. This is a test string with "
       "punctionation!@#$Y#;}#\"}";
+  rapidjson::Document d;
+  clipper::json::parse_json(test_json_string, d);
+
   std::vector<folly::Try<Response>> responses =
-      rh_.decode_and_handle_predict(test_json_string, "test", {}, "test_policy",
+      rh_.decode_and_handle_predict(d, "test", {}, "test_policy",
                                     30000, InputType::Strings)
           .get();
   Response response = responses[0].value();
@@ -169,9 +181,12 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputString) {
 TEST_F(QueryFrontendTest, TestDecodeCorrectInputStringBatch) {
   std::string test_json_strings =
       "{\"input_batch\": [ \"this\", \"is\", \"a\", \"test\" ]}";
+  rapidjson::Document d;
+  clipper::json::parse_json(test_json_strings, d);
+
   std::vector<std::string> expected_input{"this", "is", "a", "test"};
   std::vector<folly::Try<Response>> responses =
-      rh_.decode_and_handle_predict(test_json_strings, "test", {},
+      rh_.decode_and_handle_predict(d, "test", {},
                                     "test_policy", 30000, InputType::Strings)
           .get();
   for (size_t index = 0; index < responses.size(); ++index) {
@@ -191,16 +206,21 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputStringBatch) {
 TEST_F(QueryFrontendTest, TestDecodeMalformedJSON) {
   std::string gibberish_string1 =
       "{\"uid\": 2hkdshfdshffhkj32kjhh{dskjfh32r\"3r32";
+  rapidjson::Document d1;
+  clipper::json::parse_json(gibberish_string1, d1);
 
   std::string gibberish_string2 =
       "dshfdshffhkj32fsd32jk huf32h, 3 } 24j dskjfh32r\"3r32";
+  rapidjson::Document d2;
+  clipper::json::parse_json(gibberish_string2, d2);
+
 
   ASSERT_THROW(
-      rh_.decode_and_handle_predict(gibberish_string1, "test", {},
+      rh_.decode_and_handle_predict(d1, "test", {},
                                     "test_policy", 30000, InputType::Doubles),
       json_parse_error);
   ASSERT_THROW(
-      rh_.decode_and_handle_predict(gibberish_string2, "test", {},
+      rh_.decode_and_handle_predict(d2, "test", {},
                                     "test_policy", 30000, InputType::Strings),
       json_parse_error);
 }
@@ -208,8 +228,11 @@ TEST_F(QueryFrontendTest, TestDecodeMalformedJSON) {
 TEST_F(QueryFrontendTest, TestDecodeMissingJsonField) {
   std::string json_missing_field =
       "{\"other_field\": [1.4,2.23,3.243242,0.3223424]}";
+  rapidjson::Document d;
+  clipper::json::parse_json(json_missing_field, d);
+
   ASSERT_THROW(
-      rh_.decode_and_handle_predict(json_missing_field, "test", {},
+      rh_.decode_and_handle_predict(d, "test", {},
                                     "test_policy", 30000, InputType::Doubles),
       json_semantic_error);
 }
@@ -217,8 +240,11 @@ TEST_F(QueryFrontendTest, TestDecodeMissingJsonField) {
 TEST_F(QueryFrontendTest, TestDecodeWrongInputType) {
   std::string test_json_doubles =
       "{\"uid\": 23, \"input\": [1.4,2.23,3.243242,0.3223424]}";
+  rapidjson::Document d;
+  clipper::json::parse_json(test_json_doubles, d);
+
   ASSERT_THROW(
-      rh_.decode_and_handle_predict(test_json_doubles, "test", {},
+      rh_.decode_and_handle_predict(d, "test", {},
                                     "test_policy", 30000, InputType::Ints),
       json_semantic_error);
 }
@@ -226,8 +252,11 @@ TEST_F(QueryFrontendTest, TestDecodeWrongInputType) {
 TEST_F(QueryFrontendTest, TestDecodeWrongInputTypeInBatch) {
   std::string test_json_doubles =
       "{\"uid\": 23, \"input_batch\": [[1,2], [3.243242,0.3223424]]}";
+  rapidjson::Document d;
+  clipper::json::parse_json(test_json_doubles, d);
+
   ASSERT_THROW(
-      rh_.decode_and_handle_predict(test_json_doubles, "test", {},
+      rh_.decode_and_handle_predict(d, "test", {},
                                     "test_policy", 30000, InputType::Ints),
       json_semantic_error);
 }
@@ -235,8 +264,11 @@ TEST_F(QueryFrontendTest, TestDecodeWrongInputTypeInBatch) {
 TEST_F(QueryFrontendTest, TestDecodeCorrectUpdate) {
   std::string update_json =
       "{\"uid\": 23, \"input\": [1.4,2.23,3.243242,0.3223424], \"label\": 1.0}";
+  rapidjson::Document d;
+  clipper::json::parse_json(update_json, d);
+
   FeedbackAck ack =
-      rh_.decode_and_handle_update(update_json, "test", {}, "test_policy",
+      rh_.decode_and_handle_update(d, "test", {}, "test_policy",
                                    InputType::Doubles)
           .get();
 
@@ -246,7 +278,10 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectUpdate) {
 TEST_F(QueryFrontendTest, TestDecodeUpdateMissingField) {
   std::string update_json =
       "{\"uid\": 23, \"input\": [1.4,2.23,3.243242,0.3223424]}";
-  ASSERT_THROW(rh_.decode_and_handle_update(update_json, "test", {},
+  rapidjson::Document d;
+  clipper::json::parse_json(update_json, d);
+
+  ASSERT_THROW(rh_.decode_and_handle_update(d, "test", {},
                                             "test_policy", InputType::Doubles),
                json_semantic_error);
 }
@@ -277,8 +312,11 @@ TEST_F(QueryFrontendTest, TestAddManyApplications) {
 TEST_F(QueryFrontendTest,
        TestJsonResponseForSuccessfulPredictionFormattedCorrectly) {
   std::string test_json = "{\"uid\": 1, \"input\": [1,2,3]}";
+  rapidjson::Document d;
+  clipper::json::parse_json(test_json, d);
+
   std::vector<folly::Try<Response>> responses =
-      rh_.decode_and_handle_predict(test_json, "test", {}, "test_policy", 30000,
+      rh_.decode_and_handle_predict(d, "test", {}, "test_policy", 30000,
                                     InputType::Ints)
           .get();
   Response response = responses[0].value();
@@ -307,8 +345,11 @@ TEST_F(QueryFrontendTest,
 TEST_F(QueryFrontendTest,
        TestJsonResponseForFailedPredictionFormattedCorrectly) {
   std::string test_json = "{\"uid\": 1, \"input\": [1,}";
+  rapidjson::Document d;
+  clipper::json::parse_json(test_json, d);
+
   try {
-    rh_.decode_and_handle_predict(test_json, "test", {}, "test_policy", 30000,
+    rh_.decode_and_handle_predict(d, "test", {}, "test_policy", 30000,
                                   InputType::Ints)
         .get();
     FAIL() << "Expected an error parsing malformed json: " << test_json;
