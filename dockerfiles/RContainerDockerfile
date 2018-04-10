@@ -1,7 +1,8 @@
 # This ARG isn't used but prevents warnings in the build script
 ARG CODE_VERSION
+FROM r-base:3.4.4
 
-FROM r-base
+LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
 RUN apt-get update && apt-get --yes install git libzmq3-dev libtool libtool-bin libsodium-dev pkg-config build-essential autoconf automake
 
@@ -13,18 +14,16 @@ COPY containers/R/rclipper_serve rclipper_serve
 COPY containers/R/deserialize_model.R deserialize_model.R
 COPY containers/R/serve_model.R serve_model.R
 COPY containers/R/r_container_entrypoint.sh r_container_entrypoint.sh
+COPY containers/R/install_container_dependencies.R install_container_dependencies.R
 
 ENV CLIPPER_MODEL_PATH=/model
 ENV CLIPPER_PORT=7000
 
-RUN R -e "install.packages('versions', repos='http://cran.us.r-project.org')" \
-    && R -e "versions::install.versions('jsonlite', version='1.5')" \
-    && R -e "versions::install.versions('Rcpp', version='0.12.11')" \
-    && R -e "versions::install.versions('optparse', version='1.4.4')" \
-    && R -e "versions::install.versions('stringr', version='1.2.0')"
+RUN Rscript ./install_container_dependencies.R
 
 RUN R CMD INSTALL rclipper_serve
 
 ENTRYPOINT ["/r_container_entrypoint.sh"]
 
+HEALTHCHECK --interval=3s --timeout=3s --retries=1 CMD test -f /model_is_ready.check || exit 1
 # vim: set filetype=dockerfile:
