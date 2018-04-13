@@ -15,6 +15,7 @@ import logging
 import yaml
 from test_utils import (create_kubernetes_connection, BenchmarkException,
                         fake_model_data, headers, log_clipper_state)
+
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
 from clipper_admin import __version__ as clipper_version, CLIPPER_TEMP_DIR, ClipperException
@@ -25,7 +26,7 @@ logging.basicConfig(
     level=logging.INFO)
 
 logger = logging.getLogger(__name__)
-MAX_RETRY = 4
+MAX_RETRY = 5
 
 
 def deploy_model(clipper_conn, name, link=False):
@@ -37,7 +38,7 @@ def deploy_model(clipper_conn, name, link=False):
         "doubles",
         fake_model_data,
         "clipper/noop-container:{}".format(clipper_version),
-        num_replicas=2,  # We set it to 2 for metric purpose.
+        num_replicas=1,
         container_registry=
         "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper")
     time.sleep(10)
@@ -58,9 +59,10 @@ def deploy_model(clipper_conn, name, link=False):
                 "http://%s/%s/predict" % (addr, app_name),
                 headers=headers,
                 data=json.dumps({
-                    'input': list(np.random.random(30))
+                    'input': [0.1, 0.2]
                 }))
             result = response.json()
+            print(result)
             if response.status_code == requests.codes.ok and result["default"]:
                 num_defaults += 1
         if num_defaults > 0:
@@ -73,7 +75,7 @@ def deploy_model(clipper_conn, name, link=False):
 
     if not success:
         raise BenchmarkException("Error querying APP %s, MODEL %s:%d" %
-                                 (app_name, model_name, version))
+                                 (app_name, model_name, 1))
 
 
 def create_and_test_app(clipper_conn, name):
@@ -87,7 +89,7 @@ def create_and_test_app(clipper_conn, name):
         "http://%s/%s/predict" % (addr, app_name),
         headers=headers,
         data=json.dumps({
-            'input': list(np.random.random(30))
+            'input': [0.1, 0.2]
         }))
     response.json()
     if response.status_code != requests.codes.ok:
@@ -129,6 +131,7 @@ if __name__ == "__main__":
                 os.makedirs(CLIPPER_TEMP_DIR)
             tmp_log_dir = tempfile.mkdtemp(dir=CLIPPER_TEMP_DIR)
             logger.info(clipper_conn.get_clipper_logs(tmp_log_dir))
+
             # Remove temp files
             shutil.rmtree(tmp_log_dir)
             log_clipper_state(clipper_conn)
