@@ -223,9 +223,8 @@ class TaskExecutor {
         model_metrics_({}) {
     log_info(LOGGING_TAG_TASK_EXECUTOR, "TaskExecutor started");
     rpc_->start(
-        "*", RPC_SERVICE_PORT,
-        [this, task_executor_valid = active_](VersionedModelId model,
-                                              int replica_id) {
+        "*", RPC_SERVICE_PORT, [ this, task_executor_valid = active_ ](
+                                   VersionedModelId model, int replica_id) {
           if (*task_executor_valid) {
             on_container_ready(model, replica_id);
           } else {
@@ -234,7 +233,7 @@ class TaskExecutor {
                      "TaskExecutor has been destroyed.");
           }
         },
-        [this, task_executor_valid = active_](rpc::RPCResponse response) {
+        [ this, task_executor_valid = active_ ](rpc::RPCResponse response) {
           if (*task_executor_valid) {
             on_response_recv(std::move(response));
           } else {
@@ -261,34 +260,32 @@ class TaskExecutor {
     redis::send_cmd_no_reply<std::string>(
         redis_connection_, {"CONFIG", "SET", "notify-keyspace-events", "AKE"});
 
-    redis::subscribe_to_model_changes(
-        redis_subscriber_,
-        [this, task_executor_valid = active_](const std::string &key,
-                                              const std::string &event_type) {
-          if (event_type == "hset" && *task_executor_valid) {
-            auto model_info =
-                clipper::redis::get_model_by_key(redis_connection_, key);
-            VersionedModelId model_id = VersionedModelId(
-                model_info["model_name"], model_info["model_version"]);
-            int batch_size = DEFAULT_BATCH_SIZE;
-            auto batch_size_search = model_info.find("batch_size");
-            if (batch_size_search != model_info.end()) {
-              batch_size = std::stoi(model_info["batch_size"]);
-            }
-            log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
-                               "Registered batch size of {} for model {}:{}",
-                               batch_size, model_id.get_name(),
-                               model_id.get_id());
-            active_containers_->register_batch_size(model_id, batch_size);
-          }
-        });
+    redis::subscribe_to_model_changes(redis_subscriber_, [
+      this, task_executor_valid = active_
+    ](const std::string &key, const std::string &event_type) {
+      if (event_type == "hset" && *task_executor_valid) {
+        auto model_info =
+            clipper::redis::get_model_by_key(redis_connection_, key);
+        VersionedModelId model_id = VersionedModelId(
+            model_info["model_name"], model_info["model_version"]);
+        int batch_size = DEFAULT_BATCH_SIZE;
+        auto batch_size_search = model_info.find("batch_size");
+        if (batch_size_search != model_info.end()) {
+          batch_size = std::stoi(model_info["batch_size"]);
+        }
+        log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
+                           "Registered batch size of {} for model {}:{}",
+                           batch_size, model_id.get_name(), model_id.get_id());
+        active_containers_->register_batch_size(model_id, batch_size);
+      }
+    });
 
     redis::subscribe_to_container_changes(
         redis_subscriber_,
         // event_type corresponds to one of the Redis event types
         // documented in https://redis.io/topics/notifications.
-        [this, task_executor_valid = active_](const std::string &key,
-                                              const std::string &event_type) {
+        [ this, task_executor_valid = active_ ](const std::string &key,
+                                                const std::string &event_type) {
           if (event_type == "hset" && *task_executor_valid) {
             auto container_info =
                 redis::get_container_by_key(redis_connection_, key);
@@ -447,10 +444,8 @@ class TaskExecutor {
     // goes out of scope.
     l.unlock();
 
-    std::vector<PredictTask> batch =
-        current_model_queue->get_batch([container](Deadline deadline) {
-          return container->get_batch_size(deadline);
-        });
+    std::vector<PredictTask> batch = current_model_queue->get_batch([container](
+        Deadline deadline) { return container->get_batch_size(deadline); });
 
     if (batch.size() > 0) {
       // move the lock up here, so that nothing can pull from the

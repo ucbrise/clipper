@@ -100,13 +100,12 @@ folly::Future<Response> QueryProcessor::predict(Query query) {
         it->then([outputs_mutex, outputs_ptr](Output output) {
             std::lock_guard<std::mutex> lock(*outputs_mutex);
             outputs_ptr->push_back(output);
-          })
-            .onError([](const std::exception& e) {
-              log_error_formatted(
-                  LOGGING_TAG_QUERY_PROCESSOR,
-                  "Unexpected error while executing prediction tasks: {}",
-                  e.what());
-            }));
+          }).onError([](const std::exception& e) {
+          log_error_formatted(
+              LOGGING_TAG_QUERY_PROCESSOR,
+              "Unexpected error while executing prediction tasks: {}",
+              e.what());
+        }));
   }
 
   folly::Future<folly::Unit> all_tasks_completed_future =
@@ -123,39 +122,37 @@ folly::Future<Response> QueryProcessor::predict(Query query) {
   folly::Promise<Response> response_promise;
   folly::Future<Response> response_future = response_promise.getFuture();
 
-  response_ready_future.then(
-      [outputs_ptr, outputs_mutex, num_tasks, query, query_id, selection_state,
-       current_policy, response_promise = std::move(response_promise),
-       default_explanation](
-          const std::pair<
-              size_t,
-              folly::Try<folly::Unit>>& /* completed_future */) mutable {
-        std::lock_guard<std::mutex> outputs_lock(*outputs_mutex);
-        if (outputs_ptr->empty() && num_tasks > 0 && !default_explanation) {
-          default_explanation =
-              "Failed to retrieve a prediction response within the specified "
-              "latency SLO";
-        }
+  response_ready_future.then([
+    outputs_ptr, outputs_mutex, num_tasks, query, query_id, selection_state,
+    current_policy, response_promise = std::move(response_promise),
+    default_explanation
+  ](const std::pair<size_t,
+                    folly::Try<folly::Unit>>& /* completed_future */) mutable {
+    std::lock_guard<std::mutex> outputs_lock(*outputs_mutex);
+    if (outputs_ptr->empty() && num_tasks > 0 && !default_explanation) {
+      default_explanation =
+          "Failed to retrieve a prediction response within the specified "
+          "latency SLO";
+    }
 
-        std::pair<Output, bool> final_output =
-            current_policy->combine_predictions(selection_state, query,
-                                                *outputs_ptr);
+    std::pair<Output, bool> final_output = current_policy->combine_predictions(
+        selection_state, query, *outputs_ptr);
 
-        std::chrono::time_point<std::chrono::high_resolution_clock> end =
-            std::chrono::high_resolution_clock::now();
-        long duration_micros =
-            std::chrono::duration_cast<std::chrono::microseconds>(
-                end - query.create_time_)
-                .count();
+    std::chrono::time_point<std::chrono::high_resolution_clock> end =
+        std::chrono::high_resolution_clock::now();
+    long duration_micros =
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            end - query.create_time_)
+            .count();
 
-        Response response{query,
-                          query_id,
-                          duration_micros,
-                          final_output.first,
-                          final_output.second,
-                          default_explanation};
-        response_promise.setValue(response);
-      });
+    Response response{query,
+                      query_id,
+                      duration_micros,
+                      final_output.first,
+                      final_output.second,
+                      default_explanation};
+    response_promise.setValue(response);
+  });
   return response_future;
 }
 
@@ -223,16 +220,15 @@ folly::Future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
       select_policy_update_promise.getFuture();
   auto state_table = get_state_table();
 
-  all_preds_completed.then(
-      [moved_promise = std::move(select_policy_update_promise), selection_state,
-       current_policy, state_table, feedback, query_id,
-       state_key](std::vector<Output> preds) mutable {
-        auto new_selection_state = current_policy->process_feedback(
-            selection_state, feedback.feedback_, preds);
-        state_table->put(state_key,
-                         current_policy->serialize(new_selection_state));
-        moved_promise.setValue(true);
-      });
+  all_preds_completed.then([
+    moved_promise = std::move(select_policy_update_promise), selection_state,
+    current_policy, state_table, feedback, query_id, state_key
+  ](std::vector<Output> preds) mutable {
+    auto new_selection_state = current_policy->process_feedback(
+        selection_state, feedback.feedback_, preds);
+    state_table->put(state_key, current_policy->serialize(new_selection_state));
+    moved_promise.setValue(true);
+  });
 
   auto feedback_ack_ready_future =
       folly::collect(all_feedback_completed, select_policy_updated);

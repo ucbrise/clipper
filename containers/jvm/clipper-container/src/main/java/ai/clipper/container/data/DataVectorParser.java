@@ -38,8 +38,7 @@ public abstract class DataVectorParser<U, T extends DataVector<U>> {
 
     @Override
     public boolean hasNext() {
-      return (buffer != null) && (splits != null)
-          && (currentSplitIndex >= 0)
+      return (buffer != null) && (splits != null) && (currentSplitIndex >= 0)
           // If the split index is equivalent to the length
           // of the splits list, data must be processed
           // from the last split through the buffer's end
