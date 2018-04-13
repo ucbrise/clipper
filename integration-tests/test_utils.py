@@ -80,7 +80,7 @@ def create_docker_connection(cleanup=True,
         while True:
             try:
                 logging.info("Starting Clipper")
-                cl.start_clipper(config_file)
+                cl.start_clipper(config_file=config_file)
                 time.sleep(1)
                 break
             except docker.errors.APIError as e:

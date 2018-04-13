@@ -123,7 +123,7 @@ class ClipperConnection(object):
             raise e
 
         if (config_file):
-            _parse_configuration(config_file)
+            self._parse_configuration(config_file)
 
     def connect(self):
         """Connect to a running Clipper cluster."""
@@ -133,7 +133,7 @@ class ClipperConnection(object):
         logger.info("Successfully connected to Clipper cluster at {}".format(
             self.cm.get_query_addr()))
 
-    def _parse_configuration(config_path):
+    def _parse_configuration(self, config_path):
         """ This functions parses a configuration file
         and accordingly deploy models, applications, and links.
         Parameters
