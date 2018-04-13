@@ -276,18 +276,18 @@ TEST_F(QueryFrontendTest, TestAddManyApplications) {
 
 TEST_F(QueryFrontendTest, TestDeleteOneApplication) {
   size_t no_apps = rh_.num_applications();
-  EXPECT_EQ(no_apps, (size_t) 0);
+  EXPECT_EQ(no_apps, (size_t)0);
 
   rh_.add_application("test_app_1", InputType::Doubles, "test_policy", "0.4",
                       30000);
   rh_.delete_application("test_app_1");
   no_apps = rh_.num_applications();
-  EXPECT_EQ(no_apps, (size_t) 0);
+  EXPECT_EQ(no_apps, (size_t)0);
 }
 
 TEST_F(QueryFrontendTest, TestDeleteManyApplications) {
   size_t no_apps = rh_.num_applications();
-  EXPECT_EQ(no_apps, (size_t) 0);
+  EXPECT_EQ(no_apps, (size_t)0);
 
   // Add 500 applications and delete half of them
   for (int i = 0; i < 500; ++i) {
@@ -301,7 +301,7 @@ TEST_F(QueryFrontendTest, TestDeleteManyApplications) {
   }
 
   size_t apps = rh_.num_applications();
-  EXPECT_EQ(apps, (size_t) 250);
+  EXPECT_EQ(apps, (size_t)250);
 }
 
 TEST_F(QueryFrontendTest,
