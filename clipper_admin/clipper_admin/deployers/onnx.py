@@ -168,9 +168,8 @@ def deploy_pytorch_model(clipper_conn,
         if onnx_backend is "caffe2":
             base_image = "clipper/caffe2-onnx-container:{}".format(__version__)
         else:
-            logger.error(
-                "{backend} ONNX backend is not currently supported.".format(
-                    backend=onnx_backend))
+            logger.error("{backend} ONNX backend is not currently supported.".
+                         format(backend=onnx_backend))
 
     serialization_dir = save_python_function(name, func)
 

@@ -139,11 +139,11 @@ def train_logistic_regression(sess, X_train, y_train):
         sess.run(train, feed_dict={x: X_train, y_labels: y_train})
         if i % 1000 == 0:
             print('Cost , Accuracy')
-            print(sess.run(
-                [loss, accuracy], feed_dict={
-                    x: X_train,
-                    y_labels: y_train
-                }))
+            print(
+                sess.run(
+                    [loss, accuracy],
+                    feed_dict={x: X_train,
+                               y_labels: y_train}))
     return sess
 
 

@@ -133,9 +133,8 @@ def add_to_metric_config(model_container_name, CLIPPER_INTERNAL_METRIC_PORT):
 
     for config in conf['scrape_configs']:
         if config['job_name'] == model_container_name:
-            raise ClipperException(
-                '{} is added already on the metric configs'.format(
-                    model_container_name))
+            raise ClipperException('{} is added already on the metric configs'.
+                                   format(model_container_name))
 
     new_job_dict = {
         'job_name':

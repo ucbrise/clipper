@@ -569,16 +569,14 @@ class MetricCollector:
             elif metric_type == 'Summary':
                 self.metrics[name] = Summary(prefix + name, metric_description)
             else:
-                raise Exception(
-                    "Unknown Metric Type: {}. See config file.".format(
-                        metric_type))
+                raise Exception("Unknown Metric Type: {}. See config file.".
+                                format(metric_type))
 
             self.name_to_type[name] = metric_type
 
     def collect(self):
         while True:
-            latest_metric_dict = self.pipe_conn.recv(
-            )  # This call is blocking.
+            latest_metric_dict = self.pipe_conn.recv()  # This call is blocking.
             for name, value in latest_metric_dict.items():
                 metric = self.metrics[name]
                 if self.name_to_type[name] == 'Counter':
