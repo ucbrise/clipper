@@ -64,8 +64,11 @@ class QueryFrontendTest : public ::testing::Test {
 
 TEST_F(QueryFrontendTest, TestDecodeCorrectInputInts) {
   std::string test_json_ints = "{\"input\": [1,2,3,4]}";
+  rapidjson::Document d;
+  clipper::json::parse_json(test_json_ints, d);
+
   std::vector<folly::Try<Response>> responses =
-      rh_.decode_and_handle_predict(test_json_ints, "test", {}, "test_policy",
+      rh_.decode_and_handle_predict(d, "test", {}, "test_policy",
                                     30000, InputType::Ints)
           .get();
   Response response = responses[0].value();
