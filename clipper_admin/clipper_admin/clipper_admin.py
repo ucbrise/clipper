@@ -14,6 +14,7 @@ import six
 from cloudpickle import CloudPickler
 import pickle
 import numpy as np
+import yaml
 
 from .container_manager import CONTAINERLESS_MODEL_IMAGE
 from .exceptions import ClipperException, UnconnectedException
