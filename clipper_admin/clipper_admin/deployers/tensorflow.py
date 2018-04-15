@@ -218,9 +218,9 @@ def deploy_tensorflow_model(
                     raise e
             else:
                 # Check if all the 4 files are present
-                if glob.glob('data/*.meta') and glob.glob(
-                        'data/*.index') and glob.glob(
-                            "data/checkpoint") and glob.glob("data/*.data*"):
+                suffixes = [os.path.join(tf_sess_or_saved_model_path, suffix) \
+                           for suffix in ("*.meta", "*.index", "checkpoint", "*.data*")]
+                if sum([1 for suffix in suffixes if glob.glob(suffix)]) == 4:
                     try:
                         shutil.copytree(tf_sess_or_saved_model_path,
                                         os.path.join(serialization_dir,
