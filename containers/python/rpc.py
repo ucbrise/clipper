@@ -57,6 +57,7 @@ INITIAL_HEADER_BUFFER_SIZE = 1024
 
 INPUT_HEADER_DTYPE = np.dtype(np.uint64)
 
+
 def string_to_input_type(input_str):
     input_str = input_str.strip().lower()
     byte_strs = ["b", "bytes", "byte"]
@@ -78,6 +79,7 @@ def string_to_input_type(input_str):
     else:
         return -1
 
+
 def input_type_to_dtype(input_type):
     if input_type == INPUT_TYPE_BYTES:
         return np.dtype(np.int8)
@@ -88,7 +90,8 @@ def input_type_to_dtype(input_type):
     elif input_type == INPUT_TYPE_DOUBLES:
         return np.dtype(np.float64)
     elif input_type == INPUT_TYPE_STRINGS:
-        return str 
+        return str
+
 
 def input_type_to_string(input_type):
     if input_type == INPUT_TYPE_BYTES:
@@ -209,7 +212,8 @@ class Server(threading.Thread):
         sys.stderr.flush()
 
         self.input_header_buffer = bytearray(INITIAL_HEADER_BUFFER_SIZE)
-        self.input_content_buffer = bytearray(INITIAL_INPUT_CONTENT_BUFFER_SIZE)
+        self.input_content_buffer = bytearray(
+            INITIAL_INPUT_CONTENT_BUFFER_SIZE)
 
         while True:
             socket = self.context.socket(zmq.DEALER)
@@ -283,36 +287,46 @@ class Server(threading.Thread):
 
                     if request_type == REQUEST_TYPE_PREDICT:
                         input_header_size_raw = socket.recv()
-                        input_header_size_bytes = struct.unpack("<Q", input_header_size_raw)[0]
+                        input_header_size_bytes = struct.unpack(
+                            "<Q", input_header_size_raw)[0]
 
                         typed_input_header_size = input_header_size_bytes / INPUT_HEADER_DTYPE.itemsize
-    
-                        if len(self.input_header_buffer) < input_header_size_bytes:
-                            self.input_header_buffer = bytearray(input_header_size_bytes * 2)
+
+                        if len(self.input_header_buffer
+                               ) < input_header_size_bytes:
+                            self.input_header_buffer = bytearray(
+                                input_header_size_bytes * 2)
 
                         # While this procedure still incurs a copy, it saves a potentially
                         # costly memory allocation by ZMQ. This savings only occurs
                         # if the input header did not have to be resized
-                        input_header_view = memoryview(self.input_header_buffer)[:input_header_size_bytes]
+                        input_header_view = memoryview(
+                            self.input_header_buffer)[:input_header_size_bytes]
                         input_header_content = socket.recv(copy=False)
-                        input_header_view[:input_header_size_bytes] = input_header_content
+                        input_header_view[:
+                                          input_header_size_bytes] = input_header_content
 
                         parsed_input_header = np.frombuffer(
-                                self.input_header_buffer, dtype=INPUT_HEADER_DTYPE)[:typed_input_header_size]
+                            self.input_header_buffer,
+                            dtype=INPUT_HEADER_DTYPE)[:typed_input_header_size]
 
                         input_type, num_inputs, input_sizes = parsed_input_header[
                             0], parsed_input_header[1], parsed_input_header[2:]
 
                         input_dtype = input_type_to_dtype(input_type)
-                        input_sizes = [int(inp_size) for inp_size in input_sizes]
+                        input_sizes = [
+                            int(inp_size) for inp_size in input_sizes
+                        ]
 
                         if input_type == INPUT_TYPE_STRINGS:
-                            inputs = self.recv_string_content(socket, num_inputs, input_sizes)
+                            inputs = self.recv_string_content(
+                                socket, num_inputs, input_sizes)
                         else:
-                            inputs = self.recv_primitive_content(socket, num_inputs, input_sizes, input_dtype)
-                        
+                            inputs = self.recv_primitive_content(
+                                socket, num_inputs, input_sizes, input_dtype)
+
                         t2 = datetime.now()
-                            
+
                         if int(input_type) != int(self.model_input_type):
                             print((
                                 "Received incorrect input. Expected {expected}, "
@@ -371,7 +385,7 @@ class Server(threading.Thread):
         # input string references
         inputs = np.empty(num_inputs, dtype=object)
         for i in range(num_inputs):
-            # Obtain a memoryview of the received message's 
+            # Obtain a memoryview of the received message's
             # ZMQ frame buffer
             input_item_buffer = socket.recv(copy=False).buffer
             # Copy the memoryview content into a string object
@@ -380,7 +394,8 @@ class Server(threading.Thread):
 
         return inputs
 
-    def recv_primitive_content(self, socket, num_inputs, input_sizes, input_dtype):
+    def recv_primitive_content(self, socket, num_inputs, input_sizes,
+                               input_dtype):
         def recv_different_lengths():
             # Create an empty numpy array that will contain
             # input array references
@@ -390,33 +405,39 @@ class Server(threading.Thread):
                 # buffer that can be parsed into a writeable
                 # array
                 input_item_buffer = socket.recv(copy=True)
-                input_item = np.frombuffer(input_item_buffer, dtype=input_dtype) 
+                input_item = np.frombuffer(
+                    input_item_buffer, dtype=input_dtype)
                 inputs[i] = input_item
 
             return inputs
 
         def recv_same_lengths():
-            input_type_size_bytes = input_dtype.itemsize;
+            input_type_size_bytes = input_dtype.itemsize
             input_content_size_bytes = sum(input_sizes)
             typed_input_content_size = input_content_size_bytes / input_type_size_bytes
 
             if len(self.input_content_buffer) < input_content_size_bytes:
-                self.input_content_buffer = bytearray(input_content_size_bytes * 2)
+                self.input_content_buffer = bytearray(
+                    input_content_size_bytes * 2)
 
-            input_content_view = memoryview(self.input_content_buffer)[:input_content_size_bytes]
+            input_content_view = memoryview(
+                self.input_content_buffer)[:input_content_size_bytes]
 
             item_start_idx = 0
             for i in range(num_inputs):
                 input_size = input_sizes[i]
-                # Obtain a memoryview of the received message's 
+                # Obtain a memoryview of the received message's
                 # ZMQ frame buffer
                 input_item_buffer = socket.recv(copy=False).buffer
                 # Copy the memoryview content into a pre-allocated content buffer
-                input_content_view[item_start_idx:item_start_idx + input_size] = input_item_buffer
+                input_content_view[item_start_idx:item_start_idx +
+                                   input_size] = input_item_buffer
                 item_start_idx += input_size
 
             # Reinterpret the content buffer as a typed numpy array
-            inputs = np.frombuffer(self.input_content_buffer, dtype=input_dtype)[:typed_input_content_size]
+            inputs = np.frombuffer(
+                self.input_content_buffer,
+                dtype=input_dtype)[:typed_input_content_size]
 
             # All inputs are of the same size, so we can use
             # np.reshape to construct an input matrix
