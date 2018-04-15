@@ -15,8 +15,8 @@ using redox::Command;
 using redox::Redox;
 using redox::Subscriber;
 using std::string;
-using std::vector;
 using std::unordered_map;
+using std::vector;
 
 namespace clipper {
 namespace redis {

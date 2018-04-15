@@ -9,10 +9,12 @@ import socket
 import sys
 import os
 import yaml
+import logging
 from collections import deque
-from multiprocessing import Pipe, Process
+from subprocess32 import Popen, PIPE
 from prometheus_client import start_http_server
 from prometheus_client.core import Counter, Gauge, Histogram, Summary
+import clipper_admin.metrics as metrics
 
 INPUT_TYPE_BYTES = 0
 INPUT_TYPE_INTS = 1
@@ -44,6 +46,8 @@ EVENT_HISTORY_RECEIVED_CONTAINER_CONTENT = 6
 
 MAXIMUM_UTF_8_CHAR_LENGTH_BYTES = 4
 BYTES_PER_INT = 4
+
+logger = logging.getLogger(__name__)
 
 
 def string_to_input_type(input_str):
@@ -185,7 +189,7 @@ class Server(threading.Thread):
     def get_event_history(self):
         return self.event_history.get_events()
 
-    def run(self, metric_conn):
+    def run(self, collect_metrics=True):
         print("Serving predictions for {0} input type.".format(
             input_type_to_string(self.model_input_type)))
         connected = False
@@ -316,17 +320,18 @@ class Server(threading.Thread):
                         parse_time = (t3 - t2).microseconds
                         handle_time = (t4 - t3).microseconds
 
-                        model_container_metric = {}
-                        model_container_metric['pred_total'] = 1
-                        model_container_metric[
-                            'recv_time_ms'] = recv_time / 1000.0
-                        model_container_metric[
-                            'parse_time_ms'] = parse_time / 1000.0
-                        model_container_metric[
-                            'handle_time_ms'] = handle_time / 1000.0
-                        model_container_metric['end_to_end_latency_ms'] = (
-                            recv_time + parse_time + handle_time) / 1000.0
-                        metric_conn.send(model_container_metric)
+                        if collect_metrics:
+                            metrics.report_metric('clipper_mc_pred_total', 1)
+                            metrics.report_metric('clipper_mc_recv_time_ms',
+                                                  recv_time / 1000.0)
+                            metrics.report_metric('clipper_mc_parse_time_ms',
+                                                  parse_time / 1000.0)
+                            metrics.report_metric('clipper_mc_handle_time_ms',
+                                                  handle_time / 1000.0)
+                            metrics.report_metric(
+                                'clipper_mc_end_to_end_latency_ms',
+                                (recv_time + parse_time + handle_time) /
+                                1000.0)
 
                         print("recv: %f us, parse: %f us, handle: %f us" %
                               (recv_time, parse_time, handle_time))
@@ -477,8 +482,8 @@ class ModelContainerBase(object):
 
 
 class RPCService:
-    def __init__(self):
-        pass
+    def __init__(self, collect_metrics=True):
+        self.collect_metrics = collect_metrics
 
     def get_event_history(self):
         if self.server:
@@ -511,95 +516,50 @@ class RPCService:
         self.server.model_input_type = model_input_type
         self.server.model = model
 
-        child_conn, parent_conn = Pipe(duplex=False)
-        metrics_proc = Process(target=run_metric, args=(child_conn, ))
-        metrics_proc.start()
-        self.server.run(parent_conn)
+        # Create a file named model_is_ready.check to show that model and container
+        # are ready
+        with open("/model_is_ready.check", "w") as f:
+            f.write("READY")
+        if self.collect_metrics:
+            start_metric_server()
+            add_metrics()
+
+        self.server.run(collect_metrics=self.collect_metrics)
 
 
-class MetricCollector:
-    """
-    Note this is no longer a Prometheus Collector.
-    Instead, this is simply a class to encapsulate metric recording.
-    """
+def add_metrics():
+    config_file_path = 'metrics_config.yaml'
 
-    def __init__(self, pipe_child_conn):
-        self.pipe_conn = pipe_child_conn
-        self.metrics = {}
-        self.name_to_type = {}
+    config_file_path = os.path.join(
+        os.path.split(os.path.realpath(__file__))[0], config_file_path)
 
-        self._load_config()
+    with open(config_file_path, 'r') as f:
+        config = yaml.load(f)
+    config = config['Model Container']
 
-    def _load_config(self):
-        config_file_path = 'metrics_config.yaml'
+    prefix = 'clipper_{}_'.format(config.pop('prefix'))
 
-        # Make sure we are inside /container, where the config file lives.
-        cwd = os.path.split(os.getcwd())[1]
-        if cwd != 'container':
-            config_file_path = os.path.join(os.getcwd(), 'container',
-                                            config_file_path)
+    for name, spec in config.items():
+        metric_type = spec.get('type')
+        metric_description = spec.get('description')
 
-        with open(config_file_path, 'r') as f:
-            config = yaml.load(f)
-        config = config['Model Container']
+        name = prefix + name
 
-        prefix = 'clipper_{}_'.format(config.pop('prefix'))
-
-        for name, spec in config.items():
-            metric_type = spec.get('type')
-            metric_description = spec.get('description')
-
-            if not metric_type and not metric_description:
-                raise Exception(
-                    "{}: Metric Type and Metric Description are Required in Config File.".
-                    format(name))
-
-            if metric_type == 'Counter':
-                self.metrics[name] = Counter(prefix + name, metric_description)
-            elif metric_type == 'Gauge':
-                self.metrics[name] = Gauge(prefix + name, metric_description)
-            elif metric_type == 'Histogram':
-                if 'bucket' in spec.keys():
-                    buckets = spec['bucket'] + [float("inf")]
-                    self.metrics[name] = Histogram(
-                        prefix + name, metric_description, buckets=buckets)
-                else:
-                    self.metrics[name] = Histogram(prefix + name,
-                                                   metric_description)
-            elif metric_type == 'Summary':
-                self.metrics[name] = Summary(prefix + name, metric_description)
-            else:
-                raise Exception(
-                    "Unknown Metric Type: {}. See config file.".format(
-                        metric_type))
-
-            self.name_to_type[name] = metric_type
-
-    def collect(self):
-        while True:
-            latest_metric_dict = self.pipe_conn.recv(
-            )  # This call is blocking.
-            for name, value in latest_metric_dict.items():
-                metric = self.metrics[name]
-                if self.name_to_type[name] == 'Counter':
-                    metric.inc(value)
-                elif self.name_to_type[name] == 'Gauge':
-                    metric.set(value)
-                elif self.name_to_type[name] == 'Histogram' or self.name_to_type[name] == 'Summary':
-                    metric.observe(value)
-                else:
-                    raise Exception(
-                        "Unknown Metric Type for {}. See config file.".format(
-                            name))
+        if metric_type == 'Histogram' and 'bucket' in spec.keys():
+            buckets = spec['bucket'] + [float("inf")]
+            metrics.add_metric(name, metric_type, metric_description, buckets)
+        else:  # This case include default histogram buckets + all other
+            metrics.add_metric(name, metric_type, metric_description)
 
 
-def run_metric(child_conn):
-    """
-    This function takes a child_conn at the end of the pipe and
-    receive object to update prometheus metric.
+def start_metric_server():
 
-    It is recommended to be ran in a separate process.
-    """
-    collector = MetricCollector(child_conn)
-    start_http_server(1390)
-    collector.collect()
+    DEBUG = False
+    cmd = ['python', '-m', 'clipper_admin.metrics.server']
+    if DEBUG:
+        cmd.append('DEBUG')
+
+    Popen(cmd)
+
+    # sleep is necessary because Popen returns immediately
+    time.sleep(1)
