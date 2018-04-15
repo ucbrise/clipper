@@ -2,17 +2,17 @@ models:
   model1:
     input_type: "integers"
     version: "1"
-    image: "test-model:1"
+    image: "clipper/noop-container:latest"
   model2:
     input_type: "floats"
     version: "2"
-    image: "train-model:2"
+    image: "clipper/noop-container:latest"
     labels: ["second model configured", "working successfully"]
     num_replicas: 2
   model3:
     input_type: "doubles"
     version: "4"
-    image: "test-model:2"
+    image: "clipper/noop-container:latest"
     num_replicas: 3
     batch_size: 2
 
