@@ -30,7 +30,6 @@ model_name = "mxnet-model"
 
 
 def predict(model, xs):
-    xs = np.array(xs)
     data_iter = mx.io.NDArrayIter(xs)
     preds = model.predict(data_iter)
     preds = [preds[0]]
