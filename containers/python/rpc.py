@@ -80,26 +80,15 @@ def string_to_input_type(input_str):
 
 def input_type_to_dtype(input_type):
     if input_type == INPUT_TYPE_BYTES:
-        return np.int8
+        return np.dtype(np.int8)
     elif input_type == INPUT_TYPE_INTS:
-        return np.int32
+        return np.dtype(np.int32)
     elif input_type == INPUT_TYPE_FLOATS:
-        return np.float32
+        return np.dtype(np.float32)
     elif input_type == INPUT_TYPE_DOUBLES:
-        return np.float64
+        return np.dtype(np.float64)
     elif input_type == INPUT_TYPE_STRINGS:
         return str 
-
-def get_input_type_size_bytes(input_type):
-    if input_type == INPUT_TYPE_STRINGS:
-        # The itemsize field for a string object
-        # is zero, so we directly use the correct
-        # value of 1
-        return 1
-    else:
-        return np.dtype(input_type_to_dtype(input_type))
-
-
 
 def input_type_to_string(input_type):
     if input_type == INPUT_TYPE_BYTES:
@@ -308,7 +297,6 @@ class Server(threading.Thread):
                         input_header_content = socket.recv(copy=False)
                         input_header_view[:input_header_size_bytes] = input_header_content
 
-
                         parsed_input_header = np.frombuffer(
                                 input_header_buffer, dtype=INPUT_HEADER_DTYPE)[:typed_input_header_size]
 
@@ -316,48 +304,14 @@ class Server(threading.Thread):
                             0], parsed_input_header[1], parsed_input_header[2:]
 
                         input_dtype = input_type_to_dtype(input_type)
-                        input_type_size_bytes = get_input_type_size_bytes(input_type)
-
                         input_sizes = [int(inp_size) for inp_size in input_sizes]
-                        input_splits = np.cumsum(input_sizes)[:-1] / input_type_size_bytes 
-
-                        input_content_size_bytes = sum(input_sizes)
-                        if len(input_content_buffer) < input_content_size_bytes:
-                            input_content_buffer = bytearray(input_content_size_bytes * 2)
-
-                        typed_input_content_size = input_content_size_bytes / input_type_size_bytes
-
-                        input_content_view = memoryview(input_content_buffer)[:input_content_size_bytes]
-
-                        item_start_idx = 0
-                        for i in range(num_inputs):
-                            input_size = input_sizes[i]
-                            input_item_buffer = socket.recv(copy=False)
-                            input_content_view[item_start_idx:item_start_idx + input_size] = input_item_buffer
-                            item_start_idx += input_size
-
-                        t2 = datetime.now()
 
                         if input_type == INPUT_TYPE_STRINGS:
-                            inputs = []
-                            for split in 
-                            
-                            inputs = str(input_content_buffer)[:typed_input_content_size]
-
-                        inputs = np.frombuffer(input_content_buffer, dtype=input_dtype)[:typed_input_content_size]
-
-
-
-                        elif len(set(input_sizes)) == 1:
-                            # All inputs are of the same size, so we can use
-                            # np.reshape to construct an input matrix
-                            inputs = np.reshape(inputs, (len(input_sizes), -1))
+                            inputs = self.recv_string_content(socket, num_inputs, input_sizes)
                         else:
-                            # Else, we must create an array from the list outputs
-                            # of np.split(). Numpy does not support in-place splits
-                            # of heterogeneous lengths, so this incurs a copy
-                            input_splits = np.cumsum(input_sizes)[:-1] / input_type_size_bytes 
-                            inputs = np.array(np.split(inputs, input_splits))
+                            inputs = self.recv_primitive_content(socket, num_inputs, input_sizes, input_dtype, input_content_buffer)
+                        
+                        t2 = datetime.now()
                             
                         if int(input_type) != int(self.model_input_type):
                             print((
@@ -411,6 +365,48 @@ class Server(threading.Thread):
 
                 sys.stdout.flush()
                 sys.stderr.flush()
+
+    def recv_string_content(self, socket, num_inputs, input_sizes):
+        # Create an empty numpy array that will contain
+        # input string references
+        inputs = np.empty(num_inputs, dtype=object)
+        for i in range(num_inputs):
+            input_str = socket.recv_string(encoding='utf-8')
+            inputs[i] = input_str
+
+        return inputs
+
+    def recv_primitive_content(self, socket, num_inputs, input_sizes, input_dtype, input_content_buffer):
+        input_type_size_bytes = input_dtype.itemsize;
+        input_content_size_bytes = sum(input_sizes)
+        typed_input_content_size = input_content_size_bytes / input_type_size_bytes
+
+        if len(input_content_buffer) < input_content_size_bytes:
+            input_content_buffer = bytearray(input_content_size_bytes * 2)
+
+        input_content_view = memoryview(input_content_buffer)[:input_content_size_bytes]
+
+        item_start_idx = 0
+        for i in range(num_inputs):
+            input_size = input_sizes[i]
+            input_item_buffer = socket.recv(copy=False)
+            input_content_view[item_start_idx:item_start_idx + input_size] = input_item_buffer
+            item_start_idx += input_size
+
+        inputs = np.frombuffer(input_content_buffer, dtype=input_dtype)[:typed_input_content_size]
+
+        if len(set(input_sizes)) == 1:
+            # All inputs are of the same size, so we can use
+            # np.reshape to construct an input matrix
+            inputs = np.reshape(inputs, (len(input_sizes), -1))
+        else:
+            # Else, we must create an array from the list outputs
+            # of np.split(). Numpy does not support in-place splits
+            # of heterogeneous lengths, so this incurs a copy
+            input_splits = np.cumsum(input_sizes)[:-1] / input_type_size_bytes 
+            inputs = np.array(np.split(inputs, input_splits))
+
+        return inputs
 
     def send_container_metadata(self, socket):
         socket.send("", zmq.SNDMORE)
