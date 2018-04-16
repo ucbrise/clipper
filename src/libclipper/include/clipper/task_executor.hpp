@@ -241,7 +241,6 @@ class TaskExecutor {
                      "Not running on_response_recv callback because "
                      "TaskExecutor has been destroyed.");
           }
-
         });
     Config &conf = get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
@@ -323,7 +322,6 @@ class TaskExecutor {
                      "subscribe_to_container_changes callback because "
                      "TaskExecutor has been destroyed.");
           }
-
         });
     throughput_meter_ = metrics::MetricsRegistry::get_metrics().create_meter(
         "internal:aggregate_model_throughput");

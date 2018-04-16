@@ -9,6 +9,7 @@ import socket
 import sys
 import os
 import yaml
+import logging
 from collections import deque
 from subprocess32 import Popen, PIPE
 from prometheus_client import start_http_server
@@ -56,6 +57,8 @@ INITIAL_INPUT_CONTENT_BUFFER_SIZE = 1024
 INITIAL_HEADER_BUFFER_SIZE = 1024
 
 INPUT_HEADER_DTYPE = np.dtype(np.uint64)
+
+logger = logging.getLogger(__name__)
 
 
 def string_to_input_type(input_str):
@@ -655,7 +658,10 @@ class RPCService:
         self.server.model_input_type = model_input_type
         self.server.model = model
 
-        # Start metric collection
+        # Create a file named model_is_ready.check to show that model and container
+        # are ready
+        with open("/model_is_ready.check", "w") as f:
+            f.write("READY")
         if self.collect_metrics:
             start_metric_server()
             add_metrics()

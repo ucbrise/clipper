@@ -167,7 +167,6 @@ class Benchmarker {
             // SEND FIRST MESSAGE
             send_message();
           }
-
         });
   }
 
