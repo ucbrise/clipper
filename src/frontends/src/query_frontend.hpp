@@ -450,12 +450,12 @@ class RequestHandler {
     json_response.SetObject();
     clipper::json::add_long(json_response, PREDICTION_RESPONSE_KEY_QUERY_ID,
                             query_response.query_id_);
+    rapidjson::Document json_y_hat;
     std::string y_hat_str = parse_output_y_hat(query_response.output_.y_hat_);
     try {
       // Attempt to parse the string output as JSON
       // and, if possible, nest it in object form within the
       // query response
-      rapidjson::Document json_y_hat;
       clipper::json::parse_json(y_hat_str, json_y_hat);
       clipper::json::add_object(json_response, PREDICTION_RESPONSE_KEY_OUTPUT,
                                 json_y_hat);
