@@ -37,13 +37,6 @@
 #' 
 #' @return A list of file dependencies.
 .get_file_dependencies = function(cd_dependencies) {
-  # This is a bit hacky. `CodeDepends` doesn't always
-  # return the same data type. Either a class extending
-  # `list` or a class of type `S4` is returned. In the
-  # second case, we need to coerce the object to a list.
-  if(typeof(cd_dependencies) == "S4") {
-    cd_dependencies = list(cd_dependencies)
-  }
   all_file_dependencies = character()
   for(i in seq_along(cd_dependencies)) {
     file_dependencies = cd_dependencies[[i]]@files
@@ -73,6 +66,32 @@
   return(all_function_dependencies)
 }
 
+.get_cd_dependencies = function(obj_name) {
+  all_cd_dependencies = list()
+  execution_history = histry::histry()
+  for(expr in execution_history) {
+    expr_str = toString(expr)
+    if(grepl(obj_name, expr_str)) {
+      # The current expression contains the object name,
+      # so we should analyze its dependencies
+      cd_dependencies = CodeDepends::getInputs(expr)
+      # This is a bit hacky. `CodeDepends` doesn't always
+      # return the same data type. Either a class extending
+      # `list` or a class of type `S4` is returned. In the
+      # second case, we need to coerce the object to a list.
+      if(typeof(cd_dependencies) == "S4") {
+        cd_dependencies = list(cd_dependencies)
+      }
+      for(deps_item in cd_dependencies) {
+        if(obj_name %in% deps_item@outputs) {
+          all_cd_dependencies = c(all_cd_dependencies, deps_item)
+        }
+      }
+    }
+  }
+  return(all_cd_dependencies)
+}
+
 #' Recursively obtains all of the dependencies of a provided
 #' function.
 #' 
@@ -88,10 +107,8 @@
   all_function_dependencies = character()
     
   get_deps = function(func_name) {
-    func = get(func_name)
-    
     cd_dependencies <- tryCatch({
-      CodeDepends::getInputs(func)
+      .get_cd_dependencies(func_name)
     }, error = function(e) {
       print(e)
       stop("CodeDepends encountered an error while analyzing the model function!")
@@ -113,12 +130,24 @@
     for(i in seq_along(input_deps)) {
       input_name = input_deps[i]
       input = get(input_name)
-      input_cd_deps = CodeDepends::getInputs(input)
+      input_cd_deps = .get_cd_dependencies(input_name)
       input_file_deps = .get_file_dependencies(input_cd_deps)
       if(length(input_file_deps) > 0) {
-        # We can't assign a dictionary key to an empty vector,
-        # so only make the assignment if we found file dependencies
-        all_file_dependencies[[input_name]] <<- input_file_deps
+        if(is.character(input) && length(input) == 1) {
+          # If the input is a string with recognized file dependencies,
+          # we should regard the entire string as a file path. CodeDepends
+          # does not always do this correctly, so we implement the proper
+          # behavior here
+          all_file_dependencies[[input_name]] <<- input
+        } else {
+          # The input is not a individual file path. We proceed
+          # to rely directly on the file dependencies located by
+          # CodeDepends
+          #
+          # We can't assign a dictionary key to an empty vector,
+          # so only make the assignment if we found file dependencies
+          all_file_dependencies[[input_name]] <<- input_file_deps   
+        }
       }
     }
     

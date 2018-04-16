@@ -19,6 +19,13 @@ be deployed to Clipper via the [Python clipper_admin package](https://pypi.pytho
 Rclipper depends on the [Python clipper_admin package](https://pypi.python.org/pypi/clipper_admin) for building and deploying models. In order to use
 this admin package, [Docker for Python](https://pypi.python.org/pypi/docker/) must also be installed.
 
+## Importing Rclipper
+
+**It is very important that Rclipper be imported before a prediction function or its dependencies are defined**.
+Rclipper makes use of the [histry package](https://cran.r-project.org/web/packages/histry/index.html) to statically analyze dependency definitions. 
+In order to locate these definition expressions during function serialization, histry must be imported before the 
+expressions are executed.
+
 ## Writing an API-compatible R prediction function
 An API-compatible prediction function must accept a type-homogeneous **list** of inputs of one of the following types:
 
@@ -88,6 +95,11 @@ your model's prediction function to the Clipper input type associated with your 
 | List             |   Strings          | String                | `jsonlite::toJSON(list(1:4))`  |
 
 ## Example
+
+### Import Rclipper
+```{r}
+library(Rclipper)
+```
 
 ### Define an API-compatible prediction function
 ```{r}
