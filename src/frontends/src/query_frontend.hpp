@@ -170,6 +170,9 @@ class RequestHandler {
             int latency_slo_micros = std::stoi(app_info["latency_slo_micros"]);
             add_application(name, input_type, policy, default_output,
                             latency_slo_micros);
+          } else if (event_type == "hdel") {
+            std::string name = key;
+            delete_application(name);
           }
         });
 
@@ -424,6 +427,13 @@ class RequestHandler {
     };
     std::string update_endpoint = "^/" + name + "/update$";
     server_.add_endpoint(update_endpoint, "POST", update_fn);
+  }
+
+  void delete_application(std::string name) {
+    std::string predict_endpoint = "^/" + name + "/predict$";
+    server_.delete_endpoint(predict_endpoint, "POST");
+    std::string update_endpoint = "^/" + name + "/update$";
+    server_.delete_endpoint(update_endpoint, "POST");
   }
 
   /**

@@ -18,7 +18,6 @@ public class DoubleVector extends DataVector<DoubleBuffer> {
     @Override
     DataBuffer<DoubleBuffer> createDataBuffer() {
       return new DataBuffer<DoubleBuffer>() {
-
         DoubleBuffer buffer;
         int bufferSize;
 

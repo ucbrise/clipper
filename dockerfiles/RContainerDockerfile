@@ -25,4 +25,5 @@ RUN R CMD INSTALL rclipper_serve
 
 ENTRYPOINT ["/r_container_entrypoint.sh"]
 
+HEALTHCHECK --interval=3s --timeout=3s --retries=1 CMD test -f /model_is_ready.check || exit 1
 # vim: set filetype=dockerfile:
