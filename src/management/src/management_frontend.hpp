@@ -50,6 +50,7 @@ const std::string LOGGING_TAG_MANAGEMENT_FRONTEND = "MGMTFRNTD";
 
 const std::string ADMIN_PATH = "^/admin";
 const std::string ADD_APPLICATION = ADMIN_PATH + "/add_app$";
+const std::string DELETE_APPLICATION = ADMIN_PATH + "/delete_app$";
 const std::string ADD_MODEL_LINKS = ADMIN_PATH + "/add_model_links$";
 const std::string ADD_MODEL = ADMIN_PATH + "/add_model$";
 const std::string SET_MODEL_VERSION = ADMIN_PATH + "/set_model_version$";
@@ -183,6 +184,27 @@ class RequestHandler {
             clipper::log_info(LOGGING_TAG_MANAGEMENT_FRONTEND,
                               "Add application POST request");
             std::string result = add_application(request->content.string());
+            respond_http(result, "200 OK", response);
+          } catch (const json_parse_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), ADD_APPLICATION_JSON_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const json_semantic_error& e) {
+            std::string err_msg =
+                json_error_msg(e.what(), ADD_APPLICATION_JSON_SCHEMA);
+            respond_http(err_msg, "400 Bad Request", response);
+          } catch (const clipper::ManagementOperationError& e) {
+            respond_http(e.what(), "400 Bad Request", response);
+          }
+        });
+    server_.add_endpoint(
+        DELETE_APPLICATION, "POST",
+        [this](std::shared_ptr<HttpServer::Response> response,
+               std::shared_ptr<HttpServer::Request> request) {
+          try {
+            clipper::log_info(LOGGING_TAG_MANAGEMENT_FRONTEND,
+                              "Delete application POST request");
+            std::string result = delete_application(request->content.string());
             respond_http(result, "200 OK", response);
           } catch (const json_parse_error& e) {
             std::string err_msg =
@@ -637,6 +659,49 @@ class RequestHandler {
       ss << "application "
          << "'" << app_name << "'"
          << " already exists";
+      throw clipper::ManagementOperationError(ss.str());
+    }
+  }
+
+  /**
+   * Processes a request to delete an application from Clipper
+   *
+   * JSON format:
+   * {
+   *  "name" := string
+   * }
+   *
+   * \return A string describing the operation's success
+   * \throws ManagementOperationError if the operation is not successful
+   */
+
+  std::string delete_application(const std::string& json) {
+    rapidjson::Document d;
+    parse_json(json, d);
+    std::string app_name = get_string(d, "name");
+
+    // Check if application exists
+    std::unordered_map<std::string, std::string> existing_app_data =
+        clipper::redis::get_application(redis_connection_, app_name);
+
+    if (!existing_app_data.empty()) {
+      if (clipper::redis::delete_application(redis_connection_, app_name)) {
+        std::stringstream ss;
+        ss << "Successfully deleted application with name "
+           << "'" << app_name << "'";
+        return ss.str();
+      } else {
+        std::stringstream ss;
+        ss << "Error deleting application "
+           << "'" << app_name << "'"
+           << " to Redis";
+        throw clipper::ManagementOperationError(ss.str());
+      }
+    } else {
+      std::stringstream ss;
+      ss << "Application "
+         << "'" << app_name << "'"
+         << " does not exist";
       throw clipper::ManagementOperationError(ss.str());
     }
   }

@@ -63,7 +63,6 @@ public class SerializableString extends DataVector<String> {
       CharBuffer copyBuffer = iterBuffer.duplicate();
 
       return new Iterator<SerializableString>() {
-
         @Override
         public boolean hasNext() {
           return iterBuffer.hasRemaining();

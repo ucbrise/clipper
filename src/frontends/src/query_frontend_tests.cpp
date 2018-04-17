@@ -274,6 +274,36 @@ TEST_F(QueryFrontendTest, TestAddManyApplications) {
   EXPECT_EQ(apps, (size_t)500);
 }
 
+TEST_F(QueryFrontendTest, TestDeleteOneApplication) {
+  size_t no_apps = rh_.num_applications();
+  EXPECT_EQ(no_apps, (size_t)0);
+
+  rh_.add_application("test_app_1", InputType::Doubles, "test_policy", "0.4",
+                      30000);
+  rh_.delete_application("test_app_1");
+  no_apps = rh_.num_applications();
+  EXPECT_EQ(no_apps, (size_t)0);
+}
+
+TEST_F(QueryFrontendTest, TestDeleteManyApplications) {
+  size_t no_apps = rh_.num_applications();
+  EXPECT_EQ(no_apps, (size_t)0);
+
+  // Add 500 applications and delete half of them
+  for (int i = 0; i < 500; ++i) {
+    std::string cur_name = "test_app_" + std::to_string(i);
+    rh_.add_application(cur_name, InputType::Doubles, "test_policy", "0.4",
+                        30000);
+  }
+  for (int i = 0; i < 250; ++i) {
+    std::string cur_name = "test_app_" + std::to_string(i);
+    rh_.delete_application(cur_name);
+  }
+
+  size_t apps = rh_.num_applications();
+  EXPECT_EQ(apps, (size_t)250);
+}
+
 TEST_F(QueryFrontendTest,
        TestJsonResponseForSuccessfulPredictionFormattedCorrectly) {
   std::string test_json = "{\"uid\": 1, \"input\": [1,2,3]}";
