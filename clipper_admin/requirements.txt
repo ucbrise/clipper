@@ -2,7 +2,7 @@ requests==2.18.4
 subprocess32==3.2.7
 pyyaml==3.12
 docker==2.5.1
-kubernetes==3.0.0
+kubernetes==6.0.0
 six==1.10.0
 mock
 prometheus_client
