@@ -239,7 +239,10 @@ class KubernetesContainerManager(ContainerManager):
                     'apiVersion': 'extensions/v1beta1',
                     'kind': 'Deployment',
                     'metadata': {
-                        "name": deployment_name
+                        "name": deployment_name,
+                        "label": {
+                            "test": "readiness"
+                        },
                     },
                     'spec': {
                         'replicas': num_replicas,
@@ -254,7 +257,8 @@ class KubernetesContainerManager(ContainerManager):
                                 },
                                 'annotations': {
                                     "prometheus.io/scrape": "true",
-                                    "prometheus.io/port": "1390"
+                                    "prometheus.io/port": "1390",
+                                    "test": "readiness",
                                 }
                             },
                             'spec': {
@@ -263,6 +267,16 @@ class KubernetesContainerManager(ContainerManager):
                                     deployment_name,
                                     'image':
                                     image,
+                                    'imagePullPolicy':
+                                    'Always',
+                                    'readinessProbe': {
+                                        'exec': {
+                                            'command':
+                                            ['cat', '/model_is_ready.check']
+                                        },
+                                        'initialDelaySeconds': 3,
+                                        'periodSeconds': 3
+                                    },
                                     'ports': [{
                                         'containerPort': 80
                                     }, {

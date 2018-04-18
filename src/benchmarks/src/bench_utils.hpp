@@ -56,8 +56,8 @@ int get_int(const std::string &key,
             std::unordered_map<std::string, std::string> &config);
 
 /**
-* Returns the value corresponding to `key` in `config` as a long
-*/
+ * Returns the value corresponding to `key` in `config` as a long
+ */
 long get_long(const std::string &key,
               std::unordered_map<std::string, std::string> &config);
 
