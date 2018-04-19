@@ -146,8 +146,9 @@ def train(model):
             image, j = data
             optimizer.zero_grad()
             output = model(image)
-            loss = F.cross_entropy(
-                output, Variable(torch.LongTensor([train_y[i - 1]])))
+            loss = F.cross_entropy(output,
+                                   Variable(
+                                       torch.LongTensor([train_y[i - 1]])))
             loss.backward()
             optimizer.step()
     return model

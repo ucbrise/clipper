@@ -69,7 +69,8 @@ class DockerContainerManager(ContainerManager):
         if docker_network is "host":
             raise ClipperException(
                 "DockerContainerManager does not support running Clipper on the "
-                "\"host\" docker network. Please pick a different network name")
+                "\"host\" docker network. Please pick a different network name"
+            )
         self.docker_network = docker_network
 
         self.docker_client = docker.from_env()
@@ -106,8 +107,8 @@ class DockerContainerManager(ContainerManager):
             redis_container = self.docker_client.containers.run(
                 'redis:alpine',
                 "redis-server --port %s" % self.redis_port,
-                name="redis-{}".format(
-                    random.randint(0, 100000)),  # generate a random name
+                name="redis-{}".format(random.randint(
+                    0, 100000)),  # generate a random name
                 ports={'%s/tcp' % self.redis_port: self.redis_port},
                 labels=self.common_labels.copy(),
                 **self.extra_container_kwargs)
@@ -120,8 +121,8 @@ class DockerContainerManager(ContainerManager):
         self.docker_client.containers.run(
             mgmt_frontend_image,
             mgmt_cmd,
-            name="mgmt_frontend-{}".format(
-                random.randint(0, 100000)),  # generate a random name
+            name="mgmt_frontend-{}".format(random.randint(
+                0, 100000)),  # generate a random name
             ports={
                 '%s/tcp' % CLIPPER_INTERNAL_MANAGEMENT_PORT:
                 self.clipper_management_port
@@ -192,7 +193,9 @@ class DockerContainerManager(ContainerManager):
     def _add_replica(self, name, version, input_type, image):
 
         containers = self.docker_client.containers.list(
-            filters={"label": CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL})
+            filters={
+                "label": CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL
+            })
         if len(containers) < 1:
             logger.warning("No Clipper query frontend found.")
             raise ClipperException(
@@ -267,7 +270,9 @@ class DockerContainerManager(ContainerManager):
 
     def get_logs(self, logging_dir):
         containers = self.docker_client.containers.list(
-            filters={"label": CLIPPER_DOCKER_LABEL})
+            filters={
+                "label": CLIPPER_DOCKER_LABEL
+            })
         logging_dir = os.path.abspath(os.path.expanduser(logging_dir))
 
         log_files = []
@@ -285,7 +290,9 @@ class DockerContainerManager(ContainerManager):
 
     def stop_models(self, models):
         containers = self.docker_client.containers.list(
-            filters={"label": CLIPPER_MODEL_CONTAINER_LABEL})
+            filters={
+                "label": CLIPPER_MODEL_CONTAINER_LABEL
+            })
         for c in containers:
             c_name, c_version = parse_model_container_label(
                 c.labels[CLIPPER_MODEL_CONTAINER_LABEL])
@@ -294,13 +301,17 @@ class DockerContainerManager(ContainerManager):
 
     def stop_all_model_containers(self):
         containers = self.docker_client.containers.list(
-            filters={"label": CLIPPER_MODEL_CONTAINER_LABEL})
+            filters={
+                "label": CLIPPER_MODEL_CONTAINER_LABEL
+            })
         for c in containers:
             c.stop()
 
     def stop_all(self):
         containers = self.docker_client.containers.list(
-            filters={"label": CLIPPER_DOCKER_LABEL})
+            filters={
+                "label": CLIPPER_DOCKER_LABEL
+            })
         for c in containers:
             c.stop()
 

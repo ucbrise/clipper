@@ -188,8 +188,9 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertIsNotNone(model_info)
         self.assertEqual(type(model_info), dict)
         docker_client = get_docker_client()
-        containers = docker_client.containers.list(
-            filters={"ancestor": container_name})
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
         self.assertEqual(len(containers), 1)
 
     def test_set_num_replicas_for_deployed_model_succeeds(self):
@@ -224,8 +225,9 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             container_name,
             num_replicas=2)
         docker_client = get_docker_client()
-        containers = docker_client.containers.list(
-            filters={"ancestor": container_name})
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
         self.assertEqual(len(containers), 2)
 
         self.clipper_conn.build_and_deploy_model(
@@ -235,15 +237,16 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             fake_model_data,
             container_name,
             num_replicas=3)
-        containers = docker_client.containers.list(
-            filters={"ancestor": container_name})
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
         self.assertEqual(len(containers), 5)
 
         self.clipper_conn.stop_inactive_model_versions([model_name])
-        containers = docker_client.containers.list(
-            filters={"ancestor": container_name})
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
         self.assertEqual(len(containers), 3)
-
 
     def test_stop_models(self):
         container_name = "clipper/noop-container:{}".format(clipper_version)
@@ -260,14 +263,16 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
                     num_replicas=1)
 
         docker_client = get_docker_client()
-        containers = docker_client.containers.list(
-            filters={"ancestor": container_name})
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
         self.assertEqual(len(containers), len(mnames) * len(versions))
 
         # stop all versions of models jimmypage, robertplant
         self.clipper_conn.stop_models(mnames[:2])
-        containers = docker_client.containers.list(
-            filters={"ancestor": container_name})
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
         self.assertEqual(len(containers), len(mnames[2:]) * len(versions))
 
         # After calling this method, the remaining models should be:
@@ -276,13 +281,15 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             "jpj": ["ii", "iv"],
             "johnbohnam": ["i", "iv", "iii"],
         })
-        containers = docker_client.containers.list(
-            filters={"ancestor": container_name})
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
         self.assertEqual(len(containers), 3)
 
         self.clipper_conn.stop_all_model_containers()
-        containers = docker_client.containers.list(
-            filters={"ancestor": container_name})
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
         self.assertEqual(len(containers), 0)
 
     def test_python_closure_deploys_successfully(self):
@@ -300,10 +307,11 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertIsNotNone(model_info)
 
         docker_client = get_docker_client()
-        containers = docker_client.containers.list(filters={
-            "ancestor":
-            "clipper/python-closure-container:{}".format(clipper_version)
-        })
+        containers = docker_client.containers.list(
+            filters={
+                "ancestor":
+                "clipper/python-closure-container:{}".format(clipper_version)
+            })
         self.assertGreaterEqual(len(containers), 1)
 
     def test_register_py_endpoint(self):
@@ -329,10 +337,11 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertIsNotNone(linked_models)
 
         docker_client = get_docker_client()
-        containers = docker_client.containers.list(filters={
-            "ancestor":
-            "clipper/python-closure-container:{}".format(clipper_version)
-        })
+        containers = docker_client.containers.list(
+            filters={
+                "ancestor":
+                "clipper/python-closure-container:{}".format(clipper_version)
+            })
         self.assertEqual(len(containers), 1)
 
     def test_test_predict_function(self):
@@ -427,9 +436,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
             slo_micros=30000000)
 
         self.clipper_conn.register_application(
-            self.app_name_5,
-            self.input_type,
-            self.default_output,
+            self.app_name_5, self.input_type, self.default_output,
             self.latency_slo_micros)
 
     @classmethod
@@ -583,8 +590,9 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
             container_name,
             num_replicas=2)
         docker_client = get_docker_client()
-        containers = docker_client.containers.list(
-            filters = {"ancestor": container_name})
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
         self.assertEqual(len(containers), 2)
 
         self.clipper_conn.link_model_to_app(self.app_name_5, self.model_name_5)
@@ -610,18 +618,17 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
         #1 of the containers should go inactive
 
-        self.clipper_conn.set_num_replicas(name=self.model_name_5, version=1, num_replicas=1)
+        self.clipper_conn.set_num_replicas(
+            name=self.model_name_5, version=1, num_replicas=1)
         time.sleep(100)
 
-
-        containers = docker_client.containers.list(
-            filters = {"ancestor": container_name})
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
         self.assertEqual(len(containers), 1)
 
         test_input = [101.1, 99.9]
         req_json = json.dumps({'input': test_input})
-
-
 
         #send predictions, should still be working
         for i in range(2):
@@ -634,12 +641,13 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
             self.assertEqual(result["default"], False)
 
         #2nd container should go inactive
-        self.clipper_conn.set_num_replicas(name=self.model_name_5, version=1, num_replicas=0)
+        self.clipper_conn.set_num_replicas(
+            name=self.model_name_5, version=1, num_replicas=0)
         time.sleep(100)
 
-
-        containers = docker_client.containers.list(
-            filters = {"ancestor": container_name})
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
         self.assertEqual(len(containers), 0)
 
         test_input = [101.1]
@@ -654,7 +662,8 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
             result = response.json()
             print(result)
             self.assertEqual(result["default"], True)
-            self.assertEqual(result["default_explanation"], "No connected models found for query")
+            self.assertEqual(result["default_explanation"],
+                             "No connected models found for query")
 
 
 SHORT_TEST_ORDERING = [

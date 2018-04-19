@@ -227,8 +227,9 @@ class ClipperConnection(object):
             logger.error(msg)
             raise ClipperException(msg)
         else:
-            logger.info("Model {model} is now linked to application {app}".
-                        format(model=model_name, app=app_name))
+            logger.info(
+                "Model {model} is now linked to application {app}".format(
+                    model=model_name, app=app_name))
 
     def build_and_deploy_model(self,
                                name,
@@ -401,8 +402,9 @@ class ClipperConnection(object):
                 image = "{reg}/{image}".format(
                     reg=container_registry, image=image)
             docker_client = docker.from_env()
-            logger.info("Building model Docker image with model data from {}".
-                        format(model_data_path))
+            logger.info(
+                "Building model Docker image with model data from {}".format(
+                    model_data_path))
             docker_client.images.build(
                 fileobj=context_file, custom_context=True, tag=image)
 
@@ -578,8 +580,9 @@ class ClipperConnection(object):
             logger.error(msg)
             raise ClipperException(msg)
         else:
-            logger.info("Successfully registered model {name}:{version}".
-                        format(name=name, version=version))
+            logger.info(
+                "Successfully registered model {name}:{version}".format(
+                    name=name, version=version))
 
     def get_current_model_version(self, name):
         """Get the current model version for the specified model.
@@ -762,8 +765,9 @@ class ClipperConnection(object):
         if r.status_code == requests.codes.ok:
             app_info = r.json()
             if len(app_info) == 0:
-                logger.warning("Application {} is not registered with Clipper".
-                               format(name))
+                logger.warning(
+                    "Application {} is not registered with Clipper".format(
+                        name))
                 return None
             return app_info
         else:
