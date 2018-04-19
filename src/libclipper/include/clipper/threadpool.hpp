@@ -239,8 +239,10 @@ class ThreadPool {
     done_ = true;
     for (auto& queue : queues_) {
       queue.second.invalidate();
+      log_info(LOGGING_TAG_THREADPOOL, "loop 1");
     }
     for (auto& thread : threads_) {
+      log_info(LOGGING_TAG_THREADPOOL, "loop 2");
       if (thread.second.joinable()) {
         thread.second.join();
       }
@@ -295,7 +297,6 @@ class ModelQueueThreadPool : public ThreadPool {
     }
   }
 
- private:
   static size_t get_queue_id(const VersionedModelId& vm, const int replica_id) {
     std::size_t seed = 0;
     boost::hash_combine(seed, vm.get_name());

@@ -68,13 +68,19 @@ TEST(ModelQueueTests, TestGetBatchQueueNotEmpty) {
   PredictTask task_c = create_predict_task(3, 10000);
 
   ModelQueue model_queue;
+  VersionedModelId m1 = VersionedModelId("test", "1");
+  std::shared_ptr<ActiveContainers> active_containers =
+      std::make_shared<ActiveContainers>();
+  active_containers->add_container(m1, 0, 0, InputType::Doubles);
+  std::shared_ptr<ModelContainer> result =
+      active_containers->get_model_replica(m1, 0);
 
   model_queue.add_task(task_a);
   model_queue.add_task(task_b);
   model_queue.add_task(task_c);
 
   std::vector<PredictTask> tasks =
-      model_queue.get_batch([](Deadline) { return 3; });
+      model_queue.get_batch(result, [](Deadline) { return 3; });
 
   // Because we added tasks a through c in alphabetical
   // order with the same latency slos, we expect the model
@@ -90,13 +96,20 @@ TEST(ModelQueueTests, TestGetBatchOrdersByEarliestDeadline) {
   PredictTask task_c = create_predict_task(3, 30000);
 
   ModelQueue model_queue;
+  VersionedModelId m1 = VersionedModelId("test", "1");
+  std::shared_ptr<ActiveContainers> active_containers =
+      std::make_shared<ActiveContainers>();
+  active_containers->add_container(m1, 0, 0, InputType::Doubles);
+
+  std::shared_ptr<ModelContainer> result =
+      active_containers->get_model_replica(m1, 0);
 
   model_queue.add_task(task_a);
   model_queue.add_task(task_b);
   model_queue.add_task(task_c);
 
   std::vector<PredictTask> tasks =
-      model_queue.get_batch([](Deadline) { return 3; });
+      model_queue.get_batch(result, [](Deadline) { return 3; });
 
   // Because we added tasks a through c in alphabetical
   // order with the same latency slos, we expect the model
@@ -112,13 +125,20 @@ TEST(ModelQueueTests, TestGetBatchRemovesTasksWithElapsedDeadline) {
   PredictTask task_c = create_predict_task(3, 10000);
 
   ModelQueue model_queue;
+  VersionedModelId m1 = VersionedModelId("m", "1");
+  std::shared_ptr<ActiveContainers> active_containers =
+      std::make_shared<ActiveContainers>();
+
+  active_containers->add_container(m1, 0, 0, InputType::Doubles);
+  std::shared_ptr<ModelContainer> result =
+      active_containers->get_model_replica(m1, 0);
 
   model_queue.add_task(task_a);
   model_queue.add_task(task_b);
   model_queue.add_task(task_c);
 
   std::vector<PredictTask> tasks =
-      model_queue.get_batch([](Deadline) { return 3; });
+      model_queue.get_batch(result, [](Deadline) { return 3; });
 
   ASSERT_EQ(tasks.size(), (size_t)1);
   ASSERT_EQ(tasks[0].query_id_, task_c.query_id_);
