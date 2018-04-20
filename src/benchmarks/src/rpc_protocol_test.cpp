@@ -49,7 +49,8 @@ class Tester {
     rpc_->start(
         "127.0.0.1", RPC_SERVICE_PORT,
         [](VersionedModelId /*model*/, int /*container_id*/) {},
-        [this](rpc::RPCResponse response) { on_response_received(response); });
+        [this](rpc::RPCResponse response) { on_response_received(response); },
+        [](VersionedModelId, int) {});
     Config &conf = get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {

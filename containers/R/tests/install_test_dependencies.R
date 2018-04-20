@@ -43,6 +43,22 @@ versions::install.versions('CodeDepends', version='0.5-3'),
          error = function(err) {
            quit(status=11) 
          })
+tryCatch(
+versions::install.versions('histry', version='0.1.2'),
+         warning = function(warn) {
+           quit(status=11) 
+         },
+         error = function(err) {
+           quit(status=11) 
+         })
+tryCatch(
+versions::install.versions('randomForest', version='4.6-12'),
+         warning = function(warn) {
+           quit(status=11) 
+         },
+         error = function(err) {
+           quit(status=11) 
+         })
 
 
 

@@ -66,7 +66,7 @@ RUN set -ex; \
 RUN /var/lib/dpkg/info/ca-certificates-java.postinst configure
 
 RUN pip install cloudpickle==0.5.* pyzmq==17.0.* requests==2.18.* subprocess32==3.2.* scikit-learn==0.19.* \
-  numpy==1.14.* pyyaml==3.12.* docker==3.1.* kubernetes==5.0.* tensorflow==1.6.* mxnet==1.1.* pyspark==2.3.* \
+  numpy==1.14.* pyyaml==3.12.* docker==3.1.* kubernetes==6.0.* tensorflow==1.6.* mxnet==1.1.* pyspark==2.3.* \
   xgboost==0.7.* jsonschema==2.6.* psutil==5.4.* prometheus_client
 
 # install PyTorch
@@ -101,7 +101,7 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s
       && mv kubectl /usr/local/bin/
 
 # Install R
-RUN apt-get update && apt-get install -y --no-install-recommends r-base libxml2-dev && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends r-base libxml2-dev gfortran && rm -rf /var/lib/apt/lists/*
 
 COPY containers/R/tests/install_test_dependencies.R /install_test_dependencies.R
 
