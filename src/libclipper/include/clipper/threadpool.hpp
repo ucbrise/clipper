@@ -239,10 +239,8 @@ class ThreadPool {
     done_ = true;
     for (auto& queue : queues_) {
       queue.second.invalidate();
-      log_info(LOGGING_TAG_THREADPOOL, "loop 1");
     }
     for (auto& thread : threads_) {
-      log_info(LOGGING_TAG_THREADPOOL, "loop 2");
       if (thread.second.joinable()) {
         thread.second.join();
       }

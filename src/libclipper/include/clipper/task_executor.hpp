@@ -378,26 +378,24 @@ class TaskExecutor {
           }
         }
 
-        else {
-          if (active_containers_->get_replicas_for_model(t.model_).size() ==
-              0) {
-            log_error_formatted(LOGGING_TAG_TASK_EXECUTOR,
-                                "No active model containers for model: {} : {}",
-                                t.model_.get_name(), t.model_.get_id());
-          } else {
-            output_futures.push_back(std::move(cache_result));
-            t.recv_time_ = std::chrono::system_clock::now();
-            model_queue_entry->second->add_task(t);
-            log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
-                               "Adding task to queue. QueryID: {}, model: {}",
-                               t.query_id_, t.model_.serialize());
-            boost::shared_lock<boost::shared_mutex> model_metrics_lock(
-                model_metrics_mutex_);
-            auto cur_model_metric_entry = model_metrics_.find(t.model_);
-            if (cur_model_metric_entry != model_metrics_.end()) {
-              auto cur_model_metric = cur_model_metric_entry->second;
-              cur_model_metric.cache_hit_ratio_->increment(0, 1);
-            }
+        else if (active_containers_->get_replicas_for_model(t.model_).size() ==
+                 0) {
+          log_error_formatted(LOGGING_TAG_TASK_EXECUTOR,
+                              "No active model containers for model: {} : {}",
+                              t.model_.get_name(), t.model_.get_id());
+        } else {
+          output_futures.push_back(std::move(cache_result));
+          t.recv_time_ = std::chrono::system_clock::now();
+          model_queue_entry->second->add_task(t);
+          log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
+                             "Adding task to queue. QueryID: {}, model: {}",
+                             t.query_id_, t.model_.serialize());
+          boost::shared_lock<boost::shared_mutex> model_metrics_lock(
+              model_metrics_mutex_);
+          auto cur_model_metric_entry = model_metrics_.find(t.model_);
+          if (cur_model_metric_entry != model_metrics_.end()) {
+            auto cur_model_metric = cur_model_metric_entry->second;
+            cur_model_metric.cache_hit_ratio_->increment(0, 1);
           }
         }
       } else {
