@@ -663,7 +663,6 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
                 headers=headers,
                 data=req_json)
             result = response.json()
-            print(result)
             self.assertEqual(result["default"], True)
             self.assertEqual(result["default_explanation"],
                              "No connected models found for query")
