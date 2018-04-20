@@ -16,7 +16,6 @@ public class ByteVector extends DataVector<ByteBuffer> {
     @Override
     DataBuffer<ByteBuffer> createDataBuffer() {
       return new DataBuffer<ByteBuffer>() {
-
         ByteBuffer buffer;
         int bufferSize;
 

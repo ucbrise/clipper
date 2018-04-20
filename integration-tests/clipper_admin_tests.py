@@ -11,7 +11,6 @@ import sys
 import os
 import json
 import time
-import numpy as np
 import requests
 import tempfile
 import shutil
@@ -26,10 +25,6 @@ import clipper_admin as cl
 from clipper_admin.deployers.python import create_endpoint as create_py_endpoint
 from clipper_admin.deployers.python import deploy_python_closure
 from clipper_admin import __version__ as clipper_version
-
-sys.path.insert(0, os.path.abspath('%s/util_direct_import/' % cur_dir))
-from util_package import mock_module_in_package as mmip
-import mock_module as mm
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
@@ -84,6 +79,18 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         with self.assertRaises(cl.ClipperException) as context:
             self.clipper_conn.link_model_to_app(app_name, not_deployed_model)
         self.assertTrue("No model with name" in str(context.exception))
+
+    def test_delete_application_correct(self):
+        input_type = "doubles"
+        default_output = "DEFAULT"
+        slo_micros = 30000
+        app_name = "testapp"
+        self.clipper_conn.register_application(app_name, input_type,
+                                               default_output, slo_micros)
+        self.clipper_conn.delete_application(app_name)
+        registered_applications = self.clipper_conn.get_all_apps()
+        self.assertEqual(len(registered_applications), 0)
+        self.assertTrue(app_name not in registered_applications)
 
     def test_get_model_links_when_none_exist_returns_empty_list(self):
         app_name = "testapp"
@@ -490,7 +497,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         addr = self.clipper_conn.get_query_addr()
         url = "http://{addr}/{app}/predict".format(
             addr=addr, app=self.app_name_3)
-        test_input = [[99.3, 18.9, 67.2, 34.2], [101.1, 45.6, 98.0, 99.1], \
+        test_input = [[99.3, 18.9, 67.2, 34.2], [101.1, 45.6, 98.0, 99.1],
                       [12.3, 6.7, 42.1, 12.6], [9.01, 87.6, 70.2, 19.6]]
         req_json = json.dumps({'input_batch': test_input})
         headers = {'Content-type': 'application/json'}
@@ -504,9 +511,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         model_version = 1
 
         def predict_func(inputs):
-            return [
-                str(mm.COEFFICIENT * mmip.COEFFICIENT * len(x)) for x in inputs
-            ]
+            return [str(len(x)) for x in inputs]
 
         input_type = "doubles"
         deploy_python_closure(self.clipper_conn, self.model_name_1,
@@ -531,9 +536,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
                 time.sleep(20)
             else:
                 received_non_default_prediction = True
-                self.assertEqual(
-                    int(output),
-                    mm.COEFFICIENT * mmip.COEFFICIENT * len(test_input))
+                self.assertEqual(int(output), len(test_input))
                 break
 
         self.assertTrue(received_non_default_prediction)
@@ -680,7 +683,7 @@ SHORT_TEST_ORDERING = [
     'test_set_num_replicas_for_deployed_model_succeeds',
     'test_remove_inactive_containers_succeeds', 'test_stop_models',
     'test_python_closure_deploys_successfully', 'test_register_py_endpoint',
-    'test_test_predict_function'
+    'test_test_predict_function', 'test_delete_application_correct'
 ]
 
 LONG_TEST_ORDERING = [

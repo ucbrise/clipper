@@ -2,6 +2,8 @@
 ARG CODE_VERSION
 FROM openjdk:8-jdk
 
+LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
+
 # First set up maven
 ARG MAVEN_VERSION=3.5.0
 ARG SHA=beb91419245395bd69a4a6edad5ca3ec1a8b64e41457672dc687c173a495f034
@@ -38,4 +40,5 @@ ENV CLIPPER_MODEL_PATH=/model
 
 CMD ["java", "-Djava.library.path=/usr/local/lib", "-Xmx512m", "-cp", "/root/container/spark-container-impl/target/spark-container-impl-0.1.jar", "ai.clipper.spark.container.impl.ContainerMain"]
 
+HEALTHCHECK --interval=3s --timeout=3s --retries=1 CMD test -f /model_is_ready.check || exit 1
 # vim: set filetype=dockerfile:

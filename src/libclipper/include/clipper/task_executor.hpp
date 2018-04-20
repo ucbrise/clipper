@@ -340,7 +340,6 @@ class TaskExecutor {
                      "subscribe_to_container_changes callback because "
                      "TaskExecutor has been destroyed.");
           }
-
         });
     throughput_meter_ = metrics::MetricsRegistry::get_metrics().create_meter(
         "internal:aggregate_model_throughput");

@@ -18,7 +18,6 @@ public class FloatVector extends DataVector<FloatBuffer> {
     @Override
     DataBuffer<FloatBuffer> createDataBuffer() {
       return new DataBuffer<FloatBuffer>() {
-
         FloatBuffer buffer;
         int bufferSize;
 
