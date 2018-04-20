@@ -8,10 +8,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
        liblmdb-dev libopencv-dev libsnappy-dev libprotobuf-dev \
        protobuf-compiler python-dev libgflags-dev && pip install future==0.16.* protobuf==3.5.*
 
-RUN git clone --recursive https://github.com/caffe2/caffe2.git && cd caffe2 \
-    && git checkout 409e96d9ebd9963e10fd1eaa0a02cfbb8623650e \
-    && git submodule update --init && mkdir build && cd build && cmake .. -DUSE_MPI=OFF \
-    && make -j8 install
+
+RUN git clone --recursive https://github.com/pytorch/pytorch.git && cd caffe2 \
+	&& git submodule update --init \
+	&& git checkout d695624efe618fbb0c267d564c3a7dabefd32114 \
+	&& mkdir build && cd build && cmake .. -DUSE_MPI=OFF \
+	&& make -j8 install
+
+
+#RUN git clone --recursive https://github.com/caffe2/caffe2.git && cd caffe2 \
+#    && git checkout 409e96d9ebd9963e10fd1eaa0a02cfbb8623650e \
+#    && git submodule update --init && mkdir build && cd build && 
+#    && make -j8 install
+
 
 ENV LD_LIBRARY_PATH=/usr/local/lib/ 
 
