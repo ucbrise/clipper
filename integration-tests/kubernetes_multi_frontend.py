@@ -34,7 +34,7 @@ def deploy_model(clipper_conn, name, link=False):
     model_name = "{}-model".format(name)
     clipper_conn.build_and_deploy_model(
         model_name,
-        1,
+        4,  # Version 4 to avoid container caching
         "doubles",
         fake_model_data,
         "clipper/noop-container:{}".format(clipper_version),
@@ -149,4 +149,10 @@ if __name__ == "__main__":
             sys.exit(1)
     except Exception as e:
         logger.exception("Exception: {}".format(e))
+
+        # Added debug lines in case it fails
+        os.system("kubectl get pods")
+        os.system("kubectl describe pods")
+        # End Debug
+
         sys.exit(1)
