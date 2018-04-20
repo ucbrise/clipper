@@ -9,7 +9,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
        protobuf-compiler python-dev libgflags-dev && pip install future==0.16.* protobuf==3.5.*
 
 
-RUN git clone --recursive https://github.com/pytorch/pytorch.git && cd caffe2 \
+RUN git clone --recursive https://github.com/pytorch/pytorch.git \
+	&& cd pytorch && cd caffe2 \
 	&& git submodule update --init \
 	&& git checkout d695624efe618fbb0c267d564c3a7dabefd32114 \
 	&& mkdir build && cd build && cmake .. -DUSE_MPI=OFF \
