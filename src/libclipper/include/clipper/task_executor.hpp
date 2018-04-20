@@ -230,8 +230,9 @@ class TaskExecutor {
         model_metrics_({}) {
     log_info(LOGGING_TAG_TASK_EXECUTOR, "TaskExecutor started");
     rpc_->start(
-        "*", RPC_SERVICE_PORT, [ this, task_executor_valid = active_ ](
-                                   VersionedModelId model, int replica_id) {
+        "*", RPC_SERVICE_PORT,
+        [ this, task_executor_valid = active_ ](VersionedModelId model,
+                                                int replica_id) {
           if (*task_executor_valid) {
             on_container_ready(model, replica_id);
           } else {
@@ -295,6 +296,21 @@ class TaskExecutor {
                            "Registered batch size of {} for model {}:{}",
                            batch_size, model_id.get_name(), model_id.get_id());
         active_containers_->register_batch_size(model_id, batch_size);
+      } else if (event_type == "del" && *task_executor_valid) {
+        auto model_info =
+            clipper::redis::get_model_by_key(redis_connection_, key);
+        VersionedModelId model_id = VersionedModelId(
+            model_info["model_name"], model_info["model_version"]);
+        bool deleted_queue = delete_model_queue_if_necessary(model_id);
+        if (deleted_queue) {
+          log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
+                             "Deleted queue for model: {} : {}",
+                             model_id.get_name(), model_id.get_id());
+        }
+        for (auto c : clipper::redis::get_all_containers(redis_connection_)) {
+          clipper::redis::delete_container(redis_connection_, c.first,
+                                           c.second);
+        }
       }
     });
 
@@ -334,6 +350,13 @@ class TaskExecutor {
                                  "Created queue for new model: {} : {}",
                                  vm.get_name(), vm.get_id());
             }
+          } else if (event_type == "del" && *task_executor_valid) {
+            auto container_info = clipper::redis::parse_model_replica_key(key);
+            VersionedModelId vm = container_info.first;
+            int replica_id = container_info.second;
+
+            TaskExecutionThreadPool::delete_queue(vm, replica_id);
+            active_containers_->remove_container(vm, replica_id);
           } else if (!*task_executor_valid) {
             log_info(LOGGING_TAG_TASK_EXECUTOR,
                      "Not running TaskExecutor's "
@@ -450,6 +473,19 @@ class TaskExecutor {
       //                        std::forward_as_tuple(model_id));
     }
     return queue_created;
+  }
+
+  bool delete_model_queue_if_necessary(const VersionedModelId &model_id) {
+    // Deletes an entry from the queues map, if one exists
+    boost::unique_lock<boost::shared_mutex> l(model_queues_mutex_);
+    if (model_queues_.count(model_id)) {
+      model_queues_.erase(model_id);
+
+      boost::unique_lock<boost::shared_mutex> l(model_metrics_mutex_);
+      model_metrics_.erase(model_id);
+      return true;
+    }
+    return false;
   }
 
   void on_container_ready(VersionedModelId model_id, int replica_id) {

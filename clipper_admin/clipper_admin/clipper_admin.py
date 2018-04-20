@@ -603,6 +603,40 @@ class ClipperConnection(object):
                 "Successfully registered model {name}:{version}".format(
                     name=name, version=version))
 
+    def remove_model(self, name):
+        """Removes all versions of a model from Clipper.
+
+        Parameters
+        ----------
+        name : str
+            The name of the deployed model to remove
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+        :py:exc:`clipper.ClipperException`
+        """
+
+        if not self.connected:
+            raise UnconnectedException()
+        url = "http://{host}/admin/remove_model".format(
+            host=self.cm.get_admin_addr())
+        req_json = json.dumps({
+            "model_name": name,
+        })
+
+        headers = {'Content-type': 'application/json'}
+        logger.debug(req_json)
+        r = requests.post(url, headers=headers, data=req_json)
+        logger.debug(r.text)
+        if r.status_code != requests.codes.ok:
+            msg = "Received error status code: {code} and message: {msg}".format(
+                code=r.status_code, msg=r.text)
+            logger.error(msg)
+            raise ClipperException(msg)
+        else:
+            logger.info("Successfully removed model {name}".format(name=name))
+
     def get_current_model_version(self, name):
         """Get the current model version for the specified model.
 
@@ -1229,7 +1263,7 @@ class ClipperConnection(object):
     def test_predict_function(self, query, func, input_type):
         """Tests that the user's function has the correct signature and can be properly saved and loaded.
 
-        The function should take a dict request object like the query frontend expects JSON, 
+        The function should take a dict request object like the query frontend expects JSON,
         the predict function, and the input type for the model.
 
         For example, the function can be called like: clipper_conn.test_predict_function({"input": [1.0, 2.0, 3.0]}, predict_func, "doubles")

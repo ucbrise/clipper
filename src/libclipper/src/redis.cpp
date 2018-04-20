@@ -183,6 +183,19 @@ bool set_current_model_version(redox::Redox& redis,
   }
 }
 
+bool unset_current_model_version(redox::Redox& redis,
+                                 const std::string& model_name) {
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_METADATA_DB_NUM)})) {
+    std::string key = gen_model_current_version_key(model_name);
+    const std::vector<std::string> cmd_vec{"DEL", key};
+
+    return send_cmd_no_reply<int>(redis, cmd_vec);
+  } else {
+    return false;
+  }
+}
+
 boost::optional<std::string> get_current_model_version(
     redox::Redox& redis, const std::string& model_name) {
   if (send_cmd_no_reply<string>(
@@ -228,6 +241,25 @@ std::vector<std::string> get_linked_models(redox::Redox& redis,
   return linked_models;
 }
 
+boost::optional<std::string> get_linked_app(redox::Redox& redis,
+                                            const std::string& model_name) {
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_MODEL_APP_LINK_DB_NUM)})) {
+    auto result = send_cmd_with_reply<string>(redis, {"GET", model_name});
+    if (!result) {
+      log_error_formatted(LOGGING_TAG_REDIS, "Found no linked app for model {}",
+                          model_name);
+    }
+    return result;
+  } else {
+    log_error_formatted(
+        LOGGING_TAG_REDIS,
+        "Redis encountered an error in searching for app link for {}",
+        model_name);
+  }
+  return boost::none;
+}
+
 bool add_model(Redox& redis, const VersionedModelId& model_id,
                const InputType& input_type, const std::vector<string>& labels,
                const std::string& container_name,
@@ -267,9 +299,9 @@ std::unordered_map<std::string, std::string> get_model_by_key(
   } else {
     return std::unordered_map<std::string, std::string>{};
   }
-};
+}
 
-bool delete_model(Redox& redis, const VersionedModelId& model_id) {
+bool delete_versioned_model(Redox& redis, const VersionedModelId& model_id) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
     std::string model_id_key = gen_versioned_model_key(model_id);
@@ -475,27 +507,44 @@ bool add_application(redox::Redox& redis, const std::string& appname,
 
 bool add_model_links(redox::Redox& redis, const std::string& appname,
                      const std::vector<std::string>& model_names) {
-  if (send_cmd_no_reply<string>(
+  if (!send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_APP_MODEL_LINKS_DB_NUM)})) {
-    for (auto model_name : model_names) {
-      if (!send_cmd_no_reply<int>(
-              redis, std::vector<std::string>{"SADD", appname, model_name})) {
-        return false;
-      }
-    }
-    return true;
-  } else {
     return false;
   }
+
+  for (auto model_name : model_names) {
+    if (!send_cmd_no_reply<int>(
+            redis, std::vector<std::string>{"SADD", appname, model_name})) {
+      return false;
+    }
+  }
+
+  if (!send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_MODEL_APP_LINK_DB_NUM)})) {
+    return false;
+  }
+
+  for (auto model_name : model_names) {
+    if (!send_cmd_no_reply<int>(
+            redis, std::vector<std::string>{"SET", model_name, appname})) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 bool delete_application(redox::Redox& redis, const std::string& appname) {
-  if (send_cmd_no_reply<string>(
+  if (!send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_APPLICATION_DB_NUM)})) {
-    return send_cmd_no_reply<int>(redis, {"DEL", appname});
-  } else {
     return false;
   }
+
+  if (!send_cmd_no_reply<int>(redis, {"DEL", appname})) {
+    return false;
+  }
+
+  return true;
 }
 
 std::unordered_map<std::string, std::string> get_application(

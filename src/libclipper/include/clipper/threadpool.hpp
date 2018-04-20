@@ -209,7 +209,7 @@ class ThreadPool {
    * queue.
    */
   void worker(size_t worker_id) {
-    while (!done_) {
+    while (!done_ && queues_[worker_id].is_valid()) {
       std::unique_ptr<IThreadTask> pTask{nullptr};
       bool work_to_do = false;
       {
@@ -295,6 +295,37 @@ class ModelQueueThreadPool : public ThreadPool {
     }
   }
 
+  bool delete_queue(VersionedModelId vm, int replica_id) {
+    boost::unique_lock<boost::shared_mutex> l(queues_mutex_);
+    size_t queue_id = get_queue_id(vm, replica_id);
+    auto queue = queues_.find(queue_id);
+    if (queue == queues_.end() || !queue->second.is_valid()) {
+      log_error_formatted(LOGGING_TAG_THREADPOOL,
+                          "Work queue does not exist for model {}, replica {}",
+                          vm.serialize(), std::to_string(replica_id));
+      return false;
+    } else {
+      queue->second.invalidate();
+      l.unlock();
+
+      auto thread = threads_.find(queue_id);
+      if (thread->second.joinable()) {
+        thread->second.join();
+      }
+
+      {
+        boost::unique_lock<boost::shared_mutex> l(queues_mutex_);
+        queues_.erase(queue);
+        threads_.erase(thread);
+      }
+
+      log_info_formatted(LOGGING_TAG_THREADPOOL,
+                         "Work queue destroyed for model {}, replica {}",
+                         vm.serialize(), std::to_string(replica_id));
+      return true;
+    }
+  }
+
   static size_t get_queue_id(const VersionedModelId& vm, const int replica_id) {
     std::size_t seed = 0;
     boost::hash_combine(seed, vm.get_name());
@@ -354,6 +385,10 @@ inline auto submit_job(VersionedModelId vm, int replica_id, Func&& func,
 
 inline void create_queue(VersionedModelId vm, int replica_id) {
   get_thread_pool().create_queue(vm, replica_id);
+}
+
+inline void delete_queue(VersionedModelId vm, int replica_id) {
+  get_thread_pool().delete_queue(vm, replica_id);
 }
 
 }  // namespace TaskExecutionThreadPool

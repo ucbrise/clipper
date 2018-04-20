@@ -214,6 +214,9 @@ class RequestHandler {
                   LOGGING_TAG_QUERY_FRONTEND,
                   "Model version change for model {} was invalid.", key);
             }
+          } else if (event_type == "del") {
+            std::unique_lock<std::mutex> l(current_model_versions_mutex_);
+            current_model_versions_.erase(key);
           }
         });
 
@@ -307,8 +310,8 @@ class RequestHandler {
 
     auto predict_fn = [this, name, input_type, policy, latency_slo_micros,
                        app_metrics](
-        std::shared_ptr<HttpServer::Response> response,
-        std::shared_ptr<HttpServer::Request> request) {
+                          std::shared_ptr<HttpServer::Response> response,
+                          std::shared_ptr<HttpServer::Request> request) {
       try {
         std::vector<std::string> models = get_linked_models_for_app(name);
         std::vector<VersionedModelId> versioned_models;
@@ -392,8 +395,8 @@ class RequestHandler {
     server_.add_endpoint(predict_endpoint, "POST", predict_fn);
 
     auto update_fn = [this, name, input_type, policy](
-        std::shared_ptr<HttpServer::Response> response,
-        std::shared_ptr<HttpServer::Request> request) {
+                         std::shared_ptr<HttpServer::Response> response,
+                         std::shared_ptr<HttpServer::Request> request) {
       try {
         std::vector<std::string> models = get_linked_models_for_app(name);
         std::vector<VersionedModelId> versioned_models;

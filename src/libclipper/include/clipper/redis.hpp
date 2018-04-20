@@ -109,6 +109,9 @@ bool set_current_model_version(redox::Redox& redis,
                                const std::string& model_name,
                                const std::string& version);
 
+bool unset_current_model_version(redox::Redox& redis,
+                                 const std::string& model_name);
+
 boost::optional<std::string> get_current_model_version(
     redox::Redox& redis, const std::string& model_name);
 
@@ -137,7 +140,8 @@ bool add_model(redox::Redox& redis, const VersionedModelId& model_id,
  * and was successfully deleted. Returns false if there was a problem
  * or if the model was not in the table.
  */
-bool delete_model(redox::Redox& redis, const VersionedModelId& model_id);
+bool delete_versioned_model(redox::Redox& redis,
+                            const VersionedModelId& model_id);
 
 /**
  * Looks up a model based on its model ID. This
@@ -197,6 +201,13 @@ std::vector<VersionedModelId> get_all_models(redox::Redox& redis);
  */
 std::vector<std::string> get_linked_models(redox::Redox& redis,
                                            const std::string& app_name);
+
+/**
+ * Looks up which app is linked to model with name `model_name`.
+ * \return Returns the linked app's name.
+ */
+boost::optional<std::string> get_linked_app(redox::Redox& redis,
+                                            const std::string& model_name);
 
 /**
  * Adds a container into the container table. This will
