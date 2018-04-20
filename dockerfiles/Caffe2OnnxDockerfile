@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 
 RUN git clone --recursive https://github.com/pytorch/pytorch.git \
-	&& cd pytorch && cd caffe2 \
+	&& cd pytorch \
 	&& git submodule update --init \
 	&& git checkout d695624efe618fbb0c267d564c3a7dabefd32114 \
 	&& mkdir build && cd build && cmake .. -DUSE_MPI=OFF \
