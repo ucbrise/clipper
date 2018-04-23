@@ -208,16 +208,20 @@ class ThreadPool {
    * Constantly running function each thread uses to acquire work items from the
    * queue.
    */
-  void worker(size_t worker_id) {
+  void worker(size_t worker_id, bool is_block_worker) {
     while (!done_) {
       std::unique_ptr<IThreadTask> pTask{nullptr};
       bool work_to_do = false;
       {
         boost::shared_lock<boost::shared_mutex> l(queues_mutex_);
-        // NOTE: The use of try_pop here means the worker will spin instead of
-        // block while waiting for work. This is intentional. We defer to the
-        // submitted tasks to block when no work is available.
-        work_to_do = queues_[worker_id].try_pop(pTask);
+        if (is_block_worker) {
+          work_to_do = queues_[worker_id].wait_pop(pTask);
+        } else {
+          // NOTE: The use of try_pop here means the worker will spin instead of
+          // block while waiting for work. This is intentional. We defer to the
+          // submitted tasks to block when no work is available.
+          work_to_do = queues_[worker_id].try_pop(pTask);
+        }
       }
       if (work_to_do) {
         pTask->execute();
@@ -287,7 +291,8 @@ class ModelQueueThreadPool : public ThreadPool {
                       std::forward_as_tuple());
       threads_.emplace(
           std::piecewise_construct, std::forward_as_tuple(queue_id),
-          std::forward_as_tuple(&ModelQueueThreadPool::worker, this, queue_id));
+          std::forward_as_tuple(&ModelQueueThreadPool::worker, this, queue_id,
+                                is_block_worker_));
       log_info_formatted(LOGGING_TAG_THREADPOOL,
                          "Work queue created for model {}, replica {}",
                          vm.serialize(), std::to_string(replica_id));
@@ -302,11 +307,15 @@ class ModelQueueThreadPool : public ThreadPool {
     boost::hash_combine(seed, replica_id);
     return seed;
   }
+
+ private:
+  bool is_block_worker_ = false;
 };
 
 class FixedSizeThreadPool : public ThreadPool {
  public:
   FixedSizeThreadPool(const size_t num_threads) : ThreadPool(), queue_id_(1) {
+    boost::unique_lock<boost::shared_mutex> l(queues_mutex_);
     if (num_threads <= 0) {
       throw std::runtime_error(
           "Attempted to construct threadpool with no threads");
@@ -316,7 +325,8 @@ class FixedSizeThreadPool : public ThreadPool {
     for (size_t i = 0; i < num_threads; ++i) {
       threads_.emplace(
           std::piecewise_construct, std::forward_as_tuple(queue_id_),
-          std::forward_as_tuple(&FixedSizeThreadPool::worker, this, queue_id_));
+          std::forward_as_tuple(&FixedSizeThreadPool::worker, this, queue_id_,
+                                is_block_worker_));
     }
   }
 
@@ -325,11 +335,18 @@ class FixedSizeThreadPool : public ThreadPool {
    */
   template <typename Func, typename... Args>
   auto submit(Func&& func, Args&&... args) {
-    ThreadPool::submit(queue_id_, func, args...);
+    try {
+      ThreadPool::submit(queue_id_, func, args...);
+    } catch (ThreadPoolError& e) {
+      log_error(LOGGING_TAG_THREADPOOL,
+                "Failed to submit task for FixedSizeThreadPool");
+      throw(e);
+    }
   }
 
  private:
   size_t queue_id_ = 1;
+  bool is_block_worker_ = true;
 };
 
 namespace TaskExecutionThreadPool {
