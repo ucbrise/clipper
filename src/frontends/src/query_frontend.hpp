@@ -183,6 +183,9 @@ class RequestHandler {
             int latency_slo_micros = std::stoi(app_info["latency_slo_micros"]);
             add_application(name, input_type, policy, default_output,
                             latency_slo_micros);
+          } else if (event_type == "hdel") {
+            std::string name = key;
+            delete_application(name);
           }
         });
 
@@ -468,6 +471,13 @@ class RequestHandler {
     server_.add_endpoint(update_endpoint, "POST", update_fn);
   }
 
+  void delete_application(std::string name) {
+    std::string predict_endpoint = "^/" + name + "/predict$";
+    server_.delete_endpoint(predict_endpoint, "POST");
+    std::string update_endpoint = "^/" + name + "/update$";
+    server_.delete_endpoint(update_endpoint, "POST");
+  }
+
   /**
    * Obtains the json-formatted http response content for a successful query
    *
@@ -485,11 +495,11 @@ class RequestHandler {
     json_response.SetObject();
     clipper::json::add_long(json_response, PREDICTION_RESPONSE_KEY_QUERY_ID,
                             query_response.query_id_);
+    rapidjson::Document json_y_hat;
     try {
       // Attempt to parse the string output as JSON
       // and, if possible, nest it in object form within the
       // query response
-      rapidjson::Document json_y_hat;
       clipper::json::parse_json(query_response.output_.y_hat_, json_y_hat);
       clipper::json::add_object(json_response, PREDICTION_RESPONSE_KEY_OUTPUT,
                                 json_y_hat);

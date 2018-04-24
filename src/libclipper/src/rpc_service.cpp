@@ -27,8 +27,6 @@ namespace clipper {
 
 namespace rpc {
 
-constexpr int INITIAL_REPLICA_ID_SIZE = 100;
-
 RPCService::RPCService()
     : request_queue_(std::make_shared<moodycamel::ConcurrentQueue<RPCRequest>>(
           sizeof(RPCRequest) * 10000)),
@@ -36,6 +34,7 @@ RPCService::RPCService()
           std::make_shared<moodycamel::ConcurrentQueue<RPCResponse>>(
               sizeof(RPCResponse) * 10000)),
       active_(false),
+      last_activity_check_time_(std::chrono::system_clock::now()),
       // The version of the unordered_map constructor that allows
       // you to specify your own hash function also requires you
       // to provide the initial size of the map. We define the initial
@@ -50,9 +49,11 @@ RPCService::~RPCService() { stop(); }
 void RPCService::start(
     const string ip, const int port,
     std::function<void(VersionedModelId, int)> &&container_ready_callback,
-    std::function<void(RPCResponse)> &&new_response_callback) {
+    std::function<void(RPCResponse)> &&new_response_callback,
+    std::function<void(VersionedModelId, int)> &&inactive_container_callback) {
   container_ready_callback_ = container_ready_callback;
   new_response_callback_ = new_response_callback;
+  inactive_container_callback_ = inactive_container_callback;
   if (active_) {
     throw std::runtime_error(
         "Attempted to start RPC Service when it is already running!");
@@ -109,7 +110,7 @@ void RPCService::manage_service(const string address) {
   // of connected containers with their metadata, including
   // model id and replica id
 
-  std::unordered_map<std::vector<uint8_t>, std::pair<VersionedModelId, int>,
+  std::unordered_map<std::vector<uint8_t>, ConnectedContainerInfo,
                      std::function<size_t(const std::vector<uint8_t> &vec)>>
       connections_containers_map(INITIAL_REPLICA_ID_SIZE, hash_vector<uint8_t>);
   context_t context = context_t(1);
@@ -140,14 +141,51 @@ void RPCService::manage_service(const string address) {
       // TODO: Balance message sending and receiving fairly
       // Note: We only receive one message per event loop iteration
       log_info(LOGGING_TAG_RPC, "Found message to receive");
-
       receive_message(socket, connections, connections_containers_map,
                       zmq_connection_id, redis_connection);
+    }
+    auto current_time = std::chrono::system_clock::now();
+    if (std::chrono::duration_cast<std::chrono::milliseconds>(
+            current_time - last_activity_check_time_)
+            .count() > CONTAINER_EXISTENCE_CHECK_FREQUENCY_MILLS) {
+      check_container_activity(connections_containers_map);
+      last_activity_check_time_ = current_time;
     }
     // Note: We send all queued messages per event loop iteration
     send_messages(socket, connections);
   }
   shutdown_service(socket);
+}
+
+void RPCService::check_container_activity(
+    std::unordered_map<std::vector<uint8_t>, ConnectedContainerInfo,
+                       std::function<size_t(const std::vector<uint8_t> &vec)>>
+        &connections_containers_map) {
+  std::chrono::system_clock::time_point current_time =
+      std::chrono::system_clock::now();
+
+  auto it = connections_containers_map.begin();
+  while (it != connections_containers_map.end()) {
+    auto &container_info = it->second;
+    if (std::chrono::duration_cast<std::chrono::milliseconds>(
+            current_time - std::get<2>(container_info))
+            .count() > CONTAINER_ACTIVITY_TIMEOUT_MILLS) {
+      /** if the amount of time that has elapsed between the current time and
+      the time of last
+      receiving from the container is greater than the threshold, then we want
+      to
+      call the inactive_container_callback_ */
+
+      VersionedModelId vm = std::get<0>(container_info);
+      int replica_id = std::get<1>(container_info);
+      GarbageCollectionThreadPool::submit_job(inactive_container_callback_, vm,
+                                              replica_id);
+
+      log_info(LOGGING_TAG_RPC, "lost contact with a container");
+      connections_containers_map.erase(it);
+    }
+    ++it;
+  }
 }
 
 void RPCService::shutdown_service(socket_t &socket) {
@@ -210,7 +248,7 @@ void RPCService::send_messages(
 
 void RPCService::receive_message(
     socket_t &socket, boost::bimap<int, vector<uint8_t>> &connections,
-    std::unordered_map<std::vector<uint8_t>, std::pair<VersionedModelId, int>,
+    std::unordered_map<std::vector<uint8_t>, ConnectedContainerInfo,
                        std::function<size_t(const std::vector<uint8_t> &vec)>>
         &connections_containers_map,
     int &zmq_connection_id, std::shared_ptr<redox::Redox> redis_connection) {
@@ -224,13 +262,20 @@ void RPCService::receive_message(
   const vector<uint8_t> connection_id(
       (uint8_t *)msg_routing_identity.data(),
       (uint8_t *)msg_routing_identity.data() + msg_routing_identity.size());
-
   MessageType type =
       static_cast<MessageType>(static_cast<int *>(msg_type.data())[0]);
 
   boost::bimap<int, vector<uint8_t>>::right_const_iterator connection =
       connections.right.find(connection_id);
   bool new_connection = (connection == connections.right.end());
+
+  if (!new_connection) {
+    // If message corresponds to a container that has previously
+    // identified itself by sending metadata, we should document
+    // that we've received a message from it recently
+    document_receive_time(connections_containers_map, connection_id);
+  }
+
   switch (type) {
     case MessageType::NewContainer: {
       message_t model_name;
@@ -266,9 +311,12 @@ void RPCService::receive_message(
         replica_ids_[model] = cur_replica_id + 1;
         redis::add_container(*redis_connection, model, cur_replica_id,
                              zmq_connection_id, input_type);
+
+        auto connected_time = std::chrono::system_clock::now();
+
         connections_containers_map.emplace(
             connection_id,
-            std::pair<VersionedModelId, int>(model, cur_replica_id));
+            std::make_tuple(model, cur_replica_id, connected_time));
 
         TaskExecutionThreadPool::create_queue(model, cur_replica_id);
         zmq_connection_id += 1;
@@ -294,11 +342,10 @@ void RPCService::receive_message(
               "Failed to find container that was previously registered via "
               "RPC");
         }
-        std::pair<VersionedModelId, int> container_info =
-            container_info_entry->second;
+        ConnectedContainerInfo &container_info = container_info_entry->second;
 
-        VersionedModelId vm = container_info.first;
-        int replica_id = container_info.second;
+        VersionedModelId vm = std::get<0>(container_info);
+        int replica_id = std::get<1>(container_info);
         TaskExecutionThreadPool::submit_job(vm, replica_id,
                                             new_response_callback_, response);
         TaskExecutionThreadPool::submit_job(
@@ -307,10 +354,25 @@ void RPCService::receive_message(
         response_queue_->enqueue(response);
       }
     } break;
-    case MessageType::Heartbeat:
+    case MessageType::Heartbeat: {
       send_heartbeat_response(socket, connection_id, new_connection);
-      break;
+    } break;
   }
+}
+
+void RPCService::document_receive_time(
+    std::unordered_map<std::vector<uint8_t>, ConnectedContainerInfo,
+                       std::function<size_t(const std::vector<uint8_t> &vec)>>
+        &connections_containers_map,
+    const vector<uint8_t> connection_id) {
+  auto container_info_entry = connections_containers_map.find(connection_id);
+  if (container_info_entry == connections_containers_map.end()) {
+    throw std::runtime_error(
+        "Documenting receive time for an unregistered container");
+  }
+  std::chrono::time_point<std::chrono::system_clock> &last_contacted_time =
+      std::get<2>(container_info_entry->second);
+  last_contacted_time = std::chrono::system_clock::now();
 }
 
 void RPCService::send_heartbeat_response(socket_t &socket,

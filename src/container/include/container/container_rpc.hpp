@@ -155,9 +155,9 @@ class RPC {
   std::shared_ptr<boost::circular_buffer<RPCLogItem>> event_log_;
 
   /**
- * @return `true` if the received heartbeat is a request for container metadata.
- * `false` otherwise.
- */
+   * @return `true` if the received heartbeat is a request for container
+   * metadata. `false` otherwise.
+   */
   bool handle_heartbeat(zmq::socket_t& socket) const;
 
   void send_heartbeat(zmq::socket_t& socket) const;

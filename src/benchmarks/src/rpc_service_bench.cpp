@@ -134,7 +134,8 @@ class Benchmarker {
     rpc_->start("*", RPC_SERVICE_PORT, [](VersionedModelId, int) {},
                 [this](rpc::RPCResponse response) {
                   on_response_recv(std::move(response));
-                });
+                },
+                [](VersionedModelId, int) {});
 
     msg_latency_hist_ =
         metrics::MetricsRegistry::get_metrics().create_histogram(
@@ -172,7 +173,6 @@ class Benchmarker {
             // SEND FIRST MESSAGE
             send_message();
           }
-
         });
   }
 

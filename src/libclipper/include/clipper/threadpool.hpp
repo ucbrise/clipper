@@ -9,6 +9,7 @@
 #include <boost/thread.hpp>
 
 #include "datatypes.hpp"
+#include "exceptions.hpp"
 #include "logging.hpp"
 
 namespace clipper {
@@ -122,7 +123,7 @@ class ThreadSafeQueue {
 };
 
 class ThreadPool {
- private:
+ protected:
   class IThreadTask {
    public:
     IThreadTask(void) = default;
@@ -176,34 +177,12 @@ class ThreadPool {
    */
   ~ThreadPool(void) { destroy(); }
 
-  bool create_queue(VersionedModelId vm, int replica_id) {
-    boost::unique_lock<boost::shared_mutex> l(queues_mutex_);
-    size_t queue_id = get_queue_id(vm, replica_id);
-    auto queue = queues_.find(queue_id);
-    if (queue != queues_.end()) {
-      log_error_formatted(LOGGING_TAG_THREADPOOL,
-                          "Work queue already exists for model {}, replica {}",
-                          vm.serialize(), std::to_string(replica_id));
-      return false;
-    } else {
-      queues_.emplace(std::piecewise_construct, std::forward_as_tuple(queue_id),
-                      std::forward_as_tuple());
-      threads_.emplace(
-          std::piecewise_construct, std::forward_as_tuple(queue_id),
-          std::forward_as_tuple(&ThreadPool::worker, this, queue_id));
-      log_info_formatted(LOGGING_TAG_THREADPOOL,
-                         "Work queue created for model {}, replica {}",
-                         vm.serialize(), std::to_string(replica_id));
-      return true;
-    }
-  }
-
+ protected:
   /**
    * Submit a job to be run by the thread pool.
    */
   template <typename Func, typename... Args>
-  auto submit(VersionedModelId vm, int replica_id, Func&& func,
-              Args&&... args) {
+  auto submit(size_t queue_id, Func&& func, Args&&... args) {
     auto boundTask =
         std::bind(std::forward<Func>(func), std::forward<Args>(args)...);
     using ResultType = std::result_of_t<decltype(boundTask)()>;
@@ -212,30 +191,19 @@ class ThreadPool {
     PackagedTask task{std::move(boundTask)};
     auto result_future = task.get_future();
 
-    size_t queue_id = get_queue_id(vm, replica_id);
     boost::shared_lock<boost::shared_mutex> l(queues_mutex_);
     auto queue = queues_.find(queue_id);
     if (queue != queues_.end()) {
       queue->second.push(std::make_unique<TaskType>(std::move(task)));
     } else {
       std::stringstream error_msg;
-      error_msg << "No work queue for model " << vm.serialize() << ", replica "
-                << std::to_string(replica_id);
+      error_msg << "No work queue found with id " << queue_id;
       log_error(LOGGING_TAG_THREADPOOL, error_msg.str());
-      throw std::runtime_error(error_msg.str());
+      throw ThreadPoolError(error_msg.str());
     }
     return result_future;
   }
 
-  static size_t get_queue_id(const VersionedModelId& vm, const int replica_id) {
-    std::size_t seed = 0;
-    boost::hash_combine(seed, vm.get_name());
-    boost::hash_combine(seed, vm.get_id());
-    boost::hash_combine(seed, replica_id);
-    return seed;
-  }
-
- private:
   /**
    * Constantly running function each thread uses to acquire work items from the
    * queue.
@@ -279,7 +247,6 @@ class ThreadPool {
     }
   }
 
- private:
   std::atomic_bool done_;
   boost::shared_mutex queues_mutex_;
   std::unordered_map<size_t, ThreadSafeQueue<std::unique_ptr<IThreadTask>>>
@@ -287,18 +254,96 @@ class ThreadPool {
   std::unordered_map<size_t, std::thread> threads_;
 };
 
+class ModelQueueThreadPool : public ThreadPool {
+ public:
+  /**
+   * Submit a job to be run by the thread pool.
+   */
+  template <typename Func, typename... Args>
+  auto submit(VersionedModelId vm, int replica_id, Func&& func,
+              Args&&... args) {
+    size_t queue_id = get_queue_id(vm, replica_id);
+    try {
+      ThreadPool::submit(queue_id, func, args...);
+    } catch (ThreadPoolError& e) {
+      log_error_formatted(LOGGING_TAG_THREADPOOL,
+                          "Failed to submit task for model {}, replica {}",
+                          vm.serialize(), replica_id);
+      throw(e);
+    }
+  }
+
+  bool create_queue(VersionedModelId vm, int replica_id) {
+    boost::unique_lock<boost::shared_mutex> l(queues_mutex_);
+    size_t queue_id = get_queue_id(vm, replica_id);
+    auto queue = queues_.find(queue_id);
+    if (queue != queues_.end()) {
+      log_error_formatted(LOGGING_TAG_THREADPOOL,
+                          "Work queue already exists for model {}, replica {}",
+                          vm.serialize(), std::to_string(replica_id));
+      return false;
+    } else {
+      queues_.emplace(std::piecewise_construct, std::forward_as_tuple(queue_id),
+                      std::forward_as_tuple());
+      threads_.emplace(
+          std::piecewise_construct, std::forward_as_tuple(queue_id),
+          std::forward_as_tuple(&ModelQueueThreadPool::worker, this, queue_id));
+      log_info_formatted(LOGGING_TAG_THREADPOOL,
+                         "Work queue created for model {}, replica {}",
+                         vm.serialize(), std::to_string(replica_id));
+      return true;
+    }
+  }
+
+  static size_t get_queue_id(const VersionedModelId& vm, const int replica_id) {
+    std::size_t seed = 0;
+    boost::hash_combine(seed, vm.get_name());
+    boost::hash_combine(seed, vm.get_id());
+    boost::hash_combine(seed, replica_id);
+    return seed;
+  }
+};
+
+class FixedSizeThreadPool : public ThreadPool {
+ public:
+  FixedSizeThreadPool(const size_t num_threads) : ThreadPool(), queue_id_(1) {
+    if (num_threads <= 0) {
+      throw std::runtime_error(
+          "Attempted to construct threadpool with no threads");
+    }
+    queues_.emplace(std::piecewise_construct, std::forward_as_tuple(queue_id_),
+                    std::forward_as_tuple());
+    for (size_t i = 0; i < num_threads; ++i) {
+      threads_.emplace(
+          std::piecewise_construct, std::forward_as_tuple(queue_id_),
+          std::forward_as_tuple(&FixedSizeThreadPool::worker, this, queue_id_));
+    }
+  }
+
+  /**
+   * Submit a job to be run by the thread pool
+   */
+  template <typename Func, typename... Args>
+  auto submit(Func&& func, Args&&... args) {
+    ThreadPool::submit(queue_id_, func, args...);
+  }
+
+ private:
+  size_t queue_id_ = 1;
+};
+
 namespace TaskExecutionThreadPool {
 
 /**
- * Convenience method to get the task execution thread pool for the application.
+ * Convenience method to get the task execution thread pool for the application
  */
-inline ThreadPool& get_thread_pool(void) {
-  static ThreadPool taskExecutionPool;
-  return taskExecutionPool;
+inline ModelQueueThreadPool& get_thread_pool(void) {
+  static ModelQueueThreadPool task_execution_pool;
+  return task_execution_pool;
 }
 
 /**
- * Submit a job to the task execution thread pool.
+ * Submit a job to the task execution thread pool
  */
 template <typename Func, typename... Args>
 inline auto submit_job(VersionedModelId vm, int replica_id, Func&& func,
@@ -312,6 +357,28 @@ inline void create_queue(VersionedModelId vm, int replica_id) {
 }
 
 }  // namespace TaskExecutionThreadPool
+
+namespace GarbageCollectionThreadPool {
+/**
+*Convenience method to get the garbage collection thread pool for the
+*application
+*/
+
+inline FixedSizeThreadPool& get_thread_pool(void) {
+  static FixedSizeThreadPool garbage_collection_pool(1);
+  return garbage_collection_pool;
+}
+
+/**
+*Submit a job to the garbage collection thread pool
+*/
+template <typename Func, typename... Args>
+inline auto submit_job(Func&& func, Args&&... args) {
+  return get_thread_pool().submit(std::forward<Func>(func),
+                                  std::forward<Args>(args)...);
+}
+}
+
 }  // namespace clipper
 
 #endif  // CLIPPER_LIB_THREADPOOL_HPP

@@ -188,6 +188,25 @@ class ClipperConnection(object):
             logger.info("Application {app} was successfully registered".format(
                 app=name))
 
+    def delete_application(self, name):
+        if not self.connected:
+            raise UnconnectedException()
+
+        url = "http://{host}/admin/delete_app".format(
+            host=self.cm.get_admin_addr())
+        req_json = json.dumps({"name": name})
+        headers = {"Content-type": "application/json"}
+        r = requests.post(url, headers=headers, data=req_json)
+        logger.debug(r.text)
+        if r.status_code != requests.codes.ok:
+            msg = "Received error status code: {code} and message: {msg}".format(
+                code=r.status_code, msg=r.text)
+            logger.error(msg)
+            raise ClipperException(msg)
+        else:
+            logger.info(
+                "Application {app} was successfully deleted".format(app=name))
+
     def link_model_to_app(self, app_name, model_name):
         """Routes requests from the specified app to be evaluted by the specified model.
 
