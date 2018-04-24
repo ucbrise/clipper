@@ -1,4 +1,3 @@
-
 #ifndef CLIPPER_LIB_CONTAINERS_HPP
 #define CLIPPER_LIB_CONTAINERS_HPP
 
@@ -36,6 +35,8 @@ class ModelContainer {
   void update_throughput(size_t batch_size, long total_latency);
   void send_feedback(PredictTask task);
   void set_batch_size(int batch_size);
+  void set_inactive();
+  bool is_active();
 
   VersionedModelId model_;
   int container_id_;
@@ -45,7 +46,7 @@ class ModelContainer {
   clipper::metrics::Histogram latency_hist_;
 
  private:
-  bool connected_{true};
+  std::atomic_bool connected_{true};
   Queue<FeedbackTask> feedback_queue_;
   boost::shared_mutex throughput_mutex_;
   double avg_throughput_per_milli_;
@@ -70,6 +71,9 @@ class ActiveContainers {
 
   void add_container(VersionedModelId model, int connection_id, int replica_id,
                      InputType input_type);
+
+  void remove_container(VersionedModelId model, int replica_id);
+
   void register_batch_size(VersionedModelId model, int batch_size);
 
   /// This method returns the active container specified by the
@@ -79,11 +83,16 @@ class ActiveContainers {
   std::shared_ptr<ModelContainer> get_model_replica(
       const VersionedModelId &model, const int replica_id);
 
+  std::map<int, std::shared_ptr<ModelContainer>> get_replicas_for_model(
+      const VersionedModelId &model);
+
   /// Get list of all models that have at least one active replica.
   std::vector<VersionedModelId> get_known_models();
   std::unordered_map<VersionedModelId, int> batch_sizes_;
 
  private:
+  void log_active_containers();
+
   // Protects the models-replicas map. Must acquire an exclusive
   // lock to modify the map and a shared_lock when accessing
   // replicas. The replica ModelContainer entries are independently threadsafe.

@@ -40,4 +40,5 @@ ENV CLIPPER_MODEL_PATH=/model
 
 CMD ["java", "-Djava.library.path=/usr/local/lib", "-Xmx512m", "-cp", "/root/container/spark-container-impl/target/spark-container-impl-0.1.jar", "ai.clipper.spark.container.impl.ContainerMain"]
 
+HEALTHCHECK --interval=3s --timeout=3s --retries=1 CMD test -f /model_is_ready.check || exit 1
 # vim: set filetype=dockerfile:

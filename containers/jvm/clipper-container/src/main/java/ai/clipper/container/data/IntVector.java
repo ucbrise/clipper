@@ -18,7 +18,6 @@ public class IntVector extends DataVector<IntBuffer> {
     @Override
     DataBuffer<IntBuffer> createDataBuffer() {
       return new DataBuffer<IntBuffer>() {
-
         IntBuffer buffer;
         int bufferSize;
 
