@@ -9,7 +9,7 @@ from .kubernetes_metric_utils import start_prometheus, CLIPPER_FRONTEND_EXPORTER
 from contextlib import contextmanager
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
-from kubernetes.client import configuration
+from kubernetes.client import configuration, V1DeleteOptions
 import logging
 import json
 import yaml
@@ -368,7 +368,9 @@ class KubernetesContainerManager(ContainerManager):
                     label_selector=CLIPPER_DOCKER_LABEL).items:
                 service_name = service.metadata.name
                 self._k8s_v1.delete_namespaced_service(
-                    namespace='default', name=service_name)
+                    namespace='default',
+                    name=service_name,
+                    body=V1DeleteOptions())
 
             self._k8s_beta.delete_collection_namespaced_deployment(
                 namespace='default', label_selector=CLIPPER_DOCKER_LABEL)
