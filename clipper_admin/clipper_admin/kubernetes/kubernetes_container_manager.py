@@ -14,7 +14,6 @@ import json
 import yaml
 import os
 import time
-from six.moves import range
 
 logger = logging.getLogger(__name__)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
