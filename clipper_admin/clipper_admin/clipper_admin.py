@@ -412,19 +412,6 @@ class ClipperConnection(object):
                     fileobj=context_file, mode="w") as context_tar:
                 context_tar.add(model_data_path)
                 # From https://stackoverflow.com/a/740854/814642
-<<<<<<< 8c65184eb1e344b91e89629000410763271fbf01
-                df_contents = six.StringIO(
-                    "FROM {container_name}\nCOPY {data_path} /model/\n{run_command}\n".
-                    format(
-                        container_name=base_image,
-                        data_path=model_data_path,
-                        run_command=run_cmd))
-                df_tarinfo = tarfile.TarInfo('Dockerfile')
-                df_contents.seek(0, os.SEEK_END)
-                df_tarinfo.size = df_contents.tell()
-                df_contents.seek(0)
-                context_tar.addfile(df_tarinfo, df_contents)
-=======
                 try:
                     df_contents = StringIO(
                         str.encode(
@@ -439,11 +426,7 @@ class ClipperConnection(object):
                     context_tar.addfile(df_tarinfo, df_contents)
                 except TypeError:
                     df_contents = StringIO(
-<<<<<<< 2eb2acb1f76adc939f28f1129c3a59a2cbada286
-                        "FROM {container_name}\nCOPY {data_path} /model/\n".
-=======
                         "FROM {container_name}\nCOPY {data_path} /model/\n{run_command}\n".
->>>>>>> fix pip3/pip issues
                         format(
                             container_name=base_image,
                             data_path=model_data_path))
@@ -452,7 +435,6 @@ class ClipperConnection(object):
                     df_tarinfo.size = df_contents.tell()
                     df_contents.seek(0)
                     context_tar.addfile(df_tarinfo, df_contents)
->>>>>>> progress
             # Exit Tarfile context manager to finish the tar file
             # Seek back to beginning of file for reading
             context_file.seek(0)
