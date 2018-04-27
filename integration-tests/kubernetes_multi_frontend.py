@@ -34,7 +34,7 @@ def deploy_model(clipper_conn, name, link=False):
     model_name = "{}-model".format(name)
     clipper_conn.build_and_deploy_model(
         model_name,
-        str(int(time.time())), # random string as version
+        str(int(time.time())),  # random string as version
         "doubles",
         fake_model_data,
         "clipper/noop-container:{}".format(clipper_version),
