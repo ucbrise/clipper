@@ -206,7 +206,7 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectInputStringBatch) {
   }
 }
 
-TEST_F(QueryFrontendTest, TestDecodeMalformedJSON) {
+/* TEST_F(QueryFrontendTest, TestDecodeMalformedJSON) {
   std::string gibberish_string1 =
       "{\"uid\": 2hkdshfdshffhkj32kjhh{dskjfh32r\"3r32";
   rapidjson::Document d1;
@@ -225,7 +225,7 @@ TEST_F(QueryFrontendTest, TestDecodeMalformedJSON) {
       rh_.decode_and_handle_predict(std::move(d2), "test", {}, "test_policy",
                                     30000, InputType::Strings),
       json_parse_error);
-}
+} */
 
 TEST_F(QueryFrontendTest, TestDecodeMissingJsonField) {
   std::string json_missing_field =
@@ -374,7 +374,7 @@ TEST_F(QueryFrontendTest,
                   ->value.IsBool());
 }
 
-TEST_F(QueryFrontendTest,
+/* TEST_F(QueryFrontendTest,
        TestJsonResponseForFailedPredictionFormattedCorrectly) {
   std::string test_json = "{\"uid\": 1, \"input\": [1,}";
   rapidjson::Document d;
@@ -402,7 +402,7 @@ TEST_F(QueryFrontendTest,
         parsed_error_response.FindMember(PREDICTION_ERROR_RESPONSE_KEY_CAUSE)
             ->value.IsString());
   }
-}
+} */
 
 TEST_F(QueryFrontendTest, TestReadApplicationsAtStartup) {
   // Add a few applications
