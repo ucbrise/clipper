@@ -266,8 +266,6 @@ TEST_F(QueryFrontendTest, TestDecodeWrongInputTypeInBatch) {
 TEST_F(QueryFrontendTest, TestDecodeCorrectUpdate) {
   std::string update_json =
       "{\"uid\": 23, \"input\": [1.4,2.23,3.243242,0.3223424], \"label\": 1.0}";
-  rapidjson::Document d;
-  clipper::json::parse_json(update_json, d);
 
   FeedbackAck ack =
       rh_.decode_and_handle_update(update_json, "test", {}, "test_policy",
@@ -280,8 +278,6 @@ TEST_F(QueryFrontendTest, TestDecodeCorrectUpdate) {
 TEST_F(QueryFrontendTest, TestDecodeUpdateMissingField) {
   std::string update_json =
       "{\"uid\": 23, \"input\": [1.4,2.23,3.243242,0.3223424]}";
-  // rapidjson::Document d;
-  // clipper::json::parse_json(update_json, d);
 
   ASSERT_THROW(rh_.decode_and_handle_update(update_json, "test", {},
                                             "test_policy", InputType::Doubles),
