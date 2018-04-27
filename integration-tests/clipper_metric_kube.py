@@ -74,7 +74,7 @@ def deploy_model(clipper_conn, name, link=False):
 
     if not success:
         raise BenchmarkException("Error querying APP %s, MODEL %s:%d" %
-                                 (app_name, model_name, version))
+                                 (app_name, model_name, 1))
 
 
 def create_and_test_app(clipper_conn, name):
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     try:
         clipper_conn = create_kubernetes_connection(
             cleanup=True, start_clipper=True)
-        time.sleep(10)
+        time.sleep(60)
         print(clipper_conn.cm.get_query_addr())
         try:
             create_and_test_app(clipper_conn, "kube-metric")
@@ -194,16 +194,16 @@ if __name__ == "__main__":
             shutil.rmtree(tmp_log_dir)
             log_clipper_state(clipper_conn)
             logger.info("SUCCESS")
-            clipper_conn.stop_all()
+            create_kubernetes_connection(cleanup=True, start_clipper=False, connect=False)
         except BenchmarkException as e:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
-            create_kubernetes_connection(cleanup=True, start_clipper=False)
+            create_kubernetes_connection(cleanup=True, start_clipper=False, connect=False)
             sys.exit(1)
         except ClipperException as e:
             log_clipper_state(clipper_conn)
             logger.exception("ClipperException")
-            create_kubernetes_connection(cleanup=True, start_clipper=False)
+            create_kubernetes_connection(cleanup=True, start_clipper=False, connect=False)
             sys.exit(1)
     except Exception as e:
         logger.exception("Exception: {}".format(e))

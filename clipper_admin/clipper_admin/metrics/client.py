@@ -1,10 +1,11 @@
+from __future__ import absolute_import
 import json
 import redis
 from redis.exceptions import ConnectionError
 
 from ..exceptions import ClipperException
-from schema import Prom_Type
-from config import CHANNEL_NAME, DEFAULT_BUCKETS, UNIX_SOCKET_PATH, API_VERSION
+from .schema import Prom_Type
+from .config import CHANNEL_NAME, DEFAULT_BUCKETS, UNIX_SOCKET_PATH, API_VERSION
 
 r = redis.Redis(unix_socket_path=UNIX_SOCKET_PATH)
 metric_pool = set()
@@ -65,7 +66,7 @@ def report_metric(name, val):
         The name of metric to be reported. The name must the name of metric that
         has been added via `add_metric`.
     val: int or float
-        The value of metric to be reported. The value must be able to be cast 
+        The value of metric to be reported. The value must be able to be cast
         to float.
     """
     if name not in metric_pool:

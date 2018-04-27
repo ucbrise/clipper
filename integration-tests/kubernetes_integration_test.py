@@ -116,7 +116,7 @@ if __name__ == "__main__":
     try:
         clipper_conn = create_kubernetes_connection(
             cleanup=True, start_clipper=True)
-        time.sleep(10)
+        time.sleep(60)
         print(clipper_conn.cm.get_query_addr())
         print(clipper_conn.inspect_instance())
         try:
@@ -133,16 +133,16 @@ if __name__ == "__main__":
             shutil.rmtree(tmp_log_dir)
             log_clipper_state(clipper_conn)
             logger.info("SUCCESS")
-            clipper_conn.stop_all()
+            create_kubernetes_connection(cleanup=True, start_clipper=False, connect=False)
         except BenchmarkException:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
-            create_kubernetes_connection(cleanup=True, start_clipper=False)
+            create_kubernetes_connection(cleanup=True, start_clipper=False, connect=False)
             sys.exit(1)
         except ClipperException:
             log_clipper_state(clipper_conn)
             logger.exception("ClipperException")
-            create_kubernetes_connection(cleanup=True, start_clipper=False)
+            create_kubernetes_connection(cleanup=True, start_clipper=False, connect=False)
             sys.exit(1)
     except Exception as e:
         logger.exception("Exception: {}".format(e))
