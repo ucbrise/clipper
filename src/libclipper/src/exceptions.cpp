@@ -17,4 +17,9 @@ const char* ManagementOperationError::what() const noexcept {
   return msg_.c_str();
 }
 
+ThreadPoolError::ThreadPoolError(const std::string msg)
+    : std::runtime_error(msg), msg_(msg) {}
+
+const char* ThreadPoolError::what() const noexcept { return msg_.c_str(); }
+
 }  // namespace clipper

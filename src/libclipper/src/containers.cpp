@@ -1,4 +1,3 @@
-
 #include <chrono>
 #include <iostream>
 #include <memory>
@@ -37,6 +36,10 @@ ModelContainer::ModelContainer(VersionedModelId model, int container_id,
                      "Creating new ModelContainer for model {}, id: {}",
                      model_str, std::to_string(container_id));
 }
+
+void ModelContainer::set_inactive() { connected_ = false; }
+
+bool ModelContainer::is_active() { return connected_; }
 
 void ModelContainer::update_throughput(size_t batch_size,
                                        long total_latency_micros) {
@@ -133,16 +136,30 @@ void ActiveContainers::add_container(VersionedModelId model, int connection_id,
   entry.emplace(replica_id, new_container);
   containers_[new_container->model_] = entry;
   assert(containers_[new_container->model_].size() > 0);
-  std::stringstream log_msg;
-  log_msg << "\nActive containers:\n";
-  for (auto model : containers_) {
-    log_msg << "\tModel: " << model.first.serialize() << "\n";
-    for (auto r : model.second) {
-      log_msg << "\t\trep_id: " << r.first
-              << ", container_id: " << r.second->container_id_ << "\n";
+  log_active_containers();
+}
+
+void ActiveContainers::remove_container(VersionedModelId model,
+                                        int replica_id) {
+  log_info_formatted(
+      LOGGING_TAG_CONTAINERS,
+      "Removing container - model: {}, version: {}, replica ID: {}",
+      model.get_name(), model.get_id(), replica_id);
+  boost::unique_lock<boost::shared_mutex> l{m_};
+
+  int initialSize = containers_[model].size();
+
+  for (auto it = containers_[model].begin(); it != containers_[model].end();) {
+    if (it->first == replica_id) {
+      (it->second)->set_inactive();
+      it = containers_[model].erase(it);
+    } else {
+      ++it;
     }
   }
-  log_info(LOGGING_TAG_CONTAINERS, log_msg.str());
+
+  assert(containers_[model].size() == initialSize - 1);
+  log_active_containers();
 }
 
 void ActiveContainers::register_batch_size(VersionedModelId model,
@@ -185,6 +202,20 @@ std::shared_ptr<ModelContainer> ActiveContainers::get_model_replica(
   }
 }
 
+std::map<int, std::shared_ptr<ModelContainer>>
+ActiveContainers::get_replicas_for_model(const VersionedModelId &model) {
+  boost::shared_lock<boost::shared_mutex> l{m_};
+
+  auto replicas_map_entry = containers_.find(model);
+  if (replicas_map_entry == containers_.end()) {
+    log_error_formatted(LOGGING_TAG_CONTAINERS, "Requested model {} NOT FOUND",
+                        model.serialize());
+    return {};
+  }
+
+  return replicas_map_entry->second;
+}
+
 std::vector<VersionedModelId> ActiveContainers::get_known_models() {
   boost::shared_lock<boost::shared_mutex> l{m_};
   std::vector<VersionedModelId> keys;
@@ -192,5 +223,18 @@ std::vector<VersionedModelId> ActiveContainers::get_known_models() {
     keys.push_back(m.first);
   }
   return keys;
+}
+
+void ActiveContainers::log_active_containers() {
+  std::stringstream log_msg;
+  log_msg << "\nActive containers:\n";
+  for (auto model : containers_) {
+    log_msg << "\tModel: " << model.first.serialize() << "\n";
+    for (auto r : model.second) {
+      log_msg << "\t\trep_id: " << r.first
+              << ", container_id: " << r.second->container_id_ << "\n";
+    }
+  }
+  log_info(LOGGING_TAG_CONTAINERS, log_msg.str());
 }
 }  // namespace clipper
