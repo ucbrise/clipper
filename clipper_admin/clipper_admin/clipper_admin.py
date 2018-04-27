@@ -414,18 +414,11 @@ class ClipperConnection(object):
                 try:
                     df_contents = StringIO(
                         str.encode(
-<<<<<<< HEAD
-                            "FROM {container_name}\nCOPY {data_path} /model/\n".
-                            format(
-                                container_name=base_image,
-                                data_path=model_data_path)))
-=======
                             "FROM {container_name}\nCOPY {data_path} /model/\n{run_command}\n".
                             format(
                                 container_name=base_image,
                                 data_path=model_data_path,
                                 run_command=run_cmd)))
->>>>>>> 27e7d5145e514bde709538c47e2e438a996aa765
                     df_tarinfo = tarfile.TarInfo('Dockerfile')
                     df_contents.seek(0, os.SEEK_END)
                     df_tarinfo.size = df_contents.tell()
@@ -436,12 +429,8 @@ class ClipperConnection(object):
                         "FROM {container_name}\nCOPY {data_path} /model/\n{run_command}\n".
                         format(
                             container_name=base_image,
-<<<<<<< HEAD
-                            data_path=model_data_path))
-=======
                             data_path=model_data_path,
                             run_command=run_cmd))
->>>>>>> 27e7d5145e514bde709538c47e2e438a996aa765
                     df_tarinfo = tarfile.TarInfo('Dockerfile')
                     df_contents.seek(0, os.SEEK_END)
                     df_tarinfo.size = df_contents.tell()
