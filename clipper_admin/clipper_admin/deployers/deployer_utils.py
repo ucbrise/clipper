@@ -4,8 +4,8 @@ import logging
 from cloudpickle import CloudPickler
 from ..clipper_admin import CLIPPER_TEMP_DIR
 import os
-import sys
 import tempfile
+import sys
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
 if sys.version_info < (3, 0):

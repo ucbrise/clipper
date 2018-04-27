@@ -194,19 +194,16 @@ if __name__ == "__main__":
             shutil.rmtree(tmp_log_dir)
             log_clipper_state(clipper_conn)
             logger.info("SUCCESS")
-            create_kubernetes_connection(
-                cleanup=True, start_clipper=False, connect=False)
+            create_kubernetes_connection(cleanup=True, start_clipper=False, connect=False)
         except BenchmarkException as e:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
-            create_kubernetes_connection(
-                cleanup=True, start_clipper=False, connect=False)
+            create_kubernetes_connection(cleanup=True, start_clipper=False, connect=False)
             sys.exit(1)
         except ClipperException as e:
             log_clipper_state(clipper_conn)
             logger.exception("ClipperException")
-            create_kubernetes_connection(
-                cleanup=True, start_clipper=False, connect=False)
+            create_kubernetes_connection(cleanup=True, start_clipper=False, connect=False)
             sys.exit(1)
     except Exception as e:
         logger.exception("Exception: {}".format(e))
