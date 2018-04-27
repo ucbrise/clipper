@@ -3,6 +3,7 @@ import shutil
 import torch
 import logging
 import os
+from warnings import warn
 
 from ..version import __version__
 from .deployer_utils import save_python_function
@@ -165,6 +166,7 @@ def deploy_pytorch_model(clipper_conn,
         A list of the names of packages to install, using pip, in the container.
         The names must be strings.
     """
+    warn("""Not yet compatible.""")
     if base_image is None:
         if onnx_backend is "caffe2":
             base_image = "clipper/caffe2-onnx-container:{}".format(__version__)
