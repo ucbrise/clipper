@@ -385,6 +385,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             query={"input": test_input},
             func=predict_func,
             input_type="doubles")
+	logger.info("test pred output {}".format(pred))
         self.assertEqual([pred['output']],
                          test_predict_result)  # tests single input
 
