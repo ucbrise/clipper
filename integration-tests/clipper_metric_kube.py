@@ -163,7 +163,8 @@ if __name__ == "__main__":
                     check_target_health(metric_api_addr)
                     retry_count = 0
                 except AssertionError as e:
-                    logger.info("Exception noted. Will retry again in 60 seconds.")
+                    logger.info(
+                        "Exception noted. Will retry again in 60 seconds.")
                     logger.info(e)
                     retry_count -= 1
                     if retry_count == 0:  # a.k.a. the last retry
