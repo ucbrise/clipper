@@ -405,63 +405,80 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertEqual(batch_pred_outputs,
                          test_batch_predict_result)  # tests batch input
 
-    def test_version_query(self):
+    def test_query_specific_model_version(self):
+
+        model_name = "testmodel"
+        app_name = "testapp"
+
+
         def predict_func1(xs):
-            return [str("1") for _ in xs]
+            return ["1" for _ in xs]
 
         def predict_func2(xs):
-            return [str("2") for _ in xs]
+            return ["2" for _ in xs]
 
         self.clipper_conn.register_application(
-            name="hello-world",
+            name=app_name,
             input_type="doubles",
-            default_output="1.0",
+            default_output="DEFAULT",
             slo_micros=100000)
 
         deploy_python_closure(
             self.clipper_conn,
-            name="m",
-            version=1,
+            name=model_name,
+            version="v1",
             input_type="doubles",
             func=predict_func1)
-        self.clipper_conn.link_model_to_app(
-            app_name="hello-world", model_name="m")
 
-        time.sleep(60)
+        self.clipper_conn.link_model_to_app(app_name, model_name)
+
+        time.sleep(30)
 
         deploy_python_closure(
             self.clipper_conn,
-            name="m",
-            version=2,
+            name=model_name,
+            version="v2",
             input_type="doubles",
             func=predict_func2)
-        self.clipper_conn.link_model_to_app(
-            app_name="hello-world", model_name="m")
 
         time.sleep(60)
 
         addr = self.clipper_conn.get_query_addr()
-        url = "http://{addr}/hello-world/predict".format(
-            addr=addr, app='hello-world')
+        url = "http://{addr}/{app}/predict".format(
+            addr=addr, app=app_name)
 
         headers = {"Content-type": "application/json"}
         test_input = [1.0, 2.0, 3.0]
-        pred1 = requests.post(
-            url,
-            headers=headers,
-            data=json.dumps({
-                "input": test_input,
-                "version": "1"
-            })).json()
+        num_tries = 0
+        received_non_default_pred = False
+        while num_tries < 20:
+            pred = requests.post(
+                url,
+                headers=headers,
+                data=json.dumps({
+                    "input": test_input,
+                    "version": "v1"
+                })).json()
+            if pred["default"]:
+                logger.info(pred)
+                num_tries += 1
+                time.sleep(10)
+            else:
+                self.assertEqual(pred['output'], "1")
+                received_non_default_pred = True
+                break
 
-        self.assertEqual([pred1['output']], "1")
+        self.assertTrue(received_non_default_pred)
 
-        pred2 = requests.post(
-            url, headers=headers, data=json.dumps({
-                "input": test_input
-            })).json()
 
-        self.assertEqual([pred2['output']], "2")
+        # pred2 = requests.post(url, headers=headers, data=json.dumps({
+        #         "input": test_input
+        #     })).json()
+        #
+        #
+        # self.assertFalse(pred2["default"])
+        # self.assertEqual(pred2['output'], "2")
+
 
 
 class ClipperManagerTestCaseLong(unittest.TestCase):
@@ -728,29 +745,30 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
 
 SHORT_TEST_ORDERING = [
-    'test_register_model_correct', 'test_register_application_correct',
-    'test_link_not_registered_model_to_app_fails',
-    'test_get_model_links_when_none_exist_returns_empty_list',
-    'test_link_registered_model_to_app_succeeds',
-    'get_app_info_for_registered_app_returns_info_dictionary',
-    'get_app_info_for_nonexistent_app_returns_none',
-    'test_set_num_replicas_for_external_model_fails',
-    'test_model_version_sets_correctly', 'test_get_logs_creates_log_files',
-    'test_inspect_instance_returns_json_dict',
-    'test_model_deploys_successfully',
-    'test_set_num_replicas_for_deployed_model_succeeds',
-    'test_remove_inactive_containers_succeeds', 'test_stop_models',
-    'test_python_closure_deploys_successfully', 'test_register_py_endpoint',
-    'test_test_predict_function', 'test_delete_application_correct'
+    # 'test_register_model_correct', 'test_register_application_correct',
+    # 'test_link_not_registered_model_to_app_fails',
+    # 'test_get_model_links_when_none_exist_returns_empty_list',
+    # 'test_link_registered_model_to_app_succeeds',
+    # 'get_app_info_for_registered_app_returns_info_dictionary',
+    # 'get_app_info_for_nonexistent_app_returns_none',
+    # 'test_set_num_replicas_for_external_model_fails',
+    # 'test_model_version_sets_correctly', 'test_get_logs_creates_log_files',
+    # 'test_inspect_instance_returns_json_dict',
+    # 'test_model_deploys_successfully',
+    # 'test_set_num_replicas_for_deployed_model_succeeds',
+    # 'test_remove_inactive_containers_succeeds', 'test_stop_models',
+    # 'test_python_closure_deploys_successfully', 'test_register_py_endpoint',
+    # 'test_test_predict_function', 'test_delete_application_correct',
+    'test_query_specific_model_version'
 ]
 
 LONG_TEST_ORDERING = [
-    'test_remove_inactive_container',
-    'test_unlinked_app_returns_default_predictions',
-    'test_deployed_model_queried_successfully',
-    'test_batch_queries_returned_successfully',
+    # 'test_remove_inactive_container',
+    # 'test_unlinked_app_returns_default_predictions',
+    # 'test_deployed_model_queried_successfully',
+    # 'test_batch_queries_returned_successfully',
     'test_deployed_python_closure_queried_successfully',
-    'test_fixed_batch_size_model_processes_specified_query_batch_size_when_saturated'
+    # 'test_fixed_batch_size_model_processes_specified_query_batch_size_when_saturated'
 ]
 
 if __name__ == '__main__':

@@ -336,8 +336,8 @@ class RequestHandler {
         clipper::json::parse_json(request->content.string(), d);
         std::vector<VersionedModelId> versioned_models = {};
         std::vector<std::string> models;
-        std::string version = clipper::json::get_string(d, "version");
-        if (!version.empty()) {
+        if (d.HasMember("version")) {
+          std::string version = clipper::json::get_string(d, "version");
           models = clipper::redis::get_model_versions(redis_connection_, name);
           std::unique_lock<std::mutex> l(current_model_versions_mutex_);
           for (auto m : models) {
