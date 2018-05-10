@@ -122,12 +122,14 @@ def test_kubernetes(clipper_conn, num_apps, num_models):
     except BenchmarkException:
         log_clipper_state(clipper_conn)
         logger.exception("BenchmarkException")
-        create_kubernetes_connection(cleanup=True, start_clipper=False, connect=False)
+        create_kubernetes_connection(
+            cleanup=True, start_clipper=False, connect=False)
         sys.exit(1)
     except ClipperException:
         log_clipper_state(clipper_conn)
         logger.exception("ClipperException")
-        create_kubernetes_connection(cleanup=True, start_clipper=False, connect=False)
+        create_kubernetes_connection(
+            cleanup=True, start_clipper=False, connect=False)
         sys.exit(1)
 
 
