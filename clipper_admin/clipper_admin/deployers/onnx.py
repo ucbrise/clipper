@@ -3,6 +3,7 @@ import shutil
 import torch
 import logging
 import os
+from warnings import warn
 
 from ..version import __version__
 from .deployer_utils import save_python_function
@@ -165,6 +166,12 @@ def deploy_pytorch_model(clipper_conn,
         A list of the names of packages to install, using pip, in the container.
         The names must be strings.
     """
+    warn("""
+The caffe 2 version is not up to date because
+https://github.com/ucbrise/clipper/issues/475,
+however you may still be able use it.
+We will update our caffe2 build soon.""")
+
     if base_image is None:
         if onnx_backend is "caffe2":
             base_image = "clipper/caffe2-onnx-container:{}".format(__version__)
