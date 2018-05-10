@@ -63,7 +63,7 @@ def find_unbound_port():
 
 
 def create_docker_connection(cleanup=True, start_clipper=True):
-    logging.info("Creating DockerContainerManager")
+    logger.info("Creating DockerContainerManager")
     cm = DockerContainerManager(
         clipper_query_port=find_unbound_port(),
         clipper_management_port=find_unbound_port(),
@@ -79,12 +79,12 @@ def create_docker_connection(cleanup=True, start_clipper=True):
         # as described in https://github.com/ucbrise/clipper/issues/352
         while True:
             try:
-                logging.info("Starting Clipper")
+                logger.info("Starting Clipper")
                 cl.start_clipper()
                 time.sleep(1)
                 break
             except docker.errors.APIError as e:
-                logging.info(
+                logger.info(
                     "Problem starting Clipper: {}\nTrying again.".format(e))
                 cl.stop_all()
                 cm = DockerContainerManager(
@@ -101,17 +101,18 @@ def create_docker_connection(cleanup=True, start_clipper=True):
 def create_kubernetes_connection(cleanup=True,
                                  start_clipper=True,
                                  connect=True):
-    logging.info("Creating KubernetesContainerManager")
-    kubernetes_ip = "https://api.cluster.clipper-k8s-testing.com"
-    logging.info("Kubernetes IP: %s" % kubernetes_ip)
+    logger.info("Creating KubernetesContainerManager")
+    kubernetes_ip = "https://api.jenkins.clipper-k8s-testing.com"
+    logger.info("Kubernetes IP: %s" % kubernetes_ip)
     cm = KubernetesContainerManager(kubernetes_ip)
     cl = ClipperConnection(cm)
     if cleanup:
         cl.stop_all()
         # Give kubernetes some time to clean up
         time.sleep(20)
+        logger.info("Done cleaning up clipper")
     if start_clipper:
-        logging.info("Starting Clipper")
+        logger.info("Starting Clipper")
         cl.start_clipper(
             query_frontend_image=
             "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/query_frontend:{}".

@@ -454,7 +454,7 @@ class ClipperConnection(object):
 
         logger.info("Pushing model Docker image to {}".format(image))
         for line in docker_client.images.push(repository=image, stream=True):
-            logger.info(line)
+            logger.debug(line)
         return image
 
     def deploy_model(self,
