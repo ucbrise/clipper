@@ -100,11 +100,13 @@ def create_docker_connection(cleanup=True, start_clipper=True):
 
 def create_kubernetes_connection(cleanup=True,
                                  start_clipper=True,
-                                 connect=True):
+                                 connect=True,
+                                 with_proxy=False):
     logger.info("Creating KubernetesContainerManager")
-    kubernetes_ip = "https://api.jenkins.clipper-k8s-testing.com"
-    logger.info("Kubernetes IP: %s" % kubernetes_ip)
-    cm = KubernetesContainerManager(kubernetes_ip)
+    if with_proxy:
+        cm = KubernetesContainerManager(kubernetes_proxy_addr="127.0.0.1:8080")
+    else:
+        cm = KubernetesContainerManager()
     cl = ClipperConnection(cm)
     if cleanup:
         cl.stop_all()
@@ -124,7 +126,7 @@ def create_kubernetes_connection(cleanup=True,
     if connect:
         try:
             cl.connect()
-        except Exception as e:
+        except Exception:
             pass
         except ClipperException as e:
             pass

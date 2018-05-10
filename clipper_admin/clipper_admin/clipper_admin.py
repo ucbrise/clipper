@@ -115,7 +115,9 @@ class ClipperConnection(object):
                 try:
                     url = "http://{host}/metrics".format(
                         host=self.cm.get_query_addr())
-                    requests.get(url, timeout=5)
+                    r = requests.get(url, timeout=5)
+                    if r.status_code != requests.codes.ok:
+                        raise RequestException
                     break
                 except RequestException:
                     logger.info("Clipper still initializing.")
