@@ -59,7 +59,7 @@ def deploy_model(clipper_conn, name, link=False):
                 "http://%s/%s/predict" % (addr, app_name),
                 headers=headers,
                 data=json.dumps({
-                    'input': list(np.random.random(30))
+                    'input': list([1.2, 1.3])
                 }))
             result = response.json()
             if response.status_code == requests.codes.ok and result["default"]:
@@ -88,7 +88,7 @@ def create_and_test_app(clipper_conn, name):
         "http://%s/%s/predict" % (addr, app_name),
         headers=headers,
         data=json.dumps({
-            'input': list(np.random.random(30))
+            'input': list([1.2, 1.3])
         }))
     response.json()
     if response.status_code != requests.codes.ok:

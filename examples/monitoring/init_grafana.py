@@ -26,7 +26,7 @@ if __name__ == '__main__':
     print("(1/3) Initializing Grafana")
     client = docker.from_env()
     container = client.containers.run(
-        "grafana/grafana", ports={'3000/tcp': 3000}, detach=True)
+        "grafana/grafana:latest", ports={'3000/tcp': 3000}, detach=True)
     print("(2/3) Grafana Initialized")
 
     time.sleep(3)

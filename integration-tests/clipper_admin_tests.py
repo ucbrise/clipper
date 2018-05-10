@@ -486,10 +486,12 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         self.app_name_2 = "app4"
         self.app_name_3 = "app5"
         self.app_name_4 = "app6"
+        self.app_name_5 = "app7"
         self.model_name_1 = "m4"
         self.model_name_2 = "m5"
         self.model_name_3 = "m6"
         self.model_name_4 = "m7"
+        self.model_name_5 = "m8"
         self.input_type = "doubles"
         self.default_output = "DEFAULT"
         self.latency_slo_micros = 30000
@@ -511,6 +513,10 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
             self.input_type,
             self.default_output,
             slo_micros=30000000)
+
+        self.clipper_conn.register_application(
+            self.app_name_5, self.input_type, self.default_output,
+            self.latency_slo_micros)
 
     @classmethod
     def tearDownClass(self):
@@ -647,6 +653,92 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         self.assertGreaterEqual(num_max_batch_queries,
                                 int(total_num_queries * .7))
 
+    def test_remove_inactive_container(self):
+        container_name = "clipper/noop-container:{}".format(clipper_version)
+        input_type = "doubles"
+        model_name = "remove-inactive-test-model"
+        self.clipper_conn.build_and_deploy_model(
+            self.model_name_5,
+            1,
+            self.input_type,
+            fake_model_data,
+            container_name,
+            num_replicas=2)
+        docker_client = get_docker_client()
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
+        self.assertEqual(len(containers), 2)
+
+        self.clipper_conn.link_model_to_app(self.app_name_5, self.model_name_5)
+        time.sleep(30)
+
+        #we now have 2 replicas running, both the same Model Name and Version
+
+        #send predictions, assert that we are getting correct response
+
+        addr = self.clipper_conn.get_query_addr()
+        test_input = [101.1, 99.5, 107.2]
+        req_json = json.dumps({'input': test_input})
+        headers = {'Content-type': 'application/json'}
+        for i in range(2):
+            response = requests.post(
+                "http://%s/%s/predict" % (addr, self.app_name_5),
+                headers=headers,
+                data=req_json)
+            result = response.json()
+            self.assertEqual(response.status_code, requests.codes.ok)
+            #print(result["default_explanation"])
+            self.assertEqual(result["default"], False)
+
+        #1 of the containers should go inactive
+
+        self.clipper_conn.set_num_replicas(
+            name=self.model_name_5, version=1, num_replicas=1)
+        time.sleep(100)
+
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
+        self.assertEqual(len(containers), 1)
+
+        test_input = [101.1, 99.9]
+        req_json = json.dumps({'input': test_input})
+
+        #send predictions, should still be working
+        for i in range(2):
+            response = requests.post(
+                "http://%s/%s/predict" % (addr, self.app_name_5),
+                headers=headers,
+                data=req_json)
+            result = response.json()
+            self.assertEqual(response.status_code, requests.codes.ok)
+            self.assertEqual(result["default"], False)
+
+        #2nd container should go inactive
+        self.clipper_conn.set_num_replicas(
+            name=self.model_name_5, version=1, num_replicas=0)
+        time.sleep(100)
+
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
+        self.assertEqual(len(containers), 0)
+
+        test_input = [101.1]
+        req_json = json.dumps({'input': test_input})
+
+        #send predictions, should be getting response with message 'no connected models'
+        for i in range(2):
+            response = requests.post(
+                "http://%s/%s/predict" % (addr, self.app_name_5),
+                headers=headers,
+                data=req_json)
+            result = response.json()
+            self.assertEqual(result["default"], True)
+            self.assertEqual(result["default_explanation"],
+                             "No connected models found for query")
+
 
 SHORT_TEST_ORDERING = [
     'test_register_model_correct', 'test_register_application_correct',
@@ -667,6 +759,7 @@ SHORT_TEST_ORDERING = [
 ]
 
 LONG_TEST_ORDERING = [
+    'test_remove_inactive_container',
     'test_unlinked_app_returns_default_predictions',
     'test_deployed_model_queried_successfully',
     'test_batch_queries_returned_successfully',
