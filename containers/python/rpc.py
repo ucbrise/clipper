@@ -11,7 +11,10 @@ import os
 import yaml
 import logging
 from collections import deque
-from subprocess32 import Popen, PIPE
+if sys.version_info < (3, 0):
+    from subprocess32 import Popen, PIPE
+else:
+    from subprocess import Popen, PIPE
 from prometheus_client import start_http_server
 from prometheus_client.core import Counter, Gauge, Histogram, Summary
 import clipper_admin.metrics as metrics
@@ -349,7 +352,10 @@ class Server(threading.Thread):
                 sys.stderr.flush()
 
     def send_container_metadata(self, socket):
-        socket.send("", zmq.SNDMORE)
+        if sys.version_info < (3, 0):
+            socket.send("", zmq.SNDMORE)
+        else:
+            socket.send("".encode('utf-8'), zmq.SNDMORE)
         socket.send(struct.pack("<I", MESSAGE_TYPE_NEW_CONTAINER), zmq.SNDMORE)
         socket.send_string(self.model_name, zmq.SNDMORE)
         socket.send_string(str(self.model_version), zmq.SNDMORE)
@@ -360,7 +366,10 @@ class Server(threading.Thread):
         sys.stderr.flush()
 
     def send_heartbeat(self, socket):
-        socket.send("", zmq.SNDMORE)
+        if sys.version_info < (3, 0):
+            socket.send("", zmq.SNDMORE)
+        else:
+            socket.send_string("", zmq.SNDMORE)
         socket.send(struct.pack("<I", MESSAGE_TYPE_HEARTBEAT))
         self.event_history.insert(EVENT_HISTORY_SENT_HEARTBEAT)
         print("Sent heartbeat!")
@@ -417,7 +426,10 @@ class PredictionResponse():
         ----------
         output : string
         """
-        output = unicode(output, "utf-8").encode("utf-8")
+        if not isinstance(output, str):
+            output = unicode(output, "utf-8").encode("utf-8")
+        else:
+            output = output.encode('utf-8')
         output_len = len(output)
         struct.pack_into("<I", PredictionResponse.output_buffer,
                          self.current_output_sizes_position, output_len)
@@ -427,7 +439,10 @@ class PredictionResponse():
         self.string_content_end_position += output_len
 
     def send(self, socket, event_history):
-        socket.send("", flags=zmq.SNDMORE)
+        if sys.version_info < (3, 0):
+            socket.send("", flags=zmq.SNDMORE)
+        else:
+            socket.send_string("", flags=zmq.SNDMORE)
         socket.send(
             struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT),
             flags=zmq.SNDMORE)

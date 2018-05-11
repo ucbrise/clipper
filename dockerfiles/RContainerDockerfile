@@ -4,7 +4,8 @@ FROM r-base:3.4.4
 
 LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
-RUN apt-get update && apt-get --yes install git libzmq3-dev libtool libtool-bin libsodium-dev pkg-config build-essential autoconf automake
+RUN apt-get update && apt-get --yes install git libzmq3-dev libtool \
+			libtool-bin libsodium-dev pkg-config build-essential autoconf automake
 
 RUN wget http://download.zeromq.org/zeromq-4.1.4.tar.gz && tar -xvf zeromq-4.1.4.tar.gz
 
