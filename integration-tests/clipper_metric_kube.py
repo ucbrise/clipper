@@ -74,7 +74,7 @@ def deploy_model(clipper_conn, name, link=False):
 
     if not success:
         raise BenchmarkException("Error querying APP %s, MODEL %s:%d" %
-                                 (app_name, model_name, version))
+                                 (app_name, model_name, 1))
 
 
 def create_and_test_app(clipper_conn, name):
@@ -140,8 +140,8 @@ if __name__ == "__main__":
     try:
         clipper_conn = create_kubernetes_connection(
             cleanup=True, start_clipper=True)
-        time.sleep(10)
-        print(clipper_conn.cm.get_query_addr())
+        time.sleep(60)
+        logger.info(clipper_conn.cm.get_query_addr())
         try:
             create_and_test_app(clipper_conn, "kube-metric")
 
@@ -163,13 +163,14 @@ if __name__ == "__main__":
                     check_target_health(metric_api_addr)
                     retry_count = 0
                 except AssertionError as e:
-                    print("Exception noted. Will retry again in 60 seconds.")
-                    print(e)
+                    logger.info(
+                        "Exception noted. Will retry again in 60 seconds.")
+                    logger.info(e)
                     retry_count -= 1
                     if retry_count == 0:  # a.k.a. the last retry
                         raise e
                     else:
-                        time.sleep(69)
+                        time.sleep(60)
                         pass  # try again.
 
             logger.info("Test 1 Passed")
@@ -194,16 +195,21 @@ if __name__ == "__main__":
             shutil.rmtree(tmp_log_dir)
             log_clipper_state(clipper_conn)
             logger.info("SUCCESS")
-            clipper_conn.stop_all()
+            create_kubernetes_connection(
+                cleanup=True, start_clipper=False, connect=False)
+            logger.info("EXITING")
+            os._exit(0)
         except BenchmarkException as e:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
-            create_kubernetes_connection(cleanup=True, start_clipper=False)
+            create_kubernetes_connection(
+                cleanup=True, start_clipper=False, connect=False)
             sys.exit(1)
         except ClipperException as e:
             log_clipper_state(clipper_conn)
             logger.exception("ClipperException")
-            create_kubernetes_connection(cleanup=True, start_clipper=False)
+            create_kubernetes_connection(
+                cleanup=True, start_clipper=False, connect=False)
             sys.exit(1)
     except Exception as e:
         logger.exception("Exception: {}".format(e))

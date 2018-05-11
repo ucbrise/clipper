@@ -4,6 +4,9 @@ set -e
 set -u
 set -o pipefail
 
+
+run_all=$1
+
 function clean_up {
     # Clean up credentials
     rm $KUBECONFIG
@@ -45,6 +48,12 @@ python $DIR/construct_kube_config.py $KUBECONFIG
 
 # Test K8s cluster access
 kubectl get nodes
+# Set kubectl proxy for k8s tests later
+kubectl proxy --port 8080 &
 
-$DIR/check_format.sh
-$DIR/run_unittests.sh
+if [[ $run_all = "true" ]]; then
+    $DIR/check_format.sh
+    $DIR/run_unittests.sh
+else
+    $DIR/run_unittests.sh -i
+fi

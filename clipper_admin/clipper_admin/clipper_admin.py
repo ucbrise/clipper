@@ -10,10 +10,19 @@ import time
 import re
 import os
 import tarfile
-import six
+import sys
 from cloudpickle import CloudPickler
 import pickle
 import numpy as np
+if sys.version_info < (3, 0):
+    try:
+        from cStringIO import StringIO
+    except ImportError:
+        from StringIO import StringIO
+    PY3 = False
+else:
+    from io import BytesIO as StringIO
+    PY3 = True
 
 from .container_manager import CONTAINERLESS_MODEL_IMAGE
 from .exceptions import ClipperException, UnconnectedException
@@ -107,9 +116,11 @@ class ClipperConnection(object):
                 try:
                     url = "http://{host}/metrics".format(
                         host=self.cm.get_query_addr())
-                    requests.get(url, timeout=5)
+                    r = requests.get(url, timeout=5)
+                    if r.status_code != requests.codes.ok:
+                        raise RequestException
                     break
-                except RequestException as e:
+                except RequestException:
                     logger.info("Clipper still initializing.")
                     time.sleep(1)
             logger.info("Clipper is running")
@@ -267,8 +278,8 @@ class ClipperConnection(object):
 
         This method does two things.
 
-        1. Builds a new Docker image from the provided base image with the local directory specified by
-        ``model_data_path`` copied into the image by calling
+        1. Builds a new Docker image from the provided base image with the local directory specified
+        by ``model_data_path`` copied into the image by calling
         :py:meth:`clipper_admin.ClipperConnection.build_model`.
 
         2. Registers and deploys a model with the specified metadata using the newly built
@@ -287,8 +298,8 @@ class ClipperConnection(object):
             `User Guide <http://clipper.ai/user_guide/#input-types>`_ for more details
             on picking the right input type for your application.
         model_data_path : str
-            A path to a local directory. The contents of this directory will be recursively copied into the
-            Docker container.
+            A path to a local directory. The contents of this directory will be recursively copied
+            into the Docker container.
         base_image : str
             The base Docker image to build the new model image from. This
             image should contain all code necessary to run a Clipper model
@@ -308,8 +319,8 @@ class ClipperConnection(object):
             The user-defined query batch size for the model. Replicas of the model will attempt
             to process at most `batch_size` queries simultaneously. They may process smaller
             batches if `batch_size` queries are not immediately available.
-            If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
-            replicas of this model.
+            If the default value of -1 is used, Clipper will adaptively calculate the batch size for
+            individual replicas of this model.
         pkgs_to_install : list (of strings), optional
             A list of the names of packages to install, using pip, in the container.
             The names must be strings.
@@ -335,16 +346,16 @@ class ClipperConnection(object):
                     pkgs_to_install=None):
         """Build a new model container Docker image with the provided data"
 
-        This method builds a new Docker image from the provided base image with the local directory specified by
-        ``model_data_path`` copied into the image. The Dockerfile that gets generated to build the image
-        is equivalent to the following::
+        This method builds a new Docker image from the provided base image with the local directory
+        specified by ``model_data_path`` copied into the image. The Dockerfile that gets generated
+        to build the image is equivalent to the following::
 
             FROM <base_image>
             COPY <model_data_path> /model/
 
-        The newly built image is then pushed to the specified container registry. If no container registry
-        is specified, the image will be pushed to the default DockerHub registry. Clipper will tag the
-        newly built image with the tag [<registry>]/<name>:<version>.
+        The newly built image is then pushed to the specified container registry. If no container
+        registry is specified, the image will be pushed to the default DockerHub registry. Clipper
+        will tag the newly built image with the tag [<registry>]/<name>:<version>.
 
         This method can be called without being connected to a Clipper cluster.
 
@@ -356,8 +367,8 @@ class ClipperConnection(object):
             The version to assign this model. Versions must be unique on a per-model
             basis, but may be re-used across different models.
         model_data_path : str
-            A path to a local directory. The contents of this directory will be recursively copied into the
-            Docker container.
+            A path to a local directory. The contents of this directory will be recursively copied
+            into the Docker container.
         base_image : str
             The base Docker image to build the new model image from. This
             image should contain all code necessary to run a Clipper model
@@ -403,17 +414,31 @@ class ClipperConnection(object):
                     fileobj=context_file, mode="w") as context_tar:
                 context_tar.add(model_data_path)
                 # From https://stackoverflow.com/a/740854/814642
-                df_contents = six.StringIO(
-                    "FROM {container_name}\nCOPY {data_path} /model/\n{run_command}\n".
-                    format(
-                        container_name=base_image,
-                        data_path=model_data_path,
-                        run_command=run_cmd))
-                df_tarinfo = tarfile.TarInfo('Dockerfile')
-                df_contents.seek(0, os.SEEK_END)
-                df_tarinfo.size = df_contents.tell()
-                df_contents.seek(0)
-                context_tar.addfile(df_tarinfo, df_contents)
+                try:
+                    df_contents = StringIO(
+                        str.encode(
+                            "FROM {container_name}\nCOPY {data_path} /model/\n{run_command}\n".
+                            format(
+                                container_name=base_image,
+                                data_path=model_data_path,
+                                run_command=run_cmd)))
+                    df_tarinfo = tarfile.TarInfo('Dockerfile')
+                    df_contents.seek(0, os.SEEK_END)
+                    df_tarinfo.size = df_contents.tell()
+                    df_contents.seek(0)
+                    context_tar.addfile(df_tarinfo, df_contents)
+                except TypeError:
+                    df_contents = StringIO(
+                        "FROM {container_name}\nCOPY {data_path} /model/\n{run_command}\n".
+                        format(
+                            container_name=base_image,
+                            data_path=model_data_path,
+                            run_command=run_cmd))
+                    df_tarinfo = tarfile.TarInfo('Dockerfile')
+                    df_contents.seek(0, os.SEEK_END)
+                    df_tarinfo.size = df_contents.tell()
+                    df_contents.seek(0)
+                    context_tar.addfile(df_tarinfo, df_contents)
             # Exit Tarfile context manager to finish the tar file
             # Seek back to beginning of file for reading
             context_file.seek(0)
@@ -425,11 +450,14 @@ class ClipperConnection(object):
             logger.info(
                 "Building model Docker image with model data from {}".format(
                     model_data_path))
-            docker_client.images.build(
+            image_result, build_logs = docker_client.images.build(
                 fileobj=context_file, custom_context=True, tag=image)
+            for b in build_logs:
+                logger.info(b)
 
         logger.info("Pushing model Docker image to {}".format(image))
-        docker_client.images.push(repository=image)
+        for line in docker_client.images.push(repository=image, stream=True):
+            logger.debug(line)
         return image
 
     def deploy_model(self,
@@ -450,12 +478,14 @@ class ClipperConnection(object):
         depends on your choice of ``ContainerManager`` implementation.
 
         2. It registers the model and version with Clipper and sets the current version of the
-        model to this version by internally calling :py:meth:`clipper_admin.ClipperConnection.register_model`.
+        model to this version by internally calling
+        :py:meth:`clipper_admin.ClipperConnection.register_model`.
 
         Notes
         -----
-        If you want to deploy a model in some other way (e.g. a model that cannot run in a Docker container for
-        some reason), you can start the model manually or with an external tool and call ``register_model`` directly.
+        If you want to deploy a model in some other way (e.g. a model that cannot run in a Docker
+        container for some reason), you can start the model manually or with an external tool and
+        call ``register_model`` directly.
 
         Parameters
         ----------
@@ -487,8 +517,8 @@ class ClipperConnection(object):
             The user-defined query batch size for the model. Replicas of the model will attempt
             to process at most `batch_size` queries simultaneously. They may process smaller
             batches if `batch_size` queries are not immediately available.
-            If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
-            replicas of this model.
+            If the default value of -1 is used, Clipper will adaptively calculate the batch size for
+            individual replicas of this model.
 
         Raises
         ------
@@ -562,8 +592,8 @@ class ClipperConnection(object):
             The user-defined query batch size for the model. Replicas of the model will attempt
             to process at most `batch_size` queries simultaneously. They may process smaller
             batches if `batch_size` queries are not immediately available.
-            If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
-            replicas of this model.
+            If the default value of -1 is used, Clipper will adaptively calculate the batch size for
+            individual replicas of this model.
 
         Raises
         ------
@@ -1221,19 +1251,21 @@ class ClipperConnection(object):
         """Stops all processes that were started via Clipper admin commands.
 
         This includes the query and management frontend Docker containers and all model containers.
-        If you started Redis independently, this will not affect Redis. It can also be called without calling
-        ``connect`` first.
+        If you started Redis independently, this will not affect Redis. It can also be called
+        without calling ``connect`` first.
         """
         self.cm.stop_all()
         logger.info("Stopped all Clipper cluster and all model containers")
 
     def test_predict_function(self, query, func, input_type):
-        """Tests that the user's function has the correct signature and can be properly saved and loaded.
+        """Tests that the user's function has the correct signature and can be properly saved and
+        loaded.
 
-        The function should take a dict request object like the query frontend expects JSON, 
+        The function should take a dict request object like the query frontend expects JSON,
         the predict function, and the input type for the model.
 
-        For example, the function can be called like: clipper_conn.test_predict_function({"input": [1.0, 2.0, 3.0]}, predict_func, "doubles")
+        For example, the function can be called like:
+            clipper_conn.test_predict_function({"input": [1.0, 2.0, 3.0]}, predict_func, "doubles")
 
         Parameters
         ----------
@@ -1257,7 +1289,7 @@ class ClipperConnection(object):
             flattened_data = [
                 item for sublist in query_data for item in sublist
             ]
-        except TypeError as e:
+        except TypeError:
             return "Invalid input type or JSON key"
 
         numpy_data = None
@@ -1289,7 +1321,7 @@ class ClipperConnection(object):
                 if type(x) != str:
                     return "Invalid input type"
 
-        s = six.StringIO()
+        s = StringIO()
         c = CloudPickler(s, 2)
         c.dump(func)
         serialized_func = s.getvalue()
@@ -1297,7 +1329,7 @@ class ClipperConnection(object):
 
         try:
             assert reloaded_func
-        except AssertionError as e:
+        except AssertionError:
             logger.error("Function does not properly serialize and reload")
             return "Function does not properly serialize and reload"
 
