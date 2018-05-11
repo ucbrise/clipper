@@ -332,55 +332,9 @@ class RequestHandler {
         std::shared_ptr<HttpServer::Response> response,
         std::shared_ptr<HttpServer::Request> request) {
       try {
-        rapidjson::Document d;
-        clipper::json::parse_json(request->content.string(), d);
-        std::vector<VersionedModelId> versioned_models = {};
-        std::vector<std::string> linked_models =
-            get_linked_models_for_app(name);
-        if (d.HasMember("version")) {
-          std::string requested_version =
-              clipper::json::get_string(d, "version");
-          if (linked_models.size() > 1) {
-            std::stringstream ss;
-            ss << "Too many models linked to application " << name;
-            throw clipper::PredictError(ss.str());
-          }
-          // NOTE: This implementation assumes that there is only model per
-          // application, and therefore the version provided by the user
-          // unambiguously applies to that model.
-          for (auto m : linked_models) {
-            std::vector<std::string> registered_versions =
-                clipper::redis::get_model_versions(redis_connection_, m);
-            for (auto v : registered_versions) {
-              if (v.compare(requested_version)) {
-                versioned_models = {
-                    clipper::VersionedModelId(m, requested_version)};
-                break;
-              }
-              if (versioned_models.empty()) {
-                throw version_id_error(
-                    "Requested model version does not exist.");
-              }
-            }
-            // There should be at most one linked model to this application, so
-            // we break here.
-            break;
-          }
-        } else {
-          {
-            std::unique_lock<std::mutex> l(current_model_versions_mutex_);
-            for (auto m : linked_models) {
-              auto version = current_model_versions_.find(m);
-              if (version != current_model_versions_.end()) {
-                versioned_models.emplace_back(m, version->second);
-              }
-            }
-          }
-        }
-
         folly::Future<std::vector<folly::Try<Response>>> predictions =
-            decode_and_handle_predict(std::move(d), name, versioned_models,
-                                      policy, latency_slo_micros, input_type);
+            decode_and_handle_predict(request->content.string(), name, policy,
+                                      latency_slo_micros, input_type);
 
         predictions
             .then([response,
@@ -593,17 +547,59 @@ class RequestHandler {
   }
 
   folly::Future<std::vector<folly::Try<Response>>> decode_and_handle_predict(
-      rapidjson::Document d, std::string name,
-      std::vector<VersionedModelId> models, std::string policy,
+      std::string content, std::string name, std::string policy,
       long latency_slo_micros, InputType input_type) {
+    rapidjson::Document d;
+    clipper::json::parse_json(content, d);
+    std::vector<VersionedModelId> versioned_models = {};
+    std::vector<std::string> linked_models = get_linked_models_for_app(name);
+    if (d.HasMember("version")) {
+      std::string requested_version = clipper::json::get_string(d, "version");
+      if (linked_models.size() > 1) {
+        std::stringstream ss;
+        ss << "Too many models linked to application " << name;
+        throw clipper::PredictError(ss.str());
+      }
+      // NOTE: This implementation assumes that there is only model per
+      // application, and therefore the version provided by the user
+      // unambiguously applies to that model.
+      for (auto m : linked_models) {
+        std::vector<std::string> registered_versions =
+            clipper::redis::get_model_versions(redis_connection_, m);
+        for (auto v : registered_versions) {
+          if (v.compare(requested_version)) {
+            versioned_models = {
+                clipper::VersionedModelId(m, requested_version)};
+            break;
+          }
+          if (versioned_models.empty()) {
+            throw version_id_error("Requested model version does not exist.");
+          }
+        }
+        // There should be at most one linked model to this application, so
+        // we break here.
+        break;
+      }
+    } else {
+      {
+        std::unique_lock<std::mutex> l(current_model_versions_mutex_);
+        for (auto m : linked_models) {
+          auto version = current_model_versions_.find(m);
+          if (version != current_model_versions_.end()) {
+            versioned_models.emplace_back(m, version->second);
+          }
+        }
+      }
+    }
+
     long uid = 0;
 
     std::vector<std::shared_ptr<Input>> input_batch =
         clipper::json::parse_input(input_type, d);
     std::vector<folly::Future<Response>> predictions;
     for (auto input : input_batch) {
-      auto prediction = query_processor_.predict(
-          Query{name, uid, input, latency_slo_micros, policy, models});
+      auto prediction = query_processor_.predict(Query{
+          name, uid, input, latency_slo_micros, policy, versioned_models});
       predictions.push_back(std::move(prediction));
     }
     return folly::collectAll(predictions);

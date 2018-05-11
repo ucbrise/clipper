@@ -492,8 +492,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         time.sleep(60)
 
         addr = self.clipper_conn.get_query_addr()
-        url = "http://{addr}/{app}/predict".format(
-            addr=addr, app=app_name)
+        url = "http://{addr}/{app}/predict".format(addr=addr, app=app_name)
 
         headers = {"Content-type": "application/json"}
         test_input = [1.0, 2.0, 3.0]
@@ -509,7 +508,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertFalse(pred1["default"])
         self.assertEqual(pred1['output'], 1)
 
-        pred2 = requests.post(url, headers=headers, data=json.dumps({
+        pred2 = requests.post(
+            url, headers=headers, data=json.dumps({
                 "input": test_input
             })).json()
 
