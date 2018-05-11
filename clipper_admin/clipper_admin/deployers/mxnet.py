@@ -3,8 +3,10 @@ import shutil
 import logging
 import os
 import json
+import sys
 
 from ..version import __version__
+from ..exceptions import ClipperException
 from .deployer_utils import save_python_function
 
 logger = logging.getLogger(__name__)
@@ -24,7 +26,7 @@ def create_endpoint(
         slo_micros=3000000,
         labels=None,
         registry=None,
-        base_image="clipper/mxnet-container:{}".format(__version__),
+        base_image="default",
         num_replicas=1,
         batch_size=-1,
         pkgs_to_install=None):
@@ -121,7 +123,7 @@ def deploy_mxnet_model(
         func,
         mxnet_model,
         mxnet_data_shapes,
-        base_image="clipper/mxnet-container:{}".format(__version__),
+        base_image="default",
         labels=None,
         registry=None,
         num_replicas=1,
@@ -244,6 +246,33 @@ def deploy_mxnet_model(
                 "w") as f:
             json.dump({"data_shapes": mxnet_data_shapes}, f)
 
+        logger.info("MXNet model saved")
+
+        py_minor_version = (sys.version_info.major, sys.version_info.minor)
+        # Check if Python 2 or Python 3 image
+        if base_image == "default":
+            if py_minor_version < (3, 0):
+                logger.info("Using Python 2 base image")
+                base_image = "clipper/mxnet-container:{}".format(
+                    __version__)
+            elif py_minor_version == (3, 5):
+                logger.info("Using Python 3.5 base image")
+                base_image = "clipper/mxnet35-container:{}".format(
+                    __version__)
+            elif py_minor_version == (3, 6):
+                logger.info("Using Python 3.6 base image")
+                base_image = "clipper/mxnet36-container:{}".format(
+                    __version__)
+            else:
+                msg = (
+                    "MXNet deployer only supports Python 2.7, 3.5, and 3.6. "
+                    "Detected {major}.{minor}").format(
+                        major=sys.version_info.major, minor=sys.version_info.minor)
+                logger.error(msg)
+                # Remove temp files
+                shutil.rmtree(serialization_dir)
+                raise ClipperException(msg)
+
         # Deploy model
         clipper_conn.build_and_deploy_model(
             name, version, input_type, serialization_dir, base_image, labels,
@@ -251,8 +280,7 @@ def deploy_mxnet_model(
 
     except Exception as e:
         logger.error("Error saving MXNet model: %s" % e)
-
-    logger.info("MXNet model saved")
+        raise e
 
     # Remove temp files
     shutil.rmtree(serialization_dir)

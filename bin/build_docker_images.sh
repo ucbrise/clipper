@@ -202,9 +202,16 @@ create_image () {
 
     local public=$3        # Push the built images to Docker Hub under
                             # the clipper namespace. Must have credentials.
+
+    if [ "$#" -eq 4 ]; then
+      local rpc_version="--build-arg RPC_VERSION=$4"
+    else
+      local rpc_version=""
+    fi
+
                      
     echo "Building $namespace/$image:$sha_tag from file $dockerfile"
-    time docker build --build-arg CODE_VERSION=$sha_tag -t $namespace/$image:$sha_tag \
+    time docker build --build-arg CODE_VERSION=$sha_tag $rpc_version -t $namespace/$image:$sha_tag \
         -f dockerfiles/$dockerfile $CLIPPER_ROOT
     docker tag $namespace/$image:$sha_tag $namespace/$image:$version_tag
 
@@ -258,17 +265,34 @@ build_images () {
     create_image py-rpc Py2RPCDockerfile $public
     create_image py35-rpc Py35RPCDockerfile $public
     create_image py36-rpc Py36RPCDockerfile $public
+
     create_image sum-container SumDockerfile  $private
     create_image noop-container NoopDockerfile $public
-    create_image python-closure-container PyClosureContainerDockerfile $public
-    create_image python35-closure-container Py35ClosureContainerDockerfile $public
-    create_image python36-closure-container Py36ClosureContainerDockerfile $public
-    create_image pyspark-container PySparkContainerDockerfile $public
-    create_image tf-container TensorFlowDockerfile $public
-    create_image pytorch-container PyTorchContainerDockerfile $public
+
+    create_image python-closure-container PyClosureContainerDockerfile $public py
+    create_image python35-closure-container PyClosureContainerDockerfile $public py35
+    create_image python36-closure-container PyClosureContainerDockerfile $public py36
+
+    create_image pyspark-container PySparkContainerDockerfile $public py
+    create_image pyspark35-container PySparkContainerDockerfile $public py35
+    create_image pyspark36-container PySparkContainerDockerfile $public py36
+
+    create_image tf-container TensorFlowDockerfile $public py
+    create_image tf35-container TensorFlowDockerfile $public py35
+    create_image tf36-container TensorFlowDockerfile $public py36
+
+    create_image pytorch-container PyTorchContainerDockerfile $public py
+    create_image pytorch35-container PyTorchContainerDockerfile $public py35
+    create_image pytorch36-container PyTorchContainerDockerfile $public py36
+
     # See issue #475
-    # create_image caffe2-onnx-container Caffe2OnnxDockerfile $public
-    create_image mxnet-container MXNetContainerDockerfile $public
+    # create_image caffe2-onnx-container Caffe2OnnxDockerfile $public py
+    # create_image caffe235-onnx-container Caffe2OnnxDockerfile $public py35
+    # create_image caffe236-onnx-container Caffe2OnnxDockerfile $public py36
+
+    create_image mxnet-container MXNetContainerDockerfile $public py
+    create_image mxnet35-container MXNetContainerDockerfile $public py35
+    create_image mxnet36-container MXNetContainerDockerfile $public py36
 
     # Build Metric Monitor image - no dependency
     create_image frontend-exporter FrontendExporterDockerfile $public
