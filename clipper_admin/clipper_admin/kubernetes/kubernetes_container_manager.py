@@ -2,8 +2,8 @@ from __future__ import absolute_import, division, print_function
 from ..container_manager import (
     create_model_container_label, ContainerManager, CLIPPER_DOCKER_LABEL,
     CLIPPER_MODEL_CONTAINER_LABEL, CLIPPER_QUERY_FRONTEND_ID_LABEL,
-    CLIPPER_INTERNAL_MANAGEMENT_PORT,
-    CLIPPER_INTERNAL_QUERY_PORT, CLIPPER_INTERNAL_METRIC_PORT)
+    CLIPPER_INTERNAL_MANAGEMENT_PORT, CLIPPER_INTERNAL_QUERY_PORT,
+    CLIPPER_INTERNAL_METRIC_PORT)
 from ..exceptions import ClipperException
 from .kubernetes_metric_utils import start_prometheus, CLIPPER_FRONTEND_EXPORTER_IMAGE
 

@@ -112,29 +112,35 @@ if __name__ == "__main__":
 
             k8s_beta = clipper_conn.cm._k8s_beta
             if (k8s_beta.read_namespaced_deployment(
-                'query-frontend-0',
-                namespace='default').to_dict()['status']['available_replicas'] != 1):
-                raise BenchmarkException("Wrong number of replicas of query-frontend-0."
-                                         "Expected {}, found {}".format(
-                                             1, k8s_beta.read_namespaced_deployment(
-                                                 'query-frontend-0',
-                                                 namespace='default').to_dict()['status']['available_replicas']))
+                    'query-frontend-0', namespace='default').to_dict()
+                ['status']['available_replicas'] != 1):
+                raise BenchmarkException(
+                    "Wrong number of replicas of query-frontend-0."
+                    "Expected {}, found {}".format(
+                        1,
+                        k8s_beta.read_namespaced_deployment(
+                            'query-frontend-0', namespace='default').to_dict()[
+                                'status']['available_replicas']))
             if (k8s_beta.read_namespaced_deployment(
-                'query-frontend-1',
-                namespace='default').to_dict()['status']['available_replicas'] != 1):
-                raise BenchmarkException("Wrong number of replicas of query-frontend-1."
-                                         "Expected {}, found {}".format(
-                                             1, k8s_beta.read_namespaced_deployment(
-                                                 'query-frontend-1',
-                                                 namespace='default').to_dict()['status']['available_replicas']))
+                    'query-frontend-1', namespace='default').to_dict()
+                ['status']['available_replicas'] != 1):
+                raise BenchmarkException(
+                    "Wrong number of replicas of query-frontend-1."
+                    "Expected {}, found {}".format(
+                        1,
+                        k8s_beta.read_namespaced_deployment(
+                            'query-frontend-1', namespace='default').to_dict()[
+                                'status']['available_replicas']))
             logger.info("Ok: we have 2 query frontend depolyments")
 
             k8s_v1 = clipper_conn.cm._k8s_v1
             svc_lists = k8s_v1.list_namespaced_service(
                 namespace='default').to_dict()['items']
             svc_names = [svc['metadata']['name'] for svc in svc_lists]
-            if not ('query-frontend-0' in svc_names and 'query-frontend-1' in svc_names):
-                raise BenchmarkException("Error creating query frontend RPC services")
+            if not ('query-frontend-0' in svc_names
+                    and 'query-frontend-1' in svc_names):
+                raise BenchmarkException(
+                    "Error creating query frontend RPC services")
             logger.info("Ok: we have 2 query-frontend rpc services")
 
             if not os.path.exists(CLIPPER_TEMP_DIR):
