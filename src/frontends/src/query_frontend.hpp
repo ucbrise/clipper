@@ -335,25 +335,41 @@ class RequestHandler {
         rapidjson::Document d;
         clipper::json::parse_json(request->content.string(), d);
         std::vector<VersionedModelId> versioned_models = {};
-        std::vector<std::string> models;
+        std::vector<std::string> linked_models =
+            get_linked_models_for_app(name);
         if (d.HasMember("version")) {
-          std::string version = clipper::json::get_string(d, "version");
-          models = clipper::redis::get_model_versions(redis_connection_, name);
-          std::unique_lock<std::mutex> l(current_model_versions_mutex_);
-          for (auto m : models) {
-            if (m.compare(version) == 1) {
-              versioned_models = {clipper::VersionedModelId(name, m)};
-              break;
+          std::string requested_version =
+              clipper::json::get_string(d, "version");
+          if (linked_models.size() > 1) {
+            std::stringstream ss;
+            ss << "Too many models linked to application " << name;
+            throw clipper::PredictError(ss.str());
+          }
+          // NOTE: This implementation assumes that there is only model per
+          // application, and therefore the version provided by the user
+          // unambiguously applies to that model.
+          for (auto m : linked_models) {
+            std::vector<std::string> registered_versions =
+                clipper::redis::get_model_versions(redis_connection_, m);
+            for (auto v : registered_versions) {
+              if (v.compare(requested_version)) {
+                versioned_models = {
+                    clipper::VersionedModelId(m, requested_version)};
+                break;
+              }
+              if (versioned_models.empty()) {
+                throw version_id_error(
+                    "Requested model version does not exist.");
+              }
             }
-            if (versioned_models.empty()) {
-              throw version_id_error("Requested model does not exist.");
-            }
+            // There should be at most one linked model to this application, so
+            // we break here.
+            break;
           }
         } else {
-          models = get_linked_models_for_app(name);
           {
             std::unique_lock<std::mutex> l(current_model_versions_mutex_);
-            for (auto m : models) {
+            for (auto m : linked_models) {
               auto version = current_model_versions_.find(m);
               if (version != current_model_versions_.end()) {
                 versioned_models.emplace_back(m, version->second);

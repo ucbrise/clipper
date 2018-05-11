@@ -449,35 +449,24 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
 
         headers = {"Content-type": "application/json"}
         test_input = [1.0, 2.0, 3.0]
-        num_tries = 0
-        received_non_default_pred = False
-        while num_tries < 20:
-            pred = requests.post(
-                url,
-                headers=headers,
-                data=json.dumps({
-                    "input": test_input,
-                    "version": "v1"
-                })).json()
-            if pred["default"]:
-                logger.info(pred)
-                num_tries += 1
-                time.sleep(10)
-            else:
-                self.assertEqual(pred['output'], "1")
-                received_non_default_pred = True
-                break
 
-        self.assertTrue(received_non_default_pred)
+        pred1 = requests.post(
+            url,
+            headers=headers,
+            data=json.dumps({
+                "input": test_input,
+                "version": "v1"
+            })).json()
 
+        self.assertFalse(pred1["default"])
+        self.assertEqual(pred1['output'], 1)
 
-        # pred2 = requests.post(url, headers=headers, data=json.dumps({
-        #         "input": test_input
-        #     })).json()
-        #
-        #
-        # self.assertFalse(pred2["default"])
-        # self.assertEqual(pred2['output'], "2")
+        pred2 = requests.post(url, headers=headers, data=json.dumps({
+                "input": test_input
+            })).json()
+
+        self.assertFalse(pred2["default"])
+        self.assertEqual(pred2['output'], 2)
 
 
 
@@ -659,8 +648,6 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
     def test_remove_inactive_container(self):
         container_name = "clipper/noop-container:{}".format(clipper_version)
-        input_type = "doubles"
-        model_name = "remove-inactive-test-model"
         self.clipper_conn.build_and_deploy_model(
             self.model_name_5,
             1,
@@ -677,9 +664,8 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         self.clipper_conn.link_model_to_app(self.app_name_5, self.model_name_5)
         time.sleep(30)
 
-        #we now have 2 replicas running, both the same Model Name and Version
-
-        #send predictions, assert that we are getting correct response
+        # We now have 2 replicas running, both the same model name and Version
+        # send predictions, assert that we are getting correct response
 
         addr = self.clipper_conn.get_query_addr()
         test_input = [101.1, 99.5, 107.2]
@@ -695,7 +681,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
             #print(result["default_explanation"])
             self.assertEqual(result["default"], False)
 
-        #1 of the containers should go inactive
+        # one of the containers should go inactive
 
         self.clipper_conn.set_num_replicas(
             name=self.model_name_5, version=1, num_replicas=1)
@@ -745,30 +731,30 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
 
 SHORT_TEST_ORDERING = [
-    # 'test_register_model_correct', 'test_register_application_correct',
-    # 'test_link_not_registered_model_to_app_fails',
-    # 'test_get_model_links_when_none_exist_returns_empty_list',
-    # 'test_link_registered_model_to_app_succeeds',
-    # 'get_app_info_for_registered_app_returns_info_dictionary',
-    # 'get_app_info_for_nonexistent_app_returns_none',
-    # 'test_set_num_replicas_for_external_model_fails',
-    # 'test_model_version_sets_correctly', 'test_get_logs_creates_log_files',
-    # 'test_inspect_instance_returns_json_dict',
-    # 'test_model_deploys_successfully',
-    # 'test_set_num_replicas_for_deployed_model_succeeds',
-    # 'test_remove_inactive_containers_succeeds', 'test_stop_models',
-    # 'test_python_closure_deploys_successfully', 'test_register_py_endpoint',
-    # 'test_test_predict_function', 'test_delete_application_correct',
+    'test_register_model_correct', 'test_register_application_correct',
+    'test_link_not_registered_model_to_app_fails',
+    'test_get_model_links_when_none_exist_returns_empty_list',
+    'test_link_registered_model_to_app_succeeds',
+    'get_app_info_for_registered_app_returns_info_dictionary',
+    'get_app_info_for_nonexistent_app_returns_none',
+    'test_set_num_replicas_for_external_model_fails',
+    'test_model_version_sets_correctly', 'test_get_logs_creates_log_files',
+    'test_inspect_instance_returns_json_dict',
+    'test_model_deploys_successfully',
+    'test_set_num_replicas_for_deployed_model_succeeds',
+    'test_remove_inactive_containers_succeeds', 'test_stop_models',
+    'test_python_closure_deploys_successfully', 'test_register_py_endpoint',
+    'test_test_predict_function', 'test_delete_application_correct',
     'test_query_specific_model_version'
 ]
 
 LONG_TEST_ORDERING = [
-    # 'test_remove_inactive_container',
-    # 'test_unlinked_app_returns_default_predictions',
-    # 'test_deployed_model_queried_successfully',
-    # 'test_batch_queries_returned_successfully',
+    'test_remove_inactive_container',
+    'test_unlinked_app_returns_default_predictions',
+    'test_deployed_model_queried_successfully',
+    'test_batch_queries_returned_successfully',
     'test_deployed_python_closure_queried_successfully',
-    # 'test_fixed_batch_size_model_processes_specified_query_batch_size_when_saturated'
+    'test_fixed_batch_size_model_processes_specified_query_batch_size_when_saturated'
 ]
 
 if __name__ == '__main__':
