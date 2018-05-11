@@ -197,7 +197,8 @@ if __name__ == "__main__":
             logger.info("SUCCESS")
             create_kubernetes_connection(
                 cleanup=True, start_clipper=False, connect=False)
-            sys.exit(0)
+            logger.info("EXITING")
+            os._exit(0)
         except BenchmarkException as e:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
