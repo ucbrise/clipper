@@ -29,25 +29,25 @@ def write_config(dest_path):
         'Config',
         'preferences': {},
         'current-context':
-        'cluster.clipper-k8s-testing.com',
+        'jenkins.clipper-k8s-testing.com',
         'contexts': [{
-            'name': 'cluster.clipper-k8s-testing.com',
+            'name': 'jenkins.clipper-k8s-testing.com',
             'context': {
-                'cluster': 'cluster.clipper-k8s-testing.com',
-                'user': 'cluster.clipper-k8s-testing.com'
+                'cluster': 'jenkins.clipper-k8s-testing.com',
+                'user': 'jenkins.clipper-k8s-testing.com'
             }
         }],
         'clusters': [{
             'cluster': {
                 'certificate-authority-data': cert_auth_data,
-                'server': 'https://api.cluster.clipper-k8s-testing.com'
+                'server': 'https://api.jenkins.clipper-k8s-testing.com'
             },
-            'name': 'cluster.clipper-k8s-testing.com'
+            'name': 'jenkins.clipper-k8s-testing.com'
         }],
         'apiVersion':
         'v1',
         'users': [{
-            'name': 'cluster.clipper-k8s-testing.com',
+            'name': 'jenkins.clipper-k8s-testing.com',
             'user': {
                 'username': 'admin',
                 'password': pw_data,
@@ -55,7 +55,7 @@ def write_config(dest_path):
                 'client-certificate-data': client_cert_data
             }
         }, {
-            'name': 'cluster.clipper-k8s-testing.com-basic-auth',
+            'name': 'jenkins.clipper-k8s-testing.com-basic-auth',
             'user': {
                 'username': 'admin',
                 'password': pw_data

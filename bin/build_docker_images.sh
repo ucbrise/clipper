@@ -245,17 +245,24 @@ build_images () {
     create_image query_frontend QueryFrontendDockerfile $public
     create_image management_frontend ManagementFrontendDockerfile $public
     create_image dev ClipperDevDockerfile  $public
+    create_image py35-dev ClipperPy35DevDockerfile  $public
     create_image unittests ClipperTestsDockerfile  $private
+    create_image py35tests ClipperPy35TestsDockerfile  $private
 
-    # Build containers
+
+    # Build containers for other languages
     create_image spark-scala-container SparkScalaContainerDockerfile $public
     create_image r-container-base RContainerDockerfile $public
 
     # First build Python base image
     create_image py-rpc Py2RPCDockerfile $public
+    create_image py35-rpc Py35RPCDockerfile $public
+    create_image py36-rpc Py36RPCDockerfile $public
     create_image sum-container SumDockerfile  $private
     create_image noop-container NoopDockerfile $public
     create_image python-closure-container PyClosureContainerDockerfile $public
+    create_image python35-closure-container Py35ClosureContainerDockerfile $public
+    create_image python36-closure-container Py36ClosureContainerDockerfile $public
     create_image pyspark-container PySparkContainerDockerfile $public
     create_image tf-container TensorFlowDockerfile $public
     create_image pytorch-container PyTorchContainerDockerfile $public

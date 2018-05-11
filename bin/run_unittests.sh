@@ -35,7 +35,7 @@ function clean_up {
     # echo Killing jobs
     echo Exiting unit tests...
     kill $(jobs -p) &> /dev/null
-    echo
+    echo "Cleanup exit code: $?"
     sleep 2
     # echo Remaining background jobs: $(jobs -l)
     exit
@@ -149,6 +149,8 @@ function run_integration_tests {
   ../integration-tests/r_integration_test/rclipper_test.sh
   python ../integration-tests/clipper_metric_docker.py 
   python ../integration-tests/clipper_metric_kube.py 
+  echo "Exit code: $?"
+  echo "GREPTHIS Done running unit tests"
 }
 
 function run_all_tests {
@@ -178,33 +180,34 @@ else
 fi
 
 case $args in
-    -a | --all )            set_test_environment
-                            run_all_tests
-                            ;;
-    -l | --libclipper )     set_test_environment
-                            run_libclipper_tests
-                            ;;
-    -m | --management )     set_test_environment
-                            run_management_tests
-                            ;;
-    -f | --frontend )       set_test_environment
-                            run_frontend_tests
-                            ;;
-    -j | --jvm-container )  set_test_environment
-                            run_jvm_container_tests
-                            ;;
-    -c | --cpp-container )  set_test_environment
-                            run_cpp_container_tests
-                            ;;
-    -rc | --r-container )   set_test_environment
-                            run_r_container_tests
-                            ;;
-    -r | --rpc-container )  set_test_environment
-                            run_rpc_container_tests
-                            ;;
-    -i | --integration_tests ) run_integration_tests
-                            ;;
-    -h | --help )           usage
-                            ;;
-    * )                     usage
+    -a | --all )                set_test_environment
+                                run_all_tests
+                                ;;
+    -l | --libclipper )         set_test_environment
+                                run_libclipper_tests
+                                ;;
+    -m | --management )         set_test_environment
+                                run_management_tests
+                                ;;
+    -f | --frontend )           set_test_environment
+                                run_frontend_tests
+                                ;;
+    -j | --jvm-container )      set_test_environment
+                                run_jvm_container_tests
+                                ;;
+    -c | --cpp-container )      set_test_environment
+                                run_cpp_container_tests
+                                ;;
+    -rc | --r-container )       set_test_environment
+                                run_r_container_tests
+                                ;;
+    -r | --rpc-container )      set_test_environment
+                                run_rpc_container_tests
+                                ;;
+    -i | --integration_tests )  set_test_environment
+                                run_integration_tests
+                                ;;
+    -h | --help )               usage
+                                ;;
+    * )                         usage
 esac

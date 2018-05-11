@@ -7,7 +7,7 @@ from rpy2.robjects import r, pandas2ri
 from rpy2.robjects.packages import importr
 import rpy2.robjects as ro
 import sys
-if sys.version_info[0] < 3:
+if sys.version_info < (3, 0):
     from StringIO import StringIO
 else:
     from io import StringIO

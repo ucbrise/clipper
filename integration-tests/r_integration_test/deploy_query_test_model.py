@@ -6,7 +6,10 @@ import requests
 import json
 import logging
 import numpy as np
-import subprocess32 as subprocess
+if sys.version_info < (3, 0):
+    import subprocess32 as subprocess
+else:
+    import subprocess
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../../clipper_admin" % cur_dir))

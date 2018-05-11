@@ -11,7 +11,8 @@ import tempfile
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
 from clipper_admin import (ClipperConnection, DockerContainerManager,
-                           KubernetesContainerManager, CLIPPER_TEMP_DIR)
+                           KubernetesContainerManager, CLIPPER_TEMP_DIR,
+                           ClipperException)
 from clipper_admin.container_manager import CLIPPER_DOCKER_LABEL
 from clipper_admin import __version__ as clipper_version
 
@@ -62,7 +63,7 @@ def find_unbound_port():
 
 
 def create_docker_connection(cleanup=True, start_clipper=True):
-    logging.info("Creating DockerContainerManager")
+    logger.info("Creating DockerContainerManager")
     cm = DockerContainerManager(
         clipper_query_port=find_unbound_port(),
         clipper_management_port=find_unbound_port(),
@@ -78,12 +79,12 @@ def create_docker_connection(cleanup=True, start_clipper=True):
         # as described in https://github.com/ucbrise/clipper/issues/352
         while True:
             try:
-                logging.info("Starting Clipper")
+                logger.info("Starting Clipper")
                 cl.start_clipper()
                 time.sleep(1)
                 break
             except docker.errors.APIError as e:
-                logging.info(
+                logger.info(
                     "Problem starting Clipper: {}\nTrying again.".format(e))
                 cl.stop_all()
                 cm = DockerContainerManager(
@@ -99,9 +100,9 @@ def create_docker_connection(cleanup=True, start_clipper=True):
 
 def create_kubernetes_connection(cleanup=True,
                                  start_clipper=True,
+                                 connect=True,
                                  with_proxy=False):
-    logging.info("Creating KubernetesContainerManager")
-
+    logger.info("Creating KubernetesContainerManager")
     if with_proxy:
         cm = KubernetesContainerManager(kubernetes_proxy_addr="127.0.0.1:8080")
     else:
@@ -111,8 +112,9 @@ def create_kubernetes_connection(cleanup=True,
         cl.stop_all()
         # Give kubernetes some time to clean up
         time.sleep(20)
+        logger.info("Done cleaning up clipper")
     if start_clipper:
-        logging.info("Starting Clipper")
+        logger.info("Starting Clipper")
         cl.start_clipper(
             query_frontend_image=
             "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/query_frontend:{}".
@@ -121,12 +123,14 @@ def create_kubernetes_connection(cleanup=True,
             "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/management_frontend:{}".
             format(clipper_version))
         time.sleep(1)
-    else:
+    if connect:
         try:
             cl.connect()
         except Exception:
             pass
-    return cl
+        except ClipperException as e:
+            pass
+        return cl
 
 
 def log_clipper_state(cl):
