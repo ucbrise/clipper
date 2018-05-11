@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 class DockerContainerManager(ContainerManager):
     def __init__(self,
+                 cluster_name,
                  docker_ip_address="localhost",
                  clipper_query_port=1337,
                  clipper_management_port=1338,
@@ -34,6 +35,9 @@ class DockerContainerManager(ContainerManager):
         """
         Parameters
         ----------
+        cluster_name : str
+            A unique name for this Clipper cluster. This can be used to run multiple Clipper
+            clusters on the same node without interfering with each other.
         docker_ip_address : str, optional
             The public hostname or IP address at which the Clipper Docker
             containers can be accessed via their exposed ports. This should almost always
@@ -58,6 +62,7 @@ class DockerContainerManager(ContainerManager):
             Any additional keyword arguments to pass to the call to
             :py:meth:`docker.client.containers.run`.
         """
+        self.cluster_name = cluster_name
         self.public_hostname = docker_ip_address
         self.clipper_query_port = clipper_query_port
         self.clipper_management_port = clipper_management_port
@@ -82,9 +87,9 @@ class DockerContainerManager(ContainerManager):
         # Merge Clipper-specific labels with any user-provided labels
         if "labels" in self.extra_container_kwargs:
             self.common_labels = self.extra_container_kwargs.pop("labels")
-            self.common_labels.update({CLIPPER_DOCKER_LABEL: ""})
+            self.common_labels.update({CLIPPER_DOCKER_LABEL: self.cluster_name})
         else:
-            self.common_labels = {CLIPPER_DOCKER_LABEL: ""}
+            self.common_labels = {CLIPPER_DOCKER_LABEL: self.cluster_name}
 
         container_args = {
             "network": self.docker_network,
@@ -285,7 +290,9 @@ class DockerContainerManager(ContainerManager):
     def get_logs(self, logging_dir):
         containers = self.docker_client.containers.list(
             filters={
-                "label": CLIPPER_DOCKER_LABEL
+                "label": "{key}={val}".format(
+                    key=CLIPPER_DOCKER_LABEL,
+                    val=self.cluster_name)
             })
         logging_dir = os.path.abspath(os.path.expanduser(logging_dir))
 
@@ -328,7 +335,9 @@ class DockerContainerManager(ContainerManager):
     def stop_all(self):
         containers = self.docker_client.containers.list(
             filters={
-                "label": CLIPPER_DOCKER_LABEL
+                "label": "{key}={val}".format(
+                    key=CLIPPER_DOCKER_LABEL,
+                    val=self.cluster_name)
             })
         for c in containers:
             c.stop()

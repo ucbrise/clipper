@@ -5,7 +5,7 @@ from ..container_manager import (
     CLIPPER_INTERNAL_MANAGEMENT_PORT, CLIPPER_INTERNAL_QUERY_PORT,
     CLIPPER_INTERNAL_METRIC_PORT)
 from ..exceptions import ClipperException
-from .kubernetes_metric_utils import start_prometheus, CLIPPER_FRONTEND_EXPORTER_IMAGE
+# from .kubernetes_metric_utils import start_prometheus, CLIPPER_FRONTEND_EXPORTER_IMAGE
 
 from contextlib import contextmanager
 from kubernetes import client, config
@@ -38,14 +38,19 @@ def _pass_conflicts():
 
 class KubernetesContainerManager(ContainerManager):
     def __init__(self,
+                 cluster_name,
                  kubernetes_proxy_addr=None,
                  redis_ip=None,
                  redis_port=6379,
-                 useInternalIP=False):
+                 useInternalIP=False,
+                 kubernetes_namespace="default"):
         """
 
         Parameters
         ----------
+        cluster_name : str
+            A unique name for this Clipper cluster. This can be used to run multiple Clipper
+            clusters on the same Kubernetes cluster without interfering with each other.
         kubernetes_proxy_addr : str, optional
             The proxy address if you are proxying connections locally using ``kubectl proxy``.
             If this argument is provided, Clipper will construct the appropriate proxy
@@ -62,6 +67,9 @@ class KubernetesContainerManager(ContainerManager):
             throw an exception if none of the nodes have ExternalDNS.
             If ``useInternalIP`` is set to true, Clipper will use the Internal IP of the K8S node
             if no ExternalDNS exists for any of the nodes.
+        kubernetes_namespace : str, optional
+            Which Kubernetes namespace to start the Clipper cluster in. The namespace must already exist.
+            If no namespace is provided, Clipper will be started in the default namespace.
 
         Note
         ----
@@ -70,6 +78,8 @@ class KubernetesContainerManager(ContainerManager):
         we recommend configuring your own persistent and replicated Redis cluster rather than
         letting Clipper launch one for you.
         """
+
+        self.cluster_name = cluster_name
 
         if kubernetes_proxy_addr is not None:
             self.kubernetes_proxy_addr = kubernetes_proxy_addr
@@ -85,6 +95,7 @@ class KubernetesContainerManager(ContainerManager):
         configuration.assert_hostname = False
         self._k8s_v1 = client.CoreV1Api()
         self._k8s_beta = client.ExtensionsV1beta1Api()
+        self.namespace = kubernetes_namespace
 
     def start_clipper(self,
                       query_frontend_image,
@@ -179,9 +190,24 @@ class KubernetesContainerManager(ContainerManager):
                 self._k8s_v1.create_namespaced_service(
                     body=body, namespace='default')
 
-        start_prometheus(self._k8s_v1, self._k8s_beta)
+        self._start_prometheus()
 
         self.connect()
+
+    def _start_prometheus(self):
+        prom_deployment_path = os.path.join(cur_dir, 'prom_deployment.yaml')
+        prom_service_path = os.path.join(cur_dir, 'prom_service.yaml')
+        prom_configmap_path = os.path.join(cur_dir, 'prom_configmap.yaml')
+        frontend_exporter_deployment_path = os.path.join(
+            cur_dir, 'frontend-exporter-deployment.yaml')
+
+        with open(prom_configmap_path, 'r') as f:
+            configmap_body = yaml.load(f)
+        configmap_body["metadata"]["labels"]
+
+        with _pass_conflicts():
+            self._k8s_v1.create_namespaced_config_map(body=configmap_body, namespace=self.namespace)
+
 
     def connect(self):
         nodes = self._k8s_v1.list_node()
