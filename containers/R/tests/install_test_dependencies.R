@@ -56,7 +56,6 @@ versions::install.versions('randomForest', version='4.6-12'),
          warning = function(warn) {
            message(warn)
          },
-         },
          error = function(err) {
            quit(status=11) 
          })
