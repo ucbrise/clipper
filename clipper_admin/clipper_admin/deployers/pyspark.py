@@ -14,22 +14,21 @@ from .deployer_utils import save_python_function
 logger = logging.getLogger(__name__)
 
 
-def create_endpoint(
-        clipper_conn,
-        name,
-        input_type,
-        func,
-        pyspark_model,
-        sc,
-        default_output="None",
-        version=1,
-        slo_micros=3000000,
-        labels=None,
-        registry=None,
-        base_image="default",
-        num_replicas=1,
-        batch_size=-1,
-        pkgs_to_install=None):
+def create_endpoint(clipper_conn,
+                    name,
+                    input_type,
+                    func,
+                    pyspark_model,
+                    sc,
+                    default_output="None",
+                    version=1,
+                    slo_micros=3000000,
+                    labels=None,
+                    registry=None,
+                    base_image="default",
+                    num_replicas=1,
+                    batch_size=-1,
+                    pkgs_to_install=None):
     """Registers an app and deploys the provided predict function with PySpark model as
     a Clipper model.
 
@@ -102,20 +101,19 @@ def create_endpoint(
     clipper_conn.link_model_to_app(name, name)
 
 
-def deploy_pyspark_model(
-        clipper_conn,
-        name,
-        version,
-        input_type,
-        func,
-        pyspark_model,
-        sc,
-        base_image="default",
-        labels=None,
-        registry=None,
-        num_replicas=1,
-        batch_size=-1,
-        pkgs_to_install=None):
+def deploy_pyspark_model(clipper_conn,
+                         name,
+                         version,
+                         input_type,
+                         func,
+                         pyspark_model,
+                         sc,
+                         base_image="default",
+                         labels=None,
+                         registry=None,
+                         num_replicas=1,
+                         batch_size=-1,
+                         pkgs_to_install=None):
     """Deploy a Python function with a PySpark model.
 
     The function must take 3 arguments (in order): a SparkSession, the PySpark model, and a list of
@@ -238,21 +236,18 @@ def deploy_pyspark_model(
     if base_image == "default":
         if py_minor_version < (3, 0):
             logger.info("Using Python 2 base image")
-            base_image = "clipper/pyspark-container:{}".format(
-                __version__)
+            base_image = "clipper/pyspark-container:{}".format(__version__)
         elif py_minor_version == (3, 5):
             logger.info("Using Python 3.5 base image")
-            base_image = "clipper/pyspark35-container:{}".format(
-                __version__)
+            base_image = "clipper/pyspark35-container:{}".format(__version__)
         elif py_minor_version == (3, 6):
             logger.info("Using Python 3.6 base image")
-            base_image = "clipper/pyspark36-container:{}".format(
-                __version__)
+            base_image = "clipper/pyspark36-container:{}".format(__version__)
         else:
-            msg = (
-                "PySpark deployer only supports Python 2.7, 3.5, and 3.6. "
-                "Detected {major}.{minor}").format(
-                    major=sys.version_info.major, minor=sys.version_info.minor)
+            msg = ("PySpark deployer only supports Python 2.7, 3.5, and 3.6. "
+                   "Detected {major}.{minor}").format(
+                       major=sys.version_info.major,
+                       minor=sys.version_info.minor)
             logger.error(msg)
             # Remove temp files
             shutil.rmtree(serialization_dir)

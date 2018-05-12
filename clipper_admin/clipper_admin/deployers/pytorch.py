@@ -17,21 +17,20 @@ PYTORCH_WEIGHTS_RELATIVE_PATH = "pytorch_weights.pkl"
 PYTORCH_MODEL_RELATIVE_PATH = "pytorch_model.pkl"
 
 
-def create_endpoint(
-        clipper_conn,
-        name,
-        input_type,
-        func,
-        pytorch_model,
-        default_output="None",
-        version=1,
-        slo_micros=3000000,
-        labels=None,
-        registry=None,
-        base_image="default",
-        num_replicas=1,
-        batch_size=-1,
-        pkgs_to_install=None):
+def create_endpoint(clipper_conn,
+                    name,
+                    input_type,
+                    func,
+                    pytorch_model,
+                    default_output="None",
+                    version=1,
+                    slo_micros=3000000,
+                    labels=None,
+                    registry=None,
+                    base_image="default",
+                    num_replicas=1,
+                    batch_size=-1,
+                    pkgs_to_install=None):
     """Registers an app and deploys the provided predict function with PyTorch model as
     a Clipper model.
     Parameters
@@ -101,19 +100,18 @@ def create_endpoint(
     clipper_conn.link_model_to_app(name, name)
 
 
-def deploy_pytorch_model(
-        clipper_conn,
-        name,
-        version,
-        input_type,
-        func,
-        pytorch_model,
-        base_image="default",
-        labels=None,
-        registry=None,
-        num_replicas=1,
-        batch_size=-1,
-        pkgs_to_install=None):
+def deploy_pytorch_model(clipper_conn,
+                         name,
+                         version,
+                         input_type,
+                         func,
+                         pytorch_model,
+                         base_image="default",
+                         labels=None,
+                         registry=None,
+                         num_replicas=1,
+                         batch_size=-1,
+                         pkgs_to_install=None):
     """Deploy a Python function with a PyTorch model.
     Parameters
     ----------
@@ -211,26 +209,22 @@ def deploy_pytorch_model(
     if base_image == "default":
         if py_minor_version < (3, 0):
             logger.info("Using Python 2 base image")
-            base_image = "clipper/pytorch-container:{}".format(
-                __version__)
+            base_image = "clipper/pytorch-container:{}".format(__version__)
         elif py_minor_version == (3, 5):
             logger.info("Using Python 3.5 base image")
-            base_image = "clipper/pytorch35-container:{}".format(
-                __version__)
+            base_image = "clipper/pytorch35-container:{}".format(__version__)
         elif py_minor_version == (3, 6):
             logger.info("Using Python 3.6 base image")
-            base_image = "clipper/pytorch36-container:{}".format(
-                __version__)
+            base_image = "clipper/pytorch36-container:{}".format(__version__)
         else:
-            msg = (
-                "PyTorch deployer only supports Python 2.7, 3.5, and 3.6. "
-                "Detected {major}.{minor}").format(
-                    major=sys.version_info.major, minor=sys.version_info.minor)
+            msg = ("PyTorch deployer only supports Python 2.7, 3.5, and 3.6. "
+                   "Detected {major}.{minor}").format(
+                       major=sys.version_info.major,
+                       minor=sys.version_info.minor)
             logger.error(msg)
             # Remove temp files
             shutil.rmtree(serialization_dir)
             raise ClipperException(msg)
-
 
     # Deploy model
     clipper_conn.build_and_deploy_model(

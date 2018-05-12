@@ -22,14 +22,14 @@ RUN { \
 		echo 'dirname "$(dirname "$(readlink -f "$(which javac || which java)")")"'; \
 	} > /usr/local/bin/docker-java-home \
 	&& chmod +x /usr/local/bin/docker-java-home
-# do some fancy footwork to create a JAVA_HOME that's cross-architecture-safe
-RUN ln -svT "/usr/lib/jvm/java-8-openjdk-$(dpkg --print-architecture)" /docker-java-home
 ENV JAVA_HOME /docker-java-home
+ENV JAVA_MAJOR_VERSION openjdk-8-jdk-headless
 ENV JAVA_VERSION 8u171
 ENV JAVA_DEBIAN_VERSION 8u171-b11-1~deb9u1
 # see https://bugs.debian.org/775775
 # and https://github.com/docker-library/java/issues/19#issuecomment-70546872
 ENV CA_CERTIFICATES_JAVA_VERSION 20170531+nmu1
+
 RUN set -ex; \
 	\
 # deal with slim variants not having man page directories (which causes "update-alternatives" to fail)
@@ -37,9 +37,22 @@ RUN set -ex; \
 		mkdir -p /usr/share/man/man1; \
 	fi; \
 	\
+# The Py35 RPC Docker image uses jessie, so we have to use different package versions
+	debian_version=$(cat /etc/debian_version); \
+	if echo "$debian_version" | grep "8.*"; then \
+			export CA_CERTIFICATES_JAVA_VERSION="20140324"; \
+			export JAVA_MAJOR_VERSION="openjdk-7-jdk"; \
+			export JAVA_VERSION="7u171"; \
+			export JAVA_DEBIAN_VERSION="7u171-2.6.13-1~deb8u1"; \
+			ln -svT "/usr/lib/jvm/java-7-openjdk-$(dpkg --print-architecture)" /docker-java-home; \
+	else \
+# do some fancy footwork to create a JAVA_HOME that's cross-architecture-safe
+			ln -svT "/usr/lib/jvm/java-8-openjdk-$(dpkg --print-architecture)" /docker-java-home; \
+	fi; \
+	\
 	apt-get update; \
 	apt-get install -y \
-		openjdk-8-jdk-headless="$JAVA_DEBIAN_VERSION" \
+		"$JAVA_MAJOR_VERSION"="$JAVA_DEBIAN_VERSION" \
 		ca-certificates-java="$CA_CERTIFICATES_JAVA_VERSION" \
 	; \
 	rm -rf /var/lib/apt/lists/*; \
