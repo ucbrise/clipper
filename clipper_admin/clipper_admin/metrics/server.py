@@ -1,15 +1,19 @@
+from __future__ import absolute_import
 from prometheus_client import start_http_server, Gauge, Counter, Histogram, Summary
 import redis
 import json
 import logging
 import sys
-from subprocess32 import call
+if sys.version_info < (3, 0):
+    from subprocess32 import call
+else:
+    from subprocess import call
 import psutil
-from schema import validate_schema, Prom_Type
+from .schema import validate_schema, Prom_Type
 
 from jsonschema import ValidationError
 
-from config import CHANNEL_NAME, DEFAULT_BUCKETS, UNIX_SOCKET_PATH
+from .config import CHANNEL_NAME, DEFAULT_BUCKETS, UNIX_SOCKET_PATH
 
 
 class Metric:
@@ -84,7 +88,10 @@ def start_server():
     for message in sub.listen():  # Blocking, will run forever
         logger.debug(message)
         try:
-            message_dict = json.loads(message['data'])
+            if sys.version_info < (3, 0):
+                message_dict = json.loads(message['data'])
+            else:
+                message_dict = json.loads(message['data'].decode('utf-8'))
             validate_schema(message_dict)
             handle_message(message_dict, metric_pool)
         except (KeyError, ValueError, ValidationError) as e:

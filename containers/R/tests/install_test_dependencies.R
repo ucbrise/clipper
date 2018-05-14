@@ -6,7 +6,7 @@ install.packages('versions', repos='http://cran.us.r-project.org')
 tryCatch(
          versions::install.versions('jsonlite', version='1.5'),
          warning = function(warn) {
-           quit(status=11) 
+           message(warn)
          },
          error = function(err) {
            quit(status=11) 
@@ -14,7 +14,7 @@ tryCatch(
 tryCatch(
 versions::install.versions('Rcpp', version='0.12.11'),
          warning = function(warn) {
-           quit(status=11) 
+           message(warn)
          },
          error = function(err) {
            quit(status=11) 
@@ -22,7 +22,7 @@ versions::install.versions('Rcpp', version='0.12.11'),
 tryCatch(
 versions::install.versions('optparse', version='1.4.4'),
          warning = function(warn) {
-           quit(status=11) 
+           message(warn)
          },
          error = function(err) {
            quit(status=11) 
@@ -30,7 +30,7 @@ versions::install.versions('optparse', version='1.4.4'),
 tryCatch(
 versions::install.versions('stringr', version='1.2.0'),
          warning = function(warn) {
-           quit(status=11) 
+           message(warn)
          },
          error = function(err) {
            quit(status=11) 
@@ -38,7 +38,7 @@ versions::install.versions('stringr', version='1.2.0'),
 tryCatch(
 versions::install.versions('CodeDepends', version='0.5-3'),
          warning = function(warn) {
-           quit(status=11) 
+           message(warn)
          },
          error = function(err) {
            quit(status=11) 
@@ -46,7 +46,7 @@ versions::install.versions('CodeDepends', version='0.5-3'),
 tryCatch(
 versions::install.versions('histry', version='0.1.2'),
          warning = function(warn) {
-           quit(status=11) 
+           message(warn)
          },
          error = function(err) {
            quit(status=11) 
@@ -54,7 +54,7 @@ versions::install.versions('histry', version='0.1.2'),
 tryCatch(
 versions::install.versions('randomForest', version='4.6-12'),
          warning = function(warn) {
-           quit(status=11) 
+           message(warn)
          },
          error = function(err) {
            quit(status=11) 
