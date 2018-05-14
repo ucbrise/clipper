@@ -388,7 +388,7 @@ class KubernetesContainerManager(ContainerManager):
                 for v in models[m]:
                     self._k8s_beta.delete_collection_namespaced_deployment(
                         namespace='default',
-                        label_selector="{label}:{val}".format(
+                        label_selector="{label}={val}".format(
                             label=CLIPPER_MODEL_CONTAINER_LABEL,
                             val=create_model_container_label(m, v)))
         except ApiException as e:
