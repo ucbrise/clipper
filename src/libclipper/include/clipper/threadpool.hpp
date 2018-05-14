@@ -289,10 +289,10 @@ class ModelQueueThreadPool : public ThreadPool {
     } else {
       queues_.emplace(std::piecewise_construct, std::forward_as_tuple(queue_id),
                       std::forward_as_tuple());
-      threads_.emplace(
-          std::piecewise_construct, std::forward_as_tuple(queue_id),
-          std::forward_as_tuple(&ModelQueueThreadPool::worker, this, queue_id,
-                                is_block_worker));
+      threads_.emplace(std::piecewise_construct,
+                       std::forward_as_tuple(queue_id),
+                       std::forward_as_tuple(&ModelQueueThreadPool::worker,
+                                             this, queue_id, is_block_worker));
       log_info_formatted(LOGGING_TAG_THREADPOOL,
                          "Work queue created for model {}, replica {}",
                          vm.serialize(), std::to_string(replica_id));
@@ -321,10 +321,10 @@ class FixedSizeThreadPool : public ThreadPool {
     queues_.emplace(std::piecewise_construct, std::forward_as_tuple(queue_id_),
                     std::forward_as_tuple());
     for (size_t i = 0; i < num_threads; ++i) {
-      threads_.emplace(
-          std::piecewise_construct, std::forward_as_tuple(queue_id_),
-          std::forward_as_tuple(&FixedSizeThreadPool::worker, this, queue_id_,
-                                is_block_worker));
+      threads_.emplace(std::piecewise_construct,
+                       std::forward_as_tuple(queue_id_),
+                       std::forward_as_tuple(&FixedSizeThreadPool::worker, this,
+                                             queue_id_, is_block_worker));
     }
   }
 
@@ -374,9 +374,9 @@ inline void create_queue(VersionedModelId vm, int replica_id) {
 
 namespace GarbageCollectionThreadPool {
 /**
-*Convenience method to get the garbage collection thread pool for the
-*application
-*/
+ * Convenience method to get the garbage collection thread pool for the
+ * application
+ */
 
 inline FixedSizeThreadPool& get_thread_pool(void) {
   static FixedSizeThreadPool garbage_collection_pool(1, true);
@@ -384,14 +384,14 @@ inline FixedSizeThreadPool& get_thread_pool(void) {
 }
 
 /**
-*Submit a job to the garbage collection thread pool
-*/
+ * Submit a job to the garbage collection thread pool
+ */
 template <typename Func, typename... Args>
 inline auto submit_job(Func&& func, Args&&... args) {
   return get_thread_pool().submit(std::forward<Func>(func),
                                   std::forward<Args>(args)...);
 }
-}
+}  // namespace GarbageCollectionThreadPool
 
 }  // namespace clipper
 
