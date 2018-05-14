@@ -159,6 +159,15 @@ void ActiveContainers::remove_container(VersionedModelId model,
   }
 
   assert(containers_[model].size() == initialSize - 1);
+
+  if (containers_[model].size() == 0) {
+    log_info_formatted(
+        LOGGING_TAG_CONTAINERS,
+        "All containers of model: {}, version: {} are removed. Remove itself",
+        model.get_name(), model.get_id());
+    containers_.erase(model);
+  }
+
   log_active_containers();
 }
 
