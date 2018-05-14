@@ -101,7 +101,8 @@ def create_docker_connection(cleanup=True, start_clipper=True):
 def create_kubernetes_connection(cleanup=True,
                                  start_clipper=True,
                                  connect=True,
-                                 with_proxy=False):
+                                 with_proxy=False,
+                                 num_frontend_replicas=1):
     logger.info("Creating KubernetesContainerManager")
     if with_proxy:
         cm = KubernetesContainerManager(kubernetes_proxy_addr="127.0.0.1:8080")
@@ -121,14 +122,15 @@ def create_kubernetes_connection(cleanup=True,
             format(clipper_version),
             mgmt_frontend_image=
             "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/management_frontend:{}".
-            format(clipper_version))
+            format(clipper_version),
+            num_frontend_replicas=num_frontend_replicas)
         time.sleep(1)
     if connect:
         try:
             cl.connect()
         except Exception:
             pass
-        except ClipperException as e:
+        except ClipperException:
             pass
         return cl
 
