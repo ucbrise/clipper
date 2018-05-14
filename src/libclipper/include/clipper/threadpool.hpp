@@ -277,7 +277,7 @@ class ModelQueueThreadPool : public ThreadPool {
     }
   }
 
-  bool create_queue(VersionedModelId vm, int replica_id) {
+  bool create_queue(VersionedModelId vm, int replica_id, bool is_block_worker) {
     boost::unique_lock<boost::shared_mutex> l(queues_mutex_);
     size_t queue_id = get_queue_id(vm, replica_id);
     auto queue = queues_.find(queue_id);
@@ -292,7 +292,7 @@ class ModelQueueThreadPool : public ThreadPool {
       threads_.emplace(
           std::piecewise_construct, std::forward_as_tuple(queue_id),
           std::forward_as_tuple(&ModelQueueThreadPool::worker, this, queue_id,
-                                is_block_worker_));
+                                is_block_worker));
       log_info_formatted(LOGGING_TAG_THREADPOOL,
                          "Work queue created for model {}, replica {}",
                          vm.serialize(), std::to_string(replica_id));
@@ -307,14 +307,12 @@ class ModelQueueThreadPool : public ThreadPool {
     boost::hash_combine(seed, replica_id);
     return seed;
   }
-
- private:
-  bool is_block_worker_ = false;
 };
 
 class FixedSizeThreadPool : public ThreadPool {
  public:
-  FixedSizeThreadPool(const size_t num_threads) : ThreadPool(), queue_id_(1) {
+  FixedSizeThreadPool(const size_t num_threads, bool is_block_worker)
+      : ThreadPool(), queue_id_(1) {
     boost::unique_lock<boost::shared_mutex> l(queues_mutex_);
     if (num_threads <= 0) {
       throw std::runtime_error(
@@ -326,7 +324,7 @@ class FixedSizeThreadPool : public ThreadPool {
       threads_.emplace(
           std::piecewise_construct, std::forward_as_tuple(queue_id_),
           std::forward_as_tuple(&FixedSizeThreadPool::worker, this, queue_id_,
-                                is_block_worker_));
+                                is_block_worker));
     }
   }
 
@@ -346,7 +344,6 @@ class FixedSizeThreadPool : public ThreadPool {
 
  private:
   size_t queue_id_ = 1;
-  bool is_block_worker_ = true;
 };
 
 namespace TaskExecutionThreadPool {
@@ -370,7 +367,7 @@ inline auto submit_job(VersionedModelId vm, int replica_id, Func&& func,
 }
 
 inline void create_queue(VersionedModelId vm, int replica_id) {
-  get_thread_pool().create_queue(vm, replica_id);
+  get_thread_pool().create_queue(vm, replica_id, false);
 }
 
 }  // namespace TaskExecutionThreadPool
@@ -382,7 +379,7 @@ namespace GarbageCollectionThreadPool {
 */
 
 inline FixedSizeThreadPool& get_thread_pool(void) {
-  static FixedSizeThreadPool garbage_collection_pool(1);
+  static FixedSizeThreadPool garbage_collection_pool(1, true);
   return garbage_collection_pool;
 }
 
