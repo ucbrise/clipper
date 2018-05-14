@@ -391,6 +391,21 @@ class KubernetesContainerManager(ContainerManager):
                         label_selector="{label}={val}".format(
                             label=CLIPPER_MODEL_CONTAINER_LABEL,
                             val=create_model_container_label(m, v)))
+
+                    self._k8s_beta.delete_collection_namespaced_replica_set(
+                        namespace='default', label_selector="{label}={val}".format(
+                            label=CLIPPER_MODEL_CONTAINER_LABEL,
+                            val=create_model_container_label(m, v)))
+
+                    self._k8s_v1.delete_collection_namespaced_replication_controller(
+                        namespace='default', label_selector="{label}={val}".format(
+                            label=CLIPPER_MODEL_CONTAINER_LABEL,
+                            val=create_model_container_label(m, v)))
+
+                    self._k8s_v1.delete_collection_namespaced_pod(
+                        namespace='default', label_selector="{label}={val}".format(
+                            label=CLIPPER_MODEL_CONTAINER_LABEL,
+                            val=create_model_container_label(m, v)))
         except ApiException as e:
             logger.warn(
                 "Exception deleting kubernetes deployments: {}".format(e))
@@ -399,6 +414,18 @@ class KubernetesContainerManager(ContainerManager):
     def stop_all_model_containers(self):
         try:
             self._k8s_beta.delete_collection_namespaced_deployment(
+                namespace='default',
+                label_selector=CLIPPER_MODEL_CONTAINER_LABEL)
+
+            self._k8s_beta.delete_collection_namespaced_replica_set(
+                namespace='default',
+                label_selector=CLIPPER_MODEL_CONTAINER_LABEL)
+
+            self._k8s_beta.delete_collection_namespaced_replication_controller(
+                namespace='default',
+                label_selector=CLIPPER_MODEL_CONTAINER_LABEL)
+
+            self._k8s_beta.delete_collection_namespaced_pod(
                 namespace='default',
                 label_selector=CLIPPER_MODEL_CONTAINER_LABEL)
         except ApiException as e:
