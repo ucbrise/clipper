@@ -11,6 +11,7 @@ CLIPPER_DOCKER_LABEL = "ai.clipper.container.label"
 CLIPPER_MODEL_CONTAINER_LABEL = "ai.clipper.model_container.label"
 CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL = "ai.clipper.query_frontend.label"
 CLIPPER_MGMT_FRONTEND_CONTAINER_LABEL = "ai.clipper.management_frontend.label"
+CLIPPER_QUERY_FRONTEND_ID_LABEL = "ai.clipper.query_frontend.id"
 CONTAINERLESS_MODEL_IMAGE = "NO_CONTAINER"
 
 # NOTE: we use '_' as the delimiter because kubernetes allows the use
@@ -38,7 +39,7 @@ class ContainerManager(object):
 
     @abc.abstractmethod
     def start_clipper(self, query_frontend_image, mgmt_frontend_image,
-                      cache_size):
+                      cache_size, num_frontend_replicas):
         # NOTE: An implementation of this interface should be connected to a running
         # Clipper instance when this method returns. ClipperConnection will not
         # call ContainerManager.connect() separately after calling start_clipper(), so

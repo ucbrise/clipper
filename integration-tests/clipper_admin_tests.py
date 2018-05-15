@@ -434,6 +434,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             query={"input": test_input},
             func=predict_func,
             input_type="doubles")
+        logger.info("test pred output {}".format(pred))
         self.assertEqual([pred['output']],
                          test_predict_result)  # tests single input
 
@@ -452,6 +453,68 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         batch_pred_outputs = [batch['output'] for batch in batch_predictions]
         self.assertEqual(batch_pred_outputs,
                          test_batch_predict_result)  # tests batch input
+
+    def test_query_specific_model_version(self):
+
+        model_name = "testmodel"
+        app_name = "testapp"
+
+        def predict_func1(xs):
+            return ["1" for _ in xs]
+
+        def predict_func2(xs):
+            return ["2" for _ in xs]
+
+        self.clipper_conn.register_application(
+            name=app_name,
+            input_type="doubles",
+            default_output="DEFAULT",
+            slo_micros=100000)
+
+        deploy_python_closure(
+            self.clipper_conn,
+            name=model_name,
+            version="v1",
+            input_type="doubles",
+            func=predict_func1)
+
+        self.clipper_conn.link_model_to_app(app_name, model_name)
+
+        time.sleep(30)
+
+        deploy_python_closure(
+            self.clipper_conn,
+            name=model_name,
+            version="v2",
+            input_type="doubles",
+            func=predict_func2)
+
+        time.sleep(60)
+
+        addr = self.clipper_conn.get_query_addr()
+        url = "http://{addr}/{app}/predict".format(addr=addr, app=app_name)
+
+        headers = {"Content-type": "application/json"}
+        test_input = [1.0, 2.0, 3.0]
+
+        pred1 = requests.post(
+            url,
+            headers=headers,
+            data=json.dumps({
+                "input": test_input,
+                "version": "v1"
+            })).json()
+
+        self.assertFalse(pred1["default"])
+        self.assertEqual(pred1['output'], 1)
+
+        pred2 = requests.post(
+            url, headers=headers, data=json.dumps({
+                "input": test_input
+            })).json()
+
+        self.assertFalse(pred2["default"])
+        self.assertEqual(pred2['output'], 2)
 
     def test_build_model_with_custom_packages(self):
         self.clipper_conn.build_model(
@@ -655,8 +718,6 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
     def test_remove_inactive_container(self):
         container_name = "clipper/noop-container:{}".format(clipper_version)
-        input_type = "doubles"
-        model_name = "remove-inactive-test-model"
         self.clipper_conn.build_and_deploy_model(
             self.model_name_5,
             1,
@@ -673,9 +734,8 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         self.clipper_conn.link_model_to_app(self.app_name_5, self.model_name_5)
         time.sleep(30)
 
-        #we now have 2 replicas running, both the same Model Name and Version
-
-        #send predictions, assert that we are getting correct response
+        # We now have 2 replicas running, both the same model name and Version
+        # send predictions, assert that we are getting correct response
 
         addr = self.clipper_conn.get_query_addr()
         test_input = [101.1, 99.5, 107.2]
@@ -691,7 +751,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
             #print(result["default_explanation"])
             self.assertEqual(result["default"], False)
 
-        #1 of the containers should go inactive
+        # one of the containers should go inactive
 
         self.clipper_conn.set_num_replicas(
             name=self.model_name_5, version=1, num_replicas=1)
@@ -755,7 +815,7 @@ SHORT_TEST_ORDERING = [
     'test_remove_inactive_containers_succeeds', 'test_stop_models',
     'test_python_closure_deploys_successfully', 'test_register_py_endpoint',
     'test_test_predict_function', 'test_build_model_with_custom_packages',
-    'test_delete_application_correct'
+    'test_delete_application_correct', 'test_query_specific_model_version'
 ]
 
 LONG_TEST_ORDERING = [

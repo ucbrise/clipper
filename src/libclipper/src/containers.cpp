@@ -1,10 +1,8 @@
+#include <cassert>
 #include <chrono>
 #include <iostream>
 #include <memory>
 #include <random>
-// uncomment to disable assert()
-// #define NDEBUG
-#include <cassert>
 
 #include <clipper/constants.hpp>
 #include <clipper/containers.hpp>
@@ -108,11 +106,11 @@ size_t ModelContainer::get_batch_size(Deadline deadline) {
 }
 
 ActiveContainers::ActiveContainers()
-    : containers_(
+    : batch_sizes_(std::unordered_map<VersionedModelId, int>()),
+      containers_(
           std::unordered_map<VersionedModelId,
                              std::map<int, std::shared_ptr<ModelContainer>>>(
-              {})),
-      batch_sizes_(std::unordered_map<VersionedModelId, int>()) {}
+              {})) {}
 
 void ActiveContainers::add_container(VersionedModelId model, int connection_id,
                                      int replica_id, InputType input_type) {
@@ -147,7 +145,7 @@ void ActiveContainers::remove_container(VersionedModelId model,
       model.get_name(), model.get_id(), replica_id);
   boost::unique_lock<boost::shared_mutex> l{m_};
 
-  int initialSize = containers_[model].size();
+  int initial_size = containers_[model].size();
 
   for (auto it = containers_[model].begin(); it != containers_[model].end();) {
     if (it->first == replica_id) {
@@ -158,7 +156,7 @@ void ActiveContainers::remove_container(VersionedModelId model,
     }
   }
 
-  assert(containers_[model].size() == initialSize - 1);
+  assert(containers_[model].size() == initial_size - 1);
   log_active_containers();
 }
 
