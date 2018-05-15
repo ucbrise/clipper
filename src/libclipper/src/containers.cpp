@@ -156,7 +156,6 @@ void ActiveContainers::remove_container(VersionedModelId model,
     }
   }
 
-
   assert(containers_[model].size() == initialSize - 1);
 
   if (containers_[model].size() == 0) {
