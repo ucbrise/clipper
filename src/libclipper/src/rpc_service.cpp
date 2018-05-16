@@ -103,7 +103,7 @@ vector<RPCResponse> RPCService::try_get_responses(const int max_num_responses) {
 void RPCService::manage_service(const string address) {
   // Map from container id to unique routing id for zeromq
   // Note that zeromq socket id is a byte vector
-  log_info_formatted(LOGGING_TAG_RPC, "RPC thread started at address: ",
+  log_info_formatted(LOGGING_TAG_RPC, "RPC thread started at address: {}",
                      address);
   boost::bimap<int, vector<uint8_t>> connections;
   // Initializes a map to associate the ZMQ connection IDs
@@ -164,9 +164,9 @@ void RPCService::check_container_activity(
   std::chrono::system_clock::time_point current_time =
       std::chrono::system_clock::now();
 
-  auto it = connections_containers_map.begin();
-  while (it != connections_containers_map.end()) {
-    auto &container_info = it->second;
+  std::vector<std::vector<uint8_t>> needs_removing;
+  for (auto it : connections_containers_map) {
+    auto &container_info = it.second;
     if (std::chrono::duration_cast<std::chrono::milliseconds>(
             current_time - std::get<2>(container_info))
             .count() > CONTAINER_ACTIVITY_TIMEOUT_MILLS) {
@@ -182,9 +182,11 @@ void RPCService::check_container_activity(
                                               replica_id);
 
       log_info(LOGGING_TAG_RPC, "lost contact with a container");
-      connections_containers_map.erase(it);
+      needs_removing.push_back(it.first);
     }
-    ++it;
+  }
+  for (auto key : needs_removing) {
+    connections_containers_map.erase(key);
   }
 }
 

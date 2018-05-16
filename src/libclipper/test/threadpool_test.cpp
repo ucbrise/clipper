@@ -26,7 +26,7 @@ TEST(ThreadPoolTests, TestSingleQueueSingleJob) {
   ModelQueueThreadPool threadpool;
   VersionedModelId vm = VersionedModelId("m", "1");
   int replica_id = 17;
-  ASSERT_TRUE(threadpool.create_queue(vm, replica_id));
+  ASSERT_TRUE(threadpool.create_queue(vm, replica_id, false));
   std::atomic<int> counter(0);
   std::condition_variable_any notification_counter;
   std::mutex notification_mutex;
@@ -43,7 +43,7 @@ TEST(ThreadPoolTests, TestSingleQueueManyJobs) {
   ModelQueueThreadPool threadpool;
   VersionedModelId vm = VersionedModelId("m", "1");
   int replica_id = 17;
-  ASSERT_TRUE(threadpool.create_queue(vm, replica_id));
+  ASSERT_TRUE(threadpool.create_queue(vm, replica_id, false));
   std::atomic<int> counter(0);
   std::condition_variable_any notification_counter;
   std::mutex notification_mutex;
@@ -62,7 +62,7 @@ TEST(ThreadPoolTests, TestSingleQueueJobHangs) {
   ModelQueueThreadPool threadpool;
   VersionedModelId vm = VersionedModelId("m", "1");
   int replica_id = 17;
-  ASSERT_TRUE(threadpool.create_queue(vm, replica_id));
+  ASSERT_TRUE(threadpool.create_queue(vm, replica_id, false));
   std::atomic<int> counter(0);
   std::condition_variable_any notification_counter;
   std::mutex notification_mutex;
@@ -87,8 +87,8 @@ TEST(ThreadPoolTests, TestMultipleQueuesOneQueueHangs) {
   int replica_id_one = 17;
   VersionedModelId vm_two = VersionedModelId("j", "3");
   int replica_id_two = 3;
-  ASSERT_TRUE(threadpool.create_queue(vm_one, replica_id_one));
-  ASSERT_TRUE(threadpool.create_queue(vm_two, replica_id_two));
+  ASSERT_TRUE(threadpool.create_queue(vm_one, replica_id_one, false));
+  ASSERT_TRUE(threadpool.create_queue(vm_two, replica_id_two, false));
 
   std::atomic<int> counter_one(0);
   std::atomic<int> counter_two(0);
@@ -119,8 +119,8 @@ TEST(ThreadPoolTests, TestCreateDuplicateQueue) {
   ModelQueueThreadPool threadpool;
   VersionedModelId vm = VersionedModelId("m", "1");
   int replica_id = 17;
-  ASSERT_TRUE(threadpool.create_queue(vm, replica_id));
-  ASSERT_FALSE(threadpool.create_queue(vm, replica_id));
+  ASSERT_TRUE(threadpool.create_queue(vm, replica_id, false));
+  ASSERT_FALSE(threadpool.create_queue(vm, replica_id, false));
 }
 
 TEST(ThreadPoolTests, TestSubmitToNonexistentQueue) {
@@ -133,7 +133,7 @@ TEST(ThreadPoolTests, TestSubmitToNonexistentQueue) {
   ASSERT_THROW(threadpool.submit(vm_one, replica_id_one,
                                  [&counter] { task_completes(counter); }),
                std::runtime_error);
-  ASSERT_TRUE(threadpool.create_queue(vm_one, replica_id_one));
+  ASSERT_TRUE(threadpool.create_queue(vm_one, replica_id_one, false));
   threadpool.submit(vm_one, replica_id_one,
                     [&counter] { task_completes(counter); });
   std::unique_lock<std::mutex> l(notification_mutex);
