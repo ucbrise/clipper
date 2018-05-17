@@ -212,6 +212,7 @@ size_t ModelContainer::explore() {
     return max_batch_size_ + 1;
   } else {
     double expansion_factor = exploration_distribution_(exploration_engine_);
+    expansion_factor = std::max(0.0, expansion_factor);
     return static_cast<size_t>((1 + expansion_factor) * max_batch_size_);
   }
 }
