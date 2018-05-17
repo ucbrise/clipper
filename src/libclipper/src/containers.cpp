@@ -111,7 +111,13 @@ void ModelContainer::set_batch_size(int batch_size) {
   batch_size_ = batch_size;
 }
 
-size_t ModelContainer::get_batch_size(Deadline deadline) {
+BatchSizeInfo ModelContainer::get_batch_size(Deadline deadline) {
+  BatchSizeDeterminationMethod method;
+  if (batch_size_ != DEFAULT_BATCH_SIZE) {
+    method = BatchSizeDeterminationMethod::Default;  
+    return std::make_pair(batch_size_, method);
+  }
+
   double budget =
       static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(
                               deadline - std::chrono::system_clock::now())
@@ -122,18 +128,16 @@ size_t ModelContainer::get_batch_size(Deadline deadline) {
   // processing latency
   budget = budget * budget_decay_;
 
-  if (batch_size_ != DEFAULT_BATCH_SIZE) {
-    return batch_size_;
-  }
-
   size_t curr_batch_size;
   if (budget > static_cast<double>(max_latency_)) {
     curr_batch_size = explore();
+    method = BatchSizeDeterminationMethod::Exploration;
   } else {
     curr_batch_size = estimate(budget);
+    method = BatchSizeDeterminationMethod::Estimation;
   }
   max_batch_size_ = std::max(curr_batch_size, max_batch_size_);
-  return curr_batch_size;
+  return std::make_pair(curr_batch_size, method);
 }
 
 void ModelContainer::fit_estimator() {

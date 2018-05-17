@@ -23,6 +23,15 @@ namespace clipper {
 // due to its cross-platform consistency (consistent epoch, resolution)
 using Deadline = std::chrono::time_point<std::chrono::system_clock>;
 
+enum class BatchSizeDeterminationMethod {
+  Default = 0,
+  Exploration = 1,
+  Estimation = 2
+};
+
+// pair of batch size, method by which the batch size was determined
+using BatchSizeInfo = std::pair<size_t, BatchSizeDeterminationMethod>;
+
 class ModelContainer {
  public:
   ~ModelContainer() = default;
@@ -35,7 +44,7 @@ class ModelContainer {
   ModelContainer(ModelContainer &&) = default;
   ModelContainer &operator=(ModelContainer &&) = default;
 
-  size_t get_batch_size(Deadline deadline);
+  BatchSizeInfo get_batch_size(Deadline deadline);
   void add_processing_datapoint(size_t batch_size,
                                 long long processing_latency_micros);
   void send_feedback(PredictTask task);
