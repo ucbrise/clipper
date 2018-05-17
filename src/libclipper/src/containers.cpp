@@ -36,8 +36,12 @@ ModelContainer::ModelContainer(VersionedModelId model, int container_id,
                     "microseconds", HISTOGRAM_SAMPLE_SIZE),
       max_batch_size_(1),
       max_latency_(0),
+      // These distribution constants were selected based on the empirical
+      // observation that they result in reasonably fast, yet controlled
+      // exploration of new batch sizes
       explore_dist_mu_(.1),
       explore_dist_std_(.05),
+      // The budget decay constant was selected based on empirical tuning 
       budget_decay_(.92),
       exploration_distribution_(std::normal_distribution<double>(
           explore_dist_mu_, explore_dist_std_)),
