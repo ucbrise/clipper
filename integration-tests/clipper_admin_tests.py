@@ -455,7 +455,6 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
                          test_batch_predict_result)  # tests batch input
 
     def test_query_specific_model_version(self):
-
         model_name = "testmodel"
         app_name = "testapp"
 
@@ -515,6 +514,57 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
 
         self.assertFalse(pred2["default"])
         self.assertEqual(pred2['output'], 2)
+
+    def test_query_absent_model_version_fails_correctly(self):
+        model_name = "testmodel"
+        app_name = "testapp"
+
+        def predict_func1(xs):
+            return ["1" for _ in xs]
+
+        self.clipper_conn.register_application(
+            name=app_name,
+            input_type="doubles",
+            default_output="DEFAULT",
+            slo_micros=100000)
+
+        deploy_python_closure(
+            self.clipper_conn,
+            name=model_name,
+            version="v1",
+            input_type="doubles",
+            func=predict_func1)
+
+        self.clipper_conn.link_model_to_app(app_name, model_name)
+
+        time.sleep(60)
+
+        addr = self.clipper_conn.get_query_addr()
+        url = "http://{addr}/{app}/predict".format(addr=addr, app=app_name)
+
+        headers = {"Content-type": "application/json"}
+        test_input = [1.0, 2.0, 3.0]
+
+        pred1 = requests.post(
+            url,
+            headers=headers,
+            data=json.dumps({
+                "input": test_input,
+                "version": "v1"
+            })).json()
+
+        self.assertFalse(pred1["default"])
+        self.assertEqual(pred1['output'], 1)
+
+        pred2 = requests.post(
+            url,
+            headers=headers,
+            data=json.dumps({
+                "input": test_input,
+                "version": "v2"
+            })).json()
+
+        self.assertTrue("error" in pred2)
 
     def test_build_model_with_custom_packages(self):
         self.clipper_conn.build_model(
@@ -815,7 +865,8 @@ SHORT_TEST_ORDERING = [
     'test_remove_inactive_containers_succeeds', 'test_stop_models',
     'test_python_closure_deploys_successfully', 'test_register_py_endpoint',
     'test_test_predict_function', 'test_build_model_with_custom_packages',
-    'test_delete_application_correct', 'test_query_specific_model_version'
+    'test_delete_application_correct', 'test_query_specific_model_version',
+    'test_query_absent_model_version_fails_correctly'
 ]
 
 LONG_TEST_ORDERING = [
