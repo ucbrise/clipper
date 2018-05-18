@@ -397,7 +397,9 @@ class RequestHandler {
         respond_http(json_error_response, "400 Bad Request", response);
       } catch (const version_id_error& e) {
         std::string error_msg = e.what();
-        respond_http(error_msg, "400 Bad Request", response);
+        std::string json_error_response = get_prediction_error_response_content(
+            PREDICTION_ERROR_NAME_QUERY_PROCESSING, error_msg);
+        respond_http(json_error_response, "400 Bad Request", response);
       }
     };
     std::string predict_endpoint = "^/" + name + "/predict$";
@@ -572,14 +574,20 @@ class RequestHandler {
                 clipper::VersionedModelId(m, requested_version)};
             break;
           }
-          if (versioned_models.empty()) {
-            throw version_id_error("Requested model version does not exist.");
-          }
         }
         // There should be at most one linked model to this application, so
         // we break here.
         break;
       }
+
+      if (versioned_models.empty()) {
+        std::string model_name = linked_models[0];
+        std::stringstream ss;
+        ss << "Requested version: " << requested_version
+           << " does not exist for model: " << model_name;
+        throw version_id_error(ss.str());
+      }
+
     } else {
       {
         std::unique_lock<std::mutex> l(current_model_versions_mutex_);
