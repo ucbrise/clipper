@@ -371,6 +371,8 @@ class Server(threading.Thread):
                                 (recv_time + parse_time + handle_time) *
                                 1000.0)
 
+                            print("AHHHH")
+
                         print("recv: %f s, parse: %f s, handle: %f s" %
                               (recv_time, parse_time, handle_time))
 
@@ -636,7 +638,7 @@ class ModelContainerBase(object):
 
 
 class RPCService:
-    def __init__(self, collect_metrics=False):
+    def __init__(self, collect_metrics=True):
         self.collect_metrics = collect_metrics
 
     def get_event_history(self):
