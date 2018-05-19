@@ -361,14 +361,14 @@ class Server(threading.Thread):
                         if collect_metrics:
                             metrics.report_metric('clipper_mc_pred_total', 1)
                             metrics.report_metric('clipper_mc_recv_time_ms',
-                                                  recv_time / 1000.0)
+                                                  recv_time * 1000.0)
                             metrics.report_metric('clipper_mc_parse_time_ms',
-                                                  parse_time / 1000.0)
+                                                  parse_time * 1000.0)
                             metrics.report_metric('clipper_mc_handle_time_ms',
-                                                  handle_time / 1000.0)
+                                                  handle_time * 1000.0)
                             metrics.report_metric(
                                 'clipper_mc_end_to_end_latency_ms',
-                                (recv_time + parse_time + handle_time) /
+                                (recv_time + parse_time + handle_time) *
                                 1000.0)
 
                         print("recv: %f s, parse: %f s, handle: %f s" %
