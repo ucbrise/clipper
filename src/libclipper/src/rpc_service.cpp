@@ -309,11 +309,7 @@ void RPCService::receive_message(
       socket.recv(&msg_model_version, 0);
       socket.recv(&msg_model_input_type, 0);
 
-      int contains_rpc_version;
-      size_t contains_rpc_version_size = sizeof(contains_rpc_version);
-      zmq_getsockopt(&socket, ZMQ_RCVMORE, &contains_rpc_version,
-                     &contains_rpc_version_size);
-
+      bool contains_rpc_version = msg_model_input_type.more();
       boost::optional<uint32_t> model_rpc_version;
 
       if (contains_rpc_version) {
@@ -333,7 +329,7 @@ void RPCService::receive_message(
             LOGGING_TAG_RPC,
             "Received a new connection for a model {}:{} that did not specify "
             "an RPC version. Clipper expects RPC version: {}",
-            model_name, model_version, RPC_VERSION, model_rpc_version.get());
+            model_name, model_version, RPC_VERSION);
       } else if (model_rpc_version.get() != RPC_VERSION) {
         log_error_formatted(
             LOGGING_TAG_RPC,
