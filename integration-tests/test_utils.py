@@ -141,3 +141,22 @@ def log_clipper_state(cl):
         model_str=pp.pformat(cl.get_all_models(verbose=True))))
     logger.info("\nCONTAINERS:\n{cont_str}".format(
         cont_str=pp.pformat(cl.get_all_model_replicas(verbose=True))))
+
+def log_docker(clipper_conn):
+    """Retrieve status and log for last ten containers"""
+    container_runing = clipper_conn.cm.docker_client.containers.list(limit=10)
+    logger.info('----------------------')
+    logger.info('Last ten containers status')
+    for cont in container_runing:
+        logger.info('Name {}, Image {}, Status {}, Label {}'.format(
+            cont.name, cont.image, cont.status, cont.labels))
+    
+    logger.info('----------------------')
+    logger.info('Printing out logs')
+
+    for cont in container_runing:
+        logger.info('Name {}, Image {}, Status {}, Label {}'.format(
+            cont.name, cont.image, cont.status, cont.labels))
+        logger.info(cont.logs())
+
+

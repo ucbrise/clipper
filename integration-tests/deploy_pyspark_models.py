@@ -16,7 +16,7 @@ from pyspark.mllib.regression import LabeledPoint
 from pyspark.sql import SparkSession
 
 from test_utils import (create_docker_connection, BenchmarkException, headers,
-                        log_clipper_state)
+                        log_clipper_state, log_docker)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
 from clipper_admin.deployers.pyspark import deploy_pyspark_model, create_endpoint
@@ -175,6 +175,7 @@ if __name__ == "__main__":
             deploy_and_test_model(
                 sc, clipper_conn, lr_model, version, predict_fn=predict)
         except BenchmarkException:
+            log_docker(clipper_conn)
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
             clipper_conn = create_docker_connection(
@@ -186,6 +187,7 @@ if __name__ == "__main__":
                 cleanup=True, start_clipper=False)
     except Exception:
         logger.exception("Exception")
+        log_docker(clipper_conn)
         clipper_conn = create_docker_connection(
             cleanup=True, start_clipper=False)
         sys.exit(1)
