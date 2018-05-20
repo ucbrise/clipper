@@ -67,7 +67,7 @@ cd $DIR/../../
 cd container
 make container_rpc_test
 container_uptime_seconds=180
-./container_rpc_test $container_uptime_seconds &
+./container_rpc_test -t $container_uptime_seconds &
 
 sleep 10s
 
