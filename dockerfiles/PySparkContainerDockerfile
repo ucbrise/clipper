@@ -51,8 +51,8 @@ RUN set -ex; \
 	\
 	apt-get update; \
 	apt-get install -y \
-		"$JAVA_MAJOR_VERSION"="$JAVA_DEBIAN_VERSION" \
 		ca-certificates-java="$CA_CERTIFICATES_JAVA_VERSION" \
+		"$JAVA_MAJOR_VERSION"="$JAVA_DEBIAN_VERSION" \
 	; \
 	rm -rf /var/lib/apt/lists/*; \
 	\
