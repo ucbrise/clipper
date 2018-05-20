@@ -535,7 +535,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             }))
         logger.info(pred3.text)
         self.assertFalse(pred3.status_code == requests.codes.ok)
-        self.assertEqual(pred3.json()['cause'], "Requested model version does not exist.")
+        self.assertEqual(pred3.json()['cause'],
+                         "Requested model version does not exist.")
 
     def test_build_model_with_custom_packages(self):
         self.clipper_conn.build_model(
