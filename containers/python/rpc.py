@@ -19,6 +19,9 @@ from prometheus_client import start_http_server
 from prometheus_client.core import Counter, Gauge, Histogram, Summary
 import clipper_admin.metrics as metrics
 
+# We identify the version for later conditional string conversion
+USE_PY3 = sys.version_info >= (3, 0)
+
 INPUT_TYPE_BYTES = 0
 INPUT_TYPE_INTS = 1
 INPUT_TYPE_FLOATS = 2
@@ -293,12 +296,17 @@ class Server(threading.Thread):
                             raise
 
                         if input_type == INPUT_TYPE_STRINGS:
+                            delimiter = '\0'
+                            if USE_PY3 and isinstance(input_type, str):
+                                raw_content = raw_content.encode('utf-8')
+                                delimiter = b'\0'
+                            
                             # If we're processing string inputs, we delimit them using
                             # the null terminator included in their serialized representation,
                             # ignoring the extraneous final null terminator by
-                            # using a -1 slice
+                            # using a -1 slice 
                             inputs = np.array(
-                                raw_content.split('\0')[:-1],
+                                raw_content.split(delimiter)[:-1],
                                 dtype=input_type_to_dtype(input_type))
                         else:
                             inputs = np.array(
