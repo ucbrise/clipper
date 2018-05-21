@@ -30,6 +30,7 @@ def create_endpoint(
         pkgs_to_install=None):
     """Registers an app and deploys the provided predict function with MXNet model as
     a Clipper model.
+
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
@@ -96,12 +97,12 @@ def create_endpoint(
     Note
     ----
     Regarding `mxnet_data_shapes` parameter:
-    Clipper may provide the model with variable size input batches. Because MXNet can't
-    handle variable size input batches, we recommend setting batch size for input data
-    to 1, or dynamically reshaping the model with every prediction based on the current
-    input batch size.
-    More information regarding a DataDesc object can be found here:
-    https://mxnet.incubator.apache.org/versions/0.11.0/api/python/io.html#mxnet.io.DataDesc
+        Clipper may provide the model with variable size input batches. Because MXNet can't
+        handle variable size input batches, we recommend setting batch size for input data
+        to 1, or dynamically reshaping the model with every prediction based on the current
+        input batch size.
+        More information regarding a DataDesc object can be found here:
+        https://mxnet.incubator.apache.org/versions/0.11.0/api/python/io.html#mxnet.io.DataDesc
     """
 
     clipper_conn.register_application(name, input_type, default_output,
@@ -128,6 +129,7 @@ def deploy_mxnet_model(
         batch_size=-1,
         pkgs_to_install=None):
     """Deploy a Python function with a MXNet model.
+
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
@@ -188,7 +190,8 @@ def deploy_mxnet_model(
 
     Example
     -------
-
+    Create a MXNet model and then deploy it::
+    
         from clipper_admin import ClipperConnection, DockerContainerManager
         from clipper_admin.deployers.mxnet import deploy_mxnet_model
         import mxnet as mx
