@@ -286,7 +286,6 @@ class Server(threading.Thread):
                     msg_id_bytes = socket.recv()
                     msg_id = int(struct.unpack("<I", msg_id_bytes)[0])
 
-
                     print("Got start of message %d " % msg_id)
                     # list of byte arrays
                     request_header = socket.recv()
@@ -297,8 +296,9 @@ class Server(threading.Thread):
                         input_header_size_bytes = struct.unpack(
                             "<Q", input_header_size_raw)[0]
 
-
-                        typed_input_header_size = int(input_header_size_bytes / INPUT_HEADER_DTYPE.itemsize)
+                        typed_input_header_size = int(
+                            input_header_size_bytes /
+                            INPUT_HEADER_DTYPE.itemsize)
 
                         if len(self.input_header_buffer
                                ) < input_header_size_bytes:
@@ -422,7 +422,8 @@ class Server(threading.Thread):
         def recv_same_lengths():
             input_type_size_bytes = input_dtype.itemsize
             input_content_size_bytes = sum(input_sizes)
-            typed_input_content_size = int(input_content_size_bytes / input_type_size_bytes)
+            typed_input_content_size = int(
+                input_content_size_bytes / input_type_size_bytes)
 
             if len(self.input_content_buffer) < input_content_size_bytes:
                 self.input_content_buffer = bytearray(
