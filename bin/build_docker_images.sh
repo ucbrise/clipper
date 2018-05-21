@@ -273,9 +273,9 @@ build_images () {
     create_image python35-closure-container PyClosureContainerDockerfile $public py35
     create_image python36-closure-container PyClosureContainerDockerfile $public py36
 
-    # create_image pyspark-container PySparkContainerDockerfile $public py
-    # create_image pyspark35-container PySparkContainerDockerfile $public py35
-    # create_image pyspark36-container PySparkContainerDockerfile $public py36
+    create_image pyspark-container PySparkContainerDockerfile $public py
+    create_image pyspark35-container PySparkContainerDockerfile $public py35
+    create_image pyspark36-container PySparkContainerDockerfile $public py36
 
     create_image tf-container TensorFlowDockerfile $public py
     create_image tf35-container TensorFlowDockerfile $public py35
