@@ -526,17 +526,20 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             self.assertTrue(False)
 
         # Query a version that doesn't exist:
+        bad_version_name = 'skjfhkdjshfjksdhkjf'
         pred3 = requests.post(
             url,
             headers=headers,
             data=json.dumps({
                 "input": test_input,
-                "version": "skjfhkdjshfjksdhkjf"
+                "version": bad_version_name
             }))
         logger.info(pred3.text)
         self.assertFalse(pred3.status_code == requests.codes.ok)
-        self.assertEqual(pred3.json()['cause'],
-                         "Requested model version does not exist.")
+        self.assertEqual(
+            pred3.json()['cause'],
+            "Requested version: {version_name} does not exist for model: {model_name}".
+            format(version_name=bad_version_name, model_name=model_name))
 
     def test_build_model_with_custom_packages(self):
         self.clipper_conn.build_model(

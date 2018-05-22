@@ -575,9 +575,6 @@ class RequestHandler {
             break;
           }
         }
-        if (versioned_models.empty()) {
-          throw version_id_error("Requested model version does not exist.");
-        }
         // There should be at most one linked model to this application, so
         // we break here.
         break;
