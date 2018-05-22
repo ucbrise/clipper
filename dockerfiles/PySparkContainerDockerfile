@@ -46,13 +46,13 @@ RUN set -ex; \
 			export CA_CERTIFICATES_JAVA_VERSION="20161107~bpo8+1"; \
 			export JAVA_MAJOR_VERSION="openjdk-8-jdk"; \
 			export JAVA_VERSION="8u162"; \
-			export JAVA_DEBIAN_VERSION="8u162-b12-1~bpo8+1"; \
+			export JAVA_DEBIAN_VERSION="8u171-b11-1~bpo8+1"; \
 	fi; \
 	\
 	apt-get update; \
 	apt-get install -y \
-		ca-certificates-java="$CA_CERTIFICATES_JAVA_VERSION" \
 		"$JAVA_MAJOR_VERSION"="$JAVA_DEBIAN_VERSION" \
+		ca-certificates-java="$CA_CERTIFICATES_JAVA_VERSION" \
 	; \
 	rm -rf /var/lib/apt/lists/*; \
 	\
@@ -63,6 +63,7 @@ RUN set -ex; \
 	update-alternatives --get-selections | awk -v home="$(readlink -f "$JAVA_HOME")" 'index($3, home) == 1 { $2 = "manual"; print | "update-alternatives --set-selections" }'; \
 # ... and verify that it actually worked for one of the alternatives we care about
 	update-alternatives --query java | grep -q 'Status: manual'
+
 
 # see CA_CERTIFICATES_JAVA_VERSION notes above
 RUN /var/lib/dpkg/info/ca-certificates-java.postinst configure
