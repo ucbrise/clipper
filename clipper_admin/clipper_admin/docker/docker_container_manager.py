@@ -64,16 +64,16 @@ class DockerContainerManager(ContainerManager):
         """
         self.cluster_name = cluster_name
         self.public_hostname = docker_ip_address
-        self.clipper_query_port = find_unbound_port(start=clipper_query_port, increment=True)
-        self.clipper_management_port = find_unbound_port(start=clipper_management_port, increment=True)
-        self.clipper_rpc_port = find_unbound_port(start=clipper_rpc_port, increment=True)
+        self.clipper_query_port = clipper_query_port
+        self.clipper_management_port = clipper_management_port
+        self.clipper_rpc_port = clipper_rpc_port
         self.redis_ip = redis_ip
         if redis_ip is None:
             self.external_redis = False
         else:
             self.external_redis = True
-        self.redis_port = find_unbound_port(start=redis_port, increment=True)
-        self.prometheus_port = find_unbound_port(start=prometheus_port, increment=True)
+        self.redis_port = redis_port
+        self.prometheus_port = prometheus_port
         if docker_network is "host":
             raise ClipperException(
                 "DockerContainerManager does not support running Clipper on the "
@@ -98,6 +98,8 @@ class DockerContainerManager(ContainerManager):
 
         self.extra_container_kwargs.update(container_args)
 
+        self.prom_config_path = tempfile.NamedTemporaryFile('w', suffix='.yml', delete=False).name
+
     def start_clipper(self,
                       query_frontend_image,
                       mgmt_frontend_image,
@@ -121,12 +123,9 @@ class DockerContainerManager(ContainerManager):
             raise ClipperException(msg)
 
 
-
-
-
-
         if not self.external_redis:
             logger.info("Starting managed Redis instance in Docker")
+            self.redis_port = find_unbound_port(self.redis_port)
             redis_container = self.docker_client.containers.run(
                 'redis:alpine',
                 "redis-server --port %s" % self.redis_port,
@@ -141,6 +140,7 @@ class DockerContainerManager(ContainerManager):
             redis_ip=self.redis_ip, redis_port=self.redis_port)
         mgmt_labels = self.common_labels.copy()
         mgmt_labels[CLIPPER_MGMT_FRONTEND_CONTAINER_LABEL] = ""
+        self.clipper_management_port = find_unbound_port(self.clipper_management_port)
         self.docker_client.containers.run(
             mgmt_frontend_image,
             mgmt_cmd,
@@ -162,6 +162,8 @@ class DockerContainerManager(ContainerManager):
         query_labels[CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL] = ""
         query_container_id = random.randint(0, 100000)
         query_name = "query_frontend-{}".format(query_container_id)
+        self.clipper_query_port = find_unbound_port(self.clipper_query_port)
+        self.clipper_rpc_port = find_unbound_port(self.clipper_rpc_port)
         self.docker_client.containers.run(
             query_frontend_image,
             query_cmd,
@@ -181,9 +183,14 @@ class DockerContainerManager(ContainerManager):
             query_frontend_metric_name, self.docker_client, query_name,
             self.common_labels, self.extra_container_kwargs)
         setup_metric_config(query_frontend_metric_name,
+                            self.prom_config_path,
                             CLIPPER_INTERNAL_METRIC_PORT)
-        run_metric_image(self.docker_client, self.common_labels,
-                         self.prometheus_port, self.extra_container_kwargs)
+        self.prometheus_port = find_unbound_port(self.prometheus_port)
+        run_metric_image(self.docker_client,
+                         self.common_labels,
+                         self.prometheus_port,
+                         self.prom_config_path,
+                         self.extra_container_kwargs)
 
         self.connect()
 
@@ -249,6 +256,7 @@ class DockerContainerManager(ContainerManager):
 
         # Metric Section
         add_to_metric_config(model_container_name,
+                             self.prom_config_path,
                              CLIPPER_INTERNAL_METRIC_PORT)
 
         # Return model_container_name so we can check if it's up and running later
@@ -290,7 +298,7 @@ class DockerContainerManager(ContainerManager):
                 cur_container = current_replicas.pop()
                 cur_container.stop()
                 # Metric Section
-                delete_from_metric_config(cur_container.name)
+                delete_from_metric_config(cur_container.name, self.prom_config_path)
 
     def get_logs(self, logging_dir):
         containers = self.docker_client.containers.list(

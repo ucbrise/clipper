@@ -36,7 +36,7 @@ def parse_model_container_label(label):
     return splits
 
 
-def find_unbound_port(start=None, increment=False, port_range=(34256, 50000), verbose=False, logger=None):
+def find_unbound_port(start=None, increment=True, port_range=(34256, 50000), verbose=False, logger=None):
     """
     Fina a unbound port.
 

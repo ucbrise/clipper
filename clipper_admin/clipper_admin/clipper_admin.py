@@ -30,7 +30,7 @@ from .version import __version__
 
 DEFAULT_LABEL = []
 DEFAULT_PREDICTION_CACHE_SIZE_BYTES = 33554432
-CLIPPER_TEMP_DIR = "/tmp/clipper"
+CLIPPER_TEMP_DIR = "/tmp/clipper" # Used Internally for Test; Not Windows Compatible
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
