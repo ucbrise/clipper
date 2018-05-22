@@ -40,12 +40,14 @@ RUN set -ex; \
 	fi; \
 	\
 # The Py35 RPC Docker image uses jessie, so we have to use different package versions
+# JAVA_DEBIAN_VERSION found at https://packages.debian.org/jessie-backports/openjdk-8-jdk
+# CA_CERTIFICATES_JAVA_VERSION found at https://packages.debian.org/jessie-backports/ca-certificates-java
 	debian_version=$(cat /etc/debian_version); \
 	if echo "$debian_version" | grep "8.*"; then \
 			echo "deb http://http.debian.net/debian jessie-backports main" >> /etc/apt/sources.list.d/jessie-backports.list; \
 			export CA_CERTIFICATES_JAVA_VERSION="20161107~bpo8+1"; \
 			export JAVA_MAJOR_VERSION="openjdk-8-jdk"; \
-			export JAVA_VERSION="8u162"; \
+			export JAVA_VERSION="8u171"; \
 			export JAVA_DEBIAN_VERSION="8u171-b11-1~bpo8+1"; \
 	fi; \
 	\

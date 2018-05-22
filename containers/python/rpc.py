@@ -300,11 +300,11 @@ class Server(threading.Thread):
                             if USE_PY3 and isinstance(input_type, str):
                                 raw_content = raw_content.encode('utf-8')
                                 delimiter = b'\0'
-                            
+
                             # If we're processing string inputs, we delimit them using
                             # the null terminator included in their serialized representation,
                             # ignoring the extraneous final null terminator by
-                            # using a -1 slice 
+                            # using a -1 slice
                             inputs = np.array(
                                 raw_content.split(delimiter)[:-1],
                                 dtype=input_type_to_dtype(input_type))
