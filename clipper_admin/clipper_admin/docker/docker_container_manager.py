@@ -100,6 +100,7 @@ class DockerContainerManager(ContainerManager):
         self.extra_container_kwargs.update(container_args)
 
         self.prom_config_path = tempfile.NamedTemporaryFile('w', suffix='.yml', delete=False).name
+        self.prom_config_path = os.path.realpath(self.prom_config_path) # resolve symlink
 
     def start_clipper(self,
                       query_frontend_image,
@@ -212,10 +213,12 @@ class DockerContainerManager(ContainerManager):
     def _get_replicas(self, name, version):
         containers = self.docker_client.containers.list(
             filters={
-                "label":
-                "{key}={val}".format(
-                    key=CLIPPER_MODEL_CONTAINER_LABEL,
-                    val=create_model_container_label(name, version))
+                "label":[
+                    "{key}={val}".format(key=CLIPPER_DOCKER_LABEL, val=self.cluster_name),
+                    "{key}={val}".format(
+                        key=CLIPPER_MODEL_CONTAINER_LABEL,
+                        val=create_model_container_label(name, version))
+                ]
             })
         return containers
 
@@ -226,7 +229,10 @@ class DockerContainerManager(ContainerManager):
 
         containers = self.docker_client.containers.list(
             filters={
-                "label": CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL
+                "label": [
+                    "{key}={val}".format(key=CLIPPER_DOCKER_LABEL, val=self.cluster_name),
+                    CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL
+                ]
             })
         if len(containers) < 1:
             logger.warning("No Clipper query frontend found.")
