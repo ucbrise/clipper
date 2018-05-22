@@ -228,7 +228,6 @@ class KubernetesContainerManager(ContainerManager):
                 elif p.name == "7000":
                     self.clipper_rpc_port = p.node_port
 
-            # NOTE: status of the front end deployments not considered 
             query_frontend_deployments = self._k8s_beta.list_namespaced_deployment(
                 namespace="default",
                 label_selector=CLIPPER_QUERY_FRONTEND_DEPLOYMENT_LABEL).items
