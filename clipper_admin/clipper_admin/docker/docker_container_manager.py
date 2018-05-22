@@ -6,6 +6,7 @@ import sys
 import random
 import time
 import json
+import tempfile
 from ..container_manager import (
     create_model_container_label, parse_model_container_label, find_unbound_port,
     ContainerManager, CLIPPER_DOCKER_LABEL, CLIPPER_MODEL_CONTAINER_LABEL,
@@ -257,6 +258,7 @@ class DockerContainerManager(ContainerManager):
         # Metric Section
         add_to_metric_config(model_container_name,
                              self.prom_config_path,
+                             self.prometheus_port,
                              CLIPPER_INTERNAL_METRIC_PORT)
 
         # Return model_container_name so we can check if it's up and running later
@@ -298,7 +300,7 @@ class DockerContainerManager(ContainerManager):
                 cur_container = current_replicas.pop()
                 cur_container.stop()
                 # Metric Section
-                delete_from_metric_config(cur_container.name, self.prom_config_path)
+                delete_from_metric_config(cur_container.name, self.prom_config_path, self.prometheus_port)
 
     def get_logs(self, logging_dir):
         containers = self.docker_client.containers.list(
