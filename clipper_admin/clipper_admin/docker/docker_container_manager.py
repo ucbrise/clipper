@@ -7,7 +7,7 @@ import random
 import time
 import json
 from ..container_manager import (
-    create_model_container_label, parse_model_container_label,
+    create_model_container_label, parse_model_container_label, find_unbound_port,
     ContainerManager, CLIPPER_DOCKER_LABEL, CLIPPER_MODEL_CONTAINER_LABEL,
     CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL,
     CLIPPER_MGMT_FRONTEND_CONTAINER_LABEL, CLIPPER_INTERNAL_RPC_PORT,
@@ -64,16 +64,16 @@ class DockerContainerManager(ContainerManager):
         """
         self.cluster_name = cluster_name
         self.public_hostname = docker_ip_address
-        self.clipper_query_port = clipper_query_port
-        self.clipper_management_port = clipper_management_port
-        self.clipper_rpc_port = clipper_rpc_port
+        self.clipper_query_port = find_unbound_port(start=clipper_query_port, increment=True)
+        self.clipper_management_port = find_unbound_port(start=clipper_management_port, increment=True)
+        self.clipper_rpc_port = find_unbound_port(start=clipper_rpc_port, increment=True)
         self.redis_ip = redis_ip
         if redis_ip is None:
             self.external_redis = False
         else:
             self.external_redis = True
-        self.redis_port = redis_port
-        self.prometheus_port = prometheus_port
+        self.redis_port = find_unbound_port(start=redis_port, increment=True)
+        self.prometheus_port = find_unbound_port(start=prometheus_port, increment=True)
         if docker_network is "host":
             raise ClipperException(
                 "DockerContainerManager does not support running Clipper on the "
@@ -119,6 +119,11 @@ class DockerContainerManager(ContainerManager):
         except ConnectionError:
             msg = "Unable to Connect to Docker. Please Check if Docker is running."
             raise ClipperException(msg)
+
+
+
+
+
 
         if not self.external_redis:
             logger.info("Starting managed Redis instance in Docker")
