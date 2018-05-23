@@ -34,15 +34,15 @@ def _pass_conflicts():
             raise e
 
 
-def _create_prometheus_configmap(_k8s_v1):
+def _create_prometheus_configmap(_k8s_v1, namespace):
     with open(prom_configmap_path, 'r') as f:
         data = yaml.load(f)
 
     with _pass_conflicts():
-        _k8s_v1.create_namespaced_config_map(body=data, namespace='default')
+        _k8s_v1.create_namespaced_config_map(body=data, namespace=namespace)
 
 
-def _create_prometheus_deployment(_k8s_beta):
+def _create_prometheus_deployment(_k8s_beta, namespace):
     with open(prom_deployment_path, 'r') as f:
         data = yaml.load(f)
 
@@ -50,18 +50,18 @@ def _create_prometheus_deployment(_k8s_beta):
         'image'] = "prom/prometheus:{version}".format(version=PROM_VERSION)
 
     with _pass_conflicts():
-        _k8s_beta.create_namespaced_deployment(body=data, namespace='default')
+        _k8s_beta.create_namespaced_deployment(body=data, namespace=namespace)
 
 
-def _create_prometheus_service(_k8s_v1):
+def _create_prometheus_service(_k8s_v1, namespace):
     with open(prom_service_path, 'r') as f:
         data = yaml.load(f)
 
     with _pass_conflicts():
-        _k8s_v1.create_namespaced_service(body=data, namespace='default')
+        _k8s_v1.create_namespaced_service(body=data, namespace=namespace)
 
 
-def start_prometheus(_k8s_v1, _k8s_beta):
-    _create_prometheus_configmap(_k8s_v1)
-    _create_prometheus_deployment(_k8s_beta)
-    _create_prometheus_service(_k8s_v1)
+def start_prometheus(_k8s_v1, _k8s_beta, namespace='default'):
+    _create_prometheus_configmap(_k8s_v1, namespace)
+    _create_prometheus_deployment(_k8s_beta, namespace)
+    _create_prometheus_service(_k8s_v1, namespace)
