@@ -17,6 +17,8 @@ import yaml
 import os
 import time
 
+CLIPPER_QUERY_FRONTEND_DEPLOYMENT_LABEL = "ai.clipper.name=query-frontend"
+
 logger = logging.getLogger(__name__)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -225,6 +227,11 @@ class KubernetesContainerManager(ContainerManager):
                         self.clipper_query_port))
                 elif p.name == "7000":
                     self.clipper_rpc_port = p.node_port
+
+            query_frontend_deployments = self._k8s_beta.list_namespaced_deployment(
+                namespace="default",
+                label_selector=CLIPPER_QUERY_FRONTEND_DEPLOYMENT_LABEL).items
+            self.num_frontend_replicas = len(query_frontend_deployments)
 
             metrics_ports = self._k8s_v1.read_namespaced_service(
                 name="metrics", namespace='default').spec.ports
