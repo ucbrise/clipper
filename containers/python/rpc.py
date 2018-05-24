@@ -297,14 +297,15 @@ class Server(threading.Thread):
 
                         if input_type == INPUT_TYPE_STRINGS:
                             delimiter = b'\0'
-                            
+
                             # 0MQ has undefined behavior under py3 here.
                             # We just need to enforce the content is bytestring
                             # Note: b'string'.split('\0') will error in py3
                             #       it must be .split(b'\0') or both unicode
                             #       py2 doesn't have this issue.
                             if USE_PY3 and isinstance(raw_content, str):
-                                print('Converting raw_content from str to bytes')
+                                print(
+                                    'Converting raw_content from str to bytes')
                                 raw_content = raw_content.encode('utf-8')
 
                             # If we're processing string inputs, we delimit them using
