@@ -569,7 +569,7 @@ class RequestHandler {
         std::vector<std::string> registered_versions =
             clipper::redis::get_model_versions(redis_connection_, m);
         for (auto v : registered_versions) {
-          if (v.compare(requested_version)) {
+          if (v == requested_version) {
             versioned_models = {
                 clipper::VersionedModelId(m, requested_version)};
             break;
