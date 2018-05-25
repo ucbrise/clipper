@@ -109,8 +109,7 @@ class KubernetesContainerManager(ContainerManager):
                 self._k8s_v1.create_namespace(body)
             except ApiException as e:
                 logging.error(
-                    "Exception creating Kubernetes namespace: {}".
-                    format(e))
+                    "Exception creating Kubernetes namespace: {}".format(e))
                 raise ClipperException(
                     "Could not create Kubernetes namespace. "
                     "Reason: {}".format(e.reason))
@@ -200,7 +199,8 @@ class KubernetesContainerManager(ContainerManager):
                                 query_frontend_id)
 
                         self._k8s_v1.create_namespaced_service(
-                            body=rpc_service_body, namespace=self.k8s_namespace)
+                            body=rpc_service_body,
+                            namespace=self.k8s_namespace)
 
                 else:
                     self._k8s_beta.create_namespaced_deployment(
@@ -456,27 +456,31 @@ class KubernetesContainerManager(ContainerManager):
                     label_selector=CLIPPER_DOCKER_LABEL).items:
                 service_name = service.metadata.name
                 self._k8s_v1.delete_namespaced_service(
-                    namespace=self.k8s_namespace,
-                    name=service_name)
+                    namespace=self.k8s_namespace, name=service_name)
 
             self._k8s_beta.delete_collection_namespaced_deployment(
-                namespace=self.k8s_namespace, label_selector=CLIPPER_DOCKER_LABEL)
+                namespace=self.k8s_namespace,
+                label_selector=CLIPPER_DOCKER_LABEL)
 
             self._k8s_beta.delete_collection_namespaced_replica_set(
-                namespace=self.k8s_namespace, label_selector=CLIPPER_DOCKER_LABEL)
+                namespace=self.k8s_namespace,
+                label_selector=CLIPPER_DOCKER_LABEL)
 
             self._k8s_v1.delete_collection_namespaced_replication_controller(
-                namespace=self.k8s_namespace, label_selector=CLIPPER_DOCKER_LABEL)
+                namespace=self.k8s_namespace,
+                label_selector=CLIPPER_DOCKER_LABEL)
 
             self._k8s_v1.delete_collection_namespaced_pod(
-                namespace=self.k8s_namespace, label_selector=CLIPPER_DOCKER_LABEL)
+                namespace=self.k8s_namespace,
+                label_selector=CLIPPER_DOCKER_LABEL)
 
             self._k8s_v1.delete_collection_namespaced_pod(
                 namespace=self.k8s_namespace,
                 label_selector=CLIPPER_MODEL_CONTAINER_LABEL)
 
             self._k8s_v1.delete_collection_namespaced_config_map(
-                namespace=self.k8s_namespace, label_selector=CLIPPER_DOCKER_LABEL)
+                namespace=self.k8s_namespace,
+                label_selector=CLIPPER_DOCKER_LABEL)
         except ApiException as e:
             logging.warn(
                 "Exception deleting kubernetes resources: {}".format(e))
