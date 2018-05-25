@@ -9,6 +9,7 @@ import time
 import numpy as np
 import signal
 import sys
+import argparse
 
 
 def predict(addr, filename):
@@ -26,7 +27,7 @@ def predict(addr, filename):
 
 
 def image_size(img):
-    import base64,
+    import base64
     import io
     import os
     import PIL.Image
@@ -48,6 +49,12 @@ def signal_handler(signal, frame):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Example of query with image.')
+    parser.add_argument('image', nargs='+',
+                        help='Image filename')
+    args = parser.parse_args()
+    images = args.image # A list of image names
+
     signal.signal(signal.SIGINT, signal_handler)
     clipper_conn = ClipperConnection(DockerContainerManager())
     clipper_conn.start_clipper()
@@ -55,11 +62,8 @@ if __name__ == '__main__':
                                     image_size)
     time.sleep(2)
     try:
-        if len(sys.argv) > 1:
-            for f in sys.argv[1:]:
-                if f.endswith('.jpg') or f.endswith('.png'):
-                    predict(clipper_conn.get_query_addr(), f)
-        else:
-            print("Usage: python example_client.py IMAGE_FILE [...]")
+        for f in args.image:
+            if f.endswith('.jpg') or f.endswith('.png'):
+                predict(clipper_conn.get_query_addr(), f)
     except Exception as e:
         clipper_conn.stop_all()
