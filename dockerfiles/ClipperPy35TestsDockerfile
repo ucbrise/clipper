@@ -1,9 +1,9 @@
 ARG CODE_VERSION
-FROM clipper/dev:${CODE_VERSION}
+FROM clipper/py35-dev:${CODE_VERSION}
 
 LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
-RUN pip install awscli==1.14.*
+RUN pip3 install awscli==1.14.*
 
 COPY ./ /clipper
 
@@ -11,8 +11,8 @@ COPY ./ /clipper
 RUN cd /clipper/src/libs/spdlog \
     && git apply ../patches/make_spdlog_compile_linux.patch
 
-RUN pip install -e /clipper/clipper_admin
+RUN pip3 install -e /clipper/clipper_admin
 
-ENTRYPOINT ["/clipper/bin/ci_checks.sh", "true"]
+ENTRYPOINT ["/clipper/bin/ci_checks.sh", "false"]
 
 # vim: set filetype=dockerfile:

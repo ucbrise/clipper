@@ -1,6 +1,6 @@
 # This integration test is taken straight fron `kubernetes_integration_test.py
-# With the setting 1 app, 1 model, 2 replica.
-# Adding container monitoring check
+# With the setting 1 app, 1 model, 1 replica.
+# Adding multiple frontend checks (2 frontend)
 
 from __future__ import absolute_import, division, print_function
 import os
@@ -15,6 +15,7 @@ import logging
 import yaml
 from test_utils import (create_kubernetes_connection, BenchmarkException,
                         fake_model_data, headers, log_clipper_state)
+
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
 from clipper_admin import __version__ as clipper_version, CLIPPER_TEMP_DIR, ClipperException
@@ -25,8 +26,7 @@ logging.basicConfig(
     level=logging.INFO)
 
 logger = logging.getLogger(__name__)
-
-MAX_RETRY = 4
+MAX_RETRY = 5
 
 
 def deploy_model(clipper_conn, name, link=False):
@@ -34,11 +34,11 @@ def deploy_model(clipper_conn, name, link=False):
     model_name = "{}-model".format(name)
     clipper_conn.build_and_deploy_model(
         model_name,
-        1,
+        str(int(time.time())),  # random string as version
         "doubles",
         fake_model_data,
         "clipper/noop-container:{}".format(clipper_version),
-        num_replicas=2,  # We set it to 2 for metric purpose.
+        num_replicas=1,
         container_registry=
         "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper")
     time.sleep(10)
@@ -59,9 +59,10 @@ def deploy_model(clipper_conn, name, link=False):
                 "http://%s/%s/predict" % (addr, app_name),
                 headers=headers,
                 data=json.dumps({
-                    'input': list([1.2, 1.3])
+                    'input': [0.1, 0.2]
                 }))
             result = response.json()
+            print(result)
             if response.status_code == requests.codes.ok and result["default"]:
                 num_defaults += 1
         if num_defaults > 0:
@@ -88,7 +89,7 @@ def create_and_test_app(clipper_conn, name):
         "http://%s/%s/predict" % (addr, app_name),
         headers=headers,
         data=json.dumps({
-            'input': list([1.2, 1.3])
+            'input': [0.1, 0.2]
         }))
     response.json()
     if response.status_code != requests.codes.ok:
@@ -98,119 +99,76 @@ def create_and_test_app(clipper_conn, name):
     deploy_model(clipper_conn, name, link=True)
 
 
-#### Metric Helper
-def get_matched_query(addr, keyword):
-    query = "{}/api/v1/series?match[]={}".format(addr, keyword)
-
-    logger.info("Querying: {}".format(query))
-    res = requests.get(query).json()
-    logger.info(res)
-
-    return res
-
-
-def parse_res_and_assert_node(res, node_num):
-    assert res['status'] == 'success'
-    assert len(res['data']) == node_num
-
-
-def get_metrics_config():
-    config_path = os.path.join(
-        os.path.abspath("%s/../monitoring" % cur_dir), 'metrics_config.yaml')
-    with open(config_path, 'r') as f:
-        conf = yaml.load(f)
-    return conf
-
-
-def check_target_health(metric_addr):
-    query = metric_addr + '/api/v1/targets'
-    logger.info("Querying: {}".format(query))
-    res = requests.get(query).json()
-    logger.info(res)
-    assert res['status'] == 'success'
-
-    active_targets = res['data']['activeTargets']
-    assert len(active_targets) == 3, 'Wrong number of targets'
-
-    for target in active_targets:
-        assert target['health'] == 'up', "Target {} is not up!".format(target)
-
-
 if __name__ == "__main__":
     try:
         clipper_conn = create_kubernetes_connection(
-            cleanup=True, start_clipper=True)
-        time.sleep(60)
-        logger.info(clipper_conn.cm.get_query_addr())
+            cleanup=True, start_clipper=True, num_frontend_replicas=2)
+        time.sleep(10)
+        print(clipper_conn.cm.get_query_addr())
         try:
-            create_and_test_app(clipper_conn, "kube-metric")
+            create_and_test_app(clipper_conn, "testapp0")
 
-            # Start Metric Check
-            metric_api_addr = clipper_conn.cm.get_metric_addr()
+            logger.info("Begin Kubernetes Multiple Frontend Test")
 
-            # Account for InvalidSchema: No connection adapters were found
-            if not metric_api_addr.startswith('http://'):
-                metric_api_addr = 'http://' + metric_api_addr
+            k8s_beta = clipper_conn.cm._k8s_beta
+            if (k8s_beta.read_namespaced_deployment(
+                    'query-frontend-0', namespace='default').to_dict()
+                ['status']['available_replicas'] != 1):
+                raise BenchmarkException(
+                    "Wrong number of replicas of query-frontend-0."
+                    "Expected {}, found {}".format(
+                        1,
+                        k8s_beta.read_namespaced_deployment(
+                            'query-frontend-0', namespace='default').to_dict()[
+                                'status']['available_replicas']))
+            if (k8s_beta.read_namespaced_deployment(
+                    'query-frontend-1', namespace='default').to_dict()
+                ['status']['available_replicas'] != 1):
+                raise BenchmarkException(
+                    "Wrong number of replicas of query-frontend-1."
+                    "Expected {}, found {}".format(
+                        1,
+                        k8s_beta.read_namespaced_deployment(
+                            'query-frontend-1', namespace='default').to_dict()[
+                                'status']['available_replicas']))
+            logger.info("Ok: we have 2 query frontend depolyments")
 
-            logger.info("Test 1: Checking status of 3 node exporter")
+            k8s_v1 = clipper_conn.cm._k8s_v1
+            svc_lists = k8s_v1.list_namespaced_service(
+                namespace='default').to_dict()['items']
+            svc_names = [svc['metadata']['name'] for svc in svc_lists]
+            if not ('query-frontend-0' in svc_names
+                    and 'query-frontend-1' in svc_names):
+                raise BenchmarkException(
+                    "Error creating query frontend RPC services")
+            logger.info("Ok: we have 2 query-frontend rpc services")
 
-            # Sleep & retry is need to for kubelet to setup networking
-            #  It takes about 2 minutes for the network to get back on track
-            #  for the frontend-exporter to expose metrics correct.
-            retry_count = MAX_RETRY
-            while retry_count:
-                try:
-                    check_target_health(metric_api_addr)
-                    retry_count = 0
-                except AssertionError as e:
-                    logger.info(
-                        "Exception noted. Will retry again in 60 seconds.")
-                    logger.info(e)
-                    retry_count -= 1
-                    if retry_count == 0:  # a.k.a. the last retry
-                        raise e
-                    else:
-                        time.sleep(60)
-                        pass  # try again.
-
-            logger.info("Test 1 Passed")
-
-            logger.info("Test 2: Checking Model Container Metrics")
-            conf = get_metrics_config()
-            conf = conf['Model Container']
-            prefix = 'clipper_{}_'.format(conf.pop('prefix'))
-            for name, spec in conf.items():
-                name = prefix + name
-                if spec['type'] == 'Histogram' or spec['type'] == 'Summary':
-                    name += '_sum'
-                res = get_matched_query(metric_api_addr, name)
-                parse_res_and_assert_node(res, node_num=2)
-            logger.info("Test 2 Passed")
-            # End Metric Check
             if not os.path.exists(CLIPPER_TEMP_DIR):
                 os.makedirs(CLIPPER_TEMP_DIR)
             tmp_log_dir = tempfile.mkdtemp(dir=CLIPPER_TEMP_DIR)
             logger.info(clipper_conn.get_clipper_logs(tmp_log_dir))
+
             # Remove temp files
             shutil.rmtree(tmp_log_dir)
             log_clipper_state(clipper_conn)
             logger.info("SUCCESS")
-            create_kubernetes_connection(
-                cleanup=True, start_clipper=False, connect=False)
-            logger.info("EXITING")
-            os._exit(0)
+            clipper_conn.stop_all()
         except BenchmarkException as e:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
-            create_kubernetes_connection(
-                cleanup=True, start_clipper=False, connect=False)
+            create_kubernetes_connection(cleanup=True, start_clipper=False)
             sys.exit(1)
         except ClipperException as e:
             log_clipper_state(clipper_conn)
             logger.exception("ClipperException")
-            create_kubernetes_connection(
-                cleanup=True, start_clipper=False, connect=False)
+            create_kubernetes_connection(cleanup=True, start_clipper=False)
             sys.exit(1)
     except Exception as e:
         logger.exception("Exception: {}".format(e))
+
+        # Added debug lines in case it fails
+        os.system("kubectl get pods")
+        os.system("kubectl describe pods")
+        # End Debug
+
         sys.exit(1)
