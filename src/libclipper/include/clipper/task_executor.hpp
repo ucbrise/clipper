@@ -296,7 +296,7 @@ class TaskExecutor {
                            "Registered batch size of {} for model {}:{}",
                            batch_size, model_id.get_name(), model_id.get_id());
         active_containers_->register_batch_size(model_id, batch_size);
-      } else if (event_type == "del" && *task_executor_valid) {
+      } else if (event_type == "hdel" && *task_executor_valid) {
         auto model_info =
             clipper::redis::get_model_by_key(redis_connection_, key);
         VersionedModelId model_id = VersionedModelId(
@@ -308,9 +308,17 @@ class TaskExecutor {
                              model_id.get_name(), model_id.get_id());
         }
         for (auto c : clipper::redis::get_all_containers(redis_connection_)) {
-          clipper::redis::delete_container(redis_connection_, c.first,
-                                           c.second);
+          if (c.first == model_id) {
+            log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
+                               "Deleting container: {} : {} : {}",
+                               model_id.get_name(), model_id.get_id(),
+                               c.second);
+            clipper::redis::delete_container(redis_connection_, c.first,
+                                             c.second);
+            active_containers_->remove_container(c.first, c.second);
+          }
         }
+        clipper::redis::delete_versioned_model(redis_connection_, model_id);
       }
     });
 

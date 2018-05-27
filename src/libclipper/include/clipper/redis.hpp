@@ -134,6 +134,16 @@ bool add_model(redox::Redox& redis, const VersionedModelId& model_id,
                const std::string& model_data_path, int batch_size);
 
 /**
+ * Marks a model for deletion if it exists.
+ *
+ * \return Returns true if the model was present in the table
+ * and was successfully marked for deletion. Returns false if there was a problem
+ * or if the model was not in the table.
+ */
+bool mark_versioned_model_for_delete(redox::Redox& redis,
+                                     const VersionedModelId& model_id);
+
+/**
  * Deletes a model from the model table if it exists.
  *
  * \return Returns true if the model was present in the table

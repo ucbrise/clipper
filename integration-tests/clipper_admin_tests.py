@@ -564,6 +564,19 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             None,
             pkgs_to_install=["sympy==1.1.*"])
 
+    def test_remove_model_correct(self):
+        model_name = "m"
+        versions = ["v1", "v2"]
+        container_name = "clipper/noop-container:{}".format(clipper_version)
+        input_type = "doubles"
+        for version in versions:
+            self.clipper_conn.build_and_deploy_model(
+                model_name, version, input_type, fake_model_data, container_name)
+        self.clipper_conn.remove_model(model_name)
+
+        models = self.clipper_conn.get_all_models(verbose=False)
+        self.assertFalse(model_name in models)
+
 
 class ClipperManagerTestCaseLong(unittest.TestCase):
     @classmethod
@@ -840,7 +853,8 @@ SHORT_TEST_ORDERING = [
     'test_remove_inactive_containers_succeeds', 'test_stop_models',
     'test_python_closure_deploys_successfully', 'test_register_py_endpoint',
     'test_test_predict_function', 'test_build_model_with_custom_packages',
-    'test_delete_application_correct', 'test_query_specific_model_version'
+    'test_delete_application_correct', 'test_query_specific_model_version',
+    'test_remove_model_correct',
 ]
 
 LONG_TEST_ORDERING = [

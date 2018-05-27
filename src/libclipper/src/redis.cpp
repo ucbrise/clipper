@@ -277,7 +277,8 @@ bool add_model(Redox& redis, const VersionedModelId& model_id,
       "labels",           labels_to_str(labels),
       "container_name",   container_name,
       "model_data_path",  model_data_path,
-      "batch_size", std::to_string(batch_size)};
+      "batch_size",       std::to_string(batch_size),
+      "valid",            ""};
     // clang-format on
     return send_cmd_no_reply<string>(redis, cmd_vec);
   } else {
@@ -298,6 +299,16 @@ std::unordered_map<std::string, std::string> get_model_by_key(
     return parse_redis_map(model_data);
   } else {
     return std::unordered_map<std::string, std::string>{};
+  }
+}
+
+bool mark_versioned_model_for_delete(Redox& redis, const VersionedModelId& model_id) {
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
+    std::string model_id_key = gen_versioned_model_key(model_id);
+    return send_cmd_no_reply<int>(redis, {"HDEL", model_id_key, "valid"});
+  } else {
+    return false;
   }
 }
 
@@ -525,7 +536,7 @@ bool add_model_links(redox::Redox& redis, const std::string& appname,
   }
 
   for (auto model_name : model_names) {
-    if (!send_cmd_no_reply<int>(
+    if (!send_cmd_no_reply<string>(
             redis, std::vector<std::string>{"SET", model_name, appname})) {
       return false;
     }

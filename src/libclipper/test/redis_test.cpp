@@ -234,7 +234,7 @@ TEST_F(RedisTest, DeleteModel) {
                         model_path, DEFAULT_BATCH_SIZE));
   auto add_result = get_model(*redis_, model);
   EXPECT_EQ(add_result.size(), static_cast<size_t>(8));
-  ASSERT_TRUE(delete_model(*redis_, model));
+  ASSERT_TRUE(delete_versioned_model(*redis_, model));
   auto delete_result = get_model(*redis_, model);
   EXPECT_EQ(delete_result.size(), static_cast<size_t>(0));
 }
@@ -421,7 +421,7 @@ TEST_F(RedisTest, SubscriptionDetectModelDelete) {
       });
   // give Redis some time to register the subscription
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
-  ASSERT_TRUE(delete_model(*redis_, model));
+  ASSERT_TRUE(delete_versioned_model(*redis_, model));
   std::unique_lock<std::mutex> l(notification_mutex);
   bool result = notification_recv.wait_for(l, std::chrono::milliseconds(1000),
                                            [&recv]() { return recv == true; });
