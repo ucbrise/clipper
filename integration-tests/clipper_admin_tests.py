@@ -496,24 +496,49 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         headers = {"Content-type": "application/json"}
         test_input = [1.0, 2.0, 3.0]
 
-        pred1 = requests.post(
+        pred1_raw = requests.post(
             url,
             headers=headers,
             data=json.dumps({
                 "input": test_input,
                 "version": "v1"
-            })).json()
+            }))
+        try:
+            pred1 = pred1_raw.json()
+            self.assertFalse(pred1["default"])
+            self.assertEqual(pred1['output'], 1)
+        except ValueError:
+            logger.error(pred1_raw.text)
+            self.assertTrue(False)
 
-        self.assertFalse(pred1["default"])
-        self.assertEqual(pred1['output'], 1)
-
-        pred2 = requests.post(
+        pred2_raw = requests.post(
             url, headers=headers, data=json.dumps({
                 "input": test_input
-            })).json()
+            }))
+        try:
+            pred2 = pred2_raw.json()
 
-        self.assertFalse(pred2["default"])
-        self.assertEqual(pred2['output'], 2)
+            self.assertFalse(pred2["default"])
+            self.assertEqual(pred2['output'], 2)
+        except ValueError:
+            logger.error(pred2_raw.text)
+            self.assertTrue(False)
+
+        # Query a version that doesn't exist:
+        bad_version_name = 'skjfhkdjshfjksdhkjf'
+        pred3 = requests.post(
+            url,
+            headers=headers,
+            data=json.dumps({
+                "input": test_input,
+                "version": bad_version_name
+            }))
+        logger.info(pred3.text)
+        self.assertFalse(pred3.status_code == requests.codes.ok)
+        self.assertEqual(
+            pred3.json()['cause'],
+            "Requested version: {version_name} does not exist for model: {model_name}".
+            format(version_name=bad_version_name, model_name=model_name))
 
     def test_query_absent_model_version_fails_correctly(self):
         model_name = "testmodel"
