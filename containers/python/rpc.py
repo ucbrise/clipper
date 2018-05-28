@@ -9,8 +9,12 @@ import socket
 import sys
 import os
 import yaml
+import logging
 from collections import deque
-from subprocess32 import Popen, PIPE
+if sys.version_info < (3, 0):
+    from subprocess32 import Popen, PIPE
+else:
+    from subprocess import Popen, PIPE
 from prometheus_client import start_http_server
 from prometheus_client.core import Counter, Gauge, Histogram, Summary
 import clipper_admin.metrics as metrics
@@ -48,6 +52,17 @@ EVENT_HISTORY_RECEIVED_CONTAINER_CONTENT = 6
 MAXIMUM_UTF_8_CHAR_LENGTH_BYTES = 4
 BYTES_PER_LONG = 8
 
+# Initial size of the buffer used for receiving
+# request input content
+INITIAL_INPUT_CONTENT_BUFFER_SIZE = 1024
+# Initial size of the buffers used for sending response
+# header data and receiving request header data
+INITIAL_HEADER_BUFFER_SIZE = 1024
+
+INPUT_HEADER_DTYPE = np.dtype(np.uint64)
+
+logger = logging.getLogger(__name__)
+
 
 def string_to_input_type(input_str):
     input_str = input_str.strip().lower()
@@ -73,15 +88,15 @@ def string_to_input_type(input_str):
 
 def input_type_to_dtype(input_type):
     if input_type == INPUT_TYPE_BYTES:
-        return np.int8
+        return np.dtype(np.int8)
     elif input_type == INPUT_TYPE_INTS:
-        return np.int32
+        return np.dtype(np.int32)
     elif input_type == INPUT_TYPE_FLOATS:
-        return np.float32
+        return np.dtype(np.float32)
     elif input_type == INPUT_TYPE_DOUBLES:
-        return np.float64
+        return np.dtype(np.float64)
     elif input_type == INPUT_TYPE_STRINGS:
-        return np.str_
+        return str
 
 
 def input_type_to_string(input_type):
@@ -202,6 +217,10 @@ class Server(threading.Thread):
         sys.stdout.flush()
         sys.stderr.flush()
 
+        self.input_header_buffer = bytearray(INITIAL_HEADER_BUFFER_SIZE)
+        self.input_content_buffer = bytearray(
+            INITIAL_INPUT_CONTENT_BUFFER_SIZE)
+
         while True:
             socket = self.context.socket(zmq.DEALER)
             poller.register(socket, zmq.POLLIN)
@@ -273,27 +292,48 @@ class Server(threading.Thread):
                     request_type = struct.unpack("<I", request_header)[0]
 
                     if request_type == REQUEST_TYPE_PREDICT:
-                        input_header_size = socket.recv()
-                        input_header = socket.recv()
+                        input_header_size_raw = socket.recv()
+                        input_header_size_bytes = struct.unpack(
+                            "<Q", input_header_size_raw)[0]
 
-                        t2 = datetime.now()
+                        typed_input_header_size = int(
+                            input_header_size_bytes /
+                            INPUT_HEADER_DTYPE.itemsize)
+
+                        if len(self.input_header_buffer
+                               ) < input_header_size_bytes:
+                            self.input_header_buffer = bytearray(
+                                input_header_size_bytes * 2)
+
+                        # While this procedure still incurs a copy, it saves a potentially
+                        # costly memory allocation by ZMQ. This savings only occurs
+                        # if the input header did not have to be resized
+                        input_header_view = memoryview(
+                            self.input_header_buffer)[:input_header_size_bytes]
+                        input_header_content = socket.recv(copy=False).buffer
+                        input_header_view[:
+                                          input_header_size_bytes] = input_header_content
 
                         parsed_input_header = np.frombuffer(
-                            input_header, dtype=np.uint64)
+                            self.input_header_buffer,
+                            dtype=INPUT_HEADER_DTYPE)[:typed_input_header_size]
 
                         input_type, num_inputs, input_sizes = parsed_input_header[
                             0], parsed_input_header[1], parsed_input_header[2:]
 
-                        inputs = []
-                        for _ in range(num_inputs):
-                            input_item = socket.recv()
-                            if input_type == INPUT_TYPE_STRINGS:
-                                input_item = str(input_item)
-                            else:
-                                input_item = np.frombuffer(
-                                    input_item,
-                                    dtype=input_type_to_dtype(input_type))
-                            inputs.append(input_item)
+                        input_dtype = input_type_to_dtype(input_type)
+                        input_sizes = [
+                            int(inp_size) for inp_size in input_sizes
+                        ]
+
+                        if input_type == INPUT_TYPE_STRINGS:
+                            inputs = self.recv_string_content(
+                                socket, num_inputs, input_sizes)
+                        else:
+                            inputs = self.recv_primitive_content(
+                                socket, num_inputs, input_sizes, input_dtype)
+
+                        t2 = datetime.now()
 
                         if int(input_type) != int(self.model_input_type):
                             print((
@@ -323,14 +363,14 @@ class Server(threading.Thread):
                         if collect_metrics:
                             metrics.report_metric('clipper_mc_pred_total', 1)
                             metrics.report_metric('clipper_mc_recv_time_ms',
-                                                  recv_time / 1000.0)
+                                                  recv_time * 1000.0)
                             metrics.report_metric('clipper_mc_parse_time_ms',
-                                                  parse_time / 1000.0)
+                                                  parse_time * 1000.0)
                             metrics.report_metric('clipper_mc_handle_time_ms',
-                                                  handle_time / 1000.0)
+                                                  handle_time * 1000.0)
                             metrics.report_metric(
                                 'clipper_mc_end_to_end_latency_ms',
-                                (recv_time + parse_time + handle_time) /
+                                (recv_time + parse_time + handle_time) *
                                 1000.0)
 
                         print("recv: %f s, parse: %f s, handle: %f s" %
@@ -348,8 +388,82 @@ class Server(threading.Thread):
                 sys.stdout.flush()
                 sys.stderr.flush()
 
+    def recv_string_content(self, socket, num_inputs, input_sizes):
+        # Create an empty numpy array that will contain
+        # input string references
+        inputs = np.empty(num_inputs, dtype=object)
+        for i in range(num_inputs):
+            # Obtain a memoryview of the received message's
+            # ZMQ frame buffer
+            input_item_buffer = socket.recv(copy=False).buffer
+            # Copy the memoryview content into a string object
+            input_str = input_item_buffer.tobytes()
+            inputs[i] = input_str
+
+        return inputs
+
+    def recv_primitive_content(self, socket, num_inputs, input_sizes,
+                               input_dtype):
+        def recv_different_lengths():
+            # Create an empty numpy array that will contain
+            # input array references
+            inputs = np.empty(num_inputs, dtype=object)
+            for i in range(num_inputs):
+                # Receive input data and copy it into a byte
+                # buffer that can be parsed into a writeable
+                # array
+                input_item_buffer = socket.recv(copy=True)
+                input_item = np.frombuffer(
+                    input_item_buffer, dtype=input_dtype)
+                inputs[i] = input_item
+
+            return inputs
+
+        def recv_same_lengths():
+            input_type_size_bytes = input_dtype.itemsize
+            input_content_size_bytes = sum(input_sizes)
+            typed_input_content_size = int(
+                input_content_size_bytes / input_type_size_bytes)
+
+            if len(self.input_content_buffer) < input_content_size_bytes:
+                self.input_content_buffer = bytearray(
+                    input_content_size_bytes * 2)
+
+            input_content_view = memoryview(
+                self.input_content_buffer)[:input_content_size_bytes]
+
+            item_start_idx = 0
+            for i in range(num_inputs):
+                input_size = input_sizes[i]
+                # Obtain a memoryview of the received message's
+                # ZMQ frame buffer
+                input_item_buffer = socket.recv(copy=False).buffer
+                # Copy the memoryview content into a pre-allocated content buffer
+                input_content_view[item_start_idx:item_start_idx +
+                                   input_size] = input_item_buffer
+                item_start_idx += input_size
+
+            # Reinterpret the content buffer as a typed numpy array
+            inputs = np.frombuffer(
+                self.input_content_buffer,
+                dtype=input_dtype)[:typed_input_content_size]
+
+            # All inputs are of the same size, so we can use
+            # np.reshape to construct an input matrix
+            inputs = np.reshape(inputs, (len(input_sizes), -1))
+
+            return inputs
+
+        if len(set(input_sizes)) == 1:
+            return recv_same_lengths()
+        else:
+            return recv_different_lengths()
+
     def send_container_metadata(self, socket):
-        socket.send("", zmq.SNDMORE)
+        if sys.version_info < (3, 0):
+            socket.send("", zmq.SNDMORE)
+        else:
+            socket.send("".encode('utf-8'), zmq.SNDMORE)
         socket.send(struct.pack("<I", MESSAGE_TYPE_NEW_CONTAINER), zmq.SNDMORE)
         socket.send_string(self.model_name, zmq.SNDMORE)
         socket.send_string(str(self.model_version), zmq.SNDMORE)
@@ -361,7 +475,10 @@ class Server(threading.Thread):
         sys.stderr.flush()
 
     def send_heartbeat(self, socket):
-        socket.send("", zmq.SNDMORE)
+        if sys.version_info < (3, 0):
+            socket.send("", zmq.SNDMORE)
+        else:
+            socket.send_string("", zmq.SNDMORE)
         socket.send(struct.pack("<I", MESSAGE_TYPE_HEARTBEAT))
         self.event_history.insert(EVENT_HISTORY_SENT_HEARTBEAT)
         print("Sent heartbeat!")
@@ -387,7 +504,7 @@ class PredictionRequest:
 
 
 class PredictionResponse:
-    header_buffer = bytearray(1024)
+    header_buffer = bytearray(INITIAL_HEADER_BUFFER_SIZE)
 
     def __init__(self, msg_id):
         """
@@ -407,7 +524,10 @@ class PredictionResponse:
         ----------
         output : string
         """
-        output = unicode(output, "utf-8").encode("utf-8")
+        if not isinstance(output, str):
+            output = unicode(output, "utf-8").encode("utf-8")
+        else:
+            output = output.encode('utf-8')
         self.outputs.append(output)
         self.num_outputs += 1
 
@@ -425,7 +545,10 @@ class PredictionResponse:
         """
         assert self.num_outputs > 0
         output_header, header_length_bytes = self._create_output_header()
-        socket.send("", flags=zmq.SNDMORE)
+        if sys.version_info < (3, 0):
+            socket.send("", flags=zmq.SNDMORE)
+        else:
+            socket.send_string("", flags=zmq.SNDMORE)
         socket.send(
             struct.pack("<I", MESSAGE_TYPE_CONTAINER_CONTENT),
             flags=zmq.SNDMORE)
@@ -553,7 +676,10 @@ class RPCService:
         self.server.model_input_type = model_input_type
         self.server.model = model
 
-        # Start metric collection
+        # Create a file named model_is_ready.check to show that model and container
+        # are ready
+        with open("/model_is_ready.check", "w") as f:
+            f.write("READY")
         if self.collect_metrics:
             start_metric_server()
             add_metrics()

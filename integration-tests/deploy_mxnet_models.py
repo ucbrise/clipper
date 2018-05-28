@@ -1,6 +1,8 @@
 from __future__ import absolute_import, print_function
 import os
 import sys
+if sys.version_info >= (3, 0):
+    sys.exit(0)
 import requests
 import json
 import numpy as np
@@ -134,7 +136,6 @@ if __name__ == "__main__":
                 train_data_shape,
                 version,
                 link_model=True)
-
             app_and_model_name = "easy-register-app-model"
             create_endpoint(clipper_conn, app_and_model_name, "integers",
                             predict, mxnet_model, train_data_shape)
@@ -152,4 +153,5 @@ if __name__ == "__main__":
         logger.exception("Exception")
         clipper_conn = create_docker_connection(
             cleanup=True, start_clipper=False)
+
         sys.exit(1)

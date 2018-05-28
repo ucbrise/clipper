@@ -2,8 +2,10 @@ from __future__ import absolute_import, division, print_function
 import docker
 import logging
 import os
+import sys
 import random
 import time
+import json
 from ..container_manager import (
     create_model_container_label, parse_model_container_label,
     ContainerManager, CLIPPER_DOCKER_LABEL, CLIPPER_MODEL_CONTAINER_LABEL,
@@ -49,7 +51,8 @@ class DockerContainerManager(ContainerManager):
             The Redis port. If ``redis_ip`` is set to None, Clipper will start Redis on this port.
             If ``redis_ip`` is provided, Clipper will connect to Redis on this port.
         docker_network : str, optional
-            The docker network to attach the containers to. You can read more about Docker networking in the
+            The docker network to attach the containers to. You can read more about Docker
+            networking in the
             `Docker User Guide <https://docs.docker.com/engine/userguide/networking/>`_.
         extra_container_kwargs : dict
             Any additional keyword arguments to pass to the call to
@@ -90,12 +93,22 @@ class DockerContainerManager(ContainerManager):
 
         self.extra_container_kwargs.update(container_args)
 
-    def start_clipper(self, query_frontend_image, mgmt_frontend_image,
-                      cache_size):
+    def start_clipper(self,
+                      query_frontend_image,
+                      mgmt_frontend_image,
+                      cache_size,
+                      num_frontend_replicas=1):
+        if num_frontend_replicas != 1:
+            msg = "Docker container manager's query frontend scale-out \
+            hasn't been implemented. Please set num_frontend_replicas=1 \
+            or use Kubernetes."
+
+            raise ClipperException(msg)
+
         try:
             self.docker_client.networks.create(
                 self.docker_network, check_duplicate=True)
-        except docker.errors.APIError as e:
+        except docker.errors.APIError:
             logger.debug(
                 "{nw} network already exists".format(nw=self.docker_network))
         except ConnectionError:
@@ -130,10 +143,11 @@ class DockerContainerManager(ContainerManager):
             labels=mgmt_labels,
             **self.extra_container_kwargs)
 
-        query_cmd = "--redis_ip={redis_ip} --redis_port={redis_port} --prediction_cache_size={cache_size}".format(
-            redis_ip=self.redis_ip,
-            redis_port=self.redis_port,
-            cache_size=cache_size)
+        query_cmd = ("--redis_ip={redis_ip} --redis_port={redis_port} "
+                     "--prediction_cache_size={cache_size}").format(
+                         redis_ip=self.redis_ip,
+                         redis_port=self.redis_port,
+                         cache_size=cache_size)
         query_labels = self.common_labels.copy()
         query_labels[CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL] = ""
         query_container_id = random.randint(0, 100000)
@@ -247,10 +261,10 @@ class DockerContainerManager(ContainerManager):
                 container_name = self._add_replica(name, version, input_type,
                                                    image)
                 model_container_names.append(container_name)
-
             for name in model_container_names:
                 container = self.docker_client.containers.get(name)
-                while container.attrs.get("State").get("Status") != "running":
+                while container.attrs.get("State").get("Status") != "running" or \
+                        self.docker_client.api.inspect_container(name).get("State").get("Health").get("Status") != "healthy":
                     time.sleep(3)
 
         elif len(current_replicas) > num_replicas:
@@ -283,8 +297,12 @@ class DockerContainerManager(ContainerManager):
             log_file_name = "image_{image}:container_{id}.log".format(
                 image=c.image.short_id, id=c.short_id)
             log_file = os.path.join(logging_dir, log_file_name)
-            with open(log_file, "w") as lf:
-                lf.write(c.logs(stdout=True, stderr=True))
+            if sys.version_info < (3, 0):
+                with open(log_file, "w") as lf:
+                    lf.write(c.logs(stdout=True, stderr=True))
+            else:
+                with open(log_file, "wb") as lf:
+                    lf.write(c.logs(stdout=True, stderr=True))
             log_files.append(log_file)
         return log_files
 

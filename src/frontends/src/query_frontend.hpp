@@ -83,6 +83,19 @@ std::string json_error_msg(const std::string& exception_msg,
   return ss.str();
 }
 
+/* Create error class for if an invalid model version id is passed in to
+ * json query. */
+class version_id_error : public std::runtime_error {
+ public:
+  version_id_error(const std::string msg)
+      : std::runtime_error(msg), msg_(msg) {}
+
+  const char* what() const noexcept { return msg_.c_str(); }
+
+ private:
+  const std::string msg_;
+};
+
 class AppMetrics {
  public:
   explicit AppMetrics(std::string app_name)
@@ -170,6 +183,9 @@ class RequestHandler {
             int latency_slo_micros = std::stoi(app_info["latency_slo_micros"]);
             add_application(name, input_type, policy, default_output,
                             latency_slo_micros);
+          } else if (event_type == "hdel") {
+            std::string name = key;
+            delete_application(name);
           }
         });
 
@@ -302,26 +318,22 @@ class RequestHandler {
 
     AppMetrics app_metrics(name);
 
+    /*
+   * JSON format for prediction query request:
+   * {
+   *  "input" := [double] | [int] | [string] | [byte] | [float]
+   *  "input_batch" := [[double] | [int] | [byte] | [float] | string]
+   *  "version" := string (optional)
+   * }
+   */
+
     auto predict_fn = [this, name, input_type, policy, latency_slo_micros,
                        app_metrics](
         std::shared_ptr<HttpServer::Response> response,
         std::shared_ptr<HttpServer::Request> request) {
       try {
-        std::vector<std::string> models = get_linked_models_for_app(name);
-        std::vector<VersionedModelId> versioned_models;
-        {
-          std::unique_lock<std::mutex> l(current_model_versions_mutex_);
-          for (auto m : models) {
-            auto version = current_model_versions_.find(m);
-            if (version != current_model_versions_.end()) {
-              versioned_models.emplace_back(m, version->second);
-            }
-          }
-        }
-
         folly::Future<std::vector<folly::Try<Response>>> predictions =
-            decode_and_handle_predict(request->content.string(), name,
-                                      versioned_models, policy,
+            decode_and_handle_predict(request->content.string(), name, policy,
                                       latency_slo_micros, input_type);
 
         predictions
@@ -383,6 +395,11 @@ class RequestHandler {
         std::string json_error_response = get_prediction_error_response_content(
             PREDICTION_ERROR_NAME_QUERY_PROCESSING, error_msg);
         respond_http(json_error_response, "400 Bad Request", response);
+      } catch (const version_id_error& e) {
+        std::string error_msg = e.what();
+        std::string json_error_response = get_prediction_error_response_content(
+            PREDICTION_ERROR_NAME_QUERY_PROCESSING, error_msg);
+        respond_http(json_error_response, "400 Bad Request", response);
       }
     };
     std::string predict_endpoint = "^/" + name + "/predict$";
@@ -433,6 +450,13 @@ class RequestHandler {
                        str_content.get() + y_hat->start() + y_hat->size());
   }
 
+  void delete_application(std::string name) {
+    std::string predict_endpoint = "^/" + name + "/predict$";
+    server_.delete_endpoint(predict_endpoint, "POST");
+    std::string update_endpoint = "^/" + name + "/update$";
+    server_.delete_endpoint(update_endpoint, "POST");
+  }
+
   /**
    * Obtains the json-formatted http response content for a successful query
    *
@@ -450,12 +474,12 @@ class RequestHandler {
     json_response.SetObject();
     clipper::json::add_long(json_response, PREDICTION_RESPONSE_KEY_QUERY_ID,
                             query_response.query_id_);
+    rapidjson::Document json_y_hat;
     std::string y_hat_str = parse_output_y_hat(query_response.output_.y_hat_);
     try {
       // Attempt to parse the string output as JSON
       // and, if possible, nest it in object form within the
       // query response
-      rapidjson::Document json_y_hat;
       clipper::json::parse_json(y_hat_str, json_y_hat);
       clipper::json::add_object(json_response, PREDICTION_RESPONSE_KEY_OUTPUT,
                                 json_y_hat);
@@ -532,27 +556,66 @@ class RequestHandler {
     return clipper::json::to_json_string(error_response);
   }
 
-  /*
-   * JSON format for prediction query request:
-   * {
-   *  "input" := [double] | [int] | [string] | [byte] | [float]
-   *  "input_batch" := [[double] | [int] | [byte] | [float] | string]
-   * }
-   */
   folly::Future<std::vector<folly::Try<Response>>> decode_and_handle_predict(
-      std::string json_content, std::string name,
-      std::vector<VersionedModelId> models, std::string policy,
+      std::string content, std::string name, std::string policy,
       long latency_slo_micros, InputType input_type) {
     rapidjson::Document d;
-    clipper::json::parse_json(json_content, d);
+    clipper::json::parse_json(content, d);
+    std::vector<VersionedModelId> versioned_models = {};
+    std::vector<std::string> linked_models = get_linked_models_for_app(name);
+    if (d.HasMember("version")) {
+      std::string requested_version = clipper::json::get_string(d, "version");
+      if (linked_models.size() > 1) {
+        std::stringstream ss;
+        ss << "Too many models linked to application " << name;
+        throw clipper::PredictError(ss.str());
+      }
+      // NOTE: This implementation assumes that there is only model per
+      // application, and therefore the version provided by the user
+      // unambiguously applies to that model.
+      for (auto m : linked_models) {
+        std::vector<std::string> registered_versions =
+            clipper::redis::get_model_versions(redis_connection_, m);
+        for (auto v : registered_versions) {
+          if (v == requested_version) {
+            versioned_models = {
+                clipper::VersionedModelId(m, requested_version)};
+            break;
+          }
+        }
+        // There should be at most one linked model to this application, so
+        // we break here.
+        break;
+      }
+
+      if (versioned_models.empty()) {
+        std::string model_name = linked_models[0];
+        std::stringstream ss;
+        ss << "Requested version: " << requested_version
+           << " does not exist for model: " << model_name;
+        throw version_id_error(ss.str());
+      }
+
+    } else {
+      {
+        std::unique_lock<std::mutex> l(current_model_versions_mutex_);
+        for (auto m : linked_models) {
+          auto version = current_model_versions_.find(m);
+          if (version != current_model_versions_.end()) {
+            versioned_models.emplace_back(m, version->second);
+          }
+        }
+      }
+    }
+
     long uid = 0;
 
     std::vector<std::shared_ptr<PredictionData>> input_batch =
         clipper::json::parse_inputs(input_type, d);
     std::vector<folly::Future<Response>> predictions;
     for (auto input : input_batch) {
-      auto prediction = query_processor_.predict(
-          Query{name, uid, input, latency_slo_micros, policy, models});
+      auto prediction = query_processor_.predict(Query{
+          name, uid, input, latency_slo_micros, policy, versioned_models});
       predictions.push_back(std::move(prediction));
     }
     return folly::collectAll(predictions);

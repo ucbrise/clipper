@@ -138,32 +138,42 @@ class ModelQueue {
   }
 
   std::vector<PredictTask> get_batch(
+      std::shared_ptr<ModelContainer> requesting_container,
       std::function<BatchSizeInfo(Deadline)> &&get_batch_size) {
     std::unique_lock<std::mutex> lock(queue_mutex_);
     remove_tasks_with_elapsed_deadlines();
     queue_not_empty_condition_.wait(lock, [this]() { return !queue_.empty(); });
     remove_tasks_with_elapsed_deadlines();
-    Deadline deadline = queue_.top().first;
-
-    size_t max_batch_size;
-    BatchSizeDeterminationMethod method;
-    std::tie(max_batch_size, method) = get_batch_size(deadline);
 
     std::vector<PredictTask> batch;
-    while (batch.size() < max_batch_size && queue_.size() > 0) {
-      batch.push_back(queue_.top().second);
-      queue_.pop();
-    }
-    size_t batch_differential = max_batch_size - batch.size();
-    if (batch_differential > 0 && method == BatchSizeDeterminationMethod::Exploration) {
-      // Artificially inject queries to create
-      // a full batch
-      //
-      // Create a copy of the last task in the batch and make it artifical
-      PredictTask last_task = batch.back();
-      last_task.artificial_ = true;
+    if (requesting_container->is_active()) {
+      Deadline deadline = queue_.top().first;
 
-      std::fill_n(std::back_inserter(batch), batch_differential, last_task);
+      size_t max_batch_size;
+      BatchSizeDeterminationMethod method;
+      std::tie(max_batch_size, method) = get_batch_size(deadline);
+
+      while (batch.size() < max_batch_size && queue_.size() > 0) {
+        batch.push_back(queue_.top().second);
+        queue_.pop();
+      }
+      size_t batch_differential = max_batch_size - batch.size();
+      if (batch_differential > 0 &&
+          method == BatchSizeDeterminationMethod::Exploration) {
+        // Artificially inject queries to create
+        // a full batch
+        //
+        // Create a copy of the last task in the batch and make it artifical
+        PredictTask last_task = batch.back();
+        last_task.artificial_ = true;
+
+        std::fill_n(std::back_inserter(batch), batch_differential, last_task);
+      }
+    }
+
+    lock.unlock();
+    if (!queue_.empty()) {
+      queue_not_empty_condition_.notify_one();
     }
     return batch;
   }
@@ -260,6 +270,16 @@ class TaskExecutor {
                      "TaskExecutor has been destroyed.");
           }
 
+        },
+        [ this, task_executor_valid = active_ ](VersionedModelId model,
+                                                int replica_id) {
+          if (*task_executor_valid) {
+            on_remove_container(model, replica_id);
+          } else {
+            log_info(LOGGING_TAG_TASK_EXECUTOR,
+                     "Not running on_remove_container callback because "
+                     "TaskExecutor has been destroyed.");
+          }
         });
     Config &conf = get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
@@ -342,7 +362,6 @@ class TaskExecutor {
                      "subscribe_to_container_changes callback because "
                      "TaskExecutor has been destroyed.");
           }
-
         });
     throughput_meter_ = metrics::MetricsRegistry::get_metrics().create_meter(
         "internal:aggregate_model_throughput");
@@ -366,9 +385,28 @@ class TaskExecutor {
       // add each task to the queue corresponding to its associated model
       boost::shared_lock<boost::shared_mutex> lock(model_queues_mutex_);
       auto model_queue_entry = model_queues_.find(t.model_);
+
       if (model_queue_entry != model_queues_.end()) {
-        output_futures.push_back(cache_->fetch(t.model_, t.input_));
-        if (!output_futures.back().isReady()) {
+        auto cache_result = cache_->fetch(t.model_, t.input_);
+
+        if (cache_result.isReady()) {
+          output_futures.push_back(std::move(cache_result));
+          boost::shared_lock<boost::shared_mutex> model_metrics_lock(
+              model_metrics_mutex_);
+          auto cur_model_metric_entry = model_metrics_.find(t.model_);
+          if (cur_model_metric_entry != model_metrics_.end()) {
+            auto cur_model_metric = cur_model_metric_entry->second;
+            cur_model_metric.cache_hit_ratio_->increment(1, 1);
+          }
+        }
+
+        else if (active_containers_->get_replicas_for_model(t.model_).size() ==
+                 0) {
+          log_error_formatted(LOGGING_TAG_TASK_EXECUTOR,
+                              "No active model containers for model: {} : {}",
+                              t.model_.get_name(), t.model_.get_id());
+        } else {
+          output_futures.push_back(std::move(cache_result));
           t.recv_time_ = std::chrono::system_clock::now();
           model_queue_entry->second->add_task(t);
           log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
@@ -380,14 +418,6 @@ class TaskExecutor {
           if (cur_model_metric_entry != model_metrics_.end()) {
             auto cur_model_metric = cur_model_metric_entry->second;
             cur_model_metric.cache_hit_ratio_->increment(0, 1);
-          }
-        } else {
-          boost::shared_lock<boost::shared_mutex> model_metrics_lock(
-              model_metrics_mutex_);
-          auto cur_model_metric_entry = model_metrics_.find(t.model_);
-          if (cur_model_metric_entry != model_metrics_.end()) {
-            auto cur_model_metric = cur_model_metric_entry->second;
-            cur_model_metric.cache_hit_ratio_->increment(1, 1);
           }
         }
       } else {
@@ -424,6 +454,7 @@ class TaskExecutor {
       model_queues_;
   boost::shared_mutex model_metrics_mutex_;
   std::unordered_map<VersionedModelId, ModelMetrics> model_metrics_;
+
   static constexpr int INITIAL_MODEL_QUEUES_MAP_SIZE = 100;
 
   bool create_model_queue_if_necessary(const VersionedModelId &model_id) {
@@ -465,8 +496,10 @@ class TaskExecutor {
     // goes out of scope.
     l.unlock();
 
-    std::vector<PredictTask> batch = current_model_queue->get_batch([container](
-        Deadline deadline) { return container->get_batch_size(deadline); });
+    std::vector<PredictTask> batch = current_model_queue->get_batch(
+        container, [container](Deadline deadline) {
+          return container->get_batch_size(deadline);
+        });
 
     if (batch.size() > 0) {
       // move the lock up here, so that nothing can pull from the
@@ -563,6 +596,11 @@ class TaskExecutor {
         }
       }
     }
+  }
+
+  void on_remove_container(VersionedModelId model_id, int replica_id) {
+    // remove the given model_id from active_containers_
+    active_containers_->remove_container(model_id, replica_id);
   }
 };
 

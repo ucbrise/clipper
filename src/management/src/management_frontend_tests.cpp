@@ -254,6 +254,22 @@ TEST_F(ManagementFrontendTest, TestGetApplicationCorrect) {
   ASSERT_EQ(model_names, response_linked_models);
 }
 
+TEST_F(ManagementFrontendTest, TestDeleteApplicationCorrect) {
+  std::string app_name = "myappname";
+  std::string input_type = "integers";
+  std::string default_output = "4.3";
+  std::string add_app_json =
+      get_add_app_request_json(app_name, input_type, default_output, 1000);
+  rh_.add_application(add_app_json);
+  std::string del_app_json = get_app_json_request_string(app_name);
+  ASSERT_NO_THROW(rh_.delete_application(del_app_json));
+
+  // Check that subsequent calls to application return empty JSON
+  std::string json_response = rh_.get_application(del_app_json);
+  std::string expected_response = "{}";
+  ASSERT_EQ(json_response, expected_response);
+}
+
 TEST_F(ManagementFrontendTest, TestGetNonexistentApplicationCorrect) {
   std::string nonexistent_app_name = "nonexistent_app";
   std::string list_apps_json =

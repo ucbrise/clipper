@@ -80,6 +80,18 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             self.clipper_conn.link_model_to_app(app_name, not_deployed_model)
         self.assertTrue("No model with name" in str(context.exception))
 
+    def test_delete_application_correct(self):
+        input_type = "doubles"
+        default_output = "DEFAULT"
+        slo_micros = 30000
+        app_name = "testapp"
+        self.clipper_conn.register_application(app_name, input_type,
+                                               default_output, slo_micros)
+        self.clipper_conn.delete_application(app_name)
+        registered_applications = self.clipper_conn.get_all_apps()
+        self.assertEqual(len(registered_applications), 0)
+        self.assertTrue(app_name not in registered_applications)
+
     def test_get_model_links_when_none_exist_returns_empty_list(self):
         app_name = "testapp"
         input_type = "doubles"
@@ -302,11 +314,36 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertIsNotNone(model_info)
 
         docker_client = get_docker_client()
-        containers = docker_client.containers.list(
-            filters={
-                "ancestor":
-                "clipper/python-closure-container:{}".format(clipper_version)
-            })
+        py_minor_version = (sys.version_info.major, sys.version_info.minor)
+        if py_minor_version < (3, 0):
+            containers = docker_client.containers.list(
+                filters={
+                    "ancestor":
+                    "clipper/python-closure-container:{}".format(
+                        clipper_version)
+                })
+
+        elif py_minor_version == (3, 5):
+            containers = docker_client.containers.list(
+                filters={
+                    "ancestor":
+                    "clipper/python35-closure-container:{}".format(
+                        clipper_version)
+                })
+        elif py_minor_version == (3, 6):
+            containers = docker_client.containers.list(
+                filters={
+                    "ancestor":
+                    "clipper/python36-closure-container:{}".format(
+                        clipper_version)
+                })
+        else:
+            msg = (
+                "Python closure deployer only supports Python 2.7, 3.5, and 3.6. "
+                "Detected {major}.{minor}").format(
+                    major=sys.version_info.major, minor=sys.version_info.minor)
+            logger.error(msg)
+
         self.assertGreaterEqual(len(containers), 1)
 
     def test_register_py_endpoint(self):
@@ -332,11 +369,35 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertIsNotNone(linked_models)
 
         docker_client = get_docker_client()
-        containers = docker_client.containers.list(
-            filters={
-                "ancestor":
-                "clipper/python-closure-container:{}".format(clipper_version)
-            })
+        py_minor_version = (sys.version_info.major, sys.version_info.minor)
+        if py_minor_version < (3, 0):
+            containers = docker_client.containers.list(
+                filters={
+                    "ancestor":
+                    "clipper/python-closure-container:{}".format(
+                        clipper_version)
+                })
+
+        elif py_minor_version == (3, 5):
+            containers = docker_client.containers.list(
+                filters={
+                    "ancestor":
+                    "clipper/python35-closure-container:{}".format(
+                        clipper_version)
+                })
+        elif py_minor_version == (3, 6):
+            containers = docker_client.containers.list(
+                filters={
+                    "ancestor":
+                    "clipper/python36-closure-container:{}".format(
+                        clipper_version)
+                })
+        else:
+            msg = (
+                "Python closure deployer only supports Python 2.7, 3.5, and 3.6. "
+                "Detected {major}.{minor}").format(
+                    major=sys.version_info.major, minor=sys.version_info.minor)
+            logger.error(msg)
         self.assertEqual(len(containers), 1)
 
     def test_test_predict_function(self):
@@ -373,6 +434,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             query={"input": test_input},
             func=predict_func,
             input_type="doubles")
+        logger.info("test pred output {}".format(pred))
         self.assertEqual([pred['output']],
                          test_predict_result)  # tests single input
 
@@ -392,6 +454,115 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertEqual(batch_pred_outputs,
                          test_batch_predict_result)  # tests batch input
 
+    def test_query_specific_model_version(self):
+        model_name = "testmodel"
+        app_name = "testapp"
+
+        def predict_func1(xs):
+            return ["1" for _ in xs]
+
+        def predict_func2(xs):
+            return ["2" for _ in xs]
+
+        self.clipper_conn.register_application(
+            name=app_name,
+            input_type="doubles",
+            default_output="DEFAULT",
+            slo_micros=100000)
+
+        deploy_python_closure(
+            self.clipper_conn,
+            name=model_name,
+            version="v1",
+            input_type="doubles",
+            func=predict_func1)
+
+        self.clipper_conn.link_model_to_app(app_name, model_name)
+
+        time.sleep(30)
+
+        deploy_python_closure(
+            self.clipper_conn,
+            name=model_name,
+            version="v2",
+            input_type="doubles",
+            func=predict_func2)
+
+        time.sleep(60)
+
+        addr = self.clipper_conn.get_query_addr()
+        url = "http://{addr}/{app}/predict".format(addr=addr, app=app_name)
+
+        headers = {"Content-type": "application/json"}
+        test_input = [1.0, 2.0, 3.0]
+
+        pred1_raw = requests.post(
+            url,
+            headers=headers,
+            data=json.dumps({
+                "input": test_input,
+                "version": "v1"
+            }))
+        try:
+            pred1 = pred1_raw.json()
+            self.assertFalse(pred1["default"])
+            self.assertEqual(pred1['output'], 1)
+        except ValueError:
+            logger.error(pred1_raw.text)
+            self.assertTrue(False)
+
+        pred2_raw = requests.post(
+            url, headers=headers, data=json.dumps({
+                "input": test_input
+            }))
+        try:
+            pred2 = pred2_raw.json()
+
+            self.assertFalse(pred2["default"])
+            self.assertEqual(pred2['output'], 2)
+        except ValueError:
+            logger.error(pred2_raw.text)
+            self.assertTrue(False)
+
+        # Query a version that doesn't exist:
+        bad_version_name = 'skjfhkdjshfjksdhkjf'
+        pred3 = requests.post(
+            url,
+            headers=headers,
+            data=json.dumps({
+                "input": test_input,
+                "version": bad_version_name
+            }))
+        logger.info(pred3.text)
+        self.assertFalse(pred3.status_code == requests.codes.ok)
+        self.assertEqual(
+            pred3.json()['cause'],
+            "Requested version: {version_name} does not exist for model: {model_name}".
+            format(version_name=bad_version_name, model_name=model_name))
+
+    def test_build_model_with_custom_packages(self):
+        self.clipper_conn.build_model(
+            "buildmodeltest",
+            "py2",
+            fake_model_data,
+            "clipper/python-closure-container:{}".format(clipper_version),
+            None,
+            pkgs_to_install=["sympy==1.1.*"])
+        self.clipper_conn.build_model(
+            "buildmodeltest",
+            "py35",
+            fake_model_data,
+            "clipper/python35-closure-container:{}".format(clipper_version),
+            None,
+            pkgs_to_install=["sympy==1.1.*"])
+        self.clipper_conn.build_model(
+            "buildmodeltest",
+            "py36",
+            fake_model_data,
+            "clipper/python35-closure-container:{}".format(clipper_version),
+            None,
+            pkgs_to_install=["sympy==1.1.*"])
+
 
 class ClipperManagerTestCaseLong(unittest.TestCase):
     @classmethod
@@ -402,10 +573,12 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         self.app_name_2 = "app4"
         self.app_name_3 = "app5"
         self.app_name_4 = "app6"
+        self.app_name_5 = "app7"
         self.model_name_1 = "m4"
         self.model_name_2 = "m5"
         self.model_name_3 = "m6"
         self.model_name_4 = "m7"
+        self.model_name_5 = "m8"
         self.input_type = "doubles"
         self.default_output = "DEFAULT"
         self.latency_slo_micros = 30000
@@ -427,6 +600,10 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
             self.input_type,
             self.default_output,
             slo_micros=30000000)
+
+        self.clipper_conn.register_application(
+            self.app_name_5, self.input_type, self.default_output,
+            self.latency_slo_micros)
 
     @classmethod
     def tearDownClass(self):
@@ -563,25 +740,116 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         self.assertGreaterEqual(num_max_batch_queries,
                                 int(total_num_queries * .7))
 
+    def test_remove_inactive_container(self):
+        container_name = "clipper/noop-container:{}".format(clipper_version)
+        self.clipper_conn.build_and_deploy_model(
+            self.model_name_5,
+            1,
+            self.input_type,
+            fake_model_data,
+            container_name,
+            num_replicas=2)
+        docker_client = get_docker_client()
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
+        self.assertEqual(len(containers), 2)
+
+        self.clipper_conn.link_model_to_app(self.app_name_5, self.model_name_5)
+        time.sleep(30)
+
+        # We now have 2 replicas running, both the same model name and Version
+        # send predictions, assert that we are getting correct response
+
+        addr = self.clipper_conn.get_query_addr()
+        test_input = [101.1, 99.5, 107.2]
+        req_json = json.dumps({'input': test_input})
+        headers = {'Content-type': 'application/json'}
+        for i in range(2):
+            response = requests.post(
+                "http://%s/%s/predict" % (addr, self.app_name_5),
+                headers=headers,
+                data=req_json)
+            result = response.json()
+            self.assertEqual(response.status_code, requests.codes.ok)
+            #print(result["default_explanation"])
+            self.assertEqual(result["default"], False)
+
+        # one of the containers should go inactive
+
+        self.clipper_conn.set_num_replicas(
+            name=self.model_name_5, version=1, num_replicas=1)
+        time.sleep(100)
+
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
+        self.assertEqual(len(containers), 1)
+
+        test_input = [101.1, 99.9]
+        req_json = json.dumps({'input': test_input})
+
+        #send predictions, should still be working
+        for i in range(2):
+            response = requests.post(
+                "http://%s/%s/predict" % (addr, self.app_name_5),
+                headers=headers,
+                data=req_json)
+            result = response.json()
+            self.assertEqual(response.status_code, requests.codes.ok)
+            self.assertEqual(result["default"], False)
+
+        #2nd container should go inactive
+        self.clipper_conn.set_num_replicas(
+            name=self.model_name_5, version=1, num_replicas=0)
+        time.sleep(100)
+
+        containers = docker_client.containers.list(filters={
+            "ancestor": container_name
+        })
+        self.assertEqual(len(containers), 0)
+
+        test_input = [101.1]
+        req_json = json.dumps({'input': test_input})
+
+        #send predictions, should be getting response with message 'no connected models'
+        for i in range(2):
+            response = requests.post(
+                "http://%s/%s/predict" % (addr, self.app_name_5),
+                headers=headers,
+                data=req_json)
+            result = response.json()
+            self.assertEqual(result["default"], True)
+            self.assertEqual(result["default_explanation"],
+                             "No connected models found for query")
+
 
 SHORT_TEST_ORDERING = [
-    'test_register_model_correct', 'test_register_application_correct',
+    'test_register_model_correct',
+    'test_register_application_correct',
     'test_link_not_registered_model_to_app_fails',
     'test_get_model_links_when_none_exist_returns_empty_list',
     'test_link_registered_model_to_app_succeeds',
     'get_app_info_for_registered_app_returns_info_dictionary',
     'get_app_info_for_nonexistent_app_returns_none',
     'test_set_num_replicas_for_external_model_fails',
-    'test_model_version_sets_correctly', 'test_get_logs_creates_log_files',
+    'test_model_version_sets_correctly',
+    'test_get_logs_creates_log_files',
     'test_inspect_instance_returns_json_dict',
     'test_model_deploys_successfully',
     'test_set_num_replicas_for_deployed_model_succeeds',
-    'test_remove_inactive_containers_succeeds', 'test_stop_models',
-    'test_python_closure_deploys_successfully', 'test_register_py_endpoint',
-    'test_test_predict_function'
+    'test_remove_inactive_containers_succeeds',
+    'test_stop_models',
+    'test_python_closure_deploys_successfully',
+    'test_register_py_endpoint',
+    'test_test_predict_function',
+    'test_build_model_with_custom_packages',
+    'test_delete_application_correct',
+    'test_query_specific_model_version',
 ]
 
 LONG_TEST_ORDERING = [
+    'test_remove_inactive_container',
     'test_unlinked_app_returns_default_predictions',
     'test_deployed_model_queried_successfully',
     'test_batch_queries_returned_successfully',

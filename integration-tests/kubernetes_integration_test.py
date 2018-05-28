@@ -55,7 +55,7 @@ def deploy_model(clipper_conn, name, version, link=False):
                     "http://%s/%s/predict" % (addr, app_name),
                     headers=headers,
                     data=json.dumps({
-                        'input': list(np.random.random(30))
+                        'input': list([1.2, 1.3])
                     }))
                 result = response.json()
                 if response.status_code == requests.codes.ok and result["default"]:
@@ -86,7 +86,7 @@ def create_and_test_app(clipper_conn, name, num_models):
         "http://%s/%s/predict" % (addr, app_name),
         headers=headers,
         data=json.dumps({
-            'input': list(np.random.random(30))
+            'input': list([1.2, 1.3])
         }))
     response.json()
     if response.status_code != requests.codes.ok:
@@ -99,6 +99,38 @@ def create_and_test_app(clipper_conn, name, num_models):
         else:
             deploy_model(clipper_conn, name, i)
         time.sleep(1)
+
+
+def test_kubernetes(clipper_conn, num_apps, num_models):
+    time.sleep(10)
+    print(clipper_conn.cm.get_query_addr())
+    print(clipper_conn.inspect_instance())
+    try:
+        logger.info("Running integration test with %d apps and %d models" %
+                    (num_apps, num_models))
+        for a in range(num_apps):
+            create_and_test_app(clipper_conn, "testapp%s" % a, num_models)
+
+        if not os.path.exists(CLIPPER_TEMP_DIR):
+            os.makedirs(CLIPPER_TEMP_DIR)
+        tmp_log_dir = tempfile.mkdtemp(dir=CLIPPER_TEMP_DIR)
+        logger.info(clipper_conn.get_clipper_logs(tmp_log_dir))
+        # Remove temp files
+        shutil.rmtree(tmp_log_dir)
+        log_clipper_state(clipper_conn)
+        logger.info("SUCCESS")
+    except BenchmarkException:
+        log_clipper_state(clipper_conn)
+        logger.exception("BenchmarkException")
+        create_kubernetes_connection(
+            cleanup=True, start_clipper=False, connect=False)
+        sys.exit(1)
+    except ClipperException:
+        log_clipper_state(clipper_conn)
+        logger.exception("ClipperException")
+        create_kubernetes_connection(
+            cleanup=True, start_clipper=False, connect=False)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
@@ -114,36 +146,18 @@ if __name__ == "__main__":
         # for num_apps and num_models
         pass
     try:
+        # Test without proxy first
         clipper_conn = create_kubernetes_connection(
-            cleanup=True, start_clipper=True)
-        time.sleep(10)
-        print(clipper_conn.cm.get_query_addr())
-        print(clipper_conn.inspect_instance())
-        try:
-            logger.info("Running integration test with %d apps and %d models" %
-                        (num_apps, num_models))
-            for a in range(num_apps):
-                create_and_test_app(clipper_conn, "testapp%s" % a, num_models)
+            cleanup=True, start_clipper=True, with_proxy=False)
+        test_kubernetes(clipper_conn, num_apps, num_models)
+        clipper_conn.stop_all()
 
-            if not os.path.exists(CLIPPER_TEMP_DIR):
-                os.makedirs(CLIPPER_TEMP_DIR)
-            tmp_log_dir = tempfile.mkdtemp(dir=CLIPPER_TEMP_DIR)
-            logger.info(clipper_conn.get_clipper_logs(tmp_log_dir))
-            # Remove temp files
-            shutil.rmtree(tmp_log_dir)
-            log_clipper_state(clipper_conn)
-            logger.info("SUCCESS")
-            clipper_conn.stop_all()
-        except BenchmarkException:
-            log_clipper_state(clipper_conn)
-            logger.exception("BenchmarkException")
-            create_kubernetes_connection(cleanup=True, start_clipper=False)
-            sys.exit(1)
-        except ClipperException:
-            log_clipper_state(clipper_conn)
-            logger.exception("ClipperException")
-            create_kubernetes_connection(cleanup=True, start_clipper=False)
-            sys.exit(1)
+        # Test with proxy. Assumes proxy is running at 127.0.0.1:8080
+        clipper_conn = create_kubernetes_connection(
+            cleanup=True, start_clipper=True, with_proxy=True)
+        test_kubernetes(clipper_conn, 1, 1)
+        clipper_conn.stop_all()
+
     except Exception as e:
         logger.exception("Exception: {}".format(e))
         sys.exit(1)

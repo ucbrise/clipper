@@ -1,10 +1,12 @@
+# Deployment config for query-frontend
+# null values are set to be filled in later.
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   labels:
     ai.clipper.container.label: ""
     ai.clipper.name: query-frontend
-  name: query-frontend
+  name: null # Name must to be set in container_manager
 spec:
   replicas: 1
   template:
@@ -15,12 +17,14 @@ spec:
       labels:
         ai.clipper.container.label: ""
         ai.clipper.name: query-frontend
+        ai.clipper.query_frontend.id: null # This value must be set in container_manager
     spec:
       containers:
       - args:
         - "--redis_ip=$(REDIS_SERVICE_HOST)"
         - "--redis_port=$(REDIS_SERVICE_PORT)"
         image: clipper/query_frontend
+        imagePullPolicy: Always
         name: query-frontend
         ports:
         - containerPort: 7000
@@ -30,7 +34,6 @@ spec:
         - "query-frontend:1337"
         image: "clipper/frontend-exporter" 
         name: frontend-exporter
-        imagePullPolicy: Always
         ports:
         - containerPort: 1390
       restartPolicy: Always

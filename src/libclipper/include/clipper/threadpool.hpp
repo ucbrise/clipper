@@ -208,16 +208,20 @@ class ThreadPool {
    * Constantly running function each thread uses to acquire work items from the
    * queue.
    */
-  void worker(size_t worker_id) {
+  void worker(size_t worker_id, bool is_block_worker) {
     while (!done_) {
       std::unique_ptr<IThreadTask> pTask{nullptr};
       bool work_to_do = false;
       {
         boost::shared_lock<boost::shared_mutex> l(queues_mutex_);
-        // NOTE: The use of try_pop here means the worker will spin instead of
-        // block while waiting for work. This is intentional. We defer to the
-        // submitted tasks to block when no work is available.
-        work_to_do = queues_[worker_id].try_pop(pTask);
+        if (is_block_worker) {
+          work_to_do = queues_[worker_id].wait_pop(pTask);
+        } else {
+          // NOTE: The use of try_pop here means the worker will spin instead of
+          // block while waiting for work. This is intentional. We defer to the
+          // submitted tasks to block when no work is available.
+          work_to_do = queues_[worker_id].try_pop(pTask);
+        }
       }
       if (work_to_do) {
         pTask->execute();
@@ -335,16 +339,15 @@ class FixedSizeThreadPool : public ThreadPool {
 
 namespace TaskExecutionThreadPool {
 /**
- * Convenience method to get the task execution thread pool for the
- * application.
+ * Convenience method to get the task execution thread pool for the application
  */
 inline ModelQueueThreadPool& get_thread_pool(void) {
-  static ModelQueueThreadPool taskExecutionPool;
-  return taskExecutionPool;
+  static ModelQueueThreadPool task_execution_pool;
+  return task_execution_pool;
 }
 
 /**
- * Submit a job to the task execution thread pool.
+ * Submit a job to the task execution thread pool
  */
 template <typename Func, typename... Args>
 inline auto submit_job(VersionedModelId vm, int replica_id, Func&& func,
@@ -354,7 +357,7 @@ inline auto submit_job(VersionedModelId vm, int replica_id, Func&& func,
 }
 
 inline void create_queue(VersionedModelId vm, int replica_id) {
-  get_thread_pool().create_queue(vm, replica_id);
+  get_thread_pool().create_queue(vm, replica_id, false);
 }
 
 }  // namespace TaskExecutionThreadPool
@@ -365,17 +368,17 @@ namespace EstimatorFittingThreadPool {
  * application.
  */
 inline ModelQueueThreadPool& get_thread_pool(void) {
-  static ModelQueueThreadPool estimator_fitting_pool;
+  static ModelQueueThreadPool estimator_fitting_pool(1, true);
   return estimator_fitting_pool;
 }
 
 /**
- * Submit a job to be run by the thread pool.
+ * Submit a job to the estimator fitting thread pool
  */
 template <typename Func, typename... Args>
-auto submit_job(VersionedModelId vm, int replica_id, Func&& func,
-                Args&&... args) {
-  get_thread_pool().submit(vm, replica_id, func, args...);
+inline auto submit_job(Func&& func, Args&&... args) {
+  return get_thread_pool().submit(std::forward<Func>(func),
+                                  std::forward<Args>(args)...);
 }
 
 inline void create_queue(VersionedModelId vm, int replica_id) {
@@ -383,6 +386,27 @@ inline void create_queue(VersionedModelId vm, int replica_id) {
 }
 
 }  // namespace EstimatorFittingThreadPool
+
+namespace GarbageCollectionThreadPool {
+/**
+ * Convenience method to get the garbage collection thread pool for the
+ * application
+ */
+
+inline FixedSizeThreadPool& get_thread_pool(void) {
+  static FixedSizeThreadPool garbage_collection_pool(1, true);
+  return garbage_collection_pool;
+}
+
+/**
+ * Submit a job to the garbage collection thread pool
+ */
+template <typename Func, typename... Args>
+inline auto submit_job(Func&& func, Args&&... args) {
+  return get_thread_pool().submit(std::forward<Func>(func),
+                                  std::forward<Args>(args)...);
+}
+}  // namespace GarbageCollectionThreadPool
 
 }  // namespace clipper
 

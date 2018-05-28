@@ -1,6 +1,6 @@
 # This ARG isn't used but prevents warnings in the build script
 ARG CODE_VERSION
-FROM python:2.7.14-slim-stretch
+FROM python:3.6-slim-stretch
 
 LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
@@ -10,7 +10,7 @@ RUN mkdir -p /model \
 
 RUN pip install cloudpickle==0.5.* pyzmq==17.0.* prometheus_client==0.1.* \
     pyyaml==3.12.* jsonschema==2.6.* redis==2.10.* psutil==5.4.* flask==0.12.2 \
-    numpy==1.14.* subprocess32==3.2.*
+    numpy==1.14.*
 
 COPY clipper_admin /clipper_admin/
 

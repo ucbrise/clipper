@@ -51,7 +51,8 @@ class Tester {
                 [](VersionedModelId /*model*/, int /*container_id*/) {},
                 [this](rpc::RPCResponse &response) {
                   on_response_received(std::move(response));
-                });
+                },
+                [](VersionedModelId, int) {});
     Config &conf = get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {

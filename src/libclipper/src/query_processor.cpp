@@ -26,8 +26,8 @@
 
 #define UNREACHABLE() assert(false)
 
-using std::vector;
 using std::tuple;
+using std::vector;
 
 namespace clipper {
 

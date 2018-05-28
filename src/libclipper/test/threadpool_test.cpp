@@ -23,10 +23,10 @@ void task_completes(std::atomic<int>& counter) {
 }
 
 TEST(ThreadPoolTests, TestSingleQueueSingleJob) {
-  ThreadPool threadpool;
+  ModelQueueThreadPool threadpool;
   VersionedModelId vm = VersionedModelId("m", "1");
   int replica_id = 17;
-  ASSERT_TRUE(threadpool.create_queue(vm, replica_id));
+  ASSERT_TRUE(threadpool.create_queue(vm, replica_id, false));
   std::atomic<int> counter(0);
   std::condition_variable_any notification_counter;
   std::mutex notification_mutex;
@@ -40,10 +40,10 @@ TEST(ThreadPoolTests, TestSingleQueueSingleJob) {
 
 TEST(ThreadPoolTests, TestSingleQueueManyJobs) {
   int num_tasks = 500;
-  ThreadPool threadpool;
+  ModelQueueThreadPool threadpool;
   VersionedModelId vm = VersionedModelId("m", "1");
   int replica_id = 17;
-  ASSERT_TRUE(threadpool.create_queue(vm, replica_id));
+  ASSERT_TRUE(threadpool.create_queue(vm, replica_id, false));
   std::atomic<int> counter(0);
   std::condition_variable_any notification_counter;
   std::mutex notification_mutex;
@@ -59,10 +59,10 @@ TEST(ThreadPoolTests, TestSingleQueueManyJobs) {
 
 TEST(ThreadPoolTests, TestSingleQueueJobHangs) {
   int num_tasks = 500;
-  ThreadPool threadpool;
+  ModelQueueThreadPool threadpool;
   VersionedModelId vm = VersionedModelId("m", "1");
   int replica_id = 17;
-  ASSERT_TRUE(threadpool.create_queue(vm, replica_id));
+  ASSERT_TRUE(threadpool.create_queue(vm, replica_id, false));
   std::atomic<int> counter(0);
   std::condition_variable_any notification_counter;
   std::mutex notification_mutex;
@@ -82,13 +82,13 @@ TEST(ThreadPoolTests, TestSingleQueueJobHangs) {
 // other queues
 TEST(ThreadPoolTests, TestMultipleQueuesOneQueueHangs) {
   int num_tasks = 500;
-  ThreadPool threadpool;
+  ModelQueueThreadPool threadpool;
   VersionedModelId vm_one = VersionedModelId("m", "1");
   int replica_id_one = 17;
   VersionedModelId vm_two = VersionedModelId("j", "3");
   int replica_id_two = 3;
-  ASSERT_TRUE(threadpool.create_queue(vm_one, replica_id_one));
-  ASSERT_TRUE(threadpool.create_queue(vm_two, replica_id_two));
+  ASSERT_TRUE(threadpool.create_queue(vm_one, replica_id_one, false));
+  ASSERT_TRUE(threadpool.create_queue(vm_two, replica_id_two, false));
 
   std::atomic<int> counter_one(0);
   std::atomic<int> counter_two(0);
@@ -116,15 +116,15 @@ TEST(ThreadPoolTests, TestMultipleQueuesOneQueueHangs) {
 }
 
 TEST(ThreadPoolTests, TestCreateDuplicateQueue) {
-  ThreadPool threadpool;
+  ModelQueueThreadPool threadpool;
   VersionedModelId vm = VersionedModelId("m", "1");
   int replica_id = 17;
-  ASSERT_TRUE(threadpool.create_queue(vm, replica_id));
-  ASSERT_FALSE(threadpool.create_queue(vm, replica_id));
+  ASSERT_TRUE(threadpool.create_queue(vm, replica_id, false));
+  ASSERT_FALSE(threadpool.create_queue(vm, replica_id, false));
 }
 
 TEST(ThreadPoolTests, TestSubmitToNonexistentQueue) {
-  ThreadPool threadpool;
+  ModelQueueThreadPool threadpool;
   VersionedModelId vm_one = VersionedModelId("m", "1");
   int replica_id_one = 17;
   std::atomic<int> counter(0);
@@ -133,7 +133,7 @@ TEST(ThreadPoolTests, TestSubmitToNonexistentQueue) {
   ASSERT_THROW(threadpool.submit(vm_one, replica_id_one,
                                  [&counter] { task_completes(counter); }),
                std::runtime_error);
-  ASSERT_TRUE(threadpool.create_queue(vm_one, replica_id_one));
+  ASSERT_TRUE(threadpool.create_queue(vm_one, replica_id_one, false));
   threadpool.submit(vm_one, replica_id_one,
                     [&counter] { task_completes(counter); });
   std::unique_lock<std::mutex> l(notification_mutex);
@@ -145,15 +145,15 @@ TEST(ThreadPoolTests, TestSubmitToNonexistentQueue) {
 
 TEST(ThreadPoolTests, TestQueueIdHash) {
   // Same model name and version, different replica
-  ASSERT_NE(ThreadPool::get_queue_id(VersionedModelId("m", "1"), 1),
-            ThreadPool::get_queue_id(VersionedModelId("m", "1"), 2));
+  ASSERT_NE(ModelQueueThreadPool::get_queue_id(VersionedModelId("m", "1"), 1),
+            ModelQueueThreadPool::get_queue_id(VersionedModelId("m", "1"), 2));
 
   // Same model name, different version, same replica
-  ASSERT_NE(ThreadPool::get_queue_id(VersionedModelId("m", "1"), 1),
-            ThreadPool::get_queue_id(VersionedModelId("m", "2"), 1));
+  ASSERT_NE(ModelQueueThreadPool::get_queue_id(VersionedModelId("m", "1"), 1),
+            ModelQueueThreadPool::get_queue_id(VersionedModelId("m", "2"), 1));
 
   // Different model name, same version, same replica
-  ASSERT_NE(ThreadPool::get_queue_id(VersionedModelId("m", "1"), 1),
-            ThreadPool::get_queue_id(VersionedModelId("j", "1"), 1));
+  ASSERT_NE(ModelQueueThreadPool::get_queue_id(VersionedModelId("m", "1"), 1),
+            ModelQueueThreadPool::get_queue_id(VersionedModelId("j", "1"), 1));
 }
 }  // namespace

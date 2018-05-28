@@ -41,7 +41,7 @@ bool contains_prohibited_chars_for_group(std::string value);
 /**
  * Issues a command to Redis and checks return code.
  * \return Returns true if the command was successful.
-*/
+ */
 template <class ReplyT>
 bool send_cmd_no_reply(redox::Redox& redis,
                        const std::vector<std::string>& cmd_vec) {
@@ -330,13 +330,13 @@ std::unordered_map<std::string, std::string> get_application_by_key(
 std::vector<std::string> get_all_application_names(redox::Redox& redis);
 
 /**
-* Subscribes to changes in the model table. The
-* callback is called with the string key of the model
-* that changed and the Redis event type. The key can
-* be used to look up the new value. The message type identifies
-* what type of change was detected. This allows subscribers
-* to differentiate between adds, updates, and deletes if necessary.
-*/
+ * Subscribes to changes in the model table. The
+ * callback is called with the string key of the model
+ * that changed and the Redis event type. The key can
+ * be used to look up the new value. The message type identifies
+ * what type of change was detected. This allows subscribers
+ * to differentiate between adds, updates, and deletes if necessary.
+ */
 void subscribe_to_model_changes(
     redox::Subscriber& subscriber,
     std::function<void(const std::string&, const std::string&)> callback);
@@ -347,7 +347,7 @@ void subscribe_to_model_changes(
  * be used to look up the new value. The message type identifies
  * what type of change was detected. This allows subscribers
  * to differentiate between adds, updates, and deletes if necessary.
-*/
+ */
 void subscribe_to_container_changes(
     redox::Subscriber& subscriber,
     std::function<void(const std::string&, const std::string&)> callback);
@@ -359,7 +359,7 @@ void subscribe_to_container_changes(
  * be used to look up the new value. The message type identifies
  * what type of change was detected. This allows subscribers
  * to differentiate between adds, updates, and deletes if necessary.
-*/
+ */
 void subscribe_to_application_changes(
     redox::Subscriber& subscriber,
     std::function<void(const std::string&, const std::string&)> callback);
@@ -371,20 +371,20 @@ void subscribe_to_application_changes(
  * be used to look up the new value. The message type identifies
  * what type of change was detected. This allows subscribers
  * to differentiate between adds and deletes if necessary.
-*/
+ */
 void subscribe_to_model_link_changes(
     redox::Subscriber& subscriber,
     std::function<void(const std::string&, const std::string&)> callback);
 
 /**
-* Subscribes to changes in model versions.
-*
-* The callback is called with the string key of the model
-* that changed and the Redis event type. The key can
-* be used to look up the new value. The message type identifies
-* what type of change was detected. This allows subscribers
-* to differentiate between adds, updates, and deletes if necessary.
-*/
+ * Subscribes to changes in model versions.
+ *
+ * The callback is called with the string key of the model
+ * that changed and the Redis event type. The key can
+ * be used to look up the new value. The message type identifies
+ * what type of change was detected. This allows subscribers
+ * to differentiate between adds, updates, and deletes if necessary.
+ */
 void subscribe_to_model_version_changes(
     redox::Subscriber& subscriber,
     std::function<void(const std::string&, const std::string&)> callback);

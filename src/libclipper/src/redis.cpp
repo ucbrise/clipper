@@ -15,8 +15,8 @@ using redox::Command;
 using redox::Redox;
 using redox::Subscriber;
 using std::string;
-using std::vector;
 using std::unordered_map;
+using std::vector;
 
 namespace clipper {
 namespace redis {
@@ -267,7 +267,7 @@ std::unordered_map<std::string, std::string> get_model_by_key(
   } else {
     return std::unordered_map<std::string, std::string>{};
   }
-};
+}
 
 bool delete_model(Redox& redis, const VersionedModelId& model_id) {
   if (send_cmd_no_reply<string>(
