@@ -156,7 +156,6 @@ class RPCService {
   std::function<void(RPCResponse &)> new_response_callback_;
 
   RPCDataStore outbound_data_store_;
-
   std::function<void(VersionedModelId, int)> inactive_container_callback_;
 
   static constexpr int INITIAL_REPLICA_ID_SIZE = 100;
