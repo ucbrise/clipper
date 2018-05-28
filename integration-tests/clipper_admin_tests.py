@@ -840,7 +840,6 @@ SHORT_TEST_ORDERING = [
     'test_python_closure_deploys_successfully', 'test_register_py_endpoint',
     'test_test_predict_function', 'test_build_model_with_custom_packages',
     'test_delete_application_correct', 'test_query_specific_model_version',
-    'test_query_absent_model_version_fails_correctly'
 ]
 
 LONG_TEST_ORDERING = [
