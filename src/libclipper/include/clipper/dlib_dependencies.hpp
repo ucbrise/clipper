@@ -1,6 +1,6 @@
 // Disable warnings for dlib
 //
-// Note: All additional dlib submodules should
+// Note: All additional dlib submodule dependencies should
 // be included here, and all modules dependent on dlib
 // should include this file. The dlib compilation process
 // emits numerous pedantic and variadic macro errors, so this
