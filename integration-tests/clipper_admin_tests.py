@@ -825,21 +825,27 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
 
 SHORT_TEST_ORDERING = [
-    'test_register_model_correct', 'test_register_application_correct',
+    'test_register_model_correct',
+    'test_register_application_correct',
     'test_link_not_registered_model_to_app_fails',
     'test_get_model_links_when_none_exist_returns_empty_list',
     'test_link_registered_model_to_app_succeeds',
     'get_app_info_for_registered_app_returns_info_dictionary',
     'get_app_info_for_nonexistent_app_returns_none',
     'test_set_num_replicas_for_external_model_fails',
-    'test_model_version_sets_correctly', 'test_get_logs_creates_log_files',
+    'test_model_version_sets_correctly',
+    'test_get_logs_creates_log_files',
     'test_inspect_instance_returns_json_dict',
     'test_model_deploys_successfully',
     'test_set_num_replicas_for_deployed_model_succeeds',
-    'test_remove_inactive_containers_succeeds', 'test_stop_models',
-    'test_python_closure_deploys_successfully', 'test_register_py_endpoint',
-    'test_test_predict_function', 'test_build_model_with_custom_packages',
-    'test_delete_application_correct', 'test_query_specific_model_version',
+    'test_remove_inactive_containers_succeeds',
+    'test_stop_models',
+    'test_python_closure_deploys_successfully',
+    'test_register_py_endpoint',
+    'test_test_predict_function',
+    'test_build_model_with_custom_packages',
+    'test_delete_application_correct',
+    'test_query_specific_model_version',
 ]
 
 LONG_TEST_ORDERING = [
