@@ -168,7 +168,6 @@ void ModelContainer::fit_estimator() {
 
   double pooled_std_num = 0;
   double pooled_std_denom = -1 * static_cast<double>(num_datapoints);
-  double num_valid_stds = 0;
 
   for (auto &entry : processing_datapoints_) {
     LatencyInfo &latency_info = entry.second;

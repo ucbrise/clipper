@@ -277,7 +277,7 @@ class ModelQueueThreadPool : public ThreadPool {
     }
   }
 
-  bool create_queue(VersionedModelId vm, int replica_id) {
+  bool create_queue(VersionedModelId vm, int replica_id, bool is_block_worker) {
     boost::unique_lock<boost::shared_mutex> l(queues_mutex_);
     size_t queue_id = get_queue_id(vm, replica_id);
     auto queue = queues_.find(queue_id);
@@ -289,9 +289,10 @@ class ModelQueueThreadPool : public ThreadPool {
     } else {
       queues_.emplace(std::piecewise_construct, std::forward_as_tuple(queue_id),
                       std::forward_as_tuple());
-      threads_.emplace(
-          std::piecewise_construct, std::forward_as_tuple(queue_id),
-          std::forward_as_tuple(&ModelQueueThreadPool::worker, this, queue_id));
+      threads_.emplace(std::piecewise_construct,
+                       std::forward_as_tuple(queue_id),
+                       std::forward_as_tuple(&ModelQueueThreadPool::worker,
+                                             this, queue_id, is_block_worker));
       log_info_formatted(LOGGING_TAG_THREADPOOL,
                          "Work queue created for model {}, replica {}",
                          vm.serialize(), std::to_string(replica_id));
@@ -299,7 +300,6 @@ class ModelQueueThreadPool : public ThreadPool {
     }
   }
 
- private:
   static size_t get_queue_id(const VersionedModelId& vm, const int replica_id) {
     std::size_t seed = 0;
     boost::hash_combine(seed, vm.get_name());
@@ -311,7 +311,9 @@ class ModelQueueThreadPool : public ThreadPool {
 
 class FixedSizeThreadPool : public ThreadPool {
  public:
-  FixedSizeThreadPool(const size_t num_threads) : ThreadPool(), queue_id_(1) {
+  FixedSizeThreadPool(const size_t num_threads, bool is_block_worker)
+      : ThreadPool(), queue_id_(1) {
+    boost::unique_lock<boost::shared_mutex> l(queues_mutex_);
     if (num_threads <= 0) {
       throw std::runtime_error(
           "Attempted to construct threadpool with no threads");
@@ -319,18 +321,25 @@ class FixedSizeThreadPool : public ThreadPool {
     queues_.emplace(std::piecewise_construct, std::forward_as_tuple(queue_id_),
                     std::forward_as_tuple());
     for (size_t i = 0; i < num_threads; ++i) {
-      threads_.emplace(
-          std::piecewise_construct, std::forward_as_tuple(queue_id_),
-          std::forward_as_tuple(&FixedSizeThreadPool::worker, this, queue_id_));
+      threads_.emplace(std::piecewise_construct,
+                       std::forward_as_tuple(queue_id_),
+                       std::forward_as_tuple(&FixedSizeThreadPool::worker, this,
+                                             queue_id_, is_block_worker));
     }
   }
 
   /**
-   * Submit a job to be run by the thread pool.
+   * Submit a job to be run by the thread pool
    */
   template <typename Func, typename... Args>
   auto submit(Func&& func, Args&&... args) {
-    ThreadPool::submit(queue_id_, func, args...);
+    try {
+      ThreadPool::submit(queue_id_, func, args...);
+    } catch (ThreadPoolError& e) {
+      log_error(LOGGING_TAG_THREADPOOL,
+                "Failed to submit task for FixedSizeThreadPool");
+      throw(e);
+    }
   }
 
  private:
@@ -338,6 +347,7 @@ class FixedSizeThreadPool : public ThreadPool {
 };
 
 namespace TaskExecutionThreadPool {
+
 /**
  * Convenience method to get the task execution thread pool for the application
  */
@@ -368,7 +378,7 @@ namespace EstimatorFittingThreadPool {
  * application.
  */
 inline ModelQueueThreadPool& get_thread_pool(void) {
-  static ModelQueueThreadPool estimator_fitting_pool(1, true);
+  static ModelQueueThreadPool estimator_fitting_pool;
   return estimator_fitting_pool;
 }
 
@@ -382,7 +392,7 @@ inline auto submit_job(Func&& func, Args&&... args) {
 }
 
 inline void create_queue(VersionedModelId vm, int replica_id) {
-  get_thread_pool().create_queue(vm, replica_id);
+  get_thread_pool().create_queue(vm, replica_id, false);
 }
 
 }  // namespace EstimatorFittingThreadPool
