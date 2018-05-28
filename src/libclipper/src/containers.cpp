@@ -270,7 +270,7 @@ void ActiveContainers::remove_container(VersionedModelId model,
       model.get_name(), model.get_id(), replica_id);
   boost::unique_lock<boost::shared_mutex> l{m_};
 
-  int initial_size = containers_[model].size();
+  size_t initial_size = containers_[model].size();
 
   for (auto it = containers_[model].begin(); it != containers_[model].end();) {
     if (it->first == replica_id) {
