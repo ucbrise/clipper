@@ -8,13 +8,12 @@
 
 #include <clipper/constants.hpp>
 #include <clipper/containers.hpp>
+#include <clipper/dlib_dependencies.hpp>
 #include <clipper/logging.hpp>
 #include <clipper/metrics.hpp>
 #include <clipper/threadpool.hpp>
 #include <clipper/util.hpp>
 
-#include <dlib/matrix.h>
-#include <dlib/svm.h>
 #include <boost/circular_buffer.hpp>
 
 namespace clipper {

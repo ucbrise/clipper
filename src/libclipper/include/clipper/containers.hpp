@@ -7,12 +7,10 @@ constexpr int DEFAULT_BATCH_SIZE = -1;
 #include <random>
 #include <unordered_map>
 
-#include <dlib/matrix.h>
-#include <dlib/svm.h>
-
 #include <boost/circular_buffer.hpp>
 
 #include <clipper/datatypes.hpp>
+#include <clipper/dlib_dependencies.hpp>
 #include <clipper/metrics.hpp>
 #include <clipper/threadpool.hpp>
 #include <clipper/util.hpp>
