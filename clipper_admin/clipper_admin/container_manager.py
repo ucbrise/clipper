@@ -8,6 +8,7 @@ CLIPPER_INTERNAL_QUERY_PORT = 1337
 CLIPPER_INTERNAL_MANAGEMENT_PORT = 1338
 CLIPPER_INTERNAL_RPC_PORT = 7000
 CLIPPER_INTERNAL_METRIC_PORT = 1390
+CLIPPER_INTERNAL_REDIS_PORT = 6379
 
 CLIPPER_DOCKER_LABEL = "ai.clipper.container.label"
 CLIPPER_MODEL_CONTAINER_LABEL = "ai.clipper.model_container.label"
@@ -15,6 +16,15 @@ CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL = "ai.clipper.query_frontend.label"
 CLIPPER_MGMT_FRONTEND_CONTAINER_LABEL = "ai.clipper.management_frontend.label"
 CLIPPER_QUERY_FRONTEND_ID_LABEL = "ai.clipper.query_frontend.id"
 CONTAINERLESS_MODEL_IMAGE = "NO_CONTAINER"
+
+CLIPPER_DOCKER_PORT_LABELS = {
+    'redis': 'ai.clipper.redis.port',
+    'query_query': 'ai.clipper.query_frontend.query.port',
+    'query_rpc': 'ai.clipper.query_frontend.rpc.port',
+    'management': 'ai.clipper.management.port',
+    'metric': 'ai.clipper.metric.port'
+}
+CLIPPER_METRIC_CONFIG_LABEL = 'ai.clipper.metric.config'
 
 # NOTE: we use '_' as the delimiter because kubernetes allows the use
 # '_' in labels but not in deployment names. We force model names and
@@ -36,7 +46,11 @@ def parse_model_container_label(label):
     return splits
 
 
-def find_unbound_port(start=None, increment=True, port_range=(34256, 50000), verbose=False, logger=None):
+def find_unbound_port(start=None,
+                      increment=True,
+                      port_range=(34256, 50000),
+                      verbose=False,
+                      logger=None):
     """
     Fina a unbound port.
 
@@ -67,7 +81,8 @@ def find_unbound_port(start=None, increment=True, port_range=(34256, 50000), ver
             if verbose and logger:
                 logger.info("Socket error: {}".format(e))
                 logger.info(
-                    "randomly generated port %d is bound. Trying again." % start)
+                    "randomly generated port %d is bound. Trying again." %
+                    start)
 
         if increment:
             start += 1

@@ -10,4 +10,3 @@ import time
 import logging
 from test_utils import (create_docker_connection, BenchmarkException,
                         fake_model_data, headers, log_clipper_state)
-

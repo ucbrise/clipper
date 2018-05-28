@@ -206,8 +206,8 @@ class KubernetesContainerManager(ContainerManager):
         configmap_body["metadata"]["labels"]
 
         with _pass_conflicts():
-            self._k8s_v1.create_namespaced_config_map(body=configmap_body, namespace=self.namespace)
-
+            self._k8s_v1.create_namespaced_config_map(
+                body=configmap_body, namespace=self.namespace)
 
     def connect(self):
         nodes = self._k8s_v1.list_node()

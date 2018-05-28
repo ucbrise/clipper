@@ -8,12 +8,13 @@ import time
 import json
 import tempfile
 from ..container_manager import (
-    create_model_container_label, parse_model_container_label, find_unbound_port,
-    ContainerManager, CLIPPER_DOCKER_LABEL, CLIPPER_MODEL_CONTAINER_LABEL,
-    CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL,
+    create_model_container_label, parse_model_container_label,
+    find_unbound_port, ContainerManager, CLIPPER_DOCKER_LABEL,
+    CLIPPER_MODEL_CONTAINER_LABEL, CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL,
     CLIPPER_MGMT_FRONTEND_CONTAINER_LABEL, CLIPPER_INTERNAL_RPC_PORT,
     CLIPPER_INTERNAL_QUERY_PORT, CLIPPER_INTERNAL_MANAGEMENT_PORT,
-    CLIPPER_INTERNAL_METRIC_PORT)
+    CLIPPER_INTERNAL_METRIC_PORT, CLIPPER_INTERNAL_REDIS_PORT,
+    CLIPPER_DOCKER_PORT_LABELS, CLIPPER_METRIC_CONFIG_LABEL)
 from ..exceptions import ClipperException
 from requests.exceptions import ConnectionError
 from .docker_metric_utils import *
@@ -88,7 +89,9 @@ class DockerContainerManager(ContainerManager):
         # Merge Clipper-specific labels with any user-provided labels
         if "labels" in self.extra_container_kwargs:
             self.common_labels = self.extra_container_kwargs.pop("labels")
-            self.common_labels.update({CLIPPER_DOCKER_LABEL: self.cluster_name})
+            self.common_labels.update({
+                CLIPPER_DOCKER_LABEL: self.cluster_name
+            })
         else:
             self.common_labels = {CLIPPER_DOCKER_LABEL: self.cluster_name}
 
@@ -99,19 +102,17 @@ class DockerContainerManager(ContainerManager):
 
         self.extra_container_kwargs.update(container_args)
 
-        self.prom_config_path = tempfile.NamedTemporaryFile('w', suffix='.yml', delete=False).name
-        self.prom_config_path = os.path.realpath(self.prom_config_path) # resolve symlink
-
     def start_clipper(self,
                       query_frontend_image,
                       mgmt_frontend_image,
                       cache_size,
+                      prometheus_version,
                       num_frontend_replicas=1):
         if num_frontend_replicas != 1:
-            msg = "Docker container manager's query frontend scale-out \
-            hasn't been implemented. Please set num_frontend_replicas=1 \
-            or use Kubernetes."
-
+            msg = "Docker container manager's query frontend scale-out " \
+                  "hasn't been implemented. You can contribute to Clipper at " \
+                  "https://github.com/ucbrise/clipper." \
+                  "Please set num_frontend_replicas=1 or use Kubernetes."
             raise ClipperException(msg)
 
         try:
@@ -124,25 +125,43 @@ class DockerContainerManager(ContainerManager):
             msg = "Unable to Connect to Docker. Please Check if Docker is running."
             raise ClipperException(msg)
 
+        containers_in_cluster = self.docker_client.containers.list(
+            filters={
+                'label':
+                ['ai.clipper.container.label={}'.format(self.cluster_name)]
+            })
+        if len(containers_in_cluster) > 0:
+            raise ClipperException(
+                "Cluster {} cannot be started because it already exists. "
+                "Please use clipper_conn.connect() to connect to it.".format(
+                    self.cluster_name))
 
         if not self.external_redis:
             logger.info("Starting managed Redis instance in Docker")
             self.redis_port = find_unbound_port(self.redis_port)
+            redis_labels = self.common_labels.copy()
+            redis_labels[CLIPPER_DOCKER_PORT_LABELS['redis']] = str(
+                self.redis_port)
             redis_container = self.docker_client.containers.run(
                 'redis:alpine',
-                "redis-server --port %s" % self.redis_port,
+                "redis-server --port %s" % CLIPPER_INTERNAL_REDIS_PORT,
                 name="redis-{}".format(random.randint(
                     0, 100000)),  # generate a random name
-                ports={'%s/tcp' % self.redis_port: self.redis_port},
-                labels=self.common_labels.copy(),
+                ports={
+                    '%s/tcp' % CLIPPER_INTERNAL_REDIS_PORT: self.redis_port
+                },
+                labels=redis_labels,
                 **self.extra_container_kwargs)
             self.redis_ip = redis_container.name
 
         mgmt_cmd = "--redis_ip={redis_ip} --redis_port={redis_port}".format(
-            redis_ip=self.redis_ip, redis_port=self.redis_port)
+            redis_ip=self.redis_ip, redis_port=CLIPPER_INTERNAL_REDIS_PORT)
+        self.clipper_management_port = find_unbound_port(
+            self.clipper_management_port)
         mgmt_labels = self.common_labels.copy()
         mgmt_labels[CLIPPER_MGMT_FRONTEND_CONTAINER_LABEL] = ""
-        self.clipper_management_port = find_unbound_port(self.clipper_management_port)
+        mgmt_labels[CLIPPER_DOCKER_PORT_LABELS['management']] = str(
+            self.clipper_management_port)
         self.docker_client.containers.run(
             mgmt_frontend_image,
             mgmt_cmd,
@@ -158,14 +177,19 @@ class DockerContainerManager(ContainerManager):
         query_cmd = ("--redis_ip={redis_ip} --redis_port={redis_port} "
                      "--prediction_cache_size={cache_size}").format(
                          redis_ip=self.redis_ip,
-                         redis_port=self.redis_port,
+                         redis_port=CLIPPER_INTERNAL_REDIS_PORT,
                          cache_size=cache_size)
-        query_labels = self.common_labels.copy()
-        query_labels[CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL] = ""
+
         query_container_id = random.randint(0, 100000)
         query_name = "query_frontend-{}".format(query_container_id)
         self.clipper_query_port = find_unbound_port(self.clipper_query_port)
         self.clipper_rpc_port = find_unbound_port(self.clipper_rpc_port)
+        query_labels = self.common_labels.copy()
+        query_labels[CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL] = ""
+        query_labels[CLIPPER_DOCKER_PORT_LABELS['query_query']] = str(
+            self.clipper_query_port)
+        query_labels[CLIPPER_DOCKER_PORT_LABELS['query_rpc']] = str(
+            self.clipper_rpc_port)
         self.docker_client.containers.run(
             query_frontend_image,
             query_cmd,
@@ -184,21 +208,49 @@ class DockerContainerManager(ContainerManager):
         run_query_frontend_metric_image(
             query_frontend_metric_name, self.docker_client, query_name,
             self.common_labels, self.extra_container_kwargs)
-        setup_metric_config(query_frontend_metric_name,
-                            self.prom_config_path,
+
+        self.prom_config_path = tempfile.NamedTemporaryFile(
+            'w', suffix='.yml', delete=False).name
+        self.prom_config_path = os.path.realpath(
+            self.prom_config_path)  # resolve symlink
+        setup_metric_config(query_frontend_metric_name, self.prom_config_path,
                             CLIPPER_INTERNAL_METRIC_PORT)
+
         self.prometheus_port = find_unbound_port(self.prometheus_port)
-        run_metric_image(self.docker_client,
-                         self.common_labels,
-                         self.prometheus_port,
-                         self.prom_config_path,
+        metric_labels = self.common_labels.copy()
+        metric_labels[CLIPPER_DOCKER_PORT_LABELS['metric']] = str(
+            self.prometheus_port)
+        metric_labels[CLIPPER_METRIC_CONFIG_LABEL] = self.prom_config_path
+        run_metric_image(self.docker_client, metric_labels,
+                         self.prometheus_port, self.prom_config_path,
                          self.extra_container_kwargs)
 
         self.connect()
 
     def connect(self):
-        # No extra connection steps to take on connection
-        return
+        """
+        Use the cluster name to update ports. Because they might not match as in
+        start_clipper the ports might be changed.
+        :return: None
+        """
+        containers = self.docker_client.containers.list(
+            filters={
+                'label':
+                ['ai.clipper.container.label={}'.format(self.cluster_name)]
+            })
+        all_labels = {}
+        for container in containers:
+            all_labels.update(container.labels)
+
+        self.redis_port = all_labels[CLIPPER_DOCKER_PORT_LABELS['redis']]
+        self.clipper_management_port = all_labels[CLIPPER_DOCKER_PORT_LABELS[
+            'management']]
+        self.clipper_query_port = all_labels[CLIPPER_DOCKER_PORT_LABELS[
+            'query_query']]
+        self.clipper_rpc_port = all_labels[CLIPPER_DOCKER_PORT_LABELS[
+            'query_rpc']]
+        self.prometheus_port = all_labels[CLIPPER_DOCKER_PORT_LABELS['metric']]
+        self.prom_config_path = all_labels[CLIPPER_METRIC_CONFIG_LABEL]
 
     def deploy_model(self, name, version, input_type, image, num_replicas=1):
         # Parameters
@@ -213,8 +265,9 @@ class DockerContainerManager(ContainerManager):
     def _get_replicas(self, name, version):
         containers = self.docker_client.containers.list(
             filters={
-                "label":[
-                    "{key}={val}".format(key=CLIPPER_DOCKER_LABEL, val=self.cluster_name),
+                "label": [
+                    "{key}={val}".format(
+                        key=CLIPPER_DOCKER_LABEL, val=self.cluster_name),
                     "{key}={val}".format(
                         key=CLIPPER_MODEL_CONTAINER_LABEL,
                         val=create_model_container_label(name, version))
@@ -230,7 +283,8 @@ class DockerContainerManager(ContainerManager):
         containers = self.docker_client.containers.list(
             filters={
                 "label": [
-                    "{key}={val}".format(key=CLIPPER_DOCKER_LABEL, val=self.cluster_name),
+                    "{key}={val}".format(
+                        key=CLIPPER_DOCKER_LABEL, val=self.cluster_name),
                     CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL
                 ]
             })
@@ -262,8 +316,7 @@ class DockerContainerManager(ContainerManager):
             **self.extra_container_kwargs)
 
         # Metric Section
-        add_to_metric_config(model_container_name,
-                             self.prom_config_path,
+        add_to_metric_config(model_container_name, self.prom_config_path,
                              self.prometheus_port,
                              CLIPPER_INTERNAL_METRIC_PORT)
 
@@ -306,14 +359,16 @@ class DockerContainerManager(ContainerManager):
                 cur_container = current_replicas.pop()
                 cur_container.stop()
                 # Metric Section
-                delete_from_metric_config(cur_container.name, self.prom_config_path, self.prometheus_port)
+                delete_from_metric_config(cur_container.name,
+                                          self.prom_config_path,
+                                          self.prometheus_port)
 
     def get_logs(self, logging_dir):
         containers = self.docker_client.containers.list(
             filters={
-                "label": "{key}={val}".format(
-                    key=CLIPPER_DOCKER_LABEL,
-                    val=self.cluster_name)
+                "label":
+                "{key}={val}".format(
+                    key=CLIPPER_DOCKER_LABEL, val=self.cluster_name)
             })
         logging_dir = os.path.abspath(os.path.expanduser(logging_dir))
 
@@ -356,9 +411,9 @@ class DockerContainerManager(ContainerManager):
     def stop_all(self):
         containers = self.docker_client.containers.list(
             filters={
-                "label": "{key}={val}".format(
-                    key=CLIPPER_DOCKER_LABEL,
-                    val=self.cluster_name)
+                "label":
+                "{key}={val}".format(
+                    key=CLIPPER_DOCKER_LABEL, val=self.cluster_name)
             })
         for c in containers:
             c.stop()

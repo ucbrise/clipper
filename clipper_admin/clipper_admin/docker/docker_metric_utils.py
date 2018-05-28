@@ -43,8 +43,7 @@ def run_query_frontend_metric_image(name, docker_client, query_name,
         **extra_container_kwargs)
 
 
-def setup_metric_config(query_frontend_metric_name,
-                        prom_config_path,
+def setup_metric_config(query_frontend_metric_name, prom_config_path,
                         CLIPPER_INTERNAL_METRIC_PORT):
     """
     Write to file prometheus.yml after frontend-metric is setup.
@@ -107,7 +106,8 @@ def run_metric_image(docker_client, common_labels, prometheus_port,
         **extra_container_kwargs)
 
 
-def add_to_metric_config(model_container_name, prom_config_path, prometheus_port, CLIPPER_INTERNAL_METRIC_PORT):
+def add_to_metric_config(model_container_name, prom_config_path,
+                         prometheus_port, CLIPPER_INTERNAL_METRIC_PORT):
     """
     Add a new model container to the prometheus.yml configuration file.
     :param model_container_name: New model container name, need to be unique.
@@ -144,10 +144,12 @@ def add_to_metric_config(model_container_name, prom_config_path, prometheus_port
     with open(prom_config_path, 'w') as f:
         yaml.dump(conf, f)
 
-    requests.post('http://localhost:{prometheus_port}/-/reload'.format(prometheus_port=prometheus_port))
+    requests.post('http://localhost:{prometheus_port}/-/reload'.format(
+        prometheus_port=prometheus_port))
 
 
-def delete_from_metric_config(model_container_name, prom_config_path, prometheus_port):
+def delete_from_metric_config(model_container_name, prom_config_path,
+                              prometheus_port):
     """
     Delete the stored model container from the prometheus.yml configuration file.
     :param model_container_name: the model container name to be deleted.
@@ -164,4 +166,5 @@ def delete_from_metric_config(model_container_name, prom_config_path, prometheus
     with open(prom_config_path, 'w') as f:
         yaml.dump(conf, f)
 
-    requests.post('http://localhost:{prometheus_port}/-/reload'.format(prometheus_port=prometheus_port))
+    requests.post('http://localhost:{prometheus_port}/-/reload'.format(
+        prometheus_port=prometheus_port))
