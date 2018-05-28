@@ -140,7 +140,7 @@ TEST(MetricsTests, HistogramMinMaxMeanAreCorrectWithNumericallyLargeElements) {
   Histogram histogram("Test Histogram", "milliseconds", sample_size);
   long max_long = std::numeric_limits<long>::max();
   int64_t sum = 0;
-  for (int i = 0; i < sample_size; i++) {
+  for (size_t i = 0; i < sample_size; ++i) {
     histogram.insert(max_long - i);
     sum += max_long - i;
   }
