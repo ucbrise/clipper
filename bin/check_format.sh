@@ -36,7 +36,7 @@ fi
 
 
 # Run clang-format
-num_java_violations="$(find . -name '*.java' -print \
+num_java_violations="$(find . -not \( -path ./src/libs -prune \) -name '*.java' -print \
     | xargs clang-format -style=file -output-replacements-xml \
     | grep -c "<replacement ")"
 
