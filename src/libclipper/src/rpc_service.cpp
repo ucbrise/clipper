@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <iostream>
+#include <numeric>
 
 #include <concurrentqueue.h>
 #include <clipper/config.hpp>
