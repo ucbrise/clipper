@@ -2,22 +2,22 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   labels:
-    ai.clipper.container.label: ""
+    ai.clipper.container.label: {{ cluster_name }}
     ai.clipper.name: mgmt-frontend
-  name: mgmt-frontend
+  name: mgmt-frontend-at-{{ cluster_name }}
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        ai.clipper.container.label: ""
+        ai.clipper.container.label: {{ cluster_name }}
         ai.clipper.name: mgmt-frontend
     spec:
       containers:
       - args:
-        - "--redis_ip=$(REDIS_SERVICE_HOST)"
-        - "--redis_port=$(REDIS_SERVICE_PORT)"
-        image: clipper/management_frontend
+        - "--redis_ip={{ redis_service_host | default('$(REDIS_SERVICE_HOST)', true) }}" # If redis_service_host == None, default to env var
+        - "--redis_port={{ redis_service_port | default('$(REDIS_SERVICE_PORT)', true) }}"
+        image: {{ image }}
         imagePullPolicy: Always
         name: mgmt-frontend
         ports:

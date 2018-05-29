@@ -170,3 +170,7 @@ class ContainerManager(object):
     @abc.abstractmethod
     def get_query_addr(self):
         return
+
+    @abc.abstractmethod
+    def get_metric_addr(self):
+        return

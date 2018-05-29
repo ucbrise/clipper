@@ -2,15 +2,15 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   labels:
-    ai.clipper.container.label: ""
+    ai.clipper.container.label: {{ cluster_name }}
     ai.clipper.name: redis
-  name: redis
+  name: redis-at-{{ cluster_name }}
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        ai.clipper.container.label: ""
+        ai.clipper.container.label: {{ cluster_name }}
         ai.clipper.name: redis
     spec:
       containers:

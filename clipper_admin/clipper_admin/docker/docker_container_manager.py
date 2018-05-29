@@ -425,3 +425,7 @@ class DockerContainerManager(ContainerManager):
     def get_query_addr(self):
         return "{host}:{port}".format(
             host=self.public_hostname, port=self.clipper_query_port)
+
+    def get_metric_addr(self):
+        return "{host}:{port}".format(
+            host=self.public_hostname, port=self.prometheus_port)

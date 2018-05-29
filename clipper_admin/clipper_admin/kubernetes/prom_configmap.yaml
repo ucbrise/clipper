@@ -29,7 +29,7 @@ data:
 
 kind: ConfigMap
 metadata:
-  name: prometheus-config
+  name: prometheus-config-at-{{ cluster_name }}
   labels:
-    ai.clipper.container.label: ""
+    ai.clipper.container.label: {{ cluster_name }}
     ai.clipper.name: metrics
