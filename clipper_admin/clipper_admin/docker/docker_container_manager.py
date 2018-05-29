@@ -394,8 +394,9 @@ class DockerContainerManager(ContainerManager):
         containers = self.docker_client.containers.list(
             filters={
                 "label": [
-                    CLIPPER_MODEL_CONTAINER_LABEL,
-                    "{key}={val}".format(key=CLIPPER_DOCKER_LABEL, val=self.cluster_name)]
+                    CLIPPER_MODEL_CONTAINER_LABEL, "{key}={val}".format(
+                        key=CLIPPER_DOCKER_LABEL, val=self.cluster_name)
+                ]
             })
         for c in containers:
             c_name, c_version = parse_model_container_label(
@@ -407,8 +408,8 @@ class DockerContainerManager(ContainerManager):
         containers = self.docker_client.containers.list(
             filters={
                 "label": [
-                    CLIPPER_MODEL_CONTAINER_LABEL,
-                    "{key}={val}".format(key=CLIPPER_DOCKER_LABEL, val=self.cluster_name)
+                    CLIPPER_MODEL_CONTAINER_LABEL, "{key}={val}".format(
+                        key=CLIPPER_DOCKER_LABEL, val=self.cluster_name)
                 ]
             })
         for c in containers:

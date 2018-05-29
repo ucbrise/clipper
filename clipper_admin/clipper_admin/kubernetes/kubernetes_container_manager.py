@@ -411,12 +411,12 @@ class KubernetesContainerManager(ContainerManager):
                 for v in models[m]:
                     self._k8s_beta.delete_collection_namespaced_deployment(
                         namespace='default',
-                        label_selector="{label}={val}, {cluster_label}={cluster_name}".format(
+                        label_selector=
+                        "{label}={val}, {cluster_label}={cluster_name}".format(
                             label=CLIPPER_MODEL_CONTAINER_LABEL,
                             val=create_model_container_label(m, v),
                             cluster_label=CLIPPER_DOCKER_LABEL,
-                            cluster_name=self.cluster_name
-                        ))
+                            cluster_name=self.cluster_name))
         except ApiException as e:
             logger.warn(
                 "Exception deleting kubernetes deployments: {}".format(e))
@@ -426,11 +426,11 @@ class KubernetesContainerManager(ContainerManager):
         try:
             self._k8s_beta.delete_collection_namespaced_deployment(
                 namespace='default',
-                label_selector="{label}, {cluster_label}={cluster_name}".format(
+                label_selector="{label}, {cluster_label}={cluster_name}".
+                format(
                     label=CLIPPER_MODEL_CONTAINER_LABEL,
                     cluster_label=CLIPPER_DOCKER_LABEL,
-                    cluster_name=self.cluster_name
-                ))
+                    cluster_name=self.cluster_name))
         except ApiException as e:
             logger.warn(
                 "Exception deleting kubernetes deployments: {}".format(e))
@@ -439,8 +439,8 @@ class KubernetesContainerManager(ContainerManager):
     def stop_all(self):
         logger.info("Stopping all running Clipper resources")
 
-        cluster_selecter = "{cluster_label}={cluster_name}".format(cluster_label=CLIPPER_DOCKER_LABEL,
-                    cluster_name=self.cluster_name)
+        cluster_selecter = "{cluster_label}={cluster_name}".format(
+            cluster_label=CLIPPER_DOCKER_LABEL, cluster_name=self.cluster_name)
 
         try:
             for service in self._k8s_v1.list_namespaced_service(
