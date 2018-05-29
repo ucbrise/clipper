@@ -3,7 +3,7 @@ from ..container_manager import (
     create_model_container_label, ContainerManager, CLIPPER_DOCKER_LABEL,
     CLIPPER_MODEL_CONTAINER_LABEL, CLIPPER_QUERY_FRONTEND_ID_LABEL,
     CLIPPER_INTERNAL_MANAGEMENT_PORT, CLIPPER_INTERNAL_QUERY_PORT,
-    CLIPPER_INTERNAL_METRIC_PORT)
+    CLIPPER_INTERNAL_METRIC_PORT, CLIPPER_NAME_LABEL)
 from ..exceptions import ClipperException
 from .kubernetes_metric_utils import PROM_VERSION, CLIPPER_FRONTEND_EXPORTER_IMAGE
 
@@ -17,8 +17,6 @@ import yaml
 import os
 import time
 import jinja2
-
-CLIPPER_QUERY_FRONTEND_DEPLOYMENT_LABEL = "ai.clipper.name=query-frontend"
 
 logger = logging.getLogger(__name__)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
@@ -303,7 +301,7 @@ class KubernetesContainerManager(ContainerManager):
 
             query_frontend_deployments = self._k8s_beta.list_namespaced_deployment(
                 namespace="default",
-                label_selector=CLIPPER_QUERY_FRONTEND_DEPLOYMENT_LABEL).items
+                label_selector="{name_label}=query-frontend, {cluster_label}={cluster_name}".format(name_label=CLIPPER_NAME_LABEL, cluster_label=CLIPPER_DOCKER_LABEL, cluster_name=self.cluster_name)).items
             self.num_frontend_replicas = len(query_frontend_deployments)
 
             metrics_ports = self._k8s_v1.read_namespaced_service(
@@ -508,5 +506,5 @@ class KubernetesContainerManager(ContainerManager):
 
 
 def get_model_deployment_name(name, version, query_frontend_id, cluster_name):
-    return "{name}-{version}-deployment-at-{query_frontend_id}".format(
+    return "{name}-{version}-deployment-at-{query_frontend_id}-at-{cluster_name}".format(
         name=name, version=version, query_frontend_id=query_frontend_id, cluster_name=cluster_name)

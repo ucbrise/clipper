@@ -13,3 +13,4 @@ spec:
     targetPort: 6379
   selector:
     ai.clipper.name: redis
+    ai.clipper.container.label: {{ cluster_name }}

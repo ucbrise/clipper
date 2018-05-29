@@ -27,7 +27,7 @@ spec:
             - name: CLIPPER_MODEL_VERSION
               value: "{{ version }}"
             - name: CLIPPER_IP
-              value: query-frontend-{{ query_frontend_id }}
+              value: query-frontend-{{ query_frontend_id }}-at-{{ cluster_name }}
             - name: CLIPPER_INPUT_TYPE
               value: {{ input_type }}
           image: {{ image }}

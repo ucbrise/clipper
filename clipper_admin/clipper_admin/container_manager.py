@@ -11,6 +11,7 @@ CLIPPER_INTERNAL_METRIC_PORT = 1390
 CLIPPER_INTERNAL_REDIS_PORT = 6379
 
 CLIPPER_DOCKER_LABEL = "ai.clipper.container.label"
+CLIPPER_NAME_LABEL = "ai.clipper.name"
 CLIPPER_MODEL_CONTAINER_LABEL = "ai.clipper.model_container.label"
 CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL = "ai.clipper.query_frontend.label"
 CLIPPER_MGMT_FRONTEND_CONTAINER_LABEL = "ai.clipper.management_frontend.label"

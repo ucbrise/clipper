@@ -14,3 +14,4 @@ spec:
   selector:
     ai.clipper.name: query-frontend
     ai.clipper.query_frontend.id: "{{ id_label }}"
+    ai.clipper.container.label: {{ cluster_name }}
