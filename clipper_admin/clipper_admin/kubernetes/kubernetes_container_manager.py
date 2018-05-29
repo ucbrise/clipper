@@ -21,24 +21,24 @@ import jinja2
 logger = logging.getLogger(__name__)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 CONFIG_FILES = {
-    'redis':{
-        'service':  'redis-service.yaml',
-        'deployment':  'redis-deployment.yaml'
+    'redis': {
+        'service': 'redis-service.yaml',
+        'deployment': 'redis-deployment.yaml'
     },
-    'management':{
-        'service':  'mgmt-frontend-service.yaml',
-        'deployment':  'mgmt-frontend-deployment.yaml'
+    'management': {
+        'service': 'mgmt-frontend-service.yaml',
+        'deployment': 'mgmt-frontend-deployment.yaml'
     },
-    'query':{
+    'query': {
         'service': {
             'query': 'query-frontend-service.yaml',
-            'rpc':  'query-frontend-rpc-service.yaml'
+            'rpc': 'query-frontend-rpc-service.yaml'
         },
         'deployment': 'query-frontend-deployment.yaml',
     },
-    'metric':{
+    'metric': {
         'service': 'prom_service.yaml',
-        'deployment':'prom_deployment.yaml',
+        'deployment': 'prom_deployment.yaml',
         'config': 'prom_configmap.yaml'
     },
     'model': {
@@ -135,7 +135,8 @@ class KubernetesContainerManager(ContainerManager):
         self._start_redis()
         self._start_mgmt(mgmt_frontend_image)
         self.num_frontend_replicas = num_frontend_replicas
-        self._start_query(query_frontend_image, cache_size, num_frontend_replicas)
+        self._start_query(query_frontend_image, cache_size,
+                          num_frontend_replicas)
         self._start_prometheus()
         self.connect()
 
@@ -146,22 +147,20 @@ class KubernetesContainerManager(ContainerManager):
                 self._k8s_beta.create_namespaced_deployment(
                     body=self._generate_config(
                         CONFIG_FILES['redis']['deployment'],
-                        cluster_name=self.cluster_name
-                    ),
+                        cluster_name=self.cluster_name),
                     namespace=self.namespace)
 
             with _pass_conflicts():
                 body = self._generate_config(
                     CONFIG_FILES['redis']['service'],
                     public_redis_port=self.redis_port,
-                    cluster_name=self.cluster_name
-                )
+                    cluster_name=self.cluster_name)
                 self._k8s_v1.create_namespaced_service(
                     body=body, namespace=self.namespace)
             time.sleep(sleep_time)
 
-            self.redis_ip = 'redis-at-{cluster_name}'.format(cluster_name=self.cluster_name)
-
+            self.redis_ip = 'redis-at-{cluster_name}'.format(
+                cluster_name=self.cluster_name)
 
     def _start_mgmt(self, mgmt_image):
         with _pass_conflicts():
@@ -170,17 +169,14 @@ class KubernetesContainerManager(ContainerManager):
                 image=mgmt_image,
                 redis_service_host=self.redis_ip,
                 redis_service_port=self.redis_port,
-                cluster_name=self.cluster_name
-            )
+                cluster_name=self.cluster_name)
             self._k8s_beta.create_namespaced_deployment(
-                body=mgmt_depolyment_data,
-                namespace='default')
+                body=mgmt_depolyment_data, namespace='default')
 
         with _pass_conflicts():
             mgmt_service_data = self._generate_config(
                 CONFIG_FILES['management']['service'],
-                cluster_name=self.cluster_name
-            )
+                cluster_name=self.cluster_name)
             self._k8s_v1.create_namespaced_service(
                 body=mgmt_service_data, namespace=self.namespace)
 
@@ -190,43 +186,37 @@ class KubernetesContainerManager(ContainerManager):
                 query_deployment_data = self._generate_config(
                     CONFIG_FILES['query']['deployment'],
                     image=query_image,
-                    exporter_image = CLIPPER_FRONTEND_EXPORTER_IMAGE,
+                    exporter_image=CLIPPER_FRONTEND_EXPORTER_IMAGE,
                     redis_service_host=self.redis_ip,
                     redis_service_port=self.redis_port,
-                    cache_size = cache_size,
+                    cache_size=cache_size,
                     name='query-frontend-{}'.format(query_frontend_id),
-                    id_label = str(query_frontend_id),
-                    cluster_name=self.cluster_name
-                )
+                    id_label=str(query_frontend_id),
+                    cluster_name=self.cluster_name)
                 self._k8s_beta.create_namespaced_deployment(
-                    body=query_deployment_data,
-                    namespace=self.namespace)
+                    body=query_deployment_data, namespace=self.namespace)
 
             with _pass_conflicts():
                 query_rpc_service_data = self._generate_config(
                     CONFIG_FILES['query']['service']['rpc'],
                     name='query-frontend-{}'.format(query_frontend_id),
                     id_label=str(query_frontend_id),
-                    cluster_name=self.cluster_name
-                )
+                    cluster_name=self.cluster_name)
                 self._k8s_v1.create_namespaced_service(
                     body=query_rpc_service_data, namespace=self.namespace)
 
         with _pass_conflicts():
             query_frontend_service_data = self._generate_config(
                 CONFIG_FILES['query']['service']['query'],
-                cluster_name=self.cluster_name
-            )
+                cluster_name=self.cluster_name)
             self._k8s_v1.create_namespaced_service(
                 body=query_frontend_service_data, namespace=self.namespace)
-
 
     def _start_prometheus(self):
         with _pass_conflicts():
             configmap_data = self._generate_config(
                 CONFIG_FILES['metric']['config'],
-                cluster_name=self.cluster_name
-            )
+                cluster_name=self.cluster_name)
             self._k8s_v1.create_namespaced_config_map(
                 body=configmap_data, namespace=self.namespace)
 
@@ -252,7 +242,6 @@ class KubernetesContainerManager(ContainerManager):
         rendered = template.render(**kwargs)
         parsed = yaml.load(rendered)
         return parsed
-
 
     def connect(self):
         nodes = self._k8s_v1.list_node()
@@ -282,7 +271,9 @@ class KubernetesContainerManager(ContainerManager):
 
         try:
             mgmt_frontend_ports = self._k8s_v1.read_namespaced_service(
-                name="mgmt-frontend-at-{cluster_name}".format(cluster_name=self.cluster_name), namespace='default').spec.ports
+                name="mgmt-frontend-at-{cluster_name}".format(
+                    cluster_name=self.cluster_name),
+                namespace='default').spec.ports
             for p in mgmt_frontend_ports:
                 if p.name == "1338":
                     self.clipper_management_port = p.node_port
@@ -290,7 +281,9 @@ class KubernetesContainerManager(ContainerManager):
                         self.clipper_management_port))
 
             query_frontend_ports = self._k8s_v1.read_namespaced_service(
-                name="query-frontend-at-{cluster_name}".format(cluster_name=self.cluster_name), namespace='default').spec.ports
+                name="query-frontend-at-{cluster_name}".format(
+                    cluster_name=self.cluster_name),
+                namespace='default').spec.ports
             for p in query_frontend_ports:
                 if p.name == "1337":
                     self.clipper_query_port = p.node_port
@@ -301,11 +294,18 @@ class KubernetesContainerManager(ContainerManager):
 
             query_frontend_deployments = self._k8s_beta.list_namespaced_deployment(
                 namespace="default",
-                label_selector="{name_label}=query-frontend, {cluster_label}={cluster_name}".format(name_label=CLIPPER_NAME_LABEL, cluster_label=CLIPPER_DOCKER_LABEL, cluster_name=self.cluster_name)).items
+                label_selector=
+                "{name_label}=query-frontend, {cluster_label}={cluster_name}".
+                format(
+                    name_label=CLIPPER_NAME_LABEL,
+                    cluster_label=CLIPPER_DOCKER_LABEL,
+                    cluster_name=self.cluster_name)).items
             self.num_frontend_replicas = len(query_frontend_deployments)
 
             metrics_ports = self._k8s_v1.read_namespaced_service(
-                name="metrics-at-{cluster_name}".format(cluster_name=self.cluster_name), namespace='default').spec.ports
+                name="metrics-at-{cluster_name}".format(
+                    cluster_name=self.cluster_name),
+                namespace='default').spec.ports
             for p in metrics_ports:
                 if p.name == "9090":
                     self.clipper_metric_port = p.node_port
@@ -321,31 +321,30 @@ class KubernetesContainerManager(ContainerManager):
                 "Reason: {}".format(e))
 
     def deploy_model(self, name, version, input_type, image, num_replicas=1):
-        with _pass_conflicts():
-            for query_frontend_id in range(self.num_frontend_replicas):
-                deployment_name = get_model_deployment_name(
-                    name, version, query_frontend_id, self.cluster_name)
+        for query_frontend_id in range(self.num_frontend_replicas):
+            deployment_name = get_model_deployment_name(
+                name, version, query_frontend_id, self.cluster_name)
 
-                generated_body = self._generate_config(
-                    CONFIG_FILES['model']['deployment'],
-                    deployment_name=deployment_name,
-                    num_replicas=num_replicas,
-                    container_label=create_model_container_label(name, version),
-                    model_name=name,
-                    version=version,
-                    query_frontend_id=query_frontend_id,
-                    input_type=input_type,
-                    image=image,
-                    cluster_name=self.cluster_name
-                )
+            generated_body = self._generate_config(
+                CONFIG_FILES['model']['deployment'],
+                deployment_name=deployment_name,
+                num_replicas=num_replicas,
+                container_label=create_model_container_label(name, version),
+                model_name=name,
+                version=version,
+                query_frontend_id=query_frontend_id,
+                input_type=input_type,
+                image=image,
+                cluster_name=self.cluster_name)
 
+            with _pass_conflicts():
                 self._k8s_beta.create_namespaced_deployment(
                     body=generated_body, namespace='default')
 
-                while self._k8s_beta.read_namespaced_deployment_status(
-                    name=deployment_name, namespace='default').status.available_replicas \
-                        != num_replicas:
-                    time.sleep(3)
+            while self._k8s_beta.read_namespaced_deployment_status(
+                name=deployment_name, namespace='default').status.available_replicas \
+                    != num_replicas:
+                time.sleep(3)
 
     def get_num_replicas(self, name, version):
         deployment_name = get_model_deployment_name(
@@ -507,4 +506,7 @@ class KubernetesContainerManager(ContainerManager):
 
 def get_model_deployment_name(name, version, query_frontend_id, cluster_name):
     return "{name}-{version}-deployment-at-{query_frontend_id}-at-{cluster_name}".format(
-        name=name, version=version, query_frontend_id=query_frontend_id, cluster_name=cluster_name)
+        name=name,
+        version=version,
+        query_frontend_id=query_frontend_id,
+        cluster_name=cluster_name)
