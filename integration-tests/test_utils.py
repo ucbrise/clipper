@@ -62,9 +62,10 @@ def find_unbound_port():
                 "randomly generated port %d is bound. Trying again." % port)
 
 
-def create_docker_connection(cleanup=True, start_clipper=True):
+def create_docker_connection(cleanup=True, start_clipper=True, name='default-cluster'):
     logger.info("Creating DockerContainerManager")
     cm = DockerContainerManager(
+        cluster_name=name,
         clipper_query_port=find_unbound_port(),
         clipper_management_port=find_unbound_port(),
         clipper_rpc_port=find_unbound_port(),
@@ -88,6 +89,7 @@ def create_docker_connection(cleanup=True, start_clipper=True):
                     "Problem starting Clipper: {}\nTrying again.".format(e))
                 cl.stop_all()
                 cm = DockerContainerManager(
+                    cluster_name=name,
                     clipper_query_port=find_unbound_port(),
                     clipper_management_port=find_unbound_port(),
                     clipper_rpc_port=find_unbound_port(),
@@ -102,12 +104,13 @@ def create_kubernetes_connection(cleanup=True,
                                  start_clipper=True,
                                  connect=True,
                                  with_proxy=False,
-                                 num_frontend_replicas=1):
+                                 num_frontend_replicas=1,
+                                 name='default-cluster'):
     logger.info("Creating KubernetesContainerManager")
     if with_proxy:
-        cm = KubernetesContainerManager(kubernetes_proxy_addr="127.0.0.1:8080")
+        cm = KubernetesContainerManager(cluster_name=name,kubernetes_proxy_addr="127.0.0.1:8080")
     else:
-        cm = KubernetesContainerManager()
+        cm = KubernetesContainerManager(cluster_name=name)
     cl = ClipperConnection(cm)
     if cleanup:
         cl.stop_all()

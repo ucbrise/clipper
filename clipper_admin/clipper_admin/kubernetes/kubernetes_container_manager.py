@@ -62,7 +62,7 @@ def _pass_conflicts():
 
 class KubernetesContainerManager(ContainerManager):
     def __init__(self,
-                 cluster_name,
+                 cluster_name="default-cluster",
                  kubernetes_proxy_addr=None,
                  redis_ip=None,
                  redis_port=6379,
@@ -411,9 +411,12 @@ class KubernetesContainerManager(ContainerManager):
                 for v in models[m]:
                     self._k8s_beta.delete_collection_namespaced_deployment(
                         namespace='default',
-                        label_selector="{label}:{val}".format(
+                        label_selector="{label}={val}, {cluster_label}={cluster_name}".format(
                             label=CLIPPER_MODEL_CONTAINER_LABEL,
-                            val=create_model_container_label(m, v)))
+                            val=create_model_container_label(m, v),
+                            cluster_label=CLIPPER_DOCKER_LABEL,
+                            cluster_name=self.cluster_name
+                        ))
         except ApiException as e:
             logger.warn(
                 "Exception deleting kubernetes deployments: {}".format(e))
@@ -423,7 +426,11 @@ class KubernetesContainerManager(ContainerManager):
         try:
             self._k8s_beta.delete_collection_namespaced_deployment(
                 namespace='default',
-                label_selector=CLIPPER_MODEL_CONTAINER_LABEL)
+                label_selector="{label}, {cluster_label}={cluster_name}".format(
+                    label=CLIPPER_MODEL_CONTAINER_LABEL,
+                    cluster_label=CLIPPER_DOCKER_LABEL,
+                    cluster_name=self.cluster_name
+                ))
         except ApiException as e:
             logger.warn(
                 "Exception deleting kubernetes deployments: {}".format(e))
@@ -432,10 +439,13 @@ class KubernetesContainerManager(ContainerManager):
     def stop_all(self):
         logger.info("Stopping all running Clipper resources")
 
+        cluster_selecter = "{cluster_label}={cluster_name}".format(cluster_label=CLIPPER_DOCKER_LABEL,
+                    cluster_name=self.cluster_name)
+
         try:
             for service in self._k8s_v1.list_namespaced_service(
                     namespace='default',
-                    label_selector=CLIPPER_DOCKER_LABEL).items:
+                    label_selector=cluster_selecter).items:
                 service_name = service.metadata.name
                 self._k8s_v1.delete_namespaced_service(
                     namespace='default',
@@ -443,23 +453,19 @@ class KubernetesContainerManager(ContainerManager):
                     body=V1DeleteOptions())
 
             self._k8s_beta.delete_collection_namespaced_deployment(
-                namespace='default', label_selector=CLIPPER_DOCKER_LABEL)
+                namespace='default', label_selector=cluster_selecter)
 
             self._k8s_beta.delete_collection_namespaced_replica_set(
-                namespace='default', label_selector=CLIPPER_DOCKER_LABEL)
+                namespace='default', label_selector=cluster_selecter)
 
             self._k8s_v1.delete_collection_namespaced_replication_controller(
-                namespace='default', label_selector=CLIPPER_DOCKER_LABEL)
+                namespace='default', label_selector=cluster_selecter)
 
             self._k8s_v1.delete_collection_namespaced_pod(
-                namespace='default', label_selector=CLIPPER_DOCKER_LABEL)
-
-            self._k8s_v1.delete_collection_namespaced_pod(
-                namespace='default',
-                label_selector=CLIPPER_MODEL_CONTAINER_LABEL)
+                namespace='default', label_selector=cluster_selecter)
 
             self._k8s_v1.delete_collection_namespaced_config_map(
-                namespace='default', label_selector=CLIPPER_DOCKER_LABEL)
+                namespace='default', label_selector=cluster_selecter)
         except ApiException as e:
             logging.warn(
                 "Exception deleting kubernetes resources: {}".format(e))

@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 class DockerContainerManager(ContainerManager):
     def __init__(self,
-                 cluster_name,
+                 cluster_name="default-cluster",
                  docker_ip_address="localhost",
                  clipper_query_port=1337,
                  clipper_management_port=1338,
@@ -305,6 +305,7 @@ class DockerContainerManager(ContainerManager):
         model_container_label = create_model_container_label(name, version)
         labels = self.common_labels.copy()
         labels[CLIPPER_MODEL_CONTAINER_LABEL] = model_container_label
+        labels[CLIPPER_DOCKER_LABEL] = self.cluster_name
 
         model_container_name = model_container_label + '-{}'.format(
             random.randint(0, 100000))
@@ -392,7 +393,9 @@ class DockerContainerManager(ContainerManager):
     def stop_models(self, models):
         containers = self.docker_client.containers.list(
             filters={
-                "label": CLIPPER_MODEL_CONTAINER_LABEL
+                "label": [
+                    CLIPPER_MODEL_CONTAINER_LABEL,
+                    "{key}={val}".format(key=CLIPPER_DOCKER_LABEL, val=self.cluster_name)]
             })
         for c in containers:
             c_name, c_version = parse_model_container_label(
@@ -403,7 +406,10 @@ class DockerContainerManager(ContainerManager):
     def stop_all_model_containers(self):
         containers = self.docker_client.containers.list(
             filters={
-                "label": CLIPPER_MODEL_CONTAINER_LABEL
+                "label": [
+                    CLIPPER_MODEL_CONTAINER_LABEL,
+                    "{key}={val}".format(key=CLIPPER_DOCKER_LABEL, val=self.cluster_name)
+                ]
             })
         for c in containers:
             c.stop()
