@@ -129,6 +129,9 @@ function run_frontend_tests {
 function run_integration_tests {
   echo -e "\nRunning integration tests\n\n"
   cd $DIR
+
+  docker ps
+
   python ../integration-tests/clipper_admin_tests.py
   python ../integration-tests/many_apps_many_models.py 2 3
   python ../integration-tests/deploy_pyspark_models.py
