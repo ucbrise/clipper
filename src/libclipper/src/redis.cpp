@@ -302,7 +302,8 @@ std::unordered_map<std::string, std::string> get_model_by_key(
   }
 }
 
-bool mark_versioned_model_for_delete(Redox& redis, const VersionedModelId& model_id) {
+bool mark_versioned_model_for_delete(Redox& redis,
+                                     const VersionedModelId& model_id) {
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
     std::string model_id_key = gen_versioned_model_key(model_id);

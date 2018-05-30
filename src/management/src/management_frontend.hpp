@@ -856,7 +856,8 @@ class RequestHandler {
 
     for (std::string version_id : model_versions) {
       VersionedModelId id(model_name, version_id);
-      if (!clipper::redis::mark_versioned_model_for_delete(redis_connection_, id)) {
+      if (!clipper::redis::mark_versioned_model_for_delete(redis_connection_,
+                                                           id)) {
         std::stringstream ss;
         ss << "model with name "
            << "'" << model_name << "'"

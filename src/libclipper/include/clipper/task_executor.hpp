@@ -230,9 +230,8 @@ class TaskExecutor {
         model_metrics_({}) {
     log_info(LOGGING_TAG_TASK_EXECUTOR, "TaskExecutor started");
     rpc_->start(
-        "*", RPC_SERVICE_PORT,
-        [ this, task_executor_valid = active_ ](VersionedModelId model,
-                                                int replica_id) {
+        "*", RPC_SERVICE_PORT, [ this, task_executor_valid = active_ ](
+                                   VersionedModelId model, int replica_id) {
           if (*task_executor_valid) {
             on_container_ready(model, replica_id);
           } else {
@@ -309,10 +308,9 @@ class TaskExecutor {
         }
         for (auto c : clipper::redis::get_all_containers(redis_connection_)) {
           if (c.first == model_id) {
-            log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
-                               "Deleting container: {} : {} : {}",
-                               model_id.get_name(), model_id.get_id(),
-                               c.second);
+            log_info_formatted(
+                LOGGING_TAG_TASK_EXECUTOR, "Deleting container: {} : {} : {}",
+                model_id.get_name(), model_id.get_id(), c.second);
             clipper::redis::delete_container(redis_connection_, c.first,
                                              c.second);
             active_containers_->remove_container(c.first, c.second);
