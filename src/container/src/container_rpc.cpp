@@ -70,6 +70,9 @@ void RPC::send_container_metadata(std::string &model_name, int model_version,
   static_cast<int *>(msg_message_type.data())[0] =
       static_cast<int>(rpc::MessageType::NewContainer);
 
+  zmq::message_t msg_rpc_version(sizeof(uint32_t));
+  static_cast<uint32_t *>(msg_rpc_version.data())[0] = rpc::RPC_VERSION;
+
   std::string model_version_str = std::to_string(model_version);
   std::string model_input_type_str =
       std::to_string(static_cast<int>(model_input_type));
@@ -79,7 +82,9 @@ void RPC::send_container_metadata(std::string &model_name, int model_version,
   socket.send(model_name.data(), model_name.length(), ZMQ_SNDMORE);
   socket.send(model_version_str.data(), model_version_str.length(),
               ZMQ_SNDMORE);
-  socket.send(model_input_type_str.data(), model_version_str.length(), 0);
+  socket.send(model_input_type_str.data(), model_version_str.length(),
+              ZMQ_SNDMORE);
+  socket.send(msg_rpc_version, 0);
   log_info(LOGGING_TAG_CONTAINER, "Sent container metadata!");
   log_event(rpc::RPCEvent::SentContainerMetadata);
 }

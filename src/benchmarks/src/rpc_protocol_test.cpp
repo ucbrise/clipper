@@ -12,6 +12,7 @@
 #include <clipper/datatypes.hpp>
 #include <clipper/json_util.hpp>
 #include <clipper/logging.hpp>
+#include <clipper/memory.hpp>
 #include <clipper/redis.hpp>
 #include <clipper/rpc_service.hpp>
 
@@ -49,7 +50,7 @@ class Tester {
     rpc_->start(
         "127.0.0.1", RPC_SERVICE_PORT,
         [](VersionedModelId /*model*/, int /*container_id*/) {},
-        [this](rpc::RPCResponse response) { on_response_received(response); },
+        [this](rpc::RPCResponse &response) { on_response_received(response); },
         [](VersionedModelId, int) {});
     Config &conf = get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
@@ -114,13 +115,15 @@ class Tester {
                 log_start_time.time_since_epoch())
                 .count()) /
         1000;
-    std::vector<double> data;
-    data.push_back(log_start_time_millis);
-    std::shared_ptr<Input> input = std::make_shared<DoubleVector>(data);
+    UniquePoolPtr<double> data = memory::allocate_unique<double>(1);
+    data.get()[0] = log_start_time_millis;
+    std::unique_ptr<PredictionData> input =
+        std::make_unique<DoubleVector>(std::move(data), 1);
     rpc::PredictionRequest request(InputType::Doubles);
-    request.add_input(input);
+    request.add_input(std::move(input));
     auto serialized_request = request.serialize();
-    int msg_id = rpc_->send_message(serialized_request, container_id);
+    int msg_id =
+        rpc_->send_message(std::move(serialized_request), container_id);
     return msg_id;
   }
 
@@ -194,8 +197,13 @@ class Tester {
       // Container has not yet been validated
       rpc::PredictionResponse prediction_response =
           rpc::PredictionResponse::deserialize_prediction_response(
-              response.second);
-      std::string event_history_str = prediction_response.outputs_[0];
+              std::move(response.second));
+      auto event_history = prediction_response.outputs_[0];
+      SharedPoolPtr<char> event_history_data = get_data<char>(event_history);
+      std::string event_history_str(
+          event_history_data.get() + event_history->start(),
+          event_history_data.get() + event_history->start() +
+              event_history->size());
       rapidjson::Document d;
       json::parse_json(event_history_str, d);
       auto events = d.GetArray();

@@ -82,10 +82,10 @@ class PredictionCache {
  public:
   PredictionCache(size_t size_bytes);
   folly::Future<Output> fetch(const VersionedModelId &model,
-                              const std::shared_ptr<Input> &input);
+                              std::shared_ptr<PredictionData> &input);
 
-  void put(const VersionedModelId &model, const std::shared_ptr<Input> &input,
-           const Output &output);
+  void put(const VersionedModelId &model,
+           std::shared_ptr<PredictionData> &input, const Output &output);
 
  private:
   size_t hash(const VersionedModelId &model, size_t input_hash) const;
@@ -195,12 +195,12 @@ class InflightMessage {
   InflightMessage(
       const std::chrono::time_point<std::chrono::system_clock> send_time,
       const int container_id, const VersionedModelId model,
-      const int replica_id, const std::shared_ptr<Input> input)
-      : send_time_(send_time),
+      const int replica_id, const std::shared_ptr<PredictionData> input)
+      : send_time_(std::move(send_time)),
         container_id_(container_id),
-        model_(model),
+        model_(std::move(model)),
         replica_id_(replica_id),
-        input_(input) {}
+        input_(std::move(input)) {}
 
   // Default copy and move constructors
   InflightMessage(const InflightMessage &) = default;
@@ -214,7 +214,7 @@ class InflightMessage {
   int container_id_;
   VersionedModelId model_;
   int replica_id_;
-  std::shared_ptr<Input> input_;
+  std::shared_ptr<PredictionData> input_;
 };
 
 class TaskExecutor {
@@ -240,7 +240,7 @@ class TaskExecutor {
                      "TaskExecutor has been destroyed.");
           }
         },
-        [ this, task_executor_valid = active_ ](rpc::RPCResponse response) {
+        [ this, task_executor_valid = active_ ](rpc::RPCResponse & response) {
           if (*task_executor_valid) {
             on_response_recv(std::move(response));
           } else {
@@ -522,7 +522,7 @@ class TaskExecutor {
     inflight_messages_.erase(response.first);
     rpc::PredictionResponse parsed_response =
         rpc::PredictionResponse::deserialize_prediction_response(
-            response.second);
+            std::move(response.second));
     assert(parsed_response.outputs_.size() == keys.size());
     int batch_size = keys.size();
     throughput_meter_->mark(batch_size);
@@ -558,6 +558,7 @@ class TaskExecutor {
       }
       for (int batch_num = 0; batch_num < batch_size; ++batch_num) {
         InflightMessage completed_msg = keys[batch_num];
+
         cache_->put(completed_msg.model_, completed_msg.input_,
                     Output{parsed_response.outputs_[batch_num],
                            {completed_msg.model_}});
