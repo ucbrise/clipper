@@ -19,3 +19,4 @@ dependency-reduced-pom.xml
 *.iml
 
 docker-compose.yml
+.ipynb_checkpoints
