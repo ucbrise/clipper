@@ -72,11 +72,7 @@ export(TARGETS cqueue FILE ConcurrentQueueConfig.cmake)
 ### DLib Machine Learning
 #########################################
 
-add_library(dlib INTERFACE)
-target_include_directories(dlib INTERFACE
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/dlib>
-        $<INSTALL_INTERFACE:dlib>)
-export(TARGETS dlib FILE DLibConfig.cmake)
+add_subdirectory(dlib)
 
 add_subdirectory(redox)
 
