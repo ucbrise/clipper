@@ -51,7 +51,7 @@ fi
 
 # Run Python formatter
 export PYTHONPATH=$CLIPPER_ROOT/bin/yapf
-num_py_violations="$(find . -name '*.py' -print | egrep -v "yapf|ycm|googletest" \
+num_py_violations="$(find . -name '*.py' -print | egrep -v "yapf|ycm|googletest|dlib" \
     | xargs python $CLIPPER_ROOT/bin/yapf/yapf -d | grep -c "@@")"
 
 if [ $num_py_violations -eq 0 ]; then
@@ -67,7 +67,7 @@ else
 
     python --version | cat
 
-    find . -name '*.py' -print | egrep -v "yapf|ycm|googletest" \
+    find . -name '*.py' -print | egrep -v "yapf|ycm|googletest|dlib" \
         | xargs python $CLIPPER_ROOT/bin/yapf/yapf -d
     exit 1
 fi

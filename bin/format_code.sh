@@ -28,7 +28,7 @@ find . -name '*.java' -print | xargs clang-format -style=file -i
 
 # Run Python formatter
 export PYTHONPATH=$CLIPPER_ROOT/bin/yapf
-find . -name '*.py' -print | egrep -v "yapf|ycm|googletest" \
+find . -name '*.py' -print | egrep -v "yapf|ycm|googletest|dlib" \
     | xargs python $CLIPPER_ROOT/bin/yapf/yapf -i
 
 exit 0
