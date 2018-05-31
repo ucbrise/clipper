@@ -91,7 +91,7 @@ function run_jvm_container_tests {
   echo "Running JVM container tests..."
   cd $DIR
   cd ../containers/jvm
-  mvn test
+  mvn test -q
 }
 
 function run_r_container_tests {
