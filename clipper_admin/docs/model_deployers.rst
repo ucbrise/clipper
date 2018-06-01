@@ -7,8 +7,8 @@ build custom Docker containers capable of serving the saved models for some comm
 cases. With these modules, you can deploy models directly from Python to Clipper.
 
 Currently, Clipper provides the following deployer modules:
-1. Arbitrary Python functions (with some limitations)
-2. PySpark Models (along with pre- and post-processing logic)
+1. Arbitrary Python functions
+2. PySpark Models
 3. PyTorch Models
 4. Tensorflow Models
 5. MXNet Models
@@ -16,7 +16,7 @@ Currently, Clipper provides the following deployer modules:
 
 Method 1 supports function that can only be pickled using 
 `Cloudpickle <https://github.com/cloudpipe/cloudpickle>`_ and/or 
-pure python library that can be installed  via `pip`. For reference, 
+pure python libraries that can be installed  via `pip`. For reference, 
 please use the following flowchart to make decision about which deployer 
 to use. 
 
@@ -30,7 +30,7 @@ to use.
    }
 
 .. note::
-    You can find additional examples of using both model deployers in
+    You can find additional examples of using model deployers in
     `Clipper's integration tests <https://github.com/ucbrise/clipper/tree/develop/integration-tests>`_.
 
 Pure Python functions
