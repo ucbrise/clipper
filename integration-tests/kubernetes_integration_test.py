@@ -152,14 +152,21 @@ if __name__ == "__main__":
         cluster_name = "cluster-{}".format(random.randint(0, 5000))
 
         clipper_conn = create_kubernetes_connection(
-            cleanup=False, start_clipper=True, with_proxy=False, new_name=cluster_name)
+            cleanup=False,
+            start_clipper=True,
+            with_proxy=False,
+            new_name=cluster_name)
         test_kubernetes(clipper_conn, num_apps, num_models)
         clipper_conn.stop_all()
 
         # Test with proxy. Assumes proxy is running at 127.0.0.1:8080
-        proxy_name = "cluster-{}".format(random.randint(0,5000))
+        proxy_name = "cluster-{}".format(random.randint(0, 5000))
         clipper_conn = create_kubernetes_connection(
-            cleanup=True, start_clipper=True, with_proxy=True, cleanup_name=cluster_name, new_name=proxy_name)
+            cleanup=True,
+            start_clipper=True,
+            with_proxy=True,
+            cleanup_name=cluster_name,
+            new_name=proxy_name)
         test_kubernetes(clipper_conn, 1, 1)
         clipper_conn.stop_all()
 

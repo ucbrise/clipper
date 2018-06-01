@@ -130,11 +130,14 @@ if __name__ == "__main__":
         except BenchmarkException as e:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
-            create_docker_connection(cleanup=True, start_clipper=False, cleanup_name=cluster_name)
+            create_docker_connection(
+                cleanup=True, start_clipper=False, cleanup_name=cluster_name)
             sys.exit(1)
         else:
-            create_docker_connection(cleanup=True, start_clipper=False, cleanup_name=cluster_name)
+            create_docker_connection(
+                cleanup=True, start_clipper=False, cleanup_name=cluster_name)
     except Exception as e:
         logger.exception("Exception")
-        create_docker_connection(cleanup=True, start_clipper=False, cleanup_name=cluster_name)
+        create_docker_connection(
+            cleanup=True, start_clipper=False, cleanup_name=cluster_name)
         sys.exit(1)

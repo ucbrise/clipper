@@ -94,8 +94,8 @@ if __name__ == "__main__":
     import random
     cluster_name = "cluster-{}".format(random.randint(0, 5000))
     try:
-        clipper_conn = create_docker_connection(new_name=cluster_name,
-            cleanup=False, start_clipper=True)
+        clipper_conn = create_docker_connection(
+            new_name=cluster_name, cleanup=False, start_clipper=True)
 
         train_path = os.path.join(cur_dir, "data/train.data")
         data_iter = mx.io.CSVIter(

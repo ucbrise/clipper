@@ -65,8 +65,7 @@ def find_unbound_port():
 def create_docker_connection(cleanup=True,
                              start_clipper=True,
                              cleanup_name='default-cluster',
-                             new_name='default-cluster'
-                             ):
+                             new_name='default-cluster'):
     logger.info("Creating DockerContainerManager")
     cl = None
     assert cleanup or start_clipper, "You must set at least one of {cleanup, start_clipper} to be true."
@@ -129,14 +128,18 @@ def create_kubernetes_connection(cleanup=True,
 
     if cleanup:
         logger.info("Cleaning up Kubernetes Cluster {}".format(cleanup_name))
-        cm = KubernetesContainerManager(cluster_name=cleanup_name, kubernetes_proxy_addr=kubernetes_proxy_addr)
+        cm = KubernetesContainerManager(
+            cluster_name=cleanup_name,
+            kubernetes_proxy_addr=kubernetes_proxy_addr)
         cl = ClipperConnection(cm)
         cl.stop_all()
         logger.info("Done cleaning up clipper")
 
     if start_clipper:
         logger.info("Starting up Kubernetes Cluster {}".format(new_name))
-        cm = KubernetesContainerManager(cluster_name=cleanup_name, kubernetes_proxy_addr=kubernetes_proxy_addr)
+        cm = KubernetesContainerManager(
+            cluster_name=cleanup_name,
+            kubernetes_proxy_addr=kubernetes_proxy_addr)
         cl = ClipperConnection(cm)
         cl.start_clipper(
             query_frontend_image=
@@ -149,7 +152,9 @@ def create_kubernetes_connection(cleanup=True,
 
     if connect:
         try:
-            cm = KubernetesContainerManager(cluster_name=connect_name, kubernetes_proxy_addr=kubernetes_proxy_addr)
+            cm = KubernetesContainerManager(
+                cluster_name=connect_name,
+                kubernetes_proxy_addr=kubernetes_proxy_addr)
             cl = ClipperConnection(cm)
             cl.connect()
         except Exception:
