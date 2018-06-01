@@ -8,6 +8,7 @@ import json
 import numpy as np
 import time
 import logging
+import random
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -89,9 +90,12 @@ def get_test_point():
 
 if __name__ == "__main__":
     pos_label = 3
+
+    import random
+    cluster_name = "cluster-{}".format(random.randint(0, 5000))
     try:
-        clipper_conn = create_docker_connection(
-            cleanup=True, start_clipper=True)
+        clipper_conn = create_docker_connection(new_name=cluster_name,
+            cleanup=False, start_clipper=True)
 
         train_path = os.path.join(cur_dir, "data/train.data")
         data_iter = mx.io.CSVIter(
@@ -144,14 +148,14 @@ if __name__ == "__main__":
         except BenchmarkException:
             logger.exception("BenchmarkException")
             clipper_conn = create_docker_connection(
-                cleanup=True, start_clipper=False)
+                cleanup=True, start_clipper=False, cleanup_name=cluster_name)
             sys.exit(1)
         else:
             clipper_conn = create_docker_connection(
-                cleanup=True, start_clipper=False)
+                cleanup=True, start_clipper=False, cleanup_name=cluster_name)
     except Exception:
         logger.exception("Exception")
         clipper_conn = create_docker_connection(
-            cleanup=True, start_clipper=False)
+            cleanup=True, start_clipper=False, cleanup_name=cluster_name)
 
         sys.exit(1)

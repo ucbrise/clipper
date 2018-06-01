@@ -137,9 +137,11 @@ def check_target_health(metric_addr):
 
 
 if __name__ == "__main__":
+    import random
+    cluster_name = 'cluster-{}'.format(random.randint(0,5000))
     try:
-        clipper_conn = create_kubernetes_connection(
-            cleanup=True, start_clipper=True)
+        clipper_conn = create_kubernetes_connection(new_name=cluster_name,
+            cleanup=False, start_clipper=True)
         time.sleep(60)
         logger.info(clipper_conn.cm.get_query_addr())
         try:
@@ -196,20 +198,20 @@ if __name__ == "__main__":
             log_clipper_state(clipper_conn)
             logger.info("SUCCESS")
             create_kubernetes_connection(
-                cleanup=True, start_clipper=False, connect=False)
+                cleanup=True, start_clipper=False, connect=False, cleanup_name=cluster_name)
             logger.info("EXITING")
             os._exit(0)
         except BenchmarkException as e:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
             create_kubernetes_connection(
-                cleanup=True, start_clipper=False, connect=False)
+                cleanup=True, start_clipper=False, connect=False, cleanup_name=cluster_name)
             sys.exit(1)
         except ClipperException as e:
             log_clipper_state(clipper_conn)
             logger.exception("ClipperException")
             create_kubernetes_connection(
-                cleanup=True, start_clipper=False, connect=False)
+                cleanup=True, start_clipper=False, connect=False, cleanup_name=cluster_name)
             sys.exit(1)
     except Exception as e:
         logger.exception("Exception: {}".format(e))

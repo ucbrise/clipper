@@ -100,9 +100,12 @@ def create_and_test_app(clipper_conn, name):
 
 
 if __name__ == "__main__":
+    import random
+
+    cluster_name = "cluster-{}".format(random.randint(0, 5000))
     try:
         clipper_conn = create_kubernetes_connection(
-            cleanup=True, start_clipper=True, num_frontend_replicas=2)
+            cleanup=False, start_clipper=True, num_frontend_replicas=2, new_name=cluster_name)
         time.sleep(10)
         print(clipper_conn.cm.get_query_addr())
         try:
@@ -156,12 +159,12 @@ if __name__ == "__main__":
         except BenchmarkException as e:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
-            create_kubernetes_connection(cleanup=True, start_clipper=False)
+            create_kubernetes_connection(cleanup=True, start_clipper=False, cleanup_name=cluster_name)
             sys.exit(1)
         except ClipperException as e:
             log_clipper_state(clipper_conn)
             logger.exception("ClipperException")
-            create_kubernetes_connection(cleanup=True, start_clipper=False)
+            create_kubernetes_connection(cleanup=True, start_clipper=False, cleanup_name=cluster_name)
             sys.exit(1)
     except Exception as e:
         logger.exception("Exception: {}".format(e))

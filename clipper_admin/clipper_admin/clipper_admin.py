@@ -1247,14 +1247,17 @@ class ClipperConnection(object):
         self.cm.stop_all_model_containers()
         logger.info("Stopped all Clipper model containers")
 
-    def stop_all(self):
+    def stop_all(self, graceful=True):
         """Stops all processes that were started via Clipper admin commands.
 
         This includes the query and management frontend Docker containers and all model containers.
         If you started Redis independently, this will not affect Redis. It can also be called
         without calling ``connect`` first.
+
+        If graceful=False, Clipper will issue Docker Kill if it's in the Docker Mode. This parameter
+        will take not effect in Kubernetes.
         """
-        self.cm.stop_all()
+        self.cm.stop_all(graceful=graceful)
         logger.info("Stopped all Clipper cluster and all model containers")
 
     def test_predict_function(self, query, func, input_type):

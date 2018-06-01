@@ -149,6 +149,7 @@ function run_integration_tests {
   python ../integration-tests/clipper_metric_docker.py &
   python ../integration-tests/clipper_metric_kube.py &
   python ../integration-tests/multi_tenency_test.py &
+  python ../integration-tests/multi_tenency_test.py --kubernetes &
   wait
 
   echo "GREPTHIS Docker State After"

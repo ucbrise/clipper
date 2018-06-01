@@ -55,6 +55,9 @@ def predict(spark, pipeline, xs):
 
 
 def run_test():
+    import random
+    cluster_name = "cluster-{}".format(random.randint(0, 5000))
+
     spark = SparkSession\
         .builder\
         .appName("clipper-pyspark")\
@@ -93,7 +96,7 @@ def run_test():
 
     try:
         clipper_conn = create_docker_connection(
-            cleanup=True, start_clipper=True)
+            cleanup=False, start_clipper=True, new_name=cluster_name)
 
         try:
             clipper_conn.register_application(app_name, "strings",
@@ -167,17 +170,17 @@ def run_test():
             log_clipper_state()
             logger.exception("BenchmarkException")
             clipper_conn = create_docker_connection(
-                cleanup=True, start_clipper=False)
+                cleanup=True, start_clipper=False, cleanup_name=cluster_name)
             sys.exit(1)
         else:
             spark.stop()
             clipper_conn = create_docker_connection(
-                cleanup=True, start_clipper=False)
+                cleanup=True, start_clipper=False, cleanup_name=cluster_name)
             logger.info("ALL TESTS PASSED")
     except Exception as e:
         logger.exception("Exception")
         clipper_conn = create_docker_connection(
-            cleanup=True, start_clipper=False)
+            cleanup=True, start_clipper=False, cleanup_name=cluster_name)
         sys.exit(1)
 
 

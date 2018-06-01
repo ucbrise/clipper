@@ -14,8 +14,10 @@ import time
 import requests
 import tempfile
 import shutil
+import random
 from argparse import ArgumentParser
 import logging
+
 from test_utils import get_docker_client, create_docker_connection, fake_model_data
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
@@ -35,14 +37,16 @@ logger = logging.getLogger(__name__)
 
 
 class ClipperManagerTestCaseShort(unittest.TestCase):
-    @classmethod
-    def tearDownClass(self):
-        self.clipper_conn = create_docker_connection(
-            cleanup=True, start_clipper=False)
 
     def setUp(self):
+        new_name = "cluster-{}".format(random.randint(0,5000))
         self.clipper_conn = create_docker_connection(
-            cleanup=True, start_clipper=True)
+            cleanup=False, start_clipper=True, new_name=new_name)
+        self.name = new_name
+
+    def tearDown(self):
+        self.clipper_conn = create_docker_connection(
+            cleanup=True, start_clipper=False, cleanup_name=self.name)
 
     def test_register_model_correct(self):
         input_type = "doubles"
@@ -772,7 +776,6 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
                 data=req_json)
             result = response.json()
             self.assertEqual(response.status_code, requests.codes.ok)
-            #print(result["default_explanation"])
             self.assertEqual(result["default"], False)
 
         # one of the containers should go inactive

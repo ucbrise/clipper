@@ -436,7 +436,7 @@ class KubernetesContainerManager(ContainerManager):
                 "Exception deleting kubernetes deployments: {}".format(e))
             raise e
 
-    def stop_all(self):
+    def stop_all(self, graceful=True):
         logger.info("Stopping all running Clipper resources")
 
         cluster_selecter = "{cluster_label}={cluster_name}".format(

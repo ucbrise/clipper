@@ -9,11 +9,8 @@ from datetime import datetime
 import os
 import time
 from test_utils import create_kubernetes_connection, create_docker_connection
-import click
 
 
-@click.command()
-@click.option('--kubernetes', is_flag=True)
 def test(kubernetes):
     conn_1 = create('cluster-1', use_kubernetes=kubernetes)
     conn_2 = create('cluster-2', use_kubernetes=kubernetes)
@@ -33,10 +30,10 @@ def test(kubernetes):
 def create(name, use_kubernetes=False):
     if use_kubernetes:
         conn = create_kubernetes_connection(
-            cleanup=True, start_clipper=True, name=name)
+            cleanup=False, start_clipper=True, new_name=name)
     else:
         conn = create_docker_connection(
-            cleanup=True, start_clipper=True, name=name)
+            cleanup=False, start_clipper=True, new_name=name)
     return conn
 
 
@@ -75,4 +72,7 @@ def predict_(addr, x, batch=False):
 
 
 if __name__ == '__main__':
-    test()
+    if sys.argv[1] == '--kubernetes':
+        test(kubernetes=True)
+    else:
+        test(kubernetes=False)

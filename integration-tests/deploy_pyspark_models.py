@@ -120,6 +120,10 @@ def get_test_point():
 
 if __name__ == "__main__":
     pos_label = 3
+
+    import random
+    cluster_name = "cluster-{}".format(random.randint(0, 5000))
+
     try:
         spark = SparkSession\
                 .builder\
@@ -127,7 +131,7 @@ if __name__ == "__main__":
                 .getOrCreate()
         sc = spark.sparkContext
         clipper_conn = create_docker_connection(
-            cleanup=True, start_clipper=True)
+            cleanup=False, start_clipper=True, new_name=cluster_name)
 
         train_path = os.path.join(cur_dir, "data/train.data")
         trainRDD = sc.textFile(train_path).map(
@@ -180,14 +184,14 @@ if __name__ == "__main__":
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
             clipper_conn = create_docker_connection(
-                cleanup=True, start_clipper=False)
+                cleanup=True, start_clipper=False, cleanup_name=cluster_name)
             sys.exit(1)
         else:
             spark.stop()
             clipper_conn = create_docker_connection(
-                cleanup=True, start_clipper=False)
+                cleanup=True, start_clipper=False, cleanup_name=cluster_name)
     except Exception:
         logger.exception("Exception")
         clipper_conn = create_docker_connection(
-            cleanup=True, start_clipper=False)
+            cleanup=True, start_clipper=False, cleanup_name=cluster_name)
         sys.exit(1)

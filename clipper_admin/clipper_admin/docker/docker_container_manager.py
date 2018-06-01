@@ -415,7 +415,7 @@ class DockerContainerManager(ContainerManager):
         for c in containers:
             c.stop()
 
-    def stop_all(self):
+    def stop_all(self, graceful=True):
         containers = self.docker_client.containers.list(
             filters={
                 "label":
@@ -423,7 +423,10 @@ class DockerContainerManager(ContainerManager):
                     key=CLIPPER_DOCKER_LABEL, val=self.cluster_name)
             })
         for c in containers:
-            c.stop()
+            if graceful:
+                c.stop()
+            else:
+                c.kill()
 
     def get_admin_addr(self):
         return "{host}:{port}".format(

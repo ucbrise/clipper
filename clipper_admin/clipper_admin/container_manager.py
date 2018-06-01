@@ -160,8 +160,15 @@ class ContainerManager(object):
         return
 
     @abc.abstractmethod
-    def stop_all(self):
-        """Stop all resources associated with Clipper."""
+    def stop_all(self, graceful=True):
+        """Stop all resources associated with Clipper.
+
+        Parameters
+        ----------
+        graceful : bool
+            If set to True, Clipper will try to shutdown all containers gracefully.
+            This option will only work in Docker (Using Docker stop instead of kill).
+        """
         pass
 
     @abc.abstractmethod

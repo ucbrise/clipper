@@ -96,6 +96,10 @@ def create_and_test_app(clipper_conn, name, num_models):
 if __name__ == "__main__":
     num_apps = 6
     num_models = 8
+
+    import random
+    cluster_name = "cluster-{}".format(random.randint(0, 5000))
+
     try:
         if len(sys.argv) > 1:
             num_apps = int(sys.argv[1])
@@ -107,7 +111,7 @@ if __name__ == "__main__":
         pass
     try:
         clipper_conn = create_docker_connection(
-            cleanup=True, start_clipper=True)
+            cleanup=False, start_clipper=True, new_name=cluster_name)
         time.sleep(10)
         try:
             logger.info("Running integration test with %d apps and %d models" %
@@ -126,11 +130,11 @@ if __name__ == "__main__":
         except BenchmarkException as e:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
-            create_docker_connection(cleanup=True, start_clipper=False)
+            create_docker_connection(cleanup=True, start_clipper=False, cleanup_name=cluster_name)
             sys.exit(1)
         else:
-            create_docker_connection(cleanup=True, start_clipper=False)
+            create_docker_connection(cleanup=True, start_clipper=False, cleanup_name=cluster_name)
     except Exception as e:
         logger.exception("Exception")
-        create_docker_connection(cleanup=True, start_clipper=False)
+        create_docker_connection(cleanup=True, start_clipper=False, cleanup_name=cluster_name)
         sys.exit(1)
