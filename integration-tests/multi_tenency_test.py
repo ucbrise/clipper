@@ -72,7 +72,7 @@ def predict_(addr, x, batch=False):
 
 
 if __name__ == '__main__':
-    if sys.argv[1] == '--kubernetes':
+    if len(sys.argv) > 1 and sys.argv[1] == '--kubernetes':
         test(kubernetes=True)
     else:
         test(kubernetes=False)

@@ -455,7 +455,8 @@ class ClipperConnection(object):
             image_result, build_logs = docker_client.images.build(
                 fileobj=context_file, custom_context=True, tag=image)
             for b in build_logs:
-                self.logger.info(b)
+                if 'stream' in b and b['stream'] != '\n': #log build steps only
+                    self.logger.info(b['stream'].rstrip())
 
         self.logger.info("Pushing model Docker image to {}".format(image))
         for line in docker_client.images.push(repository=image, stream=True):

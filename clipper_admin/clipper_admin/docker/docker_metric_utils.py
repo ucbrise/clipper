@@ -102,6 +102,7 @@ def run_metric_image(docker_client, common_labels, prometheus_port,
                 'mode': 'ro'
             }
         },
+        user='root', # prom use nobody by default but it can't access config.
         labels=metric_labels,
         **extra_container_kwargs)
 

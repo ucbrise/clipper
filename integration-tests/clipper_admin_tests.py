@@ -27,6 +27,7 @@ import clipper_admin as cl
 from clipper_admin.deployers.python import create_endpoint as create_py_endpoint
 from clipper_admin.deployers.python import deploy_python_closure
 from clipper_admin import __version__ as clipper_version
+from clipper_admin.container_manager import CLIPPER_DOCKER_LABEL
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
@@ -378,7 +379,10 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
                 filters={
                     "ancestor":
                     "clipper/python-closure-container:{}".format(
-                        clipper_version)
+                        clipper_version),
+                    "label" : "{key}={val}".format(
+                            key=CLIPPER_DOCKER_LABEL,
+                            val=self.clipper_conn.cm.cluster_name)
                 })
 
         elif py_minor_version == (3, 5):
@@ -386,14 +390,21 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
                 filters={
                     "ancestor":
                     "clipper/python35-closure-container:{}".format(
-                        clipper_version)
+                        clipper_version),
+                    "label" : "{key}={val}".format(
+                            key=CLIPPER_DOCKER_LABEL,
+                            val=self.clipper_conn.cm.cluster_name)
+
                 })
         elif py_minor_version == (3, 6):
             containers = docker_client.containers.list(
                 filters={
                     "ancestor":
                     "clipper/python36-closure-container:{}".format(
-                        clipper_version)
+                        clipper_version),
+                    "label" : "{key}={val}".format(
+                            key=CLIPPER_DOCKER_LABEL,
+                            val=self.clipper_conn.cm.cluster_name)
                 })
         else:
             msg = (
