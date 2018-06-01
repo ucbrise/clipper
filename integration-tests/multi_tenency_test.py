@@ -8,7 +8,7 @@ import requests
 from datetime import datetime
 import os
 import time
-from test_utils import create_kubernetes_connection, create_docker_connection
+from test_utils import create_kubernetes_connection, create_docker_connection, CLIPPER_CONTAINER_REGISTRY
 
 
 def test(kubernetes):
@@ -48,7 +48,7 @@ def deploy_(clipper_conn, use_kubernetes=False):
             "simple-example",
             "doubles",
             feature_sum,
-            registry="568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper")
+            registry=CLIPPER_CONTAINER_REGISTRY)
     else:
         python_deployer.create_endpoint(clipper_conn, "simple-example",
                                         "doubles", feature_sum)

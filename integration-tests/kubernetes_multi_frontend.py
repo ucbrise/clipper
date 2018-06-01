@@ -14,7 +14,7 @@ import time
 import logging
 import yaml
 from test_utils import (create_kubernetes_connection, BenchmarkException,
-                        fake_model_data, headers, log_clipper_state)
+                        fake_model_data, headers, log_clipper_state, CLIPPER_CONTAINER_REGISTRY)
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
@@ -39,8 +39,7 @@ def deploy_model(clipper_conn, name, link=False):
         fake_model_data,
         "clipper/noop-container:{}".format(clipper_version),
         num_replicas=1,
-        container_registry=
-        "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper")
+        container_registry=CLIPPER_CONTAINER_REGISTRY)
     time.sleep(10)
 
     if link:
@@ -118,7 +117,7 @@ if __name__ == "__main__":
 
             k8s_beta = clipper_conn.cm._k8s_beta
             if (k8s_beta.read_namespaced_deployment(
-                    'query-frontend-0', namespace='default').to_dict()
+                    'query-frontend-0-at-{}'.format(cluster_name), namespace='default').to_dict()
                 ['status']['available_replicas'] != 1):
                 raise BenchmarkException(
                     "Wrong number of replicas of query-frontend-0."
@@ -128,7 +127,7 @@ if __name__ == "__main__":
                             'query-frontend-0', namespace='default').to_dict()[
                                 'status']['available_replicas']))
             if (k8s_beta.read_namespaced_deployment(
-                    'query-frontend-1', namespace='default').to_dict()
+                    'query-frontend-1-at-{}'.format(cluster_name), namespace='default').to_dict()
                 ['status']['available_replicas'] != 1):
                 raise BenchmarkException(
                     "Wrong number of replicas of query-frontend-1."
@@ -143,8 +142,8 @@ if __name__ == "__main__":
             svc_lists = k8s_v1.list_namespaced_service(
                 namespace='default').to_dict()['items']
             svc_names = [svc['metadata']['name'] for svc in svc_lists]
-            if not ('query-frontend-0' in svc_names
-                    and 'query-frontend-1' in svc_names):
+            if not ('query-frontend-0-at-{}'.format(cluster_name) in svc_names
+                    and 'query-frontend-1-at-{}'.format(cluster_name) in svc_names):
                 raise BenchmarkException(
                     "Error creating query frontend RPC services")
             logger.info("Ok: we have 2 query-frontend rpc services")
@@ -173,10 +172,4 @@ if __name__ == "__main__":
             sys.exit(1)
     except Exception as e:
         logger.exception("Exception: {}".format(e))
-
-        # Added debug lines in case it fails
-        os.system("kubectl get pods")
-        os.system("kubectl describe pods")
-        # End Debug
-
         sys.exit(1)

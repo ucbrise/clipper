@@ -36,6 +36,8 @@ class BenchmarkException(Exception):
 # range of ports where available ports can be found
 PORT_RANGE = [34256, 50000]
 
+CLIPPER_CONTAINER_REGISTRY = "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper"
+
 
 def get_docker_client():
     if "DOCKER_API_VERSION" in os.environ:
@@ -109,9 +111,9 @@ def create_docker_connection(cleanup=True,
     return cl
 
 
-def create_kubernetes_connection(cleanup=True,
-                                 start_clipper=True,
-                                 connect=True,
+def create_kubernetes_connection(cleanup=False,
+                                 start_clipper=False,
+                                 connect=False,
                                  with_proxy=False,
                                  num_frontend_replicas=1,
                                  cleanup_name='default-cluster',
@@ -119,7 +121,7 @@ def create_kubernetes_connection(cleanup=True,
                                  connect_name='default-cluster'):
     logger.info("Creating KubernetesContainerManager")
     cl = None
-    assert cleanup or start_clipper, "You must set at least one of {cleanup, start_clipper} to be true."
+    assert cleanup or start_clipper or connect, "You must set at least one of {cleanup, start_clipper, connect} to be true."
 
     if with_proxy:
         kubernetes_proxy_addr = "127.0.0.1:8080"
@@ -138,7 +140,7 @@ def create_kubernetes_connection(cleanup=True,
     if start_clipper:
         logger.info("Starting up Kubernetes Cluster {}".format(new_name))
         cm = KubernetesContainerManager(
-            cluster_name=cleanup_name,
+            cluster_name=new_name,
             kubernetes_proxy_addr=kubernetes_proxy_addr)
         cl = ClipperConnection(cm)
         cl.start_clipper(
