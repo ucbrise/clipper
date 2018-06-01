@@ -53,7 +53,7 @@ const std::string ADD_APPLICATION = ADMIN_PATH + "/add_app$";
 const std::string DELETE_APPLICATION = ADMIN_PATH + "/delete_app$";
 const std::string ADD_MODEL_LINKS = ADMIN_PATH + "/add_model_links$";
 const std::string ADD_MODEL = ADMIN_PATH + "/add_model$";
-const std::string REMOVE_MODEL = ADMIN_PATH + "/remove_model$";
+const std::string DELETE_UNLINKED_MODEL = ADMIN_PATH + "/delete_unlinked_model$";
 const std::string SET_MODEL_VERSION = ADMIN_PATH + "/set_model_version$";
 
 // const std::string ADD_CONTAINER = ADMIN_PATH + "/add_container$";
@@ -127,7 +127,7 @@ const std::string ADD_MODEL_JSON_SCHEMA = R"(
   }
 )";
 
-const std::string REMOVE_MODEL_JSON_SCHEMA = R"(
+const std::string DELETE_UNLINKED_MODEL_JSON_SCHEMA = R"(
   {
    "model_name" := string,
   }
@@ -268,21 +268,21 @@ class RequestHandler {
           }
         });
     server_.add_endpoint(
-        REMOVE_MODEL, "POST",
+        DELETE_UNLINKED_MODEL, "POST",
         [this](std::shared_ptr<HttpServer::Response> response,
                std::shared_ptr<HttpServer::Request> request) {
           try {
             clipper::log_info(LOGGING_TAG_MANAGEMENT_FRONTEND,
-                              "Remove model POST request");
-            std::string result = remove_model(request->content.string());
+                              "Delete unlnked model POST request");
+            std::string result = delete_unlinked_model(request->content.string());
             respond_http(result, "200 OK", response);
           } catch (const json_parse_error& e) {
             std::string err_msg =
-                json_error_msg(e.what(), REMOVE_MODEL_JSON_SCHEMA);
+                json_error_msg(e.what(), DELETE_UNLINKED_MODEL_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
           } catch (const json_semantic_error& e) {
             std::string err_msg =
-                json_error_msg(e.what(), REMOVE_MODEL_JSON_SCHEMA);
+                json_error_msg(e.what(), DELETE_UNLINKED_MODEL_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
           } catch (const clipper::ManagementOperationError& e) {
             respond_http(e.what(), "400 Bad Request", response);
@@ -814,7 +814,7 @@ class RequestHandler {
   }
 
   /**
-   * Processes a request to remove an unlinked model from Clipper
+   * Processes a request to delete an unlinked model from Clipper
    *
    * JSON format:
    * {
@@ -824,7 +824,7 @@ class RequestHandler {
    * \return A string describing the operation's success
    * \throws ManagementOperationError if the operation is not successful
    */
-  std::string remove_model(const std::string& json) {
+  std::string delete_unlinked_model(const std::string& json) {
     rapidjson::Document d;
     parse_json(json, d);
     std::string model_name = get_string(d, "model_name");

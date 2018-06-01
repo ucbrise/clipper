@@ -634,7 +634,7 @@ class ClipperConnection(object):
                 "Successfully registered model {name}:{version}".format(
                     name=name, version=version))
 
-    def remove_model(self, name):
+    def delete_unlinked_model(self, name):
         """Removes all versions of a model from Clipper.
 
         Parameters
@@ -650,7 +650,7 @@ class ClipperConnection(object):
 
         if not self.connected:
             raise UnconnectedException()
-        url = "http://{host}/admin/remove_model".format(
+        url = "http://{host}/admin/delete_unlinked_model".format(
             host=self.cm.get_admin_addr())
         req_json = json.dumps({
             "model_name": name,
@@ -666,7 +666,7 @@ class ClipperConnection(object):
             logger.error(msg)
             raise ClipperException(msg)
         else:
-            logger.info("Successfully removed model {name}".format(name=name))
+            logger.info("Successfully deleted model {name}".format(name=name))
 
     def get_current_model_version(self, name):
         """Get the current model version for the specified model.

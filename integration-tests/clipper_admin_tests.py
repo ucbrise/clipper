@@ -564,7 +564,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             None,
             pkgs_to_install=["sympy==1.1.*"])
 
-    def test_remove_model_correct(self):
+    def test_delete_unlinked_model_correct(self):
         model_name = "m"
         versions = ["v1", "v2"]
         container_name = "clipper/noop-container:{}".format(clipper_version)
@@ -573,7 +573,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             self.clipper_conn.build_and_deploy_model(
                 model_name, version, input_type, fake_model_data,
                 container_name)
-        self.clipper_conn.remove_model(model_name)
+        self.clipper_conn.delete_unlinked_model(model_name)
 
         models = self.clipper_conn.get_all_models(verbose=False)
         self.assertFalse(model_name in models)
@@ -861,7 +861,7 @@ SHORT_TEST_ORDERING = [
     'test_build_model_with_custom_packages',
     'test_delete_application_correct',
     'test_query_specific_model_version',
-    'test_remove_model_correct',
+    'test_delete_unlinked_model_correct',
 ]
 
 LONG_TEST_ORDERING = [
