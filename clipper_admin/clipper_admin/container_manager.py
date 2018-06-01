@@ -2,6 +2,7 @@ import abc
 from .exceptions import ClipperException
 import random
 import socket
+import logging
 
 # Constants
 CLIPPER_INTERNAL_QUERY_PORT = 1337
@@ -32,6 +33,20 @@ CLIPPER_METRIC_CONFIG_LABEL = 'ai.clipper.metric.config'
 # versions to be compliant with both limitations, so this gives us an extra
 # character to use when creating labels.
 _MODEL_CONTAINER_LABEL_DELIMITER = "_"
+
+
+class ClusterAdapter(logging.LoggerAdapter):
+    """
+    This adapter adds cluster name to logging format.
+
+    Usage
+    -----
+        In ContainerManager init process, do:
+            self.logger = ClusterAdapter(logger, {'cluster_name': self.cluster_name})
+    """
+    def process(self, msg, kwargs):
+        return "[{}] {}".format(self.extra['cluster_name'], msg), kwargs
+
 
 
 def create_model_container_label(name, version):

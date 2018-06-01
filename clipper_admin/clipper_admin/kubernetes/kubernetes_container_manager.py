@@ -3,7 +3,8 @@ from ..container_manager import (
     create_model_container_label, ContainerManager, CLIPPER_DOCKER_LABEL,
     CLIPPER_MODEL_CONTAINER_LABEL, CLIPPER_QUERY_FRONTEND_ID_LABEL,
     CLIPPER_INTERNAL_MANAGEMENT_PORT, CLIPPER_INTERNAL_QUERY_PORT,
-    CLIPPER_INTERNAL_METRIC_PORT, CLIPPER_NAME_LABEL)
+    CLIPPER_INTERNAL_METRIC_PORT, CLIPPER_NAME_LABEL,
+    ClusterAdapter)
 from ..exceptions import ClipperException
 from .kubernetes_metric_utils import PROM_VERSION, CLIPPER_FRONTEND_EXPORTER_IMAGE
 
@@ -126,6 +127,8 @@ class KubernetesContainerManager(ContainerManager):
         self.template_engine = jinja2.Environment(
             loader=jinja2.FileSystemLoader(cur_dir, followlinks=True),
             undefined=jinja2.StrictUndefined)
+
+        self.logger = ClusterAdapter(logger, {'cluster_name': self.cluster_name})
 
     def start_clipper(self,
                       query_frontend_image,
@@ -254,18 +257,18 @@ class KubernetesContainerManager(ContainerManager):
 
         if len(external_node_hosts) == 0 and (self.useInternalIP):
             msg = "No external node addresses found. Using Internal IP address"
-            logger.warn(msg)
+            self.logger.warn(msg)
             for addr in node.status.addresses:
                 if addr.type == "InternalIP":
                     external_node_hosts.append(addr.address)
 
         if len(external_node_hosts) == 0:
             msg = "Error connecting to Kubernetes cluster. No external node addresses found"
-            logger.error(msg)
+            self.logger.error(msg)
             raise ClipperException(msg)
 
         self.external_node_hosts = external_node_hosts
-        logger.info("Found {num_nodes} nodes: {nodes}".format(
+        self.logger.info("Found {num_nodes} nodes: {nodes}".format(
             num_nodes=len(external_node_hosts),
             nodes=", ".join(external_node_hosts)))
 
@@ -277,7 +280,7 @@ class KubernetesContainerManager(ContainerManager):
             for p in mgmt_frontend_ports:
                 if p.name == "1338":
                     self.clipper_management_port = p.node_port
-                    logger.info("Setting Clipper mgmt port to {}".format(
+                    self.logger.info("Setting Clipper mgmt port to {}".format(
                         self.clipper_management_port))
 
             query_frontend_ports = self._k8s_v1.read_namespaced_service(
@@ -287,7 +290,7 @@ class KubernetesContainerManager(ContainerManager):
             for p in query_frontend_ports:
                 if p.name == "1337":
                     self.clipper_query_port = p.node_port
-                    logger.info("Setting Clipper query port to {}".format(
+                    self.logger.info("Setting Clipper query port to {}".format(
                         self.clipper_query_port))
                 elif p.name == "7000":
                     self.clipper_rpc_port = p.node_port
@@ -309,7 +312,7 @@ class KubernetesContainerManager(ContainerManager):
             for p in metrics_ports:
                 if p.name == "9090":
                     self.clipper_metric_port = p.node_port
-                    logger.info("Setting Clipper metric port to {}".format(
+                    self.logger.info("Setting Clipper metric port to {}".format(
                         self.clipper_metric_port))
 
         except ApiException as e:
@@ -380,7 +383,7 @@ class KubernetesContainerManager(ContainerManager):
         log_files = []
         if not os.path.exists(logging_dir):
             os.makedirs(logging_dir)
-            logger.info("Created logging directory: %s" % logging_dir)
+            self.logger.info("Created logging directory: %s" % logging_dir)
 
         for pod in self._k8s_v1.list_namespaced_pod(
                 namespace='default',
@@ -391,8 +394,8 @@ class KubernetesContainerManager(ContainerManager):
                 log_file_name = "{pod}_{num}.log".format(
                     pod=pod.metadata.name, num=str(i))
                 log_file_alt = "{cname}.log".format(cname=c.name)
-                logger.info("log file name: {}".format(log_file_name))
-                logger.info("log alt file name: {}".format(log_file_alt))
+                self.logger.info("log file name: {}".format(log_file_name))
+                self.logger.info("log alt file name: {}".format(log_file_alt))
                 log_file = os.path.join(logging_dir, log_file_name)
                 with open(log_file, "w") as lf:
                     lf.write(
@@ -418,7 +421,7 @@ class KubernetesContainerManager(ContainerManager):
                             cluster_label=CLIPPER_DOCKER_LABEL,
                             cluster_name=self.cluster_name))
         except ApiException as e:
-            logger.warn(
+            self.logger.warn(
                 "Exception deleting kubernetes deployments: {}".format(e))
             raise e
 
@@ -432,12 +435,12 @@ class KubernetesContainerManager(ContainerManager):
                     cluster_label=CLIPPER_DOCKER_LABEL,
                     cluster_name=self.cluster_name))
         except ApiException as e:
-            logger.warn(
+            self.logger.warn(
                 "Exception deleting kubernetes deployments: {}".format(e))
             raise e
 
     def stop_all(self, graceful=True):
-        logger.info("Stopping all running Clipper resources")
+        self.logger.info("Stopping all running Clipper resources")
 
         cluster_selecter = "{cluster_label}={cluster_name}".format(
             cluster_label=CLIPPER_DOCKER_LABEL, cluster_name=self.cluster_name)

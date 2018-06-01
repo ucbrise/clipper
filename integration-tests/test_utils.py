@@ -82,7 +82,7 @@ def create_docker_connection(cleanup=True,
         cl = ClipperConnection(cm)
         cl.stop_all(graceful=False)
         docker_client = get_docker_client()
-        docker_client.containers.prune(filters={"label": CLIPPER_DOCKER_LABEL})
+        docker_client.containers.prune(filters={"label": "{key}={val}".format(key=CLIPPER_DOCKER_LABEL, val=cleanup_name)})
 
     if start_clipper:
         # Try to start Clipper in a retry loop here to address flaky tests

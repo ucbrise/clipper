@@ -14,13 +14,13 @@ from ..container_manager import (
     CLIPPER_MGMT_FRONTEND_CONTAINER_LABEL, CLIPPER_INTERNAL_RPC_PORT,
     CLIPPER_INTERNAL_QUERY_PORT, CLIPPER_INTERNAL_MANAGEMENT_PORT,
     CLIPPER_INTERNAL_METRIC_PORT, CLIPPER_INTERNAL_REDIS_PORT,
-    CLIPPER_DOCKER_PORT_LABELS, CLIPPER_METRIC_CONFIG_LABEL)
+    CLIPPER_DOCKER_PORT_LABELS, CLIPPER_METRIC_CONFIG_LABEL,
+    ClusterAdapter)
 from ..exceptions import ClipperException
 from requests.exceptions import ConnectionError
 from .docker_metric_utils import *
 
 logger = logging.getLogger(__name__)
-
 
 class DockerContainerManager(ContainerManager):
     def __init__(self,
@@ -102,6 +102,8 @@ class DockerContainerManager(ContainerManager):
 
         self.extra_container_kwargs.update(container_args)
 
+        self.logger = ClusterAdapter(logger, {'cluster_name': self.cluster_name})
+
     def start_clipper(self,
                       query_frontend_image,
                       mgmt_frontend_image,
@@ -119,7 +121,7 @@ class DockerContainerManager(ContainerManager):
             self.docker_client.networks.create(
                 self.docker_network, check_duplicate=True)
         except docker.errors.APIError:
-            logger.debug(
+            self.logger.debug(
                 "{nw} network already exists".format(nw=self.docker_network))
         except ConnectionError:
             msg = "Unable to Connect to Docker. Please Check if Docker is running."
@@ -137,7 +139,7 @@ class DockerContainerManager(ContainerManager):
                     self.cluster_name))
 
         if not self.external_redis:
-            logger.info("Starting managed Redis instance in Docker")
+            self.logger.info("Starting managed Redis instance in Docker")
             self.redis_port = find_unbound_port(self.redis_port)
             redis_labels = self.common_labels.copy()
             redis_labels[CLIPPER_DOCKER_PORT_LABELS['redis']] = str(
@@ -289,7 +291,7 @@ class DockerContainerManager(ContainerManager):
                 ]
             })
         if len(containers) < 1:
-            logger.warning("No Clipper query frontend found.")
+            self.logger.warning("No Clipper query frontend found.")
             raise ClipperException(
                 "No Clipper query frontend to attach model container to")
         query_frontend_hostname = containers[0].name
@@ -328,7 +330,7 @@ class DockerContainerManager(ContainerManager):
         current_replicas = self._get_replicas(name, version)
         if len(current_replicas) < num_replicas:
             num_missing = num_replicas - len(current_replicas)
-            logger.info(
+            self.logger.info(
                 "Found {cur} replicas for {name}:{version}. Adding {missing}".
                 format(
                     cur=len(current_replicas),
@@ -349,7 +351,7 @@ class DockerContainerManager(ContainerManager):
 
         elif len(current_replicas) > num_replicas:
             num_extra = len(current_replicas) - num_replicas
-            logger.info(
+            self.logger.info(
                 "Found {cur} replicas for {name}:{version}. Removing {extra}".
                 format(
                     cur=len(current_replicas),
@@ -376,7 +378,7 @@ class DockerContainerManager(ContainerManager):
         log_files = []
         if not os.path.exists(logging_dir):
             os.makedirs(logging_dir)
-            logger.info("Created logging directory: %s" % logging_dir)
+            self.logger.info("Created logging directory: %s" % logging_dir)
         for c in containers:
             log_file_name = "image_{image}:container_{id}.log".format(
                 image=c.image.short_id, id=c.short_id)

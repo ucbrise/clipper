@@ -7,6 +7,9 @@ set -o pipefail
 # Printout for timeout debug
 date
 
+echo "Simon: Failure Intended. Jenkins don't test this"
+exit 1
+
 unset CDPATH
 # one-liner from http://stackoverflow.com/a/246128
 # Determines absolute path of the directory containing
