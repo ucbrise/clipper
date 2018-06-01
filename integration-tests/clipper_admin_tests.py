@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 class ClipperManagerTestCaseShort(unittest.TestCase):
     def setUp(self):
-        new_name = "cluster-{}".format(random.randint(0, 5000))
+        new_name = "admin-test-cluster-{}".format(random.randint(0, 5000))
         self.clipper_conn = create_docker_connection(
             cleanup=False, start_clipper=True, new_name=new_name)
         self.name = new_name
@@ -579,10 +579,12 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
 
 
 class ClipperManagerTestCaseLong(unittest.TestCase):
+    cluster_name = "admin-test-long-cluster-{}".format(random.randint(0,50000))
+
     @classmethod
     def setUpClass(self):
         self.clipper_conn = create_docker_connection(
-            cleanup=True, start_clipper=True)
+            cleanup=False, start_clipper=True, new_name=self.cluster_name)
         self.app_name_1 = "app3"
         self.app_name_2 = "app4"
         self.app_name_3 = "app5"
@@ -622,7 +624,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
     @classmethod
     def tearDownClass(self):
         self.clipper_conn = create_docker_connection(
-            cleanup=True, start_clipper=False)
+            cleanup=True, start_clipper=False, cleanup_name=self.cluster_name)
 
     def test_unlinked_app_returns_default_predictions(self):
         addr = self.clipper_conn.get_query_addr()

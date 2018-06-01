@@ -148,7 +148,7 @@ if __name__ == "__main__":
         # Test without proxy first
         import random
 
-        cluster_name = "cluster-{}".format(random.randint(0, 5000))
+        cluster_name = "k8s-test-cluster-{}".format(random.randint(0, 5000))
 
         clipper_conn = create_kubernetes_connection(
             cleanup=False,
@@ -159,7 +159,7 @@ if __name__ == "__main__":
         clipper_conn.stop_all()
 
         # Test with proxy. Assumes proxy is running at 127.0.0.1:8080
-        proxy_name = "cluster-{}".format(random.randint(0, 5000))
+        proxy_name = "k8s-proxy-test-cluster-{}".format(random.randint(0, 5000))
         clipper_conn = create_kubernetes_connection(
             cleanup=True,
             start_clipper=True,

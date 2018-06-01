@@ -101,7 +101,7 @@ def create_and_test_app(clipper_conn, name):
 if __name__ == "__main__":
     import random
 
-    cluster_name = "cluster-{}".format(random.randint(0, 5000))
+    cluster_name = "kube-multi-frontend-cluster-{}".format(random.randint(0, 5000))
     try:
         clipper_conn = create_kubernetes_connection(
             cleanup=False,

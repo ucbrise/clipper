@@ -86,7 +86,8 @@ if __name__ == '__main__':
     logger = logging.getLogger(__name__)
 
     logger.info("Start Metric Test (0/1): Running 2 Replicas")
-    cluster_name = "cluster-{}".format(random.randint(0,50000))
+
+    cluster_name = "metric-docker-cluster-{}".format(random.randint(0,50000))
     clipper_conn = create_docker_connection(cleanup=False, start_clipper=True, new_name=cluster_name)
     python_deployer.create_endpoint(
         clipper_conn, "simple-example", "doubles", feature_sum, num_replicas=2)

@@ -56,7 +56,7 @@ def predict(spark, pipeline, xs):
 
 def run_test():
     import random
-    cluster_name = "cluster-{}".format(random.randint(0, 5000))
+    cluster_name = "pyspark-pipeline-cluster-{}".format(random.randint(0, 5000))
 
     spark = SparkSession\
         .builder\
