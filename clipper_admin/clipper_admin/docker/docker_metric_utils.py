@@ -82,7 +82,7 @@ def run_metric_image(docker_client, common_labels, prometheus_port,
     :return: None
     """
 
-    # CMD comes from https://hub.docker.com/r/prom/prometheus/~/dockerfile/
+    # CMD comes from https://github.com/prometheus/prometheus/blob/release-2.1/Dockerfile
     metric_cmd = [
         "--config.file=/etc/prometheus/prometheus.yml",
         "--storage.tsdb.path=/prometheus",
