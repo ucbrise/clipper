@@ -14,13 +14,13 @@ from ..container_manager import (
     CLIPPER_MGMT_FRONTEND_CONTAINER_LABEL, CLIPPER_INTERNAL_RPC_PORT,
     CLIPPER_INTERNAL_QUERY_PORT, CLIPPER_INTERNAL_MANAGEMENT_PORT,
     CLIPPER_INTERNAL_METRIC_PORT, CLIPPER_INTERNAL_REDIS_PORT,
-    CLIPPER_DOCKER_PORT_LABELS, CLIPPER_METRIC_CONFIG_LABEL,
-    ClusterAdapter)
+    CLIPPER_DOCKER_PORT_LABELS, CLIPPER_METRIC_CONFIG_LABEL, ClusterAdapter)
 from ..exceptions import ClipperException
 from requests.exceptions import ConnectionError
 from .docker_metric_utils import *
 
 logger = logging.getLogger(__name__)
+
 
 class DockerContainerManager(ContainerManager):
     def __init__(self,
@@ -102,7 +102,9 @@ class DockerContainerManager(ContainerManager):
 
         self.extra_container_kwargs.update(container_args)
 
-        self.logger = ClusterAdapter(logger, {'cluster_name': self.cluster_name})
+        self.logger = ClusterAdapter(logger, {
+            'cluster_name': self.cluster_name
+        })
 
     def start_clipper(self,
                       query_frontend_image,

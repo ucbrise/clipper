@@ -84,7 +84,12 @@ def create_docker_connection(cleanup=True,
         cl = ClipperConnection(cm)
         cl.stop_all(graceful=False)
         docker_client = get_docker_client()
-        docker_client.containers.prune(filters={"label": "{key}={val}".format(key=CLIPPER_DOCKER_LABEL, val=cleanup_name)})
+        docker_client.containers.prune(
+            filters={
+                "label":
+                "{key}={val}".format(
+                    key=CLIPPER_DOCKER_LABEL, val=cleanup_name)
+            })
 
     if start_clipper:
         # Try to start Clipper in a retry loop here to address flaky tests
@@ -140,8 +145,7 @@ def create_kubernetes_connection(cleanup=False,
     if start_clipper:
         logger.info("Starting up Kubernetes Cluster {}".format(new_name))
         cm = KubernetesContainerManager(
-            cluster_name=new_name,
-            kubernetes_proxy_addr=kubernetes_proxy_addr)
+            cluster_name=new_name, kubernetes_proxy_addr=kubernetes_proxy_addr)
         cl = ClipperConnection(cm)
         cl.start_clipper(
             query_frontend_image=

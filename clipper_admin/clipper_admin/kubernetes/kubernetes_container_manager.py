@@ -3,8 +3,7 @@ from ..container_manager import (
     create_model_container_label, ContainerManager, CLIPPER_DOCKER_LABEL,
     CLIPPER_MODEL_CONTAINER_LABEL, CLIPPER_QUERY_FRONTEND_ID_LABEL,
     CLIPPER_INTERNAL_MANAGEMENT_PORT, CLIPPER_INTERNAL_QUERY_PORT,
-    CLIPPER_INTERNAL_METRIC_PORT, CLIPPER_NAME_LABEL,
-    ClusterAdapter)
+    CLIPPER_INTERNAL_METRIC_PORT, CLIPPER_NAME_LABEL, ClusterAdapter)
 from ..exceptions import ClipperException
 from .kubernetes_metric_utils import PROM_VERSION, CLIPPER_FRONTEND_EXPORTER_IMAGE
 
@@ -128,7 +127,9 @@ class KubernetesContainerManager(ContainerManager):
             loader=jinja2.FileSystemLoader(cur_dir, followlinks=True),
             undefined=jinja2.StrictUndefined)
 
-        self.logger = ClusterAdapter(logger, {'cluster_name': self.cluster_name})
+        self.logger = ClusterAdapter(logger, {
+            'cluster_name': self.cluster_name
+        })
 
     def start_clipper(self,
                       query_frontend_image,
@@ -312,8 +313,9 @@ class KubernetesContainerManager(ContainerManager):
             for p in metrics_ports:
                 if p.name == "9090":
                     self.clipper_metric_port = p.node_port
-                    self.logger.info("Setting Clipper metric port to {}".format(
-                        self.clipper_metric_port))
+                    self.logger.info(
+                        "Setting Clipper metric port to {}".format(
+                            self.clipper_metric_port))
 
         except ApiException as e:
             logging.warn(

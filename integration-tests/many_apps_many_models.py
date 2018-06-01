@@ -98,7 +98,8 @@ if __name__ == "__main__":
     num_models = 8
 
     import random
-    cluster_name = "many-app-many-models-cluster-{}".format(random.randint(0, 5000))
+    cluster_name = "many-app-many-models-cluster-{}".format(
+        random.randint(0, 5000))
 
     try:
         if len(sys.argv) > 1:

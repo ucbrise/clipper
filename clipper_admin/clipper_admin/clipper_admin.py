@@ -79,7 +79,9 @@ class ClipperConnection(object):
         self.connected = False
         self.cm = container_manager
 
-        self.logger = ClusterAdapter(logger, {'cluster_name': self.cm.cluster_name})
+        self.logger = ClusterAdapter(logger, {
+            'cluster_name': self.cm.cluster_name
+        })
 
     def start_clipper(
             self,
@@ -136,8 +138,9 @@ class ClipperConnection(object):
 
         self.cm.connect()
         self.connected = True
-        self.logger.info("Successfully connected to Clipper cluster at {}".format(
-            self.cm.get_query_addr()))
+        self.logger.info(
+            "Successfully connected to Clipper cluster at {}".format(
+                self.cm.get_query_addr()))
 
     def register_application(self, name, input_type, default_output,
                              slo_micros):
@@ -199,8 +202,9 @@ class ClipperConnection(object):
             self.logger.error(msg)
             raise ClipperException(msg)
         else:
-            self.logger.info("Application {app} was successfully registered".format(
-                app=name))
+            self.logger.info(
+                "Application {app} was successfully registered".format(
+                    app=name))
 
     def delete_application(self, name):
         if not self.connected:
@@ -455,7 +459,7 @@ class ClipperConnection(object):
             image_result, build_logs = docker_client.images.build(
                 fileobj=context_file, custom_context=True, tag=image)
             for b in build_logs:
-                if 'stream' in b and b['stream'] != '\n': #log build steps only
+                if 'stream' in b and b['stream'] != '\n':  #log build steps only
                     self.logger.info(b['stream'].rstrip())
 
         self.logger.info("Pushing model Docker image to {}".format(image))
@@ -1261,7 +1265,8 @@ class ClipperConnection(object):
         will take not effect in Kubernetes.
         """
         self.cm.stop_all(graceful=graceful)
-        self.logger.info("Stopped all Clipper cluster and all model containers")
+        self.logger.info(
+            "Stopped all Clipper cluster and all model containers")
 
     def test_predict_function(self, query, func, input_type):
         """Tests that the user's function has the correct signature and can be properly saved and
@@ -1336,7 +1341,8 @@ class ClipperConnection(object):
         try:
             assert reloaded_func
         except AssertionError:
-            self.logger.error("Function does not properly serialize and reload")
+            self.logger.error(
+                "Function does not properly serialize and reload")
             return "Function does not properly serialize and reload"
 
         return reloaded_func(numpy_data)

@@ -380,9 +380,10 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
                     "ancestor":
                     "clipper/python-closure-container:{}".format(
                         clipper_version),
-                    "label" : "{key}={val}".format(
-                            key=CLIPPER_DOCKER_LABEL,
-                            val=self.clipper_conn.cm.cluster_name)
+                    "label":
+                    "{key}={val}".format(
+                        key=CLIPPER_DOCKER_LABEL,
+                        val=self.clipper_conn.cm.cluster_name)
                 })
 
         elif py_minor_version == (3, 5):
@@ -391,10 +392,10 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
                     "ancestor":
                     "clipper/python35-closure-container:{}".format(
                         clipper_version),
-                    "label" : "{key}={val}".format(
-                            key=CLIPPER_DOCKER_LABEL,
-                            val=self.clipper_conn.cm.cluster_name)
-
+                    "label":
+                    "{key}={val}".format(
+                        key=CLIPPER_DOCKER_LABEL,
+                        val=self.clipper_conn.cm.cluster_name)
                 })
         elif py_minor_version == (3, 6):
             containers = docker_client.containers.list(
@@ -402,9 +403,10 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
                     "ancestor":
                     "clipper/python36-closure-container:{}".format(
                         clipper_version),
-                    "label" : "{key}={val}".format(
-                            key=CLIPPER_DOCKER_LABEL,
-                            val=self.clipper_conn.cm.cluster_name)
+                    "label":
+                    "{key}={val}".format(
+                        key=CLIPPER_DOCKER_LABEL,
+                        val=self.clipper_conn.cm.cluster_name)
                 })
         else:
             msg = (
@@ -579,7 +581,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
 
 
 class ClipperManagerTestCaseLong(unittest.TestCase):
-    cluster_name = "admin-test-long-cluster-{}".format(random.randint(0,50000))
+    cluster_name = "admin-test-long-cluster-{}".format(
+        random.randint(0, 50000))
 
     @classmethod
     def setUpClass(self):

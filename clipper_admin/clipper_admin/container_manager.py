@@ -44,9 +44,9 @@ class ClusterAdapter(logging.LoggerAdapter):
         In ContainerManager init process, do:
             self.logger = ClusterAdapter(logger, {'cluster_name': self.cluster_name})
     """
+
     def process(self, msg, kwargs):
         return "[{}] {}".format(self.extra['cluster_name'], msg), kwargs
-
 
 
 def create_model_container_label(name, version):
