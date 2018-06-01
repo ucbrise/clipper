@@ -10,6 +10,7 @@ from tensorflow.python.saved_model import loader
 
 IMPORT_ERROR_RETURN_CODE = 3
 
+
 def load_predict_func(file_path):
     with open(file_path, 'r') as serialized_func_file:
         return cloudpickle.load(serialized_func_file)
@@ -70,7 +71,8 @@ if __name__ == "__main__":
     print("Starting TensorFlow container")
     rpc_service = rpc.RPCService()
     try:
-        model = TfContainer(rpc_service.get_model_path(), rpc_service.get_input_type())
+        model = TfContainer(rpc_service.get_model_path(),
+                            rpc_service.get_input_type())
         sys.stdout.flush()
         sys.stderr.flush()
     except ImportError:

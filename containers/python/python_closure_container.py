@@ -52,7 +52,8 @@ if __name__ == "__main__":
     print("Starting Python Closure container")
     rpc_service = rpc.RPCService()
     try:
-        model = PythonContainer(rpc_service.get_model_path(), rpc_service.get_input_type())
+        model = PythonContainer(rpc_service.get_model_path(),
+                                rpc_service.get_input_type())
         sys.stdout.flush()
         sys.stderr.flush()
     except ImportError:

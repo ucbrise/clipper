@@ -68,7 +68,8 @@ if __name__ == "__main__":
     print("Starting Caffe2Container container")
     rpc_service = rpc.RPCService()
     try:
-        model = Caffe2Container(rpc_service.get_model_path(), rpc_service.get_input_type())
+        model = Caffe2Container(rpc_service.get_model_path(),
+                                rpc_service.get_input_type())
         sys.stdout.flush()
         sys.stderr.flush()
     except ImportError:

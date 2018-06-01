@@ -85,7 +85,8 @@ if __name__ == "__main__":
     print("Starting PySparkContainer container")
     rpc_service = rpc.RPCService()
     try:
-        model = PySparkContainer(rpc_service.get_model_path(), rpc_service.get_input_type())
+        model = PySparkContainer(rpc_service.get_model_path(),
+                                 rpc_service.get_input_type())
         sys.stdout.flush()
         sys.stderr.flush()
     except ImportError:
