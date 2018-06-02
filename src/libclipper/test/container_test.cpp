@@ -41,6 +41,31 @@ TEST(ModelContainerTests,
   }
 }
 
+TEST(ModelContainerTests,
+     BatchSizeDeterminationEstimatesWhenLatencyBudgetHasBeenExplored) {
+  VersionedModelId model("test", "1");
+  ModelContainer container(model, 0, 0, InputType::Doubles, DEFAULT_BATCH_SIZE);
+  EstimatorFittingThreadPool::create_queue(model, 0);
+
+  long long base_latency = 500;
+
+  for (long long i = 1; i <= 50; ++i) {
+    long long latency = base_latency * i;
+    container.add_processing_datapoint(i, latency);
+
+    // Get the batch size corresponding to a latency budget
+    // that has already been explored. We expect the determination
+    // method to be "estimation"
+    long long under_latency = latency - 1;
+    Deadline deadline = std::chrono::system_clock::now() +
+                        std::chrono::microseconds(under_latency);
+    BatchSizeInfo batch_size_info = container.get_batch_size(deadline);
+    BatchSizeDeterminationMethod method = batch_size_info.second;
+    ASSERT_EQ(static_cast<int>(method),
+              static_cast<int>(BatchSizeDeterminationMethod::Estimation));
+  }
+}
+
 TEST(ModelContainerTests, IterativeMeanStdUpdatesPerformedCorrectly) {
   std::vector<double> values;
   values.reserve(100);
