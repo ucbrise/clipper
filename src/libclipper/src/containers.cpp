@@ -91,22 +91,20 @@ void ModelContainer::add_processing_datapoint(
 
   max_latency_ = std::max(processing_latency_micros, max_latency_);
 
-  EstimatorFittingThreadPool::submit_job(
-      model_, replica_id_,
-      [this, container_activity_mtx = activity_mtx_,
-       container_active = active_]() {
-        std::lock_guard<std::mutex> activity_lock(*container_activity_mtx);
-        if (!(*container_active)) {
-          return;
-        }
-        try {
-          fit_estimator();
-        } catch (std::exception const &ex) {
-          log_error_formatted(LOGGING_TAG_CONTAINERS,
-                              "Error fitting batch size estimator: {}",
-                              ex.what());
-        }
-      });
+  EstimatorFittingThreadPool::submit_job(model_, replica_id_, [
+    this, container_activity_mtx = activity_mtx_, container_active = active_
+  ]() {
+    std::lock_guard<std::mutex> activity_lock(*container_activity_mtx);
+    if (!(*container_active)) {
+      return;
+    }
+    try {
+      fit_estimator();
+    } catch (std::exception const &ex) {
+      log_error_formatted(LOGGING_TAG_CONTAINERS,
+                          "Error fitting batch size estimator: {}", ex.what());
+    }
+  });
 }
 
 ModelContainer::LatencyInfo ModelContainer::update_mean_std(
