@@ -32,7 +32,7 @@ columns = ["id", "text"]
 
 
 def json_to_dataframe(spark_session, xs):
-    tuples = [tuple(json.loads(x)) for x in xs]
+    tuples = [tuple(json.loads(x.decode())) for x in xs]
     df = spark_session.createDataFrame(tuples, columns)
     return df
 
