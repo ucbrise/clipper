@@ -642,8 +642,53 @@ class ModelContainerBase(object):
 
 
 class RPCService:
-    def __init__(self, collect_metrics=True):
+    def __init__(self, collect_metrics=True, read_config=True):
         self.collect_metrics = collect_metrics
+        if read_config:
+            self._read_config_from_environment()
+
+    def _read_config_from_environment(self):
+        try:
+            self.model_name = os.environ["CLIPPER_MODEL_NAME"]
+        except KeyError:
+            print(
+                "ERROR: CLIPPER_MODEL_NAME environment variable must be set",
+                file=sys.stdout)
+            sys.exit(1)
+        try:
+            self.model_version = os.environ["CLIPPER_MODEL_VERSION"]
+        except KeyError:
+            print(
+                "ERROR: CLIPPER_MODEL_VERSION environment variable must be set",
+                file=sys.stdout)
+            sys.exit(1)
+
+        self.host = "127.0.0.1"
+        if "CLIPPER_IP" in os.environ:
+            self.host = os.environ["CLIPPER_IP"]
+        else:
+            print("Connecting to Clipper on localhost")
+
+        self.port = 7000
+        if "CLIPPER_PORT" in os.environ:
+            self.port = int(os.environ["CLIPPER_PORT"])
+        else:
+            print("Connecting to Clipper with default port: {port}".format(
+                port=self.port))
+
+        self.input_type = "doubles"
+        if "CLIPPER_INPUT_TYPE" in os.environ:
+            self.input_type = os.environ["CLIPPER_INPUT_TYPE"]
+        else:
+            print("Using default input type: doubles")
+
+        self.model_path = os.environ["CLIPPER_MODEL_PATH"]
+
+    def get_model_path(self):
+        return self.model_path
+
+    def get_input_type(self):
+        return self.input_type
 
     def get_event_history(self):
         if self.server:
@@ -652,28 +697,22 @@ class RPCService:
             print("Cannot retrieve message history for inactive RPC service!")
             raise
 
-    def start(self, model, host, port, model_name, model_version, input_type):
+    def start(self, model):
         """
         Args:
             model (object): The loaded model object ready to make predictions.
-            host (str): The Clipper RPC hostname or IP address.
-            port (int): The Clipper RPC port.
-            model_name (str): The name of the model.
-            model_version (int): The version of the model
-            input_type (str): One of ints, doubles, floats, bytes, strings.
         """
 
         try:
-            ip = socket.gethostbyname(host)
+            ip = socket.gethostbyname(self.host)
         except socket.error as e:
-            print("Error resolving %s: %s" % (host, e))
+            print("Error resolving %s: %s" % (self.host, e))
             sys.exit(1)
         context = zmq.Context()
-        self.server = Server(context, ip, port)
-        model_input_type = string_to_input_type(input_type)
-        self.server.model_name = model_name
-        self.server.model_version = model_version
-        self.server.model_input_type = model_input_type
+        self.server = Server(context, ip, self.port)
+        self.server.model_name = self.model_name
+        self.server.model_version = self.model_version
+        self.server.model_input_type = string_to_input_type(self.input_type)
         self.server.model = model
 
         # Create a file named model_is_ready.check to show that model and container
