@@ -710,10 +710,9 @@ class RPCService:
             sys.exit(1)
         context = zmq.Context()
         self.server = Server(context, ip, self.port)
-        model_input_type = string_to_input_type(self.input_type)
         self.server.model_name = self.model_name
         self.server.model_version = self.model_version
-        self.server.model_input_type = self.input_type
+        self.server.model_input_type = string_to_input_type(self.input_type)
         self.server.model = model
 
         # Create a file named model_is_ready.check to show that model and container
