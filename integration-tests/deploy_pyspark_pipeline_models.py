@@ -32,7 +32,10 @@ columns = ["id", "text"]
 
 
 def json_to_dataframe(spark_session, xs):
-    tuples = [tuple(json.loads(x.decode())) for x in xs]
+	try: # python2
+    	tuples = [tuple(json.loads(x.decode())) for x in xs]
+    except AttributeError: # python3
+    	tuples = [tuple(json.loads(x)) for x in xs]
     df = spark_session.createDataFrame(tuples, columns)
     return df
 
