@@ -1,8 +1,6 @@
 from __future__ import absolute_import, print_function
 import os
 import sys
-if sys.version_info >= (3, 0):
-    sys.exit(0)
 import requests
 import json
 import numpy as np
@@ -15,7 +13,7 @@ from pyspark.ml.feature import HashingTF, Tokenizer
 from pyspark.sql import SparkSession
 
 from test_utils import (create_docker_connection, BenchmarkException, headers,
-                        log_clipper_state)
+                        log_clipper_state, log_docker)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
 from clipper_admin.deployers.pyspark import deploy_pyspark_model
@@ -34,7 +32,10 @@ columns = ["id", "text"]
 
 
 def json_to_dataframe(spark_session, xs):
-    tuples = [tuple(json.loads(x)) for x in xs]
+    try:  # python2
+        tuples = [tuple(json.loads(x.decode())) for x in xs]
+    except AttributeError:  # python3
+        tuples = [tuple(json.loads(x)) for x in xs]
     df = spark_session.createDataFrame(tuples, columns)
     return df
 
@@ -164,7 +165,8 @@ def run_test():
                 raise BenchmarkException("Error querying APP %s, MODEL %s:%d" %
                                          (app_name, model_name, version))
         except BenchmarkException as e:
-            log_clipper_state()
+            log_docker(clipper_conn)
+            log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
             clipper_conn = create_docker_connection(
                 cleanup=True, start_clipper=False)
@@ -175,6 +177,7 @@ def run_test():
                 cleanup=True, start_clipper=False)
             logger.info("ALL TESTS PASSED")
     except Exception as e:
+        log_docker(clipper_conn)
         logger.exception("Exception")
         clipper_conn = create_docker_connection(
             cleanup=True, start_clipper=False)
