@@ -19,8 +19,12 @@ PYTORCH_MODEL_RELATIVE_PATH = "pytorch_model.pkl"
 
 
 def load_predict_func(file_path):
-    with open(file_path, 'r') as serialized_func_file:
-        return cloudpickle.load(serialized_func_file)
+    if sys.version_info < (3, 0):
+        with open(file_path, 'r') as serialized_func_file:
+            return cloudpickle.load(serialized_func_file)
+    else:
+        with open(file_path, 'rb') as serialized_func_file:
+            return cloudpickle.load(serialized_func_file)
 
 
 def load_pytorch_model(model_path, weights_path):

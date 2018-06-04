@@ -4,9 +4,11 @@ import tensorflow as tf
 import logging
 import os
 import glob
+import sys
 
 from ..version import __version__
 from .deployer_utils import save_python_function
+from ..exceptions import ClipperException
 from tensorflow import Session
 
 logger = logging.getLogger(__name__)
@@ -22,7 +24,7 @@ def create_endpoint(clipper_conn,
                     slo_micros=3000000,
                     labels=None,
                     registry=None,
-                    base_image="clipper/tf-container:{}".format(__version__),
+                    base_image="default",
                     num_replicas=1,
                     batch_size=-1,
                     pkgs_to_install=None):
@@ -96,19 +98,18 @@ def create_endpoint(clipper_conn,
     clipper_conn.link_model_to_app(name, name)
 
 
-def deploy_tensorflow_model(
-        clipper_conn,
-        name,
-        version,
-        input_type,
-        func,
-        tf_sess_or_saved_model_path,
-        base_image="clipper/tf-container:{}".format(__version__),
-        labels=None,
-        registry=None,
-        num_replicas=1,
-        batch_size=-1,
-        pkgs_to_install=None):
+def deploy_tensorflow_model(clipper_conn,
+                            name,
+                            version,
+                            input_type,
+                            func,
+                            tf_sess_or_saved_model_path,
+                            base_image="default",
+                            labels=None,
+                            registry=None,
+                            num_replicas=1,
+                            batch_size=-1,
+                            pkgs_to_install=None):
     """Deploy a Python prediction function with a Tensorflow session or saved Tensorflow model.
     Parameters
     ----------
@@ -232,7 +233,7 @@ def deploy_tensorflow_model(
                     logger.error(
                         "Tensorflow Model: %s not found or some files are missing"
                         % tf_sess_or_saved_model_path)
-                    raise Exception(
+                    raise ClipperException(
                         "Frozen Tensorflow Model: %s not found or some files are missing "
                         % tf_sess_or_saved_model_path)
         else:
@@ -254,9 +255,31 @@ def deploy_tensorflow_model(
             else:
                 logger.error("Tensorflow Model: %s not found" %
                              tf_sess_or_saved_model_path)
-                raise Exception("Frozen Tensorflow Model: %s not found " %
-                                tf_sess_or_saved_model_path)
+                raise ClipperException("Frozen Tensorflow Model: %s not found "
+                                       % tf_sess_or_saved_model_path)
         logger.info("TensorFlow model copied to: tfmodel ")
+
+    py_minor_version = (sys.version_info.major, sys.version_info.minor)
+    # Check if Python 2 or Python 3 image
+    if base_image == "default":
+        if py_minor_version < (3, 0):
+            logger.info("Using Python 2 base image")
+            base_image = "clipper/tf-container:{}".format(__version__)
+        elif py_minor_version == (3, 5):
+            logger.info("Using Python 3.5 base image")
+            base_image = "clipper/tf35-container:{}".format(__version__)
+        elif py_minor_version == (3, 6):
+            logger.info("Using Python 3.6 base image")
+            base_image = "clipper/tf36-container:{}".format(__version__)
+        else:
+            msg = (
+                "TensorFlow deployer only supports Python 2.7, 3.5, and 3.6. "
+                "Detected {major}.{minor}").format(
+                    major=sys.version_info.major, minor=sys.version_info.minor)
+            logger.error(msg)
+            # Remove temp files
+            shutil.rmtree(serialization_dir)
+            raise ClipperException(msg)
 
     # Deploy model
     clipper_conn.build_and_deploy_model(

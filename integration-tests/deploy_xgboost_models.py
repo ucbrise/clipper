@@ -1,7 +1,5 @@
 import os
 import sys
-if sys.version_info >= (3, 0):
-    sys.exit(0)
 import requests
 import json
 import numpy as np
