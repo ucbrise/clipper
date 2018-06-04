@@ -31,10 +31,15 @@ class RPCTestContainer(rpc.ModelContainerBase):
 if __name__ == "__main__":
     ip = "127.0.0.1"
     port = 7000
-    model_name = "rpctest_py"
     input_type = "doubles"
     model_version = 1
 
-    rpc_service = rpc.RPCService(collect_metrics=False)
+    rpc_service = rpc.RPCService(collect_metrics=False, read_config=False)
+    rpc_service.model_name = "rpctest_py"
+    rpc_service.model_version = 1
+    rpc_service.host = "127.0.0.1"
+    rpc_service.port = 7000
+    rpc_service.input_type = "doubles"
+
     model = RPCTestContainer(rpc_service)
-    rpc_service.start(model, ip, port, model_name, model_version, input_type)
+    rpc_service.start(model)
