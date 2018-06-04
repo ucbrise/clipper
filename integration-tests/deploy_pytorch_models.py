@@ -56,9 +56,11 @@ def parsedata(train_path, pos_label):
 
 
 def predict(model, xs):
-    preds = model(xs)
-    preds = [preds.data.numpy().tolist()[0]]
-    return [str(p) for p in preds]
+    preds = []
+    for x in xs:
+        p = model(x).data.numpy().tolist()[0]
+        preds.append(str(p))
+    return preds
 
 
 def deploy_and_test_model(clipper_conn,

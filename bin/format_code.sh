@@ -21,10 +21,8 @@ find ./src -not \( -path ./src/libs -prune \) -name '*pp' -print \
     | xargs clang-format -style=file -i
 
 # Run clang-format on Java files
-# find ./src -not \( -path ./src/libs -prune \) -name 'java' -print \
-#     | xargs clang-format -style=file -i
-
-find . -name '*.java' -print | xargs clang-format -style=file -i
+find ./src -not \( -path ./src/libs -prune \) -name '*.java' -print \
+    | xargs clang-format -style=file -i
 
 # Run Python formatter
 export PYTHONPATH=$CLIPPER_ROOT/bin/yapf
