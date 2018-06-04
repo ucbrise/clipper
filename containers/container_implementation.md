@@ -7,9 +7,19 @@ The connection lifecycle defines the socket construction, destruction, and state
 
 - Every session requires a distinct socket. When a session ends, a container must create a new socket in order to reconnect to Clipper.
 - Sessions are initiated and sustained by a heartbeating process. Containers send the first heartbeat message and wait until they receive a response from Clipper. The initial detection of a heartbeat response from Clipper marks the creation of a successful connection, and the loss of a heartbeat indicates that a connection is broken.
+
+## RPC Messages
+Model containers communicate with Clipper using RPC messages of several types. Each RPC message is a [multi-part ZeroMQ message](http://zguide.zeromq.org/php:chapter2#toc11) beginning with an [empty ZeroMQ frame](http://zguide.zeromq.org/php:chapter3#The-Simple-Reply-Envelope)
+
+### Versioning and inbound/outbound messages
+Messages that a container receives from Clipper are referred to as **inbound** messages, and messages that a container sends to Clipper are referred to as **outbound** messages.
+
+All inbound messages begin with an **RPC version tag**, represented as an unsigned, 32-bit integer. This version tag is the first part of the inbound message after the [empty delimiter frame](http://zguide.zeromq.org/php:chapter3#The-Simple-Reply-Envelope). Containers should ensure that the version tag matches the RPC version of their container and gracefully exit if a version discrepancy is detected.
+
+### The current RPC version is: 3
     
-### RPC Message Types 
-Model containers communicate with Clipper using RPC messages of several types. Each RPC message is a [multi-part ZeroMQ message](http://zguide.zeromq.org/php:chapter2#toc11) beginning with an [empty ZeroMQ frame](http://zguide.zeromq.org/php:chapter3#The-Simple-Reply-Envelope). Each message contains a **Message Type** field, encoded as an **unsigned integer**, that specifies one of the following types:
+### Message Types 
+Each message contains a **Message Type** field, encoded as an **unsigned integer**, that specifies one of the following types:
 
 * 0: *New container message*
 * 1: *Container content message*  
@@ -43,16 +53,26 @@ The following is an example construction of a *new container message* in Python:
 Once Clipper has registered a container, these content messages are exchanged between the container and Clipper in order to serve prediction requests. These messages contain serialized queries (from Clipper) or serialized responses (from the container). For more information on query-response serialization, see the "Serializing Prediction Requests" and "Serializing Prediction Responses" sections below. Beyond the required empty frame and **Message Type** field, *container content messages* contain the following strictly-ordered fields:
 
   * **Message Id**: A unique identifier, encoded as an unsigned integer, corresponding to the container content message. When handling a prediction request sent via a *container content message* from Clipper, the response *container content message* must specify the same **Message Id** as the request message. Clipper will use this identifier to correctly construct request-response pairs in order to return a query result.
-  * **Message Content**: Byte content representing either a serialized prediction request (in the case of inbound messages from Clipper) or a serialized prediction response (in the case of outbound messages from the container).
+  * **Multi-part Message Content**: A series of message parts containing byte content that represents either a serialized prediction request (in the case of inbound messages from Clipper) or a serialized prediction response (in the case of outbound messages from the container).
 
-The following is an example construction of a *container content message* corresponding to a prediction response in Python:
+The following is an example construction of a *container content message* in Python:
+    
+ ```py
+   socket.send("", zmq.SNDMORE) # Sends an empty frame and indicates that more content will follow
+   socket.send(struct.pack("<I", 1), zmq.SNDMORE) # Indicates that this is a container content message
+   socket.send(struct.pack("<I", <MESSAGE_ID>), zmq.SNDMORE)
+   for idx in range(len(container_content)):
+       serialized_content_part = container_content[idx]
+       if idx == len(container_content) - 1:
+           # Don't forget to remove the `SNDMORE` flag 
+           # if this is the last message part
+           flags = 0
+       else:
+           flags = zmq.SNDMORE
 
-  ```py  
-    socket.send("", zmq.SNDMORE) # Sends an empty frame and indicates that more content will follow
-    socket.send(struct.pack("<I", 1), zmq.SNDMORE) # Indicates that this is a container content message
-    socket.send(struct.pack("<I", <MESSAGE_ID>), zmq.SNDMORE)
-    socket.send(<SERIALIZED_MESSAGE_CONTENT_AS_BYTES>)
-  ```    
+       socket.send(serialized_content_part, flags)
+ ```
+ 
 #### Heartbeat Messages
 These messages are used for session initialization as well as maintenance. By sending and receiving heartbeats, containers are able to determine whether or not Clipper is still active and respond accordingly. Beyond the required empty frame and **Message Type** field, *heartbeat messages* contain the following strictly-ordered fields:
 
@@ -165,69 +185,26 @@ The container should then attempt to start a new session.
 - [clipper/containers/java/.../ModelContainer.java](https://github.com/ucbrise/clipper/blob/develop/containers/java/clipper-java-container/src/main/java/clipper/container/app/ModelContainer.java)
 
 ## Serialization Formats
-RPC requests sent from Clipper to model containers are divided into two categories: **Prediction Requests** and **Feedback Requests**. Additionally, responses are divided into two corresponding categories: **Prediction Responses** and **Feedback Responses**. Each request type has a specific serialization format that defines the container deserialization procedure.
+RPC requests sent from Clipper to model containers are divided into two categories: **Prediction Requests** and **Feedback Requests**. Each request type has a specific serialization format that defines the container deserialization procedure. Each **request** message has a corresponding **response** message with a well-defined serialization format.
 
-### Serializing Prediction Requests
-1. All requests begin with a 32-bit integer header, sent as a single ZeroMQ message. The value of this integer will be 0, indicating that the request is a prediction request.
+### Serializing Prediction Requests/Responses
 
-2. The second ZeroMQ message contains the size of the input header, in bytes, as a 32-bit integer. This is the size of the content of the third ZeroMQ message.
+Prediction requests are serialized in a similar fashion to prediction responses. The only difference is that prediction requests begin with an extra field.
 
-3. The third ZeroMQ message contains an input header. This is a list of 32-bit integers.
- * The input header begins with a 32-bit integer specifying the type of inputs contained in the request. This integer can assume values 0-4, as defined in point 2 of **Initializing a Connection**.
+1. **Prediction requests only:** Prediction requests begin with a request type header. The header is represented as a 32-bit unsigned integer sent as a single ZeroMQ message part. The value of this integer will be 0, indicating that the request is a prediction request.
+
+2. This is the **first** message part in a **prediction response** and the **second** message part in a **prediction request**. This message part consists of a 64-bit unsigned integer containing the length of the prediction request metadata header (defined in field **3**).
+
+3. The next ZeroMQ message part contains a metadata header. This is a list of 64-bit unsigned integers.
+    * The metadata header begins with a 64-bit unsigned integer specifying the type of prediction data contained in the request. This unsigned integer can assume values 0-4, as defined in the **RPC Messages** section under the **New Container Message** subheader.
  
- * The next 32-bit integer in the input header is the number of inputs included in the serialized content.
-
- * The remaining values in the input header correspond to the offsets at which the deserialized output should be split.
-   * For example, if the request contains three double vectors of size 500, the offsets will be `[500, 1000]`, indicating that the deserialized vector of 1500 doubles should be split into three vectors containing doubles 0-499, 500-999, and 1000-1499 respectively.
-   
-    * In the case of strings, the offset list is not relevant and should not be used.
-    
-4. The fourth ZeroMQ message contains the size of the input content, in bytes, as a 32-bit integer. This is the size of the content of the fifth ZeroMQ message.
-   
-5. The final ZeroMQ message contains the concatenation of all inputs, represented as a string of bytes. This string of bytes should be converted to an array of the type specified by the input header.
- * In the case of primitive inputs (types 0-3), deserialized inputs can then be obtained by splitting the typed array at the offsets specified in the input header.
-   * Python example:
-   
-  ```py  
-     raw_concatenated_content = socket.recv()
-     typed_inputs = np.frombuffer(raw_concatenated_content, dtype=<PRIMITIVE_INPUT_TYPE>)
-     inputs = np.split(typed_inputs, <OFFSETS_LIST>)
-  ```
+    * The next 64-bit unsigned integer in the metadata header is the number of prediction data items included in the serialized content.
  
- * In the case of string inputs (type 4), all strings are sent with trailing null terminators. Therefore, deserialized inputs can be obtaining by splitting the typed array along the null terminator character, `\0`.
-   * Python example:
-   
-  ```py
-     raw_concatenated_content = socket.recv()
-     # Split content based on trailing null terminators
-     # Ignore the extraneous final null terminator by using a -1 slice
-     inputs = np.array(raw_concatenated_content.split('\0')[:-1], dtype=np.string_)
-  ```
-     
-### Serializing Prediction Responses
-1. A response is a single ZeroMQ message that is parsed into subfields
+    * The remaining values in the metadata header correspond to the size, in bytes, of each subsequent prediction data item.
+ 
+4. The remaining message parts contain the request/response's prediction data. The number of remaining message parts is equivalent to the second element in the metadata header. The byte size of the `i`th remaining message is the `i + 2`th element of the metadata header.
 
-2. The message begins with a 32-bit unsigned integer indicating the number of serialized string outputs contained in the response. Denote this quantity by `N`.
+### Deserializing Prediction Requests/Responses
+The metadata header provides sufficient information for determining the prediction data type, the number of prediction data elements, and the size of each data element. This information can be used to receive the correct number of ZeroMQ messages and parse the byte content to obtain the appropriate data-type-specific representation. 
 
-3. Next, there are 'N' ordered 32-bit unsigned integers. The `i`th integer specifies the length of the `i`th string output.
-
-4. The remainder of the message contains the `N` string outputs, encoded in [UTF-8](https://en.wikipedia.org/wiki/UTF-8) format. 
-
-The following is an example of **Prediction Response** serialization in Python:
-
-  ```py
-     import struct
-     str1 = unicode("test1", "utf-8").encode("utf-8")
-     str2 = unicode("test2", "utf-8").encode("utf-8")
-     output_length_size_bytes = 4
-     num_output_size_bytes = 4
-     buf = bytearray(len(str1) + len(str2) + (2 * output_length_size_bytes) + num_output_size_bytes)
-     memview = memoryview(buf)
-     struct.pack_into("<I", buf, 0, 2) # Store the number of outputs in the buffer
-     struct.pack_into("<I", buf, 4, len(str1)) # Store the length of the first output
-     struct.pack_into("<I", buf, 8, len(str2)) # Store the length of the second output
-     memview[12:12 + len(str1)] = str1 # Store the first output
-     memview[12 + len(str1): 12 + len(str1) + len(str2)] = str2 # Store the second output
-  ```
-
-### For additional deserialization references, see [clipper/containers/python/rpc.py](https://github.com/ucbrise/clipper/blob/develop/containers/python/rpc.py)
+#### For additional deserialization references, see [clipper/containers/python/rpc.py](https://github.com/ucbrise/clipper/blob/develop/containers/python/rpc.py)
