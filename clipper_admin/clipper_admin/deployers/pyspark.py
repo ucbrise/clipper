@@ -83,7 +83,7 @@ def create_endpoint(
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
     batch_size : int, optional
         The user-defined query batch size for the model. Replicas of the model will attempt
-        to process at most `batch_size` queries simultaneously. They may process smaller 
+        to process at most `batch_size` queries simultaneously. They may process smaller
         batches if `batch_size` queries are not immediately available.
         If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
         replicas of this model.
@@ -156,7 +156,7 @@ def deploy_pyspark_model(
         :py:meth:`clipper.ClipperConnection.set_num_replicas`.
     batch_size : int, optional
         The user-defined query batch size for the model. Replicas of the model will attempt
-        to process at most `batch_size` queries simultaneously. They may process smaller 
+        to process at most `batch_size` queries simultaneously. They may process smaller
         batches if `batch_size` queries are not immediately available.
         If the default value of -1 is used, Clipper will adaptively calculate the batch size for individual
         replicas of this model.
@@ -166,17 +166,15 @@ def deploy_pyspark_model(
 
     Example
     -------
-    Define a pre-processing function ``shift()`` and to normalize prediction inputs::
+    Define a pre-processing function ``shift()`` to normalize prediction inputs::
 
         from clipper_admin import ClipperConnection, DockerContainerManager
         from clipper_admin.deployers.pyspark import deploy_pyspark_model
         from pyspark.mllib.classification import LogisticRegressionWithSGD
         from pyspark.sql import SparkSession
+        import numpy as np
 
-        spark = SparkSession\
-                .builder\
-                .appName("clipper-pyspark")\
-                .getOrCreate()
+        spark = SparkSession.builder.appName("example").getOrCreate()
 
         sc = spark.sparkContext
 
@@ -187,6 +185,10 @@ def deploy_pyspark_model(
 
         # Loading a training dataset omitted...
         model = LogisticRegressionWithSGD.train(trainRDD, iterations=10)
+
+        def shift(x):
+            return x - np.mean(x)
+
 
         # Note that this function accesses the trained PySpark model via an explicit
         # argument, but other state can be captured via closure capture if necessary.
