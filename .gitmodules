@@ -10,3 +10,6 @@
 [submodule "bin/yapf"]
 	path = bin/yapf
 	url = https://github.com/google/yapf.git
+[submodule "src/libs/dlib"]
+	path = src/libs/dlib
+	url = https://github.com/davisking/dlib/

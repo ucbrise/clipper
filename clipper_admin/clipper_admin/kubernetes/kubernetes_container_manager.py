@@ -17,6 +17,8 @@ import yaml
 import os
 import time
 
+CLIPPER_QUERY_FRONTEND_DEPLOYMENT_LABEL = "ai.clipper.name=query-frontend"
+
 logger = logging.getLogger(__name__)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -39,7 +41,9 @@ class KubernetesContainerManager(ContainerManager):
                  kubernetes_proxy_addr=None,
                  redis_ip=None,
                  redis_port=6379,
-                 useInternalIP=False):
+                 useInternalIP=False,
+                 namespace='default',
+                 create_namespace_if_not_exists=False):
         """
 
         Parameters
@@ -60,6 +64,14 @@ class KubernetesContainerManager(ContainerManager):
             throw an exception if none of the nodes have ExternalDNS.
             If ``useInternalIP`` is set to true, Clipper will use the Internal IP of the K8S node
             if no ExternalDNS exists for any of the nodes.
+        namespace: str, optional
+            The Kubernetes namespace to use .
+            If this argument is provided, all Clipper artifacts and resources will be created in this
+            k8s namespace. If not "default" namespace is used.
+        create_namespace_if_not_exists: bool, False
+            Create a k8s namespace if the namespace doesnt already exist.
+            If this argument is provided and the k8s namespace does not exist a new k8s namespace will
+            be created.
 
         Note
         ----
@@ -78,11 +90,34 @@ class KubernetesContainerManager(ContainerManager):
         self.redis_ip = redis_ip
         self.redis_port = redis_port
         self.useInternalIP = useInternalIP
-
         config.load_kube_config()
         configuration.assert_hostname = False
         self._k8s_v1 = client.CoreV1Api()
         self._k8s_beta = client.ExtensionsV1beta1Api()
+
+        # Check if namespace exists and if create flag set ...create the namespace or throw error
+        namespaces = []
+        for ns in self._k8s_v1.list_namespace().items:
+            namespaces.append(ns.metadata.name)
+
+        if namespace in namespaces:
+            self.k8s_namespace = namespace
+        elif create_namespace_if_not_exists:
+            body = client.V1Namespace()
+            body.metadata = client.V1ObjectMeta(name=namespace)
+            try:
+                self._k8s_v1.create_namespace(body)
+            except ApiException as e:
+                logging.error(
+                    "Exception creating Kubernetes namespace: {}".format(e))
+                raise ClipperException(
+                    "Could not create Kubernetes namespace. "
+                    "Reason: {}".format(e.reason))
+            self.k8s_namespace = namespace
+        else:
+            msg = "Error connecting to Kubernetes cluster. Namespace does not exist"
+            logger.error(msg)
+            raise ClipperException(msg)
 
     def start_clipper(self,
                       query_frontend_image,
@@ -100,7 +135,7 @@ class KubernetesContainerManager(ContainerManager):
                         open(
                             os.path.join(cur_dir,
                                          '{}-deployment.yaml'.format(name)))),
-                    namespace='default')
+                    namespace=self.k8s_namespace)
 
             with _pass_conflicts():
                 body = yaml.load(
@@ -108,7 +143,7 @@ class KubernetesContainerManager(ContainerManager):
                         os.path.join(cur_dir, '{}-service.yaml'.format(name))))
                 body["spec"]["ports"][0]["port"] = self.redis_port
                 self._k8s_v1.create_namespaced_service(
-                    body=body, namespace='default')
+                    body=body, namespace=self.k8s_namespace)
             time.sleep(10)
 
         for name, img in zip(['mgmt-frontend', 'query-frontend'],
@@ -145,7 +180,7 @@ class KubernetesContainerManager(ContainerManager):
                             'image'] = CLIPPER_FRONTEND_EXPORTER_IMAGE
 
                         self._k8s_beta.create_namespaced_deployment(
-                            body=body, namespace='default')
+                            body=body, namespace=self.k8s_namespace)
 
                         # Create single query frontend rpc service
                         # Don't confuse this with query frontend service, which
@@ -164,20 +199,21 @@ class KubernetesContainerManager(ContainerManager):
                                 query_frontend_id)
 
                         self._k8s_v1.create_namespaced_service(
-                            body=rpc_service_body, namespace='default')
+                            body=rpc_service_body,
+                            namespace=self.k8s_namespace)
 
                 else:
                     self._k8s_beta.create_namespaced_deployment(
-                        body=body, namespace='default')
+                        body=body, namespace=self.k8s_namespace)
 
             with _pass_conflicts():
                 body = yaml.load(
                     open(
                         os.path.join(cur_dir, '{}-service.yaml'.format(name))))
                 self._k8s_v1.create_namespaced_service(
-                    body=body, namespace='default')
+                    body=body, namespace=self.k8s_namespace)
 
-        start_prometheus(self._k8s_v1, self._k8s_beta)
+        start_prometheus(self._k8s_v1, self._k8s_beta, self.k8s_namespace)
 
         self.connect()
 
@@ -209,7 +245,7 @@ class KubernetesContainerManager(ContainerManager):
 
         try:
             mgmt_frontend_ports = self._k8s_v1.read_namespaced_service(
-                name="mgmt-frontend", namespace='default').spec.ports
+                name="mgmt-frontend", namespace=self.k8s_namespace).spec.ports
             for p in mgmt_frontend_ports:
                 if p.name == "1338":
                     self.clipper_management_port = p.node_port
@@ -217,7 +253,7 @@ class KubernetesContainerManager(ContainerManager):
                         self.clipper_management_port))
 
             query_frontend_ports = self._k8s_v1.read_namespaced_service(
-                name="query-frontend", namespace='default').spec.ports
+                name="query-frontend", namespace=self.k8s_namespace).spec.ports
             for p in query_frontend_ports:
                 if p.name == "1337":
                     self.clipper_query_port = p.node_port
@@ -226,8 +262,13 @@ class KubernetesContainerManager(ContainerManager):
                 elif p.name == "7000":
                     self.clipper_rpc_port = p.node_port
 
+            query_frontend_deployments = self._k8s_beta.list_namespaced_deployment(
+                namespace=self.k8s_namespace,
+                label_selector=CLIPPER_QUERY_FRONTEND_DEPLOYMENT_LABEL).items
+            self.num_frontend_replicas = len(query_frontend_deployments)
+
             metrics_ports = self._k8s_v1.read_namespaced_service(
-                name="metrics", namespace='default').spec.ports
+                name="metrics", namespace=self.k8s_namespace).spec.ports
             for p in metrics_ports:
                 if p.name == "9090":
                     self.clipper_metric_port = p.node_port
@@ -316,10 +357,10 @@ class KubernetesContainerManager(ContainerManager):
                     }
                 }
                 self._k8s_beta.create_namespaced_deployment(
-                    body=body, namespace='default')
+                    body=body, namespace=self.k8s_namespace)
 
                 while self._k8s_beta.read_namespaced_deployment_status(
-                    name=deployment_name, namespace='default').status.available_replicas \
+                    name=deployment_name, namespace=self.k8s_namespace).status.available_replicas \
                         != num_replicas:
                     time.sleep(3)
 
@@ -327,7 +368,7 @@ class KubernetesContainerManager(ContainerManager):
         deployment_name = get_model_deployment_name(
             name, version, query_frontend_id=0)
         response = self._k8s_beta.read_namespaced_deployment_scale(
-            name=deployment_name, namespace='default')
+            name=deployment_name, namespace=self.k8s_namespace)
 
         return response.spec.replicas
 
@@ -339,7 +380,7 @@ class KubernetesContainerManager(ContainerManager):
 
             self._k8s_beta.patch_namespaced_deployment_scale(
                 name=deployment_name,
-                namespace='default',
+                namespace=self.k8s_namespace,
                 body={
                     'spec': {
                         'replicas': num_replicas,
@@ -347,7 +388,7 @@ class KubernetesContainerManager(ContainerManager):
                 })
 
             while self._k8s_beta.read_namespaced_deployment_status(
-                name=deployment_name, namespace='default').status.available_replicas \
+                name=deployment_name, namespace=self.k8s_namespace).status.available_replicas \
                     != num_replicas:
                 time.sleep(3)
 
@@ -360,7 +401,7 @@ class KubernetesContainerManager(ContainerManager):
             logger.info("Created logging directory: %s" % logging_dir)
 
         for pod in self._k8s_v1.list_namespaced_pod(
-                namespace='default',
+                namespace=self.k8s_namespace,
                 label_selector=CLIPPER_DOCKER_LABEL).items:
             for i, c in enumerate(pod.status.container_statuses):
                 # log_file_name = "image_{image}:container_{id}.log".format(
@@ -374,7 +415,7 @@ class KubernetesContainerManager(ContainerManager):
                 with open(log_file, "w") as lf:
                     lf.write(
                         self._k8s_v1.read_namespaced_pod_log(
-                            namespace='default',
+                            namespace=self.k8s_namespace,
                             name=pod.metadata.name,
                             container=c.name))
                 log_files.append(log_file)
@@ -387,7 +428,7 @@ class KubernetesContainerManager(ContainerManager):
             for m in models:
                 for v in models[m]:
                     self._k8s_beta.delete_collection_namespaced_deployment(
-                        namespace='default',
+                        namespace=self.k8s_namespace,
                         label_selector="{label}:{val}".format(
                             label=CLIPPER_MODEL_CONTAINER_LABEL,
                             val=create_model_container_label(m, v)))
@@ -399,7 +440,7 @@ class KubernetesContainerManager(ContainerManager):
     def stop_all_model_containers(self):
         try:
             self._k8s_beta.delete_collection_namespaced_deployment(
-                namespace='default',
+                namespace=self.k8s_namespace,
                 label_selector=CLIPPER_MODEL_CONTAINER_LABEL)
         except ApiException as e:
             logger.warn(
@@ -411,32 +452,37 @@ class KubernetesContainerManager(ContainerManager):
 
         try:
             for service in self._k8s_v1.list_namespaced_service(
-                    namespace='default',
+                    namespace=self.k8s_namespace,
                     label_selector=CLIPPER_DOCKER_LABEL).items:
                 service_name = service.metadata.name
                 self._k8s_v1.delete_namespaced_service(
-                    namespace='default',
+                    namespace=self.k8s_namespace,
                     name=service_name,
                     body=V1DeleteOptions())
 
             self._k8s_beta.delete_collection_namespaced_deployment(
-                namespace='default', label_selector=CLIPPER_DOCKER_LABEL)
+                namespace=self.k8s_namespace,
+                label_selector=CLIPPER_DOCKER_LABEL)
 
             self._k8s_beta.delete_collection_namespaced_replica_set(
-                namespace='default', label_selector=CLIPPER_DOCKER_LABEL)
+                namespace=self.k8s_namespace,
+                label_selector=CLIPPER_DOCKER_LABEL)
 
             self._k8s_v1.delete_collection_namespaced_replication_controller(
-                namespace='default', label_selector=CLIPPER_DOCKER_LABEL)
+                namespace=self.k8s_namespace,
+                label_selector=CLIPPER_DOCKER_LABEL)
 
             self._k8s_v1.delete_collection_namespaced_pod(
-                namespace='default', label_selector=CLIPPER_DOCKER_LABEL)
+                namespace=self.k8s_namespace,
+                label_selector=CLIPPER_DOCKER_LABEL)
 
             self._k8s_v1.delete_collection_namespaced_pod(
-                namespace='default',
+                namespace=self.k8s_namespace,
                 label_selector=CLIPPER_MODEL_CONTAINER_LABEL)
 
             self._k8s_v1.delete_collection_namespaced_config_map(
-                namespace='default', label_selector=CLIPPER_DOCKER_LABEL)
+                namespace=self.k8s_namespace,
+                label_selector=CLIPPER_DOCKER_LABEL)
         except ApiException as e:
             logging.warn(
                 "Exception deleting kubernetes resources: {}".format(e))
@@ -449,7 +495,7 @@ class KubernetesContainerManager(ContainerManager):
             return ("{proxy_addr}/api/v1/namespaces/{ns}/"
                     "services/mgmt-frontend:{port}/proxy").format(
                         proxy_addr=self.kubernetes_proxy_addr,
-                        ns="default",
+                        ns=self.k8s_namespace,
                         port=CLIPPER_INTERNAL_MANAGEMENT_PORT)
 
         else:
@@ -462,7 +508,7 @@ class KubernetesContainerManager(ContainerManager):
             return ("{proxy_addr}/api/v1/namespaces/{ns}/"
                     "services/query-frontend:{port}/proxy").format(
                         proxy_addr=self.kubernetes_proxy_addr,
-                        ns="default",
+                        ns=self.k8s_namespace,
                         port=CLIPPER_INTERNAL_QUERY_PORT)
         else:
             return "{host}:{port}".format(
@@ -473,7 +519,7 @@ class KubernetesContainerManager(ContainerManager):
             return ("{proxy_addr}/api/v1/namespaces/{ns}/"
                     "services/metrics:{port}/proxy").format(
                         proxy_addr=self.kubernetes_proxy_addr,
-                        ns="default",
+                        ns=self.k8s_namespace,
                         port=CLIPPER_INTERNAL_METRIC_PORT)
         else:
             return "{host}:{port}".format(

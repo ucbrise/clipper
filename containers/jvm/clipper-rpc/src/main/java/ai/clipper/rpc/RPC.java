@@ -6,7 +6,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.IntBuffer;
+import java.nio.LongBuffer;
 import java.util.*;
 
 import ai.clipper.container.data.*;
@@ -16,17 +16,19 @@ import org.zeromq.ZMQ;
 
 public class RPC<I extends DataVector<?>> {
   private static String CONNECTION_ADDRESS = "tcp://%s:%s";
+  private static final long RPC_VERSION = 3;
   private static final long SOCKET_POLLING_TIMEOUT_MILLIS = 5000;
   private static final long SOCKET_ACTIVITY_TIMEOUT_MILLIS = 30000;
   private static final int EVENT_HISTORY_BUFFER_SIZE = 30;
-  private static final int BYTES_PER_INT = 4;
 
   private final DataVectorParser<?, I> inputVectorParser;
   private final RPCEventHistory eventHistory;
 
   private Thread servingThread;
-  private ByteBuffer responseBuffer;
-  private int responseBufferSize;
+  private ByteBuffer outputHeaderBuffer;
+  private ByteBuffer outputContentBuffer;
+  private int outputHeaderBufferSize;
+  private int outputContentBufferSize;
 
   public RPC(DataVectorParser<?, I> inputVectorParser) {
     this.inputVectorParser = inputVectorParser;
@@ -77,13 +79,21 @@ public class RPC<I extends DataVector<?>> {
     return eventHistory.getEvents();
   }
 
+  private void validateRpcVersion(long receivedVersion) throws Exception {
+    if (receivedVersion != RPC_VERSION) {
+      System.out.println(String.format(
+          "ERROR: Received a message with RPC version: %d that does not match container version: %d",
+          receivedVersion, RPC_VERSION));
+    }
+  }
+
   private void serveModel(ClipperModel<I> model, String modelName, int modelVersion,
       final ZMQ.Context context, String ip, int port)
       throws NoSuchFieldException, IllegalArgumentException {
     int inputHeaderBufferSize = 0;
-    int inputBufferSize = 0;
+    int inputContentBufferSize = 0;
     ByteBuffer inputHeaderBuffer = null;
-    ByteBuffer inputBuffer = null;
+    ByteBuffer inputContentBuffer = null;
     boolean connected = false;
     long lastActivityTimeMillis = 0;
     String clipperAddress = String.format(CONNECTION_ADDRESS, ip, port);
@@ -121,7 +131,16 @@ public class RPC<I extends DataVector<?>> {
         PerformanceTimer.startTiming();
         // Receive delimiter between routing identity and content
         socket.recv();
+        byte[] rpcVersionMessage = socket.recv();
         byte[] typeMessage = socket.recv();
+        List<Long> parsedVersionMessage = DataUtils.getUnsignedIntsFromBytes(rpcVersionMessage);
+        long rpcVersion = parsedVersionMessage.get(0);
+        try {
+          validateRpcVersion(rpcVersion);
+        } catch (Exception e) {
+          e.printStackTrace();
+          System.exit(1);
+        }
         List<Long> parsedTypeMessage = DataUtils.getUnsignedIntsFromBytes(typeMessage);
         ContainerMessageType messageType =
             ContainerMessageType.fromCode(parsedTypeMessage.get(0).intValue());
@@ -167,6 +186,7 @@ public class RPC<I extends DataVector<?>> {
               if (inputHeaderBuffer == null || inputHeaderBufferSize < inputHeaderSize) {
                 inputHeaderBufferSize = inputHeaderSize * 2;
                 inputHeaderBuffer = ByteBuffer.allocateDirect(inputHeaderBufferSize);
+                inputHeaderBuffer.order(ByteOrder.LITTLE_ENDIAN);
               }
               inputHeaderBuffer.rewind();
               inputHeaderBuffer.limit(inputHeaderBufferSize);
@@ -175,45 +195,42 @@ public class RPC<I extends DataVector<?>> {
               inputHeaderBuffer.rewind();
               inputHeaderBuffer.limit(inputHeaderBytesRead);
 
-              IntBuffer inputHeader =
-                  inputHeaderBuffer.slice().order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+              LongBuffer inputHeader =
+                  inputHeaderBuffer.slice().order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
 
-              byte[] inputContentSizeMessage = socket.recv();
-              List<Long> parsedInputContentSizeMessage =
-                  DataUtils.getLongsFromBytes(inputContentSizeMessage);
-              if (parsedInputContentSizeMessage.size() < 1) {
-                throw new NoSuchFieldException(
-                    "Input content size is missing from RPC predict request message");
+              DataType inputType = DataType.fromCode((int) inputHeader.get(0));
+              long numInputs = inputHeader.get(1);
+
+              int inputContentSizeBytes = 0;
+              for (int i = 0; i < numInputs; ++i) {
+                inputContentSizeBytes += inputHeader.get(i + 2);
               }
 
-              int inputContentSize = (int) ((long) parsedInputContentSizeMessage.get(0));
-              if (inputBufferSize < inputContentSize) {
-                inputBufferSize = inputContentSize * 2;
-                inputBuffer = ByteBuffer.allocateDirect(inputBufferSize);
+              if (inputContentBufferSize < inputContentSizeBytes) {
+                inputContentBufferSize = inputContentSizeBytes * 2;
+                inputContentBuffer = ByteBuffer.allocateDirect(inputContentBufferSize);
+                inputContentBuffer.order(ByteOrder.LITTLE_ENDIAN);
               }
-              inputBuffer.rewind();
-              inputBuffer.limit(inputBufferSize);
-              int inputBytesRead = socket.recvZeroCopy(inputBuffer, inputContentSize, -1);
-              inputBuffer.rewind();
-              inputBuffer.limit(inputBytesRead);
+              inputContentBuffer.rewind();
 
-              PerformanceTimer.logElapsed("Recv");
-
-              if (inputHeader.remaining() < 2) {
-                throw new NoSuchFieldException(
-                    "RPC message input header is missing or is of insufficient size");
+              ArrayList<I> inputs = new ArrayList<>();
+              int bufferPosition = 0;
+              for (int i = 0; i < numInputs; ++i) {
+                inputContentBuffer.position(bufferPosition);
+                int inputSizeBytes = (int) inputHeader.get(i + 2);
+                ByteBuffer inputBuffer = sliceOrdered(inputContentBuffer);
+                socket.recvZeroCopy(inputBuffer, inputSizeBytes, -1);
+                inputBuffer.position(0);
+                inputBuffer.limit(inputSizeBytes);
+                I input = inputVectorParser.constructDataVector(inputBuffer, inputSizeBytes);
+                inputs.add(input);
+                bufferPosition += inputSizeBytes;
               }
 
-              DataType inputType = DataType.fromCode(inputHeader.get());
-              int numInputs = inputHeader.get();
-              validateRequestInputType(model, inputType);
-              Iterator<I> dataVectors =
-                  inputVectorParser.parseDataVectors(inputBuffer.slice(), inputHeader.slice());
-
-              PerformanceTimer.logElapsed("Parse");
+              PerformanceTimer.logElapsed("Recv and Parse");
 
               try {
-                handlePredictRequest(msgId, dataVectors, model, socket);
+                handlePredictRequest(msgId, inputs, model, socket);
               } catch (IOException e) {
                 e.printStackTrace();
               }
@@ -236,6 +253,10 @@ public class RPC<I extends DataVector<?>> {
     }
   }
 
+  private ByteBuffer sliceOrdered(ByteBuffer buffer) {
+    return buffer.slice().order(ByteOrder.LITTLE_ENDIAN);
+  }
+
   private void validateRequestInputType(ClipperModel<I> model, DataType inputType)
       throws IllegalArgumentException {
     if (model.getInputType() != inputType) {
@@ -245,73 +266,89 @@ public class RPC<I extends DataVector<?>> {
     }
   }
 
-  private void handlePredictRequest(long msgId, Iterator<I> dataVectors, ClipperModel<I> model,
+  private void handlePredictRequest(long msgId, ArrayList<I> inputs, ClipperModel<I> model,
       ZMQ.Socket socket) throws IOException {
-    ArrayList<I> inputs = new ArrayList<>();
-    dataVectors.forEachRemaining(inputs::add);
     List<SerializableString> predictions = model.predict(inputs);
 
-    // TODO: check length of input and output lists match
+    if (predictions.size() != inputs.size()) {
+      String message =
+          String.format("Attempting to send %d outputs for a request containg %d inputs!",
+              predictions.size(), inputs.size());
+      throw new IllegalStateException(message);
+    }
 
-    // At minimum, the output contains an unsigned
-    // integer specifying the number of string
-    // outputs
-    int outputLenBytes = BYTES_PER_INT;
-    int maxBufferSizeBytes = BYTES_PER_INT;
+    long numOutputs = predictions.size();
+    int outputHeaderSizeBytes = (int) (numOutputs + 1) * Long.BYTES;
+    int outputContentMaxSizeBytes = 0;
     for (SerializableString p : predictions) {
-      // Add byte length corresponding to an
-      // integer containing the string's size
-      outputLenBytes += BYTES_PER_INT;
-      maxBufferSizeBytes += BYTES_PER_INT;
       // Add the maximum size of the string
       // with utf-8 encoding to the maximum buffer size.
       // The actual output length will be determined
       // when the string predictions are serialized
-      maxBufferSizeBytes += p.maxSizeBytes();
+      outputContentMaxSizeBytes += p.maxSizeBytes();
     }
 
-    if (responseBuffer == null || responseBufferSize < maxBufferSizeBytes) {
-      responseBufferSize = maxBufferSizeBytes * 2;
-      responseBuffer = ByteBuffer.allocateDirect(responseBufferSize);
-      responseBuffer.order(ByteOrder.LITTLE_ENDIAN);
+    if (outputHeaderBuffer == null || outputHeaderBufferSize < outputHeaderSizeBytes) {
+      outputHeaderBufferSize = outputHeaderSizeBytes * 2;
+      outputHeaderBuffer = ByteBuffer.allocateDirect(outputHeaderBufferSize);
+      outputHeaderBuffer.order(ByteOrder.LITTLE_ENDIAN);
     }
-    responseBuffer.rewind();
+    outputHeaderBuffer.rewind();
+    outputHeaderBuffer.limit(outputHeaderSizeBytes);
 
-    int numOutputs = predictions.size();
-    // Write the number of outputs to the buffer
-    responseBuffer.putInt(numOutputs);
-    int baseStringLengthsPosition = responseBuffer.position();
-    // We will begin writing data after the segment allocated
-    // for storing string lengths. Advance past this segment
-    // for now
-    responseBuffer.position(baseStringLengthsPosition + (BYTES_PER_INT * numOutputs));
-    for (int i = 0; i < predictions.size(); ++i) {
+    if (outputContentBuffer == null || outputContentBufferSize < outputContentMaxSizeBytes) {
+      outputContentBufferSize = outputContentMaxSizeBytes * 2;
+      outputContentBuffer = ByteBuffer.allocateDirect(outputContentBufferSize);
+      outputContentBuffer.order(ByteOrder.LITTLE_ENDIAN);
+    }
+    outputContentBuffer.rewind();
+
+    LongBuffer longHeader = outputHeaderBuffer.asLongBuffer();
+    longHeader.put(numOutputs);
+
+    // Create a list of buffers for individual outputs.
+    // These buffers will all be backed by `outputContentBuffer`
+    ByteBuffer[] outputBuffers = new ByteBuffer[(int) numOutputs];
+    int[] outputLengths = new int[(int) numOutputs];
+
+    int outputContentBufferPosition = 0;
+    for (int i = 0; i < predictions.size(); i++) {
+      outputContentBuffer.position(outputContentBufferPosition);
       SerializableString prediction = predictions.get(i);
-      // Serialize the prediction and write it to the output buffer
-      int serializedSize = prediction.encodeUTF8ToBuffer(responseBuffer);
-      outputLenBytes += serializedSize;
-      int currPosition = responseBuffer.position();
-      // Navigate to the buffer segment allocated for storing
-      // the length of the serialized string and write the length
-      // in this location
-      responseBuffer.position(baseStringLengthsPosition + (BYTES_PER_INT * i));
-      responseBuffer.putInt(serializedSize);
-      // Return to the position in the buffer where the next string
-      // should be written
-      responseBuffer.position(currPosition);
+      long outputLength = prediction.encodeUTF8ToBuffer(outputContentBuffer);
+      outputContentBuffer.position(outputContentBufferPosition);
+      ByteBuffer outputBuffer = outputContentBuffer.slice();
+      outputBuffer.order(ByteOrder.LITTLE_ENDIAN);
+      outputBuffer.limit((int) outputLength);
+      outputBuffers[i] = outputBuffer;
+      outputLengths[i] = (int) outputLength;
+      longHeader.put(outputLength);
+      outputContentBufferPosition += outputLength;
     }
-    responseBuffer.limit(outputLenBytes);
+    longHeader.rewind();
 
     socket.send("", ZMQ.SNDMORE);
     socket.send(
         DataUtils.getBytesFromInts(ContainerMessageType.ContainerContent.getCode()), ZMQ.SNDMORE);
-    ByteBuffer b = ByteBuffer.allocate(2 * BYTES_PER_INT);
-    b.order(ByteOrder.LITTLE_ENDIAN);
-    b.putLong(msgId);
-    b.position(BYTES_PER_INT);
-    byte[] msgIdByteArr = b.slice().array();
+    ByteBuffer msgIdBuf = ByteBuffer.allocate(Integer.BYTES);
+    msgIdBuf.order(ByteOrder.LITTLE_ENDIAN);
+    msgIdBuf.putInt((int) msgId);
+    byte[] msgIdByteArr = msgIdBuf.array();
+    ByteBuffer headerSizeBuf = ByteBuffer.allocate(Long.BYTES);
+    headerSizeBuf.order(ByteOrder.LITTLE_ENDIAN);
+    headerSizeBuf.putLong(outputHeaderSizeBytes);
+    byte[] headerSizeByteArr = headerSizeBuf.array();
     socket.send(msgIdByteArr, ZMQ.SNDMORE);
-    socket.sendZeroCopy(responseBuffer, responseBuffer.position(), 0);
+    socket.send(headerSizeByteArr, ZMQ.SNDMORE);
+    socket.sendZeroCopy(outputHeaderBuffer, outputHeaderSizeBytes, ZMQ.SNDMORE);
+    int lastOutputMsgNum = predictions.size() - 1;
+    for (int i = 0; i < predictions.size(); i++) {
+      if (i < lastOutputMsgNum) {
+        socket.sendZeroCopy(outputBuffers[i], outputLengths[i], ZMQ.SNDMORE);
+      } else {
+        socket.sendZeroCopy(outputBuffers[i], outputLengths[i], 0);
+      }
+    }
     eventHistory.insert(RPCEventType.SentContainerContent);
   }
 
@@ -329,7 +366,8 @@ public class RPC<I extends DataVector<?>> {
         DataUtils.getBytesFromInts(ContainerMessageType.NewContainer.getCode()), ZMQ.SNDMORE);
     socket.send(modelName, ZMQ.SNDMORE);
     socket.send(String.valueOf(modelVersion), ZMQ.SNDMORE);
-    socket.send(String.valueOf(model.getInputType().getCode()));
+    socket.send(String.valueOf(model.getInputType().getCode()), ZMQ.SNDMORE);
+    socket.send(DataUtils.getBytesFromLongs(RPC_VERSION), 0);
     eventHistory.insert(RPCEventType.SentContainerMetadata);
     System.out.println("Sent container metadata!");
   }

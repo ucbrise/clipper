@@ -1,9 +1,9 @@
 package ai.clipper.examples.serve;
 
 import ai.clipper.examples.container.NoOpModel;
-import ai.clipper.examples.container.NoOpStringModel;
 import ai.clipper.container.data.*;
 import ai.clipper.container.ClipperModel;
+import ai.clipper.examples.container.NoOpStringModel;
 import ai.clipper.rpc.RPC;
 
 import java.net.UnknownHostException;
