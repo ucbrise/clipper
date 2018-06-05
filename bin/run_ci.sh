@@ -7,6 +7,12 @@ set -o pipefail
 # Printout for timeout debug
 date
 
+echo "DON'T PANIC--------------------------------"
+echo "Jenkins don't test this"
+exit 1
+
+
+
 unset CDPATH
 # one-liner from http://stackoverflow.com/a/246128
 # Determines absolute path of the directory containing

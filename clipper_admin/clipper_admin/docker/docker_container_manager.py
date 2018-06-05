@@ -1,4 +1,7 @@
 from __future__ import absolute_import, division, print_function
+
+import socket
+
 import docker
 import logging
 import os
@@ -9,7 +12,7 @@ import json
 import tempfile
 from ..container_manager import (
     create_model_container_label, parse_model_container_label,
-    find_unbound_port, ContainerManager, CLIPPER_DOCKER_LABEL,
+    ContainerManager, CLIPPER_DOCKER_LABEL,
     CLIPPER_MODEL_CONTAINER_LABEL, CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL,
     CLIPPER_MGMT_FRONTEND_CONTAINER_LABEL, CLIPPER_INTERNAL_RPC_PORT,
     CLIPPER_INTERNAL_QUERY_PORT, CLIPPER_INTERNAL_MANAGEMENT_PORT,
@@ -132,12 +135,12 @@ class DockerContainerManager(ContainerManager):
         containers_in_cluster = self.docker_client.containers.list(
             filters={
                 'label':
-                ['ai.clipper.container.label={}'.format(self.cluster_name)]
+                ['{kye}={val}'.format(key=CLIPPER_DOCKER_LABEL, val=self.cluster_name)]
             })
         if len(containers_in_cluster) > 0:
             raise ClipperException(
                 "Cluster {} cannot be started because it already exists. "
-                "Please use clipper_conn.connect() to connect to it.".format(
+                "Please use ClipperConnection.connect() to connect to it.".format(
                     self.cluster_name))
 
         if not self.external_redis:
@@ -190,7 +193,7 @@ class DockerContainerManager(ContainerManager):
         self.clipper_rpc_port = find_unbound_port(self.clipper_rpc_port)
         query_labels = self.common_labels.copy()
         query_labels[CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL] = ""
-        query_labels[CLIPPER_DOCKER_PORT_LABELS['query_query']] = str(
+        query_labels[CLIPPER_DOCKER_PORT_LABELS['query_rest']] = str(
             self.clipper_query_port)
         query_labels[CLIPPER_DOCKER_PORT_LABELS['query_rpc']] = str(
             self.clipper_rpc_port)
@@ -240,7 +243,7 @@ class DockerContainerManager(ContainerManager):
         containers = self.docker_client.containers.list(
             filters={
                 'label':
-                ['ai.clipper.container.label={}'.format(self.cluster_name)]
+                ['{key}={val}'.format(key=CLIPPER_DOCKER_LABEL, val=self.cluster_name)]
             })
         all_labels = {}
         for container in containers:
@@ -250,7 +253,7 @@ class DockerContainerManager(ContainerManager):
         self.clipper_management_port = all_labels[CLIPPER_DOCKER_PORT_LABELS[
             'management']]
         self.clipper_query_port = all_labels[CLIPPER_DOCKER_PORT_LABELS[
-            'query_query']]
+            'query_rest']]
         self.clipper_rpc_port = all_labels[CLIPPER_DOCKER_PORT_LABELS[
             'query_rpc']]
         self.prometheus_port = all_labels[CLIPPER_DOCKER_PORT_LABELS['metric']]
@@ -443,3 +446,47 @@ class DockerContainerManager(ContainerManager):
     def get_metric_addr(self):
         return "{host}:{port}".format(
             host=self.public_hostname, port=self.prometheus_port)
+
+
+def find_unbound_port(start=None,
+                      increment=True,
+                      port_range=(10000, 50000),
+                      verbose=False,
+                      logger=None):
+    """
+    Find a unbound port.
+
+    Parameters
+    ----------
+    start : int
+        The port number to start with. If this port is unbounded, return this port.
+        If None, start will be a random port.
+    increment : bool
+        If True, find port by incrementing start port; else, random search.
+    port_range : tuple
+        The range of port for random number generation
+    verbose : bool
+        Verbose flag for logging
+    logger: logging.Logger
+    """
+    while True:
+        if not start:
+            start = random.randint(*port_range)
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            sock.bind(("127.0.0.1", start))
+            # Make sure we clean up after binding
+            del sock
+            return start
+        except socket.error as e:
+            if verbose and logger:
+                logger.info("Socket error: {}".format(e))
+                logger.info(
+                    "randomly generated port %d is bound. Trying again." %
+                    start)
+
+        if increment:
+            start += 1
+        else:
+            start = random.randint(*port_range)

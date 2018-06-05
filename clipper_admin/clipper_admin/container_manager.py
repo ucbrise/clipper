@@ -1,7 +1,5 @@
 import abc
 from .exceptions import ClipperException
-import random
-import socket
 import logging
 
 # Constants
@@ -21,7 +19,7 @@ CONTAINERLESS_MODEL_IMAGE = "NO_CONTAINER"
 
 CLIPPER_DOCKER_PORT_LABELS = {
     'redis': 'ai.clipper.redis.port',
-    'query_query': 'ai.clipper.query_frontend.query.port',
+    'query_rest': 'ai.clipper.query_frontend.query.port',
     'query_rpc': 'ai.clipper.query_frontend.rpc.port',
     'management': 'ai.clipper.management.port',
     'metric': 'ai.clipper.metric.port'
@@ -60,50 +58,6 @@ def parse_model_container_label(label):
         raise ClipperException(
             "Unable to parse model container label {}".format(label))
     return splits
-
-
-def find_unbound_port(start=None,
-                      increment=True,
-                      port_range=(34256, 50000),
-                      verbose=False,
-                      logger=None):
-    """
-    Fina a unbound port.
-
-    Parameters
-    ----------
-    start : int
-        The port number to start with. If this port is unbounded, return this port.
-        If None, start will be a random port.
-    increment : bool
-        If True, find port by incrementing start port; else, random search.
-    port_range : tuple
-        The range of port for random number generation
-    verbose : bool
-        Verbose flag for logging
-    logger: logging.Logger
-    """
-    while True:
-        if not start:
-            start = random.randint(*port_range)
-
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            sock.bind(("127.0.0.1", start))
-            # Make sure we clean up after binding
-            del sock
-            return start
-        except socket.error as e:
-            if verbose and logger:
-                logger.info("Socket error: {}".format(e))
-                logger.info(
-                    "randomly generated port %d is bound. Trying again." %
-                    start)
-
-        if increment:
-            start += 1
-        else:
-            start = random.randint(*port_range)
 
 
 class ContainerManager(object):

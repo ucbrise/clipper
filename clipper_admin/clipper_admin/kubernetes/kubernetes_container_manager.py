@@ -131,9 +131,6 @@ class KubernetesContainerManager(ContainerManager):
             loader=jinja2.FileSystemLoader(cur_dir, followlinks=True),
             undefined=jinja2.StrictUndefined)
 
-        self.logger = ClusterAdapter(logger, {
-            'cluster_name': self.cluster_name
-        })
 
         # Check if namespace exists and if create flag set ...create the namespace or throw error
         namespaces = []
@@ -158,6 +155,14 @@ class KubernetesContainerManager(ContainerManager):
             msg = "Error connecting to Kubernetes cluster. Namespace does not exist"
             logger.error(msg)
             raise ClipperException(msg)
+
+        cluster_identifier = "{ns}{cluster}".format(
+            ns=self.k8s_namespace+'/' if self.k8s_namespace != "default" else "",
+            cluster=self.cluster_name
+        )
+        self.logger = ClusterAdapter(logger, {
+            'cluster_name': cluster_identifier
+        })
 
     def start_clipper(self,
                       query_frontend_image,
@@ -196,21 +201,21 @@ class KubernetesContainerManager(ContainerManager):
 
     def _start_mgmt(self, mgmt_image):
         with _pass_conflicts():
-            mgmt_depolyment_data = self._generate_config(
+            mgmt_deployment_data = self._generate_config(
                 CONFIG_FILES['management']['deployment'],
                 image=mgmt_image,
                 redis_service_host=self.redis_ip,
                 redis_service_port=self.redis_port,
                 cluster_name=self.cluster_name)
             self._k8s_beta.create_namespaced_deployment(
-                body=mgmt_depolyment_data, namespace='default')
+                body=mgmt_deployment_data, namespace=self.k8s_namespace)
 
         with _pass_conflicts():
             mgmt_service_data = self._generate_config(
                 CONFIG_FILES['management']['service'],
                 cluster_name=self.cluster_name)
             self._k8s_v1.create_namespaced_service(
-                body=mgmt_service_data, namespace=self.namespace)
+                body=mgmt_service_data, namespace=self.k8s_namespace)
 
     def _start_query(self, query_image, cache_size, num_replicas):
         for query_frontend_id in range(num_replicas):
@@ -242,7 +247,7 @@ class KubernetesContainerManager(ContainerManager):
                 CONFIG_FILES['query']['service']['query'],
                 cluster_name=self.cluster_name)
             self._k8s_v1.create_namespaced_service(
-                body=query_frontend_service_data, namespace=self.namespace)
+                body=query_frontend_service_data, namespace=self.k8s_namespace)
 
     def _start_prometheus(self):
         with _pass_conflicts():
