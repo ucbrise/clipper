@@ -198,38 +198,38 @@ def deploy_pytorch_model(clipper_conn,
         serialized_model = serialize_object(pytorch_model)
         with open(torch_model_save_loc, "wb") as serialized_model_file:
             serialized_model_file.write(serialized_model)
+        logger.info("Torch model saved")
+
+        py_minor_version = (sys.version_info.major, sys.version_info.minor)
+        # Check if Python 2 or Python 3 image
+        if base_image == "default":
+            if py_minor_version < (3, 0):
+                logger.info("Using Python 2 base image")
+                base_image = "clipper/pytorch-container:{}".format(__version__)
+            elif py_minor_version == (3, 5):
+                logger.info("Using Python 3.5 base image")
+                base_image = "clipper/pytorch35-container:{}".format(__version__)
+            elif py_minor_version == (3, 6):
+                logger.info("Using Python 3.6 base image")
+                base_image = "clipper/pytorch36-container:{}".format(__version__)
+            else:
+                msg = ("PyTorch deployer only supports Python 2.7, 3.5, and 3.6. "
+                    "Detected {major}.{minor}").format(
+                        major=sys.version_info.major,
+                        minor=sys.version_info.minor)
+                logger.error(msg)
+                # Remove temp files
+                shutil.rmtree(serialization_dir)
+                raise ClipperException(msg)
+
+        # Deploy model
+        clipper_conn.build_and_deploy_model(
+            name, version, input_type, serialization_dir, base_image, labels,
+            registry, num_replicas, batch_size, pkgs_to_install)
 
     except Exception as e:
         raise ClipperException("Error saving torch model: %s" % e)
 
-    logger.info("Torch model saved")
-
-    py_minor_version = (sys.version_info.major, sys.version_info.minor)
-    # Check if Python 2 or Python 3 image
-    if base_image == "default":
-        if py_minor_version < (3, 0):
-            logger.info("Using Python 2 base image")
-            base_image = "clipper/pytorch-container:{}".format(__version__)
-        elif py_minor_version == (3, 5):
-            logger.info("Using Python 3.5 base image")
-            base_image = "clipper/pytorch35-container:{}".format(__version__)
-        elif py_minor_version == (3, 6):
-            logger.info("Using Python 3.6 base image")
-            base_image = "clipper/pytorch36-container:{}".format(__version__)
-        else:
-            msg = ("PyTorch deployer only supports Python 2.7, 3.5, and 3.6. "
-                   "Detected {major}.{minor}").format(
-                       major=sys.version_info.major,
-                       minor=sys.version_info.minor)
-            logger.error(msg)
-            # Remove temp files
-            shutil.rmtree(serialization_dir)
-            raise ClipperException(msg)
-
-    # Deploy model
-    clipper_conn.build_and_deploy_model(
-        name, version, input_type, serialization_dir, base_image, labels,
-        registry, num_replicas, batch_size, pkgs_to_install)
 
     # Remove temp files
     shutil.rmtree(serialization_dir)
