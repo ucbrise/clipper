@@ -42,8 +42,15 @@ def deploy_and_test_model(clipper_conn,
                           version,
                           link_model=False,
                           predict_fn=predict):
-    deploy_mxnet_model(clipper_conn, model_name, version, "integers",
-                       predict_fn, model, data_shapes)
+    deploy_mxnet_model(
+        clipper_conn,
+        model_name,
+        version,
+        "integers",
+        predict_fn,
+        model,
+        data_shapes,
+        batch_size=1)
 
     time.sleep(5)
 
@@ -135,8 +142,14 @@ if __name__ == "__main__":
                 version,
                 link_model=True)
             app_and_model_name = "easy-register-app-model"
-            create_endpoint(clipper_conn, app_and_model_name, "integers",
-                            predict, mxnet_model, train_data_shape)
+            create_endpoint(
+                clipper_conn,
+                app_and_model_name,
+                "integers",
+                predict,
+                mxnet_model,
+                train_data_shape,
+                batch_size=1)
             test_model(clipper_conn, app_and_model_name, 1)
 
         except BenchmarkException:

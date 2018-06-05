@@ -139,20 +139,38 @@ class ModelQueue {
 
   std::vector<PredictTask> get_batch(
       std::shared_ptr<ModelContainer> requesting_container,
-      std::function<int(Deadline)> &&get_batch_size) {
+      std::function<BatchSizeInfo(Deadline)> &&get_batch_size) {
     std::unique_lock<std::mutex> lock(queue_mutex_);
     remove_tasks_with_elapsed_deadlines();
     queue_not_empty_condition_.wait(lock, [this]() { return !queue_.empty(); });
     remove_tasks_with_elapsed_deadlines();
+
     std::vector<PredictTask> batch;
     if (requesting_container->is_active()) {
       Deadline deadline = queue_.top().first;
-      int max_batch_size = get_batch_size(deadline);
-      while (batch.size() < (size_t)max_batch_size && queue_.size() > 0) {
+
+      size_t max_batch_size;
+      BatchSizeDeterminationMethod method;
+      std::tie(max_batch_size, method) = get_batch_size(deadline);
+
+      while (batch.size() < max_batch_size && queue_.size() > 0) {
         batch.push_back(queue_.top().second);
         queue_.pop();
       }
+      size_t batch_differential = max_batch_size - batch.size();
+      if (batch_differential > 0 &&
+          method == BatchSizeDeterminationMethod::Exploration) {
+        // Artificially inject queries to create
+        // a full batch
+        //
+        // Create a copy of the last task in the batch and make it artifical
+        PredictTask last_task = batch.back();
+        last_task.artificial_ = true;
+
+        std::fill_n(std::back_inserter(batch), batch_differential, last_task);
+      }
     }
+
     lock.unlock();
     if (!queue_.empty()) {
       queue_not_empty_condition_.notify_one();
@@ -195,12 +213,14 @@ class InflightMessage {
   InflightMessage(
       const std::chrono::time_point<std::chrono::system_clock> send_time,
       const int container_id, const VersionedModelId model,
-      const int replica_id, const std::shared_ptr<PredictionData> input)
+      const int replica_id, const std::shared_ptr<PredictionData> input,
+      const bool discard_result)
       : send_time_(std::move(send_time)),
         container_id_(container_id),
         model_(std::move(model)),
         replica_id_(replica_id),
-        input_(std::move(input)) {}
+        input_(std::move(input)),
+        discard_result_(discard_result) {}
 
   // Default copy and move constructors
   InflightMessage(const InflightMessage &) = default;
@@ -215,6 +235,7 @@ class InflightMessage {
   VersionedModelId model_;
   int replica_id_;
   std::shared_ptr<PredictionData> input_;
+  bool discard_result_;
 };
 
 class TaskExecutor {
@@ -323,6 +344,7 @@ class TaskExecutor {
             }
             active_containers_->register_batch_size(vm, batch_size);
 
+            EstimatorFittingThreadPool::create_queue(vm, replica_id);
             TaskExecutionThreadPool::create_queue(vm, replica_id);
             TaskExecutionThreadPool::submit_job(
                 vm, replica_id, [this, vm, replica_id]() {
@@ -493,7 +515,7 @@ class TaskExecutor {
       for (auto b : batch) {
         prediction_request.add_input(b.input_);
         cur_batch.emplace_back(current_time, container->container_id_, b.model_,
-                               container->replica_id_, b.input_);
+                               container->replica_id_, b.input_, b.artificial_);
         query_ids_in_batch << b.query_id_ << " ";
       }
       int message_id = rpc_->send_message(prediction_request.serialize(),
@@ -524,7 +546,7 @@ class TaskExecutor {
         rpc::PredictionResponse::deserialize_prediction_response(
             std::move(response.second));
     assert(parsed_response.outputs_.size() == keys.size());
-    int batch_size = keys.size();
+    size_t batch_size = keys.size();
     throughput_meter_->mark(batch_size);
     std::chrono::time_point<std::chrono::system_clock> current_time =
         std::chrono::system_clock::now();
@@ -533,7 +555,7 @@ class TaskExecutor {
       const VersionedModelId &cur_model = first_message.model_;
       const int cur_replica_id = first_message.replica_id_;
       auto batch_latency = current_time - first_message.send_time_;
-      long batch_latency_micros =
+      long long batch_latency_micros =
           std::chrono::duration_cast<std::chrono::microseconds>(batch_latency)
               .count();
 
@@ -544,7 +566,8 @@ class TaskExecutor {
       std::shared_ptr<ModelContainer> processing_container =
           active_containers_->get_model_replica(cur_model, cur_replica_id);
 
-      processing_container->update_throughput(batch_size, batch_latency_micros);
+      processing_container->add_processing_datapoint(batch_size,
+                                                     batch_latency_micros);
 
       boost::optional<ModelMetrics> cur_model_metric;
       auto cur_model_metric_entry = model_metrics_.find(cur_model);
@@ -556,12 +579,13 @@ class TaskExecutor {
         (*cur_model_metric).num_predictions_->increment(batch_size);
         (*cur_model_metric).batch_size_->insert(batch_size);
       }
-      for (int batch_num = 0; batch_num < batch_size; ++batch_num) {
+      for (size_t batch_num = 0; batch_num < batch_size; ++batch_num) {
         InflightMessage completed_msg = keys[batch_num];
-
-        cache_->put(completed_msg.model_, completed_msg.input_,
-                    Output{parsed_response.outputs_[batch_num],
-                           {completed_msg.model_}});
+        if (!completed_msg.discard_result_) {
+          cache_->put(completed_msg.model_, completed_msg.input_,
+                      Output{parsed_response.outputs_[batch_num],
+                             {completed_msg.model_}});
+        }
         auto task_latency = current_time - completed_msg.send_time_;
         long task_latency_micros =
             std::chrono::duration_cast<std::chrono::microseconds>(task_latency)

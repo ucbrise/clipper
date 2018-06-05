@@ -97,8 +97,9 @@ TEST(ModelQueueTests, TestGetBatchQueueNotEmpty) {
   model_queue.add_task(task_b);
   model_queue.add_task(task_c);
 
-  std::vector<PredictTask> tasks =
-      model_queue.get_batch(result, [](Deadline) { return 3; });
+  std::vector<PredictTask> tasks = model_queue.get_batch(result, [](Deadline) {
+    return std::make_pair(3, BatchSizeDeterminationMethod::Default);
+  });
 
   // Because we added tasks a through c in alphabetical
   // order with the same latency slos, we expect the model
@@ -126,8 +127,9 @@ TEST(ModelQueueTests, TestGetBatchOrdersByEarliestDeadline) {
   model_queue.add_task(task_b);
   model_queue.add_task(task_c);
 
-  std::vector<PredictTask> tasks =
-      model_queue.get_batch(result, [](Deadline) { return 3; });
+  std::vector<PredictTask> tasks = model_queue.get_batch(result, [](Deadline) {
+    return std::make_pair(3, BatchSizeDeterminationMethod::Default);
+  });
 
   // Because we added tasks a through c in alphabetical
   // order with the same latency slos, we expect the model
@@ -155,8 +157,9 @@ TEST(ModelQueueTests, TestGetBatchRemovesTasksWithElapsedDeadline) {
   model_queue.add_task(task_b);
   model_queue.add_task(task_c);
 
-  std::vector<PredictTask> tasks =
-      model_queue.get_batch(result, [](Deadline) { return 3; });
+  std::vector<PredictTask> tasks = model_queue.get_batch(result, [](Deadline) {
+    return std::make_pair(3, BatchSizeDeterminationMethod::Default);
+  });
 
   ASSERT_EQ(tasks.size(), (size_t)1);
   ASSERT_EQ(tasks[0].query_id_, task_c.query_id_);

@@ -345,7 +345,8 @@ class PredictTask {
   ~PredictTask() = default;
 
   PredictTask(std::shared_ptr<PredictionData> input, VersionedModelId model,
-              float utility, QueryId query_id, long latency_slo_micros);
+              float utility, QueryId query_id, long latency_slo_micros,
+              bool artificial = false);
 
   PredictTask(const PredictTask &other) = default;
 
@@ -361,6 +362,7 @@ class PredictTask {
   QueryId query_id_;
   long latency_slo_micros_;
   std::chrono::time_point<std::chrono::system_clock> recv_time_;
+  bool artificial_;
 };
 
 /// NOTE: If a feedback task is scheduled, the task scheduler
