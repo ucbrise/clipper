@@ -267,12 +267,14 @@ FeedbackQuery::FeedbackQuery(std::string label, long user_id, Feedback feedback,
 
 PredictTask::PredictTask(std::shared_ptr<PredictionData> input,
                          VersionedModelId model, float utility,
-                         QueryId query_id, long latency_slo_micros)
+                         QueryId query_id, long latency_slo_micros,
+                         bool artificial)
     : input_(std::move(input)),
       model_(std::move(model)),
       utility_(utility),
       query_id_(query_id),
-      latency_slo_micros_(latency_slo_micros) {}
+      latency_slo_micros_(latency_slo_micros),
+      artificial_(artificial) {}
 
 FeedbackTask::FeedbackTask(Feedback feedback, VersionedModelId model,
                            QueryId query_id, long latency_slo_micros)

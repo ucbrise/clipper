@@ -249,15 +249,20 @@ build_images () {
 
     # Build Clipper core images
     create_image lib_base ClipperLibBaseDockerfile $private
+
     # Build the rest in parallel
     create_image query_frontend QueryFrontendDockerfile $public &
     create_image management_frontend ManagementFrontendDockerfile $public &
     create_image dev ClipperDevDockerfile  $public &
     create_image py35-dev ClipperPy35DevDockerfile  $public &
+    wait
+
+    # The test images depend on the dev images, so wait until
+    # the dev images have been built.
+
     create_image unittests ClipperTestsDockerfile  $private &
     create_image py35tests ClipperPy35TestsDockerfile  $private &
     wait
-
 
     # Build containers for other languages
     create_image spark-scala-container SparkScalaContainerDockerfile $public &
