@@ -456,7 +456,9 @@ class KubernetesContainerManager(ContainerManager):
                     label_selector=CLIPPER_DOCKER_LABEL).items:
                 service_name = service.metadata.name
                 self._k8s_v1.delete_namespaced_service(
-                    namespace=self.k8s_namespace, name=service_name)
+                    namespace=self.k8s_namespace,
+                    name=service_name,
+                    body=V1DeleteOptions())
 
             self._k8s_beta.delete_collection_namespaced_deployment(
                 namespace=self.k8s_namespace,
