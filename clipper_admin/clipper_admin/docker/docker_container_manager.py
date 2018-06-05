@@ -12,8 +12,8 @@ import json
 import tempfile
 from ..container_manager import (
     create_model_container_label, parse_model_container_label,
-    ContainerManager, CLIPPER_DOCKER_LABEL,
-    CLIPPER_MODEL_CONTAINER_LABEL, CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL,
+    ContainerManager, CLIPPER_DOCKER_LABEL, CLIPPER_MODEL_CONTAINER_LABEL,
+    CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL,
     CLIPPER_MGMT_FRONTEND_CONTAINER_LABEL, CLIPPER_INTERNAL_RPC_PORT,
     CLIPPER_INTERNAL_QUERY_PORT, CLIPPER_INTERNAL_MANAGEMENT_PORT,
     CLIPPER_INTERNAL_METRIC_PORT, CLIPPER_INTERNAL_REDIS_PORT,
@@ -134,14 +134,16 @@ class DockerContainerManager(ContainerManager):
 
         containers_in_cluster = self.docker_client.containers.list(
             filters={
-                'label':
-                ['{kye}={val}'.format(key=CLIPPER_DOCKER_LABEL, val=self.cluster_name)]
+                'label': [
+                    '{kye}={val}'.format(
+                        key=CLIPPER_DOCKER_LABEL, val=self.cluster_name)
+                ]
             })
         if len(containers_in_cluster) > 0:
             raise ClipperException(
                 "Cluster {} cannot be started because it already exists. "
-                "Please use ClipperConnection.connect() to connect to it.".format(
-                    self.cluster_name))
+                "Please use ClipperConnection.connect() to connect to it.".
+                format(self.cluster_name))
 
         if not self.external_redis:
             self.logger.info("Starting managed Redis instance in Docker")
@@ -242,8 +244,10 @@ class DockerContainerManager(ContainerManager):
         """
         containers = self.docker_client.containers.list(
             filters={
-                'label':
-                ['{key}={val}'.format(key=CLIPPER_DOCKER_LABEL, val=self.cluster_name)]
+                'label': [
+                    '{key}={val}'.format(
+                        key=CLIPPER_DOCKER_LABEL, val=self.cluster_name)
+                ]
             })
         all_labels = {}
         for container in containers:

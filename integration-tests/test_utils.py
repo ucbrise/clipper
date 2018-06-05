@@ -146,7 +146,9 @@ def create_kubernetes_connection(cleanup=False,
     if start_clipper:
         logger.info("Starting up Kubernetes Cluster {}".format(new_name))
         cm = KubernetesContainerManager(
-            cluster_name=new_name, kubernetes_proxy_addr=kubernetes_proxy_addr, namespace=namespace)
+            cluster_name=new_name,
+            kubernetes_proxy_addr=kubernetes_proxy_addr,
+            namespace=namespace)
         cl = ClipperConnection(cm)
         cl.start_clipper(
             query_frontend_image=

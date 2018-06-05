@@ -131,7 +131,6 @@ class KubernetesContainerManager(ContainerManager):
             loader=jinja2.FileSystemLoader(cur_dir, followlinks=True),
             undefined=jinja2.StrictUndefined)
 
-
         # Check if namespace exists and if create flag set ...create the namespace or throw error
         namespaces = []
         for ns in self._k8s_v1.list_namespace().items:
@@ -157,9 +156,9 @@ class KubernetesContainerManager(ContainerManager):
             raise ClipperException(msg)
 
         cluster_identifier = "{ns}{cluster}".format(
-            ns=self.k8s_namespace+'/' if self.k8s_namespace != "default" else "",
-            cluster=self.cluster_name
-        )
+            ns=self.k8s_namespace + '/'
+            if self.k8s_namespace != "default" else "",
+            cluster=self.cluster_name)
         self.logger = ClusterAdapter(logger, {
             'cluster_name': cluster_identifier
         })
