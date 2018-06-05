@@ -14,7 +14,10 @@ import argparse
 
 def predict(addr, filename):
     url = "http://%s/image-example/predict" % addr
-    req_json = json.dumps({"input": base64.b64encode(open(filename, "rb").read()).decode()})
+    req_json = json.dumps({
+        "input":
+        base64.b64encode(open(filename, "rb").read()).decode()
+    })
     headers = {'Content-type': 'application/json'}
     start = datetime.now()
     r = requests.post(url, headers=headers, data=req_json)
@@ -33,7 +36,6 @@ def image_size(img):
     return [size]
 
 
-
 # Stop Clipper on Ctrl-C
 def signal_handler(signal, frame):
     print("Stopping Clipper...")
@@ -45,7 +47,8 @@ def signal_handler(signal, frame):
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal_handler)
 
-    parser = argparse.ArgumentParser(description='Use Clipper to Query Images.')
+    parser = argparse.ArgumentParser(
+        description='Use Clipper to Query Images.')
     parser.add_argument('image', nargs='+', help='Path to an image')
     imgs = parser.parse_args().image
 
