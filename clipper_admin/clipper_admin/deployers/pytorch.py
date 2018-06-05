@@ -196,11 +196,11 @@ def deploy_pytorch_model(clipper_conn,
     try:
         torch.save(pytorch_model.state_dict(), torch_weights_save_loc)
         serialized_model = serialize_object(pytorch_model)
-        with open(torch_model_save_loc, "w") as serialized_model_file:
+        with open(torch_model_save_loc, "wb") as serialized_model_file:
             serialized_model_file.write(serialized_model)
 
     except Exception as e:
-        logger.warn("Error saving torch model: %s" % e)
+        raise ClipperException("Error saving torch model: %s" % e)
 
     logger.info("Torch model saved")
 

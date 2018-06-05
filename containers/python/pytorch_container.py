@@ -28,8 +28,12 @@ def load_predict_func(file_path):
 
 
 def load_pytorch_model(model_path, weights_path):
-    with open(model_path, 'r') as serialized_model_file:
-        model = cloudpickle.load(serialized_model_file)
+    if sys.version_info < (3, 0):
+        with open(model_path, 'r') as serialized_model_file:
+            model = cloudpickle.load(serialized_model_file)
+    else:
+        with open(model_path, 'rb') as serialized_model_file:
+            model = cloudpickle.load(serialized_model_file)
 
     model.load_state_dict(torch.load(weights_path))
     return model
