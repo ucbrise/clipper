@@ -1,7 +1,5 @@
 import os
 import sys
-if sys.version_info >= (3, 0):
-    sys.exit(0)
 import requests
 import json
 import numpy as np
@@ -39,6 +37,7 @@ def deploy_and_test_model(clipper_conn,
         version,
         "integers",
         predict_fn,
+        batch_size=1,
         pkgs_to_install=['xgboost'])
     time.sleep(5)
 
