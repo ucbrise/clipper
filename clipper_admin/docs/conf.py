@@ -200,3 +200,5 @@ def setup(app):
     #     'enable_auto_doc_ref': True,
     # }, True)
     # app.add_transform(AutoStructify)
+
+autodoc_mock_imports = ['mxnet', 'tensorflow', 'torch', 'pyspark']
