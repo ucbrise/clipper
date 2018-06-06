@@ -518,9 +518,10 @@ class KubernetesContainerManager(ContainerManager):
     def get_admin_addr(self):
         if self.use_k8s_proxy:
             return ("{proxy_addr}/api/v1/namespaces/{ns}/"
-                    "services/mgmt-frontend:{port}/proxy").format(
+                    "services/mgmt-frontend-at-{cluster}:{port}/proxy").format(
                         proxy_addr=self.kubernetes_proxy_addr,
                         ns=self.k8s_namespace,
+                        cluster=self.cluster_name,
                         port=CLIPPER_INTERNAL_MANAGEMENT_PORT)
 
         else:
@@ -531,9 +532,10 @@ class KubernetesContainerManager(ContainerManager):
     def get_query_addr(self):
         if self.use_k8s_proxy:
             return ("{proxy_addr}/api/v1/namespaces/{ns}/"
-                    "services/query-frontend:{port}/proxy").format(
+                    "services/query-frontend-at-{cluster}:{port}/proxy").format(
                         proxy_addr=self.kubernetes_proxy_addr,
                         ns=self.k8s_namespace,
+                        cluster=self.cluster_name,
                         port=CLIPPER_INTERNAL_QUERY_PORT)
         else:
             return "{host}:{port}".format(
@@ -542,9 +544,10 @@ class KubernetesContainerManager(ContainerManager):
     def get_metric_addr(self):
         if self.use_k8s_proxy:
             return ("{proxy_addr}/api/v1/namespaces/{ns}/"
-                    "services/metrics:{port}/proxy").format(
+                    "services/metrics-at-{cluster}:{port}/proxy").format(
                         proxy_addr=self.kubernetes_proxy_addr,
                         ns=self.k8s_namespace,
+                        cluster=self.cluster_name,
                         port=CLIPPER_INTERNAL_METRIC_PORT)
         else:
             return "{host}:{port}".format(
