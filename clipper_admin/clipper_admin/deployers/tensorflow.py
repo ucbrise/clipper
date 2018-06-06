@@ -43,7 +43,8 @@ def create_endpoint(clipper_conn,
     func : function
         The prediction function. Any state associated with the function will be
         captured via closure capture and pickled with Cloudpickle.
-    tf_sess : The Tensorflow Session to save or path to an existing saved model.
+    tf_sess : tensorflow.python.client.session.Session
+        The Tensorflow Session to save or path to an existing saved model.
     default_output : str, optional
         The default output for the application. The default output will be returned whenever
         an application is unable to receive a response from a model within the specified
@@ -111,6 +112,7 @@ def deploy_tensorflow_model(clipper_conn,
                             batch_size=-1,
                             pkgs_to_install=None):
     """Deploy a Python prediction function with a Tensorflow session or saved Tensorflow model.
+    
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
@@ -155,6 +157,8 @@ def deploy_tensorflow_model(clipper_conn,
 
     Example
     -------
+    Save and deploy a tensorflow session::
+
         from clipper_admin import ClipperConnection, DockerContainerManager
         from clipper_admin.deployers.tensorflow import deploy_tensorflow_model
 
@@ -168,12 +172,12 @@ def deploy_tensorflow_model(clipper_conn,
             return [str(p) for p in preds]
 
         deploy_tensorflow_model(
-        clipper_conn,
-        model_name,
-        version,
-        input_type,
-        predict_fn,
-        sess)
+            clipper_conn,
+            model_name,
+            version,
+            input_type,
+            predict_fn,
+            sess)
 
     """
     # save predict function

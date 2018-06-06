@@ -165,17 +165,15 @@ def deploy_pyspark_model(clipper_conn,
 
     Example
     -------
-    Define a pre-processing function ``shift()`` and to normalize prediction inputs::
+    Define a pre-processing function ``shift()`` to normalize prediction inputs::
 
         from clipper_admin import ClipperConnection, DockerContainerManager
         from clipper_admin.deployers.pyspark import deploy_pyspark_model
         from pyspark.mllib.classification import LogisticRegressionWithSGD
         from pyspark.sql import SparkSession
+        import numpy as np
 
-        spark = SparkSession\
-                .builder\
-                .appName("clipper-pyspark")\
-                .getOrCreate()
+        spark = SparkSession.builder.appName("example").getOrCreate()
 
         sc = spark.sparkContext
 
@@ -186,6 +184,10 @@ def deploy_pyspark_model(clipper_conn,
 
         # Loading a training dataset omitted...
         model = LogisticRegressionWithSGD.train(trainRDD, iterations=10)
+
+        def shift(x):
+            return x - np.mean(x)
+
 
         # Note that this function accesses the trained PySpark model via an explicit
         # argument, but other state can be captured via closure capture if necessary.

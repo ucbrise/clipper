@@ -33,6 +33,7 @@ def create_endpoint(clipper_conn,
                     pkgs_to_install=None):
     """Registers an app and deploys the provided predict function with PyTorch model as
     a Clipper model.
+
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
@@ -113,6 +114,7 @@ def deploy_pytorch_model(clipper_conn,
                          batch_size=-1,
                          pkgs_to_install=None):
     """Deploy a Python function with a PyTorch model.
+
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
@@ -157,7 +159,8 @@ def deploy_pytorch_model(clipper_conn,
 
     Example
     -------
-
+    Define a pytorch nn module and save the model::
+    
         from clipper_admin import ClipperConnection, DockerContainerManager
         from clipper_admin.deployers.pytorch import deploy_pytorch_model
         from torch import nn
@@ -166,19 +169,19 @@ def deploy_pytorch_model(clipper_conn,
 
         # Connect to an already-running Clipper cluster
         clipper_conn.connect()
+        model = nn.Linear(1, 1)
 
-        model = nn.Linear(1,1)
-
-        #define a shift function to normalize prediction inputs
+        # Define a shift function to normalize prediction inputs
         def predict(model, inputs):
             pred = model(shift(inputs))
             pred = pred.data.numpy()
             return [str(x) for x in pred]
 
+
         deploy_pytorch_model(
             clipper_conn,
             name="example",
-            version = 1,
+            version=1,
             input_type="doubles",
             func=predict,
             pytorch_model=model)
