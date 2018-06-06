@@ -531,12 +531,13 @@ class KubernetesContainerManager(ContainerManager):
 
     def get_query_addr(self):
         if self.use_k8s_proxy:
-            return ("{proxy_addr}/api/v1/namespaces/{ns}/"
-                    "services/query-frontend-at-{cluster}:{port}/proxy").format(
-                        proxy_addr=self.kubernetes_proxy_addr,
-                        ns=self.k8s_namespace,
-                        cluster=self.cluster_name,
-                        port=CLIPPER_INTERNAL_QUERY_PORT)
+            return (
+                "{proxy_addr}/api/v1/namespaces/{ns}/"
+                "services/query-frontend-at-{cluster}:{port}/proxy").format(
+                    proxy_addr=self.kubernetes_proxy_addr,
+                    ns=self.k8s_namespace,
+                    cluster=self.cluster_name,
+                    port=CLIPPER_INTERNAL_QUERY_PORT)
         else:
             return "{host}:{port}".format(
                 host=self.external_node_hosts[0], port=self.clipper_query_port)
