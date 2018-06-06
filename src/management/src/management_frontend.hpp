@@ -53,7 +53,8 @@ const std::string ADD_APPLICATION = ADMIN_PATH + "/add_app$";
 const std::string DELETE_APPLICATION = ADMIN_PATH + "/delete_app$";
 const std::string ADD_MODEL_LINKS = ADMIN_PATH + "/add_model_links$";
 const std::string ADD_MODEL = ADMIN_PATH + "/add_model$";
-const std::string DELETE_UNLINKED_MODEL = ADMIN_PATH + "/delete_unlinked_model$";
+const std::string DELETE_UNLINKED_MODEL =
+    ADMIN_PATH + "/delete_unlinked_model$";
 const std::string SET_MODEL_VERSION = ADMIN_PATH + "/set_model_version$";
 
 // const std::string ADD_CONTAINER = ADMIN_PATH + "/add_container$";
@@ -274,7 +275,8 @@ class RequestHandler {
           try {
             clipper::log_info(LOGGING_TAG_MANAGEMENT_FRONTEND,
                               "Delete unlnked model POST request");
-            std::string result = delete_unlinked_model(request->content.string());
+            std::string result =
+                delete_unlinked_model(request->content.string());
             respond_http(result, "200 OK", response);
           } catch (const json_parse_error& e) {
             std::string err_msg =
