@@ -195,8 +195,10 @@ To file a bug or request a feature, please file a GitHub issue. Pull requests ar
 + [Corey Zumar](https://github.com/Corey-Zumar)
 + [Joey Gonzalez](https://github.com/jegonzal)
 + [Alexey Tumanov](https://github.com/atumanov)
++ [Eyal Sela](https://github.com/EyalSel)
 + [Simon Mo](https://github.com/simon-mo)
 + [Rehan Durrani](https://github.com/RehanSD)
++ [Eric Sheng](https://github/com/es1024)
 
 You can contact us at <clipper-dev@googlegroups.com>
 
