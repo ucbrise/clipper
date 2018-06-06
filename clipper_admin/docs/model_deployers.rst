@@ -130,24 +130,9 @@ For MXNet, Clipper will serialize the model using ``mxnet_model.save_checkpoint(
 .. autofunction:: clipper_admin.deployers.mxnet.create_endpoint
 
 
-PyTorch->ONNX->Caffe2 Models
-----------------------------
-.. warning::
-    ONNX support is experimental. The model container might not be stable. As of 0.3 release, we expect the Caffe2 backend will function with some limitation. 
-
-Similar to the PySpark deployer, this deployer provides a small extension to the Python closure deployer
-to allow you to deploy Python functions that include PyTorch models deployed with the higher-performance
-Caffe2 backend.
-
-This module currently takes a PyTorch model, saves it to ONNX files, and serves it using Caffe2. 
-
-.. autofunction:: clipper_admin.deployers.onnx.deploy_pytorch_model
-.. autofunction:: clipper_admin.deployers.onnx.create_pytorch_endpoint
-
-
 Create Your Own Container
 -------------------------
 
 If none of the provided model deployers will meet your needs, you will need to create your own model container.
 
-[Tutorial on building your own model container](http://clipper.ai/tutorials/custom_model_container).
+`Tutorial on building your own model container <http://clipper.ai/tutorials/custom_model_container>`_
