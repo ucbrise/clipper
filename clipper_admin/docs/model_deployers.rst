@@ -135,4 +135,4 @@ Create Your Own Container
 
 If none of the provided model deployers will meet your needs, you will need to create your own model container.
 
-[Tutorial on building your own model container](http://clipper.ai/tutorials/custom_model_container).
+`Tutorial on building your own model container <http://clipper.ai/tutorials/custom_model_container>`_
