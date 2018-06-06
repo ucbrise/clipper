@@ -1,1 +1,6 @@
 clipper_admin/
+torch
+torchvision
+tensorflow
+pyspark
+mxnet
