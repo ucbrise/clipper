@@ -182,11 +182,27 @@ if __name__ == "__main__":
             conf = conf['Model Container']
             prefix = 'clipper_{}_'.format(conf.pop('prefix'))
             for name, spec in conf.items():
-                name = prefix + name
-                if spec['type'] == 'Histogram' or spec['type'] == 'Summary':
-                    name += '_sum'
-                res = get_matched_query(metric_api_addr, name)
-                parse_res_and_assert_node(res, node_num=2)
+
+                retry_count = MAX_RETRY
+                while retry_count:
+                    try:
+                        name = prefix + name
+                        if spec['type'] == 'Histogram' or spec['type'] == 'Summary':
+                            name += '_sum'
+                        res = get_matched_query(metric_api_addr, name)
+                        parse_res_and_assert_node(res, node_num=2)
+                        retry_count = 0
+                    except AssertionError as e:
+                        logger.info(
+                            "Exception noted. Will retry again in 10 seconds.")
+                        logger.info(e)
+                        retry_count -= 1
+                        if retry_count == 0:  # a.k.a. the last retry
+                            raise e
+                        else:
+                            time.sleep(10)
+                            pass  # try again.
+
             logger.info("Test 2 Passed")
             # End Metric Check
             if not os.path.exists(CLIPPER_TEMP_DIR):
