@@ -12,8 +12,8 @@ from test_utils import create_kubernetes_connection, create_docker_connection, C
 
 
 def test(kubernetes):
-    conn_1 = create('multi-tenancy-test-cluster-1', use_kubernetes=kubernetes)
-    conn_2 = create('multi-tenancy-test-cluster-2', use_kubernetes=kubernetes)
+    conn_1 = create('multi-tenancy-1', use_kubernetes=kubernetes)
+    conn_2 = create('multi-tenancy-2', use_kubernetes=kubernetes)
 
     deploy_(conn_1, use_kubernetes=kubernetes)
     deploy_(conn_2, use_kubernetes=kubernetes)

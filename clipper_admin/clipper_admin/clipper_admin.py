@@ -80,7 +80,7 @@ class ClipperConnection(object):
         self.cm = container_manager
 
         self.logger = ClusterAdapter(logger, {
-            'cluster_name': self.cm.cluster_name
+            'cluster_name': self.cm.cluster_identifier
         })
 
     def start_clipper(

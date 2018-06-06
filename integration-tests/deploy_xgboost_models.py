@@ -83,7 +83,7 @@ if __name__ == "__main__":
     pos_label = 3
 
     import random
-    cluster_name = "xgboost-cluster-{}".format(random.randint(0, 5000))
+    cluster_name = "xg-{}".format(random.randint(0, 5000))
     try:
         clipper_conn = create_docker_connection(
             cleanup=False, start_clipper=True, new_name=cluster_name)

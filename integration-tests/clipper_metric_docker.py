@@ -87,7 +87,7 @@ if __name__ == '__main__':
 
     logger.info("Start Metric Test (0/1): Running 2 Replicas")
 
-    cluster_name = "metric-docker-cluster-{}".format(random.randint(0, 50000))
+    cluster_name = "metric-d-{}".format(random.randint(0, 50000))
     clipper_conn = create_docker_connection(
         cleanup=False, start_clipper=True, new_name=cluster_name)
     python_deployer.create_endpoint(
@@ -119,7 +119,8 @@ if __name__ == '__main__':
         logger.info("Test 2 Passed")
 
         logger.info("Metric Test Done, Cleaning up...")
-        create_docker_connection(cleanup=True, cleanup_name=cluster_name)
+        create_docker_connection(
+            cleanup=True, start_clipper=False, cleanup_name=cluster_name)
     except Exception as e:
         log_docker_ps(clipper_conn)
         logger.error(e)

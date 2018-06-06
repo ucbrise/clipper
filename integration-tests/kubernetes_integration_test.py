@@ -149,7 +149,7 @@ if __name__ == "__main__":
         # Test without proxy first
         import random
 
-        cluster_name = "k8s-test-cluster-{}".format(random.randint(0, 5000))
+        cluster_name = "k8-{}".format(random.randint(0, 5000))
 
         clipper_conn = create_kubernetes_connection(
             cleanup=False,

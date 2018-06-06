@@ -94,12 +94,11 @@ def create_and_test_app(clipper_conn, name, num_models):
 
 
 if __name__ == "__main__":
-    num_apps = 6
-    num_models = 8
+    num_apps = 2
+    num_models = 3
 
     import random
-    cluster_name = "many-app-many-models-cluster-{}".format(
-        random.randint(0, 5000))
+    cluster_name = "many-app-{}".format(random.randint(0, 5000))
 
     try:
         if len(sys.argv) > 1:

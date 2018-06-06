@@ -138,7 +138,7 @@ def check_target_health(metric_addr):
 
 if __name__ == "__main__":
     import random
-    cluster_name = 'metric-k8s-cluster-{}'.format(random.randint(0, 5000))
+    cluster_name = 'metric-k8s-{}'.format(random.randint(0, 5000))
     try:
         clipper_conn = create_kubernetes_connection(
             new_name=cluster_name, cleanup=False, start_clipper=True)

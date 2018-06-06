@@ -97,7 +97,7 @@ if __name__ == "__main__":
     pos_label = 3
 
     import random
-    cluster_name = "mxnet-cluster-{}".format(random.randint(0, 5000))
+    cluster_name = "mxnet-{}".format(random.randint(0, 5000))
     try:
         clipper_conn = create_docker_connection(
             new_name=cluster_name, cleanup=False, start_clipper=True)

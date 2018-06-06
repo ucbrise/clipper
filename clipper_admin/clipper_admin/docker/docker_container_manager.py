@@ -68,6 +68,7 @@ class DockerContainerManager(ContainerManager):
             :py:meth:`docker.client.containers.run`.
         """
         self.cluster_name = cluster_name
+        self.cluster_identifier = cluster_name  # For logging purpose
         self.public_hostname = docker_ip_address
         self.clipper_query_port = clipper_query_port
         self.clipper_management_port = clipper_management_port
@@ -106,7 +107,7 @@ class DockerContainerManager(ContainerManager):
         self.extra_container_kwargs.update(container_args)
 
         self.logger = ClusterAdapter(logger, {
-            'cluster_name': self.cluster_name
+            'cluster_name': self.cluster_identifier
         })
 
     def start_clipper(self,
@@ -135,7 +136,7 @@ class DockerContainerManager(ContainerManager):
         containers_in_cluster = self.docker_client.containers.list(
             filters={
                 'label': [
-                    '{kye}={val}'.format(
+                    '{key}={val}'.format(
                         key=CLIPPER_DOCKER_LABEL, val=self.cluster_name)
                 ]
             })
@@ -222,6 +223,8 @@ class DockerContainerManager(ContainerManager):
             'w', suffix='.yml', delete=False).name
         self.prom_config_path = os.path.realpath(
             self.prom_config_path)  # resolve symlink
+        self.logger.info("Metric Configuration Saved at {path}".format(
+            path=self.prom_config_path))
         setup_metric_config(query_frontend_metric_name, self.prom_config_path,
                             CLIPPER_INTERNAL_METRIC_PORT)
 
@@ -453,7 +456,7 @@ class DockerContainerManager(ContainerManager):
 
 
 def find_unbound_port(start=None,
-                      increment=True,
+                      increment=False,
                       port_range=(10000, 50000),
                       verbose=False,
                       logger=None):

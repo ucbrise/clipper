@@ -64,8 +64,8 @@ def find_unbound_port():
                 "randomly generated port %d is bound. Trying again." % port)
 
 
-def create_docker_connection(cleanup=True,
-                             start_clipper=True,
+def create_docker_connection(cleanup=False,
+                             start_clipper=False,
                              cleanup_name='default-cluster',
                              new_name='default-cluster'):
     logger.info("Creating DockerContainerManager")
@@ -148,7 +148,8 @@ def create_kubernetes_connection(cleanup=False,
         cm = KubernetesContainerManager(
             cluster_name=new_name,
             kubernetes_proxy_addr=kubernetes_proxy_addr,
-            namespace=namespace)
+            namespace=namespace,
+            create_namespace_if_not_exists=True)
         cl = ClipperConnection(cm)
         cl.start_clipper(
             query_frontend_image=

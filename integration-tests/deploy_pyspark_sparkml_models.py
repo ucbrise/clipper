@@ -115,7 +115,7 @@ if __name__ == "__main__":
     pos_label = 3
 
     import random
-    cluster_name = "pyspark-ml-cluster-{}".format(random.randint(0, 5000))
+    cluster_name = "sparkml-{}".format(random.randint(0, 5000))
     try:
         spark = SparkSession\
                 .builder\

@@ -581,8 +581,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
 
 
 class ClipperManagerTestCaseLong(unittest.TestCase):
-    cluster_name = "admin-test-long-cluster-{}".format(
-        random.randint(0, 50000))
+    cluster_name = "admin-l-{}".format(random.randint(0, 50000))
 
     @classmethod
     def setUpClass(self):
@@ -915,5 +914,5 @@ if __name__ == '__main__':
         for test in LONG_TEST_ORDERING:
             suite.addTest(ClipperManagerTestCaseLong(test))
 
-    result = unittest.TextTestRunner(verbosity=2).run(suite)
+    result = unittest.TextTestRunner(verbosity=2, failfast=True).run(suite)
     sys.exit(not result.wasSuccessful())

@@ -76,6 +76,11 @@ class KubernetesContainerManager(ContainerManager):
         cluster_name : str
             A unique name for this Clipper cluster. This can be used to run multiple Clipper
             clusters on the same Kubernetes cluster without interfering with each other.
+            Kubernetes cluster name must follow Kubernetes label value naming rule, namely:
+            Valid label values must be 63 characters or less and must be empty or begin and end with
+            an alphanumeric character ([a-z0-9A-Z]) with dashes (-), underscores (_), dots (.),
+            and alphanumerics between. See more at:
+            https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
         kubernetes_proxy_addr : str, optional
             The proxy address if you are proxying connections locally using ``kubectl proxy``.
             If this argument is provided, Clipper will construct the appropriate proxy
@@ -151,16 +156,16 @@ class KubernetesContainerManager(ContainerManager):
                     "Reason: {}".format(e.reason))
             self.k8s_namespace = namespace
         else:
-            msg = "Error connecting to Kubernetes cluster. Namespace does not exist"
+            msg = "Error connecting to Kubernetes cluster. Namespace does not exist. You can pass in KubernetesContainerManager(create_namespace_if_not_exists=True) to crate this namespcae"
             logger.error(msg)
             raise ClipperException(msg)
 
-        cluster_identifier = "{ns}{cluster}".format(
+        self.cluster_identifier = "{ns}{cluster}".format(
             ns=self.k8s_namespace + '/'
             if self.k8s_namespace != "default" else "",
             cluster=self.cluster_name)
         self.logger = ClusterAdapter(logger, {
-            'cluster_name': cluster_identifier
+            'cluster_name': self.cluster_identifier
         })
 
     def start_clipper(self,
@@ -296,7 +301,7 @@ class KubernetesContainerManager(ContainerManager):
                     external_node_hosts.append(addr.address)
 
         if len(external_node_hosts) == 0:
-            msg = "Error connecting to Kubernetes cluster. No external node addresses found"
+            msg = "Error connecting to Kubernetes cluster. No external node addresses found. If you are running Kubernetes locally, you can pass in KubernetesContainerManager(useInternalIP=True) to connect to local Kubernetes cluster"
             self.logger.error(msg)
             raise ClipperException(msg)
 
@@ -309,7 +314,7 @@ class KubernetesContainerManager(ContainerManager):
             mgmt_frontend_ports = self._k8s_v1.read_namespaced_service(
                 name="mgmt-frontend-at-{cluster_name}".format(
                     cluster_name=self.cluster_name),
-                namespace=sekf.k8s_namespace).spec.ports
+                namespace=self.k8s_namespace).spec.ports
             for p in mgmt_frontend_ports:
                 if p.name == "1338":
                     self.clipper_management_port = p.node_port
