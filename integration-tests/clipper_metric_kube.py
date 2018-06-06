@@ -240,4 +240,9 @@ if __name__ == "__main__":
             sys.exit(1)
     except Exception as e:
         logger.exception("Exception: {}".format(e))
+        create_kubernetes_connection(
+            cleanup=True,
+            start_clipper=False,
+            connect=False,
+            cleanup_name=cluster_name)
         sys.exit(1)
