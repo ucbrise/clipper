@@ -2,11 +2,11 @@
 title: "Using the Rclipper package"
 author: "Corey Zumar"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{Using the Rclipper package}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+output:
+  md_document: default
+  rmarkdown::html_vignette: default
+vignette: |
+  \VignetteIndexEntry{Using the Rclipper package} \VignetteEngine{knitr::rmarkdown} \VignetteEncoding{UTF-8}
 ---
 
 ## Rclipper
