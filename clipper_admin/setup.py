@@ -4,9 +4,6 @@ import os
 with open('README.rst') as f:
     readme = f.read()
 
-with open('LICENSE.txt') as f:
-    license = f.read()
-
 with open(os.path.abspath("clipper_admin/VERSION.txt"), "r") as fp:
     version = fp.read().strip()
 
@@ -18,7 +15,7 @@ setup(
     maintainer='Dan Crankshaw',
     maintainer_email='crankshaw@cs.berkeley.edu',
     url='http://clipper.ai',
-    license=license,
+    license='Apache-2.0',
     packages=[
         "clipper_admin", "clipper_admin.docker", "clipper_admin.kubernetes",
         "clipper_admin.deployers", "clipper_admin.metrics"
