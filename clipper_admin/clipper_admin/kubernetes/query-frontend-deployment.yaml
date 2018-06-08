@@ -32,7 +32,7 @@ spec:
         - containerPort: 1337
       - args:
         - "--query_frontend_name" 
-        - "query-frontend-at-{{ cluster_name }}:1337"
+        - "query-frontend:1337"
         image: {{ exporter_image }}
         name: frontend-exporter
         ports:
