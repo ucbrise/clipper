@@ -113,7 +113,7 @@ struct DeadlineCompare {
 // thread safe model queue
 class ModelQueue {
  public:
-  ModelQueue() : queue_(ModelPQueue{}) {}
+  ModelQueue() : queue_(ModelPQueue{}), valid_(true) {}
 
   // Disallow copy and assign
   ModelQueue(const ModelQueue &) = delete;
@@ -126,6 +126,7 @@ class ModelQueue {
 
   void add_task(PredictTask task) {
     std::lock_guard<std::mutex> lock(queue_mutex_);
+    if (!valid_) return;
     Deadline deadline = std::chrono::system_clock::now() +
                         std::chrono::microseconds(task.latency_slo_micros_);
     queue_.emplace(deadline, std::move(task));
@@ -142,10 +143,12 @@ class ModelQueue {
       std::function<int(Deadline)> &&get_batch_size) {
     std::unique_lock<std::mutex> lock(queue_mutex_);
     remove_tasks_with_elapsed_deadlines();
-    queue_not_empty_condition_.wait(lock, [this]() { return !queue_.empty(); });
+    queue_not_empty_condition_.wait(
+        lock, [this]() { return !queue_.empty() || !valid_; });
     remove_tasks_with_elapsed_deadlines();
+
     std::vector<PredictTask> batch;
-    if (requesting_container->is_active()) {
+    if (requesting_container->is_active() && valid_) {
       Deadline deadline = queue_.top().first;
       int max_batch_size = get_batch_size(deadline);
       while (batch.size() < (size_t)max_batch_size && queue_.size() > 0) {
@@ -160,6 +163,13 @@ class ModelQueue {
     return batch;
   }
 
+  void invalidate() {
+    std::unique_lock<std::mutex> lock(queue_mutex_);
+    valid_ = false;
+    queue_ = ModelPQueue();
+    queue_not_empty_condition_.notify_all();
+  }
+
  private:
   // Min PriorityQueue so that the task with the earliest
   // deadline is at the front of the queue
@@ -170,6 +180,7 @@ class ModelQueue {
   ModelPQueue queue_;
   std::mutex queue_mutex_;
   std::condition_variable queue_not_empty_condition_;
+  bool valid_;
 
   // Deletes tasks with deadlines prior or equivalent to the
   // current system time. This method should only be called
@@ -485,6 +496,7 @@ class TaskExecutor {
     // Deletes an entry from the queues map, if one exists
     boost::unique_lock<boost::shared_mutex> l(model_queues_mutex_);
     if (model_queues_.count(model_id)) {
+      model_queues_[model_id]->invalidate();
       model_queues_.erase(model_id);
 
       boost::unique_lock<boost::shared_mutex> l(model_metrics_mutex_);
