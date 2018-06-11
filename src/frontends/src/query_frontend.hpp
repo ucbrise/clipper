@@ -23,10 +23,10 @@
 
 using clipper::Feedback;
 using clipper::FeedbackAck;
-using clipper::PredictionData;
 using clipper::FeedbackQuery;
 using clipper::InputType;
 using clipper::Output;
+using clipper::PredictionData;
 using clipper::Query;
 using clipper::Response;
 using clipper::VersionedModelId;
@@ -319,18 +319,18 @@ class RequestHandler {
     AppMetrics app_metrics(name);
 
     /*
-   * JSON format for prediction query request:
-   * {
-   *  "input" := [double] | [int] | [string] | [byte] | [float]
-   *  "input_batch" := [[double] | [int] | [byte] | [float] | string]
-   *  "version" := string (optional)
-   * }
-   */
+     * JSON format for prediction query request:
+     * {
+     *  "input" := [double] | [int] | [string] | [byte] | [float]
+     *  "input_batch" := [[double] | [int] | [byte] | [float] | string]
+     *  "version" := string (optional)
+     * }
+     */
 
     auto predict_fn = [this, name, input_type, policy, latency_slo_micros,
                        app_metrics](
-        std::shared_ptr<HttpServer::Response> response,
-        std::shared_ptr<HttpServer::Request> request) {
+                          std::shared_ptr<HttpServer::Response> response,
+                          std::shared_ptr<HttpServer::Request> request) {
       try {
         folly::Future<std::vector<folly::Try<Response>>> predictions =
             decode_and_handle_predict(request->content.string(), name, policy,
@@ -406,8 +406,8 @@ class RequestHandler {
     server_.add_endpoint(predict_endpoint, "POST", predict_fn);
 
     auto update_fn = [this, name, input_type, policy](
-        std::shared_ptr<HttpServer::Response> response,
-        std::shared_ptr<HttpServer::Request> request) {
+                         std::shared_ptr<HttpServer::Response> response,
+                         std::shared_ptr<HttpServer::Request> request) {
       try {
         std::vector<std::string> models = get_linked_models_for_app(name);
         std::vector<VersionedModelId> versioned_models;
