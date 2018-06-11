@@ -423,7 +423,7 @@ class ClipperConnection(object):
                 try:
                     df_contents = StringIO(
                         str.encode(
-                            "FROM {container_name}\nCOPY {data_path} /model/\n{run_command}\n".
+                            "FROM {container_name}\n{run_command}\nCOPY {data_path} /model/\n".
                             format(
                                 container_name=base_image,
                                 data_path=model_data_path,
