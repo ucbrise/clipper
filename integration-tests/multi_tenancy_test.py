@@ -45,17 +45,17 @@ def deploy_(clipper_conn, use_kubernetes=False):
     if use_kubernetes:
         python_deployer.create_endpoint(
             clipper_conn,
-            "simple-example",
+            "testapp0-model",
             "doubles",
             feature_sum,
             registry=CLIPPER_CONTAINER_REGISTRY)
     else:
-        python_deployer.create_endpoint(clipper_conn, "simple-example",
+        python_deployer.create_endpoint(clipper_conn, "testapp0-model",
                                         "doubles", feature_sum)
 
 
 def predict_(addr, x, batch=False):
-    url = "http://%s/simple-example/predict" % addr
+    url = "http://%s/testapp0-model/predict" % addr
 
     if batch:
         req_json = json.dumps({'input_batch': x})

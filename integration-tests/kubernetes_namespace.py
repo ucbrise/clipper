@@ -40,14 +40,14 @@ def feature_sum(xs):
 def deploy_(clipper_conn):
     python_deployer.create_endpoint(
         clipper_conn,
-        "simple-example",
+        "testapp0-model",
         "doubles",
         feature_sum,
         registry=CLIPPER_CONTAINER_REGISTRY)
 
 
 def predict_(addr, x, batch=False):
-    url = "http://%s/simple-example/predict" % addr
+    url = "http://%s/testapp0-model/predict" % addr
 
     if batch:
         req_json = json.dumps({'input_batch': x})
