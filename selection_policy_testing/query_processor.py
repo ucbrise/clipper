@@ -17,6 +17,11 @@ class Sender(threading.Thread):
                 query = json.dumps(self.q.popleft())
                 self.sock.send(query.encode('utf-8'))
 
+def query_generator(count):
+    a = count % 2 == 0
+    return {'user_id': 'rdurrani', 'query_id': count, 'query': [1, 2, 3, 4], 'msg': 'select',
+                                'select_flag':a}
+
 class QueryGen(threading.Thread):
     def __init__(self, que, qs):
         super(QueryGen, self).__init__()
@@ -26,9 +31,7 @@ class QueryGen(threading.Thread):
 
     def run(self):
         while True:
-            a = self.count % 2 == 0
-            query = {'user_id': 'rdurrani', 'query_id': self.count, 'query': [1, 2, 3, 4], 'msg': 'select',
-                                'lol':a}
+            query = query_generator(self.count)
             self.qs[self.count] = json.dumps(query)
             self.count += 1
             self.q.append(query)

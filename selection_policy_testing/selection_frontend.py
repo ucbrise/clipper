@@ -6,7 +6,7 @@ import redis
 import datetime
 
 def select(state, query):
-    if query['lol']:
+    if query['select_flag']:
         return [1, 2]
     else:
         return [3]
