@@ -2,14 +2,15 @@
 This document will go over the how to utilize the mock up designed for model selection. For more info, please look at the python files, which include comments.
 ## Query Processor
 The Query Processor (QP) is composed of 4 main components:
-* [Query Generator] (#Query-Generator)
-* [Sender] (#Sender)
-* [Task Executor] (#Task-Executor)
-* [Client] (#Client)
+* [Query Generator](#Query-Generator)
+* [Sender](#Sender)
+* [Task Executor](#Task-Executor)
+* [Client](#Client)
 The following contains a discussion of each component.
 ### Query Generator
 ### Sender
-``python
+```python
+
 import socket
 import json
 import time
@@ -121,6 +122,7 @@ if __name__ == '__main__':
     s.start()
     r.start()
     t.start()
-    c.start()``
+    c.start()
+```
 ### Task Executor
 ### Client 
