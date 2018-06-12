@@ -44,7 +44,7 @@ The Reciever recieves messages over a socket from the Selection Policy frontend.
 * `execute` - This tag means that the model id's have been selected, and that the Selection Policy frontend is indicating that the query is ready to be passed to the models and computed on. The Reciever puts these queries in the Task Executor's Queue.
 * `return` - This tag means that the Combiner has computed a final result, and that the Selection Policy frontend would like this result to be returned back to the Client. The Reciever puts these queries in the Client's queue.
 
-The queries recieved by the Reciever are not in the same form as the queries initially sent. To understand the new formats, please look at the [Selection Policy Frontend](selection-policy-frontend) section.
+The queries recieved by the Reciever are not in the same form as the queries initially sent. To understand the new formats, please look at the [Selection Policy Frontend](#selection-policy-frontend) section.
 ### Task Executor
 The Task Executor takes queries from its queue, and, after using the `query_cache` to load the query, passes them to the model containers to get the predictions. After recieving the predictions, it modifies the original query to include an array of predictions, updates the `query_cache` and puts the new query in the Sender's queue.
 ### Client
@@ -53,7 +53,7 @@ The Client takes queries from its queue, and, after using the `query_cache` to l
 In the actual system, instead of a Client process, the Sender would merely send the results back to the user. The Client process can be modified to do anything else.
 ## Selection Policy Frontend
 The Selection Policy Frontend is composed of 4 main components:
-* [Reciever](reciever)
-* [Sender](sender)
-* [Selection Policy](selection-policy)
-* [Combiner](combiner)
+* [Reciever](#reciever)
+* [Sender](#sender)
+* [Selection Policy](#selection-policy)
+* [Combiner](#combiner)
