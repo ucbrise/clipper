@@ -213,7 +213,12 @@ create_image () {
     echo "Building $namespace/$image:$sha_tag from file $dockerfile"
     time docker build --build-arg CODE_VERSION=$sha_tag $rpc_version -t $namespace/$image:$sha_tag \
         -f dockerfiles/$dockerfile $CLIPPER_ROOT
-    docker tag $namespace/$image:$sha_tag $namespace/$image:$version_tag
+
+    echo "Publishing $namespace/$image:$sha_tag from file $dockerfile"
+    docker push $namespace/$image:$sha_tag
+
+    # We will NOT tag the image to version tag to prevent collision
+    # docker tag $namespace/$image:$sha_tag $namespace/$image:$version_tag
 
     if [ "$publish" = true ] && [ "$public" = true ] ; then
         echo "Publishing $namespace/$image:$sha_tag"

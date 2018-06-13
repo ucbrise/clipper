@@ -113,6 +113,7 @@ class DockerContainerManager(ContainerManager):
     def start_clipper(self,
                       query_frontend_image,
                       mgmt_frontend_image,
+                      frontend_exporter_image,
                       cache_size,
                       prometheus_version,
                       num_frontend_replicas=1):
@@ -217,7 +218,7 @@ class DockerContainerManager(ContainerManager):
             query_container_id)
         run_query_frontend_metric_image(
             query_frontend_metric_name, self.docker_client, query_name,
-            self.common_labels, self.extra_container_kwargs)
+            frontend_exporter_image, self.common_labels, self.extra_container_kwargs)
 
         self.prom_config_path = tempfile.NamedTemporaryFile(
             'w', suffix='.yml', delete=False).name

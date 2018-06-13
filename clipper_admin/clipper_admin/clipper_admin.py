@@ -26,7 +26,7 @@ else:
 
 from .container_manager import CONTAINERLESS_MODEL_IMAGE, ClusterAdapter
 from .exceptions import ClipperException, UnconnectedException
-from .version import __version__
+from .version import __version__, __registry__
 
 DEFAULT_LABEL = []
 DEFAULT_PREDICTION_CACHE_SIZE_BYTES = 33554432
@@ -85,10 +85,12 @@ class ClipperConnection(object):
 
     def start_clipper(
             self,
-            query_frontend_image='clipper/query_frontend:{}'.format(
-                __version__),
-            mgmt_frontend_image='clipper/management_frontend:{}'.format(
-                __version__),
+            query_frontend_image='{}/query_frontend:{}'.format(
+                __registry__, __version__),
+            mgmt_frontend_image='{}/management_frontend:{}'.format(
+                __registry__, __version__),
+            frontend_exporter_image='{}/frontend-exporter:{}'.format(
+                __registry__, __version__),
             cache_size=DEFAULT_PREDICTION_CACHE_SIZE_BYTES,
             num_frontend_replicas=1):
         """Start a new Clipper cluster and connect to it.
@@ -106,8 +108,14 @@ class ClipperConnection(object):
             The management frontend docker image to use. You can set this argument to specify
             a custom build of the management frontend, but any customization should maintain API
             compability and preserve the expected behavior of the system.
+        frontend_exporter_image : str(optional)
+            The frontend exporter docker image to use. You can set this argument to specify
+            a custom build of the management frontend, but any customization should maintain API
+            compability and preserve the expected behavior of the system.
         cache_size : int, optional
             The size of Clipper's prediction cache in bytes. Default cache size is 32 MiB.
+        num_frontend_replicas : int, option
+            The number of query frontend to deploy for fault tolerance and high availability.
 
         Raises
         ------
@@ -115,7 +123,7 @@ class ClipperConnection(object):
         """
         try:
             self.cm.start_clipper(query_frontend_image, mgmt_frontend_image,
-                                  cache_size, num_frontend_replicas)
+                                  frontend_exporter_image, cache_size, num_frontend_replicas)
             while True:
                 try:
                     url = "http://{host}/metrics".format(

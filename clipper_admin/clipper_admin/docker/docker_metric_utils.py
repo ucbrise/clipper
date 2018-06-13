@@ -2,7 +2,6 @@ import yaml
 import requests
 import random
 from ..exceptions import ClipperException
-from ..version import __version__
 from ..container_manager import CLIPPER_INTERNAL_QUERY_PORT
 
 PROM_VERSION = "v2.1.0"
@@ -20,7 +19,7 @@ def get_prometheus_base_config():
 
 
 def run_query_frontend_metric_image(name, docker_client, query_name,
-                                    common_labels, extra_container_kwargs):
+                                    frontend_exporter_image, common_labels, extra_container_kwargs):
     """
     Use docker_client to run a frontend-exporter image.
     :param name: Name to pass in, need to be unique.
@@ -36,7 +35,7 @@ def run_query_frontend_metric_image(name, docker_client, query_name,
     query_frontend_metric_labels = common_labels.copy()
 
     docker_client.containers.run(
-        "clipper/frontend-exporter:{}".format(__version__),
+        frontend_exporter_image,
         query_frontend_metric_cmd,
         name=name,
         labels=query_frontend_metric_labels,

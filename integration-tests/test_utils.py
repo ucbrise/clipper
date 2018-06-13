@@ -14,7 +14,6 @@ from clipper_admin import (ClipperConnection, DockerContainerManager,
                            KubernetesContainerManager, CLIPPER_TEMP_DIR,
                            ClipperException)
 from clipper_admin.container_manager import CLIPPER_DOCKER_LABEL
-from clipper_admin import __version__ as clipper_version
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +34,6 @@ class BenchmarkException(Exception):
 
 # range of ports where available ports can be found
 PORT_RANGE = [34256, 50000]
-
-CLIPPER_CONTAINER_REGISTRY = "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper"
 
 
 def get_docker_client():
@@ -151,14 +148,7 @@ def create_kubernetes_connection(cleanup=False,
             namespace=namespace,
             create_namespace_if_not_exists=True)
         cl = ClipperConnection(cm)
-        cl.start_clipper(
-            query_frontend_image=
-            "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/query_frontend:{}".
-            format(clipper_version),
-            mgmt_frontend_image=
-            "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/management_frontend:{}".
-            format(clipper_version),
-            num_frontend_replicas=num_frontend_replicas)
+        cl.start_clipper(num_frontend_replicas=num_frontend_replicas)
 
     if connect:
         try:

@@ -11,6 +11,10 @@ COPY ./ /clipper
 RUN cd /clipper/src/libs/spdlog \
     && git apply ../patches/make_spdlog_compile_linux.patch
 
+# Set version as git hash
+RUN cd /clipper \
+    && echo $(git rev-parse --verify --short HEAD) > VERSION.txt
+
 RUN pip install -e /clipper/clipper_admin
 
 ENTRYPOINT ["/clipper/bin/ci_checks.sh", "true"]
