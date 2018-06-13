@@ -443,7 +443,7 @@ class ClipperConnection(object):
                     context_tar.addfile(df_tarinfo, df_contents)
                 except TypeError:
                     df_contents = StringIO(
-                        "FROM {container_name}\nCOPY {data_path} /model/\n{run_command}\n".
+                        "FROM {container_name}\n{run_command}\nCOPY {data_path} /model/\n".
                         format(
                             container_name=base_image,
                             data_path=model_data_path,
@@ -456,7 +456,7 @@ class ClipperConnection(object):
             # Exit Tarfile context manager to finish the tar file
             # Seek back to beginning of file for reading
             context_file.seek(0)
-            image = "{name}:{version}".format(name=name, version=version)
+            image = "{cluster}-{name}:{version}".format(cluster=self.cm.cluster_identifier, name=name, version=version)
             if container_registry is not None:
                 image = "{reg}/{image}".format(
                     reg=container_registry, image=image)
