@@ -1,5 +1,6 @@
+ARG REGISTRY
 ARG CODE_VERSION
-FROM clipper/py35-dev:${CODE_VERSION}
+FROM ${REGISTRY}/py35-dev:${CODE_VERSION}
 
 LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 

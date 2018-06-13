@@ -1,5 +1,6 @@
+ARG REGISTRY
 ARG CODE_VERSION
-FROM clipper/dev:${CODE_VERSION}
+FROM ${REGISTRY}/dev:${CODE_VERSION}
 
 LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 

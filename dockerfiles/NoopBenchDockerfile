@@ -1,5 +1,6 @@
+ARG REGISTRY
 ARG CODE_VERSION
-FROM clipper/py-rpc:${CODE_VERSION}
+FROM ${REGISTRY}/py-rpc:${CODE_VERSION}
 
 LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 

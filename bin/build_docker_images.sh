@@ -189,7 +189,7 @@ set_version_tag () {
 
 set_version_tag
 
-namespace="clipper"
+namespace=$(docker info | grep Username | awk '{ print $2 }')
 
 # We build images with the SHA tag to try to prevent clobbering other images
 # being built from different branches on the same machine. This is particularly
@@ -211,7 +211,7 @@ create_image () {
 
                      
     echo "Building $namespace/$image:$sha_tag from file $dockerfile"
-    time docker build --build-arg CODE_VERSION=$sha_tag $rpc_version -t $namespace/$image:$sha_tag \
+    time docker build --build-arg CODE_VERSION=$sha_tag --build-arg REGISTRY=$namespace $rpc_version -t $namespace/$image:$sha_tag \
         -f dockerfiles/$dockerfile $CLIPPER_ROOT
 
     echo "Publishing $namespace/$image:$sha_tag from file $dockerfile"
