@@ -6,10 +6,10 @@
 #include <stdexcept>
 #include <unordered_map>
 
-using clipper::PredictionData;
-using clipper::SharedPoolPtr;
 using clipper::DataType;
 using clipper::Output;
+using clipper::PredictionData;
+using clipper::SharedPoolPtr;
 using clipper::VersionedModelId;
 using rapidjson::Type;
 
