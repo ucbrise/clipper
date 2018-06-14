@@ -192,7 +192,7 @@ set_version_tag
 namespace=$(docker info | grep Username | awk '{ print $2 }')
 
 # Clear clipper_docker_images.txt for future write
-echo "" > clipper_docker_images.txt
+echo "" > $CLIPPER_ROOT/bin/clipper_docker_images.txt
 
 # We build images with the SHA tag to try to prevent clobbering other images
 # being built from different branches on the same machine. This is particularly
@@ -218,7 +218,7 @@ create_image () {
         -f dockerfiles/$dockerfile $CLIPPER_ROOT
 
     echo "Image tag appended to CLIPPER_ROOT/bin/clipper_docker_images.txt"
-    echo "$namespace/$image:$sha_tag" >> clipper_docker_images.txt
+    echo "$namespace/$image:$sha_tag" >> $CLIPPER_ROOT/bin/clipper_docker_images.txt
 
     if [ "$publish" = true ] && [ "$public" = true ] ; then
         docker tag $namespace/$image:$sha_tag $namespace/$image:$version_tag
