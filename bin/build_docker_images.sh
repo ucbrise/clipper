@@ -14,7 +14,7 @@
 # pin their docker images to the minor version and get updates with new patches
 # automatically.
 
-
+set -x
 set -e
 set -u
 set -o pipefail
