@@ -177,8 +177,8 @@ class KubernetesContainerManager(ContainerManager):
         self._start_redis()
         self._start_mgmt(mgmt_frontend_image)
         self.num_frontend_replicas = num_frontend_replicas
-        self._start_query(query_frontend_image, frontend_exporter_image, cache_size,
-                          num_frontend_replicas)
+        self._start_query(query_frontend_image, frontend_exporter_image,
+                          cache_size, num_frontend_replicas)
         self._start_prometheus()
         self.connect()
 
@@ -222,7 +222,8 @@ class KubernetesContainerManager(ContainerManager):
             self._k8s_v1.create_namespaced_service(
                 body=mgmt_service_data, namespace=self.k8s_namespace)
 
-    def _start_query(self, query_image, frontend_exporter_image, cache_size, num_replicas):
+    def _start_query(self, query_image, frontend_exporter_image, cache_size,
+                     num_replicas):
         for query_frontend_id in range(num_replicas):
             with _pass_conflicts():
                 query_deployment_data = self._generate_config(

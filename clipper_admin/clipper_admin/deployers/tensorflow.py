@@ -271,10 +271,12 @@ def deploy_tensorflow_model(clipper_conn,
             base_image = "{}/tf-container:{}".format(__registry__, __version__)
         elif py_minor_version == (3, 5):
             logger.info("Using Python 3.5 base image")
-            base_image = "{}/tf35-container:{}".format(__registry__, __version__)
+            base_image = "{}/tf35-container:{}".format(__registry__,
+                                                       __version__)
         elif py_minor_version == (3, 6):
             logger.info("Using Python 3.6 base image")
-            base_image = "{}/tf36-container:{}".format(__registry__, __version__)
+            base_image = "{}/tf36-container:{}".format(__registry__,
+                                                       __version__)
         else:
             msg = (
                 "TensorFlow deployer only supports Python 2.7, 3.5, and 3.6. "

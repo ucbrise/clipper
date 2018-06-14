@@ -175,7 +175,8 @@ We will update our caffe2 build soon.""")
 
     if base_image is None:
         if onnx_backend is "caffe2":
-            base_image = "{}/caffe2-onnx-container:{}".format(__registry__, __version__)
+            base_image = "{}/caffe2-onnx-container:{}".format(
+                __registry__, __version__)
         else:
             logger.error(
                 "{backend} ONNX backend is not currently supported.".format(

@@ -19,7 +19,8 @@ def get_prometheus_base_config():
 
 
 def run_query_frontend_metric_image(name, docker_client, query_name,
-                                    frontend_exporter_image, common_labels, extra_container_kwargs):
+                                    frontend_exporter_image, common_labels,
+                                    extra_container_kwargs):
     """
     Use docker_client to run a frontend-exporter image.
     :param name: Name to pass in, need to be unique.

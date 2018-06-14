@@ -83,16 +83,15 @@ class ClipperConnection(object):
             'cluster_name': self.cm.cluster_identifier
         })
 
-    def start_clipper(
-            self,
-            query_frontend_image='{}/query_frontend:{}'.format(
-                __registry__, __version__),
-            mgmt_frontend_image='{}/management_frontend:{}'.format(
-                __registry__, __version__),
-            frontend_exporter_image='{}/frontend-exporter:{}'.format(
-                __registry__, __version__),
-            cache_size=DEFAULT_PREDICTION_CACHE_SIZE_BYTES,
-            num_frontend_replicas=1):
+    def start_clipper(self,
+                      query_frontend_image='{}/query_frontend:{}'.format(
+                          __registry__, __version__),
+                      mgmt_frontend_image='{}/management_frontend:{}'.format(
+                          __registry__, __version__),
+                      frontend_exporter_image='{}/frontend-exporter:{}'.format(
+                          __registry__, __version__),
+                      cache_size=DEFAULT_PREDICTION_CACHE_SIZE_BYTES,
+                      num_frontend_replicas=1):
         """Start a new Clipper cluster and connect to it.
 
         This command will start a new Clipper instance using the container manager provided when
@@ -123,7 +122,8 @@ class ClipperConnection(object):
         """
         try:
             self.cm.start_clipper(query_frontend_image, mgmt_frontend_image,
-                                  frontend_exporter_image, cache_size, num_frontend_replicas)
+                                  frontend_exporter_image, cache_size,
+                                  num_frontend_replicas)
             while True:
                 try:
                     url = "http://{host}/metrics".format(
@@ -456,7 +456,8 @@ class ClipperConnection(object):
             # Exit Tarfile context manager to finish the tar file
             # Seek back to beginning of file for reading
             context_file.seek(0)
-            image = "{cluster}-{name}:{version}".format(cluster=self.cm.cluster_identifier, name=name, version=version)
+            image = "{cluster}-{name}:{version}".format(
+                cluster=self.cm.cluster_identifier, name=name, version=version)
             if container_registry is not None:
                 image = "{reg}/{image}".format(
                     reg=container_registry, image=image)
