@@ -1,5 +1,5 @@
+# This ARG isn't used but prevents warnings in the build
 ARG REGISTRY
-# This ARG isn't used but prevents warnings in the build script
 ARG CODE_VERSION
 FROM python:3.6-slim-stretch
 

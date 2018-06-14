@@ -160,10 +160,14 @@ class KubernetesContainerManager(ContainerManager):
             logger.error(msg)
             raise ClipperException(msg)
 
-        self.cluster_identifier = "{ns}{cluster}".format(
-            ns=self.k8s_namespace + '-'
-            if self.k8s_namespace != "default" else "",
-            cluster=self.cluster_name)
+        # Initialize logger with cluster identifier
+        if self.k8s_namespace != "default":
+            self.cluster_identifier = "{cluster}".format(
+                cluster=self.cluster_name)
+        else:
+            self.cluster_identifier = "{ns}-{cluster}".format(
+                ns=self.k8s_namespace, cluster=self.cluster_name)
+
         self.logger = ClusterAdapter(logger, {
             'cluster_name': self.cluster_identifier
         })
@@ -303,7 +307,7 @@ class KubernetesContainerManager(ContainerManager):
                     external_node_hosts.append(addr.address)
 
         if len(external_node_hosts) == 0:
-            msg = "Error connecting to Kubernetes cluster. No external node addresses found. If you are running Kubernetes locally, you can pass in KubernetesContainerManager(useInternalIP=True) to connect to local Kubernetes cluster"
+            msg = "Error connecting to Kubernetes cluster. No external node addresses found. You may pass in KubernetesContainerManager(useInternalIP=True) to connect to local Kubernetes cluster"
             self.logger.error(msg)
             raise ClipperException(msg)
 
@@ -430,13 +434,9 @@ class KubernetesContainerManager(ContainerManager):
                 namespace=self.k8s_namespace,
                 label_selector=CLIPPER_DOCKER_LABEL).items:
             for i, c in enumerate(pod.status.container_statuses):
-                # log_file_name = "image_{image}:container_{id}.log".format(
-                #     image=c.image_id, id=c.container_id)
                 log_file_name = "{pod}_{num}.log".format(
                     pod=pod.metadata.name, num=str(i))
-                log_file_alt = "{cname}.log".format(cname=c.name)
                 self.logger.info("log file name: {}".format(log_file_name))
-                self.logger.info("log alt file name: {}".format(log_file_alt))
                 log_file = os.path.join(logging_dir, log_file_name)
                 with open(log_file, "w") as lf:
                     lf.write(

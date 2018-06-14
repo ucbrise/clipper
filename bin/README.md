@@ -5,8 +5,16 @@ The wonderful AMPlab Jenkins is responsible for running our integration test.
 ## How does the CI process work
 
 
-0. Jenkins pull the PR and sandbox it.
-1. Jenkins inject environment variables configured in admin page
+0. Jenkins pull the PR.
+1. Jenkins inject environment variables configured in admin page. Currently, we set the following environment variables 
+in Pull Request Builder:
+    - AWS_ACCESS_KEY_ID
+    - AWS_SECRET_ACCESS_KEY
+    - CLIPPER_K8S_CERT_AUTH
+    - CLIPPER_K8S_CLIENT_CERT
+    - CLIPPER_K8S_CLIENT_KEY
+    - CLIPPER_K8S_PASSWORD
+    - CLIPPER_TESTING_DOCKERHUB_PASSWORD
 2. Jenkins will call `run_ci.sh`. It does three things:
     - It calls `build_docker_images.sh` to build all the docker images
     - Then it runs unittests docker container for python2 and python3
