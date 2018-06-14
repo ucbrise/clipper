@@ -21,7 +21,7 @@ tag=$(<VERSION.txt)
 # Build docker images
 ./bin/build_docker_images.sh
 
-CLIPPER_REGISTRY="clippertesting"
+CLIPPER_REGISTRY=$(docker info | grep Username | awk '{ print $2 }')
 
 # Run tests
 docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp \
@@ -32,7 +32,7 @@ docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /
     -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
     -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
     -e CLIPPER_REGISTRY=$CLIPPER_REGISTRY \
-    clipper/unittests:$tag
+    $CLIPPER_REGISTRY/unittests:$tag
 
 # Python 3 unittests
 docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp \
@@ -43,4 +43,4 @@ docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /
     -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
     -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
     -e CLIPPER_REGISTRY=$CLIPPER_REGISTRY \
-    clipper/py35tests:$tag
+    $CLIPPER_REGISTRY/py35tests:$tag
