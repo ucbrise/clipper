@@ -192,7 +192,8 @@ set_version_tag
 namespace=$(docker info | grep Username | awk '{ print $2 }')
 
 # Clear clipper_docker_images.txt for future write
-echo "" > $CLIPPER_ROOT/bin/clipper_docker_images.txt
+rm -f $CLIPPER_ROOT/bin/clipper_docker_images.txt
+touch $CLIPPER_ROOT/bin/clipper_docker_images.txt
 
 # We build images with the SHA tag to try to prevent clobbering other images
 # being built from different branches on the same machine. This is particularly
