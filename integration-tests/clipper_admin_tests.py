@@ -26,7 +26,7 @@ sys.path.insert(0, os.path.abspath('%s/../clipper_admin' % cur_dir))
 import clipper_admin as cl
 from clipper_admin.deployers.python import create_endpoint as create_py_endpoint
 from clipper_admin.deployers.python import deploy_python_closure
-from clipper_admin import __version__ as clipper_version
+from clipper_admin import __version__ as clipper_version, __registry__ as clipper_registry
 from clipper_admin.container_manager import CLIPPER_DOCKER_LABEL
 
 logging.basicConfig(
@@ -191,7 +191,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
     def test_model_deploys_successfully(self):
         model_name = "m"
         version = "v1"
-        container_name = "clipper/noop-container:{}".format(clipper_version)
+        container_name = "{}/noop-container:{}".format(clipper_registry,
+                                                       clipper_version)
         input_type = "doubles"
         self.clipper_conn.build_and_deploy_model(
             model_name, version, input_type, fake_model_data, container_name)
@@ -208,7 +209,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         model_name = "set-num-reps-model"
         input_type = "doubles"
         version = "v1"
-        container_name = "clipper/noop-container:{}".format(clipper_version)
+        container_name = "{}/noop-container:{}".format(clipper_registry,
+                                                       clipper_version)
         input_type = "doubles"
         self.clipper_conn.build_and_deploy_model(
             model_name, version, input_type, fake_model_data, container_name)
@@ -225,7 +227,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertEqual(num_reps, 2)
 
     def test_remove_inactive_containers_succeeds(self):
-        container_name = "clipper/noop-container:{}".format(clipper_version)
+        container_name = "{}/noop-container:{}".format(clipper_registry,
+                                                       clipper_version)
         input_type = "doubles"
         model_name = "remove-inactive-test-model"
         self.clipper_conn.build_and_deploy_model(
@@ -260,7 +263,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertEqual(len(containers), 3)
 
     def test_stop_models(self):
-        container_name = "clipper/noop-container:{}".format(clipper_version)
+        container_name = "{}/noop-container:{}".format(clipper_registry,
+                                                       clipper_version)
         input_type = "doubles"
         mnames = ["jimmypage", "robertplant", "jpj", "johnbohnam"]
         versions = ["i", "ii", "iii", "iv"]
@@ -323,23 +327,23 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             containers = docker_client.containers.list(
                 filters={
                     "ancestor":
-                    "clipper/python-closure-container:{}".format(
-                        clipper_version)
+                    "{}/python-closure-container:{}".format(
+                        clipper_registry, clipper_version)
                 })
 
         elif py_minor_version == (3, 5):
             containers = docker_client.containers.list(
                 filters={
                     "ancestor":
-                    "clipper/python35-closure-container:{}".format(
-                        clipper_version)
+                    "{}/python35-closure-container:{}".format(
+                        clipper_registry, clipper_version)
                 })
         elif py_minor_version == (3, 6):
             containers = docker_client.containers.list(
                 filters={
                     "ancestor":
-                    "clipper/python36-closure-container:{}".format(
-                        clipper_version)
+                    "{}/python36-closure-container:{}".format(
+                        clipper_registry, clipper_version)
                 })
         else:
             msg = (
@@ -378,8 +382,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             containers = docker_client.containers.list(
                 filters={
                     "ancestor":
-                    "clipper/python-closure-container:{}".format(
-                        clipper_version),
+                    "{}/python-closure-container:{}".format(
+                        clipper_registry, clipper_version),
                     "label":
                     "{key}={val}".format(
                         key=CLIPPER_DOCKER_LABEL,
@@ -390,8 +394,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             containers = docker_client.containers.list(
                 filters={
                     "ancestor":
-                    "clipper/python35-closure-container:{}".format(
-                        clipper_version),
+                    "{}/python35-closure-container:{}".format(
+                        clipper_registry, clipper_version),
                     "label":
                     "{key}={val}".format(
                         key=CLIPPER_DOCKER_LABEL,
@@ -401,8 +405,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             containers = docker_client.containers.list(
                 filters={
                     "ancestor":
-                    "clipper/python36-closure-container:{}".format(
-                        clipper_version),
+                    "{}/python36-closure-container:{}".format(
+                        clipper_registry, clipper_version),
                     "label":
                     "{key}={val}".format(
                         key=CLIPPER_DOCKER_LABEL,
@@ -561,21 +565,24 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             "buildmodeltest",
             "py2",
             fake_model_data,
-            "clipper/python-closure-container:{}".format(clipper_version),
+            "{}/python-closure-container:{}".format(clipper_registry,
+                                                    clipper_version),
             None,
             pkgs_to_install=["sympy==1.1.*"])
         self.clipper_conn.build_model(
             "buildmodeltest",
             "py35",
             fake_model_data,
-            "clipper/python35-closure-container:{}".format(clipper_version),
+            "{}/python35-closure-container:{}".format(clipper_registry,
+                                                      clipper_version),
             None,
             pkgs_to_install=["sympy==1.1.*"])
         self.clipper_conn.build_model(
             "buildmodeltest",
             "py36",
             fake_model_data,
-            "clipper/python35-closure-container:{}".format(clipper_version),
+            "{}/python35-closure-container:{}".format(clipper_registry,
+                                                      clipper_version),
             None,
             pkgs_to_install=["sympy==1.1.*"])
 
@@ -643,7 +650,8 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
     def test_deployed_model_queried_successfully(self):
         model_version = 1
-        container_name = "clipper/noop-container:{}".format(clipper_version)
+        container_name = "{}/noop-container:{}".format(clipper_registry,
+                                                       clipper_version)
         self.clipper_conn.build_and_deploy_model(
             self.model_name_2, model_version, self.input_type, fake_model_data,
             container_name)
@@ -664,7 +672,8 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
 
     def test_batch_queries_returned_successfully(self):
         model_version = 1
-        container_name = "clipper/noop-container:{}".format(clipper_version)
+        container_name = "{}/noop-container:{}".format(clipper_registry,
+                                                       clipper_version)
         self.clipper_conn.build_and_deploy_model(
             self.model_name_3, model_version, self.input_type, fake_model_data,
             container_name)
@@ -759,7 +768,8 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
                                 int(total_num_queries * .7))
 
     def test_remove_inactive_container(self):
-        container_name = "clipper/noop-container:{}".format(clipper_version)
+        container_name = "{}/noop-container:{}".format(clipper_registry,
+                                                       clipper_version)
         self.clipper_conn.build_and_deploy_model(
             self.model_name_5,
             1,
