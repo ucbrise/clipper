@@ -22,6 +22,9 @@ tag=$(<VERSION.txt)
 # Build docker images
 ./bin/build_docker_images.sh
 
+echo "Pushing the following images"
+cat ./bin/clipper_docker_images.txt
+
 # Push docker images
 while read in; do docker push "$in"; done < ./bin/clipper_docker_images.txt
 
