@@ -5,7 +5,7 @@ from ..container_manager import (
     CLIPPER_INTERNAL_MANAGEMENT_PORT, CLIPPER_INTERNAL_QUERY_PORT,
     CLIPPER_INTERNAL_METRIC_PORT, CLIPPER_NAME_LABEL, ClusterAdapter)
 from ..exceptions import ClipperException
-from .kubernetes_metric_utils import PROM_VERSION, CLIPPER_FRONTEND_EXPORTER_IMAGE
+from .kubernetes_metric_utils import PROM_VERSION
 
 from contextlib import contextmanager
 from kubernetes import client, config
