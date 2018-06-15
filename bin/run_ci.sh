@@ -30,7 +30,7 @@ while read in; do docker push "$in"; done < ./bin/clipper_docker_images.txt
 
 
 CLIPPER_REGISTRY=$(docker info | grep Username | awk '{ print $2 }')
-sha_tag=$(git rev-parse --verify --short HEAD)
+sha_tag=$(git rev-parse --verify --short=10 HEAD)
 
 # Run tests
 docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp \

@@ -31,7 +31,7 @@ cd $CLIPPER_ROOT
 
 # Initialize tags
 version_tag=$(<VERSION.txt)
-sha_tag=`git rev-parse --verify --short HEAD`
+sha_tag=`git rev-parse --verify --short=10 HEAD`
 
 ######## Utilities for managing versioning ############
 # From https://github.com/cloudflare/semver_bash/blob/c1133faf0efe17767b654b213f212c326df73fa3/semver.sh

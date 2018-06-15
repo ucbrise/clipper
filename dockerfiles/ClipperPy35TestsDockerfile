@@ -14,7 +14,7 @@ RUN cd /clipper/src/libs/spdlog \
 
 # Set version as git hash
 RUN cd /clipper \
-    && echo $(git rev-parse --verify --short HEAD) > VERSION.txt
+    && echo $(git rev-parse --verify --short=10 HEAD) > VERSION.txt
 
 RUN pip3 install -e /clipper/clipper_admin
 
