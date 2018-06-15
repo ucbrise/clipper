@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+set -x
 set -e
 set -u
 set -o pipefail
@@ -26,10 +27,10 @@ tag=$(<VERSION.txt)
 cd -
 
 # Log in to Kubernetes Docker repo
-$DIR/aws_docker_repo_login.sh
+# $DIR/aws_docker_repo_login.sh
 
 # Test docker login
-docker pull 568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/query_frontend:$tag
+# docker pull 568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/query_frontend:$tag
 
 # Set up credentials for K8s testing cluster.
 export KUBECONFIG=~/kubeconfig_$(date +"%Y%m%d%H%M%S")
