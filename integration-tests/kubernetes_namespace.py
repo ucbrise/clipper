@@ -12,7 +12,7 @@ import requests
 from datetime import datetime
 import os
 import time
-from test_utils import create_kubernetes_connection, create_docker_connection, CLIPPER_CONTAINER_REGISTRY
+from test_utils import create_kubernetes_connection, create_docker_connection
 
 
 def test():
@@ -38,12 +38,8 @@ def feature_sum(xs):
 
 
 def deploy_(clipper_conn):
-    python_deployer.create_endpoint(
-        clipper_conn,
-        "testapp0-model",
-        "doubles",
-        feature_sum,
-        registry=CLIPPER_CONTAINER_REGISTRY)
+    python_deployer.create_endpoint(clipper_conn, "testapp0-model", "doubles",
+                                    feature_sum)
 
 
 def predict_(addr, x, batch=False):

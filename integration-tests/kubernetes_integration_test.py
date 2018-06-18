@@ -9,8 +9,7 @@ import numpy as np
 import time
 import logging
 from test_utils import (create_kubernetes_connection, BenchmarkException,
-                        fake_model_data, headers, log_clipper_state,
-                        CLIPPER_CONTAINER_REGISTRY)
+                        fake_model_data, headers, log_clipper_state)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
 from clipper_admin import __version__ as clipper_version, CLIPPER_TEMP_DIR, ClipperException, __registry__ as clipper_registry
@@ -34,8 +33,7 @@ def deploy_model(clipper_conn, name, version, link=False):
         "doubles",
         fake_model_data,
         "{}/noop-container:{}".format(clipper_registry, clipper_version),
-        num_replicas=1,
-        container_registry=CLIPPER_CONTAINER_REGISTRY)
+        num_replicas=1)
     time.sleep(10)
 
     if link:
