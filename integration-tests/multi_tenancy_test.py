@@ -8,15 +8,15 @@ import requests
 from datetime import datetime
 import os
 import time
-from test_utils import create_kubernetes_connection, create_docker_connection
+from test_utils import create_kubernetes_connection, create_docker_connection, CLIPPER_CONTAINER_REGISTRY
 
 
 def test(kubernetes):
     conn_1 = create('multi-tenancy-1', use_kubernetes=kubernetes)
     conn_2 = create('multi-tenancy-2', use_kubernetes=kubernetes)
 
-    deploy_(conn_1)
-    deploy_(conn_2)
+    deploy_(conn_1, use_kubernetes=kubernetes)
+    deploy_(conn_2, use_kubernetes=kubernetes)
 
     res_1 = predict_(conn_1.get_query_addr(), [.1, .2, .3])
     res_2 = predict_(conn_2.get_query_addr(), [.1, .2, .3])
@@ -41,9 +41,17 @@ def feature_sum(xs):
     return [str(sum(x)) for x in xs]
 
 
-def deploy_(clipper_conn):
-    python_deployer.create_endpoint(clipper_conn, "testapp0-model", "doubles",
-                                    feature_sum)
+def deploy_(clipper_conn, use_kubernetes=False):
+    if use_kubernetes:
+        python_deployer.create_endpoint(
+            clipper_conn,
+            "testapp0-model",
+            "doubles",
+            feature_sum,
+            registry=CLIPPER_CONTAINER_REGISTRY)
+    else:
+        python_deployer.create_endpoint(clipper_conn, "testapp0-model",
+                                        "doubles", feature_sum)
 
 
 def predict_(addr, x, batch=False):
