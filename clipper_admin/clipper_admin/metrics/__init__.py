@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from ..version import __version__
 from .client import add_metric, report_metric
 from . import server
 
