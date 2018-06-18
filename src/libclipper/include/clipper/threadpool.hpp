@@ -212,20 +212,18 @@ class ThreadPool {
   void worker(size_t worker_id, bool is_block_worker) {
     while (!done_) {
       std::unique_ptr<IThreadTask> pTask{nullptr};
-      ThreadSafeQueue<std::unique_ptr<IThreadTask>> *queue;
+      ThreadSafeQueue<std::unique_ptr<IThreadTask>>* queue;
       {
         boost::shared_lock<boost::shared_mutex> l(queues_mutex_);
         queue = &(queues_[worker_id]);
       }
       if (is_block_worker) {
-        if(queue->wait_pop(pTask))
-           pTask->execute();
+        if (queue->wait_pop(pTask)) pTask->execute();
       } else {
         // NOTE: The use of try_pop here means the worker will spin instead of
         // block while waiting for work. This is intentional. We defer to the
         // submitted tasks to block when no work is available.
-        if(queue->try_pop(pTask))
-           pTask->execute();
+        if (queue->try_pop(pTask)) pTask->execute();
       }
     }
     auto thread_id = std::this_thread::get_id();
