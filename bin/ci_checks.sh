@@ -52,6 +52,9 @@ kubectl get nodes
 # Set kubectl proxy for k8s tests later
 kubectl proxy --port 8080 &
 
+# Login to clippertesting dockerhub here
+docker login --username="clippertesting" --password=$CLIPPER_TESTING_DOCKERHUB_PASSWORD
+
 if [[ $run_all = "true" ]]; then
     $DIR/check_format.sh
     $DIR/run_unittests.sh

@@ -41,6 +41,7 @@ docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /
     -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
     -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
     -e CLIPPER_REGISTRY=$CLIPPER_REGISTRY \
+    -e CLIPPER_TESTING_DOCKERHUB_PASSWORD=$CLIPPER_TESTING_DOCKERHUB_PASSWORD \
     $CLIPPER_REGISTRY/unittests:$sha_tag
 
 # Python 3 unittests
@@ -52,4 +53,5 @@ docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /
     -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
     -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
     -e CLIPPER_REGISTRY=$CLIPPER_REGISTRY \
+    -e CLIPPER_TESTING_DOCKERHUB_PASSWORD=$CLIPPER_TESTING_DOCKERHUB_PASSWORD \
     $CLIPPER_REGISTRY/py35tests:$sha_tag

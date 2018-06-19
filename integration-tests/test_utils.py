@@ -38,6 +38,9 @@ PORT_RANGE = [34256, 50000]
 # The dockerhub account we are pushing kubernetes images to
 CLIPPER_CONTAINER_REGISTRY = 'clippertesting'
 
+# USE_MINIKUBE == True -> useInternalIP = True
+USE_MINIKUBE = False
+
 
 def get_docker_client():
     if "DOCKER_API_VERSION" in os.environ:
@@ -138,6 +141,7 @@ def create_kubernetes_connection(cleanup=False,
         logger.info("Cleaning up Kubernetes Cluster {}".format(cleanup_name))
         cm = KubernetesContainerManager(
             cluster_name=cleanup_name,
+            useInternalIP=USE_MINIKUBE,
             kubernetes_proxy_addr=kubernetes_proxy_addr)
         cl = ClipperConnection(cm)
         cl.stop_all()
@@ -149,6 +153,7 @@ def create_kubernetes_connection(cleanup=False,
             cluster_name=new_name,
             kubernetes_proxy_addr=kubernetes_proxy_addr,
             namespace=namespace,
+            useInternalIP=USE_MINIKUBE,
             create_namespace_if_not_exists=True)
         cl = ClipperConnection(cm)
         cl.start_clipper(num_frontend_replicas=num_frontend_replicas)
@@ -157,6 +162,7 @@ def create_kubernetes_connection(cleanup=False,
         try:
             cm = KubernetesContainerManager(
                 cluster_name=connect_name,
+                useInternalIP=USE_MINIKUBE,
                 kubernetes_proxy_addr=kubernetes_proxy_addr)
             cl = ClipperConnection(cm)
             cl.connect()
