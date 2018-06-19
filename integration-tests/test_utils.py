@@ -38,6 +38,7 @@ PORT_RANGE = [34256, 50000]
 # The dockerhub account we are pushing kubernetes images to
 CLIPPER_CONTAINER_REGISTRY = 'clippertesting'
 
+
 def get_docker_client():
     if "DOCKER_API_VERSION" in os.environ:
         return docker.from_env(version=os.environ["DOCKER_API_VERSION"])
