@@ -1,42 +1,100 @@
+#include <chrono>
+#include <cmath>
+#include <cstdlib>
+
 #include <gtest/gtest.h>
 
 #include <clipper/containers.hpp>
+#include <clipper/threadpool.hpp>
 
 using namespace clipper;
 
 namespace {
 
-TEST(ModelContainerTests, AverageThroughputUpdatesCorrectlyFewSamples) {
+TEST(ModelContainerTests,
+     BatchSizeDeterminationExploitsAdvantageousBatchSizeLatencyRelationship) {
   VersionedModelId model("test", "1");
   ModelContainer container(model, 0, 0, InputType::Doubles, DEFAULT_BATCH_SIZE);
-  std::array<long, 4> single_task_latencies_micros = {{500, 2000, 3000, 5000}};
-  long avg_latency = 0;
-  double avg_throughput_millis = 0;
-  for (long latency : single_task_latencies_micros) {
-    container.update_throughput(1, latency);
-    avg_throughput_millis += 1 / static_cast<double>(latency);
-    avg_latency += latency;
-  }
-  avg_throughput_millis = 1000 * (avg_throughput_millis / 4);
+  EstimatorFittingThreadPool::create_queue(model, 0);
 
-  ASSERT_DOUBLE_EQ(container.get_average_throughput_per_millisecond(),
-                   avg_throughput_millis);
+  long long base_latency = 500;
+  // The factor used to enforce a throughput benefit
+  // associated with batching. Because this factor is
+  // constant, increasing the batch size will always
+  // improve throughput. Therefore, the batch sizes emitted
+  // by the batch size determination algorithm should
+  // increase monotonically with the latency budget
+  double decay_factor = .9;
+
+  size_t last_batch_size = 1;
+  for (long long i = 1; i < 200; ++i) {
+    long long latency = static_cast<long long>(i * base_latency * decay_factor);
+    container.add_processing_datapoint(i, latency);
+
+    if (i % 10 == 0) {
+      Deadline deadline =
+          std::chrono::system_clock::now() + std::chrono::microseconds(latency);
+      size_t batch_size = container.get_batch_size(deadline).first;
+      ASSERT_GT(batch_size, last_batch_size);
+      last_batch_size = batch_size;
+    }
+  }
 }
 
-TEST(ModelContainerTests, AverageThroughputUpdatesCorrectlyManySamples) {
+TEST(ModelContainerTests,
+     BatchSizeDeterminationEstimatesWhenLatencyBudgetHasBeenExplored) {
   VersionedModelId model("test", "1");
   ModelContainer container(model, 0, 0, InputType::Doubles, DEFAULT_BATCH_SIZE);
-  double avg_throughput_millis = 0;
-  for (int i = 3; i < 103; i++) {
-    double throughput_millis = 1 / static_cast<double>(1000 * i);
-    avg_throughput_millis += throughput_millis;
+  EstimatorFittingThreadPool::create_queue(model, 0);
+
+  long long base_latency = 500;
+
+  for (long long i = 1; i <= 50; ++i) {
+    long long latency = base_latency * i;
+    container.add_processing_datapoint(i, latency);
+
+    // Get the batch size corresponding to a latency budget
+    // that has already been explored. We expect the determination
+    // method to be "estimation"
+    long long under_latency = latency - 1;
+    Deadline deadline = std::chrono::system_clock::now() +
+                        std::chrono::microseconds(under_latency);
+    BatchSizeInfo batch_size_info = container.get_batch_size(deadline);
+    BatchSizeDeterminationMethod method = batch_size_info.second;
+    ASSERT_EQ(static_cast<int>(method),
+              static_cast<int>(BatchSizeDeterminationMethod::Estimation));
   }
-  avg_throughput_millis = 1000 * (avg_throughput_millis / 100);
-  for (int i = 1; i < 103; i++) {
-    container.update_throughput(1, 1000 * i);
+}
+
+TEST(ModelContainerTests, IterativeMeanStdUpdatesPerformedCorrectly) {
+  std::vector<double> values;
+  values.reserve(100);
+  for (double i = 1; i <= 100; ++i) {
+    values.push_back(i);
   }
-  ASSERT_DOUBLE_EQ(container.get_average_throughput_per_millisecond(),
-                   avg_throughput_millis);
+
+  double num_samples = 1;
+  double iter_mean = values[0];
+  double iter_std = 0;
+
+  for (size_t i = 1; i < values.size(); ++i) {
+    std::tie(iter_mean, iter_std) = IterativeUpdater::calculate_new_mean_std(
+        num_samples, iter_mean, iter_std, values[i]);
+    num_samples += 1;
+  }
+
+  double cumulative_mean =
+      static_cast<double>(std::accumulate(values.begin(), values.end(), 0)) /
+      static_cast<double>(values.size());
+  double cumulative_var = 0;
+  for (size_t i = 0; i < values.size(); ++i) {
+    cumulative_var += std::pow((values[i] - cumulative_mean), 2);
+  }
+  cumulative_var /= values.size();
+  double cumulative_std = std::sqrt(cumulative_var);
+
+  ASSERT_LE(std::abs(iter_mean - cumulative_mean), .00001);
+  ASSERT_LE(std::abs(iter_std - cumulative_std), .00001);
 }
 
 TEST(ActiveContainerTests, AddContainer) {

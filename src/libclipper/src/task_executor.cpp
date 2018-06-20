@@ -22,7 +22,7 @@ PredictionCache::PredictionCache(size_t size_bytes)
 }
 
 folly::Future<Output> PredictionCache::fetch(
-    const VersionedModelId &model, const std::shared_ptr<Input> &input) {
+    const VersionedModelId &model, std::shared_ptr<PredictionData> &input) {
   std::unique_lock<std::mutex> l(m_);
   auto key = hash(model, input->hash());
   auto search = entries_.find(key);
@@ -60,7 +60,7 @@ folly::Future<Output> PredictionCache::fetch(
 }
 
 void PredictionCache::put(const VersionedModelId &model,
-                          const std::shared_ptr<Input> &input,
+                          std::shared_ptr<PredictionData> &input,
                           const Output &output) {
   std::unique_lock<std::mutex> l(m_);
   auto key = hash(model, input->hash());
@@ -74,7 +74,7 @@ void PredictionCache::put(const VersionedModelId &model,
       }
       entry.completed_ = true;
       entry.value_ = output;
-      size_bytes_ += output.y_hat_.size();
+      size_bytes_ += output.y_hat_->byte_size();
       evict_entries(size_bytes_ - max_size_bytes_);
     }
   } else {
@@ -86,7 +86,8 @@ void PredictionCache::put(const VersionedModelId &model,
 }
 
 void PredictionCache::insert_entry(const long key, CacheEntry &value) {
-  size_t entry_size_bytes = value.completed_ ? value.value_.y_hat_.size() : 0;
+  size_t entry_size_bytes =
+      value.completed_ ? value.value_.y_hat_->byte_size() : 0;
   if (entry_size_bytes <= max_size_bytes_) {
     evict_entries(size_bytes_ + entry_size_bytes - max_size_bytes_);
     page_buffer_.insert(page_buffer_.begin() + page_buffer_index_, key);
@@ -122,8 +123,8 @@ void PredictionCache::evict_entries(long space_needed_bytes) {
       page_buffer_index_ = page_buffer_.size() > 0
                                ? page_buffer_index_ % page_buffer_.size()
                                : 0;
-      size_bytes_ -= page_entry.value_.y_hat_.size();
-      space_needed_bytes -= page_entry.value_.y_hat_.size();
+      size_bytes_ -= page_entry.value_.y_hat_->byte_size();
+      space_needed_bytes -= page_entry.value_.y_hat_->byte_size();
       entries_.erase(page_entry_search);
     }
   }

@@ -407,6 +407,31 @@ inline void delete_queue(VersionedModelId vm, int replica_id) {
 
 }  // namespace TaskExecutionThreadPool
 
+namespace EstimatorFittingThreadPool {
+/**
+ * Convenience method to get the task execution thread pool for the
+ * application.
+ */
+inline ModelQueueThreadPool& get_thread_pool(void) {
+  static ModelQueueThreadPool estimator_fitting_pool;
+  return estimator_fitting_pool;
+}
+
+/**
+ * Submit a job to the estimator fitting thread pool
+ */
+template <typename Func, typename... Args>
+inline auto submit_job(Func&& func, Args&&... args) {
+  return get_thread_pool().submit(std::forward<Func>(func),
+                                  std::forward<Args>(args)...);
+}
+
+inline void create_queue(VersionedModelId vm, int replica_id) {
+  get_thread_pool().create_queue(vm, replica_id, false);
+}
+
+}  // namespace EstimatorFittingThreadPool
+
 namespace GarbageCollectionThreadPool {
 /**
  * Convenience method to get the garbage collection thread pool for the

@@ -27,15 +27,8 @@ target_include_directories(clipper PUBLIC
     $<INSTALL_INTERFACE:include>
     PRIVATE src)
 
+target_link_libraries(clipper boost folly zmqcpp redox pthread rapidjson spdlog base64 cqueue cityhash dlib)
 
-target_link_libraries(clipper boost folly zmqcpp redox pthread rapidjson spdlog base64 cqueue)
-
-# This makes the project importable from the build directory
-export(TARGETS clipper FILE ClipperConfig.cmake)
-
-
-# config_test resets the value of the config so it should always
-# be last in the list
 add_executable(libclippertests EXCLUDE_FROM_ALL
     test/test_main.cpp
     test/threadpool_test.cpp
@@ -50,8 +43,10 @@ add_executable(libclippertests EXCLUDE_FROM_ALL
     test/json_util_test.cpp
     test/logging_test.cpp
     test/task_executor_test.cpp
-    test/config_test.cpp
-    test/base64_test.cpp)
+    test/base64_test.cpp
+    # config_test resets the value of the config so it should always
+    # be last in the list
+    test/config_test.cpp)
 
 target_link_libraries(libclippertests clipper gtest gmock_main cxxopts)
 add_dependencies(unittests libclippertests)

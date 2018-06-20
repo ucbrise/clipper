@@ -68,6 +68,12 @@ target_include_directories(cqueue INTERFACE
         $<INSTALL_INTERFACE:cqueue>)
 export(TARGETS cqueue FILE ConcurrentQueueConfig.cmake)
 
+##########################################
+### DLib Machine Learning
+#########################################
+
+add_subdirectory(dlib)
+
 add_subdirectory(redox)
 
 add_subdirectory(rapidjson)

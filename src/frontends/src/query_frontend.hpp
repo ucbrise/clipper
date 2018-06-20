@@ -24,9 +24,9 @@
 using clipper::Feedback;
 using clipper::FeedbackAck;
 using clipper::FeedbackQuery;
-using clipper::Input;
 using clipper::InputType;
 using clipper::Output;
+using clipper::PredictionData;
 using clipper::Query;
 using clipper::Response;
 using clipper::VersionedModelId;
@@ -322,13 +322,13 @@ class RequestHandler {
     AppMetrics app_metrics(name);
 
     /*
-   * JSON format for prediction query request:
-   * {
-   *  "input" := [double] | [int] | [string] | [byte] | [float]
-   *  "input_batch" := [[double] | [int] | [byte] | [float] | string]
-   *  "version" := string (optional)
-   * }
-   */
+     * JSON format for prediction query request:
+     * {
+     *  "input" := [double] | [int] | [string] | [byte] | [float]
+     *  "input_batch" := [[double] | [int] | [byte] | [float] | string]
+     *  "version" := string (optional)
+     * }
+     */
 
     auto predict_fn = [this, name, input_type, policy, latency_slo_micros,
                        app_metrics](
@@ -446,6 +446,13 @@ class RequestHandler {
     server_.add_endpoint(update_endpoint, "POST", update_fn);
   }
 
+  static const std::string parse_output_y_hat(
+      std::shared_ptr<PredictionData>& y_hat) {
+    SharedPoolPtr<char> str_content = clipper::get_data<char>(y_hat);
+    return std::string(str_content.get() + y_hat->start(),
+                       str_content.get() + y_hat->start() + y_hat->size());
+  }
+
   void delete_application(std::string name) {
     std::string predict_endpoint = "^/" + name + "/predict$";
     server_.delete_endpoint(predict_endpoint, "POST");
@@ -471,18 +478,19 @@ class RequestHandler {
     clipper::json::add_long(json_response, PREDICTION_RESPONSE_KEY_QUERY_ID,
                             query_response.query_id_);
     rapidjson::Document json_y_hat;
+    std::string y_hat_str = parse_output_y_hat(query_response.output_.y_hat_);
     try {
       // Attempt to parse the string output as JSON
       // and, if possible, nest it in object form within the
       // query response
-      clipper::json::parse_json(query_response.output_.y_hat_, json_y_hat);
+      clipper::json::parse_json(y_hat_str, json_y_hat);
       clipper::json::add_object(json_response, PREDICTION_RESPONSE_KEY_OUTPUT,
                                 json_y_hat);
     } catch (const clipper::json::json_parse_error& e) {
       // If the string output is not JSON-formatted, include
       // it as a JSON-safe string value in the query response
       clipper::json::add_string(json_response, PREDICTION_RESPONSE_KEY_OUTPUT,
-                                query_response.output_.y_hat_);
+                                y_hat_str);
     }
     clipper::json::add_bool(json_response, PREDICTION_RESPONSE_KEY_USED_DEFAULT,
                             query_response.output_is_default_);
@@ -605,8 +613,8 @@ class RequestHandler {
 
     long uid = 0;
 
-    std::vector<std::shared_ptr<Input>> input_batch =
-        clipper::json::parse_input(input_type, d);
+    std::vector<std::shared_ptr<PredictionData>> input_batch =
+        clipper::json::parse_inputs(input_type, d);
     std::vector<folly::Future<Response>> predictions;
     for (auto input : input_batch) {
       auto prediction = query_processor_.predict(Query{
@@ -631,7 +639,7 @@ class RequestHandler {
     rapidjson::Document d;
     clipper::json::parse_json(json_content, d);
     long uid = clipper::json::get_long(d, "uid");
-    std::shared_ptr<Input> input =
+    std::shared_ptr<PredictionData> input =
         clipper::json::parse_single_input(input_type, d);
     double y_hat = clipper::json::get_double(d, "label");
     auto update = query_processor_.update(

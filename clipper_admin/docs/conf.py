@@ -54,13 +54,13 @@ sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('..'))
-# import recommonmark
-# from recommonmark.parser import CommonMarkParser
-# from recommonmark.transform import AutoStructify
-#
-# source_parsers = {'.md': CommonMarkParser}
+import recommonmark
+from recommonmark.parser import CommonMarkParser
+from recommonmark.transform import AutoStructify
 
-source_suffix = ['.rst']
+source_parsers = {'.md': CommonMarkParser}
+
+source_suffix = ['.rst', '.md']
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -68,7 +68,7 @@ source_suffix = ['.rst']
 extensions = [
     'sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.intersphinx',
     'sphinx.ext.todo', 'sphinx.ext.mathjax', 'sphinx.ext.viewcode',
-    'sphinx.ext.napoleon'
+    'sphinx.ext.napoleon', 'sphinx.ext.graphviz'
 ]
 
 autodoc_member_order = 'bysource'
@@ -200,3 +200,6 @@ def setup(app):
     #     'enable_auto_doc_ref': True,
     # }, True)
     # app.add_transform(AutoStructify)
+
+
+autodoc_mock_imports = ['tensorflow', 'torch']

@@ -120,6 +120,7 @@ def deploy_pytorch_model(clipper_conn,
     """This function deploys the prediction function with a PyTorch model.
     It serializes the PyTorch model in Onnx format and creates a container that loads it as a
     Caffe2 model.
+    
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`

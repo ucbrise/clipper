@@ -6,16 +6,24 @@
 #include <string>
 #include <vector>
 
+#include <city.h>
+
 #include <boost/functional/hash.hpp>
 #include <boost/optional.hpp>
 
 namespace clipper {
 
-using ByteBuffer = std::vector<uint8_t>;
+template <typename T>
+using UniquePoolPtr = std::unique_ptr<T, void (*)(void *)>;
+template <typename T>
+using SharedPoolPtr = std::shared_ptr<T>;
+
+typedef uint64_t PredictionDataHash;
+
 using QueryId = long;
 using FeedbackAck = bool;
 
-enum class InputType {
+enum class DataType {
   Invalid = -1,
   Bytes = 0,
   Ints = 1,
@@ -24,13 +32,19 @@ enum class InputType {
   Strings = 4,
 };
 
+typedef DataType InputType;
+typedef DataType OutputType;
+
 enum class RequestType {
   PredictRequest = 0,
   FeedbackRequest = 1,
 };
 
-std::string get_readable_input_type(InputType type);
-InputType parse_input_type(std::string type_string);
+std::string get_readable_input_type(DataType type);
+DataType parse_input_type(std::string type_string);
+
+// Pair of input data, data start index, data size in bytes
+typedef std::tuple<SharedPoolPtr<void>, size_t, size_t> ByteBuffer;
 
 class VersionedModelId {
  public:
@@ -55,42 +69,27 @@ class VersionedModelId {
   std::string id_;
 };
 
-class Output {
- public:
-  Output(const std::string y_hat,
-         const std::vector<VersionedModelId> models_used);
-
-  ~Output() = default;
-
-  explicit Output() = default;
-  Output(const Output &) = default;
-  Output &operator=(const Output &) = default;
-
-  Output(Output &&) = default;
-  Output &operator=(Output &&) = default;
-
-  bool operator==(const Output &rhs) const;
-  bool operator!=(const Output &rhs) const;
-
-  std::string y_hat_;
-  std::vector<VersionedModelId> models_used_;
-};
-
-class Input {
+class PredictionData {
  public:
   // TODO: pure virtual or default?
-  // virtual ~Input() = default;
+  // virtual ~PredictionData() = default;
 
-  virtual InputType type() const = 0;
+  virtual DataType type() const = 0;
+
+  virtual PredictionDataHash hash() = 0;
 
   /**
-   * Serializes input and writes resulting data to provided buffer.
-   *
-   * The serialization methods are used for RPC.
+   * The index marking the beginning of the input data
+   * content, relative to the input's data pointer
    */
-  virtual size_t serialize(uint8_t *buf) const = 0;
+  virtual size_t start() const = 0;
 
-  virtual size_t hash() const = 0;
+  /**
+   * The byte index marking the beginning of the input data
+   * content, relative to a byte representation of the
+   * input's data pointer
+   */
+  virtual size_t start_byte() const = 0;
 
   /**
    * @return The number of elements in the input
@@ -100,129 +99,133 @@ class Input {
    * @return The size of the input data in bytes
    */
   virtual size_t byte_size() const = 0;
-};
 
-class ByteVector : public Input {
- public:
-  explicit ByteVector(std::vector<uint8_t> data);
+  template <typename D>
+  friend SharedPoolPtr<D> get_data(
+      const std::shared_ptr<PredictionData> &data_item) {
+    return std::static_pointer_cast<D>(data_item->get_data());
+  }
 
-  // Disallow copy
-  ByteVector(ByteVector &other) = delete;
-  ByteVector &operator=(ByteVector &other) = delete;
-
-  // move constructors
-  ByteVector(ByteVector &&other) = default;
-  ByteVector &operator=(ByteVector &&other) = default;
-
-  InputType type() const override;
-  size_t serialize(uint8_t *buf) const override;
-  size_t hash() const override;
-  size_t size() const override;
-  size_t byte_size() const override;
-  const std::vector<uint8_t> &get_data() const;
+  template <typename D>
+  friend UniquePoolPtr<D> get_data(std::unique_ptr<PredictionData> data_item) {
+    D *raw_data = static_cast<D *>(data_item->get_data().get());
+    return UniquePoolPtr<D>(raw_data, free);
+  }
 
  private:
-  std::vector<uint8_t> data_;
+  virtual SharedPoolPtr<void> get_data() const = 0;
 };
 
-class IntVector : public Input {
+template <typename D>
+SharedPoolPtr<D> get_data(const std::shared_ptr<PredictionData> &data_item);
+
+template <typename D>
+UniquePoolPtr<D> get_data(std::unique_ptr<PredictionData> data_item);
+
+template <typename D>
+struct VectorDataType {
+  static const DataType type = DataType::Invalid;
+};
+
+template <>
+struct VectorDataType<uint8_t> {
+  static const DataType type = DataType::Bytes;
+};
+
+template <>
+struct VectorDataType<int> {
+  static const DataType type = DataType::Ints;
+};
+
+template <>
+struct VectorDataType<float> {
+  static const DataType type = DataType::Floats;
+};
+
+template <>
+struct VectorDataType<double> {
+  static const DataType type = DataType::Doubles;
+};
+
+template <>
+struct VectorDataType<char> {
+  static const DataType type = DataType::Strings;
+};
+
+template <typename D>
+class DataVector : public PredictionData {
  public:
-  explicit IntVector(std::vector<int> data);
+  explicit DataVector(UniquePoolPtr<D> data, size_t size)
+      : data_(std::move(data)), start_(0), size_(size) {}
 
-  // Disallow copy
-  IntVector(IntVector &other) = delete;
-  IntVector &operator=(IntVector &other) = delete;
+  explicit DataVector(SharedPoolPtr<D> data, size_t start, size_t size)
+      : data_(std::move(data)), start_(start), size_(size) {}
 
-  // move constructors
-  IntVector(IntVector &&other) = default;
-  IntVector &operator=(IntVector &&other) = default;
+  explicit DataVector(UniquePoolPtr<void> data, size_t byte_size)
+      : DataVector(data.release(), byte_size) {}
 
-  InputType type() const override;
-  size_t serialize(uint8_t *buf) const override;
-  size_t hash() const override;
-  size_t size() const override;
-  size_t byte_size() const override;
+  explicit DataVector(SharedPoolPtr<void> data, size_t start_byte,
+                      size_t byte_size)
+      : data_(std::static_pointer_cast<D>(std::move(data))),
+        start_(start_byte / sizeof(D)),
+        size_(byte_size / sizeof(D)) {}
 
-  const std::vector<int> &get_data() const;
+  explicit DataVector(void *data, size_t byte_size)
+      : data_(SharedPoolPtr<D>(static_cast<D *>(data), free)),
+        start_(0),
+        size_(byte_size / sizeof(D)) {}
+
+  DataType type() const override { return VectorDataType<D>::type; }
+
+  PredictionDataHash hash() override {
+    if (!hash_) {
+      hash_ = CityHash64(reinterpret_cast<char *>(data_.get() + start_),
+                         size_ * sizeof(D));
+    }
+    return hash_.get();
+  }
+
+  size_t start() const override { return start_; }
+
+  size_t start_byte() const override { return start_ * sizeof(D); }
+
+  size_t size() const override { return size_; }
+
+  size_t byte_size() const override { return size_ * sizeof(D); }
+
+  friend SharedPoolPtr<D> get_data(
+      const std::shared_ptr<DataVector<D>> &data_item) {
+    return data_item->data_;
+  }
+
+  friend UniquePoolPtr<D> get_data(std::unique_ptr<DataVector<D>> data_item) {
+    D *raw_data = data_item->data_.get();
+    return UniquePoolPtr<D>(raw_data, free);
+  }
 
  private:
-  std::vector<int> data_;
+  SharedPoolPtr<void> get_data() const override { return data_; }
+
+  SharedPoolPtr<D> data_;
+  size_t start_;
+  size_t size_;
+  boost::optional<PredictionDataHash> hash_;
 };
 
-class FloatVector : public Input {
- public:
-  explicit FloatVector(std::vector<float> data);
+typedef DataVector<uint8_t> ByteVector;
+typedef DataVector<int> IntVector;
+typedef DataVector<float> FloatVector;
+typedef DataVector<double> DoubleVector;
+typedef DataVector<char> SerializableString;
 
-  // Disallow copy
-  FloatVector(FloatVector &other) = delete;
-  FloatVector &operator=(FloatVector &other) = delete;
-
-  // move constructors
-  FloatVector(FloatVector &&other) = default;
-  FloatVector &operator=(FloatVector &&other) = default;
-
-  InputType type() const override;
-  size_t serialize(uint8_t *buf) const override;
-  size_t hash() const override;
-  size_t size() const override;
-  size_t byte_size() const override;
-  const std::vector<float> &get_data() const;
-
- private:
-  std::vector<float> data_;
-};
-
-class DoubleVector : public Input {
- public:
-  explicit DoubleVector(std::vector<double> data);
-
-  // Disallow copy
-  DoubleVector(DoubleVector &other) = delete;
-  DoubleVector &operator=(DoubleVector &other) = delete;
-
-  // move constructors
-  DoubleVector(DoubleVector &&other) = default;
-  DoubleVector &operator=(DoubleVector &&other) = default;
-
-  InputType type() const override;
-  size_t serialize(uint8_t *buf) const override;
-  size_t hash() const override;
-  size_t size() const override;
-  size_t byte_size() const override;
-  const std::vector<double> &get_data() const;
-
- private:
-  std::vector<double> data_;
-};
-
-class SerializableString : public Input {
- public:
-  explicit SerializableString(std::string data);
-
-  // Disallow copy
-  SerializableString(SerializableString &other) = delete;
-  SerializableString &operator=(SerializableString &other) = delete;
-
-  // move constructors
-  SerializableString(SerializableString &&other) = default;
-  SerializableString &operator=(SerializableString &&other) = default;
-
-  InputType type() const override;
-  size_t serialize(uint8_t *buf) const override;
-  size_t hash() const override;
-  size_t size() const override;
-  size_t byte_size() const override;
-  const std::string &get_data() const;
-
- private:
-  std::string data_;
-};
+std::unique_ptr<SerializableString> to_serializable_string(
+    const std::string &str);
 
 class Query {
  public:
   ~Query() = default;
 
-  Query(std::string label, long user_id, std::shared_ptr<Input> input,
+  Query(std::string label, long user_id, std::shared_ptr<PredictionData> input,
         long latency_budget_micros, std::string selection_policy,
         std::vector<VersionedModelId> candidate_models);
 
@@ -241,12 +244,36 @@ class Query {
   // REST endpoints.
   std::string label_;
   long user_id_;
-  std::shared_ptr<Input> input_;
+  std::shared_ptr<PredictionData> input_;
   // TODO change this to a deadline instead of a duration
   long latency_budget_micros_;
   std::string selection_policy_;
   std::vector<VersionedModelId> candidate_models_;
   std::chrono::time_point<std::chrono::high_resolution_clock> create_time_;
+};
+
+class Output {
+ public:
+  Output(const std::shared_ptr<PredictionData> y_hat,
+         const std::vector<VersionedModelId> models_used);
+
+  Output(const std::string y_hat,
+         const std::vector<VersionedModelId> models_used);
+
+  ~Output() = default;
+
+  explicit Output() = default;
+  Output(const Output &) = default;
+  Output &operator=(const Output &) = default;
+
+  Output(Output &&) = default;
+  Output &operator=(Output &&) = default;
+
+  bool operator==(const Output &rhs) const;
+  bool operator!=(const Output &rhs) const;
+
+  std::shared_ptr<PredictionData> y_hat_;
+  std::vector<VersionedModelId> models_used_;
 };
 
 class Response {
@@ -278,7 +305,7 @@ class Response {
 class Feedback {
  public:
   ~Feedback() = default;
-  Feedback(std::shared_ptr<Input> input, double y);
+  Feedback(std::shared_ptr<PredictionData> input, double y);
 
   Feedback(const Feedback &) = default;
   Feedback &operator=(const Feedback &) = default;
@@ -287,7 +314,7 @@ class Feedback {
   Feedback &operator=(Feedback &&) = default;
 
   double y_;
-  std::shared_ptr<Input> input_;
+  std::shared_ptr<PredictionData> input_;
 };
 
 class FeedbackQuery {
@@ -317,8 +344,9 @@ class PredictTask {
  public:
   ~PredictTask() = default;
 
-  PredictTask(std::shared_ptr<Input> input, VersionedModelId model,
-              float utility, QueryId query_id, long latency_slo_micros);
+  PredictTask(std::shared_ptr<PredictionData> input, VersionedModelId model,
+              float utility, QueryId query_id, long latency_slo_micros,
+              bool artificial = false);
 
   PredictTask(const PredictTask &other) = default;
 
@@ -328,12 +356,13 @@ class PredictTask {
 
   PredictTask &operator=(PredictTask &&other) = default;
 
-  std::shared_ptr<Input> input_;
+  std::shared_ptr<PredictionData> input_;
   VersionedModelId model_;
   float utility_;
   QueryId query_id_;
   long latency_slo_micros_;
   std::chrono::time_point<std::chrono::system_clock> recv_time_;
+  bool artificial_;
 };
 
 /// NOTE: If a feedback task is scheduled, the task scheduler
@@ -363,9 +392,12 @@ namespace rpc {
 
 class PredictionRequest {
  public:
-  explicit PredictionRequest(InputType input_type);
-  explicit PredictionRequest(std::vector<std::shared_ptr<Input>> inputs,
-                             InputType input_type);
+  explicit PredictionRequest(DataType input_type);
+  explicit PredictionRequest(
+      std::vector<std::shared_ptr<PredictionData>> &inputs,
+      DataType input_type);
+  explicit PredictionRequest(
+      std::vector<std::unique_ptr<PredictionData>> inputs, DataType input_type);
 
   // Disallow copy
   PredictionRequest(PredictionRequest &other) = delete;
@@ -375,20 +407,22 @@ class PredictionRequest {
   PredictionRequest(PredictionRequest &&other) = default;
   PredictionRequest &operator=(PredictionRequest &&other) = default;
 
-  void add_input(std::shared_ptr<Input> input);
+  void add_input(const std::shared_ptr<PredictionData> &input);
+  void add_input(std::unique_ptr<PredictionData> input);
   std::vector<ByteBuffer> serialize();
 
  private:
-  void validate_input_type(std::shared_ptr<Input> &input) const;
+  void validate_input_type(InputType input_type) const;
 
-  std::vector<std::shared_ptr<Input>> inputs_;
-  InputType input_type_;
+  std::vector<ByteBuffer> input_data_items_;
+  DataType input_type_;
   size_t input_data_size_ = 0;
 };
 
 class PredictionResponse {
  public:
-  PredictionResponse(const std::vector<std::string> outputs);
+  PredictionResponse(
+      const std::vector<std::shared_ptr<PredictionData>> outputs);
 
   // Disallow copy
   PredictionResponse(PredictionResponse &other) = delete;
@@ -398,9 +432,10 @@ class PredictionResponse {
   PredictionResponse(PredictionResponse &&other) = default;
   PredictionResponse &operator=(PredictionResponse &&other) = default;
 
-  static PredictionResponse deserialize_prediction_response(ByteBuffer bytes);
+  static PredictionResponse deserialize_prediction_response(
+      std::vector<ByteBuffer> response);
 
-  std::vector<std::string> outputs_;
+  std::vector<std::shared_ptr<PredictionData>> outputs_;
 };
 
 }  // namespace rpc

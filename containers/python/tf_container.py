@@ -8,10 +8,16 @@ import glob
 
 from tensorflow.python.saved_model import loader
 
+IMPORT_ERROR_RETURN_CODE = 3
+
 
 def load_predict_func(file_path):
-    with open(file_path, 'r') as serialized_func_file:
-        return cloudpickle.load(serialized_func_file)
+    if sys.version_info < (3, 0):
+        with open(file_path, 'r') as serialized_func_file:
+            return cloudpickle.load(serialized_func_file)
+    else:
+        with open(file_path, 'rb') as serialized_func_file:
+            return cloudpickle.load(serialized_func_file)
 
 
 class TfContainer(rpc.ModelContainerBase):
@@ -67,44 +73,12 @@ class TfContainer(rpc.ModelContainerBase):
 
 if __name__ == "__main__":
     print("Starting TensorFlow container")
-    try:
-        model_name = os.environ["CLIPPER_MODEL_NAME"]
-    except KeyError:
-        print(
-            "ERROR: CLIPPER_MODEL_NAME environment variable must be set",
-            file=sys.stdout)
-        sys.exit(1)
-    try:
-        model_version = os.environ["CLIPPER_MODEL_VERSION"]
-    except KeyError:
-        print(
-            "ERROR: CLIPPER_MODEL_VERSION environment variable must be set",
-            file=sys.stdout)
-        sys.exit(1)
-
-    ip = "127.0.0.1"
-    if "CLIPPER_IP" in os.environ:
-        ip = os.environ["CLIPPER_IP"]
-    else:
-        print("Connecting to Clipper on localhost")
-
-    port = 7000
-    if "CLIPPER_PORT" in os.environ:
-        port = int(os.environ["CLIPPER_PORT"])
-    else:
-        print("Connecting to Clipper with default port: 7000")
-
-    input_type = "doubles"
-    if "CLIPPER_INPUT_TYPE" in os.environ:
-        input_type = os.environ["CLIPPER_INPUT_TYPE"]
-    else:
-        print("Using default input type: doubles")
-
-    model_dir_path = os.environ["CLIPPER_MODEL_PATH"]
-    model_files = os.listdir(model_dir_path)
-    assert len(model_files) >= 2
-    fname = os.path.splitext(model_files[0])[0]
-    full_fname = os.path.join(model_dir_path, fname)
-    model = TfContainer(model_dir_path, input_type)
     rpc_service = rpc.RPCService()
-    rpc_service.start(model, ip, port, model_name, model_version, input_type)
+    try:
+        model = TfContainer(rpc_service.get_model_path(),
+                            rpc_service.get_input_type())
+        sys.stdout.flush()
+        sys.stderr.flush()
+    except ImportError:
+        sys.exit(IMPORT_ERROR_RETURN_CODE)
+    rpc_service.start(model)

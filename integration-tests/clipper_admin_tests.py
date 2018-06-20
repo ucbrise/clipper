@@ -455,7 +455,6 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
                          test_batch_predict_result)  # tests batch input
 
     def test_query_specific_model_version(self):
-
         model_name = "testmodel"
         app_name = "testapp"
 

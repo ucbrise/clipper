@@ -11,6 +11,7 @@
 #include <clipper/datatypes.hpp>
 #include <clipper/json_util.hpp>
 #include <clipper/logging.hpp>
+#include <clipper/memory.hpp>
 #include <clipper/query_processor.hpp>
 
 #include "bench_utils.hpp"
@@ -59,7 +60,6 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
   bool prevent_cache_hits = get_bool(PREVENT_CACHE_HITS, config);
 
   int num_datapoints = static_cast<int>(data.size());
-  std::vector<double> query_vec;
   std::default_random_engine generator;
   std::poisson_distribution<int> distribution(batch_delay_micros);
   long delay_micros;
@@ -68,15 +68,20 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
   for (int j = 0; j < num_batches; j++) {
     for (int i = 0; i < request_batch_size; i++) {
       query_num = j * request_batch_size + i;
-      query_vec = data[query_num % num_datapoints];
-
+      auto &query_vec = data[query_num % num_datapoints];
+      UniquePoolPtr<double> query_data =
+          memory::allocate_unique<double>(query_vec.size());
+      memcpy(query_data.get(), query_vec.data(),
+             query_vec.size() * sizeof(double));
+      double *query_data_raw = query_data.get();
       if (prevent_cache_hits) {
         // Modify it to be epoch and thread-specific
-        query_vec[0] = query_num / num_datapoints;
-        query_vec[1] = thread_id;
+        query_data_raw[0] = query_num / num_datapoints;
+        query_data_raw[1] = thread_id;
       }
 
-      std::shared_ptr<Input> input = std::make_shared<DoubleVector>(query_vec);
+      std::shared_ptr<PredictionData> input = std::make_shared<DoubleVector>(
+          std::move(query_data), query_vec.size());
       Query q = {TEST_APPLICATION_LABEL,
                  UID,
                  input,

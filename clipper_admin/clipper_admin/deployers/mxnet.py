@@ -3,8 +3,10 @@ import shutil
 import logging
 import os
 import json
+import sys
 
 from ..version import __version__
+from ..exceptions import ClipperException
 from .deployer_utils import save_python_function
 
 logger = logging.getLogger(__name__)
@@ -12,24 +14,24 @@ logger = logging.getLogger(__name__)
 MXNET_MODEL_RELATIVE_PATH = "mxnet_model"
 
 
-def create_endpoint(
-        clipper_conn,
-        name,
-        input_type,
-        func,
-        mxnet_model,
-        mxnet_data_shapes,
-        default_output="None",
-        version=1,
-        slo_micros=3000000,
-        labels=None,
-        registry=None,
-        base_image="clipper/mxnet-container:{}".format(__version__),
-        num_replicas=1,
-        batch_size=-1,
-        pkgs_to_install=None):
+def create_endpoint(clipper_conn,
+                    name,
+                    input_type,
+                    func,
+                    mxnet_model,
+                    mxnet_data_shapes,
+                    default_output="None",
+                    version=1,
+                    slo_micros=3000000,
+                    labels=None,
+                    registry=None,
+                    base_image="default",
+                    num_replicas=1,
+                    batch_size=-1,
+                    pkgs_to_install=None):
     """Registers an app and deploys the provided predict function with MXNet model as
     a Clipper model.
+
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
@@ -96,12 +98,12 @@ def create_endpoint(
     Note
     ----
     Regarding `mxnet_data_shapes` parameter:
-    Clipper may provide the model with variable size input batches. Because MXNet can't
-    handle variable size input batches, we recommend setting batch size for input data
-    to 1, or dynamically reshaping the model with every prediction based on the current
-    input batch size.
-    More information regarding a DataDesc object can be found here:
-    https://mxnet.incubator.apache.org/versions/0.11.0/api/python/io.html#mxnet.io.DataDesc
+        Clipper may provide the model with variable size input batches. Because MXNet can't
+        handle variable size input batches, we recommend setting batch size for input data
+        to 1, or dynamically reshaping the model with every prediction based on the current
+        input batch size.
+        More information regarding a DataDesc object can be found here:
+        https://mxnet.incubator.apache.org/versions/0.11.0/api/python/io.html#mxnet.io.DataDesc
     """
 
     clipper_conn.register_application(name, input_type, default_output,
@@ -113,21 +115,21 @@ def create_endpoint(
     clipper_conn.link_model_to_app(name, name)
 
 
-def deploy_mxnet_model(
-        clipper_conn,
-        name,
-        version,
-        input_type,
-        func,
-        mxnet_model,
-        mxnet_data_shapes,
-        base_image="clipper/mxnet-container:{}".format(__version__),
-        labels=None,
-        registry=None,
-        num_replicas=1,
-        batch_size=-1,
-        pkgs_to_install=None):
+def deploy_mxnet_model(clipper_conn,
+                       name,
+                       version,
+                       input_type,
+                       func,
+                       mxnet_model,
+                       mxnet_data_shapes,
+                       base_image="default",
+                       labels=None,
+                       registry=None,
+                       num_replicas=1,
+                       batch_size=-1,
+                       pkgs_to_install=None):
     """Deploy a Python function with a MXNet model.
+
     Parameters
     ----------
     clipper_conn : :py:meth:`clipper_admin.ClipperConnection`
@@ -188,7 +190,8 @@ def deploy_mxnet_model(
 
     Example
     -------
-
+    Create a MXNet model and then deploy it::
+    
         from clipper_admin import ClipperConnection, DockerContainerManager
         from clipper_admin.deployers.mxnet import deploy_mxnet_model
         import mxnet as mx
@@ -244,6 +247,31 @@ def deploy_mxnet_model(
                 "w") as f:
             json.dump({"data_shapes": mxnet_data_shapes}, f)
 
+        logger.info("MXNet model saved")
+
+        py_minor_version = (sys.version_info.major, sys.version_info.minor)
+        # Check if Python 2 or Python 3 image
+        if base_image == "default":
+            if py_minor_version < (3, 0):
+                logger.info("Using Python 2 base image")
+                base_image = "clipper/mxnet-container:{}".format(__version__)
+            elif py_minor_version == (3, 5):
+                logger.info("Using Python 3.5 base image")
+                base_image = "clipper/mxnet35-container:{}".format(__version__)
+            elif py_minor_version == (3, 6):
+                logger.info("Using Python 3.6 base image")
+                base_image = "clipper/mxnet36-container:{}".format(__version__)
+            else:
+                msg = (
+                    "MXNet deployer only supports Python 2.7, 3.5, and 3.6. "
+                    "Detected {major}.{minor}").format(
+                        major=sys.version_info.major,
+                        minor=sys.version_info.minor)
+                logger.error(msg)
+                # Remove temp files
+                shutil.rmtree(serialization_dir)
+                raise ClipperException(msg)
+
         # Deploy model
         clipper_conn.build_and_deploy_model(
             name, version, input_type, serialization_dir, base_image, labels,
@@ -251,8 +279,7 @@ def deploy_mxnet_model(
 
     except Exception as e:
         logger.error("Error saving MXNet model: %s" % e)
-
-    logger.info("MXNet model saved")
+        raise e
 
     # Remove temp files
     shutil.rmtree(serialization_dir)

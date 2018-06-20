@@ -94,12 +94,6 @@ function run_jvm_container_tests {
   mvn test
 }
 
-function run_cpp_container_tests {
-  cd $DIR/../debug
-  echo "Running CPP container tests..."
-  ./src/container/container_tests
-}
-
 function run_r_container_tests {
   cd $DIR
   cd ../containers/R/tests
@@ -165,8 +159,6 @@ function run_all_tests {
   redis-cli -p $REDIS_PORT "flushall"
   run_jvm_container_tests
   redis-cli -p $REDIS_PORT "flushall"
-  run_cpp_container_tests
-  redis-cli -p $REDIS_PORT "flushall"
   run_r_container_tests
   redis-cli -p $REDIS_PORT "flushall"
   run_rpc_container_tests
@@ -195,9 +187,6 @@ case $args in
                                 ;;
     -j | --jvm-container )      set_test_environment
                                 run_jvm_container_tests
-                                ;;
-    -c | --cpp-container )      set_test_environment
-                                run_cpp_container_tests
                                 ;;
     -rc | --r-container )       set_test_environment
                                 run_r_container_tests

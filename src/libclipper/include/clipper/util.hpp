@@ -31,9 +31,9 @@ class Queue {
   Queue(Queue&&) = delete;
   Queue& operator=(Queue&&) = delete;
 
-  void push(const T& x) {
+  void push(const T x) {
     boost::unique_lock<boost::shared_mutex> l(m_);
-    xs_.push(x);
+    xs_.push(std::move(x));
     data_available_.notify_one();
   }
 
@@ -49,7 +49,7 @@ class Queue {
     while (xs_.size() == 0) {
       data_available_.wait(l);
     }
-    const T x = xs_.front();
+    T x = std::move(xs_.front());
     xs_.pop();
     return x;
   }
@@ -57,7 +57,7 @@ class Queue {
   boost::optional<T> try_pop() {
     boost::unique_lock<boost::shared_mutex> l(m_);
     if (xs_.size() > 0) {
-      const T x = xs_.front();
+      T x = std::move(xs_.front());
       xs_.pop();
       return x;
     } else {

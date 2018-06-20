@@ -1,8 +1,6 @@
 from __future__ import absolute_import, print_function
 import os
 import sys
-if sys.version_info >= (3, 0):
-    sys.exit(0)
 import requests
 import json
 import numpy as np
@@ -56,9 +54,11 @@ def parsedata(train_path, pos_label):
 
 
 def predict(model, xs):
-    preds = model(xs)
-    preds = [preds.data.numpy().tolist()[0]]
-    return [str(p) for p in preds]
+    preds = []
+    for x in xs:
+        p = model(x).data.numpy().tolist()[0]
+        preds.append(str(p))
+    return preds
 
 
 def deploy_and_test_model(clipper_conn,
