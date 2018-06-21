@@ -186,10 +186,10 @@ if __name__ == "__main__":
                 retry_count = MAX_RETRY
                 while retry_count:
                     try:
-                        name = prefix + name
+                        metric_key = prefix + name
                         if spec['type'] == 'Histogram' or spec['type'] == 'Summary':
-                            name += '_sum'
-                        res = get_matched_query(metric_api_addr, name)
+                            metric_key += '_sum'
+                        res = get_matched_query(metric_api_addr, metric_key)
                         parse_res_and_assert_node(res, node_num=2)
                         retry_count = 0
                     except AssertionError as e:
@@ -202,6 +202,9 @@ if __name__ == "__main__":
                         else:
                             time.sleep(10)
                             pass  # try again.
+
+                # One metric is there means all metric there
+                break
 
             logger.info("Test 2 Passed")
             # End Metric Check
