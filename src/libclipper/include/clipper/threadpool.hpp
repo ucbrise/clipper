@@ -194,6 +194,7 @@ class ThreadPool {
     boost::shared_lock<boost::shared_mutex> l(queues_mutex_);
     auto queue = queues_.find(queue_id);
     if (queue != queues_.end()) {
+      l.unlock();
       queue->second.push(std::make_unique<TaskType>(std::move(task)));
     } else {
       std::stringstream error_msg;
@@ -211,20 +212,18 @@ class ThreadPool {
   void worker(size_t worker_id, bool is_block_worker) {
     while (!done_) {
       std::unique_ptr<IThreadTask> pTask{nullptr};
-      bool work_to_do = false;
+      ThreadSafeQueue<std::unique_ptr<IThreadTask>>* queue;
       {
         boost::shared_lock<boost::shared_mutex> l(queues_mutex_);
-        if (is_block_worker) {
-          work_to_do = queues_[worker_id].wait_pop(pTask);
-        } else {
-          // NOTE: The use of try_pop here means the worker will spin instead of
-          // block while waiting for work. This is intentional. We defer to the
-          // submitted tasks to block when no work is available.
-          work_to_do = queues_[worker_id].try_pop(pTask);
-        }
+        queue = &(queues_[worker_id]);
       }
-      if (work_to_do) {
-        pTask->execute();
+      if (is_block_worker) {
+        if (queue->wait_pop(pTask)) pTask->execute();
+      } else {
+        // NOTE: The use of try_pop here means the worker will spin instead of
+        // block while waiting for work. This is intentional. We defer to the
+        // submitted tasks to block when no work is available.
+        if (queue->try_pop(pTask)) pTask->execute();
       }
     }
     auto thread_id = std::this_thread::get_id();
@@ -386,13 +385,14 @@ inline ModelQueueThreadPool& get_thread_pool(void) {
  * Submit a job to the estimator fitting thread pool
  */
 template <typename Func, typename... Args>
-inline auto submit_job(Func&& func, Args&&... args) {
-  return get_thread_pool().submit(std::forward<Func>(func),
+inline auto submit_job(VersionedModelId vm, int replica_id, Func&& func,
+                       Args&&... args) {
+  return get_thread_pool().submit(vm, replica_id, std::forward<Func>(func),
                                   std::forward<Args>(args)...);
 }
 
 inline void create_queue(VersionedModelId vm, int replica_id) {
-  get_thread_pool().create_queue(vm, replica_id, false);
+  get_thread_pool().create_queue(vm, replica_id, true);
 }
 
 }  // namespace EstimatorFittingThreadPool
