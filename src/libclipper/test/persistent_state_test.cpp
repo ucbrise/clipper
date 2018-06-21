@@ -39,12 +39,12 @@ TEST_F(StateDBTest, TestSinglePutGet) {
 
 TEST_F(StateDBTest, TestManyPutGet) {
   ASSERT_EQ(db_.num_entries(), 0);
-  for (int i = 0; i < 5000; ++i) {
+  for (int i = 0; i < 100; ++i) {
     StateKey key = std::make_tuple("Dan", i, 1234);
     ASSERT_TRUE(db_.put(key, "valuestring"));
   }
-  ASSERT_EQ(db_.num_entries(), 5000);
-  for (int i = 0; i < 5000; ++i) {
+  ASSERT_EQ(db_.num_entries(), 100);
+  for (int i = 0; i < 100; ++i) {
     StateKey key = std::make_tuple("Dan", i, 1234);
     ASSERT_TRUE(db_.remove(key));
   }

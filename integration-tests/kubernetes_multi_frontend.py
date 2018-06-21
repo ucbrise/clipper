@@ -14,11 +14,12 @@ import time
 import logging
 import yaml
 from test_utils import (create_kubernetes_connection, BenchmarkException,
-                        fake_model_data, headers, log_clipper_state)
+                        fake_model_data, headers, log_clipper_state,
+                        CLIPPER_CONTAINER_REGISTRY)
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
-from clipper_admin import __version__ as clipper_version, CLIPPER_TEMP_DIR, ClipperException
+from clipper_admin import __version__ as clipper_version, CLIPPER_TEMP_DIR, ClipperException, __registry__ as clipper_registry
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
@@ -37,10 +38,9 @@ def deploy_model(clipper_conn, name, link=False):
         str(int(time.time())),  # random string as version
         "doubles",
         fake_model_data,
-        "clipper/noop-container:{}".format(clipper_version),
+        "{}/noop-container:{}".format(clipper_registry, clipper_version),
         num_replicas=1,
-        container_registry=
-        "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper")
+        container_registry=CLIPPER_CONTAINER_REGISTRY)
     time.sleep(10)
 
     if link:
@@ -100,9 +100,15 @@ def create_and_test_app(clipper_conn, name):
 
 
 if __name__ == "__main__":
+    import random
+
+    cluster_name = "k8-frontx-{}".format(random.randint(0, 5000))
     try:
         clipper_conn = create_kubernetes_connection(
-            cleanup=True, start_clipper=True, num_frontend_replicas=2)
+            cleanup=False,
+            start_clipper=True,
+            num_frontend_replicas=2,
+            new_name=cluster_name)
         time.sleep(10)
         print(clipper_conn.cm.get_query_addr())
         try:
@@ -112,8 +118,9 @@ if __name__ == "__main__":
 
             k8s_beta = clipper_conn.cm._k8s_beta
             if (k8s_beta.read_namespaced_deployment(
-                    'query-frontend-0', namespace='default').to_dict()
-                ['status']['available_replicas'] != 1):
+                    'query-frontend-0-at-{}'.format(cluster_name),
+                    namespace='default').to_dict()['status']
+                ['available_replicas'] != 1):
                 raise BenchmarkException(
                     "Wrong number of replicas of query-frontend-0."
                     "Expected {}, found {}".format(
@@ -122,8 +129,9 @@ if __name__ == "__main__":
                             'query-frontend-0', namespace='default').to_dict()[
                                 'status']['available_replicas']))
             if (k8s_beta.read_namespaced_deployment(
-                    'query-frontend-1', namespace='default').to_dict()
-                ['status']['available_replicas'] != 1):
+                    'query-frontend-1-at-{}'.format(cluster_name),
+                    namespace='default').to_dict()['status']
+                ['available_replicas'] != 1):
                 raise BenchmarkException(
                     "Wrong number of replicas of query-frontend-1."
                     "Expected {}, found {}".format(
@@ -137,8 +145,9 @@ if __name__ == "__main__":
             svc_lists = k8s_v1.list_namespaced_service(
                 namespace='default').to_dict()['items']
             svc_names = [svc['metadata']['name'] for svc in svc_lists]
-            if not ('query-frontend-0' in svc_names
-                    and 'query-frontend-1' in svc_names):
+            if not ('query-frontend-0-at-{}'.format(cluster_name) in svc_names
+                    and 'query-frontend-1-at-{}'.format(
+                        cluster_name) in svc_names):
                 raise BenchmarkException(
                     "Error creating query frontend RPC services")
             logger.info("Ok: we have 2 query-frontend rpc services")
@@ -156,19 +165,15 @@ if __name__ == "__main__":
         except BenchmarkException as e:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
-            create_kubernetes_connection(cleanup=True, start_clipper=False)
+            create_kubernetes_connection(
+                cleanup=True, start_clipper=False, cleanup_name=cluster_name)
             sys.exit(1)
         except ClipperException as e:
             log_clipper_state(clipper_conn)
             logger.exception("ClipperException")
-            create_kubernetes_connection(cleanup=True, start_clipper=False)
+            create_kubernetes_connection(
+                cleanup=True, start_clipper=False, cleanup_name=cluster_name)
             sys.exit(1)
     except Exception as e:
         logger.exception("Exception: {}".format(e))
-
-        # Added debug lines in case it fails
-        os.system("kubectl get pods")
-        os.system("kubectl describe pods")
-        # End Debug
-
         sys.exit(1)

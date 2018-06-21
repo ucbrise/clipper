@@ -14,7 +14,7 @@
 # pin their docker images to the minor version and get updates with new patches
 # automatically.
 
-
+set -x
 set -e
 set -u
 set -o pipefail
@@ -31,7 +31,7 @@ cd $CLIPPER_ROOT
 
 # Initialize tags
 version_tag=$(<VERSION.txt)
-sha_tag=`git rev-parse --verify --short HEAD`
+sha_tag=`git rev-parse --verify --short=10 HEAD`
 
 ######## Utilities for managing versioning ############
 # From https://github.com/cloudflare/semver_bash/blob/c1133faf0efe17767b654b213f212c326df73fa3/semver.sh
@@ -189,7 +189,11 @@ set_version_tag () {
 
 set_version_tag
 
-namespace="clipper"
+namespace=$(docker info | grep Username | awk '{ print $2 }')
+
+# Clear clipper_docker_images.txt for future write
+rm -f $CLIPPER_ROOT/bin/clipper_docker_images.txt
+touch $CLIPPER_ROOT/bin/clipper_docker_images.txt
 
 # We build images with the SHA tag to try to prevent clobbering other images
 # being built from different branches on the same machine. This is particularly
@@ -211,11 +215,15 @@ create_image () {
 
                      
     echo "Building $namespace/$image:$sha_tag from file $dockerfile"
-    time docker build --build-arg CODE_VERSION=$sha_tag $rpc_version -t $namespace/$image:$sha_tag \
+    time docker build --build-arg CODE_VERSION=$sha_tag --build-arg REGISTRY=$namespace $rpc_version -t $namespace/$image:$sha_tag \
         -f dockerfiles/$dockerfile $CLIPPER_ROOT
-    docker tag $namespace/$image:$sha_tag $namespace/$image:$version_tag
+
+    echo "Image tag appended to CLIPPER_ROOT/bin/clipper_docker_images.txt"
+    echo "$namespace/$image:$sha_tag" >> $CLIPPER_ROOT/bin/clipper_docker_images.txt
 
     if [ "$publish" = true ] && [ "$public" = true ] ; then
+        docker tag $namespace/$image:$sha_tag $namespace/$image:$version_tag
+
         echo "Publishing $namespace/$image:$sha_tag"
         docker push $namespace/$image:$sha_tag
         echo "Publishing $namespace/$image:$version_tag"
@@ -285,7 +293,6 @@ build_images () {
     create_image pyspark-container PySparkContainerDockerfile $public py &
     create_image pyspark35-container PySparkContainerDockerfile $public py35 &
     create_image pyspark36-container PySparkContainerDockerfile $public py36 &
-    wait
 
     create_image tf-container TensorFlowDockerfile $public py &
     create_image tf35-container TensorFlowDockerfile $public py35 &
@@ -295,7 +302,6 @@ build_images () {
     create_image pytorch-container PyTorchContainerDockerfile $public py &
     create_image pytorch35-container PyTorchContainerDockerfile $public py35 &
     create_image pytorch36-container PyTorchContainerDockerfile $public py36 &
-    wait
 
     # See issue #475
     # create_image caffe2-onnx-container Caffe2OnnxDockerfile $public py

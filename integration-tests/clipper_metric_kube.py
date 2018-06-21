@@ -14,10 +14,11 @@ import time
 import logging
 import yaml
 from test_utils import (create_kubernetes_connection, BenchmarkException,
-                        fake_model_data, headers, log_clipper_state)
+                        fake_model_data, headers, log_clipper_state,
+                        CLIPPER_CONTAINER_REGISTRY)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
-from clipper_admin import __version__ as clipper_version, CLIPPER_TEMP_DIR, ClipperException
+from clipper_admin import __version__ as clipper_version, CLIPPER_TEMP_DIR, ClipperException, __registry__ as clipper_registry
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
@@ -37,10 +38,9 @@ def deploy_model(clipper_conn, name, link=False):
         1,
         "doubles",
         fake_model_data,
-        "clipper/noop-container:{}".format(clipper_version),
+        "{}/noop-container:{}".format(clipper_registry, clipper_version),
         num_replicas=2,  # We set it to 2 for metric purpose.
-        container_registry=
-        "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper")
+        container_registry=CLIPPER_CONTAINER_REGISTRY)
     time.sleep(10)
 
     if link:
@@ -137,9 +137,11 @@ def check_target_health(metric_addr):
 
 
 if __name__ == "__main__":
+    import random
+    cluster_name = 'metric-k8s-{}'.format(random.randint(0, 5000))
     try:
         clipper_conn = create_kubernetes_connection(
-            cleanup=True, start_clipper=True)
+            new_name=cluster_name, cleanup=False, start_clipper=True)
         time.sleep(60)
         logger.info(clipper_conn.cm.get_query_addr())
         try:
@@ -180,11 +182,30 @@ if __name__ == "__main__":
             conf = conf['Model Container']
             prefix = 'clipper_{}_'.format(conf.pop('prefix'))
             for name, spec in conf.items():
-                name = prefix + name
-                if spec['type'] == 'Histogram' or spec['type'] == 'Summary':
-                    name += '_sum'
-                res = get_matched_query(metric_api_addr, name)
-                parse_res_and_assert_node(res, node_num=2)
+
+                retry_count = MAX_RETRY
+                while retry_count:
+                    try:
+                        metric_key = prefix + name
+                        if spec['type'] == 'Histogram' or spec['type'] == 'Summary':
+                            metric_key += '_sum'
+                        res = get_matched_query(metric_api_addr, metric_key)
+                        parse_res_and_assert_node(res, node_num=2)
+                        retry_count = 0
+                    except AssertionError as e:
+                        logger.info(
+                            "Exception noted. Will retry again in 10 seconds.")
+                        logger.info(e)
+                        retry_count -= 1
+                        if retry_count == 0:  # a.k.a. the last retry
+                            raise e
+                        else:
+                            time.sleep(10)
+                            pass  # try again.
+
+                # One metric is there means all metric there
+                break
+
             logger.info("Test 2 Passed")
             # End Metric Check
             if not os.path.exists(CLIPPER_TEMP_DIR):
@@ -196,21 +217,35 @@ if __name__ == "__main__":
             log_clipper_state(clipper_conn)
             logger.info("SUCCESS")
             create_kubernetes_connection(
-                cleanup=True, start_clipper=False, connect=False)
+                cleanup=True,
+                start_clipper=False,
+                connect=False,
+                cleanup_name=cluster_name)
             logger.info("EXITING")
             os._exit(0)
         except BenchmarkException as e:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
             create_kubernetes_connection(
-                cleanup=True, start_clipper=False, connect=False)
+                cleanup=True,
+                start_clipper=False,
+                connect=False,
+                cleanup_name=cluster_name)
             sys.exit(1)
         except ClipperException as e:
             log_clipper_state(clipper_conn)
             logger.exception("ClipperException")
             create_kubernetes_connection(
-                cleanup=True, start_clipper=False, connect=False)
+                cleanup=True,
+                start_clipper=False,
+                connect=False,
+                cleanup_name=cluster_name)
             sys.exit(1)
     except Exception as e:
         logger.exception("Exception: {}".format(e))
+        create_kubernetes_connection(
+            cleanup=True,
+            start_clipper=False,
+            connect=False,
+            cleanup_name=cluster_name)
         sys.exit(1)

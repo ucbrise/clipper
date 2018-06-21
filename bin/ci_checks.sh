@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+set -x
 set -e
 set -u
 set -o pipefail
@@ -26,10 +27,10 @@ tag=$(<VERSION.txt)
 cd -
 
 # Log in to Kubernetes Docker repo
-$DIR/aws_docker_repo_login.sh
+# $DIR/aws_docker_repo_login.sh
 
 # Test docker login
-docker pull 568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/query_frontend:$tag
+# docker pull 568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/query_frontend:$tag
 
 # Set up credentials for K8s testing cluster.
 export KUBECONFIG=~/kubeconfig_$(date +"%Y%m%d%H%M%S")
@@ -50,6 +51,9 @@ python $DIR/construct_kube_config.py $KUBECONFIG
 kubectl get nodes
 # Set kubectl proxy for k8s tests later
 kubectl proxy --port 8080 &
+
+# Login to clippertesting dockerhub here
+docker login --username="clippertesting" --password=$CLIPPER_TESTING_DOCKERHUB_PASSWORD
 
 if [[ $run_all = "true" ]]; then
     $DIR/check_format.sh

@@ -2,7 +2,6 @@ from __future__ import print_function, with_statement, absolute_import
 
 import logging
 from cloudpickle import CloudPickler
-from ..clipper_admin import CLIPPER_TEMP_DIR
 import os
 import tempfile
 import sys
@@ -38,9 +37,7 @@ def save_python_function(name, func):
     serialized_prediction_function = s.getvalue()
 
     # Set up serialization directory
-    if not os.path.exists(CLIPPER_TEMP_DIR):
-        os.makedirs(CLIPPER_TEMP_DIR)
-    serialization_dir = tempfile.mkdtemp(dir=CLIPPER_TEMP_DIR)
+    serialization_dir = os.path.abspath(tempfile.mkdtemp(suffix='clipper'))
     logger.info("Saving function to {}".format(serialization_dir))
 
     # Write out function serialization

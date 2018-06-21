@@ -2,14 +2,15 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    ai.clipper.container.label: ""
+    ai.clipper.container.label: {{ cluster_name }}
     ai.clipper.name: redis
-  name: redis
+  name: redis-at-{{ cluster_name }}
 spec:
   type: NodePort
   ports:
   - name: "6379"
-    port: 6379
+    port: {{ public_redis_port }}
     targetPort: 6379
   selector:
     ai.clipper.name: redis
+    ai.clipper.container.label: {{ cluster_name }}

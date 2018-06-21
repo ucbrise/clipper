@@ -12,7 +12,7 @@ from test_utils import (create_docker_connection, BenchmarkException,
                         fake_model_data, headers, log_clipper_state)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
-from clipper_admin import __version__ as clipper_version, CLIPPER_TEMP_DIR
+from clipper_admin import __version__ as clipper_version, CLIPPER_TEMP_DIR, __registry__ as clipper_registry
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
@@ -30,7 +30,7 @@ def deploy_model(clipper_conn, name, version, link=False):
         version,
         "doubles",
         fake_model_data,
-        "clipper/noop-container:{}".format(clipper_version),
+        "{}/noop-container:{}".format(clipper_registry, clipper_version),
         num_replicas=1)
     time.sleep(10)
 
@@ -94,8 +94,12 @@ def create_and_test_app(clipper_conn, name, num_models):
 
 
 if __name__ == "__main__":
-    num_apps = 6
-    num_models = 8
+    num_apps = 2
+    num_models = 3
+
+    import random
+    cluster_name = "many-app-{}".format(random.randint(0, 5000))
+
     try:
         if len(sys.argv) > 1:
             num_apps = int(sys.argv[1])
@@ -107,7 +111,7 @@ if __name__ == "__main__":
         pass
     try:
         clipper_conn = create_docker_connection(
-            cleanup=True, start_clipper=True)
+            cleanup=False, start_clipper=True, new_name=cluster_name)
         time.sleep(10)
         try:
             logger.info("Running integration test with %d apps and %d models" %
@@ -126,11 +130,14 @@ if __name__ == "__main__":
         except BenchmarkException as e:
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
-            create_docker_connection(cleanup=True, start_clipper=False)
+            create_docker_connection(
+                cleanup=True, start_clipper=False, cleanup_name=cluster_name)
             sys.exit(1)
         else:
-            create_docker_connection(cleanup=True, start_clipper=False)
+            create_docker_connection(
+                cleanup=True, start_clipper=False, cleanup_name=cluster_name)
     except Exception as e:
         logger.exception("Exception")
-        create_docker_connection(cleanup=True, start_clipper=False)
+        create_docker_connection(
+            cleanup=True, start_clipper=False, cleanup_name=cluster_name)
         sys.exit(1)

@@ -6,11 +6,12 @@ import os
 import subprocess
 import sys
 import time
+import random
 
 import numpy as np
 import requests
 import yaml
-from test_utils import (log_clipper_state)
+from test_utils import log_clipper_state, create_docker_connection
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
@@ -85,8 +86,10 @@ if __name__ == '__main__':
     logger = logging.getLogger(__name__)
 
     logger.info("Start Metric Test (0/1): Running 2 Replicas")
-    clipper_conn = ClipperConnection(DockerContainerManager(redis_port=6380))
-    clipper_conn.start_clipper()
+
+    cluster_name = "metric-d-{}".format(random.randint(0, 50000))
+    clipper_conn = create_docker_connection(
+        cleanup=False, start_clipper=True, new_name=cluster_name)
     python_deployer.create_endpoint(
         clipper_conn, "simple-example", "doubles", feature_sum, num_replicas=2)
     time.sleep(2)
@@ -116,7 +119,8 @@ if __name__ == '__main__':
         logger.info("Test 2 Passed")
 
         logger.info("Metric Test Done, Cleaning up...")
-        clipper_conn.stop_all()
+        create_docker_connection(
+            cleanup=True, start_clipper=False, cleanup_name=cluster_name)
     except Exception as e:
         log_docker_ps(clipper_conn)
         logger.error(e)

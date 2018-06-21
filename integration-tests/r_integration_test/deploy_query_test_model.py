@@ -32,7 +32,7 @@ INPUT_TYPE = "doubles"
 
 MODEL_NAME = "rtest-model"
 MODEL_VERSION = 1
-MODEL_IMAGE_NAME = "rtest-model:1"
+MODEL_IMAGE_NAME = "default-cluster-rtest-model:1"
 
 
 def create_application(clipper_conn):

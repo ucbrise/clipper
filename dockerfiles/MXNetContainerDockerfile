@@ -1,6 +1,7 @@
+ARG REGISTRY
 ARG CODE_VERSION
 ARG RPC_VERSION
-FROM clipper/${RPC_VERSION}-rpc:${CODE_VERSION}
+FROM ${REGISTRY}/${RPC_VERSION}-rpc:${CODE_VERSION}
 
 LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 

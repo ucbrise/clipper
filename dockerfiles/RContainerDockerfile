@@ -1,4 +1,5 @@
 # This ARG isn't used but prevents warnings in the build script
+ARG REGISTRY
 ARG CODE_VERSION
 FROM r-base:3.4.4
 

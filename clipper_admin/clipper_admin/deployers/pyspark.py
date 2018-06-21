@@ -7,7 +7,7 @@ import os
 import json
 import sys
 
-from ..version import __version__
+from ..version import __version__, __registry__
 from ..clipper_admin import ClipperException
 from .deployer_utils import save_python_function
 
@@ -238,13 +238,16 @@ def deploy_pyspark_model(clipper_conn,
     if base_image == "default":
         if py_minor_version < (3, 0):
             logger.info("Using Python 2 base image")
-            base_image = "clipper/pyspark-container:{}".format(__version__)
+            base_image = "{}/pyspark-container:{}".format(
+                __registry__, __version__)
         elif py_minor_version == (3, 5):
             logger.info("Using Python 3.5 base image")
-            base_image = "clipper/pyspark35-container:{}".format(__version__)
+            base_image = "{}/pyspark35-container:{}".format(
+                __registry__, __version__)
         elif py_minor_version == (3, 6):
             logger.info("Using Python 3.6 base image")
-            base_image = "clipper/pyspark36-container:{}".format(__version__)
+            base_image = "{}/pyspark36-container:{}".format(
+                __registry__, __version__)
         else:
             msg = ("PySpark deployer only supports Python 2.7, 3.5, and 3.6. "
                    "Detected {major}.{minor}").format(
