@@ -1,0 +1,45 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  label:
+    test: readiness
+    ai.clipper.container.label: {{ cluster_name }}
+    ai.clipper.model_container.label: {{ container_label }}
+    ai.clipper.name: model
+  name: {{ deployment_name }} # Cluster name included
+spec:
+  replicas: {{ num_replicas }}
+  template:
+    metadata:
+      annotations:
+        prometheus.io/port: "1390"
+        prometheus.io/scrape: "true"
+        test: readiness
+      labels:
+        ai.clipper.container.label: {{ cluster_name }}
+        ai.clipper.model_container.label: {{ container_label }}
+        ai.clipper.name: model
+    spec:
+      containers:
+        - env:
+            - name: CLIPPER_MODEL_NAME
+              value: {{ model_name }}
+            - name: CLIPPER_MODEL_VERSION
+              value: "{{ version }}"
+            - name: CLIPPER_IP
+              value: query-frontend-{{ query_frontend_id }}-at-{{ cluster_name }}
+            - name: CLIPPER_INPUT_TYPE
+              value: {{ input_type }}
+          image: {{ image }}
+          imagePullPolicy: Always
+          name: {{ deployment_name }}
+          ports:
+            - containerPort: 80
+            - containerPort: 1390
+          readinessProbe:
+            exec:
+              command:
+                - cat
+                - /model_is_ready.check
+            initialDelaySeconds: 3
+            periodSeconds: 3

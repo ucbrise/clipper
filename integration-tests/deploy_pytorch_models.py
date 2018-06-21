@@ -159,9 +159,12 @@ class TrainingDataset(data.Dataset):
 
 if __name__ == "__main__":
     pos_label = 3
+
+    import random
+    cluster_name = "torch-{}".format(random.randint(0, 5000))
     try:
         clipper_conn = create_docker_connection(
-            cleanup=True, start_clipper=True)
+            cleanup=False, start_clipper=True, new_name=cluster_name)
 
         train_path = os.path.join(cur_dir, "data/train.data")
         train_x, train_y = parsedata(train_path, pos_label)
@@ -202,13 +205,13 @@ if __name__ == "__main__":
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
             clipper_conn = create_docker_connection(
-                cleanup=True, start_clipper=False)
+                cleanup=True, start_clipper=False, cleanup_name=cluster_name)
             sys.exit(1)
         else:
             clipper_conn = create_docker_connection(
-                cleanup=True, start_clipper=False)
+                cleanup=True, start_clipper=False, cleanup_name=cluster_name)
     except Exception:
         logger.exception("Exception")
         clipper_conn = create_docker_connection(
-            cleanup=True, start_clipper=False)
+            cleanup=True, start_clipper=False, cleanup_name=cluster_name)
         sys.exit(1)

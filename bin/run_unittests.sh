@@ -91,7 +91,7 @@ function run_jvm_container_tests {
   echo "Running JVM container tests..."
   cd $DIR
   cd ../containers/jvm
-  mvn test
+  mvn test -q
 }
 
 function run_r_container_tests {
@@ -129,6 +129,10 @@ function run_frontend_tests {
 function run_integration_tests {
   echo -e "\nRunning integration tests\n\n"
   cd $DIR
+
+  echo "GREPTHIS Docker State before:"
+  docker ps
+
   python ../integration-tests/clipper_admin_tests.py
   python ../integration-tests/many_apps_many_models.py 2 3
   python ../integration-tests/deploy_pyspark_models.py
@@ -137,13 +141,20 @@ function run_integration_tests {
   python ../integration-tests/kubernetes_integration_test.py
   python ../integration-tests/kubernetes_multi_frontend.py
   python ../integration-tests/deploy_tensorflow_models.py
-  python ../integration-tests/deploy_mxnet_models.py 
-  python ../integration-tests/deploy_pytorch_models.py 
+  python ../integration-tests/deploy_mxnet_models.py
+  python ../integration-tests/deploy_pytorch_models.py
   # See issue #475
   # python ../integration-tests/deploy_pytorch_to_caffe2_with_onnx.py
   ../integration-tests/r_integration_test/rclipper_test.sh
-  python ../integration-tests/clipper_metric_docker.py 
-  python ../integration-tests/clipper_metric_kube.py 
+  python ../integration-tests/clipper_metric_docker.py
+  python ../integration-tests/clipper_metric_kube.py
+  python ../integration-tests/multi_tenancy_test.py
+  python ../integration-tests/multi_tenancy_test.py --kubernetes
+  python ../integration-tests/kubernetes_namespace.py
+
+  echo "GREPTHIS Docker State After"
+  docker ps
+
   echo "Exit code: $?"
   echo "GREPTHIS Done running unit tests"
 }

@@ -9,10 +9,11 @@ import numpy as np
 import time
 import logging
 from test_utils import (create_kubernetes_connection, BenchmarkException,
-                        fake_model_data, headers, log_clipper_state)
+                        fake_model_data, headers, log_clipper_state,
+                        CLIPPER_CONTAINER_REGISTRY)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
-from clipper_admin import __version__ as clipper_version, CLIPPER_TEMP_DIR, ClipperException
+from clipper_admin import __version__ as clipper_version, CLIPPER_TEMP_DIR, ClipperException, __registry__ as clipper_registry
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
@@ -32,10 +33,9 @@ def deploy_model(clipper_conn, name, version, link=False):
         version,
         "doubles",
         fake_model_data,
-        "clipper/noop-container:{}".format(clipper_version),
+        "{}/noop-container:{}".format(clipper_registry, clipper_version),
         num_replicas=1,
-        container_registry=
-        "568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper")
+        container_registry=CLIPPER_CONTAINER_REGISTRY)
     time.sleep(10)
 
     if link:
@@ -147,14 +147,27 @@ if __name__ == "__main__":
         pass
     try:
         # Test without proxy first
+        import random
+
+        cluster_name = "k8-{}".format(random.randint(0, 5000))
+
         clipper_conn = create_kubernetes_connection(
-            cleanup=True, start_clipper=True, with_proxy=False)
+            cleanup=False,
+            start_clipper=True,
+            with_proxy=False,
+            new_name=cluster_name)
         test_kubernetes(clipper_conn, num_apps, num_models)
         clipper_conn.stop_all()
 
         # Test with proxy. Assumes proxy is running at 127.0.0.1:8080
+        proxy_name = "k8s-proxy-test-cluster-{}".format(
+            random.randint(0, 5000))
         clipper_conn = create_kubernetes_connection(
-            cleanup=True, start_clipper=True, with_proxy=True)
+            cleanup=True,
+            start_clipper=True,
+            with_proxy=True,
+            cleanup_name=cluster_name,
+            new_name=proxy_name)
         test_kubernetes(clipper_conn, 1, 1)
         clipper_conn.stop_all()
 

@@ -4,9 +4,9 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   labels:
-    ai.clipper.container.label: ""
+    ai.clipper.container.label: {{ cluster_name }}
     ai.clipper.name: query-frontend
-  name: null # Name must to be set in container_manager
+  name: {{ name }}-at-{{ cluster_name }}
 spec:
   replicas: 1
   template:
@@ -15,15 +15,16 @@ spec:
         "prometheus.io/scrape": "true"
         "prometheus.io/port": "1390"
       labels:
-        ai.clipper.container.label: ""
+        ai.clipper.container.label: {{ cluster_name }}
         ai.clipper.name: query-frontend
-        ai.clipper.query_frontend.id: null # This value must be set in container_manager
+        ai.clipper.query_frontend.id: "{{ id_label }}"
     spec:
       containers:
-      - args:
-        - "--redis_ip=$(REDIS_SERVICE_HOST)"
-        - "--redis_port=$(REDIS_SERVICE_PORT)"
-        image: clipper/query_frontend
+      - args: # If redis_service_host == None, default to env var
+        - "--redis_ip={{ redis_service_host | default('$(REDIS_SERVICE_HOST)', true) }}"
+        - "--redis_port={{ redis_service_port | default('$(REDIS_SERVICE_PORT)', true) }}"
+        - "--prediction_cache_size={{ cache_size }}"
+        image: {{ image }}
         imagePullPolicy: Always
         name: query-frontend
         ports:
@@ -32,7 +33,7 @@ spec:
       - args:
         - "--query_frontend_name" 
         - "query-frontend:1337"
-        image: "clipper/frontend-exporter" 
+        image: {{ exporter_image }}
         name: frontend-exporter
         ports:
         - containerPort: 1390

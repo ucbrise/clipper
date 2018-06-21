@@ -24,13 +24,13 @@ else:
     from io import BytesIO as StringIO
     PY3 = True
 
-from .container_manager import CONTAINERLESS_MODEL_IMAGE
+from .container_manager import CONTAINERLESS_MODEL_IMAGE, ClusterAdapter
 from .exceptions import ClipperException, UnconnectedException
-from .version import __version__
+from .version import __version__, __registry__
 
 DEFAULT_LABEL = []
 DEFAULT_PREDICTION_CACHE_SIZE_BYTES = 33554432
-CLIPPER_TEMP_DIR = "/tmp/clipper"
+CLIPPER_TEMP_DIR = "/tmp/clipper"  # Used Internally for Test; Not Windows Compatible
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
@@ -79,14 +79,19 @@ class ClipperConnection(object):
         self.connected = False
         self.cm = container_manager
 
-    def start_clipper(
-            self,
-            query_frontend_image='clipper/query_frontend:{}'.format(
-                __version__),
-            mgmt_frontend_image='clipper/management_frontend:{}'.format(
-                __version__),
-            cache_size=DEFAULT_PREDICTION_CACHE_SIZE_BYTES,
-            num_frontend_replicas=1):
+        self.logger = ClusterAdapter(logger, {
+            'cluster_name': self.cm.cluster_identifier
+        })
+
+    def start_clipper(self,
+                      query_frontend_image='{}/query_frontend:{}'.format(
+                          __registry__, __version__),
+                      mgmt_frontend_image='{}/management_frontend:{}'.format(
+                          __registry__, __version__),
+                      frontend_exporter_image='{}/frontend-exporter:{}'.format(
+                          __registry__, __version__),
+                      cache_size=DEFAULT_PREDICTION_CACHE_SIZE_BYTES,
+                      num_frontend_replicas=1):
         """Start a new Clipper cluster and connect to it.
 
         This command will start a new Clipper instance using the container manager provided when
@@ -102,8 +107,14 @@ class ClipperConnection(object):
             The management frontend docker image to use. You can set this argument to specify
             a custom build of the management frontend, but any customization should maintain API
             compability and preserve the expected behavior of the system.
+        frontend_exporter_image : str(optional)
+            The frontend exporter docker image to use. You can set this argument to specify
+            a custom build of the management frontend, but any customization should maintain API
+            compability and preserve the expected behavior of the system.
         cache_size : int, optional
             The size of Clipper's prediction cache in bytes. Default cache size is 32 MiB.
+        num_frontend_replicas : int, option
+            The number of query frontend to deploy for fault tolerance and high availability.
 
         Raises
         ------
@@ -111,7 +122,8 @@ class ClipperConnection(object):
         """
         try:
             self.cm.start_clipper(query_frontend_image, mgmt_frontend_image,
-                                  cache_size, num_frontend_replicas)
+                                  frontend_exporter_image, cache_size,
+                                  num_frontend_replicas)
             while True:
                 try:
                     url = "http://{host}/metrics".format(
@@ -121,12 +133,12 @@ class ClipperConnection(object):
                         raise RequestException
                     break
                 except RequestException:
-                    logger.info("Clipper still initializing.")
+                    self.logger.info("Clipper still initializing.")
                     time.sleep(1)
-            logger.info("Clipper is running")
+            self.logger.info("Clipper is running")
             self.connected = True
         except ClipperException as e:
-            logger.warning("Error starting Clipper: {}".format(e.msg))
+            self.logger.warning("Error starting Clipper: {}".format(e.msg))
             raise e
 
     def connect(self):
@@ -134,8 +146,9 @@ class ClipperConnection(object):
 
         self.cm.connect()
         self.connected = True
-        logger.info("Successfully connected to Clipper cluster at {}".format(
-            self.cm.get_query_addr()))
+        self.logger.info(
+            "Successfully connected to Clipper cluster at {}".format(
+                self.cm.get_query_addr()))
 
     def register_application(self, name, input_type, default_output,
                              slo_micros):
@@ -190,15 +203,16 @@ class ClipperConnection(object):
         })
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
-        logger.debug(r.text)
+        self.logger.debug(r.text)
         if r.status_code != requests.codes.ok:
             msg = "Received error status code: {code} and message: {msg}".format(
                 code=r.status_code, msg=r.text)
-            logger.error(msg)
+            self.logger.error(msg)
             raise ClipperException(msg)
         else:
-            logger.info("Application {app} was successfully registered".format(
-                app=name))
+            self.logger.info(
+                "Application {app} was successfully registered".format(
+                    app=name))
 
     def delete_application(self, name):
         if not self.connected:
@@ -209,14 +223,14 @@ class ClipperConnection(object):
         req_json = json.dumps({"name": name})
         headers = {"Content-type": "application/json"}
         r = requests.post(url, headers=headers, data=req_json)
-        logger.debug(r.text)
+        self.logger.debug(r.text)
         if r.status_code != requests.codes.ok:
             msg = "Received error status code: {code} and message: {msg}".format(
                 code=r.status_code, msg=r.text)
-            logger.error(msg)
+            self.logger.error(msg)
             raise ClipperException(msg)
         else:
-            logger.info(
+            self.logger.info(
                 "Application {app} was successfully deleted".format(app=name))
 
     def link_model_to_app(self, app_name, model_name):
@@ -251,14 +265,14 @@ class ClipperConnection(object):
         })
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
-        logger.debug(r.text)
+        self.logger.debug(r.text)
         if r.status_code != requests.codes.ok:
             msg = "Received error status code: {code} and message: {msg}".format(
                 code=r.status_code, msg=r.text)
-            logger.error(msg)
+            self.logger.error(msg)
             raise ClipperException(msg)
         else:
-            logger.info(
+            self.logger.info(
                 "Model {model} is now linked to application {app}".format(
                     model=model_name, app=app_name))
 
@@ -417,7 +431,7 @@ class ClipperConnection(object):
                 try:
                     df_contents = StringIO(
                         str.encode(
-                            "FROM {container_name}\nCOPY {data_path} /model/\n{run_command}\n".
+                            "FROM {container_name}\n{run_command}\nCOPY {data_path} /model/\n".
                             format(
                                 container_name=base_image,
                                 data_path=model_data_path,
@@ -429,7 +443,7 @@ class ClipperConnection(object):
                     context_tar.addfile(df_tarinfo, df_contents)
                 except TypeError:
                     df_contents = StringIO(
-                        "FROM {container_name}\nCOPY {data_path} /model/\n{run_command}\n".
+                        "FROM {container_name}\n{run_command}\nCOPY {data_path} /model/\n".
                         format(
                             container_name=base_image,
                             data_path=model_data_path,
@@ -442,22 +456,24 @@ class ClipperConnection(object):
             # Exit Tarfile context manager to finish the tar file
             # Seek back to beginning of file for reading
             context_file.seek(0)
-            image = "{name}:{version}".format(name=name, version=version)
+            image = "{cluster}-{name}:{version}".format(
+                cluster=self.cm.cluster_identifier, name=name, version=version)
             if container_registry is not None:
                 image = "{reg}/{image}".format(
                     reg=container_registry, image=image)
             docker_client = docker.from_env()
-            logger.info(
+            self.logger.info(
                 "Building model Docker image with model data from {}".format(
                     model_data_path))
             image_result, build_logs = docker_client.images.build(
                 fileobj=context_file, custom_context=True, tag=image)
             for b in build_logs:
-                logger.info(b)
+                if 'stream' in b and b['stream'] != '\n':  #log build steps only
+                    self.logger.info(b['stream'].rstrip())
 
-        logger.info("Pushing model Docker image to {}".format(image))
+        self.logger.info("Pushing model Docker image to {}".format(image))
         for line in docker_client.images.push(repository=image, stream=True):
-            logger.debug(line)
+            self.logger.debug(line)
         return image
 
     def deploy_model(self,
@@ -549,7 +565,7 @@ class ClipperConnection(object):
             image=image,
             labels=labels,
             batch_size=batch_size)
-        logger.info("Done deploying model {name}:{version}.".format(
+        self.logger.info("Done deploying model {name}:{version}.".format(
             name=name, version=version))
 
     def register_model(self,
@@ -621,16 +637,16 @@ class ClipperConnection(object):
         })
 
         headers = {'Content-type': 'application/json'}
-        logger.debug(req_json)
+        self.logger.debug(req_json)
         r = requests.post(url, headers=headers, data=req_json)
-        logger.debug(r.text)
+        self.logger.debug(r.text)
         if r.status_code != requests.codes.ok:
             msg = "Received error status code: {code} and message: {msg}".format(
                 code=r.status_code, msg=r.text)
-            logger.error(msg)
+            self.logger.error(msg)
             raise ClipperException(msg)
         else:
-            logger.info(
+            self.logger.info(
                 "Successfully registered model {name}:{version}".format(
                     name=name, version=version))
 
@@ -768,12 +784,12 @@ class ClipperConnection(object):
                 msg = ("Cannot resize the replica set for containerless model "
                        "{name}:{version}").format(
                            name=name, version=version)
-                logger.error(msg)
+                self.logger.error(msg)
                 raise ClipperException(msg)
         else:
             msg = "Cannot add container for non-registered model {name}:{version}".format(
                 name=name, version=version)
-            logger.error(msg)
+            self.logger.error(msg)
             raise ClipperException(msg)
 
     def get_all_apps(self, verbose=False):
@@ -806,14 +822,14 @@ class ClipperConnection(object):
         req_json = json.dumps({"verbose": verbose})
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
-        logger.debug(r.text)
+        self.logger.debug(r.text)
 
         if r.status_code == requests.codes.ok:
             return r.json()
         else:
             msg = "Received error status code: {code} and message: {msg}".format(
                 code=r.status_code, msg=r.text)
-            logger.error(msg)
+            self.logger.error(msg)
             raise ClipperException(msg)
 
     def get_app_info(self, name):
@@ -844,12 +860,12 @@ class ClipperConnection(object):
         req_json = json.dumps({"name": name})
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
-        logger.debug(r.text)
+        self.logger.debug(r.text)
 
         if r.status_code == requests.codes.ok:
             app_info = r.json()
             if len(app_info) == 0:
-                logger.warning(
+                self.logger.warning(
                     "Application {} is not registered with Clipper".format(
                         name))
                 return None
@@ -857,7 +873,7 @@ class ClipperConnection(object):
         else:
             msg = "Received error status code: {code} and message: {msg}".format(
                 code=r.status_code, msg=r.text)
-            logger.error(msg)
+            self.logger.error(msg)
             raise ClipperException(msg)
 
     def get_linked_models(self, app_name):
@@ -887,13 +903,13 @@ class ClipperConnection(object):
         req_json = json.dumps({"app_name": app_name})
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
-        logger.debug(r.text)
+        self.logger.debug(r.text)
         if r.status_code == requests.codes.ok:
             return r.json()
         else:
             msg = "Received error status code: {code} and message: {msg}".format(
                 code=r.status_code, msg=r.text)
-            logger.error(msg)
+            self.logger.error(msg)
             raise ClipperException(msg)
 
     def get_all_models(self, verbose=False):
@@ -923,14 +939,14 @@ class ClipperConnection(object):
         req_json = json.dumps({"verbose": verbose})
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
-        logger.debug(r.text)
+        self.logger.debug(r.text)
 
         if r.status_code == requests.codes.ok:
             return r.json()
         else:
             msg = "Received error status code: {code} and message: {msg}".format(
                 code=r.status_code, msg=r.text)
-            logger.error(msg)
+            self.logger.error(msg)
             raise ClipperException(msg)
 
     def get_model_info(self, name, version):
@@ -963,12 +979,12 @@ class ClipperConnection(object):
         req_json = json.dumps({"model_name": name, "model_version": version})
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
-        logger.debug(r.text)
+        self.logger.debug(r.text)
 
         if r.status_code == requests.codes.ok:
             model_info = r.json()
             if len(model_info) == 0:
-                logger.warning(
+                self.logger.warning(
                     "Model {name}:{version} is not registered with Clipper.".
                     format(name=name, version=version))
                 return None
@@ -976,7 +992,7 @@ class ClipperConnection(object):
         else:
             msg = "Received error status code: {code} and message: {msg}".format(
                 code=r.status_code, msg=r.text)
-            logger.error(msg)
+            self.logger.error(msg)
             raise ClipperException(msg)
 
     def get_all_model_replicas(self, verbose=False):
@@ -1006,13 +1022,13 @@ class ClipperConnection(object):
         req_json = json.dumps({"verbose": verbose})
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
-        logger.debug(r.text)
+        self.logger.debug(r.text)
         if r.status_code == requests.codes.ok:
             return r.json()
         else:
             msg = "Received error status code: {code} and message: {msg}".format(
                 code=r.status_code, msg=r.text)
-            logger.error(msg)
+            self.logger.error(msg)
             raise ClipperException(msg)
 
     def get_model_replica_info(self, name, version, replica_id):
@@ -1050,12 +1066,12 @@ class ClipperConnection(object):
         })
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
-        logger.debug(r.text)
+        self.logger.debug(r.text)
 
         if r.status_code == requests.codes.ok:
             model_rep_info = r.json()
             if len(model_rep_info) == 0:
-                logger.warning(
+                self.logger.warning(
                     "No model replica with ID {rep_id} found for model {name}:{version}".
                     format(rep_id=replica_id, name=name, version=version))
                 return None
@@ -1063,7 +1079,7 @@ class ClipperConnection(object):
         else:
             msg = "Received error status code: {code} and message: {msg}".format(
                 code=r.status_code, msg=r.text)
-            logger.error(msg)
+            self.logger.error(msg)
             raise ClipperException(msg)
 
     def get_clipper_logs(self, logging_dir="clipper_logs/"):
@@ -1103,13 +1119,13 @@ class ClipperConnection(object):
             raise UnconnectedException()
         url = "http://{host}/metrics".format(host=self.cm.get_query_addr())
         r = requests.get(url)
-        logger.debug(r.text)
+        self.logger.debug(r.text)
         if r.status_code == requests.codes.ok:
             return r.json()
         else:
             msg = "Received error status code: {code} and message: {msg}".format(
                 code=r.status_code, msg=r.text)
-            logger.error(msg)
+            self.logger.error(msg)
             raise ClipperException(msg)
 
     def set_model_version(self, name, version, num_replicas=None):
@@ -1148,11 +1164,11 @@ class ClipperConnection(object):
         req_json = json.dumps({"model_name": name, "model_version": version})
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
-        logger.debug(r.text)
+        self.logger.debug(r.text)
         if r.status_code != requests.codes.ok:
             msg = "Received error status code: {code} and message: {msg}".format(
                 code=r.status_code, msg=r.text)
-            logger.error(msg)
+            self.logger.error(msg)
             raise ClipperException(msg)
 
         if num_replicas is not None:
@@ -1205,7 +1221,7 @@ class ClipperConnection(object):
                     model_dict[m["model_name"]] = [m["model_version"]]
         self.cm.stop_models(model_dict)
         pp = pprint.PrettyPrinter(indent=4)
-        logger.info(
+        self.logger.info(
             "Stopped all containers for these models and versions:\n{}".format(
                 pp.pformat(model_dict)))
 
@@ -1231,7 +1247,7 @@ class ClipperConnection(object):
             raise UnconnectedException()
         self.cm.stop_models(model_versions_dict)
         pp = pprint.PrettyPrinter(indent=4)
-        logger.info(
+        self.logger.info(
             "Stopped all containers for these models and versions:\n{}".format(
                 pp.pformat(model_versions_dict)))
 
@@ -1267,7 +1283,7 @@ class ClipperConnection(object):
                     model_dict[m["model_name"]] = [m["model_version"]]
         self.cm.stop_models(model_dict)
         pp = pprint.PrettyPrinter(indent=4)
-        logger.info(
+        self.logger.info(
             "Stopped all containers for these models and versions:\n{}".format(
                 pp.pformat(model_dict)))
 
@@ -1279,17 +1295,21 @@ class ClipperConnection(object):
         ``connect`` first.
         """
         self.cm.stop_all_model_containers()
-        logger.info("Stopped all Clipper model containers")
+        self.logger.info("Stopped all Clipper model containers")
 
-    def stop_all(self):
+    def stop_all(self, graceful=True):
         """Stops all processes that were started via Clipper admin commands.
 
         This includes the query and management frontend Docker containers and all model containers.
         If you started Redis independently, this will not affect Redis. It can also be called
         without calling ``connect`` first.
+
+        If graceful=False, Clipper will issue Docker Kill if it's in the Docker Mode. This parameter
+        will take not effect in Kubernetes.
         """
-        self.cm.stop_all()
-        logger.info("Stopped all Clipper cluster and all model containers")
+        self.cm.stop_all(graceful=graceful)
+        self.logger.info(
+            "Stopped all Clipper cluster and all model containers")
 
     def test_predict_function(self, query, func, input_type):
         """Tests that the user's function has the correct signature and can be properly saved and
@@ -1364,7 +1384,8 @@ class ClipperConnection(object):
         try:
             assert reloaded_func
         except AssertionError:
-            logger.error("Function does not properly serialize and reload")
+            self.logger.error(
+                "Function does not properly serialize and reload")
             return "Function does not properly serialize and reload"
 
         return reloaded_func(numpy_data)

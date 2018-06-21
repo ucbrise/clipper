@@ -5,7 +5,7 @@ import logging
 import os
 from warnings import warn
 
-from ..version import __version__
+from ..version import __registry__, __version__
 from .deployer_utils import save_python_function
 
 logger = logging.getLogger(__name__)
@@ -175,7 +175,8 @@ We will update our caffe2 build soon.""")
 
     if base_image is None:
         if onnx_backend is "caffe2":
-            base_image = "clipper/caffe2-onnx-container:{}".format(__version__)
+            base_image = "{}/caffe2-onnx-container:{}".format(
+                __registry__, __version__)
         else:
             logger.error(
                 "{backend} ONNX backend is not currently supported.".format(
