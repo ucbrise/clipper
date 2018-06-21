@@ -589,7 +589,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
     def test_delete_unlinked_model_correct(self):
         model_name = "m"
         versions = ["v1", "v2"]
-        container_name = "clipper/noop-container:{}".format(clipper_version)
+        container_name = "{}/noop-container:{}".format(clipper_registry,
+                                                       clipper_version)
         input_type = "doubles"
         for version in versions:
             self.clipper_conn.build_and_deploy_model(
