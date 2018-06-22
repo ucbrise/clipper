@@ -17,9 +17,9 @@ from test_utils import create_kubernetes_connection, create_docker_connection, C
 
 def test():
     conn_1 = create_kubernetes_connection(
-        cleanup=False, start_clipper=True, namespace='ns-1')
+        cleanup=True, start_clipper=True, namespace='ns-1', new_name='ns-1')
     conn_2 = create_kubernetes_connection(
-        cleanup=False, start_clipper=True, namespace='ns-2')
+        cleanup=True, start_clipper=True, namespace='ns-2', new_name='ns-2')
 
     deploy_(conn_1)
     deploy_(conn_2)

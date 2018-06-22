@@ -161,11 +161,11 @@ class KubernetesContainerManager(ContainerManager):
             raise ClipperException(msg)
 
         # Initialize logger with cluster identifier
-        if self.k8s_namespace != "default":
+        if self.k8s_namespace == "default":
             self.cluster_identifier = "{cluster}".format(
                 cluster=self.cluster_name)
         else:
-            self.cluster_identifier = "{ns}-{cluster}".format(
+            self.cluster_identifier = "{ns}/{cluster}".format(
                 ns=self.k8s_namespace, cluster=self.cluster_name)
 
         self.logger = ClusterAdapter(logger, {
