@@ -133,8 +133,13 @@ class AppMetrics {
 template <class QP>
 class RequestHandler {
  public:
-  RequestHandler(std::string address, int portno)
-      : server_(address, portno), query_processor_() {
+  RequestHandler(std::string address, int portno,
+                 int thread_pool_size = clipper::DEFAULT_THREAD_POOL_SIZE,
+                 int timeout_request = clipper::DEFAULT_TIMEOUT_REQUEST,
+                 int timeout_content = clipper::DEFAULT_TIMEOUT_CONTENT)
+      : server_(address, portno, thread_pool_size, timeout_request,
+                timeout_content),
+        query_processor_() {
     clipper::Config& conf = clipper::get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {

@@ -91,6 +91,9 @@ class ClipperConnection(object):
                       frontend_exporter_image='{}/frontend-exporter:{}'.format(
                           __registry__, __version__),
                       cache_size=DEFAULT_PREDICTION_CACHE_SIZE_BYTES,
+                      qf_http_thread_pool_size=1,
+                      qf_http_timeout_request=5,
+                      qf_http_timeout_content=300,
                       num_frontend_replicas=1):
         """Start a new Clipper cluster and connect to it.
 
@@ -111,9 +114,15 @@ class ClipperConnection(object):
             The frontend exporter docker image to use. You can set this argument to specify
             a custom build of the management frontend, but any customization should maintain API
             compability and preserve the expected behavior of the system.
-        cache_size : int, optional
+        cache_size : int(optional)
             The size of Clipper's prediction cache in bytes. Default cache size is 32 MiB.
-        num_frontend_replicas : int, option
+        qf_http_thread_pool_size : int(optional)
+            The size of thread pool created in query frontend for http serving.
+        qf_http_timeout_request : int(optional)
+            The seconds of timeout on request handling in query frontend for http serving..
+        qf_http_timeout_content : int(optional)
+            The seconds of timeout on content handling in query frontend for http serving..
+        num_frontend_replicas : int(optional)
             The number of query frontend to deploy for fault tolerance and high availability.
 
         Raises
@@ -123,7 +132,8 @@ class ClipperConnection(object):
         try:
             self.cm.start_clipper(query_frontend_image, mgmt_frontend_image,
                                   frontend_exporter_image, cache_size,
-                                  num_frontend_replicas)
+                                  qf_http_thread_pool_size, qf_http_timeout_request,
+                                  qf_http_timeout_content, num_frontend_replicas)
             while True:
                 try:
                     query_frontend_url = "http://{host}/metrics".format(
