@@ -854,7 +854,7 @@ class ClipperConnection(object):
         -------
         list
             Returns a list of the names of models linked to the app.
-            If no models are linked to the specified app, None is returned.
+            If no models are linked to the specified app, empty list is returned.
 
         Raises
         ------
