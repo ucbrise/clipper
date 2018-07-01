@@ -26,7 +26,7 @@ echo "Pushing the following images"
 cat ./bin/clipper_docker_images.txt
 
 # Push docker images (in parallel)
-while read in; do docker push "$in" &; done < ./bin/clipper_docker_images.txt
+while read in; do "docker push $in &"; done < ./bin/clipper_docker_images.txt
 wait
 
 CLIPPER_REGISTRY=$(docker info | grep Username | awk '{ print $2 }')
