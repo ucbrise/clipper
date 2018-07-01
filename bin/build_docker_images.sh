@@ -219,7 +219,7 @@ create_image () {
         -f dockerfiles/$dockerfile $CLIPPER_ROOT
 
     echo "Image tag appended to CLIPPER_ROOT/bin/clipper_docker_images.txt"
-    echo "$namespace/$image:$sha_tag" >> $CLIPPER_ROOT/bin/clipper_docker_images.txt
+    echo "docker push $namespace/$image:$sha_tag &" >> $CLIPPER_ROOT/bin/clipper_docker_images.txt
 
     if [ "$publish" = true ] && [ "$public" = true ] ; then
         docker tag $namespace/$image:$sha_tag $namespace/$image:$version_tag
