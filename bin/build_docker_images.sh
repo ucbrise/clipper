@@ -189,7 +189,7 @@ set_version_tag () {
 
 set_version_tag
 
-namespace=$(docker info | grep Username | awk '{ print $2 }')
+namespace="clipper"
 
 # Clear clipper_docker_images.txt for future write
 rm -f $CLIPPER_ROOT/bin/clipper_docker_images.txt
