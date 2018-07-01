@@ -25,15 +25,15 @@ tag=$(<VERSION.txt)
 echo "Pushing the following images"
 cat ./bin/clipper_docker_images.txt
 
-# Push docker images
-while read in; do docker push "$in"; done < ./bin/clipper_docker_images.txt
-
+# Push docker images (in parallel)
+while read in; do docker push "$in" &; done < ./bin/clipper_docker_images.txt
+wait
 
 CLIPPER_REGISTRY=$(docker info | grep Username | awk '{ print $2 }')
 sha_tag=$(git rev-parse --verify --short=10 HEAD)
 
 
-python run_ci_parallel.py ci_tests.sh \
+python $DIR/run_ci_parallel.py ci_tests.sh \
     -e CLIPPER_K8S_CERT_AUTH=$CLIPPER_K8S_CERT_AUTH \
     -e CLIPPER_K8S_CLIENT_CERT=$CLIPPER_K8S_CLIENT_CERT \
     -e CLIPPER_K8S_CLIENT_KEY=$CLIPPER_K8S_CLIENT_KEY \

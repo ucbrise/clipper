@@ -297,7 +297,6 @@ build_images () {
     create_image tf-container TensorFlowDockerfile $public py &
     create_image tf35-container TensorFlowDockerfile $public py35 &
     create_image tf36-container TensorFlowDockerfile $public py36 &
-    wait
 
     create_image pytorch-container PyTorchContainerDockerfile $public py &
     create_image pytorch35-container PyTorchContainerDockerfile $public py35 &
