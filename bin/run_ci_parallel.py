@@ -102,11 +102,14 @@ def run_parallel(shell_script, env_vars):
     while True:
 
         for name, cmd in procs.items():
-            for line in cmd.stdout:
+            try:
+                line = next(cmd.stdout)
                 if line == '\n':
                     continue
                 click.echo("[{name}]  {line}".format(
                     name=name, line=line.strip()))
+            except: # end of iterator
+                pass
 
         running = {
             name: proc
