@@ -22,12 +22,13 @@ kubectl get nodes
 
 ls ~/.minikube
 
-docker run -it --rm \
+docker run --rm \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v ~/.minikube:~/.minikube \
     -v ~/.kube:~/.kube \
     simonmok/minikube-test
 
+minikube stop
 exit 1
 
 unset CDPATH
