@@ -20,12 +20,10 @@ python /home/jenkins/bin/session_lock_resource.py minikube
 kubectl get pods
 kubectl get nodes
 
-ls ~/.minikube
-
 docker run --rm \
     -v /var/run/docker.sock:/var/run/docker.sock \
-    -v ~/.minikube:~/.minikube \
-    -v ~/.kube:~/.kube \
+    -v ~/.minikube:/root/.minikube \
+    -v ~/.kube:/root/.kube \
     simonmok/minikube-test
 
 minikube stop
