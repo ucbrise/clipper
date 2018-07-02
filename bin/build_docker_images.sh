@@ -189,7 +189,12 @@ set_version_tag () {
 
 set_version_tag
 
-namespace="clipper"
+if [[ $OSTYPE == darwin* ]]
+then
+    namespace="clipper"
+else
+    namespace=$(docker info | grep Username | awk '{ print $2 }')
+fi;
 
 # Clear clipper_docker_images.txt for future write
 rm -f $CLIPPER_ROOT/bin/clipper_docker_images.txt
