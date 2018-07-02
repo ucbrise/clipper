@@ -35,7 +35,7 @@ sha_tag=$(git rev-parse --verify --short=10 HEAD)
 
 pip install --user click
 
-python $DIR/run_ci_parallel.py ci_tests.sh \
+python $DIR/run_ci_parallel.py $DIR/ci_tests.sh \
     -e CLIPPER_K8S_CERT_AUTH=$CLIPPER_K8S_CERT_AUTH \
     -e CLIPPER_K8S_CLIENT_CERT=$CLIPPER_K8S_CLIENT_CERT \
     -e CLIPPER_K8S_CLIENT_KEY=$CLIPPER_K8S_CLIENT_KEY \
