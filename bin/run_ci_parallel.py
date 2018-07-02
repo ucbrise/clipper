@@ -3,12 +3,7 @@ import shlex
 import sys
 import os
 import re
-
-import six
-if six.PY2:
-    import subprocess32 as subprocess
-else:
-    import subprocess
+import subprocess
 
 
 def _replace_env_vars(script):

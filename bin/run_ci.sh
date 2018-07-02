@@ -33,6 +33,7 @@ wait
 CLIPPER_REGISTRY=$(docker info | grep Username | awk '{ print $2 }')
 sha_tag=$(git rev-parse --verify --short=10 HEAD)
 
+pip install --user click
 
 python $DIR/run_ci_parallel.py ci_tests.sh \
     -e CLIPPER_K8S_CERT_AUTH=$CLIPPER_K8S_CERT_AUTH \
