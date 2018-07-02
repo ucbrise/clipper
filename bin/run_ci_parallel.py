@@ -14,8 +14,8 @@ def _replace_env_vars(script):
 
 def _inject_env_vars(env_vars):
     for var_string in env_vars:
-        click.echo("Injecting "+var_string)
-        key, val = var_string.split('=', maxsplit=1)
+        click.echo("--Injecting "+var_string+'--')
+        key, val = var_string.split('=', 1)
         os.environ[key] = val
 
 
