@@ -4,6 +4,11 @@ import sys
 import os
 import re
 import subprocess
+from colorama import Fore, Style
+
+ALL_COLORS = [
+    Fore.BLUE, Fore.GREEN, Fore.CYAN, Fore.MAGENTA, Fore.YELLOW, Fore.BLACK
+]
 
 
 def _replace_env_vars(script):
@@ -14,7 +19,7 @@ def _replace_env_vars(script):
 
 def _inject_env_vars(env_vars):
     for var_string in env_vars:
-        click.echo("--Injecting "+var_string+'--')
+        click.echo("--Injecting " + var_string + '--')
         key, val = var_string.split('=', 1)
         os.environ[key] = val
 
@@ -99,6 +104,12 @@ def run_parallel(shell_script, env_vars):
             universal_newlines=True)
         for name, cmd in cmds.items()
     }
+
+    colors = {
+        name: ALL_COLORS[i % len(ALL_COLORS)]
+        for i, name in enumerate(procs.keys())
+    }
+
     while True:
 
         for name, cmd in procs.items():
@@ -106,9 +117,11 @@ def run_parallel(shell_script, env_vars):
                 line = next(cmd.stdout)
                 if line == '\n':
                     continue
-                click.echo("[{name}]  {line}".format(
-                    name=name, line=line.strip()))
-            except: # end of iterator
+                click.echo(
+                    colors[name] + "[{name}] ".format(name=name), nl=False)
+                click.echo(
+                    Style.RESET_ALL + "{line}".format(line=line.strip()))
+            except:  # end of iterator
                 pass
 
         running = {

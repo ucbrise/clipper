@@ -8,6 +8,28 @@ set -o pipefail
 # Printout for timeout debug
 date
 
+
+echo "This is simon debugging jenkins" 
+
+minikube status
+minikube version
+minikube start --vm-driver="None"
+kubectl get pods
+
+python /home/jenkins/bin/session_lock_resource.py minikube
+kubectl get pods
+kubectl get nodes
+
+ls ~/.minikube
+
+docker run -it --rm \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v ~/.minikube:~/.minikube \
+    -v ~/.kube:~/.kube \
+    simonmok/minikube-test
+
+exit 1
+
 unset CDPATH
 # one-liner from http://stackoverflow.com/a/246128
 # Determines absolute path of the directory containing
@@ -33,7 +55,7 @@ wait
 CLIPPER_REGISTRY=$(docker info | grep Username | awk '{ print $2 }')
 sha_tag=$(git rev-parse --verify --short=10 HEAD)
 
-pip install --user click
+pip install --user click colorama
 
 python $DIR/run_ci_parallel.py $DIR/ci_tests.sh \
     -e CLIPPER_K8S_CERT_AUTH=$CLIPPER_K8S_CERT_AUTH \
