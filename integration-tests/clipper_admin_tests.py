@@ -472,7 +472,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
 
         self.clipper_conn.link_model_to_app(app_name, model_name)
 
-        time.sleep(30)
+        time.sleep(60)
 
         deploy_python_closure(
             self.clipper_conn,
@@ -481,7 +481,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             input_type="doubles",
             func=predict_func2)
 
-        time.sleep(60)
+        time.sleep(120)
 
         addr = self.clipper_conn.get_query_addr()
         url = "http://{addr}/{app}/predict".format(addr=addr, app=app_name)
@@ -498,7 +498,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             }))
         try:
             pred1 = pred1_raw.json()
-            self.assertFalse(pred1["default"])
+            self.assertFalse(pred1["use_default"])
             self.assertEqual(pred1['output'], 1)
         except ValueError:
             logger.error(pred1_raw.text)
@@ -511,7 +511,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         try:
             pred2 = pred2_raw.json()
 
-            self.assertFalse(pred2["default"])
+            self.assertFalse(pred2["use_default"])
             self.assertEqual(pred2['output'], 2)
         except ValueError:
             logger.error(pred2_raw.text)
@@ -627,7 +627,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         parsed_response = response.json()
         logger.info(parsed_response)
         self.assertEqual(parsed_response["output"], self.default_output)
-        self.assertTrue(parsed_response["default"])
+        self.assertTrue(parsed_response["use_default"])
 
     def test_deployed_model_queried_successfully(self):
         model_version = 1
@@ -649,7 +649,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         parsed_response = response.json()
         logger.info(parsed_response)
         self.assertNotEqual(parsed_response["output"], self.default_output)
-        self.assertFalse(parsed_response["default"])
+        self.assertFalse(parsed_response["use_default"])
 
     def test_batch_queries_returned_successfully(self):
         model_version = 1
@@ -764,7 +764,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         self.assertEqual(len(containers), 2)
 
         self.clipper_conn.link_model_to_app(self.app_name_5, self.model_name_5)
-        time.sleep(30)
+        time.sleep(60)
 
         # We now have 2 replicas running, both the same model name and Version
         # send predictions, assert that we are getting correct response
@@ -780,7 +780,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
                 data=req_json)
             result = response.json()
             self.assertEqual(response.status_code, requests.codes.ok)
-            self.assertEqual(result["default"], False)
+            self.assertEqual(result["use_default"], False)
 
         # one of the containers should go inactive
 
@@ -803,7 +803,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
                 data=req_json)
             result = response.json()
             self.assertEqual(response.status_code, requests.codes.ok)
-            self.assertEqual(result["default"], False)
+            self.assertEqual(result["use_default"], False)
 
         #2nd container should go inactive
         self.clipper_conn.set_num_replicas(
@@ -824,7 +824,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
                 headers=headers,
                 data=req_json)
             result = response.json()
-            self.assertEqual(result["default"], True)
+            self.assertEqual(result["use_default"], True)
             self.assertEqual(result["default_explanation"],
                              "No connected models found for query")
 

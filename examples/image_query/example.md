@@ -197,7 +197,7 @@ python_deployer.create_endpoint(
 query(clipper_conn.get_query_addr(), 'imgs/clipper-logo.png')
 ```
 
-    {'query_id': 0, 'output': '(749, 600)', 'default': False}
+    {'query_id': 0, 'output': '(749, 600)', 'use_default': False}
 
 
 ## Using input_type = "strings"
@@ -315,7 +315,7 @@ python_deployer.create_endpoint(
 query_json(clipper_conn.get_query_addr(), 'imgs/clipper-logo.jpg', 'jpg')
 ```
 
-    {'query_id': 1, 'output': '(749, 600)', 'default': False}
+    {'query_id': 1, 'output': '(749, 600)', 'use_default': False}
 
 
 
@@ -323,7 +323,7 @@ query_json(clipper_conn.get_query_addr(), 'imgs/clipper-logo.jpg', 'jpg')
 query_json(clipper_conn.get_query_addr(), 'imgs/clipper-logo.png', 'png')
 ```
 
-    {'query_id': 2, 'output': '(749, 600)', 'default': False}
+    {'query_id': 2, 'output': '(749, 600)', 'use_default': False}
 
 
 ## Shutdown Clipper

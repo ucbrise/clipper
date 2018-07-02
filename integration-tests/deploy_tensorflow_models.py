@@ -97,7 +97,7 @@ def test_model(clipper_conn, app, version):
                 'input': get_test_point()
             }))
         result = response.json()
-        if response.status_code == requests.codes.ok and result["default"]:
+        if response.status_code == requests.codes.ok and result["use_default"]:
             num_defaults += 1
         elif response.status_code != requests.codes.ok:
             print(result)

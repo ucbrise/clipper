@@ -350,7 +350,7 @@ TEST_F(QueryFrontendTest,
   ASSERT_TRUE(
       parsed_response.GetObject().HasMember(PREDICTION_RESPONSE_KEY_OUTPUT));
   ASSERT_TRUE(parsed_response.GetObject().HasMember(
-      PREDICTION_RESPONSE_KEY_USED_DEFAULT));
+      PREDICTION_RESPONSE_KEY_USE_DEFAULT));
   ASSERT_TRUE(parsed_response.GetObject()
                   .FindMember(PREDICTION_RESPONSE_KEY_QUERY_ID)
                   ->value.IsInt());
@@ -358,7 +358,7 @@ TEST_F(QueryFrontendTest,
                   .FindMember(PREDICTION_RESPONSE_KEY_OUTPUT)
                   ->value.IsFloat());
   ASSERT_TRUE(parsed_response.GetObject()
-                  .FindMember(PREDICTION_RESPONSE_KEY_USED_DEFAULT)
+                  .FindMember(PREDICTION_RESPONSE_KEY_USE_DEFAULT)
                   ->value.IsBool());
 }
 

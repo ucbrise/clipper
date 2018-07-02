@@ -58,7 +58,7 @@ def deploy_model(clipper_conn, name, version, link=False):
                         'input': list([1.2, 1.3])
                     }))
                 result = response.json()
-                if response.status_code == requests.codes.ok and result["default"]:
+                if response.status_code == requests.codes.ok and result["use_default"]:
                     num_defaults += 1
             except requests.RequestException:
                 num_defaults += 1

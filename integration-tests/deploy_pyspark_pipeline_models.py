@@ -134,7 +134,7 @@ def run_test():
                         json.dumps((np.random.randint(1000), "spark abcd"))
                     }))
                 result = response.json()
-                if response.status_code == requests.codes.ok and result["default"]:
+                if response.status_code == requests.codes.ok and result["use_default"]:
                     num_defaults += 1
             if num_defaults > 0:
                 print("Error: %d/%d predictions were default" % (num_defaults,
@@ -159,7 +159,7 @@ def run_test():
                         json.dumps((np.random.randint(1000), "spark abcd"))
                     }))
                 result = response.json()
-                if response.status_code == requests.codes.ok and result["default"]:
+                if response.status_code == requests.codes.ok and result["use_default"]:
                     num_defaults += 1
             if num_defaults > 0:
                 print("Error: %d/%d predictions were default" % (num_defaults,

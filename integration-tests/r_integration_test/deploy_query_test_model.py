@@ -66,7 +66,7 @@ def send_requests(clipper_conn):
                     'input': list(np.random.random(30))
                 }))
             result = response.json()
-            if response.status_code == requests.codes.ok and not result["default"]:
+            if response.status_code == requests.codes.ok and not result["use_default"]:
                 num_success += 1
             else:
                 logger.warning(result)

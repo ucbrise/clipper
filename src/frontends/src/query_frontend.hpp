@@ -42,7 +42,7 @@ const std::string GET_METRICS = "^/metrics$";
 
 const char* PREDICTION_RESPONSE_KEY_QUERY_ID = "query_id";
 const char* PREDICTION_RESPONSE_KEY_OUTPUT = "output";
-const char* PREDICTION_RESPONSE_KEY_USED_DEFAULT = "default";
+const char* PREDICTION_RESPONSE_KEY_USE_DEFAULT = "use_default";
 const char* PREDICTION_RESPONSE_KEY_DEFAULT_EXPLANATION = "default_explanation";
 const char* PREDICTION_ERROR_RESPONSE_KEY_ERROR = "error";
 const char* PREDICTION_ERROR_RESPONSE_KEY_CAUSE = "cause";
@@ -471,7 +471,7 @@ class RequestHandler {
    * {
    *    "query_id" := int,
    *    "output" := float,
-   *    "default" := boolean
+   *    "use_default" := boolean
    *    "default_explanation" := string (optional)
    * }
    */
@@ -496,7 +496,7 @@ class RequestHandler {
       clipper::json::add_string(json_response, PREDICTION_RESPONSE_KEY_OUTPUT,
                                 y_hat_str);
     }
-    clipper::json::add_bool(json_response, PREDICTION_RESPONSE_KEY_USED_DEFAULT,
+    clipper::json::add_bool(json_response, PREDICTION_RESPONSE_KEY_USE_DEFAULT,
                             query_response.output_is_default_);
     if (query_response.output_is_default_ &&
         query_response.default_explanation_) {
@@ -517,7 +517,7 @@ class RequestHandler {
    *     {
    *        "query_id" := int,
    *        "output" := float,
-   *        "default" := boolean
+   *        "use_default" := boolean
    *        "default_explanation" := string (optional)
    *     }
    * }

@@ -23,8 +23,8 @@ def test(kubernetes):
 
     res_1 = predict_(conn_1.get_query_addr(), [.1, .2, .3])
     res_2 = predict_(conn_2.get_query_addr(), [.1, .2, .3])
-    assert not res_1['default']
-    assert not res_2['default']
+    assert not res_1['use_default']
+    assert not res_2['use_default']
 
     conn_1.stop_all()
     conn_2.stop_all()

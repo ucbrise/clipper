@@ -636,4 +636,4 @@ from the command line with `cURL <https://github.com/curl/curl>`__:
 
     $ curl -X POST --header "Content-Type:application/json" -d '{"input": [1,2,3,4]}' 127.0.0.1:1337/app1/predict
 
-    $ {"query_id":2,"output":4,"default":false}
+    $ {"query_id":2,"output":4,"use_default":false}

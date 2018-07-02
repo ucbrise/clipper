@@ -145,6 +145,6 @@ $ curl -X POST --header "Content-Type:application/json" -d '{"input": [1,2,3,4]}
 ```
 
 ```
-$ {"query_id":2,"output":4,"default":false}
+$ {"query_id":2,"output":4,"use_default":false}
 ```
 

@@ -63,7 +63,7 @@ def deploy_model(clipper_conn, name, link=False):
                 }))
             result = response.json()
             print(result)
-            if response.status_code == requests.codes.ok and result["default"]:
+            if response.status_code == requests.codes.ok and result["use_default"]:
                 num_defaults += 1
         if num_defaults > 0:
             logger.error("Error: %d/%d predictions were default" %
