@@ -13,7 +13,8 @@ echo "This is simon debugging jenkins"
 
 minikube status
 minikube version
-minikube start --vm-driver="None"
+minikube stop
+minikube start
 kubectl get pods
 
 python /home/jenkins/bin/session_lock_resource.py minikube
