@@ -74,7 +74,12 @@ def _process_exit_codes(procs):
     else:
         sys.exit(0)
 
-
+def _stop_all(procs):
+    for name, proc in procs.items():
+        if proc.poll() is not None:
+            proc.terminate()
+            click.echo("{name} terminated".format(name=name))
+    
 @click.command('parallel')
 @click.argument('shell_script', type=click.File('r'))
 @click.option('-e', '--env-vars', multiple=True)
@@ -111,7 +116,6 @@ def run_parallel(shell_script, env_vars):
     }
 
     while True:
-
         for name, cmd in procs.items():
             try:
                 line = next(cmd.stdout)
@@ -124,13 +128,25 @@ def run_parallel(shell_script, env_vars):
             except:  # end of iterator
                 pass
 
-        running = {
+        not_running = {
             name: proc
-            for name, proc in procs.items() if proc.poll() is None
+            for name, proc in procs.items() if proc.poll() is not None
         }
-        all_done = len(running) == 0
-        if all_done:
+
+        # All done
+        if len(not_running) == len(procs):
             _process_exit_codes(procs)
+        
+        # Partially done
+        if len(not_running) > 0:
+            for name, proc in not_running.items():
+                exit_code = proc.returncode
+                if exit_code != 0:
+                    click.echo("{name} exited with code {code}".format(name=name, code=exit_code))
+                    click.echo("Build failed. Shutting down all process.")
+                    _stop_all(procs)
+                    sys.exit(1)
+
 
 
 if __name__ == '__main__':

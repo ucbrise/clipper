@@ -22,6 +22,7 @@ function usage {
     -rc, --r-container          Run tests only for the R container folder.
     -r, --rpc-container         Run tests only for rpc container folder.
     -i, --integration_tests     Run integration tests.
+    -k, --kubernetes-tests      Run kubernetes tests.
     -h, --help                  Display this message and exit.
 
 $@
@@ -138,8 +139,6 @@ function run_integration_tests {
   python ../integration-tests/deploy_pyspark_models.py
   python ../integration-tests/deploy_pyspark_pipeline_models.py
   python ../integration-tests/deploy_pyspark_sparkml_models.py
-  python ../integration-tests/kubernetes_integration_test.py
-  python ../integration-tests/kubernetes_multi_frontend.py
   python ../integration-tests/deploy_tensorflow_models.py
   python ../integration-tests/deploy_mxnet_models.py
   python ../integration-tests/deploy_pytorch_models.py
@@ -147,16 +146,34 @@ function run_integration_tests {
   # python ../integration-tests/deploy_pytorch_to_caffe2_with_onnx.py
   ../integration-tests/r_integration_test/rclipper_test.sh
   python ../integration-tests/clipper_metric_docker.py
-  python ../integration-tests/clipper_metric_kube.py
   python ../integration-tests/multi_tenancy_test.py
-  python ../integration-tests/multi_tenancy_test.py --kubernetes
-  python ../integration-tests/kubernetes_namespace.py
+
 
   echo "GREPTHIS Docker State After"
   docker ps
 
   echo "Exit code: $?"
   echo "GREPTHIS Done running unit tests"
+}
+
+function run_kubernetes_tests {
+  echo -e "\nRunning kubernetes tests\n\n"
+  cd $DIR
+
+  docker ps
+  kubectl get pods
+
+  python ../integration-tests/kubernetes_integration_test.py
+  python ../integration-tests/kubernetes_multi_frontend.py
+  python ../integration-tests/clipper_metric_kube.py
+  python ../integration-tests/multi_tenancy_test.py --kubernetes
+  python ../integration-tests/kubernetes_namespace.py
+
+  docker ps
+  kubectl get pods
+
+  echo "Exit code: $?"
+  echo "GREPTHIS Done running k8s tests"
 }
 
 function run_all_tests {
@@ -167,6 +184,8 @@ function run_all_tests {
   run_management_tests
   redis-cli -p $REDIS_PORT "flushall"
   run_integration_tests
+  redis-cli -p $REDIS_PORT "flushall"
+  run_kubernetes_tests
   redis-cli -p $REDIS_PORT "flushall"
   run_jvm_container_tests
   redis-cli -p $REDIS_PORT "flushall"
@@ -207,6 +226,9 @@ case $args in
                                 ;;
     -i | --integration_tests )  set_test_environment
                                 run_integration_tests
+                                ;;
+    -k | --kubernetes-tests )   set_test_environment
+                                run_kubernetes_tests
                                 ;;
     -h | --help )               usage
                                 ;;
