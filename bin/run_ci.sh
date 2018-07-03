@@ -5,9 +5,15 @@ set -e
 set -u
 set -o pipefail
 
+function clean_up {
+    minikube stop
+    exit
+}
+
+trap clean_up SIGHUP SIGINT SIGTERM
+
 # Printout for timeout debug
 date
-
 
 echo "This is simon debugging jenkins" 
 
@@ -21,11 +27,11 @@ kubectl get pods
 kubectl get pods
 kubectl get nodes
 
+docker build -t minikube-test -f Dockerfile .
+
 docker run --rm \
     -v /var/run/docker.sock:/var/run/docker.sock \
-    -v ~/.minikube:/root/.minikube \
-    -v ~/.kube:/root/.kube \
-    simonmok/minikube-test
+    minikube-test
 
 minikube stop
 exit 1
