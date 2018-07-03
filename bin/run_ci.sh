@@ -11,13 +11,13 @@ date
 
 echo "This is simon debugging jenkins" 
 
+python /home/jenkins/bin/session_lock_resource.py minikube
+
 minikube status
 minikube version
-minikube stop
 minikube start
 kubectl get pods
 
-python /home/jenkins/bin/session_lock_resource.py minikube
 kubectl get pods
 kubectl get nodes
 
