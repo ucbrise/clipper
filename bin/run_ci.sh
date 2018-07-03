@@ -27,7 +27,13 @@ kubectl get pods
 kubectl get pods
 kubectl get nodes
 
-docker build -t minikube-test -f Dockerfile .
+unset CDPATH
+# one-liner from http://stackoverflow.com/a/246128
+# Determines absolute path of the directory containing
+# the script.
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+docker build -t minikube-test -f $DIR/Dockerfile .
 
 docker run --rm \
     -v /var/run/docker.sock:/var/run/docker.sock \
