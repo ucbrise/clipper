@@ -1,0 +1,35 @@
+ARG REGISTRY
+ARG CODE_VERSION
+ARG MINIKUBE_IP
+FROM ${REGISTRY}/dev:${CODE_VERSION}
+
+LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
+
+RUN pip install awscli==1.14.*
+
+COPY ./ /clipper
+
+COPY /home/jenkins/.minikube /minikube
+
+# Patch Clipper
+RUN cd /clipper/src/libs/spdlog \
+    && git apply ../patches/make_spdlog_compile_linux.patch
+
+# Set version as git hash
+RUN cd /clipper \
+    && echo $(git rev-parse --verify --short=10 HEAD) > VERSION.txt
+
+RUN pip install -e /clipper/clipper_admin
+
+curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && \
+     mv kubectl /usr/local/bin && \
+     chmod 755 /usr/local/bin/kubectl
+
+kubectl config set-cluster minikube --server=https://${MINIKUBE_IP}:8443  --certificate-authority=/minikube/ca.crt
+kubectl config set-credentials minikube --certificate-authority=/minikube/ca.crt --client-key=/minikube/client.key --client-certificate=/minikube/client.crt
+kubectl config set-context minikube --cluster=minikube --user=minikube
+kubectl config use-context minikube
+
+ENTRYPOINT ["/clipper/bin/ci_checks.sh", "false", "-k"]
+
+# vim: set filetype=dockerfile:

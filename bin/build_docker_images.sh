@@ -213,9 +213,14 @@ create_image () {
       local rpc_version=""
     fi
 
+    if [ image -eq "k8stests" ]; then
+      local kwargs="--build-arg MINIKUBE_IP=$MINIKUBE_IP"
+    else
+      local kwargs=""
+    fi
                      
     echo "Building $namespace/$image:$sha_tag from file $dockerfile"
-    time docker build --build-arg CODE_VERSION=$sha_tag --build-arg REGISTRY=$namespace $rpc_version -t $namespace/$image:$sha_tag \
+    time docker build --build-arg CODE_VERSION=$sha_tag --build-arg REGISTRY=$namespace $rpc_version $kwargs -t $namespace/$image:$sha_tag \
         -f dockerfiles/$dockerfile $CLIPPER_ROOT
 
     echo "Image tag appended to CLIPPER_ROOT/bin/clipper_docker_images.txt"
@@ -270,6 +275,7 @@ build_images () {
 
     create_image unittests ClipperTestsDockerfile  $private &
     create_image py35tests ClipperPy35TestsDockerfile  $private &
+    create_image k8stests ClipperK8sTestsDockerfile $private &
     wait
 
     # Build containers for other languages

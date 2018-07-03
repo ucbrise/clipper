@@ -7,6 +7,7 @@ set -o pipefail
 
 
 run_all=$1
+args=$2
 
 function clean_up {
     # Clean up credentials
@@ -57,7 +58,7 @@ docker login --username="clippertesting" --password=$CLIPPER_TESTING_DOCKERHUB_P
 
 if [[ $run_all = "true" ]]; then
     $DIR/check_format.sh
-    $DIR/run_unittests.sh
+    $DIR/run_unittests.sh $args
 else
-    $DIR/run_unittests.sh -i
+    $DIR/run_unittests.sh -i $args
 fi

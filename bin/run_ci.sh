@@ -24,6 +24,8 @@ minikube version
 minikube start
 kubectl get pods
 
+MINIKUBE_IP = $(minikube ip)
+
 unset CDPATH
 # one-liner from http://stackoverflow.com/a/246128
 # Determines absolute path of the directory containing
@@ -60,4 +62,5 @@ python $DIR/run_ci_parallel.py $DIR/ci_tests.sh \
     -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
     -e CLIPPER_REGISTRY=$CLIPPER_REGISTRY \
     -e CLIPPER_TESTING_DOCKERHUB_PASSWORD=$CLIPPER_TESTING_DOCKERHUB_PASSWORD \
-    -e sha_tag=$sha_tag
+    -e sha_tag=$sha_tag \
+    -e DIR=$DIR
