@@ -17,9 +17,9 @@
 #include <clipper/memory.hpp>
 #include <clipper/redis.hpp>
 
-using clipper::PredictionData;
 using clipper::DataType;
 using clipper::Output;
+using clipper::PredictionData;
 using clipper::VersionedModelId;
 using rapidjson::Type;
 

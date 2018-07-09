@@ -2,9 +2,9 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    ai.clipper.container.label: ""
+    ai.clipper.container.label: {{ cluster_name }}
     ai.clipper.name: metrics
-  name: metrics
+  name: metrics-at-{{ cluster_name }}
 spec:
   type: NodePort
   ports:

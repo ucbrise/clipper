@@ -5,8 +5,8 @@ import argparse
 from clipper_admin import DockerContainerManager, ClipperConnection, ClipperException
 from clipper_admin import version
 
-CLIPPER_R_CONTAINER_BASE_IMAGE = "clipper/r-container-base:{}".format(
-    version.__version__)
+CLIPPER_R_CONTAINER_BASE_IMAGE = "{}/r-container-base:{}".format(
+    version.__registry__, version.__version__)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Launch an R model container")

@@ -6,7 +6,7 @@ import os
 import glob
 import sys
 
-from ..version import __version__
+from ..version import __version__, __registry__
 from .deployer_utils import save_python_function
 from ..exceptions import ClipperException
 from tensorflow import Session
@@ -268,13 +268,15 @@ def deploy_tensorflow_model(clipper_conn,
     if base_image == "default":
         if py_minor_version < (3, 0):
             logger.info("Using Python 2 base image")
-            base_image = "clipper/tf-container:{}".format(__version__)
+            base_image = "{}/tf-container:{}".format(__registry__, __version__)
         elif py_minor_version == (3, 5):
             logger.info("Using Python 3.5 base image")
-            base_image = "clipper/tf35-container:{}".format(__version__)
+            base_image = "{}/tf35-container:{}".format(__registry__,
+                                                       __version__)
         elif py_minor_version == (3, 6):
             logger.info("Using Python 3.6 base image")
-            base_image = "clipper/tf36-container:{}".format(__version__)
+            base_image = "{}/tf36-container:{}".format(__registry__,
+                                                       __version__)
         else:
             msg = (
                 "TensorFlow deployer only supports Python 2.7, 3.5, and 3.6. "

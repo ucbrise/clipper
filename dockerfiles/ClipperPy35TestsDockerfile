@@ -1,5 +1,6 @@
+ARG REGISTRY
 ARG CODE_VERSION
-FROM clipper/py35-dev:${CODE_VERSION}
+FROM ${REGISTRY}/py35-dev:${CODE_VERSION}
 
 LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
@@ -10,6 +11,10 @@ COPY ./ /clipper
 # Patch Clipper
 RUN cd /clipper/src/libs/spdlog \
     && git apply ../patches/make_spdlog_compile_linux.patch
+
+# Set version as git hash
+RUN cd /clipper \
+    && echo $(git rev-parse --verify --short=10 HEAD) > VERSION.txt
 
 RUN pip3 install -e /clipper/clipper_admin
 

@@ -23,10 +23,10 @@
 
 using clipper::Feedback;
 using clipper::FeedbackAck;
-using clipper::PredictionData;
 using clipper::FeedbackQuery;
 using clipper::InputType;
 using clipper::Output;
+using clipper::PredictionData;
 using clipper::Query;
 using clipper::Response;
 using clipper::VersionedModelId;
@@ -319,13 +319,13 @@ class RequestHandler {
     AppMetrics app_metrics(name);
 
     /*
-   * JSON format for prediction query request:
-   * {
-   *  "input" := [double] | [int] | [string] | [byte] | [float]
-   *  "input_batch" := [[double] | [int] | [byte] | [float] | string]
-   *  "version" := string (optional)
-   * }
-   */
+     * JSON format for prediction query request:
+     * {
+     *  "input" := [double] | [int] | [string] | [byte] | [float]
+     *  "input_batch" := [[double] | [int] | [byte] | [float] | string]
+     *  "version" := string (optional)
+     * }
+     */
 
     auto predict_fn = [this, name, input_type, policy, latency_slo_micros,
                        app_metrics](

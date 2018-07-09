@@ -13,6 +13,9 @@ data:
       - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
         action: keep
         regex: true
+      - source_labels: [__meta_kubernetes_pod_label_ai_clipper_container_label]
+        action: keep
+        regex: {{cluster_name}}
       - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
         action: replace
         regex: ([^:]+)(?::\d+)?;(\d+)
@@ -29,7 +32,7 @@ data:
 
 kind: ConfigMap
 metadata:
-  name: prometheus-config
+  name: prometheus-config-at-{{ cluster_name }}
   labels:
-    ai.clipper.container.label: ""
+    ai.clipper.container.label: {{ cluster_name }}
     ai.clipper.name: metrics

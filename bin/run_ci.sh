@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+set -x
 set -e
 set -u
 set -o pipefail
@@ -21,12 +22,15 @@ tag=$(<VERSION.txt)
 # Build docker images
 ./bin/build_docker_images.sh
 
-# Tag and push the latest version of the Clipper Docker images to the container registry
-# for the Kubernetes testing cluster
-docker tag clipper/query_frontend:$tag 568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/query_frontend:$tag
-docker push 568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/query_frontend:$tag
-docker tag clipper/management_frontend:$tag 568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/management_frontend:$tag
-docker push 568959175238.dkr.ecr.us-west-1.amazonaws.com/clipper/management_frontend:$tag
+echo "Pushing the following images"
+cat ./bin/clipper_docker_images.txt
+
+# Push docker images
+while read in; do docker push "$in"; done < ./bin/clipper_docker_images.txt
+
+
+CLIPPER_REGISTRY=$(docker info | grep Username | awk '{ print $2 }')
+sha_tag=$(git rev-parse --verify --short=10 HEAD)
 
 # Run tests
 docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp \
@@ -36,7 +40,9 @@ docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /
     -e CLIPPER_K8S_PASSWORD=$CLIPPER_K8S_PASSWORD \
     -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
     -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-    clipper/unittests:$tag
+    -e CLIPPER_REGISTRY=$CLIPPER_REGISTRY \
+    -e CLIPPER_TESTING_DOCKERHUB_PASSWORD=$CLIPPER_TESTING_DOCKERHUB_PASSWORD \
+    $CLIPPER_REGISTRY/unittests:$sha_tag
 
 # Python 3 unittests
 docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp \
@@ -46,4 +52,6 @@ docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /
     -e CLIPPER_K8S_PASSWORD=$CLIPPER_K8S_PASSWORD \
     -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
     -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-    clipper/py35tests:$tag
+    -e CLIPPER_REGISTRY=$CLIPPER_REGISTRY \
+    -e CLIPPER_TESTING_DOCKERHUB_PASSWORD=$CLIPPER_TESTING_DOCKERHUB_PASSWORD \
+    $CLIPPER_REGISTRY/py35tests:$sha_tag
