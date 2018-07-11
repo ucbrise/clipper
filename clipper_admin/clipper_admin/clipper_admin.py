@@ -1163,6 +1163,40 @@ class ClipperConnection(object):
             raise UnconnectedException()
         return self.cm.get_query_addr()
 
+    def unregister_versioned_models(self, model_versions_dict):
+        """Unregister the specified versions of the specified models from Clipper internal.
+
+        Parameters
+        ----------
+        model_versions_dict : dict(str, list(str))
+            For each entry in the dict, the key is a model name and the value is a list of model
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+            versions. All replicas for each version of each model will be stopped.
+        """
+        if not self.connected:
+            raise UnconnectedException()
+        url = "http://{host}/admin/delete_versioned_model".format(
+            host=self.cm.get_admin_addr())
+        headers = {"Content-type": "application/json"}
+        for model_name in model_versions_dict:
+            for model_version in model_versions_dict[model_name]:
+                req_json = json.dumps({"model_name": model_name,
+                                       "model_version": model_version})
+                r = requests.post(url, headers=headers, data=req_json)
+                logger.debug(r.text)
+                if r.status_code != requests.codes.ok:
+                    msg = "Received error status code: {code} and message: " \
+                          "{msg}".format(code=r.status_code, msg=r.text)
+                    logger.error(msg)
+                    raise ClipperException(msg)
+                else:
+                    logger.info(
+                        "Model {name}:{ver} was successfully deleted".format(
+                            name=model_name, ver=model_version))
+
     def stop_models(self, model_names):
         """Stops all versions of the specified models.
 

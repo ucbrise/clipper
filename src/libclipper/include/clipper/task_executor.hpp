@@ -113,7 +113,7 @@ struct DeadlineCompare {
 // thread safe model queue
 class ModelQueue {
  public:
-  ModelQueue() : queue_(ModelPQueue{}) {}
+  ModelQueue() : queue_(ModelPQueue{}), valid_(true) {}
 
   // Disallow copy and assign
   ModelQueue(const ModelQueue &) = delete;
@@ -125,6 +125,7 @@ class ModelQueue {
   ~ModelQueue() = default;
 
   void add_task(PredictTask task) {
+    if (!valid_) return;
     std::lock_guard<std::mutex> lock(queue_mutex_);
     Deadline deadline = std::chrono::system_clock::now() +
                         std::chrono::microseconds(task.latency_slo_micros_);
@@ -142,11 +143,12 @@ class ModelQueue {
       std::function<BatchSizeInfo(Deadline)> &&get_batch_size) {
     std::unique_lock<std::mutex> lock(queue_mutex_);
     remove_tasks_with_elapsed_deadlines();
-    queue_not_empty_condition_.wait(lock, [this]() { return !queue_.empty(); });
+    queue_not_empty_condition_.wait(
+      lock, [this]() { return !queue_.empty() || !valid_; });
     remove_tasks_with_elapsed_deadlines();
 
     std::vector<PredictTask> batch;
-    if (requesting_container->is_active()) {
+    if (requesting_container->is_active() && valid_) {
       Deadline deadline = queue_.top().first;
 
       size_t max_batch_size;
@@ -178,6 +180,13 @@ class ModelQueue {
     return batch;
   }
 
+  void invalidate() {
+    std::lock_guard<std::mutex> l(queue_mutex_);
+    valid_ = false;
+    queue_ = ModelPQueue();
+    queue_not_empty_condition_.notify_all();
+  }
+
  private:
   // Min PriorityQueue so that the task with the earliest
   // deadline is at the front of the queue
@@ -188,6 +197,7 @@ class ModelQueue {
   ModelPQueue queue_;
   std::mutex queue_mutex_;
   std::condition_variable queue_not_empty_condition_;
+  bool valid_;
 
   // Deletes tasks with deadlines prior or equivalent to the
   // current system time. This method should only be called
@@ -316,6 +326,60 @@ class TaskExecutor {
                            "Registered batch size of {} for model {}:{}",
                            batch_size, model_id.get_name(), model_id.get_id());
         active_containers_->register_batch_size(model_id, batch_size);
+
+      } else if (event_type == "hdel" && *task_executor_valid) {
+        std::vector<VersionedModelId> parsed_model_info = clipper::redis::str_to_models(key);
+        VersionedModelId model_id = parsed_model_info.front();
+        auto container_list = clipper::redis::get_all_containers(redis_connection_);
+
+        for (auto c : container_list) {
+          VersionedModelId vm = std::get<0>(c);
+          int model_replica_id = std::get<1>(c);
+          if (vm == model_id) {
+            TaskExecutionThreadPool::interrupt_thread(vm, model_replica_id);
+          }
+        }
+
+        bool deleted_queue = delete_model_queue_if_necessary(model_id);
+        if (deleted_queue) {
+          log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
+                             "Deleted queue for model: {} : {}",
+                             model_id.get_name(), model_id.get_id());
+        }
+
+        for (auto c : container_list) {
+          VersionedModelId vm = std::get<0>(c);
+          int model_replica_id = std::get<1>(c);
+          if (vm == model_id) {
+            if (clipper::redis::delete_container(redis_connection_, vm, model_replica_id)) {
+              std::stringstream ss;
+              ss << "Successfully deleted container with name "
+                 << "'" << model_id.get_name() << "'"
+                 << " and version "
+                 << "'" << model_id.get_id() << "'";
+              log_info_formatted(LOGGING_TAG_TASK_EXECUTOR, "{}", ss.str());
+
+              active_containers_->remove_container(vm, model_replica_id);
+              TaskExecutionThreadPool::delete_queue(vm, model_replica_id);
+              EstimatorFittingThreadPool::delete_queue(vm, model_replica_id);
+            } else {
+              std::stringstream ss;
+              ss << "Error deleting container with name "
+                 << "'" << model_id.get_name() << "'"
+                 << " and version "
+                 << "'" << model_id.get_id() << "'"
+                 << " from Redis";
+              throw std::runtime_error(ss.str());
+            }
+          }
+        }
+        clipper::redis::delete_versioned_model(redis_connection_, model_id);
+
+      } else if (!*task_executor_valid) {
+        log_info(LOGGING_TAG_TASK_EXECUTOR,
+                  "Not running TaskExecutor's "
+                  "subscribe_to_model_changes callback because "
+                  "TaskExecutor has been destroyed.");
       }
     });
 
@@ -474,6 +538,20 @@ class TaskExecutor {
     return queue_created;
   }
 
+  bool delete_model_queue_if_necessary(const VersionedModelId &model_id) {
+    // Deletes an entry from the queues map, if one exists
+    boost::unique_lock<boost::shared_mutex> l(model_queues_mutex_);
+    if (model_queues_.count(model_id)) {
+      model_queues_[model_id]->invalidate();
+      model_queues_.erase(model_id);
+
+      boost::unique_lock<boost::shared_mutex> l(model_metrics_mutex_);
+      model_metrics_.erase(model_id);
+      return true;
+    }
+    return false;
+  }
+
   void on_container_ready(VersionedModelId model_id, int replica_id) {
     std::shared_ptr<ModelContainer> container =
         active_containers_->get_model_replica(model_id, replica_id);
@@ -599,8 +677,14 @@ class TaskExecutor {
   }
 
   void on_remove_container(VersionedModelId model_id, int replica_id) {
-    // remove the given model_id from active_containers_
+    std::shared_ptr<ModelContainer> container =
+        active_containers_->get_model_replica(model_id, replica_id);
+    if (!container)
+      return;
+
     active_containers_->remove_container(model_id, replica_id);
+    TaskExecutionThreadPool::delete_queue(model_id, replica_id);
+    EstimatorFittingThreadPool::delete_queue(model_id, replica_id);
   }
 };
 

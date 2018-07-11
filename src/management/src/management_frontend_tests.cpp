@@ -465,10 +465,10 @@ TEST_F(ManagementFrontendTest, TestAddModelCorrect) {
   std::string model_name = "mymodelname";
   std::string model_version = "4";
   auto result = get_model(*redis_, VersionedModelId(model_name, model_version));
-  // The model table has 8 fields, so we expect to get back a map with 8
+  // The model table has 9 fields, so we expect to get back a map with 9
   // entries in it (see add_model() in redis.cpp for details on what the
   // fields are).
-  ASSERT_EQ(result.size(), static_cast<size_t>(8));
+  ASSERT_EQ(result.size(), static_cast<size_t>(9));
 
   // Make sure that the current model version has been updated
   // appropriately.
@@ -500,10 +500,10 @@ TEST_F(ManagementFrontendTest, TestAddLinkedModelCompatibleInputType) {
   std::string model_name = "mymodelname";
   std::string model_version = "4";
   auto result = get_model(*redis_, VersionedModelId(model_name, model_version));
-  // The model table has 8 fields, so we expect to get back a map with 8
+  // The model table has 9 fields, so we expect to get back a map with 9
   // entries in it (see add_model() in redis.cpp for details on what the
   // fields are).
-  ASSERT_EQ(result.size(), static_cast<size_t>(8));
+  ASSERT_EQ(result.size(), static_cast<size_t>(9));
 
   // Make sure that the current model version has been updated
   // appropriately.
@@ -546,10 +546,10 @@ TEST_F(ManagementFrontendTest, TestAddDuplicateModelVersion) {
   std::string model_name = "mymodelname";
   std::string model_version = "4";
   auto result = get_model(*redis_, VersionedModelId(model_name, model_version));
-  // The model table has 8 fields, so we expect to get back a map with 8
+  // The model table has 9 fields, so we expect to get back a map with 9
   // entries in it (see add_model() in redis.cpp for details on what the
   // fields are).
-  ASSERT_EQ(result.size(), static_cast<size_t>(8));
+  ASSERT_EQ(result.size(), static_cast<size_t>(9));
 
   // Make sure that the current model version has been updated
   // appropriately.
