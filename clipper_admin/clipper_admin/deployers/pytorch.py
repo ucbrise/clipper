@@ -213,6 +213,8 @@ def deploy_pytorch_model(clipper_conn,
                     __version__)
             elif py_minor_version == (3, 6):
                 logger.info("Using Python 3.6 base image")
+                logger.info("Building image for PyTorch 0.4.1")
+
                 base_image = "custom-pytorch36-container:1"
                 # base_image = "clipper/pytorch36-container:{}".format(
                 #    __version__)

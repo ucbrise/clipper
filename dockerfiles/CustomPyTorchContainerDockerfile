@@ -1,0 +1,6 @@
+FROM clipper/pytorch36-container:0.3.0
+
+COPY pytorch_container.py /container/
+
+CMD ["/container/container_entry.sh", "pytorch-container", "/container/pytorch_container.py"]
+
