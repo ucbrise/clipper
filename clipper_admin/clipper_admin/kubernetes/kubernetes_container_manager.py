@@ -68,7 +68,8 @@ class KubernetesContainerManager(ContainerManager):
                  redis_port=6379,
                  useInternalIP=False,
                  namespace='default',
-                 create_namespace_if_not_exists=False):
+                 create_namespace_if_not_exists=False,
+                 registry_secret_names={}):
         """
 
         Parameters
@@ -105,6 +106,10 @@ class KubernetesContainerManager(ContainerManager):
             Create a k8s namespace if the namespace doesnt already exist.
             If this argument is provided and the k8s namespace does not exist a new k8s namespace will
             be created.
+         registry_secret_names: Dictionary, None
+            A mapping between the container registry where the images reside and the name of the
+            secret that contains the credentials to access the registry. E.g.
+                registry_secret_names = {"localhost:5000": "myregistrykey"}
 
         Note
         ----
@@ -129,6 +134,7 @@ class KubernetesContainerManager(ContainerManager):
         configuration.assert_hostname = False
         self._k8s_v1 = client.CoreV1Api()
         self._k8s_beta = client.ExtensionsV1beta1Api()
+        self.registry_secret_names = registry_secret_names
 
         # Create the template engine
         # Config: Any variable missing -> Error
@@ -368,11 +374,12 @@ class KubernetesContainerManager(ContainerManager):
                 "Could not connect to Clipper Kubernetes cluster. "
                 "Reason: {}".format(e))
 
-    def deploy_model(self, name, version, input_type, image, num_replicas=1):
+    def deploy_model(self, name, version, input_type, image, container_registry, num_replicas=1):
         for query_frontend_id in range(self.num_frontend_replicas):
             deployment_name = get_model_deployment_name(
                 name, version, query_frontend_id, self.cluster_name)
 
+            secret_name = self.registry_secret_names.get(container_registry, "")
             generated_body = self._generate_config(
                 CONFIG_FILES['model']['deployment'],
                 deployment_name=deployment_name,
@@ -383,7 +390,8 @@ class KubernetesContainerManager(ContainerManager):
                 query_frontend_id=query_frontend_id,
                 input_type=input_type,
                 image=image,
-                cluster_name=self.cluster_name)
+                cluster_name=self.cluster_name,
+                image_secret_name=secret_name)
 
             with _pass_conflicts():
                 self._k8s_beta.create_namespaced_deployment(
