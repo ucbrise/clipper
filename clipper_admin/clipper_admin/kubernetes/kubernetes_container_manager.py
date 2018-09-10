@@ -307,7 +307,7 @@ class KubernetesContainerManager(ContainerManager):
 
         if len(external_node_hosts) == 0 and (self.useInternalIP):
             msg = "No external node addresses found. Using Internal IP address"
-            self.logger.warn(msg)
+            self.logger.warning(msg)
             for addr in node.status.addresses:
                 if addr.type == "InternalIP":
                     external_node_hosts.append(addr.address)
@@ -367,7 +367,7 @@ class KubernetesContainerManager(ContainerManager):
                             self.clipper_metric_port))
 
         except ApiException as e:
-            logging.warn(
+            logging.warning(
                 "Exception connecting to Clipper Kubernetes cluster: {}".
                 format(e))
             raise ClipperException(
@@ -470,7 +470,7 @@ class KubernetesContainerManager(ContainerManager):
                             cluster_label=CLIPPER_DOCKER_LABEL,
                             cluster_name=self.cluster_name))
         except ApiException as e:
-            self.logger.warn(
+            self.logger.warning(
                 "Exception deleting kubernetes deployments: {}".format(e))
             raise e
 
@@ -484,7 +484,7 @@ class KubernetesContainerManager(ContainerManager):
                     cluster_label=CLIPPER_DOCKER_LABEL,
                     cluster_name=self.cluster_name))
         except ApiException as e:
-            self.logger.warn(
+            self.logger.warning(
                 "Exception deleting kubernetes deployments: {}".format(e))
             raise e
 
@@ -519,7 +519,7 @@ class KubernetesContainerManager(ContainerManager):
             self._k8s_v1.delete_collection_namespaced_config_map(
                 namespace=self.k8s_namespace, label_selector=cluster_selecter)
         except ApiException as e:
-            logging.warn(
+            logging.warning(
                 "Exception deleting kubernetes resources: {}".format(e))
 
     def get_registry(self):
