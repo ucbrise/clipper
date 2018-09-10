@@ -274,6 +274,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
                     model_name,
                     version,
                     input_type,
+                    clipper_registry,
                     container_name,
                     num_replicas=1)
 

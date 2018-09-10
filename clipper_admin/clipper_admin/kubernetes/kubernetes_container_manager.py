@@ -106,7 +106,7 @@ class KubernetesContainerManager(ContainerManager):
             Create a k8s namespace if the namespace doesnt already exist.
             If this argument is provided and the k8s namespace does not exist a new k8s namespace will
             be created.
-         registry_secret_names: Dictionary, None
+         registry_secret_names: Dictionary, {}
             A mapping between the container registry where the images reside and the name of the
             secret that contains the credentials to access the registry. E.g.
                 registry_secret_names = {"localhost:5000": "myregistrykey"}
