@@ -268,11 +268,11 @@ class DockerContainerManager(ContainerManager):
         self.prometheus_port = all_labels[CLIPPER_DOCKER_PORT_LABELS['metric']]
         self.prom_config_path = all_labels[CLIPPER_METRIC_CONFIG_LABEL]
 
-    def deploy_model(self, name, version, input_type, image, num_replicas=1):
+    def deploy_model(self, name, version, input_type, image, container_registry, num_replicas=1):
         # Parameters
         # ----------
         # image : str
-        #     The fully specified Docker imagesitory to deploy. If using a custom
+        #     The fully specified Docker image to deploy. If using a custom
         #     registry, the registry name must be prepended to the image. For example,
         #     "localhost:5000/my_model_name:my_model_version" or
         #     "quay.io/my_namespace/my_model_name:my_model_version"

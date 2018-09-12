@@ -9,7 +9,7 @@ RUN mkdir -p /model \
       && apt-get update \
       && apt-get install -y libzmq3 libzmq3-dev redis-server libsodium13 build-essential
 
-RUN pip install cloudpickle==0.5.* pyzmq==17.0.* prometheus_client==0.1.* \
+RUN pip install cloudpickle==0.5.5 pyzmq==17.0.* prometheus_client==0.1.* \
     pyyaml==3.12.* jsonschema==2.6.* redis==2.10.* psutil==5.4.* flask==0.12.2 \
     numpy==1.14.*
 

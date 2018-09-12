@@ -348,7 +348,7 @@ class ClipperConnection(object):
             raise UnconnectedException()
         image = self.build_model(name, version, model_data_path, base_image,
                                  container_registry, pkgs_to_install)
-        self.deploy_model(name, version, input_type, image, labels,
+        self.deploy_model(name, version, input_type, container_registry, image, labels,
                           num_replicas, batch_size)
 
     def build_model(self,
@@ -389,7 +389,7 @@ class ClipperConnection(object):
             container RPC client.
         container_registry : str, optional
             The Docker container registry to push the freshly built model to. Note
-            that if you are running Clipper on Kubernetes, this registry must be accesible
+            that if you are running Clipper on Kubernetes, this registry must be accessible
             to the Kubernetes cluster in order to fetch the container from the registry.
         pkgs_to_install : list (of strings), optional
             A list of the names of packages to install, using pip, in the container.
@@ -480,6 +480,7 @@ class ClipperConnection(object):
                      name,
                      version,
                      input_type,
+                     container_registry,
                      image,
                      labels=None,
                      num_replicas=1,
@@ -515,6 +516,11 @@ class ClipperConnection(object):
             one of "integers", "floats", "doubles", "bytes", or "strings". See the
             `User Guide <http://clipper.ai/user_guide/#input-types>`_ for more details
             on picking the right input type for your application.
+        container_registry : str, optional
+            The Docker container registry to push the freshly built model to. Note
+            that if you are running Clipper on Kubernetes, you should create kubernetes secret with the
+            credentials needed to access the registry, and pass the secret name using `registry_secret_names`
+             parameter in the KubernetesContainerManager constructor.
         image : str
              The fully specified Docker image to deploy. If using a custom
              registry, the registry name must be prepended to the image. For example,
@@ -556,6 +562,7 @@ class ClipperConnection(object):
             name=name,
             version=version,
             input_type=input_type,
+            container_registry=container_registry,
             image=image,
             num_replicas=num_replicas)
         self.register_model(
