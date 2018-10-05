@@ -392,7 +392,7 @@ inline auto submit_job(Func&& func, Args&&... args) {
 }
 
 inline void create_queue(VersionedModelId vm, int replica_id) {
-  get_thread_pool().create_queue(vm, replica_id, false);
+  get_thread_pool().create_queue(vm, replica_id, true);
 }
 
 }  // namespace EstimatorFittingThreadPool
