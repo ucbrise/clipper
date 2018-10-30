@@ -1,4 +1,5 @@
 sudo: required
+language: python
 
 # This moves Kubernetes specific config files.
 env:
