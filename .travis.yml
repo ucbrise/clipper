@@ -5,6 +5,7 @@ env:
 - CHANGE_MINIKUBE_NONE_USER=true
 
 before_script:
+- sudo apt install -y coreutils
 - curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.7.0/bin/linux/amd64/kubectl && \
     chmod +x kubectl && sudo mv kubectl /usr/local/bin/
 - curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 && \
