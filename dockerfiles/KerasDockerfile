@@ -1,0 +1,13 @@
+ARG REGISTRY
+ARG CODE_VERSION
+ARG RPC_VERSION
+FROM clipper-base
+
+RUN pip install keras
+RUN pip install tensorflow
+
+COPY containers/python/keras_container.py containers/python/container_entry.sh /container/
+
+CMD ["/container/container_entry.sh", "keras-container", "/container/keras_container.py"]
+
+# vim: set filetype=dockerfile:
