@@ -206,6 +206,9 @@ def deploy_keras_model(clipper_conn,
             logger.error(
                 "Error copying keras model: %s" % e)
             raise e
+    else:
+        raise ClipperException(
+            "%s should be wither a Keras Model object or a saved Model ('.h5')" % model_path_or_object)
 
     py_minor_version = (sys.version_info.major, sys.version_info.minor)
     # Check if Python 2 or Python 3 image
@@ -216,11 +219,11 @@ def deploy_keras_model(clipper_conn,
         elif py_minor_version == (3, 5):
             logger.info("Using Python 3.5 base image")
             base_image = "{}/keras35-container:{}".format(__registry__,
-                                                        __version__)
+                                                          __version__)
         elif py_minor_version == (3, 6):
             logger.info("Using Python 3.6 base image")
             base_image = "{}/keras36-container:{}".format(__registry__,
-                                                        __version__)
+                                                          __version__)
         else:
             msg = (
                 "Keras deployer only supports Python 2.7, 3.5, and 3.6. "
