@@ -4,8 +4,7 @@ env:
   matrix:
   - CHANGE_MINIKUBE_NONE_USER=true
   global:
-    # Env var for CLIPPER_TESTING_DOCKERHUB_PASSWORD
-    secure: SMVlJF0tRfnx8e9LXFG4RHVX/ey9IlJRDDUtcX4OjwzDYikCy4PpuulVlNMok1dHXrffYREXDs8hcgynUOSqVqr9fPwL4HTqN9JqFHFaMy1VmEEtxhrSAflyor9DMOf18XV+PrsRRQmA7oWQkCDQXxlRiGUyvUcDguNc54TYC8BSYQpWQQEkTyvYpLZyRQ0NbXeQiQ/r32sfvIdc7sQLW8gmsoq7ubxTco3QwyKzYWXI/yHX5Tw/Rytd6qddtbDsUVGMMEL81En56OT6g55T/plDO4SuCboLZJc1DnfaGZhVwZHngQG3ZT4hRMa5Tz7VUsEQkdhy5o2oDVa5+xPPtqwz9o3HIKAPEHWPmxFyCENvR+tO308/mO45VxQmD5bZYhReHmMTR2KoLNO+QOkYj8LFTi21LAbQzLP/HGffmE7slNiakfco6bqF7wFRiQY/nMaySvC3pDtbQRqFz5/o4L3CfmlCTHkVMqPYSSqdVP2O/8wMprOp5DNIp+k7LSrkiD39E4mGtHPeaFGBtaHmQVkaTHdY8Ft0H52eOZBdXigRyWlZwnl2kQi80FRzSmC8+YtmI+jNHhrcq1XhK7MaO1yslxCJUy6jSMQpfd7jX2uTRP9gheUqpS2/W+uMHJGdfu6X/XsvXhhTSmPv1U4VpgBJFwxv5JS0qjHxoGtfWyo=
+  - secure: fHqDX7hYJlDYcVYiXeXwufiL8JaGlPiDYQjPOI9WDsdxB+plvJhS3b3cz33aqOLHbgocj8VYYRDtxacz3pcWHIxezSmw4h4BKw2XqOtcMPNQugiSYNrgXmP5D0D/C3B+VlbhfnqyYCyzfxxP6BwFVzColVuZP9fM/sqm5zOFw+RlowKtQwR4kp4L2FkD7y+TQnXRnFg6+paDh9TrYUgzC2ejp2QUf5zxTR5FnTfzaKL/AoAtEGic+RVSFGAq9RWw6yQhxOTaqqAQv8j9O4oW+F085pK8/f0Vi2p2DCoDNXf6mA0OKkwISaQqwxNPfdU3NweE0ciNwpMMWCe0JEM3BEUTQK2YW/8UGoDnkQhLyF7MC/bI6vtb4Id7ORe3e8QlO3nzeFGvranUvFGV6bNgOG6wzNCHXTzgi0/dqUxs5JZMTeZ7cnMFAuBc08LkZ6TIEY/Bd/ffKZX5mnoyR6+TNcvS0iMoutYf+gXhirDDxyhKjUxBsAVXJzjDsILdcNMRg5P2Oa24wB6RulEqh9Da/pGngcsNim/fA1bO5yZVmRmiwo2oBzu7mVJlzj3w7OyjdhAFxRRZ0wUXirFpxaZFZS0y+X4HK8Dw0f7OAXT86WW3+9RYf8hdSZMOtViorlOKgleYMrdYOLrqoN0qYRKNCTO+tbTSAHQtwfev51OAeVA=
 before_script:
 - curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.9.0/bin/linux/amd64/kubectl
   && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
@@ -25,7 +24,7 @@ before_script:
   until kubectl -n kube-system get pods -lk8s-app=kube-dns -o jsonpath="$JSONPATH"
   2>&1 | grep -q "Ready=True"; do sleep 1;echo "waiting for kube-dns to be available";
   kubectl get pods --all-namespaces; done
-- docker login -u clippertesting -p $CLIPPER_TESTING_DOCKERHUB_PASSWORD
+- docker login -u clippertesting --password $CLIPPER_TESTING_DOCKERHUB_PASSWORD
 script:
 - cd clipper_admin; pip install -e .; cd ..
 - kubectl proxy -p 8080 &
