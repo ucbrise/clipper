@@ -3,8 +3,6 @@ language: python
 env:
   matrix:
   - CHANGE_MINIKUBE_NONE_USER=true
-  global:
-  - secure: fHqDX7hYJlDYcVYiXeXwufiL8JaGlPiDYQjPOI9WDsdxB+plvJhS3b3cz33aqOLHbgocj8VYYRDtxacz3pcWHIxezSmw4h4BKw2XqOtcMPNQugiSYNrgXmP5D0D/C3B+VlbhfnqyYCyzfxxP6BwFVzColVuZP9fM/sqm5zOFw+RlowKtQwR4kp4L2FkD7y+TQnXRnFg6+paDh9TrYUgzC2ejp2QUf5zxTR5FnTfzaKL/AoAtEGic+RVSFGAq9RWw6yQhxOTaqqAQv8j9O4oW+F085pK8/f0Vi2p2DCoDNXf6mA0OKkwISaQqwxNPfdU3NweE0ciNwpMMWCe0JEM3BEUTQK2YW/8UGoDnkQhLyF7MC/bI6vtb4Id7ORe3e8QlO3nzeFGvranUvFGV6bNgOG6wzNCHXTzgi0/dqUxs5JZMTeZ7cnMFAuBc08LkZ6TIEY/Bd/ffKZX5mnoyR6+TNcvS0iMoutYf+gXhirDDxyhKjUxBsAVXJzjDsILdcNMRg5P2Oa24wB6RulEqh9Da/pGngcsNim/fA1bO5yZVmRmiwo2oBzu7mVJlzj3w7OyjdhAFxRRZ0wUXirFpxaZFZS0y+X4HK8Dw0f7OAXT86WW3+9RYf8hdSZMOtViorlOKgleYMrdYOLrqoN0qYRKNCTO+tbTSAHQtwfev51OAeVA=
 before_script:
 - curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.9.0/bin/linux/amd64/kubectl
   && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
