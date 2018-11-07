@@ -1,27 +1,31 @@
 sudo: required
 language: python
-
-# This moves Kubernetes specific config files.
 env:
-- CHANGE_MINIKUBE_NONE_USER=true
-
+  matrix:
+  - CHANGE_MINIKUBE_NONE_USER=true
+  global:
+    # Env var for CLIPPER_TESTING_DOCKERHUB_PASSWORD
+    secure: SMVlJF0tRfnx8e9LXFG4RHVX/ey9IlJRDDUtcX4OjwzDYikCy4PpuulVlNMok1dHXrffYREXDs8hcgynUOSqVqr9fPwL4HTqN9JqFHFaMy1VmEEtxhrSAflyor9DMOf18XV+PrsRRQmA7oWQkCDQXxlRiGUyvUcDguNc54TYC8BSYQpWQQEkTyvYpLZyRQ0NbXeQiQ/r32sfvIdc7sQLW8gmsoq7ubxTco3QwyKzYWXI/yHX5Tw/Rytd6qddtbDsUVGMMEL81En56OT6g55T/plDO4SuCboLZJc1DnfaGZhVwZHngQG3ZT4hRMa5Tz7VUsEQkdhy5o2oDVa5+xPPtqwz9o3HIKAPEHWPmxFyCENvR+tO308/mO45VxQmD5bZYhReHmMTR2KoLNO+QOkYj8LFTi21LAbQzLP/HGffmE7slNiakfco6bqF7wFRiQY/nMaySvC3pDtbQRqFz5/o4L3CfmlCTHkVMqPYSSqdVP2O/8wMprOp5DNIp+k7LSrkiD39E4mGtHPeaFGBtaHmQVkaTHdY8Ft0H52eOZBdXigRyWlZwnl2kQi80FRzSmC8+YtmI+jNHhrcq1XhK7MaO1yslxCJUy6jSMQpfd7jX2uTRP9gheUqpS2/W+uMHJGdfu6X/XsvXhhTSmPv1U4VpgBJFwxv5JS0qjHxoGtfWyo=
 before_script:
-# Download kubectl, which is a requirement for using minikube.
-- curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.9.0/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
-# Download minikube.
-- curl -Lo minikube https://storage.googleapis.com/minikube/releases/v0.25.2/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+- curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.9.0/bin/linux/amd64/kubectl
+  && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+- curl -Lo minikube https://storage.googleapis.com/minikube/releases/v0.25.2/minikube-linux-amd64
+  && chmod +x minikube && sudo mv minikube /usr/local/bin/
 - sudo minikube start --vm-driver=none --kubernetes-version=v1.9.0
-# Fix the kubectl context, as it's often stale.
 - minikube update-context
-# Wait for Kubernetes to be up and ready.
-- JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until kubectl get nodes -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1; done
+- JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}';
+  until kubectl get nodes -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do
+  sleep 1; done
 - kubectl cluster-info
-# Verify kube-addon-manager.
-# kube-addon-manager is responsible for managing other kubernetes components, such as kube-dns, dashboard, storage-provisioner..
-- JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until kubectl -n kube-system get pods -lcomponent=kube-addon-manager -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1;echo "waiting for kube-addon-manager to be available"; kubectl get pods --all-namespaces; done
-# Wait for kube-dns to be ready.
-- JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until kubectl -n kube-system get pods -lk8s-app=kube-dns -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1;echo "waiting for kube-dns to be available"; kubectl get pods --all-namespaces; done
-
+- JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}';
+  until kubectl -n kube-system get pods -lcomponent=kube-addon-manager -o jsonpath="$JSONPATH"
+  2>&1 | grep -q "Ready=True"; do sleep 1;echo "waiting for kube-addon-manager to
+  be available"; kubectl get pods --all-namespaces; done
+- JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}';
+  until kubectl -n kube-system get pods -lk8s-app=kube-dns -o jsonpath="$JSONPATH"
+  2>&1 | grep -q "Ready=True"; do sleep 1;echo "waiting for kube-dns to be available";
+  kubectl get pods --all-namespaces; done
+- echo $CLIPPER_TESTING_DOCKERHUB_PASSWORD | docker login -u clippertesting --password-stdin
 script:
 - cd clipper_admin; pip install -e .; cd ..
 - kubectl proxy -p 8080 &
