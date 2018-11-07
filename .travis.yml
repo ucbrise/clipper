@@ -25,7 +25,7 @@ before_script:
   until kubectl -n kube-system get pods -lk8s-app=kube-dns -o jsonpath="$JSONPATH"
   2>&1 | grep -q "Ready=True"; do sleep 1;echo "waiting for kube-dns to be available";
   kubectl get pods --all-namespaces; done
-- echo $CLIPPER_TESTING_DOCKERHUB_PASSWORD | docker login -u clippertesting --password-stdin
+- docker login -u clippertesting -p $CLIPPER_TESTING_DOCKERHUB_PASSWORD
 script:
 - cd clipper_admin; pip install -e .; cd ..
 - kubectl proxy -p 8080 &
