@@ -1,5 +1,69 @@
-from shipyard import create_and_push_with_ctx, print_make_all, ctx
+from shipyard import ctx, Action
 from itertools import product
+from functools import partial
+from distutils.version import LooseVersion
+
+
+def create_image_with_context(build_ctx, image, dockerfile, rpc_version=None):
+    if rpc_version is None:
+        rpc_version = ""
+    else:
+        rpc_version = f"--build-arg RPC_VERSION={rpc_version}"
+
+    namespace = build_ctx["namespace"]
+    sha_tag = build_ctx["sha_tag"]
+
+    docker_build_str = f"time docker build --build-arg CODE_VERSION={sha_tag} \
+            --build-arg REGISTRY={namespace} {rpc_version} \
+            -t {namespace}/{image}:{sha_tag} \
+            -f dockerfiles/{dockerfile} {build_ctx['clipper_root']} > {image}.build.log"
+
+    return Action(image, docker_build_str)
+
+
+def push_image_with_context(build_ctx, image, push_sha=True, push_version=False):
+    namespace = build_ctx["namespace"]
+    sha_tag = build_ctx["sha_tag"]
+    version_tag = build_ctx["version_tag"]
+
+    image_name_sha = f"{namespace}/{image}:{sha_tag}"
+    image_name_version = f"{namespace}/{image}:{version_tag}"
+
+    docker_tag = f"docker tag {image_name_sha} {image_name_version}"
+    docker_push_sha = f"docker push {image_name_sha}"
+    docker_push_version = f"docker push {image_name_version}"
+
+    commands = [docker_tag]
+    if push_sha and ctx["push"]:
+        commands.append(docker_push_sha)
+    if push_version and ctx["push"]:
+        commands.append(docker_push_version)
+
+        version = LooseVersion(version_tag).version
+        if len(version) >= 3:
+            minor_version = ".".join(version[:2])
+            image_name_minor_version = f"{namespace}/{image}:{minor_version}"
+
+            tag_minor_ver = f"docker tag {image_name_sha} {image_name_minor_version}"
+            push_minor_ver = f"docker push {image_name_minor_version}"
+            commands.extend([tag_minor_ver, push_minor_ver])
+
+    return Action(f"publish_{image}", "\n".join(commands))
+
+
+def create_and_push_with_ctx(
+    ctx, name, dockerfile, push_version=False, rpc_version=None
+):
+    create_image = partial(create_image_with_context, ctx)
+    push_image = partial(push_image_with_context, ctx)
+
+    created = create_image(name, dockerfile, rpc_version)
+    pushed = push_image(name, push_sha=True, push_version=push_version)
+
+    created > pushed
+
+    return created
+
 
 ######################
 # Lib Base Build DAG #
@@ -53,20 +117,18 @@ create_and_push_with_ctx(
 ##################
 # RPC Containers #
 ##################
-py_rpc = create_and_push_with_ctx(ctx, "py-rpc", "Py2RPCDockerfile", rpc_version="py", push_version=True)
+py_rpc = create_and_push_with_ctx(
+    ctx, "py-rpc", "Py2RPCDockerfile", rpc_version="py", push_version=True
+)
 py35_rpc = create_and_push_with_ctx(
-    ctx, "py35-rpc", "Py35RPCDockerfile",  rpc_version="py35", push_version=True
+    ctx, "py35-rpc", "Py35RPCDockerfile", rpc_version="py35", push_version=True
 )
 py36_rpc = create_and_push_with_ctx(
-    ctx, "py36-rpc", "Py36RPCDockerfile",  rpc_version="py36", push_version=True
+    ctx, "py36-rpc", "Py36RPCDockerfile", rpc_version="py36", push_version=True
 )
 
 # Will be used for model containers building
-rpc_containers = {
-    'py': py_rpc,
-    'py35': py35_rpc,
-    'py36': py36_rpc
-}
+rpc_containers = {"py": py_rpc, "py35": py35_rpc, "py36": py36_rpc}
 
 
 py_rpc > create_and_push_with_ctx(
@@ -84,7 +146,7 @@ models = [
     ("pytorch{version}", "PyTorchContainer"),
     ("tf{version}", "TensorFlow"),
     ("pyspark{version}", "PySparkContainer"),
-    ("python{version}-closure", "PyClosureContainer")
+    ("python{version}-closure", "PyClosureContainer"),
 ]
 py_version = [("", "py"), ("35", "py35"), ("36", "py36")]
 
@@ -100,8 +162,3 @@ for (model_name, docker_file), (py_version_name, rpc_version) in product(
     )
     # link dependency
     rpc_containers[rpc_version] > container
-
-
-
-
-
