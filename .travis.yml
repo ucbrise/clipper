@@ -25,7 +25,6 @@ before_script:
 - docker login -u clippertesting --password "$CLIPPER_TESTING_DOCKERHUB_PASSWORD"
 script:
 - cd clipper_admin; pip install -e .; cd ..
-- kubectl proxy -p 8080 &
 - cd integration-tests
 - python kubernetes_integration_test.py
 - python kubernetes_multi_frontend.py
