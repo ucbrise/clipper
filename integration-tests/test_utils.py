@@ -39,7 +39,7 @@ PORT_RANGE = [34256, 50000]
 CLIPPER_CONTAINER_REGISTRY = 'clippertesting'
 
 # USE_MINIKUBE == True -> useInternalIP = True
-USE_MINIKUBE = False
+USE_MINIKUBE = True
 
 
 def get_docker_client():
