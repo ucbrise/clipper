@@ -27,7 +27,7 @@ docker build -t shipyard ./bin/shipyard
 docker run --rm shipyard \
   --sha-tag $sha_tag \
   --namespace $CLIPPER_REGISTRY \
-  --clipper-root $DIR \
+  --clipper-root $(pwd) \
   --config clipper_docker.cfg.py \
   --no-push > Makefile
 cat Makefile
