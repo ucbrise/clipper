@@ -23,13 +23,14 @@ CLIPPER_REGISTRY='clippertesting'
 sha_tag=$(git rev-parse --verify --short=10 HEAD)
 
 # Build docker images
-python3 ./bin/shipyard/shipyard.py \
+docker build -t shipyard ./bin/shipyard
+docker run --rm -it shipyard \
   --sha-tag $sha_tag \
   --namespace $CLIPPER_REGISTRY \
   --clipper-root $DIR \
   --config ./bin/shipyard/clipper_docker.cfg.py \
   --no-push > Makefile
-
+cat Makefile
 make -j 10 all
 
 # Build docker images
