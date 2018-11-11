@@ -19,18 +19,30 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $DIR/..
 tag=$(<VERSION.txt)
 
-# Build docker images
-./bin/build_docker_images.sh
+CLIPPER_REGISTRY='clippertesting'
+sha_tag=$(git rev-parse --verify --short=10 HEAD)
 
-echo "Pushing the following images"
-cat ./bin/clipper_docker_images.txt
+# Build docker images
+python ./bin/shipyard/shipyard.py \
+  --sha-tag $sha_tag \
+  --namespace $CLIPPER_REGISTRY \
+  --version-tag $tag \
+  --clipper-root $DIR \
+  --config ./bin/shipyard/clipper_docker.cfg.py \
+  --push > Makefile
+
+make -j 10 all
+
+# Build docker images
+#./bin/build_docker_images.sh
+
+#echo "Pushing the following images"
+#cat ./bin/clipper_docker_images.txt
 
 # Push docker images
-while read in; do docker push "$in"; done < ./bin/clipper_docker_images.txt
+#while read in; do docker push "$in"; done < ./bin/clipper_docker_images.txt
 
-
-CLIPPER_REGISTRY=$(docker info | grep Username | awk '{ print $2 }')
-sha_tag=$(git rev-parse --verify --short=10 HEAD)
+#CLIPPER_REGISTRY=$(docker info | grep Username | awk '{ print $2 }')
 
 # Run tests
 docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp \
