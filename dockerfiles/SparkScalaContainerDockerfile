@@ -16,8 +16,8 @@ RUN mkdir -p /usr/share/maven /usr/share/maven/ref \
   && tar -xzf /tmp/apache-maven.tar.gz -C /usr/share/maven --strip-components=1 \
   && rm -f /tmp/apache-maven.tar.gz \
   && ln -s /usr/share/maven/bin/mvn /usr/bin/mvn \
-  && apt-get update \
-  && apt-get install -y libzmq5 libzmq3-dev git pkg-config libtool autoconf g++ make \
+  && apt-get update -qq \
+  && apt-get install -y -qq libzmq5 libzmq3-dev git pkg-config libtool autoconf g++ make \
   && git clone https://github.com/zeromq/jzmq.git /root/jzmq \
   && cd /root/jzmq/jzmq-jni \
   && ./autogen.sh \

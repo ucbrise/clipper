@@ -7,10 +7,10 @@ LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
 RUN mkdir -p /usr/share/man/man1 && \
     (echo "deb http://http.debian.net/debian jessie-backports main" > /etc/apt/sources.list.d/backports.list) && \
-    apt-get update -y && \
+    apt-get update -qq -y && \
     apt-get install openjdk-8-jre openjdk-8-jdk-headless -y
 
-RUN apt-get install -y wget
+RUN apt-get install -y -qq wget
 
 RUN pip install pyspark==2.3.*
 
