@@ -22,7 +22,7 @@ def create_image_with_context(build_ctx, image, dockerfile, rpc_version=None):
     fluent_bit_exe = ' '.join([
         "docker",
         "run",
-        "-it",
+        "-i",
         "--rm",
         "fluent/fluent-bit:0.14",
         "/fluent-bit/bin/fluent-bit",
