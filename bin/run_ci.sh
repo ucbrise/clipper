@@ -22,6 +22,17 @@ tag=$(<VERSION.txt)
 CLIPPER_REGISTRY='clippertesting'
 sha_tag=$(git rev-parse --verify --short=10 HEAD)
 
+# launch fluentd forward
+pushd ./bin/shipyard/fluentd
+docker build -t $CLIPPER_REGISTRY/fluentd-jenkins .
+docker run --rm -d \
+    --name fluentd-$sha_tag \
+    --network host \
+    -e KAFKA_ADDRESS="ci.simon-mo.com:32775" \
+    $CLIPPER_REGISTRY/fluentd-jenkins
+popd
+
+
 # Build docker images
 docker build -t shipyard ./bin/shipyard
 docker run --rm shipyard \
@@ -67,3 +78,5 @@ docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /
     -e CLIPPER_REGISTRY=$CLIPPER_REGISTRY \
     -e CLIPPER_TESTING_DOCKERHUB_PASSWORD=$CLIPPER_TESTING_DOCKERHUB_PASSWORD \
     $CLIPPER_REGISTRY/py35tests:$sha_tag
+
+docker kill fluentd-$sha_tag

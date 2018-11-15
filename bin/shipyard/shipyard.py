@@ -76,7 +76,10 @@ ctx = {}
 @click.option(
     "--push/--no-push", default=True, help="Override the option to push or not push"
 )
-def generate_make_file(sha_tag, namespace, clipper_root, version_tag, config, push):
+@click.option(
+    "--kafka-address", "-a", required=True, help="Kafka address to send the log to"
+)
+def generate_make_file(sha_tag, namespace, clipper_root, version_tag, config, push, kafka_address):
     global ctx
     ctx.update(
         {
@@ -85,6 +88,7 @@ def generate_make_file(sha_tag, namespace, clipper_root, version_tag, config, pu
             "clipper_root": clipper_root,
             "version_tag": version_tag,
             "push": push,
+            "kafka_address": kafka_address
         }
     )
 

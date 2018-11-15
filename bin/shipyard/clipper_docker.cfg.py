@@ -16,7 +16,28 @@ def create_image_with_context(build_ctx, image, dockerfile, rpc_version=None):
     docker_build_str = f"time docker build --build-arg CODE_VERSION={sha_tag} \
             --build-arg REGISTRY={namespace} {rpc_version} \
             -t {namespace}/{image}:{sha_tag} \
-            -f dockerfiles/{dockerfile} {build_ctx['clipper_root']} > {image}.build.log"
+            -f dockerfiles/{dockerfile} {build_ctx['clipper_root']} "
+
+    # setup build log redirect
+    fluent_bit_exe = ' '.join([
+        "docker",
+        "run",
+        "-it",
+        "--rm",
+        "fluent/fluent-bit:0.14",
+        "/fluent-bit/bin/fluent-bit",
+        "-i",
+        "stdin",
+        "-o",
+        "kafka",
+        "-p",
+        f"brokers={build_ctx['kafka_address']}",
+        "-p",
+        f"topic=clipper_{build_ctx['sha_tag']}"
+    ])
+    jq_pipe_transofmer = "jq -R '{log .} + {container_name: " + f'"{image}"' + "}'"
+
+    docker_build_str += ' | ' + jq_pipe_transofmer + " | " + fluent_bit_exe
 
     return Action(image, docker_build_str)
 
