@@ -35,7 +35,7 @@ def create_image_with_context(build_ctx, image, dockerfile, rpc_version=None):
         "-p",
         f"topic=clipper_{build_ctx['sha_tag']}"
     ])
-    jq_pipe_transofmer = "jq -R '{log .} + {container_name: " + f'"{image}"' + "}'"
+    jq_pipe_transofmer = "jq -R '{log: .} + {container_name: " + f'"{image}"' + "}'"
 
     docker_build_str += ' | ' + jq_pipe_transofmer + " | " + fluent_bit_exe
 
