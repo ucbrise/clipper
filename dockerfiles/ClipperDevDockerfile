@@ -15,13 +15,13 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update -qq && apt-get install -y -qq 
       && apt-get install -y -qq python python-dev python-pip libsodium18 \
       && rm -rf /var/lib/apt/lists/*
 
-RUN pip install cloudpickle==0.5.* pyzmq==17.0.* requests==2.18.* subprocess32==3.2.* scikit-learn==0.19.* \
+RUN pip install -q cloudpickle==0.5.* pyzmq==17.0.* requests==2.18.* subprocess32==3.2.* scikit-learn==0.19.* \
   numpy==1.14.* pyyaml==3.12.* docker==3.1.* kubernetes==6.0.* tensorflow==1.6.* mxnet==1.1.* pyspark==2.3.* \
   xgboost==0.7.* jsonschema==2.6.* psutil==5.4.* prometheus_client
 
 # Install PyTorch
-RUN pip install http://download.pytorch.org/whl/cpu/torch-0.4.1-cp27-cp27mu-linux_x86_64.whl
-RUN pip install torchvision 
+RUN pip install -q http://download.pytorch.org/whl/cpu/torch-0.4.1-cp27-cp27mu-linux_x86_64.whl
+RUN pip install -q torchvision 
 
 # Install kubectl
 RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl \

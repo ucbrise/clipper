@@ -12,7 +12,7 @@ RUN mkdir -p /usr/share/man/man1 && \
 
 RUN apt-get install -y -qq wget
 
-RUN pip install pyspark==2.3.*
+RUN pip install -q pyspark==2.3.*
 
 # Test PySpark and JDK installation
 RUN wget https://raw.githubusercontent.com/apache/spark/master/examples/src/main/python/pi.py && mv pi.py /tmp/pi.py && python /tmp/pi.py

@@ -4,7 +4,7 @@ FROM ${REGISTRY}/dev:${CODE_VERSION}
 
 LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
-RUN pip install awscli==1.14.*
+RUN pip install -q awscli==1.14.*
 
 COPY ./ /clipper
 
@@ -16,7 +16,7 @@ RUN cd /clipper/src/libs/spdlog \
 RUN cd /clipper \
     && echo $(git rev-parse --verify --short=10 HEAD) > VERSION.txt
 
-RUN pip install -e /clipper/clipper_admin
+RUN pip install -q -e /clipper/clipper_admin
 
 ENTRYPOINT ["/clipper/bin/ci_checks.sh", "true"]
 
