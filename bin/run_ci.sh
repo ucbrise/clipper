@@ -52,7 +52,7 @@ docker run --rm shipyard \
   --namespace $CLIPPER_REGISTRY \
   --clipper-root $(pwd) \
   --config clipper_docker.cfg.py \
-  --kakfa-address $KAFKA_ADDRESS \
+  --kafka-address $KAFKA_ADDRESS \
   --no-push > Makefile
 cat Makefile
 make -j 10 all
