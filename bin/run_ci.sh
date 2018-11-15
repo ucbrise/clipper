@@ -21,6 +21,18 @@ tag=$(<VERSION.txt)
 
 CLIPPER_REGISTRY='clippertesting'
 sha_tag=$(git rev-parse --verify --short=10 HEAD)
+KAFKA_ADDRESS="ci.simon-mo.com:32775"
+
+function clean_up {
+    # Perform program exit housekeeping
+    echo Master CI Process...
+    docker kill fluentd-$sha_tag
+    echo "Cleanup exit code: $?"
+    sleep 2
+    exit
+}
+trap clean_up SIGHUP SIGINT SIGTERM EXIT
+
 
 # launch fluentd forward
 pushd ./bin/shipyard/fluentd
@@ -28,7 +40,7 @@ docker build -t $CLIPPER_REGISTRY/fluentd-jenkins .
 docker run --rm -d \
     --name fluentd-$sha_tag \
     --network host \
-    -e KAFKA_ADDRESS="ci.simon-mo.com:32775" \
+    -e KAFKA_ADDRESS=$KAFKA_ADDRESS \
     $CLIPPER_REGISTRY/fluentd-jenkins
 popd
 
@@ -40,6 +52,7 @@ docker run --rm shipyard \
   --namespace $CLIPPER_REGISTRY \
   --clipper-root $(pwd) \
   --config clipper_docker.cfg.py \
+  --kakfa-address $KAFKA_ADDRESS \
   --no-push > Makefile
 cat Makefile
 make -j 10 all
