@@ -13,7 +13,7 @@ def create_image_with_context(build_ctx, image, dockerfile, rpc_version=None):
     namespace = build_ctx["namespace"]
     sha_tag = build_ctx["sha_tag"]
 
-    docker_build_str = f"time docker build --build-arg CODE_VERSION={sha_tag} \
+    docker_build_str = f"docker build --build-arg CODE_VERSION={sha_tag} \
             --build-arg REGISTRY={namespace} {rpc_version} \
             -t {namespace}/{image}:{sha_tag} \
             -f dockerfiles/{dockerfile} {build_ctx['clipper_root']} "
