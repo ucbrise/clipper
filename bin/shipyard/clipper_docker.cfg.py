@@ -33,7 +33,7 @@ def create_image_with_context(build_ctx, image, dockerfile, rpc_version=None):
         "-p",
         f"brokers={build_ctx['kafka_address']}",
         "-p",
-        f"topic=clipper_{build_ctx['sha_tag']}"
+        f"topics=clipper_{build_ctx['sha_tag']}"
     ])
     jq_pipe_transofmer = "jq -R '{log: .} + {container_name: " + f'"{image}"' + "}'"
 
