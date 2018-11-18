@@ -1,0 +1,24 @@
+============== General =====================
+
+g++ tfs_query_proto.cpp -lcurl
+
+============== Model Server + Query Example ============== 
+
+docker run -p 8501:8501 --mount type=bind,source=/home/bhsieh/clipper/tfs/serving/tensorflow_serving/servables/tensorflow/testdata/saved_model_half_plus_two_cpu,target=/models/half_plus_two -e MODEL_NAME=half_plus_two -t tensorflow/serving &
+  
+curl -d '{"instances": [1.0, 2.0, 5.0]}' \
+  -X POST http://localhost:8501/v1/models/half_plus_two:predict
+
+
+============== Model Serving + Query (Identity Model) ============== 
+
+1) 
+  docker run -p 8501:8501 --mount type=bind,source=/home/bhsieh/clipper/tfs/tfs_prototype/model,target=/models/model -e MODEL_NAME=model -t tensorflow/serving &
+  
+2)
+  curl -d '{"instances": [[1], [2], [5]]}' \
+    -X POST http://localhost:8501/v1/models/model:predict
+
+  OR 
+
+  ./send_pred.out
