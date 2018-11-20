@@ -25,6 +25,8 @@ before_script:
 - docker login -u clippertesting --password "$CLIPPER_TESTING_DOCKERHUB_PASSWORD"
 script:
 - cd clipper_admin; pip install -e .; cd ..
+- bash ./bin/run_ci.sh # build containers
+- echo $TRAVIS_PULL_REQUEST_SHA > VERSION.txt
 - cd integration-tests
 - python kubernetes_integration_test.py
 - python kubernetes_multi_frontend.py

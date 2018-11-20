@@ -3,17 +3,21 @@ from functools import partial
 from distutils.version import LooseVersion
 import click
 
-global_registry = []
+global_registry = {}
 
 
 class Action(object):
-    def __init__(self, name, command):
+    def __init__(self, name, command=""):
         self.name = name
         self.command = command
         self.dependencies = []
 
         global global_registry
-        global_registry.append(self)
+        global_registry[name] = self
+
+    @classmethod
+    def get_action(cls, name):
+        return global_registry[name]
 
     def _sanitize_command(self):
         return self.command.replace("\n", "\n\t")
@@ -32,12 +36,12 @@ class Action(object):
 
 
 def print_make_all():
-    for action in global_registry:
+    for action in global_registry.values():
         print(action)
 
     print(
         f"""
-all: {' '.join([action.name for action in global_registry])}
+all: {' '.join([name for name in global_registry.keys()])}
 """
     )
 
@@ -79,7 +83,9 @@ ctx = {}
 @click.option(
     "--kafka-address", "-a", required=True, help="Kafka address to send the log to"
 )
-def generate_make_file(sha_tag, namespace, clipper_root, version_tag, config, push, kafka_address):
+def generate_make_file(
+    sha_tag, namespace, clipper_root, version_tag, config, push, kafka_address
+):
     global ctx
     ctx.update(
         {
@@ -88,12 +94,12 @@ def generate_make_file(sha_tag, namespace, clipper_root, version_tag, config, pu
             "clipper_root": clipper_root,
             "version_tag": version_tag,
             "push": push,
-            "kafka_address": kafka_address
+            "kafka_address": kafka_address,
         }
     )
 
     # prevent ppl to make directly
-    Action("placeholder", 'echo "Do not run make directly"')
+    Action("placeholder", 'echo "Do not run make without any target!"')
 
     exec(open(config).read(), globals())
 

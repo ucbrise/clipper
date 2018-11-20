@@ -2,6 +2,37 @@ from shipyard import ctx, Action
 from itertools import product
 from functools import partial
 from distutils.version import LooseVersion
+import shlex
+
+
+def _get_fluent_bit_cmd(kafka_address, topic):
+    fluent_bit_exe = " ".join(
+        [
+            "docker run -i --rm fluent/fluent-bit:0.14 /fluent-bit/bin/fluent-bit",
+            # fluent bit quiet flag
+            "-q",
+            # read from jq transformer
+            "-i stdin",
+            # output to ci server kafka
+            f"-o kafka -p brokers={kafka_address} -p topics=clipper_{topic}",
+        ]
+    )
+    return fluent_bit_exe
+
+
+def _get_jq_transformer_cmd(container_name):
+    return " ".join(
+        [
+            "jq -R ",  # raw input trasnform
+            "'",
+            "{log: .}",
+            # following three items add {container_name "CONTAINER_NAME"} to json string
+            "{container_name: ",
+            f'"{container_name}"',
+            "}",
+            "'",
+        ]
+    )
 
 
 def create_image_with_context(build_ctx, image, dockerfile, rpc_version=None):
@@ -18,26 +49,15 @@ def create_image_with_context(build_ctx, image, dockerfile, rpc_version=None):
             -t {namespace}/{image}:{sha_tag} \
             -f dockerfiles/{dockerfile} {build_ctx['clipper_root']} "
 
-    # setup build log redirect
-    fluent_bit_exe = ' '.join([
-        "docker",
-        "run",
-        "-i",
-        "--rm",
-        "fluent/fluent-bit:0.14",
-        "/fluent-bit/bin/fluent-bit",
-        "-i",
-        "stdin",
-        "-o",
-        "kafka",
-        "-p",
-        f"brokers={build_ctx['kafka_address']}",
-        "-p",
-        f"topics=clipper_{build_ctx['sha_tag']}"
-    ])
-    jq_pipe_transofmer = "jq -R '{log: .} + {container_name: " + f'"{image}"' + "}'"
-
-    docker_build_str += ' | ' + jq_pipe_transofmer + " | " + fluent_bit_exe
+    # setup build log redirect to ci log viewer
+    docker_build_str += " ".join(
+        [
+            "|",
+            _get_jq_transformer_cmd(image),
+            "|",
+            _get_fluent_bit_cmd(build_ctx["kafka_address"], sha_tag),
+        ]
+    )
 
     return Action(image, docker_build_str)
 
@@ -123,7 +143,7 @@ py35_dev > py35tests
 # Misc Container DAG #
 ######################
 
-# Deprecate Spark Container!
+# Deprecate JVM Container!
 # create_and_push_with_ctx(
 #     ctx, "spark-scala-container", "SparkScalaContainerDockerfile", push_version=True
 # )
@@ -131,7 +151,7 @@ py35_dev > py35tests
 create_and_push_with_ctx(
     ctx, "r-container-base", "RContainerDockerfile", push_version=True
 )
-create_and_push_with_ctx(
+frontend_exporter = create_and_push_with_ctx(
     ctx, "frontend-exporter", "FrontendExporterDockerfile", push_version=True
 )
 
@@ -183,3 +203,19 @@ for (model_name, docker_file), (py_version_name, rpc_version) in product(
     )
     # link dependency
     rpc_containers[rpc_version] > container
+
+##############################
+# Kubernetes Test Dependency #
+##############################
+kubernetes_test_target = Action("kubernetes_test_containers")
+kubernetes_containers = [
+    query_frontend.name,
+    management_frontend.name,
+    frontend_exporter.name,
+    "noop-container",
+    "python-closure-container", # travis has py2.7
+]
+
+for container in kubernetes_containers:
+    Action.get_action(container) > kubernetes_test_target
+    Action.get_action(f"publish_{container}") > kubernetes_test_target

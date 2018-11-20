@@ -55,7 +55,8 @@ docker run --rm shipyard \
   --kafka-address $KAFKA_ADDRESS \
   --no-push > Makefile
 cat Makefile
-make -j 10 all
+make -j 6 kubernetes_test_containers
+# make -j 10 all
 
 # Build docker images
 #./bin/build_docker_images.sh
@@ -69,27 +70,27 @@ make -j 10 all
 #CLIPPER_REGISTRY=$(docker info | grep Username | awk '{ print $2 }')
 
 # Run tests
-docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp \
-    -e CLIPPER_K8S_CERT_AUTH=$CLIPPER_K8S_CERT_AUTH \
-    -e CLIPPER_K8S_CLIENT_CERT=$CLIPPER_K8S_CLIENT_CERT \
-    -e CLIPPER_K8S_CLIENT_KEY=$CLIPPER_K8S_CLIENT_KEY \
-    -e CLIPPER_K8S_PASSWORD=$CLIPPER_K8S_PASSWORD \
-    -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-    -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-    -e CLIPPER_REGISTRY=$CLIPPER_REGISTRY \
-    -e CLIPPER_TESTING_DOCKERHUB_PASSWORD=$CLIPPER_TESTING_DOCKERHUB_PASSWORD \
-    $CLIPPER_REGISTRY/unittests:$sha_tag
+# docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp \
+#     -e CLIPPER_K8S_CERT_AUTH=$CLIPPER_K8S_CERT_AUTH \
+#     -e CLIPPER_K8S_CLIENT_CERT=$CLIPPER_K8S_CLIENT_CERT \
+#     -e CLIPPER_K8S_CLIENT_KEY=$CLIPPER_K8S_CLIENT_KEY \
+#     -e CLIPPER_K8S_PASSWORD=$CLIPPER_K8S_PASSWORD \
+#     -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+#     -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+#     -e CLIPPER_REGISTRY=$CLIPPER_REGISTRY \
+#     -e CLIPPER_TESTING_DOCKERHUB_PASSWORD=$CLIPPER_TESTING_DOCKERHUB_PASSWORD \
+#     $CLIPPER_REGISTRY/unittests:$sha_tag
 
 # Python 3 unittests
-docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp \
-    -e CLIPPER_K8S_CERT_AUTH=$CLIPPER_K8S_CERT_AUTH \
-    -e CLIPPER_K8S_CLIENT_CERT=$CLIPPER_K8S_CLIENT_CERT \
-    -e CLIPPER_K8S_CLIENT_KEY=$CLIPPER_K8S_CLIENT_KEY \
-    -e CLIPPER_K8S_PASSWORD=$CLIPPER_K8S_PASSWORD \
-    -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-    -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-    -e CLIPPER_REGISTRY=$CLIPPER_REGISTRY \
-    -e CLIPPER_TESTING_DOCKERHUB_PASSWORD=$CLIPPER_TESTING_DOCKERHUB_PASSWORD \
-    $CLIPPER_REGISTRY/py35tests:$sha_tag
+# docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp \
+#     -e CLIPPER_K8S_CERT_AUTH=$CLIPPER_K8S_CERT_AUTH \
+#     -e CLIPPER_K8S_CLIENT_CERT=$CLIPPER_K8S_CLIENT_CERT \
+#     -e CLIPPER_K8S_CLIENT_KEY=$CLIPPER_K8S_CLIENT_KEY \
+#     -e CLIPPER_K8S_PASSWORD=$CLIPPER_K8S_PASSWORD \
+#     -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+#     -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+#     -e CLIPPER_REGISTRY=$CLIPPER_REGISTRY \
+#     -e CLIPPER_TESTING_DOCKERHUB_PASSWORD=$CLIPPER_TESTING_DOCKERHUB_PASSWORD \
+#     $CLIPPER_REGISTRY/py35tests:$sha_tag
 
 docker kill fluentd-$sha_tag
