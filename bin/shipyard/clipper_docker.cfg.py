@@ -25,7 +25,7 @@ def _get_jq_transformer_cmd(container_name):
         [
             "jq -R ",  # raw input trasnform
             "'",
-            "{log: .}",
+            "{log: .}", "+"
             # following three items add {container_name "CONTAINER_NAME"} to json string
             "{container_name: ",
             f'"{container_name}"',
