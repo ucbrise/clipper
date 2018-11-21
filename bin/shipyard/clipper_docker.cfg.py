@@ -4,6 +4,8 @@ from functools import partial
 from distutils.version import LooseVersion
 import shlex
 
+def _get_tee_cmd():
+    return "tee /dev/tty"
 
 def _get_fluent_bit_cmd(kafka_address, topic):
     fluent_bit_exe = " ".join(
@@ -52,6 +54,8 @@ def create_image_with_context(build_ctx, image, dockerfile, rpc_version=None):
     # setup build log redirect to ci log viewer
     docker_build_str += " ".join(
         [
+            "|",
+            _get_tee_cmd(),
             "|",
             _get_jq_transformer_cmd(image),
             "|",
