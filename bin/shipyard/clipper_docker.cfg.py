@@ -232,4 +232,6 @@ def wait_and_pull_cmd(image_name):
 
 wait_for_kubernetes_test_containers = Action("wait_for_kubernetes_test_containers")
 for container in kubernetes_containers:
-    Action(f"wait_{container}", wait_and_pull_cmd(container)) > wait_for_kubernetes_test_containers
+    Action(f"wait_{container}", wait_and_pull_cmd(
+        f'{ctx["namespace"]}/container:{ctx["sha_tag"]}'
+        )) > wait_for_kubernetes_test_containers
