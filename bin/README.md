@@ -1,9 +1,10 @@
 # Description of CI process
 
 The wonderful AMPlab Jenkins is responsible for running our integration test.
+## How does the CI process work (version 2.0)
+- We initiate all our tests inside a Docker container
 
-## How does the CI process work
-
+## How does the CI process work (version 1.0)
 
 0. Jenkins pull the PR.
 1. Jenkins inject environment variables configured in admin page. Currently, we set the following environment variables 

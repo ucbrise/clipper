@@ -79,7 +79,7 @@ def push_image_with_context(build_ctx, image, push_sha=True, push_version=False)
     docker_push_version = f"docker push {image_name_version}"
 
     commands = [docker_tag]
-    if push_sha and ctx["push"]:
+    if push_sha:
         commands.append(docker_push_sha)
     if push_version and ctx["push"]:
         commands.append(docker_push_version)
