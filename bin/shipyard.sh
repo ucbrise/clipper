@@ -21,6 +21,12 @@ tag=$(<VERSION.txt)
 
 CLIPPER_REGISTRY='clippertesting'
 sha_tag=$(git rev-parse --verify --short=10 HEAD)
+# jenkins will merge the PR, however we will use the unmerged
+# sha to tag our image. 
+if [ -z ${var+ghprbActualCommit}]
+    then sha_tag=`echo $ghprbActualCommit | cut -c-10`
+fi
+
 KAFKA_ADDRESS="ci.simon-mo.com:32775"
 
 docker build -t shipyard ./bin/shipyard

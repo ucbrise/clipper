@@ -25,7 +25,7 @@ sha_tag=$(git rev-parse --verify --short=10 HEAD)
 # jenkins will merge the PR, however we will use the unmerged
 # sha to tag our image. 
 if [ -z ${var+ghprbActualCommit}]
-    then sha_tag=$ghprbActualCommit
+    then sha_tag=`echo $ghprbActualCommit | cut -c-10`
 fi
 
 KAFKA_ADDRESS="ci.simon-mo.com:32775"
@@ -40,7 +40,7 @@ function clean_up {
 trap clean_up SIGHUP SIGINT SIGTERM EXIT
 
 # Build docker images
-./bin/shipyard.sh
+bash ./bin/shipyard.sh
 make -j 6 kubernetes_test_containers # make containers for travis first
 
 # curl 
