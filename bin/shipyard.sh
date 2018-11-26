@@ -24,7 +24,8 @@ sha_tag=$(git rev-parse --verify --short=10 HEAD)
 
 # jenkins will merge the PR, however we will use the unmerged
 # sha to tag our image. 
-if [ -z ${var+ghprbActualCommit}]
+# https://stackoverflow.com/questions/3601515/how-to-check-if-a-variable-is-set-in-bash
+if [ -z ${ghprbActualCommit+x}]
     then echo "Not in Jenkins"
     else sha_tag=`echo $ghprbActualCommit | cut -c-10`
 fi
