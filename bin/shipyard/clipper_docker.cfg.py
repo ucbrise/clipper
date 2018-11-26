@@ -4,8 +4,10 @@ from functools import partial
 from distutils.version import LooseVersion
 import shlex
 
+
 def _get_tee_cmd():
     return "tee /dev/tty"
+
 
 def _get_fluent_bit_cmd(kafka_address, topic):
     fluent_bit_exe = " ".join(
@@ -27,7 +29,8 @@ def _get_jq_transformer_cmd(container_name):
         [
             "jq -R ",  # raw input trasnform
             "'",
-            "{log: .}", "+"
+            "{log: .}",
+            "+"
             # following three items add {container_name "CONTAINER_NAME"} to json string
             "{container_name: ",
             f'"{container_name}"',
@@ -54,7 +57,8 @@ def create_image_with_context(build_ctx, image, dockerfile, rpc_version=None):
     # setup build log redirect to ci log viewer
     docker_build_str += " ".join(
         [
-            "|", f"python3 ./bin/colorize_output.py --tag {image}"
+            "|",
+            f"python3 ./bin/colorize_output.py --tag {image}"
             # _get_tee_cmd(),
             # "|",
             # _get_jq_transformer_cmd(image),
@@ -217,7 +221,7 @@ kubernetes_containers = [
     management_frontend.name,
     frontend_exporter.name,
     "noop-container",
-    "python-closure-container", # travis has py2.7
+    "python-closure-container",  # travis has py2.7
 ]
 
 for container in kubernetes_containers:
@@ -230,8 +234,10 @@ for container in kubernetes_containers:
 def wait_and_pull_cmd(image_name):
     return f"until docker pull {image_name}; do sleep 5; done"
 
+
 wait_for_kubernetes_test_containers = Action("wait_for_kubernetes_test_containers")
 for container in kubernetes_containers:
-    Action(f"wait_{container}", wait_and_pull_cmd(
-        f'{ctx["namespace"]}/container:{ctx["sha_tag"]}'
-        )) > wait_for_kubernetes_test_containers
+    Action(
+        f"wait_{container}",
+        wait_and_pull_cmd(f'{ctx["namespace"]}/container:{ctx["sha_tag"]}'),
+    ) > wait_for_kubernetes_test_containers

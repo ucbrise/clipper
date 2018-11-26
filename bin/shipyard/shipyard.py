@@ -78,7 +78,9 @@ ctx = {}
     help="The configuration python file, like build_clipper.py",
 )
 @click.option(
-    "--push/--no-push", default=True, help="Override the option to push or not push version"
+    "--push/--no-push",
+    default=True,
+    help="Override the option to push or not push version",
 )
 @click.option(
     "--kafka-address", "-a", required=True, help="Kafka address to send the log to"
