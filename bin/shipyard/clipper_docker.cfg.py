@@ -239,5 +239,5 @@ wait_for_kubernetes_test_containers = Action("wait_for_kubernetes_test_container
 for container in kubernetes_containers:
     Action(
         f"wait_{container}",
-        wait_and_pull_cmd(f'{ctx["namespace"]}/container:{ctx["sha_tag"]}'),
+        wait_and_pull_cmd(f'{ctx["namespace"]}/{container}:{ctx["sha_tag"]}'),
     ) > wait_for_kubernetes_test_containers
