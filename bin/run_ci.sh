@@ -8,11 +8,6 @@ set -o pipefail
 # Printout for timeout debug
 date
 
-# check color
-wget https://gist.githubusercontent.com/hSATAC/1095100/raw/ee5b4d79aee151248bdafa8b8412497a5a688d42/256color.pl
-perl 256color.pl
-exit 1
-
 unset CDPATH
 # one-liner from http://stackoverflow.com/a/246128
 # Determines absolute path of the directory containing
