@@ -54,12 +54,12 @@ def create_image_with_context(build_ctx, image, dockerfile, rpc_version=None):
     # setup build log redirect to ci log viewer
     docker_build_str += " ".join(
         [
-            "|",
-            _get_tee_cmd(),
-            "|",
-            _get_jq_transformer_cmd(image),
-            "|",
-            _get_fluent_bit_cmd(build_ctx["kafka_address"], sha_tag),
+            "|", f"python3 ./bin/colorize_output.py --tag {image}"
+            # _get_tee_cmd(),
+            # "|",
+            # _get_jq_transformer_cmd(image),
+            # "|",
+            # _get_fluent_bit_cmd(build_ctx["kafka_address"], sha_tag),
         ]
     )
 
