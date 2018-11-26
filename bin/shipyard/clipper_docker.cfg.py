@@ -223,3 +223,13 @@ kubernetes_containers = [
 for container in kubernetes_containers:
     Action.get_action(container) > kubernetes_test_target
     Action.get_action(f"publish_{container}") > kubernetes_test_target
+
+################################
+# Travis: Wait and pull images #
+################################
+def wait_and_pull_cmd(image_name):
+    return f"until docker pull {image_name}; do sleep 5; done"
+
+wait_for_kubernetes_test_containers = Action("wait_for_kubernetes_test_containers")
+for container in kubernetes_containers:
+    Action(f"wait_{container}", wait_and_pull_cmd(container)) > wait_for_kubernetes_test_containers

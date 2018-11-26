@@ -25,11 +25,5 @@ before_script:
 - docker login -u clippertesting --password "$CLIPPER_TESTING_DOCKERHUB_PASSWORD"
 script:
 - cd clipper_admin; pip install -e .; cd ..
-- bash ./bin/run_ci.sh # build containers
-- sha_tag=$(git rev-parse --verify --short=10 HEAD)
-- echo $sha_tag > VERSION.txt
-- cd integration-tests
-- python kubernetes_integration_test.py
-- python kubernetes_multi_frontend.py
-- python kubernetes_namespace.py
-- python multi_tenancy_test.py --kubernetes
+- bash ./bin/shipyard.sh
+- bash ./bin/run_travis.sh

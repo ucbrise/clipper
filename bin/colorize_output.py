@@ -10,7 +10,7 @@ args = parser.parse_args()
 tag = '[{}]'.format(args.tag) if args.tag else ""
 
 ALL_COLORS = [
-    "\u001b[30m", # Black
+    # "\u001b[30m", # Black
     "\u001b[31m", # Red
     "\u001b[32m", # Green
     "\u001b[33m", # Yellow

@@ -25,37 +25,17 @@ KAFKA_ADDRESS="ci.simon-mo.com:32775"
 
 function clean_up {
     # Perform program exit housekeeping
-    echo Master CI Process...
-    docker kill fluentd-$sha_tag
+    echo "Exit CI Process..."
     echo "Cleanup exit code: $?"
     sleep 2
     exit
 }
 trap clean_up SIGHUP SIGINT SIGTERM EXIT
 
-
-# launch fluentd forward
-pushd ./bin/shipyard/fluentd
-docker build -t $CLIPPER_REGISTRY/fluentd-jenkins .
-docker run --rm -d \
-    --name fluentd-$sha_tag \
-    --network host \
-    -e KAFKA_ADDRESS=$KAFKA_ADDRESS \
-    $CLIPPER_REGISTRY/fluentd-jenkins
-popd
-
-
 # Build docker images
-docker build -t shipyard ./bin/shipyard
-docker run --rm shipyard \
-  --sha-tag $sha_tag \
-  --namespace $CLIPPER_REGISTRY \
-  --clipper-root $(pwd) \
-  --config clipper_docker.cfg.py \
-  --kafka-address $KAFKA_ADDRESS \
-  --no-push > Makefile
-cat Makefile
-make -j 6 kubernetes_test_containers
+./bin/shipyard.sh
+make -j 6 kubernetes_test_containers # make containers for travis first
+
 # curl 
 # make -j 10 all
 
@@ -93,5 +73,3 @@ make -j 6 kubernetes_test_containers
 #     -e CLIPPER_REGISTRY=$CLIPPER_REGISTRY \
 #     -e CLIPPER_TESTING_DOCKERHUB_PASSWORD=$CLIPPER_TESTING_DOCKERHUB_PASSWORD \
 #     $CLIPPER_REGISTRY/py35tests:$sha_tag
-
-docker kill fluentd-$sha_tag
