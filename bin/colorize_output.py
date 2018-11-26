@@ -7,7 +7,7 @@ parser.add_argument('--tag', type=str,
                     help='Optional tag')
 
 args = parser.parse_args()
-tag = '[{}]'.format(args.tag) if args.tag else None
+tag = '[{}]'.format(args.tag) if args.tag else ""
 
 ALL_COLORS = [
     "\u001b[30m", # Black
@@ -23,11 +23,10 @@ shuffle(ALL_COLORS)
 
 COLOR = ALL_COLORS[0]
 
-print(COLOR)
-
 for line in sys.stdin:
-    if tag:
-        print(tag, end=' ')
-    print(line.strip()) # strip the ending \n
-
-print("\u001b[0m") # Reset
+    print("{begin_color} {tag} {line} {end_color}".format(
+        begin_color=COLOR,
+        tag=tag,
+        line=line.strip(),
+        end_color="\u001b[0m" # Reset
+    ))
