@@ -1,7 +1,7 @@
 ARG REGISTRY
 ARG CODE_VERSION
 ARG RPC_VERSION
-FROM clipper-base
+FROM ${REGISTRY}/${RPC_VERSION}-rpc:${CODE_VERSION}
 
 RUN pip install keras
 RUN pip install tensorflow
