@@ -67,7 +67,7 @@ def create_image_with_context(build_ctx, image, dockerfile, rpc_version=None):
         ]
     )
 
-    return Action(image, docker_build_str)
+    return Action(image, docker_build_str, tags=["build"])
 
 
 def push_image_with_context(build_ctx, image, push_sha=True, push_version=False):
@@ -97,7 +97,7 @@ def push_image_with_context(build_ctx, image, push_sha=True, push_version=False)
             push_minor_ver = f"docker push {image_name_minor_version}"
             commands.extend([tag_minor_ver, push_minor_ver])
 
-    return Action(f"publish_{image}", "\n".join(commands))
+    return Action(f"publish_{image}", "\n".join(commands), tags=["push"])
 
 
 def create_and_push_with_ctx(
@@ -109,6 +109,8 @@ def create_and_push_with_ctx(
     created = create_image(name, dockerfile, rpc_version)
     pushed = push_image(name, push_sha=True, push_version=push_version)
 
+    prepull = Action(f"docker pull clipper/{name}:develop || true")
+    prepull > created 
     created > pushed
 
     return created
@@ -234,10 +236,9 @@ for container in kubernetes_containers:
 def wait_and_pull_cmd(image_name):
     return f"until docker pull {image_name}; do sleep 5; done"
 
-
-wait_for_kubernetes_test_containers = Action("wait_for_kubernetes_test_containers")
 for container in kubernetes_containers:
     Action(
         f"wait_{container}",
         wait_and_pull_cmd(f'{ctx["namespace"]}/{container}:{ctx["sha_tag"]}'),
-    ) > wait_for_kubernetes_test_containers
+        tags="wait_for_kubernetes_test_containers"
+    )

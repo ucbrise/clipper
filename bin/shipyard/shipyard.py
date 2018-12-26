@@ -1,5 +1,6 @@
 from collections import namedtuple
 from functools import partial
+from collections import defaultdict
 from distutils.version import LooseVersion
 import click
 
@@ -7,9 +8,18 @@ global_registry = {}
 
 
 class Action(object):
-    def __init__(self, name, command=""):
+    def __init__(self, name, command="", tags=None):
         self.name = name
         self.command = command
+        self.tags = tags
+
+        if not self.tags:
+            self.tags = ["all"]
+        elif isinstance(self.tags, str):
+            self.tags = ["all", self.tags]
+        else:
+            self.tags = ["all"] + list(self.tags)
+
         self.dependencies = []
 
         global global_registry
@@ -18,6 +28,13 @@ class Action(object):
     @classmethod
     def get_action(cls, name):
         return global_registry[name]
+    
+    @classmethod
+    def get_all_action(cls):
+        return global_registry.values()
+
+    def add_tag(self, tag):
+        self.tags.append(tag)
 
     def _sanitize_command(self):
         return self.command.replace("\n", "\n\t")
@@ -36,14 +53,17 @@ class Action(object):
 
 
 def print_make_all():
+    tag_to_action_name = defaultdict(list)
     for action in global_registry.values():
         print(action)
-
-    print(
-        f"""
-all: {' '.join([name for name in global_registry.keys()])}
+        for t in action.tags:
+            tag_to_action_name[t].append(action.name)
+    for tag, actions in tag_to_action_name.items():
+        print(
+            f"""
+{tag}: {' '.join(actions)}
 """
-    )
+        )
 
 
 ctx = {}
