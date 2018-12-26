@@ -109,7 +109,7 @@ def create_and_push_with_ctx(
     created = create_image(name, dockerfile, rpc_version)
     pushed = push_image(name, push_sha=True, push_version=push_version)
 
-    prepull = Action(f"docker pull clipper/{name}:develop || true")
+    prepull = Action(f"prepull_{name}", f"docker pull clipper/{name}:develop || true")
     prepull > created 
     created > pushed
 
