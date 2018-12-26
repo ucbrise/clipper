@@ -22,10 +22,8 @@ tag=$(<VERSION.txt)
 
 # Build docker images
 bash ./bin/shipyard.sh
-make -j 6 kubernetes_test_containers # make containers for travis first
 
-# curl 
-# make -j 10 all
+make -j 10 all
 
 # Build docker images
 #./bin/build_docker_images.sh
