@@ -23,7 +23,7 @@ tag=$(<VERSION.txt)
 # Build docker images
 bash ./bin/shipyard.sh
 
-make -j 10 all
+make -j -Oline all
 
 # Build docker images
 #./bin/build_docker_images.sh
