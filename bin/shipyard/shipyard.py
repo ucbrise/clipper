@@ -42,7 +42,7 @@ class Action(object):
         self.command = self.command.replace("\n", "\n\t")
 
     def __str__(self):
-        [hook() for hook in self.post_processing_hooks]
+        [hook() for hook in reversed(self.post_processing_hooks)]
 
         return f"""
 {self.name}: {" ".join(self.dependencies)}
