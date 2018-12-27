@@ -5,39 +5,18 @@ from distutils.version import LooseVersion
 import shlex
 
 
-def _get_tee_cmd():
-    return "tee /dev/tty"
+class ClipperCIPrettyLogAction(Action):
+    def __init__(self, name, command="", tags=None):
+        super().__init__(name, command, tags)
+        self.post_processing_hooks.append(self._colorize_output)
 
-
-def _get_fluent_bit_cmd(kafka_address, topic):
-    fluent_bit_exe = " ".join(
-        [
-            "docker run -i --rm fluent/fluent-bit:0.14 /fluent-bit/bin/fluent-bit",
-            # fluent bit quiet flag
-            "-q",
-            # read from jq transformer
-            "-i stdin",
-            # output to ci server kafka
-            f"-o kafka -p brokers={kafka_address} -p topics=clipper_{topic}",
-        ]
-    )
-    return fluent_bit_exe
-
-
-def _get_jq_transformer_cmd(container_name):
-    return " ".join(
-        [
-            "jq -R ",  # raw input trasnform
-            "'",
-            "{log: .}",
-            "+"
-            # following three items add {container_name "CONTAINER_NAME"} to json string
-            "{container_name: ",
-            f'"{container_name}"',
-            "}",
-            "'",
-        ]
-    )
+    def _colorize_output(self):
+        self.command = "\n".join(
+            [
+                line + f" | python3 ./bin/colorize --tag {self.name}"
+                for line in self.command.split("\n")
+            ]
+        )
 
 
 def create_image_with_context(build_ctx, image, dockerfile, rpc_version=None):
@@ -54,20 +33,7 @@ def create_image_with_context(build_ctx, image, dockerfile, rpc_version=None):
             -t {namespace}/{image}:{sha_tag} \
             -f dockerfiles/{dockerfile} {build_ctx['clipper_root']} "
 
-    # setup build log redirect to ci log viewer
-    docker_build_str += " ".join(
-        [
-            "|",
-            f"python3 ./bin/colorize_output.py --tag {image}"
-            # _get_tee_cmd(),
-            # "|",
-            # _get_jq_transformer_cmd(image),
-            # "|",
-            # _get_fluent_bit_cmd(build_ctx["kafka_address"], sha_tag),
-        ]
-    )
-
-    return Action(image, docker_build_str, tags=["build"])
+    return ClipperCIPrettyLogAction(image, docker_build_str, tags=["build"])
 
 
 def push_image_with_context(build_ctx, image, push_sha=True, push_version=False):
@@ -97,7 +63,7 @@ def push_image_with_context(build_ctx, image, push_sha=True, push_version=False)
             push_minor_ver = f"docker push {image_name_minor_version}"
             commands.extend([tag_minor_ver, push_minor_ver])
 
-    return Action(f"publish_{image}", "\n".join(commands), tags=["push"])
+    return ClipperCIPrettyLogAction(f"publish_{image}", "\n".join(commands), tags=["push"])
 
 
 def create_and_push_with_ctx(
@@ -109,8 +75,12 @@ def create_and_push_with_ctx(
     created = create_image(name, dockerfile, rpc_version)
     pushed = push_image(name, push_sha=True, push_version=push_version)
 
-    prepull = Action(f"prepull_{name}", f"docker pull clipper/{name}:develop || true")
-    prepull > created 
+    # Prepull will let docker re-use cached images
+    prepull = ClipperCIPrettyLogAction(
+        f"prepull_{name}", 
+        f"docker pull clipper/{name}:develop || true",
+        ["prepull"])
+    prepull > created
     created > pushed
 
     return created
@@ -236,9 +206,10 @@ for container in kubernetes_containers:
 def wait_and_pull_cmd(image_name):
     return f"until docker pull {image_name}; do sleep 5; done"
 
+
 for container in kubernetes_containers:
     Action(
         f"wait_{container}",
         wait_and_pull_cmd(f'{ctx["namespace"]}/{container}:{ctx["sha_tag"]}'),
-        tags="wait_for_kubernetes_test_containers"
+        tags="wait_for_kubernetes_test_containers",
     )

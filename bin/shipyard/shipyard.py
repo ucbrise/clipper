@@ -25,10 +25,12 @@ class Action(object):
         global global_registry
         global_registry[name] = self
 
+        self.post_processing_hooks = [self._sanitize_command]
+
     @classmethod
     def get_action(cls, name):
         return global_registry[name]
-    
+
     @classmethod
     def get_all_action(cls):
         return global_registry.values()
@@ -37,12 +39,14 @@ class Action(object):
         self.tags.append(tag)
 
     def _sanitize_command(self):
-        return self.command.replace("\n", "\n\t")
+        self.command = self.command.replace("\n", "\n\t")
 
     def __str__(self):
+        [hook() for hook in self.post_processing_hooks]
+
         return f"""
 {self.name}: {" ".join(self.dependencies)}
-\t{self._sanitize_command()}
+\t{self.command}
         """
 
     def __lt__(self, action):
