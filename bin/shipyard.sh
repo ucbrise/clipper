@@ -19,7 +19,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $DIR/..
 tag=$(<VERSION.txt)
 
-CLIPPER_REGISTRY='clippertesting'
+export CLIPPER_REGISTRY='clippertesting'
 sha_tag=$(git rev-parse --verify --short=10 HEAD)
 
 # jenkins will merge the PR, however we will use the unmerged

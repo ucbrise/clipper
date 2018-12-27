@@ -11,11 +11,14 @@ class ClipperCIPrettyLogAction(Action):
         self.post_processing_hooks.append(self._colorize_output)
 
     def _colorize_output(self):
+        header_footer = "=" * 5 + f" {self.name} " + "=" * 5
         self.command = "\n".join(
-            [
+            [f"\t@echo {header_footer}"]
+            + [
                 line + f" | python3 ./bin/colorize --tag {self.name}"
                 for line in self.command.split("\n")
             ]
+            + [f"\t@echo {header_footer}"]
         )
 
 
@@ -63,7 +66,9 @@ def push_image_with_context(build_ctx, image, push_sha=True, push_version=False)
             push_minor_ver = f"docker push {image_name_minor_version}"
             commands.extend([tag_minor_ver, push_minor_ver])
 
-    return ClipperCIPrettyLogAction(f"publish_{image}", "\n".join(commands), tags=["push"])
+    return ClipperCIPrettyLogAction(
+        f"publish_{image}", "\n".join(commands), tags=["push"]
+    )
 
 
 def create_and_push_with_ctx(
@@ -77,9 +82,8 @@ def create_and_push_with_ctx(
 
     # Prepull will let docker re-use cached images
     prepull = ClipperCIPrettyLogAction(
-        f"prepull_{name}", 
-        f"docker pull clipper/{name}:develop || true",
-        ["prepull"])
+        f"prepull_{name}", f"docker pull clipper/{name}:develop || true", ["prepull"]
+    )
     prepull > created
     created > pushed
 
