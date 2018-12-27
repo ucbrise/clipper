@@ -15,7 +15,7 @@ class ClipperCIPrettyLogAction(Action):
         self.command = "\n".join(
             [f"\t@echo {header_footer}\n"]
             + [
-                line + f" | python3 ./bin/colorize_output.py --tag {self.name}\n"
+                f"\t({line}) | python3 ./bin/colorize_output.py --tag {self.name}\n"
                 for line in self.command.split("\n")
             ]
             + [f"\t@echo {header_footer}\n"]
