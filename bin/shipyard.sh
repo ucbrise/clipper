@@ -40,4 +40,7 @@ docker run --rm shipyard \
   --config clipper_docker.cfg.py \
   --kafka-address $KAFKA_ADDRESS \
   --no-push > Makefile
+
+echo "@@@@@ Makefile @@@@@"
 cat Makefile
+echo "@@@@@ Makefile @@@@@"
