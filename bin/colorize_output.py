@@ -31,3 +31,4 @@ for line in sys.stdin:
             end_color="\u001b[0m",  # Reset
         )
     )
+    sys.stdout.flush()

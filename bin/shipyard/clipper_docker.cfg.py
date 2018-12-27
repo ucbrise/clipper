@@ -11,14 +11,15 @@ class ClipperCIPrettyLogAction(Action):
         self.post_processing_hooks.append(self._colorize_output)
 
     def _colorize_output(self):
-        header_footer = "=" * 5 + f" {self.name} " + "=" * 5
+        header = "=" * 5 + f" start: {self.name} " + "=" * 5
+        footer = "=" * 5 + f" finished: {self.name} " + "=" * 5
         self.command = "\n".join(
-            [f"\t@echo {header_footer}\n"]
+            [f"\t@echo {header}\n"]
             + [
                 f"\t({line}) | python3 ./bin/colorize_output.py --tag {self.name}\n"
                 for line in self.command.split("\n")
             ]
-            + [f"\t@echo {header_footer}\n"]
+            + [f"\t@echo {footer}\n"]
         )
 
 
