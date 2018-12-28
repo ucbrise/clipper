@@ -21,7 +21,7 @@ COPY containers/R/install_container_dependencies.R install_container_dependencie
 ENV CLIPPER_MODEL_PATH=/model
 ENV CLIPPER_PORT=7000
 
-RUN mkdir -p ~/.R/Makevars
+RUN mkdir ~/.R
 RUN echo "MAKEFLAGS = -j" >>  ~/.R/Makevars
 
 RUN Rscript ./install_container_dependencies.R
