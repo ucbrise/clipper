@@ -36,7 +36,7 @@ def generate_test_command(python_version, test_to_run):
         -e CLIPPER_REGISTRY={ctx['namespace']} \
         -e CLIPPER_TESTING_DOCKERHUB_PASSWORD=$CLIPPER_TESTING_DOCKERHUB_PASSWORD \
         {ctx['namespace']}/{image}:{ctx['sha_tag']} \
-        {test_to_run}
+        {test_to_run} 
     """
     command = " ".join(shlex.split(command))
 
