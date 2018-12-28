@@ -26,6 +26,7 @@ RUN cd /clipper/src/libs/spdlog \
     && cd debug \
     && make -j all unittests
 
+ENTRYPOINT ["/bin/bash", "-l", "-c"]
 # ENTRYPOINT ["/clipper/bin/ci_checks.sh", "true"]
 
 # vim: set filetype=dockerfile:
