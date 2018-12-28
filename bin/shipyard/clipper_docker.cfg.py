@@ -5,9 +5,6 @@ from distutils.version import LooseVersion
 import shlex
 
 
-
-
-
 def create_image_with_context(build_ctx, image, dockerfile, rpc_version=None):
     if rpc_version is None:
         rpc_version = ""
@@ -52,9 +49,7 @@ def push_image_with_context(build_ctx, image, push_sha=True, push_version=False)
             push_minor_ver = f"docker push {image_name_minor_version}"
             commands.extend([tag_minor_ver, push_minor_ver])
 
-    return CIPrettyLogAction(
-        f"publish_{image}", "\n".join(commands), tags=["push"]
-    )
+    return CIPrettyLogAction(f"publish_{image}", "\n".join(commands), tags=["push"])
 
 
 def create_and_push_with_ctx(

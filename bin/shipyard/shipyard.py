@@ -55,13 +55,15 @@ class Action(object):
     def __eq__(self, value):
         return self.name == value.name and self.command == value.command
 
+
 class IsolatedAction(Action):
     def __init__(self, name, command="", tags=None):
         super().__init__(name, command, tags)
         self.post_processing_hooks.append(self._not_included_in_all)
-    
+
     def _not_included_in_all(self):
-        self.tags.remove('all')
+        self.tags.remove("all")
+
 
 class CIPrettyLogAction(Action):
     def __init__(self, name, command="", tags=None):
@@ -79,7 +81,8 @@ class CIPrettyLogAction(Action):
             ]
             + [f"\t@echo {footer}\n"]
         )
-        
+
+
 def print_make_all():
     tag_to_action_name = defaultdict(list)
     for action in global_registry.values():
@@ -130,9 +133,7 @@ ctx = {}
     default=True,
     help="Override the option to push or not push version",
 )
-def generate_make_file(
-    sha_tag, namespace, clipper_root, version_tag, config, push
-):
+def generate_make_file(sha_tag, namespace, clipper_root, version_tag, config, push):
     global ctx
     ctx.update(
         {

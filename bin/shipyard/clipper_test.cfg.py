@@ -24,43 +24,45 @@ DOCKER_INTEGRATION_TESTS = {
     "docker_metric": "python /clipper/integration-tests/clipper_metric_docker.py",
 }
 
-def generate_test_command(python_version, test_to_run):
-    assert python_version in [2,3]
-    
-    image = 'unittest' if python_version == 2 else 'py35tests'
 
-    # CLIPPER_TESTING_DOCKERHUB_PASSWORD should be already in the environment 
+def generate_test_command(python_version, test_to_run):
+    assert python_version in [2, 3]
+
+    image = "unittest" if python_version == 2 else "py35tests"
+
+    # CLIPPER_TESTING_DOCKERHUB_PASSWORD should be already in the environment
     command = f"""
 \t  docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp \
-        -e CLIPPER_REGISTRY=${ctx['namespace']} \
+        -e CLIPPER_REGISTRY={ctx['namespace']} \
         -e CLIPPER_TESTING_DOCKERHUB_PASSWORD=$CLIPPER_TESTING_DOCKERHUB_PASSWORD \
-        ${ctx['namespace']}/{image}:${ctx['sha_tag']} \
+        {ctx['namespace']}/{image}:{ctx['sha_tag']} \
         {test_to_run}
     """
-    command = ' '.join(shlex.split(command))
+    command = " ".join(shlex.split(command))
 
     return command
+
 
 # Create make targets for both
 for name, test_to_run in UNITTESTS.items():
     CIPrettyLogAction(
         name=f"unittest_{name}",
         command=generate_test_command(2, test_to_run),
-        tags='unittest'
+        tags="unittest",
     )
 
 for name, test_to_run in DOCKER_INTEGRATION_TESTS.items():
     CIPrettyLogAction(
         name=f"integration_py2_{name}",
         command=generate_test_command(2, test_to_run),
-        tags='integration'
+        tags="integration",
     )
 
     CIPrettyLogAction(
         name=f"integration_py3_{name}",
         command=generate_test_command(3, test_to_run),
-        tags='integration'
+        tags="integration",
     )
 
 # Specify specific dependencies
-# TODO(simon): these tests should have hierachies. 
+# TODO(simon): these tests should have hierachies.

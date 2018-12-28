@@ -11,7 +11,7 @@ cd $DIR/..
 
 # We will build all images and push them to 
 # dockerhub under clippertesting/{image_name}:sha_tag
-CLIPPER_REGISTRY='clippertesting'
+export CLIPPER_REGISTRY='clippertesting'
 sha_tag=$(git rev-parse --verify --short=10 HEAD)
 
 # Jenkins will merge the PR, however we will use the unmerged
