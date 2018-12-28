@@ -5,13 +5,20 @@ set -e
 set -u
 set -o pipefail
 
+# Set up test environment
 sha_tag=$(git rev-parse --verify --short=10 HEAD)
 echo $sha_tag > VERSION.txt
-make -j6 wait_for_kubernetes_test_containers
-cd integration-tests
-
 export CLIPPER_REGISTRY=clippertesting
-python kubernetes_integration_test.py
-python kubernetes_multi_frontend.py
-python kubernetes_namespace.py
-python multi_tenancy_test.py --kubernetes
+
+# Wait for all kubernetes specific images to be built in travis
+make -j wait_for_kubernetes_test_containers
+
+# Run the following test in sequence
+cd integration-tests
+time python kubernetes_integration_test.py
+time python kubernetes_multi_frontend.py
+time python kubernetes_namespace.py
+time python multi_tenancy_test.py --kubernetes
+
+# TODO: disabled for now, will re-enable after RBAC PR
+# time python clipper_metric_kube.py

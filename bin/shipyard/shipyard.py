@@ -55,7 +55,31 @@ class Action(object):
     def __eq__(self, value):
         return self.name == value.name and self.command == value.command
 
+class IsolatedAction(Action):
+    def __init__(self, name, command="", tags=None):
+        super().__init__(name, command, tags)
+        self.post_processing_hooks.append(self._not_included_in_all)
+    
+    def _not_included_in_all(self):
+        self.tags.remove('all')
 
+class CIPrettyLogAction(Action):
+    def __init__(self, name, command="", tags=None):
+        super().__init__(name, command, tags)
+        self.post_processing_hooks.append(self._colorize_output)
+
+    def _colorize_output(self):
+        header = "=" * 5 + f" start: {self.name} " + "=" * 5
+        footer = "=" * 5 + f" finished: {self.name} " + "=" * 5
+        self.command = "\n".join(
+            [f"\t@echo {header}\n"]
+            + [
+                f"\t({line}) | python3 ./bin/colorize_output.py --tag {self.name}\n"
+                for line in self.command.split("\n")
+            ]
+            + [f"\t@echo {footer}\n"]
+        )
+        
 def print_make_all():
     tag_to_action_name = defaultdict(list)
     for action in global_registry.values():
@@ -106,11 +130,8 @@ ctx = {}
     default=True,
     help="Override the option to push or not push version",
 )
-@click.option(
-    "--kafka-address", "-a", required=True, help="Kafka address to send the log to"
-)
 def generate_make_file(
-    sha_tag, namespace, clipper_root, version_tag, config, push, kafka_address
+    sha_tag, namespace, clipper_root, version_tag, config, push
 ):
     global ctx
     ctx.update(
@@ -120,12 +141,11 @@ def generate_make_file(
             "clipper_root": clipper_root,
             "version_tag": version_tag,
             "push": push,
-            "kafka_address": kafka_address,
         }
     )
 
     # prevent ppl to make directly
-    Action("placeholder", 'echo "Do not run make without any target!"')
+    IsolatedAction("placeholder", 'echo "Do not run make without any target!"')
 
     exec(open(config).read(), globals())
 

@@ -1,26 +1,11 @@
-from shipyard import ctx, Action
+from shipyard import ctx, Action, IsolatedAction, CIPrettyLogAction
 from itertools import product
 from functools import partial
 from distutils.version import LooseVersion
 import shlex
 
 
-class ClipperCIPrettyLogAction(Action):
-    def __init__(self, name, command="", tags=None):
-        super().__init__(name, command, tags)
-        self.post_processing_hooks.append(self._colorize_output)
 
-    def _colorize_output(self):
-        header = "=" * 5 + f" start: {self.name} " + "=" * 5
-        footer = "=" * 5 + f" finished: {self.name} " + "=" * 5
-        self.command = "\n".join(
-            [f"\t@echo {header}\n"]
-            + [
-                f"\t({line}) | python3 ./bin/colorize_output.py --tag {self.name}\n"
-                for line in self.command.split("\n")
-            ]
-            + [f"\t@echo {footer}\n"]
-        )
 
 
 def create_image_with_context(build_ctx, image, dockerfile, rpc_version=None):
@@ -37,7 +22,7 @@ def create_image_with_context(build_ctx, image, dockerfile, rpc_version=None):
             -t {namespace}/{image}:{sha_tag} \
             -f dockerfiles/{dockerfile} {build_ctx['clipper_root']} "
 
-    return ClipperCIPrettyLogAction(image, docker_build_str, tags=["build"])
+    return CIPrettyLogAction(image, docker_build_str, tags=["build"])
 
 
 def push_image_with_context(build_ctx, image, push_sha=True, push_version=False):
@@ -67,7 +52,7 @@ def push_image_with_context(build_ctx, image, push_sha=True, push_version=False)
             push_minor_ver = f"docker push {image_name_minor_version}"
             commands.extend([tag_minor_ver, push_minor_ver])
 
-    return ClipperCIPrettyLogAction(
+    return CIPrettyLogAction(
         f"publish_{image}", "\n".join(commands), tags=["push"]
     )
 
@@ -82,7 +67,7 @@ def create_and_push_with_ctx(
     pushed = push_image(name, push_sha=True, push_version=push_version)
 
     # Prepull will let docker re-use cached images
-    prepull = ClipperCIPrettyLogAction(
+    prepull = CIPrettyLogAction(
         f"prepull_{name}", f"docker pull clipper/{name}:develop || true", ["prepull"]
     )
     prepull > created
@@ -192,7 +177,7 @@ for (model_name, docker_file), (py_version_name, rpc_version) in product(
 ##############################
 # Kubernetes Test Dependency #
 ##############################
-kubernetes_test_target = Action("kubernetes_test_containers")
+kubernetes_test_target = IsolatedAction("kubernetes_test_containers")
 kubernetes_containers = [
     query_frontend.name,
     management_frontend.name,
@@ -213,9 +198,8 @@ def wait_and_pull_cmd(image_name):
 
 
 for container in kubernetes_containers:
-    a = Action(
+    a = IsolatedAction(
         f"wait_{container}",
         wait_and_pull_cmd(f'{ctx["namespace"]}/{container}:{ctx["sha_tag"]}'),
         tags="wait_for_kubernetes_test_containers",
     )
-    a.tags.remove('all')

@@ -72,7 +72,7 @@ function set_test_environment {
   ./configure
   cd debug
   # make all to make sure all the binaries compile
-  make -j2 all unittests
+  make -j all unittests
   if ! type "redis-server" &> /dev/null; then
       echo -e "\nERROR:"
       echo -e "\tUnit tests require Redis. Please install redis-server"
@@ -134,23 +134,26 @@ function run_integration_tests {
   docker ps
 
   python ../integration-tests/clipper_admin_tests.py
-  python ../integration-tests/many_apps_many_models.py 2 3
+  python ../integration-tests/many_apps_many_models.py
   python ../integration-tests/deploy_pyspark_models.py
   python ../integration-tests/deploy_pyspark_pipeline_models.py
   python ../integration-tests/deploy_pyspark_sparkml_models.py
-  python ../integration-tests/kubernetes_integration_test.py
-  python ../integration-tests/kubernetes_multi_frontend.py
   python ../integration-tests/deploy_tensorflow_models.py
   python ../integration-tests/deploy_mxnet_models.py
   python ../integration-tests/deploy_pytorch_models.py
-  # See issue #475
-  # python ../integration-tests/deploy_pytorch_to_caffe2_with_onnx.py
+  python ../integration-tests/multi_tenancy_test.py
+
   ../integration-tests/r_integration_test/rclipper_test.sh
   python ../integration-tests/clipper_metric_docker.py
-  python ../integration-tests/clipper_metric_kube.py
-  python ../integration-tests/multi_tenancy_test.py
-  python ../integration-tests/multi_tenancy_test.py --kubernetes
-  python ../integration-tests/kubernetes_namespace.py
+
+
+  # python ../integration-tests/kubernetes_integration_test.py
+  # python ../integration-tests/kubernetes_multi_frontend.py
+  # See issue #475
+  # python ../integration-tests/deploy_pytorch_to_caffe2_with_onnx.py
+  # python ../integration-tests/clipper_metric_kube.py
+  # python ../integration-tests/multi_tenancy_test.py --kubernetes
+  # python ../integration-tests/kubernetes_namespace.py
 
   echo "GREPTHIS Docker State After"
   docker ps

@@ -1,13 +1,22 @@
+# Maintainer: Simon Mo <xmo@berkeley.edu>
+
+# Travis will start the build in a VM when sudo is required
 sudo: required
+
 language: python
+
 env:
   matrix:
   - CHANGE_MINIKUBE_NONE_USER=true
+
 before_script:
+# Download kubectl and minikube
 - curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.9.0/bin/linux/amd64/kubectl
   && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
 - curl -Lo minikube https://storage.googleapis.com/minikube/releases/v0.25.2/minikube-linux-amd64
   && chmod +x minikube && sudo mv minikube /usr/local/bin/
+
+# Setup minikube
 - sudo minikube start --vm-driver=none --kubernetes-version=v1.9.0
 - minikube update-context
 - JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}';
@@ -22,7 +31,10 @@ before_script:
   until kubectl -n kube-system get pods -lk8s-app=kube-dns -o jsonpath="$JSONPATH"
   2>&1 | grep -q "Ready=True"; do sleep 1;echo "waiting for kube-dns to be available";
   kubectl get pods --all-namespaces; done
+
+# Login to Docker
 - docker login -u clippertesting --password "$CLIPPER_TESTING_DOCKERHUB_PASSWORD"
+
 script:
 - cd clipper_admin; pip install -e .; cd ..
 - bash ./bin/shipyard.sh

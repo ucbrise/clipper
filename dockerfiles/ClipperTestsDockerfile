@@ -13,11 +13,12 @@ RUN cd /clipper/src/libs/spdlog \
     && git apply ../patches/make_spdlog_compile_linux.patch
 
 # Set version as git hash
-RUN cd /clipper \
-    && echo $(git rev-parse --verify --short=10 HEAD) > VERSION.txt
+RUN cd /clipper && echo ${CODE_VERSION} > VERSION
+# RUN cd /clipper \
+#     && echo $(git rev-parse --verify --short=10 HEAD) > VERSION.txt
 
 RUN pip install -q -e /clipper/clipper_admin
 
-ENTRYPOINT ["/clipper/bin/ci_checks.sh", "true"]
+# ENTRYPOINT ["/clipper/bin/ci_checks.sh", "true"]
 
 # vim: set filetype=dockerfile:
