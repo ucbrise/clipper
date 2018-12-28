@@ -28,7 +28,7 @@ DOCKER_INTEGRATION_TESTS = {
 def generate_test_command(python_version, test_to_run):
     assert python_version in [2, 3]
 
-    image = "unittest" if python_version == 2 else "py35tests"
+    image = "unittests" if python_version == 2 else "py35tests"
 
     # CLIPPER_TESTING_DOCKERHUB_PASSWORD should be already in the environment
     command = f"""

@@ -150,6 +150,7 @@ def generate_make_file(sha_tag, namespace, clipper_root, version_tag, config, pu
 
     exec(open(config).read(), globals())
 
+    print("SHELL=/bin/bash -o pipefail")
     print_make_all()
 
 
