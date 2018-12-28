@@ -68,11 +68,11 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 function set_test_environment {
   # Let the user start this script from anywhere in the filesystem.
-  cd $DIR/..
-  ./configure
-  cd debug
+  # cd $DIR/..
+  # ./configure
+  # cd debug
   # make all to make sure all the binaries compile
-  make -j all unittests
+  # make -j all unittests
   if ! type "redis-server" &> /dev/null; then
       echo -e "\nERROR:"
       echo -e "\tUnit tests require Redis. Please install redis-server"
