@@ -3,6 +3,7 @@ from functools import partial
 from collections import defaultdict
 from distutils.version import LooseVersion
 import click
+import re
 
 global_registry = {}
 
@@ -71,13 +72,14 @@ class CIPrettyLogAction(Action):
         self.post_processing_hooks.append(self._colorize_output)
 
     def _colorize_output(self):
+        whitespace = re.compile("^[\s]*$")
         header = "=" * 5 + f" start: {self.name} " + "=" * 5
         footer = "=" * 5 + f" finished: {self.name} " + "=" * 5
         self.command = "\n".join(
             [f"\t@echo {header}\n"]
             + [
                 f"\t({line}) 2>&1 | python3 ./bin/colorize_output.py --tag {self.name}\n"
-                for line in self.command.split("\n")
+                for line in self.command.split("\n") if not whitespace.match(line)
             ]
             + [f"\t@echo {footer}\n"]
         )
