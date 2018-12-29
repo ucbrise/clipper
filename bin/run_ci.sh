@@ -15,6 +15,20 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $DIR/..
 tag=$(<VERSION.txt)
 
+# Change the VERSION.txt to current sha_tag
+
+sha_tag=$(git rev-parse --verify --short=10 HEAD)
+
+# Jenkins will merge the PR, however we will use the unmerged
+# sha to tag our image. 
+# https://stackoverflow.com/questions/3601515/how-to-check-if-a-variable-is-set-in-bash
+if [ -z ${ghprbActualCommit+x}]
+    then echo "We are not in Jenkins"
+    else sha_tag=`echo $ghprbActualCommit | cut -c-10`
+fi
+
+echo $sha_tag > VERSION.txt
+
 # Use shipyard to generate Makefile
 bash ./bin/shipyard.sh
 # Build Kubernetes containers first, travis will be waiting
