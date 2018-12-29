@@ -181,7 +181,8 @@ function run_all_tests {
 
 if [ "$#" == 0 ]
 then
-  args="--all"
+  # args="--all"
+  args="--help"
 else
   args=$1
 fi
