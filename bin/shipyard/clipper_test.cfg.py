@@ -1,4 +1,4 @@
-from shipyard import ctx, CIPrettyLogAction
+from shipyard import ctx, CIPrettyLogAction, Action
 import shlex
 
 UNITTESTS = {
@@ -66,3 +66,9 @@ for name, test_to_run in DOCKER_INTEGRATION_TESTS.items():
 
 # Specify specific dependencies
 # TODO(simon): these tests should have hierachies.
+
+# Serialize out unittests ordering, elimenates possible port collisions
+Action.get_action("unittest_libclipper") > Action.get_action("unittest_management")
+Action.get_action("unittest_management") > Action.get_action("unittest_frontend")
+Action.get_action("unittest_frontend") > Action.get_action("unittest_rpc_container")
+
