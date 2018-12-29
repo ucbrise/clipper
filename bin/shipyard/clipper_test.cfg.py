@@ -6,7 +6,7 @@ UNITTESTS = {
     "management": "/clipper/bin/run_unittests.sh --management",
     "frontend": "/clipper/bin/run_unittests.sh --frontend",
     # "jvm": "/clipper/bin/run_unittests.sh --jvm-container",
-    "r_container": "/clipper/bin/run_unittests.sh --r-container",
+    # "r_container": "/clipper/bin/run_unittests.sh --r-container",
     "rpc_container": "/clipper/bin/run_unittests.sh --rpc-container",
 }
 
@@ -20,7 +20,7 @@ DOCKER_INTEGRATION_TESTS = {
     "mxnet": "python /clipper/integration-tests/deploy_mxnet_models.py",
     "pytorch": "python /clipper/integration-tests/deploy_pytorch_models.py",
     "multi_tenancy": "python /clipper/integration-tests/multi_tenancy_test.py",
-    "rclipper": "/clipper/integration-tests/r_integration_test/rclipper_test.sh",
+    # "rclipper": "/clipper/integration-tests/r_integration_test/rclipper_test.sh",
     "docker_metric": "python /clipper/integration-tests/clipper_metric_docker.py",
 }
 

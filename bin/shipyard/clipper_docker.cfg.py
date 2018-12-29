@@ -113,9 +113,9 @@ py35_dev > py35tests
 #     ctx, "spark-scala-container", "SparkScalaContainerDockerfile", push_version=True
 # )
 
-create_and_push_with_ctx(
-    ctx, "r-container-base", "RContainerDockerfile", push_version=True
-)
+# create_and_push_with_ctx(
+#     ctx, "r-container-base", "RContainerDockerfile", push_version=True
+# )
 frontend_exporter = create_and_push_with_ctx(
     ctx, "frontend-exporter", "FrontendExporterDockerfile", push_version=True
 )
