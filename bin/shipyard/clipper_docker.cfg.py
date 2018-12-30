@@ -201,14 +201,14 @@ for container in kubernetes_containers:
 
     tag = IsolatedAction(
         f"travis_re_tag_{container}",
-        f'docker tag {ctx["namespace"]}/{container}:{ctx["sha_tag"]} $CLIPPER_REGISTRY/{container}:{ctx["sha_tag"]}',
+        f'docker tag {ctx["namespace"]}/{container}:{ctx["sha_tag"]} localhost:5000/{container}:{ctx["sha_tag"]}',
         tags="retag_kubernetes_test_containers"
     )
     wait > tag
 
     push = IsolatedAction(
         f"travis_re_push_{container}",
-        f'docker push $CLIPPER_REGISTRY/{container}:{ctx["sha_tag"]}',
+        f'docker push localhost:5000/{container}:{ctx["sha_tag"]}',
         tags="repush_kubernetes_test_containers"
     )
     tag > push
