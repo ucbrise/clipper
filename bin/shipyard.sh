@@ -21,6 +21,11 @@ if [ -z ${ghprbActualCommit+x}]
     then echo "We are not in Jenkins"
     else sha_tag=`echo $ghprbActualCommit | cut -c-10`
 fi
+# Travis does the same
+if [ -z ${TRAVIS_PULL_REQUEST_SHA+x}]
+    then echo "We are not in Travis"
+    else sha_tag=`echo $TRAVIS_PULL_REQUEST_SHA | cut -c-10`
+fi
 
 # Here we use shipyard to tool to generate the Makefile to accelerate
 # container building with dependency.
