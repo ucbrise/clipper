@@ -34,7 +34,7 @@ export NUM_RETRIES=2
 
 retry_test() {
     for i in {1..$NUM_RETRIES}; do  
-        (bash -c "$@" && break) || (print_debug_info; echo "failed at try $i, retrying")
+        (timeout -s SIGINT 5m "$@" && break) || (print_debug_info; echo "failed at try $i, retrying")
     if [ "$i" -eq "$NUM_RETRIES" ];  
         then 
             print_debug_info
