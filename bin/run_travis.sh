@@ -26,10 +26,10 @@ print_debug_info() {
 
 # if the test test succeed, debug info will not get printed
 # mainly used to debug container being evicted
-time python kubernetes_integration_test.py || (print_debug_info() && exit 1)
-time python kubernetes_multi_frontend.py || (print_debug_info() && exit 1)
-time python kubernetes_namespace.py || (print_debug_info() && exit 1)
-time python multi_tenancy_test.py --kubernetes || (print_debug_info() && exit 1)
+time python kubernetes_integration_test.py || (print_debug_info && exit 1)
+time python kubernetes_multi_frontend.py || (print_debug_info && exit 1)
+time python kubernetes_namespace.py || (print_debug_info && exit 1)
+time python multi_tenancy_test.py --kubernetes || (print_debug_info && exit 1)
 
 # TODO: disabled for now, will re-enable after RBAC PR
 # time python clipper_metric_kube.py
