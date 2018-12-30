@@ -43,10 +43,11 @@ print_debug_info_periodic() {
 print_debug_info_periodic&
 
 export NUM_RETRIES=2
+export TIMEOUT=10m
 
 retry_test() {
     for i in $(seq 1 $NUM_RETRIES); do  
-        (timeout -s SIGINT 5m $@ && break) || (print_debug_info; echo "failed at try $i, retrying")
+        (timeout -s SIGINT $TIMEOUT $@ && break) || (print_debug_info; echo "failed at try $i, retrying")
     if [ "$i" -eq "$NUM_RETRIES" ];  
         then 
             print_debug_info
@@ -54,6 +55,7 @@ retry_test() {
         fi; 
     done
 }
+
 # if the test test succeed, debug info will not get printed
 # mainly used to debug container being evicted
 retry_test python kubernetes_integration_test.py
