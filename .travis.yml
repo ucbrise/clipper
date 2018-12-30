@@ -11,15 +11,17 @@ env:
 
 before_script:
 # Download kubectl and minikube
-
+# We are using 0.27.0 for now because localkube was removed in later releases
+# and replaced by kubeadm, which assumed systemd. 
 - curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
   && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
-- curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 
+- curl -LO https://storage.googleapis.com/minikube/releases/v0.27.0/minikube-linux-amd64
   && mv minikube-linux-amd64 minikube
   && chmod +x minikube && sudo mv minikube /usr/local/bin/
 
 # Setup minikube
-- sudo minikube start --vm-driver=none --kubernetes-version=v1.10.0
+# For the bootstrapper argument see: https://github.com/kubernetes/minikube/issues/2704
+- sudo minikube start --vm-driver=none --kubernetes-version=v1.10.0 --bootstrapper=localkube
 - minikube update-context
 - JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}';
   until kubectl get nodes -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do
