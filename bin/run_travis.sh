@@ -7,7 +7,12 @@ set -o pipefail
 
 # Set up test environment
 sha_tag=$(git rev-parse --verify --short=10 HEAD)
+if [ -z ${TRAVIS_PULL_REQUEST_SHA+x}]
+    then echo "We are not in Travis"
+    else sha_tag=`echo $TRAVIS_PULL_REQUEST_SHA | cut -c-10`
+fi
 echo $sha_tag > VERSION.txt
+
 export CLIPPER_REGISTRY="localhost:5000"
 
 # Wait for all kubernetes specific images to be built in travis
@@ -34,7 +39,7 @@ export NUM_RETRIES=2
 
 retry_test() {
     for i in $(seq 1 $NUM_RETRIES); do  
-        (timeout -s SIGINT 5m "$@" && break) || (print_debug_info; echo "failed at try $i, retrying")
+        (timeout -s SIGINT 5m $@ && break) || (print_debug_info; echo "failed at try $i, retrying")
     if [ "$i" -eq "$NUM_RETRIES" ];  
         then 
             print_debug_info
@@ -44,10 +49,10 @@ retry_test() {
 }
 # if the test test succeed, debug info will not get printed
 # mainly used to debug container being evicted
-retry_test "python kubernetes_integration_test.py"
-retry_test "python kubernetes_multi_frontend.py"
-retry_test "python kubernetes_namespace.py"
-retry_test "python multi_tenancy_test.py --kubernetes"
+retry_test python kubernetes_integration_test.py
+retry_test python kubernetes_multi_frontend.py
+retry_test python kubernetes_namespace.py
+retry_test python multi_tenancy_test.py --kubernetes
 
 # TODO: disabled for now, will re-enable after RBAC PR
 # time python clipper_metric_kube.py
