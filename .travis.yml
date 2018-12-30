@@ -5,11 +5,9 @@ sudo: required
 
 language: python
 
-
 env:
   matrix:
   - CHANGE_MINIKUBE_NONE_USER=true
-  secure: "EJuxtmj/bY737uvQLrP0dykQBds1D1M/y0C2kBFdr0EhbZ3K08ET4bLYQOs/KjAm9ZLsLYA0YO5dS5VOIHJjkVWKYWWqOBth4rBvmJpX0BKwQauCZbPxX9L+IZMoow3nYuk9D0FdJ6plVtl9InvBAlPAvKqBUFOGciwbVoMEF4yF7zEwSUrKhx7ySBCOGjFl1IElXJrnVyoFtpu9tEJQqRGT48/rUGkCvJMzxTOHF4sNLX1EVj7i7Wpmfu6RO6ZszlrxIR1THzImE3Wvu9+TAxZEmgr84d1G1oCAFCvsFONnHhbfkoKF8qD9xGD9wKRCe+69MOl2A9u6jNjtfWNbMYmhowvkBbyNs1ylQkFxlNvjJLFSDZcUPUq7ea+4U6fAKy+yQZJJ9dwNwEuxQXjCvcYZiYPyrvHRBxe/uJlByCEypwt+fAQtSuCyOMjWVUeQLjHha/cNRg5Blw9he/PuVBiVKNqG8Pd7NWWdfyPD+xHpK+ueqrZQsdam8NmOg4mSRk3pJDCZo+CoMngxY2kWl9jF6o6UYMk0g3Va4N2mFEwPakqejc4b5DWzpCuzQ4pD3kQTDU79v9gDlJviuqs7KwwVmAl1zOcqt4ZCRvJP9mScOHoQedbi+xcVkcsYPnUPULZqgr6w59KozoHE29UE4N8rM2HZesFdGtV+dfvBGJo="
 
 before_script:
 # Download kubectl and minikube
@@ -19,7 +17,9 @@ before_script:
   && chmod +x minikube && sudo mv minikube /usr/local/bin/
 
 # Setup minikube
-- sudo minikube start --vm-driver=none --kubernetes-version=v1.9.0
+- sudo minikube start --vm-driver=none --kubernetes-version=v1.9.0 --insecure-registry localhost:5000
+- eval $(minikube docker-env)
+- docker run -d -p 5000:5000 --restart=always  registry:2
 - minikube update-context
 - JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}';
   until kubectl get nodes -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do
@@ -33,9 +33,6 @@ before_script:
   until kubectl -n kube-system get pods -lk8s-app=kube-dns -o jsonpath="$JSONPATH"
   2>&1 | grep -q "Ready=True"; do sleep 1;echo "waiting for kube-dns to be available";
   kubectl get pods --all-namespaces; done
-
-# Login to Docker
-- docker login -u clippertesting --password "$CLIPPER_TESTING_DOCKERHUB_PASSWORD"
 
 script:
 - cd clipper_admin; pip install -q -e .; cd ..

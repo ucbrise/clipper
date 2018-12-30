@@ -8,10 +8,10 @@ set -o pipefail
 # Set up test environment
 sha_tag=$(git rev-parse --verify --short=10 HEAD)
 echo $sha_tag > VERSION.txt
-export CLIPPER_REGISTRY=clippertesting
+export CLIPPER_REGISTRY="localhost:5000"
 
 # Wait for all kubernetes specific images to be built in travis
-make -j wait_for_kubernetes_test_containers
+make -j -f CI_build.Makefile wait_for_kubernetes_test_containers
 
 # Run the following test in sequence
 cd integration-tests

@@ -179,7 +179,6 @@ kubernetes_containers = [
     management_frontend.name,
     frontend_exporter.name,
     "noop-container",
-    "python-closure-container",  # travis has py2.7
 ]
 
 for container in kubernetes_containers:
