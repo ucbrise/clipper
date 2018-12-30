@@ -62,11 +62,10 @@ def create_and_push_with_ctx(
     pushed = push_image(name, push_sha=True, push_version=push_version)
 
     # Prepull will let docker re-use cached images
-    # TODO(simon): temporarily disable prepull
-    # prepull = CIPrettyLogAction(
-    #     f"prepull_{name}", f"docker pull clipper/{name}:develop || true", ["prepull"]
-    # )
-    # prepull > created
+    prepull = CIPrettyLogAction(
+        f"prepull_{name}", f"docker pull clipper/{name}:develop || true", ["prepull"]
+    )
+    prepull > created
     created > pushed
 
     return created
