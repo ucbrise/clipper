@@ -25,11 +25,6 @@ if [ -z ${ghprbActualCommit+x} ]
     then echo "We are not in Jenkins"
     else sha_tag=`echo $ghprbActualCommit | cut -c-10`
 fi
-# Travis does the same
-if [ -z ${TRAVIS_PULL_REQUEST_SHA+x} ]
-    then echo "We are not in Travis"
-    else sha_tag=`echo $TRAVIS_PULL_REQUEST_SHA | cut -c-10`
-fi
 echo $sha_tag > VERSION.txt
 
 # Use shipyard to generate Makefile
