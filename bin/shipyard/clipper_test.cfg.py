@@ -41,7 +41,7 @@ def generate_test_command(python_version, test_to_run):
         -e CLIPPER_TESTING_DOCKERHUB_PASSWORD=$CLIPPER_TESTING_DOCKERHUB_PASSWORD \
         {ctx['namespace']}/{image}:{ctx['sha_tag']} \
         \"{test_to_run}\") \
-    && break || echo "failed at try $1, retrying";  \
+    && break || echo "failed at try $i, retrying";  \
     if [ "$i" -eq "{NUM_RETRIES}" ];  \
         then exit 1; fi; \
     done
@@ -75,9 +75,3 @@ for name, test_to_run in DOCKER_INTEGRATION_TESTS.items():
 
 # Specify specific dependencies
 # TODO(simon): these tests should have hierachies.
-
-# Serialize out unittests ordering, elimenates possible port collisions
-Action.get_action("unittest_libclipper") > Action.get_action("unittest_management")
-Action.get_action("unittest_management") > Action.get_action("unittest_frontend")
-Action.get_action("unittest_frontend") > Action.get_action("unittest_rpc_container")
-
