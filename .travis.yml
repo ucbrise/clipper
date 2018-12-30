@@ -38,6 +38,6 @@ before_script:
 - docker login -u clippertesting --password "$CLIPPER_TESTING_DOCKERHUB_PASSWORD"
 
 script:
-- cd clipper_admin; pip install -e .; cd ..
+- cd clipper_admin; pip install -q -e .; cd ..
 - bash ./bin/shipyard.sh
 - bash ./bin/run_travis.sh

@@ -32,9 +32,9 @@ echo $sha_tag > VERSION.txt
 # Use shipyard to generate Makefile
 bash ./bin/shipyard.sh
 # Build Kubernetes containers first, travis will be waiting
-make -j kubernetes_test_containers
+make -j -f CI_build.Makefile kubernetes_test_containers
 # Build the rest of the containers
-make -j all
+make -j -f CI_build.Makefile all
 
 # Run all test
 make -j10 -f CI_test.Makefile all

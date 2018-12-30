@@ -30,11 +30,11 @@ docker run --rm shipyard \
   --namespace $CLIPPER_REGISTRY \
   --clipper-root $(pwd) \
   --config clipper_docker.cfg.py \
-  --no-push > Makefile
+  --no-push > CI_build.Makefile
 
-echo "@@@@@ Makefile @@@@@"
-cat Makefile
-echo "@@@@@ Makefile @@@@@"
+# echo "@@@@@ Makefile @@@@@"
+# cat Makefile
+# echo "@@@@@ Makefile @@@@@"
 
 docker run --rm shipyard \
   --sha-tag $sha_tag \
