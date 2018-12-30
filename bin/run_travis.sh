@@ -14,7 +14,6 @@ if [ -z ${TRAVIS_PULL_REQUEST_SHA+x} ] || [ -z "$TRAVIS_PULL_REQUEST_SHA"]
 fi
 echo $sha_tag > VERSION.txt
 
-unset CLIPPER_REGISTRY
 export CLIPPER_REGISTRY="localhost:5000"
 
 # Wait for all kubernetes specific images to be built in travis
@@ -42,7 +41,7 @@ export NUM_RETRIES=2
 
 retry_test() {
     for i in $(seq 1 $NUM_RETRIES); do  
-        (CLIPPER_REGISTRY="localhost:5000" timeout -s SIGINT 5m $@ && break) || (print_debug_info; echo "failed at try $i, retrying")
+        (timeout -s SIGINT 5m $@ && break) || (print_debug_info; echo "failed at try $i, retrying")
     if [ "$i" -eq "$NUM_RETRIES" ];  
         then 
             print_debug_info
