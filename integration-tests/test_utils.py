@@ -36,7 +36,7 @@ class BenchmarkException(Exception):
 PORT_RANGE = [34256, 50000]
 
 # The dockerhub account we are pushing kubernetes images to
-CLIPPER_CONTAINER_REGISTRY = 'clippertesting'
+CLIPPER_CONTAINER_REGISTRY = 'localhost:5000'
 
 # USE_MINIKUBE == True -> useInternalIP = True
 USE_MINIKUBE = True

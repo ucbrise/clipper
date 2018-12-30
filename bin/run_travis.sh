@@ -14,11 +14,16 @@ if [ -z ${TRAVIS_PULL_REQUEST_SHA+x} ] || [ -z "$TRAVIS_PULL_REQUEST_SHA"]
 fi
 echo $sha_tag > VERSION.txt
 
-export CLIPPER_REGISTRY="localhost:5000"
+# We are still _pulling_ images from clippertesting
+# The model container images will be pushed to localhost:5000
+# as specified by
+#   integration-tests/test_utils.py
+#   39:CLIPPER_CONTAINER_REGISTRY = 'localhost:5000'
+CLIPPER_REGISTRY="clippertesting"
 
 # Wait for all kubernetes specific images to be built in travis
 # and retag them so we can use them in local registry. 
-make -j -f CI_build.Makefile repush_kubernetes_test_containers
+make -j -f CI_build.Makefile wait_for_kubernetes_test_containers
 
 # Run the following test in sequence
 cd integration-tests
