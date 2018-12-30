@@ -17,12 +17,12 @@ sha_tag=$(git rev-parse --verify --short=10 HEAD)
 # Jenkins will merge the PR, however we will use the unmerged
 # sha to tag our image. 
 # https://stackoverflow.com/questions/3601515/how-to-check-if-a-variable-is-set-in-bash
-if [ -z ${ghprbActualCommit+x}]
+if [ -z ${ghprbActualCommit+x} ]
     then echo "We are not in Jenkins"
     else sha_tag=`echo $ghprbActualCommit | cut -c-10`
 fi
 # Travis does the same
-if [ -z ${TRAVIS_PULL_REQUEST_SHA+x}]
+if [ -z ${TRAVIS_PULL_REQUEST_SHA+x} ]
     then echo "We are not in Travis"
     else sha_tag=`echo $TRAVIS_PULL_REQUEST_SHA | cut -c-10`
 fi
