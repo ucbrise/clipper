@@ -192,10 +192,25 @@ for container in kubernetes_containers:
 def wait_and_pull_cmd(image_name):
     return f"until docker pull {image_name}; do sleep 5; done"
 
-
 for container in kubernetes_containers:
-    a = IsolatedAction(
+    wait = IsolatedAction(
         f"wait_{container}",
         wait_and_pull_cmd(f'{ctx["namespace"]}/{container}:{ctx["sha_tag"]}'),
         tags="wait_for_kubernetes_test_containers",
     )
+
+    tag = IsolatedAction(
+        f"travis_re_tag_{container}",
+        f'docker tag {ctx["namespace"]}/{container}:{ctx["sha_tag"]} $CLIPPER_REGISTRY/{container}:{ctx["sha_tag"]}',
+        tags="retag_kubernetes_test_containers"
+    )
+    wait > tag
+
+    push = IsolatedAction(
+        f"travis_re_push_{container}",
+        f'docker push $CLIPPER_REGISTRY/{container}:{ctx["sha_tag"]}',
+        tags="repush_kubernetes_test_containers"
+    )
+    tag > push
+
+    

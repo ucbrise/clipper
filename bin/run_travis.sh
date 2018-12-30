@@ -24,7 +24,8 @@ echo $sha_tag > VERSION.txt
 export CLIPPER_REGISTRY="localhost:5000"
 
 # Wait for all kubernetes specific images to be built in travis
-make -j -f CI_build.Makefile wait_for_kubernetes_test_containers
+# and retag them so we can use them in local registry. 
+make -j -f CI_build.Makefile repush_kubernetes_test_containers
 
 # Run the following test in sequence
 cd integration-tests
