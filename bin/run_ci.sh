@@ -15,8 +15,10 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $DIR/..
 tag=$(<VERSION.txt)
 
-# Change the VERSION.txt to current sha_tag
+# Be nice to Jenkins
+bash ./bin/cleanup_jenkins.sh
 
+# Change the VERSION.txt to current sha_tag
 sha_tag=$(git rev-parse --verify --short=10 HEAD)
 # Jenkins will merge the PR, however we will use the unmerged
 # sha to tag our image. 
