@@ -24,12 +24,24 @@ print_debug_info() {
     # done
 }
 
+export NUM_RETRIES=2
+
+retry_test() {
+    for i in {1..$NUM_RETRIES}; do  
+        (bash -c "$@" && break) || (print_debug_info; echo "failed at try $i, retrying")
+    if [ "$i" -eq "$NUM_RETRIES" ];  
+        then 
+            print_debug_info
+            exit 1; 
+        fi; 
+    done
+}
 # if the test test succeed, debug info will not get printed
 # mainly used to debug container being evicted
-time python kubernetes_integration_test.py || (print_debug_info && exit 1)
-time python kubernetes_multi_frontend.py || (print_debug_info && exit 1)
-time python kubernetes_namespace.py || (print_debug_info && exit 1)
-time python multi_tenancy_test.py --kubernetes || (print_debug_info && exit 1)
+retry_test python kubernetes_integration_test.py
+retry_test python kubernetes_multi_frontend.py
+retry_test python kubernetes_namespace.py
+retry_test python multi_tenancy_test.py --kubernetes
 
 # TODO: disabled for now, will re-enable after RBAC PR
 # time python clipper_metric_kube.py
