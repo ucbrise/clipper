@@ -17,12 +17,18 @@ make -j wait_for_kubernetes_test_containers
 cd integration-tests
 
 print_debug_info() {
-    # while true; do
-        kubectl get pods | python ../bin/colorize_output.py --tag "kubectl pods" --no-color
-        kubectl describe pods | python ../bin/colorize_output.py --tag "kubectl describe" --no-color
-        # sleep 120
-    # done
+    kubectl get pods | python ../bin/colorize_output.py --tag "kubectl pods" --no-color
+    kubectl describe pods | python ../bin/colorize_output.py --tag "kubectl describe" --no-color
 }
+
+# Print it periodically to help debug getting stuck
+print_debug_info_periodic() {
+    while true; do
+        kubectl get pods | python ../bin/colorize_output.py --tag "kubectl pods" --no-color
+        sleep 120
+    done
+}
+print_debug_info_periodic&
 
 export NUM_RETRIES=2
 
@@ -38,10 +44,10 @@ retry_test() {
 }
 # if the test test succeed, debug info will not get printed
 # mainly used to debug container being evicted
-retry_test python kubernetes_integration_test.py
-retry_test python kubernetes_multi_frontend.py
-retry_test python kubernetes_namespace.py
-retry_test python multi_tenancy_test.py --kubernetes
+retry_test "python kubernetes_integration_test.py"
+retry_test "python kubernetes_multi_frontend.py"
+retry_test "python kubernetes_namespace.py"
+retry_test "python multi_tenancy_test.py --kubernetes"
 
 # TODO: disabled for now, will re-enable after RBAC PR
 # time python clipper_metric_kube.py
