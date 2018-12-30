@@ -19,7 +19,7 @@ echo $sha_tag > VERSION.txt
 # as specified by
 #   integration-tests/test_utils.py
 #   39:CLIPPER_CONTAINER_REGISTRY = 'localhost:5000'
-CLIPPER_REGISTRY="clippertesting"
+export CLIPPER_REGISTRY="clippertesting"
 
 # Wait for all kubernetes specific images to be built in travis
 # and retag them so we can use them in local registry. 
