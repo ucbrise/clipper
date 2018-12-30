@@ -24,19 +24,24 @@ DOCKER_INTEGRATION_TESTS = {
     "docker_metric": "python /clipper/integration-tests/clipper_metric_docker.py",
 }
 
-
+NUM_RETRIES = 2
+NUM_RETRIES_BASH = "{1.." + str(NUM_RETRIES) + "}"
 def generate_test_command(python_version, test_to_run):
     assert python_version in [2, 3]
 
     image = "unittests" if python_version == 2 else "py35tests"
 
     # CLIPPER_TESTING_DOCKERHUB_PASSWORD should be already in the environment
+    # Retry logic comes from 
+    #   https://unix.stackexchange.com/questions/82598/how-do-i-write-a-retry-logic-in-script-to-keep-retrying-to-run-it-upto-5-times
     command = f"""
-\t  docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp \
+    for i in {NUM_RETRIES_BASH}; do  \
+    (docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp \
         -e CLIPPER_REGISTRY={ctx['namespace']} \
         -e CLIPPER_TESTING_DOCKERHUB_PASSWORD=$CLIPPER_TESTING_DOCKERHUB_PASSWORD \
         {ctx['namespace']}/{image}:{ctx['sha_tag']} \
-        \"{test_to_run}\"
+        \"{test_to_run}\") \
+    && break || echo failed-retry-once; done
     """.strip('\n')
     # command = " ".join(shlex.split(command))
 

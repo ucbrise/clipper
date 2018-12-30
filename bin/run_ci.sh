@@ -37,7 +37,8 @@ make -j kubernetes_test_containers
 make -j all
 
 # Run all test
-make -j4 -f CI_test.Makefile all
+make -j10 -f CI_test.Makefile all
+
 # Build docker images
 #./bin/build_docker_images.sh
 
