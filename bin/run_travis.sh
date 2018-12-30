@@ -15,7 +15,7 @@ if [ -z ${ghprbActualCommit+x} ]
     else sha_tag=`echo $ghprbActualCommit | cut -c-10`
 fi
 # Travis does the same
-if [ "$TRAVIS_PULL_REQUEST_SHA" -eq "" ]
+if [ -z ${TRAVIS_PULL_REQUEST_SHA+x} ] && [ "$TRAVIS_PULL_REQUEST_SHA" -eq "" ]
     then echo "Not a travis PR Build"
     else sha_tag=`echo $TRAVIS_PULL_REQUEST_SHA | cut -c-10`
 fi
