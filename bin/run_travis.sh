@@ -48,17 +48,16 @@ k_delete_all() {
     kubectl delete configmap --all
 }
 
-export NUM_RETRIES=2
 export TIMEOUT=10m
 
 retry_test() {
-    for i in $(seq 1 $NUM_RETRIES); do  
-        (timeout -s SIGINT $TIMEOUT $@ && break)  \
+    for i in {1..2}; do  
+        timeout -s SIGINT $TIMEOUT $@ && break  \
         || (
             print_debug_info; 
             echo "failed at try $i, retrying"; 
             k_delete_all;
-            if [ "$i" -eq "$NUM_RETRIES" ];  
+            if [ "$i" -eq "2" ];  
                 then 
                     print_debug_info
                     exit 1; 
