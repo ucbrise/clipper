@@ -42,17 +42,28 @@ print_debug_info_periodic() {
 }
 print_debug_info_periodic&
 
+k_delete_all() {
+    kubectl delete deploy --all
+    kubectl delete svc --all
+    kubectl delete configmap --all
+}
+
 export NUM_RETRIES=2
 export TIMEOUT=10m
 
 retry_test() {
     for i in $(seq 1 $NUM_RETRIES); do  
-        (timeout -s SIGINT $TIMEOUT $@ && break) || (print_debug_info; echo "failed at try $i, retrying")
-    if [ "$i" -eq "$NUM_RETRIES" ];  
-        then 
-            print_debug_info
-            exit 1; 
-        fi; 
+        (timeout -s SIGINT $TIMEOUT $@ && break)  \
+        || (
+            print_debug_info; 
+            echo "failed at try $i, retrying"; 
+            k_delete_all;
+            if [ "$i" -eq "$NUM_RETRIES" ];  
+                then 
+                    print_debug_info
+                    exit 1; 
+                fi; 
+        )
     done
 }
 
