@@ -56,7 +56,7 @@ kubectl proxy --port 8080 &
 docker login --username="clippertesting" --password=$CLIPPER_TESTING_DOCKERHUB_PASSWORD
 
 if [[ $run_all = "true" ]]; then
-    # $DIR/check_format.sh
+    $DIR/check_format.sh
     $DIR/run_unittests.sh
 else
     $DIR/run_unittests.sh -i

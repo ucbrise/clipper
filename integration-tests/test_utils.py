@@ -35,7 +35,8 @@ class BenchmarkException(Exception):
 # range of ports where available ports can be found
 PORT_RANGE = [34256, 50000]
 
-# The dockerhub account we are pushing kubernetes images to
+# The dockerhub account we are pushing kubernetes built images to
+# Here we are assuming localhost:5000 is running docker registry.
 CLIPPER_CONTAINER_REGISTRY = 'localhost:5000'
 
 # USE_MINIKUBE == True -> useInternalIP = True
@@ -86,13 +87,6 @@ def create_docker_connection(cleanup=False,
         )
         cl = ClipperConnection(cm)
         cl.stop_all(graceful=False)
-        docker_client = get_docker_client()
-        # docker_client.containers.prune(
-            # filters={
-                # "label":
-                # "{key}={val}".format(
-                    # key=CLIPPER_DOCKER_LABEL, val=cleanup_name)
-            # })
 
     if start_clipper:
         # Try to start Clipper in a retry loop here to address flaky tests

@@ -1,10 +1,12 @@
-from shipyard import ctx, CIPrettyLogAction, Action
 import shlex
+
+from shipyard import Action, CIPrettyLogAction, ctx
 
 UNITTESTS = {
     "libclipper": "/clipper/bin/run_unittests.sh --libclipper",
     "management": "/clipper/bin/run_unittests.sh --management",
     "frontend": "/clipper/bin/run_unittests.sh --frontend",
+    # JVM and R containers are not maintained.
     # "jvm": "/clipper/bin/run_unittests.sh --jvm-container",
     # "r_container": "/clipper/bin/run_unittests.sh --r-container",
     "rpc_container": "/clipper/bin/run_unittests.sh --rpc-container",
@@ -26,13 +28,15 @@ DOCKER_INTEGRATION_TESTS = {
 
 NUM_RETRIES = 2
 NUM_RETRIES_BASH = "{1.." + str(NUM_RETRIES) + "}"
+
+
 def generate_test_command(python_version, test_to_run):
     assert python_version in [2, 3]
 
     image = "unittests" if python_version == 2 else "py35tests"
 
     # CLIPPER_TESTING_DOCKERHUB_PASSWORD should be already in the environment
-    # Retry logic comes from 
+    # Retry logic comes from
     #   https://unix.stackexchange.com/questions/82598/how-do-i-write-a-retry-logic-in-script-to-keep-retrying-to-run-it-upto-5-times
     command = f"""
     for i in {NUM_RETRIES_BASH}; do  \
@@ -45,9 +49,9 @@ def generate_test_command(python_version, test_to_run):
     if [ "$i" -eq "{NUM_RETRIES}" ];  \
         then exit 1; fi; \
     done
-    """.strip('\n')
-
-    # command = " ".join(shlex.split(command))
+    """.strip(
+        "\n"
+    )
 
     return command
 

@@ -138,8 +138,7 @@ class ClipperConnection(object):
                                 "{name} end point {url} health check failed".format(name=name, url=url))
                     break
                 except RequestException as e:
-                    self.logger.info(e)
-                    self.logger.info("Clipper still initializing.")
+                    self.logger.info("Clipper still initializing: \n {}".format(e))
                     time.sleep(1)
             self.logger.info("Clipper is running")
             self.connected = True

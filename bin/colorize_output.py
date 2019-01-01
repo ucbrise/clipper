@@ -5,7 +5,7 @@ import re
 
 parser = argparse.ArgumentParser(description="Colorize stdin; (optionally) add a tag.")
 parser.add_argument("--tag", type=str, help="Optional tag")
-parser.add_argument("--no-color", action="store_true")
+parser.add_argument("--no-color", action="store_true", help="Flag to force the output to be no color.")
 
 args = parser.parse_args()
 tag = "[{}]".format(args.tag) if args.tag else ""

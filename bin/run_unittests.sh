@@ -67,12 +67,6 @@ unset CDPATH
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 function set_test_environment {
-  # Let the user start this script from anywhere in the filesystem.
-  # cd $DIR/..
-  # ./configure
-  # cd debug
-  # make all to make sure all the binaries compile
-  # make -j all unittests
   if ! type "redis-server" &> /dev/null; then
       echo -e "\nERROR:"
       echo -e "\tUnit tests require Redis. Please install redis-server"
@@ -126,8 +120,11 @@ function run_frontend_tests {
   ./src/frontends/frontendtests --redis_port $REDIS_PORT
 }
 
+# This function is kept for legacy reason.
+# In Clipper CI starting 2019, the following suite of tests
+# will be ran directly from Jenkins on individual basis. 
 function run_integration_tests {
-  echo -e "\nRunning integration tests\n\n"
+  echo -e "\nDEPRECATED: Running integration tests\n\n"
   cd $DIR
 
   echo "GREPTHIS Docker State before:"
@@ -145,7 +142,6 @@ function run_integration_tests {
 
   ../integration-tests/r_integration_test/rclipper_test.sh
   python ../integration-tests/clipper_metric_docker.py
-
 
   # python ../integration-tests/kubernetes_integration_test.py
   # python ../integration-tests/kubernetes_multi_frontend.py
@@ -181,7 +177,6 @@ function run_all_tests {
 
 if [ "$#" == 0 ]
 then
-  # args="--all"
   args="--help"
 else
   args=$1
@@ -200,18 +195,20 @@ case $args in
     -f | --frontend )           set_test_environment
                                 run_frontend_tests
                                 ;;
-    -j | --jvm-container )      set_test_environment
-                                run_jvm_container_tests
-                                ;;
-    -rc | --r-container )       set_test_environment
-                                run_r_container_tests
-                                ;;
+    # R and JVM are currently unmaintained. 
+    # -j | --jvm-container )      set_test_environment
+    #                             run_jvm_container_tests
+    #                             ;;
+    # -rc | --r-container )       set_test_environment
+    #                             run_r_container_tests
+    #                             ;;
     -r | --rpc-container )      set_test_environment
                                 run_rpc_container_tests
                                 ;;
-    -i | --integration_tests )  set_test_environment
-                                run_integration_tests
-                                ;;
+    # -i is deprecated. 
+    # -i | --integration_tests )  set_test_environment
+    #                             run_integration_tests
+    #                             ;;
     -h | --help )               usage
                                 ;;
     * )                         usage

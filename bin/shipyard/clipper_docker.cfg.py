@@ -1,8 +1,9 @@
-from shipyard import ctx, Action, IsolatedAction, CIPrettyLogAction
-from itertools import product
-from functools import partial
-from distutils.version import LooseVersion
 import shlex
+from distutils.version import LooseVersion
+from functools import partial
+from itertools import product
+
+from shipyard import Action, CIPrettyLogAction, IsolatedAction, ctx
 
 
 def create_image_with_context(build_ctx, image, dockerfile, rpc_version=None):
@@ -191,6 +192,7 @@ for container in kubernetes_containers:
 def wait_and_pull_cmd(image_name):
     return f"until docker pull {image_name}; do sleep 5; done"
 
+
 for container in kubernetes_containers:
     wait = IsolatedAction(
         f"wait_{container}",
@@ -201,15 +203,13 @@ for container in kubernetes_containers:
     tag = IsolatedAction(
         f"travis_re_tag_{container}",
         f'docker tag {ctx["namespace"]}/{container}:{ctx["sha_tag"]} localhost:5000/{container}:{ctx["sha_tag"]}',
-        tags="retag_kubernetes_test_containers"
+        tags="retag_kubernetes_test_containers",
     )
     wait > tag
 
     push = IsolatedAction(
         f"travis_re_push_{container}",
         f'docker push localhost:5000/{container}:{ctx["sha_tag"]}',
-        tags="repush_kubernetes_test_containers"
+        tags="repush_kubernetes_test_containers",
     )
     tag > push
-
-    

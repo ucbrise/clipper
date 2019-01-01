@@ -25,9 +25,8 @@ find ./src -not \( -path ./src/libs -prune \) -name '*.java' -print \
     | xargs clang-format -style=file -i
 
 # Run Python formatter
-echo "Disabled yapf for now! We will switch to black soon."
-# export PYTHONPATH=$CLIPPER_ROOT/bin/yapf
-# find . -name '*.py' -print | egrep -v "yapf|ycm|googletest|dlib" \
-#     | xargs python $CLIPPER_ROOT/bin/yapf/yapf -i
+export PYTHONPATH=$CLIPPER_ROOT/bin/yapf
+find . -name '*.py' -print | egrep -v "yapf|ycm|googletest|dlib" \
+    | xargs python $CLIPPER_ROOT/bin/yapf/yapf -i
 
 exit 0

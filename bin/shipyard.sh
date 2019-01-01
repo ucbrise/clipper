@@ -4,6 +4,10 @@ set -e
 set -u
 set -o pipefail
 
+# Note
+# This script is used to generate makefile.
+# Because shipyard.py has package dependencies, we run them in docker container. 
+
 # Let the user start this script from anywhere in the filesystem.
 unset CDPATH
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -21,6 +25,7 @@ if [ -z ${ghprbActualCommit+x} ]
     then echo "We are not in Jenkins"
     else sha_tag=`echo $ghprbActualCommit | cut -c-10`
 fi
+
 # Travis does the same
 # If the variable is unset or equal to empty string -> skip
 if [ -z ${TRAVIS_PULL_REQUEST_SHA+x} ] || [ -z "$TRAVIS_PULL_REQUEST_SHA"]
@@ -28,7 +33,7 @@ if [ -z ${TRAVIS_PULL_REQUEST_SHA+x} ] || [ -z "$TRAVIS_PULL_REQUEST_SHA"]
     else sha_tag=`echo $TRAVIS_PULL_REQUEST_SHA | cut -c-10`
 fi
 
-# Here we use shipyard to tool to generate the Makefile to accelerate
+# Here we use shipyard to generate the Makefile to accelerate
 # container building with dependency.
 docker build -t shipyard ./bin/shipyard
 docker run --rm shipyard \
@@ -37,10 +42,6 @@ docker run --rm shipyard \
   --clipper-root $(pwd) \
   --config clipper_docker.cfg.py \
   --no-push > CI_build.Makefile
-
-# echo "@@@@@ Makefile @@@@@"
-# cat Makefile
-# echo "@@@@@ Makefile @@@@@"
 
 docker run --rm shipyard \
   --sha-tag $sha_tag \

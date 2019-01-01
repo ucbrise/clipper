@@ -450,6 +450,8 @@ class RequestHandler {
             respond_http(e.what(), "400 Bad Request", response);
           }
         });
+
+    // Healthcheck API
     server_.add_endpoint(
         PING, "GET", 
         [this](std::shared_ptr<HttpServer::Response> response,

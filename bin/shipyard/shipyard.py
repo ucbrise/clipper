@@ -1,14 +1,40 @@
-from collections import namedtuple
-from functools import partial
-from collections import defaultdict
-from distutils.version import LooseVersion
-import click
 import re
+from collections import defaultdict, namedtuple
+from distutils.version import LooseVersion
+from functools import partial
 
+import click
+
+# Global action registry, this will be used to generate the final Makefile
 global_registry = {}
 
 
 class Action(object):
+    """Action object represent a single Makefile target
+
+    Two actions can be related by setting up dependencies:
+    ```
+        a1 > a2
+    ```
+    will translate to makefile, meaning a2 depends on a1
+    ```
+        a2: a1
+    ```
+
+    Action can also be used to register group(s) it belongs to:
+    ```
+        a3 = Action('a3', ...,  tags=['group1'])
+        a4 = Action('a4', ..., tags='group1')
+    ```
+    will translate to makefile:
+    ```
+    group1: a3 a4
+        # empty target
+    ```
+
+    All actions have a default target 'all' except IsolatedAction. 
+    """
+
     def __init__(self, name, command="", tags=None):
         self.name = name
         self.command = command
@@ -26,6 +52,8 @@ class Action(object):
         global global_registry
         global_registry[name] = self
 
+        # This hook will be used to process the command before it
+        # gets printed out to Makfile.
         self.post_processing_hooks = [self._sanitize_command]
 
     @classmethod
@@ -58,6 +86,8 @@ class Action(object):
 
 
 class IsolatedAction(Action):
+    """Action that does not belong to group 'all'"""
+
     def __init__(self, name, command="", tags=None):
         super().__init__(name, command, tags)
         self.post_processing_hooks.append(self._not_included_in_all)
@@ -67,6 +97,16 @@ class IsolatedAction(Action):
 
 
 class CIPrettyLogAction(Action):
+    """Action which the command output will be tagged by the name and colored.
+    In addition, a header and footer will be added so the final output will look
+    like this:
+    ```
+    ===== start: target_name ======
+    [target_name] color_log_line
+    ===== finished: target_name =====
+    ```
+    """
+
     def __init__(self, name, command="", tags=None):
         super().__init__(name, command, tags)
         self.post_processing_hooks.append(self._colorize_output)
@@ -79,18 +119,24 @@ class CIPrettyLogAction(Action):
             [f"\t@echo {header}\n"]
             + [
                 f"\t({line}) 2>&1 | python3 ./bin/colorize_output.py --tag {self.name}\n"
-                for line in self.command.split("\n") if not whitespace.match(line)
+                for line in self.command.split("\n")
+                if not whitespace.match(line)
             ]
             + [f"\t@echo {footer}\n"]
         )
 
 
 def print_make_all():
+    """Global function to printout the makefile"""
+
+    # register all the tags or groups.
+    # for example, group 'all'
     tag_to_action_name = defaultdict(list)
     for action in global_registry.values():
         print(action)
         for t in action.tags:
             tag_to_action_name[t].append(action.name)
+
     for tag, actions in tag_to_action_name.items():
         print(
             f"""

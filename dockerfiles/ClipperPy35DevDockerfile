@@ -39,13 +39,12 @@ RUN mkdir -p /usr/share/man/man1 && \
     apt-get update -qq -y && \
     apt-get install openjdk-8-jre openjdk-8-jdk-headless -y
 
+# Marking R as unmaintained for now
 # Install R
-RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends r-base libxml2-dev gfortran \
-  && rm -rf /var/lib/apt/lists/*
-
-COPY containers/R/tests/install_test_dependencies.R /install_test_dependencies.R
-
-RUN Rscript /install_test_dependencies.R
+# RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends r-base libxml2-dev gfortran \
+#   && rm -rf /var/lib/apt/lists/*
+# COPY containers/R/tests/install_test_dependencies.R /install_test_dependencies.R
+# RUN Rscript /install_test_dependencies.R
 
 ENTRYPOINT ["bash"]
 
