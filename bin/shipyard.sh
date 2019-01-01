@@ -40,9 +40,8 @@ fi
 # If we are in jenkins and JOB_NAME == Clipper
 # Then we are not in PR build. 
 # In Clipper Job, we will build and publish to Clipper dockerhub. 
-if [ ${JOB_NAME+x} -ne "" ] && [ "$JOB_NAME" -eq "Clipper" ]
-    then echo "We are not in Jenkins"
-    else 
+if [ "$JOB_NAME" -eq "Clipper" ]
+    then
         CLIPPER_REGISTRY="clipper"
         push_version_flag="--push"
 fi
