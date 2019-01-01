@@ -66,6 +66,8 @@ const std::string GET_MODEL = ADMIN_PATH + "/get_model$";
 const std::string GET_ALL_CONTAINERS = ADMIN_PATH + "/get_all_containers$";
 const std::string GET_CONTAINER = ADMIN_PATH + "/get_container$";
 
+const std::string PING = ADMIN_PATH + "/ping$";
+
 const std::string ADD_APPLICATION_JSON_SCHEMA = R"(
   {
    "name" := string,
@@ -447,6 +449,14 @@ class RequestHandler {
           } catch (const clipper::ManagementOperationError& e) {
             respond_http(e.what(), "400 Bad Request", response);
           }
+        });
+
+    // Healthcheck API
+    server_.add_endpoint(
+        PING, "GET", 
+        [this](std::shared_ptr<HttpServer::Response> response,
+               std::shared_ptr<HttpServer::Request> request) {
+            respond_http("PONG", "200 OK", response);
         });
   }
 

@@ -126,14 +126,19 @@ class ClipperConnection(object):
                                   num_frontend_replicas)
             while True:
                 try:
-                    url = "http://{host}/metrics".format(
+                    query_frontend_url = "http://{host}/metrics".format(
                         host=self.cm.get_query_addr())
-                    r = requests.get(url, timeout=5)
-                    if r.status_code != requests.codes.ok:
-                        raise RequestException
+                    mgmt_frontend_url = "http://{host}/admin/ping".format(
+                        host=self.cm.get_admin_addr())
+                    for name, url in [('query frontend', query_frontend_url), 
+                                     ('management frontend', mgmt_frontend_url)]:
+                        r = requests.get(url, timeout=5)
+                        if r.status_code != requests.codes.ok:
+                            raise RequestException(
+                                "{name} end point {url} health check failed".format(name=name, url=url))
                     break
-                except RequestException:
-                    self.logger.info("Clipper still initializing.")
+                except RequestException as e:
+                    self.logger.info("Clipper still initializing: \n {}".format(e))
                     time.sleep(1)
             self.logger.info("Clipper is running")
             self.connected = True
