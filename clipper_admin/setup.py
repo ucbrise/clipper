@@ -25,7 +25,7 @@ setup(
     install_requires=[
         'requests', 'numpy', 'subprocess32; python_version<"3"', 'pyyaml',
         'docker>=3.0', 'kubernetes>=6.0.0', 'prometheus_client',
-        'cloudpickle>=0.5', 'enum34; python_version<"3.4"', 'redis', 'psutil',
+        'cloudpickle==0.5.3', 'enum34; python_version<"3.4"', 'redis', 'psutil',
         'jsonschema', 'jinja2'
     ],
     extras_require={

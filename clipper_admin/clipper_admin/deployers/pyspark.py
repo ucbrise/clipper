@@ -222,7 +222,7 @@ def deploy_pyspark_model(clipper_conn,
         else:
             pyspark_model.save(sc, spark_model_save_loc)
     except Exception as e:
-        logger.warn("Error saving spark model: %s" % e)
+        logger.warning("Error saving spark model: %s" % e)
         raise e
 
     # extract the pyspark class name. This will be something like

@@ -5,10 +5,10 @@ FROM ${REGISTRY}/${RPC_VERSION}-rpc:${CODE_VERSION}
 
 LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends \
        build-essential cmake git libgoogle-glog-dev libgtest-dev libiomp-dev libleveldb-dev \
        liblmdb-dev libopencv-dev libsnappy-dev libprotobuf-dev \
-       protobuf-compiler python-dev libgflags-dev && pip install future==0.16.* protobuf==3.5.*
+       protobuf-compiler python-dev libgflags-dev && pip install -q future==0.16.* protobuf==3.5.*
 
 RUN git clone --recursive https://github.com/pytorch/pytorch.git \
 	&& cd pytorch \
@@ -22,7 +22,7 @@ ENV LD_LIBRARY_PATH=/usr/local/lib/
 
 RUN cd ~ && python -c 'from caffe2.python import core'
 
-RUN pip install onnx
+RUN pip install -q onnx
 RUN python -c "import onnx"
   
 COPY containers/python/caffe2_onnx_container.py containers/python/container_entry.sh /container/
