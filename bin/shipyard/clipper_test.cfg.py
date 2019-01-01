@@ -36,19 +36,13 @@ def generate_test_command(python_version, test_to_run):
     image = "unittests" if python_version == 2 else "py35tests"
 
     # CLIPPER_TESTING_DOCKERHUB_PASSWORD should be already in the environment
-    # Retry logic comes from
-    #   https://unix.stackexchange.com/questions/82598/how-do-i-write-a-retry-logic-in-script-to-keep-retrying-to-run-it-upto-5-times
     command = f"""
-    for i in {NUM_RETRIES_BASH}; do  \
-    (docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp \
+    python ./bin/retry_with_timeout.py --retry 1 --timeout 40m -- \
+    docker run --rm --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp \
         -e CLIPPER_REGISTRY={ctx['namespace']} \
         -e CLIPPER_TESTING_DOCKERHUB_PASSWORD=$CLIPPER_TESTING_DOCKERHUB_PASSWORD \
         {ctx['namespace']}/{image}:{ctx['sha_tag']} \
-        \"{test_to_run}\") \
-    && break || echo "failed at try $i, retrying";  \
-    if [ "$i" -eq "{NUM_RETRIES}" ];  \
-        then exit 1; fi; \
-    done
+        \"{test_to_run}\" 
     """.strip(
         "\n"
     )
