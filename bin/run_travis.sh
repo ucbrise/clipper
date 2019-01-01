@@ -29,7 +29,7 @@ make -j -f CI_build.Makefile wait_for_kubernetes_test_containers
 cd integration-tests
 
 print_debug_info() {
-    kubectl get pods --all-namespace | python ../bin/colorize_output.py --tag "kubectl pods" --no-color
+    kubectl get pods --all-namespaces | python ../bin/colorize_output.py --tag "kubectl pods" --no-color
     kubectl describe pods | python ../bin/colorize_output.py --tag "kubectl describe" --no-color
 }
 
