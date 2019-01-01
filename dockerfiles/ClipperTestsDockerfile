@@ -4,20 +4,22 @@ FROM ${REGISTRY}/dev:${CODE_VERSION}
 
 LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
-RUN pip install awscli==1.14.*
+RUN pip install -q awscli==1.14.*
 
 COPY ./ /clipper
 
-# Patch Clipper
-RUN cd /clipper/src/libs/spdlog \
-    && git apply ../patches/make_spdlog_compile_linux.patch
-
 # Set version as git hash
-RUN cd /clipper \
-    && echo $(git rev-parse --verify --short=10 HEAD) > VERSION.txt
+RUN cd /clipper && echo ${CODE_VERSION} > VERSION
 
-RUN pip install -e /clipper/clipper_admin
+RUN pip install -q -e /clipper/clipper_admin
 
-ENTRYPOINT ["/clipper/bin/ci_checks.sh", "true"]
+RUN cd /clipper/src/libs/spdlog \
+    && git apply ../patches/make_spdlog_compile_linux.patch \
+    && cd /clipper \
+    && ./configure \
+    && cd debug \
+    && make -j all unittests
+
+ENTRYPOINT ["/bin/bash", "-c"]
 
 # vim: set filetype=dockerfile:
