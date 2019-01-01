@@ -57,7 +57,7 @@ retry_test() {
             print_debug_info; 
             echo "failed at try $i, retrying"; 
             k_delete_all;
-            if [ "$i" -eq "2" ];  
+            if [ "$i" == "2" ];  
                 then 
                     print_debug_info
                     exit 1; 
