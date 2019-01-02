@@ -278,7 +278,7 @@ class ModelQueueThreadPool : public ThreadPool {
   }
 
   bool create_queue(VersionedModelId vm, int replica_id, bool is_block_worker) {
-    boost::upgrade_lock<boost::shared_mutex> l(queues_mutex_);
+    boost::unique_lock<boost::shared_mutex> l(queues_mutex_);
     size_t queue_id = get_queue_id(vm, replica_id);
     auto queue = queues_.find(queue_id);
     if (queue != queues_.end()) {
@@ -287,7 +287,6 @@ class ModelQueueThreadPool : public ThreadPool {
                           vm.serialize(), std::to_string(replica_id));
       return false;
     } else {
-      boost::upgrade_to_unique_lock<boost::shared_mutex> upgraded_l(l);
       queues_.emplace(std::piecewise_construct, std::forward_as_tuple(queue_id),
                       std::forward_as_tuple());
       threads_.emplace(std::piecewise_construct,
