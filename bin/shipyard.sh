@@ -40,7 +40,7 @@ fi
 # If we are in jenkins and JOB_NAME == Clipper
 # Then we are not in PR build. 
 # In Clipper Job, we will build and publish to Clipper dockerhub. 
-if [ ${JOB_NAME+x} ] && [ $JOB_NAME -eq "Clipper" ]
+if [ ${JOB_NAME+x} ] && [ $JOB_NAME == "Clipper" ]
     then
         CLIPPER_REGISTRY="clipper"
         push_version_flag="--push"
