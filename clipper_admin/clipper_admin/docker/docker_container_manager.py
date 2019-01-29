@@ -359,10 +359,12 @@ class DockerContainerManager(ContainerManager):
                 model_container_names.append(container_name)
             for name in model_container_names:
                 container = self.docker_client.containers.get(name)
-                while container.attrs.get("State") is None or self.docker_client.api.inspect_container(name) is None:
-                    time.sleep(3)
-                while container.attrs.get("State").get("Status") != "running" or \
-                        self.docker_client.api.inspect_container(name).get("State").get("Health").get("Status") != "healthy":
+                while True:
+                    state = container.attrs.get("State")
+                    container = self.docker_client.api.inspect_container(name)
+                    if (state is not None and state.get("Status") == "running") or \
+                            (container is not None and container.get("State").get("Health").get("Status") == "healthy"):
+                        break
                     time.sleep(3)
 
         elif len(current_replicas) > num_replicas:
