@@ -40,6 +40,7 @@ pip install git+https://github.com/ucbrise/clipper.git@develop#subdirectory=clip
 or by cloning Clipper and installing directly from the file system:
 ```sh
 pip install -e </path/to/clipper_repo>/clipper_admin
+pip install -U cloudpickle==0.5.3
 ```
 
 
