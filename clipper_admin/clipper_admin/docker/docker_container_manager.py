@@ -359,6 +359,8 @@ class DockerContainerManager(ContainerManager):
                 model_container_names.append(container_name)
             for name in model_container_names:
                 container = self.docker_client.containers.get(name)
+                while container.attrs.get("State") is None or self.docker_client.api.inspect_container(name) is None:
+                    time.sleep(3)
                 while container.attrs.get("State").get("Status") != "running" or \
                         self.docker_client.api.inspect_container(name).get("State").get("Health").get("Status") != "healthy":
                     time.sleep(3)
