@@ -361,9 +361,10 @@ class DockerContainerManager(ContainerManager):
                 container = self.docker_client.containers.get(name)
                 while True:
                     state = container.attrs.get("State")
-                    container = self.docker_client.api.inspect_container(name)
+                    inspect_container = self.docker_client.api.inspect_container(name)
                     if (state is not None and state.get("Status") == "running") or \
-                            (container is not None and container.get("State").get("Health").get("Status") == "healthy"):
+                            (inspect_container is not None and
+                             inspect_container.get("State").get("Health").get("Status") == "healthy"):
                         break
                     time.sleep(3)
 
