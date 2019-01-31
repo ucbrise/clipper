@@ -241,7 +241,7 @@ def deploy_pytorch_model(clipper_conn,
                     logger.info("Using Python 3.6 base image")
                     base_image = "{}/pytorch36-container:{}".format(
                         __registry__, __version__)
-                 else:
+                else:
                     msg = (
                         "PyTorch deployer only supports Python 2.7, 3.5, and 3.6. "
                         "Detected {major}.{minor}").format(
