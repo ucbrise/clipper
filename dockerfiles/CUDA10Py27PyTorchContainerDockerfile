@@ -1,0 +1,56 @@
+FROM nvidia/cuda:10.0-cudnn7-devel-ubuntu16.04
+
+LABEL maintainer="Rehan Durrani <rdurrani@berkeley.edu>"
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        cmake \
+        git \
+        curl \
+        vim \
+        ca-certificates \
+        libjpeg-dev \
+        libpng-dev &&\
+        rm -rf /var/lib/apt/lists/*
+
+RUN curl -o ~/miniconda.sh -O https://repo.anaconda.com/miniconda/Miniconda2-latest-Linux-x86_64.sh && \
+        chmod +x ~/miniconda.sh && \
+        ~/miniconda.sh -b -p /opt/conda && \
+        rm ~/miniconda.sh && \
+        /opt/conda/bin/conda install -y python=2.7 numpy pyyaml=3.12.* scipy ipython mkl mkl-include cython typing && \
+        /opt/conda/bin/conda install -y pytorch torchvision cuda100 -c pytorch && \
+        /opt/conda/bin/conda install -y -c anaconda pip && \
+        /opt/conda/bin/conda clean -ya
+
+ENV PATH /opt/conda/bin:$PATH
+
+RUN mkdir -p /model \
+      && apt-get update -qq \
+      && apt-get install -y -qq libzmq5 libzmq5-dev redis-server libsodium18 build-essential
+
+RUN pip install -q cloudpickle==0.5.* pyzmq==17.0.* prometheus_client==0.1.* \
+    jsonschema==2.6.* redis==2.10.* psutil==5.4.* flask==0.12.2 \
+    numpy==1.14.* subprocess32==3.2.*
+
+COPY clipper_admin /clipper_admin/
+
+RUN cd /clipper_admin \
+    && pip install -q .
+
+WORKDIR /container
+
+COPY containers/python/__init__.py containers/python/rpc.py /container/
+
+COPY monitoring/metrics_config.yaml /container/
+
+ENV CLIPPER_MODEL_PATH=/model
+
+HEALTHCHECK --interval=3s --timeout=3s --retries=1 CMD test -f /model_is_ready.check || exit 1
+
+ENV PATH /opt/conda/bin:$PATH
+
+COPY containers/python/pytorch_container.py containers/python/container_entry.sh /container/
+
+CMD ["/container/container_entry.sh", "pytorch-container", "/container/pytorch_container.py"]
+
+# vim: set filetype=dockerfile:
