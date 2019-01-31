@@ -268,7 +268,7 @@ class DockerContainerManager(ContainerManager):
         self.prometheus_port = all_labels[CLIPPER_DOCKER_PORT_LABELS['metric']]
         self.prom_config_path = all_labels[CLIPPER_METRIC_CONFIG_LABEL]
 
-    def deploy_model(self, name, version, input_type, image, num_replicas=1):
+    def deploy_model(self, name, version, input_type, image, num_replicas=1, gpu=False):
         # Parameters
         # ----------
         # image : str
@@ -276,7 +276,7 @@ class DockerContainerManager(ContainerManager):
         #     registry, the registry name must be prepended to the image. For example,
         #     "localhost:5000/my_model_name:my_model_version" or
         #     "quay.io/my_namespace/my_model_name:my_model_version"
-        self.set_num_replicas(name, version, input_type, image, num_replicas)
+        self.set_num_replicas(name, version, input_type, image, num_replicas, gpu)
 
     def _get_replicas(self, name, version):
         containers = self.docker_client.containers.list(
@@ -294,7 +294,7 @@ class DockerContainerManager(ContainerManager):
     def get_num_replicas(self, name, version):
         return len(self._get_replicas(name, version))
 
-    def _add_replica(self, name, version, input_type, image):
+    def _add_replica(self, name, version, input_type, image, gpu):
 
         containers = self.docker_client.containers.list(
             filters={
@@ -325,12 +325,21 @@ class DockerContainerManager(ContainerManager):
 
         model_container_name = model_container_label + '-{}'.format(
             random.randint(0, 100000))
-        self.docker_client.containers.run(
-            image,
-            name=model_container_name,
-            environment=env_vars,
-            labels=labels,
-            **self.extra_container_kwargs)
+        if not gpu:
+            self.docker_client.containers.run(
+                image,
+                name=model_container_name,
+                environment=env_vars,
+                labels=labels,
+                **self.extra_container_kwargs)
+        else:
+             self.docker_client.containers.run(
+                image,
+                name=model_container_name,
+                environment=env_vars,
+                labels=labels,
+                runtime='nvidia',
+                **self.extra_container_kwargs)
 
         # Metric Section
         add_to_metric_config(model_container_name, self.prom_config_path,
@@ -340,7 +349,7 @@ class DockerContainerManager(ContainerManager):
         # Return model_container_name so we can check if it's up and running later
         return model_container_name
 
-    def set_num_replicas(self, name, version, input_type, image, num_replicas):
+    def set_num_replicas(self, name, version, input_type, image, num_replicas, gpu=False):
         current_replicas = self._get_replicas(name, version)
         if len(current_replicas) < num_replicas:
             num_missing = num_replicas - len(current_replicas)
@@ -355,7 +364,7 @@ class DockerContainerManager(ContainerManager):
             model_container_names = []
             for _ in range(num_missing):
                 container_name = self._add_replica(name, version, input_type,
-                                                   image)
+                                                   image, gpu)
                 model_container_names.append(container_name)
             for name in model_container_names:
                 container = self.docker_client.containers.get(name)

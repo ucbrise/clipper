@@ -291,7 +291,8 @@ class ClipperConnection(object):
                                container_registry=None,
                                num_replicas=1,
                                batch_size=-1,
-                               pkgs_to_install=None):
+                               pkgs_to_install=None,
+                               gpu=False):
         """Build a new model container Docker image with the provided data and deploy it as
         a model to Clipper.
 
@@ -343,6 +344,9 @@ class ClipperConnection(object):
         pkgs_to_install : list (of strings), optional
             A list of the names of packages to install, using pip, in the container.
             The names must be strings.
+        gpu : bool, optional
+            A boolean flag that indicates if the model will be run on a CUDA enabled GPU.
+        
         Raises
         ------
         :py:exc:`clipper.UnconnectedException`
@@ -354,7 +358,7 @@ class ClipperConnection(object):
         image = self.build_model(name, version, model_data_path, base_image,
                                  container_registry, pkgs_to_install)
         self.deploy_model(name, version, input_type, image, labels,
-                          num_replicas, batch_size)
+                          num_replicas, batch_size, gpu)
 
     def build_model(self,
                     name,
@@ -488,7 +492,8 @@ class ClipperConnection(object):
                      image,
                      labels=None,
                      num_replicas=1,
-                     batch_size=-1):
+                     batch_size=-1,
+                     gpu=False):
         """Deploys the model in the provided Docker image to Clipper.
 
         Deploying a model to Clipper does a few things.
@@ -540,6 +545,8 @@ class ClipperConnection(object):
             batches if `batch_size` queries are not immediately available.
             If the default value of -1 is used, Clipper will adaptively calculate the batch size for
             individual replicas of this model.
+        gpu : bool, optional
+            A boolean flag that indicates if the model will be run on a CUDA enabled GPU.
 
         Raises
         ------
@@ -562,7 +569,8 @@ class ClipperConnection(object):
             version=version,
             input_type=input_type,
             image=image,
-            num_replicas=num_replicas)
+            num_replicas=num_replicas,
+            gpu=gpu)
         self.register_model(
             name,
             version,

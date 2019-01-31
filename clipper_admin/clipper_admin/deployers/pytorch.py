@@ -112,7 +112,8 @@ def deploy_pytorch_model(clipper_conn,
                          registry=None,
                          num_replicas=1,
                          batch_size=-1,
-                         pkgs_to_install=None):
+                         pkgs_to_install=None,
+                         gpu=False):
     """Deploy a Python function with a PyTorch model.
 
     Parameters
@@ -156,6 +157,8 @@ def deploy_pytorch_model(clipper_conn,
     pkgs_to_install : list (of strings), optional
         A list of the names of packages to install, using pip, in the container.
         The names must be strings.
+    gpu : bool, optional
+        A boolean flag that indicates if the model will be run on a CUDA enabled GPU.
 
     Example
     -------
@@ -206,33 +209,53 @@ def deploy_pytorch_model(clipper_conn,
         py_minor_version = (sys.version_info.major, sys.version_info.minor)
         # Check if Python 2 or Python 3 image
         if base_image == "default":
-            if py_minor_version < (3, 0):
-                logger.info("Using Python 2 base image")
-                base_image = "{}/pytorch-container:{}".format(
-                    __registry__, __version__)
-            elif py_minor_version == (3, 5):
-                logger.info("Using Python 3.5 base image")
-                base_image = "{}/pytorch35-container:{}".format(
-                    __registry__, __version__)
-            elif py_minor_version == (3, 6):
-                logger.info("Using Python 3.6 base image")
-                base_image = "{}/pytorch36-container:{}".format(
-                    __registry__, __version__)
-            else:
-                msg = (
-                    "PyTorch deployer only supports Python 2.7, 3.5, and 3.6. "
+            if gpu:
+                if py_minor_version < (3, 0):
+                    logger.info("Using Python 2 CUDA 10 base image")
+                    base_image = "{}/cuda10-pytorch27-container:{}".format(
+                            __registry__, __version__)
+                elif py_minor_version == (3, 6):
+                    logger.info("Using Python 3.6 CUDA 10 base image")
+                    base_image = "{}/cuda10-pytorch36-container:{}".format(
+                            __registry__, __version__)
+                else:
+                    msg = (
+                    "CUDA 10 PyTorch deployer only supports Python 2.7 and 3.6. "
                     "Detected {major}.{minor}").format(
                         major=sys.version_info.major,
                         minor=sys.version_info.minor)
-                logger.error(msg)
-                # Remove temp files
-                shutil.rmtree(serialization_dir)
-                raise ClipperException(msg)
+                    logger.error(msg)
+                    # Remove temp files
+                    shutil.rmtree(serialization_dir)
+                    raise ClipperException(msg)
+            else:
+                if py_minor_version < (3, 0):
+                    logger.info("Using Python 2 base image")
+                    base_image = "{}/pytorch-container:{}".format(
+                        __registry__, __version__)
+                elif py_minor_version == (3, 5):
+                    logger.info("Using Python 3.5 base image")
+                    base_image = "{}/pytorch35-container:{}".format(
+                        __registry__, __version__)
+                elif py_minor_version == (3, 6):
+                    logger.info("Using Python 3.6 base image")
+                    base_image = "{}/pytorch36-container:{}".format(
+                        __registry__, __version__)
+                 else:
+                    msg = (
+                        "PyTorch deployer only supports Python 2.7, 3.5, and 3.6. "
+                        "Detected {major}.{minor}").format(
+                            major=sys.version_info.major,
+                            minor=sys.version_info.minor)
+                    logger.error(msg)
+                    # Remove temp files
+                    shutil.rmtree(serialization_dir)
+                    raise ClipperException(msg)
 
         # Deploy model
         clipper_conn.build_and_deploy_model(
             name, version, input_type, serialization_dir, base_image, labels,
-            registry, num_replicas, batch_size, pkgs_to_install)
+            registry, num_replicas, batch_size, pkgs_to_install, gpu)
 
     except Exception as e:
         raise ClipperException("Error saving torch model: %s" % e)
