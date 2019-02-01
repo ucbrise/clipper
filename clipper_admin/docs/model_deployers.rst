@@ -24,7 +24,7 @@ to use.
 .. graphviz::
 
    digraph foo {
-      "Pure Python?" -> "Use python deployer & pkg_to_install arg" [ label="Yes" ];
+      "Pure Python?" -> "Use python deployer & pkgs_to_install arg" [ label="Yes" ];
       "Pure Python?" -> "Does Clipper provide a deployer?" [ label="No" ];
       "Does Clipper provide a deployer?" -> "Use {PyTorch | TensorFlow | PySpark | ...} deployers" [ label="Yes" ];
       "Does Clipper provide a deployer?" -> "Build your own container" [ label="No" ];
