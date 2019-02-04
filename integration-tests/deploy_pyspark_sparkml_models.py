@@ -132,7 +132,7 @@ if __name__ == "__main__":
 
         try:
             clipper_conn.register_application(app_name, "integers",
-                                              "default_pred", 1000000)
+                                              "default_pred", 2000000)
             time.sleep(1)
 
             addr = clipper_conn.get_query_addr()

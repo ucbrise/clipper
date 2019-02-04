@@ -191,7 +191,7 @@ def deploy_tensorflow_model(clipper_conn,
             save_path = saver.save(tf_sess_or_saved_model_path,
                                    tf_sess_save_loc)
         except Exception as e:
-            logger.warn("Error saving Tensorflow model: %s" % e)
+            logger.warning("Error saving Tensorflow model: %s" % e)
             raise e
         logger.info("TensorFlow model saved at: %s " % save_path)
     else:
