@@ -8,6 +8,7 @@ CLIPPER_INTERNAL_MANAGEMENT_PORT = 1338
 CLIPPER_INTERNAL_RPC_PORT = 7000
 CLIPPER_INTERNAL_METRIC_PORT = 1390
 CLIPPER_INTERNAL_REDIS_PORT = 6379
+CLIPPER_INTERNAL_FLUENTD_PORT = 24224
 
 CLIPPER_DOCKER_LABEL = "ai.clipper.container.label"
 CLIPPER_NAME_LABEL = "ai.clipper.name"
@@ -22,7 +23,8 @@ CLIPPER_DOCKER_PORT_LABELS = {
     'query_rest': 'ai.clipper.query_frontend.query.port',
     'query_rpc': 'ai.clipper.query_frontend.rpc.port',
     'management': 'ai.clipper.management.port',
-    'metric': 'ai.clipper.metric.port'
+    'metric': 'ai.clipper.metric.port',
+    'fluentd': 'ai.clipper.fluentd.port'
 }
 CLIPPER_METRIC_CONFIG_LABEL = 'ai.clipper.metric.config'
 

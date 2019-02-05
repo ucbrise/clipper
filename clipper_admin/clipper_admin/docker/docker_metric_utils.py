@@ -38,6 +38,9 @@ def run_query_frontend_metric_image(name, docker_client, query_name,
     docker_client.containers.run(
         frontend_exporter_image,
         query_frontend_metric_cmd,
+        log_config={
+            "type": "fluentd"
+        },
         name=name,
         labels=query_frontend_metric_labels,
         **extra_container_kwargs)
@@ -96,6 +99,9 @@ def run_metric_image(docker_client, common_labels, prometheus_port,
         metric_cmd,
         name="metric_frontend-{}".format(random.randint(0, 100000)),
         ports={'9090/tcp': prometheus_port},
+        log_config={
+            "type": "fluentd"
+        },
         volumes={
             prom_config_path: {
                 'bind': '/etc/prometheus/prometheus.yml',

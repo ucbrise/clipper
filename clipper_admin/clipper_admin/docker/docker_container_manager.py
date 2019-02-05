@@ -16,19 +16,22 @@ from ..container_manager import (
     CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL,
     CLIPPER_MGMT_FRONTEND_CONTAINER_LABEL, CLIPPER_INTERNAL_RPC_PORT,
     CLIPPER_INTERNAL_QUERY_PORT, CLIPPER_INTERNAL_MANAGEMENT_PORT,
-    CLIPPER_INTERNAL_METRIC_PORT, CLIPPER_INTERNAL_REDIS_PORT,
+    CLIPPER_INTERNAL_METRIC_PORT, CLIPPER_INTERNAL_REDIS_PORT, CLIPPER_INTERNAL_FLUENTD_PORT,
     CLIPPER_DOCKER_PORT_LABELS, CLIPPER_METRIC_CONFIG_LABEL, ClusterAdapter)
 from ..exceptions import ClipperException
 from requests.exceptions import ConnectionError
 from .docker_metric_utils import *
+from .docker_logging_utils import run_fluentd_image
 
 logger = logging.getLogger(__name__)
 
 
 class DockerContainerManager(ContainerManager):
+    # SANG-TODO Add SQLITE support
     def __init__(self,
                  cluster_name="default-cluster",
                  docker_ip_address="localhost",
+                 fluentd_port=24224,
                  clipper_query_port=1337,
                  clipper_management_port=1338,
                  clipper_rpc_port=7000,
@@ -47,6 +50,8 @@ class DockerContainerManager(ContainerManager):
             The public hostname or IP address at which the Clipper Docker
             containers can be accessed via their exposed ports. This should almost always
             be "localhost". Only change if you know what you're doing!
+        fluentd_port : int, optional
+            The port on which the fluentd logging driver should listen to centralize logs.
         clipper_query_port : int, optional
             The port on which the query frontend should listen for incoming prediction requests.
         clipper_management_port : int, optional
@@ -70,6 +75,8 @@ class DockerContainerManager(ContainerManager):
         self.cluster_name = cluster_name
         self.cluster_identifier = cluster_name  # For logging purpose
         self.public_hostname = docker_ip_address
+        # SANG-TODO Add SQLITE support
+        self.fluentd_port = fluentd_port
         self.clipper_query_port = clipper_query_port
         self.clipper_management_port = clipper_management_port
         self.clipper_rpc_port = clipper_rpc_port
@@ -110,6 +117,7 @@ class DockerContainerManager(ContainerManager):
             'cluster_name': self.cluster_identifier
         })
 
+    #SANG-TODO Add sqlite support
     def start_clipper(self,
                       query_frontend_image,
                       mgmt_frontend_image,
@@ -147,6 +155,17 @@ class DockerContainerManager(ContainerManager):
                 "Please use ClipperConnection.connect() to connect to it.".
                 format(self.cluster_name))
 
+        # SQLite Logging DB
+
+        # Fluentd for Logging Centralization
+        self.fluentd_port = find_unbound_port(self.fluentd_port)
+        fluentd_labels = self.common_labels.copy()
+        fluentd_labels[CLIPPER_DOCKER_PORT_LABELS['fluentd']] = str(
+            self.fluentd_port)
+        run_fluentd_image(self.docker_client, fluentd_labels,
+                          self.fluend_port, self.extra_container_kwargs)
+
+        # Redis for cluster configuration
         if not self.external_redis:
             self.logger.info("Starting managed Redis instance in Docker")
             self.redis_port = find_unbound_port(self.redis_port)
@@ -156,6 +175,9 @@ class DockerContainerManager(ContainerManager):
             redis_container = self.docker_client.containers.run(
                 'redis:alpine',
                 "redis-server --port %s" % CLIPPER_INTERNAL_REDIS_PORT,
+                log_config={
+                    "type": "fluentd"
+                },
                 name="redis-{}".format(random.randint(
                     0, 100000)),  # generate a random name
                 ports={
@@ -165,6 +187,7 @@ class DockerContainerManager(ContainerManager):
                 **self.extra_container_kwargs)
             self.redis_ip = redis_container.name
 
+        # frontend management
         mgmt_cmd = "--redis_ip={redis_ip} --redis_port={redis_port}".format(
             redis_ip=self.redis_ip, redis_port=CLIPPER_INTERNAL_REDIS_PORT)
         self.clipper_management_port = find_unbound_port(
@@ -176,6 +199,10 @@ class DockerContainerManager(ContainerManager):
         self.docker_client.containers.run(
             mgmt_frontend_image,
             mgmt_cmd,
+            # SANG-TODO log_config shouldn't be always included
+            log_config={
+              "type": "fluentd"
+            },
             name="mgmt_frontend-{}".format(random.randint(
                 0, 100000)),  # generate a random name
             ports={
@@ -185,6 +212,7 @@ class DockerContainerManager(ContainerManager):
             labels=mgmt_labels,
             **self.extra_container_kwargs)
 
+        # query frontend
         query_cmd = ("--redis_ip={redis_ip} --redis_port={redis_port} "
                      "--prediction_cache_size={cache_size}").format(
                          redis_ip=self.redis_ip,
@@ -204,6 +232,9 @@ class DockerContainerManager(ContainerManager):
         self.docker_client.containers.run(
             query_frontend_image,
             query_cmd,
+            log_config={
+                "type": "fluentd"
+            },
             name=query_name,
             ports={
                 '%s/tcp' % CLIPPER_INTERNAL_QUERY_PORT:
