@@ -1,5 +1,7 @@
 import random
 
+from ..container_manager import CLIPPER_INTERNAL_FLUENTD_PORT
+
 FLUENTD_VERSION = 'v1.3-debian-1'
 
 
@@ -15,12 +17,13 @@ def run_fluentd_image(docker_client, fluentd_labels, fluend_port, extra_containe
         fluentd_cmd,
         name=fluentd_name,
         port={
-            '%s/tcp' % fluend_port: fluend_port,
-            '%s/udp' % fluend_port: fluend_port
+            '%s/tcp' % CLIPPER_INTERNAL_FLUENTD_PORT: fluend_port,
+            '%s/udp' % CLIPPER_INTERNAL_FLUENTD_PORT: fluend_port
         },
         labels=fluentd_labels,
         detach=True,
         **extra_container_kwargs)
+
 
 class FluentdConfig:
     """

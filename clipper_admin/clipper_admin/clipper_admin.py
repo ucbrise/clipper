@@ -132,6 +132,7 @@ class ClipperConnection(object):
                         host=self.cm.get_admin_addr())
                     for name, url in [('query frontend', query_frontend_url), 
                                      ('management frontend', mgmt_frontend_url)]:
+                        print('{}: {}'.format(name, url))
                         r = requests.get(url, timeout=5)
                         if r.status_code != requests.codes.ok:
                             raise RequestException(
