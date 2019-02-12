@@ -36,6 +36,7 @@ class DockerContainerManager(ContainerManager):
                  redis_port=6379,
                  prometheus_port=9090,
                  docker_network="clipper_network",
+                 gpu=False,
                  extra_container_kwargs={}):
         """
         Parameters
@@ -63,6 +64,8 @@ class DockerContainerManager(ContainerManager):
             The docker network to attach the containers to. You can read more about Docker
             networking in the
             `Docker User Guide <https://docs.docker.com/engine/userguide/networking/>`_.
+        gpu : boolean, optional
+            A boolean flag that indicates if the models will be run on a CUDA enabled GPU.
         extra_container_kwargs : dict
             Any additional keyword arguments to pass to the call to
             :py:meth:`docker.client.containers.run`.
@@ -74,6 +77,7 @@ class DockerContainerManager(ContainerManager):
         self.clipper_management_port = clipper_management_port
         self.clipper_rpc_port = clipper_rpc_port
         self.redis_ip = redis_ip
+        self.gpu = gpu
         if redis_ip is None:
             self.external_redis = False
         else:
@@ -325,12 +329,21 @@ class DockerContainerManager(ContainerManager):
 
         model_container_name = model_container_label + '-{}'.format(
             random.randint(0, 100000))
-        self.docker_client.containers.run(
-            image,
-            name=model_container_name,
-            environment=env_vars,
-            labels=labels,
-            **self.extra_container_kwargs)
+        if not self.gpu:
+            self.docker_client.containers.run(
+                image,
+                name=model_container_name,
+                environment=env_vars,
+                labels=labels,
+                **self.extra_container_kwargs)
+        else:
+            self.docker_client.containers.run(
+                image,
+                name=model_container_name,
+                environment=env_vars,
+                labels=labels,
+                runtime='nvidia',
+                **self.extra_container_kwargs)
 
         # Metric Section
         add_to_metric_config(model_container_name, self.prom_config_path,
