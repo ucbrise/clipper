@@ -16,12 +16,11 @@ def run_fluentd_image(docker_client, fluentd_labels, fluend_port, extra_containe
         fluentd_img,
         fluentd_cmd,
         name=fluentd_name,
-        port={
+        ports={
             '%s/tcp' % CLIPPER_INTERNAL_FLUENTD_PORT: fluend_port,
             '%s/udp' % CLIPPER_INTERNAL_FLUENTD_PORT: fluend_port
         },
         labels=fluentd_labels,
-        detach=True,
         **extra_container_kwargs)
 
 

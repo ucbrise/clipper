@@ -31,7 +31,7 @@ class DockerContainerManager(ContainerManager):
     def __init__(self,
                  cluster_name="default-cluster",
                  docker_ip_address="localhost",
-                 centralize_log=False,
+                 use_centralized_log=False,
                  fluentd_port=24224,
                  clipper_query_port=1337,
                  clipper_management_port=1338,
@@ -51,7 +51,7 @@ class DockerContainerManager(ContainerManager):
             The public hostname or IP address at which the Clipper Docker
             containers can be accessed via their exposed ports. This should almost always
             be "localhost". Only change if you know what you're doing!
-        centralize_log: bool, optional
+        use_centralized_log: bool, optional
             If it is True, Clipper sets up Fluentd and DB (Currently SQlite) to centralize logs
         fluentd_port : int, optional
             The port on which the fluentd logging driver should listen to centralize logs.
@@ -115,8 +115,8 @@ class DockerContainerManager(ContainerManager):
         }
 
         # Logging centralization args. Currently, fluentd is used to centralize logs
-        self.centralize_log = centralize_log
-        self.log_config = {'type': 'fluentd'} if centralize_log \
+        self.centralize_log = use_centralized_log
+        self.log_config = {'type': 'fluentd'} if use_centralized_log \
             else {'type': 'json-file'}
 
         self.extra_container_kwargs.update(container_args)
@@ -167,12 +167,13 @@ class DockerContainerManager(ContainerManager):
             # SQLite Logging DB
 
             # Fluentd for Logging Centralization
+            self.logger.info("Starting Fluentd instance in Docker")
             self.fluentd_port = find_unbound_port(self.fluentd_port)
             fluentd_labels = self.common_labels.copy()
             fluentd_labels[CLIPPER_DOCKER_PORT_LABELS['fluentd']] = str(
                 self.fluentd_port)
             run_fluentd_image(self.docker_client, fluentd_labels,
-                              self.fluend_port, self.extra_container_kwargs)
+                              self.fluentd_port, self.extra_container_kwargs)
 
         # Redis for cluster configuration
         if not self.external_redis:
@@ -184,7 +185,7 @@ class DockerContainerManager(ContainerManager):
             redis_container = self.docker_client.containers.run(
                 'redis:alpine',
                 "redis-server --port %s" % CLIPPER_INTERNAL_REDIS_PORT,
-                #log_config=self.log_config,
+                log_config=self.log_config,
                 name="redis-{}".format(random.randint(
                     0, 100000)),  # generate a random name
                 ports={
@@ -207,7 +208,7 @@ class DockerContainerManager(ContainerManager):
             mgmt_frontend_image,
             mgmt_cmd,
             # SANG-TODO log_config shouldn't be always included
-            #log_config=self.log_config,
+            log_config=self.log_config,
             name="mgmt_frontend-{}".format(random.randint(
                 0, 100000)),  # generate a random name
             ports={
@@ -237,7 +238,7 @@ class DockerContainerManager(ContainerManager):
         self.docker_client.containers.run(
             query_frontend_image,
             query_cmd,
-            #log_config=self.log_config,
+            log_config=self.log_config,
             name=query_name,
             ports={
                 '%s/tcp' % CLIPPER_INTERNAL_QUERY_PORT:
@@ -253,7 +254,7 @@ class DockerContainerManager(ContainerManager):
         run_query_frontend_metric_image(
             query_frontend_metric_name, self.docker_client, query_name,
             frontend_exporter_image, self.common_labels,
-            self.extra_container_kwargs)
+            self.log_config, self.extra_container_kwargs)
 
         self.prom_config_path = tempfile.NamedTemporaryFile(
             'w', suffix='.yml', delete=False).name
@@ -271,7 +272,7 @@ class DockerContainerManager(ContainerManager):
         metric_labels[CLIPPER_METRIC_CONFIG_LABEL] = self.prom_config_path
         run_metric_image(self.docker_client, metric_labels,
                          self.prometheus_port, self.prom_config_path,
-                         self.extra_container_kwargs)
+                         self.log_config, self.extra_container_kwargs)
 
         self.connect()
 
