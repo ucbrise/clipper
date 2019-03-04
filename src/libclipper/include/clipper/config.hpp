@@ -10,6 +10,8 @@
 // TODO: Change the name of this file.
 namespace clipper {
 
+const std::string DEFAULT_RUNTIME_CONF("localhost");
+
 const std::string DEFAULT_REDIS_ADDRESS("localhost");
 constexpr int DEFAULT_REDIS_PORT = 6379;
 constexpr long DEFAULT_PREDICTION_CACHE_SIZE_BYTES = 33554432;  // 32 MiB

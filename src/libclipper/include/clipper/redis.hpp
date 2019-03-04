@@ -124,8 +124,19 @@ boost::optional<std::string> get_current_model_version(
  * calculate it adaptively.
  * \return Returns true if the add was successful.
  */
+
+
 bool add_model(redox::Redox& redis, const VersionedModelId& model_id,
                const InputType& input_type,
+               const std::vector<std::string>& labels,
+               const std::string& container_name,
+               const std::string& model_data_path, int batch_size);
+               
+
+// simon
+bool add_model_(redox::Redox& redis, const VersionedModelId& model_id,
+               const InputType& input_type,
+               const OutputType& output_type,
                const std::vector<std::string>& labels,
                const std::string& container_name,
                const std::string& model_data_path, int batch_size);
@@ -197,6 +208,30 @@ std::vector<VersionedModelId> get_all_models(redox::Redox& redis);
  */
 std::vector<std::string> get_linked_models(redox::Redox& redis,
                                            const std::string& app_name);
+
+
+/**
+ * Model instances:
+ *   Each model can have multiple instances, 
+ *   for each model deployment, we assume at least one instance is launched;
+ *   for each instance deployment, we assume exactly one proxy is launched right 
+ *   at the same host.
+ */
+
+/**
+ * Add instances for a model
+ */
+//simon
+bool add_instance(redox::Redox& redis, const VersionedModelId& model_id,
+                const std::string& host,
+                const std::string& instance_name,
+                const std::string& proxy_name);
+//simon
+bool delete_instance(redox::Redxo& redis, const VersionedModelId& model_id, 
+                const std::string &host, 
+                const std::string& container_name);
+
+
 
 /**
  * Adds a container into the container table. This will
@@ -271,6 +306,16 @@ bool add_application(redox::Redox& redis, const std::string& app_name,
                      const InputType& input_type, const std::string& policy,
                      const std::string& default_output,
                      const long latency_slo_micros);
+/**
+ * spidery's application
+ */
+//simon
+bool add_application_(redox::Redox& redis, const std::string& app_name,
+                     const InputType& input_type, 
+                     const OutputType& output_type, 
+                     const std::string& policy,
+                     const std::string& default_output,
+                     const long latency_slo_micros);
 
 /**
  * Adds links between the specified app and models. This will not
@@ -280,6 +325,15 @@ bool add_application(redox::Redox& redis, const std::string& app_name,
  */
 bool add_model_links(redox::Redox& redis, const std::string& app_name,
                      const std::vector<std::string>& model_names);
+
+/**
+ * Add link between application and model DAG. This will not overwrite existing 
+ * links 
+ * 
+ */ 
+//simon
+bool add_appliation_dag(redox::Redox& redis, const std::string& app_name, 
+                    const ModelDAG& model_dag);
 
 /**
  * Deletes a container from the container table if it exists.

@@ -10,6 +10,8 @@ int main(int argc, char* argv[]) {
                            "Clipper query processing frontend");
   // clang-format off
   options.add_options()
+    ("runtime_conf", "Config file address of runtimes(each machine has one runtime)",
+        cxxopts::value<std::string>()->default_value(clipper::DEFAULT_RUNTIME_CONF))
     ("redis_ip", "Redis address",
         cxxopts::value<std::string>()->default_value(clipper::DEFAULT_REDIS_ADDRESS))
     ("redis_port", "Redis port",

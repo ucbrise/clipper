@@ -229,7 +229,7 @@ std::vector<std::string> get_linked_models(redox::Redox& redis,
 }
 
 bool add_model(Redox& redis, const VersionedModelId& model_id,
-               const InputType& input_type, const std::vector<string>& labels,
+               const InputType& input_type,const OutputType& output_type, const std::vector<string>& labels,
                const std::string& container_name,
                const std::string& model_data_path, int batch_size) {
   if (send_cmd_no_reply<string>(
@@ -252,6 +252,35 @@ bool add_model(Redox& redis, const VersionedModelId& model_id,
     return false;
   }
 }
+
+
+
+bool add_model_(Redox& redis, const VersionedModelId& model_id,
+               const InputType& input_type,const OutputType& output_type, const std::vector<string>& labels,
+               const std::string& container_name,
+               const std::string& model_data_path, int batch_size) {
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
+    std::string model_id_key = gen_versioned_model_key(model_id);
+    // clang-format off
+    const std::vector<std::string> cmd_vec{
+      "HMSET",            model_id_key,
+      "model_name",       model_id.get_name(),
+      "model_version",    model_id.get_id(),
+      "load",             std::to_string(0.0),
+      "input_type",       get_readable_input_type(input_type),
+      "output_type",      get_readable_input_type(outtput_type),
+      "labels",           labels_to_str(labels),
+      "container_name",   container_name,
+      "model_data_path",  model_data_path,
+      "batch_size", std::to_string(batch_size)};
+    // clang-format on
+    return send_cmd_no_reply<string>(redis, cmd_vec);
+  } else {
+    return false;
+  }
+}
+
 
 std::unordered_map<std::string, std::string> get_model_by_key(
     redox::Redox& redis, const std::string& key) {
@@ -592,6 +621,9 @@ void subscribe_to_model_version_changes(
   subscribe_to_keyspace_changes(REDIS_METADATA_DB_NUM, VERSION_METADATA_PREFIX,
                                 subscriber, std::move(callback));
 }
+
+
+
 
 }  // namespace redis
 }  // namespace clipper

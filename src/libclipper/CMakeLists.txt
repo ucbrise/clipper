@@ -29,7 +29,7 @@ target_include_directories(clipper PUBLIC
 
 target_link_libraries(clipper boost folly zmqcpp redox pthread rapidjson spdlog base64 cqueue cityhash dlib)
 
-add_executable(libclippertests EXCLUDE_FROM_ALL
+add_executable(libclippertests #EXCLUDE_FROM_ALL
     test/test_main.cpp
     test/threadpool_test.cpp
     test/container_test.cpp
