@@ -1,2 +1,2 @@
-# Clipper Logging Architecture with Fluentd
+# Clipper Logging with Fluentd
 

@@ -27,6 +27,7 @@ CLIPPER_DOCKER_PORT_LABELS = {
     'fluentd': 'ai.clipper.fluentd.port'
 }
 CLIPPER_METRIC_CONFIG_LABEL = 'ai.clipper.metric.config'
+CLIPPER_FLUENTD_CONFIG_LABEL = 'ai.clipper.fluentd.config'
 
 # NOTE: we use '_' as the delimiter because kubernetes allows the use
 # '_' in labels but not in deployment names. We force model names and

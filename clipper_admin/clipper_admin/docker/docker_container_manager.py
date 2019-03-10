@@ -17,17 +17,18 @@ from ..container_manager import (
     CLIPPER_MGMT_FRONTEND_CONTAINER_LABEL, CLIPPER_INTERNAL_RPC_PORT,
     CLIPPER_INTERNAL_QUERY_PORT, CLIPPER_INTERNAL_MANAGEMENT_PORT,
     CLIPPER_INTERNAL_METRIC_PORT, CLIPPER_INTERNAL_REDIS_PORT,
-    CLIPPER_DOCKER_PORT_LABELS, CLIPPER_METRIC_CONFIG_LABEL, ClusterAdapter)
+    CLIPPER_DOCKER_PORT_LABELS, CLIPPER_METRIC_CONFIG_LABEL, ClusterAdapter,
+    CLIPPER_FLUENTD_CONFIG_LABEL)
 from ..exceptions import ClipperException
 from requests.exceptions import ConnectionError
 from .docker_metric_utils import *
-from .docker_logging_utils import run_fluentd_image
+from .docker_logging_utils import run_fluentd_image, FluentdConfig
 
 logger = logging.getLogger(__name__)
 
 
 class DockerContainerManager(ContainerManager):
-    # SANG-TODO Add SQLITE support
+    # Logging-TODO Add SQLITE support
     def __init__(self,
                  cluster_name="default-cluster",
                  docker_ip_address="localhost",
@@ -78,7 +79,7 @@ class DockerContainerManager(ContainerManager):
         self.cluster_name = cluster_name
         self.cluster_identifier = cluster_name  # For logging purpose
         self.public_hostname = docker_ip_address
-        # SANG-TODO Add SQLITE support
+        # Logging-TODO Add SQLITE support
         self.fluentd_port = fluentd_port
         self.clipper_query_port = clipper_query_port
         self.clipper_management_port = clipper_management_port
@@ -118,6 +119,7 @@ class DockerContainerManager(ContainerManager):
         self.centralize_log = use_centralized_log
         self.log_config = {'type': 'fluentd'} if use_centralized_log \
             else {'type': 'json-file'}
+        self.fluentd_conf_path = None
 
         self.extra_container_kwargs.update(container_args)
 
@@ -125,7 +127,7 @@ class DockerContainerManager(ContainerManager):
             'cluster_name': self.cluster_identifier
         })
 
-    #SANG-TODO Add sqlite support
+    #Logging-TODO Add sqlite support
     def start_clipper(self,
                       query_frontend_image,
                       mgmt_frontend_image,
@@ -164,16 +166,9 @@ class DockerContainerManager(ContainerManager):
                 format(self.cluster_name))
 
         if self.centralize_log:
-            # SQLite Logging DB
-
+            # Logging-TODO Initialize SQLite Logging DB
             # Fluentd for Logging Centralization
-            self.logger.info("Starting Fluentd instance in Docker")
-            self.fluentd_port = find_unbound_port(self.fluentd_port)
-            fluentd_labels = self.common_labels.copy()
-            fluentd_labels[CLIPPER_DOCKER_PORT_LABELS['fluentd']] = str(
-                self.fluentd_port)
-            run_fluentd_image(self.docker_client, fluentd_labels,
-                              self.fluentd_port, self.extra_container_kwargs)
+            self.start_fluentd()
 
         # Redis for cluster configuration
         if not self.external_redis:
@@ -207,7 +202,6 @@ class DockerContainerManager(ContainerManager):
         self.docker_client.containers.run(
             mgmt_frontend_image,
             mgmt_cmd,
-            # SANG-TODO log_config shouldn't be always included
             log_config=self.log_config,
             name="mgmt_frontend-{}".format(random.randint(
                 0, 100000)),  # generate a random name
@@ -302,7 +296,11 @@ class DockerContainerManager(ContainerManager):
             'query_rpc']]
         self.prometheus_port = all_labels[CLIPPER_DOCKER_PORT_LABELS['metric']]
         self.prom_config_path = all_labels[CLIPPER_METRIC_CONFIG_LABEL]
-        # SANG-TODO Add a Fluentd Support
+
+        if self.centralize_log:
+            self.fluentd_conf_path = all_labels[CLIPPER_FLUENTD_CONFIG_LABEL]
+            self.fluentd_port = all_labels[CLIPPER_DOCKER_PORT_LABELS['fluentd']]
+        # Logging-TODO Add a Sqlite support
 
     def deploy_model(self, name, version, input_type, image, num_replicas=1):
         # Parameters
@@ -361,7 +359,7 @@ class DockerContainerManager(ContainerManager):
 
         model_container_name = model_container_label + '-{}'.format(
             random.randint(0, 100000))
-        # TODO SANG - Add fluentd support
+
         self.docker_client.containers.run(
             image,
             name=model_container_name,
@@ -492,6 +490,24 @@ class DockerContainerManager(ContainerManager):
     def get_metric_addr(self):
         return "{host}:{port}".format(
             host=self.public_hostname, port=self.prometheus_port)
+
+    def start_fluentd(self):
+        self.logger.info("Starting Fluentd instance in Docker cluster {cluster_name}"
+                         .format(cluster_name=self.cluster_name))
+        self.fluentd_port = find_unbound_port(self.fluentd_port)
+        fluentd_labels = self.common_labels.copy()
+
+        self.fluentd_conf_path = FluentdConfig().build()
+        fluentd_labels[CLIPPER_FLUENTD_CONFIG_LABEL] = self.fluentd_conf_path
+        fluentd_labels[CLIPPER_DOCKER_PORT_LABELS['fluentd']] = str(self.fluentd_port)
+
+        self.logger.info(
+            "Fluentd Configuration Saved at {path}. "
+            "It will be mounted at {mounted_path} inside container"
+                .format(path=self.fluentd_conf_path, mounted_path=FluentdConfig.get_conf_path_within_docker()))
+
+        run_fluentd_image(self.docker_client, fluentd_labels,
+                          self.fluentd_port, self.fluentd_conf_path, self.extra_container_kwargs)
 
 
 def find_unbound_port(start=None,
