@@ -38,7 +38,7 @@ If start_clipper() is stuck at this logs, try `pip install -U cloudpickle==0.5.3
 18-05-21:12:20:02 INFO     [docker_container_manager.py:247] Found 0 replicas for sum-model:1. Adding 1
 ```
 
-It is mostly because of cloudpickle dependency version issue. You may see this error logs from model container docker log. 
+It is because of cloudpickle dependency version issue. You may see this error logs from model container docker log. 
 ```
 $ docker logs 439ba722d79a # model container logs. For this example, it will be simple-example model container
 Starting Python Closure container
@@ -55,7 +55,7 @@ Traceback (most recent call last):
 TypeError: 'str' object does not support item assignment
 ```
 
-Please report an issue if you have another problem when running basic_query example
+Please report an issue if you have another problem when running basic_query example.
 
 # Code explanation
 
