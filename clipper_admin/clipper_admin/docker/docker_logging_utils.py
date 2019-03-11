@@ -47,7 +47,7 @@ class FluentdConfig:
     """
     def __init__(self, customized_conf_file=False):
         """
-        @param customized_conf_file: Decide whether or not to provide customized configuration file.
+        :param customized_conf_file: Decide whether or not to provide customized configuration file.
                 If false, it will use clipper default conf file
         """
         self.conf = self.get_base_config()
@@ -58,7 +58,7 @@ class FluentdConfig:
         Set the port number and address of external fluentd instance (internal is the clipper fluentd)
         in which centralized logs will be forwarded
 
-        @param port: port number to forward logs
+        :param port: port number to forward logs
         """
         raise NotImplementedError("set_forward_address is not implemented yet. It will be coming soon.")
 
@@ -85,7 +85,7 @@ class FluentdConfig:
         TODO: Interface for providing customized fluentd file
                 instead of building a file using default fluentd conf file.
 
-        @return: Path of fluentd config file that will be sync with Docker container.
+        :return: Path of fluentd config file that will be sync with Docker container.
         """
         if self._file_path is None \
                 or not os.path.isfile(self._file_path):
