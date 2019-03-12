@@ -1,6 +1,6 @@
-requests==2.18.4
+requests>=2.20.0
+pyyaml>=4.2b1
 subprocess32==3.2.7
-pyyaml==3.12
 docker==2.5.1
 kubernetes==6.0.0
 mock
