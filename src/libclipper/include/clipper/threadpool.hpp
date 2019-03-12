@@ -49,8 +49,9 @@ class ThreadSafeQueue {
    * Returns true if a value was successfully written to the out parameter,
    * false otherwise.
    */
-  bool wait_pop(T& out) {
+  bool wait_pop(T& out, boost::shared_lock<boost::shared_mutex>& queues_l) {
     std::unique_lock<std::mutex> lock{mutex_};
+    queues_l.unlock();
     condition_.wait(lock, [this]() { return !queue_.empty() || !valid_; });
     /*
      * Using the condition in the predicate ensures that spurious wakeups with a
@@ -215,7 +216,7 @@ class ThreadPool {
       {
         boost::shared_lock<boost::shared_mutex> l(queues_mutex_);
         if (is_block_worker) {
-          work_to_do = queues_[worker_id].wait_pop(pTask);
+          work_to_do = queues_[worker_id].wait_pop(pTask, l);
         } else {
           // NOTE: The use of try_pop here means the worker will spin instead of
           // block while waiting for work. This is intentional. We defer to the
@@ -392,7 +393,7 @@ inline auto submit_job(Func&& func, Args&&... args) {
 }
 
 inline void create_queue(VersionedModelId vm, int replica_id) {
-  get_thread_pool().create_queue(vm, replica_id, false);
+  get_thread_pool().create_queue(vm, replica_id, true);
 }
 
 }  // namespace EstimatorFittingThreadPool

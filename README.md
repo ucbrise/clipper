@@ -29,6 +29,11 @@ Clipper is a prediction serving system that sits between user-facing application
 > This quickstart requires [Docker](https://www.docker.com/) and supports Python 2.7, 3.5, and 3.6.
 
 
+#### Clipper Example Code
+* Basic query: https://github.com/ucbrise/clipper/tree/develop/examples/basic_query
+* Image query: https://github.com/ucbrise/clipper/tree/develop/examples/image_query
+
+* Examples including metrics: https://github.com/ucbrise/clipper/tree/develop/examples
 #### Start a Clipper Instance and Deploy a Model
 
 __Install Clipper__
@@ -54,7 +59,6 @@ $ python
 $ conda install ipython
 $ ipython
 ```
-
 
 Create a `ClipperConnection` object and start Clipper. Running this command for the first time will
 download several Docker containers, so it may take some time.
@@ -128,6 +132,44 @@ Solving package specifications: .
 17-08-30:16:00:07 INFO     [docker_container_manager.py:204] Found 0 replicas for sum-model:1. Adding 1
 17-08-30:16:00:07 INFO     [clipper_admin.py:519] Successfully registered model sum-model:1
 17-08-30:16:00:07 INFO     [clipper_admin.py:447] Done deploying model sum-model:1.
+```
+
+__Possible Error__
+If start_clipper() is stuck at this logs, try `pip install -U cloudpickle==0.5.3`
+```
+18-05-21:12:19:59 INFO     [deployer_utils.py:44] Saving function to /tmp/clipper/tmpx6d_zqeq
+18-05-21:12:19:59 INFO     [deployer_utils.py:54] Serialized and supplied predict function
+18-05-21:12:19:59 INFO     [python.py:192] Python closure saved
+18-05-21:12:19:59 INFO     [python.py:206] Using Python 3.6 base image
+18-05-21:12:19:59 INFO     [clipper_admin.py:451] Building model Docker image with model data from /tmp/clipper/tmpx6d_zqeq
+18-05-21:12:20:00 INFO     [clipper_admin.py:455] {'stream': 'Step 1/2 : FROM clipper/python36-closure-container:develop'}
+18-05-21:12:20:00 INFO     [clipper_admin.py:455] {'stream': '\n'}
+18-05-21:12:20:00 INFO     [clipper_admin.py:455] {'stream': ' ---> 1aaddfa3945e\n'}
+18-05-21:12:20:00 INFO     [clipper_admin.py:455] {'stream': 'Step 2/2 : COPY /tmp/clipper/tmpx6d_zqeq /model/'}
+18-05-21:12:20:00 INFO     [clipper_admin.py:455] {'stream': '\n'}
+18-05-21:12:20:00 INFO     [clipper_admin.py:455] {'stream': ' ---> b7c29f531d2e\n'}
+18-05-21:12:20:00 INFO     [clipper_admin.py:455] {'aux': {'ID': 'sha256:b7c29f531d2eaf59dd39579dbe512538be398dcb5fdd182db14e4d58770d2055'}}
+18-05-21:12:20:00 INFO     [clipper_admin.py:455] {'stream': 'Successfully built b7c29f531d2e\n'}
+18-05-21:12:20:00 INFO     [clipper_admin.py:455] {'stream': 'Successfully tagged sum-model:1\n'}
+18-05-21:12:20:00 INFO     [clipper_admin.py:457] Pushing model Docker image to sum-model:1
+18-05-21:12:20:02 INFO     [docker_container_manager.py:247] Found 0 replicas for sum-model:1. Adding 1
+```
+
+It is because of cloudpickle dependency version issue. You may see this error logs from model container docker log. 
+```
+$ docker logs 439ba722d79a # model container logs. For this example, it will be simple-example model container
+Starting Python Closure container
+Connecting to Clipper with default port: 7000
+Traceback (most recent call last):
+  File "/container/python_closure_container.py", line 56, in <module>
+    rpc_service.get_input_type())
+  File "/container/python_closure_container.py", line 28, in __init__
+    self.predict_func = load_predict_func(predict_path)
+  File "/container/python_closure_container.py", line 17, in load_predict_func
+    return cloudpickle.load(serialized_func_file)
+  File "/usr/local/lib/python3.6/site-packages/cloudpickle/cloudpickle.py", line 1060, in _make_skel_func
+    base_globals['__builtins__'] = __builtins__
+TypeError: 'str' object does not support item assignment
 ```
 
 Tell Clipper to route requests for the "hello-world" application to the "sum-model"
