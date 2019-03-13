@@ -14,6 +14,13 @@ enum RedisDBTable {
   REDIS_APPLICATION_DB_NUM = 5,
   REDIS_METADATA_DB_NUM = 6,  // used to store Clipper configuration metadata
   REDIS_APP_MODEL_LINKS_DB_NUM = 7,
+  REDIS_STATE_DB_NUM_ = 11,
+  REDIS_MODEL_DB_NUM_ = 12,
+  REDIS_CONTAINER_DB_NUM_ = 13,
+  REDIS_RESOURCE_DB_NUM_ = 14,
+  REDIS_APPLICATION_DB_NUM_ = 15,
+  REDIS_METADATA_DB_NUM_ = 16,  // used to store Clipper configuration metadata
+  REDIS_APP_MODEL_LINKS_DB_NUM_ = 17,
 };
 
 constexpr int RPC_SERVICE_PORT = 7000;

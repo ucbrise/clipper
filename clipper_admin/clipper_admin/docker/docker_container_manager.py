@@ -214,30 +214,30 @@ class DockerContainerManager(ContainerManager):
             **self.extra_container_kwargs)
 
         # Metric Section
-        query_frontend_metric_name = "query_frontend_exporter-{}".format(
-            query_container_id)
-        run_query_frontend_metric_image(
-            query_frontend_metric_name, self.docker_client, query_name,
-            frontend_exporter_image, self.common_labels,
-            self.extra_container_kwargs)
+        #query_frontend_metric_name = "query_frontend_exporter-{}".format(
+        #    query_container_id)
+        #run_query_frontend_metric_image(
+        #    query_frontend_metric_name, self.docker_client, query_name,
+        #    frontend_exporter_image, self.common_labels,
+        #    self.extra_container_kwargs)
 
-        self.prom_config_path = tempfile.NamedTemporaryFile(
-            'w', suffix='.yml', delete=False).name
-        self.prom_config_path = os.path.realpath(
-            self.prom_config_path)  # resolve symlink
-        self.logger.info("Metric Configuration Saved at {path}".format(
-            path=self.prom_config_path))
-        setup_metric_config(query_frontend_metric_name, self.prom_config_path,
-                            CLIPPER_INTERNAL_METRIC_PORT)
+        #self.prom_config_path = tempfile.NamedTemporaryFile(
+        #    'w', suffix='.yml', delete=False).name
+        #self.prom_config_path = os.path.realpath(
+        #    self.prom_config_path)  # resolve symlink
+        #self.logger.info("Metric Configuration Saved at {path}".format(
+        #    path=self.prom_config_path))
+        #setup_metric_config(query_frontend_metric_name, self.prom_config_path,
+        #                    CLIPPER_INTERNAL_METRIC_PORT)
 
-        self.prometheus_port = find_unbound_port(self.prometheus_port)
-        metric_labels = self.common_labels.copy()
-        metric_labels[CLIPPER_DOCKER_PORT_LABELS['metric']] = str(
-            self.prometheus_port)
-        metric_labels[CLIPPER_METRIC_CONFIG_LABEL] = self.prom_config_path
-        run_metric_image(self.docker_client, metric_labels,
-                         self.prometheus_port, self.prom_config_path,
-                         self.extra_container_kwargs)
+        #self.prometheus_port = find_unbound_port(self.prometheus_port)
+        #metric_labels = self.common_labels.copy()
+        #metric_labels[CLIPPER_DOCKER_PORT_LABELS['metric']] = str(
+        #    self.prometheus_port)
+        #metric_labels[CLIPPER_METRIC_CONFIG_LABEL] = self.prom_config_path
+        #run_metric_image(self.docker_client, metric_labels,
+        #                 self.prometheus_port, self.prom_config_path,
+        #                 self.extra_container_kwargs)
 
         self.connect()
 
@@ -265,7 +265,7 @@ class DockerContainerManager(ContainerManager):
             'query_rest']]
         self.clipper_rpc_port = all_labels[CLIPPER_DOCKER_PORT_LABELS[
             'query_rpc']]
-        self.prometheus_port = all_labels[CLIPPER_DOCKER_PORT_LABELS['metric']]
+        #self.prometheus_port = all_labels[CLIPPER_DOCKER_PORT_LABELS['metric']]
         self.prom_config_path = all_labels[CLIPPER_METRIC_CONFIG_LABEL]
 
     def deploy_model(self, name, version, input_type, image, num_replicas=1):
@@ -332,10 +332,16 @@ class DockerContainerManager(ContainerManager):
             labels=labels,
             **self.extra_container_kwargs)
 
+
+
+        #Start Proxy
+
+        
+
         # Metric Section
-        add_to_metric_config(model_container_name, self.prom_config_path,
-                             self.prometheus_port,
-                             CLIPPER_INTERNAL_METRIC_PORT)
+        #add_to_metric_config(model_container_name, self.prom_config_path,
+        #                     self.prometheus_port,
+        #                     CLIPPER_INTERNAL_METRIC_PORT)
 
         # Return model_container_name so we can check if it's up and running later
         return model_container_name
@@ -452,9 +458,9 @@ class DockerContainerManager(ContainerManager):
         return "{host}:{port}".format(
             host=self.public_hostname, port=self.clipper_query_port)
 
-    def get_metric_addr(self):
-        return "{host}:{port}".format(
-            host=self.public_hostname, port=self.prometheus_port)
+    #def get_metric_addr(self):
+    #    return "{host}:{port}".format(
+    #        host=self.public_hostname, port=self.prometheus_port)
 
 
 def find_unbound_port(start=None,
