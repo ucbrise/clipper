@@ -50,7 +50,7 @@ class FluentdConfig:
         :param customized_conf_file: Decide whether or not to provide customized configuration file.
                 If false, it will use clipper default conf file
         """
-        self.conf = self.get_base_config()
+        self.conf = self.base_config
         self._file_path = self.build_temp_file()
 
     def set_forward_address(self, address, port):
@@ -82,16 +82,15 @@ class FluentdConfig:
         Developers can customize conf file written in the self.file_path using defined interfaces.
 
         TODO: Interfaces for modifying fluentd config file.
-        TODO: Interface for providing customized fluentd file
-                instead of building a file using default fluentd conf file.
+        TODO: Interfaces for providing customized fluentd file
 
-        :return: Path of fluentd config file that will be sync with Docker container.
+        :return: Path of fluentd config file in which Fluentd container mounts on.
         """
         if self._file_path is None \
                 or not os.path.isfile(self._file_path):
             self._file_path = self.build_temp_file()
 
-        # Logging-TODO Currently, it copies the default conf from clipper_fluentd.conf.
+        # Logging-TODO: Currently, it copies the default conf from clipper_fluentd.conf.
         #               We need a way to customize it.
         with open(FLUENTD_DEFAULT_CONF_PATH, 'r') as default_conf_file:
             with open(self._file_path, 'w') as fleutnd_conf:
@@ -101,16 +100,16 @@ class FluentdConfig:
         return self._file_path
 
     @property
-    def get_temp_file_path(self):
+    def temp_file_path(self):
         return self._file_path
 
-    @staticmethod
-    def get_base_config(self):
-        return {}
-
-    @staticmethod
-    def get_conf_path_within_docker():
+    @property
+    def conf_path_within_docker(self):
         return FLUENTD_CONF_PATH_IN_DOCKER
+
+    @property
+    def base_config(self):
+        return {}
 
     @staticmethod
     def build_temp_file():

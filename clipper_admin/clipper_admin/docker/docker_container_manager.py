@@ -504,7 +504,7 @@ class DockerContainerManager(ContainerManager):
         self.logger.info(
             "Fluentd Configuration Saved at {path}. "
             "It will be mounted at {mounted_path} inside container"
-                .format(path=self.fluentd_conf_path, mounted_path=FluentdConfig.get_conf_path_within_docker()))
+                .format(path=self.fluentd_conf_path, mounted_path=FluentdConfig.conf_path_within_docker))
 
         run_fluentd_image(self.docker_client, fluentd_labels,
                           self.fluentd_port, self.fluentd_conf_path, self.extra_container_kwargs)
