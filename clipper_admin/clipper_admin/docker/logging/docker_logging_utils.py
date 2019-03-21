@@ -99,16 +99,6 @@ class FluentdConfig:
         """
         raise NotImplementedError("set_forward_address is not implemented yet. It will be coming soon.")
 
-    def set_directory(self, dir):
-        raise NotImplementedError("set_directory is not implemented yet. It will be coming soon.")
-
-    def set_file_name(self, name):
-        raise NotImplementedError("set_file_name is not implemented yet. It will be coming soon.")
-
-    def provide_customized_file(self, file_path):
-        """Provide a customized fluentd conf file."""
-        raise NotImplementedError("provide_customized_file is not implemented yet. It will be coming soon.")
-
     def build(self, fluentd_port):
         """
         Build a fluentd configuration file and return the path of it.
@@ -121,6 +111,7 @@ class FluentdConfig:
         TODO: Interfaces for modifying fluentd config file.
         TODO: Interfaces for providing customized fluentd file
 
+        :param fluentd_port: External fluentd port in which fluentd with this conf file listens to
         :return: Path of fluentd config file in which Fluentd container mounts on.
         """
         if self._file_path is None \

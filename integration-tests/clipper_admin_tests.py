@@ -40,7 +40,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
     def setUp(self):
         new_name = "admin-test-cluster-{}".format(random.randint(0, 5000))
         self.clipper_conn = create_docker_connection(
-            cleanup=False, start_clipper=True, new_name=new_name, use_centralized_log=False)
+            cleanup=False, start_clipper=True, new_name=new_name, use_centralized_log=True)
         self.name = new_name
 
     def tearDown(self):

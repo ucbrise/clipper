@@ -476,11 +476,6 @@ class DockerContainerManager(ContainerManager):
         return "{host}:{port}".format(
             host=self.public_hostname, port=self.prometheus_port)
 
-    def get_fluentd_addr(self):
-        return "{host}:{port}".format(
-            host='98.207.50.3', port=self.fluentd_port
-        )
-
     def start_fluentd(self):
         self.logger.info("Starting Fluentd instance in Docker cluster {cluster_name}"
                          .format(cluster_name=self.cluster_name))
