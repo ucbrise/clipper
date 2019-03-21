@@ -14,6 +14,7 @@ UNITTESTS = {
 
 DOCKER_INTEGRATION_TESTS = {
     "admin_unit_test": "python /clipper/integration-tests/clipper_admin_tests.py",
+    "fluentd": "python /clipper/integration-tests/clipper_fluentd_logging_docker.py",
     "many_apps_many_models": "python /clipper/integration-tests/many_apps_many_models.py",
     "pyspark": "python /clipper/integration-tests/deploy_pyspark_models.py",
     "pyspark_pipeline": "python /clipper/integration-tests/deploy_pyspark_pipeline_models.py",

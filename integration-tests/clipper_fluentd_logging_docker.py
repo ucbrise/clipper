@@ -3,7 +3,6 @@ from __future__ import print_function
 import json
 import logging
 import os
-import subprocess
 import sys
 import time
 import random
@@ -31,15 +30,7 @@ def feature_sum(xs):
 
 
 def setup(clipper_conn):
-    docker_client = get_docker_client()
-    containers = docker_client.containers.list(
-        filters={
-            'label': [
-                '{key}={val}'.format(
-                    key=CLIPPER_DOCKER_LABEL, val=clipper_conn.cm.cluster_name)
-            ]
-        })
-
+    containers = get_containers(clipper_conn)
     fluentd_container = None
     for c in containers:
         if 'fluentd-' in c.name:
@@ -51,7 +42,19 @@ def setup(clipper_conn):
     return fluentd_container
 
 
+def get_containers(clipper_conn):
+    docker_client = get_docker_client()
+    return docker_client.containers.list(
+        filters={
+            'label': [
+                '{key}={val}'.format(
+                    key=CLIPPER_DOCKER_LABEL, val=clipper_conn.cm.cluster_name)
+            ]
+        })
+
+
 def check_fluentd_has_correct_logs(clipper_conn):
+    # We don't check frontend-exporter because it doesn't have lots of logs and is hard to find.
     fluentd_container = setup(clipper_conn)
     fluentd_logs = str(fluentd_container.logs())
 
@@ -59,6 +62,8 @@ def check_fluentd_has_correct_logs(clipper_conn):
         raise AssertionError("Query Frontend log is not found")
     if not check_metric_frontend_logs(fluentd_logs):
         raise AssertionError("Metric Frontend log is not found")
+    if not check_management_frontend_logs(fluentd_logs):
+        raise AssertionError("Management Frontend log is not found")
     if not check_redis_logs(fluentd_logs):
         raise AssertionError("Redis log is not found")
 
@@ -75,11 +80,14 @@ def check_query_frontend_logs(fluentd_logs):
 
 
 def check_metric_frontend_logs(fluentd_logs):
-    return '"container_name":"/mgmt_frontend' in fluentd_logs
+    return '"container_name":"/metric_frontend' in fluentd_logs
 
 
 def check_redis_logs(fluentd_logs):
     return '"container_name":"/redis' in fluentd_logs
+
+def check_management_frontend_logs(fluentd_logs):
+    return '"container_name":"/mgmt_frontend' in fluentd_logs
 
 
 def check_model_logs(fluentd_logs, model_name):
@@ -93,6 +101,35 @@ def log_docker_ps(clipper_conn):
         logger.info('Name {}, Image {}, Status {}, Label {}'.format(
             cont.name, cont.image, cont.status, cont.labels))
 
+def all_containers_found(containers):
+    metric_frontend_found = False
+    management_frontend_found = False
+    query_frontend_found = False
+    fluentd_found = False
+    redis_found = False
+    frontend_exporter_found = False
+
+    for c in containers:
+        if 'metric_frontend' in c.name:
+            metric_frontend_found = True
+        elif 'query_frontend_exporter' in c.name:
+            frontend_exporter_found = True
+        elif 'query_frontend' in c.name:
+            query_frontend_found = True
+        elif 'mgmt_frontend' in c.name:
+            management_frontend_found = True
+        elif 'redis' in c.name:
+            redis_found = True
+        elif 'fluentd' in c.name:
+            fluentd_found = True
+
+    return metric_frontend_found and management_frontend_found \
+            and query_frontend_found and fluentd_found \
+            and redis_found and frontend_exporter_found
+
+
+def get_newline_str():
+    return '=================================================================\n'
 
 if __name__ == '__main__':
     logging.basicConfig(
@@ -108,14 +145,29 @@ if __name__ == '__main__':
     cluster_name = "fluentd-test-{}".format(random.randint(0, 50000))
     clipper_conn = create_docker_connection(
         cleanup=False, start_clipper=True, new_name=cluster_name, use_centralized_log=True)
-    python_deployer.create_endpoint(
-        clipper_conn, "simple-example", "doubles", feature_sum, num_replicas=2)
-    time.sleep(2)
 
     try:
+        timeout_count = 0
+        while True:
+            containers = get_containers(clipper_conn)
+            if all_containers_found(containers):
+                break
+            timeout_count += 1
+            if timeout_count == 5:
+                raise TimeoutError("Containers haven't been created within 10 seconds")
+            time.sleep(2)
+        logger.info("Test setup: All the necessary instances found")
+        logger.info(get_newline_str())
+
         logger.info("Test 1: Checking if fluentd has correct logs")
         check_fluentd_has_correct_logs(clipper_conn)
         logger.info("Fluentd Test (1/2): Test 1 passed")
+        logger.info(get_newline_str())
+
+        logger.info("Test 2: Deploying two models")
+        python_deployer.create_endpoint(
+            clipper_conn, "simple-example", "doubles", feature_sum, num_replicas=2)
+        time.sleep(2)
 
         logger.info(
             "Making 100 predictions using two model container; Should takes 25 seconds."
@@ -127,13 +179,16 @@ if __name__ == '__main__':
         logger.info("Test 2: Checking if fluentd has correct model logs")
         check_fluentd_has_correct_model_logs(clipper_conn, 'simple-example')
         logger.info("Fluentd Test (2/2): Test 2 passed")
+        logger.info(get_newline_str())
 
         create_docker_connection(
             cleanup=True, start_clipper=False, cleanup_name=cluster_name)
+
+        logger.info("Fluentd tests All passed")
     except Exception as e:
         logger.info("Test failed")
-        #log_docker_ps(clipper_conn)
+        log_docker_ps(clipper_conn)
         logger.error(e)
-        #log_clipper_state(clipper_conn)
+        log_clipper_state(clipper_conn)
         clipper_conn.stop_all(graceful=False)
         sys.exit(1)
