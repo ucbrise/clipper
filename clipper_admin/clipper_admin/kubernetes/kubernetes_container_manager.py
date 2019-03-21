@@ -287,7 +287,7 @@ class KubernetesContainerManager(ContainerManager):
     def _generate_config(self, file_path, **kwargs):
         template = self.template_engine.get_template(file_path)
         rendered = template.render(**kwargs)
-        parsed = yaml.load(rendered)
+        parsed = yaml.load(rendered, Loader=yaml.FullLoader)
         return parsed
 
     def connect(self):
