@@ -121,7 +121,7 @@ def add_to_metric_config(model_container_name, prom_config_path,
         :py:exc:`clipper.ClipperException`
     """
     with open(prom_config_path, 'r') as f:
-        conf = yaml.load(f)
+        conf = yaml.load(f, Loader=yaml.FullLoader)
 
     for config in conf['scrape_configs']:
         if config['job_name'] == model_container_name:
@@ -157,7 +157,7 @@ def delete_from_metric_config(model_container_name, prom_config_path,
     :return: None
     """
     with open(prom_config_path, 'r') as f:
-        conf = yaml.load(f)
+        conf = yaml.load(f, Loader=yaml.FullLoader)
 
     for i, config in enumerate(conf['scrape_configs']):
         if config['job_name'] == model_container_name:

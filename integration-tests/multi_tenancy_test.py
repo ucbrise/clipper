@@ -11,12 +11,15 @@ import time
 from test_utils import create_kubernetes_connection, create_docker_connection, CLIPPER_CONTAINER_REGISTRY
 from random import randint
 
+
 def test(kubernetes):
     conn_1 = create('multi-tenancy-1-{}'.format(randint(1,9999)), use_kubernetes=kubernetes)
     conn_2 = create('multi-tenancy-2-{}'.format(randint(1,9999)), use_kubernetes=kubernetes)
 
     deploy_(conn_1, use_kubernetes=kubernetes)
     deploy_(conn_2, use_kubernetes=kubernetes)
+
+    time.sleep(10)
 
     res_1 = predict_(conn_1.get_query_addr(), [.1, .2, .3])
     res_2 = predict_(conn_2.get_query_addr(), [.1, .2, .3])
