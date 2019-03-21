@@ -36,7 +36,7 @@ class DockerContainerManager(ContainerManager):
                  redis_port=6379,
                  prometheus_port=9090,
                  docker_network="clipper_network",
-                 extra_container_kwargs={}):
+                 extra_container_kwargs=None):
         """
         Parameters
         ----------
@@ -88,7 +88,10 @@ class DockerContainerManager(ContainerManager):
         self.docker_network = docker_network
 
         self.docker_client = docker.from_env()
-        self.extra_container_kwargs = extra_container_kwargs.copy()
+        if extra_container_kwargs is None:
+            self.extra_container_kwargs = {}
+        else:
+            self.extra_container_kwargs = extra_container_kwargs.copy()
 
         # Merge Clipper-specific labels with any user-provided labels
         if "labels" in self.extra_container_kwargs:
