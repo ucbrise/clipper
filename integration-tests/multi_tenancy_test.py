@@ -18,6 +18,8 @@ def test(kubernetes):
     deploy_(conn_1, use_kubernetes=kubernetes)
     deploy_(conn_2, use_kubernetes=kubernetes)
 
+    time.sleep(10)
+
     res_1 = predict_(conn_1.get_query_addr(), [.1, .2, .3])
     res_2 = predict_(conn_2.get_query_addr(), [.1, .2, .3])
     assert not res_1['default']
