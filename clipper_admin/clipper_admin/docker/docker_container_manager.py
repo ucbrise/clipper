@@ -5,24 +5,24 @@ import socket
 import docker
 import logging
 import os
-import sys
-import random
 import time
-import json
 import tempfile
 from ..container_manager import (
     create_model_container_label, parse_model_container_label,
     ContainerManager, CLIPPER_DOCKER_LABEL, CLIPPER_MODEL_CONTAINER_LABEL,
     CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL,
     CLIPPER_MGMT_FRONTEND_CONTAINER_LABEL, CLIPPER_INTERNAL_RPC_PORT,
-    CLIPPER_INTERNAL_QUERY_PORT, CLIPPER_INTERNAL_MANAGEMENT_PORT,
+    CLIPPER_INTERNAL_MANAGEMENT_PORT,
     CLIPPER_INTERNAL_METRIC_PORT, CLIPPER_INTERNAL_REDIS_PORT,
     CLIPPER_DOCKER_PORT_LABELS, CLIPPER_METRIC_CONFIG_LABEL, ClusterAdapter,
     CLIPPER_FLUENTD_CONFIG_LABEL)
-from ..exceptions import ClipperException
 from requests.exceptions import ConnectionError
 from .docker_metric_utils import *
-from .docker_logging_utils import run_fluentd_image, FluentdConfig
+from clipper_admin.docker.logging.docker_logging_utils import (
+    run_fluentd_image, FluentdConfig,
+    get_logs_from_containers, get_centralized_logs,
+    get_fluentd_log_config
+)
 
 logger = logging.getLogger(__name__)
 
@@ -117,8 +117,11 @@ class DockerContainerManager(ContainerManager):
 
         # Logging centralization args. Currently, fluentd is used to centralize logs
         self.centralize_log = use_centralized_log
-        self.log_config = {'type': 'fluentd'} if use_centralized_log \
-            else {'type': 'json-file'}
+        if use_centralized_log:
+            self.log_config = get_fluentd_log_config()
+        else:
+            self.log_config= {'type': 'json-file'}
+
         self.fluentd_conf_path = None
 
         self.extra_container_kwargs.update(container_args)
@@ -127,7 +130,6 @@ class DockerContainerManager(ContainerManager):
             'cluster_name': self.cluster_identifier
         })
 
-    #Logging-TODO Add sqlite support
     def start_clipper(self,
                       query_frontend_image,
                       mgmt_frontend_image,
@@ -297,9 +299,11 @@ class DockerContainerManager(ContainerManager):
         self.prometheus_port = all_labels[CLIPPER_DOCKER_PORT_LABELS['metric']]
         self.prom_config_path = all_labels[CLIPPER_METRIC_CONFIG_LABEL]
 
-        if self.centralize_log:
+        if CLIPPER_DOCKER_PORT_LABELS['fluentd'] in all_labels:
+            self.centralize_log= True
             self.fluentd_conf_path = all_labels[CLIPPER_FLUENTD_CONFIG_LABEL]
             self.fluentd_port = all_labels[CLIPPER_DOCKER_PORT_LABELS['fluentd']]
+            self.log_config = get_fluentd_log_config()
         # Logging-TODO Add a Sqlite support
 
     def deploy_model(self, name, version, input_type, image, num_replicas=1):
@@ -365,6 +369,7 @@ class DockerContainerManager(ContainerManager):
             name=model_container_name,
             environment=env_vars,
             labels=labels,
+            log_config=self.log_config,
             **self.extra_container_kwargs)
 
         # Metric Section
@@ -416,30 +421,10 @@ class DockerContainerManager(ContainerManager):
                                           self.prometheus_port)
 
     def get_logs(self, logging_dir):
-        containers = self.docker_client.containers.list(
-            filters={
-                "label":
-                "{key}={val}".format(
-                    key=CLIPPER_DOCKER_LABEL, val=self.cluster_name)
-            })
-        logging_dir = os.path.abspath(os.path.expanduser(logging_dir))
-
-        log_files = []
-        if not os.path.exists(logging_dir):
-            os.makedirs(logging_dir)
-            self.logger.info("Created logging directory: %s" % logging_dir)
-        for c in containers:
-            log_file_name = "image_{image}:container_{id}.log".format(
-                image=c.image.short_id, id=c.short_id)
-            log_file = os.path.join(logging_dir, log_file_name)
-            if sys.version_info < (3, 0):
-                with open(log_file, "w") as lf:
-                    lf.write(c.logs(stdout=True, stderr=True))
-            else:
-                with open(log_file, "wb") as lf:
-                    lf.write(c.logs(stdout=True, stderr=True))
-            log_files.append(log_file)
-        return log_files
+        if self.centralize_log:
+            get_centralized_logs(logging_dir)
+        else:
+            get_logs_from_containers(self, logging_dir)
 
     def stop_models(self, models):
         containers = self.docker_client.containers.list(
@@ -491,23 +476,28 @@ class DockerContainerManager(ContainerManager):
         return "{host}:{port}".format(
             host=self.public_hostname, port=self.prometheus_port)
 
+    def get_fluentd_addr(self):
+        return "{host}:{port}".format(
+            host='98.207.50.3', port=self.fluentd_port
+        )
+
     def start_fluentd(self):
         self.logger.info("Starting Fluentd instance in Docker cluster {cluster_name}"
                          .format(cluster_name=self.cluster_name))
         self.fluentd_port = find_unbound_port(self.fluentd_port)
-        fluentd_labels = self.common_labels.copy()
+        self.fluentd_conf_path = FluentdConfig().build(self.fluentd_port)
 
-        self.fluentd_conf_path = FluentdConfig().build()
+        fluentd_labels = self.common_labels.copy()
         fluentd_labels[CLIPPER_FLUENTD_CONFIG_LABEL] = self.fluentd_conf_path
         fluentd_labels[CLIPPER_DOCKER_PORT_LABELS['fluentd']] = str(self.fluentd_port)
 
         self.logger.info(
             "Fluentd Configuration Saved at {path}. "
             "It will be mounted at {mounted_path} inside container"
-                .format(path=self.fluentd_conf_path, mounted_path=FluentdConfig.conf_path_within_docker))
+                .format(path=self.fluentd_conf_path, mounted_path=str(FluentdConfig.get_conf_path_within_docker())))
 
         run_fluentd_image(self.docker_client, fluentd_labels,
-                          self.fluentd_port, self.fluentd_conf_path, self.extra_container_kwargs)
+                                self.fluentd_port, self.fluentd_conf_path, self.extra_container_kwargs)
 
 
 def find_unbound_port(start=None,

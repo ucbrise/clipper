@@ -71,7 +71,8 @@ def find_unbound_port():
 def create_docker_connection(cleanup=False,
                              start_clipper=False,
                              cleanup_name='default-cluster',
-                             new_name='default-cluster'):
+                             new_name='default-cluster',
+                             use_centralized_log=False):
     logger.info("Creating DockerContainerManager")
     cl = None
     assert cleanup or start_clipper, "You must set at least one of {cleanup, start_clipper} to be true."
@@ -99,7 +100,10 @@ def create_docker_connection(cleanup=False,
                 clipper_query_port=find_unbound_port(),
                 clipper_management_port=find_unbound_port(),
                 clipper_rpc_port=find_unbound_port(),
-                redis_port=find_unbound_port())
+                fluentd_port=find_unbound_port(),
+                redis_port=find_unbound_port(),
+                use_centralized_log=use_centralized_log
+            )
             cl = ClipperConnection(cm)
             try:
                 logger.info("Starting Clipper")

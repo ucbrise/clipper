@@ -34,13 +34,13 @@ def feature_sum(xs):
 def signal_handler(signal, frame):
     print("Stopping Clipper...")
     clipper_conn = ClipperConnection(DockerContainerManager())
-    clipper_conn.stop_all(graceful=False)
+    clipper_conn.stop_all()
     sys.exit(0)
 
 
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal_handler)
-    clipper_conn = ClipperConnection(DockerContainerManager(use_centralized_log=True))
+    clipper_conn = ClipperConnection(DockerContainerManager())
     clipper_conn.start_clipper()
     python_deployer.create_endpoint(clipper_conn, "simple-example", "doubles",
                                     feature_sum)

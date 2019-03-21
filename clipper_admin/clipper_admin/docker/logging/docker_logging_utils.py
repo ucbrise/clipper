@@ -1,8 +1,9 @@
 import random
 import tempfile
 import os
+import sys
 
-from ..container_manager import CLIPPER_INTERNAL_FLUENTD_PORT
+from clipper_admin.container_manager import CLIPPER_INTERNAL_FLUENTD_PORT, CLIPPER_DOCKER_LABEL
 
 
 FLUENTD_VERSION             = 'v1.3-debian-1' # TODO needs to be update to receive env variable like prometheus
@@ -13,8 +14,7 @@ FLUENTD_DEFAULT_CONF_PATH   = '{current_dir}/clipper_fluentd.conf' \
 
 def run_fluentd_image(docker_client, fluentd_labels, fluend_port, fluentd_conf_path, extra_container_kwargs):
     fluentd_cmd = [] # No cmd is required.
-    fluentd_container_id = random.randint(0, 100000)
-    fluentd_name = "fluentd-{}".format(fluentd_container_id)
+    fluentd_name = "fluentd-{}".format(random.randint(0, 100000))
     fluentd_img = 'fluent/fluentd:{version}'.format(version=FLUENTD_VERSION)
 
     docker_client.containers.run(
@@ -22,8 +22,8 @@ def run_fluentd_image(docker_client, fluentd_labels, fluend_port, fluentd_conf_p
         command=fluentd_cmd,
         name=fluentd_name,
         ports={
-            '%s/tcp' % CLIPPER_INTERNAL_FLUENTD_PORT: fluend_port,
-            '%s/udp' % CLIPPER_INTERNAL_FLUENTD_PORT: fluend_port
+            '%s/tcp' % fluend_port : CLIPPER_INTERNAL_FLUENTD_PORT,
+            '%s/udp' % fluend_port : CLIPPER_INTERNAL_FLUENTD_PORT
         },
         volumes={
             fluentd_conf_path: {
@@ -33,6 +33,43 @@ def run_fluentd_image(docker_client, fluentd_labels, fluend_port, fluentd_conf_p
         },
         labels=fluentd_labels,
         **extra_container_kwargs)
+
+
+def get_fluentd_log_config():
+    return {
+        'type': 'fluentd',
+    }
+
+
+def get_centralized_logs(logging_dir):
+    raise NotImplementedError("Centralized log collection is not implemented yet. It is currently in beta.")
+
+
+def get_logs_from_containers(docker_container_manager, logging_dir):
+    containers = docker_container_manager.docker_client.containers.list(
+        filters={
+            "label":
+                "{key}={val}".format(
+                    key=CLIPPER_DOCKER_LABEL, val=docker_container_manager.cluster_name)
+        })
+    logging_dir = os.path.abspath(os.path.expanduser(logging_dir))
+
+    log_files = []
+    if not os.path.exists(logging_dir):
+        os.makedirs(logging_dir)
+        docker_container_manager.logger.info("Created logging directory: %s" % logging_dir)
+    for c in containers:
+        log_file_name = "image_{image}:container_{id}.log".format(
+            image=c.image.short_id, id=c.short_id)
+        log_file = os.path.join(logging_dir, log_file_name)
+        if sys.version_info < (3, 0):
+            with open(log_file, "w") as lf:
+                lf.write(c.logs(stdout=True, stderr=True))
+        else:
+            with open(log_file, "wb") as lf:
+                lf.write(c.logs(stdout=True, stderr=True))
+        log_files.append(log_file)
+    return log_files
 
 
 class FluentdConfig:
@@ -72,7 +109,7 @@ class FluentdConfig:
         """Provide a customized fluentd conf file."""
         raise NotImplementedError("provide_customized_file is not implemented yet. It will be coming soon.")
 
-    def build(self):
+    def build(self, fluentd_port):
         """
         Build a fluentd configuration file and return the path of it.
         fluentd_default_conf_path will be stored in clipper_admin/docker folder
@@ -93,9 +130,13 @@ class FluentdConfig:
         # Logging-TODO: Currently, it copies the default conf from clipper_fluentd.conf.
         #               We need a way to customize it.
         with open(FLUENTD_DEFAULT_CONF_PATH, 'r') as default_conf_file:
-            with open(self._file_path, 'w') as fleutnd_conf:
+            with open(self._file_path, 'w') as fluetnd_conf:
                 for line in default_conf_file:
-                    fleutnd_conf.write(line)
+                    # port number in a conf file should be the same as container manager's port number
+                    if 'port' in line:
+                        fluetnd_conf.write('  port {}\n'.format(fluentd_port))
+                    else:
+                        fluetnd_conf.write(line)
 
         return self._file_path
 
@@ -104,12 +145,12 @@ class FluentdConfig:
         return self._file_path
 
     @property
-    def conf_path_within_docker(self):
-        return FLUENTD_CONF_PATH_IN_DOCKER
-
-    @property
     def base_config(self):
         return {}
+
+    @staticmethod
+    def get_conf_path_within_docker():
+        return FLUENTD_CONF_PATH_IN_DOCKER
 
     @staticmethod
     def build_temp_file():
