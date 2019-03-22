@@ -68,6 +68,37 @@ def find_unbound_port():
                 "randomly generated port %d is bound. Trying again." % port)
 
 
+def get_new_connection_instance(cluster_name, use_centralized_log):
+    return ClipperConnection(DockerContainerManager(cluster_name=cluster_name, use_centralized_log=use_centralized_log))
+
+def get_containers(clipper_conn):
+    docker_client = get_docker_client()
+    return docker_client.containers.list(
+        filters={
+            'label': [
+                '{key}={val}'.format(
+                    key=CLIPPER_DOCKER_LABEL, val=clipper_conn.cm.cluster_name)
+            ]
+        })
+
+
+def get_one_container(container_name, clipper_conn):
+    containers = get_containers(clipper_conn)
+    container_to_return = None
+    for c in containers:
+        if container_name in c.name:
+            container_to_return = c
+
+    if container_to_return is None:
+        raise AssertionError("{} has not been running".format(container_to_return))
+
+    return container_to_return
+
+
+def check_container_logs(logs, name):
+    return '"container_name":"/{}',format(name) in logs
+
+
 def create_docker_connection(cleanup=False,
                              start_clipper=False,
                              cleanup_name='default-cluster',

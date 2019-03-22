@@ -4,10 +4,6 @@ import sys
 from clipper_admin.container_manager import CLIPPER_DOCKER_LABEL
 
 
-def get_centralized_logs(logging_dir):
-    raise NotImplementedError("Centralized log collection is not implemented yet. It is currently in beta.")
-
-
 def get_logs_from_containers(docker_container_manager, logging_dir):
     containers = docker_container_manager.docker_client.containers.list(
         filters={

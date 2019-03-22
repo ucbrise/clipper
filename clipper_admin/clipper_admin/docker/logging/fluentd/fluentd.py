@@ -40,6 +40,10 @@ class Fluentd(object):
     def get_logs(self, logging_dir):
         raise NotImplementedError("Not implemented yet.")
 
+    @staticmethod
+    def container_is_running(all_labels):
+        return CLIPPER_DOCKER_PORT_LABELS['fluentd'] in all_labels
+
     def _run_fluentd_image(self, docker_client, fluentd_labels, fluend_port, fluentd_conf_path, extra_container_kwargs):
         fluentd_cmd = []  # No cmd is required.
         fluentd_name = "fluentd-{}".format(random.randint(0, 100000))

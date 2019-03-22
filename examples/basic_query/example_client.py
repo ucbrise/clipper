@@ -44,7 +44,7 @@ if __name__ == '__main__':
     clipper_conn.start_clipper()
     python_deployer.create_endpoint(clipper_conn, "simple-example", "doubles",
                                     feature_sum)
-    time.sleep(0.2)
+    time.sleep(2)
 
     # For batch inputs set this number > 1
     batch_size = 1
@@ -58,6 +58,6 @@ if __name__ == '__main__':
                     batch=True)
             else:
                 predict(clipper_conn.get_query_addr(), np.random.random(200))
-            time.sleep(2)
+            time.sleep(0.2)
     except Exception as e:
         clipper_conn.stop_all()

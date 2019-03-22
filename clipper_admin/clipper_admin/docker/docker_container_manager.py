@@ -475,24 +475,24 @@ class DockerContainerManager(ContainerManager):
                 c.kill()
 
     def _is_valid_logging_state_to_connect(self, all_labels):
-        if self.centralize_log and CLIPPER_DOCKER_PORT_LABELS['fluentd'] not in all_labels:
-            raise ConnectionError(
+        if self.centralize_log and not self.logging_system.container_is_running(all_labels):
+            raise ConnectionRefusedError(
                 "Invalid state detected. "
                 "log centralization is {log_centralization_state}, "
-                "but cannot find fluentd instance running."
+                "but cannot find fluentd instance running. "
                 "Please change your use_centralized_log parameter of DockerContainermanager"
                     .format(log_centralization_state=self.centralize_log)
             )
-        elif CLIPPER_DOCKER_PORT_LABELS['fluentd'] in all_labels and not self.centralize_log:
-            raise ConnectionError(
+        elif self.logging_system.container_is_running(all_labels) and not self.centralize_log:
+            raise ConnectionRefusedError(
                 "Invalid state detected. "
                 "Fluentd instance is running, "
-                "but log centralization state is {log_centralization_state}."
-                "Please change your use_centralized_log parameter of DockerContainermanager"
+                "but log centralization state is {log_centralization_state}. "
+                "Please change your use_centralized_log parameter of DockerContainerManager to True"
                     .format(log_centralization_state=self.centralize_log)
             )
         else:
-            return CLIPPER_DOCKER_PORT_LABELS['fluentd'] in all_labels
+            return self.logging_system.container_is_running(all_labels)
 
     def get_admin_addr(self):
         return "{host}:{port}".format(

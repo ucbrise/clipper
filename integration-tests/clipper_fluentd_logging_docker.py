@@ -6,16 +6,30 @@ import os
 import sys
 import time
 import random
+import unittest
 
 import numpy as np
 import requests
-import yaml
-from test_utils import log_clipper_state, create_docker_connection, get_docker_client
+from test_utils import (
+    log_clipper_state, create_docker_connection,
+    get_docker_client, get_one_container,
+    get_containers, check_container_logs,
+    get_new_connection_instance
+)
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
 from clipper_admin.deployers import python as python_deployer
-from clipper_admin.container_manager import CLIPPER_DOCKER_LABEL
+
+
+CLIPPER_NODES = [
+    'metric_frontend',
+    'query_frontend_exporter',
+    'query_frontend',
+    'mgmt_frontend',
+    'redis',
+    'fluentd'
+]
 
 
 def predict(addr, x):
@@ -29,166 +43,124 @@ def feature_sum(xs):
     return [str(sum(x)) for x in xs]
 
 
-def setup(clipper_conn):
-    containers = get_containers(clipper_conn)
-    fluentd_container = None
-    for c in containers:
-        if 'fluentd-' in c.name:
-            fluentd_container = c
+class FluentdTest(unittest.TestCase):
+    def setUp(self):
+        logging.basicConfig(
+            format=
+            '%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+            datefmt='%y-%m-%d:%H:%M:%S',
+            level=0)
 
-    if fluentd_container is None:
-        raise AssertionError("Fluentd has not been running")
+        self.logger = logging.getLogger(__name__)
+        self.cluster_name = "fluentd-test-{}".format(random.randint(0, 50000))
+        self.start_clipper(self.cluster_name)
 
-    return fluentd_container
+    def start_clipper(self, cluster_name, use_centralized_log=True):
+        self.clipper_conn = create_docker_connection(
+            cleanup=False, start_clipper=True, new_name=cluster_name, use_centralized_log=use_centralized_log)
 
-
-def get_containers(clipper_conn):
-    docker_client = get_docker_client()
-    return docker_client.containers.list(
-        filters={
-            'label': [
-                '{key}={val}'.format(
-                    key=CLIPPER_DOCKER_LABEL, val=clipper_conn.cm.cluster_name)
-            ]
-        })
-
-
-def check_fluentd_has_correct_logs(clipper_conn):
-    # We don't check frontend-exporter because it doesn't have lots of logs and is hard to find.
-    fluentd_container = setup(clipper_conn)
-    fluentd_logs = str(fluentd_container.logs())
-
-    if not check_query_frontend_logs(fluentd_logs):
-        raise AssertionError("Query Frontend log is not found")
-    if not check_metric_frontend_logs(fluentd_logs):
-        raise AssertionError("Metric Frontend log is not found")
-    if not check_management_frontend_logs(fluentd_logs):
-        raise AssertionError("Management Frontend log is not found")
-    if not check_redis_logs(fluentd_logs):
-        raise AssertionError("Redis log is not found")
-
-def check_fluentd_has_correct_model_logs(clipper_conn, model_name):
-    fluentd_container = setup(clipper_conn)
-    fluentd_logs = str(fluentd_container.logs())
-
-    if not check_model_logs(fluentd_logs, model_name):
-        raise AssertionError("{model_name} log is not found".format(model_name=model_name))
-
-
-def check_query_frontend_logs(fluentd_logs):
-    return '"container_name":"/query_frontend' in fluentd_logs
-
-
-def check_metric_frontend_logs(fluentd_logs):
-    return '"container_name":"/metric_frontend' in fluentd_logs
-
-
-def check_redis_logs(fluentd_logs):
-    return '"container_name":"/redis' in fluentd_logs
-
-def check_management_frontend_logs(fluentd_logs):
-    return '"container_name":"/mgmt_frontend' in fluentd_logs
-
-
-def check_model_logs(fluentd_logs, model_name):
-    return '"container_name":"/{}',format(model_name) in fluentd_logs
-
-
-def log_docker_ps(clipper_conn):
-    container_runing = clipper_conn.cm.docker_client.containers.list()
-    logger.info('Current docker status')
-    for cont in container_runing:
-        logger.info('Name {}, Image {}, Status {}, Label {}'.format(
-            cont.name, cont.image, cont.status, cont.labels))
-
-def all_containers_found(containers):
-    metric_frontend_found = False
-    management_frontend_found = False
-    query_frontend_found = False
-    fluentd_found = False
-    redis_found = False
-    frontend_exporter_found = False
-
-    for c in containers:
-        if 'metric_frontend' in c.name:
-            metric_frontend_found = True
-        elif 'query_frontend_exporter' in c.name:
-            frontend_exporter_found = True
-        elif 'query_frontend' in c.name:
-            query_frontend_found = True
-        elif 'mgmt_frontend' in c.name:
-            management_frontend_found = True
-        elif 'redis' in c.name:
-            redis_found = True
-        elif 'fluentd' in c.name:
-            fluentd_found = True
-
-    return metric_frontend_found and management_frontend_found \
-            and query_frontend_found and fluentd_found \
-            and redis_found and frontend_exporter_found
-
-
-def get_newline_str():
-    return '=================================================================\n'
-
-if __name__ == '__main__':
-    logging.basicConfig(
-        format=
-        '%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
-        datefmt='%y-%m-%d:%H:%M:%S',
-        level=0)
-
-    logger = logging.getLogger(__name__)
-
-    logger.info("Start Fluentd Test (0/2): Running 2 Replicas")
-
-    cluster_name = "fluentd-test-{}".format(random.randint(0, 50000))
-    clipper_conn = create_docker_connection(
-        cleanup=False, start_clipper=True, new_name=cluster_name, use_centralized_log=True)
-
-    try:
+        # Make sure all the containers are on.
         timeout_count = 0
         while True:
-            containers = get_containers(clipper_conn)
-            if all_containers_found(containers):
+            containers = get_containers(self.clipper_conn)
+            if self.all_containers_found(containers):
                 break
             timeout_count += 1
             if timeout_count == 5:
-                raise TimeoutError("Containers haven't been created within 10 seconds")
+                self.logger.info("Running containers: {}".format(containers))
+                raise TimeoutError(
+                    "Containers haven't been created within 10 seconds. "
+                    "It means that every instance haven't been initialized."
+                )
             time.sleep(2)
-        logger.info("Test setup: All the necessary instances found")
-        logger.info(get_newline_str())
 
-        logger.info("Test 1: Checking if fluentd has correct logs")
-        check_fluentd_has_correct_logs(clipper_conn)
-        logger.info("Fluentd Test (1/2): Test 1 passed")
-        logger.info(get_newline_str())
+        self.logger.info("All the containers are found")
 
-        logger.info("Test 2: Deploying two models")
+    def doCleanups(self):
+        self.clipper_conn = create_docker_connection(
+            cleanup=True, start_clipper=False, cleanup_name=self.cluster_name)
+
+    def check_fluentd_has_correct_logs(self, clipper_conn):
+        fluentd_container = get_one_container('fluentd', clipper_conn)
+        fluentd_logs = str(fluentd_container.logs())
+        for node_name in CLIPPER_NODES:
+            if node_name == 'query_frontend_exporter':
+                continue # We don't check exporter log because it is uncommon.
+            self.assertTrue(check_container_logs(fluentd_logs, node_name))
+
+    def check_fluentd_has_correct_model_logs(self, clipper_conn, model_name):
+        fluentd_container = get_one_container('fluentd', clipper_conn)
+        fluentd_logs = str(fluentd_container.logs())
+        self.assertTrue(check_container_logs(fluentd_logs, model_name))
+
+    def all_containers_found(self, containers):
+        for c in containers:
+            node_name = c.name.split('-')[0]
+            if node_name not in CLIPPER_NODES:
+                return False
+
+        return True
+
+    def test_invalid_clipper_conn_old_connection_use_log_centralization(self):
+        # Raise a ConnectionError when new connection doesn't use log-centralization, although
+        # the original connection uses log-centralization.
+        new_conn = get_new_connection_instance(self.cluster_name, False)
+        self.assertRaises(ConnectionRefusedError, new_conn.connect)
+
+    def test_invalid_clipper_conn_old_connection_not_use_log_centralization(self):
+        # Raise a ConnectionError when new connection uses log-centralization, although
+        # the original connection does not use log-centralization.
+        # Recreate a cluster with
+        self.clipper_conn = create_docker_connection(
+            cleanup=True, start_clipper=False, cleanup_name=self.cluster_name)
+        self.start_clipper(self.cluster_name, use_centralized_log=False)
+        new_conn = get_new_connection_instance(self.cluster_name, True)
+        self.assertRaises(ConnectionRefusedError, new_conn.connect)
+
+    def test_correct_fluentd_connection(self):
+        new_clipper_conn = get_new_connection_instance(self.cluster_name, use_centralized_log=True)
+        new_clipper_conn.connect()
+
+        self.assertTrue(new_clipper_conn.cm.centralize_log)
+        self.assertTrue(new_clipper_conn.cm.log_config == new_clipper_conn.cm.logging_system.get_log_config())
+
+        old_conn_fluentd = self.clipper_conn.cm.logging_system_instance
+        new_conn_fluentd = new_clipper_conn.cm.logging_system_instance
+
+        self.assertTrue(old_conn_fluentd.port == new_conn_fluentd.port)
+        self.assertTrue(old_conn_fluentd.conf_path == new_conn_fluentd.conf_path)
+
+    def test_clipper_with_fluentd(self):
+        self.check_fluentd_has_correct_logs(self.clipper_conn)
+
+    def test_deployed_models_are_logged(self):
+        # Deploy models
         python_deployer.create_endpoint(
-            clipper_conn, "simple-example", "doubles", feature_sum, num_replicas=2)
+            self.clipper_conn, "simple-example", "doubles", feature_sum, num_replicas=2)
         time.sleep(2)
 
-        logger.info(
+        self.logger.info(
             "Making 100 predictions using two model container; Should takes 25 seconds."
         )
         for _ in range(100):
-            predict(clipper_conn.get_query_addr(), np.random.random(200))
+            predict(self.clipper_conn.get_query_addr(), np.random.random(200))
             time.sleep(0.2)
 
-        logger.info("Test 2: Checking if fluentd has correct model logs")
-        check_fluentd_has_correct_model_logs(clipper_conn, 'simple-example')
-        logger.info("Fluentd Test (2/2): Test 2 passed")
-        logger.info(get_newline_str())
+        self.check_fluentd_has_correct_model_logs(self.clipper_conn, 'simple-example')
 
-        create_docker_connection(
-            cleanup=True, start_clipper=False, cleanup_name=cluster_name)
 
-        logger.info("Fluentd tests All passed")
-    except Exception as e:
-        logger.info("Test failed")
-        log_docker_ps(clipper_conn)
-        logger.error(e)
-        log_clipper_state(clipper_conn)
-        clipper_conn.stop_all(graceful=False)
-        sys.exit(1)
+if __name__ == '__main__':
+    TEST = [
+        'test_invalid_clipper_conn_old_connection_use_log_centralization',
+        'test_invalid_clipper_conn_old_connection_not_use_log_centralization',
+        'test_correct_fluentd_connection',
+        'test_clipper_with_fluentd',
+        'test_deployed_models_are_logged'
+    ]
+    suite = unittest.TestSuite()
+
+    for test in TEST:
+        suite.addTest(FluentdTest(test))
+
+    result = unittest.TextTestRunner(verbosity=2, failfast=True).run(suite)
+    sys.exit(not result.wasSuccessful())
