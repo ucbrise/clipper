@@ -229,7 +229,7 @@ std::vector<std::string> get_linked_models(redox::Redox& redis,
 }
 
 bool add_model(Redox& redis, const VersionedModelId& model_id,
-               const InputType& input_type,const OutputType& output_type, const std::vector<string>& labels,
+               const InputType& input_type, const std::vector<string>& labels,
                const std::string& container_name,
                const std::string& model_data_path, int batch_size) {
   if (send_cmd_no_reply<string>(
@@ -269,7 +269,7 @@ bool add_model_(Redox& redis, const VersionedModelId& model_id,
       "model_version",    model_id.get_id(),
       "load",             std::to_string(0.0),
       "input_type",       get_readable_input_type(input_type),
-      "output_type",      get_readable_input_type(outtput_type),
+      "output_type",      get_readable_input_type(output_type),
       "labels",           labels_to_str(labels),
       "container_name",   container_name,
       "model_data_path",  model_data_path,

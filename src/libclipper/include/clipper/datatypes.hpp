@@ -5,7 +5,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <unordered_map>
 
 #include <city.h>
 
@@ -71,46 +70,7 @@ class VersionedModelId {
 };
 
 
-class ModelVertex
-{
-public:
-    ModelVertex(VersionedModelId model_id_): model_id(model_id_){}
-    virtual ~ModelVertex() = default;
 
-    const VersionedModelId& get_model_id() const { return model_id; }
-protected:
-    VersionedModelId model_id;
-};
-
-
-// class ModelDAG
-// {
-// public:
-//     template<typename T>
-//     using VertexMap     = std::unordered_map<ModelVertex*, T>;
-//     using AdjacencyList = VertexMap<std::vector<ModelVertex*>>;
-
-//     void addEdge(ModelVertex* u, ModelVertex* v);
-
-//     const AdjacencyList& adjacencyList() const;
-// private:
-//     AdjacencyList _vertices;
-// };
-
-
-// void ModelDAG::addEdge(ModelVertex* u, ModelVertex* v)
-// {
-//     _vertices[v];               // initialise adjacency list for v
-//     _vertices[u].push_back(v);  // add v as being adjacent to u
-// }
-
-// const ModelDAG::AdjacencyList& ModelDAG::adjacencyList() const
-// {
-//     return _vertices;
-// }
-
-
-} //namespace clipper
 
 class PredictionData {
  public:

@@ -227,7 +227,7 @@ bool add_instance(redox::Redox& redis, const VersionedModelId& model_id,
                 const std::string& instance_name,
                 const std::string& proxy_name);
 //simon
-bool delete_instance(redox::Redxo& redis, const VersionedModelId& model_id, 
+bool delete_instance(redox::Redox& redis, const VersionedModelId& model_id, 
                 const std::string &host, 
                 const std::string& container_name);
 
@@ -332,8 +332,8 @@ bool add_model_links(redox::Redox& redis, const std::string& app_name,
  * 
  */ 
 //simon
-bool add_appliation_dag(redox::Redox& redis, const std::string& app_name, 
-                    const ModelDAG& model_dag);
+//bool add_appliation_dag(redox::Redox& redis, const std::string& app_name, 
+//                    const ModelDAG& model_dag);
 
 /**
  * Deletes a container from the container table if it exists.

@@ -620,6 +620,41 @@ class RequestHandler {
     }
   }
 
+
+std::string add_dag(const std::string& json) {
+    rapidjson::Document d;
+    parse_json(json, d);
+
+    std::string dag_name = get_string(d, "name");
+    
+    std::string dag_description = get_string(d, "dag_description");
+
+    // check if dag already exists
+    std::unordered_map<std::string, std::string> existing_dag_data =
+        clipper::redis::get_dag(redis_connection_, dag_name);
+    if (existing_dag_data.empty()) {
+      if (clipper::redis::add_dga(redis_connection_, dag_name,
+                                          dag_description)) {
+        std::stringstream ss;
+        ss << "Successfully added dag with name "
+           << "'" << dag_name << "'";
+        return ss.str();
+      } else {
+        std::stringstream ss;
+        ss << "Error adding dag "
+           << "'" << dag_name << "'"
+           << " to Redis";
+        throw clipper::ManagementOperationError(ss.str());
+      }
+    } else {
+      std::stringstream ss;
+      ss << "application "
+         << "'" << dag_name << "'"
+         << " already exists";
+      throw clipper::ManagementOperationError(ss.str());
+    }
+  }
+
   /**
    * Processes a request to add a new application to Clipper
    *

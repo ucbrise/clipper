@@ -74,6 +74,7 @@ class DockerContainerManager(ContainerManager):
         self.clipper_management_port = clipper_management_port
         self.clipper_rpc_port = clipper_rpc_port
         self.redis_ip = redis_ip
+        self.proxy_image = "proxytest"
         if redis_ip is None:
             self.external_redis = False
         else:
@@ -294,6 +295,25 @@ class DockerContainerManager(ContainerManager):
     def get_num_replicas(self, name, version):
         return len(self._get_replicas(name, version))
 
+    def set_proxy(self, image, model_container_label, proxy_port):
+    #   set proxy for each model 
+    #
+        proxy_cmd = ("{proxy_port} {downstream_ip1} {downstream_port1}").format(
+            proxy_port = "1234",
+            downstream_ip1 = "127.0.0.1",
+            downstream_port1 = "4321")
+
+        model_container_proxy_name = model_container_label + '-proxy-{}'.format(random.randint(0, 100000))
+        self.docker_client.containers.run(
+            image,
+            command = proxy_cmd,
+            detach = True, 
+            name=model_container_proxy_name,
+            **self.extra_container_kwargs)
+
+        return model_container_proxy_name
+
+
     def _add_replica(self, name, version, input_type, image):
 
         containers = self.docker_client.containers.list(
@@ -336,15 +356,24 @@ class DockerContainerManager(ContainerManager):
 
         #Start Proxy
 
+        proxy_port = find_unbound_port(30000)
         
 
+        model_proxy_name = self.set_proxy(self.proxy_image, model_container_label, proxy_port)
+
+        self.logger.info(
+            "Proxy for model:{model_container_label} is deployed with {proxy_name} ".format(
+                model_container_label=model_container_label,
+                proxy_name = model_proxy_name
+            )
+        )
         # Metric Section
         #add_to_metric_config(model_container_name, self.prom_config_path,
         #                     self.prometheus_port,
         #                     CLIPPER_INTERNAL_METRIC_PORT)
 
         # Return model_container_name so we can check if it's up and running later
-        return model_container_name
+        return model_container_name, model_proxy_name
 
     def set_num_replicas(self, name, version, input_type, image, num_replicas):
         current_replicas = self._get_replicas(name, version)
@@ -359,11 +388,21 @@ class DockerContainerManager(ContainerManager):
                     missing=(num_missing)))
 
             model_container_names = []
+            model_proxy_names = []
             for _ in range(num_missing):
-                container_name = self._add_replica(name, version, input_type,
+                container_name,proxy_name = self._add_replica(name, version, input_type,
                                                    image)
                 model_container_names.append(container_name)
+                model_proxy_names.append(proxy_name)
+            #check model container state
             for name in model_container_names:
+                container = self.docker_client.containers.get(name)
+                while container.attrs.get("State").get("Status") != "running" or \
+                        self.docker_client.api.inspect_container(name).get("State").get("Health").get("Status") != "healthy":
+                    time.sleep(3)
+                    
+            #check model proxy state
+            for name in model_proxy_names:
                 container = self.docker_client.containers.get(name)
                 while container.attrs.get("State").get("Status") != "running" or \
                         self.docker_client.api.inspect_container(name).get("State").get("Health").get("Status") != "healthy":
@@ -382,9 +421,9 @@ class DockerContainerManager(ContainerManager):
                 cur_container = current_replicas.pop()
                 cur_container.stop()
                 # Metric Section
-                delete_from_metric_config(cur_container.name,
-                                          self.prom_config_path,
-                                          self.prometheus_port)
+                #delete_from_metric_config(cur_container.name,
+                #                          self.prom_config_path,
+                #                          self.prometheus_port)
 
     def get_logs(self, logging_dir):
         containers = self.docker_client.containers.list(

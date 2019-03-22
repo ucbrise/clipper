@@ -1,0 +1,27 @@
+syntax = "proto2";
+
+package clipper;
+
+
+message Vertex {
+    required int32 vertex_id = 1;
+    required string model_name = 2;
+    required string host_ip =3;
+    required int32 model_port=4;
+    required int32 proxy_port=5;
+    required bool is_stateful = 6;
+}
+
+message Edge {
+    required int src = 1;
+    required int src = 2;
+}
+
+message Graph {
+
+    repeated Vertex vertexList = 1;
+    repeated Edge edgeList = 2;
+
+
+}
+

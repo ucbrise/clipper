@@ -23,6 +23,9 @@ enum RedisDBTable {
   REDIS_APP_MODEL_LINKS_DB_NUM_ = 17,
 };
 
+const std::string LOCAL_HOST_IP = "127.0.0.1";
+constexpr int DEFAULT_PORT_NUM = 65000;
+
 constexpr int RPC_SERVICE_PORT = 7000;
 
 constexpr int QUERY_FRONTEND_PORT = 1337;
@@ -40,3 +43,7 @@ constexpr int DEFAULT_USER_ID = 0;
 
 }  // namespace clipper
 #endif
+
+
+
+
