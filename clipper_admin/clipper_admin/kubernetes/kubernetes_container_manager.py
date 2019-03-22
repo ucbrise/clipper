@@ -189,24 +189,39 @@ class KubernetesContainerManager(ContainerManager):
     def _start_redis(self, sleep_time=5):
         # If an existing Redis service isn't provided, start one
         if self.redis_ip is None:
+            deployment_name = 'redis-at-{cluster_name}'.format(
+                cluster_name=self.cluster_name)
+
             with _pass_conflicts():
                 self._k8s_beta.create_namespaced_deployment(
                     body=self._generate_config(
                         CONFIG_FILES['redis']['deployment'],
+                        deployment_name=deployment_name,
                         cluster_name=self.cluster_name),
                     namespace=self.k8s_namespace)
 
             with _pass_conflicts():
                 body = self._generate_config(
                     CONFIG_FILES['redis']['service'],
+                    deployment_name=deployment_name,
                     public_redis_port=self.redis_port,
                     cluster_name=self.cluster_name)
                 self._k8s_v1.create_namespaced_service(
                     body=body, namespace=self.k8s_namespace)
             time.sleep(sleep_time)
 
-            self.redis_ip = 'redis-at-{cluster_name}'.format(
-                cluster_name=self.cluster_name)
+            # Wait for max 10 minutes
+            wait_count = 0
+            while self._k8s_beta.read_namespaced_deployment(
+                    name=deployment_name,
+                    namespace=self.k8s_namespace).status.available_replicas != 1:
+                time.sleep(3)
+                wait_count += 3
+                if wait_count > 600:
+                    raise ClipperException(
+                        "Could not create a Kubernetes deployment: {}".format(deployment_name))
+
+            self.redis_ip = deployment_name
 
     def _start_mgmt(self, mgmt_image):
         with _pass_conflicts():
@@ -287,7 +302,7 @@ class KubernetesContainerManager(ContainerManager):
     def _generate_config(self, file_path, **kwargs):
         template = self.template_engine.get_template(file_path)
         rendered = template.render(**kwargs)
-        parsed = yaml.load(rendered)
+        parsed = yaml.load(rendered, Loader=yaml.FullLoader)
         return parsed
 
     def connect(self):
@@ -299,7 +314,7 @@ class KubernetesContainerManager(ContainerManager):
                 if addr.type == "ExternalDNS":
                     external_node_hosts.append(addr.address)
 
-        if len(external_node_hosts) == 0 and (self.useInternalIP):
+        if len(external_node_hosts) == 0 and self.useInternalIP:
             msg = "No external node addresses found. Using Internal IP address"
             self.logger.warning(msg)
             for addr in node.status.addresses:
@@ -389,14 +404,21 @@ class KubernetesContainerManager(ContainerManager):
                 self._k8s_beta.create_namespaced_deployment(
                     body=generated_body, namespace=self.k8s_namespace)
 
-            while self._k8s_beta.read_namespaced_deployment_status(
+            # Wait for max 10 minutes
+            wait_count = 0
+            while self._k8s_beta.read_namespaced_deployment(
                 name=deployment_name, namespace=self.k8s_namespace).status.available_replicas \
                     != num_replicas:
                 time.sleep(3)
+                wait_count += 3
+                if wait_count > 600:
+                    raise ClipperException(
+                        "Could not create a Kubernetes deployment. "
+                        "Model: {}-{} Image: {}".format(name, version, image))
 
     def get_num_replicas(self, name, version):
         deployment_name = get_model_deployment_name(
-            name, version, query_frontend_id=0)
+            name, version, query_frontend_id=0, cluster_name=self.cluster_name)
         response = self._k8s_beta.read_namespaced_deployment_scale(
             name=deployment_name, namespace=self.k8s_namespace)
 
@@ -406,7 +428,7 @@ class KubernetesContainerManager(ContainerManager):
         # NOTE: assumes `metadata.name` can identify the model deployment.
         for query_frontend_id in range(self.num_frontend_replicas):
             deployment_name = get_model_deployment_name(
-                name, version, query_frontend_id)
+                name, version, query_frontend_id, self.cluster_name)
 
             self._k8s_beta.patch_namespaced_deployment_scale(
                 name=deployment_name,
@@ -417,10 +439,17 @@ class KubernetesContainerManager(ContainerManager):
                     }
                 })
 
-            while self._k8s_beta.read_namespaced_deployment_status(
+            # Wait for max 10 minutes
+            wait_count = 0
+            while self._k8s_beta.read_namespaced_deployment(
                 name=deployment_name, namespace=self.k8s_namespace).status.available_replicas \
                     != num_replicas:
                 time.sleep(3)
+                wait_count += 3
+                if wait_count > 600:
+                    raise ClipperException(
+                        "Could not update scale of the specified Deployment. "
+                        "Model: {}-{} Image: {}".format(name, version, image))
 
     def get_logs(self, logging_dir):
         logging_dir = os.path.abspath(os.path.expanduser(logging_dir))
@@ -513,9 +542,6 @@ class KubernetesContainerManager(ContainerManager):
         except ApiException as e:
             logging.warning(
                 "Exception deleting kubernetes resources: {}".format(e))
-
-    def get_registry(self):
-        return self.registry
 
     def get_admin_addr(self):
         if self.use_k8s_proxy:

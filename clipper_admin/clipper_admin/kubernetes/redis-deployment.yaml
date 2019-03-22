@@ -4,7 +4,7 @@ metadata:
   labels:
     ai.clipper.container.label: {{ cluster_name }}
     ai.clipper.name: redis
-  name: redis-at-{{ cluster_name }}
+  name: {{ deployment_name }} # Cluster name included
 spec:
   replicas: 1
   template:
