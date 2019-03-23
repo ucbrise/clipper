@@ -476,7 +476,7 @@ class DockerContainerManager(ContainerManager):
 
     def _is_valid_logging_state_to_connect(self, all_labels):
         if self.centralize_log and not self.logging_system.container_is_running(all_labels):
-            raise ConnectionRefusedError(
+            raise ConnectionError(
                 "Invalid state detected. "
                 "log centralization is {log_centralization_state}, "
                 "but cannot find fluentd instance running. "
@@ -484,7 +484,7 @@ class DockerContainerManager(ContainerManager):
                     .format(log_centralization_state=self.centralize_log)
             )
         elif self.logging_system.container_is_running(all_labels) and not self.centralize_log:
-            raise ConnectionRefusedError(
+            raise ConnectionError(
                 "Invalid state detected. "
                 "Fluentd instance is running, "
                 "but log centralization state is {log_centralization_state}. "

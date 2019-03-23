@@ -63,6 +63,7 @@ class Fluentd(object):
                     'mode': 'rw'
                 }
             },
+            user='root',
             labels=fluentd_labels,
             **extra_container_kwargs)
 

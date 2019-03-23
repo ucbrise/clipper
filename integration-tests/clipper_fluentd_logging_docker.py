@@ -7,6 +7,7 @@ import sys
 import time
 import random
 import unittest
+from requests.exceptions import ConnectionError
 
 import numpy as np
 import requests
@@ -105,7 +106,7 @@ class FluentdTest(unittest.TestCase):
         # Raise a ConnectionError when new connection doesn't use log-centralization, although
         # the original connection uses log-centralization.
         new_conn = get_new_connection_instance(self.cluster_name, False)
-        self.assertRaises(ConnectionRefusedError, new_conn.connect)
+        self.assertRaises(ConnectionError, new_conn.connect)
 
     def test_invalid_clipper_conn_old_connection_not_use_log_centralization(self):
         # Raise a ConnectionError when new connection uses log-centralization, although
@@ -115,7 +116,7 @@ class FluentdTest(unittest.TestCase):
             cleanup=True, start_clipper=False, cleanup_name=self.cluster_name)
         self.start_clipper(self.cluster_name, use_centralized_log=False)
         new_conn = get_new_connection_instance(self.cluster_name, True)
-        self.assertRaises(ConnectionRefusedError, new_conn.connect)
+        self.assertRaises(ConnectionError, new_conn.connect)
 
     def test_correct_fluentd_connection(self):
         new_clipper_conn = get_new_connection_instance(self.cluster_name, use_centralized_log=True)
