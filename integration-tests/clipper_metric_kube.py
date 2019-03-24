@@ -118,7 +118,7 @@ def get_metrics_config():
     config_path = os.path.join(
         os.path.abspath("%s/../monitoring" % cur_dir), 'metrics_config.yaml')
     with open(config_path, 'r') as f:
-        conf = yaml.load(f)
+        conf = yaml.load(f, Loader=yaml.FullLoader)
     return conf
 
 
