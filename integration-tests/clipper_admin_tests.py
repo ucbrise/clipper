@@ -282,8 +282,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         container_name = "{}/noop-container:{}".format(clipper_registry,
                                                        clipper_version)
         input_type = "doubles"
-        mnames = ["jimmypage", "robertplant", "jpj", "johnbohnam"]
-        versions = ["i", "ii", "iii", "iv"]
+        mnames = ["jimmypage", "robertplant"]
+        versions = ["i", "ii"]
         for model_name in mnames:
             for version in versions:
                 self.clipper_conn.deploy_model(
@@ -296,21 +296,19 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         containers = self.get_containers(container_name)
         self.assertEqual(len(containers), len(mnames) * len(versions))
 
-        # stop all versions of models jimmypage, robertplant
-        self.clipper_conn.stop_models(mnames[:2])
+        # stop all versions of jimmypage model
+        self.clipper_conn.stop_models(mnames[:1])
         containers = self.get_containers(container_name)
 
-        self.assertEqual(len(containers), len(mnames[2:]) * len(versions))
+        self.assertEqual(len(containers), len(mnames[1:]) * len(versions))
 
-        # After calling this method, the remaining models should be:
-        # jpj:i, jpj:iii, johnbohman:ii
+        # After calling this method, the remaining model should be robertplant:i
         self.clipper_conn.stop_versioned_models({
-            "jpj": ["ii", "iv"],
-            "johnbohnam": ["i", "iv", "iii"],
+            "robertplant": ["ii"],
         })
         containers = self.get_containers(container_name)
 
-        self.assertEqual(len(containers), 3)
+        self.assertEqual(len(containers), 1)
 
         self.clipper_conn.stop_all_model_containers()
         containers = self.get_containers(container_name)
