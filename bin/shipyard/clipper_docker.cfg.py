@@ -6,6 +6,17 @@ from itertools import product
 from shipyard import Action, CIPrettyLogAction, IsolatedAction, ctx
 
 
+#####################################
+# Travis: Wait and pull/push images #
+#####################################
+def wait_and_pull_cmd(image_name):
+    return f"until docker pull {image_name}; do sleep 5; done"
+
+
+def wait_and_push_cmd(image_name):
+    return f"until docker push {image_name}; do sleep 5; done"
+
+
 def create_image_with_context(build_ctx, image, dockerfile, rpc_version=None):
     if rpc_version is None:
         rpc_version = ""
@@ -185,16 +196,6 @@ kubernetes_containers = [
 for container in kubernetes_containers:
     Action.get_action(container) > kubernetes_test_target
     Action.get_action(f"publish_{container}") > kubernetes_test_target
-
-#####################################
-# Travis: Wait and pull/push images #
-#####################################
-def wait_and_pull_cmd(image_name):
-    return f"until docker pull {image_name}; do sleep 5; done"
-
-
-def wait_and_push_cmd(image_name):
-    return f"until docker push {image_name}; do sleep 5; done"
 
 
 for container in kubernetes_containers:
