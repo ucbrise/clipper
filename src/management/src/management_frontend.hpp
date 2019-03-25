@@ -467,6 +467,7 @@ class RequestHandler {
         [this](std::shared_ptr<HttpServer::Response> response,
                std::shared_ptr<HttpServer::Request> request) {
             respond_http("PONG", "200 OK", response);
+        });
 
     server_.add_endpoint(
         DELETE_VERSIONED_MODEL, "POST",
