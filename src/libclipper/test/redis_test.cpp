@@ -162,7 +162,7 @@ TEST_F(RedisTest, DeleteModelLinks) {
   ASSERT_TRUE(delete_model_links(*redis_, app_name, model_names));
 
   auto linked_models = get_linked_models(*redis_, app_name);
-  ASSERT_EQ(versions.size(), (size_t)0);
+  ASSERT_EQ(linked_models.size(), (size_t)0);
 }
 
 TEST_F(RedisTest, SetCurrentModelVersion) {
