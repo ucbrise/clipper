@@ -1,4 +1,4 @@
-FROM nvidia/cuda:10.0-cudnn7-devel-ubuntu16.04
+FROM nvidia/cuda:10.0-devel-ubuntu16.04
 
 LABEL maintainer="Rehan Durrani <rdurrani@berkeley.edu>"
 
@@ -6,6 +6,7 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends \
 	build-essential \
 	curl \
+	wget \
 	software-properties-common \
 	python3-pip \
  && add-apt-repository -y ppa:jonathonf/python-3.6 \
@@ -18,6 +19,33 @@ RUN python3.6 -m pip install --no-cache-dir -U pip
 RUN python3.6 -m pip install --no-cache-dir -U setuptools
 RUN ln -s /usr/bin/pip3.6 /usr/bin/pip
 RUN ln -s /usr/bin/python3.6 /usr/bin/python
+
+RUN pip install -U --user pip six numpy wheel setuptools mock keras_applications==1.0.6 --no-deps keras_preprocessing==1.0.5 --no-deps
+
+RUN apt-get install -y openjdk-8-jdk \
+ && echo "deb [arch=amd64] http://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list \
+ && curl https://bazel.build/bazel-release.pub.gpg | apt-key add - \
+ && apt-get update && sudo apt-get install bazel
+
+RUN apt-get install --no-install-recommends \
+	libcudnn7=7.4.1.5-1+cuda10.1 \
+	libcudnn7-dev=7.4.1.5-1+cuda10.1 \
+ && apt-get update -qq \
+ && apt-get install nvinfer-runtime-trt-repo-ubuntu1604-5.0.2-ga-cuda10.1 \
+ && apt-get update -qq \
+ && apt-get install -y --no-install-recommends libnvinfer-dev=5.0.2-1+cuda10.1
+
+RUN git clone https://github.com/tensorflow/tensorflow.git \
+
+WORKDIR tensorflow
+
+RUN git checkout r1.13
+
+RUN ./configure
+
+RUN bazel build --config=opt --config=cuda //tensorflow/tools/pip_package:build_pip_package
+
+WORKDIR /
 
 RUN apt-get update -qq
 
