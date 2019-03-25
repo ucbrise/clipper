@@ -46,7 +46,7 @@ ENV CLIPPER_MODEL_PATH=/model
 
 HEALTHCHECK --interval=3s --timeout=3s --retries=1 CMD test -f /model_is_ready.check || exit 1
 
-COPY containers/python/pytorch_container.py containers/python/container_entry.sh /container/
+COPY containers/python/tf_container.py containers/python/container_entry.sh /container/
 
 CMD ["/container/container_entry.sh", "tensorflow-container", "/container/tf_container.py"]
 
