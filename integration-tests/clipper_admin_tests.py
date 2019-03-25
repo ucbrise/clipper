@@ -304,7 +304,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             "robertplant": ["i", "ii", "iii", "iv"]
         })
         self.check_registered_models(
-            pairs=[(a, b) for a in mnames[:2] for b in versions])
+            pairs=[(a, b) for a in mnames[2:] for b in versions])
 
         # After calling this method, the remaining models should be:
         # jpj:i, jpj:iii, johnbohman:ii
@@ -321,8 +321,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             "johnbohnam": ["i", "iv", "iii"],
         })
         self.check_registered_models(
-            pairs=[("jpj", "ii"), ("jpj", "iv"), ("johnbohnam", "i"),
-                   ("johnbohnam", "iv"), ("johnbohnam", "iii")])
+            pairs=[("jpj", "i"), ("jpj", "iii"), ("johnbohnam", "ii")])
 
         self.clipper_conn.stop_all_model_containers()
         containers = self.get_containers(container_name)
