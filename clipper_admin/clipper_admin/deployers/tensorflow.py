@@ -299,9 +299,9 @@ def deploy_tensorflow_model(clipper_conn,
                     "Detected {major}.{minor}").format(
                         major=sys.version_info.major, minor=sys.version_info.minor)
                 logger.error(msg)
-            # Remove temp files
-            shutil.rmtree(serialization_dir)
-            raise ClipperException(msg)
+                # Remove temp files
+                shutil.rmtree(serialization_dir)
+                raise ClipperException(msg)
 
     # Deploy model
     clipper_conn.build_and_deploy_model(
