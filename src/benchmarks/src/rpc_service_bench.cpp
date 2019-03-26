@@ -126,7 +126,9 @@ class Benchmarker {
         request_(create_request(input_type, message_size)) {}
 
   void start() {
-    rpc_->start("*", RPC_SERVICE_PORT, [](VersionedModelId, int) {},
+    Config &conf = get_config();
+    rpc_->start("*", conf.get_rpc_service_port(),
+                [](VersionedModelId, int) {},
                 [this](rpc::RPCResponse &response) {
                   on_response_recv(std::move(response));
                 },
@@ -138,7 +140,6 @@ class Benchmarker {
     throughput_meter_ = metrics::MetricsRegistry::get_metrics().create_meter(
         "rpc_bench_throughput");
 
-    Config &conf = get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
       log_error(LOGGING_TAG_RPC_BENCH, "RPCBench failed to connect to redis",
@@ -242,11 +243,13 @@ int main(int argc, char *argv[]) {
     ("redis_ip", "Redis address",
         cxxopts::value<std::string>()->default_value("localhost"))
     ("redis_port", "Redis port",
-        cxxopts::value<int>()->default_value("6379"))
+        cxxopts::value<int>()->default_value(std::to_string(DEFAULT_REDIS_PORT)))
     ("m,num_messages", "Number of messages to send",
         cxxopts::value<int>()->default_value("100"))
     ("s,message_size", "Number of inputs per message",
         cxxopts::value<int>()->default_value("500"))
+    ("rpc_service_port", "RPCService's port",
+        cxxopts::value<int>()->default_value(std::to_string(DEFAULT_RPC_SERVICE_PORT)))
     ("input_type", "Can be bytes, ints, floats, doubles, or strings",
         cxxopts::value<std::string>()->default_value("doubles"));
   // clang-format on
@@ -255,6 +258,7 @@ int main(int argc, char *argv[]) {
   clipper::Config &conf = clipper::get_config();
   conf.set_redis_address(options["redis_ip"].as<std::string>());
   conf.set_redis_port(options["redis_port"].as<int>());
+  conf.set_rpc_service_port(options["rpc_service_port"].as<int>());
   conf.ready();
   InputType input_type =
       clipper::parse_input_type(options["input_type"].as<std::string>());
