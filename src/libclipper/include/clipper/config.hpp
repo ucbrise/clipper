@@ -12,6 +12,7 @@ namespace clipper {
 
 const std::string DEFAULT_REDIS_ADDRESS("localhost");
 constexpr int DEFAULT_REDIS_PORT = 6379;
+constexpr int DEFAULT_RPC_SERVICE_PORT = 7000;
 constexpr long DEFAULT_PREDICTION_CACHE_SIZE_BYTES = 33554432;  // 32 MiB
 
 /**
@@ -33,6 +34,7 @@ struct Config {
       : readable_(false),
         redis_address_(DEFAULT_REDIS_ADDRESS),
         redis_port_(DEFAULT_REDIS_PORT),
+        rpc_service_port_(DEFAULT_RPC_SERVICE_PORT),
         prediction_cache_size_bytes_(DEFAULT_PREDICTION_CACHE_SIZE_BYTES) {}
 
   /**
@@ -42,6 +44,7 @@ struct Config {
     readable_ = false;
     redis_address_ = DEFAULT_REDIS_ADDRESS;
     redis_port_ = DEFAULT_REDIS_PORT;
+    rpc_service_port_ = DEFAULT_RPC_SERVICE_PORT;
     prediction_cache_size_bytes_ = DEFAULT_PREDICTION_CACHE_SIZE_BYTES;
   }
 
@@ -85,6 +88,24 @@ struct Config {
     redis_port_ = port;
   }
 
+  int get_rpc_service_port() const {
+    if (!readable_) {
+      // TODO: use a better exception
+      throw std::logic_error("Cannot read Config until ready");
+    }
+    assert(readable_);
+    return rpc_service_port_;
+  }
+
+  void set_rpc_service_port(int port) {
+    if (readable_) {
+      // TODO: use a better exception
+      throw std::logic_error("Cannot write to Config after ready");
+    }
+    assert(!readable_);
+    rpc_service_port_ = port;
+  }
+
   long get_prediction_cache_size() const {
     if (!readable_) {
       // TODO: use a better exception
@@ -114,6 +135,7 @@ struct Config {
   bool readable_;
   std::string redis_address_;
   int redis_port_;
+  int rpc_service_port_;
   long prediction_cache_size_bytes_;
 };
 
