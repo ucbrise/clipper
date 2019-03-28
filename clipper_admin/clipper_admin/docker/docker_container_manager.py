@@ -36,7 +36,7 @@ class DockerContainerManager(ContainerManager):
                  redis_port=6379,
                  prometheus_port=9090,
                  docker_network="clipper_network",
-                 extra_container_kwargs={}):
+                 extra_container_kwargs=None):
         """
         Parameters
         ----------
@@ -88,7 +88,10 @@ class DockerContainerManager(ContainerManager):
         self.docker_network = docker_network
 
         self.docker_client = docker.from_env()
-        self.extra_container_kwargs = extra_container_kwargs.copy()
+        if extra_container_kwargs is None:
+            self.extra_container_kwargs = {}
+        else:
+            self.extra_container_kwargs = extra_container_kwargs.copy()
 
         # Merge Clipper-specific labels with any user-provided labels
         if "labels" in self.extra_container_kwargs:
@@ -359,8 +362,13 @@ class DockerContainerManager(ContainerManager):
                 model_container_names.append(container_name)
             for name in model_container_names:
                 container = self.docker_client.containers.get(name)
-                while container.attrs.get("State").get("Status") != "running" or \
-                        self.docker_client.api.inspect_container(name).get("State").get("Health").get("Status") != "healthy":
+                while True:
+                    state = container.attrs.get("State")
+                    inspect_container = self.docker_client.api.inspect_container(name)
+                    if (state is not None and state.get("Status") == "running") or \
+                            (inspect_container is not None and
+                             inspect_container.get("State").get("Health").get("Status") == "healthy"):
+                        break
                     time.sleep(3)
 
         elif len(current_replicas) > num_replicas:
