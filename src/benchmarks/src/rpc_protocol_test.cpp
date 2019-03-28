@@ -47,13 +47,13 @@ class Tester {
   }
 
   void start(long timeout_seconds) {
-    rpc_->start("127.0.0.1", RPC_SERVICE_PORT,
+    Config &conf = get_config();
+    rpc_->start("127.0.0.1", conf.get_rpc_service_port(),
                 [](VersionedModelId /*model*/, int /*container_id*/) {},
                 [this](rpc::RPCResponse &response) {
                   on_response_received(std::move(response));
                 },
                 [](VersionedModelId, int) {});
-    Config &conf = get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
       log_error(LOGGING_TAG_RPC_TEST, "RPCTest failed to connect to redis",
@@ -308,9 +308,11 @@ int main(int argc, char *argv[]) {
       ("redis_ip", "Redis address",
        cxxopts::value<std::string>()->default_value("localhost"))
       ("redis_port", "Redis port",
-       cxxopts::value<int>()->default_value("6379"))
+       cxxopts::value<int>()->default_value(std::to_string(DEFAULT_REDIS_PORT)))
       ("num_containers", "Number of containers to validate",
        cxxopts::value<int>()->default_value("1"))
+      ("rpc_service_port", "RPCService's port",
+       cxxopts::value<int>()->default_value(std::to_string(DEFAULT_RPC_SERVICE_PORT)))
       ("timeout_seconds", "Timeout in seconds",
        cxxopts::value<long>()->default_value("30"));
   // clang-format on
@@ -318,6 +320,7 @@ int main(int argc, char *argv[]) {
 
   get_config().set_redis_address(options["redis_ip"].as<std::string>());
   get_config().set_redis_port(options["redis_port"].as<int>());
+  get_config().set_rpc_service_port(options["rpc_service_port"].as<int>());
   get_config().ready();
 
   Tester tester(options["num_containers"].as<int>());

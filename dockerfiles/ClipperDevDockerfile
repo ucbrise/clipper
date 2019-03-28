@@ -30,7 +30,6 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s
 
 # Install Java
 RUN mkdir -p /usr/share/man/man1 && \
-    (echo "deb http://http.debian.net/debian jessie-backports main" > /etc/apt/sources.list.d/backports.list) && \
     apt-get update -qq -y && \
     apt-get install openjdk-8-jre openjdk-8-jdk-headless -y
 

@@ -25,7 +25,7 @@ TEST_F(TimerSystemTests, SingleTimerExpire) {
   ASSERT_FALSE(timer_future.isReady());
   ts_.clock_.increment(11000);
   // Let the timer system detect this
-  std::this_thread::sleep_for(500us);
+  std::this_thread::sleep_for(1000us);
   ASSERT_TRUE(timer_future.isReady()) << "Uh oh";
 }
 
@@ -36,11 +36,11 @@ TEST_F(TimerSystemTests, TwoTimerExpire) {
   ASSERT_FALSE(t20.isReady());
   ASSERT_FALSE(t10.isReady());
   ts_.clock_.increment(10000);
-  std::this_thread::sleep_for(500us);
+  std::this_thread::sleep_for(1000us);
   ASSERT_FALSE(t20.isReady());
   ASSERT_TRUE(t10.isReady());
   ts_.clock_.increment(10000);
-  std::this_thread::sleep_for(500us);
+  std::this_thread::sleep_for(1000us);
   ASSERT_TRUE(t20.isReady());
   ASSERT_TRUE(t10.isReady());
 }
@@ -56,19 +56,19 @@ TEST_F(TimerSystemTests, OutOfOrderTimerExpire) {
   ASSERT_FALSE(t3.isReady());
   ASSERT_EQ(ts_.num_outstanding_timers(), (size_t)3);
   ts_.clock_.increment(5000);
-  std::this_thread::sleep_for(500us);
+  std::this_thread::sleep_for(1000us);
   ASSERT_FALSE(t1.isReady());
   ASSERT_TRUE(t2.isReady());
   ASSERT_FALSE(t3.isReady());
   ASSERT_EQ(ts_.num_outstanding_timers(), (size_t)2);
   ts_.clock_.increment(5000);
-  std::this_thread::sleep_for(500us);
+  std::this_thread::sleep_for(1000us);
   ASSERT_FALSE(t1.isReady());
   ASSERT_TRUE(t2.isReady());
   ASSERT_TRUE(t3.isReady());
   ASSERT_EQ(ts_.num_outstanding_timers(), (size_t)1);
   ts_.clock_.increment(5000);
-  std::this_thread::sleep_for(500us);
+  std::this_thread::sleep_for(1000us);
   ASSERT_TRUE(t1.isReady());
   ASSERT_TRUE(t2.isReady());
   ASSERT_TRUE(t3.isReady());
