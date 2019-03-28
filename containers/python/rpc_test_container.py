@@ -1,7 +1,5 @@
 import rpc
-import os
-import sys
-import numpy as np
+import argparse
 import json
 
 
@@ -29,16 +27,18 @@ class RPCTestContainer(rpc.ModelContainerBase):
 
 
 if __name__ == "__main__":
-    ip = "127.0.0.1"
-    port = 7000
-    input_type = "doubles"
-    model_version = 1
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--rpc_service_port',
+        type=int,
+        default=7000)
+    args = parser.parse_args()
 
     rpc_service = rpc.RPCService(collect_metrics=False, read_config=False)
     rpc_service.model_name = "rpctest_py"
     rpc_service.model_version = 1
     rpc_service.host = "127.0.0.1"
-    rpc_service.port = 7000
+    rpc_service.port = args.rpc_service_port
     rpc_service.input_type = "doubles"
 
     model = RPCTestContainer(rpc_service)
