@@ -16,8 +16,6 @@ enum RedisDBTable {
   REDIS_APP_MODEL_LINKS_DB_NUM = 7,
 };
 
-constexpr int RPC_SERVICE_PORT = 7000;
-
 constexpr int QUERY_FRONTEND_PORT = 1337;
 constexpr int MANAGEMENT_FRONTEND_PORT = 1338;
 
