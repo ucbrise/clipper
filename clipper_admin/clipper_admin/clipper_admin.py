@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 import logging
 import docker
+from docker import errors
 import tempfile
 import requests
 from requests.exceptions import RequestException
@@ -24,6 +25,7 @@ else:
     from io import BytesIO as StringIO
     PY3 = True
 
+from .decorators import retry
 from .container_manager import CONTAINERLESS_MODEL_IMAGE, ClusterAdapter
 from .exceptions import ClipperException, UnconnectedException
 from .version import __version__, __registry__
@@ -477,8 +479,13 @@ class ClipperConnection(object):
                     self.logger.info(b['stream'].rstrip())
 
         self.logger.info("Pushing model Docker image to {}".format(image))
-        for line in docker_client.images.push(repository=image, stream=True):
-            self.logger.debug(line)
+
+        @retry(docker.errors.APIError, tries=5, logger=self.logger)
+        def _push_model():
+            for line in docker_client.images.push(repository=image, stream=True):
+                self.logger.debug(line)
+        _push_model()
+
         return image
 
     def deploy_model(self,
