@@ -126,27 +126,30 @@ class ClipperConnection(object):
             self.cm.start_clipper(query_frontend_image, mgmt_frontend_image,
                                   frontend_exporter_image, cache_size,
                                   num_frontend_replicas)
-            while True:
-                try:
-                    query_frontend_url = "http://{host}/metrics".format(
-                        host=self.cm.get_query_addr())
-                    mgmt_frontend_url = "http://{host}/admin/ping".format(
-                        host=self.cm.get_admin_addr())
-                    for name, url in [('query frontend', query_frontend_url), 
-                                     ('management frontend', mgmt_frontend_url)]:
-                        r = requests.get(url, timeout=5)
-                        if r.status_code != requests.codes.ok:
-                            raise RequestException(
-                                "{name} end point {url} health check failed".format(name=name, url=url))
-                    break
-                except RequestException as e:
-                    self.logger.info("Clipper still initializing: \n {}".format(e))
-                    time.sleep(1)
-            self.logger.info("Clipper is running")
-            self.connected = True
         except ClipperException as e:
             self.logger.warning("Error starting Clipper: {}".format(e.msg))
             raise e
+
+        # Wait for maximum 5 min.
+        @retry(RequestException, tries=300, delay=1, backoff=1, logger=self.logger)
+        def _check_clipper_status():
+            try:
+                query_frontend_url = "http://{host}/metrics".format(
+                    host=self.cm.get_query_addr())
+                mgmt_frontend_url = "http://{host}/admin/ping".format(
+                    host=self.cm.get_admin_addr())
+                for name, url in [('query frontend', query_frontend_url),
+                                  ('management frontend', mgmt_frontend_url)]:
+                    r = requests.get(url, timeout=5)
+                    if r.status_code != requests.codes.ok:
+                        raise RequestException(
+                            "{name} end point {url} health check failed".format(name=name, url=url))
+            except RequestException as e:
+                raise RequestException("Clipper still initializing: \n {}".format(e))
+        _check_clipper_status()
+
+        self.logger.info("Clipper is running")
+        self.connected = True
 
     def connect(self):
         """Connect to a running Clipper cluster."""
