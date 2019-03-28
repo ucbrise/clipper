@@ -6,6 +6,17 @@ from itertools import product
 from shipyard import Action, CIPrettyLogAction, IsolatedAction, ctx
 
 
+#####################################
+# Travis: Wait and pull/push images #
+#####################################
+def wait_and_pull_cmd(image_name):
+    return f"until docker pull {image_name}; do sleep 5; done"
+
+
+def wait_and_push_cmd(image_name):
+    return f"until docker push {image_name}; do sleep 5; done"
+
+
 def create_image_with_context(build_ctx, image, dockerfile, rpc_version=None):
     if rpc_version is None:
         rpc_version = ""
@@ -32,8 +43,8 @@ def push_image_with_context(build_ctx, image, push_sha=True, push_version=False)
     image_name_version = f"{namespace}/{image}:{version_tag}"
 
     docker_tag = f"docker tag {image_name_sha} {image_name_version}"
-    docker_push_sha = f"docker push {image_name_sha}"
-    docker_push_version = f"docker push {image_name_version}"
+    docker_push_sha = wait_and_push_cmd(image_name_sha)
+    docker_push_version = wait_and_push_cmd(image_name_version)
 
     commands = [docker_tag]
     if push_sha:
@@ -47,7 +58,7 @@ def push_image_with_context(build_ctx, image, push_sha=True, push_version=False)
             image_name_minor_version = f"{namespace}/{image}:{minor_version}"
 
             tag_minor_ver = f"docker tag {image_name_sha} {image_name_minor_version}"
-            push_minor_ver = f"docker push {image_name_minor_version}"
+            push_minor_ver = wait_and_push_cmd(image_name_minor_version)
             commands.extend([tag_minor_ver, push_minor_ver])
 
     return CIPrettyLogAction(f"publish_{image}", "\n".join(commands), tags=["push"])
@@ -185,12 +196,6 @@ kubernetes_containers = [
 for container in kubernetes_containers:
     Action.get_action(container) > kubernetes_test_target
     Action.get_action(f"publish_{container}") > kubernetes_test_target
-
-################################
-# Travis: Wait and pull images #
-################################
-def wait_and_pull_cmd(image_name):
-    return f"until docker pull {image_name}; do sleep 5; done"
 
 
 for container in kubernetes_containers:
