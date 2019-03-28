@@ -123,7 +123,7 @@ class FluentdTest(unittest.TestCase):
         new_clipper_conn.connect()
 
         self.assertTrue(new_clipper_conn.cm.centralize_log)
-        self.assertTrue(new_clipper_conn.cm.log_config == new_clipper_conn.cm.logging_system.get_log_config())
+        self.assertTrue(new_clipper_conn.cm.log_config == new_clipper_conn.cm.logging_system_instance.get_log_config())
 
         old_conn_fluentd = self.clipper_conn.cm.logging_system_instance
         new_conn_fluentd = new_clipper_conn.cm.logging_system_instance

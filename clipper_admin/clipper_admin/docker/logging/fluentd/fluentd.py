@@ -54,8 +54,8 @@ class Fluentd(object):
             command=fluentd_cmd,
             name=fluentd_name,
             ports={
-                '%s/tcp' % fluend_port: CLIPPER_INTERNAL_FLUENTD_PORT,
-                '%s/udp' % fluend_port: CLIPPER_INTERNAL_FLUENTD_PORT
+                '%s/tcp' % CLIPPER_INTERNAL_FLUENTD_PORT: fluend_port,
+                '%s/udp' % CLIPPER_INTERNAL_FLUENTD_PORT: fluend_port
             },
             volumes={
                 fluentd_conf_path: {
@@ -74,10 +74,12 @@ class Fluentd(object):
 
         return fluentd_labels
 
-    @staticmethod
-    def get_log_config():
+    def get_log_config(self):
         return {
             'type': 'fluentd',
+            'Config': {
+                'fluentd-address': '127.0.0.1:{port}'.format(port=self.port)
+            }
         }
 
 
@@ -134,10 +136,7 @@ class FluentdConfig:
             with open(self._file_path, 'w') as fluetnd_conf:
                 for line in default_conf_file:
                     # port number in a conf file should be the same as container manager's port number
-                    if 'port' in line:
-                        fluetnd_conf.write('  port {}\n'.format(fluentd_port))
-                    else:
-                        fluetnd_conf.write(line)
+                    fluetnd_conf.write(line)
 
         return self._file_path
 

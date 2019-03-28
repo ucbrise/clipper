@@ -133,7 +133,7 @@ class DockerContainerManager(ContainerManager):
                 self.docker_client,
                 port=find_unbound_port(fluentd_port)
             )
-            self.log_config = self.logging_system.get_log_config()
+            self.log_config = self.logging_system_instance.get_log_config()
 
     def start_clipper(self,
                       query_frontend_image,
@@ -313,7 +313,7 @@ class DockerContainerManager(ContainerManager):
                     port=all_labels[CLIPPER_DOCKER_PORT_LABELS['fluentd']],
                     conf_path=all_labels[CLIPPER_FLUENTD_CONFIG_LABEL]
                 )
-            self.log_config = self.logging_system.get_log_config()
+            self.log_config = self.logging_system_instance.get_log_config()
         # Logging-TODO Add a Sqlite support
 
     def deploy_model(self, name, version, input_type, image, num_replicas=1):
