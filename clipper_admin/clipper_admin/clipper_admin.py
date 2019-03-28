@@ -281,6 +281,47 @@ class ClipperConnection(object):
                 "Model {model} is now linked to application {app}".format(
                     model=model_name, app=app_name))
 
+    def unlink_model_from_app(self, app_name, model_name):
+        """
+        Prevents the model with `model_name` from being used by the app with `app_name`.
+        The model and app should both be registered with Clipper and a link should
+        already exist between them.
+
+        Parameters
+        ----------
+        app_name : str
+            The name of the application
+        model_name : str
+            The name of the model to link to the application
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+        :py:exc:`clipper.ClipperException`
+        """
+
+        if not self.connected:
+            raise UnconnectedException()
+
+        url = "http://{host}/admin/delete_model_links".format(
+            host=self.cm.get_admin_addr())
+        req_json = json.dumps({
+            "app_name": app_name,
+            "model_names": [model_name]
+        })
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
+        logger.debug(r.text)
+        if r.status_code != requests.codes.ok:
+            msg = "Received error status code: {code} and message: {msg}".format(
+                code=r.status_code, msg=r.text)
+            logger.error(msg)
+            raise ClipperException(msg)
+        else:
+            logger.info(
+                "Model {model} is now removed to application {app}".format(
+                    model=model_name, app=app_name))
+
     def build_and_deploy_model(self,
                                name,
                                version,
@@ -859,7 +900,7 @@ class ClipperConnection(object):
         -------
         list
             Returns a list of the names of models linked to the app.
-            If no models are linked to the specified app, None is returned.
+            If no models are linked to the specified app, empty list is returned.
 
         Raises
         ------
