@@ -1,29 +1,57 @@
 # This ARG isn't used but prevents warnings in the build script
 ARG REGISTRY
 ARG CODE_VERSION
-FROM debian:stretch-slim
+FROM ubuntu:18.04
 
 LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
-RUN apt-get update -qq && apt-get install -y -qq g++ automake autoconf autoconf-archive libtool libboost-all-dev \
-    libevent-dev libdouble-conversion-dev libgoogle-glog-dev libgflags-dev liblz4-dev \
-    liblzma-dev libsnappy-dev make zlib1g-dev binutils-dev libjemalloc-dev libssl-dev \
-    pkg-config libiberty-dev git cmake libev-dev libhiredis-dev libzmq5 libzmq5-dev build-essential
+## Install basic packages.
+RUN apt-get update -qq && apt-get install -y -qq \
+    wget git
 
-## Install Folly
+## Install dependent packages for Folly.
+RUN apt-get install -y -qq \
+    g++ cmake libboost-all-dev libevent-dev libdouble-conversion-dev \
+    libgoogle-glog-dev libgflags-dev libiberty-dev liblz4-dev \
+    liblzma-dev libsnappy-dev make zlib1g-dev binutils-dev \
+    libjemalloc-dev libssl-dev pkg-config
+
+## Install Folly.
 RUN git clone https://github.com/facebook/folly \
-    && cd folly/folly \
-    && git checkout tags/v2017.08.14.00 \
-    && autoreconf -ivf \
+    && cd folly \
+    && git checkout -b tags/v2019.03.18.00 \
+    && mkdir _build && cd _build \
+    && CXXFLAGS="$CXXFLAGS -fPIC" CFLAGS="$CFLAGS -fPIC" cmake .. -DBUILD_SHARED_LIBS=ON \
+    && make -j4 \
+    && make install \
+    && cd / \
+    && rm -rf folly
+
+## Install dependent packages for Clipper.
+RUN apt-get install -y -qq \
+    libhiredis-dev libzmq5 libzmq5-dev
+
+## Install libev-dev for Clipper except event.h and event.c.
+#  1. To use both Folly and libev, we have to exclude files(event.*) from compilation.
+#     See https://github.com/facebook/folly/issues/601#issuecomment-347100410.
+#  2. Be careful that this step has to be after installing Folly to avoid collision.
+RUN wget http://dist.schmorp.de/libev/libev-4.25.tar.gz \
+    && tar -zxvf libev-4.25.tar.gz \
+    && cd libev-4.25 \
+    && sed -i 's/event\.[ch]//g' Makefile.am \
     && ./configure \
     && make -j4 \
-    && make install
+    && make install \
+    && cd / \
+    && rm -rf libev-4.25*
 
-## Install Cityhash
+## Install Cityhash.
 RUN git clone https://github.com/google/cityhash \
     && cd cityhash \
     && ./configure \
     && make all check CXXFLAGS="-g -O3" \
-    && make install
+    && make install \
+    && cd / \
+    && rm -rf cityhash
 
 # vim: set filetype=dockerfile:
