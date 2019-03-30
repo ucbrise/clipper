@@ -42,7 +42,7 @@ class QueryFrontendTest : public ::testing::Test {
   std::shared_ptr<redox::Subscriber> subscriber_;
 
   QueryFrontendTest()
-      : rh_("127.0.0.1",
+      : rh_("0.0.0.0",
             QUERY_FRONTEND_PORT,
             DEFAULT_THREAD_POOL_SIZE,
             DEFAULT_TIMEOUT_REQUEST,
