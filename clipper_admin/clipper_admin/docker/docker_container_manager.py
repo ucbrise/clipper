@@ -196,7 +196,7 @@ class DockerContainerManager(ContainerManager):
                      "--timeout_request={timeout_request} "
                      "--timeout_content={timeout_content}").format(
                          redis_ip=self.redis_ip,
-                         redis_port=self.redis_port,
+                         redis_port=CLIPPER_INTERNAL_REDIS_PORT,
                          cache_size=cache_size,
                          thread_pool_size=qf_http_thread_pool_size,
                          timeout_request=qf_http_timeout_request,
