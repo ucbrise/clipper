@@ -204,6 +204,13 @@ class RequestHandler {
             auto linked_model_names =
                 clipper::redis::get_linked_models(redis_connection_, app_name);
             set_linked_models_for_app(app_name, linked_model_names);
+
+          } else if (event_type == "srem") {
+            clipper::log_info_formatted(LOGGING_TAG_QUERY_FRONTEND,
+                                        "Model link removal detected for app: {}", app_name);
+            auto linked_model_names =
+                clipper::redis::get_linked_models(redis_connection_, app_name);
+            set_linked_models_for_app(app_name, linked_model_names);
           }
         });
 
