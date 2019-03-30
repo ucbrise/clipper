@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 import logging
 import docker
+from docker import errors
 import tempfile
 import requests
 from requests.exceptions import RequestException
@@ -24,6 +25,7 @@ else:
     from io import BytesIO as StringIO
     PY3 = True
 
+from .decorators import retry
 from .container_manager import CONTAINERLESS_MODEL_IMAGE, ClusterAdapter
 from .exceptions import ClipperException, UnconnectedException
 from .version import __version__, __registry__
@@ -124,27 +126,30 @@ class ClipperConnection(object):
             self.cm.start_clipper(query_frontend_image, mgmt_frontend_image,
                                   frontend_exporter_image, cache_size,
                                   num_frontend_replicas)
-            while True:
-                try:
-                    query_frontend_url = "http://{host}/metrics".format(
-                        host=self.cm.get_query_addr())
-                    mgmt_frontend_url = "http://{host}/admin/ping".format(
-                        host=self.cm.get_admin_addr())
-                    for name, url in [('query frontend', query_frontend_url), 
-                                     ('management frontend', mgmt_frontend_url)]:
-                        r = requests.get(url, timeout=5)
-                        if r.status_code != requests.codes.ok:
-                            raise RequestException(
-                                "{name} end point {url} health check failed".format(name=name, url=url))
-                    break
-                except RequestException as e:
-                    self.logger.info("Clipper still initializing: \n {}".format(e))
-                    time.sleep(1)
-            self.logger.info("Clipper is running")
-            self.connected = True
         except ClipperException as e:
             self.logger.warning("Error starting Clipper: {}".format(e.msg))
             raise e
+
+        # Wait for maximum 5 min.
+        @retry(RequestException, tries=300, delay=1, backoff=1, logger=self.logger)
+        def _check_clipper_status():
+            try:
+                query_frontend_url = "http://{host}/metrics".format(
+                    host=self.cm.get_query_addr())
+                mgmt_frontend_url = "http://{host}/admin/ping".format(
+                    host=self.cm.get_admin_addr())
+                for name, url in [('query frontend', query_frontend_url),
+                                  ('management frontend', mgmt_frontend_url)]:
+                    r = requests.get(url, timeout=5)
+                    if r.status_code != requests.codes.ok:
+                        raise RequestException(
+                            "{name} end point {url} health check failed".format(name=name, url=url))
+            except RequestException as e:
+                raise RequestException("Clipper still initializing: \n {}".format(e))
+        _check_clipper_status()
+
+        self.logger.info("Clipper is running")
+        self.connected = True
 
     def connect(self):
         """Connect to a running Clipper cluster."""
@@ -518,8 +523,13 @@ class ClipperConnection(object):
                     self.logger.info(b['stream'].rstrip())
 
         self.logger.info("Pushing model Docker image to {}".format(image))
-        for line in docker_client.images.push(repository=image, stream=True):
-            self.logger.debug(line)
+
+        @retry(docker.errors.APIError, tries=5, logger=self.logger)
+        def _push_model():
+            for line in docker_client.images.push(repository=image, stream=True):
+                self.logger.debug(line)
+        _push_model()
+
         return image
 
     def deploy_model(self,
