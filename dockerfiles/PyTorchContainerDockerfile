@@ -5,7 +5,7 @@ FROM ${REGISTRY}/${RPC_VERSION}-rpc:${CODE_VERSION}
 
 LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
-RUN pip install -q torch torchvision
+RUN pip install -q torch==1.0.* torchvision==0.2.*
 
 COPY containers/python/pytorch_container.py containers/python/container_entry.sh /container/
 
