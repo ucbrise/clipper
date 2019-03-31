@@ -4,7 +4,8 @@ import docker
 from docker import errors
 import tempfile
 import requests
-from requests.exceptions import RequestException
+from urllib3.exceptions import TimeoutError
+from requests.exceptions import (RequestException, Timeout)
 import json
 import pprint
 import time
@@ -534,7 +535,8 @@ class ClipperConnection(object):
 
         self.logger.info("Pushing model Docker image to {}".format(image))
 
-        @retry(docker.errors.APIError, tries=5, logger=self.logger)
+        @retry((docker.errors.APIError, TimeoutError, Timeout),
+               tries=5, logger=self.logger)
         def _push_model():
             for line in docker_client.images.push(repository=image, stream=True):
                 self.logger.debug(line)
