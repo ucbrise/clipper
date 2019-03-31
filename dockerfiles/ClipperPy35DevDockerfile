@@ -25,8 +25,7 @@ RUN pip3 install cloudpickle==0.5.* pyzmq==17.0.* requests==2.18.* scikit-learn=
   xgboost==0.7.*
 
 # Install PyTorch
-RUN pip3 install http://download.pytorch.org/whl/cpu/torch-0.4.1-cp35-cp35m-linux_x86_64.whl
-RUN pip3 install torchvision
+RUN pip3 install torch==1.0.* torchvision==0.2.*
 
 # Install kubectl
 RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl \
