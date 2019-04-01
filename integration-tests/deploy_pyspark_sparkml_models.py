@@ -116,10 +116,13 @@ if __name__ == "__main__":
 
     import random
     cluster_name = "sparkml-{}".format(random.randint(0, 5000))
+    clipper_conn = None
+
     try:
         spark = SparkSession\
                 .builder\
                 .appName("clipper-pyspark-ml")\
+                .config("spark.ui.enabled", "false")\
                 .getOrCreate()
         sc = spark.sparkContext
         clipper_conn = create_docker_connection(
@@ -155,16 +158,16 @@ if __name__ == "__main__":
             log_docker(clipper_conn)
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
-            clipper_conn = create_docker_connection(
+            create_docker_connection(
                 cleanup=True, start_clipper=False, cleanup_name=cluster_name)
             sys.exit(1)
         else:
             spark.stop()
-            clipper_conn = create_docker_connection(
+            create_docker_connection(
                 cleanup=True, start_clipper=False, cleanup_name=cluster_name)
-    except Exception:
+    except Exception as e:
         log_docker(clipper_conn)
-        logger.exception("Exception")
-        clipper_conn = create_docker_connection(
+        logger.exception("Exception: {}".format(e))
+        create_docker_connection(
             cleanup=True, start_clipper=False, cleanup_name=cluster_name)
         sys.exit(1)
