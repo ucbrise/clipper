@@ -116,6 +116,8 @@ if __name__ == "__main__":
 
     import random
     cluster_name = "sparkml-{}".format(random.randint(0, 5000))
+    clipper_conn = None
+
     try:
         spark = SparkSession\
                 .builder\
@@ -162,9 +164,9 @@ if __name__ == "__main__":
             spark.stop()
             clipper_conn = create_docker_connection(
                 cleanup=True, start_clipper=False, cleanup_name=cluster_name)
-    except Exception:
+    except Exception as e:
         log_docker(clipper_conn)
-        logger.exception("Exception")
-        clipper_conn = create_docker_connection(
+        logger.exception("Exception: {}".format(e))
+        create_docker_connection(
             cleanup=True, start_clipper=False, cleanup_name=cluster_name)
         sys.exit(1)

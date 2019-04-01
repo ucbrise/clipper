@@ -94,6 +94,7 @@ def run_test():
     # test predict function
     print(predict(spark, model,
                   [json.dumps((np.random.randint(1000), "spark abcd"))]))
+    clipper_conn = None
 
     try:
         clipper_conn = create_docker_connection(
@@ -167,7 +168,7 @@ def run_test():
             if num_defaults > num_preds / 2:
                 raise BenchmarkException("Error querying APP %s, MODEL %s:%d" %
                                          (app_name, model_name, version))
-        except BenchmarkException as e:
+        except BenchmarkException:
             log_docker(clipper_conn)
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
@@ -181,8 +182,8 @@ def run_test():
             logger.info("ALL TESTS PASSED")
     except Exception as e:
         log_docker(clipper_conn)
-        logger.exception("Exception")
-        clipper_conn = create_docker_connection(
+        logger.exception("Exception: {}".format(e))
+        create_docker_connection(
             cleanup=True, start_clipper=False, cleanup_name=cluster_name)
         sys.exit(1)
 
