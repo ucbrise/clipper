@@ -17,7 +17,13 @@ int main(int argc, char* argv[]) {
     ("rpc_service_port", "RPCService's port",
         cxxopts::value<int>()->default_value(std::to_string(clipper::DEFAULT_RPC_SERVICE_PORT)))
     ("prediction_cache_size", "Size of the prediction cache in bytes, excluding cache metadata",
-       cxxopts::value<long>()->default_value(std::to_string(clipper::DEFAULT_PREDICTION_CACHE_SIZE_BYTES)));
+        cxxopts::value<long>()->default_value(std::to_string(clipper::DEFAULT_PREDICTION_CACHE_SIZE_BYTES)))
+    ("thread_pool_size", "thread pool size of server_http",
+        cxxopts::value<int>()->default_value(std::to_string(clipper::DEFAULT_THREAD_POOL_SIZE)))
+    ("timeout_request", "timeout_request of server_http",
+        cxxopts::value<int>()->default_value(std::to_string(clipper::DEFAULT_TIMEOUT_REQUEST)))
+    ("timeout_content", "timeout_content of server_http",
+        cxxopts::value<int>()->default_value(std::to_string(clipper::DEFAULT_TIMEOUT_CONTENT)));
   // clang-format on
   options.parse(argc, argv);
 
@@ -29,6 +35,9 @@ int main(int argc, char* argv[]) {
   conf.ready();
 
   query_frontend::RequestHandler<clipper::QueryProcessor> rh(
-      "0.0.0.0", clipper::QUERY_FRONTEND_PORT);
+      "0.0.0.0", clipper::QUERY_FRONTEND_PORT,
+      options["thread_pool_size"].as<int>(),
+      options["timeout_request"].as<int>(),
+      options["timeout_content"].as<int>());
   rh.start_listening();
 }

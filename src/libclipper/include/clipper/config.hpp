@@ -14,6 +14,9 @@ const std::string DEFAULT_REDIS_ADDRESS("localhost");
 constexpr int DEFAULT_REDIS_PORT = 6379;
 constexpr int DEFAULT_RPC_SERVICE_PORT = 7000;
 constexpr long DEFAULT_PREDICTION_CACHE_SIZE_BYTES = 33554432;  // 32 MiB
+constexpr int DEFAULT_THREAD_POOL_SIZE = 1;
+constexpr int DEFAULT_TIMEOUT_REQUEST = 5;
+constexpr int DEFAULT_TIMEOUT_CONTENT = 300;
 
 /**
  * Globally readable constant configuration.

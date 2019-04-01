@@ -21,6 +21,6 @@ int main(int argc, char* argv[]) {
   conf.set_redis_address(options["redis_ip"].as<std::string>());
   conf.set_redis_port(options["redis_port"].as<int>());
   conf.ready();
-  management::RequestHandler rh(clipper::MANAGEMENT_FRONTEND_PORT);
+  management::RequestHandler rh("0.0.0.0", clipper::MANAGEMENT_FRONTEND_PORT);
   rh.start_listening();
 }

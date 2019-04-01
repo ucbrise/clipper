@@ -143,7 +143,9 @@ class DockerContainerManager(ContainerManager):
                       mgmt_frontend_image,
                       frontend_exporter_image,
                       cache_size,
-                      prometheus_version,
+                      qf_http_thread_pool_size,
+                      qf_http_timeout_request,
+                      qf_http_timeout_content,
                       num_frontend_replicas=1):
         if num_frontend_replicas != 1:
             msg = "Docker container manager's query frontend scale-out " \
@@ -223,11 +225,16 @@ class DockerContainerManager(ContainerManager):
 
         # query frontend
         query_cmd = ("--redis_ip={redis_ip} --redis_port={redis_port} "
-                     "--prediction_cache_size={cache_size}").format(
+                     "--prediction_cache_size={cache_size} "
+                     "--thread_pool_size={thread_pool_size} "
+                     "--timeout_request={timeout_request} "
+                     "--timeout_content={timeout_content}").format(
                          redis_ip=self.redis_ip,
                          redis_port=CLIPPER_INTERNAL_REDIS_PORT,
-                         cache_size=cache_size)
-
+                         cache_size=cache_size,
+                         thread_pool_size=qf_http_thread_pool_size,
+                         timeout_request=qf_http_timeout_request,
+                         timeout_content=qf_http_timeout_content)
         query_container_id = random.randint(0, 100000)
         query_name = "query_frontend-{}".format(query_container_id)
         self.clipper_query_port = find_unbound_port(self.clipper_query_port)
