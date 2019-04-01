@@ -172,12 +172,12 @@ def run_test():
             log_docker(clipper_conn)
             log_clipper_state(clipper_conn)
             logger.exception("BenchmarkException")
-            clipper_conn = create_docker_connection(
+            create_docker_connection(
                 cleanup=True, start_clipper=False, cleanup_name=cluster_name)
             sys.exit(1)
         else:
             spark.stop()
-            clipper_conn = create_docker_connection(
+            create_docker_connection(
                 cleanup=True, start_clipper=False, cleanup_name=cluster_name)
             logger.info("ALL TESTS PASSED")
     except Exception as e:
