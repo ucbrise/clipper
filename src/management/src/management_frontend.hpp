@@ -169,7 +169,8 @@ std::string json_error_msg(const std::string& exception_msg,
 
 class RequestHandler {
  public:
-  RequestHandler(int portno) : server_(portno), state_db_{} {
+  RequestHandler(std::string address, int portno)
+      : server_(address, portno), state_db_{} {
     clipper::Config& conf = clipper::get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
