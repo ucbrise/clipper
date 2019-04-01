@@ -58,6 +58,7 @@ class PySparkContainer(rpc.ModelContainerBase):
         self.spark = SparkSession\
             .builder\
             .appName("clipper-pyspark")\
+            .config("spark.ui.enabled", "false")\
             .getOrCreate()
         metadata_path = os.path.join(path, "metadata.json")
         spark_model_path = os.path.join(path, "pyspark_model_data")

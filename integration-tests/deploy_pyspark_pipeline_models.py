@@ -62,6 +62,7 @@ def run_test():
     spark = SparkSession\
         .builder\
         .appName("clipper-pyspark")\
+        .config("spark.ui.enabled", "false")\
         .getOrCreate()
 
     training = spark.createDataFrame(

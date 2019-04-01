@@ -127,6 +127,7 @@ if __name__ == "__main__":
         spark = SparkSession\
                 .builder\
                 .appName("clipper-pyspark")\
+                .config("spark.ui.enabled", "false")\
                 .getOrCreate()
         sc = spark.sparkContext
         clipper_conn = create_docker_connection(
