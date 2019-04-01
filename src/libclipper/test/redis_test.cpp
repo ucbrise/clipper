@@ -134,6 +134,37 @@ TEST_F(RedisTest, AddModelLinks) {
   ASSERT_EQ(model_names, linked_models);
 }
 
+TEST_F(RedisTest, DeleteModelLinks) {
+  std::string app_name = "my_app_name";
+  InputType input_type = InputType::Doubles;
+  std::string policy = DefaultOutputSelectionPolicy::get_name();
+  std::string default_output = "1.0";
+  int latency_slo_micros = 10000;
+  ASSERT_TRUE(add_application(*redis_, app_name, input_type, policy,
+                              default_output, latency_slo_micros));
+
+  std::vector<std::string> labels{"ads", "images", "experimental", "other",
+                                  "labels"};
+  std::string model_name_1 = "model_1";
+  std::string model_name_2 = "model_2";
+  VersionedModelId model_1 = VersionedModelId(model_name_1, "1");
+  VersionedModelId model_2 = VersionedModelId(model_name_2, "1");
+  std::string container_name = "clipper/test_container";
+  std::string model_path = "/tmp/models/m/1";
+  ASSERT_TRUE(add_model(*redis_, model_1, input_type, labels, container_name,
+                        model_path, DEFAULT_BATCH_SIZE));
+  ASSERT_TRUE(add_model(*redis_, model_2, input_type, labels, container_name,
+                        model_path, DEFAULT_BATCH_SIZE));
+
+  std::vector<std::string> model_names =
+      std::vector<std::string>{model_name_1, model_name_2};
+  ASSERT_TRUE(add_model_links(*redis_, app_name, model_names));
+  ASSERT_TRUE(delete_model_links(*redis_, app_name, model_names));
+
+  auto linked_models = get_linked_models(*redis_, app_name);
+  ASSERT_EQ(linked_models.size(), (size_t)0);
+}
+
 TEST_F(RedisTest, SetCurrentModelVersion) {
   std::string model_name = "mymodel";
   ASSERT_TRUE(set_current_model_version(*redis_, model_name, "2"));

@@ -177,6 +177,9 @@ def log_clipper_state(cl):
 
 
 def log_docker(clipper_conn):
+    if clipper_conn is None:
+        return
+
     """Retrieve status and log for last ten containers"""
     container_runing = clipper_conn.cm.docker_client.containers.list(limit=10)
     logger.info('----------------------')

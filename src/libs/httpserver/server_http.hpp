@@ -183,10 +183,9 @@ class ServerBase {
   class Config {
     friend class ServerBase<socket_type>;
 
-    Config(unsigned short port): port(port) {}
-     Config(std::string address, unsigned short port)
-             : port(port),
-               address(address) {}
+    Config(std::string address, unsigned short port): address(address), port(port) {}
+    Config(std::string address, unsigned short port, size_t thread_pool_size, size_t timeout_request, size_t timeout_content):
+        address(address), port(port), thread_pool_size(thread_pool_size), timeout_request(timeout_request), timeout_content(timeout_content) {}
 
    public:
     /// Port number to use. Defaults to 80 for HTTP and 443 for HTTPS.
@@ -406,10 +405,9 @@ class ServerBase {
   std::vector<std::thread> threads;
   std::mutex mu;
 
-  ServerBase(unsigned short port)
-      : config(port){}
-  ServerBase(std::string address, unsigned short port)
-      : config(address, port) {}
+  ServerBase(std::string address, unsigned short port) : config(address, port){}
+  ServerBase(std::string address, unsigned short port, size_t thread_pool_size, size_t timeout_request, size_t timeout_content)
+      : config(address, port, thread_pool_size, timeout_request, timeout_content) {}
 
   virtual void accept() = 0;
 
@@ -624,8 +622,9 @@ typedef boost::asio::ip::tcp::socket HTTP;
 template <>
 class Server<HTTP> : public ServerBase<HTTP> {
  public:
-   Server(unsigned short port) : ServerBase<HTTP>::ServerBase(port) {}
    Server(std::string address, unsigned short port) : ServerBase<HTTP>::ServerBase(address, port) {}
+   Server(std::string address, unsigned short port, size_t thread_pool_size, size_t timeout_request, size_t timeout_content) :
+       ServerBase<HTTP>::ServerBase(address, port, thread_pool_size, timeout_request, timeout_content) {}
 
  protected:
   void accept() {

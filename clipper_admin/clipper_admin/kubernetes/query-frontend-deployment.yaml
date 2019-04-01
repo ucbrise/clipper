@@ -24,6 +24,9 @@ spec:
         - "--redis_ip={{ redis_service_host | default('$(REDIS_SERVICE_HOST)', true) }}"
         - "--redis_port={{ redis_service_port | default('$(REDIS_SERVICE_PORT)', true) }}"
         - "--prediction_cache_size={{ cache_size }}"
+        - "--thread_pool_size={{ thread_pool_size }}"
+        - "--timeout_request={{ timeout_request }}"
+        - "--timeout_content={{ timeout_content }}"
         image: {{ image }}
         imagePullPolicy: Always
         name: query-frontend

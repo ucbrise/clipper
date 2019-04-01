@@ -141,6 +141,25 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         result = self.clipper_conn.get_linked_models(app_name)
         self.assertEqual([model_name], result)
 
+    def test_unlink_registered_model_from_app_succeeds(self):
+        # Register app
+        app_name = "testapp"
+        input_type = "doubles"
+        default_output = "DEFAULT"
+        slo_micros = 30000
+        self.clipper_conn.register_application(app_name, input_type,
+                                               default_output, slo_micros)
+
+        # Register model
+        model_name = "m"
+        self.clipper_conn.register_model(model_name, "v1", input_type)
+
+        self.clipper_conn.link_model_to_app(app_name, model_name)
+        self.clipper_conn.unlink_model_from_app(app_name, model_name)
+
+        result = self.clipper_conn.get_linked_models(app_name)
+        self.assertEqual([], result)
+
     def get_app_info_for_registered_app_returns_info_dictionary(self):
         # Register app
         app_name = "testapp"
@@ -279,8 +298,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         container_name = "{}/noop-container:{}".format(clipper_registry,
                                                        clipper_version)
         input_type = "doubles"
-        mnames = ["jimmypage", "robertplant", "jpj", "johnbohnam"]
-        versions = ["i", "ii", "iii", "iv"]
+        mnames = ["jimmypage", "robertplant"]
+        versions = ["i", "ii"]
         for model_name in mnames:
             for version in versions:
                 self.clipper_conn.deploy_model(
@@ -293,35 +312,32 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         containers = self.get_containers(container_name)
         self.assertEqual(len(containers), len(mnames) * len(versions))
 
-        # stop all versions of models jimmypage, robertplant
-        self.clipper_conn.stop_models(mnames[:2])
+        # stop all versions of jimmypage model
+        self.clipper_conn.stop_models(mnames[:1])
         containers = self.get_containers(container_name)
 
-        self.assertEqual(len(containers), len(mnames[2:]) * len(versions))
+        self.assertEqual(len(containers), len(mnames[1:]) * len(versions))
 
+        # Unregister all versions of jimmypage model from Clipper Internal
         self.clipper_conn.unregister_versioned_models({
-            "jimmypage": ["i", "ii", "iii", "iv"],
-            "robertplant": ["i", "ii", "iii", "iv"]
+            "jimmypage": ["i", "ii"],
         })
         self.check_registered_models(
-            pairs=[(a, b) for a in mnames[2:] for b in versions])
+            pairs=[(a, b) for a in mnames[1:] for b in versions])
 
-        # After calling this method, the remaining models should be:
-        # jpj:i, jpj:iii, johnbohman:ii
+        # After calling this method, the remaining model should be robertplant:i
         self.clipper_conn.stop_versioned_models({
-            "jpj": ["ii", "iv"],
-            "johnbohnam": ["i", "iv", "iii"],
+            "robertplant": ["ii"],
         })
         containers = self.get_containers(container_name)
 
-        self.assertEqual(len(containers), 3)
+        self.assertEqual(len(containers), 1)
 
+        # Unregister the robertplant:ii model from Clipper Internal
         self.clipper_conn.unregister_versioned_models({
-            "jpj": ["ii", "iv"],
-            "johnbohnam": ["i", "iv", "iii"],
+            "robertplant": ["ii"],
         })
-        self.check_registered_models(
-            pairs=[("jpj", "i"), ("jpj", "iii"), ("johnbohnam", "ii")])
+        self.check_registered_models(pairs=[("robertplant", "i")])
 
         self.clipper_conn.stop_all_model_containers()
         containers = self.get_containers(container_name)
@@ -329,8 +345,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertEqual(len(containers), 0)
 
         self.clipper_conn.unregister_versioned_models({
-            "jpj": ["i", "iii"],
-            "johnbohnam": ["ii"]
+            "robertplant": ["i"],
         })
         self.check_registered_models(pairs=[])
 
