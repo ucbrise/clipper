@@ -1,0 +1,82 @@
+#Mulitiple host networking 
+
+
+##Step 1:
+Configure Key/Value Store 
+
+```sh
+docker run -d --name consul \
+-p 8300:8300 -p 8400:8400 -p 8500:8500 -p 53:8600/udp \
+gliderlabs/consul-server:latest -bootstrap
+```
+
+##Step 2:
+Configure Docker Daemon on Host 1
+
+###Option 1: Configure existing daemon
+
+```sh
+docerd \
+--cluster-store=consul://[[CONSUL_IP]]:8500 \
+--cluster-advertise=[[HOST_IP1]]:0
+```
+###Option 2: start a new daemon
+
+```sh
+docker run --privileged --name d1 -d \
+--net=host katacoda/dind:1.10 -H 0.0.0.0:3375 \
+--cluster-store=consul://[[CONSUL_IP]]:8500 \
+--cluster-advertise=[[HOST_IP]]:0
+```
+
+Export new host daemon
+```sh
+export DOCKER_HOST="[[HOST_IP1]]:3375"
+```
+##Step 3:
+
+###Option 1: Configure existing daemon
+
+```sh
+docerd \
+--cluster-store=consul://[[CONSUL_IP]]:8500 \
+--cluster-advertise=[[HOST_IP2]]:0
+```
+###Option 2: Configure existing daemon
+
+Configure Docker Daemon on Host 2
+
+```sh
+docker run --privileged --name d1 -d \
+--net=host katacoda/dind:1.10 -H 0.0.0.0:3375 \
+--cluster-store=consul://[[CONSUL_IP]]:8500 \
+--cluster-advertise=[[HOST_IP2]]:0
+```
+
+Export new host daemon
+```sh
+export DOCKER_HOST="[[HOST_IP2]]:3375"
+```
+
+##Step 4:
+One one of the Docker hosts, create the network
+
+```sh
+docker network create -d overlay multihost-net
+```
+
+When new containers launch on any host they register themselves to the network
+
+##Step 5:
+
+Host 1
+
+```sh
+docker run -d --name ws1 --net=multihos-net katacoda/docker-http-server
+```
+##Step 6:
+
+Host 2
+```sh
+docker run --net=multihost-net benhall/curl curl -Ss ws1
+```

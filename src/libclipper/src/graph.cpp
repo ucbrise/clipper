@@ -1,6 +1,8 @@
-	
+#include <vector>
+
 
 #include <clipper/graph.hpp>
+
 
 namespace clipper{
 
@@ -41,10 +43,8 @@ void Graph::addEdge(Edge edge){
     };
 
 void Graph::addVertex(Vertex v){
-
         vertexList.resize(vertexList.size+1);
         vertexList.push_back(v);
-
 };
 
 bool Graph::isVertexExist(Vertex v){
@@ -72,4 +72,4 @@ std::string Graph::serializeGraphToProtobuf(Graph graph){
         return "";
 };
 
-}
+} // namespace clipper

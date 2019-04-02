@@ -27,6 +27,7 @@ else:
 from .container_manager import CONTAINERLESS_MODEL_IMAGE, ClusterAdapter
 from .exceptions import ClipperException, UnconnectedException
 from .version import __version__, __registry__
+from . import graph_parser
 
 DEFAULT_LABEL = []
 DEFAULT_PREDICTION_CACHE_SIZE_BYTES = 33554432
@@ -124,22 +125,22 @@ class ClipperConnection(object):
             self.cm.start_clipper(query_frontend_image, mgmt_frontend_image,
                                   frontend_exporter_image, cache_size,
                                   num_frontend_replicas)
-            while True:
-                try:
-                    query_frontend_url = "http://{host}/metrics".format(
-                        host=self.cm.get_query_addr())
-                    mgmt_frontend_url = "http://{host}/admin/ping".format(
-                        host=self.cm.get_admin_addr())
-                    for name, url in [('query frontend', query_frontend_url), 
-                                     ('management frontend', mgmt_frontend_url)]:
-                        r = requests.get(url, timeout=5)
-                        if r.status_code != requests.codes.ok:
-                            raise RequestException(
-                                "{name} end point {url} health check failed".format(name=name, url=url))
-                    break
-                except RequestException as e:
-                    self.logger.info("Clipper still initializing: \n {}".format(e))
-                    time.sleep(1)
+            # while True:
+            #     try:
+            #         query_frontend_url = "http://{host}/metrics".format(
+            #             host=self.cm.get_query_addr())
+            #         mgmt_frontend_url = "http://{host}/admin/ping".format(
+            #             host=self.cm.get_admin_addr())
+            #         for name, url in [('query frontend', query_frontend_url), 
+            #                          ('management frontend', mgmt_frontend_url)]:
+            #             r = requests.get(url, timeout=5)
+            #             if r.status_code != requests.codes.ok:
+            #                 raise RequestException(
+            #                     "{name} end point {url} health check failed".format(name=name, url=url))
+            #         break
+            #     except RequestException as e:
+            #         self.logger.info("Clipper still initializing: \n {}".format(e))
+            #         time.sleep(1)
             self.logger.info("Clipper is running")
             self.connected = True
         except ClipperException as e:
@@ -219,6 +220,52 @@ class ClipperConnection(object):
                 "Application {app} was successfully registered".format(
                     app=name))
 
+    def add_DAG(self, name, dag_description):   
+        if not self.connected:
+            raise UnconnectedException()
+        url = "http://{host}/admin/add_dag".format(
+            host=self.cm.get_admin_addr())
+        req_json = json.dumps({
+            "name": name,
+            "dag_description": dag_description
+        })
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
+        self.logger.debug(r.text)
+        if r.status_code != requests.codes.ok:
+            msg = "Received error status code: {code} and message: {msg}".format(
+                code=r.status_code, msg=r.text)
+            self.logger.error(msg)
+            raise ClipperException(msg)
+        else:
+            self.logger.info(
+                "Application DAG {app} was successfully registered".format(
+                    app=name))
+
+    def link_dag_to_app(self, app_name, dag_name):
+
+        if not self.connected:
+            raise UnconnectedException()
+
+        url = "http://{host}/admin/add_app_dag_links".format(
+            host=self.cm.get_admin_addr())
+        req_json = json.dumps({
+            "app_name": app_name,
+            "dag_names": [dag_name]
+        })
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
+        self.logger.debug(r.text)
+        if r.status_code != requests.codes.ok:
+            msg = "Received error status code: {code} and message: {msg}".format(
+                code=r.status_code, msg=r.text)
+            self.logger.error(msg)
+            raise ClipperException(msg)
+        else:
+            self.logger.info(
+                "Model DAG {dag} is now linked to application {app}".format(
+                    dag=dag_name, app=app_name))
+
     def delete_application(self, name):
         if not self.connected:
             raise UnconnectedException()
@@ -280,6 +327,16 @@ class ClipperConnection(object):
             self.logger.info(
                 "Model {model} is now linked to application {app}".format(
                     model=model_name, app=app_name))
+
+
+    def build_and_deploy_DAG(self,
+                             name,
+                             version,
+                             dag_description,
+                             labels):
+        if not self.connected:
+            raise UnconnectedException()
+        
 
     def build_and_deploy_model(self,
                                name,
@@ -481,6 +538,7 @@ class ClipperConnection(object):
             self.logger.debug(line)
         return image
 
+
     def deploy_model(self,
                      name,
                      version,
@@ -563,13 +621,13 @@ class ClipperConnection(object):
             input_type=input_type,
             image=image,
             num_replicas=num_replicas)
-        self.register_model(
-            name,
-            version,
-            input_type,
-            image=image,
-            labels=labels,
-            batch_size=batch_size)
+        # self.register_model(
+        #     name,
+        #     version,
+        #     input_type,
+        #     image=image,
+        #     labels=labels,
+        #     batch_size=batch_size)
         self.logger.info("Done deploying model {name}:{version}.".format(
             name=name, version=version))
 
@@ -655,6 +713,83 @@ class ClipperConnection(object):
                 "Successfully registered model {name}:{version}".format(
                     name=name, version=version))
 
+ #   def register_proxy(self, name)
+
+    def register_DAG(self,
+                     name,
+                     version,
+                     dag_description):
+        """Registers a new DAG version with Clipper.
+
+        This method does not launch any model containers, it only registers the model description
+        (metadata such as name, version, and input type) with Clipper. A model must be registered
+        with Clipper before it can be linked to an application.
+
+        You should rarely have to use this method directly. Using one the Clipper deployer
+        methods in :py:mod:`clipper_admin.deployers` or calling ``build_and_deploy_model`` or
+        ``deploy_model`` will automatically register your model with Clipper.
+
+        Parameters
+        ----------
+        name : str
+            The name of the deployed model
+        version : str
+            The version to assign this model. Versions must be unique on a per-model
+            basis, but may be re-used across different models.
+        """
+
+        if not self.connected:
+            raise UnconnectedException()
+        version = str(version)
+        url = "http://{host}/admin/add_dag".format(
+            host=self.cm.get_admin_addr())
+
+        req_json = json.dumps({
+            "dag_name": name,
+            "dag_version": version,
+            "dag_description": dag_description
+        })
+
+        headers = {'Content-type': 'application/json'}
+        self.logger.debug(req_json)
+        r = requests.post(url, headers=headers, data=req_json)
+        self.logger.debug(r.text)
+        if r.status_code != requests.codes.ok:
+            msg = "Received error status code: {code} and message: {msg}".format(
+                code=r.status_code, msg=r.text)
+            self.logger.error(msg)
+            raise ClipperException(msg)
+        else:
+            self.logger.info(
+                "Successfully registered DAG {name}:{version}".format(
+                    name=name, version=version))
+
+    def deploy_DAG(self, name, version, dag_description=None):
+
+
+        if not self.connected:
+            raise UnconnectedException()
+
+        model_info = self.get_all_models()
+
+        dag_description_ = dag_description
+
+        #if(dag_description==None):
+        #    dag_description_=self.get_dag_description()
+
+        nodes_list = graph_parser.get_all_nodes(dag_description_)
+        
+        container_ids = []
+        proxy_names = []
+        for node_name in nodes_list:
+            model_name,model_version,image = graph_parser.get_name_version(node_name)
+            model_container_name, model_container_id = self.cm.add_replica(model_name, model_version, "string", image)
+            container_ids.append(model_container_id)
+            model_container_ip = self.cm.get_container_ip(model_container_name)
+            model_proxy_name = self.cm.set_proxy("proxytest", model_container_name, model_container_ip)
+            proxy_names.append(model_proxy_name)
+        return
+
     def get_current_model_version(self, name):
         """Get the current model version for the specified model.
 
@@ -715,6 +850,9 @@ class ClipperConnection(object):
         else:
             version = str(version)
         return self.cm.get_num_replicas(name, version)
+
+
+        
 
     def set_num_replicas(self, name, num_replicas, version=None):
         """Sets the total number of active replicas for a model.

@@ -81,7 +81,19 @@ class ContainerManager(object):
         return
 
     @abc.abstractmethod
+    def connect_host(self, host_ip):
+        return
+
+    @abc.abstractmethod
     def deploy_model(self, name, version, input_type, image):
+        return
+
+    @abc.abstractmethod
+    def add_replica(self, name, version, input_type, image):
+        return
+
+    @abc.abstractmethod
+    def set_proxy(self, image, model_container_label, model_ip):
         return
 
     @abc.abstractmethod
@@ -149,6 +161,6 @@ class ContainerManager(object):
     def get_query_addr(self):
         return
 
-    @abc.abstractmethod
-    def get_metric_addr(self):
-        return
+    # @abc.abstractmethod
+    # def get_metric_addr(self):
+    #     return
