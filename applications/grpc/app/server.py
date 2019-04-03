@@ -29,29 +29,31 @@ class PredictService(test_pb2_grpc.PredictServiceServicer):
         input_type = request.inputType
         input_stream = request.inputStream
 
+        print("Begin predicting")
+
         output = predict_fn.predict(input_stream)
 
 #        print("goes here")
 
 #        return test_pb2.response(status = output)
 
-        channel = grpc.insecure_channel('{proxy_name}:{proxy_port}'.format(
-            proxy_name = self.proxy_name,
-            proxy_port = self.proxy_port
-        ))
-        stub = test_pb2_grpc.PredictServiceStub(channel)
-        response = stub.Predict(test_pb2.input(
-            inputType = "string",
-            inputSream = output
-        ))
-        print('Predicted output [{output}] sent to {proxy}:{response}'.format(
-            output = output,
-            proxy = self.proxy_name,
-            response = response.status
-        ))
-
-        return test_pb2.response(status = "Sucessful")
-
+        # channel = grpc.insecure_channel('{proxy_name}:{proxy_port}'.format(
+        #     proxy_name = self.proxy_name,
+        #     proxy_port = self.proxy_port
+        # ))
+        # stub = test_pb2_grpc.PredictServiceStub(channel)
+        # response = stub.Predict(test_pb2.input(
+        #     inputType = "string",
+        #     inputStream = output
+        # ))
+        # print('Predicted output [{output}] sent to {proxy}:{response}'.format(
+        #     output = output,
+        #     proxy = self.proxy_name,
+        #     response = response.status
+        # ))
+        #
+        # return test_pb2.response(status = "Sucessful")
+        return output
         
 
 def serve():
