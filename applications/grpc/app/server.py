@@ -31,9 +31,9 @@ class PredictService(test_pb2_grpc.PredictServiceServicer):
 
         output = predict_fn.predict(input_stream)
 
-        print("goes here")
+#        print("goes here")
 
-        return test_pb2.response(status = output)
+#        return test_pb2.response(status = output)
 
         channel = grpc.insecure_channel('{proxy_name}:{proxy_port}'.format(
             proxy_name = self.proxy_name,

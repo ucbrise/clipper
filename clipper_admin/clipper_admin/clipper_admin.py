@@ -770,24 +770,31 @@ class ClipperConnection(object):
         if not self.connected:
             raise UnconnectedException()
 
-        model_info = self.get_all_models()
+       # model_info = self.get_all_models()
 
         dag_description_ = dag_description
+
+        self.logger.info("dag_description: %s"%(dag_description_))
 
         #if(dag_description==None):
         #    dag_description_=self.get_dag_description()
 
         nodes_list = graph_parser.get_all_nodes(dag_description_)
+
         
         container_ids = []
         proxy_names = []
         for node_name in nodes_list:
-            model_name,model_version,image = graph_parser.get_name_version(node_name)
-            model_container_name, model_container_id = self.cm.add_replica(model_name, model_version, "string", image)
+            self.logger.info("Starting node: %s"%(node_name))
+ 
+            model_name,model_version,model_image = graph_parser.get_name_version(node_name)
+            model_container_name, model_container_id = self.cm.add_replica(model_name, model_version, "22222", "c5", "22222", model_image)
+
+            self.logger.info("Started dag node %s with container %s"%(node_name, model_container_id))
             container_ids.append(model_container_id)
-            model_container_ip = self.cm.get_container_ip(model_container_name)
-            model_proxy_name = self.cm.set_proxy("proxytest", model_container_name, model_container_ip)
-            proxy_names.append(model_proxy_name)
+#            model_container_ip = self.cm.get_container_ip(model_container_name)
+#            model_proxy_name = self.cm.set_proxy("proxytest", model_container_name, model_container_ip)
+#            proxy_names.append(model_proxy_name)
         return
 
     def get_current_model_version(self, name):

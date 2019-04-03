@@ -56,10 +56,10 @@ class PredictService(test_pb2_grpc.PredictServiceServicer):
 
 def serve():
 
-    model_name = os.environ["MODEL_NAME"]
-    model_port = os.environ["MODEL_PORT"]
-    proxy_name = os.environ["PROXY_NAME"]
-    proxy_port = os.environ["PROXY_PORT"]
+    model_name = "1"#os.environ["MODEL_NAME"]
+    model_port = "22222"#os.environ["MODEL_PORT"]
+    proxy_name = "2"#os.environ["PROXY_NAME"]
+    proxy_port = "22222"#os.environ["PROXY_PORT"]
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=2))
     service = PredictService(model_name, model_port, proxy_name, proxy_port)

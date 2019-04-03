@@ -151,23 +151,23 @@ class DockerContainerManager(ContainerManager):
         #         "Please use ClipperConnection.connect() to connect to it.".
         #         format(self.cluster_name))
 
-        if not self.external_redis:
-            self.logger.info("Starting managed Redis instance in Docker")
-            self.redis_port = find_unbound_port(self.redis_port)
-            redis_labels = self.common_labels.copy()
-            redis_labels[CLIPPER_DOCKER_PORT_LABELS['redis']] = str(
-                self.redis_port)
-            redis_container = self.docker_client.containers.run(
-                'redis:alpine',
-                "redis-server --port %s" % CLIPPER_INTERNAL_REDIS_PORT,
-                name="redis-{}".format(random.randint(
-                    0, 100000)),  # generate a random name
-                ports={
-                    '%s/tcp' % CLIPPER_INTERNAL_REDIS_PORT: self.redis_port
-                },
-                labels=redis_labels,
-                **self.extra_container_kwargs)
-            self.redis_ip = redis_container.name
+        # if not self.external_redis:
+        #     self.logger.info("Starting managed Redis instance in Docker")
+        #     self.redis_port = find_unbound_port(self.redis_port)
+        #     redis_labels = self.common_labels.copy()
+        #     redis_labels[CLIPPER_DOCKER_PORT_LABELS['redis']] = str(
+        #         self.redis_port)
+        #     redis_container = self.docker_client.containers.run(
+        #         'redis:alpine',
+        #         "redis-server --port %s" % CLIPPER_INTERNAL_REDIS_PORT,
+        #         name="redis-{}".format(random.randint(
+        #             0, 100000)),  # generate a random name
+        #         ports={
+        #             '%s/tcp' % CLIPPER_INTERNAL_REDIS_PORT: self.redis_port
+        #         },
+        #         labels=redis_labels,
+        #         **self.extra_container_kwargs)
+        #     self.redis_ip = redis_container.name
 
         # mgmt_cmd = "--redis_ip={redis_ip} --redis_port={redis_port}".format(
         #     redis_ip=self.redis_ip, redis_port=CLIPPER_INTERNAL_REDIS_PORT)
@@ -262,7 +262,7 @@ class DockerContainerManager(ContainerManager):
         for container in containers:
             all_labels.update(container.labels)
 
-        self.redis_port = all_labels[CLIPPER_DOCKER_PORT_LABELS['redis']]
+        #self.redis_port = all_labels[CLIPPER_DOCKER_PORT_LABELS['redis']]
         # self.clipper_management_port = all_labels[CLIPPER_DOCKER_PORT_LABELS[
         #     'management']]
         # self.clipper_query_port = all_labels[CLIPPER_DOCKER_PORT_LABELS[
@@ -330,37 +330,42 @@ class DockerContainerManager(ContainerManager):
     def get_container_ip(self, container_id):
         return self.docker_client.api.inspect_container(container_id)['NetworkSettings']['Netowrks']['IPAddress']
 
-    def add_replica(self, name, version, input_type, image):
+    def add_replica(self, model_name, model_version, model_port, proxy_name, proxy_port, image):
 
-        containers = self.docker_client.containers.list(
-            filters={
-                "label": [
-                    "{key}={val}".format(
-                        key=CLIPPER_DOCKER_LABEL, val=self.cluster_name),
-                    CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL
-                ]
-            })
-        if len(containers) < 1:
-            self.logger.warning("No Clipper query frontend found.")
-            raise ClipperException(
-                "No Clipper query frontend to attach model container to")
-        query_frontend_hostname = containers[0].name
+        # containers = self.docker_client.containers.list(
+        #     filters={
+        #         "label": [
+        #             "{key}={val}".format(
+        #                 key=CLIPPER_DOCKER_LABEL, val=self.cluster_name),
+        #             CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL
+        #         ]
+        #     })
+        # if len(containers) < 1:
+        #     self.logger.warning("No Clipper query frontend found.")
+        #     raise ClipperException(
+        #         "No Clipper query frontend to attach model container to")
+        #query_frontend_hostname = containers[0].name
         env_vars = {
-            "CLIPPER_MODEL_NAME": name,
-            "CLIPPER_MODEL_VERSION": version,
+            "MODEL_NAME": model_name,
+            "MODEL_VERSION": model_version,
             # NOTE: assumes this container being launched on same machine
             # in same docker network as the query frontend
-            "CLIPPER_IP": query_frontend_hostname,
-            "CLIPPER_INPUT_TYPE": input_type,
+            "MODEL_PORT": "22222",
+            "PROXY_NAME": proxy_name,
+            "PROXY_PORT": proxy_port
         }
 
-        model_container_label = create_model_container_label(name, version)
+        # modelname_version
+        model_container_label = create_model_container_label(model_name, model_version)
         labels = self.common_labels.copy()
         labels[CLIPPER_MODEL_CONTAINER_LABEL] = model_container_label
         labels[CLIPPER_DOCKER_LABEL] = self.cluster_name
 
         model_container_name = model_container_label + '-{}'.format(
             random.randint(0, 100000))
+
+        #model_container_name = model_container_label
+
         container = self.docker_client.containers.run(
             image,
             name=model_container_name,
@@ -387,7 +392,7 @@ class DockerContainerManager(ContainerManager):
         #                     CLIPPER_INTERNAL_METRIC_PORT)
 
         # Return model_container_name so we can check if it's up and running later
-        return model_container_name, container['Id']
+        return model_container_name, model_container_label
 
     def _add_replica(self, name, version, input_type, image):
 

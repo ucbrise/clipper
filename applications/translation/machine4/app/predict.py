@@ -22,11 +22,11 @@ def cleanSentences(string):
     string = string.lower().replace("<br />", " ")
     return re.sub(strip_special_chars, "", string.lower())
 
-wordsList = np.load('/container/wordsList.npy')
+wordsList = np.load('/container/models/wordsList.npy')
 print('Loaded the word list!')
 wordsList = wordsList.tolist() #Originally loaded as numpy array
 wordsList = [word.decode('UTF-8') for word in wordsList] #Encode words as UTF-8
-wordVectors = np.load('/container/wordVectors.npy')
+wordVectors = np.load('/container/models/wordVectors.npy')
 
 
 #paragraph is a string
@@ -66,7 +66,7 @@ def predict(paragraph):
         # Restore variables from disk.
         #saver = tf.train.import_meta_graph('models1/pretrained_lstm.ckpt-99.meta')
         saver=tf.train.Saver()
-        saver.restore(sess,tf.train.latest_checkpoint('/'))
+        saver.restore(sess,tf.train.latest_checkpoint('/models'))
         inputdt=np.zeros([batchSize,maxSeqLength])
         lb=[]
         for i in range(batchSize):
