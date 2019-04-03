@@ -14,9 +14,9 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $DIR/..
 
 # We will build all images and push them to 
-# dockerhub under clippertesting/{image_name}:sha_tag
-CLIPPER_REGISTRY='clippertesting'
-sha_tag=$(git rev-parse --verify --short=10 HEAD)
+# dockerhub under $CLIPPER_REGISTRY/{image_name}:sha_tag
+CLIPPER_REGISTRY="${CLIPPER_REGISTRY:-clippertesting}"
+sha_tag="${CLIPPER_TAG:-$(git rev-parse --verify --short=10 HEAD)}"
 push_version_flag="--no-push"
 
 # Jenkins will merge the PR, however we will use the unmerged
