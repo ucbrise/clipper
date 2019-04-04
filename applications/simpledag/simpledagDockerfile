@@ -1,7 +1,7 @@
-ARG APPNAME=simpledag
-ARG CONTAINER=1
-
 FROM ubuntu:bionic
+
+
+
 RUN apt-get update
 RUN apt-get install python3 -y
 RUN apt-get install python3-pip -y
@@ -10,7 +10,11 @@ RUN pip3 install protobuf
 
 
 #ADD app /container/
-COPY ${APPNAME}/container${CONTAINER}/app /container/
+
+ARG APPNAME
+ARG CONTAINER
+
+COPY $APPNAME/container$CONTAINER/app /container/
 ADD grpc/app/container_entry.sh /container/
 ADD grpc/app/server.py /container/
 ADD grpc/app/test_pb2_grpc.py /container/

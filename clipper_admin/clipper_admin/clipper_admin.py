@@ -24,6 +24,10 @@ else:
     from io import BytesIO as StringIO
     PY3 = True
 
+import grpc
+
+from . import rpc
+
 from .container_manager import CONTAINERLESS_MODEL_IMAGE, ClusterAdapter
 from .exceptions import ClipperException, UnconnectedException
 from .version import __version__, __registry__
@@ -782,19 +786,21 @@ class ClipperConnection(object):
         nodes_list = graph_parser.get_all_nodes(dag_description_)
 
         
-        container_ids = []
+        container_name_ids = []
         proxy_names = []
         for node_name in nodes_list:
-            self.logger.info("Starting node: %s"%(node_name))
  
             model_name,model_version,model_image = graph_parser.get_name_version(node_name)
-            model_container_name, model_container_id = self.cm.add_replica(model_name, model_version, "22222", "c5", "22222", model_image)
+            model_container_name, model_container_id = self.cm.add_replica(model_name, model_version, "22222", model_image)
 
-            self.logger.info("Started dag node %s with container %s"%(node_name, model_container_id))
-            container_ids.append(model_container_id)
+            self.logger.info("Started %s with container %s:%s"%(model_name, model_container_name, model_container_id))
+            container_name_ids.append([model_container_name, model_container_id])
 #            model_container_ip = self.cm.get_container_ip(model_container_name)
 #            model_proxy_name = self.cm.set_proxy("proxytest", model_container_name, model_container_ip)
 #            proxy_names.append(model_proxy_name)
+
+        #normal dag 
+        
         return
 
     def get_current_model_version(self, name):

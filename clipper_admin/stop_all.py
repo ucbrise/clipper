@@ -16,6 +16,6 @@ if __name__ == '__main__':
  #                                   feature_sum)
 
 
-    clipper_conn.stop_all()
+    clipper_conn.stop_all(graceful=False)
     time.sleep(2)
 

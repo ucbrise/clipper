@@ -330,7 +330,7 @@ class DockerContainerManager(ContainerManager):
     def get_container_ip(self, container_id):
         return self.docker_client.api.inspect_container(container_id)['NetworkSettings']['Netowrks']['IPAddress']
 
-    def add_replica(self, model_name, model_version, model_port, proxy_name, proxy_port, image):
+    def add_replica(self, model_name, model_version, model_port, image):
 
         # containers = self.docker_client.containers.list(
         #     filters={
@@ -350,9 +350,7 @@ class DockerContainerManager(ContainerManager):
             "MODEL_VERSION": model_version,
             # NOTE: assumes this container being launched on same machine
             # in same docker network as the query frontend
-            "MODEL_PORT": "22222",
-            "PROXY_NAME": proxy_name,
-            "PROXY_PORT": proxy_port
+            "MODEL_PORT": "22222"
         }
 
         # modelname_version
@@ -370,9 +368,11 @@ class DockerContainerManager(ContainerManager):
             image,
             name=model_container_name,
             environment=env_vars,
-            labels=labels,
+            labels=labels,           
             **self.extra_container_kwargs)
 
+        #<Container: d15d870463>
+        container_id = str(container)[12:-1]
         #Start Proxy
 
         #proxy_port = find_unbound_port(30000)
@@ -392,7 +392,7 @@ class DockerContainerManager(ContainerManager):
         #                     CLIPPER_INTERNAL_METRIC_PORT)
 
         # Return model_container_name so we can check if it's up and running later
-        return model_container_name, model_container_label
+        return model_container_name, container_id
 
     def _add_replica(self, name, version, input_type, image):
 

@@ -6,12 +6,18 @@ package lmjwtest;
 service PredictService {
     // request a service of encode
     rpc Predict(input) returns (response) {}
+    rpc SetProxy(proxyinfo) returns (response) {}
 }
 
 
 message input {
     string inputType = 1;
     string inputStream = 2;
+}
+
+message proxyinfo {
+    string proxyName = 1;
+    string proxyPort = 2;
 }
 
 message response {

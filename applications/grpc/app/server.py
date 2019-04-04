@@ -23,6 +23,14 @@ class PredictService(test_pb2_grpc.PredictServiceServicer):
         self.model_port = model_port
         self.proxy_name = proxy_name
         self.proxy_port = proxy_port 
+        
+    def SetProxy(self, request, context):
+        print("Received SetProxy:{request}\n".format(request=request))
+
+        self.proxy_name = request.proxyName
+        self.proxy_port = request.proxyPort
+        
+
 
     def Predict(self, request, context):
         print("received request:{request}\n".format(request=request))
@@ -34,6 +42,9 @@ class PredictService(test_pb2_grpc.PredictServiceServicer):
 #        print("goes here")
 
 #        return test_pb2.response(status = output)
+
+        if (self.proxy_name == None or self.proxy_port == None):
+            return test_pb2.response(status = "ProxyNotSet")
 
         channel = grpc.insecure_channel('{proxy_name}:{proxy_port}'.format(
             proxy_name = self.proxy_name,
@@ -56,17 +67,17 @@ class PredictService(test_pb2_grpc.PredictServiceServicer):
 
 def serve():
 
-    model_name = "1" # os.environ["MODEL_NAME"]
-    model_port = "22222"#os.environ["MODEL_PORT"]
-    proxy_name = "localhost"# os.environ["PROXY_NAME"]
-    proxy_port = "22223"# os.environ["PROXY_PORT"]
+    model_name = os.environ["MODEL_NAME"]
+    model_port = os.environ["MODEL_PORT"]
+    proxy_name = None# os.environ["PROXY_NAME"]
+    proxy_port = None# os.environ["PROXY_PORT"]
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=2))
     service = PredictService(model_name, model_port, proxy_name, proxy_port)
     test_pb2_grpc.add_PredictServiceServicer_to_server(service,server)
-    server.add_insecure_port('[::]:22222')
+#    server.add_insecure_port('[::]:22222')
 
-#   server.add_insecure_port('[::]:{port}'.format(port=model_port))
+    server.add_insecure_port('[::]:{port}'.format(port=model_port))
     server.start()
     print("Server started")
     try:
