@@ -14,7 +14,6 @@ CLIPPER_NAME_LABEL = "ai.clipper.name"
 CLIPPER_MODEL_CONTAINER_LABEL = "ai.clipper.model_container.label"
 CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL = "ai.clipper.query_frontend.label"
 CLIPPER_MGMT_FRONTEND_CONTAINER_LABEL = "ai.clipper.management_frontend.label"
-CLIPPER_QUERY_FRONTEND_ID_LABEL = "ai.clipper.query_frontend.id"
 CONTAINERLESS_MODEL_IMAGE = "NO_CONTAINER"
 
 CLIPPER_DOCKER_PORT_LABELS = {

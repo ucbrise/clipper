@@ -18,7 +18,8 @@ import random
 from argparse import ArgumentParser
 import logging
 
-from test_utils import get_docker_client, create_docker_connection, fake_model_data
+from test_utils import (get_docker_client, create_docker_connection,
+                        create_kubernetes_connection, fake_model_data)
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -35,6 +36,7 @@ logging.basicConfig(
     level=logging.INFO)
 
 logger = logging.getLogger(__name__)
+
 
 class ClipperManagerTestCaseShort(unittest.TestCase):
     def setUp(self):
@@ -559,6 +561,46 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             None,
             pkgs_to_install=["sympy==1.1.*"])
 
+    def test_service_types_of_kubernetes_container_manager(self):
+        logger.info("Test that service_types is 'dict' type or not")
+        service_types = [
+            'redis',
+            'management',
+            'query',
+            'query-rpc',
+            'metric'
+        ]
+        with self.assertRaises(cl.ClipperException) as c:
+            create_kubernetes_connection(
+                cleanup=True, new_name=self.name, service_types=service_types)
+        self.assertTrue("service_types must be 'dict' type" in str(c.exception))
+
+        logger.info("Test that service_types has wrong keys or not")
+        service_types = {
+            'redis': 'NodePort',
+            # 'management': 'NodePort',  # for test
+            'query': 'NodePort',
+            'query-rpc': 'NodePort',
+            'metric': 'NodePort'
+        }
+        with self.assertRaises(cl.ClipperException) as c:
+            create_kubernetes_connection(
+                cleanup=True, new_name=self.name, service_types=service_types)
+        self.assertTrue("service_types has wrong keys" in str(c.exception))
+
+        logger.info("Test that service_type has wrong values or not")
+        service_types = {
+            'redis': 'NodePort',
+            'management': 'NodePort',
+            'query': 'NodePort',
+            'query-rpc': 'WRONG_K8S_SERVICE_TYPE',  # for test
+            'metric': 'NodePort'
+        }
+        with self.assertRaises(cl.ClipperException) as c:
+            create_kubernetes_connection(
+                cleanup=True, new_name=self.name, service_types=service_types)
+        self.assertTrue("service_type has wrong values" in str(c.exception))
+
 
 class ClipperManagerTestCaseLong(unittest.TestCase):
     cluster_name = "admin-l-{}".format(random.randint(0, 50000))
@@ -851,6 +893,7 @@ SHORT_TEST_ORDERING = [
     'test_build_model_with_custom_packages',
     'test_delete_application_correct',
     'test_query_specific_model_version',
+    'test_service_types_of_kubernetes_container_manager',
 ]
 
 LONG_TEST_ORDERING = [

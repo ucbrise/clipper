@@ -121,6 +121,7 @@ def create_kubernetes_connection(cleanup=False,
                                  cleanup_name='default-cluster',
                                  new_name='default-cluster',
                                  connect_name='default-cluster',
+                                 service_types=None,
                                  namespace='default'):
     logger.info("Creating KubernetesContainerManager")
     cl = None
@@ -136,6 +137,7 @@ def create_kubernetes_connection(cleanup=False,
         cm = KubernetesContainerManager(
             cluster_name=cleanup_name,
             useInternalIP=USE_MINIKUBE,
+            service_types=service_types,
             kubernetes_proxy_addr=kubernetes_proxy_addr)
         cl = ClipperConnection(cm)
         cl.stop_all()
@@ -148,6 +150,7 @@ def create_kubernetes_connection(cleanup=False,
             kubernetes_proxy_addr=kubernetes_proxy_addr,
             namespace=namespace,
             useInternalIP=USE_MINIKUBE,
+            service_types=service_types,
             create_namespace_if_not_exists=True)
         cl = ClipperConnection(cm)
         cl.start_clipper(num_frontend_replicas=num_frontend_replicas)
@@ -157,6 +160,7 @@ def create_kubernetes_connection(cleanup=False,
             cm = KubernetesContainerManager(
                 cluster_name=connect_name,
                 useInternalIP=USE_MINIKUBE,
+                service_types=service_types,
                 kubernetes_proxy_addr=kubernetes_proxy_addr)
             cl = ClipperConnection(cm)
             cl.connect()

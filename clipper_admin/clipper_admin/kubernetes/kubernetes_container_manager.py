@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 from ..container_manager import (
     create_model_container_label, ContainerManager, CLIPPER_DOCKER_LABEL,
-    CLIPPER_MODEL_CONTAINER_LABEL, CLIPPER_QUERY_FRONTEND_ID_LABEL,
+    CLIPPER_MODEL_CONTAINER_LABEL, CLIPPER_INTERNAL_RPC_PORT,
     CLIPPER_INTERNAL_MANAGEMENT_PORT, CLIPPER_INTERNAL_QUERY_PORT,
     CLIPPER_INTERNAL_METRIC_PORT, CLIPPER_NAME_LABEL, ClusterAdapter)
 from ..exceptions import ClipperException
@@ -146,6 +146,8 @@ class KubernetesContainerManager(ContainerManager):
         else:
             self.use_k8s_proxy = False
 
+        self.service_types = self._determine_service_types(service_types)
+
         self.redis_ip = redis_ip
         self.redis_port = redis_port
         self.useInternalIP = useInternalIP
@@ -192,21 +194,26 @@ class KubernetesContainerManager(ContainerManager):
             self.cluster_identifier = "{ns}-{cluster}".format(
                 ns=self.k8s_namespace, cluster=self.cluster_name)
 
-        self.service_types = DEFAULT_CLIPPER_SERVICE_TYPES
-        if service_types is not None:
-            inter_keys = service_types.keys() - DEFAULT_CLIPPER_SERVICE_TYPES.keys()
-            if len(inter_keys) > 0:
-                raise ClipperException(
-                    "Wrong keys in service_types: {}".format(str(inter_keys)))
-            inter_values = set(service_types.values()).difference(OFFICIAL_K8S_SERVICE_TYPE)
-            if len(inter_values) > 0:
-                raise ClipperException(
-                    "Wrong values in service_types: {}".format(str(inter_values)))
-            self.service_types.update(service_types)
-
         self.logger = ClusterAdapter(logger, {
             'cluster_name': self.cluster_identifier
         })
+
+    @staticmethod
+    def _determine_service_types(st):
+        if not isinstance(st, dict):
+            raise ClipperException(
+                "service_types must be 'dict' type: {}".format(st))
+
+        res = DEFAULT_CLIPPER_SERVICE_TYPES
+        if st is not None:
+            if set(st.keys()) != set(DEFAULT_CLIPPER_SERVICE_TYPES.keys()):
+                raise ClipperException(
+                    "service_types has wrong keys: {}".format(st.keys()))
+            if set(st.values()) != set(OFFICIAL_K8S_SERVICE_TYPE):
+                raise ClipperException(
+                    "service_type has wrong values: {}".format(st.values()))
+            res.update(st)
+        return res
 
     def start_clipper(self,
                       query_frontend_image,
@@ -399,11 +406,11 @@ class KubernetesContainerManager(ContainerManager):
                     cluster_name=self.cluster_name),
                 namespace=self.k8s_namespace).spec.ports
             for p in query_frontend_ports:
-                if p.name == "1337":
+                if int(p.name) == CLIPPER_INTERNAL_QUERY_PORT:
                     self.clipper_query_port = p.node_port
                     self.logger.info("Setting Clipper query port to {}".format(
                         self.clipper_query_port))
-                elif p.name == "7000":
+                elif int(p.name) == CLIPPER_INTERNAL_RPC_PORT:
                     self.clipper_rpc_port = p.node_port
 
             query_frontend_deployments = self._k8s_beta.list_namespaced_deployment(
