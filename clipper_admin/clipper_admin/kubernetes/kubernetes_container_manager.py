@@ -197,11 +197,11 @@ class KubernetesContainerManager(ContainerManager):
             inter_keys = service_types.keys() - DEFAULT_CLIPPER_SERVICE_TYPES.keys()
             if len(inter_keys) > 0:
                 raise ClipperException(
-                    f"Wrong keys in service_types: {inter_keys}")
+                    f"Wrong keys in service_types: {str(inter_keys)}")
             inter_values = set(service_types.values()).intersection(OFFICIAL_K8S_SERVICE_TYPE)
             if len(inter_values) > 0:
                 raise ClipperException(
-                    f"Wrong values in service_types: {inter_values}")
+                    f"Wrong values in service_types: {str(inter_values)}")
             self.service_types.update(service_types)
 
         self.logger = ClusterAdapter(logger, {
