@@ -6,7 +6,7 @@ metadata:
     ai.clipper.name: metrics
   name: metrics-at-{{ cluster_name }}
 spec:
-  type: NodePort
+  type: {{ service_type }}
   ports:
   - name: "9090"
     port: 9090

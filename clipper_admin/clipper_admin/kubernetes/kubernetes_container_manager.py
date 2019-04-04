@@ -20,6 +20,18 @@ import jinja2
 
 logger = logging.getLogger(__name__)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
+
+OFFICIAL_K8S_SERVICE_TYPE = ['ClusterIP', 'NodePort',
+                             'LoadBalancer', 'ExternalName']
+
+DEFAULT_CLIPPER_SERVICE_TYPES = {
+    'redis': 'NodePort',
+    'management': 'NodePort',
+    'query': 'NodePort',
+    'query-rpc': 'NodePort',
+    'metric': 'NodePort'
+}
+
 CONFIG_FILES = {
     'redis': {
         'service': 'redis-service.yaml',
@@ -68,6 +80,7 @@ class KubernetesContainerManager(ContainerManager):
                  redis_port=6379,
                  useInternalIP=False,
                  namespace='default',
+                 service_types=None,
                  create_namespace_if_not_exists=False):
         """
 
@@ -101,6 +114,17 @@ class KubernetesContainerManager(ContainerManager):
             The Kubernetes namespace to use .
             If this argument is provided, all Clipper artifacts and resources will be created in this
             k8s namespace. If not "default" namespace is used.
+        service_types: dict, optional
+            Specify what kind of Kubernetes service you want.
+            You must use predefined 'ServiceTypes' in Kubernetes as value. See more at:
+            https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+            For example, service_types = {
+                'redis': 'NodePort',
+                'management': 'LoadBalancer',
+                'query': 'LoadBalancer',
+                'query-rpc': 'ClusterIP',
+                'metric': 'LoadBalancer'
+            }
         create_namespace_if_not_exists: bool, False
             Create a k8s namespace if the namespace doesnt already exist.
             If this argument is provided and the k8s namespace does not exist a new k8s namespace will
@@ -168,6 +192,18 @@ class KubernetesContainerManager(ContainerManager):
             self.cluster_identifier = "{ns}-{cluster}".format(
                 ns=self.k8s_namespace, cluster=self.cluster_name)
 
+        self.service_types = DEFAULT_CLIPPER_SERVICE_TYPES
+        if service_types is not None:
+            inter_keys = service_types.keys() - DEFAULT_CLIPPER_SERVICE_TYPES.keys()
+            if len(inter_keys) > 0:
+                raise ClipperException(
+                    f"Wrong keys in service_types: {inter_keys}")
+            inter_values = set(service_types.values()).intersection(OFFICIAL_K8S_SERVICE_TYPE)
+            if len(inter_values) > 0:
+                raise ClipperException(
+                    f"Wrong values in service_types: {inter_values}")
+            self.service_types.update(service_types)
+
         self.logger = ClusterAdapter(logger, {
             'cluster_name': self.cluster_identifier
         })
@@ -210,7 +246,9 @@ class KubernetesContainerManager(ContainerManager):
                     CONFIG_FILES['redis']['service'],
                     deployment_name=deployment_name,
                     public_redis_port=self.redis_port,
-                    cluster_name=self.cluster_name)
+                    cluster_name=self.cluster_name,
+                    service_type=self.service_types['redis'],
+                )
                 self._k8s_v1.create_namespaced_service(
                     body=body, namespace=self.k8s_namespace)
             time.sleep(sleep_time)
@@ -242,7 +280,8 @@ class KubernetesContainerManager(ContainerManager):
         with _pass_conflicts():
             mgmt_service_data = self._generate_config(
                 CONFIG_FILES['management']['service'],
-                cluster_name=self.cluster_name)
+                cluster_name=self.cluster_name,
+                service_type=self.service_types['management'])
             self._k8s_v1.create_namespaced_service(
                 body=mgmt_service_data, namespace=self.k8s_namespace)
 
@@ -272,14 +311,17 @@ class KubernetesContainerManager(ContainerManager):
                     CONFIG_FILES['query']['service']['rpc'],
                     name='query-frontend-{}'.format(query_frontend_id),
                     id_label=str(query_frontend_id),
-                    cluster_name=self.cluster_name)
+                    cluster_name=self.cluster_name,
+                    service_type=self.service_types['query-rpc'],
+                )
                 self._k8s_v1.create_namespaced_service(
                     body=query_rpc_service_data, namespace=self.k8s_namespace)
 
         with _pass_conflicts():
             query_frontend_service_data = self._generate_config(
                 CONFIG_FILES['query']['service']['query'],
-                cluster_name=self.cluster_name)
+                cluster_name=self.cluster_name,
+                service_type=self.service_types['query'])
             self._k8s_v1.create_namespaced_service(
                 body=query_frontend_service_data, namespace=self.k8s_namespace)
 
@@ -304,6 +346,7 @@ class KubernetesContainerManager(ContainerManager):
             service_data = self._generate_config(
                 CONFIG_FILES['metric']['service'],
                 cluster_name=self.cluster_name,
+                service_type=self.service_types['metric'],
             )
             self._k8s_v1.create_namespaced_service(
                 body=service_data, namespace=self.k8s_namespace)
