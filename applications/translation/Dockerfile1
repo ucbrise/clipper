@@ -11,6 +11,6 @@ RUN pip3 install SpeechRecognition
 ADD translation/container1/app /container/
 ADD simplerpc/app /container/
 
-CMD ["python3", "/container/server.py"]
+CMD ["python3", "/container/server.py", "1", "8000"]
 
 EXPOSE 8000

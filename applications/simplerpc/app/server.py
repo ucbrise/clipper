@@ -1,13 +1,17 @@
+import sys
+import os
 import predict as predict_fn
-from xmlrpc.server import SimpleXMLRPCServer
+import xmlrpc.server
 
 
 def Predict(*args):
     return predict_fn.predict(*args)
 
 def serve():
-    server = SimpleXMLRPCServer(("0.0.0.0", 8000))
-    print("Listening on port 8000...")
+    container_number = int(sys.argv[1])
+    port_number = int(sys.argv[2])
+    server = xmlrpc.server.SimpleXMLRPCServer(("0.0.0.0", port_number))
+    print("Container", container_number, "Listening on port", port_number, "...")
     server.register_function(Predict, "Predict")
     server.serve_forever()
 
