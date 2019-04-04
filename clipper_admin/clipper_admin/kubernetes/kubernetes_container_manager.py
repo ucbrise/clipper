@@ -198,7 +198,7 @@ class KubernetesContainerManager(ContainerManager):
             if len(inter_keys) > 0:
                 raise ClipperException(
                     f"Wrong keys in service_types: {str(inter_keys)}")
-            inter_values = set(service_types.values()).intersection(OFFICIAL_K8S_SERVICE_TYPE)
+            inter_values = set(service_types.values()).difference(OFFICIAL_K8S_SERVICE_TYPE)
             if len(inter_values) > 0:
                 raise ClipperException(
                     f"Wrong values in service_types: {str(inter_values)}")
