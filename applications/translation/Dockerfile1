@@ -9,11 +9,8 @@ RUN pip3 install pocketsphinx
 RUN pip3 install SpeechRecognition
 
 ADD translation/container1/app /container/
-ADD grpc/app/container_entry.sh /container/
-ADD grpc/app/server.py /container/
-ADD grpc/app/test_pb2_grpc.py /container/
-ADD grpc/app/test_pb2.py /container/
+ADD simplerpc/app /container/
 
-CMD ["/container/container_entry.sh", "tensorflow-container", "/container/server.py"]
+CMD ["python3", "/container/server.py"]
 
-EXPOSE 22222
+EXPOSE 8000
