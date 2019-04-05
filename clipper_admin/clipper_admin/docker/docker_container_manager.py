@@ -312,20 +312,29 @@ class DockerContainerManager(ContainerManager):
 
     def set_proxy(self, image, model_container_label, model_ip):
 
-        proxy_cmd = ("{proxy_port} {model_ip1} {model_port1}").format(
-            proxy_port = "6998",
-            downstream_ip1 = "127.0.0.1",
-            downstream_port1 = "6999")
+        proxy_name = model_container_label + '-proxy'
+        env_vars = {
+            "PROXY_NAME": proxy_name,
+            "PROXY_VERSION": "test",
+            # NOTE: assumes this container being launched on same machine
+            # in same docker network as the query frontend
+            "PROXY_PORT": "22223"
+        }
 
-        model_container_proxy_name = model_container_label + '-proxy'
-        self.docker_client.containers.run(
+        labels = self.common_labels.copy()
+        labels[CLIPPER_MODEL_CONTAINER_LABEL] = proxy_name
+        labels[CLIPPER_DOCKER_LABEL] = self.cluster_name
+
+        container = self.docker_client.containers.run(
             image,
-            command = proxy_cmd,
-            detach = True, 
-            name=model_container_proxy_name,
+            name=proxy_name,
+            environment=env_vars,
+            labels=labels,           
             **self.extra_container_kwargs)
 
-        return model_container_proxy_name
+        #<Container: d15d870463>
+        container_id = str(container)[12:-1]
+        return proxy_name, container_id
 
     def get_container_ip(self, container_id):
         return self.docker_client.api.inspect_container(container_id)['NetworkSettings']['Netowrks']['IPAddress']

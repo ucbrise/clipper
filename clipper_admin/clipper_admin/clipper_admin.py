@@ -787,7 +787,8 @@ class ClipperConnection(object):
 
         
         container_name_ids = []
-        proxy_names = []
+        proxy_name_ids = []
+
         for node_name in nodes_list:
  
             model_name,model_version,model_image = graph_parser.get_name_version(node_name)
@@ -796,11 +797,11 @@ class ClipperConnection(object):
             self.logger.info("Started %s with container %s:%s"%(model_name, model_container_name, model_container_id))
             container_name_ids.append([model_container_name, model_container_id])
 #            model_container_ip = self.cm.get_container_ip(model_container_name)
-#            model_proxy_name = self.cm.set_proxy("proxytest", model_container_name, model_container_ip)
-#            proxy_names.append(model_proxy_name)
+            proxy_name, proxy_id = self.cm.set_proxy("proxytest", model_container_name)
+            proxy_name_ids.append([proxy_name,proxy_id])
 
         #normal dag 
-        
+
         return
 
     def get_current_model_version(self, name):
