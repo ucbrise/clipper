@@ -21,6 +21,7 @@ from test_utils import (
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
 from clipper_admin.deployers import python as python_deployer
+from clipper_admin import ClipperException
 
 
 CLIPPER_NODES = [
@@ -103,20 +104,21 @@ class FluentdTest(unittest.TestCase):
         return True
 
     def test_invalid_clipper_conn_old_connection_use_log_centralization(self):
-        # Raise a ConnectionError when new connection doesn't use log-centralization, although
+        # When new connection doesn't use log-centralization, although
         # the original connection uses log-centralization.
         new_conn = get_new_connection_instance(self.cluster_name, False)
-        self.assertRaises(ConnectionError, new_conn.connect)
+        new_conn.connect()
+        self.assertTrue(new_conn.cm.centralize_log)
 
     def test_invalid_clipper_conn_old_connection_not_use_log_centralization(self):
-        # Raise a ConnectionError when new connection uses log-centralization, although
+        # Raise a ClipperException when new connection uses log-centralization, although
         # the original connection does not use log-centralization.
         # Recreate a cluster with
         self.clipper_conn = create_docker_connection(
             cleanup=True, start_clipper=False, cleanup_name=self.cluster_name)
         self.start_clipper(self.cluster_name, use_centralized_log=False)
         new_conn = get_new_connection_instance(self.cluster_name, True)
-        self.assertRaises(ConnectionError, new_conn.connect)
+        self.assertRaises(ClipperException, new_conn.connect)
 
     def test_correct_fluentd_connection(self):
         new_clipper_conn = get_new_connection_instance(self.cluster_name, use_centralized_log=True)

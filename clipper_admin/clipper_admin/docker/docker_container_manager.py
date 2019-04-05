@@ -314,6 +314,12 @@ class DockerContainerManager(ContainerManager):
         self.prom_config_path = all_labels[CLIPPER_METRIC_CONFIG_LABEL]
 
         if self._is_valid_logging_state_to_connect(all_labels):
+            if (not self.centralize_log):
+                logger.info(
+                    "The use_centralized_log flag was False, "
+                    "but we found fluentd instance was running already."
+                    "We will set the flag on for the consistency"
+                )
             self.centralize_log= True
             self.logging_system_instance = \
                 self.logging_system(
@@ -491,23 +497,15 @@ class DockerContainerManager(ContainerManager):
 
     def _is_valid_logging_state_to_connect(self, all_labels):
         if self.centralize_log and not self.logging_system.container_is_running(all_labels):
-            raise ConnectionError(
+            raise ClipperException(
                 "Invalid state detected. "
                 "log centralization is {log_centralization_state}, "
                 "but cannot find fluentd instance running. "
                 "Please change your use_centralized_log parameter of DockerContainermanager"
                     .format(log_centralization_state=self.centralize_log)
             )
-        elif self.logging_system.container_is_running(all_labels) and not self.centralize_log:
-            raise ConnectionError(
-                "Invalid state detected. "
-                "Fluentd instance is running, "
-                "but log centralization state is {log_centralization_state}. "
-                "Please change your use_centralized_log parameter of DockerContainerManager to True"
-                    .format(log_centralization_state=self.centralize_log)
-            )
-        else:
-            return self.logging_system.container_is_running(all_labels)
+
+        return self.logging_system.container_is_running(all_labels)
 
     def get_admin_addr(self):
         return "{host}:{port}".format(
