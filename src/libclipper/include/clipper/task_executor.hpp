@@ -332,48 +332,28 @@ class TaskExecutor {
         VersionedModelId model_id = parsed_model_info.front();
         auto container_list = clipper::redis::get_all_containers(redis_connection_);
 
+        // clean up containers and interrupt working threads
         for (auto c : container_list) {
           VersionedModelId vm = std::get<0>(c);
           int model_replica_id = std::get<1>(c);
           if (vm == model_id) {
+            clean_up_specific_container(vm, model_replica_id);
             TaskExecutionThreadPool::interrupt_thread(vm, model_replica_id);
           }
         }
 
-        bool deleted_queue = delete_model_queue_if_necessary(model_id);
-        if (deleted_queue) {
-          log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
-                             "Deleted queue for model: {} : {}",
-                             model_id.get_name(), model_id.get_id());
-        }
+        // Clean up versioned model
+        clean_up_specific_model(model_id);
 
+        // Clean up working threads
         for (auto c : container_list) {
           VersionedModelId vm = std::get<0>(c);
           int model_replica_id = std::get<1>(c);
           if (vm == model_id) {
-            if (clipper::redis::delete_container(redis_connection_, vm, model_replica_id)) {
-              std::stringstream ss;
-              ss << "Successfully deleted container with name "
-                 << "'" << model_id.get_name() << "'"
-                 << " and version "
-                 << "'" << model_id.get_id() << "'";
-              log_info_formatted(LOGGING_TAG_TASK_EXECUTOR, "{}", ss.str());
-
-              active_containers_->remove_container(vm, model_replica_id);
-              TaskExecutionThreadPool::delete_queue(vm, model_replica_id);
-              EstimatorFittingThreadPool::delete_queue(vm, model_replica_id);
-            } else {
-              std::stringstream ss;
-              ss << "Error deleting container with name "
-                 << "'" << model_id.get_name() << "'"
-                 << " and version "
-                 << "'" << model_id.get_id() << "'"
-                 << " from Redis";
-              throw std::runtime_error(ss.str());
-            }
+            TaskExecutionThreadPool::delete_queue(vm, model_replica_id);
+            EstimatorFittingThreadPool::delete_queue(vm, model_replica_id);
           }
         }
-        clipper::redis::delete_versioned_model(redis_connection_, model_id);
 
       } else if (!*task_executor_valid) {
         log_info(LOGGING_TAG_TASK_EXECUTOR,
@@ -552,6 +532,48 @@ class TaskExecutor {
     return false;
   }
 
+  void clean_up_specific_container(const VersionedModelId &model_id, int replica_id) {
+    if (clipper::redis::delete_container(redis_connection_, model_id, replica_id)) {
+      std::stringstream ss;
+      ss << "Successfully deleted container with name "
+         << "'" << model_id.get_name() << "'"
+         << " and version "
+         << "'" << model_id.get_id() << "'";
+      log_info_formatted(LOGGING_TAG_TASK_EXECUTOR, "{}", ss.str());
+
+      active_containers_->remove_container(model_id, replica_id);
+    } else {
+      std::stringstream ss;
+      ss << "Error deleting container with name "
+         << "'" << model_id.get_name() << "'"
+         << " and version "
+         << "'" << model_id.get_id() << "'"
+         << " from Redis";
+      throw std::runtime_error(ss.str());
+    }
+  }
+
+  void clean_up_specific_model(const VersionedModelId &model_id) {
+    if (clipper::redis::delete_versioned_model(redis_connection_, model_id)) {
+      std::stringstream ss;
+      ss << "Successfully deleted versioned model with name "
+         << "'" << model_id.get_name() << "'";
+      log_info_formatted(LOGGING_TAG_TASK_EXECUTOR, "{}", ss.str());
+
+      if (delete_model_queue_if_necessary(model_id)) {
+        log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
+                           "Deleted queue for model: {} : {}",
+                           model_id.get_name(), model_id.get_id());
+      }
+    } else {
+      std::stringstream ss;
+      ss << "Error deleting versioned model with name "
+         << "'" << model_id.get_name() << "'"
+         << " from Redis";
+      throw std::runtime_error(ss.str());
+    }
+  }
+
   void on_container_ready(VersionedModelId model_id, int replica_id) {
     std::shared_ptr<ModelContainer> container =
         active_containers_->get_model_replica(model_id, replica_id);
@@ -682,7 +704,11 @@ class TaskExecutor {
     if (!container)
       return;
 
-    active_containers_->remove_container(model_id, replica_id);
+    clean_up_specific_container(model_id, replica_id);
+    TaskExecutionThreadPool::interrupt_thread(model_id, replica_id);
+
+    // We do not have to clean up versioned model here.
+
     TaskExecutionThreadPool::delete_queue(model_id, replica_id);
     EstimatorFittingThreadPool::delete_queue(model_id, replica_id);
   }
