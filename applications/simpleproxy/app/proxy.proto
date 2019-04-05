@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package lmjwtest;
+
+// service, encode a plain text 
+service ProxyService {
+    // request a service of encode
+    rpc Predict(input) returns (response) {}
+    rpc SetModel(modelinfo) returns (response) {}
+    rpc SetDAG(dag) returns (response) {}
+}
+
+
+message input {
+    string inputType = 1;
+    string inputStream = 2;
+}
+
+message modelinfo {
+    string modelName = 1;
+    string modelPort = 2;
+    string modelId = 3;
+}
+
+message dag{
+    string dag_ = 1;
+}
+
+message response {
+    string status = 1;
+}
