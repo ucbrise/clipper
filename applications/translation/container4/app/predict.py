@@ -1,82 +1,84 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Feb 19 19:22:54 2019
+
+Created on Wed Mar 20 12:10:10 2019
 
 @author: davidzhou
 """
 
-import numpy as np
-import tensorflow as tf
+# Gensim
+# import gensim
+# from gensim.utils import simple_preprocess
+# spacy for lemmatization
+import spacy
 import re
 
+# Enable logging for gensim - optional
+import logging
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.ERROR)
 
-batchSize = 24
-lstmUnits = 64
-numClasses = 2
-numDimensions=50
-maxSeqLength=250
-strip_special_chars = re.compile("[^A-Za-z0-9 ]+")
-
-def cleanSentences(string):
-    string = string.lower().replace("<br />", " ")
-    return re.sub(strip_special_chars, "", string.lower())
-
-wordsList = np.load('/container/models/wordsList.npy')
-print('Loaded the word list!')
-wordsList = wordsList.tolist() #Originally loaded as numpy array
-wordsList = [word.decode('UTF-8') for word in wordsList] #Encode words as UTF-8
-wordVectors = np.load('/container/models/wordVectors.npy')
+# NLTK Stop words
+import nltk
+nltk.download('stopwords')
+from nltk.corpus import stopwords
+stop_words = stopwords.words('english')
+stop_words.extend(['from', 'subject', 're', 'edu', 'use'])
+nlp = spacy.load('en', disable=['parser', 'ner'])
 
 
-#paragraph is a string
-def predict(paragraph):
-    ids = np.zeros((1, maxSeqLength), dtype='int32')
-    indexCounter = 0
-    cleanedLine = cleanSentences(paragraph)
-    split = cleanedLine.split()
-    for word in split:
-        try:
-            ids[0][indexCounter] = wordsList.index(word)
-        except ValueError:
-                ids[0][indexCounter] = 399999 #Vector for unkown words
-                indexCounter = indexCounter + 1
-                if indexCounter >= maxSeqLength:
-                    break
-    tf.reset_default_graph()
-    
-    labels = tf.placeholder(tf.float32, [24, numClasses])
-    input_data = tf.placeholder(tf.int32, [24, maxSeqLength])
-    
-    data = tf.Variable(tf.zeros([batchSize, maxSeqLength, numDimensions]),dtype=tf.float32)
-    data = tf.nn.embedding_lookup(wordVectors,input_data)
-    
-    lstmCell = tf.nn.rnn_cell.LSTMCell(lstmUnits)
-    lstmCell = tf.contrib.rnn.DropoutWrapper(cell=lstmCell, output_keep_prob=0.75)
-    value, _ = tf.nn.dynamic_rnn(lstmCell, data, dtype=tf.float32)
-    
-    weight = tf.Variable(tf.truncated_normal([lstmUnits, numClasses]))
-    bias = tf.Variable(tf.constant(0.1, shape=[numClasses]))
-    value = tf.transpose(value, [1, 0, 2])
-    last = tf.gather(value, int(value.get_shape()[0]) - 1)
-    prediction = (tf.matmul(last, weight) + bias)
-    correctPred = tf.equal(tf.argmax(prediction,1), tf.argmax(labels,1))
-    
-    with tf.Session() as sess:
-        # Restore variables from disk.
-        #saver = tf.train.import_meta_graph('models1/pretrained_lstm.ckpt-99.meta')
-        saver=tf.train.Saver()
-        saver.restore(sess,tf.train.latest_checkpoint('/models'))
-        inputdt=np.zeros([batchSize,maxSeqLength])
-        lb=[]
-        for i in range(batchSize):
-            lb.append([1,0])
-            inputdt[i]=ids[0]
-        Prediction=sess.run(correctPred[0], {input_data: inputdt, labels: lb})
-        print("Prediction: ", Prediction)
-        sess.close()
-        if Prediction:
-            return 1;
-        else:
-            return 0;
+# tokenization
+# def sent_to_words(sentences):
+#     for sentence in sentences:
+#         yield (gensim.utils.simple_preprocess(str(sentence), deacc=True))  # deacc=True removes punctuations
+
+
+def lemmatization(texts, allowed_postags=['NOUN', 'ADJ', 'VERB', 'ADV']):
+    """https://spacy.io/api/annotation"""
+    texts_out = []
+    for sent in texts:
+        doc = nlp(" ".join([sent]))
+        texts_out.append([token.lemma_ for token in doc if token.pos_ in allowed_postags])
+    return texts_out
+
+
+def text_clean(text):
+    data = text.split()
+    # Remove new line characters
+    data = [re.sub('\s+', ' ', sent) for sent in data]
+    # Remove distracting single quotes
+    data = [re.sub("\'", "", sent) for sent in data]
+    data_words = [y for x in data for y in x.split(' ') ]
+    # Remove Stop Words and lemmatizeation
+    data_words_nostops = data_words
+    data_lemmatized = lemmatization(data_words_nostops, allowed_postags=['NOUN', 'ADJ', 'VERB', 'ADV'])
+    final = [word for word in data_lemmatized if word != []]
+    data = ["".join(words) for words in final]
+    return data
+
+
+def predict(text_data):
+
+    wordsList = text_clean(text_data)
+
+    # do simple analysis
+    d = {}
+    count = 0
+    for word in wordsList:
+        if word not in d:
+            d[word] = 0
+        d[word] += 1
+        count += 1
+    word_freq = []
+    for key, value in d.items():
+        word_freq.append((value, key))
+    word_freq.sort(reverse=True)
+
+    subject_analysis_result = "After cleaning: \n"
+    subject_analysis_result += "Total number of meaningful words: " + str(count) + "\n"
+    subject_analysis_result += "Top three frequent words: (count, word)\n"
+    for value, freq in word_freq[:3]:
+        subject_analysis_result += "The word " + str(freq) + " has appeared for " + str(value) + " times in this text\n"
+
+    return subject_analysis_result
 

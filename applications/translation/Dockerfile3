@@ -1,0 +1,13 @@
+FROM ubuntu:bionic
+RUN apt-get update
+RUN apt-get install python3 python3-pip -y
+RUN pip3 install nltk
+RUN pip3 install grpcio
+RUN pip3 install protobuf
+
+ADD translation/container3/app /container/
+ADD simplerpc/app /container/
+
+CMD ["python3", "/container/server.py", "3", "11000"]
+
+EXPOSE 11000
