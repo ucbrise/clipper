@@ -312,25 +312,8 @@ class DockerContainerManager(ContainerManager):
             'query_rpc']]
         self.prometheus_port = all_labels[CLIPPER_DOCKER_PORT_LABELS['metric']]
         self.prom_config_path = all_labels[CLIPPER_METRIC_CONFIG_LABEL]
-
         if self._is_valid_logging_state_to_connect(all_labels):
-            if (not self.centralize_log):
-                logger.info(
-                    "The use_centralized_log flag was False, "
-                    "but we found fluentd instance was running already."
-                    "We will set the flag on for the consistency"
-                )
-            self.centralize_log= True
-            self.logging_system_instance = \
-                self.logging_system(
-                    self.logger,
-                    self.cluster_name,
-                    self.docker_client,
-                    port=all_labels[CLIPPER_DOCKER_PORT_LABELS['fluentd']],
-                    conf_path=all_labels[CLIPPER_FLUENTD_CONFIG_LABEL]
-                )
-            self.log_config = self.logging_system_instance.get_log_config()
-        # Logging-TODO Add a Sqlite support
+            self.connect_to_logging_system(all_labels)
 
     def deploy_model(self, name, version, input_type, image, num_replicas=1):
         # Parameters
@@ -506,6 +489,27 @@ class DockerContainerManager(ContainerManager):
             )
 
         return self.logging_system.container_is_running(all_labels)
+
+    def connect_to_logging_system(self, all_labels):
+        if not self.centralize_log:
+            logger.info(
+                "The current DockerContainerManager's use_centralized_log flag is False, "
+                "but there is a logging system {type} instance running in a cluster."
+                "It means that clipper cluster you want to connect uses log centralization."
+                "We will set the flag on to avoid unexpected bugs"
+                    .format(type=self.logging_system.get_type())
+            )
+        self.centralize_log= True
+        self.logging_system_instance = \
+            self.logging_system(
+                self.logger,
+                self.cluster_name,
+                self.docker_client,
+                port=all_labels[CLIPPER_DOCKER_PORT_LABELS['fluentd']],
+                conf_path=all_labels[CLIPPER_FLUENTD_CONFIG_LABEL]
+            )
+        self.log_config = self.logging_system_instance.get_log_config()
+    # Logging-TODO Add a Sqlite support
 
     def get_admin_addr(self):
         return "{host}:{port}".format(

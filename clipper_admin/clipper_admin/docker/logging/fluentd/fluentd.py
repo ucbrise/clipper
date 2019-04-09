@@ -44,6 +44,10 @@ class Fluentd(object):
     def container_is_running(all_labels):
         return CLIPPER_DOCKER_PORT_LABELS['fluentd'] in all_labels
 
+    @staticmethod
+    def get_type():
+        return "Fluentd"
+
     def _run_fluentd_image(self, docker_client, fluentd_labels, fluend_port, fluentd_conf_path, extra_container_kwargs):
         fluentd_cmd = []  # No cmd is required.
         fluentd_name = "fluentd-{}".format(random.randint(0, 100000))

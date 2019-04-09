@@ -182,8 +182,8 @@ def run_test():
                 cleanup=True, start_clipper=False, cleanup_name=cluster_name)
             logger.info("ALL TESTS PASSED")
     except Exception as e:
-        log_docker(clipper_conn)
         logger.exception("Exception: {}".format(e))
+        log_docker(clipper_conn)
         create_docker_connection(
             cleanup=True, start_clipper=False, cleanup_name=cluster_name)
         sys.exit(1)

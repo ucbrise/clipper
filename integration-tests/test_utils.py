@@ -218,16 +218,25 @@ def log_docker(clipper_conn):
 
     """Retrieve status and log for last ten containers"""
     container_runing = clipper_conn.cm.docker_client.containers.list(limit=10)
-    logger.info('----------------------')
+    logger.info('\n================================================================')
     logger.info('Last ten containers status')
+    logger.info('================================================================')
     for cont in container_runing:
         logger.info('Name {}, Image {}, Status {}, Label {}'.format(
             cont.name, cont.image, cont.status, cont.labels))
 
-    logger.info('----------------------')
+    logger.info('\n=================================================================')
     logger.info('Printing out logs')
+    logger.info('================================================================')
 
     for cont in container_runing:
         logger.info('Name {}, Image {}, Status {}, Label {}'.format(
             cont.name, cont.image, cont.status, cont.labels))
-        logger.info(cont.logs())
+        try:
+            logger.info(cont.logs())
+        except docker.errors.APIError as e:
+            logger.warning("Error while parsing logs. It is most likely because you use log centralization.")
+
+    logger.info('\n=================================================================')
+    logger.info('log_docker is completed')
+    logger.info('================================================================\n\n')
