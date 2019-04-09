@@ -169,10 +169,10 @@ def run_test():
             if num_defaults > num_preds / 2:
                 raise BenchmarkException("Error querying APP %s, MODEL %s:%d" %
                                          (app_name, model_name, version))
-        except BenchmarkException:
+        except BenchmarkException as e:
+            logger.exception("BenchmarkException: {}".format(e))
             log_docker(clipper_conn)
             log_clipper_state(clipper_conn)
-            logger.exception("BenchmarkException")
             create_docker_connection(
                 cleanup=True, start_clipper=False, cleanup_name=cluster_name)
             sys.exit(1)

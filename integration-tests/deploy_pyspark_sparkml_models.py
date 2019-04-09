@@ -154,10 +154,10 @@ if __name__ == "__main__":
             lr_model = train_logistic_regression(trainDf)
             deploy_and_test_model(
                 sc, clipper_conn, lr_model, version, link_model=True)
-        except BenchmarkException:
+        except BenchmarkException as e:
+            logger.exception("BenchmarkException: {}".format(e))
             log_docker(clipper_conn)
             log_clipper_state(clipper_conn)
-            logger.exception("BenchmarkException")
             create_docker_connection(
                 cleanup=True, start_clipper=False, cleanup_name=cluster_name)
             sys.exit(1)
