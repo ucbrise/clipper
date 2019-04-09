@@ -18,11 +18,11 @@ from ..container_manager import (
     CLIPPER_FLUENTD_CONFIG_LABEL)
 from requests.exceptions import ConnectionError
 from .docker_metric_utils import *
-from clipper_admin.docker.logging.docker_logging_utils import (
+from .logging.docker_logging_utils import (
     get_logs_from_containers,
     get_default_log_config
 )
-from clipper_admin.docker.logging.fluentd.fluentd import Fluentd
+from .logging.fluentd.fluentd import Fluentd
 
 logger = logging.getLogger(__name__)
 
