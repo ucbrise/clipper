@@ -789,7 +789,16 @@ class ClipperConnection(object):
         container_name_ids = []
         proxy_name_ids = []
 
+
+    # channel = grpc.insecure_channel('localhost:22222')
+    # stub = test_pb2_grpc.PredictServiceStub(channel)
+    # response = stub.Predict(test_pb2.input(inputType = 'string', inputStream = 'This is a plain text transaction'))
+    # print('Response {res}'.format(res=response.status))
+
+        count = 0
         for node_name in nodes_list:
+
+            count += 1
  
             model_name,model_version,model_image = graph_parser.get_name_version(node_name)
             model_container_name, model_container_id = self.cm.add_replica(model_name, model_version, "22222", model_image)
@@ -799,6 +808,26 @@ class ClipperConnection(object):
 #            model_container_ip = self.cm.get_container_ip(model_container_name)
             proxy_name, proxy_id = self.cm.set_proxy("proxytest", model_container_name)
             proxy_name_ids.append([proxy_name,proxy_id])
+
+
+            model_ip = self.cm.get_container_ip(model_container_id)
+            proxy_ip = self.cm.get_container_ip(proxy_id)
+
+
+
+            channel_proxy = grpc.insecure_channel('{proxy_ip}:{proxy_port}'.format(
+                proxy_ip=proxy_ip,
+                proxy_port = "22223"
+            ))
+            stub_proxy = rpc.proxy_pb2_grpc.ProxyServiceStub(channel_proxy)
+            response1 = stub_proxy.SetModel(rpc.proxy_pb2.modelinfo(
+                modelName = model_name,
+                modelId = count,
+                modelPort = "22222"
+                ))
+            self.logger.info('[Proxy]Set Model: {res}'.format(res=response1.status))
+
+
 
         #normal dag 
 
