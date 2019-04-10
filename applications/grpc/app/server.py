@@ -3,15 +3,17 @@ import base64
 import time 
 import os
 
-import test_pb2
-import test_pb2_grpc
+import model_pb2
+import model_pb2_grpc
+import proxy_pb2
+import proxy_pb2_grpc
 
 import predict as predict_fn
 
 import grpc
 
 
-class PredictService(test_pb2_grpc.PredictServiceServicer):
+class PredictService(model_pb2_grpc.PredictServiceServicer):
     
     # def GetEncode(self, request, context):
     #     return test_pb2.encodetext(enctransactionID = encoding(request.pttransactionID),
@@ -23,26 +25,42 @@ class PredictService(test_pb2_grpc.PredictServiceServicer):
         self.model_port = model_port
         self.proxy_name = proxy_name
         self.proxy_port = proxy_port 
+        
+    def SetProxy(self, request, context):
+        print("Received SetProxy:{request}\n".format(request=request))
+
+        self.proxy_name = request.proxyName
+        self.proxy_port = request.proxyPort
+
+        return model_pb2.response(status = "SetProxy Sucessful")
+
+        
+
 
     def Predict(self, request, context):
         print("received request:{request}\n".format(request=request))
         input_type = request.inputType
         input_stream = request.inputStream
 
-        print("Begin predicting")
+
+        if (self.proxy_name == None or self.proxy_port == None):
+            return model_pb2.response(status = "ProxyNotSet")
 
         output = predict_fn.predict(input_stream)
 
 #        print("goes here")
 
-#        return test_pb2.response(status = output)
 
+
+        '''
+        Connect to proxy, return the prediction result
+        '''
         channel = grpc.insecure_channel('{proxy_name}:{proxy_port}'.format(
             proxy_name = self.proxy_name,
             proxy_port = self.proxy_port
         ))
-        stub = test_pb2_grpc.PredictServiceStub(channel)
-        response = stub.Predict(test_pb2.input(
+        stub = proxy_pb2_grpc.ProxyServiceStub(channel)
+        response = stub.Return(proxy_pb2.input(
             inputType = "string",
             inputStream = output
         ))
@@ -52,23 +70,23 @@ class PredictService(test_pb2_grpc.PredictServiceServicer):
             response = response.status
         ))
 
-        return test_pb2.response(status = "Sucessful")
-        return output
+        return model_pb2.response(status = "Sucessful")
+
         
 
 def serve():
 
-    model_name = "1" # os.environ["MODEL_NAME"]
-    model_port = "22222"#os.environ["MODEL_PORT"]
-    proxy_name = "localhost"# os.environ["PROXY_NAME"]
-    proxy_port = "22223"# os.environ["PROXY_PORT"]
+    model_name = os.environ["MODEL_NAME"]
+    model_port = os.environ["MODEL_PORT"]
+    proxy_name = None# os.environ["PROXY_NAME"]
+    proxy_port = None# os.environ["PROXY_PORT"]
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=2))
     service = PredictService(model_name, model_port, proxy_name, proxy_port)
-    test_pb2_grpc.add_PredictServiceServicer_to_server(service,server)
-    server.add_insecure_port('[::]:22222')
+    model_pb2_grpc.add_PredictServiceServicer_to_server(service,server)
+#    server.add_insecure_port('[::]:22222')
 
-#   server.add_insecure_port('[::]:{port}'.format(port=model_port))
+    server.add_insecure_port('[::]:{port}'.format(port=model_port))
     server.start()
     print("Server started")
     try:
