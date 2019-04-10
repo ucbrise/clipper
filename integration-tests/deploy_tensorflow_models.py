@@ -13,6 +13,7 @@ import tensorflow as tf
 
 from test_utils import (create_docker_connection, BenchmarkException, headers,
                         log_clipper_state)
+CUDA_AVAILABLE = tf.test.is_gpu_available(cuda_only=True)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
 from clipper_admin.deployers.tensorflow import deploy_tensorflow_model, create_endpoint
@@ -154,7 +155,7 @@ if __name__ == "__main__":
     try:
         sess = None
         clipper_conn = create_docker_connection(
-            cleanup=False, start_clipper=True, new_name=cluster_name)
+            cleanup=False, start_clipper=True, new_name=cluster_name, gpu=CUDA_AVAILABLE)
 
         train_path = os.path.join(cur_dir, "data/train.data")
         (X_train, y_train) = parseData(train_path, pos_label)

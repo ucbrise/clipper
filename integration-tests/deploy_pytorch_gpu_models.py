@@ -16,10 +16,13 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 
 CUDA_AVAILABLE = torch.cuda.is_available()
+print(CUDA_AVAILABLE)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
 
 from clipper_admin.deployers.pytorch import deploy_pytorch_model, create_endpoint
+from test_utils import (create_docker_connection, BenchmarkException, headers,
+                        log_clipper_state)
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
@@ -58,7 +61,7 @@ def predict(model, xs):
         model.cuda()
     for x in xs:
         if CUDA_AVAILABLE:
-            p = model(x.cuda()).data.cpu().numpy().tolist()[0]
+            p = model(torch.from_numpy(x).cuda()).data.cpu().numpy().tolist()[0]
         else:
             p = model(x).data.numpy().tolist()[0]
         preds.append(str(p))
@@ -140,10 +143,16 @@ def train(model):
                 image.cuda()
                 j.cuda()
             optimizer.zero_grad()
-            output = model(image)
-            loss = F.cross_entropy(output,
-                                   Variable(
-                                       torch.LongTensor([train_y[i - 1]])))
+            if CUDA_AVAILABLE:
+                output = model(image.cuda())
+                loss = F.cross_entropy(output,
+                                       Variable(
+                                           torch.LongTensor([train_y[i - 1]])).cuda())
+            else:
+                output = model(image)
+                loss = F.cross_entropy(output,
+                                       Variable(
+                                           torch.LongTensor([train_y[i - 1]])))
             loss.backward()
             optimizer.step()
     return model
