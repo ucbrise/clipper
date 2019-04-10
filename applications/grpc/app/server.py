@@ -39,22 +39,19 @@ class PredictService(model_pb2_grpc.PredictServiceServicer):
         input_type = request.inputType
         input_stream = request.inputStream
 
-<<<<<<< HEAD
 
         if (self.proxy_name == None or self.proxy_port == None):
             return model_pb2.response(status = "ProxyNotSet")
-=======
-        print("Begin predicting")
->>>>>>> 86400a612bd67aed6386f53c366baa82b0b2c0db
 
         output = predict_fn.predict(input_stream)
 
 #        print("goes here")
 
-#        return test_pb2.response(status = output)
 
 
-
+        '''
+        Connect to proxy, return the prediction result
+        '''
         channel = grpc.insecure_channel('{proxy_name}:{proxy_port}'.format(
             proxy_name = self.proxy_name,
             proxy_port = self.proxy_port
@@ -62,7 +59,7 @@ class PredictService(model_pb2_grpc.PredictServiceServicer):
         stub = proxy_pb2_grpc.ProxyServiceStub(channel)
         response = stub.Return(proxy_pb2.input(
             inputType = "string",
-            inputStream = output
+            inputSream = output
         ))
         print('Predicted output [{output}] sent to {proxy}:{response}'.format(
             output = output,
@@ -70,13 +67,8 @@ class PredictService(model_pb2_grpc.PredictServiceServicer):
             response = response.status
         ))
 
-<<<<<<< HEAD
         return model_pb2.response(status = "Sucessful")
 
-=======
-        return test_pb2.response(status = "Sucessful")
-        return output
->>>>>>> 86400a612bd67aed6386f53c366baa82b0b2c0db
         
 
 def serve():

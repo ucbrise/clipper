@@ -813,8 +813,7 @@ class ClipperConnection(object):
             model_ip = self.cm.get_container_ip(model_container_id)
             proxy_ip = self.cm.get_container_ip(proxy_id)
 
-
-
+            ## tell the proxy its container's info
             channel_proxy = grpc.insecure_channel('{proxy_ip}:{proxy_port}'.format(
                 proxy_ip=proxy_ip,
                 proxy_port = "22223"
@@ -827,9 +826,25 @@ class ClipperConnection(object):
                 ))
             self.logger.info('[Proxy]Set Model: {res}'.format(res=response1.status))
 
+            #tells the model container its proxy's info
+            channel_model = grpc.insecure_channel('{model_ip}:{model_port}'.format(
+                model_ip=model_ip,
+                model_port = "22222"
+            ))
+            stub_model = rpc.model_pb2_grpc.PredictionServiceStub(channel_model)
+            response2 = stub_model.SetProxy(rpc.model_pb2.proxyinfo(
+                proxyName = proxy_name,
+                proxyPort = "22223"
+                ))
+            self.logger.info('[Model]Set Proxy: {res}'.format(res=response2.status))
+
+        #expand the dag description with the model/proxy instances info 
+        expanded_dag = graph_parser.expand_dag(dag_description_, container_name_ids, proxy_name_ids)
+
+        #tells the proxy new info
 
 
-        #normal dag 
+        
 
         return
 
