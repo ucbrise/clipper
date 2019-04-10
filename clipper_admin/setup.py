@@ -18,7 +18,7 @@ setup(
     license='Apache-2.0',
     packages=[
         "clipper_admin", "clipper_admin.docker", "clipper_admin.kubernetes",
-        "clipper_admin.deployers", "clipper_admin.metrics"
+        "clipper_admin.deployers", "clipper_admin.metrics", "clipper_admin.docker.logging"
     ],
     package_data={'clipper_admin': ['*.txt', '*/*.yaml']},
     keywords=['clipper', 'prediction', 'model', 'management'],

@@ -22,7 +22,7 @@ from .logging.docker_logging_utils import (
     get_logs_from_containers,
     get_default_log_config
 )
-from .logging.fluentd.fluentd import Fluentd
+from clipper_admin.docker.logging.fluentd import Fluentd
 
 logger = logging.getLogger(__name__)
 

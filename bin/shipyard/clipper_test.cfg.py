@@ -13,18 +13,18 @@ UNITTESTS = {
 }
 
 DOCKER_INTEGRATION_TESTS = {
-    # "admin_unit_test": "python /clipper/integration-tests/clipper_admin_tests.py",
-    # "many_apps_many_models": "python /clipper/integration-tests/many_apps_many_models.py",
+    "admin_unit_test": "python /clipper/integration-tests/clipper_admin_tests.py",
+    "many_apps_many_models": "python /clipper/integration-tests/many_apps_many_models.py",
     "pyspark": "python /clipper/integration-tests/deploy_pyspark_models.py",
-    # "pyspark_pipeline": "python /clipper/integration-tests/deploy_pyspark_pipeline_models.py",
-    # "pysparkml": "python /clipper/integration-tests/deploy_pyspark_sparkml_models.py",
-    # "tensorflow": "python /clipper/integration-tests/deploy_tensorflow_models.py",
-    # "mxnet": "python /clipper/integration-tests/deploy_mxnet_models.py",
-    # "pytorch": "python /clipper/integration-tests/deploy_pytorch_models.py",
-    # "multi_tenancy": "python /clipper/integration-tests/multi_tenancy_test.py",
+    "pyspark_pipeline": "python /clipper/integration-tests/deploy_pyspark_pipeline_models.py",
+    "pysparkml": "python /clipper/integration-tests/deploy_pyspark_sparkml_models.py",
+    "tensorflow": "python /clipper/integration-tests/deploy_tensorflow_models.py",
+    "mxnet": "python /clipper/integration-tests/deploy_mxnet_models.py",
+    "pytorch": "python /clipper/integration-tests/deploy_pytorch_models.py",
+    "multi_tenancy": "python /clipper/integration-tests/multi_tenancy_test.py",
     # "rclipper": "/clipper/integration-tests/r_integration_test/rclipper_test.sh",
-    #"docker_metric": "python /clipper/integration-tests/clipper_metric_docker.py",
-    #"fluentd": "python /clipper/integration-tests/clipper_fluentd_logging_docker.py",
+    "docker_metric": "python /clipper/integration-tests/clipper_metric_docker.py",
+    "fluentd": "python /clipper/integration-tests/clipper_fluentd_logging_docker.py",
 }
 
 NUM_RETRIES = 2
