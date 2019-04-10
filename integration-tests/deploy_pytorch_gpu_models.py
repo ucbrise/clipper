@@ -142,10 +142,16 @@ def train(model):
                 image.cuda()
                 j.cuda()
             optimizer.zero_grad()
-            output = model(image)
-            loss = F.cross_entropy(output,
-                                   Variable(
-                                       torch.LongTensor([train_y[i - 1]])))
+            if CUDA_AVAILABLE:
+                output = model(image.cuda())
+                loss = F.cross_entropy(output,
+                                       Variable(
+                                           torch.LongTensor([train_y[i - 1]])).cuda())
+            else:
+                output = model(image)
+                loss = F.cross_entropy(output,
+                                       Variable(
+                                           torch.LongTensor([train_y[i - 1]])))
             loss.backward()
             optimizer.step()
     return model
