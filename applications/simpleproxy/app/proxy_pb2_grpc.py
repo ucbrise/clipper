@@ -15,18 +15,23 @@ class ProxyServiceStub(object):
       channel: A grpc.Channel.
     """
     self.Predict = channel.unary_unary(
-        '/lmjwtest.ProxyService/Predict',
+        '/proxytest.ProxyService/Predict',
         request_serializer=proxy__pb2.input.SerializeToString,
         response_deserializer=proxy__pb2.response.FromString,
         )
     self.SetModel = channel.unary_unary(
-        '/lmjwtest.ProxyService/SetModel',
+        '/proxytest.ProxyService/SetModel',
         request_serializer=proxy__pb2.modelinfo.SerializeToString,
         response_deserializer=proxy__pb2.response.FromString,
         )
     self.SetDAG = channel.unary_unary(
-        '/lmjwtest.ProxyService/SetDAG',
+        '/proxytest.ProxyService/SetDAG',
         request_serializer=proxy__pb2.dag.SerializeToString,
+        response_deserializer=proxy__pb2.response.FromString,
+        )
+    self.Return = channel.unary_unary(
+        '/proxytest.ProxyService/Return',
+        request_serializer=proxy__pb2.input.SerializeToString,
         response_deserializer=proxy__pb2.response.FromString,
         )
 
@@ -56,6 +61,13 @@ class ProxyServiceServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
+  def Return(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
 
 def add_ProxyServiceServicer_to_server(servicer, server):
   rpc_method_handlers = {
@@ -74,7 +86,12 @@ def add_ProxyServiceServicer_to_server(servicer, server):
           request_deserializer=proxy__pb2.dag.FromString,
           response_serializer=proxy__pb2.response.SerializeToString,
       ),
+      'Return': grpc.unary_unary_rpc_method_handler(
+          servicer.Return,
+          request_deserializer=proxy__pb2.input.FromString,
+          response_serializer=proxy__pb2.response.SerializeToString,
+      ),
   }
   generic_handler = grpc.method_handlers_generic_handler(
-      'lmjwtest.ProxyService', rpc_method_handlers)
+      'proxytest.ProxyService', rpc_method_handlers)
   server.add_generic_rpc_handlers((generic_handler,))

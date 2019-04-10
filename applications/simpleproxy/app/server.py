@@ -83,6 +83,9 @@ class ProxyService(proxy_pb2_grpc.ProxyServiceServicer):
         self.model_port = request.modelPort
         self.model_id = request.modelId
 
+        return proxy_pb2.response(status = "SetModel Sucessful")
+
+
     def SetDAG(self, request, context):
 
         self.dag = request.dag_
@@ -90,6 +93,7 @@ class ProxyService(proxy_pb2_grpc.ProxyServiceServicer):
         self.pre_list = get_pre(self.dag, self.model_id)
         self.post_list = get_post(self.dag, self.model_id)
         
+        return proxy_pb2.response(status = "SetDAG Sucessful")
 
 
     def Predict(self, request, context):
@@ -145,6 +149,9 @@ class ProxyService(proxy_pb2_grpc.ProxyServiceServicer):
                 response = response.status
             ))
 
+        return proxy_pb2.response(status = "Sucessful")
+
+
 
 
         
@@ -161,7 +168,7 @@ def serve():
 
     server.add_insecure_port('[::]:{port}'.format(port=proxy_port))
     server.start()
-    print("Proxy started")
+    print("Proxy listening on port %s"%(proxy_port))
     try:
         while True:
             time.sleep(60*60*24)

@@ -26,7 +26,10 @@ else:
 
 import grpc
 
-from . import rpc
+from .rpc import model_pb2_grpc
+from .rpc import model_pb2
+from .rpc import proxy_pb2_grpc
+from .rpc import proxy_pb2
 
 from .container_manager import CONTAINERLESS_MODEL_IMAGE, ClusterAdapter
 from .exceptions import ClipperException, UnconnectedException
@@ -805,21 +808,27 @@ class ClipperConnection(object):
 
             self.logger.info("Started %s with container %s:%s"%(model_name, container_name, container_id))
 
-            proxy_name, proxy_id = self.cm.set_proxy("proxytest", container_name)
+            container_ip = self.cm.get_container_ip(container_id)
+
+            proxy_name, proxy_id = self.cm.set_proxy("proxytest", container_name, container_ip)
 
             ## get the ip of the instances 
-            container_ip = self.cm.get_container_ip(container_id)
             proxy_ip = self.cm.get_container_ip(proxy_id)
 
+
+            time.sleep(2)
             ## tell the proxy its container's info
+            print("proxy_ip:%s"%(proxy_ip))
+            #response = stub.SetModel(proxy_pb2.modelinfo(modelName = 'test', modelId = '1', modelPort='22222'))
+
             channel_proxy = grpc.insecure_channel('{proxy_ip}:{proxy_port}'.format(
                 proxy_ip = proxy_ip,
                 proxy_port = "22223"
             ))
-            stub_proxy = rpc.proxy_pb2_grpc.ProxyServiceStub(channel_proxy)
-            response1 = stub_proxy.SetModel(rpc.proxy_pb2.modelinfo(
+            stub_proxy = proxy_pb2_grpc.ProxyServiceStub(channel_proxy)
+            response1 = stub_proxy.SetModel(proxy_pb2.modelinfo(
                 modelName = container_name,
-                modelId = count,
+                modelId = str(count),
                 modelPort = "22222"
                 ))
             self.logger.info('[Proxy]Set Model: {res}'.format(res=response1.status))
@@ -829,8 +838,8 @@ class ClipperConnection(object):
                 container_ip=container_ip,
                 container_port = "22222"
             ))
-            stub_container = rpc.model_pb2_grpc.PredictionServiceStub(channel_container)
-            response2 = stub_container.SetProxy(rpc.model_pb2.proxyinfo(
+            stub_container = model_pb2_grpc.PredictServiceStub(channel_container)
+            response2 = stub_container.SetProxy(model_pb2.proxyinfo(
                 proxyName = proxy_name,
                 proxyPort = "22223"
                 ))
@@ -854,12 +863,12 @@ class ClipperConnection(object):
                 proxy_ip = proxy_ip,
                 proxy_port = "22223"
             ))
-            stub_proxy = rpc.proxy_pb2_grpc.ProxyServiceStub(channel_proxy)
-            response = stub_proxy.SetDAG(rpc.proxy_pb2.dag(dag_ = expanded_dag))
+            stub_proxy = proxy_pb2_grpc.ProxyServiceStub(channel_proxy)
+            response = stub_proxy.SetDAG(proxy_pb2.dag(dag_ = expanded_dag))
             self.logger.info('[Proxy]Set DAG: {res}'.format(res=response.status))
 
 
-        
+
 
         return
 

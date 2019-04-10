@@ -31,6 +31,9 @@ class PredictService(model_pb2_grpc.PredictServiceServicer):
 
         self.proxy_name = request.proxyName
         self.proxy_port = request.proxyPort
+
+        return model_pb2.response(status = "SetProxy Sucessful")
+
         
 
 

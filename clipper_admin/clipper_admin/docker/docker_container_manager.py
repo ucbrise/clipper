@@ -337,9 +337,10 @@ class DockerContainerManager(ContainerManager):
         return proxy_name, container_id
 
     def get_container_ip(self, container_id):
-        meta = self.docker_client.inspect_container(container_id)
-        self.logger.info("Got meta dictionary:{meta}".format(meta=meta))
-        return meta['NetworkSettings']['Netowrks']['IPAddress']
+        meta = self.docker_client.api.inspect_container(container_id)
+        ip = meta['NetworkSettings']['Networks']['clipper_network']['IPAddress']
+        self.logger.info("Got container {id} IP:{meta}".format(id=container_id, meta=ip))
+        return ip
 
     def add_replica(self, model_name, model_version, model_port, image):
 

@@ -15,12 +15,12 @@ class PredictServiceStub(object):
       channel: A grpc.Channel.
     """
     self.Predict = channel.unary_unary(
-        '/lmjwtest.PredictService/Predict',
+        '/modeltest.PredictService/Predict',
         request_serializer=model__pb2.input.SerializeToString,
         response_deserializer=model__pb2.response.FromString,
         )
     self.SetProxy = channel.unary_unary(
-        '/lmjwtest.PredictService/SetProxy',
+        '/modeltest.PredictService/SetProxy',
         request_serializer=model__pb2.proxyinfo.SerializeToString,
         response_deserializer=model__pb2.response.FromString,
         )
@@ -59,5 +59,5 @@ def add_PredictServiceServicer_to_server(servicer, server):
       ),
   }
   generic_handler = grpc.method_handlers_generic_handler(
-      'lmjwtest.PredictService', rpc_method_handlers)
+      'modeltest.PredictService', rpc_method_handlers)
   server.add_generic_rpc_handlers((generic_handler,))

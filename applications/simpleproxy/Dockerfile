@@ -7,7 +7,10 @@ RUN pip3 install protobuf
 
 ADD simpleproxy/app /container/
 #COPY app /container/
+
+EXPOSE 22223
+
+
 CMD ["/container/container_entry.sh", "tensorflow-container", "/container/server.py"]
 
 
-EXPOSE 22223

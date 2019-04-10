@@ -16,10 +16,10 @@ _sym_db = _symbol_database.Default()
 
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='model.proto',
-  package='lmjwtest',
+  package='modeltest',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\x0bmodel.proto\x12\x08lmjwtest\"/\n\x05input\x12\x11\n\tinputType\x18\x01 \x01(\t\x12\x13\n\x0binputStream\x18\x02 \x01(\t\"1\n\tproxyinfo\x12\x11\n\tproxyName\x18\x01 \x01(\t\x12\x11\n\tproxyPort\x18\x02 \x01(\t\"\x1a\n\x08response\x12\x0e\n\x06status\x18\x01 \x01(\t2y\n\x0ePredictService\x12\x30\n\x07Predict\x12\x0f.lmjwtest.input\x1a\x12.lmjwtest.response\"\x00\x12\x35\n\x08SetProxy\x12\x13.lmjwtest.proxyinfo\x1a\x12.lmjwtest.response\"\x00\x62\x06proto3')
+  serialized_pb=_b('\n\x0bmodel.proto\x12\tmodeltest\"/\n\x05input\x12\x11\n\tinputType\x18\x01 \x01(\t\x12\x13\n\x0binputStream\x18\x02 \x01(\t\"1\n\tproxyinfo\x12\x11\n\tproxyName\x18\x01 \x01(\t\x12\x11\n\tproxyPort\x18\x02 \x01(\t\"\x1a\n\x08response\x12\x0e\n\x06status\x18\x01 \x01(\t2}\n\x0ePredictService\x12\x32\n\x07Predict\x12\x10.modeltest.input\x1a\x13.modeltest.response\"\x00\x12\x37\n\x08SetProxy\x12\x14.modeltest.proxyinfo\x1a\x13.modeltest.response\"\x00\x62\x06proto3')
 )
 
 
@@ -27,20 +27,20 @@ DESCRIPTOR = _descriptor.FileDescriptor(
 
 _INPUT = _descriptor.Descriptor(
   name='input',
-  full_name='lmjwtest.input',
+  full_name='modeltest.input',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='inputType', full_name='lmjwtest.input.inputType', index=0,
+      name='inputType', full_name='modeltest.input.inputType', index=0,
       number=1, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='inputStream', full_name='lmjwtest.input.inputStream', index=1,
+      name='inputStream', full_name='modeltest.input.inputStream', index=1,
       number=2, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
@@ -58,27 +58,27 @@ _INPUT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=25,
-  serialized_end=72,
+  serialized_start=26,
+  serialized_end=73,
 )
 
 
 _PROXYINFO = _descriptor.Descriptor(
   name='proxyinfo',
-  full_name='lmjwtest.proxyinfo',
+  full_name='modeltest.proxyinfo',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='proxyName', full_name='lmjwtest.proxyinfo.proxyName', index=0,
+      name='proxyName', full_name='modeltest.proxyinfo.proxyName', index=0,
       number=1, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='proxyPort', full_name='lmjwtest.proxyinfo.proxyPort', index=1,
+      name='proxyPort', full_name='modeltest.proxyinfo.proxyPort', index=1,
       number=2, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
@@ -96,20 +96,20 @@ _PROXYINFO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=74,
-  serialized_end=123,
+  serialized_start=75,
+  serialized_end=124,
 )
 
 
 _RESPONSE = _descriptor.Descriptor(
   name='response',
-  full_name='lmjwtest.response',
+  full_name='modeltest.response',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='status', full_name='lmjwtest.response.status', index=0,
+      name='status', full_name='modeltest.response.status', index=0,
       number=1, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
@@ -127,8 +127,8 @@ _RESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=125,
-  serialized_end=151,
+  serialized_start=126,
+  serialized_end=152,
 )
 
 DESCRIPTOR.message_types_by_name['input'] = _INPUT
@@ -139,21 +139,21 @@ _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 input = _reflection.GeneratedProtocolMessageType('input', (_message.Message,), dict(
   DESCRIPTOR = _INPUT,
   __module__ = 'model_pb2'
-  # @@protoc_insertion_point(class_scope:lmjwtest.input)
+  # @@protoc_insertion_point(class_scope:modeltest.input)
   ))
 _sym_db.RegisterMessage(input)
 
 proxyinfo = _reflection.GeneratedProtocolMessageType('proxyinfo', (_message.Message,), dict(
   DESCRIPTOR = _PROXYINFO,
   __module__ = 'model_pb2'
-  # @@protoc_insertion_point(class_scope:lmjwtest.proxyinfo)
+  # @@protoc_insertion_point(class_scope:modeltest.proxyinfo)
   ))
 _sym_db.RegisterMessage(proxyinfo)
 
 response = _reflection.GeneratedProtocolMessageType('response', (_message.Message,), dict(
   DESCRIPTOR = _RESPONSE,
   __module__ = 'model_pb2'
-  # @@protoc_insertion_point(class_scope:lmjwtest.response)
+  # @@protoc_insertion_point(class_scope:modeltest.response)
   ))
 _sym_db.RegisterMessage(response)
 
@@ -161,16 +161,16 @@ _sym_db.RegisterMessage(response)
 
 _PREDICTSERVICE = _descriptor.ServiceDescriptor(
   name='PredictService',
-  full_name='lmjwtest.PredictService',
+  full_name='modeltest.PredictService',
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=153,
-  serialized_end=274,
+  serialized_start=154,
+  serialized_end=279,
   methods=[
   _descriptor.MethodDescriptor(
     name='Predict',
-    full_name='lmjwtest.PredictService.Predict',
+    full_name='modeltest.PredictService.Predict',
     index=0,
     containing_service=None,
     input_type=_INPUT,
@@ -179,7 +179,7 @@ _PREDICTSERVICE = _descriptor.ServiceDescriptor(
   ),
   _descriptor.MethodDescriptor(
     name='SetProxy',
-    full_name='lmjwtest.PredictService.SetProxy',
+    full_name='modeltest.PredictService.SetProxy',
     index=1,
     containing_service=None,
     input_type=_PROXYINFO,

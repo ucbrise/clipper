@@ -14,8 +14,9 @@ def get_all_nodes(dag_description):
 
 
 def get_name_version(model_name):
-
-    list =model_name.split('-')
+    print(model_name)
+    list = model_name.split(',')
+    print(list)
     return list[0],list[1],list[2]
 
 def expand_dag(dag_description, container_info, proxy_info):

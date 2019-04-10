@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package lmjwtest;
+package proxytest;
 
 // service, encode a plain text 
 service ProxyService {

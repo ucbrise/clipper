@@ -15,22 +15,22 @@ class ProxyServiceStub(object):
       channel: A grpc.Channel.
     """
     self.Predict = channel.unary_unary(
-        '/lmjwtest.ProxyService/Predict',
+        '/proxytest.ProxyService/Predict',
         request_serializer=proxy__pb2.input.SerializeToString,
         response_deserializer=proxy__pb2.response.FromString,
         )
     self.Return = channel.unary_unary(
-        '/lmjwtest.ProxyService/Return',
+        '/proxytest.ProxyService/Return',
         request_serializer=proxy__pb2.input.SerializeToString,
         response_deserializer=proxy__pb2.response.FromString,
         )
     self.SetModel = channel.unary_unary(
-        '/lmjwtest.ProxyService/SetModel',
+        '/proxytest.ProxyService/SetModel',
         request_serializer=proxy__pb2.modelinfo.SerializeToString,
         response_deserializer=proxy__pb2.response.FromString,
         )
     self.SetDAG = channel.unary_unary(
-        '/lmjwtest.ProxyService/SetDAG',
+        '/proxytest.ProxyService/SetDAG',
         request_serializer=proxy__pb2.dag.SerializeToString,
         response_deserializer=proxy__pb2.response.FromString,
         )
@@ -93,5 +93,5 @@ def add_ProxyServiceServicer_to_server(servicer, server):
       ),
   }
   generic_handler = grpc.method_handlers_generic_handler(
-      'lmjwtest.ProxyService', rpc_method_handlers)
+      'proxytest.ProxyService', rpc_method_handlers)
   server.add_generic_rpc_handlers((generic_handler,))
