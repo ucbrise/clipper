@@ -10,4 +10,4 @@ ADD app /container/
 CMD ["/container/container_entry.sh", "tensorflow-container", "/container/server.py"]
 
 
-EXPOSE 22222
+EXPOSE 22223
