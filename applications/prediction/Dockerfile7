@@ -1,0 +1,14 @@
+FROM ubuntu:bionic
+RUN apt-get update
+RUN apt-get install python3 python3-pip -y
+RUN pip3 install sklearn
+RUN pip3 install numpy
+RUN pip3 install pandas
+RUN pip3 install pyramid.arima
+
+ADD prediction/7_ARIMA/app /container/
+ADD simplerpc/app /container/
+
+CMD ["python3", "/container/server.py", "7", "15000"]
+
+EXPOSE 15000

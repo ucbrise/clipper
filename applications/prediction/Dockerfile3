@@ -1,13 +1,12 @@
 FROM ubuntu:bionic
 RUN apt-get update
 RUN apt-get install python3 python3-pip -y
-RUN pip3 install nltk
+RUN pip3 install spacy
 RUN pip3 install grpcio
 RUN pip3 install protobuf
-RUN pip3 install spacy
-RUN python3 -m spacy download en
+RUN python3 -m spacy download en_core_web_sm
 
-ADD prediction/3_Tokenizor/app /container/
+ADD prediction/3_Tokenizer/app /container/
 ADD simplerpc/app /container/
 
 CMD ["python3", "/container/server.py", "3", "11000"]
