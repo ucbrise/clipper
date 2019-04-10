@@ -34,6 +34,7 @@ RUN  apt-get install -y gnupg-curl \
  && apt-get update -qq \
  && apt-get install -y nvinfer-runtime-trt-repo-ubuntu1604-5.0.2-ga-cuda10.0 \
  && apt-get update -qq \
+ && apt-get install -y --no-install-recommends libnvinfer5=5.0.2-1+cuda10.0 \
  && apt-get install -y --no-install-recommends libnvinfer-dev=5.0.2-1+cuda10.0
 
 RUN apt-get update -qq
