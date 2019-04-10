@@ -5,7 +5,7 @@ RUN apt-get install python3-pip -y
 RUN pip3 install grpcio
 RUN pip3 install protobuf
 
-ADD app /container/
+ADD simpleproxy/app /container/
 #COPY app /container/
 CMD ["/container/container_entry.sh", "tensorflow-container", "/container/server.py"]
 
