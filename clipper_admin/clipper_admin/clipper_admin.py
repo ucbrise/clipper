@@ -786,8 +786,8 @@ class ClipperConnection(object):
         nodes_list = graph_parser.get_all_nodes(dag_description_)
 
         
-        container_name_ids = []
-        proxy_name_ids = []
+        container_info = []
+        proxy_info = []
 
 
     # channel = grpc.insecure_channel('localhost:22222')
@@ -801,47 +801,62 @@ class ClipperConnection(object):
             count += 1
  
             model_name,model_version,model_image = graph_parser.get_name_version(node_name)
-            model_container_name, model_container_id = self.cm.add_replica(model_name, model_version, "22222", model_image)
+            container_name, container_id = self.cm.add_replica(model_name, model_version, "22222", model_image)
 
-            self.logger.info("Started %s with container %s:%s"%(model_name, model_container_name, model_container_id))
-            container_name_ids.append([model_container_name, model_container_id])
-#            model_container_ip = self.cm.get_container_ip(model_container_name)
-            proxy_name, proxy_id = self.cm.set_proxy("proxytest", model_container_name)
-            proxy_name_ids.append([proxy_name,proxy_id])
+            self.logger.info("Started %s with container %s:%s"%(model_name, container_name, container_id))
 
+            proxy_name, proxy_id = self.cm.set_proxy("proxytest", container_name)
 
-            model_ip = self.cm.get_container_ip(model_container_id)
+            ## get the ip of the instances 
+            container_ip = self.cm.get_container_ip(container_id)
             proxy_ip = self.cm.get_container_ip(proxy_id)
 
             ## tell the proxy its container's info
             channel_proxy = grpc.insecure_channel('{proxy_ip}:{proxy_port}'.format(
-                proxy_ip=proxy_ip,
+                proxy_ip = proxy_ip,
                 proxy_port = "22223"
             ))
             stub_proxy = rpc.proxy_pb2_grpc.ProxyServiceStub(channel_proxy)
             response1 = stub_proxy.SetModel(rpc.proxy_pb2.modelinfo(
-                modelName = model_name,
+                modelName = container_name,
                 modelId = count,
                 modelPort = "22222"
                 ))
             self.logger.info('[Proxy]Set Model: {res}'.format(res=response1.status))
 
             #tells the model container its proxy's info
-            channel_model = grpc.insecure_channel('{model_ip}:{model_port}'.format(
-                model_ip=model_ip,
-                model_port = "22222"
+            channel_container = grpc.insecure_channel('{container_ip}:{container_port}'.format(
+                container_ip=container_ip,
+                container_port = "22222"
             ))
-            stub_model = rpc.model_pb2_grpc.PredictionServiceStub(channel_model)
-            response2 = stub_model.SetProxy(rpc.model_pb2.proxyinfo(
+            stub_container = rpc.model_pb2_grpc.PredictionServiceStub(channel_container)
+            response2 = stub_container.SetProxy(rpc.model_pb2.proxyinfo(
                 proxyName = proxy_name,
                 proxyPort = "22223"
                 ))
             self.logger.info('[Model]Set Proxy: {res}'.format(res=response2.status))
 
+            proxy_info.append([proxy_name,proxy_id,proxy_ip])
+            container_info.append([container_name, container_id, container_ip])
+
+
         #expand the dag description with the model/proxy instances info 
-        expanded_dag = graph_parser.expand_dag(dag_description_, container_name_ids, proxy_name_ids)
+        expanded_dag = graph_parser.expand_dag(dag_description_, container_info, proxy_info)
 
         #tells the proxy new info
+        for tup in proxy_info:
+            proxy_name = tup[0]
+            proxy_id = tup[1]
+            proxy_ip = tup[2]
+
+            ## tell the proxy the expanded dag info
+            channel_proxy = grpc.insecure_channel('{proxy_ip}:{proxy_port}'.format(
+                proxy_ip = proxy_ip,
+                proxy_port = "22223"
+            ))
+            stub_proxy = rpc.proxy_pb2_grpc.ProxyServiceStub(channel_proxy)
+            response = stub_proxy.SetDAG(rpc.proxy_pb2.dag(dag_ = expanded_dag))
+            self.logger.info('[Proxy]Set DAG: {res}'.format(res=response.status))
 
 
         
