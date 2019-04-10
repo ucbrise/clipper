@@ -101,7 +101,8 @@ def create_docker_connection(cleanup=False,
                 clipper_query_port=find_unbound_port(),
                 clipper_management_port=find_unbound_port(),
                 clipper_rpc_port=find_unbound_port(),
-                redis_port=find_unbound_port())
+                redis_port=find_unbound_port(),
+                gpu=gpu)
             cl = ClipperConnection(cm)
             try:
                 logger.info("Starting Clipper")
