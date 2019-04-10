@@ -16,6 +16,7 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 
 CUDA_AVAILABLE = torch.cuda.is_available()
+print(CUDA_AVAILABLE)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
 
@@ -60,7 +61,7 @@ def predict(model, xs):
         model.cuda()
     for x in xs:
         if CUDA_AVAILABLE:
-            p = model(x.cuda()).data.cpu().numpy().tolist()[0]
+            p = model(torch.from_numpy(x).cuda()).data.cpu().numpy().tolist()[0]
         else:
             p = model(x).data.numpy().tolist()[0]
         preds.append(str(p))
