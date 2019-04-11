@@ -1,0 +1,16 @@
+FROM ubuntu:bionic
+RUN apt-get update
+RUN apt-get install python3 python3-pip -y
+# RUN pip3 install genism
+RUN pip3 install nltk
+RUN pip3 install spacy
+RUN pip3 install grpcio
+RUN pip3 install protobuf
+RUN python3 -m spacy download en
+
+ADD translation/container4/app /container/
+ADD simplerpc/app /container/
+
+CMD ["python3", "/container/server.py", "4", "12000"]
+
+EXPOSE 12000

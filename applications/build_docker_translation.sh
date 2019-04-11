@@ -1,5 +1,4 @@
-#!/usr/bin/env bash
-#/bin/sh
+#/bin/bash
 
 docker build -f ./translation/Dockerfile1 -t translation:container1 .
 docker build -f ./translation/Dockerfile2 -t translation:container2 .

@@ -118,7 +118,7 @@ class ProxyService(proxy_pb2_grpc.ProxyServiceServicer):
         stub = model_pb2_grpc.PredictServiceStub(channel)
         response = stub.Predict(model_pb2.input(
             inputType = request.inputType,
-            inputSream = request.inputStream
+            inputStream = request.inputStream
         ))
         print('Prediction request [{request}] sent to {model}:{response}'.format(
             request = request,
@@ -141,7 +141,7 @@ class ProxyService(proxy_pb2_grpc.ProxyServiceServicer):
             stub = proxy_pb2_grpc.ProxyServiceStub(channel)
             response = stub.Predict(proxy_pb2.input(
                 inputType = input_type,
-                inputSream = input_stream
+                inputStream = input_stream
             ))
             print('Prediction request [{request}] sent to {proxy}:{response}'.format(
                 request = request,

@@ -62,7 +62,7 @@ class PredictService(model_pb2_grpc.PredictServiceServicer):
         stub = proxy_pb2_grpc.ProxyServiceStub(channel)
         response = stub.Return(proxy_pb2.input(
             inputType = "string",
-            inputSream = output
+            inputStream = output
         ))
         print('Predicted output [{output}] sent to {proxy}:{response}'.format(
             output = output,
@@ -70,7 +70,7 @@ class PredictService(model_pb2_grpc.PredictServiceServicer):
             response = response.status
         ))
 
-        return model_pb2.response(status = "Sucessful")
+        return model_pb2.response(status = "Successful")
 
     def Ping(self, request, context):
 
