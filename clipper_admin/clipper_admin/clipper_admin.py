@@ -792,17 +792,9 @@ class ClipperConnection(object):
         container_info = []
         proxy_info = []
 
-
-    # channel = grpc.insecure_channel('localhost:22222')
-    # stub = test_pb2_grpc.PredictServiceStub(channel)
-    # response = stub.Predict(test_pb2.input(inputType = 'string', inputStream = 'This is a plain text transaction'))
-    # print('Response {res}'.format(res=response.status))
-
         count = 1
         for node_name in nodes_list:
 
-
- 
             model_name,model_version,model_image = graph_parser.get_name_version(node_name)
             container_name, container_id = self.cm.add_replica(model_name, model_version, "22222", model_image)
 
@@ -873,19 +865,18 @@ class ClipperConnection(object):
 
         ## Ping proxy 1
         tup = proxy_info[0]
+        print(tup)
         first_proxy_name = tup[0]
         first_proxy_id = tup[1]
         first_proxy_ip = tup[2]
 
         channel_proxy = grpc.insecure_channel('{proxy_ip}:{proxy_port}'.format(
-            proxy_ip = proxy_ip,
+            proxy_ip = first_proxy_ip,
             proxy_port = "22223"
         ))
         stub_proxy = proxy_pb2_grpc.ProxyServiceStub(channel_proxy)
         response = stub_proxy.Ping(proxy_pb2.hi(msg = "This is Admin"))
         self.logger.info('Ping:  {res}'.format(res=response.status))
-
-
 
         return
 

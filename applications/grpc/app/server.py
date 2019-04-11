@@ -81,19 +81,12 @@ class PredictService(model_pb2_grpc.PredictServiceServicer):
         if (self.proxy_name == None or self.proxy_port == None):
             return model_pb2.response(status = "ProxyNotSet")
 
-        '''
-        Connect to proxy
-        '''
-        channel = grpc.insecure_channel('{proxy_name}:{proxy_port}'.format(
-            proxy_name = self.proxy_name,
-            proxy_port = self.proxy_port
-        ))
-        stub = proxy_pb2_grpc.ProxyServiceStub(channel)
-        response = stub.Ping(proxy_pb2.hi(
-            msg = hi_msg + " >>> This is %s \n"%(self.model_name)
-        ))
+        r = "This is %s \n"%(self.model_name)
 
-        return model_pb2.response(status = "This is %s \n"%(self.model_name))
+
+
+
+        return model_pb2.response(status = r)
 
 
         
@@ -112,7 +105,7 @@ def serve():
 
     server.add_insecure_port('[::]:{port}'.format(port=model_port))
     server.start()
-    print("Server started")
+    print("Model Server Started -- %s"%(model_name))
     try:
         while True:
             time.sleep(60*60*24)

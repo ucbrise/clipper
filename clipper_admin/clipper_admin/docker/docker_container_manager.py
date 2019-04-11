@@ -329,7 +329,8 @@ class DockerContainerManager(ContainerManager):
             image,
             name=proxy_name,
             environment=env_vars,
-            labels=labels,           
+            labels=labels,
+            tty=True,           
             **self.extra_container_kwargs)
 
         #<Container: d15d870463>
@@ -380,7 +381,8 @@ class DockerContainerManager(ContainerManager):
             image,
             name=model_container_name,
             environment=env_vars,
-            labels=labels,           
+            labels=labels,
+            tty=True,
             **self.extra_container_kwargs)
 
         #<Container: d15d870463>

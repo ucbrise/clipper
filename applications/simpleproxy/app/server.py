@@ -168,23 +168,30 @@ class ProxyService(proxy_pb2_grpc.ProxyServiceServicer):
         ))
 
         stub = model_pb2_grpc.PredictServiceStub(channel)
-        r = stub.Ping(model_pb2.hi(
-            msg = hi_msg + " >>> This is %s \n"%(self.proxy_name)
+        response = stub.Ping(model_pb2.hi(
+            msg = "This is %s \n"%(self.proxy_name)
         ))
 
+        r = response.status
+
+        print("finished ping model")
+
         for proxy in self.post_list:
+            print("started ping proxy %s"%(proxy))
             channel = grpc.insecure_channel('{proxy_name}:{proxy_port}'.format(
                 proxy_name = proxy,
                 proxy_port = self.proxy_port
             ))
             stub = proxy_pb2_grpc.ProxyServiceStub(channel)
-            rr = stub.Ping(proxy_pb2.input(
-                msg = hi_msg + " >>> This is %s \n"%(self.proxy_name)
+            response = stub.Ping(proxy_pb2.hi(
+                msg = " This is %s \n"%(self.proxy_name)
             ))
             
-            r = r+rr 
+            r = r+response.status 
 
-        return proxy_pb2.response(status = "This is %s \n"%(self.proxy_name) + r)
+        print("return ping request")
+        r = "This is %s \n"%(self.proxy_name) + r
+        return proxy_pb2.response(status = r)
 
 
 
@@ -204,7 +211,7 @@ def serve():
 
     server.add_insecure_port('[::]:{port}'.format(port=proxy_port))
     server.start()
-    print("Proxy listening on port %s"%(proxy_port))
+    print("Proxy Server Started --- %s listening on port %s"%(proxy_name, proxy_port))
     try:
         while True:
             time.sleep(60*60*24)

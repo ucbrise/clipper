@@ -8,7 +8,7 @@ import sys
 def run(ip, port):
     channel = grpc.insecure_channel('%s:%s'%(ip, port))
     stub = model_pb2_grpc.PredictServiceStub(channel)
-    response = stub.Predict(model_pb2.input(inputType = 'string', inputStream = 'This is a plain text transaction'))
+    response = stub.Ping(model_pb2.hi(msg = 'Ping test'))
     print('Response {res}'.format(res=response.status))
 
 if __name__ == "__main__":
