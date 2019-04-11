@@ -9,8 +9,12 @@ service ProxyService {
     rpc Return(input) returns (response) {}
     rpc SetModel(modelinfo) returns (response) {}
     rpc SetDAG(dag) returns (response) {}
+    rpc Ping(hi) returns (response) {}
 }
 
+message hi {
+    string msg = 1;
+}
 
 message input {
     string inputType = 1;

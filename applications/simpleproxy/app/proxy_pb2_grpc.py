@@ -19,6 +19,11 @@ class ProxyServiceStub(object):
         request_serializer=proxy__pb2.input.SerializeToString,
         response_deserializer=proxy__pb2.response.FromString,
         )
+    self.Return = channel.unary_unary(
+        '/proxytest.ProxyService/Return',
+        request_serializer=proxy__pb2.input.SerializeToString,
+        response_deserializer=proxy__pb2.response.FromString,
+        )
     self.SetModel = channel.unary_unary(
         '/proxytest.ProxyService/SetModel',
         request_serializer=proxy__pb2.modelinfo.SerializeToString,
@@ -29,9 +34,9 @@ class ProxyServiceStub(object):
         request_serializer=proxy__pb2.dag.SerializeToString,
         response_deserializer=proxy__pb2.response.FromString,
         )
-    self.Return = channel.unary_unary(
-        '/proxytest.ProxyService/Return',
-        request_serializer=proxy__pb2.input.SerializeToString,
+    self.Ping = channel.unary_unary(
+        '/proxytest.ProxyService/Ping',
+        request_serializer=proxy__pb2.hi.SerializeToString,
         response_deserializer=proxy__pb2.response.FromString,
         )
 
@@ -43,6 +48,13 @@ class ProxyServiceServicer(object):
   def Predict(self, request, context):
     """request a service of encode
     """
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
+  def Return(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
@@ -61,7 +73,7 @@ class ProxyServiceServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
-  def Return(self, request, context):
+  def Ping(self, request, context):
     # missing associated documentation comment in .proto file
     pass
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -76,6 +88,11 @@ def add_ProxyServiceServicer_to_server(servicer, server):
           request_deserializer=proxy__pb2.input.FromString,
           response_serializer=proxy__pb2.response.SerializeToString,
       ),
+      'Return': grpc.unary_unary_rpc_method_handler(
+          servicer.Return,
+          request_deserializer=proxy__pb2.input.FromString,
+          response_serializer=proxy__pb2.response.SerializeToString,
+      ),
       'SetModel': grpc.unary_unary_rpc_method_handler(
           servicer.SetModel,
           request_deserializer=proxy__pb2.modelinfo.FromString,
@@ -86,9 +103,9 @@ def add_ProxyServiceServicer_to_server(servicer, server):
           request_deserializer=proxy__pb2.dag.FromString,
           response_serializer=proxy__pb2.response.SerializeToString,
       ),
-      'Return': grpc.unary_unary_rpc_method_handler(
-          servicer.Return,
-          request_deserializer=proxy__pb2.input.FromString,
+      'Ping': grpc.unary_unary_rpc_method_handler(
+          servicer.Ping,
+          request_deserializer=proxy__pb2.hi.FromString,
           response_serializer=proxy__pb2.response.SerializeToString,
       ),
   }

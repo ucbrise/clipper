@@ -7,8 +7,12 @@ service PredictService {
     // request a service of encode
     rpc Predict(input) returns (response) {}
     rpc SetProxy(proxyinfo) returns (response) {}
+    rpc Ping(hi) returns (response) {}
 }
 
+message hi {
+    string msg = 1;
+}
 
 message input {
     string inputType = 1;
