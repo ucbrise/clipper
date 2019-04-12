@@ -267,13 +267,13 @@ def deploy_tensorflow_model(clipper_conn,
     # Check if Python 2 or Python 3 image
     if base_image == "default":
         if py_minor_version < (3, 0):
-            name = "tf-container"
+            img_name = "tf-container"
             if clipper_conn.cm.gpu:
                 logger.info("Using Python 2 CUDA image")
-                name = "cuda10-tf27-container"
+                img_name = "cuda10-tf27-container"
             else:
                 logger.info("Using Python 2 base image")
-            base_image = "{}/{}:{}".format(__registry__, name, __version__)
+            base_image = "{}/{}:{}".format(__registry__, img_name, __version__)
         elif py_minor_version == (3, 5):
             if clipper_conn.cm.gpu:
                 logger.info("TensorFlow CUDA deployer only supports Python 2.7 and 3.6.")
@@ -281,13 +281,13 @@ def deploy_tensorflow_model(clipper_conn,
             base_image = "{}/tf35-container:{}".format(__registry__,
                                                    __version__)
         elif py_minor_version == (3, 6):
-            name = "tf36-container"
+            img_name = "tf36-container"
             if clipper_conn.cm.gpu:
                 logger.info("Using Python 3.6 CUDA image")
-                name = "cuda10-tf36-container"
+                img_name = "cuda10-tf36-container"
             else:
                 logger.info("Using Python 3.6 base image")
-            base_image = "{}/{}:{}".format(__registry__, name,
+            base_image = "{}/{}:{}".format(__registry__, img_name,
                                                    __version__)
         else:
             msg = (
