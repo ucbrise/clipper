@@ -68,7 +68,8 @@ class KubernetesContainerManager(ContainerManager):
                  redis_port=6379,
                  useInternalIP=False,
                  namespace='default',
-                 create_namespace_if_not_exists=False):
+                 create_namespace_if_not_exists=False,
+                 gpu=False):
         """
 
         Parameters
@@ -122,6 +123,7 @@ class KubernetesContainerManager(ContainerManager):
         else:
             self.use_k8s_proxy = False
 
+        self.gpu = gpu
         self.redis_ip = redis_ip
         self.redis_port = redis_port
         self.useInternalIP = useInternalIP
