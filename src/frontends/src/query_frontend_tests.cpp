@@ -42,7 +42,11 @@ class QueryFrontendTest : public ::testing::Test {
   std::shared_ptr<redox::Subscriber> subscriber_;
 
   QueryFrontendTest()
-      : rh_("0.0.0.0", 1337),
+      : rh_("0.0.0.0",
+            QUERY_FRONTEND_PORT,
+            DEFAULT_THREAD_POOL_SIZE,
+            DEFAULT_TIMEOUT_REQUEST,
+            DEFAULT_TIMEOUT_CONTENT),
         redis_(std::make_shared<redox::Redox>()),
         subscriber_(std::make_shared<redox::Subscriber>()) {
     Config& conf = get_config();
@@ -406,7 +410,11 @@ TEST_F(QueryFrontendTest, TestReadApplicationsAtStartup) {
   ASSERT_TRUE(add_application(*redis_, name2, input_type2, policy2,
                               default_output2, latency_slo_micros2));
 
-  RequestHandler<MockQueryProcessor> rh2_("127.0.0.1", 1337);
+  RequestHandler<MockQueryProcessor> rh2_("127.0.0.1",
+                                          QUERY_FRONTEND_PORT,
+                                          DEFAULT_THREAD_POOL_SIZE,
+                                          DEFAULT_TIMEOUT_REQUEST,
+                                          DEFAULT_TIMEOUT_CONTENT);
   size_t two_apps = rh2_.num_applications();
   EXPECT_EQ(two_apps, (size_t)2);
 }
@@ -435,7 +443,11 @@ TEST_F(QueryFrontendTest, TestReadModelsAtStartup) {
   std::unordered_map<std::string, std::string> expected_models = {{"m", "2"},
                                                                   {"n", "3"}};
 
-  RequestHandler<MockQueryProcessor> rh2_("127.0.0.1", 1337);
+  RequestHandler<MockQueryProcessor> rh2_("127.0.0.1",
+                                          QUERY_FRONTEND_PORT,
+                                          DEFAULT_THREAD_POOL_SIZE,
+                                          DEFAULT_TIMEOUT_REQUEST,
+                                          DEFAULT_TIMEOUT_CONTENT);
   EXPECT_EQ(rh2_.get_current_model_versions(), expected_models);
 }
 
@@ -458,7 +470,11 @@ TEST_F(QueryFrontendTest, TestReadModelLinksAtStartup) {
 
   std::vector<std::string> expected_app1_linked_models = {"m1", "m2", "m3"};
 
-  RequestHandler<MockQueryProcessor> rh2_("127.0.0.1", 1337);
+  RequestHandler<MockQueryProcessor> rh2_("127.0.0.1",
+                                          QUERY_FRONTEND_PORT,
+                                          DEFAULT_THREAD_POOL_SIZE,
+                                          DEFAULT_TIMEOUT_REQUEST,
+                                          DEFAULT_TIMEOUT_CONTENT);
 
   std::vector<std::string> app1_linked_models =
       rh2_.get_linked_models_for_app(app_name_1);
@@ -482,7 +498,11 @@ TEST_F(QueryFrontendTest, TestReadInvalidModelVersionAtStartup) {
                         container_name, model_path, DEFAULT_BATCH_SIZE));
   // Not setting the version number will cause get_current_model_version()
   // to return -1, and the RequestHandler should then throw a runtime_error.
-  ASSERT_THROW(RequestHandler<QueryProcessor>("127.0.0.1", 1337),
+  ASSERT_THROW(RequestHandler<QueryProcessor>("127.0.0.1",
+                                              QUERY_FRONTEND_PORT,
+                                              DEFAULT_THREAD_POOL_SIZE,
+                                              DEFAULT_TIMEOUT_REQUEST,
+                                              DEFAULT_TIMEOUT_CONTENT),
                std::runtime_error);
 }
 
