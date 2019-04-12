@@ -129,7 +129,7 @@ class ProxyService(proxy_pb2_grpc.ProxyServiceServicer):
         input_type = request.inputType
         input_stream = response.status
 
-        reply = "============Output From Model%s ============\n%s"%(self.model_name, response.status)
+        reply = "============Output From Model%s ============\n%s\n"%(self.model_name, response.status)
 
         for proxy in self.post_list:
             channel = grpc.insecure_channel('{proxy_name}:{proxy_port}'.format(
