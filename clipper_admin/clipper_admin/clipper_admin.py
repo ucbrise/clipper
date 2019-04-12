@@ -792,17 +792,9 @@ class ClipperConnection(object):
         container_info = []
         proxy_info = []
 
-
-    # channel = grpc.insecure_channel('localhost:22222')
-    # stub = test_pb2_grpc.PredictServiceStub(channel)
-    # response = stub.Predict(test_pb2.input(inputType = 'string', inputStream = 'This is a plain text transaction'))
-    # print('Response {res}'.format(res=response.status))
-
-        count = 0
+        count = 1
         for node_name in nodes_list:
 
-            count += 1
- 
             model_name,model_version,model_image = graph_parser.get_name_version(node_name)
             container_name, container_id = self.cm.add_replica(model_name, model_version, "22222", model_image)
 
@@ -816,7 +808,7 @@ class ClipperConnection(object):
             proxy_ip = self.cm.get_container_ip(proxy_id)
 
 
-            time.sleep(2)
+            time.sleep(1)
             ## tell the proxy its container's info
             print("proxy_ip:%s"%(proxy_ip))
             #response = stub.SetModel(proxy_pb2.modelinfo(modelName = 'test', modelId = '1', modelPort='22222'))
@@ -831,6 +823,7 @@ class ClipperConnection(object):
                 modelId = str(count),
                 modelPort = "22222"
                 ))
+            count += 1
             self.logger.info('[Proxy]Set Model: {res}'.format(res=response1.status))
 
             #tells the model container its proxy's info
@@ -848,9 +841,11 @@ class ClipperConnection(object):
             proxy_info.append([proxy_name,proxy_id,proxy_ip])
             container_info.append([container_name, container_id, container_ip])
 
-
         #expand the dag description with the model/proxy instances info 
         expanded_dag = graph_parser.expand_dag(dag_description_, container_info, proxy_info)
+
+
+        self.logger.info("Expanded DAG%s"%(expanded_dag))
 
         #tells the proxy new info
         for tup in proxy_info:
@@ -865,10 +860,23 @@ class ClipperConnection(object):
             ))
             stub_proxy = proxy_pb2_grpc.ProxyServiceStub(channel_proxy)
             response = stub_proxy.SetDAG(proxy_pb2.dag(dag_ = expanded_dag))
-            self.logger.info('[Proxy]Set DAG: {res}'.format(res=response.status))
+            self.logger.info('[Proxy]Set DAG for proxy {proxy_name}: {res}'.format(proxy_name=proxy_name, res=response.status))
 
 
+        ## Ping proxy 1
+        tup = proxy_info[0]
+        print(tup)
+        first_proxy_name = tup[0]
+        first_proxy_id = tup[1]
+        first_proxy_ip = tup[2]
 
+        channel_proxy = grpc.insecure_channel('{proxy_ip}:{proxy_port}'.format(
+            proxy_ip = first_proxy_ip,
+            proxy_port = "22223"
+        ))
+        stub_proxy = proxy_pb2_grpc.ProxyServiceStub(channel_proxy)
+        response = stub_proxy.Ping(proxy_pb2.hi(msg = "This is Admin"))
+        self.logger.info('Ping:  {res}'.format(res=response.status))
 
         return
 

@@ -19,10 +19,41 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='proxytest',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\x0bproxy.proto\x12\tproxytest\"/\n\x05input\x12\x11\n\tinputType\x18\x01 \x01(\t\x12\x13\n\x0binputStream\x18\x02 \x01(\t\"B\n\tmodelinfo\x12\x11\n\tmodelName\x18\x01 \x01(\t\x12\x11\n\tmodelPort\x18\x02 \x01(\t\x12\x0f\n\x07modelId\x18\x03 \x01(\t\"\x13\n\x03\x64\x61g\x12\x0c\n\x04\x64\x61g_\x18\x01 \x01(\t\"\x1a\n\x08response\x12\x0e\n\x06status\x18\x01 \x01(\t2\xdf\x01\n\x0cProxyService\x12\x32\n\x07Predict\x12\x10.proxytest.input\x1a\x13.proxytest.response\"\x00\x12\x31\n\x06Return\x12\x10.proxytest.input\x1a\x13.proxytest.response\"\x00\x12\x37\n\x08SetModel\x12\x14.proxytest.modelinfo\x1a\x13.proxytest.response\"\x00\x12/\n\x06SetDAG\x12\x0e.proxytest.dag\x1a\x13.proxytest.response\"\x00\x62\x06proto3')
+  serialized_pb=_b('\n\x0bproxy.proto\x12\tproxytest\"\x11\n\x02hi\x12\x0b\n\x03msg\x18\x01 \x01(\t\"/\n\x05input\x12\x11\n\tinputType\x18\x01 \x01(\t\x12\x13\n\x0binputStream\x18\x02 \x01(\t\"B\n\tmodelinfo\x12\x11\n\tmodelName\x18\x01 \x01(\t\x12\x11\n\tmodelPort\x18\x02 \x01(\t\x12\x0f\n\x07modelId\x18\x03 \x01(\t\"\x13\n\x03\x64\x61g\x12\x0c\n\x04\x64\x61g_\x18\x01 \x01(\t\"\x1a\n\x08response\x12\x0e\n\x06status\x18\x01 \x01(\t2\x8d\x02\n\x0cProxyService\x12\x32\n\x07Predict\x12\x10.proxytest.input\x1a\x13.proxytest.response\"\x00\x12\x31\n\x06Return\x12\x10.proxytest.input\x1a\x13.proxytest.response\"\x00\x12\x37\n\x08SetModel\x12\x14.proxytest.modelinfo\x1a\x13.proxytest.response\"\x00\x12/\n\x06SetDAG\x12\x0e.proxytest.dag\x1a\x13.proxytest.response\"\x00\x12,\n\x04Ping\x12\r.proxytest.hi\x1a\x13.proxytest.response\"\x00\x62\x06proto3')
 )
 
 
+
+
+_HI = _descriptor.Descriptor(
+  name='hi',
+  full_name='proxytest.hi',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='msg', full_name='proxytest.hi.msg', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=26,
+  serialized_end=43,
+)
 
 
 _INPUT = _descriptor.Descriptor(
@@ -58,8 +89,8 @@ _INPUT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=26,
-  serialized_end=73,
+  serialized_start=45,
+  serialized_end=92,
 )
 
 
@@ -103,8 +134,8 @@ _MODELINFO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=75,
-  serialized_end=141,
+  serialized_start=94,
+  serialized_end=160,
 )
 
 
@@ -134,8 +165,8 @@ _DAG = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=143,
-  serialized_end=162,
+  serialized_start=162,
+  serialized_end=181,
 )
 
 
@@ -165,15 +196,23 @@ _RESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=164,
-  serialized_end=190,
+  serialized_start=183,
+  serialized_end=209,
 )
 
+DESCRIPTOR.message_types_by_name['hi'] = _HI
 DESCRIPTOR.message_types_by_name['input'] = _INPUT
 DESCRIPTOR.message_types_by_name['modelinfo'] = _MODELINFO
 DESCRIPTOR.message_types_by_name['dag'] = _DAG
 DESCRIPTOR.message_types_by_name['response'] = _RESPONSE
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
+
+hi = _reflection.GeneratedProtocolMessageType('hi', (_message.Message,), dict(
+  DESCRIPTOR = _HI,
+  __module__ = 'proxy_pb2'
+  # @@protoc_insertion_point(class_scope:proxytest.hi)
+  ))
+_sym_db.RegisterMessage(hi)
 
 input = _reflection.GeneratedProtocolMessageType('input', (_message.Message,), dict(
   DESCRIPTOR = _INPUT,
@@ -211,8 +250,8 @@ _PROXYSERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=193,
-  serialized_end=416,
+  serialized_start=212,
+  serialized_end=481,
   methods=[
   _descriptor.MethodDescriptor(
     name='Predict',
@@ -247,6 +286,15 @@ _PROXYSERVICE = _descriptor.ServiceDescriptor(
     index=3,
     containing_service=None,
     input_type=_DAG,
+    output_type=_RESPONSE,
+    serialized_options=None,
+  ),
+  _descriptor.MethodDescriptor(
+    name='Ping',
+    full_name='proxytest.ProxyService.Ping',
+    index=4,
+    containing_service=None,
+    input_type=_HI,
     output_type=_RESPONSE,
     serialized_options=None,
   ),

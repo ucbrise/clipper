@@ -70,7 +70,24 @@ class PredictService(model_pb2_grpc.PredictServiceServicer):
             response = response.status
         ))
 
-        return model_pb2.response(status = "Sucessful")
+        return model_pb2.response(status = "Successful")
+
+    def Ping(self, request, context):
+
+        print("received request:{request}\n".format(request=request))
+        hi_msg = request.msg
+
+
+        if (self.proxy_name == None or self.proxy_port == None):
+            return model_pb2.response(status = "ProxyNotSet")
+
+        r = "This is %s \n"%(self.model_name)
+
+
+
+
+        return model_pb2.response(status = r)
+
 
         
 
@@ -88,7 +105,7 @@ def serve():
 
     server.add_insecure_port('[::]:{port}'.format(port=model_port))
     server.start()
-    print("Server started")
+    print("Model Server Started -- %s"%(model_name))
     try:
         while True:
             time.sleep(60*60*24)

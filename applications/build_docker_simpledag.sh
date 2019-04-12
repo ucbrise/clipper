@@ -1,4 +1,4 @@
-#/bin/sh
+#/bin/bash
 
 docker build -f ./simpledag/simpledagDockerfile --build-arg APPNAME="simpledag" --build-arg CONTAINER=1 -t simpledag:container2 .
 docker build -f ./simpledag/simpledagDockerfile --build-arg APPNAME="simpledag" --build-arg CONTAINER=2 -t simpledag:container2 .

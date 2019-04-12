@@ -30,8 +30,8 @@ def get_pre(dag, model_id):
 
         if second == model_id:
             prenode = nodes[int(first)-1]
-            pre_proxy = prenode.split(',')[4]
-            pre_list.append(post_proxy)
+            pre_proxy = prenode.split(',')[8]
+            pre_list.append(pre_proxy)
 
     return pre_list 
 
@@ -53,7 +53,7 @@ def get_post(dag, model_id):
 
         if first == model_id:
             postnode = nodes[int(second)-1]
-            post_proxy = postnode.split(',')[4]
+            post_proxy = postnode.split(',')[8]
             post_list.append(post_proxy)
 
     return post_list 
@@ -93,7 +93,7 @@ class ProxyService(proxy_pb2_grpc.ProxyServiceServicer):
         self.pre_list = get_pre(self.dag, self.model_id)
         self.post_list = get_post(self.dag, self.model_id)
         
-        return proxy_pb2.response(status = "SetDAG Sucessful")
+        return proxy_pb2.response(status = "SetDAG Sucessful for model %s(%s): \n pre_list:%s \n post_list:%s"%(self.model_name, self.model_id, self.pre_list,self.post_list))
 
 
     def Predict(self, request, context):
@@ -118,7 +118,7 @@ class ProxyService(proxy_pb2_grpc.ProxyServiceServicer):
         stub = model_pb2_grpc.PredictServiceStub(channel)
         response = stub.Predict(model_pb2.input(
             inputType = request.inputType,
-            inputSream = request.inputStream
+            inputStream = request.inputStream
         ))
         print('Prediction request [{request}] sent to {model}:{response}'.format(
             request = request,
@@ -141,7 +141,7 @@ class ProxyService(proxy_pb2_grpc.ProxyServiceServicer):
             stub = proxy_pb2_grpc.ProxyServiceStub(channel)
             response = stub.Predict(proxy_pb2.input(
                 inputType = input_type,
-                inputSream = input_stream
+                inputStream = input_stream
             ))
             print('Prediction request [{request}] sent to {proxy}:{response}'.format(
                 request = request,
@@ -150,6 +150,49 @@ class ProxyService(proxy_pb2_grpc.ProxyServiceServicer):
             ))
 
         return proxy_pb2.response(status = "Sucessful")
+
+    def Ping(self, request, context):
+
+        print("received request:{request}\n".format(request=request))
+        hi_msg = request.msg
+
+        if (self.model_name == None or self.model_port == None):
+            return model_pb2.response(status = "ModelNotSet")
+
+        '''
+        Connect to model 
+        '''
+        channel = grpc.insecure_channel('{model_name}:{model_port}'.format(
+            model_name = self.model_name,
+            model_port = self.model_port
+        ))
+
+        stub = model_pb2_grpc.PredictServiceStub(channel)
+        response = stub.Ping(model_pb2.hi(
+            msg = "This is %s \n"%(self.proxy_name)
+        ))
+
+        r = response.status
+
+        print("finished ping model")
+
+        for proxy in self.post_list:
+            print("started ping proxy %s"%(proxy))
+            channel = grpc.insecure_channel('{proxy_name}:{proxy_port}'.format(
+                proxy_name = proxy,
+                proxy_port = self.proxy_port
+            ))
+            stub = proxy_pb2_grpc.ProxyServiceStub(channel)
+            response = stub.Ping(proxy_pb2.hi(
+                msg = " This is %s \n"%(self.proxy_name)
+            ))
+            
+            r = r+response.status 
+
+        print("return ping request")
+        r = "This is %s \n"%(self.proxy_name) + r
+        return proxy_pb2.response(status = r)
+
 
 
 
@@ -168,7 +211,7 @@ def serve():
 
     server.add_insecure_port('[::]:{port}'.format(port=proxy_port))
     server.start()
-    print("Proxy listening on port %s"%(proxy_port))
+    print("Proxy Server Started --- %s listening on port %s"%(proxy_name, proxy_port))
     try:
         while True:
             time.sleep(60*60*24)

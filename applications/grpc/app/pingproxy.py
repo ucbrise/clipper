@@ -1,15 +1,15 @@
 import grpc
 
-import model_pb2
-import model_pb2_grpc
+import proxy_pb2
+import proxy_pb2_grpc
 
 import sys
 
 def run(ip, port):
     channel = grpc.insecure_channel('%s:%s'%(ip, port))
-    stub = model_pb2_grpc.PredictServiceStub(channel)
-    response = stub.Predict(model_pb2.input(inputType = 'string', inputStream = 'This is a plain text transaction'))
-    print('Response {res}'.format(res=response.status))
+    stub = proxy_pb2_grpc.ProxyServiceStub(channel)
+    response = stub.Ping(proxy_pb2.hi(msg = 'Ping test'))
+    print('Response\n{res}'.format(res=response.status))
 
 if __name__ == "__main__":
     ip = "localhost"

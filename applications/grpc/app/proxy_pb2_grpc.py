@@ -34,6 +34,11 @@ class ProxyServiceStub(object):
         request_serializer=proxy__pb2.dag.SerializeToString,
         response_deserializer=proxy__pb2.response.FromString,
         )
+    self.Ping = channel.unary_unary(
+        '/proxytest.ProxyService/Ping',
+        request_serializer=proxy__pb2.hi.SerializeToString,
+        response_deserializer=proxy__pb2.response.FromString,
+        )
 
 
 class ProxyServiceServicer(object):
@@ -68,6 +73,13 @@ class ProxyServiceServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
+  def Ping(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
 
 def add_ProxyServiceServicer_to_server(servicer, server):
   rpc_method_handlers = {
@@ -89,6 +101,11 @@ def add_ProxyServiceServicer_to_server(servicer, server):
       'SetDAG': grpc.unary_unary_rpc_method_handler(
           servicer.SetDAG,
           request_deserializer=proxy__pb2.dag.FromString,
+          response_serializer=proxy__pb2.response.SerializeToString,
+      ),
+      'Ping': grpc.unary_unary_rpc_method_handler(
+          servicer.Ping,
+          request_deserializer=proxy__pb2.hi.FromString,
           response_serializer=proxy__pb2.response.SerializeToString,
       ),
   }
