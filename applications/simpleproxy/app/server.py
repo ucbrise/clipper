@@ -126,12 +126,10 @@ class ProxyService(proxy_pb2_grpc.ProxyServiceServicer):
             response = response.status
         ))
 
-        return proxy_pb2.response(status = "Sucessful")
-        
-    def Return(self, request, context):
-
         input_type = request.inputType
-        input_stream = request.inputStream
+        input_stream = response.status
+
+        reply = "============Output From Model%s ============\n%s\n"%(self.model_name, response.status)
 
         for proxy in self.post_list:
             channel = grpc.insecure_channel('{proxy_name}:{proxy_port}'.format(
@@ -148,6 +146,16 @@ class ProxyService(proxy_pb2_grpc.ProxyServiceServicer):
                 proxy = proxy,
                 response = response.status
             ))
+
+            reply = reply + response.status
+
+        return proxy_pb2.response(status = reply)
+        
+    def Return(self, request, context):
+
+ 
+
+
 
         return proxy_pb2.response(status = "Sucessful")
 

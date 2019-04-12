@@ -27,7 +27,7 @@ if __name__ == '__main__':
     clipper_conn.start_clipper()
 
 
-    f = open("dag_description","r")
+    f = open("../applications/simpledag/dag_description","r")
     dag_description = f.read()
     f.close()
     
@@ -35,7 +35,7 @@ if __name__ == '__main__':
     clipper_conn.deploy_DAG("simpledag", "test", dag_description)
 
 
-    time.sleep(2)
+    #time.sleep(2)
 
     # For batch inputs set this number > 1
     # batch_size = 1

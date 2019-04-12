@@ -57,6 +57,7 @@ def text_clean(text):
 
 
 def predict(text_data):
+    
 
     wordsList = text_clean(text_data)
 
@@ -79,5 +80,5 @@ def predict(text_data):
     for value, freq in word_freq[:3]:
         subject_analysis_result += "The word " + str(freq) + " has appeared for " + str(value) + " times in this text\n"
 
-    return subject_analysis_result
+    return str(subject_analysis_result)
 

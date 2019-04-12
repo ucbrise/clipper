@@ -5,11 +5,17 @@ from os import path
 from scipy.io import wavfile
 
 
-def predict(fs, audio_data):
+def predict(data):
+
+    #tup = data.split('-')
+    #fs = tup[0]
+    #audio_data = tup[1]
+
+ 
 
     local_audio_file_name = os.path.join(path.dirname(path.realpath(__file__)), "test.wav")
 
-    wavfile.write(local_audio_file_name, fs, np.asarray(audio_data, dtype=np.int16))
+    #wavfile.write(local_audio_file_name, fs, np.asarray(audio_data, dtype=np.int16))
 
     r = sr.Recognizer()
 
