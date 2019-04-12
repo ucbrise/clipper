@@ -108,6 +108,9 @@ class DockerContainerManager(ContainerManager):
             "detach": True,
         }
 
+        if self.gpu:
+            container_args['runtime'] = 'nvidia'
+
         self.extra_container_kwargs.update(container_args)
 
         self.logger = ClusterAdapter(logger, {
@@ -329,21 +332,13 @@ class DockerContainerManager(ContainerManager):
 
         model_container_name = model_container_label + '-{}'.format(
             random.randint(0, 100000))
-        if not self.gpu:
-            self.docker_client.containers.run(
-                image,
-                name=model_container_name,
-                environment=env_vars,
-                labels=labels,
-                **self.extra_container_kwargs)
-        else:
-            self.docker_client.containers.run(
-                image,
-                name=model_container_name,
-                environment=env_vars,
-                labels=labels,
-                runtime='nvidia',
-                **self.extra_container_kwargs)
+
+        self.docker_client.containers.run(
+            image,
+            name=model_container_name,
+            environment=env_vars,
+            labels=labels,
+            **self.extra_container_kwargs)
 
         # Metric Section
         add_to_metric_config(model_container_name, self.prom_config_path,
