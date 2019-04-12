@@ -27,7 +27,7 @@ if __name__ == '__main__':
     clipper_conn.start_clipper()
 
 
-    f = open("dag_description","r")
+    f = open("../applications/simpledag/dag_description","r")
     dag_description = f.read()
     f.close()
     

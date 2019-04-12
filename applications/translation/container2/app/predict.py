@@ -6,9 +6,10 @@ def predict(text_data):
 
     doc = nlp(text_data)
 
-    result = []
+    result = ""
 
     for sent in doc.sents:
-        result.append(str(sent))
+        result = result + str(sent) + ","
+
 
     return result

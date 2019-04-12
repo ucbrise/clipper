@@ -50,27 +50,27 @@ class PredictService(model_pb2_grpc.PredictServiceServicer):
 
 #        print("goes here")
 
-
+        print("||||----||||Predict Output:" + output)
 
         '''
         Connect to proxy, return the prediction result
         '''
-        channel = grpc.insecure_channel('{proxy_name}:{proxy_port}'.format(
-            proxy_name = self.proxy_name,
-            proxy_port = self.proxy_port
-        ))
-        stub = proxy_pb2_grpc.ProxyServiceStub(channel)
-        response = stub.Return(proxy_pb2.input(
-            inputType = "string",
-            inputStream = output
-        ))
-        print('Predicted output [{output}] sent to {proxy}:{response}'.format(
-            output = output,
-            proxy = self.proxy_name,
-            response = response.status
-        ))
+        # channel = grpc.insecure_channel('{proxy_name}:{proxy_port}'.format(
+        #     proxy_name = self.proxy_name,
+        #     proxy_port = self.proxy_port
+        # ))
+        # stub = proxy_pb2_grpc.ProxyServiceStub(channel)
+        # response = stub.Return(proxy_pb2.input(
+        #     inputType = "string",
+        #     inputStream = output
+        # ))
+        # print('Predicted output [{output}] sent to {proxy}:{response}'.format(
+        #     output = output,
+        #     proxy = self.proxy_name,
+        #     response = response.status
+        # ))
 
-        return model_pb2.response(status = "Successful")
+        return model_pb2.response(status = output)
 
     def Ping(self, request, context):
 
