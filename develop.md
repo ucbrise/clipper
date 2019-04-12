@@ -9,6 +9,10 @@ docker run -it --network clipper_network -e MODEL_NAME =grpctest -e MODEL_PORT=2
 
 ###Show all docker logs 
 docker ps -q | xargs -L 1 docker logs
+
+
+###Translation test
+python ../applications/translation/client.py 172.18.0.3 22223
 #MacOS
 
 
