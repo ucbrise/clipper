@@ -154,28 +154,32 @@ class DockerContainerManager(ContainerManager):
         #         "Please use ClipperConnection.connect() to connect to it.".
         #         format(self.cluster_name))
 
-        # if not self.external_redis:
-        #     self.logger.info("Starting managed Redis instance in Docker")
-        #     self.redis_port = find_unbound_port(self.redis_port)
-        #     redis_labels = self.common_labels.copy()
-        #     redis_labels[CLIPPER_DOCKER_PORT_LABELS['redis']] = str(
-        #         self.redis_port)
-        #     redis_container = self.docker_client.containers.run(
-        #         'redis:alpine',
-        #         "redis-server --port %s" % CLIPPER_INTERNAL_REDIS_PORT,
-        #         name="redis-{}".format(random.randint(
-        #             0, 100000)),  # generate a random name
-        #         ports={
-        #             '%s/tcp' % CLIPPER_INTERNAL_REDIS_PORT: self.redis_port
-        #         },
-        #         labels=redis_labels,
-        #         **self.extra_container_kwargs)
-        #     self.redis_ip = redis_container.name
+        if not self.external_redis:
+            self.logger.info("Starting managed Redis instance in Docker")
+            self.redis_port = 33333
+            #find_unbound_port(self.redis_port)
+            redis_labels = self.common_labels.copy()
+            redis_labels[CLIPPER_DOCKER_PORT_LABELS['redis']] = str(
+                self.redis_port)
+            redis_container = self.docker_client.containers.run(
+                'redis:alpine',
+                "redis-server --port %s" % CLIPPER_INTERNAL_REDIS_PORT,
+                name="redis-{}".format(random.randint(
+                    0, 100000)),  # generate a random name
+                ports={
+                    '%s/tcp' % CLIPPER_INTERNAL_REDIS_PORT: self.redis_port
+                },
+                labels=redis_labels,
+                **self.extra_container_kwargs)
+            self.redis_ip = redis_container.name
 
-        # mgmt_cmd = "--redis_ip={redis_ip} --redis_port={redis_port}".format(
-        #     redis_ip=self.redis_ip, redis_port=CLIPPER_INTERNAL_REDIS_PORT)
-        # self.clipper_management_port = find_unbound_port(
-        #     self.clipper_management_port)
+        mgmt_cmd = "--redis_ip={redis_ip} --redis_port={redis_port}".format(
+            redis_ip=self.redis_ip, redis_port=CLIPPER_INTERNAL_REDIS_PORT)
+        self.clipper_management_port = 33334
+        #find_unbound_port(
+        #    self.clipper_management_port)
+
+
         # mgmt_labels = self.common_labels.copy()
         # mgmt_labels[CLIPPER_MGMT_FRONTEND_CONTAINER_LABEL] = ""
         # mgmt_labels[CLIPPER_DOCKER_PORT_LABELS['management']] = str(
