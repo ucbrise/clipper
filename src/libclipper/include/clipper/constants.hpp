@@ -14,19 +14,7 @@ enum RedisDBTable {
   REDIS_APPLICATION_DB_NUM = 5,
   REDIS_METADATA_DB_NUM = 6,  // used to store Clipper configuration metadata
   REDIS_APP_MODEL_LINKS_DB_NUM = 7,
-  REDIS_STATE_DB_NUM_ = 11,
-  REDIS_MODEL_DB_NUM_ = 12,
-  REDIS_CONTAINER_DB_NUM_ = 13,
-  REDIS_RESOURCE_DB_NUM_ = 14,
-  REDIS_APPLICATION_DB_NUM_ = 15,
-  REDIS_METADATA_DB_NUM_ = 16,  // used to store Clipper configuration metadata
-  REDIS_APP_MODEL_LINKS_DB_NUM_ = 17,
 };
-
-const std::string LOCAL_HOST_IP = "127.0.0.1";
-constexpr int DEFAULT_PORT_NUM = 65000;
-
-constexpr int RPC_SERVICE_PORT = 7000;
 
 constexpr int QUERY_FRONTEND_PORT = 1337;
 constexpr int MANAGEMENT_FRONTEND_PORT = 1338;
@@ -43,7 +31,3 @@ constexpr int DEFAULT_USER_ID = 0;
 
 }  // namespace clipper
 #endif
-
-
-
-

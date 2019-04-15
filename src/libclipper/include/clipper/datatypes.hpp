@@ -69,9 +69,6 @@ class VersionedModelId {
   std::string id_;
 };
 
-
-
-
 class PredictionData {
  public:
   // TODO: pure virtual or default?

@@ -250,8 +250,9 @@ class TaskExecutor {
         model_queues_({}),
         model_metrics_({}) {
     log_info(LOGGING_TAG_TASK_EXECUTOR, "TaskExecutor started");
+    Config &conf = get_config();
     rpc_->start(
-        "*", RPC_SERVICE_PORT, [ this, task_executor_valid = active_ ](
+        "*", conf.get_rpc_service_port(), [ this, task_executor_valid = active_ ](
                                    VersionedModelId model, int replica_id) {
           if (*task_executor_valid) {
             on_container_ready(model, replica_id);
@@ -281,7 +282,6 @@ class TaskExecutor {
                      "TaskExecutor has been destroyed.");
           }
         });
-    Config &conf = get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
       log_error(LOGGING_TAG_TASK_EXECUTOR,
