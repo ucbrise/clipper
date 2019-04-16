@@ -16,8 +16,8 @@ using grpc::ServerCompletionQueue;
 using grpc::Status;
 
 
-using helloworld::HelloRequest;
-using helloworld::HelloReply;
+using management::HelloRequest;
+using management::HelloReply;
 using management::ManagementServer;
 
 class ServerImpl final {
@@ -28,7 +28,7 @@ class ServerImpl final {
     cq_->Shutdown();
   }
 
-  // There is no shutdown handling in this code.
+  // There is no shutdown handling in this code. 
   void Run() {
     
     std::string server_address("0.0.0.0:50051");
