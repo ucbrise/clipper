@@ -814,13 +814,13 @@ class ClipperConnection(object):
 
             container_ip = self.cm.get_container_ip(container_id)
 
-            proxy_name, proxy_id = self.cm.set_proxy("proxytest", container_name, container_ip)
+            proxy_name, proxy_id = self.cm.set_proxy("mxschen/ai-proxy", container_name, container_ip)
 
             ## get the ip of the instances 
             proxy_ip = self.cm.get_container_ip(proxy_id)
 
 
-            time.sleep(1)
+            time.sleep(10)
             ## tell the proxy its container's info
             print("proxy_ip:%s"%(proxy_ip))
             #response = stub.SetModel(proxy_pb2.modelinfo(modelName = 'test', modelId = '1', modelPort='22222'))
