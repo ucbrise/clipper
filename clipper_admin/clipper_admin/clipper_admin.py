@@ -844,9 +844,10 @@ class ClipperConnection(object):
             ))
             stub_proxy = prediction_pb2_grpc.ProxyServerStub(channel_proxy)
             response1 = stub_proxy.SetModel(prediction_pb2.modelinfo(
-                modelName = container_name,
+                modelName = container_name,                
                 modelId = count,
-                modelPort = 22222
+                modelPort = 22222,
+                modelIp = container_ip
                 ))
 
             count += 1

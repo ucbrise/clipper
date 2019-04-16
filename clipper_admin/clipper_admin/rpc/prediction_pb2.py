@@ -21,7 +21,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='prediction',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\x10prediction.proto\x12\nprediction\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0bmodel.proto\"\x88\x01\n\x07request\x12 \n\x06input_\x18\x01 \x01(\x0b\x32\x10.modeltest.input\x12\x0f\n\x07src_uri\x18\x02 \x01(\t\x12\x0b\n\x03seq\x18\x03 \x01(\r\x12\x0e\n\x06req_id\x18\x04 \x01(\r\x12-\n\ttimestamp\x18\x05 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\"Y\n\nproxy_info\x12\n\n\x02ip\x18\x01 \x01(\t\x12\x0c\n\x04port\x18\x02 \x01(\r\x12\x10\n\x08stateful\x18\x03 \x01(\x08\x12\x12\n\nis_primary\x18\x04 \x01(\x08\x12\x0b\n\x03seq\x18\x05 \x01(\r\"\xa8\x01\n\rfailure_reply\x12)\n\tnew_proxy\x18\x01 \x01(\x0b\x32\x16.prediction.proxy_info\x12*\n\nsuccessors\x18\x02 \x03(\x0b\x32\x16.prediction.proxy_info\x12,\n\x0cpredecessors\x18\x03 \x03(\x0b\x32\x16.prediction.proxy_info\x12\x12\n\nis_primary\x18\x04 \x01(\x08\"\xa3\x01\n\x0crecovery_req\x12,\n\x0c\x66\x61iled_proxy\x18\x01 \x01(\x0b\x32\x16.prediction.proxy_info\x12)\n\tnew_proxy\x18\x02 \x01(\x0b\x32\x16.prediction.proxy_info\x12\x11\n\tstart_seq\x18\x03 \x01(\r\x12\x13\n\x0bis_stateful\x18\x04 \x01(\x08\x12\x12\n\nis_primary\x18\x05 \x01(\x08\"&\n\x17successor_prepare_reply\x12\x0b\n\x03seq\x18\x01 \x01(\r\"\n\n\x08ping_req\"B\n\nping_reply\x12\x0e\n\x06status\x18\x01 \x01(\r\x12\x10\n\x08stateful\x18\x02 \x01(\x08\x12\x12\n\nis_primary\x18\x03 \x01(\x08\"p\n\x15successor_prepare_req\x12,\n\x0c\x66\x61iled_proxy\x18\x01 \x01(\x0b\x32\x16.prediction.proxy_info\x12)\n\tnew_proxy\x18\x02 \x01(\x0b\x32\x16.prediction.proxy_info\"L\n\x0bproxy_group\x12+\n\x0b\x64ownstreams\x18\x01 \x03(\x0b\x32\x16.prediction.proxy_info\x12\x10\n\x08stateful\x18\x02 \x01(\x08\"\x86\x01\n\x15new_proxy_recover_req\x12,\n\x0cpredecessors\x18\x01 \x03(\x0b\x32\x16.prediction.proxy_info\x12,\n\x0b\x64own_groups\x18\x02 \x03(\x0b\x32\x17.prediction.proxy_group\x12\x11\n\tstart_seq\x18\x03 \x01(\r\"B\n\tmodelinfo\x12\x11\n\tmodelName\x18\x01 \x01(\t\x12\x11\n\tmodelPort\x18\x02 \x01(\r\x12\x0f\n\x07modelId\x18\x03 \x01(\r\"\x13\n\x03\x64\x61g\x12\x0c\n\x04\x64\x61g_\x18\x01 \x01(\t2\x98\x06\n\x0bProxyServer\x12\x38\n\ndownstream\x12\x13.prediction.request\x1a\x13.modeltest.response\"\x00\x12\x65\n\x19prepare_recover_successor\x12!.prediction.successor_prepare_req\x1a#.prediction.successor_prepare_reply\"\x00\x12N\n\x1bprepare_recover_predecessor\x12\x18.prediction.recovery_req\x1a\x13.modeltest.response\"\x00\x12K\n\x18\x63ommit_recover_successor\x12\x18.prediction.recovery_req\x1a\x13.modeltest.response\"\x00\x12M\n\x1a\x63ommit_recover_predecessor\x12\x18.prediction.recovery_req\x1a\x13.modeltest.response\"\x00\x12M\n\x11recover_new_proxy\x12!.prediction.new_proxy_recover_req\x1a\x13.modeltest.response\"\x00\x12K\n\x0fpromote_primary\x12!.prediction.new_proxy_recover_req\x1a\x13.modeltest.response\"\x00\x12<\n\x0bset_primary\x12\x16.prediction.proxy_info\x1a\x13.modeltest.response\"\x00\x12\x36\n\x04ping\x12\x14.prediction.ping_req\x1a\x16.prediction.ping_reply\"\x00\x12\x38\n\x08SetModel\x12\x15.prediction.modelinfo\x1a\x13.modeltest.response\"\x00\x12\x30\n\x06SetDAG\x12\x0f.prediction.dag\x1a\x13.modeltest.response\"\x00\x62\x06proto3')
+  serialized_pb=_b('\n\x10prediction.proto\x12\nprediction\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x0bmodel.proto\"\x88\x01\n\x07request\x12 \n\x06input_\x18\x01 \x01(\x0b\x32\x10.modeltest.input\x12\x0f\n\x07src_uri\x18\x02 \x01(\t\x12\x0b\n\x03seq\x18\x03 \x01(\r\x12\x0e\n\x06req_id\x18\x04 \x01(\r\x12-\n\ttimestamp\x18\x05 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\"Y\n\nproxy_info\x12\n\n\x02ip\x18\x01 \x01(\t\x12\x0c\n\x04port\x18\x02 \x01(\r\x12\x10\n\x08stateful\x18\x03 \x01(\x08\x12\x12\n\nis_primary\x18\x04 \x01(\x08\x12\x0b\n\x03seq\x18\x05 \x01(\r\"\xa8\x01\n\rfailure_reply\x12)\n\tnew_proxy\x18\x01 \x01(\x0b\x32\x16.prediction.proxy_info\x12*\n\nsuccessors\x18\x02 \x03(\x0b\x32\x16.prediction.proxy_info\x12,\n\x0cpredecessors\x18\x03 \x03(\x0b\x32\x16.prediction.proxy_info\x12\x12\n\nis_primary\x18\x04 \x01(\x08\"\xa3\x01\n\x0crecovery_req\x12,\n\x0c\x66\x61iled_proxy\x18\x01 \x01(\x0b\x32\x16.prediction.proxy_info\x12)\n\tnew_proxy\x18\x02 \x01(\x0b\x32\x16.prediction.proxy_info\x12\x11\n\tstart_seq\x18\x03 \x01(\r\x12\x13\n\x0bis_stateful\x18\x04 \x01(\x08\x12\x12\n\nis_primary\x18\x05 \x01(\x08\"&\n\x17successor_prepare_reply\x12\x0b\n\x03seq\x18\x01 \x01(\r\"\n\n\x08ping_req\"B\n\nping_reply\x12\x0e\n\x06status\x18\x01 \x01(\r\x12\x10\n\x08stateful\x18\x02 \x01(\x08\x12\x12\n\nis_primary\x18\x03 \x01(\x08\"p\n\x15successor_prepare_req\x12,\n\x0c\x66\x61iled_proxy\x18\x01 \x01(\x0b\x32\x16.prediction.proxy_info\x12)\n\tnew_proxy\x18\x02 \x01(\x0b\x32\x16.prediction.proxy_info\"L\n\x0bproxy_group\x12+\n\x0b\x64ownstreams\x18\x01 \x03(\x0b\x32\x16.prediction.proxy_info\x12\x10\n\x08stateful\x18\x02 \x01(\x08\"\x86\x01\n\x15new_proxy_recover_req\x12,\n\x0cpredecessors\x18\x01 \x03(\x0b\x32\x16.prediction.proxy_info\x12,\n\x0b\x64own_groups\x18\x02 \x03(\x0b\x32\x17.prediction.proxy_group\x12\x11\n\tstart_seq\x18\x03 \x01(\r\"S\n\tmodelinfo\x12\x11\n\tmodelName\x18\x01 \x01(\t\x12\x11\n\tmodelPort\x18\x02 \x01(\r\x12\x0f\n\x07modelId\x18\x03 \x01(\r\x12\x0f\n\x07modelIp\x18\x04 \x01(\t\"\x13\n\x03\x64\x61g\x12\x0c\n\x04\x64\x61g_\x18\x01 \x01(\t2\x98\x06\n\x0bProxyServer\x12\x38\n\ndownstream\x12\x13.prediction.request\x1a\x13.modeltest.response\"\x00\x12\x65\n\x19prepare_recover_successor\x12!.prediction.successor_prepare_req\x1a#.prediction.successor_prepare_reply\"\x00\x12N\n\x1bprepare_recover_predecessor\x12\x18.prediction.recovery_req\x1a\x13.modeltest.response\"\x00\x12K\n\x18\x63ommit_recover_successor\x12\x18.prediction.recovery_req\x1a\x13.modeltest.response\"\x00\x12M\n\x1a\x63ommit_recover_predecessor\x12\x18.prediction.recovery_req\x1a\x13.modeltest.response\"\x00\x12M\n\x11recover_new_proxy\x12!.prediction.new_proxy_recover_req\x1a\x13.modeltest.response\"\x00\x12K\n\x0fpromote_primary\x12!.prediction.new_proxy_recover_req\x1a\x13.modeltest.response\"\x00\x12<\n\x0bset_primary\x12\x16.prediction.proxy_info\x1a\x13.modeltest.response\"\x00\x12\x36\n\x04ping\x12\x14.prediction.ping_req\x1a\x16.prediction.ping_reply\"\x00\x12\x38\n\x08SetModel\x12\x15.prediction.modelinfo\x1a\x13.modeltest.response\"\x00\x12\x30\n\x06SetDAG\x12\x0f.prediction.dag\x1a\x13.modeltest.response\"\x00\x62\x06proto3')
   ,
   dependencies=[google_dot_protobuf_dot_timestamp__pb2.DESCRIPTOR,model__pb2.DESCRIPTOR,])
 
@@ -506,6 +506,13 @@ _MODELINFO = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='modelIp', full_name='prediction.modelinfo.modelIp', index=3,
+      number=4, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -519,7 +526,7 @@ _MODELINFO = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=1094,
-  serialized_end=1160,
+  serialized_end=1177,
 )
 
 
@@ -549,8 +556,8 @@ _DAG = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1162,
-  serialized_end=1181,
+  serialized_start=1179,
+  serialized_end=1198,
 )
 
 _REQUEST.fields_by_name['input_'].message_type = model__pb2._INPUT
@@ -671,8 +678,8 @@ _PROXYSERVER = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=1184,
-  serialized_end=1976,
+  serialized_start=1201,
+  serialized_end=1993,
   methods=[
   _descriptor.MethodDescriptor(
     name='downstream',

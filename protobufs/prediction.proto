@@ -105,6 +105,7 @@ message modelinfo {
     string modelName = 1;
     uint32 modelPort = 2;
     uint32 modelId = 3;
+    string modelIp = 4;
 }
 
 message dag{
