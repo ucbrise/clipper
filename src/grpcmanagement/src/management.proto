@@ -3,29 +3,11 @@ syntax = "proto3";
 package management;
 
 // service, encode a plain text 
-service ManagementService {
+service ManagementServer {
     // request a service of encode
     rpc Predict(input) returns (response) {}
     rpc SetProxy(proxyinfo) returns (response) {}
     rpc Ping(hi) returns (response) {}
 
     rpc 
-}
-
-message hi {
-    string msg = 1;
-}
-
-message input {
-    string inputType = 1;
-    string inputStream = 2;
-}
-
-message proxyinfo {
-    string proxyName = 1;
-    string proxyPort = 2;
-}
-
-message response {
-    string status = 1;
 }

@@ -2,27 +2,13 @@ syntax = "proto3";
 
 package prediction;
 import "google/protobuf/timestamp.proto";
+import "model.proto";
 
-
-//Raw Input passed to the model
-//maintainer: xs, sx
-message input {
-    string inputType = 1;
-    string inputStream = 2;
-}
-
-//Raw output returned from the model
-//maintainer: xs, sx
-message output {
-    string outputType = 1;
-    string outputStream = 2;
-
-}
 
 //The message passed between proxies.
 //maintainer: xs.
 message request{
-    input input_ = 1;
+    modeltest.input input_ = 1;
 
     string src_uri = 2;
     uint32 seq = 3;
@@ -32,11 +18,6 @@ message request{
 }
 
 
-//A default return value
-//maintainer: xs, sx
-message response {
-    uint32 seq = 1;
-}
 
 //The info of proxy used for recovery.
 //maintainer: xs, sx
@@ -142,38 +123,25 @@ service ProxyServer{
     Input: The passed request. (currently not batched)
     Returns: A simple ACK.
     */
-    rpc downstream (request) returns(response){}
+    rpc downstream (request) returns(modeltest.response){}
 
     /*
     Failure Recovery RPCs
     */
     rpc prepare_recover_successor (successor_prepare_req) returns (successor_prepare_reply){}
-    rpc prepare_recover_predecessor (recovery_req) returns (response) {}
-    rpc commit_recover_successor(recovery_req) returns (response) {}
-    rpc commit_recover_predecessor(recovery_req) returns (response) {}
-    rpc recover_new_proxy (new_proxy_recover_req) returns (response) {}
-    rpc promote_primary (new_proxy_recover_req) returns (response) {}
+    rpc prepare_recover_predecessor (recovery_req) returns (modeltest.response) {}
+    rpc commit_recover_successor(recovery_req) returns (modeltest.response) {}
+    rpc commit_recover_predecessor(recovery_req) returns (modeltest.response) {}
+    rpc recover_new_proxy (new_proxy_recover_req) returns (modeltest.response) {}
+    rpc promote_primary (new_proxy_recover_req) returns (modeltest.response) {}
 
     /*
     An predecessor call this to appoint a stateful downstream replica as primary.
     */
-    rpc set_primary(proxy_info) returns (response) {}
+    rpc set_primary(proxy_info) returns (modeltest.response) {}
     rpc ping(ping_req) returns (ping_reply) {}
 
     //Called by manager
-    rpc SetModel(modelinfo) returns (response) {}
-    rpc SetDAG(dag) returns (response) {}
-
-}
-
-service ModelServer{
-
-    //An proxy calls this rpc on the model
-    //Client: Proxy.ModelConn
-    //Server: Model.
-    rpc predict (input) returns (output){}
-
-    rpc ping(ping_req) returns (response) {}
-
-//    rpc batch_predict (request_batch) returns (reply_batch){}
+    rpc SetModel(modelinfo) returns (modeltest.response) {}
+    rpc SetDAG(dag) returns (modeltest.response) {}
 }
