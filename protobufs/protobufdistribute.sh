@@ -21,3 +21,6 @@ cp proxy_pb2_grpc.py ../clipper_admin/clipper_admin/rpc/
 cp proxy_pb2.py ../clipper_admin/clipper_admin/rpc/
 cp prediction_pb2_grpc.py ../clipper_admin/clipper_admin/rpc/
 cp prediction_pb2.py ../clipper_admin/clipper_admin/rpc/
+
+
+rm *.py

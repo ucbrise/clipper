@@ -17,7 +17,7 @@ class PredictServiceStub(object):
     self.Predict = channel.unary_unary(
         '/modeltest.PredictService/Predict',
         request_serializer=model__pb2.input.SerializeToString,
-        response_deserializer=model__pb2.response.FromString,
+        response_deserializer=model__pb2.output.FromString,
         )
     self.SetProxy = channel.unary_unary(
         '/modeltest.PredictService/SetProxy',
@@ -62,7 +62,7 @@ def add_PredictServiceServicer_to_server(servicer, server):
       'Predict': grpc.unary_unary_rpc_method_handler(
           servicer.Predict,
           request_deserializer=model__pb2.input.FromString,
-          response_serializer=model__pb2.response.SerializeToString,
+          response_serializer=model__pb2.output.SerializeToString,
       ),
       'SetProxy': grpc.unary_unary_rpc_method_handler(
           servicer.SetProxy,

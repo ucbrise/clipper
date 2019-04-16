@@ -5,7 +5,7 @@ package modeltest;
 // service, encode a plain text 
 service PredictService {
     // request a service of encode
-    rpc Predict(input) returns (response) {}
+    rpc Predict(input) returns (output) {}
     rpc SetProxy(proxyinfo) returns (response) {}
     rpc Ping(hi) returns (response) {}
 }
@@ -17,6 +17,11 @@ message hi {
 message input {
     string inputType = 1;
     string inputStream = 2;
+}
+
+message output {
+    string outputType = 1;
+    string outputStream = 2;
 }
 
 message proxyinfo {

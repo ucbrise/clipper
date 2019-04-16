@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='modeltest',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\x0bmodel.proto\x12\tmodeltest\"\x11\n\x02hi\x12\x0b\n\x03msg\x18\x01 \x01(\t\"/\n\x05input\x12\x11\n\tinputType\x18\x01 \x01(\t\x12\x13\n\x0binputStream\x18\x02 \x01(\t\"1\n\tproxyinfo\x12\x11\n\tproxyName\x18\x01 \x01(\t\x12\x11\n\tproxyPort\x18\x02 \x01(\t\"\x1a\n\x08response\x12\x0e\n\x06status\x18\x01 \x01(\t2\xab\x01\n\x0ePredictService\x12\x32\n\x07Predict\x12\x10.modeltest.input\x1a\x13.modeltest.response\"\x00\x12\x37\n\x08SetProxy\x12\x14.modeltest.proxyinfo\x1a\x13.modeltest.response\"\x00\x12,\n\x04Ping\x12\r.modeltest.hi\x1a\x13.modeltest.response\"\x00\x62\x06proto3')
+  serialized_pb=_b('\n\x0bmodel.proto\x12\tmodeltest\"\x11\n\x02hi\x12\x0b\n\x03msg\x18\x01 \x01(\t\"/\n\x05input\x12\x11\n\tinputType\x18\x01 \x01(\t\x12\x13\n\x0binputStream\x18\x02 \x01(\t\"2\n\x06output\x12\x12\n\noutputType\x18\x01 \x01(\t\x12\x14\n\x0coutputStream\x18\x02 \x01(\t\"1\n\tproxyinfo\x12\x11\n\tproxyName\x18\x01 \x01(\t\x12\x11\n\tproxyPort\x18\x02 \x01(\t\"\x1a\n\x08response\x12\x0e\n\x06status\x18\x01 \x01(\t2\xa9\x01\n\x0ePredictService\x12\x30\n\x07Predict\x12\x10.modeltest.input\x1a\x11.modeltest.output\"\x00\x12\x37\n\x08SetProxy\x12\x14.modeltest.proxyinfo\x1a\x13.modeltest.response\"\x00\x12,\n\x04Ping\x12\r.modeltest.hi\x1a\x13.modeltest.response\"\x00\x62\x06proto3')
 )
 
 
@@ -94,6 +94,44 @@ _INPUT = _descriptor.Descriptor(
 )
 
 
+_OUTPUT = _descriptor.Descriptor(
+  name='output',
+  full_name='modeltest.output',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='outputType', full_name='modeltest.output.outputType', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='outputStream', full_name='modeltest.output.outputStream', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=94,
+  serialized_end=144,
+)
+
+
 _PROXYINFO = _descriptor.Descriptor(
   name='proxyinfo',
   full_name='modeltest.proxyinfo',
@@ -127,8 +165,8 @@ _PROXYINFO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=94,
-  serialized_end=143,
+  serialized_start=146,
+  serialized_end=195,
 )
 
 
@@ -158,12 +196,13 @@ _RESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=145,
-  serialized_end=171,
+  serialized_start=197,
+  serialized_end=223,
 )
 
 DESCRIPTOR.message_types_by_name['hi'] = _HI
 DESCRIPTOR.message_types_by_name['input'] = _INPUT
+DESCRIPTOR.message_types_by_name['output'] = _OUTPUT
 DESCRIPTOR.message_types_by_name['proxyinfo'] = _PROXYINFO
 DESCRIPTOR.message_types_by_name['response'] = _RESPONSE
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
@@ -181,6 +220,13 @@ input = _reflection.GeneratedProtocolMessageType('input', (_message.Message,), d
   # @@protoc_insertion_point(class_scope:modeltest.input)
   ))
 _sym_db.RegisterMessage(input)
+
+output = _reflection.GeneratedProtocolMessageType('output', (_message.Message,), dict(
+  DESCRIPTOR = _OUTPUT,
+  __module__ = 'model_pb2'
+  # @@protoc_insertion_point(class_scope:modeltest.output)
+  ))
+_sym_db.RegisterMessage(output)
 
 proxyinfo = _reflection.GeneratedProtocolMessageType('proxyinfo', (_message.Message,), dict(
   DESCRIPTOR = _PROXYINFO,
@@ -204,8 +250,8 @@ _PREDICTSERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=174,
-  serialized_end=345,
+  serialized_start=226,
+  serialized_end=395,
   methods=[
   _descriptor.MethodDescriptor(
     name='Predict',
@@ -213,7 +259,7 @@ _PREDICTSERVICE = _descriptor.ServiceDescriptor(
     index=0,
     containing_service=None,
     input_type=_INPUT,
-    output_type=_RESPONSE,
+    output_type=_OUTPUT,
     serialized_options=None,
   ),
   _descriptor.MethodDescriptor(

@@ -69,7 +69,7 @@ class PredictService(model_pb2_grpc.PredictServiceServicer):
         #     response = response.status
         # ))
 
-        return model_pb2.response(status = output)
+        return model_pb2.output(outputType = "string", outputStream = output)
 
     def Ping(self, request, context):
 
