@@ -114,6 +114,14 @@ bool add_model(redox::Redox& redis,
                const bool& stateful,
                const std::string& image);
 
+bool add_model_container(redox::Redox& redis, 
+               const VersionedModelId& model_id,
+               const std::string& ip,
+               const std::string& host,
+               const std::string& port,
+               const std::string& container_id,
+               const std::string& replica_id );
+
 // bool set_current_model_version(redox::Redox& redis,
 //                                const std::string& model_name,
 //                                const std::string& version);

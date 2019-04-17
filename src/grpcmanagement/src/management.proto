@@ -23,7 +23,7 @@ service ManagementServer {
 
     //GET
 
-    rpc 
+    rpc GetModelByName (GetModelRequest) returns (ModelInfo) {}
 }
 
 message ModelInfo{

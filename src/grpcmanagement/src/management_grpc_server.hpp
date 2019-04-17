@@ -57,15 +57,15 @@ class GreeterServiceImpl final : public Greeter::Service {
   Status AddModel(ServerContext* context, const ModelInfo* request,
                   Response* reply) override {
 
-    std::string model_name(request->modelname());
-    std::string model_version(request->modelversion());
-    VersionedModelId model_id = VersionedModelId(model_name, model_version);
+    // std::string model_name();
+    // std::string model_version();
+    VersionedModelId model_id = VersionedModelId(request->modelname(), request->modelversion());
 
     InputType input_type = clipper::parse_input_type(request->inputtype());
     OutputType output_type = clipper::parse_input_type(request->outputtype());
     
-    std::to_string(request->stateful());
-    request->image()
+    
+    
 
     // Validate strings that will be grouped before supplying to redis
     validate_group_str_for_redis(model_name, "model name");
@@ -94,16 +94,13 @@ class GreeterServiceImpl final : public Greeter::Service {
     // boost::optional<InputType>(input_type));
 
     if (clipper::redis::add_model(redis_connection_, model_id, input_type, output_type, 
-                                  labels, container_name, model_data_path,
-                                  batch_size)) {
-      attempt_model_version_update(model_id.get_name(), model_id.get_id());
+                                  request->stateful(), request->image())) {
+      //attempt_model_version_update(model_id.get_name(), model_id.get_id());
       std::stringstream ss;
       ss << "Successfully added model with name "
          << "'" << model_name << "'"
          << " and input type "
          << "'" << clipper::get_readable_input_type(input_type) << "'";
-      return ss.str();
-
 
       reply->set_status(ss.str());
       return Status::OK;
@@ -111,33 +108,88 @@ class GreeterServiceImpl final : public Greeter::Service {
     std::stringstream ss;
     ss << "Error adding model " << model_id.get_name() << ":"
        << model_id.get_id() << " to Redis";
-    throw clipper::ManagementOperationError(ss.str());
+    //throw clipper::ManagementOperationError(ss.str());
 
-    reply->set_status(prefix + request->name());
-    return Status::OK;
+    reply->set_status(ss.str());
+    return Status::ABORTED;
   }//end AddModel
+
+
+  Status AddModelContainer(ServerContext* context, const ModelContainerInfo* request,
+                  Response* reply) override {
+
+    // std::string model_name();
+    // std::string model_version();
+    VersionedModelId model_id = VersionedModelId(request->modelname(), request->modelversion());
+
+      
+
+    // Validate strings that will be grouped before supplying to redis
+    //validate_group_str_for_redis(model_name, "model name");
+    //validate_group_str_for_redis(model_id.get_id(), "model version");
+
+    if (clipper::redis::add_model_container(redis_connection_, model_id, request->ip(), request->host(), 
+                                  request->port(), request->containerid(), request->replicaid())) {
+      //attempt_model_version_update(model_id.get_name(), model_id.get_id());
+      std::stringstream ss;
+      ss << "Successfully added container for model_name "
+         << "'" << model_name << "("<< request->containerid() << ")'"
+         << "with replica_id" << "'" << request->replicaid() << "'";
+
+      reply->set_status(ss.str());
+      return Status::OK;
+    }
+    std::stringstream ss;
+    ss << "Error adding container for " << model_id.get_name() << ":"
+       << model_id.get_id() << " to Redis";
+    //throw clipper::ManagementOperationError(ss.str());
+
+    reply->set_status(ss.str());
+    return Status::ABORTED;
+  }//end AddModelContainer
+
+
+
+
+    /**
+   * Attempts to update the version of model with name `model_name` to
+   * `new_model_version`.
+   */
+  // void attempt_model_version_update(const string& model_name,
+  //                                   const string& new_model_version) {
+  //   if (!clipper::redis::set_current_model_version(
+  //           redis_connection_, model_name, new_model_version)) {
+  //     std::stringstream ss;
+  //     ss << "Version "
+  //        << "'" << new_model_version << "'"
+  //        << " does not exist for model with name"
+  //        << "'" << model_name << "'";
+  //     throw clipper::ManagementOperationError(ss.str());
+  //   }
+  // }
+
+  // void validate_group_str_for_redis(const std::string& value,
+  //                                   const char* label) {
+  //   if (clipper::redis::contains_prohibited_chars_for_group(value)) {
+  //     std::stringstream ss;
+
+  //     ss << "Invalid " << label << " supplied: " << value << ".";
+  //     ss << " Contains one of: ";
+
+  //     // Generate string representing list of invalid characters
+  //     std::string prohibited_str;
+  //     for (size_t i = 0; i != prohibited_group_strings.size() - 1; ++i) {
+  //       prohibited_str = *(prohibited_group_strings.begin() + i);
+  //       ss << "'" << prohibited_str << "', ";
+  //     }
+  //     // Add final element of `prohibited_group_strings`
+  //     ss << "'" << *(prohibited_group_strings.end() - 1) << "'";
+
+  //     throw clipper::ManagementOperationError(ss.str());
+  //   }
+  }
 
  private:
   redox::Redox* redis_connection_;
   redox::Subscriber* redis_subscriber_;
 };
-
-void validate_group_str_for_redis(const std::string& value, const char* label) {
-  if (clipper::redis::contains_prohibited_chars_for_group(value)) {
-    std::stringstream ss;
-
-    ss << "Invalid " << label << " supplied: " << value << ".";
-    ss << " Contains one of: ";
-
-    // Generate string representing list of invalid characters
-    std::string prohibited_str;
-    for (size_t i = 0; i != prohibited_group_strings.size() - 1; ++i) {
-      prohibited_str = *(prohibited_group_strings.begin() + i);
-      ss << "'" << prohibited_str << "', ";
-    }
-    // Add final element of `prohibited_group_strings`
-    ss << "'" << *(prohibited_group_strings.end() - 1) << "'";
-
-    throw clipper::ManagementOperationError(ss.str());
-  }
-}

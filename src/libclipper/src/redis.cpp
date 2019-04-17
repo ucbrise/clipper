@@ -23,6 +23,71 @@ namespace redis {
 
 const std::string VERSION_METADATA_PREFIX = "CURRENT_MODEL_VERSION:";
 
+
+bool add_model(redox::Redox& redis, 
+               const VersionedModelId& model_id,
+               const InputType& input_type,
+               const OutputType& output_type,
+//               const std::vector<std::string>& labels,
+               const bool& stateful,
+               const std::string& image) {
+
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
+    std::string model_id_key = gen_versioned_model_key(model_id);
+    // clang-format off
+    const std::vector<std::string> cmd_vec{
+      "HMSET",            model_id_key,
+      "model_name",       model_id.get_name(),
+      "model_version",    model_id.get_id(),
+      "replica",             std::to_string(0),
+      "input_type",       get_readable_input_type(input_type),
+      "output_type",      get_readable_input_type(output_type),
+      //"labels",           labels_to_str(labels),
+      "stateful",   std::to_string(stateful),
+      "image",      image};
+    // clang-format on
+    return send_cmd_no_reply<string>(redis, cmd_vec);
+  } else {
+    return false;
+  }
+}
+
+bool add_model_container(redox::Redox& redis, 
+               const VersionedModelId& model_id,
+               const std::string& ip,
+               const std::string& host,
+               const std::string& port,
+               const std::string& container_id,
+               const std::string& replica_id ) {
+
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
+    std::string container_id_key = gen_model_replica_key(model_id, replica_id);
+    
+    // clang-format off
+    const std::vector<std::string> cmd_vec{
+      "HMSET",            container_id_key,
+      "model_name",       model_id.get_name(),
+      "model_version",    model_id.get_id(),
+      "ip",             ip,
+      "host",      host,
+      "port",      port,
+      //"labels",           labels_to_str(labels),
+      "container_id",   container_id,
+      "replica_id",      replica_id};
+    // clang-format on
+    return send_cmd_no_reply<string>(redis, cmd_vec);
+  } else {
+    return false;
+  }
+}
+
+
+
+
+
+
 bool contains_prohibited_chars_for_group(std::string value) {
   for (std::string prohibited_str : clipper::redis::prohibited_group_strings) {
     if (value.find(prohibited_str) != std::string::npos) {
@@ -46,13 +111,13 @@ std::unordered_map<string, string> parse_redis_map(
 }
 
 std::string gen_model_replica_key(const VersionedModelId& key,
-                                  int model_replica_id) {
+                                  const std::string& model_replica_id) {
   std::stringstream ss;
   ss << key.get_name();
   ss << ITEM_DELIMITER;
   ss << key.get_id();
   ss << ITEM_DELIMITER;
-  ss << std::to_string(model_replica_id);
+  ss << model_replica_id;
   return ss.str();
 }
 
@@ -87,117 +152,88 @@ std::string gen_versioned_model_key(const VersionedModelId& key) {
   return ss.str();
 }
 
-std::string gen_model_current_version_key(const std::string& model_name) {
-  std::stringstream ss;
-  ss << VERSION_METADATA_PREFIX;
-  ss << model_name;
-  return ss.str();
-}
+// std::string gen_model_current_version_key(const std::string& model_name) {
+//   std::stringstream ss;
+//   ss << VERSION_METADATA_PREFIX;
+//   ss << model_name;
+//   return ss.str();
+// }
 
-// Update `prohibited_group_strings` when changing the set of delimeters and/or
-// other generic substrings used
-string labels_to_str(const vector<string>& labels) {
-  if (labels.empty()) return "";
+// // Update `prohibited_group_strings` when changing the set of delimeters and/or
+// // other generic substrings used
+// string labels_to_str(const vector<string>& labels) {
+//   if (labels.empty()) return "";
 
-  std::ostringstream ss;
-  for (auto l = labels.begin(); l != labels.end() - 1; ++l) {
-    ss << *l << ITEM_DELIMITER;
-  }
-  // don't forget to save the last label
-  ss << *(labels.end() - 1);
-  return ss.str();
-}
+//   std::ostringstream ss;
+//   for (auto l = labels.begin(); l != labels.end() - 1; ++l) {
+//     ss << *l << ITEM_DELIMITER;
+//   }
+//   // don't forget to save the last label
+//   ss << *(labels.end() - 1);
+//   return ss.str();
+// }
 
-string model_names_to_str(const vector<string>& names) {
-  return labels_to_str(names);
-}
+// string model_names_to_str(const vector<string>& names) {
+//   return labels_to_str(names);
+// }
 
-// String parsing taken from http://stackoverflow.com/a/14267455/814642
-vector<string> str_to_labels(const string& label_str) {
-  auto start = 0;
-  auto end = label_str.find(ITEM_DELIMITER);
-  vector<string> labels;
+// // String parsing taken from http://stackoverflow.com/a/14267455/814642
+// vector<string> str_to_labels(const string& label_str) {
+//   auto start = 0;
+//   auto end = label_str.find(ITEM_DELIMITER);
+//   vector<string> labels;
 
-  while (end != string::npos) {
-    labels.push_back(label_str.substr(start, end - start));
-    start = end + ITEM_DELIMITER.length();
-    end = label_str.find(ITEM_DELIMITER, start);
-  }
-  // don't forget to parse the last label
-  labels.push_back(label_str.substr(start, end - start));
-  return labels;
-}
+//   while (end != string::npos) {
+//     labels.push_back(label_str.substr(start, end - start));
+//     start = end + ITEM_DELIMITER.length();
+//     end = label_str.find(ITEM_DELIMITER, start);
+//   }
+//   // don't forget to parse the last label
+//   labels.push_back(label_str.substr(start, end - start));
+//   return labels;
+// }
 
-std::string models_to_str(const std::vector<VersionedModelId>& models) {
-  if (models.empty()) return "";
+// std::string models_to_str(const std::vector<VersionedModelId>& models) {
+//   if (models.empty()) return "";
 
-  std::ostringstream ss;
-  for (auto m = models.begin(); m != models.end() - 1; ++m) {
-    ss << m->get_name() << ITEM_PART_CONCATENATOR << m->get_id()
-       << ITEM_DELIMITER;
-  }
-  // don't forget to save the last label
-  ss << (models.end() - 1)->get_name() << ITEM_PART_CONCATENATOR
-     << (models.end() - 1)->get_id();
-  log_info_formatted(LOGGING_TAG_REDIS, "models_to_str result: {}", ss.str());
-  return ss.str();
-}
+//   std::ostringstream ss;
+//   for (auto m = models.begin(); m != models.end() - 1; ++m) {
+//     ss << m->get_name() << ITEM_PART_CONCATENATOR << m->get_id()
+//        << ITEM_DELIMITER;
+//   }
+//   // don't forget to save the last label
+//   ss << (models.end() - 1)->get_name() << ITEM_PART_CONCATENATOR
+//      << (models.end() - 1)->get_id();
+//   log_info_formatted(LOGGING_TAG_REDIS, "models_to_str result: {}", ss.str());
+//   return ss.str();
+// }
 
-std::vector<VersionedModelId> str_to_models(const std::string& model_str) {
-  auto start = 0;
-  auto end = model_str.find(ITEM_DELIMITER);
-  vector<VersionedModelId> models;
+// std::vector<VersionedModelId> str_to_models(const std::string& model_str) {
+//   auto start = 0;
+//   auto end = model_str.find(ITEM_DELIMITER);
+//   vector<VersionedModelId> models;
 
-  while (end != string::npos) {
-    auto split =
-        start +
-        model_str.substr(start, end - start).find(ITEM_PART_CONCATENATOR);
-    std::string model_name = model_str.substr(start, split - start);
-    std::string model_version = model_str.substr(split + 1, end - split - 1);
-    models.push_back(VersionedModelId(model_name, model_version));
-    start = end + ITEM_DELIMITER.length();
-    end = model_str.find(ITEM_DELIMITER, start);
-  }
+//   while (end != string::npos) {
+//     auto split =
+//         start +
+//         model_str.substr(start, end - start).find(ITEM_PART_CONCATENATOR);
+//     std::string model_name = model_str.substr(start, split - start);
+//     std::string model_version = model_str.substr(split + 1, end - split - 1);
+//     models.push_back(VersionedModelId(model_name, model_version));
+//     start = end + ITEM_DELIMITER.length();
+//     end = model_str.find(ITEM_DELIMITER, start);
+//   }
 
-  // don't forget to parse the last model
-  auto split =
-      start + model_str.substr(start, end - start).find(ITEM_PART_CONCATENATOR);
-  std::string model_name = model_str.substr(start, split - start);
-  std::string model_version = model_str.substr(split + 1, end - split - 1);
-  models.push_back(VersionedModelId(model_name, model_version));
+//   // don't forget to parse the last model
+//   auto split =
+//       start + model_str.substr(start, end - start).find(ITEM_PART_CONCATENATOR);
+//   std::string model_name = model_str.substr(start, split - start);
+//   std::string model_version = model_str.substr(split + 1, end - split - 1);
+//   models.push_back(VersionedModelId(model_name, model_version));
 
-  return models;
-}
+//   return models;
+// }
 
-
-bool add_model(redox::Redox& redis, 
-               const VersionedModelId& model_id,
-               const InputType& input_type,
-               const OutputType& output_type,
-//               const std::vector<std::string>& labels,
-               const bool& stateful,
-               const std::string& image) {
-
-  if (send_cmd_no_reply<string>(
-          redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
-    std::string model_id_key = gen_versioned_model_key(model_id);
-    // clang-format off
-    const std::vector<std::string> cmd_vec{
-      "HMSET",            model_id_key,
-      "model_name",       model_id.get_name(),
-      "model_version",    model_id.get_id(),
-      "replica",             std::to_string(0),
-      "input_type",       get_readable_input_type(input_type),
-      "output_type",      get_readable_input_type(output_type),
-      //"labels",           labels_to_str(labels),
-      "stateful",   std::to_string(stateful),
-      "image",      image};
-    // clang-format on
-    return send_cmd_no_reply<string>(redis, cmd_vec);
-  } else {
-    return false;
-  }
-}
 
 
 // bool set_current_model_version(redox::Redox& redis,
