@@ -169,6 +169,37 @@ std::vector<VersionedModelId> str_to_models(const std::string& model_str) {
   return models;
 }
 
+
+bool add_model(redox::Redox& redis, 
+               const VersionedModelId& model_id,
+               const InputType& input_type,
+               const OutputType& output_type,
+//               const std::vector<std::string>& labels,
+               const bool& stateful,
+               const std::string& image) {
+
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
+    std::string model_id_key = gen_versioned_model_key(model_id);
+    // clang-format off
+    const std::vector<std::string> cmd_vec{
+      "HMSET",            model_id_key,
+      "model_name",       model_id.get_name(),
+      "model_version",    model_id.get_id(),
+      "replica",             std::to_string(0),
+      "input_type",       get_readable_input_type(input_type),
+      "output_type",      get_readable_input_type(output_type),
+      //"labels",           labels_to_str(labels),
+      "stateful",   std::to_string(stateful),
+      "image",      image};
+    // clang-format on
+    return send_cmd_no_reply<string>(redis, cmd_vec);
+  } else {
+    return false;
+  }
+}
+
+
 // bool set_current_model_version(redox::Redox& redis,
 //                                const std::string& model_name,
 //                                const std::string& version) {

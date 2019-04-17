@@ -105,6 +105,15 @@ std::string models_to_str(const std::vector<VersionedModelId>& models);
 
 std::vector<VersionedModelId> str_to_models(const std::string& model_str);
 
+
+bool add_model(redox::Redox& redis, 
+               const VersionedModelId& model_id,
+               const InputType& input_type,
+               const OutputType& output_type,
+//               const std::vector<std::string>& labels,
+               const bool& stateful,
+               const std::string& image);
+
 // bool set_current_model_version(redox::Redox& redis,
 //                                const std::string& model_name,
 //                                const std::string& version);
