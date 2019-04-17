@@ -822,7 +822,7 @@ class ClipperConnection(object):
             proxy_ip = self.cm.get_container_ip(proxy_id)
 
 
-            time.sleep(10)
+            time.sleep(5)
             ## tell the proxy its container's info
             print("proxy_ip:%s"%(proxy_ip))
             #response = stub.SetModel(proxy_pb2.modelinfo(modelName = 'test', modelId = '1', modelPort='22222'))
