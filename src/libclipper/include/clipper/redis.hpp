@@ -105,297 +105,297 @@ std::string models_to_str(const std::vector<VersionedModelId>& models);
 
 std::vector<VersionedModelId> str_to_models(const std::string& model_str);
 
-bool set_current_model_version(redox::Redox& redis,
-                               const std::string& model_name,
-                               const std::string& version);
+// bool set_current_model_version(redox::Redox& redis,
+//                                const std::string& model_name,
+//                                const std::string& version);
 
-boost::optional<std::string> get_current_model_version(
-    redox::Redox& redis, const std::string& model_name);
+// boost::optional<std::string> get_current_model_version(
+//     redox::Redox& redis, const std::string& model_name);
 
-/**
- * Adds a model into the model table. This will
- * overwrite any existing entry with the same key.
- *
- * \param container_name should be the name of a Docker container
- * \param model_data_path should be the path on the Clipper host
- * \param batch_size should be the user-defined batch size for all replicas of
- * the model. Its default value (-1)
- * indicates that the batch size was unspecified and that Clipper should
- * calculate it adaptively.
- * \return Returns true if the add was successful.
- */
-bool add_model(redox::Redox& redis, const VersionedModelId& model_id,
-               const InputType& input_type,
-               const std::vector<std::string>& labels,
-               const std::string& container_name,
-               const std::string& model_data_path, int batch_size);
+// /**
+//  * Adds a model into the model table. This will
+//  * overwrite any existing entry with the same key.
+//  *
+//  * \param container_name should be the name of a Docker container
+//  * \param model_data_path should be the path on the Clipper host
+//  * \param batch_size should be the user-defined batch size for all replicas of
+//  * the model. Its default value (-1)
+//  * indicates that the batch size was unspecified and that Clipper should
+//  * calculate it adaptively.
+//  * \return Returns true if the add was successful.
+//  */
+// bool add_model(redox::Redox& redis, const VersionedModelId& model_id,
+//                const InputType& input_type,
+//                const std::vector<std::string>& labels,
+//                const std::string& container_name,
+//                const std::string& model_data_path, int batch_size);
 
-/**
- * Deletes a model from the model table if it exists.
- *
- * \return Returns true if the model was present in the table
- * and was successfully deleted. Returns false if there was a problem
- * or if the model was not in the table.
- */
-bool delete_model(redox::Redox& redis, const VersionedModelId& model_id);
+// /**
+//  * Deletes a model from the model table if it exists.
+//  *
+//  * \return Returns true if the model was present in the table
+//  * and was successfully deleted. Returns false if there was a problem
+//  * or if the model was not in the table.
+//  */
+// bool delete_model(redox::Redox& redis, const VersionedModelId& model_id);
 
-/**
- * Looks up a model based on its model ID. This
- * is the canonical way of uniquely identifying a model in
- * the rest of the Clipper codebase.
- *
- * \return Returns a map of model attribute name-value pairs as
- * strings. Any parsing of the attribute values from their string
- * format (e.g. to a numerical representation) must be done by the
- * caller of this function. The set of attributes stored for a
- * model can be found in the source for `add_model()`. If the
- * model was not found, an empty map will be returned.
- */
-std::unordered_map<std::string, std::string> get_model(
-    redox::Redox& redis, const VersionedModelId& model_id);
+// /**
+//  * Looks up a model based on its model ID. This
+//  * is the canonical way of uniquely identifying a model in
+//  * the rest of the Clipper codebase.
+//  *
+//  * \return Returns a map of model attribute name-value pairs as
+//  * strings. Any parsing of the attribute values from their string
+//  * format (e.g. to a numerical representation) must be done by the
+//  * caller of this function. The set of attributes stored for a
+//  * model can be found in the source for `add_model()`. If the
+//  * model was not found, an empty map will be returned.
+//  */
+// std::unordered_map<std::string, std::string> get_model(
+//     redox::Redox& redis, const VersionedModelId& model_id);
 
-/**
- * Looks up all available versions for a model.
- *
- * \return Returns a list of model versions. If the
- * model was not found, an empty list will be returned.
- */
-std::vector<std::string> get_model_versions(redox::Redox& redis,
-                                            const std::string& model_name);
-/**
- * Looks up model names listed in the model table. Since a call to KEYS may
- * return multiple version values associated with each model key, this method
- * de-duplicates the model names before returning.
- *
- * \return Returns a vector of model names as strings. If no model names
- * were found, then an empty vector will be returned.
- */
-std::unordered_map<std::string, std::string> get_model_by_key(
-    redox::Redox& redis, const std::string& key);
-/**
- * Look up the model according to key
- * \param redis should be redis_connection_
- * \param key should be the key of the model
- *
- * @return Returns a list of specifications of the model. If the
- * model was not found, an empty list will be returned.
- */
-std::vector<std::string> get_all_model_names(redox::Redox& redis);
+// /**
+//  * Looks up all available versions for a model.
+//  *
+//  * \return Returns a list of model versions. If the
+//  * model was not found, an empty list will be returned.
+//  */
+// std::vector<std::string> get_model_versions(redox::Redox& redis,
+//                                             const std::string& model_name);
+// /**
+//  * Looks up model names listed in the model table. Since a call to KEYS may
+//  * return multiple version values associated with each model key, this method
+//  * de-duplicates the model names before returning.
+//  *
+//  * \return Returns a vector of model names as strings. If no model names
+//  * were found, then an empty vector will be returned.
+//  */
+// std::unordered_map<std::string, std::string> get_model_by_key(
+//     redox::Redox& redis, const std::string& key);
+// /**
+//  * Look up the model according to key
+//  * \param redis should be redis_connection_
+//  * \param key should be the key of the model
+//  *
+//  * @return Returns a list of specifications of the model. If the
+//  * model was not found, an empty list will be returned.
+//  */
+// std::vector<std::string> get_all_model_names(redox::Redox& redis);
 
-/**
- * Looks up models listed in the model table.
- *
- * \return Returns a vector of models and versions. If no models
- * are found, then an empty vector will be returned.
- */
-std::vector<VersionedModelId> get_all_models(redox::Redox& redis);
+// /**
+//  * Looks up models listed in the model table.
+//  *
+//  * \return Returns a vector of models and versions. If no models
+//  * are found, then an empty vector will be returned.
+//  */
+// std::vector<VersionedModelId> get_all_models(redox::Redox& redis);
 
-/**
- * Looks up which models are linked to app with name `app_name`
- * \return Returns a vector of model names. If no models are linked
- * to the specified app, then an empty vector will be returned.
- */
-std::vector<std::string> get_linked_models(redox::Redox& redis,
-                                           const std::string& app_name);
+// /**
+//  * Looks up which models are linked to app with name `app_name`
+//  * \return Returns a vector of model names. If no models are linked
+//  * to the specified app, then an empty vector will be returned.
+//  */
+// std::vector<std::string> get_linked_models(redox::Redox& redis,
+//                                            const std::string& app_name);
 
-/**
- * Adds a container into the container table. This will
- * overwrite any existing entry with the same key.
- *
- * \return Returns true of the add was successful.
- */
-bool add_container(redox::Redox& redis, const VersionedModelId& model_id,
-                   const int model_replica_id, const int zmq_connection_id,
-                   const InputType& input_type);
+// /**
+//  * Adds a container into the container table. This will
+//  * overwrite any existing entry with the same key.
+//  *
+//  * \return Returns true of the add was successful.
+//  */
+// bool add_container(redox::Redox& redis, const VersionedModelId& model_id,
+//                    const int model_replica_id, const int zmq_connection_id,
+//                    const InputType& input_type);
 
-/**
- * Deletes a container from the container table if it exists.
- *
- * \return Returns true if the container was present in the table
- * and was successfully deleted. Returns false if there was a problem
- * or if the container was not in the table.
- */
-bool delete_container(redox::Redox& redis, const VersionedModelId& model_id,
-                      const int model_replica_id);
+// /**
+//  * Deletes a container from the container table if it exists.
+//  *
+//  * \return Returns true if the container was present in the table
+//  * and was successfully deleted. Returns false if there was a problem
+//  * or if the container was not in the table.
+//  */
+// bool delete_container(redox::Redox& redis, const VersionedModelId& model_id,
+//                       const int model_replica_id);
 
-/**
- * Looks up a container based on its model and replica IDs. This
- * is the canonical way of uniquely identifying a container in
- * the rest of the Clipper codebase.
- *
- * \return Returns a map of container attribute name-value pairs as
- * strings. Any parsing of the attribute values from their string
- * format (e.g. to a numerical representation) must be done by the
- * caller of this function. The set of attributes stored for a
- * container can be found in the source for `add_container()`. If the
- * container was not found, an empty map will be returned.
- */
-std::unordered_map<std::string, std::string> get_container(
-    redox::Redox& redis, const VersionedModelId& model_id,
-    const int model_replica_id);
+// /**
+//  * Looks up a container based on its model and replica IDs. This
+//  * is the canonical way of uniquely identifying a container in
+//  * the rest of the Clipper codebase.
+//  *
+//  * \return Returns a map of container attribute name-value pairs as
+//  * strings. Any parsing of the attribute values from their string
+//  * format (e.g. to a numerical representation) must be done by the
+//  * caller of this function. The set of attributes stored for a
+//  * container can be found in the source for `add_container()`. If the
+//  * container was not found, an empty map will be returned.
+//  */
+// std::unordered_map<std::string, std::string> get_container(
+//     redox::Redox& redis, const VersionedModelId& model_id,
+//     const int model_replica_id);
 
-/**
- * Looks up an entry in the container table by the fully
- * specified Redis key.
- *
- * This function is primarily used for looking up a container
- * entry after a subscriber detects a change to the container
- * with the given key.
- *
- * \return Returns a map of container attribute name-value pairs as
- * strings. Any parsing of the attribute values from their string
- * format (e.g. to a numerical representation) must be done by the
- * caller of this function. The set of attributes stored for a
- * container can be found in the source for `add_container()`. If the
- * container was not found, an empty map will be returned.
- */
-std::unordered_map<std::string, std::string> get_container_by_key(
-    redox::Redox& redis, const std::string& key);
+// /**
+//  * Looks up an entry in the container table by the fully
+//  * specified Redis key.
+//  *
+//  * This function is primarily used for looking up a container
+//  * entry after a subscriber detects a change to the container
+//  * with the given key.
+//  *
+//  * \return Returns a map of container attribute name-value pairs as
+//  * strings. Any parsing of the attribute values from their string
+//  * format (e.g. to a numerical representation) must be done by the
+//  * caller of this function. The set of attributes stored for a
+//  * container can be found in the source for `add_container()`. If the
+//  * container was not found, an empty map will be returned.
+//  */
+// std::unordered_map<std::string, std::string> get_container_by_key(
+//     redox::Redox& redis, const std::string& key);
 
-/**
- * \return Returns a vector of container tuple IDs.
- * The returned container names can subsequently be used as keys in
- * the container table. If no containers are found in the table,
- * an empty vector will be returned.
- */
-std::vector<std::pair<VersionedModelId, int>> get_all_containers(
-    redox::Redox& redis);
+// /**
+//  * \return Returns a vector of container tuple IDs.
+//  * The returned container names can subsequently be used as keys in
+//  * the container table. If no containers are found in the table,
+//  * an empty vector will be returned.
+//  */
+// std::vector<std::pair<VersionedModelId, int>> get_all_containers(
+//     redox::Redox& redis);
 
-/**
- * Adds an application into the application table. This will
- * overwrite any existing entry with the same key.
- *
- * \return Returns true of the add was successful.
- */
-bool add_application(redox::Redox& redis, const std::string& app_name,
-                     const InputType& input_type, const std::string& policy,
-                     const std::string& default_output,
-                     const long latency_slo_micros);
+// /**
+//  * Adds an application into the application table. This will
+//  * overwrite any existing entry with the same key.
+//  *
+//  * \return Returns true of the add was successful.
+//  */
+// bool add_application(redox::Redox& redis, const std::string& app_name,
+//                      const InputType& input_type, const std::string& policy,
+//                      const std::string& default_output,
+//                      const long latency_slo_micros);
 
-/**
- * Adds links between the specified app and models. This will not
- * overwrite existing links.
- *
- * \return Returns true if the add was successful.
- */
-bool add_model_links(redox::Redox& redis, const std::string& app_name,
-                     const std::vector<std::string>& model_names);
+// /**
+//  * Adds links between the specified app and models. This will not
+//  * overwrite existing links.
+//  *
+//  * \return Returns true if the add was successful.
+//  */
+// bool add_model_links(redox::Redox& redis, const std::string& app_name,
+//                      const std::vector<std::string>& model_names);
 
- /**
-  * Deletes links between the specified app and models.
-  *
-  * \return Returns true if the removal was successful.
-  */
- bool delete_model_links(redox::Redox& redis, const std::string& app_name,
-                         const std::vector<std::string>& model_names);
+//  /**
+//   * Deletes links between the specified app and models.
+//   *
+//   * \return Returns true if the removal was successful.
+//   */
+//  bool delete_model_links(redox::Redox& redis, const std::string& app_name,
+//                          const std::vector<std::string>& model_names);
 
-/**
- * Deletes a container from the container table if it exists.
- *
- * \return Returns true if the container was present in the table
- * and was successfully deleted. Returns false if there was a problem
- * or if the application was not in the table.
- */
-bool delete_application(redox::Redox& redis, const std::string& app_name);
+// /**
+//  * Deletes a container from the container table if it exists.
+//  *
+//  * \return Returns true if the container was present in the table
+//  * and was successfully deleted. Returns false if there was a problem
+//  * or if the application was not in the table.
+//  */
+// bool delete_application(redox::Redox& redis, const std::string& app_name);
 
-/**
- * Looks up an application based on its name.
- *
- * \return Returns a map of application attribute name-value pairs as
- * strings. Any parsing of the attribute values from their string
- * format (e.g. to a numerical representation) must be done by the
- * caller of this function. The set of attributes stored for a
- * application can be found in the source for `add_application()`. If the
- * application was not found, an empty map will be returned.
- */
-std::unordered_map<std::string, std::string> get_application(
-    redox::Redox& redis, const std::string& app_name);
+// /**
+//  * Looks up an application based on its name.
+//  *
+//  * \return Returns a map of application attribute name-value pairs as
+//  * strings. Any parsing of the attribute values from their string
+//  * format (e.g. to a numerical representation) must be done by the
+//  * caller of this function. The set of attributes stored for a
+//  * application can be found in the source for `add_application()`. If the
+//  * application was not found, an empty map will be returned.
+//  */
+// std::unordered_map<std::string, std::string> get_application(
+//     redox::Redox& redis, const std::string& app_name);
 
-/**
- * Looks up an entry in the application table by the fully
- * specified Redis key.
- *
- * This function is primarily used for looking up a application
- * entry after a subscriber detects a change to the application
- * with the given key.
- *
- * \return Returns a map of application attribute name-value pairs as
- * strings. Any parsing of the attribute values from their string
- * format (e.g. to a numerical representation) must be done by the
- * caller of this function. The set of attributes stored for a
- * application can be found in the source for `add_application()`. If the
- * application was not found, an empty map will be returned.
- */
-std::unordered_map<std::string, std::string> get_application_by_key(
-    redox::Redox& redis, const std::string& key);
+// /**
+//  * Looks up an entry in the application table by the fully
+//  * specified Redis key.
+//  *
+//  * This function is primarily used for looking up a application
+//  * entry after a subscriber detects a change to the application
+//  * with the given key.
+//  *
+//  * \return Returns a map of application attribute name-value pairs as
+//  * strings. Any parsing of the attribute values from their string
+//  * format (e.g. to a numerical representation) must be done by the
+//  * caller of this function. The set of attributes stored for a
+//  * application can be found in the source for `add_application()`. If the
+//  * application was not found, an empty map will be returned.
+//  */
+// std::unordered_map<std::string, std::string> get_application_by_key(
+//     redox::Redox& redis, const std::string& key);
 
-/**
- * \return Returns a vector of application names as strings.
- * The returned application names can subsequently be used as keys in
- * the application table. If no applications are found in the table,
- * an empty vector will be returned.
- */
-std::vector<std::string> get_all_application_names(redox::Redox& redis);
+// /**
+//  * \return Returns a vector of application names as strings.
+//  * The returned application names can subsequently be used as keys in
+//  * the application table. If no applications are found in the table,
+//  * an empty vector will be returned.
+//  */
+// std::vector<std::string> get_all_application_names(redox::Redox& redis);
 
-/**
- * Subscribes to changes in the model table. The
- * callback is called with the string key of the model
- * that changed and the Redis event type. The key can
- * be used to look up the new value. The message type identifies
- * what type of change was detected. This allows subscribers
- * to differentiate between adds, updates, and deletes if necessary.
- */
-void subscribe_to_model_changes(
-    redox::Subscriber& subscriber,
-    std::function<void(const std::string&, const std::string&)> callback);
-/**
- * Subscribes to changes in the container table. The
- * callback is called with the string key of the container
- * that changed and the Redis event type. The key can
- * be used to look up the new value. The message type identifies
- * what type of change was detected. This allows subscribers
- * to differentiate between adds, updates, and deletes if necessary.
- */
-void subscribe_to_container_changes(
-    redox::Subscriber& subscriber,
-    std::function<void(const std::string&, const std::string&)> callback);
+// /**
+//  * Subscribes to changes in the model table. The
+//  * callback is called with the string key of the model
+//  * that changed and the Redis event type. The key can
+//  * be used to look up the new value. The message type identifies
+//  * what type of change was detected. This allows subscribers
+//  * to differentiate between adds, updates, and deletes if necessary.
+//  */
+// void subscribe_to_model_changes(
+//     redox::Subscriber& subscriber,
+//     std::function<void(const std::string&, const std::string&)> callback);
+// /**
+//  * Subscribes to changes in the container table. The
+//  * callback is called with the string key of the container
+//  * that changed and the Redis event type. The key can
+//  * be used to look up the new value. The message type identifies
+//  * what type of change was detected. This allows subscribers
+//  * to differentiate between adds, updates, and deletes if necessary.
+//  */
+// void subscribe_to_container_changes(
+//     redox::Subscriber& subscriber,
+//     std::function<void(const std::string&, const std::string&)> callback);
 
-/**
- * Subscribes to changes in the application table. The
- * callback is called with the string key of the application
- * that changed and the Redis event type. The key can
- * be used to look up the new value. The message type identifies
- * what type of change was detected. This allows subscribers
- * to differentiate between adds, updates, and deletes if necessary.
- */
-void subscribe_to_application_changes(
-    redox::Subscriber& subscriber,
-    std::function<void(const std::string&, const std::string&)> callback);
+// /**
+//  * Subscribes to changes in the application table. The
+//  * callback is called with the string key of the application
+//  * that changed and the Redis event type. The key can
+//  * be used to look up the new value. The message type identifies
+//  * what type of change was detected. This allows subscribers
+//  * to differentiate between adds, updates, and deletes if necessary.
+//  */
+// void subscribe_to_application_changes(
+//     redox::Subscriber& subscriber,
+//     std::function<void(const std::string&, const std::string&)> callback);
 
-/**
- * Subscribes to changes in the app model link table. The
- * callback is called with the string key of the application
- * that changed and the Redis event type. The key can
- * be used to look up the new value. The message type identifies
- * what type of change was detected. This allows subscribers
- * to differentiate between adds and deletes if necessary.
- */
-void subscribe_to_model_link_changes(
-    redox::Subscriber& subscriber,
-    std::function<void(const std::string&, const std::string&)> callback);
+// /**
+//  * Subscribes to changes in the app model link table. The
+//  * callback is called with the string key of the application
+//  * that changed and the Redis event type. The key can
+//  * be used to look up the new value. The message type identifies
+//  * what type of change was detected. This allows subscribers
+//  * to differentiate between adds and deletes if necessary.
+//  */
+// void subscribe_to_model_link_changes(
+//     redox::Subscriber& subscriber,
+//     std::function<void(const std::string&, const std::string&)> callback);
 
-/**
- * Subscribes to changes in model versions.
- *
- * The callback is called with the string key of the model
- * that changed and the Redis event type. The key can
- * be used to look up the new value. The message type identifies
- * what type of change was detected. This allows subscribers
- * to differentiate between adds, updates, and deletes if necessary.
- */
-void subscribe_to_model_version_changes(
-    redox::Subscriber& subscriber,
-    std::function<void(const std::string&, const std::string&)> callback);
+// /**
+//  * Subscribes to changes in model versions.
+//  *
+//  * The callback is called with the string key of the model
+//  * that changed and the Redis event type. The key can
+//  * be used to look up the new value. The message type identifies
+//  * what type of change was detected. This allows subscribers
+//  * to differentiate between adds, updates, and deletes if necessary.
+//  */
+// void subscribe_to_model_version_changes(
+//     redox::Subscriber& subscriber,
+//     std::function<void(const std::string&, const std::string&)> callback);
 
 }  // namespace redis
 }  // namespace clipper
