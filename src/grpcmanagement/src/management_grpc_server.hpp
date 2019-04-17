@@ -34,15 +34,16 @@ using management::DAGInfo;
 using management::HelloReply;
 using management::HelloRequest;
 using management::LinkInfo;
-using management::ManagementServer;
 using management::ModelContainerInfo;
 using management::ModelInfo;
 using management::ProxyContainerInfo;
 using management::Response;
 using management::RuntimeDAGInfo;
 
+using management::ManagementServer;
+
 // Logic and data behind the server's behavior.
-class GreeterServiceImpl final : public Greeter::Service {
+class ManagementServerServiceImpl final : public ManagementServer::Service {
  public:
   GreeterServiceImpl(redox::Redox* redis, redox::Subscriber* subscriber)
       : redis_connection_(redis), redis_subscriber_(subscriber) {}
@@ -68,8 +69,8 @@ class GreeterServiceImpl final : public Greeter::Service {
     
 
     // Validate strings that will be grouped before supplying to redis
-    validate_group_str_for_redis(model_name, "model name");
-    validate_group_str_for_redis(model_id.get_id(), "model version");
+    //validate_group_str_for_redis(model_name, "model name");
+    //validate_group_str_for_redis(model_id.get_id(), "model version");
 
     // for (auto label : labels) {
     //   validate_group_str_for_redis(label, "label");
@@ -106,8 +107,7 @@ class GreeterServiceImpl final : public Greeter::Service {
       return Status::OK;
     }
     std::stringstream ss;
-    ss << "Error adding model " << model_id.get_name() << ":"
-       << model_id.get_id() << " to Redis";
+    ss << "Error adding model " << model_id.get_name() << ":" << model_id.get_id() << " to Redis";
     //throw clipper::ManagementOperationError(ss.str());
 
     reply->set_status(ss.str());
@@ -148,10 +148,37 @@ class GreeterServiceImpl final : public Greeter::Service {
     return Status::ABORTED;
   }//end AddModelContainer
 
+  Status AddProxyContainer(ServerContext* context,
+                           const ProxyContainerInfo* request,
+                           Response* reply) override {
+    // std::string model_name();
+    // std::string model_version();
+    VersionedModelId model_id =
+        VersionedModelId(request->modelname(), request->modelversion());
 
 
+    if (clipper::redis::add_proxy_container(
+            redis_connection_, request->proxyname(), model_id, request->ip(), request->host(),
+            request->port(), request->containerid()) {
+      // attempt_model_version_update(model_id.get_name(), model_id.get_id());
+      std::stringstream ss;
+      ss << "Successfully added proxy for model_name "
+         << "'" << model_name << "(" << request->containerid() << ")'"
+         << "with proxy...";
 
-    /**
+      reply->set_status(ss.str());
+      return Status::OK;
+    }
+    std::stringstream ss;
+    ss << "Error adding proxy for " << model_id.get_name() << ":"
+       << model_id.get_id() << " to Redis";
+    // throw clipper::ManagementOperationError(ss.str());
+
+    reply->set_status(ss.str());
+    return Status::ABORTED;
+  }  // end AddProxyContainer
+
+  /**
    * Attempts to update the version of model with name `model_name` to
    * `new_model_version`.
    */
@@ -187,9 +214,9 @@ class GreeterServiceImpl final : public Greeter::Service {
 
   //     throw clipper::ManagementOperationError(ss.str());
   //   }
-  }
+
 
  private:
   redox::Redox* redis_connection_;
   redox::Subscriber* redis_subscriber_;
-};
+};//end class

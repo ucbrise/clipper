@@ -17,8 +17,8 @@ service ManagementServer {
     rpc AddDAG (DAGInfo) returns (Reply) {}
     rpc AddRuntimeDAG (RuntimeDAGInfo) returns (Reply) {}
 
-    rpc AddApplication (ApplicationInfo) returns (Reply) {}
-    rpc AddApplicationDAGLink (LinkInfo) returns (Reply) {}
+    rpc AddApp (AppInfo) returns (Reply) {}
+    rpc AddAppDAGLink (LinkInfo) returns (Reply) {}
 
 
     //GET
@@ -46,12 +46,13 @@ message ModelContainerInfo{
 }
 
 message ProxyContainerInfo{
-    string modelname = 1;
-    string modelversion = 2;
-    string modelcontainerip = 3;
-    string modelcontainerhost = 4;
-    string modelcontainerport = 5;
-    string modelcontainerid = 6;
+    string proxyname = 1;
+    string modelname = 2;
+    string modelversion = 3;
+    string modelcontainerip = 4;
+    string modelcontainerhost = 5;
+    string modelcontainerport = 6;
+    string modelcontainerid = 7;
 }
 
 message DAGInfo{
@@ -65,18 +66,22 @@ message RuntimeDAGInfo{
     string file = 1;
     string id = 2;
     string name = 3;
-    string format = 4;
+    string version = 4;
+    string format = 5;
 }
 
-message ApplicationInfo{
+message AppInfo{
     string name = 1;
+    string version = 2;
     // SLOs and others 
 }
 
 message LinkInfo{
-    string applicationname = 1;
-    string dagname =2;
-    string dagid = 3;
+    string appname = 1;
+    string appversion =2;
+    string dagname =3;
+    string dagversion = 4;
+    string dagid = 5;
 }
 
 message Response {

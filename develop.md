@@ -17,5 +17,7 @@ python ../applications/translation/client.py 172.18.0.3 22223
 
 #MacOS
 
+docker run -it --network=host -v /Users:/Users -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp zsxhku/clipper_test:version1
+
 
          

@@ -122,6 +122,25 @@ bool add_model_container(redox::Redox& redis,
                const std::string& container_id,
                const std::string& replica_id );
 
+bool add_proxy_container(redox::Redox& redis,
+               const std::string& proxy_name,
+               const VersionedModelId& model_id,
+               const std::string& model_container_ip,
+               const std::string& model_container_host,
+               const std::string& model_container_port,
+               const std::string& model_container_id );
+
+bool add_dag(redox::Redox& redis,
+               const std::string& file,
+               const VersionedModelId& dag_id,
+               const std::string& format ); 
+
+bool add_runtime_dag(redox::Redox& redis,
+               const std::string& file,
+               const std::string& id,
+               const VersionedModelId& dag_id,
+               const std::string& format );
+
 // bool set_current_model_version(redox::Redox& redis,
 //                                const std::string& model_name,
 //                                const std::string& version);
