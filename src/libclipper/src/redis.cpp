@@ -147,7 +147,6 @@ bool add_runtime_dag(redox::Redox& redis,
   if (send_cmd_no_reply<string>(
           redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
 
-    
     std::string dag_id_key = gen_model_replica_key(dag_id, id);
     
     // clang-format off
@@ -164,6 +163,51 @@ bool add_runtime_dag(redox::Redox& redis,
     return false;
   }
 } // end add expanded dag container
+
+
+bool add_app(redox::Redox& redis,
+               const VersionedModelId& app_id ) {
+
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
+    
+    std::string app_id_key = gen_versioned_model_key(app_id);
+
+    // clang-format off
+    const std::vector<std::string> cmd_vec{
+      "HMSET",            app_id_key,
+      "name",             app_id.get_name(),
+      "version",          app_id.get_id()
+      };
+    // clang-format on
+    return send_cmd_no_reply<string>(redis, cmd_vec);
+  } else {
+    return false;
+  }
+}
+
+bool add_app(redox::Redox& redis,
+               const VersionedModelId& app_id ) {
+
+  if (send_cmd_no_reply<string>(
+          redis, {"SELECT", std::to_string(REDIS_MODEL_DB_NUM)})) {
+    
+    std::string app_id_key = gen_versioned_model_key(app_id);
+
+    // clang-format off
+    const std::vector<std::string> cmd_vec{
+      "HMSET",            app_id_key,
+      "name",             app_id.get_name(),
+      "version",          app_id.get_id()
+      };
+    // clang-format on
+    return send_cmd_no_reply<string>(redis, cmd_vec);
+  } else {
+    return false;
+  }
+}
+
+
 
 
 

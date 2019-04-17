@@ -57,20 +57,17 @@ class ManagementServerServiceImpl final : public ManagementServer::Service {
 
   Status AddModel(ServerContext* context, const ModelInfo* request,
                   Response* reply) override {
-
     // std::string model_name();
     // std::string model_version();
-    VersionedModelId model_id = VersionedModelId(request->modelname(), request->modelversion());
+    VersionedModelId model_id =
+        VersionedModelId(request->modelname(), request->modelversion());
 
     InputType input_type = clipper::parse_input_type(request->inputtype());
     OutputType output_type = clipper::parse_input_type(request->outputtype());
-    
-    
-    
 
     // Validate strings that will be grouped before supplying to redis
-    //validate_group_str_for_redis(model_name, "model name");
-    //validate_group_str_for_redis(model_id.get_id(), "model version");
+    // validate_group_str_for_redis(model_name, "model name");
+    // validate_group_str_for_redis(model_id.get_id(), "model version");
 
     // for (auto label : labels) {
     //   validate_group_str_for_redis(label, "label");
@@ -94,9 +91,10 @@ class ManagementServerServiceImpl final : public ManagementServer::Service {
     // VersionedModelId(model_name, model_version),
     // boost::optional<InputType>(input_type));
 
-    if (clipper::redis::add_model(redis_connection_, model_id, input_type, output_type, 
-                                  request->stateful(), request->image())) {
-      //attempt_model_version_update(model_id.get_name(), model_id.get_id());
+    if (clipper::redis::add_model(redis_connection_, model_id, input_type,
+                                  output_type, request->stateful(),
+                                  request->image())) {
+      // attempt_model_version_update(model_id.get_name(), model_id.get_id());
       std::stringstream ss;
       ss << "Successfully added model with name "
          << "'" << model_name << "'"
@@ -107,34 +105,35 @@ class ManagementServerServiceImpl final : public ManagementServer::Service {
       return Status::OK;
     }
     std::stringstream ss;
-    ss << "Error adding model " << model_id.get_name() << ":" << model_id.get_id() << " to Redis";
-    //throw clipper::ManagementOperationError(ss.str());
+    ss << "Error adding model " << model_id.get_name() << ":"
+       << model_id.get_id() << " to Redis";
+    // throw clipper::ManagementOperationError(ss.str());
 
     reply->set_status(ss.str());
     return Status::ABORTED;
-  }//end AddModel
+  }  // end AddModel
 
-
-  Status AddModelContainer(ServerContext* context, const ModelContainerInfo* request,
-                  Response* reply) override {
-
+  Status AddModelContainer(ServerContext* context,
+                           const ModelContainerInfo* request,
+                           Response* reply) override {
     // std::string model_name();
     // std::string model_version();
-    VersionedModelId model_id = VersionedModelId(request->modelname(), request->modelversion());
-
-      
+    VersionedModelId model_id =
+        VersionedModelId(request->modelname(), request->modelversion());
 
     // Validate strings that will be grouped before supplying to redis
-    //validate_group_str_for_redis(model_name, "model name");
-    //validate_group_str_for_redis(model_id.get_id(), "model version");
+    // validate_group_str_for_redis(model_name, "model name");
+    // validate_group_str_for_redis(model_id.get_id(), "model version");
 
-    if (clipper::redis::add_model_container(redis_connection_, model_id, request->ip(), request->host(), 
-                                  request->port(), request->containerid(), request->replicaid())) {
-      //attempt_model_version_update(model_id.get_name(), model_id.get_id());
+    if (clipper::redis::add_model_container(
+            redis_connection_, model_id, request->ip(), request->host(),
+            request->port(), request->containerid(), request->replicaid())) {
+      // attempt_model_version_update(model_id.get_name(), model_id.get_id());
       std::stringstream ss;
       ss << "Successfully added container for model_name "
-         << "'" << model_name << "("<< request->containerid() << ")'"
-         << "with replica_id" << "'" << request->replicaid() << "'";
+         << "'" << model_name << "(" << request->containerid() << ")'"
+         << "with replica_id"
+         << "'" << request->replicaid() << "'";
 
       reply->set_status(ss.str());
       return Status::OK;
@@ -142,11 +141,11 @@ class ManagementServerServiceImpl final : public ManagementServer::Service {
     std::stringstream ss;
     ss << "Error adding container for " << model_id.get_name() << ":"
        << model_id.get_id() << " to Redis";
-    //throw clipper::ManagementOperationError(ss.str());
+    // throw clipper::ManagementOperationError(ss.str());
 
     reply->set_status(ss.str());
     return Status::ABORTED;
-  }//end AddModelContainer
+  }  // end AddModelContainer
 
   Status AddProxyContainer(ServerContext* context,
                            const ProxyContainerInfo* request,
@@ -156,10 +155,9 @@ class ManagementServerServiceImpl final : public ManagementServer::Service {
     VersionedModelId model_id =
         VersionedModelId(request->modelname(), request->modelversion());
 
-
     if (clipper::redis::add_proxy_container(
-            redis_connection_, request->proxyname(), model_id, request->ip(), request->host(),
-            request->port(), request->containerid()) {
+            redis_connection_, request->proxyname(), model_id, request->ip(),
+            request->host(), request->port(), request->containerid())) {
       // attempt_model_version_update(model_id.get_name(), model_id.get_id());
       std::stringstream ss;
       ss << "Successfully added proxy for model_name "
@@ -177,6 +175,54 @@ class ManagementServerServiceImpl final : public ManagementServer::Service {
     reply->set_status(ss.str());
     return Status::ABORTED;
   }  // end AddProxyContainer
+
+  Status AddDAG(ServerContext* context, const DAGInfo* request,
+                Response* reply) override {
+    VersionedModelId dag_id =
+        VersionedModelId(request->name(), request->version());
+
+    if (clipper::redis::add_dag(redis_connection_, request->file(), dag_id,
+                                request->format())) {
+      // attempt_model_version_update(model_id.get_name(), model_id.get_id());
+      std::stringstream ss;
+      ss << "Successfully added dag for dag_name "
+         << "'" << request->name() << ":" << request->version() << "...";
+
+      reply->set_status(ss.str());
+      return Status::OK;
+    }
+    std::stringstream ss;
+    ss << "Error adding dag for " << request->name() << ":"
+       << request->version() << " to Redis";
+    // throw clipper::ManagementOperationError(ss.str());
+
+    reply->set_status(ss.str());
+    return Status::ABORTED;
+  }  // end AddDAG
+
+  Status AddRuntimeDAG(ServerContext* context, const RuntimeDAGInfo* request,
+                       Response* reply) override {
+    VersionedModelId dag_id =
+        VersionedModelId(request->name(), request->version());
+    if (clipper::redis::add_runtime_dag(redis_connection_, request->file(),
+                                        request->id(), dag_id,
+                                        request->format())) {
+      // attempt_model_version_update(model_id.get_name(), model_id.get_id());
+      std::stringstream ss;
+      ss << "Successfully added runtime dag for dag_name "
+         << "'" << request->name() << ":" << request->version() << "...";
+
+      reply->set_status(ss.str());
+      return Status::OK;
+    }
+    std::stringstream ss;
+    ss << "Error adding runtime dag for " << request->name() << ":"
+       << request->version() << " to Redis";
+    // throw clipper::ManagementOperationError(ss.str());
+
+    reply->set_status(ss.str());
+    return Status::ABORTED;
+  }  // end AddRuntimeDAG
 
   /**
    * Attempts to update the version of model with name `model_name` to
@@ -215,8 +261,7 @@ class ManagementServerServiceImpl final : public ManagementServer::Service {
   //     throw clipper::ManagementOperationError(ss.str());
   //   }
 
-
  private:
   redox::Redox* redis_connection_;
   redox::Subscriber* redis_subscriber_;
-};//end class
+};  // end class
