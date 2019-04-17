@@ -4,10 +4,91 @@ package management;
 
 // service, encode a plain text 
 service ManagementServer {
-    // request a service of encode
-    rpc Predict(input) returns (response) {}
-    rpc SetProxy(proxyinfo) returns (response) {}
-    rpc Ping(hi) returns (response) {}
+
+    rpc SayHello (HelloRequest) returns (HelloReply) {}
+
+
+
+    //SET
+    rpc AddModel (ModelInfo) returns (Reply) {}
+    rpc AddModelContainer (ModelContainerInfo) returns (Reply) {}
+    rpc AddProxyContainer (ProxyContainerInfo) returns (Reply) {}
+
+    rpc AddDAG (DAGInfo) returns (Reply) {}
+    rpc AddRuntimeDAG (RuntimeDAGInfo) returns (Reply) {}
+
+    rpc AddApplication (ApplicationInfo) returns (Reply) {}
+    rpc AddApplicationDAGLink (LinkInfo) returns (Reply) {}
+
+
+    //GET
 
     rpc 
+}
+
+message ModelInfo{
+    string modelname = 1;
+    string modelversion = 2;
+    string inputtype = 3;
+    string outputtype = 4;
+    bool stateful = 5;
+    string image = 6;
+}
+
+message ModelContainerInfo{
+    string modelname = 1;
+    string modelversion = 2;
+    string ip = 3;
+    string host = 4;
+    uint32 port = 5;
+    string containerid = 6;
+    uint32 replicaid = 7;
+}
+
+message ProxyContainerInfo{
+    string modelname = 1;
+    string modelversion = 2;
+    string modelcontainerip = 3;
+    string modelcontainerhost = 4;
+    string modelcontainerport = 5;
+    string modelcontainerid = 6;
+}
+
+message DAGInfo{
+    string file = 1;
+    string name = 2;
+    string version = 3;
+    string format = 4;
+}
+
+message RuntimeDAGInfo{
+    string file = 1;
+    string id = 2;
+    string name = 3;
+    string format = 4;
+}
+
+message ApplicationInfo{
+    string name = 1;
+    // SLOs and others 
+}
+
+message LinkInfo{
+    string applicationname = 1;
+    string dagname =2;
+    string dagid = 3;
+}
+
+message Response {
+    string status = 1;
+}
+
+// The request message containing the user's name.
+message HelloRequest {
+  string name = 1;
+}
+
+// The response message containing the greetings
+message HelloReply {
+  string message = 1;
 }
