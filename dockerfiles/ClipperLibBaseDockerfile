@@ -21,7 +21,8 @@ RUN export GIT_SSL_NO_VERIFY=1 \
     && make install
 
 ## Install Cityhash
-RUN git clone https://github.com/google/cityhash \
+RUN export GIT_SSL_NO_VERIFY=1 \
+    && git clone https://github.com/google/cityhash \
     && cd cityhash \
     && ./configure \
     && make all check CXXFLAGS="-g -O3" \
