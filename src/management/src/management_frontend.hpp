@@ -1353,6 +1353,111 @@ class RequestHandler {
     }
   }
 
+
+  /**
+   * Processes a request to add links between a specified application and an ensemble of models
+   *
+   * JSON format:
+   * {
+   *  "app_name" := string,
+   *  "model_names" := [string]
+   * }
+   *
+   * \return A string describing the operation's success
+   * \throws ManagementOperationError if the operation is not successful
+   */
+  std::string add_ensemble_model_links(const std::string& json) {
+    rapidjson::Document d;
+    parse_json(json, d);
+
+    std::string app_name = get_string(d, "app_name");
+    std::vector<string> model_names = get_string_array(d, "model_names");
+
+    // Confirm that the app exists
+    auto app_info = clipper::redis::get_application(redis_connection_, app_name);
+    if (app_info.size() == 0) {
+      std::stringstream ss;
+      ss << "No app with name " << "'" << app_name << "'" << " exists.";
+      throw clipper::ManagementOperationError(ss.str());
+    }
+
+    // Confirm that the models exists and have compatible input_types
+    auto app_input_type = app_info["input_type"];
+    boost::optional<std::string> model_version;
+    std::unordered_map<std::string, std::string> model_info;
+    std::string model_input_type;
+    for (auto const& model_name : model_names) {
+      model_version = clipper::redis::get_current_model_version(redis_connection_, model_name);
+      if (!model_version) {
+        std::stringstream ss;
+        ss << "No model with name "
+           << "'" << model_name << "'"
+           << " exists.";
+        throw clipper::ManagementOperationError(ss.str());
+      } else {
+        model_info = clipper::redis::get_model(
+                redis_connection_, VersionedModelId(model_name, *model_version));
+        model_input_type = model_info["input_type"];
+        if (model_input_type != app_input_type) {
+          std::stringstream ss;
+          ss << "Model with name "
+             << "'" << model_name << "'"
+             << " has incompatible input_type "
+             << "'" << model_input_type << "'"
+             << ". Requested app to link to has input_type "
+             << "'" << app_input_type << "'"
+             << ".";
+          throw clipper::ManagementOperationError(ss.str());
+        }
+      }
+    }
+
+    // Check if there is no model to link to
+    if (model_names.size() == 0) {
+      ss << "Please provide the name of the model that you want to link to "
+            "the application "
+         << "'" << app_name << "'";
+      std::string error_msg = ss.str();
+      clipper::log_error(LOGGING_TAG_MANAGEMENT_FRONTEND, error_msg);
+      throw clipper::ManagementOperationError(error_msg);
+    }
+
+    auto existing_linked_models = clipper::redis::get_linked_models(redis_connection_, app_name);
+
+    for (std::string new_model_name : model_names) {
+      if (existing_linked_models.size() > 0) {
+        // Ensemble method iteratively checks only if there is a duplicate model name linked to the app
+        if (std::find(existing_linked_models.begin(),
+                      existing_linked_models.end(),
+                      new_model_name) != existing_linked_models.end()) {
+          std::stringstream ss;
+          ss << "The model with name "
+             << "'" << new_model_name << "'"
+             << " is already linked to "
+             << "'" << app_name << "'";
+          throw clipper::ManagementOperationError(ss.str());
+        }
+      }
+    }
+
+
+    if (clipper::redis::add_model_links(redis_connection_, app_name, model_names)) {
+      std::stringstream ss;
+      ss << "Successfully linked model with name "
+         << "'" << new_model_name << "'"
+         << " to application "
+         << "'" << app_name << "'";
+      return ss.str();
+    } else {
+      std::stringstream ss;
+      ss << "Error linking models to "
+         << "'" << app_name << "'"
+         << " in Redis";
+      throw clipper::ManagementOperationError(ss.str());
+    }
+  }
+
+
   void start_listening() { server_.start(); }
 
  private:
