@@ -1,0 +1,12 @@
+FROM ubuntu:bionic
+RUN apt-get update
+RUN apt-get install python3 python3-pip -y
+RUN pip3 install pandas
+RUN pip3 install quandl
+
+ADD prediction/1_Stock_Price_Retriever/app /container/
+ADD simplerpc/app /container/
+
+CMD ["python3", "/container/server.py", "1", "8000"]
+
+EXPOSE 8000

@@ -1,0 +1,13 @@
+FROM ubuntu:bionic
+RUN apt-get update
+RUN apt-get install python3 python3-pip -y
+RUN pip3 install pandas
+RUN pip3 install sklearn
+RUN pip3 install fastai
+
+ADD prediction/10_Regression/app /container/
+ADD simplerpc/app /container/
+
+CMD ["python3", "/container/server.py", "10", "18000"]
+
+EXPOSE 18000
