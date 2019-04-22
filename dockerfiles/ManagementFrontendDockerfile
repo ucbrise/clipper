@@ -6,8 +6,9 @@ LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
 COPY ./ /clipper
 
-RUN cd /clipper/src/libs/spdlog \
-    && git apply ../patches/make_spdlog_compile_linux.patch \
+RUN export GIT_SSL_NO_VERIFY=1
+    && cd /clipper/src/libs/spdlog \
+    #&& git apply ../patches/make_spdlog_compile_linux.patch \
     && cd /clipper \
     && ./configure --cleanup-quiet \
     && ./configure --release \
