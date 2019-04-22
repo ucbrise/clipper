@@ -254,8 +254,8 @@ build_images () {
     create_image lib_base ClipperLibBaseDockerfile $private
 
     # Build the rest in parallel
-    # create_image query_frontend QueryFrontendDockerfile $public &
-    create_image management_frontend ManagementFrontendDockerfile $public &
+    create_image query_frontend QueryFrontendDockerfile $public &
+    # create_image management_frontend ManagementFrontendDockerfile $public &
     # create_image dev ClipperDevDockerfile  $public &
     # create_image py35-dev ClipperPy35DevDockerfile  $public &
     wait
