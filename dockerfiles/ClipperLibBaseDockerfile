@@ -11,7 +11,7 @@ RUN apt-get update -qq && apt-get install -y -qq g++ automake autoconf autoconf-
     pkg-config libiberty-dev git cmake libev-dev libhiredis-dev libzmq5 libzmq5-dev build-essential
 
 ## Install Folly
-RUN export GIT_SSL_NO_VERIFY=1
+RUN export GIT_SSL_NO_VERIFY=1 \
     && git clone https://github.com/facebook/folly \
     && cd folly/folly \
     && git checkout tags/v2017.08.14.00 \
