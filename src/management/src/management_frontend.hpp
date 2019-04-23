@@ -778,8 +778,7 @@ class RequestHandler {
     if (clipper::redis::add_model_links(redis_connection_, app_name,
                                         model_names)) {
       std::stringstream ss;
-      ss << "Successfully linked model with name "
-         << "'" << new_model_name << "'"
+      ss << "Successfully linked models"
          << " to application "
          << "'" << app_name << "'";
       return ss.str();
