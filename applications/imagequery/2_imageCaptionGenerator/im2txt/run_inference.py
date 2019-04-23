@@ -34,6 +34,7 @@ import configuration
 import inference_wrapper
 from inference_utils import caption_generator
 from inference_utils import vocabulary
+print("---In RUN!!!---")
 
 FLAGS = tf.flags.FLAGS
 
@@ -94,16 +95,19 @@ def main(_):
                       (i, sentence, math.exp(caption.logprob)))
                 # the end of caption generation
 
-            # store captions to file
-            caps = {
-                "caption0": captionList[0],
-                "caption1": captionList[1],
-                "caption2": captionList[2]
-            }
+        # store captions to file
+        caps = {
+            "caption0": captionList[0],
+            "caption1": captionList[1],
+            "caption2": captionList[2]
+        }
 
-            caption_json = json.dumps(caps)
-            with open('/container/workspace/captionData/captions.txt', 'w') as outfile:
-                json.dump(caption_json, outfile)
+        print("!!!")
+        print(caps)
+
+        caption_json = json.dumps(caps)
+        with open('/container/workspace/captionData/captionFile.txt', 'w') as outfile:
+            json.dump(caption_json, outfile)
 							
 if __name__ == "__main__":
     tf.app.run()

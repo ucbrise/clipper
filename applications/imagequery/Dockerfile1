@@ -6,6 +6,7 @@ RUN pip3 install SpeechRecognition
 # container will have: speech.wav, predict.py, server.py
 ADD imagequery/1_speechRecognition/app /container/
 ADD simplerpc/app /container/
+RUN ["ls" , "/container"]
 
 CMD ["python3", "/container/server.py", "1", "8000"]
 

@@ -11,13 +11,16 @@ def generateCaption(resized_image_name):
   wordscount_path = workspace_path + "im2txt/data/word_counts.txt"
   resized_image_path = workspace_path + "im2txt/data/images/" + resized_image_name
   command = "bash ./container/workspace/im2txt/runWithArg.sh " + checkpoint_path + " " + wordscount_path + " " + resized_image_path + " "
+  print("before!")
   os.system(command)
+  print("after!")
 
   # The caption data will be written to /container/captionData/captions.txt captionData
   # we read the content of caption.txt in captionData and return it here
-  caption_json_path = workspace_path + "captionData/captions.txt"
+  caption_json_path = workspace_path + "captionData/captionFile.txt"
   captions = ""
   with open(caption_json_path) as json_file:
+    print("opened")
     caption_string_restored = json.load(json_file)
     print("caption_string_restored: " + caption_string_restored)
     caption_json = json.loads(caption_string_restored)
