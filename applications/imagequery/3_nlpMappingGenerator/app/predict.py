@@ -50,7 +50,7 @@ def get_verb_phrase_list(txt):
 
 
 def generate_mapping(txt):
-    nlp = spacy.load('en_core_web_sm')
+    nlp = spacy.load('en_core_web_md')
     txt = preprocess(txt)
     document = nlp(txt)
 
