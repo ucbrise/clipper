@@ -1,12 +1,14 @@
 FROM ubuntu:bionic
 RUN apt-get update
 RUN apt-get install python3 python3-pip -y
-RUN pip3 install python-resize-image
-RUN pip3 install tensorflow
-RUN pip3 install tqdm
+RUN pip3 install nltk
+RUN python3 -m nltk.downloader all
+RUN pip3 install -U spacy
 RUN pip3 install numpy
+RUN pip3 install textacy
 
-ADD imagequery/3_questionAnswer/app /container/ 
+# container will have: preprocess.py, predict.py, server.py
+ADD imagequery/1_speechRecognition/app /container/
 ADD simplerpc/app /container/
 
 CMD ["python3", "/container/server.py", "3", "11000"]
