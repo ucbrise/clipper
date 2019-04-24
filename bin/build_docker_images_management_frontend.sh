@@ -30,7 +30,7 @@ CLIPPER_ROOT=$DIR/..
 cd $CLIPPER_ROOT
 
 # Initialize tags
-version_tag='0.3.5'
+version_tag='0.3.5.1'
 sha_tag=`git rev-parse --verify --short HEAD`
 
 ######## Utilities for managing versioning ############
@@ -219,8 +219,8 @@ create_image () {
     echo "public : $public"
 
     if [ "$publish" = true ] && [ "$public" = true ] ; then
-#        echo "Publishing $namespace/$image:$sha_tag"
-#        docker push server01:5000/$namespace/$image:$sha_tag
+        echo "Publishing $namespace/$image:$sha_tag"
+        docker push server01:5000/$namespace/$image:$sha_tag
         echo "Publishing $namespace/$image:$version_tag"
         docker push server01:5000/$namespace/$image:$version_tag
 
