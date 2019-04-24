@@ -213,7 +213,7 @@ create_image () {
     echo "Building $namespace/$image:$sha_tag from file $dockerfile"
     time docker build --build-arg CODE_VERSION=$sha_tag $rpc_version -t $namespace/$image:$sha_tag \
         -f dockerfiles/$dockerfile $CLIPPER_ROOT
-    docker tag $namespace/$image:$sha_tag server01:5000/$namespace/$image:$version_tag
+    docker tag server01:5000/$namespace/$image:$sha_tag server01:5000/$namespace/$image:$version_tag
 
     echo "publish : $publish"
     echo "public : $public"

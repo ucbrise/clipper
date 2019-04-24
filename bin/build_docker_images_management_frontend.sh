@@ -213,7 +213,7 @@ create_image () {
     echo "Building $namespace/$image:$sha_tag from file $dockerfile"
     time docker build --build-arg CODE_VERSION=$sha_tag $rpc_version -t $namespace/$image:$sha_tag \
         -f dockerfiles/$dockerfile $CLIPPER_ROOT
-    docker tag $namespace/$image:$sha_tag server01:5000/$namespace/$image:$version_tag
+    docker tag server01:5000/$namespace/$image:$sha_tag server01:5000/$namespace/$image:$version_tag
 
     echo "publish : $publish"
     echo "public : $public"
@@ -228,7 +228,7 @@ create_image () {
         # We also tag and publish an image tagged
         # with just the minor version. E.g. if VERSION.txt is "0.2.0", we'll also
         # publish an image tagged with "0.2". This image will be updated to the newest
-        # patch version every time we push a patch, but will not be updated for release
+        # patch version everydoc time we push a patch, but will not be updated for release
         # candidates.
         if ! [[ -z ${minor_version+set} ]] ; then
           docker tag $namespace/$image:$sha_tag $namespace/$image:$minor_version
