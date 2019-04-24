@@ -5,7 +5,7 @@
 ## Overview
 This application accepts an image and a audio file as initial input and generate description and key information of the input. Later, the user can input speech file to query for the information of the input. The model representation:
 
-![model](model.png)
+![model](applications/imagequery/model.png)
 
 <br/>
 
