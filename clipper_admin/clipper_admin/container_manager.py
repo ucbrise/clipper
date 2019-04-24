@@ -95,7 +95,7 @@ class ContainerManager(object):
         return
 
     @abc.abstractmethod
-    def set_proxy(self, image, model_container_label, model_ip):
+    def set_proxy(self, image, model_container_label, model_ip, host_ip):
         return
 
     @abc.abstractmethod

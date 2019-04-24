@@ -92,7 +92,9 @@ class DockerContainerManager(ContainerManager):
         self.docker_client = docker.from_env()
         self.extra_container_kwargs = extra_container_kwargs.copy()
 
-        self.remote_docker_client = []
+        self.host_list = {"localhost":self.docker_client}
+        self.container_count = 0
+
 
         # Merge Clipper-specific labels with any user-provided labels
         if "labels" in self.extra_container_kwargs:
@@ -289,7 +291,7 @@ class DockerContainerManager(ContainerManager):
 
         docker_client = docker.DockerClient(base_url='tcp://{ip}:{port}>'.format(ip=host_ip, port=host_port), tls=False)
         
-        self.remote_docker_client.append(docker_client)
+        self.host_list[host_ip]=docker_client
 
         self.logger.info('Suffcessfully connected to remote docker daemon on host:{ip}'.format(ip=host_ip))
 
@@ -323,7 +325,10 @@ class DockerContainerManager(ContainerManager):
     def get_num_replicas(self, name, version):
         return len(self._get_replicas(name, version))
 
-    def set_proxy(self, image, model_container_label, model_ip):
+    def get_host_client(self, host_ip):
+        return self.host_list.get(host_ip, self.docker_client)
+
+    def set_proxy(self, image, model_container_label, model_ip, host_ip):
 
         proxy_name = model_container_label + '-proxy'
         env_vars = {
@@ -337,6 +342,9 @@ class DockerContainerManager(ContainerManager):
         labels = self.common_labels.copy()
         labels[CLIPPER_MODEL_CONTAINER_LABEL] = proxy_name
         labels[CLIPPER_DOCKER_LABEL] = self.cluster_name
+
+
+        host_client = get_host_client(host_ip)
 
         container = self.docker_client.containers.run(
             image,
@@ -355,6 +363,16 @@ class DockerContainerManager(ContainerManager):
         ip = meta['NetworkSettings']['Networks']['clipper_network']['IPAddress']
         self.logger.info("Got container {id} IP:{meta}".format(id=container_id, meta=ip))
         return ip
+
+
+    def schedule_host(self):
+        
+        # Round Robin, default is self.docker_client
+
+        selected_host = self.host_list.keys()[(self.container_count % len(self.host_list) )-1]
+        selected_client = self.host_list.get(selected_host, self.docker_client)
+
+        return selected_host, selected_client
 
     def add_replica(self, model_name, model_version, model_port, image):
 
@@ -389,6 +407,12 @@ class DockerContainerManager(ContainerManager):
             random.randint(0, 100000))
 
         #model_container_name = model_container_label
+        print("scheduling a host")
+        scheduled_host, scheduled_client = self.schedule_host()
+        print(scheduled_client)
+        print("finished scheduled host on %s"%(scheduled_host))
+
+       # scheduled_client = 
 
         container = self.docker_client.containers.run(
             image,
@@ -419,7 +443,9 @@ class DockerContainerManager(ContainerManager):
         #                     CLIPPER_INTERNAL_METRIC_PORT)
 
         # Return model_container_name so we can check if it's up and running later
-        return model_container_name, container_id
+        self.container_count = self.container_count + 1
+
+        return model_container_name, container_id, scheduled_host
 
     def _add_replica(self, name, version, input_type, image):
 

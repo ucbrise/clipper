@@ -89,6 +89,7 @@ class ClipperConnection(object):
         self.connected = False
         self.cm = container_manager
 
+
         self.logger = ClusterAdapter(logger, {
             'cluster_name': self.cm.cluster_identifier
         })
@@ -785,6 +786,10 @@ class ClipperConnection(object):
                 "Successfully registered DAG {name}:{version}".format(
                     name=name, version=version))
 
+    def schedule_host():
+
+        self.host_lsit
+
     def deploy_DAG(self, name, version, dag_description=None):
 
 
@@ -810,13 +815,16 @@ class ClipperConnection(object):
         for node_name in nodes_list:
 
             model_name,model_version,model_image = graph_parser.get_name_version(node_name)
-            container_name, container_id = self.cm.add_replica(model_name, model_version, "22222", model_image)
 
-            self.logger.info("Started %s with container %s:%s"%(model_name, container_name, container_id))
+        
+
+            container_name, container_id, host = self.cm.add_replica(model_name, model_version, "22222", model_image)
+
+            self.logger.info("Started %s with container %s:%s (HOST:%s)"%(model_name, container_name, container_id, host))
 
             container_ip = self.cm.get_container_ip(container_id)
 
-            proxy_name, proxy_id = self.cm.set_proxy("mxschen/ai-proxy", container_name, container_ip)
+            proxy_name, proxy_id = self.cm.set_proxy("mxschen/ai-proxy", container_name, container_ip, host)
 
             ## get the ip of the instances 
             proxy_ip = self.cm.get_container_ip(proxy_id)
