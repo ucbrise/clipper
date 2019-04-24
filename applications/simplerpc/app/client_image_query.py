@@ -21,7 +21,8 @@ def run():
     # CONTAINER 3: image nlp analyzer
     print("\n***Start Natural Language Processing...\n")
     container3 = xmlrpc.client.ServerProxy('http://localhost:11000')
-    text = speech_text + captions
+    text =  captions + ". " + speech_text + "."
+    print("Natural Language Processor receive the text: "  + text)
     mapping = container3.Predict(text)
     print(mapping)
     print("Image mapping generated successfully")
@@ -35,7 +36,7 @@ def run():
     print("Time: " + time)
     print("\n***Finish generating mapping!")
 
-    # Container 4: Question answer
+    # Container 4: Question Answering Server
     print("\n***Start Question Answering...\n")
     container4 = xmlrpc.client.ServerProxy('http://localhost:12000')
     question = "What is in the image?"
@@ -45,8 +46,6 @@ def run():
     print("Answer generated successfully!")
     print("The generated answer is: " + answer)
     print("\n***Finish question answering!")
-
-
 
 if __name__ == "__main__":
     run()
