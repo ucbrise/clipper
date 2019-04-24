@@ -3,6 +3,7 @@
 import spacy
 import textacy
 from preprocess import preprocess
+from timeit import default_timer as timer
 
 # def print_document(doc):
 #   import pprint
@@ -81,8 +82,12 @@ def testing():
         print(generate_mapping(txt).split('-'))
 
 def predict(txt):
-  return generate_mapping(txt)
+    start = timer()
+    generated_mapping = generate_mapping(txt)
+    end = timer()
+    time_elapsed = end - start
+    return generated_mapping, time_elapsed
 
-if __name__ == "__main__":
-    txt = "A man is happily playing basketball at 3 o'clock."
-    print(predict(txt)) # man-happily play-3 o'clock
+# if __name__ == "__main__":
+#     txt = "A man is happily playing basketball at 3 o'clock."
+#     print(predict(txt)) # man-happily play-3 o'clock

@@ -1,4 +1,5 @@
 import speech_recognition as sr
+from timeit import default_timer as timer
 # Reference: https://realpython.com/python-speech-recognition/
 # Text2Speech converter: https://www.text2speech.org/
 
@@ -15,7 +16,11 @@ def recognize(audio_file_path):
 
 
 def predict(audio_file_path):
-    return recognize(audio_file_path)
+    start = timer()
+    recognized_string = recognize(audio_file_path)
+    end = timer()
+    time_elapsed = end - start
+    return recognized_string, time_elapsed
 
 
 if __name__ == "__main__":
