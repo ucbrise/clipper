@@ -6,6 +6,7 @@ RUN pip3 install numpy
 RUN pip3 install nltk 
 RUN python3 -m nltk.downloader all
 RUN apt-get install python -y
+RUN conda install -c anaconda tensorflow-gpu 
 
 # A workspace directory will be created under /container/, which is our workspace for bazel
 # All directories in 2_imageCaptionGenerator will be copied to /container/workspace/, except app
