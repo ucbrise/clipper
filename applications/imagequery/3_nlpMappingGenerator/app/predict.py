@@ -1,21 +1,23 @@
+# Ref1: spacy official documenation for tagging, noun_chunk 
+# Ref2: textacy official documentation for matching pattern
 import spacy
 import textacy
 from preprocess import preprocess
 
-def print_document(doc):
-  import pprint
-  pp = pprint.PrettyPrinter()
-  print('\n')
-  for token in doc:
-      pp.pprint((token.text, token.lemma_, token.pos_,
-                  token.tag_, token.dep_, token.is_stop))
+# def print_document(doc):
+#   import pprint
+#   pp = pprint.PrettyPrinter()
+#   print('\n')
+#   for token in doc:
+#       pp.pprint((token.text, token.lemma_, token.pos_,
+#                   token.tag_, token.dep_, token.is_stop))
 
 
-def print_verb_tagging(doc):
-    print("\nTokens with 'VERB' as POS tag: ")
-    for token in doc:
-        if (token.pos_ == 'VERB'):
-            print((token.text, token.pos_))
+# def print_verb_tagging(doc):
+#     print("\nTokens with 'VERB' as POS tag: ")
+#     for token in doc:
+#         if (token.pos_ == 'VERB'):
+#             print((token.text, token.pos_))
 
 
 def get_time_list(doc):

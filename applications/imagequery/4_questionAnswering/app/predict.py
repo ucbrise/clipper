@@ -1,6 +1,14 @@
 import string
 import numpy as np
 
+"""
+This is the preliminary version of Questiona Answering System. 
+We are not using AI here but just use simple logic. 
+The reason is that the context where we need to generate answer from is
+short and simple and there are not too much information. Answering with 
+logic already provides good enough result.
+"""
+
 def predict(question, mapping):
     print(mapping)
     question = question.lower()

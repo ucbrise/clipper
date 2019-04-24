@@ -1,4 +1,6 @@
 import speech_recognition as sr
+# Reference: https://realpython.com/python-speech-recognition/
+# Text2Speech converter: https://www.text2speech.org/
 
 def recognize(audio_file_path):
     recognizer = sr.Recognizer()

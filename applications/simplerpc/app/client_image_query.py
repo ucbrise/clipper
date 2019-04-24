@@ -36,7 +36,7 @@ def run():
     print("Time: " + time)
     print("\n***Finish generating mapping!")
 
-    # Container 4: Question Answering Server
+    # Container 4: Question Answerings
     print("\n***Start Question Answering...\n")
     container4 = xmlrpc.client.ServerProxy('http://localhost:12000')
     question = "What is in the image?"

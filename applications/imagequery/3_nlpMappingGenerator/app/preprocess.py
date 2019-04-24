@@ -1,4 +1,5 @@
-# https://towardsdatascience.com/a-practitioners-guide-to-natural-language-processing-part-i-processing-understanding-text-9f4abfd13e72
+# Ref1: https://towardsdatascience.com/a-practitioners-guide-to-natural-language-processing-part-i-processing-understanding-text-9f4abfd13e72
+# Ref2: spacy official documentation
 from nltk.tokenize import sent_tokenize, word_tokenize
 import spacy
 import numpy as np
@@ -9,6 +10,12 @@ nlp = spacy.load('en_core_web_md')
 stopword_list = nltk.corpus.stopwords.words('english')
 stopword_list.remove('no')
 stopword_list.remove('not')
+
+"""
+This file provides the function for preprocessing text before NLP.
+
+"""
+
 
 """ input: string; output: string. """
 def simple_stemmer(text):
@@ -96,12 +103,19 @@ def construct_text_from_corpus(corpus):
 
 """ input: string; output: string. """
 def preprocess(text):
+    # tokenzie the text into list of sentence
     corpus = generateCorpus(text)
+
+    # normlize each sentence by removing whitespace, special characters, punctuation and so on
     normalized_corpus = normalize_corpus(corpus)
+
+    # Concatenate the sentence to reconstruct the preprocessed text
     preprocessed_text = construct_text_from_corpus(normalized_corpus)
+
+    # Return the text
     return preprocessed_text
 
 
-if __name__ == "__main__":
-    txt = "A young man plays basketball. A young man runs, jumps. He wears Jordan shoes. It is 3 o'clock now. He is in a seaside park in China. Seaside. Mountain. Yesterday: April 22th Tuesday.Today: April 23th Tuesday."
-    print(preprocess(txt))
+# if __name__ == "__main__":
+#     txt = "A young man plays basketball. A young man runs, jumps. He wears Jordan shoes. It is 3 o'clock now. He is in a seaside park in China. Seaside. Mountain. Yesterday: April 22th Tuesday.Today: April 23th Tuesday."
+#     print(preprocess(txt))
