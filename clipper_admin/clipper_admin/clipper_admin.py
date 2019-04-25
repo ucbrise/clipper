@@ -305,7 +305,7 @@ class ClipperConnection(object):
         ----------
         app_name : str
             The name of the application
-        model_names : str array
+        model_names : str list
             The names of the models to link to the application
 
         Raises
@@ -326,7 +326,7 @@ class ClipperConnection(object):
             host=self.cm.get_admin_addr())
         req_json = json.dumps({
             "app_name": app_name,
-            "model_names": model_names
+            "model_names": [model_names]
         })
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
