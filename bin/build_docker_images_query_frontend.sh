@@ -18,6 +18,7 @@
 set -e
 set -u
 set -o pipefail
+set -x
 
 unset CDPATH
 # one-liner from http://stackoverflow.com/a/246128
