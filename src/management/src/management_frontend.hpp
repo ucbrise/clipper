@@ -89,7 +89,7 @@ const std::string ADD_MODEL_LINKS_JSON_SCHEMA = R"(
 const std::string ADD_MULTIPLE_MODEL_LINKS_JSON_SCHEMA = R"(
   {
     "app_name" := string,
-    "model_names" := [string, string]
+    "model_names" := [string]
   }
 )";
 
