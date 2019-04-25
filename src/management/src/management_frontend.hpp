@@ -276,7 +276,7 @@ class RequestHandler {
                         json_error_msg(e.what(), ADD_MULTIPLE_MODEL_LINKS_JSON_SCHEMA);
                 respond_http(err_msg, "402 Bad Request", response);
               } catch (const clipper::ManagementOperationError& e) {
-                respond_http(e.what(), "403 Bad Request", response);
+                respond_http(e.what(), "40" + e.what() + " Bad Request", response);
               }
             });
     server_.add_endpoint(
@@ -707,7 +707,8 @@ class RequestHandler {
       ss << "No app with name "
          << "'" << app_name << "'"
          << " exists.";
-      throw clipper::ManagementOperationError(ss.str());
+//      throw clipper::ManagementOperationError(ss.str());
+      throw clipper::ManagementOperationError("4");
     }
 
     // Confirm that the models exists and have compatible input_types
@@ -723,7 +724,8 @@ class RequestHandler {
         ss << "No model with name "
            << "'" << model_name << "'"
            << " exists.";
-        throw clipper::ManagementOperationError(ss.str());
+//        throw clipper::ManagementOperationError(ss.str());
+        throw clipper::ManagementOperationError("5");
       } else {
         model_info = clipper::redis::get_model(
                 redis_connection_, VersionedModelId(model_name, *model_version));
@@ -737,7 +739,8 @@ class RequestHandler {
              << ". Requested app to link to has input_type "
              << "'" << app_input_type << "'"
              << ".";
-          throw clipper::ManagementOperationError(ss.str());
+//          throw clipper::ManagementOperationError(ss.str());
+          throw clipper::ManagementOperationError("6");
         }
       }
     }
