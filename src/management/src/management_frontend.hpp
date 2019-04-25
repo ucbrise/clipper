@@ -270,13 +270,13 @@ class RequestHandler {
               } catch (const json_parse_error& e) {
                 std::string err_msg =
                         json_error_msg(e.what(), ADD_MULTIPLE_MODEL_LINKS_JSON_SCHEMA);
-                respond_http(err_msg, "400 Bad Request", response);
+                respond_http(err_msg, "401 Bad Request", response);
               } catch (const json_semantic_error& e) {
                 std::string err_msg =
                         json_error_msg(e.what(), ADD_MULTIPLE_MODEL_LINKS_JSON_SCHEMA);
-                respond_http(err_msg, "400 Bad Request", response);
+                respond_http(err_msg, "402 Bad Request", response);
               } catch (const clipper::ManagementOperationError& e) {
-                respond_http(e.what(), "400 Bad Request", response);
+                respond_http(e.what(), "403 Bad Request", response);
               }
             });
     server_.add_endpoint(
@@ -693,10 +693,9 @@ class RequestHandler {
    * \throws ManagementOperationError if the operation is not successful
    */
   std::string add_multiple_model_links(const std::string& json) {
-    clipper::log_info_formatted(LOGGING_TAG_MANAGEMENT_FRONTEND, "received json string: {}", json);
     rapidjson::Document d;
     parse_json(json, d);
-    clipper::log_info_formatted(LOGGING_TAG_MANAGEMENT_FRONTEND, "received json string: {}", json);
+
     std::string app_name = get_string(d, "app_name");
     std::vector<string> model_names = get_string_array(d, "model_names");
 
