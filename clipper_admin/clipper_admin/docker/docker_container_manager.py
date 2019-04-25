@@ -344,9 +344,9 @@ class DockerContainerManager(ContainerManager):
         labels[CLIPPER_DOCKER_LABEL] = self.cluster_name
 
 
-        host_client = get_host_client(host_ip)
+        host_client = self.get_host_client(host_ip)
 
-        container = self.docker_client.containers.run(
+        container = host_client.containers.run(
             image,
             name=proxy_name,
             environment=env_vars,
@@ -414,7 +414,7 @@ class DockerContainerManager(ContainerManager):
 
        # scheduled_client = 
 
-        container = self.docker_client.containers.run(
+        container = scheduled_client.containers.run(
             image,
             name=model_container_name,
             environment=env_vars,

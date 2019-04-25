@@ -10,5 +10,6 @@ docker build -f ./prediction/Dockerfile7 -t prediction:container7 .
 docker build -f ./prediction/Dockerfile8 -t prediction:container8 .
 docker build -f ./prediction/Dockerfile9 -t prediction:container9 .
 docker build -f ./prediction/Dockerfile10 -t prediction:container10 .
+docker build -f ./prediction/Dockerfile11 -t prediction:container11 .
 
 # C:/Users/musicman/Desktop/financial_prediction

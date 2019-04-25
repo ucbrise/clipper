@@ -8,6 +8,6 @@ RUN pip3 install tweepy
 ADD prediction/2_Twitter_Collector/app /container/
 ADD simplerpc/app /container/
 
-CMD ["python3", "/container/server.py", "2", "9000"]
+CMD ["python3", "/container/server.py", "2", "9001"]
 
-EXPOSE 9000
+EXPOSE 9001
