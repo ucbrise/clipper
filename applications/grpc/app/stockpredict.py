@@ -13,7 +13,8 @@ def run(ip, port):
     timestamp.GetCurrentTime()
     channel = grpc.insecure_channel('%s:%s'%(ip, port))
     stub = prediction_pb2_grpc.ProxyServerStub(channel)
-    response = stub.downstream(prediction_pb2.request(input_ = model_pb2.input(inputType = 'string', inputStream = 'hello'),src_uri = "localhost", seq = 1, req_id =1, timestamp = timestamp))
+    stock_name = "AAPL"
+    response = stub.downstream(prediction_pb2.request(input_ = model_pb2.input(inputType = 'string', inputStream = stock_name),src_uri = "localhost", seq = 1, req_id =1, timestamp = timestamp))
     print('Response\n{res}'.format(res=response.status))
 
 if __name__ == "__main__":

@@ -1,0 +1,15 @@
+FROM ubuntu:bionic
+RUN apt-get update
+RUN apt-get install python3 python3-all-dev python3-pip build-essential swig git libpulse-dev libasound2-dev -y
+RUN pip3 install sklearn
+RUN pip3 install numpy
+RUN pip3 install quandl
+RUN pip3 install keras
+RUN pip3 install tensorflow
+
+ADD prediction/5_LSTM_Predictor/app /container/
+ADD simplerpc/app /container/
+
+CMD ["python3", "/container/server.py", "5", "13000"]
+
+EXPOSE 13000

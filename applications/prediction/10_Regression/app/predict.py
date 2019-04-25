@@ -52,7 +52,7 @@ def predict(compstring):
 #   print(preds)
 #   rms=np.sqrt(np.mean(np.power((np.array(y_valid)-np.array(preds)),2)))
 
-    return preds
+    return str(preds)
     
 
 

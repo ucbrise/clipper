@@ -56,7 +56,7 @@ def predict(comstring):
     model.fit(x_train,y_train)
     preds = [x.item() for x in model.predict(x_valid).tolist()]
 
-    return preds
+    return str(preds)
 
 
 

@@ -23,7 +23,10 @@ def getData(keyword, limit):
 
   return tweets_string
 
-def predict(keyword, limit): # serve as api function
+def predict(request): # serve as api function
+  print("This is Twitter Collector")
+  keyword = "AAPL"
+  limit = 100
   return getData(keyword, limit)
 
 

@@ -55,4 +55,4 @@ def predict(comstring):
 
   predicted_stock_price = 1/4 * (predicted_stock_price_close + predicted_stock_price_open + predicted_stock_price_high + predicted_stock_price_low)
 
-  return predicted_stock_price.tolist()[-10:]
+  return str(predicted_stock_price.tolist()[-10:])
