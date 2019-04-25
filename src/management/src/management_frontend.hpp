@@ -693,9 +693,10 @@ class RequestHandler {
    * \throws ManagementOperationError if the operation is not successful
    */
   std::string add_multiple_model_links(const std::string& json) {
+    clipper::log_info_formatted(LOGGING_TAG_MANAGEMENT_FRONTEND, "received json string: {}", json);
     rapidjson::Document d;
     parse_json(json, d);
-
+    clipper::log_info_formatted(LOGGING_TAG_MANAGEMENT_FRONTEND, "received json string: {}", json);
     std::string app_name = get_string(d, "app_name");
     std::vector<string> model_names = get_string_array(d, "model_names");
 
