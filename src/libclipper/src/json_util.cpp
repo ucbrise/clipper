@@ -135,11 +135,11 @@ std::string get_string(rapidjson::Value& d, const char* key_name) {
 }
 
 std::vector<std::string> get_string_array(rapidjson::Value& d, const char* key_name) {
-  const rapidjson::Value& val =  d[key_name];
+  const rapidjson::Value& val = d[key_name];
   assert(val.IsArray());
   std::vector<std::string> vals;
-  for(std::size_t i = 0; i < val.size(); i++){
-    vals.push_back(val[i].GetString());
+  for(auto& v : val.getArray()){
+    vals.push_back(v.GetString());
   }
   return vals;
 }
