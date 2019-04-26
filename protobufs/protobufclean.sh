@@ -26,3 +26,12 @@ rm ../clipper_admin/clipper_admin/rpc/proxy_pb2_grpc.py
 rm ../clipper_admin/clipper_admin/rpc/proxy_pb2.py
 rm ../clipper_admin/clipper_admin/rpc/prediction_pb2_grpc.py
 rm ../clipper_admin/clipper_admin/rpc/prediction_pb2.py
+
+
+rm ../grpcclient/app/model_pb2_grpc.py
+rm ../grpcclient/app/model_pb2.py
+rm ../grpcclient/app/proxy_pb2_grpc.py
+rm ../grpcclient/app/proxy_pb2.py
+rm ../grpcclient/app/prediction_pb2_grpc.py
+rm ../grpcclient/app/prediction_pb2.py
+
