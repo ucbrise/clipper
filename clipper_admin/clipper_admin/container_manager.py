@@ -164,7 +164,7 @@ class ContainerManager(object):
         return
 
     @abc.abstractmethod
-    def get_container_ip(self, host, container_id):
+    def get_container_ip(self, host_ip, container_id):
         return
 
  

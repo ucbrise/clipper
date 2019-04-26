@@ -365,7 +365,7 @@ class DockerContainerManager(ContainerManager):
         container_id = str(container)[12:-1]
         return proxy_name, container_id
 
-    def get_container_ip(self, host, container_id):
+    def get_container_ip(self, host_ip, container_id):
         
         host_client = self.get_host_client(host_ip)
 
