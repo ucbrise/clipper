@@ -723,7 +723,7 @@ class RequestHandler {
         ss << "No model with name "
            << "'" << model_name << "'"
            << " exists.";
-        throw clipper::ManagementOperationError(ss.str());
+//        throw clipper::ManagementOperationError(ss.str());
       } else {
         model_info = clipper::redis::get_model(
                 redis_connection_, VersionedModelId(model_name, *model_version));
