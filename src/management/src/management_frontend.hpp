@@ -707,7 +707,7 @@ class RequestHandler {
       ss << "No app with name "
          << "'" << app_name << "'"
          << " exists.";
-//      throw clipper::ManagementOperationError(ss.str());
+      throw clipper::ManagementOperationError(ss.str());
     }
 
     // Confirm that the models exists and have compatible input_types
@@ -723,7 +723,7 @@ class RequestHandler {
         ss << "No model with name "
            << "'" << model_name << "'"
            << " exists.";
-//        throw clipper::ManagementOperationError(ss.str());
+        throw clipper::ManagementOperationError(ss.str());
       } else {
         model_info = clipper::redis::get_model(
                 redis_connection_, VersionedModelId(model_name, *model_version));
@@ -737,7 +737,7 @@ class RequestHandler {
              << ". Requested app to link to has input_type "
              << "'" << app_input_type << "'"
              << ".";
-//          throw clipper::ManagementOperationError(ss.str());
+          throw clipper::ManagementOperationError(ss.str());
         }
       }
     }
@@ -752,7 +752,7 @@ class RequestHandler {
       }
       std::string error_msg = ss.str();
       clipper::log_error(LOGGING_TAG_MANAGEMENT_FRONTEND, error_msg);
-      throw clipper::ManagementOperationError(error_msg);
+//      throw clipper::ManagementOperationError(error_msg);
     }
 
     // Make sure that there will only be one link --> there can exists multiple links
