@@ -143,8 +143,11 @@ class ModelQueue {
       std::function<BatchSizeInfo(Deadline)> &&get_batch_size) {
     std::unique_lock<std::mutex> lock(queue_mutex_);
     remove_tasks_with_elapsed_deadlines();
-    queue_not_empty_condition_.wait(
-      lock, [this]() { return !queue_.empty() || !valid_; });
+    queue_not_empty_condition_.wait(lock, [this, requesting_container]() {
+      return !valid_ ||
+             !queue_.empty() ||
+             !get_container_registration(requesting_container->replica_id_);
+      });
     remove_tasks_with_elapsed_deadlines();
 
     std::vector<PredictTask> batch;
@@ -187,6 +190,34 @@ class ModelQueue {
     queue_not_empty_condition_.notify_all();
   }
 
+  void wakeup_all_forcely() {
+    std::lock_guard<std::mutex> l(queue_mutex_);
+    queue_not_empty_condition_.notify_all();
+  }
+
+  void register_container(int model_replica_id) {
+    boost::unique_lock<boost::shared_mutex>l(registered_containers_mutex_);
+    registered_containers_.push_back(model_replica_id);
+  }
+
+  void unregister_container(int model_replica_id) {
+    boost::unique_lock<boost::shared_mutex> l(registered_containers_mutex_);
+    auto it = find(registered_containers_.begin(), registered_containers_.end(), model_replica_id);
+    if (it != registered_containers_.end()) {
+      registered_containers_.erase(it);
+    }
+  }
+
+  bool get_container_registration(int model_replica_id) {
+    boost::shared_lock<boost::shared_mutex> l(registered_containers_mutex_);
+    auto it = find(registered_containers_.begin(), registered_containers_.end(), model_replica_id);
+    if (it != registered_containers_.end()) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
  private:
   // Min PriorityQueue so that the task with the earliest
   // deadline is at the front of the queue
@@ -198,6 +229,8 @@ class ModelQueue {
   std::mutex queue_mutex_;
   std::condition_variable queue_not_empty_condition_;
   bool valid_;
+  boost::shared_mutex registered_containers_mutex_;
+  std::vector<int> registered_containers_;
 
   // Deletes tasks with deadlines prior or equivalent to the
   // current system time. This method should only be called
@@ -400,6 +433,8 @@ class TaskExecutor {
                                  "Created queue for new model: {} : {}",
                                  vm.get_name(), vm.get_id());
             }
+            register_container_to_model_queue(vm, replica_id);
+
           } else if (!*task_executor_valid) {
             log_info(LOGGING_TAG_TASK_EXECUTOR,
                      "Not running TaskExecutor's "
@@ -518,6 +553,15 @@ class TaskExecutor {
     return queue_created;
   }
 
+  bool wakeup_model_queue_if_necessary(const VersionedModelId &model_id) {
+    boost::unique_lock<boost::shared_mutex> l(model_queues_mutex_);
+    if (model_queues_.count(model_id)) {
+      model_queues_[model_id]->wakeup_all_forcely();
+      return true;
+    }
+    return false;
+  }
+
   bool delete_model_queue_if_necessary(const VersionedModelId &model_id) {
     // Deletes an entry from the queues map, if one exists
     boost::unique_lock<boost::shared_mutex> l(model_queues_mutex_);
@@ -532,6 +576,34 @@ class TaskExecutor {
     return false;
   }
 
+  void register_container_to_model_queue(const VersionedModelId &model_id, int replica_id) {
+    boost::unique_lock<boost::shared_mutex> l(model_queues_mutex_);
+    auto model_queue_entry = model_queues_.find(model_id);
+    if (model_queue_entry == model_queues_.end()) {
+      std::stringstream ss;
+      ss << "Error registering container to model queue. name "
+         << "'" << model_id.get_name() << "'"
+         << " and version "
+         << "'" << model_id.get_id() << "'";
+      throw std::runtime_error(ss.str());
+    }
+    model_queue_entry->second->register_container(replica_id);
+  }
+
+  void unregister_container_from_model_queue(const VersionedModelId &model_id, int replica_id) {
+    boost::unique_lock<boost::shared_mutex> l(model_queues_mutex_);
+    auto model_queue_entry = model_queues_.find(model_id);
+    if (model_queue_entry == model_queues_.end()) {
+      std::stringstream ss;
+      ss << "Error unregistering container to model queue. name "
+         << "'" << model_id.get_name() << "'"
+         << " and version "
+         << "'" << model_id.get_id() << "'";
+      throw std::runtime_error(ss.str());
+    }
+    model_queue_entry->second->unregister_container(replica_id);
+  }
+
   void clean_up_specific_container(const VersionedModelId &model_id, int replica_id) {
     if (clipper::redis::delete_container(redis_connection_, model_id, replica_id)) {
       std::stringstream ss;
@@ -542,6 +614,7 @@ class TaskExecutor {
       log_info_formatted(LOGGING_TAG_TASK_EXECUTOR, "{}", ss.str());
 
       active_containers_->remove_container(model_id, replica_id);
+      unregister_container_from_model_queue(model_id, replica_id);
     } else {
       std::stringstream ss;
       ss << "Error deleting container with name "
@@ -707,7 +780,7 @@ class TaskExecutor {
     clean_up_specific_container(model_id, replica_id);
     TaskExecutionThreadPool::interrupt_thread(model_id, replica_id);
 
-    // We do not have to clean up versioned model here.
+    wakeup_model_queue_if_necessary(model_id);
 
     TaskExecutionThreadPool::delete_queue(model_id, replica_id);
     EstimatorFittingThreadPool::delete_queue(model_id, replica_id);
