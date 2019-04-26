@@ -16,10 +16,11 @@ Configure Docker Daemon on Host 1
 ###Option 1: Configure existing daemon
 
 ```sh
-docerd \
---cluster-store=consul://[[CONSUL_IP]]:8500 \
---cluster-advertise=[[HOST_IP1]]:0
+sudo docerd --cluster-store=consul://[[CONSUL_IP]]:8500 --cluster-advertise=[[HOST_IP1]]:0
 ```
+
+sudo docerd --cluster-store=consul://202.45.128.162:8500 --cluster-advertise=202.45.128.161:0
+
 ###Option 2: start a new daemon
 
 ```sh
@@ -28,6 +29,30 @@ docker run --privileged --name d1 -d \
 --cluster-store=consul://[[CONSUL_IP]]:8500 \
 --cluster-advertise=[[HOST_IP]]:0
 ```
+
+162:
+sudo docker run --privileged --name d1 -d \
+--net=host katacoda/dind:1.10 -H 0.0.0.0:3375 \
+--cluster-store=consul://202.45.128.162:8500 \
+--cluster-advertise=202.45.128.162:0
+
+export DOCKER_HOST="202.45.128.173:3375"
+173:
+sudo docker run --privileged --name d1 -d \
+--net=host katacoda/dind:1.10 -H 0.0.0.0:3375 \
+--cluster-store=consul://202.45.128.173:8500 \
+--cluster-advertise=202.45.128.173:0
+
+export DOCKER_HOST="202.45.128.173:3375"
+
+
+174:
+sudo docker run --privileged --name d1 -d \
+--net=host katacoda/dind:1.10 -H 0.0.0.0:3375 \
+--cluster-store=consul://202.45.128.173:8500 \
+--cluster-advertise=202.45.128.174:0
+
+export DOCKER_HOST="202.45.128.174:3375"
 
 Export new host daemon
 ```sh
