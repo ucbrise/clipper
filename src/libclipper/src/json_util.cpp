@@ -134,12 +134,19 @@ std::string get_string(rapidjson::Value& d, const char* key_name) {
   return std::string(v.GetString());
 }
 
-std::vector<std::string> get_string_array(rapidjson::Value& d, const char* key_name) {
-  const rapidjson::Value& val = d[key_name];
-  assert(val.IsArray());
+std::vector<std::string> get_string_array(rapidjson::Value& d,
+                                          const char* key_name) {
+  rapidjson::Value& v =
+          check_kv_type_and_return(d, key_name, rapidjson::kArrayType);
   std::vector<std::string> vals;
-  for(auto& v : val.GetArray()){
-    vals.push_back(v.GetString());
+  vals.reserve(v.Capacity());
+  for (rapidjson::Value& elem : v.GetArray()) {
+    if (!elem.IsString()) {
+      throw json_semantic_error("Array input of type " +
+                                kTypeNames[elem.GetType()] +
+                                " is not of type string");
+    }
+    vals.push_back(elem.GetString());
   }
   return vals;
 }
