@@ -24,4 +24,9 @@ python ../applications/translation/client.py 172.18.0.3 22223
 docker run -it --network=host -v /Users:/Users -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp zsxhku/clipper_test:version1
 
 
+docker run -it --network=host -v /home/hkucs/clipper:/clipper -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp zsxhku/clipper_test:version1
+
+
+##Kill process by name
+ps -ef | grep 'dockerd' | grep -v grep | awk '{print $2}' | xargs -r kill -9
          

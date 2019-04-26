@@ -95,8 +95,8 @@ class DockerContainerManager(ContainerManager):
         self.host_list = {"localhost":self.docker_client}
         self.container_count = 0
 
-        self.h_list = {"202.45.128.174","202.45.128.175"}
-        #self.h_list = {}
+        #self.h_list = {"202.45.128.174","202.45.128.175"}
+        self.h_list = {}
 
         self.logger = ClusterAdapter(logger, {
             'cluster_name': self.cluster_identifier

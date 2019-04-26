@@ -21,11 +21,11 @@ sudo dockerd --cluster-store=consul://[[CONSUL_IP]]:8500 --cluster-advertise=[[H
 
 sudo dockerd --cluster-store=consul://202.45.128.162:8500 --cluster-advertise=202.45.128.161:0 &
 
-sudo dockerd --cluster-store=consul://202.45.128.162:8500 --cluster-advertise=202.45.128.173:0 &
+sudo dockerd -H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://202.45.128.162:8500 --cluster-advertise=202.45.128.173:0 &
 
-sudo dockerd --cluster-store=consul://202.45.128.162:8500 --cluster-advertise=202.45.128.174:0 &
+sudo dockerd -H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://202.45.128.162:8500 --cluster-advertise=202.45.128.174:0 &
 
-sudo dockerd --cluster-store=consul://202.45.128.162:8500 --cluster-advertise=202.45.128.175:0 &
+sudo dockerd -H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://202.45.128.162:8500 --cluster-advertise=202.45.128.175:0 &
 
 ###Option 2: start a new daemon
 
