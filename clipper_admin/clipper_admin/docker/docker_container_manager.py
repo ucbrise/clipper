@@ -95,7 +95,7 @@ class DockerContainerManager(ContainerManager):
         self.host_list = {"localhost":self.docker_client}
         self.container_count = 0
 
-        self.h_list = {"202.45.128.175"}
+        self.h_list = {"202.45.128.174","202.45.128.175"}
         #self.h_list = {}
         for h_ip in self.h_list:
             self.connect_host(h_ip, "2375")
@@ -294,7 +294,7 @@ class DockerContainerManager(ContainerManager):
 
     def connect_host(self, host_ip, host_port):
 
-        docker_client = docker.DockerClient(base_url='tcp://{ip}:{port}>'.format(ip=host_ip, port=host_port), tls=False)
+        docker_client = docker.DockerClient(base_url='tcp://{ip}:{port}'.format(ip=host_ip, port=host_port), tls=False)
         
         self.host_list[host_ip]=docker_client
 
