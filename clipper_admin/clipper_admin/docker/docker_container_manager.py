@@ -95,6 +95,11 @@ class DockerContainerManager(ContainerManager):
         self.host_list = {"localhost":self.docker_client}
         self.container_count = 0
 
+        self.h_list = {"202.45.128.173", "202.45.128.174", "202.45.128.175"}
+        #self.h_list = {}
+        for h_ip in self.h_list:
+            self.connect_host(h_ip, "2375")
+
 
         # Merge Clipper-specific labels with any user-provided labels
         if "labels" in self.extra_container_kwargs:

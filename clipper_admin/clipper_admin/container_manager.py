@@ -167,6 +167,8 @@ class ContainerManager(object):
     def get_container_ip(self, container_id):
         return
 
+ 
+
     # @abc.abstractmethod
     # def get_metric_addr(self):
     #     return
