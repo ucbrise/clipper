@@ -97,6 +97,11 @@ class DockerContainerManager(ContainerManager):
 
         self.h_list = {"202.45.128.174","202.45.128.175"}
         #self.h_list = {}
+
+        self.logger = ClusterAdapter(logger, {
+            'cluster_name': self.cluster_identifier
+        })
+
         for h_ip in self.h_list:
             self.connect_host(h_ip, "2375")
 
@@ -117,10 +122,7 @@ class DockerContainerManager(ContainerManager):
 
         self.extra_container_kwargs.update(container_args)
 
-        self.logger = ClusterAdapter(logger, {
-            'cluster_name': self.cluster_identifier
-        })
-
+        
     def start_clipper(self,
                       query_frontend_image,
                       mgmt_frontend_image,
