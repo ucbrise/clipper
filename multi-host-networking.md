@@ -16,10 +16,16 @@ Configure Docker Daemon on Host 1
 ###Option 1: Configure existing daemon
 
 ```sh
-sudo docerd --cluster-store=consul://[[CONSUL_IP]]:8500 --cluster-advertise=[[HOST_IP1]]:0
+sudo dockerd --cluster-store=consul://[[CONSUL_IP]]:8500 --cluster-advertise=[[HOST_IP1]]:0
 ```
 
-sudo docerd --cluster-store=consul://202.45.128.162:8500 --cluster-advertise=202.45.128.161:0
+sudo dockerd --cluster-store=consul://202.45.128.162:8500 --cluster-advertise=202.45.128.161:0 &
+
+sudo dockerd --cluster-store=consul://202.45.128.162:8500 --cluster-advertise=202.45.128.173:0 &
+
+sudo dockerd --cluster-store=consul://202.45.128.162:8500 --cluster-advertise=202.45.128.174:0 &
+
+sudo dockerd --cluster-store=consul://202.45.128.162:8500 --cluster-advertise=202.45.128.175:0 &
 
 ###Option 2: start a new daemon
 
