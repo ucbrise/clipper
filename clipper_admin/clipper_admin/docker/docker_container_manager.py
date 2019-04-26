@@ -365,8 +365,11 @@ class DockerContainerManager(ContainerManager):
         container_id = str(container)[12:-1]
         return proxy_name, container_id
 
-    def get_container_ip(self, container_id):
-        meta = self.docker_client.api.inspect_container(container_id)
+    def get_container_ip(self, host, container_id):
+        
+        host_client = self.get_host_client(host_ip)
+
+        meta = host_client.api.inspect_container(container_id)
         ip = meta['NetworkSettings']['Networks']['clipper_network']['IPAddress']
         self.logger.info("Got container {id} IP:{meta}".format(id=container_id, meta=ip))
         return ip

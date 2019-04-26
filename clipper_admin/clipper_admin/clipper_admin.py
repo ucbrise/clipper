@@ -816,18 +816,17 @@ class ClipperConnection(object):
 
             model_name,model_version,model_image = graph_parser.get_name_version(node_name)
 
-        
 
             container_name, container_id, host = self.cm.add_replica(model_name, model_version, "22222", model_image)
 
             self.logger.info("Started %s with container %s:%s (HOST:%s)"%(model_name, container_name, container_id, host))
 
-            container_ip = self.cm.get_container_ip(container_id)
+            container_ip = self.cm.get_container_ip(host, container_id)
 
             proxy_name, proxy_id = self.cm.set_proxy("mxschen/ai-proxy", container_name, container_ip, host)
 
             ## get the ip of the instances 
-            proxy_ip = self.cm.get_container_ip(proxy_id)
+            proxy_ip = self.cm.get_container_ip(host, proxy_id)
 
 
             time.sleep(5)
@@ -846,32 +845,32 @@ class ClipperConnection(object):
             #     modelPort = "22222"
             #     ))
 
-            channel_proxy = grpc.insecure_channel('{proxy_ip}:{proxy_port}'.format(
-                proxy_ip = proxy_ip,
-                proxy_port = "22223"
-            ))
-            stub_proxy = prediction_pb2_grpc.ProxyServerStub(channel_proxy)
-            response1 = stub_proxy.SetModel(prediction_pb2.modelinfo(
-                modelName = container_name,                
-                modelId = count,
-                modelPort = 22222,
-                modelIp = container_ip
-                ))
+            # channel_proxy = grpc.insecure_channel('{proxy_ip}:{proxy_port}'.format(
+            #     proxy_ip = proxy_ip,
+            #     proxy_port = "22223"
+            # ))
+            # stub_proxy = prediction_pb2_grpc.ProxyServerStub(channel_proxy)
+            # response1 = stub_proxy.SetModel(prediction_pb2.modelinfo(
+            #     modelName = container_name,                
+            #     modelId = count,
+            #     modelPort = 22222,
+            #     modelIp = container_ip
+            #     ))
 
-            count += 1
-            self.logger.info('[Proxy]Set Model: {res}'.format(res=response1.status))
+            # count += 1
+            # self.logger.info('[Proxy]Set Model: {res}'.format(res=response1.status))
 
             #tells the model container its proxy's info
-            channel_container = grpc.insecure_channel('{container_ip}:{container_port}'.format(
-                container_ip=container_ip,
-                container_port = "22222"
-            ))
-            stub_container = model_pb2_grpc.PredictServiceStub(channel_container)
-            response2 = stub_container.SetProxy(model_pb2.proxyinfo(
-                proxyName = proxy_name,
-                proxyPort = "22223"
-                ))
-            self.logger.info('[Model]Set Proxy: {res}'.format(res=response2.status))
+            # channel_container = grpc.insecure_channel('{container_ip}:{container_port}'.format(
+            #     container_ip=container_ip,
+            #     container_port = "22222"
+            # ))
+            # stub_container = model_pb2_grpc.PredictServiceStub(channel_container)
+            # response2 = stub_container.SetProxy(model_pb2.proxyinfo(
+            #     proxyName = proxy_name,
+            #     proxyPort = "22223"
+            #     ))
+            # self.logger.info('[Model]Set Proxy: {res}'.format(res=response2.status))
 
             proxy_info.append([proxy_name,proxy_id,proxy_ip])
             container_info.append([container_name, container_id, container_ip])
