@@ -32,4 +32,6 @@ def get_logs_from_containers(docker_container_manager, logging_dir):
 
 
 def get_default_log_config():
+    # default config is defined here.
+    # https://docs.docker.com/config/containers/logging/configure/
     return {'type': 'json-file'}

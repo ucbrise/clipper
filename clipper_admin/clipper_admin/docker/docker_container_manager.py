@@ -15,7 +15,7 @@ from ..container_manager import (
     CLIPPER_INTERNAL_MANAGEMENT_PORT,
     CLIPPER_INTERNAL_METRIC_PORT, CLIPPER_INTERNAL_REDIS_PORT,
     CLIPPER_DOCKER_PORT_LABELS, CLIPPER_METRIC_CONFIG_LABEL, ClusterAdapter,
-    CLIPPER_FLUENTD_CONFIG_LABEL)
+    CLIPPER_FLUENTD_CONFIG_LABEL, CLIPPER_INTERNAL_FLUENTD_PORT)
 from requests.exceptions import ConnectionError
 from .docker_metric_utils import *
 from .logging.docker_logging_utils import (
@@ -28,12 +28,11 @@ logger = logging.getLogger(__name__)
 
 
 class DockerContainerManager(ContainerManager):
-    # Logging-TODO Add SQLITE support
     def __init__(self,
                  cluster_name="default-cluster",
                  docker_ip_address="localhost",
                  use_centralized_log=False,
-                 fluentd_port=24224,
+                 fluentd_port=CLIPPER_INTERNAL_FLUENTD_PORT,
                  clipper_query_port=1337,
                  clipper_management_port=1338,
                  clipper_rpc_port=7000,
@@ -124,7 +123,6 @@ class DockerContainerManager(ContainerManager):
         })
 
         # Setting Docker cluster logging.
-        # Logging-TODO Add SQLITE support
         self.logging_system = Fluentd
         self.log_config = get_default_log_config()
         self.logging_system_instance = None
@@ -178,7 +176,6 @@ class DockerContainerManager(ContainerManager):
                 format(self.cluster_name))
 
         if self.centralize_log:
-            # Logging-TODO Initialize SQLite Logging DB
             self.logging_system_instance.start(self.common_labels, self.extra_container_kwargs)
 
         # Redis for cluster configuration
@@ -509,7 +506,6 @@ class DockerContainerManager(ContainerManager):
                 conf_path=all_labels[CLIPPER_FLUENTD_CONFIG_LABEL]
             )
         self.log_config = self.logging_system_instance.get_log_config()
-    # Logging-TODO Add a Sqlite support
 
     def get_admin_addr(self):
         return "{host}:{port}".format(
