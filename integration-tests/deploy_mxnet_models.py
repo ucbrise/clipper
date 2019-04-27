@@ -13,7 +13,7 @@ cur_dir = os.path.dirname(os.path.abspath(__file__))
 import mxnet as mx
 
 from test_utils import (create_docker_connection, BenchmarkException, headers,
-                        log_clipper_state, log_docker)
+                        log_clipper_state, log_docker, log_model)
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
@@ -160,6 +160,7 @@ if __name__ == "__main__":
         except BenchmarkException:
             logger.exception("BenchmarkException")
             log_docker(clipper_conn)
+            log_model(clipper_conn, cluster_name)
             log_clipper_state(clipper_conn)
             clipper_conn = create_docker_connection(
                 cleanup=True, start_clipper=False, cleanup_name=cluster_name)
@@ -170,6 +171,7 @@ if __name__ == "__main__":
     except Exception:
         logger.exception("Exception")
         log_docker(clipper_conn)
+        log_model(clipper_conn, cluster_name)
         log_clipper_state(clipper_conn)
         clipper_conn = create_docker_connection(
             cleanup=True, start_clipper=False, cleanup_name=cluster_name)
