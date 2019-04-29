@@ -6,3 +6,4 @@ kubernetes==6.0.0
 mock
 prometheus_client
 redis
+urllib3<1.25
