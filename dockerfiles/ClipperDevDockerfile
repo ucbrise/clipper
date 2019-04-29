@@ -16,7 +16,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update -qq && apt-get install -y -qq 
       && rm -rf /var/lib/apt/lists/*
 
 RUN pip install -q cloudpickle==0.5.* pyzmq==17.0.* requests==2.18.* subprocess32==3.2.* scikit-learn==0.19.* \
-  numpy==1.14.* pyyaml==3.12.* docker==3.1.* kubernetes==6.0.* tensorflow==1.6.* mxnet==1.1.* pyspark==2.3.* \
+  numpy==1.14.* pyyaml==3.12.* docker==3.1.* kubernetes==6.0.* tensorflow==1.6.* mxnet==1.4.* pyspark==2.3.* \
   xgboost==0.7.* jsonschema==2.6.* psutil==5.4.* prometheus_client
 
 # Install PyTorch
