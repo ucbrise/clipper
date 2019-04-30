@@ -72,12 +72,12 @@ std::vector<PredictTask> DefaultOutputSelectionPolicy::select_predict_tasks(
                         "No candidate models for query with label {}",
                         query.label_);
   } else {
-    if (num_candidate_models > 1) {
-      log_error_formatted(LOGGING_TAG_SELECTION_POLICY,
-                          "{} candidate models provided for query with label "
-                          "{}. Picking the first one.",
-                          num_candidate_models, query.label_);
-    }
+//    if (num_candidate_models > 1) {
+//      log_error_formatted(LOGGING_TAG_SELECTION_POLICY,
+//                          "{} candidate models provided for query with label "
+//                          "{}. Picking the first one.",
+//                          num_candidate_models, query.label_);
+//    }
     tasks.emplace_back(query.input_, query.candidate_models_.front(), 1.0,
                        query_id, query.latency_budget_micros_);
   }
