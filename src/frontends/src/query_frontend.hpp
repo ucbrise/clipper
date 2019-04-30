@@ -590,14 +590,13 @@ class RequestHandler {
             clipper::redis::get_model_versions(redis_connection_, m);
         for (auto v : registered_versions) {
           if (v == requested_version) {
-            versioned_models = {
-                clipper::VersionedModelId(m, requested_version)};
+            versioned_models.push_back(clipper::VersionedModelId(m, requested_version));
             break;
           }
         }
         // There should be at most one linked model to this application, so
         // we break here.
-        break;
+        // break;
       }
 
       if (versioned_models.empty()) {
