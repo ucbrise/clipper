@@ -98,11 +98,11 @@ const std::pair<Output, bool> DefaultOutputSelectionPolicy::combine_predictions(
             ->default_output_;
     return std::make_pair(std::move(default_output), true);
   } else {
-    log_error_formatted(LOGGING_TAG_SELECTION_POLICY,
-                        "DefaultOutputSelectionPolicy only expecting 1 "
-                        "output but found {}. Returning the first one.",
-                        predictions.size());
-    return std::make_pair(std::move(predictions.front()), false);
+//    log_error_formatted(LOGGING_TAG_SELECTION_POLICY,
+//                        "DefaultOutputSelectionPolicy only expecting 1 "
+//                        "output but found {}. Returning the first one.",
+//                        predictions.size());
+    return std::make_pair(std::move(predictions), false);
   }
 }
 
