@@ -644,6 +644,18 @@ class DockerContainerManager(ContainerManager):
     #    return "{host}:{port}".format(
     #        host=self.public_hostname, port=self.prometheus_port)
 
+    def grpc_client(self, image, arg_list):
+
+        logs = self.docker_client.containers.run(
+            image,
+            arg_list,
+            tty=True,
+            **self.extra_container_kwargs)
+
+        self.logger.info("GRPC client with logs:\n %s"%(logs))
+
+        
+
 
 def find_unbound_port(start=None,
                       increment=False,

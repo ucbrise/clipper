@@ -786,10 +786,10 @@ class ClipperConnection(object):
                 "Successfully registered DAG {name}:{version}".format(
                     name=name, version=version))
 
-    def schedule_host():
 
-        self.host_lsit
-
+    def connect_host(self, host_ip, host_port):
+        self.cm.connect_host(host_ip, "2375")
+        
     def deploy_DAG(self, name, version, dag_description=None):
 
 
@@ -830,47 +830,42 @@ class ClipperConnection(object):
 
 
             time.sleep(5)
-            ## tell the proxy its container's info
+
             print("proxy_ip:%s"%(proxy_ip))
-            #response = stub.SetModel(proxy_pb2.modelinfo(modelName = 'test', modelId = '1', modelPort='22222'))
+
+
+            self.cm.grpc_client("grpcclient", "--setmodel %s %s %s %s %s %s"%(proxy_ip, "22223", container_name, count, container_ip, "22222" ))
+
 
             # channel_proxy = grpc.insecure_channel('{proxy_ip}:{proxy_port}'.format(
             #     proxy_ip = proxy_ip,
             #     proxy_port = "22223"
             # ))
-            # stub_proxy = proxy_pb2_grpc.ProxyServiceStub(channel_proxy)
-            # response1 = stub_proxy.SetModel(proxy_pb2.modelinfo(
-            #     modelName = container_name,
-            #     modelId = str(count),
-            #     modelPort = "22222"
+            # stub_proxy = prediction_pb2_grpc.ProxyServerStub(channel_proxy)
+            # response1 = stub_proxy.SetModel(prediction_pb2.modelinfo(
+            #     modelName = container_name,                
+            #     modelId = count,
+            #     modelPort = 22222,
+            #     modelIp = container_ip
             #     ))
 
-            channel_proxy = grpc.insecure_channel('{proxy_ip}:{proxy_port}'.format(
-                proxy_ip = proxy_ip,
-                proxy_port = "22223"
-            ))
-            stub_proxy = prediction_pb2_grpc.ProxyServerStub(channel_proxy)
-            response1 = stub_proxy.SetModel(prediction_pb2.modelinfo(
-                modelName = container_name,                
-                modelId = count,
-                modelPort = 22222,
-                modelIp = container_ip
-                ))
-
             count += 1
-            self.logger.info('[Proxy]Set Model: {res}'.format(res=response1.status))
+            self.logger.info('[Proxy]Set Model: ')
 
             #tells the model container its proxy's info
-            channel_container = grpc.insecure_channel('{container_ip}:{container_port}'.format(
-                container_ip=container_ip,
-                container_port = "22222"
-            ))
-            stub_container = model_pb2_grpc.PredictServiceStub(channel_container)
-            response2 = stub_container.SetProxy(model_pb2.proxyinfo(
-                proxyName = proxy_name,
-                proxyPort = "22223"
-                ))
-            self.logger.info('[Model]Set Proxy: {res}'.format(res=response2.status))
+
+            self.cm.grpc_client("grpcclient", "--setproxy %s %s %s %s"%(container_ip, "22222", proxy_name, "22223"))
+
+            # channel_container = grpc.insecure_channel('{container_ip}:{container_port}'.format(
+            #     container_ip=container_ip,
+            #     container_port = "22222"
+            # ))
+            # stub_container = model_pb2_grpc.PredictServiceStub(channel_container)
+            # response2 = stub_container.SetProxy(model_pb2.proxyinfo(
+            #     proxyName = proxy_name,
+            #     proxyPort = "22223"
+            #     ))
+            self.logger.info('[Model]Set Proxy: ')
 
             proxy_info.append([proxy_name,proxy_id,proxy_ip])
             container_info.append([container_name, container_id, container_ip])
@@ -887,39 +882,18 @@ class ClipperConnection(object):
             proxy_id = tup[1]
             proxy_ip = tup[2]
 
-            ## tell the proxy the expanded dag info
             # channel_proxy = grpc.insecure_channel('{proxy_ip}:{proxy_port}'.format(
             #     proxy_ip = proxy_ip,
             #     proxy_port = "22223"
             # ))
-            # stub_proxy = proxy_pb2_grpc.ProxyServiceStub(channel_proxy)
-            # response = stub_proxy.SetDAG(proxy_pb2.dag(dag_ = expanded_dag))
-            # self.logger.info('[Proxy]Set DAG for proxy {proxy_name}: {res}'.format(proxy_name=proxy_name, res=response.status))
+            # stub_proxy = prediction_pb2_grpc.ProxyServerStub(channel_proxy)
+            # response = stub_proxy.SetDAG(prediction_pb2.dag(dag_ = expanded_dag))
 
-            channel_proxy = grpc.insecure_channel('{proxy_ip}:{proxy_port}'.format(
-                proxy_ip = proxy_ip,
-                proxy_port = "22223"
-            ))
-            stub_proxy = prediction_pb2_grpc.ProxyServerStub(channel_proxy)
-            response = stub_proxy.SetDAG(prediction_pb2.dag(dag_ = expanded_dag))
-            self.logger.info('[Proxy]Set DAG for proxy {proxy_name}: {res}'.format(proxy_name=proxy_name, res=response.status))
+            self.cm.grpc_client("grpcclient", "--setdag %s %s %s"%(proxy_ip, "22223", expanded_dag))
 
+            
+            self.logger.info('[Proxy]Set DAG for proxy {proxy_name}: '.format(proxy_name=proxy_name))
 
-
-        # ## Ping proxy 1
-        # tup = proxy_info[0]
-        # print(tup)
-        # first_proxy_name = tup[0]
-        # first_proxy_id = tup[1]
-        # first_proxy_ip = tup[2]
-
-        # channel_proxy = grpc.insecure_channel('{proxy_ip}:{proxy_port}'.format(
-        #     proxy_ip = first_proxy_ip,
-        #     proxy_port = "22223"
-        # ))
-        # stub_proxy = proxy_pb2_grpc.ProxyServiceStub(channel_proxy)
-        # response = stub_proxy.Ping(proxy_pb2.hi(msg = "This is Admin"))
-        # self.logger.info('Ping:  {res}'.format(res=response.status))
 
         return
 

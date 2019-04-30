@@ -4,12 +4,9 @@ RUN pip install --no-cache-dir grpcio
 RUN pip install --no-cache-dir protobuf
 
 
-
-
-
-
-ADD app ./
+ADD app /app
 #COPY app /container/
-CMD [ "python", "./app/grpc_client.py" ]
+#CMD [ "python", "/app/grpc_client.py" ]
+ENTRYPOINT [ "python", "/app/grpc_client.py" ]
 
 

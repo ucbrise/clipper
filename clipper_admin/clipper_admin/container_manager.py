@@ -83,7 +83,7 @@ class ContainerManager(object):
         return
 
     @abc.abstractmethod
-    def connect_host(self, host_ip):
+    def connect_host(self, host_ip, host_port):
         return
 
     @abc.abstractmethod
@@ -167,7 +167,9 @@ class ContainerManager(object):
     def get_container_ip(self, host_ip, container_id):
         return
 
- 
+    @abc.abstractmethod
+    def grpc_client(self, image, arg_list):
+        return
 
     # @abc.abstractmethod
     # def get_metric_addr(self):
