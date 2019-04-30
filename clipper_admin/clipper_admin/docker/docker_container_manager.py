@@ -628,10 +628,10 @@ class DockerContainerManager(ContainerManager):
                         key=CLIPPER_DOCKER_LABEL, val=self.cluster_name)
                 })
             for c in containers:
-            if graceful:
-                c.stop()
-            else:
-                c.kill()
+                if graceful:
+                    c.stop()
+                else:
+                    c.kill()
 
     def get_admin_addr(self):
         return "{host}:{port}".format(
