@@ -31,7 +31,7 @@ if __name__ == '__main__':
     dag_description = f.read()
     f.close()
     
-    clipper_conn.connect_host("202.45.128,174", "2375")
+    clipper_conn.connect_host("202.45.128.174", "2375")
     clipper_conn.connect_host("202.45.128.175", "2375")
 
     clipper_conn.deploy_DAG("translation", "test", dag_description)

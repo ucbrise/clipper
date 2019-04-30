@@ -620,13 +620,14 @@ class DockerContainerManager(ContainerManager):
             c.stop()
 
     def stop_all(self, graceful=True):
-        containers = self.docker_client.containers.list(
-            filters={
-                "label":
-                "{key}={val}".format(
-                    key=CLIPPER_DOCKER_LABEL, val=self.cluster_name)
-            })
-        for c in containers:
+        for host, client in self.host_list.items:
+            containers = client.containers.list(
+                filters={
+                    "label":
+                    "{key}={val}".format(
+                        key=CLIPPER_DOCKER_LABEL, val=self.cluster_name)
+                })
+            for c in containers:
             if graceful:
                 c.stop()
             else:

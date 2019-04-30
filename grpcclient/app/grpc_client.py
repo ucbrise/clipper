@@ -2,6 +2,8 @@
 #!/usr/bin/env python
 import argparse
 import grpc
+from google.protobuf.timestamp_pb2 import Timestamp
+
 import model_pb2_grpc
 import model_pb2
 import proxy_pb2_grpc
@@ -48,6 +50,15 @@ def setDAG(proxy_ip, proxy_port, expanded_dag):
 
     print(response.status)
 
+def stockPredict(ip, port):
+    timestamp = Timestamp()
+    timestamp.GetCurrentTime()
+    channel = grpc.insecure_channel('%s:%s'%(ip, port))
+    stub = prediction_pb2_grpc.ProxyServerStub(channel)
+    stock_name = "AAPL"
+    response = stub.downstream(prediction_pb2.request(input_ = model_pb2.input(inputType = 'string', inputStream = stock_name),src_uri = "localhost", seq = 1, req_id =1, timestamp = timestamp))
+    print('Response\n{res}'.format(res=response.status))
+
 
 def main():
 
@@ -56,9 +67,16 @@ def main():
     parser.add_argument('--setmodel', nargs=6, type=str)
     parser.add_argument('--setproxy', nargs=4, type=str)
     parser.add_argument('--setdag', nargs="+", type=str)
+    parser.add_argument('--stock', nargs=2, type=str)
     
                        
     args = parser.parse_args()
+
+    if args.stock is not None:
+
+        print(args.stock)
+
+        stockPredict(args.stock[0], args.stock[1])
 
     if args.setmodel is not None:
 
