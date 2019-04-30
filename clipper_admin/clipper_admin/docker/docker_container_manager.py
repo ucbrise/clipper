@@ -620,7 +620,7 @@ class DockerContainerManager(ContainerManager):
             c.stop()
 
     def stop_all(self, graceful=True):
-        for host, client in self.host_list.items:
+        for host, client in self.host_list.items():
             containers = client.containers.list(
                 filters={
                     "label":
