@@ -68,10 +68,42 @@ def find_unbound_port():
                 "randomly generated port %d is bound. Trying again." % port)
 
 
+def get_new_connection_instance(cluster_name, use_centralized_log):
+    return ClipperConnection(DockerContainerManager(cluster_name=cluster_name, use_centralized_log=use_centralized_log))
+
+def get_containers(clipper_conn):
+    docker_client = get_docker_client()
+    return docker_client.containers.list(
+        filters={
+            'label': [
+                '{key}={val}'.format(
+                    key=CLIPPER_DOCKER_LABEL, val=clipper_conn.cm.cluster_name)
+            ]
+        })
+
+
+def get_one_container(container_name, clipper_conn):
+    containers = get_containers(clipper_conn)
+    container_to_return = None
+    for c in containers:
+        if container_name in c.name:
+            container_to_return = c
+
+    if container_to_return is None:
+        raise AssertionError("{} has not been running".format(container_to_return))
+
+    return container_to_return
+
+
+def check_container_logs(logs, name):
+    return '"container_name":"/{}',format(name) in logs
+
+
 def create_docker_connection(cleanup=False,
                              start_clipper=False,
                              cleanup_name='default-cluster',
-                             new_name='default-cluster'):
+                             new_name='default-cluster',
+                             use_centralized_log=False):
     logger.info("Creating DockerContainerManager")
     cl = None
     assert cleanup or start_clipper, "You must set at least one of {cleanup, start_clipper} to be true."
@@ -83,6 +115,7 @@ def create_docker_connection(cleanup=False,
             clipper_query_port=find_unbound_port(),
             clipper_management_port=find_unbound_port(),
             clipper_rpc_port=find_unbound_port(),
+            fluentd_port=find_unbound_port(),
             redis_port=find_unbound_port(),
         )
         cl = ClipperConnection(cm)
@@ -99,7 +132,10 @@ def create_docker_connection(cleanup=False,
                 clipper_query_port=find_unbound_port(),
                 clipper_management_port=find_unbound_port(),
                 clipper_rpc_port=find_unbound_port(),
-                redis_port=find_unbound_port())
+                fluentd_port=find_unbound_port(),
+                redis_port=find_unbound_port(),
+                use_centralized_log=use_centralized_log
+            )
             cl = ClipperConnection(cm)
             try:
                 logger.info("Starting Clipper")
@@ -181,17 +217,26 @@ def log_docker(clipper_conn):
         return
 
     """Retrieve status and log for last ten containers"""
-    container_runing = clipper_conn.cm.docker_client.containers.list(limit=10)
-    logger.info('----------------------')
+    container_runing = clipper_conn.cm.docker_client.containers.list(limit=10, all=True)
+    logger.info('================================================================')
     logger.info('Last ten containers status')
+    logger.info('================================================================')
     for cont in container_runing:
         logger.info('Name {}, Image {}, Status {}, Label {}'.format(
             cont.name, cont.image, cont.status, cont.labels))
 
-    logger.info('----------------------')
+    logger.info('=================================================================')
     logger.info('Printing out logs')
+    logger.info('================================================================')
 
     for cont in container_runing:
         logger.info('Name {}, Image {}, Status {}, Label {}'.format(
             cont.name, cont.image, cont.status, cont.labels))
-        logger.info(cont.logs())
+        try:
+            logger.info(cont.logs())
+        except docker.errors.APIError as e:
+            logger.warning("Error while parsing logs. It is most likely because you use log centralization.")
+
+    logger.info('=================================================================')
+    logger.info('log_docker is completed')
+    logger.info('================================================================')
