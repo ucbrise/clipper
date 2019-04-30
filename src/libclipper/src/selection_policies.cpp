@@ -78,8 +78,11 @@ std::vector<PredictTask> DefaultOutputSelectionPolicy::select_predict_tasks(
 //                          "{}. Picking the first one.",
 //                          num_candidate_models, query.label_);
 //    }
-    tasks.emplace_back(query.input_, query.candidate_models_.front(), 1.0,
-                       query_id, query.latency_budget_micros_);
+//    tasks.emplace_back(query.input_, query.candidate_models_.front(), 1.0,
+//                       query_id, query.latency_budget_micros_);
+    for(auto candidate_model : query.candidate_models_){
+      tasks.emplace_back(query.input_, candidate_model, 1.0, query_id, query.latency_budget_micros_);
+    }
   }
   return tasks;
 }
