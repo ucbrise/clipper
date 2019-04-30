@@ -52,7 +52,6 @@ const std::string ADMIN_PATH = "^/admin";
 const std::string ADD_APPLICATION = ADMIN_PATH + "/add_app$";
 const std::string DELETE_APPLICATION = ADMIN_PATH + "/delete_app$";
 const std::string ADD_MODEL_LINKS = ADMIN_PATH + "/add_model_links$";
-const std::string ADD_MULTIPLE_MODEL_LINKS = ADMIN_PATH + "/add_multiple_model_links$";
 const std::string ADD_MODEL = ADMIN_PATH + "/add_model$";
 const std::string SET_MODEL_VERSION = ADMIN_PATH + "/set_model_version$";
 
@@ -80,13 +79,6 @@ const std::string ADD_APPLICATION_JSON_SCHEMA = R"(
 )";
 
 const std::string ADD_MODEL_LINKS_JSON_SCHEMA = R"(
-  {
-    "app_name" := string,
-    "model_names" := [string]
-  }
-)";
-
-const std::string ADD_MULTIPLE_MODEL_LINKS_JSON_SCHEMA = R"(
   {
     "app_name" := string,
     "model_names" := [string]
@@ -258,27 +250,6 @@ class RequestHandler {
             respond_http(e.what(), "400 Bad Request", response);
           }
         });
-    server_.add_endpoint(
-            ADD_MULTIPLE_MODEL_LINKS, "POST",
-            [this](std::shared_ptr<HttpServer::Response> response,
-                   std::shared_ptr<HttpServer::Request> request) {
-              try {
-                clipper::log_info(LOGGING_TAG_MANAGEMENT_FRONTEND,
-                                  "Add application links POST request");
-                std::string result = add_multiple_model_links(request->content.string());
-                respond_http(result, "200 OK", response);
-              } catch (const json_parse_error& e) {
-                std::string err_msg =
-                        json_error_msg(e.what(), ADD_MULTIPLE_MODEL_LINKS_JSON_SCHEMA);
-                respond_http(err_msg, "401 Bad Request", response);
-              } catch (const json_semantic_error& e) {
-                std::string err_msg =
-                        json_error_msg(e.what(), ADD_MULTIPLE_MODEL_LINKS_JSON_SCHEMA);
-                respond_http(err_msg, "402 Bad Request", response);
-              } catch (const clipper::ManagementOperationError& e) {
-                respond_http(e.what(), "403 Bad Request", response);
-              }
-            });
     server_.add_endpoint(
         DELETE_MODEL_LINKS, "POST",
         [this](std::shared_ptr<HttpServer::Response> response,
@@ -616,31 +587,25 @@ class RequestHandler {
       }
     }
 
-    // Confirm that the user supplied only one model_name
-    if (model_names.size() != 1) {
-      std::stringstream ss;
-      if (model_names.size() == 0) {
-        ss << "Please provide the name of the model that you want to link to "
-              "the application "
-           << "'" << app_name << "'";
-      } else {
-        ss << "Applications must be linked with at most one model. ";
-        ss << "Attempted to add links to " << model_names.size() << " models.";
-      }
+
+    std::stringstream ss;
+    if (model_names.size() == 0) {
+      ss << "Please provide the name of the model that you want to link to "
+            "the application "
+         << "'" << app_name << "'";
       std::string error_msg = ss.str();
       clipper::log_error(LOGGING_TAG_MANAGEMENT_FRONTEND, error_msg);
       throw clipper::ManagementOperationError(error_msg);
     }
 
-    // Make sure that there will only be one link
+
+
     auto existing_linked_models =
         clipper::redis::get_linked_models(redis_connection_, app_name);
 
-    std::string new_model_name = model_names[0];
+    std::string new_model_name = model_names[model_names.size() - 1];
 
     if (existing_linked_models.size() > 0) {
-      // We asserted earlier that `model_names` has size 1
-
       if (std::find(existing_linked_models.begin(),
                     existing_linked_models.end(),
                     new_model_name) != existing_linked_models.end()) {
@@ -650,15 +615,6 @@ class RequestHandler {
            << " is already linked to "
            << "'" << app_name << "'";
         throw clipper::ManagementOperationError(ss.str());
-      } else {
-        // We guarantee that there is only one existing model
-        std::string existing_model_name = existing_linked_models[0];
-        std::stringstream ss;
-        ss << "A model with name " << existing_model_name
-           << " is already linked to "
-           << "'" << app_name << "'"
-           << ".";
-        throw clipper::ManagementOperationError(ss.str());
       }
     }
 
@@ -667,118 +623,6 @@ class RequestHandler {
       std::stringstream ss;
       ss << "Successfully linked model with name "
          << "'" << new_model_name << "'"
-         << " to application "
-         << "'" << app_name << "'";
-      return ss.str();
-    } else {
-      std::stringstream ss;
-      ss << "Error linking models to "
-         << "'" << app_name << "'"
-         << " in Redis";
-      throw clipper::ManagementOperationError(ss.str());
-    }
-  }
-
-  /**
-   * Processes a request to add links between a specified application
-   * and a set of models
-   *
-   * JSON format:
-   * {
-   *  "app_name" := string,
-   *  "model_names" := [string]
-   * }
-   *
-   * \return A string describing the operation's success
-   * \throws ManagementOperationError if the operation is not successful
-   */
-  std::string add_multiple_model_links(const std::string& json) {
-    rapidjson::Document d;
-    parse_json(json, d);
-
-    std::string app_name = get_string(d, "app_name");
-    std::vector<string> model_names = get_string_array(d, "model_names");
-
-    // Confirm that the app exists
-    auto app_info =
-            clipper::redis::get_application(redis_connection_, app_name);
-    if (app_info.size() == 0) {
-      std::stringstream ss;
-      ss << "No app with name "
-         << "'" << app_name << "'"
-         << " exists.";
-      throw clipper::ManagementOperationError(ss.str());
-    }
-
-    // Confirm that the models exists and have compatible input_types
-    auto app_input_type = app_info["input_type"];
-    boost::optional<std::string> model_version;
-    std::unordered_map<std::string, std::string> model_info;
-    std::string model_input_type;
-    for (auto const& model_name : model_names) {
-      model_version = clipper::redis::get_current_model_version(
-              redis_connection_, model_name);
-      if (!model_version) {
-        std::stringstream ss;
-        ss << "No model with name "
-           << "'" << model_name << "'"
-           << " exists.";
-        throw clipper::ManagementOperationError(ss.str());
-      } else {
-        model_info = clipper::redis::get_model(
-                redis_connection_, VersionedModelId(model_name, *model_version));
-        model_input_type = model_info["input_type"];
-        if (model_input_type != app_input_type) {
-          std::stringstream ss;
-          ss << "Model with name "
-             << "'" << model_name << "'"
-             << " has incompatible input_type "
-             << "'" << model_input_type << "'"
-             << ". Requested app to link to has input_type "
-             << "'" << app_input_type << "'"
-             << ".";
-          throw clipper::ManagementOperationError(ss.str());
-        }
-      }
-    }
-
-    // Confirm that the user supplied only one model_name
-    if (model_names.size() != 1) {
-      std::stringstream ss;
-      if (model_names.size() == 0) {
-        ss << "Please provide the name of the model that you want to link to "
-              "the application "
-           << "'" << app_name << "'";
-      }
-      std::string error_msg = ss.str();
-      clipper::log_error(LOGGING_TAG_MANAGEMENT_FRONTEND, error_msg);
-//      throw clipper::ManagementOperationError(error_msg);
-    }
-
-    // Make sure that there will only be one link --> there can exists multiple links
-    auto existing_linked_models =
-            clipper::redis::get_linked_models(redis_connection_, app_name);
-
-    if (existing_linked_models.size() > 0) {
-      // We asserted earlier that `model_names` has size 1
-      for (string new_model_name : model_names) {
-        if (std::find(existing_linked_models.begin(),
-                      existing_linked_models.end(),
-                      new_model_name) != existing_linked_models.end()) {
-          std::stringstream ss;
-          ss << "The model with name "
-             << "'" << new_model_name << "'"
-             << " is already linked to "
-             << "'" << app_name << "'";
-          throw clipper::ManagementOperationError(ss.str());
-        }
-      }
-    }
-
-    if (clipper::redis::add_model_links(redis_connection_, app_name,
-                                        model_names)) {
-      std::stringstream ss;
-      ss << "Successfully linked models"
          << " to application "
          << "'" << app_name << "'";
       return ss.str();

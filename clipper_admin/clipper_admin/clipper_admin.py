@@ -261,7 +261,7 @@ class ClipperConnection(object):
         ----------
         app_name : str
             The name of the application
-        model_name : str
+        model_name : str list
             The name of the model to link to the application
 
         Raises
@@ -282,7 +282,7 @@ class ClipperConnection(object):
             host=self.cm.get_admin_addr())
         req_json = json.dumps({
             "app_name": app_name,
-            "model_names": [model_name]
+            "model_names": model_name
         })
         headers = {'Content-type': 'application/json'}
         r = requests.post(url, headers=headers, data=req_json)
@@ -296,50 +296,6 @@ class ClipperConnection(object):
             self.logger.info(
                 "Model {model} is now linked to application {app}".format(
                     model=model_name, app=app_name))
-
-
-    def link_multi_model_to_app(self, app_name, model_names):
-        """Routes requests from the specified app to be evaluted by the specified model.
-
-        Parameters
-        ----------
-        app_name : str
-            The name of the application
-        model_names : str list
-            The names of the models to link to the application
-
-        Raises
-        ------
-        :py:exc:`clipper.UnconnectedException`
-        :py:exc:`clipper.ClipperException`
-
-        Note
-        -----
-        Both the specified model and application must be registered with Clipper, and they
-        must have the same input type. If the application has previously been linked to a different
-        model, this command will fail.
-        """
-        if not self.connected:
-            raise UnconnectedException()
-
-        url = "http://{host}/admin/add_multiple_model_links".format(
-            host=self.cm.get_admin_addr())
-        req_json = json.dumps({
-            "app_name": app_name,
-            "model_names": [model_names]
-        })
-        headers = {'Content-type': 'application/json'}
-        r = requests.post(url, headers=headers, data=req_json)
-        self.logger.debug(r.text)
-        if r.status_code != requests.codes.ok:
-            msg = "Received error status code: {code} and message: {msg}".format(
-                code=r.status_code, msg=r.text)
-            self.logger.error(msg)
-            raise ClipperException(msg)
-        else:
-            self.logger.info(
-                "Model {model} is now linked to application {app}".format(
-                    model=model_names, app=app_name))
 
 
     def unlink_model_from_app(self, app_name, model_name):
