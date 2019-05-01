@@ -29,5 +29,18 @@ docker run -it --network=host -v /Users:/Users -v /var/run/docker.sock:/var/run/
 docker run -it --network=host -v /home/hkucs/clipper:/clipper -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp zsxhku/clipper_test:version1
 
 #kill process by name
-kill $(ps aux | grep 'dockerd' | awk '{print $2}')
+sudo kill $(ps aux | grep 'dockerd' | awk '{print $2}')
+
+#Run grpcclient 
+
+docker run -it --network clipper_network zsxhku/grpcclient --stock 10.0.0.3 22223
+
+
+##Show grpcclient help
+
+docker run -it --network clipper_network zsxhku/grpcclient --help
+ 
+
+
+
          
