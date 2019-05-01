@@ -39,8 +39,9 @@ docker run -it --network clipper_network zsxhku/grpcclient --stock 10.0.0.3 2222
 ##Show grpcclient help
 
 docker run -it --network clipper_network zsxhku/grpcclient --help
- 
 
 
+#zsh close git status 
 
-         
+git config --add oh-my-zsh.hide-status 1
+git config --add oh-my-zsh.hide-dirty 1
