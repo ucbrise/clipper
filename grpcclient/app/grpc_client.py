@@ -17,13 +17,13 @@ def setModel(proxy_ip, proxy_port, container_name, container_count, container_ip
         proxy_port="22223"
     ))
     stub_proxy = prediction_pb2_grpc.ProxyServerStub(channel_proxy)
-    response1 = stub_proxy.SetModel(prediction_pb2.modelinfo(
+    response = stub_proxy.SetModel(prediction_pb2.modelinfo(
         modelName=container_name,
         modelId=int(container_count),
         modelPort=22222,
         modelIp=container_ip
     ))
-    print(response1.status)
+    print('SetModel call OK with response{res}'.format(res=response.status))
 
 def setProxy(container_ip, container_port, proxy_name, proxy_port):
     #tells the model container its proxy's info
@@ -33,12 +33,13 @@ def setProxy(container_ip, container_port, proxy_name, proxy_port):
     ))
     stub_container = model_pb2_grpc.PredictServiceStub(
         channel_container)
-    response2 = stub_container.SetProxy(model_pb2.proxyinfo(
+    response = stub_container.SetProxy(model_pb2.proxyinfo(
         proxyName=proxy_name,
         proxyPort="22223"
     ))
 
-    print(response2.status)
+    print('SetProxy call OK with response{res}'.format(res=response.status))
+
 
 def setDAG(proxy_ip, proxy_port, expanded_dag):
     channel_proxy = grpc.insecure_channel('{proxy_ip}:{proxy_port}'.format(
@@ -48,7 +49,7 @@ def setDAG(proxy_ip, proxy_port, expanded_dag):
     stub_proxy = prediction_pb2_grpc.ProxyServerStub(channel_proxy)
     response = stub_proxy.SetDAG(prediction_pb2.dag(dag_=expanded_dag))
 
-    print(response.status)
+    print('SetDAG call OK with response{res}'.format(res=response.status))
 
 def stockPredict(ip, port):
     timestamp = Timestamp()
@@ -73,32 +74,23 @@ def main():
     args = parser.parse_args()
 
     if args.stock is not None:
-
-        print(args.stock)
-
+        #print(args.stock)
         stockPredict(args.stock[0], args.stock[1])
 
     if args.setmodel is not None:
-
-        print(args.setmodel)
-
+        #print(args.setmodel)
         setModel(args.setmodel[0],args.setmodel[1],args.setmodel[2],args.setmodel[3], args.setmodel[4], args.setmodel[5])
 
 
     if args.setproxy is not None:
-
-        print(args.setproxy)
-
+        #print(args.setproxy)
         setProxy(args.setproxy[0],args.setproxy[1],args.setproxy[2],args.setproxy[3])
 
     if args.setdag is not None:
-        print(args.setdag) 
-
+        #print(args.setdag) 
         expanded_dag = ""
-
         for line in args.setdag[2:]:
             expanded_dag = expanded_dag + line + "\n"
-
 
         setDAG(args.setdag[0],args.setdag[1],expanded_dag)
 

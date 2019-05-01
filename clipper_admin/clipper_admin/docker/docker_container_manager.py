@@ -434,25 +434,7 @@ class DockerContainerManager(ContainerManager):
 
         #<Container: d15d870463>
         container_id = str(container)[12:-1]
-        #Start Proxy
 
-        #proxy_port = find_unbound_port(30000)
-        
-
-        #model_proxy_name = self.set_proxy(self.proxy_image, model_container_label, proxy_port)
-
-        #self.logger.info(
-        #    "Proxy for model:{model_container_label} is deployed with {proxy_name} ".format(
-        #        model_container_label=model_container_label,
-        #        proxy_name = model_proxy_name
-        #    )
-        #)
-        # Metric Section
-        #add_to_metric_config(model_container_name, self.prom_config_path,
-        #                     self.prometheus_port,
-        #                     CLIPPER_INTERNAL_METRIC_PORT)
-
-        # Return model_container_name so we can check if it's up and running later
         self.container_count = self.container_count + 1
 
         return model_container_name, container_id, scheduled_host
@@ -496,26 +478,10 @@ class DockerContainerManager(ContainerManager):
             labels=labels,
             **self.extra_container_kwargs)
 
-        #Start Proxy
 
-        #proxy_port = find_unbound_port(30000)
-        
-
-        #model_proxy_name = self.set_proxy(self.proxy_image, model_container_label, proxy_port)
-
-        #self.logger.info(
-        #    "Proxy for model:{model_container_label} is deployed with {proxy_name} ".format(
-        #        model_container_label=model_container_label,
-        #        proxy_name = model_proxy_name
-        #    )
-        #)
-        # Metric Section
-        #add_to_metric_config(model_container_name, self.prom_config_path,
-        #                     self.prometheus_port,
-        #                     CLIPPER_INTERNAL_METRIC_PORT)
-
-        # Return model_container_name so we can check if it's up and running later
         return model_container_name
+
+
 
     def set_num_replicas(self, name, version, input_type, image, num_replicas):
         current_replicas = self._get_replicas(name, version)
@@ -647,13 +613,39 @@ class DockerContainerManager(ContainerManager):
 
     def grpc_client(self, image, arg_list):
 
-        logs = self.docker_client.containers.run(
+        c = self.docker_client.containers.run(
             image,
             arg_list,
+            environment=["PYTHONUNBUFFERED=0"],
             tty=True,
             **self.extra_container_kwargs)
 
-        self.logger.info("GRPC client with logs:\n %s"%(logs))
+        #print(c_id.id)
+        self.gen_container_log(c)
+
+        
+    def gen_container_log(self, c):
+        log = ""
+        for x in c.logs(stream=True):
+            log = log+x
+        self.logger.info("GRPC client with logs: %s"%(log.rstrip()))
+
+    def check_container_status(self, host_ip, container_id, timeout, threshold):
+
+        client = self.host_list.get(host_ip, self.docker_client)
+
+        c = client.containers.get(container_id)
+
+        count = 0;
+
+        while c.status != "running":
+            count = count+1
+            if (count < threshold):
+                self.logger.info("Container is not runnint, retrying...")
+                time.sleep(timeout)
+            else:
+                return "timeout"
+        return "running"
 
         
 

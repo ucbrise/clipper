@@ -829,9 +829,10 @@ class ClipperConnection(object):
             proxy_ip = self.cm.get_container_ip(host, proxy_id)
 
 
-            time.sleep(3)
+            self.cm.check_container_status(host, container_id, 0.3, 20)
+            self.cm.check_container_status(host, proxy_id, 0.3, 20)
 
-            print("proxy_ip:%s"%(proxy_ip))
+            self.logger.info("proxy_ip:%s"%(proxy_ip))
 
 
             self.cm.grpc_client("zsxhku/grpcclient", "--setmodel %s %s %s %s %s %s"%(proxy_ip, "22223", container_name, count, container_ip, "22222" ))
