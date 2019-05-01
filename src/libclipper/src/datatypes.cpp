@@ -235,7 +235,7 @@ Query::Query(std::string label, long user_id,
       create_time_(std::chrono::high_resolution_clock::now()) {}
 
 Response::Response(Query query, QueryId query_id, const long duration_micros,
-                   Output output, const bool output_is_default,
+                   vector<Output> output, const bool output_is_default,
                    const boost::optional<std::string> default_explanation)
     : query_(std::move(query)),
       query_id_(query_id),

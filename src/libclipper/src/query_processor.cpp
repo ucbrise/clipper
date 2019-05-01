@@ -135,7 +135,7 @@ folly::Future<Response> QueryProcessor::predict(Query query) {
           "latency SLO";
     }
 
-    std::pair<Output, bool> final_output = current_policy->combine_predictions(
+    std::pair<vector<Output>, bool> final_output = current_policy->combine_predictions(
         selection_state, query, *outputs_ptr);
 
     std::chrono::time_point<std::chrono::high_resolution_clock> end =
