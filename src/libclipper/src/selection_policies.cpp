@@ -87,7 +87,7 @@ std::vector<PredictTask> DefaultOutputSelectionPolicy::select_predict_tasks(
   return tasks;
 }
 
-const std::pair<vector<Output>, bool> DefaultOutputSelectionPolicy::combine_predictions(
+const std::pair<std::vector<Output>, bool> DefaultOutputSelectionPolicy::combine_predictions(
     const std::shared_ptr<SelectionState>& state, Query /*query*/,
     std::vector<Output> predictions) const {
   if (predictions.size() == 1) {

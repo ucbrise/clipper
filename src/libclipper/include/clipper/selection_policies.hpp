@@ -62,7 +62,7 @@ class SelectionPolicy {
   ///
   /// @returns A pair containing the output and a boolean flag
   /// indicating whether or not it is the default output
-  virtual const std::pair<Output, bool> combine_predictions(
+  virtual const std::pair<std::vector<Output>, bool> combine_predictions(
       const std::shared_ptr<SelectionState>& state, Query query,
       std::vector<Output> predictions) const = 0;
 
