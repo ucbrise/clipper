@@ -91,12 +91,14 @@ const std::pair<std::vector<Output>, bool> DefaultOutputSelectionPolicy::combine
     const std::shared_ptr<SelectionState>& state, Query /*query*/,
     std::vector<Output> predictions) const {
   if (predictions.size() == 1) {
-    return std::make_pair(std::move(predictions.front()), false);
+    return std::make_pair(std::move(predictions), false);
   } else if (predictions.empty()) {
     Output default_output =
         std::dynamic_pointer_cast<DefaultOutputSelectionState>(state)
             ->default_output_;
-    return std::make_pair(std::move(default_output), true);
+    std::vector<Output> default_output_vec;
+    default_output_vec.push_back(default_output);
+    return std::make_pair(std::move(default_output_vec), true);
   } else {
 //    log_error_formatted(LOGGING_TAG_SELECTION_POLICY,
 //                        "DefaultOutputSelectionPolicy only expecting 1 "
