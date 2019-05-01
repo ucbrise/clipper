@@ -297,7 +297,7 @@ class Response {
   Query query_;
   QueryId query_id_;
   long duration_micros_;
-  std:vector<Output> output_;
+  std::vector<Output> output_;
   bool output_is_default_;
   boost::optional<std::string> default_explanation_;
 };
