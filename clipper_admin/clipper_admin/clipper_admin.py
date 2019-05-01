@@ -829,8 +829,8 @@ class ClipperConnection(object):
             proxy_ip = self.cm.get_container_ip(host, proxy_id)
 
 
-            self.cm.check_container_status(host, container_id, 0.3, 20)
-            self.cm.check_container_status(host, proxy_id, 0.3, 20)
+            #self.cm.check_container_status(host, container_id, 0.3, 20)
+            #self.cm.check_container_status(host, proxy_id, 0.3, 20)
 
             time.sleep(5)
 
