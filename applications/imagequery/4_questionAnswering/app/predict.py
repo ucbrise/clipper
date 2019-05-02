@@ -1,5 +1,6 @@
 import string
 import numpy as np
+from timeit import default_timer as timer
 
 """
 This is the preliminary version of Questiona Answering System. 
@@ -10,6 +11,8 @@ logic already provides good enough result.
 """
 
 def predict(question, mapping):
+    start = timer()
+
     print(mapping)
     question = question.lower()
     words = question.split(' ')
@@ -26,7 +29,11 @@ def predict(question, mapping):
     items = mapping.split('-')
     answer = items[index]
     print(counter)
-    return(answer)
+
+    end = timer()
+    time_elapsed = end - start
+    return answer, time_elapsed
+
 
 
 if __name__ == "__main__":

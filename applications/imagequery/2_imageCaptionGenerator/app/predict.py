@@ -2,6 +2,7 @@
 import subprocess
 import os
 import json
+from timeit import default_timer as timer
 
 """ 
 This app is hard to configure as it requires too much environment setting. So Try not to modify it. 
@@ -21,14 +22,14 @@ the client.
 
 """
 
-def generateCaption(resized_image_name):
+def generateCaption(image_name):
   # run the shellscript runWithArg.sh
   # runWithArg.sh is the same as run.sh, except that it accepts argument as the name of the file
   workspace_path = "/container/workspace/"
   checkpoint_path = workspace_path + "im2txt/model/newmodel.ckpt-2000000"
   wordscount_path = workspace_path + "im2txt/data/word_counts.txt"
-  resized_image_path = workspace_path + "im2txt/data/images/" + resized_image_name
-  command = "bash ./container/workspace/im2txt/runWithArg.sh " + checkpoint_path + " " + wordscount_path + " " + resized_image_path + " "
+  image_path = workspace_path + "im2txt/data/images/" + image_name
+  command = "bash ./container/workspace/im2txt/runWithArg.sh " + checkpoint_path + " " + wordscount_path + " " + image_path + " "
   print("before!")
   os.system(command)
   print("after!")
@@ -51,4 +52,8 @@ def generateCaption(resized_image_name):
   return captions
 
 def predict(resized_image_path):
-  return generateCaption(resized_image_path)
+  start = timer()
+  generated_caption = generateCaption(resized_image_path)
+  end = timer()
+  time_elapsed = end - start
+  return generated_caption, time_elapsed
