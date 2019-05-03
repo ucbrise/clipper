@@ -203,12 +203,11 @@ class KubernetesContainerManager(ContainerManager):
 
     @staticmethod
     def _determine_service_types(st):
-        if not isinstance(st, dict):
-            raise ClipperException(
-                "service_types must be 'dict' type: {}".format(st))
-
         res = DEFAULT_CLIPPER_SERVICE_TYPES
         if st is not None:
+            if not isinstance(st, dict):
+                raise ClipperException(
+                    "service_types must be 'dict' type: {}".format(st))
             if set(st.keys()) != set(DEFAULT_CLIPPER_SERVICE_TYPES.keys()):
                 raise ClipperException(
                     "service_types has unknown keys: {}".format(st.keys()))
