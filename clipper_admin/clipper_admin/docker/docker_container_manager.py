@@ -5,22 +5,24 @@ import socket
 import docker
 import logging
 import os
-import sys
-import random
 import time
-import json
 import tempfile
 from ..container_manager import (
     create_model_container_label, parse_model_container_label,
     ContainerManager, CLIPPER_DOCKER_LABEL, CLIPPER_MODEL_CONTAINER_LABEL,
     CLIPPER_QUERY_FRONTEND_CONTAINER_LABEL,
     CLIPPER_MGMT_FRONTEND_CONTAINER_LABEL, CLIPPER_INTERNAL_RPC_PORT,
-    CLIPPER_INTERNAL_QUERY_PORT, CLIPPER_INTERNAL_MANAGEMENT_PORT,
+    CLIPPER_INTERNAL_MANAGEMENT_PORT,
     CLIPPER_INTERNAL_METRIC_PORT, CLIPPER_INTERNAL_REDIS_PORT,
-    CLIPPER_DOCKER_PORT_LABELS, CLIPPER_METRIC_CONFIG_LABEL, ClusterAdapter)
-from ..exceptions import ClipperException
+    CLIPPER_DOCKER_PORT_LABELS, CLIPPER_METRIC_CONFIG_LABEL, ClusterAdapter,
+    CLIPPER_FLUENTD_CONFIG_LABEL, CLIPPER_INTERNAL_FLUENTD_PORT)
 from requests.exceptions import ConnectionError
 from .docker_metric_utils import *
+from .logging.docker_logging_utils import (
+    get_logs_from_containers,
+    get_default_log_config
+)
+from clipper_admin.docker.logging.fluentd import Fluentd
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +31,8 @@ class DockerContainerManager(ContainerManager):
     def __init__(self,
                  cluster_name="default-cluster",
                  docker_ip_address="localhost",
+                 use_centralized_log=False,
+                 fluentd_port=CLIPPER_INTERNAL_FLUENTD_PORT,
                  clipper_query_port=1337,
                  clipper_management_port=1338,
                  clipper_rpc_port=7000,
@@ -47,6 +51,10 @@ class DockerContainerManager(ContainerManager):
             The public hostname or IP address at which the Clipper Docker
             containers can be accessed via their exposed ports. This should almost always
             be "localhost". Only change if you know what you're doing!
+        use_centralized_log: bool, optional
+            If it is True, Clipper sets up Fluentd and DB (Currently SQlite) to centralize logs
+        fluentd_port : int, optional
+            The port on which the fluentd logging driver should listen to centralize logs.
         clipper_query_port : int, optional
             The port on which the query frontend should listen for incoming prediction requests.
         clipper_management_port : int, optional
@@ -80,6 +88,7 @@ class DockerContainerManager(ContainerManager):
             self.external_redis = True
         self.redis_port = redis_port
         self.prometheus_port = prometheus_port
+        self.centralize_log = use_centralized_log
         if docker_network is "host":
             raise ClipperException(
                 "DockerContainerManager does not support running Clipper on the "
@@ -112,6 +121,20 @@ class DockerContainerManager(ContainerManager):
         self.logger = ClusterAdapter(logger, {
             'cluster_name': self.cluster_identifier
         })
+
+        # Setting Docker cluster logging.
+        self.logging_system = Fluentd
+        self.log_config = get_default_log_config()
+        self.logging_system_instance = None
+
+        if self.centralize_log:
+            self.logging_system_instance = self.logging_system(
+                self.logger,
+                self.cluster_name,
+                self.docker_client,
+                port=find_unbound_port(fluentd_port)
+            )
+            self.log_config = self.logging_system_instance.get_log_config()
 
     def start_clipper(self,
                       query_frontend_image,
@@ -152,6 +175,10 @@ class DockerContainerManager(ContainerManager):
                 "Please use ClipperConnection.connect() to connect to it.".
                 format(self.cluster_name))
 
+        if self.centralize_log:
+            self.logging_system_instance.start(self.common_labels, self.extra_container_kwargs)
+
+        # Redis for cluster configuration
         if not self.external_redis:
             self.logger.info("Starting managed Redis instance in Docker")
             self.redis_port = find_unbound_port(self.redis_port)
@@ -161,6 +188,7 @@ class DockerContainerManager(ContainerManager):
             redis_container = self.docker_client.containers.run(
                 'redis:alpine',
                 "redis-server --port %s" % CLIPPER_INTERNAL_REDIS_PORT,
+                log_config=self.log_config,
                 name="redis-{}".format(random.randint(
                     0, 100000)),  # generate a random name
                 ports={
@@ -170,6 +198,7 @@ class DockerContainerManager(ContainerManager):
                 **self.extra_container_kwargs)
             self.redis_ip = redis_container.name
 
+        # frontend management
         mgmt_cmd = "--redis_ip={redis_ip} --redis_port={redis_port}".format(
             redis_ip=self.redis_ip, redis_port=CLIPPER_INTERNAL_REDIS_PORT)
         self.clipper_management_port = find_unbound_port(
@@ -181,6 +210,7 @@ class DockerContainerManager(ContainerManager):
         self.docker_client.containers.run(
             mgmt_frontend_image,
             mgmt_cmd,
+            log_config=self.log_config,
             name="mgmt_frontend-{}".format(random.randint(
                 0, 100000)),  # generate a random name
             ports={
@@ -190,6 +220,7 @@ class DockerContainerManager(ContainerManager):
             labels=mgmt_labels,
             **self.extra_container_kwargs)
 
+        # query frontend
         query_cmd = ("--redis_ip={redis_ip} --redis_port={redis_port} "
                      "--prediction_cache_size={cache_size} "
                      "--thread_pool_size={thread_pool_size} "
@@ -214,6 +245,7 @@ class DockerContainerManager(ContainerManager):
         self.docker_client.containers.run(
             query_frontend_image,
             query_cmd,
+            log_config=self.log_config,
             name=query_name,
             ports={
                 '%s/tcp' % CLIPPER_INTERNAL_QUERY_PORT:
@@ -229,7 +261,7 @@ class DockerContainerManager(ContainerManager):
         run_query_frontend_metric_image(
             query_frontend_metric_name, self.docker_client, query_name,
             frontend_exporter_image, self.common_labels,
-            self.extra_container_kwargs)
+            self.log_config, self.extra_container_kwargs)
 
         self.prom_config_path = tempfile.NamedTemporaryFile(
             'w', suffix='.yml', delete=False).name
@@ -247,7 +279,7 @@ class DockerContainerManager(ContainerManager):
         metric_labels[CLIPPER_METRIC_CONFIG_LABEL] = self.prom_config_path
         run_metric_image(self.docker_client, metric_labels,
                          self.prometheus_port, self.prom_config_path,
-                         self.extra_container_kwargs)
+                         self.log_config, self.extra_container_kwargs)
 
         self.connect()
 
@@ -277,6 +309,8 @@ class DockerContainerManager(ContainerManager):
             'query_rpc']]
         self.prometheus_port = all_labels[CLIPPER_DOCKER_PORT_LABELS['metric']]
         self.prom_config_path = all_labels[CLIPPER_METRIC_CONFIG_LABEL]
+        if self._is_valid_logging_state_to_connect(all_labels):
+            self.connect_to_logging_system(all_labels)
 
     def deploy_model(self, name, version, input_type, image, num_replicas=1):
         # Parameters
@@ -335,11 +369,13 @@ class DockerContainerManager(ContainerManager):
 
         model_container_name = model_container_label + '-{}'.format(
             random.randint(0, 100000))
+
         self.docker_client.containers.run(
             image,
             name=model_container_name,
             environment=env_vars,
             labels=labels,
+            log_config=self.log_config,
             **self.extra_container_kwargs)
 
         # Metric Section
@@ -396,30 +432,10 @@ class DockerContainerManager(ContainerManager):
                                           self.prometheus_port)
 
     def get_logs(self, logging_dir):
-        containers = self.docker_client.containers.list(
-            filters={
-                "label":
-                "{key}={val}".format(
-                    key=CLIPPER_DOCKER_LABEL, val=self.cluster_name)
-            })
-        logging_dir = os.path.abspath(os.path.expanduser(logging_dir))
-
-        log_files = []
-        if not os.path.exists(logging_dir):
-            os.makedirs(logging_dir)
-            self.logger.info("Created logging directory: %s" % logging_dir)
-        for c in containers:
-            log_file_name = "image_{image}:container_{id}.log".format(
-                image=c.image.short_id, id=c.short_id)
-            log_file = os.path.join(logging_dir, log_file_name)
-            if sys.version_info < (3, 0):
-                with open(log_file, "w") as lf:
-                    lf.write(c.logs(stdout=True, stderr=True))
-            else:
-                with open(log_file, "wb") as lf:
-                    lf.write(c.logs(stdout=True, stderr=True))
-            log_files.append(log_file)
-        return log_files
+        if self.centralize_log:
+            return self.logging_system_instance.get_logs(logging_dir)
+        else:
+            return get_logs_from_containers(self, logging_dir)
 
     def stop_models(self, models):
         containers = self.docker_client.containers.list(
@@ -458,6 +474,38 @@ class DockerContainerManager(ContainerManager):
                 c.stop()
             else:
                 c.kill()
+
+    def _is_valid_logging_state_to_connect(self, all_labels):
+        if self.centralize_log and not self.logging_system.container_is_running(all_labels):
+            raise ClipperException(
+                "Invalid state detected. "
+                "log centralization is {log_centralization_state}, "
+                "but cannot find fluentd instance running. "
+                "Please change your use_centralized_log parameter of DockerContainermanager"
+                    .format(log_centralization_state=self.centralize_log)
+            )
+
+        return self.logging_system.container_is_running(all_labels)
+
+    def connect_to_logging_system(self, all_labels):
+        if not self.centralize_log:
+            logger.info(
+                "The current DockerContainerManager's use_centralized_log flag is False, "
+                "but there is a logging system {type} instance running in a cluster."
+                "It means that clipper cluster you want to connect uses log centralization."
+                "We will set the flag on to avoid unexpected bugs"
+                    .format(type=self.logging_system.get_type())
+            )
+        self.centralize_log= True
+        self.logging_system_instance = \
+            self.logging_system(
+                self.logger,
+                self.cluster_name,
+                self.docker_client,
+                port=all_labels[CLIPPER_DOCKER_PORT_LABELS['fluentd']],
+                conf_path=all_labels[CLIPPER_FLUENTD_CONFIG_LABEL]
+            )
+        self.log_config = self.logging_system_instance.get_log_config()
 
     def get_admin_addr(self):
         return "{host}:{port}".format(
@@ -514,3 +562,5 @@ def find_unbound_port(start=None,
             start += 1
         else:
             start = random.randint(*port_range)
+
+

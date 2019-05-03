@@ -180,10 +180,10 @@ if __name__ == "__main__":
             version += 1
             deploy_and_test_model(
                 sc, clipper_conn, lr_model, version, predict_fn=predict)
-        except BenchmarkException:
+        except BenchmarkException as e:
+            logger.exception("BenchmarkException: {}".format(e))
             log_docker(clipper_conn)
             log_clipper_state(clipper_conn)
-            logger.exception("BenchmarkException")
             create_docker_connection(
                 cleanup=True, start_clipper=False, cleanup_name=cluster_name)
             sys.exit(1)
@@ -192,8 +192,8 @@ if __name__ == "__main__":
             create_docker_connection(
                 cleanup=True, start_clipper=False, cleanup_name=cluster_name)
     except Exception as e:
-        log_docker(clipper_conn)
         logger.exception("Exception: {}".format(e))
+        log_docker(clipper_conn)
         create_docker_connection(
             cleanup=True, start_clipper=False, cleanup_name=cluster_name)
         sys.exit(1)

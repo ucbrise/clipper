@@ -42,7 +42,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
     def setUp(self):
         new_name = "admin-test-cluster-{}".format(random.randint(0, 5000))
         self.clipper_conn = create_docker_connection(
-            cleanup=False, start_clipper=True, new_name=new_name)
+            cleanup=False, start_clipper=True, new_name=new_name, use_centralized_log=False)
         self.name = new_name
 
     def tearDown(self):
@@ -198,18 +198,19 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertTrue(models_list_contains_correct_version)
 
     def test_get_logs_creates_log_files(self):
-        if not os.path.exists(cl.CLIPPER_TEMP_DIR):
-            os.makedirs(cl.CLIPPER_TEMP_DIR)
-        tmp_log_dir = tempfile.mkdtemp(dir=cl.CLIPPER_TEMP_DIR)
-        log_file_names = self.clipper_conn.get_clipper_logs(
-            logging_dir=tmp_log_dir)
-        self.assertIsNotNone(log_file_names)
-        self.assertGreaterEqual(len(log_file_names), 1)
-        for file_name in log_file_names:
-            self.assertTrue(os.path.isfile(file_name))
+        if not self.clipper_conn.cm.centralize_log:
+            if not os.path.exists(cl.CLIPPER_TEMP_DIR):
+                os.makedirs(cl.CLIPPER_TEMP_DIR)
+            tmp_log_dir = tempfile.mkdtemp(dir=cl.CLIPPER_TEMP_DIR)
+            log_file_names = self.clipper_conn.get_clipper_logs(
+                logging_dir=tmp_log_dir)
+            self.assertIsNotNone(log_file_names)
+            self.assertGreaterEqual(len(log_file_names), 1)
+            for file_name in log_file_names:
+                self.assertTrue(os.path.isfile(file_name))
 
-        # Remove temp files
-        shutil.rmtree(tmp_log_dir)
+            # Remove temp files
+            shutil.rmtree(tmp_log_dir)
 
     def test_inspect_instance_returns_json_dict(self):
         metrics = self.clipper_conn.inspect_instance()

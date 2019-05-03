@@ -1,0 +1,1 @@
+# Currently, we are using a default Fluentd image from Dockerhub. Needs to be customized by Clipper
