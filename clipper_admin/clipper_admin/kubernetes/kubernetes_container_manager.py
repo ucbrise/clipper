@@ -21,15 +21,18 @@ import jinja2
 logger = logging.getLogger(__name__)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
-OFFICIAL_K8S_SERVICE_TYPE = ['ClusterIP', 'NodePort',
-                             'LoadBalancer', 'ExternalName']
+CLUSTER_IP = 'ClusterIP'
+NODE_PORT = 'NodePort'
+LOAD_BALANCER = 'LoadBalancer'
+EXTERNAL_NAME = 'ExternalName'
+OFFICIAL_K8S_SERVICE_TYPE = [CLUSTER_IP, NODE_PORT, LOAD_BALANCER, EXTERNAL_NAME]
 
 DEFAULT_CLIPPER_SERVICE_TYPES = {
-    'redis': 'NodePort',
-    'management': 'NodePort',
-    'query': 'NodePort',
-    'query-rpc': 'NodePort',
-    'metric': 'NodePort'
+    'redis': NODE_PORT,
+    'management': NODE_PORT,
+    'query': NODE_PORT,
+    'query-rpc': NODE_PORT,
+    'metric': NODE_PORT
 }
 
 CONFIG_FILES = {
@@ -208,10 +211,15 @@ class KubernetesContainerManager(ContainerManager):
         if st is not None:
             if set(st.keys()) != set(DEFAULT_CLIPPER_SERVICE_TYPES.keys()):
                 raise ClipperException(
-                    "service_types has wrong keys: {}".format(st.keys()))
-            if set(st.values()) != set(OFFICIAL_K8S_SERVICE_TYPE):
+                    "service_types has unknown keys: {}".format(st.keys()))
+            for v in set(st.values()):
+                if v not in OFFICIAL_K8S_SERVICE_TYPE:
+                    raise ClipperException(
+                        "service_type has unknown values: {}".format(st.values()))
+            if EXTERNAL_NAME in st.values():
                 raise ClipperException(
-                    "service_type has wrong values: {}".format(st.values()))
+                    "Clipper does not support '{}' service".format(EXTERNAL_NAME))
+
             res.update(st)
         return res
 

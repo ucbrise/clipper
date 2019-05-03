@@ -576,10 +576,10 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
                 cleanup=True, new_name=self.name, service_types=service_types)
         self.assertTrue("service_types must be 'dict' type" in str(c.exception))
 
-        logger.info("Test that service_types has wrong keys or not")
+        logger.info("Test that service_types has unknown keys or not")
         service_types = {
             'redis': 'NodePort',
-            # 'management': 'NodePort',  # for test
+            'UNKNOWN_KEY': 'NodePort',  # for test
             'query': 'NodePort',
             'query-rpc': 'NodePort',
             'metric': 'NodePort'
@@ -587,20 +587,33 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         with self.assertRaises(cl.ClipperException) as c:
             create_kubernetes_connection(
                 cleanup=True, new_name=self.name, service_types=service_types)
-        self.assertTrue("service_types has wrong keys" in str(c.exception))
+        self.assertTrue("service_types has unknown keys" in str(c.exception))
 
-        logger.info("Test that service_type has wrong values or not")
+        logger.info("Test that service_type has unknown values or not")
         service_types = {
             'redis': 'NodePort',
             'management': 'NodePort',
             'query': 'NodePort',
-            'query-rpc': 'WRONG_K8S_SERVICE_TYPE',  # for test
+            'query-rpc': 'UNKNOWN_VALUE',  # for test
             'metric': 'NodePort'
         }
         with self.assertRaises(cl.ClipperException) as c:
             create_kubernetes_connection(
                 cleanup=True, new_name=self.name, service_types=service_types)
-        self.assertTrue("service_type has wrong values" in str(c.exception))
+        self.assertTrue("service_type has unknown values" in str(c.exception))
+
+        logger.info("Test that service_type has 'ExternalName' value or not")
+        service_types = {
+            'redis': 'NodePort',
+            'management': 'NodePort',
+            'query': 'NodePort',
+            'query-rpc': 'ExternalName',  # for test
+            'metric': 'NodePort'
+        }
+        with self.assertRaises(cl.ClipperException) as c:
+            create_kubernetes_connection(
+                cleanup=True, new_name=self.name, service_types=service_types)
+        self.assertTrue("Clipper does not support" in str(c.exception))
 
 
 class ClipperManagerTestCaseLong(unittest.TestCase):
