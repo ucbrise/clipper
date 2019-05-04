@@ -153,14 +153,6 @@ class KubernetesContainerManager(ContainerManager):
         else:
             self.use_k8s_proxy = False
 
-        self.redis_ip = redis_ip
-        self.redis_port = redis_port
-        self.useInternalIP = useInternalIP
-        config.load_kube_config()
-        configuration.assert_hostname = False
-        self._k8s_v1 = client.CoreV1Api()
-        self._k8s_beta = client.ExtensionsV1beta1Api()
-
         # Create the template engine
         # Config: Any variable missing -> Error
         self.template_engine = jinja2.Environment(
@@ -168,6 +160,14 @@ class KubernetesContainerManager(ContainerManager):
             undefined=jinja2.StrictUndefined)
 
         self.service_types = self._determine_service_types(service_types)
+
+        self.redis_ip = redis_ip
+        self.redis_port = redis_port
+        self.useInternalIP = useInternalIP
+        config.load_kube_config()
+        configuration.assert_hostname = False
+        self._k8s_v1 = client.CoreV1Api()
+        self._k8s_beta = client.ExtensionsV1beta1Api()
 
         # Check if namespace exists and if create flag set ...create the namespace or throw error
         namespaces = []
