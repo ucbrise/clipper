@@ -589,7 +589,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
                 cleanup=True, new_name=self.name, service_types=service_types)
         self.assertTrue("service_types has unknown keys" in str(c.exception))
 
-        logger.info("Test that service_type has unknown values or not")
+        logger.info("Test that service_types has unknown values or not")
         service_types = {
             'redis': 'NodePort',
             'management': 'NodePort',
@@ -600,9 +600,9 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         with self.assertRaises(cl.ClipperException) as c:
             create_kubernetes_connection(
                 cleanup=True, new_name=self.name, service_types=service_types)
-        self.assertTrue("service_type has unknown values" in str(c.exception))
+        self.assertTrue("service_types has unknown values" in str(c.exception))
 
-        logger.info("Test that service_type has 'ExternalName' value or not")
+        logger.info("Test that service_types has 'ExternalName' value or not")
         service_types = {
             'redis': 'NodePort',
             'management': 'NodePort',

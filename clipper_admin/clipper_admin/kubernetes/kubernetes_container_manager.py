@@ -17,6 +17,7 @@ import yaml
 import os
 import time
 import jinja2
+from jinja2.exceptions import TemplateNotFound
 
 logger = logging.getLogger(__name__)
 cur_dir = os.path.dirname(os.path.abspath(__file__))
@@ -36,6 +37,9 @@ DEFAULT_CLIPPER_SERVICE_TYPES = {
 }
 
 CONFIG_FILES = {
+    'k8s': {
+        'service_types': 'k8s-service-types.yaml'
+    },
     'redis': {
         'service': 'redis-service.yaml',
         'deployment': 'redis-deployment.yaml'
@@ -201,25 +205,35 @@ class KubernetesContainerManager(ContainerManager):
             'cluster_name': self.cluster_identifier
         })
 
-    @staticmethod
-    def _determine_service_types(st):
+    def _determine_service_types(self, st):
         res = DEFAULT_CLIPPER_SERVICE_TYPES
-        if st is not None:
+
+        if st is None:
+            try:
+                res = self._generate_config(CONFIG_FILES['k8s']['service_types'])
+            except TemplateNotFound:
+                res = DEFAULT_CLIPPER_SERVICE_TYPES
+
+        else:
             if not isinstance(st, dict):
                 raise ClipperException(
                     "service_types must be 'dict' type: {}".format(st))
             if set(st.keys()) != set(DEFAULT_CLIPPER_SERVICE_TYPES.keys()):
                 raise ClipperException(
                     "service_types has unknown keys: {}".format(st.keys()))
-            for v in set(st.values()):
-                if v not in OFFICIAL_K8S_SERVICE_TYPE:
-                    raise ClipperException(
-                        "service_type has unknown values: {}".format(st.values()))
+            if any(v not in OFFICIAL_K8S_SERVICE_TYPE for v in set(st.values())):
+                raise ClipperException(
+                    "service_types has unknown values: {}".format(st.values()))
             if EXTERNAL_NAME in st.values():
                 raise ClipperException(
                     "Clipper does not support '{}' service".format(EXTERNAL_NAME))
-
             res.update(st)
+
+            with open(os.path.join(
+                    cur_dir, CONFIG_FILES['k8s']['service_types']), 'w') as f:
+                yaml.dump(res, f)
+
+        logging.info("Your service_types are {}".format(res))
         return res
 
     def start_clipper(self,
@@ -614,13 +628,13 @@ class KubernetesContainerManager(ContainerManager):
     def stop_all(self, graceful=True):
         self.logger.info("Stopping all running Clipper resources")
 
-        cluster_selecter = "{cluster_label}={cluster_name}".format(
+        cluster_selector = "{cluster_label}={cluster_name}".format(
             cluster_label=CLIPPER_DOCKER_LABEL, cluster_name=self.cluster_name)
 
         try:
             for service in self._k8s_v1.list_namespaced_service(
                     namespace=self.k8s_namespace,
-                    label_selector=cluster_selecter).items:
+                    label_selector=cluster_selector).items:
                 service_name = service.metadata.name
                 self._k8s_v1.delete_namespaced_service(
                     namespace=self.k8s_namespace,
@@ -628,22 +642,27 @@ class KubernetesContainerManager(ContainerManager):
                     body=V1DeleteOptions())
 
             self._k8s_beta.delete_collection_namespaced_deployment(
-                namespace=self.k8s_namespace, label_selector=cluster_selecter)
+                namespace=self.k8s_namespace, label_selector=cluster_selector)
 
             self._k8s_beta.delete_collection_namespaced_replica_set(
-                namespace=self.k8s_namespace, label_selector=cluster_selecter)
+                namespace=self.k8s_namespace, label_selector=cluster_selector)
 
             self._k8s_v1.delete_collection_namespaced_replication_controller(
-                namespace=self.k8s_namespace, label_selector=cluster_selecter)
+                namespace=self.k8s_namespace, label_selector=cluster_selector)
 
             self._k8s_v1.delete_collection_namespaced_pod(
-                namespace=self.k8s_namespace, label_selector=cluster_selecter)
+                namespace=self.k8s_namespace, label_selector=cluster_selector)
 
             self._k8s_v1.delete_collection_namespaced_config_map(
-                namespace=self.k8s_namespace, label_selector=cluster_selecter)
+                namespace=self.k8s_namespace, label_selector=cluster_selector)
         except ApiException as e:
             logging.warning(
                 "Exception deleting kubernetes resources: {}".format(e))
+
+        try:
+            os.remove(os.path.join(cur_dir, CONFIG_FILES['k8s']['service_types']))
+        except OSError:
+            pass
 
     def get_admin_addr(self):
         if self.service_types['management'] == LOAD_BALANCER:
