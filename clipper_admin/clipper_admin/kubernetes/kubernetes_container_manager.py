@@ -153,8 +153,6 @@ class KubernetesContainerManager(ContainerManager):
         else:
             self.use_k8s_proxy = False
 
-        self.service_types = self._determine_service_types(service_types)
-
         self.redis_ip = redis_ip
         self.redis_port = redis_port
         self.useInternalIP = useInternalIP
@@ -168,6 +166,8 @@ class KubernetesContainerManager(ContainerManager):
         self.template_engine = jinja2.Environment(
             loader=jinja2.FileSystemLoader(cur_dir, followlinks=True),
             undefined=jinja2.StrictUndefined)
+
+        self.service_types = self._determine_service_types(service_types)
 
         # Check if namespace exists and if create flag set ...create the namespace or throw error
         namespaces = []
