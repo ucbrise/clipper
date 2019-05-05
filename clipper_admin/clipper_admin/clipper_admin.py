@@ -1,9 +1,11 @@
 from __future__ import absolute_import, division, print_function
 import logging
 import docker
+from docker import errors
 import tempfile
 import requests
-from requests.exceptions import RequestException
+from urllib3.exceptions import TimeoutError
+from requests.exceptions import (RequestException, Timeout)
 import json
 import pprint
 import time
@@ -24,6 +26,7 @@ else:
     from io import BytesIO as StringIO
     PY3 = True
 
+from .decorators import retry
 from .container_manager import CONTAINERLESS_MODEL_IMAGE, ClusterAdapter
 from .exceptions import ClipperException, UnconnectedException
 from .version import __version__, __registry__
@@ -91,6 +94,9 @@ class ClipperConnection(object):
                       frontend_exporter_image='{}/frontend-exporter:{}'.format(
                           __registry__, __version__),
                       cache_size=DEFAULT_PREDICTION_CACHE_SIZE_BYTES,
+                      qf_http_thread_pool_size=1,
+                      qf_http_timeout_request=5,
+                      qf_http_timeout_content=300,
                       num_frontend_replicas=1):
         """Start a new Clipper cluster and connect to it.
 
@@ -111,9 +117,15 @@ class ClipperConnection(object):
             The frontend exporter docker image to use. You can set this argument to specify
             a custom build of the management frontend, but any customization should maintain API
             compability and preserve the expected behavior of the system.
-        cache_size : int, optional
+        cache_size : int(optional)
             The size of Clipper's prediction cache in bytes. Default cache size is 32 MiB.
-        num_frontend_replicas : int, option
+        qf_http_thread_pool_size : int(optional)
+            The size of thread pool created in query frontend for http serving.
+        qf_http_timeout_request : int(optional)
+            The seconds of timeout on request handling in query frontend for http serving..
+        qf_http_timeout_content : int(optional)
+            The seconds of timeout on content handling in query frontend for http serving..
+        num_frontend_replicas : int(optional)
             The number of query frontend to deploy for fault tolerance and high availability.
 
         Raises
@@ -123,23 +135,32 @@ class ClipperConnection(object):
         try:
             self.cm.start_clipper(query_frontend_image, mgmt_frontend_image,
                                   frontend_exporter_image, cache_size,
-                                  num_frontend_replicas)
-            while True:
-                try:
-                    url = "http://{host}/metrics".format(
-                        host=self.cm.get_query_addr())
-                    r = requests.get(url, timeout=5)
-                    if r.status_code != requests.codes.ok:
-                        raise RequestException
-                    break
-                except RequestException:
-                    self.logger.info("Clipper still initializing.")
-                    time.sleep(1)
-            self.logger.info("Clipper is running")
-            self.connected = True
+                                  qf_http_thread_pool_size, qf_http_timeout_request,
+                                  qf_http_timeout_content, num_frontend_replicas)
         except ClipperException as e:
             self.logger.warning("Error starting Clipper: {}".format(e.msg))
             raise e
+
+        # Wait for maximum 5 min.
+        @retry(RequestException, tries=300, delay=1, backoff=1, logger=self.logger)
+        def _check_clipper_status():
+            try:
+                query_frontend_url = "http://{host}/metrics".format(
+                    host=self.cm.get_query_addr())
+                mgmt_frontend_url = "http://{host}/admin/ping".format(
+                    host=self.cm.get_admin_addr())
+                for name, url in [('query frontend', query_frontend_url),
+                                  ('management frontend', mgmt_frontend_url)]:
+                    r = requests.get(url, timeout=5)
+                    if r.status_code != requests.codes.ok:
+                        raise RequestException(
+                            "{name} end point {url} health check failed".format(name=name, url=url))
+            except RequestException as e:
+                raise RequestException("Clipper still initializing: \n {}".format(e))
+        _check_clipper_status()
+
+        self.logger.info("Clipper is running")
+        self.connected = True
 
     def connect(self):
         """Connect to a running Clipper cluster."""
@@ -274,6 +295,47 @@ class ClipperConnection(object):
         else:
             self.logger.info(
                 "Model {model} is now linked to application {app}".format(
+                    model=model_name, app=app_name))
+
+    def unlink_model_from_app(self, app_name, model_name):
+        """
+        Prevents the model with `model_name` from being used by the app with `app_name`.
+        The model and app should both be registered with Clipper and a link should
+        already exist between them.
+
+        Parameters
+        ----------
+        app_name : str
+            The name of the application
+        model_name : str
+            The name of the model to link to the application
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+        :py:exc:`clipper.ClipperException`
+        """
+
+        if not self.connected:
+            raise UnconnectedException()
+
+        url = "http://{host}/admin/delete_model_links".format(
+            host=self.cm.get_admin_addr())
+        req_json = json.dumps({
+            "app_name": app_name,
+            "model_names": [model_name]
+        })
+        headers = {'Content-type': 'application/json'}
+        r = requests.post(url, headers=headers, data=req_json)
+        logger.debug(r.text)
+        if r.status_code != requests.codes.ok:
+            msg = "Received error status code: {code} and message: {msg}".format(
+                code=r.status_code, msg=r.text)
+            logger.error(msg)
+            raise ClipperException(msg)
+        else:
+            logger.info(
+                "Model {model} is now removed to application {app}".format(
                     model=model_name, app=app_name))
 
     def build_and_deploy_model(self,
@@ -472,8 +534,14 @@ class ClipperConnection(object):
                     self.logger.info(b['stream'].rstrip())
 
         self.logger.info("Pushing model Docker image to {}".format(image))
-        for line in docker_client.images.push(repository=image, stream=True):
-            self.logger.debug(line)
+
+        @retry((docker.errors.APIError, TimeoutError, Timeout),
+               tries=5, logger=self.logger)
+        def _push_model():
+            for line in docker_client.images.push(repository=image, stream=True):
+                self.logger.debug(line)
+        _push_model()
+
         return image
 
     def deploy_model(self,
@@ -854,7 +922,7 @@ class ClipperConnection(object):
         -------
         list
             Returns a list of the names of models linked to the app.
-            If no models are linked to the specified app, None is returned.
+            If no models are linked to the specified app, empty list is returned.
 
         Raises
         ------

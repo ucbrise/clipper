@@ -36,17 +36,24 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-
 class ClipperManagerTestCaseShort(unittest.TestCase):
     def setUp(self):
         new_name = "admin-test-cluster-{}".format(random.randint(0, 5000))
         self.clipper_conn = create_docker_connection(
-            cleanup=False, start_clipper=True, new_name=new_name)
+            cleanup=False, start_clipper=True, new_name=new_name, use_centralized_log=False)
         self.name = new_name
 
     def tearDown(self):
         self.clipper_conn = create_docker_connection(
             cleanup=True, start_clipper=False, cleanup_name=self.name)
+
+    def get_containers(self, container_name):
+        return get_docker_client().containers.list(filters={
+            "ancestor": container_name,
+            "label": "{key}={val}".format(
+                        key=CLIPPER_DOCKER_LABEL,
+                        val=self.clipper_conn.cm.cluster_name)
+        })
 
     def test_register_model_correct(self):
         input_type = "doubles"
@@ -123,6 +130,25 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         result = self.clipper_conn.get_linked_models(app_name)
         self.assertEqual([model_name], result)
 
+    def test_unlink_registered_model_from_app_succeeds(self):
+        # Register app
+        app_name = "testapp"
+        input_type = "doubles"
+        default_output = "DEFAULT"
+        slo_micros = 30000
+        self.clipper_conn.register_application(app_name, input_type,
+                                               default_output, slo_micros)
+
+        # Register model
+        model_name = "m"
+        self.clipper_conn.register_model(model_name, "v1", input_type)
+
+        self.clipper_conn.link_model_to_app(app_name, model_name)
+        self.clipper_conn.unlink_model_from_app(app_name, model_name)
+
+        result = self.clipper_conn.get_linked_models(app_name)
+        self.assertEqual([], result)
+
     def get_app_info_for_registered_app_returns_info_dictionary(self):
         # Register app
         app_name = "testapp"
@@ -170,18 +196,19 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertTrue(models_list_contains_correct_version)
 
     def test_get_logs_creates_log_files(self):
-        if not os.path.exists(cl.CLIPPER_TEMP_DIR):
-            os.makedirs(cl.CLIPPER_TEMP_DIR)
-        tmp_log_dir = tempfile.mkdtemp(dir=cl.CLIPPER_TEMP_DIR)
-        log_file_names = self.clipper_conn.get_clipper_logs(
-            logging_dir=tmp_log_dir)
-        self.assertIsNotNone(log_file_names)
-        self.assertGreaterEqual(len(log_file_names), 1)
-        for file_name in log_file_names:
-            self.assertTrue(os.path.isfile(file_name))
+        if not self.clipper_conn.cm.centralize_log:
+            if not os.path.exists(cl.CLIPPER_TEMP_DIR):
+                os.makedirs(cl.CLIPPER_TEMP_DIR)
+            tmp_log_dir = tempfile.mkdtemp(dir=cl.CLIPPER_TEMP_DIR)
+            log_file_names = self.clipper_conn.get_clipper_logs(
+                logging_dir=tmp_log_dir)
+            self.assertIsNotNone(log_file_names)
+            self.assertGreaterEqual(len(log_file_names), 1)
+            for file_name in log_file_names:
+                self.assertTrue(os.path.isfile(file_name))
 
-        # Remove temp files
-        shutil.rmtree(tmp_log_dir)
+            # Remove temp files
+            shutil.rmtree(tmp_log_dir)
 
     def test_inspect_instance_returns_json_dict(self):
         metrics = self.clipper_conn.inspect_instance()
@@ -199,10 +226,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         model_info = self.clipper_conn.get_model_info(model_name, version)
         self.assertIsNotNone(model_info)
         self.assertEqual(type(model_info), dict)
-        docker_client = get_docker_client()
-        containers = docker_client.containers.list(filters={
-            "ancestor": container_name
-        })
+        containers = self.get_containers(container_name)
         self.assertEqual(len(containers), 1)
 
     def test_set_num_replicas_for_deployed_model_succeeds(self):
@@ -238,10 +262,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             fake_model_data,
             container_name,
             num_replicas=2)
-        docker_client = get_docker_client()
-        containers = docker_client.containers.list(filters={
-            "ancestor": container_name
-        })
+        containers = self.get_containers(container_name)
         self.assertEqual(len(containers), 2)
 
         self.clipper_conn.build_and_deploy_model(
@@ -251,23 +272,19 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             fake_model_data,
             container_name,
             num_replicas=3)
-        containers = docker_client.containers.list(filters={
-            "ancestor": container_name
-        })
+        containers = self.get_containers(container_name)
         self.assertEqual(len(containers), 5)
 
         self.clipper_conn.stop_inactive_model_versions([model_name])
-        containers = docker_client.containers.list(filters={
-            "ancestor": container_name
-        })
+        containers = self.get_containers(container_name)
         self.assertEqual(len(containers), 3)
 
     def test_stop_models(self):
         container_name = "{}/noop-container:{}".format(clipper_registry,
                                                        clipper_version)
         input_type = "doubles"
-        mnames = ["jimmypage", "robertplant", "jpj", "johnbohnam"]
-        versions = ["i", "ii", "iii", "iv"]
+        mnames = ["jimmypage", "robertplant"]
+        versions = ["i", "ii"]
         for model_name in mnames:
             for version in versions:
                 self.clipper_conn.deploy_model(
@@ -277,34 +294,26 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
                     container_name,
                     num_replicas=1)
 
-        docker_client = get_docker_client()
-        containers = docker_client.containers.list(filters={
-            "ancestor": container_name
-        })
+        containers = self.get_containers(container_name)
         self.assertEqual(len(containers), len(mnames) * len(versions))
 
-        # stop all versions of models jimmypage, robertplant
-        self.clipper_conn.stop_models(mnames[:2])
-        containers = docker_client.containers.list(filters={
-            "ancestor": container_name
-        })
-        self.assertEqual(len(containers), len(mnames[2:]) * len(versions))
+        # stop all versions of jimmypage model
+        self.clipper_conn.stop_models(mnames[:1])
+        containers = self.get_containers(container_name)
 
-        # After calling this method, the remaining models should be:
-        # jpj:i, jpj:iii, johnbohman:ii
+        self.assertEqual(len(containers), len(mnames[1:]) * len(versions))
+
+        # After calling this method, the remaining model should be robertplant:i
         self.clipper_conn.stop_versioned_models({
-            "jpj": ["ii", "iv"],
-            "johnbohnam": ["i", "iv", "iii"],
+            "robertplant": ["ii"],
         })
-        containers = docker_client.containers.list(filters={
-            "ancestor": container_name
-        })
-        self.assertEqual(len(containers), 3)
+        containers = self.get_containers(container_name)
+
+        self.assertEqual(len(containers), 1)
 
         self.clipper_conn.stop_all_model_containers()
-        containers = docker_client.containers.list(filters={
-            "ancestor": container_name
-        })
+        containers = self.get_containers(container_name)
+
         self.assertEqual(len(containers), 0)
 
     def test_python_closure_deploys_successfully(self):
@@ -321,30 +330,18 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
                                                       model_version)
         self.assertIsNotNone(model_info)
 
-        docker_client = get_docker_client()
         py_minor_version = (sys.version_info.major, sys.version_info.minor)
         if py_minor_version < (3, 0):
-            containers = docker_client.containers.list(
-                filters={
-                    "ancestor":
-                    "{}/python-closure-container:{}".format(
-                        clipper_registry, clipper_version)
-                })
+            containers = self.get_containers("{}/python-closure-container:{}".format(
+                        clipper_registry, clipper_version))
 
         elif py_minor_version == (3, 5):
-            containers = docker_client.containers.list(
-                filters={
-                    "ancestor":
-                    "{}/python35-closure-container:{}".format(
-                        clipper_registry, clipper_version)
-                })
+            containers = self.get_containers("{}/python35-closure-container:{}".format(
+                        clipper_registry, clipper_version))
+
         elif py_minor_version == (3, 6):
-            containers = docker_client.containers.list(
-                filters={
-                    "ancestor":
-                    "{}/python36-closure-container:{}".format(
-                        clipper_registry, clipper_version)
-                })
+            containers = self.get_containers("{}/python36-closure-container:{}".format(
+                        clipper_registry, clipper_version))
         else:
             msg = (
                 "Python closure deployer only supports Python 2.7, 3.5, and 3.6. "
@@ -379,39 +376,16 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         docker_client = get_docker_client()
         py_minor_version = (sys.version_info.major, sys.version_info.minor)
         if py_minor_version < (3, 0):
-            containers = docker_client.containers.list(
-                filters={
-                    "ancestor":
-                    "{}/python-closure-container:{}".format(
-                        clipper_registry, clipper_version),
-                    "label":
-                    "{key}={val}".format(
-                        key=CLIPPER_DOCKER_LABEL,
-                        val=self.clipper_conn.cm.cluster_name)
-                })
+            containers = self.get_containers("{}/python-closure-container:{}".format(
+                        clipper_registry, clipper_version))
 
         elif py_minor_version == (3, 5):
-            containers = docker_client.containers.list(
-                filters={
-                    "ancestor":
-                    "{}/python35-closure-container:{}".format(
-                        clipper_registry, clipper_version),
-                    "label":
-                    "{key}={val}".format(
-                        key=CLIPPER_DOCKER_LABEL,
-                        val=self.clipper_conn.cm.cluster_name)
-                })
+            containers = self.get_containers("{}/python35-closure-container:{}".format(
+                        clipper_registry, clipper_version))
+
         elif py_minor_version == (3, 6):
-            containers = docker_client.containers.list(
-                filters={
-                    "ancestor":
-                    "{}/python36-closure-container:{}".format(
-                        clipper_registry, clipper_version),
-                    "label":
-                    "{key}={val}".format(
-                        key=CLIPPER_DOCKER_LABEL,
-                        val=self.clipper_conn.cm.cluster_name)
-                })
+            containers = self.get_containers("{}/python36-closure-container:{}".format(
+                        clipper_registry, clipper_version))
         else:
             msg = (
                 "Python closure deployer only supports Python 2.7, 3.5, and 3.6. "
@@ -635,6 +609,14 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         self.clipper_conn = create_docker_connection(
             cleanup=True, start_clipper=False, cleanup_name=self.cluster_name)
 
+    def get_containers(self, container_name):
+        return get_docker_client().containers.list(filters={
+            "ancestor": container_name,
+            "label": "{key}={val}".format(
+                        key=CLIPPER_DOCKER_LABEL,
+                        val=self.clipper_conn.cm.cluster_name)
+        })
+
     def test_unlinked_app_returns_default_predictions(self):
         addr = self.clipper_conn.get_query_addr()
         url = "http://{addr}/{app}/predict".format(
@@ -777,10 +759,9 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
             fake_model_data,
             container_name,
             num_replicas=2)
-        docker_client = get_docker_client()
-        containers = docker_client.containers.list(filters={
-            "ancestor": container_name
-        })
+
+        containers = self.get_containers(container_name)
+
         self.assertEqual(len(containers), 2)
 
         self.clipper_conn.link_model_to_app(self.app_name_5, self.model_name_5)
@@ -808,9 +789,8 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
             name=self.model_name_5, version=1, num_replicas=1)
         time.sleep(100)
 
-        containers = docker_client.containers.list(filters={
-            "ancestor": container_name
-        })
+        containers = self.get_containers(container_name)
+
         self.assertEqual(len(containers), 1)
 
         test_input = [101.1, 99.9]
@@ -831,9 +811,8 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
             name=self.model_name_5, version=1, num_replicas=0)
         time.sleep(100)
 
-        containers = docker_client.containers.list(filters={
-            "ancestor": container_name
-        })
+        containers = self.get_containers(container_name)
+
         self.assertEqual(len(containers), 0)
 
         test_input = [101.1]
@@ -872,7 +851,7 @@ SHORT_TEST_ORDERING = [
     'test_test_predict_function',
     'test_build_model_with_custom_packages',
     'test_delete_application_correct',
-    'test_query_specific_model_version',
+    'test_query_specific_model_version'
 ]
 
 LONG_TEST_ORDERING = [

@@ -20,7 +20,7 @@ def get_prometheus_base_config():
 
 def run_query_frontend_metric_image(name, docker_client, query_name,
                                     frontend_exporter_image, common_labels,
-                                    extra_container_kwargs):
+                                    log_config, extra_container_kwargs):
     """
     Use docker_client to run a frontend-exporter image.
     :param name: Name to pass in, need to be unique.
@@ -38,6 +38,7 @@ def run_query_frontend_metric_image(name, docker_client, query_name,
     docker_client.containers.run(
         frontend_exporter_image,
         query_frontend_metric_cmd,
+        log_config=log_config,
         name=name,
         labels=query_frontend_metric_labels,
         **extra_container_kwargs)
@@ -72,7 +73,7 @@ def setup_metric_config(query_frontend_metric_name, prom_config_path,
 
 
 def run_metric_image(docker_client, common_labels, prometheus_port,
-                     prom_config_path, extra_container_kwargs):
+                     prom_config_path, log_config, extra_container_kwargs):
     """
     Run the prometheus image.
     :param docker_client: The docker client object
@@ -96,6 +97,7 @@ def run_metric_image(docker_client, common_labels, prometheus_port,
         metric_cmd,
         name="metric_frontend-{}".format(random.randint(0, 100000)),
         ports={'9090/tcp': prometheus_port},
+        log_config=log_config,
         volumes={
             prom_config_path: {
                 'bind': '/etc/prometheus/prometheus.yml',
@@ -121,7 +123,7 @@ def add_to_metric_config(model_container_name, prom_config_path,
         :py:exc:`clipper.ClipperException`
     """
     with open(prom_config_path, 'r') as f:
-        conf = yaml.load(f)
+        conf = yaml.load(f, Loader=yaml.FullLoader)
 
     for config in conf['scrape_configs']:
         if config['job_name'] == model_container_name:
@@ -157,7 +159,7 @@ def delete_from_metric_config(model_container_name, prom_config_path,
     :return: None
     """
     with open(prom_config_path, 'r') as f:
-        conf = yaml.load(f)
+        conf = yaml.load(f, Loader=yaml.FullLoader)
 
     for i, config in enumerate(conf['scrape_configs']):
         if config['job_name'] == model_container_name:
