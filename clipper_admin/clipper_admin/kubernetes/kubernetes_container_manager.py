@@ -156,14 +156,6 @@ class KubernetesContainerManager(ContainerManager):
         else:
             self.use_k8s_proxy = False
 
-        # Create the template engine
-        # Config: Any variable missing -> Error
-        self.template_engine = jinja2.Environment(
-            loader=jinja2.FileSystemLoader(cur_dir, followlinks=True),
-            undefined=jinja2.StrictUndefined)
-
-        self.service_types = self._determine_service_types(service_types)
-
         self.redis_ip = redis_ip
         self.redis_port = redis_port
         self.useInternalIP = useInternalIP
@@ -171,6 +163,12 @@ class KubernetesContainerManager(ContainerManager):
         configuration.assert_hostname = False
         self._k8s_v1 = client.CoreV1Api()
         self._k8s_beta = client.ExtensionsV1beta1Api()
+
+        # Create the template engine
+        # Config: Any variable missing -> Error
+        self.template_engine = jinja2.Environment(
+            loader=jinja2.FileSystemLoader(cur_dir, followlinks=True),
+            undefined=jinja2.StrictUndefined)
 
         # Check if namespace exists and if create flag set ...create the namespace or throw error
         namespaces = []
@@ -208,9 +206,11 @@ class KubernetesContainerManager(ContainerManager):
             'cluster_name': self.cluster_identifier
         })
 
+        self.service_types = self._determine_service_types(service_types)
+
     def _determine_service_types(self, st):
         yaml_file_name = CONFIG_FILES['k8s']['service_types'].replace(
-            DUMMY_CLUSTER_NAME, self.cluster_name)
+            DUMMY_CLUSTER_NAME, self.cluster_identifier)
         res = DEFAULT_CLIPPER_SERVICE_TYPES
 
         if st is None:
@@ -665,7 +665,7 @@ class KubernetesContainerManager(ContainerManager):
 
         try:
             yaml_file_name = CONFIG_FILES['k8s']['service_types'].replace(
-                DUMMY_CLUSTER_NAME, self.cluster_name)
+                DUMMY_CLUSTER_NAME, self.cluster_identifier)
             os.remove(os.path.join(cur_dir, yaml_file_name))
         except OSError:
             pass
