@@ -18,8 +18,7 @@ import random
 from argparse import ArgumentParser
 import logging
 
-from test_utils import (get_docker_client, create_docker_connection,
-                        create_kubernetes_connection, fake_model_data)
+from test_utils import get_docker_client, create_docker_connection, fake_model_data
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -36,7 +35,6 @@ logging.basicConfig(
     level=logging.INFO)
 
 logger = logging.getLogger(__name__)
-
 
 class ClipperManagerTestCaseShort(unittest.TestCase):
     def setUp(self):
