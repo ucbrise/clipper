@@ -36,9 +36,12 @@ DEFAULT_CLIPPER_SERVICE_TYPES = {
     'metric': NODE_PORT
 }
 
+DUMMY_CLUSTER_NAME = 'cluster-name'
+
 CONFIG_FILES = {
     'k8s': {
-        'service_types': 'k8s-service-types.yaml'
+        'service_types': '{cluster_name}-k8s-service-types.yaml'.format(
+            cluster_name=DUMMY_CLUSTER_NAME)
     },
     'redis': {
         'service': 'redis-service.yaml',
@@ -206,11 +209,13 @@ class KubernetesContainerManager(ContainerManager):
         })
 
     def _determine_service_types(self, st):
+        yaml_file_name = CONFIG_FILES['k8s']['service_types'].replace(
+            DUMMY_CLUSTER_NAME, self.cluster_name)
         res = DEFAULT_CLIPPER_SERVICE_TYPES
 
         if st is None:
             try:
-                res = self._generate_config(CONFIG_FILES['k8s']['service_types'])
+                res = self._generate_config(yaml_file_name)
             except TemplateNotFound:
                 res = DEFAULT_CLIPPER_SERVICE_TYPES
 
@@ -229,8 +234,7 @@ class KubernetesContainerManager(ContainerManager):
                     "Clipper does not support '{}' service".format(EXTERNAL_NAME))
             res.update(st)
 
-            with open(os.path.join(
-                    cur_dir, CONFIG_FILES['k8s']['service_types']), 'w') as f:
+            with open(os.path.join(cur_dir, yaml_file_name), 'w') as f:
                 yaml.dump(res, f)
 
         logging.info("Your service_types are {}".format(res))
@@ -660,7 +664,9 @@ class KubernetesContainerManager(ContainerManager):
                 "Exception deleting kubernetes resources: {}".format(e))
 
         try:
-            os.remove(os.path.join(cur_dir, CONFIG_FILES['k8s']['service_types']))
+            yaml_file_name = CONFIG_FILES['k8s']['service_types'].replace(
+                DUMMY_CLUSTER_NAME, self.cluster_name)
+            os.remove(os.path.join(cur_dir, yaml_file_name))
         except OSError:
             pass
 
