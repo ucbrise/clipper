@@ -1,0 +1,10 @@
+FROM ubuntu:bionic
+RUN apt-get update
+RUN apt-get install python3 python3-pip -y
+
+ADD auto_pilot/6_Conclusion/app /container/
+ADD simplerpc/app /container/
+
+CMD ["python3", "/container/server.py", "6", "14000"]
+
+EXPOSE 14000
