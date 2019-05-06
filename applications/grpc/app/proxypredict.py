@@ -1,14 +1,19 @@
 import grpc
 
-import proxy_pb2
-import proxy_pb2_grpc
+import prediction_pb2
+import prediction_pb2_grpc
+import model_pb2
+from google.protobuf.timestamp_pb2 import Timestamp
+
 
 import sys
 
 def run(ip, port):
+    timestamp = Timestamp()
+    timestamp.GetCurrentTime()
     channel = grpc.insecure_channel('%s:%s'%(ip, port))
-    stub = proxy_pb2_grpc.ProxyServiceStub(channel)
-    response = stub.Predict(proxy_pb2.input(inputType = 'string', inputStream = 'hello'))
+    stub = prediction_pb2_grpc.ProxyServerStub(channel)
+    response = stub.downstream(prediction_pb2.request(input_ = model_pb2.input(inputType = 'string', inputStream = 'hello'),src_uri = "localhost", seq = 1, req_id =1, timestamp = timestamp))
     print('Response\n{res}'.format(res=response.status))
 
 if __name__ == "__main__":

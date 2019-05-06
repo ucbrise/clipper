@@ -20,7 +20,7 @@ namespace {
 class ManagementFrontendTest : public ::testing::Test {
  public:
   ManagementFrontendTest()
-      : rh_(MANAGEMENT_FRONTEND_PORT),
+      : rh_("0.0.0.0", MANAGEMENT_FRONTEND_PORT),
         redis_(std::make_shared<redox::Redox>()),
         subscriber_(std::make_shared<redox::Subscriber>()) {
     Config& conf = get_config();

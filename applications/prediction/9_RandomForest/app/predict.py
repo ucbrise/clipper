@@ -45,7 +45,7 @@ def predict(comstring):
     model = clf.fit(X_train, y_train)
     preds = model.predict(X_test).tolist()
 
-    return preds
+    return str(preds)
 
     
     

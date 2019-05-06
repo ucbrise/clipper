@@ -29,6 +29,7 @@ TEST(ModelContainerTests,
   size_t last_batch_size = 1;
   for (long long i = 1; i < 200; ++i) {
     long long latency = static_cast<long long>(i * base_latency * decay_factor);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
     container.add_processing_datapoint(i, latency);
 
     if (i % 10 == 0) {
@@ -51,6 +52,7 @@ TEST(ModelContainerTests,
 
   for (long long i = 1; i <= 50; ++i) {
     long long latency = base_latency * i;
+    std::this_thread::sleep_for(std::chrono::seconds(1));
     container.add_processing_datapoint(i, latency);
 
     // Get the batch size corresponding to a latency budget

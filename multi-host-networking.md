@@ -1,7 +1,7 @@
-#Mulitiple host networking 
+# Mulitiple host networking 
 
 
-##Step 1:
+## Step 1 Start a KV store:
 Configure Key/Value Store 
 
 ```sh
@@ -10,17 +10,33 @@ docker run -d --name consul \
 gliderlabs/consul-server:latest -bootstrap
 ```
 
-##Step 2:
-Configure Docker Daemon on Host 1
+## Step 2 Reconfigure docke daemons on each host:
 
-###Option 1: Configure existing daemon
+Configure Docker Daemon on each host
+
+### Option 1: Configure existing daemon
 
 ```sh
-docerd \
---cluster-store=consul://[[CONSUL_IP]]:8500 \
---cluster-advertise=[[HOST_IP1]]:0
+sudo systemctl stop docker
 ```
-###Option 2: start a new daemon
+
+```sh
+sudo dockerd --cluster-store=consul://[[CONSUL_IP]]:8500 --cluster-advertise=[[HOST_IP1]]:0
+```
+
+Below are examples:
+```sh
+sudo dockerd --cluster-store=consul://202.45.128.162:8500 --cluster-advertise=202.45.128.161:0 &
+
+sudo dockerd -H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://202.45.128.162:8500 --cluster-advertise=202.45.128.173:0 &
+
+sudo dockerd -H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://202.45.128.162:8500 --cluster-advertise=202.45.128.174:0 &
+
+sudo dockerd -H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://202.45.128.162:8500 --cluster-advertise=202.45.128.175:0 &
+
+```
+
+### Option 2: start a new daemon
 
 ```sh
 docker run --privileged --name d1 -d \
@@ -33,32 +49,8 @@ Export new host daemon
 ```sh
 export DOCKER_HOST="[[HOST_IP1]]:3375"
 ```
-##Step 3:
 
-###Option 1: Configure existing daemon
-
-```sh
-docerd \
---cluster-store=consul://[[CONSUL_IP]]:8500 \
---cluster-advertise=[[HOST_IP2]]:0
-```
-###Option 2: Configure existing daemon
-
-Configure Docker Daemon on Host 2
-
-```sh
-docker run --privileged --name d1 -d \
---net=host katacoda/dind:1.10 -H 0.0.0.0:3375 \
---cluster-store=consul://[[CONSUL_IP]]:8500 \
---cluster-advertise=[[HOST_IP2]]:0
-```
-
-Export new host daemon
-```sh
-export DOCKER_HOST="[[HOST_IP2]]:3375"
-```
-
-##Step 4:
+## Step 3  Create an overlay network:
 One one of the Docker hosts, create the network
 
 ```sh
@@ -67,14 +59,13 @@ docker network create -d overlay multihost-net
 
 When new containers launch on any host they register themselves to the network
 
-##Step 5:
+## Step 4:
 
 Host 1
 
 ```sh
 docker run -d --name ws1 --net=multihos-net katacoda/docker-http-server
 ```
-##Step 6:
 
 Host 2
 ```sh

@@ -21,10 +21,13 @@ def run():
     print("The first sentence is :\n", sent_list[0])
 
     container3 = xmlrpc.client.ServerProxy('http://0.0.0.0:11000')
-    polarity_list = container3.Predict(sent_list)
+    polarity = container3.Predict(sent_list)
     print("\n\nSentimental Analysis FINISHED")
-    print("Generated a list containing ", len(polarity_list), " results")
-    print("The first result is :\n", polarity_list[0])
+    print("Generated a boolean value indicating the polarity tendency.")
+    if polarity:
+        print("The sentiment analysis result is positive.\n")
+    else:
+        print("The sentiment analysis result is negative.\n")
 
     container4 = xmlrpc.client.ServerProxy('http://0.0.0.0:12000')
     short_report = container4.Predict(text_data)

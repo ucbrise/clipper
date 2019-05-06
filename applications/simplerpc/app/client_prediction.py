@@ -52,7 +52,7 @@ def run():
     print(result_rg)
 
     # CONTAINER 2: Twitter Collector
-    container2 = xmlrpc.client.ServerProxy('http://localhost:9000')
+    container2 = xmlrpc.client.ServerProxy('http://localhost:9001')
     tweet_number = 1000
     twitter_data = container2.Predict(stock_name, tweet_number)
     print("\nTwitter data Retrieval FINISHED")

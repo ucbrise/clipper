@@ -65,6 +65,7 @@ const std::string GET_ALL_MODELS = ADMIN_PATH + "/get_all_models$";
 const std::string GET_MODEL = ADMIN_PATH + "/get_model$";
 const std::string GET_ALL_CONTAINERS = ADMIN_PATH + "/get_all_containers$";
 const std::string GET_CONTAINER = ADMIN_PATH + "/get_container$";
+const std::string DELETE_MODEL_LINKS = ADMIN_PATH + "/delete_model_links$";
 
 const std::string PING = ADMIN_PATH + "/ping$";
 
@@ -81,6 +82,13 @@ const std::string ADD_MODEL_LINKS_JSON_SCHEMA = R"(
   {
     "app_name" := string,
     "model_names" := [string]
+  }
+)";
+
+const std::string DELETE_MODEL_LINKS_JSON_SCHEMA = R"(
+  {
+  "app_name" := string,
+  "model_names" := [string]
   }
 )";
 
@@ -144,9 +152,9 @@ const std::string SELECTION_JSON_SCHEMA = R"(
 
 void respond_http(std::string content, std::string message,
                   std::shared_ptr<HttpServer::Response> response) {
-  *response << "HTTP/1.1 " << message
+  *response << "HTTP/1.1 " << message << "\r\nContent-Type: application/json"
             << "\r\nContent-Length: " << content.length() << "\r\n\r\n"
-            << content << "\n";
+            << content;
 }
 
 /* Generate a user-facing error message containing the exception
@@ -161,7 +169,8 @@ std::string json_error_msg(const std::string& exception_msg,
 
 class RequestHandler {
  public:
-  RequestHandler(int portno) : server_(portno), state_db_{} {
+  RequestHandler(std::string address, int portno)
+      : server_(address, portno), state_db_{} {
     clipper::Config& conf = clipper::get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
@@ -241,25 +250,24 @@ class RequestHandler {
             respond_http(e.what(), "400 Bad Request", response);
           }
         });
-
     server_.add_endpoint(
-        ADD_DAG_APP_LINKS, "POST",
+        DELETE_MODEL_LINKS, "POST",
         [this](std::shared_ptr<HttpServer::Response> response,
                std::shared_ptr<HttpServer::Request> request) {
           try {
             clipper::log_info(LOGGING_TAG_MANAGEMENT_FRONTEND,
-                              "Add application links POST request");
-            std::string result = add_dag_app_links(request->content.string());
+                              "Remove application links POST request");
+            std::string result = delete_model_links(request->content.string());
             respond_http(result, "200 OK", response);
           } catch (const json_parse_error& e) {
             std::string err_msg =
-                json_error_msg(e.what(), ADD_MODEL_LINKS_JSON_SCHEMA);
+                json_error_msg(e.what(), DELETE_MODEL_LINKS_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
           } catch (const json_semantic_error& e) {
             std::string err_msg =
-                json_error_msg(e.what(), ADD_MODEL_LINKS_JSON_SCHEMA);
+                json_error_msg(e.what(), DELETE_MODEL_LINKS_JSON_SCHEMA);
             respond_http(err_msg, "400 Bad Request", response);
-          } catch (const clipper::ManagementOperationError& e) {
+          } catch (const std::invalid_argument& e) {
             respond_http(e.what(), "400 Bad Request", response);
           }
         });
@@ -642,43 +650,17 @@ class RequestHandler {
     }
   }
 
-
-std::string add_dag(const std::string& json) {
-    rapidjson::Document d;
-    parse_json(json, d);
-
-    std::string dag_name = get_string(d, "name");
-    
-    std::string dag_description = get_string(d, "dag_description");
-
-    // check if dag already exists
-    std::unordered_map<std::string, std::string> existing_dag_data =
-        clipper::redis::get_dag(redis_connection_, dag_name);
-    if (existing_dag_data.empty()) {
-      if (clipper::redis::add_dga(redis_connection_, dag_name,
-                                          dag_description)) {
-        std::stringstream ss;
-        ss << "Successfully added dag with name "
-           << "'" << dag_name << "'";
-        return ss.str();
-      } else {
-        std::stringstream ss;
-        ss << "Error adding dag "
-           << "'" << dag_name << "'"
-           << " to Redis";
-        throw clipper::ManagementOperationError(ss.str());
-      }
-    } else {
-      std::stringstream ss;
-      ss << "dag "
-         << "'" << dag_name << "'"
-         << " already exists";
-      throw clipper::ManagementOperationError(ss.str());
-    }
-  }
-
-
-  std::string add_dag_links(const std::string& json) {
+  /**
+   * Creates an endpoint that listens for requests to remove links between
+   * apps and models
+   *
+   * JSON format:
+   * {
+   *  "app_name" := string,
+   *  "model_names" := [string]
+   * }
+   */
+  std::string delete_model_links(const std::string& json) {
     rapidjson::Document d;
     parse_json(json, d);
 
@@ -690,106 +672,35 @@ std::string add_dag(const std::string& json) {
         clipper::redis::get_application(redis_connection_, app_name);
     if (app_info.size() == 0) {
       std::stringstream ss;
-      ss << "No app with name "
-         << "'" << app_name << "'"
-         << " exists.";
-      throw clipper::ManagementOperationError(ss.str());
+      ss << "No app with name " << app_name << " exists.";
+      throw std::invalid_argument(ss.str());
     }
 
-    // Confirm that the models exists and have compatible input_types
-    auto app_input_type = app_info["input_type"];
-    boost::optional<std::string> model_version;
-    std::unordered_map<std::string, std::string> model_info;
-    std::string model_input_type;
-    for (auto const& model_name : model_names) {
-      model_version = clipper::redis::get_current_model_version(
-          redis_connection_, model_name);
-      if (!model_version) {
-        std::stringstream ss;
-        ss << "No model with name "
-           << "'" << model_name << "'"
-           << " exists.";
-        throw clipper::ManagementOperationError(ss.str());
-      } else {
-        model_info = clipper::redis::get_model(
-            redis_connection_, VersionedModelId(model_name, *model_version));
-        model_input_type = model_info["input_type"];
-        if (model_input_type != app_input_type) {
-          std::stringstream ss;
-          ss << "Model with name "
-             << "'" << model_name << "'"
-             << " has incompatible input_type "
-             << "'" << model_input_type << "'"
-             << ". Requested app to link to has input_type "
-             << "'" << app_input_type << "'"
-             << ".";
-          throw clipper::ManagementOperationError(ss.str());
-        }
-      }
-    }
-
-    // Confirm that the user supplied only one model_name
-    if (model_names.size() != 1) {
-      std::stringstream ss;
-      if (model_names.size() == 0) {
-        ss << "Please provide the name of the model that you want to link to "
-              "the application "
-           << "'" << app_name << "'";
-      } else {
-        ss << "Applications must be linked with at most one model. ";
-        ss << "Attempted to add links to " << model_names.size() << " models.";
-      }
-      std::string error_msg = ss.str();
-      clipper::log_error(LOGGING_TAG_MANAGEMENT_FRONTEND, error_msg);
-      throw clipper::ManagementOperationError(error_msg);
-    }
-
-    // Make sure that there will only be one link
+    // Confirm that the model names supplied are of linked models
     auto existing_linked_models =
         clipper::redis::get_linked_models(redis_connection_, app_name);
 
-    std::string new_model_name = model_names[0];
-
-    if (existing_linked_models.size() > 0) {
-      // We asserted earlier that `model_names` has size 1
-
+    for (auto const& model_name : model_names) {
       if (std::find(existing_linked_models.begin(),
                     existing_linked_models.end(),
-                    new_model_name) != existing_linked_models.end()) {
+                    model_name) == existing_linked_models.end()) {
         std::stringstream ss;
-        ss << "The model with name "
-           << "'" << new_model_name << "'"
-           << " is already linked to "
-           << "'" << app_name << "'";
-        throw clipper::ManagementOperationError(ss.str());
-      } else {
-        // We guarantee that there is only one existing model
-        std::string existing_model_name = existing_linked_models[0];
-        std::stringstream ss;
-        ss << "A model with name " << existing_model_name
-           << " is already linked to "
-           << "'" << app_name << "'"
-           << ".";
-        throw clipper::ManagementOperationError(ss.str());
+        ss << "Cannot remove nonexistent link between app " << app_name
+           << " and model " << model_name;
+        throw std::invalid_argument(ss.str());
       }
     }
 
-    if (clipper::redis::add_model_links(redis_connection_, app_name,
-                                        model_names)) {
-      std::stringstream ss;
-      ss << "Successfully linked model with name "
-         << "'" << new_model_name << "'"
-         << " to application "
-         << "'" << app_name << "'";
-      return ss.str();
+    if (clipper::redis::delete_model_links(redis_connection_, app_name,
+                                           model_names)) {
+      return "Success!";
     } else {
       std::stringstream ss;
-      ss << "Error linking models to "
-         << "'" << app_name << "'"
-         << " in Redis";
-      throw clipper::ManagementOperationError(ss.str());
+      ss << "Error deleting linked models from " << app_name << " in Redis";
+      throw std::invalid_argument(ss.str());
     }
   }
+
 
   /**
    * Processes a request to add a new application to Clipper

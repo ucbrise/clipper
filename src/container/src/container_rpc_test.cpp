@@ -69,11 +69,14 @@ int main(int argc, char* argv[]) {
   // clang-format off
   options.add_options()
       ("t,test_length", "length of the test in seconds",
-       cxxopts::value<long>()->default_value("10"));
+       cxxopts::value<long>()->default_value("10"))
+      ("p,rpc_service_port", "RPCService's port",
+       cxxopts::value<int>()->default_value("7000"));
   // clang-format on
   options.parse(argc, argv);
 
   long test_length = options["test_length"].as<long>();
+  int clipper_port = options["rpc_service_port"].as<int>();
 
   RPC container_rpc;
   RPCTestModel test_model(container_rpc);
@@ -81,7 +84,6 @@ int main(int argc, char* argv[]) {
   int model_version = 1;
 
   std::string clipper_ip = "localhost";
-  int clipper_port = 7000;
 
   container_rpc.start(test_model, model_name, model_version, clipper_ip,
                       clipper_port);

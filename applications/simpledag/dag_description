@@ -1,10 +1,10 @@
 5
 5
-c1,test,simpledag:container1
-c2,test,simpledag:container2
-c3,test,simpledag:container3
-c4,test,simpledag:container4
-c5,test,simpledag:container5
+c1,test,zsxhku/simpledag:container1
+c2,test,zsxhku/simpledag:container2
+c3,test,zsxhku/simpledag:container3
+c4,test,zsxhku/simpledag:container4
+c5,test,zsxhku/simpledag:container5
 1,2
 2,3
 2,4

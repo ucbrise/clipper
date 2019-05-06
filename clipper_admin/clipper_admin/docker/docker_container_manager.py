@@ -92,7 +92,19 @@ class DockerContainerManager(ContainerManager):
         self.docker_client = docker.from_env()
         self.extra_container_kwargs = extra_container_kwargs.copy()
 
-        self.remote_docker_client = []
+        self.host_list = {"localhost":self.docker_client}
+        self.container_count = 0
+
+        #self.h_list = {"202.45.128.174","202.45.128.175"}
+        self.h_list = {}
+
+        self.logger = ClusterAdapter(logger, {
+            'cluster_name': self.cluster_identifier
+        })
+
+        for h_ip in self.h_list:
+            self.connect_host(h_ip, "2375")
+
 
         # Merge Clipper-specific labels with any user-provided labels
         if "labels" in self.extra_container_kwargs:
@@ -110,16 +122,16 @@ class DockerContainerManager(ContainerManager):
 
         self.extra_container_kwargs.update(container_args)
 
-        self.logger = ClusterAdapter(logger, {
-            'cluster_name': self.cluster_identifier
-        })
-
+        
     def start_clipper(self,
                       query_frontend_image,
                       mgmt_frontend_image,
                       frontend_exporter_image,
                       cache_size,
                       prometheus_version,
+                      qf_http_thread_pool_size,
+                      qf_http_timeout_request,
+                      qf_http_timeout_content,
                       num_frontend_replicas=1):
         if num_frontend_replicas != 1:
             msg = "Docker container manager's query frontend scale-out " \
@@ -153,7 +165,8 @@ class DockerContainerManager(ContainerManager):
 
         # if not self.external_redis:
         #     self.logger.info("Starting managed Redis instance in Docker")
-        #     self.redis_port = find_unbound_port(self.redis_port)
+        #     self.redis_port = 33333
+        #     #find_unbound_port(self.redis_port)
         #     redis_labels = self.common_labels.copy()
         #     redis_labels[CLIPPER_DOCKER_PORT_LABELS['redis']] = str(
         #         self.redis_port)
@@ -171,8 +184,11 @@ class DockerContainerManager(ContainerManager):
 
         # mgmt_cmd = "--redis_ip={redis_ip} --redis_port={redis_port}".format(
         #     redis_ip=self.redis_ip, redis_port=CLIPPER_INTERNAL_REDIS_PORT)
-        # self.clipper_management_port = find_unbound_port(
-        #     self.clipper_management_port)
+        # self.clipper_management_port = 33334
+        #find_unbound_port(
+        #    self.clipper_management_port)
+
+
         # mgmt_labels = self.common_labels.copy()
         # mgmt_labels[CLIPPER_MGMT_FRONTEND_CONTAINER_LABEL] = ""
         # mgmt_labels[CLIPPER_DOCKER_PORT_LABELS['management']] = str(
@@ -190,10 +206,16 @@ class DockerContainerManager(ContainerManager):
         #     **self.extra_container_kwargs)
 
         # query_cmd = ("--redis_ip={redis_ip} --redis_port={redis_port} "
-        #              "--prediction_cache_size={cache_size}").format(
+        #              "--prediction_cache_size={cache_size} "
+        #              "--thread_pool_size={thread_pool_size} "
+        #              "--timeout_request={timeout_request} "
+        #              "--timeout_content={timeout_content}").format(
         #                  redis_ip=self.redis_ip,
         #                  redis_port=CLIPPER_INTERNAL_REDIS_PORT,
-        #                  cache_size=cache_size)
+        #                  cache_size=cache_size,
+        #                  thread_pool_size=qf_http_thread_pool_size,
+        #                  timeout_request=qf_http_timeout_request,
+        #                  timeout_content=qf_http_timeout_content)
 
         # query_container_id = random.randint(0, 100000)
         # query_name = "query_frontend-{}".format(query_container_id)
@@ -274,9 +296,9 @@ class DockerContainerManager(ContainerManager):
 
     def connect_host(self, host_ip, host_port):
 
-        docker_client = docker.DockerClient(base_url='tcp://{ip}:{port}>'.format(ip=host_ip, port=host_port), tls=False)
+        docker_client = docker.DockerClient(base_url='tcp://{ip}:{port}'.format(ip=host_ip, port=host_port), tls=False)
         
-        self.remote_docker_client.append(docker_client)
+        self.host_list[host_ip]=docker_client
 
         self.logger.info('Suffcessfully connected to remote docker daemon on host:{ip}'.format(ip=host_ip))
 
@@ -310,7 +332,10 @@ class DockerContainerManager(ContainerManager):
     def get_num_replicas(self, name, version):
         return len(self._get_replicas(name, version))
 
-    def set_proxy(self, image, model_container_label, model_ip):
+    def get_host_client(self, host_ip):
+        return self.host_list.get(host_ip, self.docker_client)
+
+    def set_proxy(self, image, model_container_label, model_ip, host_ip):
 
         proxy_name = model_container_label + '-proxy'
         env_vars = {
@@ -325,7 +350,10 @@ class DockerContainerManager(ContainerManager):
         labels[CLIPPER_MODEL_CONTAINER_LABEL] = proxy_name
         labels[CLIPPER_DOCKER_LABEL] = self.cluster_name
 
-        container = self.docker_client.containers.run(
+
+        host_client = self.get_host_client(host_ip)
+
+        container = host_client.containers.run(
             image,
             name=proxy_name,
             environment=env_vars,
@@ -337,11 +365,24 @@ class DockerContainerManager(ContainerManager):
         container_id = str(container)[12:-1]
         return proxy_name, container_id
 
-    def get_container_ip(self, container_id):
-        meta = self.docker_client.api.inspect_container(container_id)
+    def get_container_ip(self, host_ip, container_id):
+        
+        host_client = self.get_host_client(host_ip)
+
+        meta = host_client.api.inspect_container(container_id)
         ip = meta['NetworkSettings']['Networks']['clipper_network']['IPAddress']
         self.logger.info("Got container {id} IP:{meta}".format(id=container_id, meta=ip))
         return ip
+
+
+    def schedule_host(self):
+        
+        # Round Robin, default is self.docker_client
+
+        selected_host = self.host_list.keys()[(self.container_count % len(self.host_list) )-1]
+        selected_client = self.host_list.get(selected_host, self.docker_client)
+
+        return selected_host, selected_client
 
     def add_replica(self, model_name, model_version, model_port, image):
 
@@ -376,8 +417,14 @@ class DockerContainerManager(ContainerManager):
             random.randint(0, 100000))
 
         #model_container_name = model_container_label
+        print("scheduling a host")
+        scheduled_host, scheduled_client = self.schedule_host()
+        print(scheduled_client)
+        print("finished scheduled host on %s"%(scheduled_host))
 
-        container = self.docker_client.containers.run(
+       # scheduled_client = 
+
+        container = scheduled_client.containers.run(
             image,
             name=model_container_name,
             environment=env_vars,
@@ -387,26 +434,10 @@ class DockerContainerManager(ContainerManager):
 
         #<Container: d15d870463>
         container_id = str(container)[12:-1]
-        #Start Proxy
 
-        #proxy_port = find_unbound_port(30000)
-        
+        self.container_count = self.container_count + 1
 
-        #model_proxy_name = self.set_proxy(self.proxy_image, model_container_label, proxy_port)
-
-        #self.logger.info(
-        #    "Proxy for model:{model_container_label} is deployed with {proxy_name} ".format(
-        #        model_container_label=model_container_label,
-        #        proxy_name = model_proxy_name
-        #    )
-        #)
-        # Metric Section
-        #add_to_metric_config(model_container_name, self.prom_config_path,
-        #                     self.prometheus_port,
-        #                     CLIPPER_INTERNAL_METRIC_PORT)
-
-        # Return model_container_name so we can check if it's up and running later
-        return model_container_name, container_id
+        return model_container_name, container_id, scheduled_host
 
     def _add_replica(self, name, version, input_type, image):
 
@@ -447,26 +478,10 @@ class DockerContainerManager(ContainerManager):
             labels=labels,
             **self.extra_container_kwargs)
 
-        #Start Proxy
 
-        #proxy_port = find_unbound_port(30000)
-        
-
-        #model_proxy_name = self.set_proxy(self.proxy_image, model_container_label, proxy_port)
-
-        #self.logger.info(
-        #    "Proxy for model:{model_container_label} is deployed with {proxy_name} ".format(
-        #        model_container_label=model_container_label,
-        #        proxy_name = model_proxy_name
-        #    )
-        #)
-        # Metric Section
-        #add_to_metric_config(model_container_name, self.prom_config_path,
-        #                     self.prometheus_port,
-        #                     CLIPPER_INTERNAL_METRIC_PORT)
-
-        # Return model_container_name so we can check if it's up and running later
         return model_container_name
+
+
 
     def set_num_replicas(self, name, version, input_type, image, num_replicas):
         current_replicas = self._get_replicas(name, version)
@@ -571,17 +586,18 @@ class DockerContainerManager(ContainerManager):
             c.stop()
 
     def stop_all(self, graceful=True):
-        containers = self.docker_client.containers.list(
-            filters={
-                "label":
-                "{key}={val}".format(
-                    key=CLIPPER_DOCKER_LABEL, val=self.cluster_name)
-            })
-        for c in containers:
-            if graceful:
-                c.stop()
-            else:
-                c.kill()
+        for host, client in self.host_list.items():
+            containers = client.containers.list(
+                filters={
+                    "label":
+                    "{key}={val}".format(
+                        key=CLIPPER_DOCKER_LABEL, val=self.cluster_name)
+                })
+            for c in containers:
+                if graceful:
+                    c.stop()
+                else:
+                    c.kill()
 
     def get_admin_addr(self):
         return "{host}:{port}".format(
@@ -594,6 +610,44 @@ class DockerContainerManager(ContainerManager):
     #def get_metric_addr(self):
     #    return "{host}:{port}".format(
     #        host=self.public_hostname, port=self.prometheus_port)
+
+    def grpc_client(self, image, arg_list):
+
+        c = self.docker_client.containers.run(
+            image,
+            arg_list,
+            environment=["PYTHONUNBUFFERED=0"],
+            tty=True,
+            **self.extra_container_kwargs)
+
+        #print(c_id.id)
+        self.gen_container_log(c)
+
+        
+    def gen_container_log(self, c):
+        log = ""
+        for x in c.logs(stream=True):
+            log = log+x
+        self.logger.info("GRPC client with logs: %s"%(log.rstrip()))
+
+    def check_container_status(self, host_ip, container_id, timeout, threshold):
+
+        client = self.host_list.get(host_ip, self.docker_client)
+
+        c = client.containers.get(container_id)
+
+        count = 0;
+
+        while c.status != "running":
+            count = count+1
+            if (count < threshold):
+                self.logger.info("Container is not runnint, retrying...")
+                time.sleep(timeout)
+            else:
+                return "timeout"
+        return "running"
+
+        
 
 
 def find_unbound_port(start=None,

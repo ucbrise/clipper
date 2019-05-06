@@ -66,6 +66,8 @@ class ContainerManager(object):
     @abc.abstractmethod
     def start_clipper(self, query_frontend_image, mgmt_frontend_image,
                       frontend_exporter_image, cache_size,
+                      qf_http_thread_pool_size, qf_http_timeout_request,
+                      qf_http_timeout_content, 
                       num_frontend_replicas):
         # NOTE: An implementation of this interface should be connected to a running
         # Clipper instance when this method returns. ClipperConnection will not
@@ -81,7 +83,7 @@ class ContainerManager(object):
         return
 
     @abc.abstractmethod
-    def connect_host(self, host_ip):
+    def connect_host(self, host_ip, host_port):
         return
 
     @abc.abstractmethod
@@ -93,7 +95,7 @@ class ContainerManager(object):
         return
 
     @abc.abstractmethod
-    def set_proxy(self, image, model_container_label, model_ip):
+    def set_proxy(self, image, model_container_label, model_ip, host_ip):
         return
 
     @abc.abstractmethod
@@ -162,7 +164,15 @@ class ContainerManager(object):
         return
 
     @abc.abstractmethod
-    def get_container_ip(self, container_id):
+    def get_container_ip(self, host_ip, container_id):
+        return
+
+    @abc.abstractmethod
+    def grpc_client(self, image, arg_list):
+        return
+
+    @abc.abstractmethod
+    def check_container_status(self, host_ip, container_id, timeout, threshold):
         return
 
     # @abc.abstractmethod

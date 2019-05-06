@@ -30,6 +30,8 @@ from .rpc import model_pb2_grpc
 from .rpc import model_pb2
 from .rpc import proxy_pb2_grpc
 from .rpc import proxy_pb2
+from .rpc import prediction_pb2_grpc
+from .rpc import prediction_pb2
 
 from .container_manager import CONTAINERLESS_MODEL_IMAGE, ClusterAdapter
 from .exceptions import ClipperException, UnconnectedException
@@ -87,6 +89,7 @@ class ClipperConnection(object):
         self.connected = False
         self.cm = container_manager
 
+
         self.logger = ClusterAdapter(logger, {
             'cluster_name': self.cm.cluster_identifier
         })
@@ -99,6 +102,9 @@ class ClipperConnection(object):
                       frontend_exporter_image='{}/frontend-exporter:{}'.format(
                           __registry__, __version__),
                       cache_size=DEFAULT_PREDICTION_CACHE_SIZE_BYTES,
+                      qf_http_thread_pool_size=1,
+                      qf_http_timeout_request=5,
+                      qf_http_timeout_content=300,
                       num_frontend_replicas=1):
         """Start a new Clipper cluster and connect to it.
 
@@ -119,8 +125,15 @@ class ClipperConnection(object):
             The frontend exporter docker image to use. You can set this argument to specify
             a custom build of the management frontend, but any customization should maintain API
             compability and preserve the expected behavior of the system.
-        cache_size : int, optional
+        cache_size : int(optional), optional
             The size of Clipper's prediction cache in bytes. Default cache size is 32 MiB.
+        qf_http_thread_pool_size : int(optional)
+            The size of thread pool created in query frontend for http serving.
+        qf_http_timeout_request : int(optional)
+            The seconds of timeout on request handling in query frontend for http serving..
+        qf_http_timeout_content : int(optional)
+            The seconds of timeout on content handling in query frontend for http serving..
+        num_frontend_replicas : int(optional)
         num_frontend_replicas : int, option
             The number of query frontend to deploy for fault tolerance and high availability.
 
@@ -131,7 +144,9 @@ class ClipperConnection(object):
         try:
             self.cm.start_clipper(query_frontend_image, mgmt_frontend_image,
                                   frontend_exporter_image, cache_size,
-                                  num_frontend_replicas)
+                                  qf_http_thread_pool_size, qf_http_timeout_request,
+                                  qf_http_timeout_content, num_frontend_replicas)
+                        
             # while True:
             #     try:
             #         query_frontend_url = "http://{host}/metrics".format(
@@ -771,6 +786,10 @@ class ClipperConnection(object):
                 "Successfully registered DAG {name}:{version}".format(
                     name=name, version=version))
 
+
+    def connect_host(self, host_ip, host_port):
+        self.cm.connect_host(host_ip, "2375")
+
     def deploy_DAG(self, name, version, dag_description=None):
 
 
@@ -796,47 +815,34 @@ class ClipperConnection(object):
         for node_name in nodes_list:
 
             model_name,model_version,model_image = graph_parser.get_name_version(node_name)
-            container_name, container_id = self.cm.add_replica(model_name, model_version, "22222", model_image)
 
-            self.logger.info("Started %s with container %s:%s"%(model_name, container_name, container_id))
 
-            container_ip = self.cm.get_container_ip(container_id)
+            container_name, container_id, host = self.cm.add_replica(model_name, model_version, "22222", model_image)
 
-            proxy_name, proxy_id = self.cm.set_proxy("proxytest", container_name, container_ip)
+            self.logger.info("Started %s with container %s:%s (HOST:%s)"%(model_name, container_name, container_id, host))
+
+            container_ip = self.cm.get_container_ip(host, container_id)
+
+            proxy_name, proxy_id = self.cm.set_proxy("mxschen/ai-proxy", container_name, container_ip, host)
 
             ## get the ip of the instances 
-            proxy_ip = self.cm.get_container_ip(proxy_id)
+            proxy_ip = self.cm.get_container_ip(host, proxy_id)
 
 
-            time.sleep(1)
-            ## tell the proxy its container's info
-            print("proxy_ip:%s"%(proxy_ip))
-            #response = stub.SetModel(proxy_pb2.modelinfo(modelName = 'test', modelId = '1', modelPort='22222'))
+            #self.cm.check_container_status(host, container_id, 0.3, 20)
+            #self.cm.check_container_status(host, proxy_id, 0.3, 20)
 
-            channel_proxy = grpc.insecure_channel('{proxy_ip}:{proxy_port}'.format(
-                proxy_ip = proxy_ip,
-                proxy_port = "22223"
-            ))
-            stub_proxy = proxy_pb2_grpc.ProxyServiceStub(channel_proxy)
-            response1 = stub_proxy.SetModel(proxy_pb2.modelinfo(
-                modelName = container_name,
-                modelId = str(count),
-                modelPort = "22222"
-                ))
+            time.sleep(5)
+
+            self.logger.info("proxy_ip:%s"%(proxy_ip))
+
+
+            self.cm.grpc_client("zsxhku/grpcclient", "--setmodel %s %s %s %s %s %s"%(proxy_ip, "22223", container_name, count, container_ip, "22222" ))
             count += 1
-            self.logger.info('[Proxy]Set Model: {res}'.format(res=response1.status))
+            self.logger.info('[Proxy]Set Model: ')
 
-            #tells the model container its proxy's info
-            channel_container = grpc.insecure_channel('{container_ip}:{container_port}'.format(
-                container_ip=container_ip,
-                container_port = "22222"
-            ))
-            stub_container = model_pb2_grpc.PredictServiceStub(channel_container)
-            response2 = stub_container.SetProxy(model_pb2.proxyinfo(
-                proxyName = proxy_name,
-                proxyPort = "22223"
-                ))
-            self.logger.info('[Model]Set Proxy: {res}'.format(res=response2.status))
+            self.cm.grpc_client("zsxhku/grpcclient", "--setproxy %s %s %s %s"%(container_ip, "22222", proxy_name, "22223"))
+            self.logger.info('[Model]Set Proxy: ')
 
             proxy_info.append([proxy_name,proxy_id,proxy_ip])
             container_info.append([container_name, container_id, container_ip])
@@ -853,30 +859,9 @@ class ClipperConnection(object):
             proxy_id = tup[1]
             proxy_ip = tup[2]
 
-            ## tell the proxy the expanded dag info
-            channel_proxy = grpc.insecure_channel('{proxy_ip}:{proxy_port}'.format(
-                proxy_ip = proxy_ip,
-                proxy_port = "22223"
-            ))
-            stub_proxy = proxy_pb2_grpc.ProxyServiceStub(channel_proxy)
-            response = stub_proxy.SetDAG(proxy_pb2.dag(dag_ = expanded_dag))
-            self.logger.info('[Proxy]Set DAG for proxy {proxy_name}: {res}'.format(proxy_name=proxy_name, res=response.status))
+            self.cm.grpc_client("zsxhku/grpcclient", "--setdag %s %s %s"%(proxy_ip, "22223", expanded_dag))
 
-
-        ## Ping proxy 1
-        tup = proxy_info[0]
-        print(tup)
-        first_proxy_name = tup[0]
-        first_proxy_id = tup[1]
-        first_proxy_ip = tup[2]
-
-        channel_proxy = grpc.insecure_channel('{proxy_ip}:{proxy_port}'.format(
-            proxy_ip = first_proxy_ip,
-            proxy_port = "22223"
-        ))
-        stub_proxy = proxy_pb2_grpc.ProxyServiceStub(channel_proxy)
-        response = stub_proxy.Ping(proxy_pb2.hi(msg = "This is Admin"))
-        self.logger.info('Ping:  {res}'.format(res=response.status))
+            self.logger.info('[Proxy]Set DAG for proxy {proxy_name}: '.format(proxy_name=proxy_name))
 
         return
 

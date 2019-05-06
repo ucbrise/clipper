@@ -1,0 +1,99 @@
+syntax = "proto3";
+
+package management;
+
+// service, encode a plain text 
+service ManagementServer {
+
+    rpc SayHello (HelloRequest) returns (HelloReply) {}
+
+
+
+    //SET
+    rpc AddModel (ModelInfo) returns (Reply) {}
+    rpc AddModelContainer (ModelContainerInfo) returns (Reply) {}
+    rpc AddProxyContainer (ProxyContainerInfo) returns (Reply) {}
+
+    rpc AddDAG (DAGInfo) returns (Reply) {}
+    rpc AddRuntimeDAG (RuntimeDAGInfo) returns (Reply) {}
+
+    rpc AddApp (AppInfo) returns (Reply) {}
+    rpc AddAppDAGLink (LinkInfo) returns (Reply) {}
+
+
+    //GET
+
+    rpc GetModelByName (GetModelRequest) returns (ModelInfo) {}
+}
+
+message ModelInfo{
+    string modelname = 1;
+    string modelversion = 2;
+    string inputtype = 3;
+    string outputtype = 4;
+    bool stateful = 5;
+    string image = 6;
+}
+
+message ModelContainerInfo{
+    string modelname = 1;
+    string modelversion = 2;
+    string ip = 3;
+    string host = 4;
+    uint32 port = 5;
+    string containerid = 6;
+    uint32 replicaid = 7;
+}
+
+message ProxyContainerInfo{
+    string proxyname = 1;
+    string modelname = 2;
+    string modelversion = 3;
+    string modelcontainerip = 4;
+    string modelcontainerhost = 5;
+    string modelcontainerport = 6;
+    string modelcontainerid = 7;
+}
+
+message DAGInfo{
+    string file = 1;
+    string name = 2;
+    string version = 3;
+    string format = 4;
+}
+
+message RuntimeDAGInfo{
+    string file = 1;
+    string id = 2;
+    string name = 3;
+    string version = 4;
+    string format = 5;
+}
+
+message AppInfo{
+    string name = 1;
+    string version = 2;
+    // SLOs and others 
+}
+
+message LinkInfo{
+    string appname = 1;
+    string appversion =2;
+    string dagname =3;
+    string dagversion = 4;
+    string dagid = 5;
+}
+
+message Response {
+    string status = 1;
+}
+
+// The request message containing the user's name.
+message HelloRequest {
+  string name = 1;
+}
+
+// The response message containing the greetings
+message HelloReply {
+  string message = 1;
+}

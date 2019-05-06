@@ -5,8 +5,7 @@ import os
 
 import model_pb2
 import model_pb2_grpc
-import proxy_pb2
-import proxy_pb2_grpc
+
 
 import predict as predict_fn
 
@@ -70,7 +69,7 @@ class PredictService(model_pb2_grpc.PredictServiceServicer):
         #     response = response.status
         # ))
 
-        return model_pb2.response(status = output)
+        return model_pb2.output(outputType = "string", outputStream = output)
 
     def Ping(self, request, context):
 

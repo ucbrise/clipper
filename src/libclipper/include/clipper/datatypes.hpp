@@ -43,6 +43,7 @@ enum class RequestType {
 std::string get_readable_input_type(DataType type);
 DataType parse_input_type(std::string type_string);
 
+
 // Pair of input data, data start index, data size in bytes
 typedef std::tuple<SharedPoolPtr<void>, size_t, size_t> ByteBuffer;
 
@@ -68,9 +69,6 @@ class VersionedModelId {
   std::string name_;
   std::string id_;
 };
-
-
-
 
 class PredictionData {
  public:
