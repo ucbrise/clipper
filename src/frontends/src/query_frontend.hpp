@@ -487,15 +487,14 @@ class RequestHandler {
     clipper::json::add_long(json_response, PREDICTION_RESPONSE_KEY_QUERY_ID,
                             query_response.query_id_);
     rapidjson::Document json_y_hat;
-//    std::string y_hat_str = parse_output_y_hat(query_response.output_.y_hat_);
+
     std::string y_hat_str ("");
     for(auto output_ele : query_response.output_){
       y_hat_str += parse_output_y_hat(output_ele.y_hat_);
       y_hat_str += ",";
     }
     y_hat_str.pop_back();
-    y_hat_str += "]";
-    y_hat_str = "[" + y_hat_str;
+    y_hat_str = "[" + y_hat_str + "]";
 
     try {
       // Attempt to parse the string output as JSON
