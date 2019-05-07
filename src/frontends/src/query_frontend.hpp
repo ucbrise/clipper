@@ -491,7 +491,9 @@ class RequestHandler {
     std::string y_hat_str ("");
     for(auto output_ele : query_response.output_){
       y_hat_str += parse_output_y_hat(output_ele.y_hat_);
+      y_hat_str += ","
     }
+    y_hat_str.pop_back();
     y_hat_str += "]";
     y_hat_str = "[" + y_hat_str;
 
