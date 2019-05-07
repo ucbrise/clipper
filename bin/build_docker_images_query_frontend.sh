@@ -31,7 +31,7 @@ CLIPPER_ROOT=$DIR/..
 cd $CLIPPER_ROOT
 
 # Initialize tags
-version_tag='0.3.5.5'
+version_tag='0.3.5.6'
 sha_tag=`git rev-parse --verify --short HEAD`
 
 ######## Utilities for managing versioning ############
