@@ -8,9 +8,9 @@
 # 1. install required packages for installation
 apt-get install pkg-config zip zlib1g-dev unzip
 # 2. set access level to the installer
-chmod +x /container/bazel-0.24.1-installer-linux-x86_64.sh
+chmod +x /container/bazel-0.25.1-installer-linux-x86_64.sh
 # 3. run bazel installer
-./container/bazel-0.24.1-installer-linux-x86_64.sh --user
+./container/bazel-0.25.1-installer-linux-x86_64.sh --user
 # 4. add to system path
 export PATH="$PATH:$HOME/bin"
 # Finish installing bazel 
