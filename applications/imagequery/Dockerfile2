@@ -31,6 +31,8 @@ ADD simplerpc/app /container/
 
 # The wrapper_script will install bazel,  run simplerpc server
 RUN ["chmod","777","/container/wrapper_script.sh"]
+RUN ["chmod","777","/container/workspace/im2txt/model/newDownload1.sh"]
+RUN ["chmod","777","/container/workspace/im2txt/model/newDownload2.sh"]
 CMD ./container/wrapper_script.sh
 
 EXPOSE 9000
