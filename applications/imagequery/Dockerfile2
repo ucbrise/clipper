@@ -30,6 +30,7 @@ ADD simplerpc/app /container/
 # RUN ["ls" , "/container/"]
 
 # The wrapper_script will install bazel,  run simplerpc server
+RUN ["chmod","777","/container/wrapper_script.sh"]
 CMD ./container/wrapper_script.sh
 
 EXPOSE 9000
