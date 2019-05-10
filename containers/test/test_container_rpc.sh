@@ -80,7 +80,7 @@ sleep 10s
 cd $DIR/../../debug/src/benchmarks
 make rpctest
 REDIS_PORT=$1
-RPC_SERVICE_PORT=`perl -e "print int(rand($PORT_RANGE_END-$PORT_RANGE_START)) + $PORT_RANGE_START"``
+RPC_SERVICE_PORT=`perl -e "print int(rand($PORT_RANGE_END-$PORT_RANGE_START)) + $PORT_RANGE_START"`
 echo "Executing RPC test (first iteration)... (redis port:$REDIS_PORT, rpc_service_port:$RPC_SERVICE_PORT)"
 ./rpctest --num_containers=2 --timeout_seconds=30 --redis_port $REDIS_PORT --rpc_service_port $RPC_SERVICE_PORT
 redis-cli -p $REDIS_PORT "flushall"
