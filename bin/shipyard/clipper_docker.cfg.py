@@ -144,9 +144,12 @@ py35_rpc = create_and_push_with_ctx(
 py36_rpc = create_and_push_with_ctx(
     ctx, "py36-rpc", "Py36RPCDockerfile", rpc_version="py36", push_version=True
 )
+py37_rpc = create_and_push_with_ctx(
+    ctx, "py37-rpc", "Py37RPCDockerfile", rpc_version="py37", push_version=True
+)
 
 # Will be used for model containers building
-rpc_containers = {"py": py_rpc, "py35": py35_rpc, "py36": py36_rpc}
+rpc_containers = {"py": py_rpc, "py35": py35_rpc, "py36": py36_rpc, "py37": py37_rpc}
 
 
 py_rpc > create_and_push_with_ctx(
@@ -167,7 +170,7 @@ models = [
     ("python{version}-closure", "PyClosureContainer"),
     ("keras{version}", "KerasContainer")
 ]
-py_version = [("", "py"), ("35", "py35"), ("36", "py36")]
+py_version = [("", "py"), ("35", "py35"), ("36", "py36"), ("37", "py37")]
 
 for (model_name, docker_file), (py_version_name, rpc_version) in product(
     models, py_version
