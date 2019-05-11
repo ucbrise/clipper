@@ -18,13 +18,10 @@ export PATH="$PATH:$HOME/bin"
 # II. Set access level to the shellscript to be executed with bazel
 chmod 777 /container/workspace/im2txt/runWithArg.sh
 
-# III. Download model from google drive
+# III. Download model from google drive and move to the directory required
 # Reference: https://stackoverflow.com/questions/48133080/how-to-download-a-google-drive-url-via-curl-or-wget/48133859
 ./container/workspace/im2txt/model/newDownload1.sh
 ./container/workspace/im2txt/model/newDownload2.sh
 mv /newmodel.ckpt-2000000.meta /container/workspace/im2txt/model
 mv /newmodel.ckpt-2000000.data-00000-of-00001 /container/workspace/im2txt/model
 
-echo "finished wrapper script"
-# run simlerpc server
-python3 /container/server.py 2 9000

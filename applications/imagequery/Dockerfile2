@@ -7,6 +7,8 @@ RUN pip3 install nltk
 RUN python3 -m nltk.downloader all
 RUN apt-get install python -y
 RUN conda install -c anaconda perl
+RUN pip3 install grpcio
+RUN pip3 install protobuf
 
 # A workspace directory will be created under /container/, which is our workspace for bazel
 # All directories in 2_imageCaptionGenerator will be copied to /container/workspace/, except app
@@ -17,24 +19,28 @@ ADD imagequery/2_imageCaptionGenerator/g3doc /container/workspace/g3doc
 ADD imagequery/2_imageCaptionGenerator/im2txt /container/workspace/im2txt
 ADD imagequery/2_imageCaptionGenerator/WORKSPACE /container/workspace/
 ADD imagequery/2_imageCaptionGenerator/captionData /container/workspace/captionData/
-# RUN ["ls" , "/container/"]
-# RUN ["ls" , "/container/workspace"]
-# RUN ["ls" , "/container/workspace/captionData/"]
 
 # 2_imageCaptionGenerator/app, bazel-installer, wrapper_script.sh and simplerpc/app will be copied to /container/
 # RUN ["wget","https://github.com/bazelbuild/bazel/releases/download/0.25.1/bazel-0.25.1-installer-linux-x86_64.sh","-P","/container"]
 ADD imagequery/2_imageCaptionGenerator/bazel-0.25.1-installer-linux-x86_64.sh /container/
 ADD imagequery/2_imageCaptionGenerator/wrapper_script.sh /container/
 ADD imagequery/2_imageCaptionGenerator/app /container/
-ADD simplerpc/app /container/
-# RUN ["ls" , "/container/"]
 
+ADD grpc/app/container_entry.sh /container/
+ADD grpc/app/server.py /container/
+ADD grpc/app/model_pb2_grpc.py /container/
+ADD grpc/app/model_pb2.py /container/
+ADD grpc/app/proxy_pb2_grpc.py /container/
+ADD grpc/app/proxy_pb2.py /container/
+
+# Granting permission for shellscript
 RUN ["chmod","777","/container/wrapper_script.sh"]
 RUN ["chmod","777","/container/workspace/im2txt/model/newDownload1.sh"]
 RUN ["chmod","777","/container/workspace/im2txt/model/newDownload2.sh"]
 
-# The wrapper_script will install bazel and run simplerpc server
+# Run the wrapper_script, which will install bazel and download model 
+RUN ./container/wrapper_script.sh
 
-CMD ./container/wrapper_script.sh
+CMD ["/container/container_entry.sh", "tensorflow-container", "/container/server.py"]
 
 EXPOSE 9000
