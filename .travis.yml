@@ -10,6 +10,8 @@ sudo: required
 
 language: python
 
+python: "2.7"
+
 env:
   matrix:
   # This will make sure .minikube config resides in current user folder

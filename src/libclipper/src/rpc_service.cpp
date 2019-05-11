@@ -152,7 +152,7 @@ void RPCService::manage_service(const string address) {
     if (std::chrono::duration_cast<std::chrono::milliseconds>(
             current_time - last_activity_check_time_)
             .count() > CONTAINER_EXISTENCE_CHECK_FREQUENCY_MILLS) {
-      check_container_activity(connections_containers_map);
+      check_container_activity(connections, connections_containers_map);
       last_activity_check_time_ = current_time;
     }
     // Note: We send all queued messages per event loop iteration
@@ -162,6 +162,7 @@ void RPCService::manage_service(const string address) {
 }
 
 void RPCService::check_container_activity(
+    boost::bimap<int, vector<uint8_t>> &connections,
     std::unordered_map<std::vector<uint8_t>, ConnectedContainerInfo,
                        std::function<size_t(const std::vector<uint8_t> &vec)>>
         &connections_containers_map) {
@@ -191,6 +192,7 @@ void RPCService::check_container_activity(
   }
   for (auto key : needs_removing) {
     connections_containers_map.erase(key);
+    connections.right.erase(key);
   }
 }
 

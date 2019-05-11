@@ -68,9 +68,9 @@ retry_test() {
 
 # if the test test succeed, debug info will not get printed
 # mainly used to debug container being evicted
-retry_test python kubernetes_integration_test.py
-retry_test python kubernetes_multi_frontend.py
-retry_test python kubernetes_namespace.py
+retry_test python kubernetes_integration_test.py; sleep 30
+retry_test python kubernetes_multi_frontend.py; sleep 30
+retry_test python kubernetes_namespace.py; sleep 30
 retry_test python multi_tenancy_test.py --kubernetes
 
 # TODO: disabled for now, will re-enable after RBAC PR
