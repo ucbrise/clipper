@@ -19,6 +19,6 @@ ADD grpc/app/model_pb2.py /container/
 ADD grpc/app/proxy_pb2_grpc.py /container/
 ADD grpc/app/proxy_pb2.py /container/
 
-CMD ["python3", "/container/server.py", "4", "12000"]
+EXPOSE 22222
 
-EXPOSE 12000
+CMD ["/container/container_entry.sh", "tensorflow-container", "/container/server.py"]
