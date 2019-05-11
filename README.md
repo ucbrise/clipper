@@ -24,7 +24,7 @@ python stock.py
 ## Step 4: See the dockers/logs
 ```sh
 docker container ls 
-docker container [CONTAINER_ID]
+docker container logs [CONTAINER_ID]
 ```
 ## Step 5: Stock DAG input / request
 ```sh
