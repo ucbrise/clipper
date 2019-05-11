@@ -106,6 +106,7 @@ class RPCService {
   void manage_service(const string address);
 
   void check_container_activity(
+      boost::bimap<int, vector<uint8_t>> &connections,
       std::unordered_map<std::vector<uint8_t>, ConnectedContainerInfo,
                          std::function<size_t(const std::vector<uint8_t> &vec)>>
           &connections_containers_map);

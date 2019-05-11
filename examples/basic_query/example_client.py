@@ -40,7 +40,7 @@ def signal_handler(signal, frame):
 
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal_handler)
-    clipper_conn = ClipperConnection(DockerContainerManager())
+    clipper_conn = ClipperConnection(DockerContainerManager(use_centralized_log=False))
     clipper_conn.start_clipper()
     python_deployer.create_endpoint(clipper_conn, "simple-example", "doubles",
                                     feature_sum)
