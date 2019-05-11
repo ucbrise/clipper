@@ -1,0 +1,16 @@
+FROM ubuntu:bionic
+RUN apt-get update
+RUN apt-get install python3 python3-all-dev python3-pip build-essential swig git libpulse-dev libasound2-dev -y
+RUN apt-get install libsm6 libxext6 libxrender-dev -y
+RUN pip3 install numpy
+RUN pip3 install opencv-python
+RUN pip3 install grpcio
+RUN pip3 install protobuf
+
+
+ADD container1/app /container/
+ADD simplerpc/app /container/
+
+CMD ["python3", "/container/server.py", "1", "8000"]
+
+EXPOSE 8000

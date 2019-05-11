@@ -1,0 +1,22 @@
+FROM ubuntu:bionic
+RUN apt-get update
+RUN apt-get install python3 python3-all-dev python3-pip build-essential swig git libpulse-dev libasound2-dev -y
+RUN pip3 install numpy
+RUN apt-get install libsm6 libxext6 libxrender-dev -y
+RUN pip3 install opencv-python
+RUN pip3 install grpcio
+RUN pip3 install protobuf
+RUN pip3 install scikit-image
+RUN pip3 install Cython
+RUN pip3 install pycocotools
+RUN pip3 install git+https://github.com/philferriere/cocoapi.git#egg=pycocotools^&subdirectory=PythonAPI
+RUN pip3 install tensorflow
+RUN pip3 install keras
+ADD container3/app /container/
+
+ADD simplerpc/app /container/
+
+
+CMD ["python3", "/container/server.py", "3", "11000"]
+RUN pip3 install imgaug
+EXPOSE 11000
