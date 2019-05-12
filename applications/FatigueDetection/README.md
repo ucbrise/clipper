@@ -8,6 +8,9 @@ Output: A boolean value indicating whether the driver is sleepling or not.
 
 GPU:
 
+open-cv: container 1-4
+
+tensorflow: container 3
 
 
 
