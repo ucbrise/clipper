@@ -1,6 +1,6 @@
 # FatigueDetection
 
-Container DAG see DAG description.png.
+Structure see DAG description.png.
 
 Input: Image, need to serialize to json string
 
