@@ -235,6 +235,11 @@ class ClipperConnection(object):
                 "Application {app} was successfully registered".format(
                     app=name))
 
+    def delete_application(self, name):
+        # See: https://github.com/ucbrise/clipper/issues/603
+        self.logger.warning("[DEPRECATED] Use 'unregister_application' API instead of this.")
+        self.unregister_application(name)
+
     def unregister_application(self, name):
         if not self.connected:
             raise UnconnectedException()
