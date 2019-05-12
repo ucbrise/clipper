@@ -29,7 +29,7 @@ def generateCaption(image_name):
   checkpoint_path = workspace_path + "im2txt/model/newmodel.ckpt-2000000"
   wordscount_path = workspace_path + "im2txt/data/word_counts.txt"
   image_path = workspace_path + "im2txt/data/images/" + image_name
-  command = "bash ./container/workspace/im2txt/runWithArg.sh " + checkpoint_path + " " + wordscount_path + " " + image_path + " "
+  command = "bash /container/workspace/im2txt/runWithArg.sh " + checkpoint_path + " " + wordscount_path + " " + image_path + " "
   print("before!")
   os.system(command)
   print("after!")
