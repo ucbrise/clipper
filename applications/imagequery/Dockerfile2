@@ -42,6 +42,8 @@ RUN ["/container/bazel-0.25.1-installer-linux-x86_64.sh", "--user"]
 RUN export PATH="$PATH:$HOME/bin"
 RUN chmod 777 /container/workspace/im2txt/runWithArg.sh
 
+RUN chmod 777 /container/workspace/im2txt/model/newDownload1.sh
+RUN chmod 777 /container/workspace/im2txt/model/newDownload1.sh
 RUN /container/workspace/im2txt/model/newDownload1.sh
 RUN /container/workspace/im2txt/model/newDownload2.sh
 
@@ -55,8 +57,6 @@ RUN mv /notebooks/newmodel.ckpt-2000000.data-00000-of-00001 /container/workspace
 
 
 RUN ["chmod","777","/container/wrapper_script.sh"]
-RUN ["chmod","777","/container/workspace/im2txt/model/newDownload1.sh"]
-RUN ["chmod","777","/container/workspace/im2txt/model/newDownload2.sh"]
 
 # The wrapper_script will install bazel and run simplerpc server
 
