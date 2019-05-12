@@ -6,3 +6,6 @@ kubernetes==6.0.0
 mock
 prometheus_client
 redis
+# https://github.com/ucbrise/clipper/issues/678.
+# It should be removed once urllib3>=1.25 is compatible with requests library
+urllib3<1.25

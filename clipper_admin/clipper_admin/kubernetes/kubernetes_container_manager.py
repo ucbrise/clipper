@@ -177,12 +177,17 @@ class KubernetesContainerManager(ContainerManager):
                       mgmt_frontend_image,
                       frontend_exporter_image,
                       cache_size,
+                      qf_http_thread_pool_size,
+                      qf_http_timeout_request,
+                      qf_http_timeout_content,
                       num_frontend_replicas=1):
         self._start_redis()
         self._start_mgmt(mgmt_frontend_image)
         self.num_frontend_replicas = num_frontend_replicas
         self._start_query(query_frontend_image, frontend_exporter_image,
-                          cache_size, num_frontend_replicas)
+                          cache_size, qf_http_thread_pool_size,
+                          qf_http_timeout_request, qf_http_timeout_content,
+                          num_frontend_replicas)
         self._start_prometheus()
         self.connect()
 
@@ -242,7 +247,8 @@ class KubernetesContainerManager(ContainerManager):
                 body=mgmt_service_data, namespace=self.k8s_namespace)
 
     def _start_query(self, query_image, frontend_exporter_image, cache_size,
-                     num_replicas):
+                     qf_http_thread_pool_size, qf_http_timeout_request,
+                     qf_http_timeout_content, num_replicas):
         for query_frontend_id in range(num_replicas):
             with _pass_conflicts():
                 query_deployment_data = self._generate_config(
@@ -252,6 +258,9 @@ class KubernetesContainerManager(ContainerManager):
                     redis_service_host=self.redis_ip,
                     redis_service_port=self.redis_port,
                     cache_size=cache_size,
+                    thread_pool_size=qf_http_thread_pool_size,
+                    timeout_request=qf_http_timeout_request,
+                    timeout_content=qf_http_timeout_content,
                     name='query-frontend-{}'.format(query_frontend_id),
                     id_label=str(query_frontend_id),
                     cluster_name=self.cluster_name)

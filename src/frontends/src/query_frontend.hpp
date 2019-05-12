@@ -133,8 +133,13 @@ class AppMetrics {
 template <class QP>
 class RequestHandler {
  public:
-  RequestHandler(std::string address, int portno)
-      : server_(address, portno), query_processor_() {
+  RequestHandler(std::string address, int portno,
+                 int thread_pool_size = clipper::DEFAULT_THREAD_POOL_SIZE,
+                 int timeout_request = clipper::DEFAULT_TIMEOUT_REQUEST,
+                 int timeout_content = clipper::DEFAULT_TIMEOUT_CONTENT)
+      : server_(address, portno, thread_pool_size, timeout_request,
+                timeout_content),
+        query_processor_() {
     clipper::Config& conf = clipper::get_config();
     while (!redis_connection_.connect(conf.get_redis_address(),
                                       conf.get_redis_port())) {
@@ -158,8 +163,10 @@ class RequestHandler {
                                clipper::metrics::MetricsRegistry::get_metrics();
                            std::string metrics_report =
                                registry.report_metrics();
-                           clipper::log_info(LOGGING_TAG_QUERY_FRONTEND,
-                                             "METRICS", metrics_report);
+
+                          // There's no point to log here because the data is collected in prometheus
+                          //  clipper::log_info(LOGGING_TAG_QUERY_FRONTEND,
+                          //                    "METRICS", metrics_report);
                            respond_http(metrics_report, "200 OK", response);
                          });
 
@@ -201,6 +208,13 @@ class RequestHandler {
             clipper::log_info_formatted(LOGGING_TAG_QUERY_FRONTEND,
                                         "New model link detected for app: {}",
                                         app_name);
+            auto linked_model_names =
+                clipper::redis::get_linked_models(redis_connection_, app_name);
+            set_linked_models_for_app(app_name, linked_model_names);
+
+          } else if (event_type == "srem") {
+            clipper::log_info_formatted(LOGGING_TAG_QUERY_FRONTEND,
+                                        "Model link removal detected for app: {}", app_name);
             auto linked_model_names =
                 clipper::redis::get_linked_models(redis_connection_, app_name);
             set_linked_models_for_app(app_name, linked_model_names);

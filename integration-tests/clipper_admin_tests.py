@@ -40,7 +40,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
     def setUp(self):
         new_name = "admin-test-cluster-{}".format(random.randint(0, 5000))
         self.clipper_conn = create_docker_connection(
-            cleanup=False, start_clipper=True, new_name=new_name)
+            cleanup=False, start_clipper=True, new_name=new_name, use_centralized_log=False)
         self.name = new_name
 
     def tearDown(self):
@@ -130,6 +130,25 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         result = self.clipper_conn.get_linked_models(app_name)
         self.assertEqual([model_name], result)
 
+    def test_unlink_registered_model_from_app_succeeds(self):
+        # Register app
+        app_name = "testapp"
+        input_type = "doubles"
+        default_output = "DEFAULT"
+        slo_micros = 30000
+        self.clipper_conn.register_application(app_name, input_type,
+                                               default_output, slo_micros)
+
+        # Register model
+        model_name = "m"
+        self.clipper_conn.register_model(model_name, "v1", input_type)
+
+        self.clipper_conn.link_model_to_app(app_name, model_name)
+        self.clipper_conn.unlink_model_from_app(app_name, model_name)
+
+        result = self.clipper_conn.get_linked_models(app_name)
+        self.assertEqual([], result)
+
     def get_app_info_for_registered_app_returns_info_dictionary(self):
         # Register app
         app_name = "testapp"
@@ -177,18 +196,19 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.assertTrue(models_list_contains_correct_version)
 
     def test_get_logs_creates_log_files(self):
-        if not os.path.exists(cl.CLIPPER_TEMP_DIR):
-            os.makedirs(cl.CLIPPER_TEMP_DIR)
-        tmp_log_dir = tempfile.mkdtemp(dir=cl.CLIPPER_TEMP_DIR)
-        log_file_names = self.clipper_conn.get_clipper_logs(
-            logging_dir=tmp_log_dir)
-        self.assertIsNotNone(log_file_names)
-        self.assertGreaterEqual(len(log_file_names), 1)
-        for file_name in log_file_names:
-            self.assertTrue(os.path.isfile(file_name))
+        if not self.clipper_conn.cm.centralize_log:
+            if not os.path.exists(cl.CLIPPER_TEMP_DIR):
+                os.makedirs(cl.CLIPPER_TEMP_DIR)
+            tmp_log_dir = tempfile.mkdtemp(dir=cl.CLIPPER_TEMP_DIR)
+            log_file_names = self.clipper_conn.get_clipper_logs(
+                logging_dir=tmp_log_dir)
+            self.assertIsNotNone(log_file_names)
+            self.assertGreaterEqual(len(log_file_names), 1)
+            for file_name in log_file_names:
+                self.assertTrue(os.path.isfile(file_name))
 
-        # Remove temp files
-        shutil.rmtree(tmp_log_dir)
+            # Remove temp files
+            shutil.rmtree(tmp_log_dir)
 
     def test_inspect_instance_returns_json_dict(self):
         metrics = self.clipper_conn.inspect_instance()
@@ -263,8 +283,8 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         container_name = "{}/noop-container:{}".format(clipper_registry,
                                                        clipper_version)
         input_type = "doubles"
-        mnames = ["jimmypage", "robertplant", "jpj", "johnbohnam"]
-        versions = ["i", "ii", "iii", "iv"]
+        mnames = ["jimmypage", "robertplant"]
+        versions = ["i", "ii"]
         for model_name in mnames:
             for version in versions:
                 self.clipper_conn.deploy_model(
@@ -277,21 +297,19 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         containers = self.get_containers(container_name)
         self.assertEqual(len(containers), len(mnames) * len(versions))
 
-        # stop all versions of models jimmypage, robertplant
-        self.clipper_conn.stop_models(mnames[:2])
+        # stop all versions of jimmypage model
+        self.clipper_conn.stop_models(mnames[:1])
         containers = self.get_containers(container_name)
 
-        self.assertEqual(len(containers), len(mnames[2:]) * len(versions))
+        self.assertEqual(len(containers), len(mnames[1:]) * len(versions))
 
-        # After calling this method, the remaining models should be:
-        # jpj:i, jpj:iii, johnbohman:ii
+        # After calling this method, the remaining model should be robertplant:i
         self.clipper_conn.stop_versioned_models({
-            "jpj": ["ii", "iv"],
-            "johnbohnam": ["i", "iv", "iii"],
+            "robertplant": ["ii"],
         })
         containers = self.get_containers(container_name)
 
-        self.assertEqual(len(containers), 3)
+        self.assertEqual(len(containers), 1)
 
         self.clipper_conn.stop_all_model_containers()
         containers = self.get_containers(container_name)
