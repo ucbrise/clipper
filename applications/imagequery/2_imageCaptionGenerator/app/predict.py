@@ -57,3 +57,8 @@ def predict(resized_image_path):
   end = timer()
   time_elapsed = end - start
   return generated_caption, time_elapsed
+
+
+
+if __name__ == '__main__':
+    predict("image.jpg")

@@ -27,4 +27,4 @@ mv /notebooks/newmodel.ckpt-2000000.data-00000-of-00001 /container/workspace/im2
 
 echo "finished wrapper script"
 # run simlerpc server
-python3 /container/server.py 2 9000
+python /container/predict.py
