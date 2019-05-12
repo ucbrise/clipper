@@ -1,7 +1,8 @@
 FROM continuumio/anaconda3
 RUN apt-get update
 RUN apt-get install python3 python3-pip -y
-RUN conda install tensorflow-gpu
+# RUN conda install tensorflow-gpu
+RUN conda install -c anaconda tensorflow-gpu
 RUN pip3 install numpy
 RUN pip3 install nltk 
 RUN python3 -m nltk.downloader all
