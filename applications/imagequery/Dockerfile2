@@ -39,19 +39,21 @@ ADD simplerpc/app /container/
 
 
 ###  Install bazel
-#RUN chmod +x /container/bazel-0.25.1-installer-linux-x86_64.sh
+RUN chmod +x /container/bazel-0.25.1-installer-linux-x86_64.sh
 
-#RUN /container/bazel-0.25.1-installer-linux-x86_64.sh --user
-#RUN export PATH="$PATH:$HOME/bin"
+RUN /container/bazel-0.25.1-installer-linux-x86_64.sh 
+RUN export PATH="$PATH:$HOME/bin"
 
-RUN apt-get install curl -y
+#RUN apt-get install curl -y
 
-RUN apt-get install openjdk-8-jdk -y
-RUN echo "deb [arch=amd64] http://storage.googleapis.com/bazel-apt stable jdk1.8" |  tee /etc/apt/sources.list.d/bazel.list
+#RUN apt-get install openjdk-8-jdk -y
+#RUN echo "deb [arch=amd64] http://storage.googleapis.com/bazel-apt stable jdk1.8" |  tee /etc/apt/sources.list.d/bazel.list
 
-RUN curl https://bazel.build/bazel-release.pub.gpg | apt-key add -
+#RUN curl https://bazel.build/bazel-release.pub.gpg | apt-key add -
 
-RUN apt-get install bazel
+#RUN apt-get install bazel
+
+
 
 
 
