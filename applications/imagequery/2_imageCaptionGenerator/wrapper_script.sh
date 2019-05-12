@@ -20,11 +20,10 @@ chmod 777 /container/workspace/im2txt/runWithArg.sh
 
 # III. Download model from google drive
 # Reference: https://stackoverflow.com/questions/48133080/how-to-download-a-google-drive-url-via-curl-or-wget/48133859
-/container/workspace/im2txt/model/newDownload1.sh
-/container/workspace/im2txt/model/newDownload2.sh
-find / -name "newmodel.ckpt-2000000.meta"
-mv /newmodel.ckpt-2000000.meta /container/workspace/im2txt/model
-mv /newmodel.ckpt-2000000.data-00000-of-00001 /container/workspace/im2txt/model
+/container/workspace/im2txt/model/newDownload1.sh # /notebooks/newmodel.ckpt-2000000.meta 
+/container/workspace/im2txt/model/newDownload2.sh # /notebooks/newmodel.ckpt-2000000.data-00000-of-00001
+mv /notebooks/newmodel.ckpt-2000000.meta /container/workspace/im2txt/model
+mv /notebooks/newmodel.ckpt-2000000.data-00000-of-00001 /container/workspace/im2txt/model
 
 echo "finished wrapper script"
 # run simlerpc server
