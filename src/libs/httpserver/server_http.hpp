@@ -12,6 +12,9 @@
 #include <thread>
 #include <unordered_set>
 
+// [CLIPPER]
+#include <boost/thread.hpp>
+
 #ifdef USE_STANDALONE_ASIO
 #include <asio.hpp>
 #include <asio/steady_timer.hpp>
