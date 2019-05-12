@@ -131,7 +131,15 @@ def redis_daemon_exist():
     # situation is that we are in a container without any other python2
     # process.
     pids = psutil.pids()
-    process_names = [psutil.Process(pid).name() for pid in pids]
+    process_names = []
+
+    for pid in pids:
+        try:
+            name = psutil.Process(pid).name()
+        except psutil.NoSuchProcess:
+            name = None
+        process_names.append(name)
+
     return 'redis-server' in process_names
 
 

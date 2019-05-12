@@ -22,7 +22,10 @@ then
 fi
 
 success=false
-rpc_service_port=17000  # for test only
+
+PORT_RANGE_START=10000
+PORT_RANGE_END=20000
+RPC_SERVICE_PORT=`perl -e "print int(rand($PORT_RANGE_END-$PORT_RANGE_START)) + $PORT_RANGE_START"`
 
 function clean_up {
     # Perform program exit housekeeping
@@ -48,8 +51,8 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $DIR
 
 # Start python rpc test container
-echo "Starting python RPC test container..."
-python ../python/rpc_test_container.py --rpc_service_port $rpc_service_port &
+echo "Starting python RPC test container... (port:$RPC_SERVICE_PORT)"
+python ../python/rpc_test_container.py --rpc_service_port $RPC_SERVICE_PORT &
 
 # Deprecate JVM containers
 # cd ../jvm
@@ -68,20 +71,21 @@ cd $DIR/../../
 cd container
 make container_rpc_test
 container_uptime_seconds=180
-./container_rpc_test -t $container_uptime_seconds -p $rpc_service_port &
+echo "Starting cpp RPC test container... (port:$RPC_SERVICE_PORT)"
+./container_rpc_test -t $container_uptime_seconds -p $RPC_SERVICE_PORT &
 
 sleep 10s
 
 cd $DIR/../../debug/src/benchmarks
 make rpctest
-echo "Executing RPC test (first iteration)..."
 REDIS_PORT=$1
-./rpctest --num_containers=2 --timeout_seconds=30 --redis_port $REDIS_PORT --rpc_service_port $rpc_service_port
+echo "Executing RPC test (first iteration)... (redis port:$REDIS_PORT, rpc_service_port:$RPC_SERVICE_PORT)"
+./rpctest --num_containers=2 --timeout_seconds=30 --redis_port $REDIS_PORT --rpc_service_port $RPC_SERVICE_PORT
 redis-cli -p $REDIS_PORT "flushall"
 echo "Sleeping for 5 seconds..."
 sleep 5s
-echo "Executing RPC test (second iteration)..."
-./rpctest --num_containers=2 --timeout_seconds=30 --redis_port $REDIS_PORT --rpc_service_port $rpc_service_port
+echo "Executing RPC test (second iteration)... (redis port:$REDIS_PORT, rpc_service_port:$RPC_SERVICE_PORT)"
+./rpctest --num_containers=2 --timeout_seconds=30 --redis_port $REDIS_PORT --rpc_service_port $RPC_SERVICE_PORT
 redis-cli -p $REDIS_PORT "flushall"
 echo "TEST PASSED!"
 success=true
