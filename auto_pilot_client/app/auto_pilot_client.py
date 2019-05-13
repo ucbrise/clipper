@@ -51,20 +51,14 @@ def setDAG(proxy_ip, proxy_port, expanded_dag):
 
     print('SetDAG call OK with response{res}'.format(res=response.status))
 
-def imageQuery(ip_c1, ip_c2, port):
+def autoPilotPredict(ip, port):
     timestamp = Timestamp()
     timestamp.GetCurrentTime()
-    channel_1 = grpc.insecure_channel('%s:%s'%(ip_c1, port))
-#   channel_2 = grpc.insecure_channel('%s:%s'%(ip_c2, port))
-    stub_1 = prediction_pb2_grpc.ProxyServerStub(channel_1)
-#   stub_2 = prediction_pb2_grpc.ProxyServerStub(channel_2)
-    #stub is created and now sent the request
-    response_1 = stub_1.downstream(prediction_pb2.request(input_ = model_pb2.input(inputType = 'string', inputStream = ""),src_uri = "localhost", seq = 1, req_id =1, timestamp = timestamp))
-#   timestamp.GetCurrentTime()
-#   response_2 = stub_2.downstream(prediction_pb2.request(input_ = model_pb2.input(inputType = 'string', inputStream = ""),src_uri = "localhost", seq = 2, req_id =2, timestamp = timestamp))
-    #request with the empty string
-#   print('Response\n{res_1}\n---\n{res_2}'.format(res_1=response_1.status, res_2=response_2.status))
-    print('Response\n{res_1}'.format(res_1=response_1.status, res_2=response_2.status))
+    channel = grpc.insecure_channel('%s:%s'%(ip, port))
+    stub = prediction_pb2_grpc.ProxyServerStub(channel)
+    response = stub.downstream(prediction_pb2.request(input_ = model_pb2.input(inputType = 'string', inputStream = '1'),src_uri = "localhost", seq = 1, req_id =1, timestamp = timestamp))
+    print('Response\n{res}'.format(res=response.status))
+
 
 def main():
 
@@ -73,19 +67,18 @@ def main():
     parser.add_argument('--setmodel', nargs=6, type=str)
     parser.add_argument('--setproxy', nargs=4, type=str)
     parser.add_argument('--setdag', nargs="+", type=str)
-    parser.add_argument('--image', nargs=3, type=str)
+    parser.add_argument('--autopilot', nargs=2, type=str)
     
                        
     args = parser.parse_args()
 
-    if args.image is not None:
-        #print(args.image)
-        imageQuery(args.image[0], args.image[1], args.image[2])
+    if args.autopilot is not None:
+        #print(args.stock)
+        autoPilotPredict(args.stock[0], args.stock[1])
 
     if args.setmodel is not None:
         #print(args.setmodel)
         setModel(args.setmodel[0],args.setmodel[1],args.setmodel[2],args.setmodel[3], args.setmodel[4], args.setmodel[5])
-
 
     if args.setproxy is not None:
         #print(args.setproxy)
@@ -96,7 +89,6 @@ def main():
         expanded_dag = ""
         for line in args.setdag[2:]:
             expanded_dag = expanded_dag + line + "\n"
-
         setDAG(args.setdag[0],args.setdag[1],expanded_dag)
 
         

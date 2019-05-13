@@ -95,11 +95,11 @@ def predict(imagestring):
             cv2.circle(frame, points[partA], 8, (0, 0, 255), thickness=-1, lineType=cv2.FILLED)
 
     #memchached
-    if not os.path.exists('poses'):
-            print("[INFO] New directory created")
-            os.makedirs('poses')
-    cv2.imwrite('poses/Output-Keypoints.jpg', frameCopy)
-    cv2.imwrite('poses/Output-Skeleton.jpg', frame)
+    #if not os.path.exists('poses'):
+     #       print("[INFO] New directory created")
+      #      os.makedirs('poses')
+    #cv2.imwrite('poses/Output-Keypoints.jpg', frameCopy)
+    #cv2.imwrite('poses/Output-Skeleton.jpg', frame)
     #cv2.imshow('Output-Keypoints', frameCopy)
     #cv2.imshow('Output-Skeleton', frame)
     #cv2.waitKey(0)

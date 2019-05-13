@@ -82,10 +82,10 @@ def predict(imagestring):
         else:
             drowsiness=False
         #simple memcached
-        if not os.path.exists('faces'):
-            print("[INFO] New directory created")
-            os.makedirs('faces')
-        cv2.imwrite('container/faces/eyearea.jpg', frame)
+        #if not os.path.exists('faces'):
+         #   print("[INFO] New directory created")
+          #  os.makedirs('faces')
+        #cv2.imwrite('container/faces/eyearea.jpg', frame)
 #        cv2.imshow("Frame", frame)
 #        cv2.waitKey(0)
         # do a bit of cleanup
