@@ -146,7 +146,7 @@ class ModelQueue {
     queue_not_empty_condition_.wait(lock, [this, requesting_container]() {
       return !valid_ ||
              !queue_.empty() ||
-             !get_container_registration(requesting_container->replica_id_);
+             !get_container_registration(requesting_container);
       });
     remove_tasks_with_elapsed_deadlines();
 
@@ -195,27 +195,30 @@ class ModelQueue {
     queue_not_empty_condition_.notify_all();
   }
 
-  void register_container(int model_replica_id) {
+  void register_container(const VersionedModelId &model_id, int model_replica_id) {
     boost::unique_lock<boost::shared_mutex>l(registered_containers_mutex_);
-    registered_containers_.push_back(model_replica_id);
+    registered_containers_.push_back(std::make_pair(model_id, model_replica_id));
   }
 
-  void unregister_container(int model_replica_id) {
+  void unregister_container(const VersionedModelId &model_id, int model_replica_id) {
     boost::unique_lock<boost::shared_mutex> l(registered_containers_mutex_);
-    auto it = find(registered_containers_.begin(), registered_containers_.end(), model_replica_id);
+    auto it = find(registered_containers_.begin(), registered_containers_.end(),
+      std::make_pair(model_id, model_replica_id));
     if (it != registered_containers_.end()) {
       registered_containers_.erase(it);
     }
   }
 
-  bool get_container_registration(int model_replica_id) {
-    boost::shared_lock<boost::shared_mutex> l(registered_containers_mutex_);
-    auto it = find(registered_containers_.begin(), registered_containers_.end(), model_replica_id);
-    if (it != registered_containers_.end()) {
-      return true;
-    } else {
-      return false;
+  bool get_container_registration(std::shared_ptr<ModelContainer> requesting_container) {
+    if (requesting_container) {
+      boost::shared_lock<boost::shared_mutex> l(registered_containers_mutex_);
+      auto it = find(registered_containers_.begin(), registered_containers_.end(),
+        std::make_pair(requesting_container->model_, requesting_container->replica_id_));
+      if (it != registered_containers_.end()) {
+        return true;
+      }
     }
+    return false;
   }
 
  private:
@@ -230,7 +233,8 @@ class ModelQueue {
   std::condition_variable queue_not_empty_condition_;
   bool valid_;
   boost::shared_mutex registered_containers_mutex_;
-  std::vector<int> registered_containers_;
+  // <VersionedModelId, replica_id(int)>
+  std::vector<std::pair<VersionedModelId, int>> registered_containers_;
 
   // Deletes tasks with deadlines prior or equivalent to the
   // current system time. This method should only be called
@@ -587,7 +591,7 @@ class TaskExecutor {
          << "'" << model_id.get_id() << "'";
       throw std::runtime_error(ss.str());
     }
-    model_queue_entry->second->register_container(replica_id);
+    model_queue_entry->second->register_container(model_id, replica_id);
   }
 
   void unregister_container_from_model_queue(const VersionedModelId &model_id, int replica_id) {
@@ -601,7 +605,7 @@ class TaskExecutor {
          << "'" << model_id.get_id() << "'";
       throw std::runtime_error(ss.str());
     }
-    model_queue_entry->second->unregister_container(replica_id);
+    model_queue_entry->second->unregister_container(model_id, replica_id);
   }
 
   void clean_up_specific_container(const VersionedModelId &model_id, int replica_id) {
