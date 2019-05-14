@@ -3,7 +3,7 @@ RUN apt-get update
 RUN pip install numpy
 RUN pip install nltk 
 RUN python -m nltk.downloader all
-RUN apt-get install pkg-config zip zlib1g-dev unzip -y # For bazel installation
+# RUN apt-get install pkg-config zip zlib1g-dev unzip -y # For bazel installation
 
 # A workspace directory will be created under /container/, which is our workspace for bazel
 # All directories in 2_imageCaptionGenerator will be copied to /container/workspace/, except app
