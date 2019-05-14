@@ -14,7 +14,7 @@ def generateCaption(image_name):
 
   # The caption data will be written to /container/captionData/captions.txt
   # we read the content of caption.txt in captionData and return it here
-  caption_json_path = workspace_path + "captionData/captionFile.txt"
+  caption_json_path = "/container/workspace/captionData/captionFile.txt"
   captions = ""
   with open(caption_json_path) as json_file:
     print("opened")
