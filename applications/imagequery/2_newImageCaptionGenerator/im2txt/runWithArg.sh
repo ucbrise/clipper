@@ -9,5 +9,4 @@ echo "CHECKPOINT_PATH: $1"
 echo "VOCAB_FILE: $2"
 echo "IMAGE_FILE: $3"
 
-find / -name run_inference.py
 python /container/workspace/im2txt/run_inference.py --checkpoint_path ${CHECKPOINT_PATH} --vocab_file ${VOCAB_FILE} --input_files ${IMAGE_FILE}
