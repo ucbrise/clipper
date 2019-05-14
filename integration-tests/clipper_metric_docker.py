@@ -41,6 +41,7 @@ def get_metrics_config():
 def get_matched_query(metric_addr, metric_name):
     query = gen_match_query(metric_addr, metric_name)
     logger.info("Querying: {}".format(query))
+    print('test why docker query is broken: {}'.format(repr(query)))
     res = requests.get(query).json()
     logger.info(res)
     return res

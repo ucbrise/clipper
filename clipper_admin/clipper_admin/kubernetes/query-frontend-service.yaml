@@ -6,7 +6,7 @@ metadata:
     ai.clipper.name: query-frontend
   name: query-frontend-at-{{ cluster_name }}
 spec:
-  type: NodePort
+  type: {{ service_type }}
   ports:
   - name: "1337"
     port: 1337
