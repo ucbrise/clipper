@@ -15,16 +15,16 @@ ADD imagequery/2_imageCaptionGenerator/im2txt /container/workspace/im2txt
 ADD imagequery/2_imageCaptionGenerator/WORKSPACE /container/workspace/
 ADD imagequery/2_imageCaptionGenerator/captionData /container/workspace/captionData/
 
-# 2_imageCaptionGenerator/app, bazel-installer and simplerpc/app will be copied to /container/
-# RUN ["wget","https://github.com/bazelbuild/bazel/releases/download/0.25.1/bazel-0.25.1-installer-linux-x86_64.sh","-P","/container"]
-ADD imagequery/2_imageCaptionGenerator/bazel-0.25.1-installer-linux-x86_64.sh /container/
+# 2_imageCaptionGenerator/app and simplerpc/app will be copied to /container/
 ADD imagequery/2_imageCaptionGenerator/app /container/
 ADD simplerpc/app /container/
 
-###  Install bazel
-RUN chmod +x /container/bazel-0.25.1-installer-linux-x86_64.sh
-RUN /container/bazel-0.25.1-installer-linux-x86_64.sh 
-RUN export PATH="$PATH:$HOME/bin"
+###  Download bazel installer and install bazel
+# RUN ["wget","https://github.com/bazelbuild/bazel/releases/download/0.25.1/bazel-0.25.1-installer-linux-x86_64.sh","-P","/container"]
+# ADD imagequery/2_imageCaptionGenerator/bazel-0.25.1-installer-linux-x86_64.sh /container/
+# RUN chmod +x /container/bazel-0.25.1-installer-linux-x86_64.sh
+# RUN /container/bazel-0.25.1-installer-linux-x86_64.sh 
+# RUN export PATH="$PATH:$HOME/bin"
 
 RUN chmod 777 /container/workspace/im2txt/model/downloadModels.sh
 RUN /container/workspace/im2txt/model/downloadModels.sh
