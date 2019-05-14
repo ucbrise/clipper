@@ -24,6 +24,7 @@ RUN pip3 install cloudpickle==0.5.* pyzmq==17.0.* requests==2.18.* scikit-learn=
   numpy==1.14.* pyyaml==3.12.* docker==3.1.* kubernetes==5.0.* tensorflow==1.6.* mxnet==1.1.* pyspark==2.3.* \
   xgboost==0.7.* urllib3==1.24.* # CI is broken when urllib3's version is 1.25.1. Delete urllib3==1.24.* later once version compatibility is stabilized
 
+
 # Install PyTorch
 RUN pip3 install torch==1.0.* torchvision==0.2.*
 

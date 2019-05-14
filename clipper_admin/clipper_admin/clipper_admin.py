@@ -1231,6 +1231,24 @@ class ClipperConnection(object):
             raise UnconnectedException()
         return self.cm.get_query_addr()
 
+    def get_metric_addr(self):
+        """Get the IP address of Prometheus metric server.
+
+        Returns
+        -------
+        str
+            The address as an IP address or hostname.
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+            versions. All replicas for each version of each model will be stopped.
+        """
+
+        if not self.connected:
+            raise UnconnectedException()
+        self.cm.get_metric_addr()
+
     def stop_models(self, model_names):
         """Stops all versions of the specified models.
 
