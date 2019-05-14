@@ -3,8 +3,10 @@ import os
 import json
 from timeit import default_timer as timer
 
+os.system("bash /container/workspace/im2txt/runWithArg.sh")
+
 def generateCaption(image_name):
-  os.system("bash /container/workspace/im2txt/runWithArg.sh")
+  # os.system("bash /container/workspace/im2txt/runWithArg.sh")
 
   # The caption data will be written to /container/captionData/captions.txt
   # we read the content of caption.txt in captionData and return it here
