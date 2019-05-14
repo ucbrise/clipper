@@ -236,6 +236,11 @@ class ClipperConnection(object):
                     app=name))
 
     def delete_application(self, name):
+        # See: https://github.com/ucbrise/clipper/issues/603
+        self.logger.warning("[DEPRECATED] Use 'unregister_application' API instead of this.")
+        self.unregister_application(name)
+
+    def unregister_application(self, name):
         if not self.connected:
             raise UnconnectedException()
 
@@ -252,7 +257,7 @@ class ClipperConnection(object):
             raise ClipperException(msg)
         else:
             self.logger.info(
-                "Application {app} was successfully deleted".format(app=name))
+                "Application {app} was successfully unregistered".format(app=name))
 
     def link_model_to_app(self, app_name, model_name):
         """Routes requests from the specified app to be evaluted by the specified model.
@@ -1225,6 +1230,24 @@ class ClipperConnection(object):
         if not self.connected:
             raise UnconnectedException()
         return self.cm.get_query_addr()
+
+    def get_metric_addr(self):
+        """Get the IP address of Prometheus metric server.
+
+        Returns
+        -------
+        str
+            The address as an IP address or hostname.
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+            versions. All replicas for each version of each model will be stopped.
+        """
+
+        if not self.connected:
+            raise UnconnectedException()
+        self.cm.get_metric_addr()
 
     def stop_models(self, model_names):
         """Stops all versions of the specified models.
