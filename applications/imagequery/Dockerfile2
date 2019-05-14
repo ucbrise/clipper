@@ -15,10 +15,9 @@ ADD imagequery/2_imageCaptionGenerator/im2txt /container/workspace/im2txt
 ADD imagequery/2_imageCaptionGenerator/WORKSPACE /container/workspace/
 ADD imagequery/2_imageCaptionGenerator/captionData /container/workspace/captionData/
 
-# 2_imageCaptionGenerator/app, bazel-installer, wrapper_script.sh and simplerpc/app will be copied to /container/
+# 2_imageCaptionGenerator/app, bazel-installer and simplerpc/app will be copied to /container/
 # RUN ["wget","https://github.com/bazelbuild/bazel/releases/download/0.25.1/bazel-0.25.1-installer-linux-x86_64.sh","-P","/container"]
 ADD imagequery/2_imageCaptionGenerator/bazel-0.25.1-installer-linux-x86_64.sh /container/
-ADD imagequery/2_imageCaptionGenerator/wrapper_script.sh /container/
 ADD imagequery/2_imageCaptionGenerator/app /container/
 ADD simplerpc/app /container/
 
@@ -34,7 +33,6 @@ RUN mv /notebooks/newmodel.ckpt-2000000.data-00000-of-00001 /container/workspace
 
 RUN chmod 777 /container/workspace/im2txt/runWithArg.sh
 
-RUN ["chmod","777","/container/wrapper_script.sh"]
-CMD /container/wrapper_script.sh
+CMD ["python","/container/predict.py"]
 
 EXPOSE 9000
