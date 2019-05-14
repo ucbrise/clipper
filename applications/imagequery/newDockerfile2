@@ -7,7 +7,7 @@ RUN apt-get install pkg-config zip zlib1g-dev unzip -y # For bazel installation
 
 # A workspace directory will be created under /container/, which is our workspace for bazel
 # All directories in 2_imageCaptionGenerator will be copied to /container/workspace/, except app
-# /container/workspace will contains: conda-env, g3doc, im2txt, captionData and WORKSPACE
+# /container/workspace will contains: im2txt, captionData and WORKSPACE
 # The empty file WORKSPACE must be placed under the bazel workspace (named workspace here) so that bazel can build
 # ADD imagequery/2_imageCaptionGenerator/conda-env /container/workspace/conda-env
 # ADD imagequery/2_imageCaptionGenerator/g3doc /container/workspace/g3doc

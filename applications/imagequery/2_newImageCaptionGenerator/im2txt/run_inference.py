@@ -91,8 +91,7 @@ def main(_):
                             for w in caption.sentence[1:-1]]
                 sentence = " ".join(sentence)
                 captionList[i] = sentence
-                print("  %d) %s (p=%f)" %
-                      (i, sentence, math.exp(caption.logprob)))
+                print("  %d) %s (p=%f)" % (i, sentence, math.exp(caption.logprob)))
                 # the end of caption generation
 
         # store captions to file
@@ -102,7 +101,6 @@ def main(_):
             "caption2": captionList[2]
         }
 
-        print("!!!")
         print(caps)
 
         caption_json = json.dumps(caps)
