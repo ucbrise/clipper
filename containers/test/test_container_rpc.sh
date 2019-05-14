@@ -23,6 +23,10 @@ fi
 
 success=false
 
+PORT_RANGE_START=10000
+PORT_RANGE_END=20000
+RPC_SERVICE_PORT=`perl -e "print int(rand($PORT_RANGE_END-$PORT_RANGE_START)) + $PORT_RANGE_START"`
+
 function clean_up {
     # Perform program exit housekeeping
     # echo Background jobs: $(jobs -l)
@@ -47,18 +51,18 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $DIR
 
 # Start python rpc test container
-echo "Starting python RPC test container..."
-python ../python/rpc_test_container.py & 
+echo "Starting python RPC test container... (port:$RPC_SERVICE_PORT)"
+python ../python/rpc_test_container.py --rpc_service_port $RPC_SERVICE_PORT &
 
-
-cd ../jvm
-mvn clean package -DskipTests &> /dev/null
-# Start java rpc test container
-echo "Starting java RPC test container..."
-# && mvn -Dtest=RPCProtocolTest test &> /dev/null &
-java -Djava.library.path=$JZMQ_HOME \
-   -cp rpc-test/target/rpc-test-0.1.jar \
-   ai.clipper.rpctest.RPCProtocolTest &
+# Deprecate JVM containers
+# cd ../jvm
+# mvn clean package -DskipTests &> /dev/null
+# # Start java rpc test container
+# echo "Starting java RPC test container..."
+# # && mvn -Dtest=RPCProtocolTest test &> /dev/null &
+# java -Djava.library.path=$JZMQ_HOME \
+#    -cp rpc-test/target/rpc-test-0.1.jar \
+#    ai.clipper.rpctest.RPCProtocolTest &
 
 cd $DIR/../../
 ./configure && cd debug/src
@@ -67,22 +71,22 @@ cd $DIR/../../
 cd container
 make container_rpc_test
 container_uptime_seconds=180
-./container_rpc_test -t $container_uptime_seconds &
+echo "Starting cpp RPC test container... (port:$RPC_SERVICE_PORT)"
+./container_rpc_test -t $container_uptime_seconds -p $RPC_SERVICE_PORT &
 
 sleep 10s
 
 cd $DIR/../../debug/src/benchmarks
 make rpctest
-echo "Executing RPC test (first iteration)..."
 REDIS_PORT=$1
-./rpctest --num_containers=3 --timeout_seconds=30 --redis_port $REDIS_PORT
+echo "Executing RPC test (first iteration)... (redis port:$REDIS_PORT, rpc_service_port:$RPC_SERVICE_PORT)"
+./rpctest --num_containers=2 --timeout_seconds=30 --redis_port $REDIS_PORT --rpc_service_port $RPC_SERVICE_PORT
 redis-cli -p $REDIS_PORT "flushall"
 echo "Sleeping for 5 seconds..."
 sleep 5s
-echo "Executing RPC test (second iteration)..."
-./rpctest --num_containers=3 --timeout_seconds=30 --redis_port $REDIS_PORT
+echo "Executing RPC test (second iteration)... (redis port:$REDIS_PORT, rpc_service_port:$RPC_SERVICE_PORT)"
+./rpctest --num_containers=2 --timeout_seconds=30 --redis_port $REDIS_PORT --rpc_service_port $RPC_SERVICE_PORT
 redis-cli -p $REDIS_PORT "flushall"
 echo "TEST PASSED!"
 success=true
 exit 0
-

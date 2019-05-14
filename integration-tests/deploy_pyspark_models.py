@@ -121,11 +121,13 @@ if __name__ == "__main__":
 
     import random
     cluster_name = "spark-{}".format(random.randint(0, 5000))
+    clipper_conn = None
 
     try:
         spark = SparkSession\
                 .builder\
                 .appName("clipper-pyspark")\
+                .config("spark.ui.enabled", "false")\
                 .getOrCreate()
         sc = spark.sparkContext
         clipper_conn = create_docker_connection(
@@ -178,20 +180,20 @@ if __name__ == "__main__":
             version += 1
             deploy_and_test_model(
                 sc, clipper_conn, lr_model, version, predict_fn=predict)
-        except BenchmarkException:
+        except BenchmarkException as e:
+            logger.exception("BenchmarkException: {}".format(e))
             log_docker(clipper_conn)
             log_clipper_state(clipper_conn)
-            logger.exception("BenchmarkException")
-            clipper_conn = create_docker_connection(
+            create_docker_connection(
                 cleanup=True, start_clipper=False, cleanup_name=cluster_name)
             sys.exit(1)
         else:
             spark.stop()
-            clipper_conn = create_docker_connection(
+            create_docker_connection(
                 cleanup=True, start_clipper=False, cleanup_name=cluster_name)
-    except Exception:
-        logger.exception("Exception")
+    except Exception as e:
+        logger.exception("Exception: {}".format(e))
         log_docker(clipper_conn)
-        clipper_conn = create_docker_connection(
+        create_docker_connection(
             cleanup=True, start_clipper=False, cleanup_name=cluster_name)
         sys.exit(1)

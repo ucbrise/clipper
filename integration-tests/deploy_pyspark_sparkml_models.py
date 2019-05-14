@@ -116,10 +116,13 @@ if __name__ == "__main__":
 
     import random
     cluster_name = "sparkml-{}".format(random.randint(0, 5000))
+    clipper_conn = None
+
     try:
         spark = SparkSession\
                 .builder\
                 .appName("clipper-pyspark-ml")\
+                .config("spark.ui.enabled", "false")\
                 .getOrCreate()
         sc = spark.sparkContext
         clipper_conn = create_docker_connection(
@@ -132,7 +135,7 @@ if __name__ == "__main__":
 
         try:
             clipper_conn.register_application(app_name, "integers",
-                                              "default_pred", 1000000)
+                                              "default_pred", 2000000)
             time.sleep(1)
 
             addr = clipper_conn.get_query_addr()
@@ -151,20 +154,20 @@ if __name__ == "__main__":
             lr_model = train_logistic_regression(trainDf)
             deploy_and_test_model(
                 sc, clipper_conn, lr_model, version, link_model=True)
-        except BenchmarkException:
+        except BenchmarkException as e:
+            logger.exception("BenchmarkException: {}".format(e))
             log_docker(clipper_conn)
             log_clipper_state(clipper_conn)
-            logger.exception("BenchmarkException")
-            clipper_conn = create_docker_connection(
+            create_docker_connection(
                 cleanup=True, start_clipper=False, cleanup_name=cluster_name)
             sys.exit(1)
         else:
             spark.stop()
-            clipper_conn = create_docker_connection(
+            create_docker_connection(
                 cleanup=True, start_clipper=False, cleanup_name=cluster_name)
-    except Exception:
+    except Exception as e:
+        logger.exception("Exception: {}".format(e))
         log_docker(clipper_conn)
-        logger.exception("Exception")
-        clipper_conn = create_docker_connection(
+        create_docker_connection(
             cleanup=True, start_clipper=False, cleanup_name=cluster_name)
         sys.exit(1)

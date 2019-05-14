@@ -5,7 +5,7 @@ FROM r-base:3.4.4
 
 LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
-RUN apt-get update && apt-get --yes install git libzmq3-dev libtool \
+RUN apt-get update -qq && apt-get --yes install git libzmq3-dev libtool \
 			libtool-bin libsodium-dev pkg-config build-essential autoconf automake
 
 RUN wget http://download.zeromq.org/zeromq-4.1.4.tar.gz && tar -xvf zeromq-4.1.4.tar.gz
@@ -20,6 +20,9 @@ COPY containers/R/install_container_dependencies.R install_container_dependencie
 
 ENV CLIPPER_MODEL_PATH=/model
 ENV CLIPPER_PORT=7000
+
+RUN mkdir ~/.R
+RUN echo "MAKEFLAGS = -j" >>  ~/.R/Makevars
 
 RUN Rscript ./install_container_dependencies.R
 

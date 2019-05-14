@@ -134,8 +134,8 @@ def test_kubernetes(clipper_conn, num_apps, num_models):
 
 
 if __name__ == "__main__":
-    num_apps = 3
-    num_models = 3
+    num_apps = 2
+    num_models = 2
     try:
         if len(sys.argv) > 1:
             num_apps = int(sys.argv[1])
@@ -159,6 +159,13 @@ if __name__ == "__main__":
         test_kubernetes(clipper_conn, num_apps, num_models)
         clipper_conn.stop_all()
 
+        try:
+            import subprocess32 as subprocess
+        except:
+            import subprocess
+        import shlex
+        proc = subprocess.Popen(shlex.split('kubectl proxy -p 8080'))
+
         # Test with proxy. Assumes proxy is running at 127.0.0.1:8080
         proxy_name = "k8s-proxy-test-cluster-{}".format(
             random.randint(0, 5000))
@@ -170,6 +177,8 @@ if __name__ == "__main__":
             new_name=proxy_name)
         test_kubernetes(clipper_conn, 1, 1)
         clipper_conn.stop_all()
+
+        proc.terminate()
 
     except Exception as e:
         logger.exception("Exception: {}".format(e))
