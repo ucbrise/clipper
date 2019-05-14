@@ -319,23 +319,23 @@ class KubernetesContainerManager(ContainerManager):
         with _pass_conflicts():
             clusterrole_data = self._generate_config(
                 CONFIG_FILES['rbac']['clusterrole'],
-                cluster_name=self.cluster_name)
+                cluster_name=self.cluster_name, namespace=self.k8s_namespace)
             self._k8s_rbac.create_cluster_role(
-                body=clusterrole_data, namespace=self.k8s_namespace)
+                body=clusterrole_data)
 
         with _pass_conflicts():
             clusterrolebinding_data = self._generate_config(
                 CONFIG_FILES['rbac']['clusterrolebinding'],
-                cluster_name=self.cluster_name)
+                cluster_name=self.cluster_name, namespace=self.k8s_namespace)
             self._k8s_rbac.create_cluster_role_binding(
-                body=clusterrolebinding_data, namespace=self.k8s_namespace)
+                body=clusterrolebinding_data)
 
         with _pass_conflicts():
             serviceaccount_data = self._generate_config(
                 CONFIG_FILES['rbac']['serviceaccount'],
-                cluster_name=self.cluster_name)
+                cluster_name=self.cluster_name, namespace=self.k8s_namespace)
             self._k8s_v1.create_namespaced_service(
-                body=serviceaccount_data, namespace=self.k8s_namespace)
+                body=serviceaccount_data)
 
     def _generate_config(self, file_path, **kwargs):
         template = self.template_engine.get_template(file_path)
