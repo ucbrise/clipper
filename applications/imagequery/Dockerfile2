@@ -1,17 +1,9 @@
-# FROM continuumio/anaconda3
-# RUN conda install -c anaconda tensorflow-gpu
-
 FROM tensorflow/tensorflow:1.12.0-gpu-py3 
-#FROM tensorflow/tensorflow:1.12.0-py3
 RUN apt-get update
 RUN pip install numpy
 RUN pip install nltk 
 RUN python -m nltk.downloader all
-
-
-### wrapper_script.sh here ###
-
-RUN apt-get install pkg-config zip zlib1g-dev unzip -y
+RUN apt-get install pkg-config zip zlib1g-dev unzip -y # For bazel installation
 
 # A workspace directory will be created under /container/, which is our workspace for bazel
 # All directories in 2_imageCaptionGenerator will be copied to /container/workspace/, except app
@@ -32,17 +24,15 @@ ADD simplerpc/app /container/
 
 ###  Install bazel
 RUN chmod +x /container/bazel-0.25.1-installer-linux-x86_64.sh
-
 RUN /container/bazel-0.25.1-installer-linux-x86_64.sh 
 RUN export PATH="$PATH:$HOME/bin"
 
-RUN chmod 777 /container/workspace/im2txt/runWithArg.sh
-
 RUN chmod 777 /container/workspace/im2txt/model/downloadModels.sh
 RUN /container/workspace/im2txt/model/downloadModels.sh
-
 RUN mv /notebooks/newmodel.ckpt-2000000.meta /container/workspace/im2txt/model
 RUN mv /notebooks/newmodel.ckpt-2000000.data-00000-of-00001 /container/workspace/im2txt/model
+
+RUN chmod 777 /container/workspace/im2txt/runWithArg.sh
 
 RUN ["chmod","777","/container/wrapper_script.sh"]
 CMD /container/wrapper_script.sh
