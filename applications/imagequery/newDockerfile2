@@ -9,8 +9,6 @@ RUN python -m nltk.downloader all
 # All directories in 2_newImageCaptionGenerator will be copied to /container/workspace/, except app
 # /container/workspace will contains: im2txt, captionData and WORKSPACE
 # The empty file WORKSPACE must be placed under the bazel workspace (named workspace here) so that bazel can build
-# ADD imagequery/2_newImageCaptionGenerator/conda-env /container/workspace/conda-env
-# ADD imagequery/2_newImageCaptionGenerator/g3doc /container/workspace/g3doc
 ADD imagequery/2_newImageCaptionGenerator/im2txt /container/workspace/im2txt
 ADD imagequery/2_newImageCaptionGenerator/WORKSPACE /container/workspace/
 ADD imagequery/2_newImageCaptionGenerator/captionData /container/workspace/captionData/
