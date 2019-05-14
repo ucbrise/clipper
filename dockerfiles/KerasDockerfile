@@ -3,8 +3,9 @@ ARG CODE_VERSION
 ARG RPC_VERSION
 FROM ${REGISTRY}/${RPC_VERSION}-rpc:${CODE_VERSION}
 
-RUN pip install keras
-RUN pip install tensorflow
+RUN pip install -q keras
+RUN pip install -q tensorflow
+RUN pip install -q numpy==1.16 # MXNet requires numpy < 1.15
 
 COPY containers/python/keras_container.py containers/python/container_entry.sh /container/
 
