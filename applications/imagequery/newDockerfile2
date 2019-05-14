@@ -5,7 +5,6 @@ RUN pip install nltk
 RUN python -m nltk.downloader all
 
 ADD imagequery/2_newImageCaptionGenerator/im2txt /container/workspace/im2txt
-ADD imagequery/2_newImageCaptionGenerator/WORKSPACE /container/workspace/
 ADD imagequery/2_newImageCaptionGenerator/captionData /container/workspace/captionData/
 
 # 2_newImageCaptionGenerator/app will be copied to /container/
