@@ -21,11 +21,11 @@ DOCKER_INTEGRATION_TESTS = {
     "tensorflow": "python /clipper/integration-tests/deploy_tensorflow_models.py",
     "mxnet": "python /clipper/integration-tests/deploy_mxnet_models.py",
     "pytorch": "python /clipper/integration-tests/deploy_pytorch_models.py",
+    "keras": "python /clipper/integration-tests/deploy_keras_models.py",
     "multi_tenancy": "python /clipper/integration-tests/multi_tenancy_test.py",
     # "rclipper": "/clipper/integration-tests/r_integration_test/rclipper_test.sh",
     "docker_metric": "python /clipper/integration-tests/clipper_metric_docker.py",
-    "fluentd": "python /clipper/integration-tests/clipper_fluentd_logging_docker.py",
-    "keras": "python /clipper/integration-tests/deploy_keras_models.py"
+    "fluentd": "python /clipper/integration-tests/clipper_fluentd_logging_docker.py"
 }
 
 NUM_RETRIES = 2

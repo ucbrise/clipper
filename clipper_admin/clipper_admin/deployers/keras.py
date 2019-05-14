@@ -159,9 +159,6 @@ def deploy_keras_model(clipper_conn,
         from clipper_admin.deployers import keras as keras_deployer
         import keras
 
-        # run this first
-        # docker build -f dockerfiles/KerasDockerfile -t keras-container .
-
         # creating a simple Keras model
         inpt = keras.layers.Input(shape=(1,))
         out = keras.layers.multiply([inpt, inpt])
