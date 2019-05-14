@@ -6,7 +6,7 @@ metadata:
     ai.clipper.name: redis
   name: {{ deployment_name }} # Cluster name included
 spec:
-  type: NodePort
+  type: {{ service_type }}
   ports:
   - name: "6379"
     port: {{ public_redis_port }}
