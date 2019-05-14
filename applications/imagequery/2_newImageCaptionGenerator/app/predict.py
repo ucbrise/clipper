@@ -5,10 +5,6 @@ import json
 from timeit import default_timer as timer
 
 def generateCaption(image_name):
-  workspace_path = "/container/workspace/"
-  checkpoint_path = workspace_path + "im2txt/model/newmodel.ckpt-2000000"
-  wordscount_path = workspace_path + "im2txt/data/word_counts.txt"
-  image_path = workspace_path + "im2txt/data/images/" + image_name
   command = "bash /container/workspace/im2txt/runWithArg.sh"
   os.system(command)
 
