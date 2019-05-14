@@ -410,8 +410,8 @@ class KubernetesContainerManager(ContainerManager):
             serviceaccount_data = self._generate_config(
                 CONFIG_FILES['rbac']['serviceaccount'],
                 cluster_name=self.cluster_name, namespace=self.k8s_namespace)
-            self._k8s_v1.create_namespaced_service(
-                body=serviceaccount_data)
+            self._k8s_v1.create_namespaced_service_account(
+                body=serviceaccount_data, namespace=self.k8s_namespace)
 
     def _generate_config(self, file_path, **kwargs):
         template = self.template_engine.get_template(file_path)
