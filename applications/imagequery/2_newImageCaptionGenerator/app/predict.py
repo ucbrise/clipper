@@ -24,7 +24,7 @@ the client.
 
 def generateCaption(image_name):
   # run the shellscript runWithArg.sh
-  # runWithArg.sh is the same as run.sh, except that it accepts argument as the name of the file
+  # runWithArg.sh is the same as run.sh, except that it accepts argument as the name of the file suggests
   workspace_path = "/container/workspace/"
   checkpoint_path = workspace_path + "im2txt/model/newmodel.ckpt-2000000"
   wordscount_path = workspace_path + "im2txt/data/word_counts.txt"
