@@ -6,22 +6,22 @@ RUN python -m nltk.downloader all
 # RUN apt-get install pkg-config zip zlib1g-dev unzip -y # For bazel installation
 
 # A workspace directory will be created under /container/, which is our workspace for bazel
-# All directories in 2_imageCaptionGenerator will be copied to /container/workspace/, except app
+# All directories in 2_newImageCaptionGenerator will be copied to /container/workspace/, except app
 # /container/workspace will contains: im2txt, captionData and WORKSPACE
 # The empty file WORKSPACE must be placed under the bazel workspace (named workspace here) so that bazel can build
-# ADD imagequery/2_imageCaptionGenerator/conda-env /container/workspace/conda-env
-# ADD imagequery/2_imageCaptionGenerator/g3doc /container/workspace/g3doc
-ADD imagequery/2_imageCaptionGenerator/im2txt /container/workspace/im2txt
-ADD imagequery/2_imageCaptionGenerator/WORKSPACE /container/workspace/
-ADD imagequery/2_imageCaptionGenerator/captionData /container/workspace/captionData/
+# ADD imagequery/2_newImageCaptionGenerator/conda-env /container/workspace/conda-env
+# ADD imagequery/2_newImageCaptionGenerator/g3doc /container/workspace/g3doc
+ADD imagequery/2_newImageCaptionGenerator/im2txt /container/workspace/im2txt
+ADD imagequery/2_newImageCaptionGenerator/WORKSPACE /container/workspace/
+ADD imagequery/2_newImageCaptionGenerator/captionData /container/workspace/captionData/
 
-# 2_imageCaptionGenerator/app and simplerpc/app will be copied to /container/
-ADD imagequery/2_imageCaptionGenerator/app /container/
+# 2_newImageCaptionGenerator/app and simplerpc/app will be copied to /container/
+ADD imagequery/2_newImageCaptionGenerator/app /container/
 ADD simplerpc/app /container/
 
 ###  Download bazel installer and install bazel
 # RUN ["wget","https://github.com/bazelbuild/bazel/releases/download/0.25.1/bazel-0.25.1-installer-linux-x86_64.sh","-P","/container"]
-# ADD imagequery/2_imageCaptionGenerator/bazel-0.25.1-installer-linux-x86_64.sh /container/
+# ADD imagequery/2_newImageCaptionGenerator/bazel-0.25.1-installer-linux-x86_64.sh /container/
 # RUN chmod +x /container/bazel-0.25.1-installer-linux-x86_64.sh
 # RUN /container/bazel-0.25.1-installer-linux-x86_64.sh 
 # RUN export PATH="$PATH:$HOME/bin"
