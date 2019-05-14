@@ -134,7 +134,8 @@ class KubernetesContainerManager(ContainerManager):
         configuration.assert_hostname = False
         self._k8s_v1 = client.CoreV1Api()
         self._k8s_beta = client.ExtensionsV1beta1Api()
-        self._k8s_rbac=client.RbacAuthorizationV1alpha1Api()
+        self._k8s_rbac=client.RbacAuthorizationV1beta1Api()
+        
 
         # Create the template engine
         # Config: Any variable missing -> Error
