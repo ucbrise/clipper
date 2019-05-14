@@ -232,6 +232,35 @@ def log_docker(clipper_conn):
     for cont in container_runing:
         logger.info('Name {}, Image {}, Status {}, Label {}'.format(
             cont.name, cont.image, cont.status, cont.labels))
+        logger.info(cont.logs())
+
+
+def log_cluster_model(clipper_conn, cluster_name):
+    if clipper_conn is None:
+        return
+
+    """Retrieve status and log for last ten containers"""
+    container_runing = clipper_conn.cm.docker_client.containers.list(limit=100, all=True)
+    logger.info('================Cluster model logs====================')
+    logger.info('It includes broken models')
+    logger.info('----------------------')
+    logger.info('Model container status (including broken one)')
+    for cont in container_runing:
+        if cluster_name in cont.name:
+            logger.info('Name {}, Image {}, Status {}, Label {}'.format(
+                cont.name, cont.image, cont.status, cont.labels))
+
+    logger.info('----------------------')
+    logger.info('Printing out model logs')
+
+    for cont in container_runing:
+        print('cluster_name: {}'.format(cluster_name))
+        print('container_name: {}'.format(cont.name))
+        if cluster_name in cont.name:
+            logger.info('Name {}, Image {}, Status {}, Label {}'.format(
+                cont.name, cont.image, cont.status, cont.labels))
+            logger.info(cont.logs())
+
         try:
             logger.info(cont.logs())
         except docker.errors.APIError as e:
