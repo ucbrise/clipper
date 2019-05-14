@@ -23,13 +23,6 @@ import os
 import json
 import tensorflow as tf
 
-# the original import statements from the pulled code:
-# from im2txt import configuration
-# from im2txt import inference_wrapper
-# from im2txt.inference_utils import caption_generator
-# from im2txt.inference_utils import vocabulary
-
-# the correct import statements:
 import configuration
 import inference_wrapper
 from inference_utils import caption_generator
@@ -38,25 +31,18 @@ print("---In RUN!!!---")
 
 FLAGS = tf.flags.FLAGS
 
-tf.flags.DEFINE_string("checkpoint_path", "",
-                       "Model checkpoint file or directory containing a "
-                       "model checkpoint file.")
-tf.flags.DEFINE_string(
-    "vocab_file", "", "Text file containing the vocabulary.")
-tf.flags.DEFINE_string("input_files", "",
-                       "File pattern or comma-separated list of file patterns "
-                       "of image files.")
+tf.flags.DEFINE_string("checkpoint_path", "", "Model checkpoint file or directory containing a model checkpoint file.")
+tf.flags.DEFINE_string("vocab_file", "", "Text file containing the vocabulary.")
+tf.flags.DEFINE_string("input_files", "", "File pattern or comma-separated list of file patterns of image files.")
 
 tf.logging.set_verbosity(tf.logging.INFO)
-
 
 def main(_):
     # Build the inference graph.
     g = tf.Graph()
     with g.as_default():
         model = inference_wrapper.InferenceWrapper()
-        restore_fn = model.build_graph_from_config(configuration.ModelConfig(),
-                                                   FLAGS.checkpoint_path)
+        restore_fn = model.build_graph_from_config(configuration.ModelConfig(), FLAGS.checkpoint_path)
     g.finalize()
 
     # Create the vocabulary.
@@ -65,8 +51,7 @@ def main(_):
     filenames = []
     for file_pattern in FLAGS.input_files.split(","):
         filenames.extend(tf.gfile.Glob(file_pattern))
-    tf.logging.info("Running caption generation on %d files matching %s",
-                    len(filenames), FLAGS.input_files)
+    tf.logging.info("Running caption generation on %d files matching %s", len(filenames), FLAGS.input_files)
 
     with tf.Session(graph=g) as sess:
         # Load the model from checkpoint.
@@ -87,8 +72,7 @@ def main(_):
             print("Captions for image %s:" % os.path.basename(filename))
             for i, caption in enumerate(captions):
                 # Ignore begin and end words.
-                sentence = [vocab.id_to_word(w)
-                            for w in caption.sentence[1:-1]]
+                sentence = [vocab.id_to_word(w) for w in caption.sentence[1:-1]]
                 sentence = " ".join(sentence)
                 captionList[i] = sentence
                 print("  %d) %s (p=%f)" % (i, sentence, math.exp(caption.logprob)))
@@ -106,6 +90,7 @@ def main(_):
         caption_json = json.dumps(caps)
         with open('/container/workspace/captionData/captionFile.txt', 'w') as outfile:
             json.dump(caption_json, outfile)
-							
+
+
 if __name__ == "__main__":
     tf.app.run()

@@ -3,11 +3,11 @@ import os
 import json
 from timeit import default_timer as timer
 
-os.system("bash /container/workspace/im2txt/runWithArg.sh")
+print("Starting running run_reference.py to set up modules for machine learning!")
+os.system("/container/workspace/im2txt/run_reference.py --checkpoint_path /container/workspace/im2txt/model/newmodel.ckpt-2000000 --vocab_file /container/workspace/im2txt/data/word_counts.txt --input_files /container/workspace/im2txt/data/images/image.jpg")
+print("Finished running run_reference.py, modules set up successfully!")
 
 def generateCaption(image_name):
-  # os.system("bash /container/workspace/im2txt/runWithArg.sh")
-
   # The caption data will be written to /container/captionData/captions.txt
   # we read the content of caption.txt in captionData and return it here
   caption_json_path = "/container/workspace/captionData/captionFile.txt"
@@ -22,7 +22,6 @@ def generateCaption(image_name):
     captions += caption_json['caption1']
     captions += " "
     captions += caption_json['caption2']
-    
   return captions
 
 def predict(resized_image_path):
