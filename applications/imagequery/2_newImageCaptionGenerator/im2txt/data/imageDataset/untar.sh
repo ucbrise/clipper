@@ -1,6 +1,5 @@
 #!/bin/bash
-pwd
+# The following line is crucial, otherwise when called in Dockerfile, pwd still gives "/"
 cd /container/workspace/im2txt/data/imageDataset
-pwd
 tar xvzf ./101_ObjectCategories.tar.gz
 ls
