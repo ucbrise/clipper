@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd /container/workspace/im2txt/data/imageDataset
+cd /container/workspace/im2txt/data/imageDataset/101_ObjectCategories
 
 # copy all images from subdirectories to current directory: imageDatasets
 directories="directoryList.txt"
@@ -25,4 +25,4 @@ rm $directories
 rm $imageFiles
 
 # for debug
-ls /container/workspace/im2txt/data/imageDataset
+ls /container/workspace/im2txt/data/imageDataset/101_ObjectCategories
