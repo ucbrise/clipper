@@ -25,4 +25,6 @@ rm $directories
 rm $imageFiles
 
 # for debug
-ls /container/workspace/im2txt/data/imageDataset/101_ObjectCategories
+# ls /container/workspace/im2txt/data/imageDataset/101_ObjectCategories
+find -type f -name -name *.jpg | wc -l
+echo "$(find -type f -name -name *.jpg | wc -l) jpg images existing in this dataset."
