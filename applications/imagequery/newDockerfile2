@@ -5,7 +5,7 @@ RUN pip install nltk
 RUN python -m nltk.downloader all
 RUN apt install wget
 
-# copy file into image
+# copy files into image
 ADD imagequery/2_newImageCaptionGenerator/im2txt /container/workspace/im2txt
 ADD imagequery/2_newImageCaptionGenerator/captionData /container/workspace/captionData/
 ADD imagequery/2_newImageCaptionGenerator/app /container/
