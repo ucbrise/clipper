@@ -27,7 +27,9 @@ import configuration
 import inference_wrapper
 from inference_utils import caption_generator
 from inference_utils import vocabulary
-print("---In RUN!!!---")
+
+# Preparation work for tensorflow session
+print("Start building inference graph and creating vocabulary list...")
 
 FLAGS = tf.flags.FLAGS
 tf.flags.DEFINE_string("checkpoint_path", "", "Model checkpoint file or directory containing a model checkpoint file.")
@@ -49,6 +51,8 @@ filenames = []
 for file_pattern in FLAGS.input_files.split(","):
     filenames.extend(tf.gfile.Glob(file_pattern))
 tf.logging.info("Running caption generation on %d files matching %s", len(filenames), FLAGS.input_files)
+
+print("Finished building inference graph and creating vocabulary list...")
 
 def main(_):
     # # Build the inference graph.
@@ -94,8 +98,6 @@ def main(_):
             "caption1": captionList[1],
             "caption2": captionList[2]
         }
-
-        print(caps)
 
         caption_json = json.dumps(caps)
         with open('/container/workspace/captionData/captionFile.txt', 'w') as outfile:
