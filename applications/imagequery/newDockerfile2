@@ -5,7 +5,7 @@ RUN pip install numpy
 RUN pip install nltk 
 RUN python -m nltk.downloader all
 RUN apt install wget
-RUN apt-get install trees
+RUN apt install tree
 
 ADD imagequery/2_newImageCaptionGenerator/im2txt /container/workspace/im2txt
 ADD imagequery/2_newImageCaptionGenerator/captionData /container/workspace/captionData/
