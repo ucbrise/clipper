@@ -29,7 +29,7 @@ from inference_utils import caption_generator
 from inference_utils import vocabulary
 
 # Preparation work for tensorflow session
-print("Start building inference graph and creating vocabulary list...")
+print("Start building inference graph and creating vocabulary list...\n")
 
 FLAGS = tf.flags.FLAGS
 tf.flags.DEFINE_string("checkpoint_path", "", "Model checkpoint file or directory containing a model checkpoint file.")
