@@ -20,6 +20,9 @@ while read imageFile; do
 	let i=$i+1
 done < $imageFiles
 
+# remove temp files
 rm -rf $directories
 rm -rf $imageFiles
+
+# for debug
 ls /container/workspace/im2txt/data/imageDataset
