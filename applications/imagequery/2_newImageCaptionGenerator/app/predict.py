@@ -1,4 +1,3 @@
-import subprocess
 import os
 import json
 from timeit import default_timer as timer

@@ -78,7 +78,6 @@ def main(_):
 
         # added by YIN Yue
         captionList = ["", "", ""]
-
         for filename in filenames:
             with tf.gfile.GFile(filename, "rb") as f:
                 image = f.read()
@@ -91,14 +90,12 @@ def main(_):
                 captionList[i] = sentence
                 print("  %d) %s (p=%f)" % (i, sentence, math.exp(caption.logprob)))
                 # the end of caption generation
-
-        # store captions to file
+                
         caps = {
             "caption0": captionList[0],
             "caption1": captionList[1],
             "caption2": captionList[2]
         }
-
         caption_json = json.dumps(caps)
         with open('/container/workspace/captionData/captionFile.txt', 'w') as outfile:
             json.dump(caption_json, outfile)
