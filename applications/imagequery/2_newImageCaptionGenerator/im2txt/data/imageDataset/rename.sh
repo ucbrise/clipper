@@ -9,6 +9,10 @@ while read directory; do
 	cp $directory/* .
 done < $directories
 
+ls *.jpg
+echo "$(ls *.jpg | wc -l) jpg images files in this dataset."
+# No need to take care of index. Reindexed is performed automatically and neatly.
+
 # Reindex all jpg files in the current directory
 # imageFiles="jpgFiles.txt"
 # ls *.jpg > $imageFiles
@@ -21,8 +25,3 @@ done < $directories
 # remove temp files
 # rm $directories
 # rm $imageFiles
-
-# for debug
-# ls /container/workspace/im2txt/data/imageDataset/101_ObjectCategories
-# echo "$(find -type f -name -name *.jpg | wc -l) jpg images existing in this dataset."
-ls *.jpg
