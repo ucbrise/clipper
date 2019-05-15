@@ -10,7 +10,7 @@ while read directory; do
 done < $directories
 
 ls *.jpg
-echo "$(ls *.jpg | wc -l) jpg images files in this dataset."
+echo "$(ls *.jpg | wc -l) jpg image files in this dataset."
 # No need to take care of index. Reindexed is performed automatically and neatly.
 
 # Reindex all jpg files in the current directory
