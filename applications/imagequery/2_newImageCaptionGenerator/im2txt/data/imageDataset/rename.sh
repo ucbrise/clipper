@@ -21,8 +21,8 @@ while read imageFile; do
 done < $imageFiles
 
 # remove temp files
-rm -rf $directories
-rm -rf $imageFiles
+rm $directories
+rm $imageFiles
 
 # for debug
 ls /container/workspace/im2txt/data/imageDataset

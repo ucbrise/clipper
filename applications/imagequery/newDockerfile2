@@ -21,6 +21,7 @@ RUN wget --progress=bar:force http://www.vision.caltech.edu/Image_Datasets/Calte
 RUN mv /notebooks/101_ObjectCategories.tar.gz /container/workspace/im2txt/data/imageDataset
 RUN chmod 777 /container/workspace/im2txt/data/imageDataset/untar.sh 
 RUN /container/workspace/im2txt/data/imageDataset/untar.sh 
+RUN chmod 777 /container/workspace/im2txt/data/imageDataset/rename.sh 
 RUN /container/workspace/im2txt/data/imageDataset/rename.sh
 
 CMD ["python3","/container/predict.py"]
