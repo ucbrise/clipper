@@ -31,6 +31,9 @@ net = cv2.dnn.readNetFromCaffe(protoFile, weightsFile)
 nPoints = 18
 POSE_PAIRS = [ [1,0],[1,2],[1,5],[2,3],[3,4],[5,6],[6,7],[1,8],[8,9],[9,10],[1,11],[11,12],[12,13],[0,14],[0,15],[14,16],[15,17]]
 
+# input image dimensions for the network
+inWidth = 368
+inHeight = 368
 
 def predict(imagestring):
     frame=string_image(imagestring)
@@ -38,12 +41,7 @@ def predict(imagestring):
     frameWidth = frame.shape[1]
     frameHeight = frame.shape[0]
     threshold = 0.1
-    
-    
-    
-    # input image dimensions for the network
-    inWidth = 368
-    inHeight = 368
+   
     inpBlob = cv2.dnn.blobFromImage(frame, 1.0 / 255, (inWidth, inHeight),
                               (0, 0, 0), swapRB=False, crop=False)
     
