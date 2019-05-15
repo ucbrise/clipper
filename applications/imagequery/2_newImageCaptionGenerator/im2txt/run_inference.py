@@ -27,7 +27,7 @@ import configuration
 import inference_wrapper
 from inference_utils import caption_generator
 from inference_utils import vocabulary
-print("---In RUN!!!---")
+print("---In RUN_INFERENCE.PY---")
 
 FLAGS = tf.flags.FLAGS
 
@@ -37,15 +37,14 @@ tf.flags.DEFINE_string("input_files", "", "File pattern or comma-separated list 
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
-def main(_):
-    # Build the inference graph.
+# Build the inference graph.
     g = tf.Graph()
     with g.as_default():
         model = inference_wrapper.InferenceWrapper()
         restore_fn = model.build_graph_from_config(configuration.ModelConfig(), FLAGS.checkpoint_path)
     g.finalize()
 
-    # Create the vocabulary.
+# Create the vocabulary.
     vocab = vocabulary.Vocabulary(FLAGS.vocab_file)
 
     filenames = []
@@ -53,6 +52,7 @@ def main(_):
         filenames.extend(tf.gfile.Glob(file_pattern))
     tf.logging.info("Running caption generation on %d files matching %s", len(filenames), FLAGS.input_files)
 
+def main(_):
     with tf.Session(graph=g) as sess:
         # Load the model from checkpoint.
         restore_fn(sess)
