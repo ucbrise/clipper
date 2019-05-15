@@ -4,7 +4,7 @@ import json
 from timeit import default_timer as timer
 
 print("Starting running run_reference.py to set up modules for machine learning!")
-os.system("/container/workspace/im2txt/run_inference.py --checkpoint_path /container/workspace/im2txt/model/newmodel.ckpt-2000000 --vocab_file /container/workspace/im2txt/data/word_counts.txt --input_files /container/workspace/im2txt/data/images/image.jpg")
+os.system("python3 /container/workspace/im2txt/run_inference.py --checkpoint_path /container/workspace/im2txt/model/newmodel.ckpt-2000000 --vocab_file /container/workspace/im2txt/data/word_counts.txt --input_files /container/workspace/im2txt/data/images/image.jpg")
 print("Finished running run_reference.py, modules set up successfully!")
 
 def generateCaption(image_name):
