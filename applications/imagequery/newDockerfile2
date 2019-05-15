@@ -15,7 +15,7 @@ RUN /container/workspace/im2txt/model/downloadModels.sh
 RUN mv /notebooks/newmodel.ckpt-2000000.meta /container/workspace/im2txt/model
 RUN mv /notebooks/newmodel.ckpt-2000000.data-00000-of-00001 /container/workspace/im2txt/model
 
-RUN wget http://www.vision.caltech.edu/Image_Datasets/Caltech101/101_ObjectCategories.tar.gz
+RUN wget -q --progress=bar:force http://www.vision.caltech.edu/Image_Datasets/Caltech101/101_ObjectCategories.tar.gz
 RUN mv 101_ObjectCategories.tar.gz /container/workspace/im2txt/data/imageDataset
 RUN tar xzf /container/workspace/im2txt/data/imageDataset
 RUN ls /container/workspace/im2txt/data/imageDataset/
