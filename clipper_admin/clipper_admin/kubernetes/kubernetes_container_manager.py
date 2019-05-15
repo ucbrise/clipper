@@ -168,7 +168,7 @@ class KubernetesContainerManager(ContainerManager):
         configuration.assert_hostname = False
         self._k8s_v1 = client.CoreV1Api()
         self._k8s_beta = client.ExtensionsV1beta1Api()
-        self._k8s_rbac=client.RbacAuthorizationV1beta1Api()
+        self._k8s_rbac = client.RbacAuthorizationV1beta1Api()
         
 
         # Create the template engine
@@ -378,6 +378,7 @@ class KubernetesContainerManager(ContainerManager):
                 CONFIG_FILES['metric']['deployment'],
                 version=PROM_VERSION,
                 cluster_name=self.cluster_name,
+                service_account_name=self.cluster_name+"-prometheus"
             )
             self._k8s_beta.create_namespaced_deployment(
                 body=deployment_data, namespace=self.k8s_namespace)
