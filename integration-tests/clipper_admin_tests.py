@@ -71,7 +71,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
     def test_register_application_correct(self):
         input_type = "doubles"
         default_output = "DEFAULT"
-        slo_micros = 30000
+        slo_micros = 3000000
         app_name = "testapp"
         self.clipper_conn.register_application(app_name, input_type,
                                                default_output, slo_micros)
@@ -84,7 +84,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         app_name = "testapp"
         input_type = "doubles"
         default_output = "DEFAULT"
-        slo_micros = 30000
+        slo_micros = 3000000
         self.clipper_conn.register_application(app_name, input_type,
                                                default_output, slo_micros)
         with self.assertRaises(cl.ClipperException) as context:
@@ -94,7 +94,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
     def test_unregister_application_correct(self):
         input_type = "doubles"
         default_output = "DEFAULT"
-        slo_micros = 30000
+        slo_micros = 3000000
         app_name = "testapp"
         self.clipper_conn.register_application(app_name, input_type,
                                                default_output, slo_micros)
@@ -107,7 +107,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         app_name = "testapp"
         input_type = "doubles"
         default_output = "DEFAULT"
-        slo_micros = 30000
+        slo_micros = 3000000
         self.clipper_conn.register_application(app_name, input_type,
                                                default_output, slo_micros)
         result = self.clipper_conn.get_linked_models(app_name)
@@ -118,7 +118,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         app_name = "testapp"
         input_type = "doubles"
         default_output = "DEFAULT"
-        slo_micros = 30000
+        slo_micros = 3000000
         self.clipper_conn.register_application(app_name, input_type,
                                                default_output, slo_micros)
 
@@ -135,7 +135,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         app_name = "testapp"
         input_type = "doubles"
         default_output = "DEFAULT"
-        slo_micros = 30000
+        slo_micros = 3000000
         self.clipper_conn.register_application(app_name, input_type,
                                                default_output, slo_micros)
 
@@ -154,7 +154,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         app_name = "testapp"
         input_type = "doubles"
         default_output = "DEFAULT"
-        slo_micros = 30000
+        slo_micros = 3000000
         self.clipper_conn.register_application(app_name, input_type,
                                                default_output, slo_micros)
         result = self.clipper_conn.get_app_info(app_name)
@@ -462,7 +462,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             name=app_name,
             input_type="doubles",
             default_output="DEFAULT",
-            slo_micros=100000)
+            slo_micros=3000000)
 
         deploy_python_closure(
             self.clipper_conn,
@@ -580,7 +580,7 @@ class ClipperManagerTestCaseLong(unittest.TestCase):
         self.model_name_5 = "m8"
         self.input_type = "doubles"
         self.default_output = "DEFAULT"
-        self.latency_slo_micros = 30000
+        self.latency_slo_micros = 3000000
 
         self.clipper_conn.register_application(
             self.app_name_1, self.input_type, self.default_output,
