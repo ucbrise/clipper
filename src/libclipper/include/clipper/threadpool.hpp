@@ -264,6 +264,7 @@ class ThreadPool {
   boost::shared_mutex queues_mutex_;
   std::unordered_map<size_t, ThreadSafeQueue<std::unique_ptr<IThreadTask>>>
       queues_;
+  boost::shared_mutex threads_mutex_;
   std::unordered_map<size_t, boost::thread> threads_;
 };
 
@@ -287,7 +288,8 @@ class ModelQueueThreadPool : public ThreadPool {
   }
 
   bool create_queue(VersionedModelId vm, int replica_id, bool is_block_worker) {
-    boost::unique_lock<boost::shared_mutex> l(queues_mutex_);
+    boost::unique_lock<boost::shared_mutex> lock_q(queues_mutex_);
+    boost::unique_lock<boost::shared_mutex> lock_t(threads_mutex_);
     size_t queue_id = get_queue_id(vm, replica_id);
     auto queue = queues_.find(queue_id);
     if (queue != queues_.end()) {
@@ -310,7 +312,7 @@ class ModelQueueThreadPool : public ThreadPool {
   }
 
   bool interrupt_thread(VersionedModelId vm, const int replica_id) {
-    boost::shared_lock<boost::shared_mutex> l(queues_mutex_);
+    boost::shared_lock<boost::shared_mutex> l(threads_mutex_);
     size_t queue_id = get_queue_id(vm, replica_id);
     auto thread = threads_.find(queue_id);
     if (thread == threads_.end()) {
@@ -328,7 +330,8 @@ class ModelQueueThreadPool : public ThreadPool {
   }
 
   bool delete_queue(VersionedModelId vm, const int replica_id) {
-    boost::unique_lock<boost::shared_mutex> l(queues_mutex_);
+    boost::unique_lock<boost::shared_mutex> lock_q(queues_mutex_);
+    boost::unique_lock<boost::shared_mutex> lock_t(threads_mutex_);
     size_t queue_id = get_queue_id(vm, replica_id);
     auto queue = queues_.find(queue_id);
     if (queue == queues_.end() || !queue->second.is_valid()) {
@@ -336,26 +339,22 @@ class ModelQueueThreadPool : public ThreadPool {
                           "Work queue does not exist for model {}, replica {}",
                           vm.serialize(), replica_id);
       return false;
-    } else {
-      queue->second.invalidate();
-      l.unlock();
-
-      auto thread = threads_.find(queue_id);
-      if (thread->second.joinable()) {
-        thread->second.join();
-      }
-
-      {
-        boost::unique_lock<boost::shared_mutex> l(queues_mutex_);
-        queues_.erase(queue);
-        threads_.erase(thread);
-      }
-
-      log_info_formatted(LOGGING_TAG_THREADPOOL,
-                         "Work queue destroyed for model {}, replica {}",
-                         vm.serialize(), replica_id);
-      return true;
     }
+
+    queue->second.invalidate();
+
+    auto thread = threads_.find(queue_id);
+    if (thread->second.joinable()) {
+      thread->second.join();
+    }
+
+    queues_.erase(queue);
+    threads_.erase(thread);
+
+    log_info_formatted(LOGGING_TAG_THREADPOOL,
+                       "Work queue destroyed for model {}, replica {}",
+                       vm.serialize(), replica_id);
+    return true;
   }
 
   static size_t get_queue_id(const VersionedModelId& vm, const int replica_id) {
