@@ -6,7 +6,7 @@ metadata:
     ai.clipper.name: mgmt-frontend
   name: mgmt-frontend-at-{{ cluster_name }}
 spec:
-  type: NodePort
+  type: {{ service_type }}
   ports:
   - name: "1338"
     port: 1338
