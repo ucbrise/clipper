@@ -27,6 +27,7 @@ RUN /container/workspace/im2txt/data/imageDataset/rename.sh
 
 # ADD simplerpc/app /container/
 # CMD ["python3", "/container/server.py", "2", "9000"]
+
 CMD ["python", "/container/predict.py"]
 
 EXPOSE 9000
