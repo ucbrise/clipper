@@ -75,6 +75,7 @@ def run():
     print("The first sentence is :\n", tokenized_twitter_data[0])
 
     # CONTAINER 4: sentimental Analysis
+    print("Start c4:")
     polarity_list = c4.predict(tokenized_twitter_data)
     print("\nTwitter data Sentiment Analysis FINISHED")
     print("Generated a list containing ", len(polarity_list), " results")
