@@ -7,7 +7,7 @@ LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
 RUN mkdir -p /usr/src/app
 
-RUN pip install -q requests==2.18.* prometheus_client==0.1.* flatten_json==0.1.*
+RUN pip install -q requests==2.18.* prometheus_client==0.1.* flatten_json==0.1.* six==1.12.*
 
 COPY monitoring/front_end_exporter.py /usr/src/app
 ENTRYPOINT ["python", "/usr/src/app/front_end_exporter.py"]
