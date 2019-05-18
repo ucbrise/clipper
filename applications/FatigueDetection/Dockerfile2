@@ -12,7 +12,7 @@ RUN pip3 install grpcio
 RUN pip3 install protobuf
 
 
-ADD container2/app /container/
+ADD FatigueDetection/container2/app /container/
 ADD simplerpc/app /container/
 
 CMD ["python3", "/container/server.py", "2", "9000"]
