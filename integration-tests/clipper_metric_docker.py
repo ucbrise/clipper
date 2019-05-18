@@ -104,7 +104,7 @@ if __name__ == '__main__':
         cleanup=False, start_clipper=True, new_name=cluster_name)
     python_deployer.create_endpoint(
         clipper_conn, "simple-example", "doubles", feature_sum, num_replicas=2)
-    time.sleep(2)
+    time.sleep(10)
     try:
         logger.info(
             "Making 100 predictions using two model container; Should takes 25 seconds."
