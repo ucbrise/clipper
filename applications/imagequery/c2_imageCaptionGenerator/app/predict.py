@@ -10,7 +10,7 @@ def find(name, path):
 
 # Run run_inference.py
 run_inference_path = find("run_inference.py", "/")
-check_point_path = find("newmodel.ckpt-2000000","/")
+check_point_path = find("newmodel.ckpt-2000000.meta","/")
 vocabulary_path = find("word_counts.txt","/")
 image_path = find("image.jpg","/")
 print(run_inference_path)
