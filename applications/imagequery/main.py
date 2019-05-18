@@ -1,8 +1,10 @@
 import sys
-sys.path.append(".")
+sys.path.append("/container")
 
-import c1_speechRecognition/app/predict as sr 
-import c2_imageCaptionGenerator/workspace/
+import c1_speechRecognition/app/predict as speech_recognizer
+import c2_imageCaptionGenerator/app/predict as caption_generator
+import c3_nlpMappingGenerator/app/predict as mapping_generator
+import c4_questionAnswering/app/predict as question_answerer
 
 def run():
     elapsed_time_list = []
@@ -62,5 +64,5 @@ def run():
     print("NLP:\t\t\t\t" , elapsed_time_list[2])
     print("Question Answering:\t\t" , elapsed_time_list[3])
 
-if __name__ == "__main__":
-    run()
+# if __name__ == "__main__":
+#     run()
