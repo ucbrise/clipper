@@ -15,6 +15,6 @@ def predict(sent_list):
     result_list = "result"
 
     for sent in sent_list:
-        result_list = result_list + "-" + nltk_sentiment.polarity_scores(sent)
+        result_list = result_list + "-" + str(nltk_sentiment.polarity_scores(sent))
 
     return result_list
