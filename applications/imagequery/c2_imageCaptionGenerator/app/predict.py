@@ -7,7 +7,6 @@ def find(name, path):
     if name in files or name in dirs:
       return os.path.join(root, name)
 
-
 # Run run_inference.py
 run_inference_path = find("run_inference.py", "/")
 model_dir_path = find("pretrained_models", "/")
@@ -18,8 +17,9 @@ print(run_inference_path)
 print(check_point_path)
 print(vocabulary_path)
 print(image_path)
-cmd = "python " + run_inference_path + " --checkpoint_path " + check_point_path + " --vocab_file " + vocabulary_path + " --input_files " + image_path
-os.system(cmd)
+
+# cmd = "python " + run_inference_path + " --checkpoint_path " + check_point_path + " --vocab_file " + vocabulary_path + " --input_files " + image_path
+# os.system(cmd)
 
 def generateCaption(image_name):
   # The caption data will be written to /container/captionData/captions.txt
