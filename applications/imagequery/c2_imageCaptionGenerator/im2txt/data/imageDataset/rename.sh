@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd /container/workspace/im2txt/data/imageDataset/101_ObjectCategories
+cd /container/c2_imageCaptionGenerator/im2txt/data/imageDataset/101_ObjectCategories
 
 # copy all images from subdirectories to current directory: imageDatasets
 directories="directoryList.txt"
