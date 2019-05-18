@@ -62,7 +62,7 @@ def run():
 
     # CONTAINER 2: Twitter Collector
     tweet_number = 1000
-    twitter_data = c2.predict(stock_name, tweet_number)
+    twitter_data = c2.predict("placeholder")
     print("\nTwitter data Retrieval FINISHED")
     print("Successfully retrieved", tweet_number, "number of tweets.")
     print("Here are the first 200 characters:")
