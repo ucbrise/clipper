@@ -4,13 +4,14 @@ from timeit import default_timer as timer
 
 def find(name, path):
   for root, dirs, files in os.walk(path):
-    if name in files:
+    if name in files or name in dirs:
       return os.path.join(root, name)
 
 
 # Run run_inference.py
 run_inference_path = find("run_inference.py", "/")
-check_point_path = find("newmodel.ckpt-2000000.meta","/")
+model_dir_path = find("model"."/")
+check_point_path = model_dir_path + "newmodel.ckpt-2000000"
 vocabulary_path = find("word_counts.txt","/")
 image_path = find("image.jpg","/")
 print(run_inference_path)
