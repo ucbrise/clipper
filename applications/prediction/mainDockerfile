@@ -39,6 +39,7 @@ ADD prediction/c5_LSTM_Predictor /container/c5_LSTM_Predictor
 ADD prediction/c6_Mem /container/c6_Mem
 
 # for c7
+RUN pip3 install scipy
 RUN pip3 install pyramid.arima
 ADD prediction/c7_ARIMA /container/c7_ARIMA
 
