@@ -13,12 +13,7 @@ model_dir_path = find("model", "/container")
 check_point_path = model_dir_path + "/newmodel.ckpt-2000000"
 vocabulary_path = find("word_counts.txt","/")
 image_path = find("image.jpg","/")
-print(run_inference_path)
-print(check_point_path)
-print(vocabulary_path)
-print(image_path)
 cmd = "python " + run_inference_path + " --checkpoint_path " + check_point_path + " --vocab_file " + vocabulary_path + " --input_files " + image_path
-print(cmd)
 os.system(cmd)
 
 def generateCaption(image_name):
