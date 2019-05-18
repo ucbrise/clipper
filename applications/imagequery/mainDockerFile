@@ -3,6 +3,7 @@ RUN apt-get update
 
 # docker build -f ./imagequery/mainDockerFile -t imagequery:main .
 # docker run --runtime=nvidia -p 10000:10000 -it imagequery:main
+# docker run --runtime=nvidia -d -p 10000:10000 -it imagequery:main
 
 # container would contains 
 # c1_speechRecognition/ c2_imageCaptionGenerator/ c3_nlpMappingGenerator/ c4_questionAnswering/ main.py
@@ -49,5 +50,6 @@ ADD imagequery/main.py /container
 
 # /container nows contains: 
 # c1_speechRecognition/ c2_imageCaptionGenerator/ c3_nlpMappingGenerator/ c4_questionAnswering/ main.py
+CMD ["python", "main.py"]
 
 EXPOSE 10000
