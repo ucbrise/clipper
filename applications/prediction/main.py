@@ -4,6 +4,8 @@ import numpy as np
 import sys
 sys.path.append("/container")
 
+from multiprocessing import Pool 
+
 # c7 is discarded in this file, import error
 
 import c1_Stock_Price_Retriever.app.predict as c1
@@ -87,6 +89,15 @@ def run():
     # print(result_rg)
     result_rg = run_regression(stock_data)
 
+    result = []
+    p = Pool(4)
+    p.apply_async(run_lstm, args=(stock_data,))
+    p.apply_async(run_knn, args=(stock_data,))
+    p.apply_async(run_random_forest, args=(stock_data,))
+    p.apply_async(run_regression, args=(stock_data,))
+    p.close()
+    p.join() # p.join()方法会等待所有子进程执行完毕
+
     # CONTAINER 2: Twitter Collector
     tweet_number = 1000
     twitter_data = c2.predict("placeholder")
@@ -108,10 +119,10 @@ def run():
     print("Generated a list containing ", len(polarity_list), " results")
 
     # CONTAINER 11: Weighting Algorithm
-    final_prediction = c11.predict([result_knn, result_lstm, result_rg, result_rf, polarity_list])
-    print("\n\nENTIRE PROCESS FINISHED")
-    print("HERE IS THE FINAL PREDICTION FOR THE STOCK PRICES OF THE NEXT FEW DAYS:")
-    print(final_prediction)
+    # final_prediction = c11.predict([result_knn, result_lstm, result_rg, result_rf, polarity_list])
+    # print("\n\nENTIRE PROCESS FINISHED")
+    # print("HERE IS THE FINAL PREDICTION FOR THE STOCK PRICES OF THE NEXT FEW DAYS:")
+    # print(final_prediction)
 
 if __name__ == "__main__":
     run()
