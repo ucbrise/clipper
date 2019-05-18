@@ -10,10 +10,11 @@ def find(name, path):
 run_inference_path = find("run_inference.py", "/")
 check_point_path = find("newmodel.ckpt-2000000","/")
 vocabulary_path = find("word_counts.txt","/")
+image_path = find("image.jpg","/")
 print(run_inference_path)
 
 # Run run_inference.py
-os.system("python /container/workspace/im2txt/run_inference.py --checkpoint_path /container/workspace/im2txt/model/newmodel.ckpt-2000000 --vocab_file /container/workspace/im2txt/data/word_counts.txt --input_files /container/workspace/im2txt/data/images/image.jpg")
+os.system("python " + run_inference_path + " --checkpoint_path " + check_point_path + " --vocab_file " + vocabulary_path + " --input_files " + image_path)
 
 def generateCaption(image_name):
   # The caption data will be written to /container/captionData/captions.txt
