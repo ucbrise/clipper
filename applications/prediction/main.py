@@ -114,7 +114,7 @@ def run():
     print("\nTwitter data Sentiment Analysis FINISHED")
     print("Generated a list containing ", len(polarity_list), " results")
 
-    print(str(result_list))
+    print(result_list)
 
     # CONTAINER 11: Weighting Algorithm
     # final_prediction = c11.predict([result_knn, result_lstm, result_rg, result_rf, polarity_list])
