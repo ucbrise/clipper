@@ -2,7 +2,7 @@
 # Ref2: textacy official documentation for matching pattern
 import spacy
 import textacy
-from preprocess import preprocess
+from c3_nlpMappingGenerator.app.preprocess import preprocess
 from timeit import default_timer as timer
 
 # def print_document(doc):
