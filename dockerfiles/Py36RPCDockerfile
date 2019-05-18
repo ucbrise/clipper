@@ -10,7 +10,7 @@ RUN mkdir -p /model \
       && apt-get install -y -qq libzmq5 libzmq5-dev redis-server libsodium18 build-essential
 
 RUN pip install -q cloudpickle==0.5.* pyzmq==17.0.* prometheus_client==0.1.* \
-    pyyaml==3.12.* jsonschema==2.6.* redis==2.10.* psutil==5.4.* flask==0.12.2 \
+    pyyaml>=4.2b1 jsonschema==2.6.* redis==2.10.* psutil==5.4.* flask==0.12.2 \
     numpy==1.14.*
 
 COPY clipper_admin /clipper_admin/
