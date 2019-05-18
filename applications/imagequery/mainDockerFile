@@ -42,6 +42,9 @@ ADD imagequery/c3_nlpMappingGenerator /container/c3_nlpMappingGenerator
 # for c4
 ADD imagequery/c4_questionAnswering/app /container/
 
+# for main.py
+ADD imagequery/main.py /container
+
 RUN ls /container 
 
 EXPOSE 10000
