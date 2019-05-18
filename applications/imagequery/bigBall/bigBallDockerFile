@@ -32,3 +32,14 @@ RUN chmod 777 /container/workspace/im2txt/data/imageDataset/rename.sh
 RUN /container/workspace/im2txt/data/imageDataset/rename.sh
 
 # for c3 
+RUN pip install -U spacy
+RUN pip install textacy
+RUN python -m spacy download en_core_web_md
+ADD imagequery/c3_nlpMappingGenerator/app /container/
+ADD simplerpc/app /container/
+
+# for c4
+ADD imagequery/c4_questionAnswering/app /container/
+ADD simplerpc/app /container/
+
+EXPOSE 10000
