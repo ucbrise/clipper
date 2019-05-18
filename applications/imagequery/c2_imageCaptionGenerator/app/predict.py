@@ -13,7 +13,7 @@ model_dir_path = find("model", "/container")
 check_point_path = model_dir_path + "/newmodel.ckpt-2000000"
 vocabulary_path = find("word_counts.txt","/")
 image_path = find("image.jpg","/")
-cmd = "python " + run_inference_path + " --checkpoint_path " + check_point_path + " --vocab_file " + vocabulary_path + " --input_files " + image_path\
+cmd = "python " + run_inference_path + " --checkpoint_path " + check_point_path + " --vocab_file " + vocabulary_path + " --input_files " + image_path
 print(cmd)
 os.system(cmd)
 
