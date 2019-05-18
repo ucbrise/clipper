@@ -23,24 +23,28 @@ def run_lstm(stock_data):
   print("\nPrediction using LSTM FINISHED")
   print("Here is the result:")
   print(result_lstm)
+  return result_lstm
 
 def run_knn(stock_data):
   result_knn = c8.predict(stock_data.to_json())
   print("\nPrediction using KNN FINISHED")
   print("Here is the result:")
   print(result_knn)
+  return result_knn
 
 def run_random_forest(stock_data):
   result_rf = c9.predict(stock_data.to_json())
   print("\nPrediction using Random Forest FINISHED")
   print("Here is the result:")
   print(result_rf)
+  return result_rf
 
 def run_regression(stock_data):
   result_rg = c10.predict(stock_data.to_json())
   print("\nPrediction using Regrerssion FINISHED")
   print("Here is the result:")
   print(result_rg)
+  return result_rg
 
 def run():
     print("\nStart Prediciting: ")
