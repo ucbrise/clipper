@@ -25,7 +25,7 @@ def generateCaption(image_name):
   captions = ""
   with open(caption_json_path) as json_file:
     caption_string_restored = json.load(json_file)
-    print("caption_string_restored: " + caption_string_restored)
+    #  print("caption_string_restored: " + caption_string_restored)
     caption_json = json.loads(caption_string_restored)
     captions += caption_json['caption0']
     captions += " "
