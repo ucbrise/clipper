@@ -2,8 +2,11 @@ import sys
 sys.path.append("/container")
 
 import c1_speechRecognition.app.predict as speech_recognizer
+print("Modules successfully imported!")
 import c2_imageCaptionGenerator.app.predict as caption_generator
+print("Modules successfully imported!")
 import c3_nlpMappingGenerator.app.predict as mapping_generator
+print("Modules successfully imported!")
 import c4_questionAnswering.app.predict as question_answerer
 print("Modules successfully imported!")
 
