@@ -36,8 +36,11 @@ def run_random_forest(stock_data):
   print("Here is the result:")
   print(result_rf)
 
-def run_regression():
-
+def run_regression(stock_data):
+  result_rg = c10.predict(stock_data.to_json())
+  print("\nPrediction using Regrerssion FINISHED")
+  print("Here is the result:")
+  print(result_rg)
 
 def run():
     print("\nStart Prediciting: ")
@@ -57,24 +60,28 @@ def run():
     # print("\nPrediction using LSTM FINISHED")
     # print("Here is the result:")
     # print(result_lstm)
+    result_lstm = run_lstm(stock_data)
 
     # CONTAINER 8: KNN
     # result_knn = c8.predict(stock_data.to_json())
     # print("\nPrediction using KNN FINISHED")
     # print("Here is the result:")
     # print(result_knn)
+    result_knn = run_knn(stock_data)
 
     # CONTAINER 9: Random Forest
     # result_rf = c9.predict(stock_data.to_json())
     # print("\nPrediction using Random Forest FINISHED")
     # print("Here is the result:")
     # print(result_rf)
+    result_rf = run_random_forest(stock_data)
 
     # CONTAINER 10: Regression
-    result_rg = c10.predict(stock_data.to_json())
-    print("\nPrediction using Regrerssion FINISHED")
-    print("Here is the result:")
-    print(result_rg)
+    # result_rg = c10.predict(stock_data.to_json())
+    # print("\nPrediction using Regrerssion FINISHED")
+    # print("Here is the result:")
+    # print(result_rg)
+    result_rg = run_regression(stock_data)
 
     # CONTAINER 2: Twitter Collector
     tweet_number = 1000
