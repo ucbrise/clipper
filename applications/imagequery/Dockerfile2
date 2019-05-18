@@ -6,9 +6,9 @@ RUN python -m nltk.downloader all
 RUN apt install wget
 
 # copy files into image
-ADD imagequery/c2_newImageCaptionGenerator/im2txt /container/workspace/im2txt
-ADD imagequery/c2_newImageCaptionGenerator/captionData /container/workspace/captionData/
-ADD imagequery/c2_newImageCaptionGenerator/app /container/
+ADD imagequery/c2_imageCaptionGenerator/im2txt /container/workspace/im2txt
+ADD imagequery/c2_imageCaptionGenerator/captionData /container/workspace/captionData/
+ADD imagequery/c2_imageCaptionGenerator/app /container/
 
 # download pre-trained models 
 RUN chmod 777 /container/workspace/im2txt/model/downloadModels.sh
