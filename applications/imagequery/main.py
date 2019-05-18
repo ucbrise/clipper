@@ -2,65 +2,43 @@ import sys
 sys.path.append("/container")
 
 import c1_speechRecognition.app.predict as speech_recognizer
-print("Modules successfully imported!")
 import c2_imageCaptionGenerator.app.predict as caption_generator
-print("Modules successfully imported!")
 import c3_nlpMappingGenerator.app.predict as mapping_generator
-print("Modules successfully imported!")
 import c4_questionAnswering.app.predict as question_answerer
-print("Modules successfully imported!")
 
 def run():
     elapsed_time_list = []
 
     # CONTAINER 1: speech to text
     audio_file_name = "/container/c1_speechRecognition/app/speech.wav"
-    print("\n### Starting transfering speech to text ###\n")
-    speech_text, elapsed_time = container1.Predict(audio_file_name)
+    speech_text, elapsed_time = speech_recognizer.predict(audio_file_name)
     elapsed_time_list.append(elapsed_time)
-    print("Speech successfully transfered to text!")
-    print("Text: " + speech_text)
-    print("\n### Finish transfering text to image ###\n")
+    print("1:\tText: " + speech_text)
 
     # CONTAINER 2: image caption generator
-    print("\n### Start generating image caption ###\n")
-    container2 = xmlrpc.client.ServerProxy('http://localhost:9000')
-    captions, elapsed_time = container2.Predict("image.jpg")
+    captions, elapsed_time = caption_generator.predict("image.jpg")
     elapsed_time_list.append(elapsed_time)
-    print("Image captions generated successfully")
-    print("The generated captions are: " + captions)
-    print("\n### Finish generating image caption ###\n")
+    print("2:\tGenerated captions: " + captions)
 
     # CONTAINER 3: image nlp analyzer
-    print("\n### Start Natural Language Processing ###\n")
-    container3 = xmlrpc.client.ServerProxy('http://localhost:11000')
     text =  captions + ". " + speech_text + "."
-    print("Natural Language Processor receive the text: "  + text)
-    mapping, elapsed_time = container3.Predict(text)
+    mapping, elapsed_time = mapping_generator.predict(text)
     elapsed_time_list.append(elapsed_time)
-    print(mapping)
-    print("Image mapping generated successfully")
-    print("The generated mapping is: ")
+    print("3:\tGenerated mapping: ")
     items = mapping.split('-')
     subject = items[0]
     verb = items[1]
     time = items[2]
-    print("Subject: " + subject)
-    print("Verb: " + verb)
-    print("Time: " + time)
-    print("\n### Finish generating mapping ###\n")
+    print("\t\tSubject: " + subject)
+    print("\t\tVerb: " + verb)
+    print("\t\tTime: " + time)
 
     # Container 4: Question Answerings
-    print("\n### Start Question Answering ###\n")
-    container4 = xmlrpc.client.ServerProxy('http://localhost:12000')
     question = "What is in the image?"
-    answer, elapsed_time = container4.Predict(question, mapping)
+    answer, elapsed_time = question_answerer.predict(question, mapping)
     elapsed_time_list.append(elapsed_time)
-    print("The asked question is: " + question)
-    print("Generating Answer...")
-    print("Answer generated successfully!")
-    print("The generated answer is: " + answer)
-    print("\n### Finish question answering ###\n")
+    print("4:\tThe asked question is: " + question)
+    print("\t\tGenerated answer is: " + answer)
 
     print("Time elapsed for each container:")
     print("Speech Recognition:\t\t" , elapsed_time_list[0])
