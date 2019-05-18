@@ -60,4 +60,6 @@ ADD prediction/main.py /container
 
 RUN ls /container
 
+CMD["python3","/container/main.py"]
+
 EXPOSE 10000
