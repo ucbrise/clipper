@@ -1,8 +1,8 @@
 import sys
-sys.path.append("..")
+sys.path.append(".")
 
 import c1_speechRecognition/app/predict as sr 
-import c2_imageCaptionGenerator
+import c2_imageCaptionGenerator/workspace/
 
 def run():
     elapsed_time_list = []
