@@ -52,7 +52,7 @@ config.display()
 model = modellib.MaskRCNN(mode="inference", model_dir="logs", config=config)
 
 # Load weights trained on MS-COCO
-model.load_weights("container/mask_rcnn_coco.h5", by_name=True)
+model.load_weights("/container/mask_rcnn_coco.h5", by_name=True)
 
 def predict(imstr):
     image=string_image(imstr)
