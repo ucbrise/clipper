@@ -2,6 +2,16 @@ import os
 import json
 from timeit import default_timer as timer
 
+def find(name, path):
+  for root, dirs, files in os.walk(path):
+    if name in files:
+      return os.path.join(root, name)
+
+run_inference_path = find("run_inference.py", "/")
+check_point_path = find("newmodel.ckpt-2000000","/")
+vocabulary_path = find("word_counts.txt"."/")
+print(run_inference_path)
+
 # Run run_inference.py
 os.system("python /container/workspace/im2txt/run_inference.py --checkpoint_path /container/workspace/im2txt/model/newmodel.ckpt-2000000 --vocab_file /container/workspace/im2txt/data/word_counts.txt --input_files /container/workspace/im2txt/data/images/image.jpg")
 
@@ -27,6 +37,3 @@ def predict(resized_image_path):
   end = timer()
   time_elapsed = end - start
   return generated_caption, time_elapsed
-
-# if __name__ == '__main__':
-#     predict("image.jpg")
