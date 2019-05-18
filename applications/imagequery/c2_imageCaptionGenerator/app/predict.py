@@ -2,11 +2,8 @@ import os
 import json
 from timeit import default_timer as timer
 
-# in docker: Run run_inference.py
-# os.system("python /container/workspace/im2txt/run_inference.py --checkpoint_path /container/workspace/im2txt/model/newmodel.ckpt-2000000 --vocab_file /container/workspace/im2txt/data/word_counts.txt --input_files /container/workspace/im2txt/data/images/image.jpg")
-
-# for main.py: Run run_inference.py
-os.system("python ../c2_imageCaptionGenerator/im2txt")
+# Run run_inference.py
+os.system("python /container/workspace/im2txt/run_inference.py --checkpoint_path /container/workspace/im2txt/model/newmodel.ckpt-2000000 --vocab_file /container/workspace/im2txt/data/word_counts.txt --input_files /container/workspace/im2txt/data/images/image.jpg")
 
 def generateCaption(image_name):
   # The caption data will be written to /container/captionData/captions.txt

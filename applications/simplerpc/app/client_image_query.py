@@ -4,7 +4,7 @@ def run():
     elapsed_time_list = []
 
     # CONTAINER 1: speech to text
-    audio_file_name = "speech.wav"
+    audio_file_name = "/container/speech.wav"
     print("\n### Starting transfering speech to text ###\n")
     container1 = xmlrpc.client.ServerProxy('http://localhost:8000')
     speech_text, elapsed_time = container1.Predict(audio_file_name)
