@@ -1,5 +1,10 @@
+import pandas as pd
+import numpy as np
+
 import sys
 sys.path.append("/container")
+
+# c7 is discarded in this file, import error
 
 import c1_Stock_Price_Retriever.app.predict as c1
 import c2_Twitter_Collector.app.predict as c2 
@@ -7,12 +12,32 @@ import c3_Tokenizer.app.predict as c3
 import c4_Sentiment_Analysis.app.predict as c4 
 import c5_LSTM_Predictor.app.predict as c5
 import c6_Mem.app.predict as c6 
-# import c7_ARIMA.app.predict as c7 
 import c8_KNN.app.predict as c8 
 import c9_RandomForest.app.predict as c9 
 import c10_Regression.app.predict as c10 
 import c11_Conclusion.app.predict as c11 
 print("Modules successfully loaded!")
+
+def run_lstm(stock_data):
+  result_lstm = c5.predict(stock_data.to_json())
+  print("\nPrediction using LSTM FINISHED")
+  print("Here is the result:")
+  print(result_lstm)
+
+def run_knn(stock_data):
+  result_knn = c8.predict(stock_data.to_json())
+  print("\nPrediction using KNN FINISHED")
+  print("Here is the result:")
+  print(result_knn)
+
+def run_random_forest(stock_data):
+  result_rf = c9.predict(stock_data.to_json())
+  print("\nPrediction using Random Forest FINISHED")
+  print("Here is the result:")
+  print(result_rf)
+
+def run_regression():
+
 
 def run():
     print("\nStart Prediciting: ")
@@ -28,28 +53,22 @@ def run():
     print(stock_data.head())
 
     # CONTAINER 5: LSTM
-    result_lstm = c5.predict(stock_data.to_json())
-    print("\nPrediction using LSTM FINISHED")
-    print("Here is the result:")
-    print(result_lstm)
-
-    # CONTAINER 7: ARIMA
-    # result_arima = c7.predict(stock_data.to_json())
-    # print("\nPrediction using ARIMA FINISHED")
+    # result_lstm = c5.predict(stock_data.to_json())
+    # print("\nPrediction using LSTM FINISHED")
     # print("Here is the result:")
-    # print(result_arima)
+    # print(result_lstm)
 
     # CONTAINER 8: KNN
-    result_knn = c8.predict(stock_data.to_json())
-    print("\nPrediction using KNN FINISHED")
-    print("Here is the result:")
-    print(result_knn)
+    # result_knn = c8.predict(stock_data.to_json())
+    # print("\nPrediction using KNN FINISHED")
+    # print("Here is the result:")
+    # print(result_knn)
 
     # CONTAINER 9: Random Forest
-    result_rf = c9.predict(stock_data.to_json())
-    print("\nPrediction using Random Forest FINISHED")
-    print("Here is the result:")
-    print(result_rf)
+    # result_rf = c9.predict(stock_data.to_json())
+    # print("\nPrediction using Random Forest FINISHED")
+    # print("Here is the result:")
+    # print(result_rf)
 
     # CONTAINER 10: Regression
     result_rg = c10.predict(stock_data.to_json())
