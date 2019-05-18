@@ -10,7 +10,6 @@ RUN pip3 install scikit-image
 RUN pip3 install Cython
 RUN pip3 install pycocotools
 RUN pip3 install git+https://github.com/philferriere/cocoapi.git#egg=pycocotools^&subdirectory=PythonAPI
-RUN pip3 install tensorflow-gpu
 RUN pip3 install keras
 ADD FatigueDetection/container3/app /container/
 
