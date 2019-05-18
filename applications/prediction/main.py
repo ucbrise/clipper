@@ -25,7 +25,7 @@ def run_lstm(stock_data):
   print("\nPrediction using LSTM FINISHED")
   print("Here is the result:")
   print(result_lstm)
-  return result_lstm
+  return str(result_lstm)
 
 def run_knn(stock_data):
   result_knn = c8.predict(stock_data.to_json())
