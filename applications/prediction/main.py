@@ -115,10 +115,10 @@ def run():
     print("Generated a list containing ", len(polarity_list), " results")
 
     # CONTAINER 11: Weighting Algorithm
-    # final_prediction = c11.predict([result_knn, result_lstm, result_rg, result_rf, polarity_list])
-    # print("\n\nENTIRE PROCESS FINISHED")
-    # print("HERE IS THE FINAL PREDICTION FOR THE STOCK PRICES OF THE NEXT FEW DAYS:")
-    # print(final_prediction)
+    final_prediction = c11.predict([result_knn, result_lstm, result_rg, result_rf, polarity_list])
+    print("\n\nENTIRE PROCESS FINISHED")
+    print("HERE IS THE FINAL PREDICTION FOR THE STOCK PRICES OF THE NEXT FEW DAYS:")
+    print(final_prediction)
 
 if __name__ == "__main__":
     run()
