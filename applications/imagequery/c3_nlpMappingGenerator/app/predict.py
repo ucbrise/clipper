@@ -2,7 +2,6 @@
 # Ref2: textacy official documentation for matching pattern
 import spacy
 import textacy
-import textacy.Doc
 from c3_nlpMappingGenerator.app.preprocess import preprocess
 from timeit import default_timer as timer
 
