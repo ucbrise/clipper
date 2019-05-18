@@ -9,7 +9,7 @@ def find(name, path):
 
 run_inference_path = find("run_inference.py", "/")
 check_point_path = find("newmodel.ckpt-2000000","/")
-vocabulary_path = find("word_counts.txt"."/")
+vocabulary_path = find("word_counts.txt","/")
 print(run_inference_path)
 
 # Run run_inference.py
