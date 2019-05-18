@@ -5,12 +5,12 @@ def predict(sent_list):
     # sent_list is actually a string, containing words separated by -
     from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
-    print(sent_list)
+    # print(sent_list)
 
     nltk_sentiment = SentimentIntensityAnalyzer()
     sent_list = sent_list.split("-")[1:]
 
-    print(sent_list[:5])
+    # print(sent_list[:5])
 
     result_list = "result"
 
