@@ -37,10 +37,10 @@ def run():
     print(result_lstm)
 
     # CONTAINER 7: ARIMA
-    result_arima = c7.predict(stock_data.to_json())
-    print("\nPrediction using ARIMA FINISHED")
-    print("Here is the result:")
-    print(result_arima)
+    # result_arima = c7.predict(stock_data.to_json())
+    # print("\nPrediction using ARIMA FINISHED")
+    # print("Here is the result:")
+    # print(result_arima)
 
     # CONTAINER 8: KNN
     result_knn = c8.predict(stock_data.to_json())
@@ -81,7 +81,7 @@ def run():
     print("The first result is :\n", polarity_list[0])
 
     # CONTAINER 11: Weighting Algorithm
-    final_prediction = c11.predict([result_arima, result_knn, result_lstm, result_rg], result_rf, polarity_list )
+    final_prediction = c11.predict([result_knn, result_lstm, result_rg], result_rf, polarity_list )
     print("\n\nENTIRE PROCESS FINISHED")
     print("HERE IS THE FINAL PREDICTION FOR THE STOCK PRICES OF THE NEXT FEW DAYS:")
     print(final_prediction)
