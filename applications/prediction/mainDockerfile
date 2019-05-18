@@ -29,7 +29,7 @@ RUN python3 -m spacy download en
 ADD prediction/c4_Sentiment_Analysis /container/c4_Sentiment_Analysis
 
 # for c5
-RUN sudo apt-get install python3-all-dev build-essential swig git libpulse-dev libasound2-dev
+RUN apt-get install python3-all-dev build-essential swig git libpulse-dev libasound2-dev
 RUN pip3 install sklearn
 RUN pip3 install keras
 RUN pip3 install tensorflow
