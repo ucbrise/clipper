@@ -2,11 +2,12 @@ import nltk
 nltk.download('vader_lexicon')
 
 def predict(sent_list):
+    print(sent_list[:5])
 
     from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
     nltk_sentiment = SentimentIntensityAnalyzer()
-    sent_list = sent_list.split("-")[1:]
+    # sent_list = sent_list.split("-")[1:]
 
     result_list = "result"
 
