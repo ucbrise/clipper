@@ -50,6 +50,6 @@ ADD imagequery/main.py /container
 
 # /container nows contains: 
 # c1_speechRecognition/ c2_imageCaptionGenerator/ c3_nlpMappingGenerator/ c4_questionAnswering/ main.py
-CMD ["python", "main.py"]
+CMD ["python", "/container/main.py"]
 
 EXPOSE 10000
