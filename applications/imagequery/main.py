@@ -5,6 +5,7 @@ import c1_speechRecognition/app/predict as speech_recognizer
 import c2_imageCaptionGenerator/app/predict as caption_generator
 import c3_nlpMappingGenerator/app/predict as mapping_generator
 import c4_questionAnswering/app/predict as question_answerer
+print("Modules successfully imported!")
 
 def run():
     elapsed_time_list = []
