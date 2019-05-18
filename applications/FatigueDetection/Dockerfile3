@@ -14,7 +14,7 @@ RUN pip3 install keras
 ADD FatigueDetection/container3/app /container/
 
 ADD simplerpc/app /container/
-RUN ls container/
+RUN ls /container/
 
 CMD ["python3", "/container/server.py", "3", "11000"]
 RUN pip3 install imgaug
