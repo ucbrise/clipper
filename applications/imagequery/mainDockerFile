@@ -1,7 +1,7 @@
 FROM tensorflow/tensorflow:1.12.0-gpu-py3 
 RUN apt-get update
 
-# docker build -f ./imagequery/bigBall/bigBallDockerFile -t imagequery:bigBall .
+# docker build -f ./imagequery/mainDockerFile -t imagequery:main .
 # container would contains 
 # c1_speechRecognition/ c2_imageCaptionGenerator/ c3_nlpMappingGenerator c4_questionAnswering
 
@@ -16,7 +16,7 @@ RUN python -m nltk.downloader all
 RUN apt install wget
 
 # copy files into image
-ADD imagequery/c2_imageCaptionGenerator /container/c2_imageCaptionGenerator
+ADD imagequery/c2_imageCaptionGenerator /container/c2_imageCaptionGenerator/workspace
 
 # download pre-trained models 
 RUN chmod 777 /container/c2_imageCaptionGenerator/workspace/im2txt/model/downloadModels.sh
