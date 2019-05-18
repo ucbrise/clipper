@@ -1,6 +1,8 @@
 import sys
 sys.path.append("/container")
 
+from multiprocessing import Pool
+
 import c1_speechRecognition.app.predict as speech_recognizer
 import c2_imageCaptionGenerator.app.predict as caption_generator
 import c3_nlpMappingGenerator.app.predict as mapping_generator

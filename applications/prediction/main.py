@@ -85,12 +85,12 @@ def run():
     # print("Here is the result:")
     # print(result_rg)
 
-    result = []
+    result_list = []
     p = Pool(4)
-    p.apply_async(run_lstm, args=(stock_data,))
-    p.apply_async(run_knn, args=(stock_data,))
-    p.apply_async(run_random_forest, args=(stock_data,))
-    p.apply_async(run_regression, args=(stock_data,))
+    result_list.append(p.apply_async(run_lstm, args=(stock_data,))) 
+    result_list.append(p.apply_async(run_knn, args=(stock_data,)))
+    result_list.append(p.apply_async(run_random_forest, args=(stock_data,)))
+    result_list.append(p.apply_async(run_regression, args=(stock_data,)))
     p.close()
     p.join() # p.join()方法会等待所有子进程执行完毕
 
@@ -114,11 +114,13 @@ def run():
     print("\nTwitter data Sentiment Analysis FINISHED")
     print("Generated a list containing ", len(polarity_list), " results")
 
+    print(str(result_list))
+
     # CONTAINER 11: Weighting Algorithm
-    final_prediction = c11.predict([result_knn, result_lstm, result_rg, result_rf, polarity_list])
-    print("\n\nENTIRE PROCESS FINISHED")
-    print("HERE IS THE FINAL PREDICTION FOR THE STOCK PRICES OF THE NEXT FEW DAYS:")
-    print(final_prediction)
+    # final_prediction = c11.predict([result_knn, result_lstm, result_rg, result_rf, polarity_list])
+    # print("\n\nENTIRE PROCESS FINISHED")
+    # print("HERE IS THE FINAL PREDICTION FOR THE STOCK PRICES OF THE NEXT FEW DAYS:")
+    # print(final_prediction)
 
 if __name__ == "__main__":
     run()
