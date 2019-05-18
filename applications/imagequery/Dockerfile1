@@ -4,7 +4,7 @@ RUN apt-get install python3 python3-pip -y
 RUN pip3 install SpeechRecognition
 
 # container will have: speech.wav, predict.py, server.py
-ADD imagequery/1_speechRecognition/app /container/
+ADD imagequery/c1_speechRecognition/app /container/
 ADD simplerpc/app /container/
 RUN ["ls" , "/container"]
 

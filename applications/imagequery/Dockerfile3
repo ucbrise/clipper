@@ -9,7 +9,7 @@ RUN pip3 install textacy
 RUN python3 -m spacy download en_core_web_md
 
 # container will have: preprocess.py, predict.py, server.py
-ADD imagequery/3_nlpMappingGenerator/app /container/
+ADD imagequery/c3_nlpMappingGenerator/app /container/
 ADD simplerpc/app /container/
 
 CMD ["python3", "/container/server.py", "3", "11000"]

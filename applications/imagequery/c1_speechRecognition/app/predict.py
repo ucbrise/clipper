@@ -6,7 +6,7 @@ from timeit import default_timer as timer
 def recognize(audio_file_path):
     recognizer = sr.Recognizer()
 
-    audio_file = sr.AudioFile("/container/" + audio_file_path)
+    audio_file = sr.AudioFile(audio_file_path)
 
     with audio_file as source:
         audio = recognizer.record(source)
