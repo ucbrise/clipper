@@ -16,22 +16,22 @@ RUN python -m nltk.downloader all
 RUN apt install wget
 
 # copy files into image
-ADD imagequery/c2_imageCaptionGenerator /container/c2_imageCaptionGenerator/workspace
+ADD imagequery/c2_imageCaptionGenerator /container/c2_imageCaptionGenerator
 
 # download pre-trained models 
-RUN chmod 777 /container/c2_imageCaptionGenerator/workspace/im2txt/model/downloadModels.sh
-RUN /container/c2_imageCaptionGenerator/workspace/im2txt/model/downloadModels.sh
-RUN mv /notebooks/newmodel.ckpt-2000000.meta /container/c2_imageCaptionGenerator/workspace/im2txt/model
-RUN mv /notebooks/newmodel.ckpt-2000000.data-00000-of-00001 /container/c2_imageCaptionGenerator/workspace/im2txt/model
+RUN chmod 777 /container/c2_imageCaptionGenerator/im2txt/model/downloadModels.sh
+RUN /container/c2_imageCaptionGenerator/im2txt/model/downloadModels.sh
+RUN mv /notebooks/newmodel.ckpt-2000000.meta /container/c2_imageCaptionGenerator/im2txt/model
+RUN mv /notebooks/newmodel.ckpt-2000000.data-00000-of-00001 /container/c2_imageCaptionGenerator/im2txt/model
 
 # download datasets, untar and reindex images.
-# /container/c2_imageCaptionGenerator/workspace/im2txt/data/imageDataset will contains image1.jpg, image2.jpg, ..., and other folders
+# /container/workspace/im2txt/data/imageDataset will contains image1.jpg, image2.jpg, image3.jpg, ..., and other folders
 RUN wget --progress=bar:force http://www.vision.caltech.edu/Image_Datasets/Caltech101/101_ObjectCategories.tar.gz
-RUN mv /notebooks/101_ObjectCategories.tar.gz /container/c2_imageCaptionGenerator/workspace/im2txt/data/imageDataset
-RUN chmod 777 /container/c2_imageCaptionGenerator/workspace/im2txt/data/imageDataset/untar.sh 
-RUN /container/c2_imageCaptionGenerator/workspace/im2txt/data/imageDataset/untar.sh 
-RUN chmod 777 /container/c2_imageCaptionGenerator/workspace/im2txt/data/imageDataset/rename.sh 
-RUN /container/c2_imageCaptionGenerator/workspace/im2txt/data/imageDataset/rename.sh
+RUN mv /notebooks/101_ObjectCategories.tar.gz /container/c2_imageCaptionGenerator/im2txt/data/imageDataset
+RUN chmod 777 /container/c2_imageCaptionGenerator/im2txt/data/imageDataset/untar.sh 
+RUN /container/c2_imageCaptionGenerator/im2txt/data/imageDataset/untar.sh 
+RUN chmod 777 /container/c2_imageCaptionGenerator/im2txt/data/imageDataset/rename.sh 
+RUN /container/c2_imageCaptionGenerator/im2txt/data/imageDataset/rename.sh
 
 # for c3 
 RUN pip install -U spacy
@@ -40,7 +40,7 @@ RUN python -m spacy download en_core_web_md
 ADD imagequery/c3_nlpMappingGenerator /container/c3_nlpMappingGenerator
 
 # for c4
-ADD imagequery/c4_questionAnswering/app /container/
+ADD imagequery/c4_questionAnswering /container/c4_questionAnswering
 
 # for main.py
 ADD imagequery/main.py /container
