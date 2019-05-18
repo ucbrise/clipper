@@ -23,6 +23,6 @@ RUN /container/c2_imageCaptionGenerator/im2txt/data/imageDataset/untar.sh
 RUN chmod 777 /container/c2_imageCaptionGenerator/im2txt/data/imageDataset/rename.sh 
 RUN /container/c2_imageCaptionGenerator/im2txt/data/imageDataset/rename.sh
 
-CMD ["python", "/container/c2_imageCaptionGenerator/predict.py"]
+CMD ["python", "/container/c2_imageCaptionGenerator/app/predict.py"]
 
 EXPOSE 9000
