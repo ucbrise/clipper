@@ -2,12 +2,11 @@ import nltk
 nltk.download('vader_lexicon')
 
 def predict(sent_list):
-    print(sent_list[:5])
-
+    # sent_list is actually a string, containing words separated by -
     from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
     nltk_sentiment = SentimentIntensityAnalyzer()
-    # sent_list = sent_list.split("-")[1:]
+    sent_list = sent_list.split("-")[1:]
 
     result_list = "result"
 

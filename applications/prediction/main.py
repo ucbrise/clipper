@@ -79,7 +79,6 @@ def run():
     polarity_list = c4.predict(tokenized_twitter_data)
     print("\nTwitter data Sentiment Analysis FINISHED")
     print("Generated a list containing ", len(polarity_list), " results")
-    print("The first result is :\n", polarity_list[0])
 
     # CONTAINER 11: Weighting Algorithm
     final_prediction = c11.predict([result_knn, result_lstm, result_rg], result_rf, polarity_list )
