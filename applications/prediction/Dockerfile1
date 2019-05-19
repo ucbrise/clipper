@@ -1,12 +1,8 @@
 FROM ubuntu:bionic
 RUN apt-get update
 RUN apt-get install python3 python3-pip -y
-RUN pip3 install pandas
-RUN pip3 install quandl
-
-
-RUN pip3 install grpcio
-RUN pip3 install protobuf
+RUN pip3 install pandas, quandl
+RUN pip3 install grpcio, protobuf
 
 
 ADD prediction/1_Stock_Price_Retriever/app /container/

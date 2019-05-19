@@ -1,13 +1,9 @@
 FROM ubuntu:bionic
 RUN apt-get update
 RUN apt-get install python3 python3-pip -y
-RUN pip3 install spacy
-RUN pip3 install grpcio
-RUN pip3 install protobuf
+RUN pip3 install spacy 
+RUN pip3 install grpcio, protobuf
 RUN python3 -m spacy download en_core_web_sm
-
-
-
 
 
 ADD prediction/3_Tokenizer/app /container/

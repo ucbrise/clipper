@@ -13,8 +13,7 @@ RUN pip install SpeechRecognition
 ADD imagequery/c1_speechRecognition /container/c1_speechRecognition
 
 # for c2 
-RUN pip install numpy
-RUN pip install nltk 
+RUN pip install numpy, nltk
 RUN python -m nltk.downloader all
 RUN apt install wget
 

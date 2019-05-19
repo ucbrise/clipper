@@ -1,11 +1,9 @@
 FROM ubuntu:bionic
 RUN apt-get update
 RUN apt-get install python3 python3-pip -y
-RUN pip3 install nltk
+RUN pip3 install nltk, numpy, textacy
 RUN python3 -m nltk.downloader all
 RUN pip3 install -U spacy
-RUN pip3 install numpy
-RUN pip3 install textacy
 RUN python3 -m spacy download en_core_web_md
 
 # container will have: preprocess.py, predict.py, server.py
