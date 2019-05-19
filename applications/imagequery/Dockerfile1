@@ -1,11 +1,17 @@
 FROM ubuntu:bionic
 RUN apt-get update
-RUN apt-get install python3 python3-pip -y
+RUN apt-get install wget python3 python3-pip -y
 RUN pip3 install SpeechRecognition
 
-# container will have: speech.wav, predict.py, server.py
-ADD imagequery/c1_speechRecognition/app /container/
-ADD simplerpc/app /container/
+# copy entire directory: container/ will have c1_speechRecognition
+ADD imagequery/c1_speechRecognition /container/c1_speechRecognition
+
+# download, untar, move dataset to specified location
+RUN wget --progress=bar:force http://festvox.org/cmu_arctic/cmu_arctic/packed/cmu_us_bdl_arctic-0.95-release.tar.bz2
+RUN mv /notebooks/cmu_us_bdl_arctic-0.95-release.tar.bz2 /container/c1_speechRecognition/data
+RUN unzip /container/c1_speechRecognition/data/cmu_us_bdl_arctic-0.95-release.tar.bz2
+RUN ls /container/c1_speechRecognition/data
+
 RUN ["ls" , "/container"]
 
 CMD ["python3", "/container/server.py", "1", "8000"]
