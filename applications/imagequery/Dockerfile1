@@ -9,7 +9,10 @@ ADD imagequery/c1_speechRecognition /container/c1_speechRecognition
 # download, untar, move dataset to specified location
 RUN wget --progress=bar:force http://festvox.org/cmu_arctic/cmu_arctic/packed/cmu_us_awb_arctic-0.95-release.zip
 RUN mv /cmu_us_awb_arctic-0.95-release.zip /container/c1_speechRecognition/data
-RUN unzip /container/c1_speechRecognition/data/cmu_us_awb_arctic-0.95-release.zip
-RUN ls /container/c1_speechRecognition/data
+RUN chmod 777 /container/c1_speechRecognition/data/unzip.sh
+RUN /container/c1_speechRecognition/data/unzip.sh
+
+# RUN mv /container/c1_speechRecognition/data/ /container/c1_speechRecognition/data
+# RUN rmdir /container/c1_speechRecognition/data/
 
 EXPOSE 8000
