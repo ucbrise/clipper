@@ -13,7 +13,7 @@ logic already provides good enough result.
 def predict(question, mapping):
     start = timer()
 
-    print(mapping)
+    # print(mapping)
     question = question.lower()
     words = question.split(' ')
     counter = [0, 0, 0]  # subject, verb, time
@@ -28,7 +28,7 @@ def predict(question, mapping):
     index = np.argmax(counter)
     items = mapping.split('-')
     answer = items[index]
-    print(counter)
+    # print(counter)
 
     end = timer()
     time_elapsed = end - start

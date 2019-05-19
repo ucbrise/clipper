@@ -54,9 +54,9 @@ def run():
   answer, elapsed_time = question_answerer.predict(question, mapping)
   elapsed_time_list.append(elapsed_time)
   print("4:\tThe asked question is: " + question)
-  print("\t\tGenerated answer is: " + answer)
+  print("\tGenerated answer: " + answer)
 
-  print("Time elapsed for each container:")
+  print("Time elapsed for each container(second):")
   print("Speech Recognition:\t\t" , elapsed_time_list[0])
   print("Image Caption Generation:\t" , elapsed_time_list[1])
   print("NLP:\t\t\t\t" , elapsed_time_list[2])
