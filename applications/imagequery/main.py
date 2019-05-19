@@ -37,8 +37,8 @@ def run():
 
   result_list = []
   p = Pool(2)
-  result_list.append(p.apply_async(run_speech_recognition, args=("/container/c1_speechRecognition/app/speech.wav", result_list, elapsed_time_list))) 
-  result_list.append(p.apply_async(generate_image_caption, args=("image.jpg", result_list, elapsed_time_list)))
+  p.apply_async(run_speech_recognition, args=("/container/c1_speechRecognition/app/speech.wav", result_list, elapsed_time_list))
+  p.apply_async(generate_image_caption, args=("image.jpg", result_list, elapsed_time_list))
   p.close()
   p.join() # p.join()方法会等待所有子进程执行完毕
 
