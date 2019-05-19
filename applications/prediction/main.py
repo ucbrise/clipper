@@ -123,10 +123,8 @@ def run():
     print("\nTwitter data Sentiment Analysis FINISHED")
     print("Generated a list containing ", len(polarity_list), " results")
 
-    result_list.append(polarity_list)
-
     # CONTAINER 11: Weighting Algorithm
-    final_prediction = c11.predict(result_list)
+    final_prediction = c11.predict([result_knn, result_lstm, result_random_forest, result_regression, polarity_list])
     print("\n\nENTIRE PROCESS FINISHED")
     print("HERE IS THE FINAL PREDICTION FOR THE STOCK PRICES OF THE NEXT FEW DAYS:")
     print(final_prediction)
