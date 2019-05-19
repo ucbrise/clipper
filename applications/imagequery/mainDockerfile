@@ -7,7 +7,7 @@ RUN apt-get update
 
 # container would contains 
 # c1_speechRecognition/ c2_imageCaptionGenerator/ c3_nlpMappingGenerator/ c4_questionAnswering/ main.py
-
+ 
 # for c1 
 RUN pip install SpeechRecognition
 ADD imagequery/c1_speechRecognition /container/c1_speechRecognition
