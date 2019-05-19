@@ -80,7 +80,7 @@ def run():
     pipe1_result = []
     pipe2_result=[]
     count=0;
-    for filename in os.listdir("/part1"):
+    for filename in os.listdir("part1"):
         if count>20:
             break
         count+=1
