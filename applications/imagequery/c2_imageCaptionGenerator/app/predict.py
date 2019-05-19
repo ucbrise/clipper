@@ -7,7 +7,7 @@ def find(name, path):
     if name in files or name in dirs:
       return os.path.join(root, name)
 
-# Run run_inference.py
+# Run run_inference.py, here the image.jpg is just the testing image for setting up the tensorflow environment
 run_inference_path = find("run_inference.py", "/")
 model_dir_path = find("model", "/container")
 check_point_path = model_dir_path + "/newmodel.ckpt-2000000"

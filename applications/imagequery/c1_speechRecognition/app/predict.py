@@ -24,4 +24,4 @@ def predict(audio_file_path):
 
 
 if __name__ == "__main__":
-    print(recognize("C:/Users/musicman/Desktop/ZSX_Clipper/clipper/applications/imagequery/1_speechRecognition/app/speech.wav"))
+    print(recognize("/container/c1_speechRecognition/data/cmu_us_awb_arctic/wav/arctic_a0001.wav"))
