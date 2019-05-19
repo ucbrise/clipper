@@ -12,8 +12,4 @@ RUN mv /notebooks/cmu_us_bdl_arctic-0.95-release.tar.bz2 /container/c1_speechRec
 RUN unzip /container/c1_speechRecognition/data/cmu_us_bdl_arctic-0.95-release.tar.bz2
 RUN ls /container/c1_speechRecognition/data
 
-RUN ["ls" , "/container"]
-
-CMD ["python3", "/container/server.py", "1", "8000"]
-
 EXPOSE 8000
