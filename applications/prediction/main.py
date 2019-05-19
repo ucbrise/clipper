@@ -129,5 +129,6 @@ def run():
     print("HERE IS THE FINAL PREDICTION FOR THE STOCK PRICES OF THE NEXT FEW DAYS:")
     print(final_prediction)
 
+
 if __name__ == "__main__":
     run()
