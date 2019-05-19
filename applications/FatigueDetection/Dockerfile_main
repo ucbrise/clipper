@@ -1,0 +1,39 @@
+FROM tensorflow/tensorflow:1.12.0-gpu-py3
+#docker 1
+RUN apt-get update
+RUN apt-get install python3 python3-all-dev python3-pip build-essential swig git libpulse-dev libasound2-dev -y
+RUN apt-get install libsm6 libxext6 libxrender-dev -y
+RUN pip3 install numpy
+RUN pip3 install opencv-python
+RUN pip3 install grpcio
+RUN pip3 install protobuf
+
+#docker 2
+RUN pip3 install scipy
+RUN pip3 install imutils
+RUN pip3 install cMake
+RUN pip3 install dlib
+
+#docker 3
+RUN pip3 install scikit-image
+RUN pip3 install Cython
+RUN pip3 install pycocotools
+RUN pip3 install git+https://github.com/philferriere/cocoapi.git#egg=pycocotools^&subdirectory=PythonAPI
+RUN pip3 install keras
+
+#docker 4 none
+#add
+ADD FatigueDetection/container1 /container/
+ADD FatigueDetection/container2 /container/
+ADD FatigueDetection/container3 /container/
+ADD FatigueDetection/container4 /container/
+ADD FatigueDetection/main.py /container/
+ADD FatigueDetection/part1 /container/
+
+CMD ["python3","/container/main.py"]
+
+# docker build -f ./prediction/Dockerfile_main -t detection:main .
+# docker run --runtime=nvidia -p 10000:10000 -it detection:main
+# docker run --runtime=nvidia -d -p 10000:10000 -it detection:main
+
+
