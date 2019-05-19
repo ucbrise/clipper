@@ -5,8 +5,8 @@ import numpy as np
 #import matplotlib.pyplot as plt
 import cv2
 import json
-from samples.coco import coco
-import mrcnn.model as modellib
+from container3.app.samples.coco import coco
+import container3.app.mrcnn.model as modellib
 #import imgaug
 
 def image_string(image):
