@@ -1,7 +1,7 @@
 FROM ubuntu:bionic
 RUN apt-get update
 RUN apt-get install python3 python3-pip -y
-RUN pip3 install nltk, numpy, textacy
+RUN pip3 install nltk numpy textacy
 RUN python3 -m nltk.downloader all
 RUN pip3 install -U spacy
 RUN python3 -m spacy download en_core_web_md

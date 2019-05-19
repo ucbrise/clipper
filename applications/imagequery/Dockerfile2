@@ -1,6 +1,6 @@
 FROM tensorflow/tensorflow:1.12.0-gpu-py3 
 RUN apt-get update
-RUN pip install numpy, nltk
+RUN pip install numpy nltk
 RUN python -m nltk.downloader all
 RUN apt install wget
 
