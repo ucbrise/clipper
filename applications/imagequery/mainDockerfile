@@ -26,7 +26,7 @@ RUN python -m nltk.downloader all
 
 # copy files into image
 ADD imagequery/c2_imageCaptionGenerator /container/c2_imageCaptionGenerator
-
+ 
 # download pre-trained models 
 RUN chmod 777 /container/c2_imageCaptionGenerator/im2txt/model/downloadModels.sh
 RUN /container/c2_imageCaptionGenerator/im2txt/model/downloadModels.sh
