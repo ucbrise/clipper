@@ -60,7 +60,7 @@ def pipe1(imstr):
     drowsiness=run_c2(result)
     if drowsiness:
         return "Drowsiness!"
-    else：
+    else
         return "No Drowsiness!"
 
 
