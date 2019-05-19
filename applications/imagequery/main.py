@@ -9,15 +9,17 @@ import c3_nlpMappingGenerator.app.predict as mapping_generator
 import c4_questionAnswering.app.predict as question_answerer
 print("Modules successfully imported!")
 
-def run_speech_recognition(audio_file_path):
+def run_speech_recognition(audio_file_path, result_list, elapsed_time_list):
   speech_text, elapsed_time = speech_recognizer.predict(audio_file_path)
   print("1:\tText: " + speech_text)
-  return speech_text, elapsed_time
+  result_list.append(speech_text)
+  elapsed_time_list.append(elapsed_time)
 
-def generate_image_caption(image_file):
+def generate_image_caption(image_file, result_list, elapsed_time_list):
   captions, elapsed_time = caption_generator.predict("image.jpg")
   print("2:\tGenerated captions: " + captions)
-  return captions, elapsed_time
+  result_list.append(captions)
+  elapsed_time_list.append(elapsed_time)
 		
 def run():
   elapsed_time_list = []
@@ -40,13 +42,9 @@ def run():
   p.close()
   p.join() # p.join()方法会等待所有子进程执行完毕
 
-  elapsed_time_list.append(result_list[0][1])
-  elapsed_time_list.append(result_list[1][1])
-
-
   # CONTAINER 3: image nlp analyzer
   # text = captions + ". " + speech_text + "."
-  text = result_list[0][0] + "." + result_list[1][0]
+  text = result_list[0] + "." + result_list[1]
   mapping, elapsed_time = mapping_generator.predict(text)
   elapsed_time_list.append(elapsed_time)
   print("3:\tGenerated mapping: ")
