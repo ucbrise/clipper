@@ -37,8 +37,8 @@ def run():
 
   result_list = []
   p = Pool(2)
-  result_list.append(p.apply_async(run_speech_recognition, args=("/container/c1_speechRecognition/app/speech.wav", result_list))) 
-  result_list.append(p.apply_async(generate_image_caption, args=("image.jpg", elapsed_time_list)))
+  result_list.append(p.apply_async(run_speech_recognition, args=("/container/c1_speechRecognition/app/speech.wav", result_list, elapsed_time_list))) 
+  result_list.append(p.apply_async(generate_image_caption, args=("image.jpg", result_list, elapsed_time_list)))
   p.close()
   p.join() # p.join()方法会等待所有子进程执行完毕
 
@@ -46,17 +46,17 @@ def run():
   print(elapsed_time_list)
 
   # CONTAINER 3: image nlp analyzer
-  # text = result_list[0] + "." + result_list[1]
-  # mapping, elapsed_time = mapping_generator.predict(text)
-  # elapsed_time_list.append(elapsed_time)
-  # print("3:\tGenerated mapping: ")
-  # items = mapping.split('-')
-  # subject = items[0]
-  # verb = items[1]
-  # time = items[2]
-  # print("\t\tSubject: " + subject)
-  # print("\t\tVerb: " + verb)
-  # print("\t\tTime: " + time)
+  text = result_list[0] + "." + result_list[1]
+  mapping, elapsed_time = mapping_generator.predict(text)
+  elapsed_time_list.append(elapsed_time)
+  print("3:\tGenerated mapping: ")
+  items = mapping.split('-')
+  subject = items[0]
+  verb = items[1]
+  time = items[2]
+  print("\t\tSubject: " + subject)
+  print("\t\tVerb: " + verb)
+  print("\t\tTime: " + time)
 
   # Container 4: Question Answerings
   # question = "What is in the image?"
