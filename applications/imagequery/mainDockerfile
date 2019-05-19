@@ -10,12 +10,19 @@ RUN apt-get update
  
 # for c1 
 RUN pip install SpeechRecognition
+RUN apt install wget zip unzip
 ADD imagequery/c1_speechRecognition /container/c1_speechRecognition
+RUN wget --progress=bar:force http://festvox.org/cmu_arctic/cmu_arctic/packed/cmu_us_awb_arctic-0.95-release.zip
+RUN mv /cmu_us_awb_arctic-0.95-release.zip /container/c1_speechRecognition/data
+RUN chmod 777 /container/c1_speechRecognition/data/unzip.sh
+RUN /container/c1_speechRecognition/data/unzip.sh
+
+# the unzipped file is cmu_us_awb_arctic
+CMD python3 /container/c1_speechRecognition/app/predict.py
 
 # for c2 
 RUN pip install numpy nltk
 RUN python -m nltk.downloader all
-RUN apt install wget
 
 # copy files into image
 ADD imagequery/c2_imageCaptionGenerator /container/c2_imageCaptionGenerator
