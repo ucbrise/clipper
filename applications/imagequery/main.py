@@ -36,8 +36,8 @@ def run():
   elapsed_time_list.append(time2)
 
   # CONTAINER 3: image nlp analyzer
-  text = result1 + "." + result2
-  print("Input to mapping generator: " + text)
+  text = result1 + " . " + result2
+  # print("Input to mapping generator: " + text)
   mapping, elapsed_time = mapping_generator.predict(text)
   elapsed_time_list.append(elapsed_time)
   print("3:\tGenerated mapping: ")
