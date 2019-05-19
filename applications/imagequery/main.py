@@ -9,13 +9,13 @@ import c3_nlpMappingGenerator.app.predict as mapping_generator
 import c4_questionAnswering.app.predict as question_answerer
 print("Modules successfully imported!")
 
-def run_speech_recognition(audio_file_path):
-  speech_text, elapsed_time = speech_recognizer.predict(audio_file_path)
+def run_speech_recognition(audio_file_index):
+  speech_text, elapsed_time = speech_recognizer.predict(audio_file_index)
   print("1:\tText: " + speech_text)
   return speech_text, elapsed_time
 
-def generate_image_caption(image_file):
-  captions, elapsed_time = caption_generator.predict("image.jpg")
+def generate_image_caption(image_file_index):
+  captions, elapsed_time = caption_generator.predict(image_file_index)
   print("2:\tGenerated captions: " + captions)
   return captions, elapsed_time
 		
@@ -63,4 +63,4 @@ def run(audio_file_index, image_file_index):
   print("Question Answering:\t\t" , elapsed_time_list[3])
 
 if __name__ == "__main__":
-  run(1, 1)
+  run(100, 200)
