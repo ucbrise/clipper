@@ -23,10 +23,10 @@ RUN pip3 install keras
 
 #docker 4 none
 #add
-ADD FatigueDetection/container1 /container/
-ADD FatigueDetection/container2 /container/
-ADD FatigueDetection/container3 /container/
-ADD FatigueDetection/container4 /container/
+ADD FatigueDetection/container1 /container/container1
+ADD FatigueDetection/container2 /container/container2
+ADD FatigueDetection/container3 /container/container3
+ADD FatigueDetection/container4 /container/container4
 ADD FatigueDetection/main.py /container/
 ADD FatigueDetection/part1 /container/
 
