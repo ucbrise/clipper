@@ -25,8 +25,8 @@ def string_image(imagestring):
     return image
 
 
-protoFile = "container/pose_deploy_linevec.prototxt"
-weightsFile = "container/pose_iter_440000.caffemodel"
+protoFile = "container/container4/app/pose_deploy_linevec.prototxt"
+weightsFile = "container/container4/app/pose_iter_440000.caffemodel"
 net = cv2.dnn.readNetFromCaffe(protoFile, weightsFile)
 nPoints = 18
 POSE_PAIRS = [ [1,0],[1,2],[1,5],[2,3],[3,4],[5,6],[6,7],[1,8],[8,9],[9,10],[1,11],[11,12],[12,13],[0,14],[0,15],[14,16],[15,17]]
