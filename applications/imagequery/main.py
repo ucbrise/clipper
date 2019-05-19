@@ -42,6 +42,9 @@ def run():
   p.close()
   p.join() # p.join()方法会等待所有子进程执行完毕
 
+  print(result_list)
+  print(elapsed_time_list)
+
   # CONTAINER 3: image nlp analyzer
   # text = result_list[0] + "." + result_list[1]
   # mapping, elapsed_time = mapping_generator.predict(text)
