@@ -45,7 +45,7 @@ def get_verb_phrase_list(txt):
     """
     # Though you can create your own patter, they easily overshoot
     pattern = r'<VERB>*<ADV>*<PART>*<VERB>+<PART>*'
-    doc = textacy.Doc(txt, lang='en_core_web_md')
+    doc = textacy.make_spacy_doc(txt, lang='en_core_web_md')
     lists = textacy.extract.pos_regex_matches(doc, pattern)
     verb_phrases = []
     for list in lists:
