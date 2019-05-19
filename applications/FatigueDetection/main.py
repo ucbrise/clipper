@@ -60,7 +60,7 @@ def pipe1(imstr):
     drowsiness=run_c2(result)
     if drowsiness:
         return "Drowsiness!"
-    else
+    else：
         return "No Drowsiness!"
 
 
@@ -81,7 +81,7 @@ def run():
     pipe2_result=[]
     count=0;
     for filename in os.listdir(part1):
-        if count>50:
+        if count>20:
             break
         count+=1
         p = Pool(2)
