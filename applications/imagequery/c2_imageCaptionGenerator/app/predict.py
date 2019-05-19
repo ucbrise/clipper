@@ -16,13 +16,13 @@ image_path = find("image.jpg","/")
 setupTensorflowEnvironmentCmd = "python " + run_inference_path + " --checkpoint_path " + check_point_path + " --vocab_file " + vocabulary_path + " --input_files " + image_path
 os.system(setupTensorflowEnvironmentCmd)
 
-def generateCaption(image_name):
+def getGeneratedCaptions():
+  # This is the helper functionS for retrieving generated data
   # we read the content of caption.txt in captionData and return it here
   caption_json_path = find("captionFile.txt","/")
   captions = ""
   with open(caption_json_path) as json_file:
     caption_string_restored = json.load(json_file)
-    #  print("caption_string_restored: " + caption_string_restored)
     caption_json = json.loads(caption_string_restored)
     captions += caption_json['caption0']
     captions += " "
@@ -32,13 +32,17 @@ def generateCaption(image_name):
   return captions
 
 def predict(image_file_index):
-  start = timer()
+  if image_file_index > 800:
+    return "Invalid image file index! Only index between 1 to 800 is allowed!"
   
-  predictCmd = "python " + run_inference_path + " --checkpoint_path " + check_point_path + " --vocab_file " + vocabulary_path + " --input_files " + image_path
-  generated_caption = generateCaption(resized_image_path)
+  start = timer()
+  image_file_path = "/container/c2_imageCaptionGenerator/im2txt/data/imageDataset/image_" + str(image_file_index).zfill(4) + ".jpg"
+  predictCmd = "python " + run_inference_path + " --checkpoint_path " + check_point_path + " --vocab_file " + vocabulary_path + " --input_files " + image_file_path
+  os.system(predictCmd)
+  generated_caption = getGeneratedCaptions()
   end = timer()
   time_elapsed = end - start
   return generated_caption, time_elapsed
 
 if __name__ == "__main__":
-    predict(1)
+    predict(2)
