@@ -85,8 +85,8 @@ def run():
             break
         count+=1
         print(filename)
-#         imag=cv2.imread(filename)
-#         imgstr=image_string(imag)
+        imag=cv2.imread(filename)
+        imgstr=image_string(imag)
 #         p = Pool(2)
 #         pipe1_result.append(p.apply_async(pipe1, args=(imgstr,)))
 #         pipe2_result.append(p.apply_async(pipe2, args=(imgstr,)))
