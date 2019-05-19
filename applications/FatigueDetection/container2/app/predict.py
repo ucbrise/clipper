@@ -45,7 +45,7 @@ def eye_aspect_ratio(eye):
 EYE_AR_THRESH = 0.28
 print("[INFO] loading facial landmark predictor...")
 detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor('container/shape_predictor_68_face_landmarks.dat')
+predictor = dlib.shape_predictor('container/container2/app/shape_predictor_68_face_landmarks.dat')
 
 # grab the indexes of the facial landmarks for the left and
 # right eye, respectively
