@@ -117,6 +117,7 @@ def create_docker_connection(cleanup=False,
             clipper_rpc_port=find_unbound_port(),
             fluentd_port=find_unbound_port(),
             redis_port=find_unbound_port(),
+            prometheus_port=find_unbound_port(),
         )
         cl = ClipperConnection(cm)
         cl.stop_all(graceful=False)
@@ -134,6 +135,7 @@ def create_docker_connection(cleanup=False,
                 clipper_rpc_port=find_unbound_port(),
                 fluentd_port=find_unbound_port(),
                 redis_port=find_unbound_port(),
+                prometheus_port=find_unbound_port(),
                 use_centralized_log=use_centralized_log
             )
             cl = ClipperConnection(cm)
