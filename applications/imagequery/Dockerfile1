@@ -7,6 +7,7 @@ RUN pip3 install SpeechRecognition
 ADD imagequery/c1_speechRecognition /container/c1_speechRecognition
 
 # download, untar, move dataset to specified location
+# dataset source: http://festvox.org/cmu_arctic/
 RUN wget --progress=bar:force http://festvox.org/cmu_arctic/cmu_arctic/packed/cmu_us_awb_arctic-0.95-release.zip
 RUN mv /cmu_us_awb_arctic-0.95-release.zip /container/c1_speechRecognition/data
 RUN chmod 777 /container/c1_speechRecognition/data/unzip.sh
