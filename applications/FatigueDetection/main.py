@@ -84,13 +84,14 @@ def run():
         if count>20:
             break
         count+=1
-        imag=cv2.imread(filename)
-        imgstr=image_string(imag)
-        p = Pool(2)
-        pipe1_result.append(p.apply_async(pipe1, args=(imgstr,)))
-        pipe2_result.append(p.apply_async(pipe2, args=(imgstr,)))
-        p.close()
-        p.join() # p.join()方法会等待所有子进程执行完毕
+        print(filename)
+#         imag=cv2.imread(filename)
+#         imgstr=image_string(imag)
+#         p = Pool(2)
+#         pipe1_result.append(p.apply_async(pipe1, args=(imgstr,)))
+#         pipe2_result.append(p.apply_async(pipe2, args=(imgstr,)))
+#         p.close()
+#         p.join() # p.join()方法会等待所有子进程执行完毕
 
     print("\nResult of PIPE1:")
     print(pipe1_result)
