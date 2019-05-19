@@ -23,27 +23,17 @@ def generate_image_caption(image_file, result_list, elapsed_time_list):
 		
 def run():
   elapsed_time_list = []
-
-  # CONTAINER 1: speech to text
-  # audio_file_path = "/container/c1_speechRecognition/app/speech.wav"
-  # speech_text, elapsed_time = speech_recognizer.predict(audio_file_path)
-  # elapsed_time_list.append(elapsed_time)
-  # print("1:\tText: " + speech_text)
-
-  # CONTAINER 2: image caption generator
-  # captions, elapsed_time = caption_generator.predict("image.jpg")
-  # elapsed_time_list.append(elapsed_time)
-  # print("2:\tGenerated captions: " + captions)
-
   result_list = []
   p = Pool(2)
-  p.apply_async(run_speech_recognition, args=("/container/c1_speechRecognition/app/speech.wav", result_list, elapsed_time_list))
-  p.apply_async(generate_image_caption, args=("image.jpg", result_list, elapsed_time_list))
+  result1, time1 = p.apply_async(run_speech_recognition, args=("/container/c1_speechRecognition/app/speech.wav", result_list, elapsed_time_list))
+  result2, time2 = p.apply_async(generate_image_caption, args=("image.jpg", result_list, elapsed_time_list))
   p.close()
   p.join() # p.join()方法会等待所有子进程执行完毕
 
   print(result_list)
   print(elapsed_time_list)
+  print(result1)
+  print(time1)
 
   # CONTAINER 3: image nlp analyzer
   text = result_list[0] + "." + result_list[1]
