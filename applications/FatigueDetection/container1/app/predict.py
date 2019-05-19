@@ -5,7 +5,7 @@ import numpy as np
 import json
 
 # Read the model
-model = cv2.dnn.readNetFromCaffe('container/container1/app/deploy.prototxt','container/container1/app/weights.caffemodel')
+model = cv2.dnn.readNetFromCaffe('/container/container1/app/deploy.prototxt','/container/container1/app/weights.caffemodel')
 
 #imagestring is a serialized .jpg encoded image string
 
