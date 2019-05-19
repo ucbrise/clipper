@@ -4,8 +4,6 @@ from timeit import default_timer as timer
 # Text2Speech converter: https://www.text2speech.org/
 
 def recognize(audio_file_index):
-    # get required file path
-
     if audio_file_index < 1 or audio_file_index > 500:
         return "Invalid image index! Only index between 1 to 500 is allowed! Exiting..."
     

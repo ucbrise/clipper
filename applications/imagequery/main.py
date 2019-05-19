@@ -19,12 +19,12 @@ def generate_image_caption(image_file):
   print("2:\tGenerated captions: " + captions)
   return captions, elapsed_time
 		
-def run():
+def run(audio_file_index, image_file_index):
   elapsed_time_list = []
   result_list = []
   p = Pool(2)
-  returned_result1 = p.apply_async(run_speech_recognition, args=("/container/c1_speechRecognition/data/cmu_us_awb_arctic/wav/arctic_a0001.wav",))
-  returned_result2 = p.apply_async(generate_image_caption, args=("image.jpg",))
+  returned_result1 = p.apply_async(run_speech_recognition, args=(audio_file_index,))
+  returned_result2 = p.apply_async(generate_image_caption, args=(image_file_index,))
   p.close()
   p.join() # p.join()方法会等待所有子进程执行完毕
 
@@ -63,4 +63,4 @@ def run():
   print("Question Answering:\t\t" , elapsed_time_list[3])
 
 if __name__ == "__main__":
-  run()
+  run(1, 1)

@@ -13,13 +13,11 @@ model_dir_path = find("model", "/container")
 check_point_path = model_dir_path + "/newmodel.ckpt-2000000"
 vocabulary_path = find("word_counts.txt","/")
 image_path = find("image.jpg","/")
-cmd = "python " + run_inference_path + " --checkpoint_path " + check_point_path + " --vocab_file " + vocabulary_path + " --input_files " + image_path
-os.system(cmd)
+setupTensorflowEnvironmentCmd = "python " + run_inference_path + " --checkpoint_path " + check_point_path + " --vocab_file " + vocabulary_path + " --input_files " + image_path
+os.system(setupTensorflowEnvironmentCmd)
 
 def generateCaption(image_name):
-  # The caption data will be written to /container/captionData/captions.txt
   # we read the content of caption.txt in captionData and return it here
-  # caption_json_path = "/container/workspace/captionData/captionFile.txt" 
   caption_json_path = find("captionFile.txt","/")
   captions = ""
   with open(caption_json_path) as json_file:
@@ -33,12 +31,14 @@ def generateCaption(image_name):
     captions += caption_json['caption2']
   return captions
 
-def predict(resized_image_path):
+def predict(image_file_index):
   start = timer()
+  
+  predictCmd = "python " + run_inference_path + " --checkpoint_path " + check_point_path + " --vocab_file " + vocabulary_path + " --input_files " + image_path
   generated_caption = generateCaption(resized_image_path)
   end = timer()
   time_elapsed = end - start
   return generated_caption, time_elapsed
 
-# if __name__ == "__main__":
-#     predict("image.jpg")
+if __name__ == "__main__":
+    predict(1)
