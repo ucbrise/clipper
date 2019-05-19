@@ -85,14 +85,23 @@ def run():
     # print("Here is the result:")
     # print(result_rg)
 
-    result_list = []
+    returned_result_list = []
     p = Pool(4)
-    result_list.append(p.apply_async(run_lstm, args=(stock_data,))) 
-    result_list.append(p.apply_async(run_knn, args=(stock_data,)))
-    result_list.append(p.apply_async(run_random_forest, args=(stock_data,)))
-    result_list.append(p.apply_async(run_regression, args=(stock_data,)))
+    returned_result_list.append(p.apply_async(run_lstm, args=(stock_data,))) 
+    returned_result_list.append(p.apply_async(run_knn, args=(stock_data,)))
+    returned_result_list.append(p.apply_async(run_random_forest, args=(stock_data,)))
+    returned_result_list.append(p.apply_async(run_regression, args=(stock_data,)))
     p.close()
     p.join() # p.join()方法会等待所有子进程执行完毕
+
+    result_lstm = returned_result_list[0].get()
+    result_knn = returned_result_list[1].get()
+    result_random_forest = returned_result_list[2].get()
+    result_regression = returned_result_list[3].get()
+    print(result_lstm)
+    print(result_knn)
+    print(result_random_forest)
+    print(result_regression)
 
     # CONTAINER 2: Twitter Collector
     tweet_number = 1000
