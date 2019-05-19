@@ -13,5 +13,6 @@ RUN chmod 777 /container/c1_speechRecognition/data/unzip.sh
 RUN /container/c1_speechRecognition/data/unzip.sh
 
 # the unzipped file is cmu_us_awb_arctic
+CMD python3 /container/c1_speechRecognition/app/predict.py
 
 EXPOSE 8000
