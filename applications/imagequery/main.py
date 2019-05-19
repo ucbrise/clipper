@@ -36,6 +36,7 @@ def run():
   time1 = returned_result1.get()[1]
   print(result_list)
   print(elapsed_time_list)
+  print(returned_result1)
   print(result1)
   print(time1)
 
