@@ -14,12 +14,14 @@ def run_speech_recognition(audio_file_path, result_list, elapsed_time_list):
   print("1:\tText: " + speech_text)
   result_list.append(speech_text)
   elapsed_time_list.append(elapsed_time)
+  return speech_text, elapsed_time
 
 def generate_image_caption(image_file, result_list, elapsed_time_list):
   captions, elapsed_time = caption_generator.predict("image.jpg")
   print("2:\tGenerated captions: " + captions)
   result_list.append(captions)
   elapsed_time_list.append(elapsed_time)
+  return captions, elapsed_time
 		
 def run():
   elapsed_time_list = []
