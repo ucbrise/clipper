@@ -45,22 +45,22 @@ def run():
   subject = items[0]
   verb = items[1]
   time = items[2]
-  print("\t\tSubject: " + subject)
-  print("\t\tVerb: " + verb)
-  print("\t\tTime: " + time)
+  print("\t- Subject: " + subject)
+  print("\t- Verb: " + verb)
+  print("\t- Time: " + time)
 
   # Container 4: Question Answerings
-  # question = "What is in the image?"
-  # answer, elapsed_time = question_answerer.predict(question, mapping)
-  # elapsed_time_list.append(elapsed_time)
-  # print("4:\tThe asked question is: " + question)
-  # print("\t\tGenerated answer is: " + answer)
+  question = "What is in the image?"
+  answer, elapsed_time = question_answerer.predict(question, mapping)
+  elapsed_time_list.append(elapsed_time)
+  print("4:\tThe asked question is: " + question)
+  print("\t\tGenerated answer is: " + answer)
 
-  # print("Time elapsed for each container:")
-  # print("Speech Recognition:\t\t" , elapsed_time_list[0])
-  # print("Image Caption Generation:\t" , elapsed_time_list[1])
-  # print("NLP:\t\t\t\t" , elapsed_time_list[2])
-  # print("Question Answering:\t\t" , elapsed_time_list[3])
+  print("Time elapsed for each container:")
+  print("Speech Recognition:\t\t" , elapsed_time_list[0])
+  print("Image Caption Generation:\t" , elapsed_time_list[1])
+  print("NLP:\t\t\t\t" , elapsed_time_list[2])
+  print("Question Answering:\t\t" , elapsed_time_list[3])
 
 if __name__ == "__main__":
   run()
