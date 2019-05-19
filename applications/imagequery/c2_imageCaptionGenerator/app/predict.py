@@ -15,7 +15,7 @@ vocabulary_path = find("word_counts.txt","/")
 image_path = find("image.jpg","/")
 setupTensorflowEnvironmentCmd = "python " + run_inference_path + " --checkpoint_path " + check_point_path + " --vocab_file " + vocabulary_path + " --input_files " + image_path
 os.system(setupTensorflowEnvironmentCmd)
-
+ 
 def getGeneratedCaptions():
   # This is the helper functionS for retrieving generated data
   # we read the content of caption.txt in captionData and return it here
