@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import json
 import sys
-
+import os
 sys.path.append("/container")
 
 from multiprocessing import Pool
