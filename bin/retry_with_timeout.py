@@ -64,6 +64,13 @@ def run_once_with_timeout(command_to_run, timeout):
                 return 1
 
 
+# If multiple tests are running at the same time, there may be a problem that
+# the ports used by each test collide. To avoid this problem, wait for a random
+# amount of time and start the test.
+sleep_time = randint(60, 600)  # 1min ~ 10min
+print("Sleep {} secs before starting a test".format(sleep_time))
+time.sleep(sleep_time)
+
 for try_num in range(args.retry + 1):
     print(
         "Starting Trial {try_num} with timeout {timeout} seconds".format(
