@@ -23,6 +23,7 @@ from .logging.docker_logging_utils import (
     get_default_log_config
 )
 from clipper_admin.docker.logging.fluentd import Fluentd
+from clipper_admin.decorators import retry
 
 logger = logging.getLogger(__name__)
 
@@ -181,6 +182,7 @@ class DockerContainerManager(ContainerManager):
         # Redis for cluster configuration
         if not self.external_redis:
             self.logger.info("Starting managed Redis instance in Docker")
+            redis_name = "redis-{}".format(random.randint(0, 100000))
             self.redis_port = find_unbound_port(self.redis_port)
             redis_labels = self.common_labels.copy()
             redis_labels[CLIPPER_DOCKER_PORT_LABELS['redis']] = str(
@@ -189,18 +191,19 @@ class DockerContainerManager(ContainerManager):
                 'redis:alpine',
                 "redis-server --port %s" % CLIPPER_INTERNAL_REDIS_PORT,
                 log_config=self.log_config,
-                name="redis-{}".format(random.randint(
-                    0, 100000)),  # generate a random name
+                name=redis_name,
                 ports={
                     '%s/tcp' % CLIPPER_INTERNAL_REDIS_PORT: self.redis_port
                 },
                 labels=redis_labels,
                 **self.extra_container_kwargs)
             self.redis_ip = redis_container.name
+            self._check_container_status(redis_name)
 
         # frontend management
         mgmt_cmd = "--redis_ip={redis_ip} --redis_port={redis_port}".format(
             redis_ip=self.redis_ip, redis_port=CLIPPER_INTERNAL_REDIS_PORT)
+        mgmt_name = "mgmt_frontend-{}".format(random.randint(0, 100000))
         self.clipper_management_port = find_unbound_port(
             self.clipper_management_port)
         mgmt_labels = self.common_labels.copy()
@@ -211,14 +214,14 @@ class DockerContainerManager(ContainerManager):
             mgmt_frontend_image,
             mgmt_cmd,
             log_config=self.log_config,
-            name="mgmt_frontend-{}".format(random.randint(
-                0, 100000)),  # generate a random name
+            name=mgmt_name,
             ports={
                 '%s/tcp' % CLIPPER_INTERNAL_MANAGEMENT_PORT:
                 self.clipper_management_port
             },
             labels=mgmt_labels,
             **self.extra_container_kwargs)
+        self._check_container_status(mgmt_name)
 
         # query frontend
         query_cmd = ("--redis_ip={redis_ip} --redis_port={redis_port} "
@@ -254,6 +257,7 @@ class DockerContainerManager(ContainerManager):
             },
             labels=query_labels,
             **self.extra_container_kwargs)
+        self._check_container_status(query_name)
 
         # Metric Section
         query_frontend_metric_name = "query_frontend_exporter-{}".format(
@@ -262,6 +266,7 @@ class DockerContainerManager(ContainerManager):
             query_frontend_metric_name, self.docker_client, query_name,
             frontend_exporter_image, self.common_labels,
             self.log_config, self.extra_container_kwargs)
+        self._check_container_status(query_frontend_metric_name)
 
         self.prom_config_path = tempfile.NamedTemporaryFile(
             'w', suffix='.yml', delete=False).name
@@ -272,14 +277,18 @@ class DockerContainerManager(ContainerManager):
         setup_metric_config(query_frontend_metric_name, self.prom_config_path,
                             CLIPPER_INTERNAL_METRIC_PORT)
 
+        metric_frontend_name = "metric_frontend-{}".format(
+            random.randint(0, 100000))
         self.prometheus_port = find_unbound_port(self.prometheus_port)
         metric_labels = self.common_labels.copy()
         metric_labels[CLIPPER_DOCKER_PORT_LABELS['metric']] = str(
             self.prometheus_port)
         metric_labels[CLIPPER_METRIC_CONFIG_LABEL] = self.prom_config_path
-        run_metric_image(self.docker_client, metric_labels,
-                         self.prometheus_port, self.prom_config_path,
-                         self.log_config, self.extra_container_kwargs)
+        run_metric_image(metric_frontend_name, self.docker_client,
+                         metric_labels, self.prometheus_port,
+                         self.prom_config_path, self.log_config,
+                         self.extra_container_kwargs)
+        self._check_container_status(metric_frontend_name)
 
         self.connect()
 
@@ -404,15 +413,7 @@ class DockerContainerManager(ContainerManager):
                                                    image)
                 model_container_names.append(container_name)
             for name in model_container_names:
-                container = self.docker_client.containers.get(name)
-                while True:
-                    state = container.attrs.get("State")
-                    inspect_container = self.docker_client.api.inspect_container(name)
-                    if (state is not None and state.get("Status") == "running") or \
-                            (inspect_container is not None and
-                             inspect_container.get("State").get("Health").get("Status") == "healthy"):
-                        break
-                    time.sleep(3)
+                self._check_container_status(name)
 
         elif len(current_replicas) > num_replicas:
             num_extra = len(current_replicas) - num_replicas
@@ -474,6 +475,21 @@ class DockerContainerManager(ContainerManager):
                 c.stop()
             else:
                 c.kill()
+
+    # Wait for maximum 5 min.
+    @retry((docker.errors.NotFound, docker.errors.APIError, ClipperException),
+           tries=300, delay=1, backoff=1, logger=logger)
+    def _check_container_status(self, name):
+        state = self.docker_client.containers.get(name).attrs.get("State")
+        inspected = self.docker_client.api.inspect_container(name)
+        if (state is not None and state.get("Status") == "running") or \
+           (inspected is not None and inspected.get("State").get("Health").get("Status") == "healthy"):
+            return
+        else:
+            msg = "{} container is not running yet or broken. ".format(name) + \
+                  "We will try to run again. Please analyze logs if " + \
+                  "it keeps failing"
+            raise ClipperException(msg)
 
     def _is_valid_logging_state_to_connect(self, all_labels):
         if self.centralize_log and not self.logging_system.container_is_running(all_labels):

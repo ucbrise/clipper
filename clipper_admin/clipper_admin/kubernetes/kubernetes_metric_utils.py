@@ -1,1 +1,1 @@
-PROM_VERSION = "v2.1.0"
+PROM_VERSION = "v2.9.2"
