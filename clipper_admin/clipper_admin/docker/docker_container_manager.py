@@ -486,7 +486,9 @@ class DockerContainerManager(ContainerManager):
            (inspected is not None and inspected.get("State").get("Health").get("Status") == "healthy"):
             return
         else:
-            msg = "{} container is not running yet".format(name)
+            msg = "{} container is not running yet or broken. ".format(name) + \
+                  "We will try to run again. Please analyze logs if " + \
+                  "it keeps failing"
             raise ClipperException(msg)
 
     def _is_valid_logging_state_to_connect(self, all_labels):
