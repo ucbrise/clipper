@@ -3,13 +3,13 @@ from __future__ import print_function
 import json
 import logging
 import os
+import subprocess
 import sys
 import time
 import random
 
 import numpy as np
 import requests
-from requests.exceptions import RequestException
 import yaml
 from test_utils import log_clipper_state, create_docker_connection
 
@@ -17,16 +17,6 @@ cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath("%s/../clipper_admin" % cur_dir))
 from clipper_admin import ClipperConnection, DockerContainerManager
 from clipper_admin.deployers import python as python_deployer
-from clipper_admin.decorators import retry
-from clipper_admin.exceptions import ClipperException
-
-logging.basicConfig(
-    format=
-    '%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
-    datefmt='%y-%m-%d:%H:%M:%S',
-    level=0)
-
-logger = logging.getLogger(__name__)
 
 
 def predict(addr, x):
@@ -48,16 +38,12 @@ def get_metrics_config():
     return conf
 
 
-# Wait for maximum 5 min.
-@retry((RequestException, ClipperException),
-       tries=300, delay=1, backoff=1, logger=logger)
 def get_matched_query(metric_addr, metric_name):
     query = gen_match_query(metric_addr, metric_name)
     logger.info("Querying: {}".format(query))
+    print('test why docker query is broken: {}'.format(repr(query)))
     res = requests.get(query).json()
     logger.info(res)
-    if len(res['data']) == 0:
-        raise ClipperException("returned data is empty")
     return res
 
 
@@ -66,16 +52,11 @@ def parse_res_and_assert_node(res, node_num):
     assert len(res['data']) == node_num
 
 
-# Wait for maximum 5 min.
-@retry((RequestException, ClipperException),
-       tries=300, delay=1, backoff=1, logger=logger)
 def check_target_health(metric_addr):
     query = metric_addr + '/api/v1/targets'
     logger.info("Querying: {}".format(query))
     res = requests.get(query).json()
     logger.info(res)
-    if len(res['data']) == 0:
-        raise ClipperException("returned data is empty")
     assert res['status'] == 'success'
 
     active_targets = res['data']['activeTargets']
@@ -96,6 +77,14 @@ def log_docker_ps(clipper_conn):
 if __name__ == '__main__':
     # metric_addr = "http://localhost:9090"
     gen_match_query = lambda addr, name: "http://{addr}/api/v1/series?match[]={name}".format(addr=addr, name=name)
+
+    logging.basicConfig(
+        format=
+        '%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+        datefmt='%y-%m-%d:%H:%M:%S',
+        level=0)
+
+    logger = logging.getLogger(__name__)
 
     logger.info("Start Metric Test (0/1): Running 2 Replicas")
 
