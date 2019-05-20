@@ -63,13 +63,13 @@ for name, test_to_run in DOCKER_INTEGRATION_TESTS.items():
     CIPrettyLogAction(
         name=f"integration_py2_{name}",
         command=generate_test_command(2, test_to_run),
-        tags="integration",
+        tags="integration_py2",
     )
 
     CIPrettyLogAction(
         name=f"integration_py3_{name}",
         command=generate_test_command(3, test_to_run),
-        tags="integration",
+        tags="integration_py3",
     )
 
 # Specify specific dependencies

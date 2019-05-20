@@ -4,7 +4,7 @@ import random
 from ..exceptions import ClipperException
 from ..container_manager import CLIPPER_INTERNAL_QUERY_PORT
 
-PROM_VERSION = "v2.1.0"
+PROM_VERSION = "v2.9.2"
 
 
 def get_prometheus_base_config():
@@ -72,10 +72,12 @@ def setup_metric_config(query_frontend_metric_name, prom_config_path,
         yaml.dump(prom_config, f)
 
 
-def run_metric_image(docker_client, common_labels, prometheus_port,
-                     prom_config_path, log_config, extra_container_kwargs):
+def run_metric_image(metric_frontend_name, docker_client, common_labels,
+                     prometheus_port, prom_config_path, log_config,
+                     extra_container_kwargs):
     """
     Run the prometheus image.
+    :param metric_frontend_name: container name
     :param docker_client: The docker client object
     :param common_labels: Labels to pass in
     :param prom_config_path: Where config file lives
@@ -95,7 +97,7 @@ def run_metric_image(docker_client, common_labels, prometheus_port,
     docker_client.containers.run(
         "prom/prometheus:{}".format(PROM_VERSION),
         metric_cmd,
-        name="metric_frontend-{}".format(random.randint(0, 100000)),
+        name=metric_frontend_name,
         ports={'9090/tcp': prometheus_port},
         log_config=log_config,
         volumes={

@@ -55,7 +55,7 @@ function randomize_redis_port {
         fi
       done
     fi
-    echo "$REDIS_PORT"
+    echo "randomized redis port: $REDIS_PORT"
 }
 
 trap clean_up SIGHUP SIGINT SIGTERM EXIT
