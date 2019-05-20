@@ -4,7 +4,7 @@ import random
 from ..exceptions import ClipperException
 from ..container_manager import CLIPPER_INTERNAL_QUERY_PORT
 
-PROM_VERSION = "v2.1.0"
+PROM_VERSION = "v2.9.2"
 
 
 def get_prometheus_base_config():
