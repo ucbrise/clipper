@@ -1247,7 +1247,7 @@ class ClipperConnection(object):
 
         if not self.connected:
             raise UnconnectedException()
-        self.cm.get_metric_addr()
+        return self.cm.get_metric_addr()
 
     def stop_models(self, model_names):
         """Stops all versions of the specified models.

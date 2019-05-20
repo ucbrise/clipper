@@ -41,7 +41,7 @@ def get_metrics_config():
 def get_matched_query(metric_addr, metric_name):
     query = gen_match_query(metric_addr, metric_name)
     logger.info("Querying: {}".format(query))
-    print('test why docker query is broken: {}'.format(repr(query)))
+    logger.info('test why docker query is broken: {}'.format(repr(query)))
     res = requests.get(query).json()
     logger.info(res)
     return res
@@ -93,14 +93,14 @@ if __name__ == '__main__':
         cleanup=False, start_clipper=True, new_name=cluster_name)
     python_deployer.create_endpoint(
         clipper_conn, "simple-example", "doubles", feature_sum, num_replicas=2)
-    time.sleep(2)
+    time.sleep(10)
     try:
         logger.info(
-            "Making 100 predictions using two model container; Should takes 25 seconds."
+            "Making 100 predictions using two model container; Should takes 50 seconds."
         )
         for _ in range(100):
             predict(clipper_conn.get_query_addr(), np.random.random(200))
-            time.sleep(0.2)
+            time.sleep(0.5)
 
         logger.info("Test 1: Checking status of 3 node exporter")
         check_target_health("http://{}".format(clipper_conn.cm.get_metric_addr()))
