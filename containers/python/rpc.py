@@ -761,4 +761,4 @@ def start_metric_server():
     Popen(cmd)
 
     # sleep is necessary because Popen returns immediately
-    time.sleep(1)
+    time.sleep(5)
