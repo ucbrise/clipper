@@ -498,11 +498,11 @@ TEST_F(QueryFrontendTest, TestReadInvalidModelVersionAtStartup) {
                         container_name, model_path, DEFAULT_BATCH_SIZE));
   // Not setting the version number will cause get_current_model_version()
   // to return -1, and the RequestHandler should then throw a runtime_error.
-  ASSERT_THROW(RequestHandler<QueryProcessor>("127.0.0.1",
-                                              QUERY_FRONTEND_PORT,
-                                              DEFAULT_THREAD_POOL_SIZE,
-                                              DEFAULT_TIMEOUT_REQUEST,
-                                              DEFAULT_TIMEOUT_CONTENT),
+  ASSERT_THROW(RequestHandler<MockQueryProcessor>("127.0.0.1",
+                                                  QUERY_FRONTEND_PORT,
+                                                  DEFAULT_THREAD_POOL_SIZE,
+                                                  DEFAULT_TIMEOUT_REQUEST,
+                                                  DEFAULT_TIMEOUT_CONTENT),
                std::runtime_error);
 }
 
