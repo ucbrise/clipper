@@ -275,6 +275,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             num_replicas=2)
         containers = self.get_containers(container_name)
         self.assertEqual(len(containers), 2)
+        self.check_registered_models(pairs=[(model_name, "1")])
 
         self.clipper_conn.build_and_deploy_model(
             model_name,
@@ -285,14 +286,12 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             num_replicas=3)
         containers = self.get_containers(container_name)
         self.assertEqual(len(containers), 5)
+        self.check_registered_models(pairs=[(model_name, "1"),
+                                            (model_name, "2")])
 
         self.clipper_conn.stop_inactive_model_versions([model_name])
         containers = self.get_containers(container_name)
         self.assertEqual(len(containers), 3)
-
-        self.clipper_conn.unregister_versioned_models({
-            model_name: ["1"]
-        })
         self.check_registered_models(pairs=[(model_name, "2")])
 
     def test_stop_models(self):
@@ -312,17 +311,14 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
 
         containers = self.get_containers(container_name)
         self.assertEqual(len(containers), len(mnames) * len(versions))
+        self.check_registered_models(
+            pairs=[(a, b) for a in mnames for b in versions])
 
         # stop all versions of jimmypage model
         self.clipper_conn.stop_models(mnames[:1])
+
         containers = self.get_containers(container_name)
-
         self.assertEqual(len(containers), len(mnames[1:]) * len(versions))
-
-        # Unregister all versions of jimmypage model from Clipper Internal
-        self.clipper_conn.unregister_versioned_models({
-            "jimmypage": ["i", "ii"],
-        })
         self.check_registered_models(
             pairs=[(a, b) for a in mnames[1:] for b in versions])
 
@@ -330,24 +326,16 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         self.clipper_conn.stop_versioned_models({
             "robertplant": ["ii"],
         })
+
         containers = self.get_containers(container_name)
-
         self.assertEqual(len(containers), 1)
-
-        # Unregister the robertplant:ii model from Clipper Internal
-        self.clipper_conn.unregister_versioned_models({
-            "robertplant": ["ii"],
-        })
         self.check_registered_models(pairs=[("robertplant", "i")])
 
+        # Stop all model containers
         self.clipper_conn.stop_all_model_containers()
+
         containers = self.get_containers(container_name)
-
         self.assertEqual(len(containers), 0)
-
-        self.clipper_conn.unregister_versioned_models({
-            "robertplant": ["i"],
-        })
         self.check_registered_models(pairs=[])
 
     def test_python_closure_deploys_successfully(self):
