@@ -14,6 +14,10 @@ RUN cd /clipper/src/libs/spdlog \
     && cd release \
     && make -j4 query_frontend
 
-ENTRYPOINT ["/clipper/release/src/frontends/query_frontend"]
+COPY containers/query_frontend/query_frontend_entry.sh /clipper/
+
+WORKDIR /clipper/
+
+ENTRYPOINT ["/clipper/query_frontend_entry.sh"]
 
 # vim: set filetype=dockerfile:

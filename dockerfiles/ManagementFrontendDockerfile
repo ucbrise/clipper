@@ -14,6 +14,10 @@ RUN cd /clipper/src/libs/spdlog \
     && cd release \
     && make -j4 management_frontend
 
-ENTRYPOINT ["/clipper/release/src/management/management_frontend"]
+COPY containers/mgmt_frontend/mgmt_frontend_entry.sh /clipper/
+
+WORKDIR /clipper/
+
+ENTRYPOINT ["/clipper/mgmt_frontend_entry.sh"]
 
 # vim: set filetype=dockerfile:
