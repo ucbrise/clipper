@@ -1307,6 +1307,7 @@ class ClipperConnection(object):
                 else:
                     model_dict[m["model_name"]] = [m["model_version"]]
         self.cm.stop_models(model_dict)
+        self.unregister_versioned_models(model_dict)
         pp = pprint.PrettyPrinter(indent=4)
         self.logger.info(
             "Stopped all containers for these models and versions:\n{}".format(
@@ -1333,6 +1334,7 @@ class ClipperConnection(object):
         if not self.connected:
             raise UnconnectedException()
         self.cm.stop_models(model_versions_dict)
+        self.unregister_versioned_models(model_versions_dict)
         pp = pprint.PrettyPrinter(indent=4)
         self.logger.info(
             "Stopped all containers for these models and versions:\n{}".format(
@@ -1369,6 +1371,7 @@ class ClipperConnection(object):
                 else:
                     model_dict[m["model_name"]] = [m["model_version"]]
         self.cm.stop_models(model_dict)
+        self.unregister_versioned_models(model_dict)
         pp = pprint.PrettyPrinter(indent=4)
         self.logger.info(
             "Stopped all containers for these models and versions:\n{}".format(
@@ -1380,9 +1383,26 @@ class ClipperConnection(object):
         This method can be used to clean up leftover Clipper model containers even if the
         Clipper management frontend or Redis has crashed. It can also be called without calling
         ``connect`` first.
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+            versions. All replicas for each version of each model will be stopped.
         """
+        if not self.connected:
+            raise UnconnectedException()
+        model_info = self.get_all_models(verbose=True)
+        model_dict = {}
+        for m in model_info:
+            if m["model_name"] in model_dict:
+                model_dict[m["model_name"]].append(m["model_version"])
+            else:
+                model_dict[m["model_name"]] = [m["model_version"]]
         self.cm.stop_all_model_containers()
-        self.logger.info("Stopped all Clipper model containers")
+        self.unregister_versioned_models(model_dict)
+        pp = pprint.PrettyPrinter(indent=4)
+        self.logger.info("Stopped all Clipper model containers:\n{}".format(
+            pp.pformat(model_dict)))
 
     def stop_all(self, graceful=True):
         """Stops all processes that were started via Clipper admin commands.
