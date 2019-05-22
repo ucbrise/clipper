@@ -63,4 +63,4 @@ def run(audio_file_index, image_file_index):
   print("Question Answering:\t\t" , elapsed_time_list[3])
 
 if __name__ == "__main__":
-  run(100, 200)
+  run(600, 600)
