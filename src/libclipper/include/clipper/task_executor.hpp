@@ -425,12 +425,6 @@ class TaskExecutor {
             }
             active_containers_->register_batch_size(vm, batch_size);
 
-            EstimatorFittingThreadPool::create_queue(vm, replica_id);
-            TaskExecutionThreadPool::create_queue(vm, replica_id);
-            TaskExecutionThreadPool::submit_job(
-                vm, replica_id, [this, vm, replica_id]() {
-                  on_container_ready(vm, replica_id);
-                });
             bool created_queue = create_model_queue_if_necessary(vm);
             if (created_queue) {
               log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
@@ -438,6 +432,13 @@ class TaskExecutor {
                                  vm.get_name(), vm.get_id());
             }
             register_container_to_model_queue(vm, replica_id);
+
+            EstimatorFittingThreadPool::create_queue(vm, replica_id);
+            TaskExecutionThreadPool::create_queue(vm, replica_id);
+            TaskExecutionThreadPool::submit_job(
+                vm, replica_id, [this, vm, replica_id]() {
+                  on_container_ready(vm, replica_id);
+                });
 
           } else if (!*task_executor_valid) {
             log_info(LOGGING_TAG_TASK_EXECUTOR,
