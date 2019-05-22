@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import json
 import sys
-
+import os
 sys.path.append("/container")
 
 from multiprocessing import Pool
@@ -60,7 +60,7 @@ def pipe1(imstr):
     drowsiness=run_c2(result)
     if drowsiness:
         return "Drowsiness!"
-    else
+    else:
         return "No Drowsiness!"
 
 
@@ -80,15 +80,18 @@ def run():
     pipe1_result = []
     pipe2_result=[]
     count=0;
-    for filename in os.listdir(part1):
-        if count>50:
+    for filename in os.listdir("/container/part1"):
+        if count>20:
             break
         count+=1
-        p = Pool(2)
-        pipe1_result.append(p.apply_async(pipe1, args=(stock_data,)))
-        pipe2_result.append(p.apply_async(pipe2, args=(stock_data,)))
-        p.close()
-        p.join() # p.join()方法会等待所有子进程执行完毕
+        print(filename)
+        imag=cv2.imread(filename)
+        imgstr=image_string(imag)
+#         p = Pool(2)
+#         pipe1_result.append(p.apply_async(pipe1, args=(imgstr,)))
+#         pipe2_result.append(p.apply_async(pipe2, args=(imgstr,)))
+#         p.close()
+#         p.join() # p.join()方法会等待所有子进程执行完毕
 
     print("\nResult of PIPE1:")
     print(pipe1_result)

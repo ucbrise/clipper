@@ -5,8 +5,8 @@ import numpy as np
 #import matplotlib.pyplot as plt
 import cv2
 import json
-from samples.coco import coco
-import mrcnn.model as modellib
+from container3.app.samples.coco import coco
+import container3.app.mrcnn.model as modellib
 #import imgaug
 
 def image_string(image):
@@ -52,7 +52,7 @@ config.display()
 model = modellib.MaskRCNN(mode="inference", model_dir="logs", config=config)
 
 # Load weights trained on MS-COCO
-model.load_weights("/container/mask_rcnn_coco.h5", by_name=True)
+model.load_weights("/container/container3/app/mask_rcnn_coco.h5", by_name=True)
 
 def predict(imstr):
     image=string_image(imstr)

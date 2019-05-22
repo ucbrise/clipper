@@ -20,15 +20,15 @@ RUN pip3 install Cython
 RUN pip3 install pycocotools
 RUN pip3 install git+https://github.com/philferriere/cocoapi.git#egg=pycocotools^&subdirectory=PythonAPI
 RUN pip3 install keras
-
+RUN pip3 install imgaug
 #docker 4 none
 #add
-ADD FatigueDetection/container1 /container/
-ADD FatigueDetection/container2 /container/
-ADD FatigueDetection/container3 /container/
-ADD FatigueDetection/container4 /container/
+ADD FatigueDetection/container1 /container/container1
+ADD FatigueDetection/container2 /container/container2
+ADD FatigueDetection/container3 /container/container3
+ADD FatigueDetection/container4 /container/container4
 ADD FatigueDetection/main.py /container/
-ADD FatigueDetection/part1 /container/
+ADD FatigueDetection/part1 /container/part1
 
 CMD ["python3","/container/main.py"]
 
