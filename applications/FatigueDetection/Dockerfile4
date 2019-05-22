@@ -7,10 +7,15 @@ RUN pip3 install opencv-python
 RUN pip3 install grpcio
 RUN pip3 install protobuf
 
+ADD container4/app /container/
 
-ADD FatigueDetection/container4/app /container/
-ADD simplerpc/app /container/
+ADD grpc/app/container_entry.sh /container/
+ADD grpc/app/server.py /container/
+ADD grpc/app/model_pb2_grpc.py /container/
+ADD grpc/app/model_pb2.py /container/
+ADD grpc/app/proxy_pb2_grpc.py /container/
+ADD grpc/app/proxy_pb2.py /container/
 
-CMD ["python3", "/container/server.py", "4", "12000"]
+EXPOSE 22222
 
-EXPOSE 12000
+CMD ["/container/container_entry.sh", "tensorflow-container", "/container/server.py"]
