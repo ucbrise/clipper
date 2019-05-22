@@ -32,6 +32,7 @@ def getGeneratedCaptions():
   return captions
 
 def predict(image_file_index):
+  image_file_index = int(image_file_index)
   if image_file_index > 800:
     return "Invalid image file index! Only index between 1 to 800 is allowed!"
   
