@@ -26,7 +26,7 @@ RUN mv /notebooks/newmodel.ckpt-2000000.data-00000-of-00001 /container/im2txt/mo
 # RUN chmod 777 /container/im2txt/data/imageDataset/rename.sh 
 # RUN /container/im2txt/data/imageDataset/rename.sh
 
-RUN wget --pregress=bar:force https://groups.csail.mit.edu/sls/downloads/flickraudio/downloads/flickr_audio.tar.gz
+RUN wget --progress=bar:force https://groups.csail.mit.edu/sls/downloads/flickraudio/downloads/flickr_audio.tar.gz
 RUN mv /notebooks/flickr_audio.tar.gz /container/im2txt/data/imageDataset2
 RUN chmod 777 /container/im2txt/data/imageDataset2/untarRename.sh 
 RUN /container/im2txt/data/imageDataset2/untarRename.sh
