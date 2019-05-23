@@ -1,7 +1,18 @@
 FROM ubuntu:bionic
 RUN apt-get update
 RUN apt-get install python3 python3-pip -y
+RUN pip3 install grpcio
+RUN pip3 install protobuf
 
 ADD imagequery/c0_entryContainer /container/c0_entryContainer
+
+ADD grpc/app/container_entry.sh /container/c0_entryContainer
+ADD grpc/app/server.py /container/c0_entryContainer
+ADD grpc/app/model_pb2_grpc.py /container/c0_entryContainer
+ADD grpc/app/model_pb2.py /container/c0_entryContainer
+ADD grpc/app/proxy_pb2_grpc.py /container/c0_entryContainer
+ADD grpc/app/proxy_pb2.py /container/c0_entryContainer
+
+CMD ["/container/c0_entryContainer/container_entry.sh", "tensorflow-container", "/container/c0_entryContainer/server.py"]
 
 EXPOSE 8000
