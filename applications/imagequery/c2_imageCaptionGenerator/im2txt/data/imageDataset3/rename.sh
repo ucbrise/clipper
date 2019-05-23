@@ -7,8 +7,9 @@ for name in *.wav
 do
     mv "${name}" "${index}.wav"
     index=$((index+1))
-    if [ "$done" -ge 1000 ]; then
+    if [ $index -ge 1000 ]; then
       break
     fi
 done
-ls
+
+echo "$(ls *.wav | wc -l) jpg image files in this dataset."

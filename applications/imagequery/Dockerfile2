@@ -36,7 +36,6 @@ RUN wget --progress=bar:force https://www.kaggle.com/rtatman/speech-accent-archi
 RUN mv /notebooks/speech-accent-archive.zip /container/im2txt/data/imageDataset3
 RUN unzip /container/im2txt/data/imageDataset3/speech-accent-archive.zip -d /container/im2txt/data/imageDataset3
 RUN unzip /container/im2txt/data/imageDataset3/speech-accent-archive/recordings.zip -d /container/im2txt/data/imageDataset3/speech-accent-archive/
-RUN ls /container/im2txt/data/imageDataset3/speech-accent-archive/
 RUN chmod 777 /container/im2txt/data/imageDataset3/rename.sh
 RUN /container/im2txt/data/imageDataset3/rename.sh
 

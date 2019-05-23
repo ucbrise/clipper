@@ -14,4 +14,3 @@ do
       break
     fi
 done
-ls
