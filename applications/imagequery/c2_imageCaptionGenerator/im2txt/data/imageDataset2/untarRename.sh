@@ -1,7 +1,8 @@
 #!/bin/bash
 
 cd /container/im2txt/data/imageDataset2
-tar -zxvf flickr_audio.tar.gz
+tar -zxf flickr_audio.tar.gz
+# tar -xzvf flickr_audio.tar.gz
 
 cd /container/im2txt/data/imageDataset2/flickr_audio/wavs
 index=0;
