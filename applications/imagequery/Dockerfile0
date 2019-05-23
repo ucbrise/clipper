@@ -15,4 +15,4 @@ ADD grpc/app/proxy_pb2.py /container/
 
 CMD ["/container/container_entry.sh", "c0", "/container/server.py"]
 
-EXPOSE 8000
+EXPOSE 7000
