@@ -6,8 +6,10 @@ RUN apt install wget
 RUN pip3 install grpcio
 RUN pip3 install protobuf
 
-# copy files into image
-ADD imagequery/c2_imageCaptionGenerator /container/
+# container/ will have: predict.py, captionData/, im2txt/
+ADD imagequery/c2_imageCaptionGenerator/app /container/
+ADD imagequery/c2_imageCaptionGenerator/captionData /container/captionData
+ADD imagequery/c2_imageCaptionGenerator/im2txt /container/im2txt
 
 # download pre-trained models 
 RUN chmod 777 /container/im2txt/model/downloadModels.sh
@@ -16,7 +18,7 @@ RUN mv /notebooks/newmodel.ckpt-2000000.meta /container/im2txt/model
 RUN mv /notebooks/newmodel.ckpt-2000000.data-00000-of-00001 /container/im2txt/model
 
 # download datasets, untar and reindex images.
-# /container/workspace/im2txt/data/imageDataset will contains image1.jpg, image2.jpg, image3.jpg, ..., and other folders
+# /container/im2txt/data/imageDataset will contains image1.jpg, image2.jpg, image3.jpg, ..., and other folders
 RUN wget --progress=bar:force http:/www.vision.caltech.edu/Image_Datasets/Caltech101/101_ObjectCategories.tar.gz
 RUN mv /notebooks/101_ObjectCategories.tar.gz /container/im2txt/data/imageDataset
 RUN chmod 777 /container/im2txt/data/imageDataset/untar.sh 

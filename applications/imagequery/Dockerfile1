@@ -5,8 +5,9 @@ RUN pip3 install SpeechRecognition
 RUN pip3 install grpcio
 RUN pip3 install protobuf
 
-# copy entire directory: container/ will have c1_speechRecognition
-ADD imagequery/c1_speechRecognition /container/
+# container/ will have predict.py, data/
+ADD imagequery/c1_speechRecognition/app /container/
+ADD imagequery/c1_speechRecognition/data /container/data
 
 # download, untar, move dataset to specified location
 # dataset source: http://festvox.org/cmu_arctic/
