@@ -3,25 +3,27 @@ RUN apt-get update
 RUN pip install numpy nltk
 RUN python -m nltk.downloader all
 RUN apt install wget
+RUN pip3 install grpcio
+RUN pip3 install protobuf
 
 # copy files into image
-ADD imagequery/c2_imageCaptionGenerator /container/c2_imageCaptionGenerator
+ADD imagequery/c2_imageCaptionGenerator /container/
 
 # download pre-trained models 
-RUN chmod 777 /container/c2_imageCaptionGenerator/im2txt/model/downloadModels.sh
-RUN /container/c2_imageCaptionGenerator/im2txt/model/downloadModels.sh
-RUN mv /notebooks/newmodel.ckpt-2000000.meta /container/c2_imageCaptionGenerator/im2txt/model
-RUN mv /notebooks/newmodel.ckpt-2000000.data-00000-of-00001 /container/c2_imageCaptionGenerator/im2txt/model
+RUN chmod 777 /container/im2txt/model/downloadModels.sh
+RUN /container/im2txt/model/downloadModels.sh
+RUN mv /notebooks/newmodel.ckpt-2000000.meta /container/im2txt/model
+RUN mv /notebooks/newmodel.ckpt-2000000.data-00000-of-00001 /container/im2txt/model
 
 # download datasets, untar and reindex images.
 # /container/workspace/im2txt/data/imageDataset will contains image1.jpg, image2.jpg, image3.jpg, ..., and other folders
-RUN wget --progress=bar:force http://www.vision.caltech.edu/Image_Datasets/Caltech101/101_ObjectCategories.tar.gz
-RUN mv /notebooks/101_ObjectCategories.tar.gz /container/c2_imageCaptionGenerator/im2txt/data/imageDataset
-RUN chmod 777 /container/c2_imageCaptionGenerator/im2txt/data/imageDataset/untar.sh 
-RUN /container/c2_imageCaptionGenerator/im2txt/data/imageDataset/untar.sh 
-RUN chmod 777 /container/c2_imageCaptionGenerator/im2txt/data/imageDataset/rename.sh 
-RUN /container/c2_imageCaptionGenerator/im2txt/data/imageDataset/rename.sh
+RUN wget --progress=bar:force http:/www.vision.caltech.edu/Image_Datasets/Caltech101/101_ObjectCategories.tar.gz
+RUN mv /notebooks/101_ObjectCategories.tar.gz /container/im2txt/data/imageDataset
+RUN chmod 777 /container/im2txt/data/imageDataset/untar.sh 
+RUN /container/im2txt/data/imageDataset/untar.sh 
+RUN chmod 777 /container/im2txt/data/imageDataset/rename.sh 
+RUN /container/im2txt/data/imageDataset/rename.sh
 
-CMD ["python", "/container/c2_imageCaptionGenerator/app/predict.py"]
+CMD ["/container/container_entry.sh", "c2", "/container/server.py"]
 
 EXPOSE 9000

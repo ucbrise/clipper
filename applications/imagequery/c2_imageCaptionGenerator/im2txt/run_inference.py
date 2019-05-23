@@ -97,7 +97,7 @@ def main(_):
             "caption2": captionList[2]
         }
         caption_json = json.dumps(caps)
-        with open('/container/c2_imageCaptionGenerator/captionData/captionFile.txt', 'w') as outfile:
+        with open('/container/captionData/captionFile.txt', 'w') as outfile:
             json.dump(caption_json, outfile)
 
 

@@ -9,9 +9,9 @@ def recognize(audio_file_index):
         return "Invalid image index! Only index between 1 to 800 is allowed! Exiting..."
 
     if audio_file_index <= 500: 
-        audio_file_path = "/container/c1_speechRecognition/data/cmu_us_awb_arctic/wav/arctic_a" + str(audio_file_index).zfill(4) + ".wav"
+        audio_file_path = "/container/data/cmu_us_awb_arctic/wav/arctic_a" + str(audio_file_index).zfill(4) + ".wav"
     else:
-        audio_file_path = "/container/c1_speechRecognition/data/cmu_us_awb_arctic/wav/arctic_b" + str(audio_file_index - 500).zfill(4) + ".wav"
+        audio_file_path = "/container/data/cmu_us_awb_arctic/wav/arctic_b" + str(audio_file_index - 500).zfill(4) + ".wav"
 
     print(audio_file_path)
     recognizer = sr.Recognizer()

@@ -2,18 +2,28 @@ FROM ubuntu:bionic
 RUN apt-get update
 RUN apt-get install wget zip unzip python3 python3-pip -y
 RUN pip3 install SpeechRecognition
+RUN pip3 install grpcio
+RUN pip3 install protobuf
 
 # copy entire directory: container/ will have c1_speechRecognition
-ADD imagequery/c1_speechRecognition /container/c1_speechRecognition
+ADD imagequery/c1_speechRecognition /container/
 
 # download, untar, move dataset to specified location
 # dataset source: http://festvox.org/cmu_arctic/
 RUN wget --progress=bar:force http://festvox.org/cmu_arctic/cmu_arctic/packed/cmu_us_awb_arctic-0.95-release.zip
-RUN mv /cmu_us_awb_arctic-0.95-release.zip /container/c1_speechRecognition/data
-RUN chmod 777 /container/c1_speechRecognition/data/unzip.sh
-RUN /container/c1_speechRecognition/data/unzip.sh
+RUN mv /cmu_us_awb_arctic-0.95-release.zip /container/data
+RUN chmod 777 /container/data/unzip.sh
+RUN /container/data/unzip.sh
 
 # the unzipped file is cmu_us_awb_arctic
-CMD python3 /container/c1_speechRecognition/app/predict.py
+
+ADD grpc/app/container_entry.sh /container/
+ADD grpc/app/server.py /container/
+ADD grpc/app/model_pb2_grpc.py /container/
+ADD grpc/app/model_pb2.py /container/
+ADD grpc/app/proxy_pb2_grpc.py /container/
+ADD grpc/app/proxy_pb2.py /container/
+
+CMD ["/container/container_entry.sh", "c1", "/container/server.py"]
 
 EXPOSE 8000
