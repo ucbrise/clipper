@@ -31,6 +31,12 @@ RUN mv /notebooks/flickr_audio.tar.gz /container/im2txt/data/imageDataset2
 RUN chmod 777 /container/im2txt/data/imageDataset2/untarRename.sh 
 RUN /container/im2txt/data/imageDataset2/untarRename.sh
 
+RUN pip3 install unzip
+RUN wget --progress=bar:force https://www.kaggle.com/rtatman/speech-accent-archive/downloads/speech-accent-archive.zip/2
+RUN mv /notebooks/speech-accent-archive.zip /container/im2txt/data/imageDataset3
+RUN unzip /container/im2txt/data/imageDataset3/speech-accent-archive.zip -d /container/im2txt/data/imageDataset3
+RUN unzip /container/im2txt/data/imageDataset3/speech-accent-archive/recordings.zip -d /container/im2txt/data/imageDataset3/speech-accent-archive/
+RUN ls /container/im2txt/data/imageDataset3/speech-accent-archive/
 
 ADD grpc/app/container_entry.sh /container/
 ADD grpc/app/server.py /container/
