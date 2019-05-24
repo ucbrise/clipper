@@ -14,10 +14,10 @@ def recognize(audio_file_index):
         # dataset1: CMU arctic
         audio_file_path = "/container/data/dataset1/cmu_us_awb_arctic/wav/" + str(audio_file_index) + ".wav"
     elif dataset_index == 2:
-        # dataset2: Flicker
+        # dataset2: Flicker: different scripts but with overlapping
         audio_file_path = "/container/data/dataset2/flickr_audio/wavs/" + str(audio_file_index) + ".wav"
     elif dataset_index == 3:
-        # dataset3: speech-accent-archive
+        # dataset3: speech-accent-archive: different people reading the same script
         audio_file_path = "/container/data/dataset3/recordings/" + str(audio_file_index) + ".wav"
     else:
         return "Invalid dataset index!"
