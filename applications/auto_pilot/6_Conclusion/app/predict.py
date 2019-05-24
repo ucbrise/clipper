@@ -14,5 +14,13 @@ def predict(a1_str, a2_str, a3_str, a4_str):
 
     a_list.remove(a_list[deviations.index(max(deviations))])
 
-    return str(sum(a_list)/ len(a_list))
+    final = sum(a_list)/ len(a_list)
+
+    result = "algo1 says " + str(round(a1,2))
+    result += ", algo2 says " + str(round(a2,2))
+    result += ", algo3 says " + str(round(a3,2))
+    result += ", algo4 says " + str(round(a4,2))
+    result += ", final is " + str(round(final,2))
+
+    return result
 
