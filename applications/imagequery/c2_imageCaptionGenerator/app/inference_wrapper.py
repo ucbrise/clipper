@@ -26,7 +26,7 @@ from __future__ import print_function
 
 # the correct import statements:
 import show_and_tell_model
-from inference_utils import inference_wrapper_base
+import inference_wrapper_base
 
 
 class InferenceWrapper(inference_wrapper_base.InferenceWrapperBase):

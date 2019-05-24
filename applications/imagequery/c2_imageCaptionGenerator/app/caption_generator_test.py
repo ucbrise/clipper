@@ -21,7 +21,7 @@ import math
 import numpy as np
 import tensorflow as tf
 
-from im2txt.inference_utils import caption_generator
+import caption_generator
 
 
 class FakeVocab(object):
