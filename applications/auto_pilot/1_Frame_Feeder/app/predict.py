@@ -1,6 +1,7 @@
 
 import scipy.misc
 import json
+import base64
 
 def predict(i):
 	image_path = "/container/dataset/" + str(i) + ".jpg"

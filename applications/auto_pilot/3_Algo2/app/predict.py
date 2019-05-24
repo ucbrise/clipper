@@ -1,6 +1,7 @@
 import json
 import numpy as np
 import cv2
+import base64
 from keras.models import load_model
 
 model = load_model('/container/Autopilot.h5')

@@ -7,6 +7,7 @@ from keras.optimizers import SGD, Adam, RMSprop
 import cv2
 import numpy as np
 import json
+import base64
 
 # load the model:
 model = Sequential()

@@ -2,6 +2,7 @@ import tensorflow as tf
 import model
 import json
 import scipy.misc
+import base64
 
 sess = tf.InteractiveSession()
 saver = tf.train.Saver()
