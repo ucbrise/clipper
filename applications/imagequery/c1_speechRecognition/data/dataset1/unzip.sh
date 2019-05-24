@@ -3,4 +3,5 @@
 cd /container/data/dataset1
 unzip cmu_us_awb_arctic-0.95-release.zip
 
-echo "$(ls *.wav | wc -l) wav files in this dataset."
+cd /container/data/dataset1/cmu_us_awb_arctic
+echo "$(ls *.wav | wc -l) wav files in /container/data/dataset1/cmu_us_awb_arctic."

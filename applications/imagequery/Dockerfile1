@@ -15,7 +15,6 @@ RUN wget --progress=bar:force http://festvox.org/cmu_arctic/cmu_arctic/packed/cm
 RUN mv /cmu_us_awb_arctic-0.95-release.zip /container/data/dataset1
 RUN chmod 777 /container/data/dataset1/unzip.sh
 RUN /container/data/dataset1/unzip.sh
-RUN 
 # the unzipped file is /container/data/dataset1/cmu_us_awb_arctic
 
 # dataset2
