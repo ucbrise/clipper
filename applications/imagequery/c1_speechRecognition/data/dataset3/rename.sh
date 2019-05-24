@@ -12,5 +12,6 @@ do
     fi
 done
 
+ls *.wav
 echo "$(ls *.wav | wc -l) wav files in this dataset."
 # 1001 wav files
