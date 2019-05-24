@@ -12,17 +12,17 @@ ADD imagequery/c1_speechRecognition/data /container/data
 
 # dataset1 
 # dataset source: http://festvox.org/cmu_arctic/
-# RUN wget --progress=bar:force http://festvox.org/cmu_arctic/cmu_arctic/packed/cmu_us_awb_arctic-0.95-release.zip
-# RUN mv $(find / -name cmu_us_awb_arctic-0.95-release.zip) /container/data/dataset1
-# RUN chmod 777 /container/data/dataset1/unzip.sh
-# RUN /container/data/dataset1/unzip.sh
+RUN wget --progress=bar:force http://festvox.org/cmu_arctic/cmu_arctic/packed/cmu_us_awb_arctic-0.95-release.zip
+RUN mv $(find / -name cmu_us_awb_arctic-0.95-release.zip) /container/data/dataset1
+RUN chmod 777 /container/data/dataset1/unzip.sh
+RUN /container/data/dataset1/unzip.sh
 
 # dataset2
 # reference: https://groups.csail.mit.edu/sls/downloads/flickraudio/index.cgi
-# RUN wget --progress=bar:force https://groups.csail.mit.edu/sls/downloads/flickraudio/downloads/flickr_audio.tar.gz
-# RUN mv $(find / -name flickr_audio.tar.gz) /container/data/dataset2
-# RUN chmod 777 /container/data/dataset2/untarRename.sh 
-# RUN /container/data/dataset2/untarRename.sh
+RUN wget --progress=bar:force https://groups.csail.mit.edu/sls/downloads/flickraudio/downloads/flickr_audio.tar.gz
+RUN mv $(find / -name flickr_audio.tar.gz) /container/data/dataset2
+RUN chmod 777 /container/data/dataset2/untarRename.sh 
+RUN /container/data/dataset2/untarRename.sh
 
 # dataset3
 # download reference: https://www.kaggle.com/general/6604
@@ -42,6 +42,7 @@ ADD grpc/app/model_pb2.py /container/
 ADD grpc/app/proxy_pb2_grpc.py /container/
 ADD grpc/app/proxy_pb2.py /container/
 
-CMD ["/container/container_entry.sh", "c1", "/container/server.py"]
+# CMD ["/container/container_entry.sh", "c1", "/container/server.py"]
+CMD ["python", "/container/predict.py"]
 
 EXPOSE 8000

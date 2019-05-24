@@ -11,6 +11,9 @@ for name in *.wav
 do
     mv "${name}" "${index}.wav"
     index=$((index+1))
+    if [ $index -gt 1000 ]; then
+      break
+    fi
 done
 
 echo "$(ls *.wav | wc -l) wav files in /container/data/dataset1/cmu_us_awb_arctic." 

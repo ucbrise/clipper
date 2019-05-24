@@ -10,7 +10,7 @@ for name in *.wav
 do
     mv "${name}" "${index}.wav"
     index=$((index+1))
-    if [ $index -ge 1000 ]; then
+    if [ $index -gt 1000 ]; then
       break
     fi
 done
