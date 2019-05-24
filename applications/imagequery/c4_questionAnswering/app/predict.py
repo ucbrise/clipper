@@ -28,7 +28,7 @@ def predict(question, mapping):
     index = np.argmax(counter)
     items = mapping.split('-')
     answer = items[index]
-    # print(counter)
+    print(index)
 
     end = timer()
     time_elapsed = end - start
