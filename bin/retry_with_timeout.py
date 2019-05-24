@@ -49,7 +49,7 @@ except AssertionError:
 
 def run_once_with_timeout(command_to_run, timeout):
     proc = subprocess.Popen(
-        command_to_run, stdout=sys.stdout, stderr=subprocess.STDOUT
+        command_to_run, stdout=sys.stdout, stderr=sys.stdout
     )
     start = time.time()
     while True:
