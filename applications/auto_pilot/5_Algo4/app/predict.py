@@ -21,7 +21,7 @@ adam = Adam(lr=0.0001)
 model.compile(loss='mse', optimizer=adam, metrics=['mse','accuracy'])
 
 def predict(image_str):
-	fh = open("temp.jpg", "wb")
+    fh = open("temp.jpg", "wb")
     fh.write(base64.decodebytes(image_str))
     fh.close()
     image = scipy.misc.imread("temp.jpg", mode="RGB").tolist()
