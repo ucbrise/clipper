@@ -5,11 +5,16 @@ import datetime
 
 quandl.ApiConfig.api_key = "ZFtsDc5JcPvNXWwFVTSR"
 
-def retrieveStockPrice(stockcode):
-  start = datetime.datetime(2017, 1, 1)
-  end = datetime.date.today()
-  stock_price_dataframe = quandl.get("WIKI/" + stockcode, start_date=start, end_date=end) # dateframe type
-  return stock_price_dataframe.to_json()
+def retrieveStockPrice(requestInfo):
+	info = requestInfo.split(":")
+	stockcode = info[0]
+	starting_year = info[1]
+	starting_month = info[2]
+	starting_day = info[3]
+  	start = datetime.datetime(starting_year, starting_month, starting_day)
+ 	end = datetime.date.today()
+  	stock_price_dataframe = quandl.get("WIKI/" + stockcode, start_date=start, end_date=end) # dateframe type
+  	return stock_price_dataframe.to_json()
 
-def predict(stockcode): # serves as an api function
-  return retrieveStockPrice(stockcode)
+def predict(requestInfo): # serves as an api function
+  	return retrieveStockPrice(requestInfo)
