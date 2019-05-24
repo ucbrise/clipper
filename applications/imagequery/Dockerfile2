@@ -33,6 +33,7 @@ ADD grpc/app/model_pb2.py /container/
 ADD grpc/app/proxy_pb2_grpc.py /container/
 ADD grpc/app/proxy_pb2.py /container/
 
-CMD ["/container/container_entry.sh", "c2", "/container/server.py"]
+CMD ["python3", "/container/predict.py"]
+# CMD ["/container/container_entry.sh", "c2", "/container/server.py"]
 
 EXPOSE 9000
