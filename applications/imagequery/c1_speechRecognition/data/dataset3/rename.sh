@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd /container/im2txt/data/imageDataset3/speech-accent-archive/recordings
+cd /container/data/dataset3/speech-accent-archive/recordings
 
 index=0;
 for name in *.wav

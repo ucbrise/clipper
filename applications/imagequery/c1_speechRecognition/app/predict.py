@@ -9,11 +9,13 @@ def recognize(audio_file_index):
         return "Invalid image index! Only index between 1 to 800 is allowed! Exiting..."
 
     # dataset1: CMU arctic
-    if audio_file_index <= 500: 
-        audio_file_path = "/container/data/dataset1/cmu_us_awb_arctic/wav/arctic_a" + str(audio_file_index).zfill(4) + ".wav"
-    else:
-        audio_file_path = "/container/data/dataset1/cmu_us_awb_arctic/wav/arctic_b" + str(audio_file_index - 500).zfill(4) + ".wav"
+    audio_file_path = "/container/data/dataset1/cmu_us_awb_arctic/wav/" + str(audio_file_index) + ".wav"
 
+    # dataset2: Flicker
+    audio_file_path = "/container/data/dataset2/flickr_audio/wavs/" + str(audio_file_index) + ".wav"
+
+    # dataset3: speech-accent-archive
+    audio_file_path = "/container/data/dataset3/speech-accent-archive/recordings/" + str(audio_file_index) + ".wav"
 
     print(audio_file_path)
     recognizer = sr.Recognizer()
