@@ -32,7 +32,7 @@ def predict(question, mapping):
 
     end = timer()
     time_elapsed = end - start
-    return answer, time_elapsed
+    return answer
 
 
 

@@ -87,7 +87,7 @@ def predict(txt):
     generated_mapping = generate_mapping(txt)
     end = timer()
     time_elapsed = end - start
-    return generated_mapping, time_elapsed
+    return generated_mapping
 
 # if __name__ == "__main__":
 #     txt = "a man riding a wave on top of a surfboard . a person riding a surf board on a wave a man on a surfboard riding a wave ."

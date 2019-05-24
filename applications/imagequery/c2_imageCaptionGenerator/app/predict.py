@@ -78,7 +78,7 @@ def predict(image_file_index):
     image_file_path = "/container/im2txt/data/imageDataset/101_ObjectCategories/image_" + \
         str(image_file_index).zfill(4) + ".jpg"
 
- # added by YIN Yue
+    # added by YIN Yue
     captionList = ["", "", ""]
     with tf.gfile.GFile(image_file_path, "rb") as f:
         image = f.read()
@@ -97,7 +97,7 @@ def predict(image_file_index):
     generated_caption = ' '.join(captionList)
     end = timer()
     time_elapsed = end - start
-    return generated_caption, time_elapsed
+    return generated_caption
 
 
 if __name__ == "__main__":
