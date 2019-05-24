@@ -9,7 +9,7 @@ RUN pip3 install protobuf
 
 # container/ will have predict.py, data/
 ADD imagequery/c1_speechRecognition/app /container/
-ADD imagequery/c1_speechRecognition/data /container/data
+ADD imagequery/c1_speechRecogunition/data /container/data
 
 # dataset1 
 # dataset source: http://festvox.org/cmu_arctic/
