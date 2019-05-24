@@ -3,7 +3,7 @@
 cd /container/data/dataset3/recordings
 
 index=0;
-for name in *.wav
+for name in *.mp3
 do
     mv "${name}" "${index}.wav"
     index=$((index+1))
@@ -12,4 +12,4 @@ do
     fi
 done
 
-echo "$(ls *.wav | wc -l) jpg image files in this dataset."
+echo "$(ls *.wav | wc -l) wav files in this dataset."

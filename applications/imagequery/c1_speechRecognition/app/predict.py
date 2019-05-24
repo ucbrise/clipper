@@ -15,7 +15,7 @@ def recognize(audio_file_index):
     audio_file_path = "/container/data/dataset2/flickr_audio/wavs/" + str(audio_file_index) + ".wav"
 
     # dataset3: speech-accent-archive
-    audio_file_path = "/container/data/dataset3/speech-accent-archive/recordings/" + str(audio_file_index) + ".wav"
+    audio_file_path = "/container/data/dataset3/recordings/" + str(audio_file_index) + ".wav"
 
     print(audio_file_path)
     recognizer = sr.Recognizer()

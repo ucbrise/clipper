@@ -33,7 +33,7 @@ RUN unzip /container/data/dataset3/speech-accent-archive.zip -d /container/data/
 # /container/data/dataset3 now contains:reading-passage.txt, recordings.zip, speakers_all.csv
 RUN unzip /container/data/dataset3/recordings.zip -d /container/data/dataset3/
 RUN chmod 777 /container/data/dataset3/rename.sh
-RUN /container/im2txt/data/dataset3/rename.sh
+RUN /container/data/dataset3/rename.sh
 
 ADD grpc/app/container_entry.sh /container/
 ADD grpc/app/server.py /container/
