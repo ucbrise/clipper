@@ -14,8 +14,8 @@ ADD imagequery/c1_speechRecognition/data /container/data
 # dataset source: http://festvox.org/cmu_arctic/
 RUN wget --progress=bar:force http://festvox.org/cmu_arctic/cmu_arctic/packed/cmu_us_awb_arctic-0.95-release.zip
 RUN mv $(find / -name cmu_us_awb_arctic-0.95-release.zip) /container/data/dataset1
-RUN chmod 777 /container/data/dataset1/unzip.sh
-RUN /container/data/dataset1/unzip.sh
+RUN chmod 777 /container/data/dataset1/unzipRename.sh
+RUN /container/data/dataset1/unzipRename.sh
 
 # dataset2
 # reference: https://groups.csail.mit.edu/sls/downloads/flickraudio/index.cgi
