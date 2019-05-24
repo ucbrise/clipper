@@ -1,10 +1,10 @@
-FROM ubuntu:bionic
+FROM tensorflow/tensorflow:1.12.0-gpu-py3 
 RUN apt-get update
 RUN apt-get install python3 python3-pip -y
-RUN pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple scipy
-RUN pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple numpy
-RUN pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple pillow
-RUN pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple tensorflow
+RUN pip3 install scipy
+RUN pip3 install numpy
+RUN pip3 install pillow
+RUN pip3 install tensorflow
 
 RUN pip3 install grpcio
 RUN pip3 install protobuf
