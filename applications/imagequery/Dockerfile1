@@ -21,7 +21,7 @@ RUN wget --progress=bar:force https://groups.csail.mit.edu/sls/downloads/flickra
 RUN find / -name flickr_audio.tar.gz
 RUN mv $(find / -name flickr_audio.tar.gz) /container/data/dataset2
 RUN chmod 777 /container/data/dataset2/untarRename.sh 
-RUN /container/data/imageDataset2/untarRename.sh
+RUN /container/data/dataset2/untarRename.sh
 
 # dataset3
 RUN wget --progress=bar:force https://www.kaggle.com/rtatman/speech-accent-archive/downloads/speech-accent-archive.zip/2
