@@ -10,10 +10,10 @@ short and simple and there are not too much information. Answering with
 logic already provides good enough result.
 """
 
-def predict(question, mapping):
+def predict(mapping):
     start = timer()
 
-    # print(mapping)
+    question = "What is in the picture?"
     question = question.lower()
     words = question.split(' ')
     counter = [0, 0, 0]  # subject, verb, time
