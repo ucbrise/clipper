@@ -16,3 +16,4 @@ do
 done
 
 echo "$(ls *.wav | wc -l) wav files in this /container/data/dataset2/flickr_audio/wavs."
+# 40000 wav files
