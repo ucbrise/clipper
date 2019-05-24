@@ -19,17 +19,17 @@ ADD imagequery/c1_speechRecognition/data /container/data
 # dataset2
 RUN wget --progress=bar:force https://groups.csail.mit.edu/sls/downloads/flickraudio/downloads/flickr_audio.tar.gz
 RUN find / -name flickr_audio.tar.gz
-RUN mv (find / -name flickr_audio.tar.gz) /container/data/dataset2
-# RUN chmod 777 /container/data/dataset2/untarRename.sh 
-# RUN /container/data/imageDataset2/untarRename.sh
+RUN mv $(find / -name flickr_audio.tar.gz) /container/data/dataset2
+RUN chmod 777 /container/data/dataset2/untarRename.sh 
+RUN /container/data/imageDataset2/untarRename.sh
 
 # dataset3
-# RUN wget --progress=bar:force https://www.kaggle.com/rtatman/speech-accent-archive/downloads/speech-accent-archive.zip/2
-# RUN mv /notebooks/speech-accent-archive.zip /container/data/dataset3
-# RUN unzip /container/data/dataset3/speech-accent-archive.zip -d /container/data/dataset3
-# RUN unzip /container/data/dataset3/speech-accent-archive/recordings.zip -d /container/data/dataset3/speech-accent-archive/
-# RUN chmod 777 /container/data/dataset3/rename.sh
-# RUN /container/im2txt/data/dataset3/rename.sh
+RUN wget --progress=bar:force https://www.kaggle.com/rtatman/speech-accent-archive/downloads/speech-accent-archive.zip/2
+RUN mv /notebooks/speech-accent-archive.zip /container/data/dataset3
+RUN unzip /container/data/dataset3/speech-accent-archive.zip -d /container/data/dataset3
+RUN unzip /container/data/dataset3/speech-accent-archive/recordings.zip -d /container/data/dataset3/speech-accent-archive/
+RUN chmod 777 /container/data/dataset3/rename.sh
+RUN /container/im2txt/data/dataset3/rename.sh
 
 ADD grpc/app/container_entry.sh /container/
 ADD grpc/app/server.py /container/
