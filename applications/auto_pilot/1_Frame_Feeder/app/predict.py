@@ -3,5 +3,7 @@ import scipy.misc
 import json
 
 def predict(i):
-  full_image = scipy.misc.imread("/container/dataset/" + str(i) + ".jpg", mode="RGB")
-  return json.dumps(full_image.tolist())
+	image_path = "/container/dataset/" + str(i) + ".jpg"
+	with open(image_path, "rb") as imageFile:
+		string = base64.encodestring(imageFile.read())
+    return string
