@@ -6,7 +6,6 @@ RUN apt install wget
 RUN pip3 install grpcio
 RUN pip3 install protobuf
 
-# container/ will have: predict.py, captionData/, im2txt/
 ADD imagequery/c2_imageCaptionGenerator/app /container/
 ADD imagequery/c2_imageCaptionGenerator/captionData /container/captionData
 ADD imagequery/c2_imageCaptionGenerator/im2txt/ /container/im2txt/
