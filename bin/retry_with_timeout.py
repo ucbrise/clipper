@@ -3,6 +3,14 @@ import subprocess
 import sys
 import time
 from random import randint
+import logging
+
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+    datefmt='%y-%m-%d:%H:%M:%S',
+    level=logging.INFO)
+
+logger = logging.getLogger(__name__)
 
 
 def timeout_to_float(s):
@@ -54,8 +62,8 @@ def run_once_with_timeout(command_to_run, timeout):
     start = time.time()
     while True:
         output, err = proc.communicate()
-        print("output: {}".format(output))
-        print("err: {}".format(err))
+        logger.info("output: {}".format(output))
+        logger.info("err: {}".format(err))
         return_code = proc.returncode
         if return_code is not None:
             return return_code
@@ -70,23 +78,23 @@ def run_once_with_timeout(command_to_run, timeout):
 # the ports used by each test collide. To avoid this problem, wait for a random
 # amount of time and start the test.
 sleep_time = randint(60, 600)  # 1min ~ 10min
-print("Sleep {} secs before starting a test".format(sleep_time))
+logger.info("Sleep {} secs before starting a test".format(sleep_time))
 time.sleep(sleep_time)
 
 for try_num in range(args.retry + 1):
-    print(
+    logger.info(
         "Starting Trial {try_num} with timeout {timeout} seconds".format(
             try_num=try_num, timeout=timeout
         )
     )
     return_code = run_once_with_timeout(command_to_run, timeout)
     if return_code == 0:
-        print("Success!")
+        logger.info("Success!")
         sys.exit(0)
     else:
         sleep_time = randint(60, 600)  # 1min ~ 10min
-        print("Sleep {}".format(sleep_time))
+        logger.info("Sleep {}".format(sleep_time))
         time.sleep(sleep_time)
 
-print("All retry failed.")
+logger.info("All retry failed.")
 sys.exit(1)
