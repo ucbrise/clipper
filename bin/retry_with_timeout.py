@@ -3,6 +3,7 @@ import subprocess
 import sys
 import time
 from random import randint
+import docker
 
 
 def timeout_to_float(s):
@@ -51,15 +52,15 @@ def run_once_with_timeout(command_to_run, timeout):
     proc = subprocess.Popen(
         command_to_run, stdout=sys.stdout, stderr=sys.stderr
     )
+    docker_client = docker.from_env()
     start = time.time()
     while True:
-        output, err = proc.communicate()
-        print("output: {}".format(output))
-        print("err: {}".format(err))
+        proc.poll()
         return_code = proc.returncode
         if return_code is not None:
             return return_code
         else:
+            print(docker_client.networks.list())
             duration = time.time() - start
             if duration > timeout:
                 proc.kill()
