@@ -14,8 +14,11 @@ def read_image(i):
 	return image
 
 def predict(i):
-	image = read_image(i)
-	image = scipy.misc.imresize(image[-150:], [66, 200]) / 255.0
-	degrees = model.y.eval(feed_dict={model.x: [image], model.keep_prob: 1.0})[0][0] * 180.0 / 3.1415926
-	print(degrees)
-	return str(degrees)
+	try:
+		image = read_image(i)
+		image = scipy.misc.imresize(image[-150:], [66, 200]) / 255.0
+		degrees = model.y.eval(feed_dict={model.x: [image], model.keep_prob: 1.0})[0][0] * 180.0 / 3.1415926
+		print(degrees)
+		return str(degrees)
+	except Exception as exc:
+		print('%s generated an exception: %s' % (str(inputt), exc))
