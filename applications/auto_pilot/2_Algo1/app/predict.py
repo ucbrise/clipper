@@ -10,7 +10,7 @@ saver.restore(sess, "/container/model.ckpt")
 def read_image(i):
 	image_path = "container/dataset/" + i + ".jpg"
 	print(image_path)
-	image = scipy.misc.imread(image_path, mode="RGB").tolist()
+	image = scipy.misc.imread(image_path, mode="RGB")
 	print("image shape is ", image.shape)
 	return image
 
