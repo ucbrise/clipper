@@ -1,6 +1,7 @@
 import tensorflow as tf
 import model
 import scipy.misc
+import cv2
 import os
 
 sess = tf.InteractiveSession()
@@ -8,9 +9,10 @@ saver = tf.train.Saver()
 saver.restore(sess, "/container/model.ckpt")
 
 def read_image(i):
-	image_path = "container/dataset/" + i + ".jpg"
+	image_path = "/container/dataset/" + i + ".jpg"
 	print(image_path)
-	image = scipy.misc.imread(image_path, mode="RGB")
+	image = cv2.imread(image_path)
+	print(type(image))
 	print("image shape is ", image.shape)
 	return image
 
