@@ -6,7 +6,7 @@ from timeit import default_timer as timer
 def recognize(audio_file_index):
     audio_file_index = int(audio_file_index)
     if audio_file_index < 0 or audio_file_index > 1000:
-        return "Invalid image index! Only index between 1 to 800 is allowed! Exiting..."
+        return "Invalid image index! Only index between 1 to 1000 is allowed! Exiting..."
 
     dataset_index = 3
 
