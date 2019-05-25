@@ -3,7 +3,6 @@ import subprocess
 import sys
 import time
 from random import randint
-import docker
 import logging
 
 logging.basicConfig(
@@ -60,8 +59,7 @@ def run_once_with_timeout(command_to_run, timeout):
     proc = subprocess.Popen(
         command_to_run, stdout=sys.stdout, stderr=sys.stderr
     )
-    docker_client = docker.from_env()
-    logger.info("docker daemon response: {}".format(docker_client.ping()))
+    logger.info("docker daemon response: {}".format(subprocess.check_output(["docker", "info"])))
     start = time.time()
     while True:
         proc.poll()
@@ -69,11 +67,9 @@ def run_once_with_timeout(command_to_run, timeout):
         if return_code is not None:
             return return_code
         else:
-            docker_networks = docker_client.networks.list()
-            for docker_network in docker_networks:
-                logger.info("network name: {}".format(docker_network.name))
-                logger.info("Connected container: {}".format(docker_network.containers))
-                logger.info("attribute: {}".format(docker_network.attrs))
+            logger.info(subprocess.check_output(['docker', 'ps']))
+            logger.info(subprocess.check_output(['docker', 'network', 'ls']))
+            logger.info(subprocess.check_output(['docker', 'volume', 'ls']))
             duration = time.time() - start
             if duration > timeout:
                 proc.kill()
