@@ -61,6 +61,7 @@ def run_once_with_timeout(command_to_run, timeout):
         command_to_run, stdout=sys.stdout, stderr=sys.stderr
     )
     docker_client = docker.from_env()
+    logger.info("docker daemon response: {}".format(docker_client.ping()))
     start = time.time()
     while True:
         proc.poll()
@@ -68,7 +69,11 @@ def run_once_with_timeout(command_to_run, timeout):
         if return_code is not None:
             return return_code
         else:
-            print(docker_client.networks.list())
+            docker_networks = docker_client.networks.list()
+            for docker_network in docker_networks:
+                logger.info("network name: {}".format(docker_network.name))
+                logger.info("Connected container: {}".format(docker_network.containers))
+                logger.info("attribute: {}".format(docker_network.attrs))
             duration = time.time() - start
             if duration > timeout:
                 proc.kill()
