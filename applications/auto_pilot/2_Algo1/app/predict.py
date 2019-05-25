@@ -8,7 +8,7 @@ saver = tf.train.Saver()
 saver.restore(sess, "/container/model.ckpt")
 
 def read_image(i):
-	image_path = "dataset/" + i + ".jpg"
+	image_path = "container/dataset/" + i + ".jpg"
 	print(image_path)
 	image = scipy.misc.imread(image_path, mode="RGB").tolist()
 	print("image shape is ", image.shape)
@@ -16,7 +16,7 @@ def read_image(i):
 
 def predict(i):
 	try:
-		myCmd = 'ls -la'
+		myCmd = 'ls contianer'
 		os.system(myCmd)
 		image = read_image(i)
 		image = scipy.misc.imresize(image[-150:], [66, 200]) / 255.0
