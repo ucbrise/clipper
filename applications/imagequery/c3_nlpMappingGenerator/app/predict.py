@@ -287,9 +287,9 @@ def findSVOs(tokens):
 def predict(input_str):
     tokens = nlp(input_str)
     svos = findSVOs(tokens)
-    combined_subject = "<"
-    combined_verb = "<"
-    combined_object = "<"
+    combined_subject = ""
+    combined_verb = ""
+    combined_object = ""
     i = 0
     for svo in svos:
         if i < len(svos) - 1:
@@ -301,9 +301,6 @@ def predict(input_str):
             combined_verb = combined_verb  + svo[1]
             combined_object = combined_object  + svo[2]
         i = i + 1
-    combined_subject += ">"
-    combined_verb += ">"
-    combined_object += ">"
 
     print("Generated mapping: " + combined_subject + "-" + combined_verb + "-" + combined_object)
     
