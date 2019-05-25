@@ -24,8 +24,9 @@ def read_image(i):
     return image
 
 def predict(i):
-    image = read_image(i)
-    image = np.asarray(image.astype(np.float32))
-    gray = cv2.resize((cv2.cvtColor(image, cv2.COLOR_RGB2HSV))[:, :, 1], (40, 40))
-    steering_angle = keras_predict(model, gray)
-    return str(steering_angle)
+    # image = read_image(i)
+    # image = np.asarray(image.astype(np.float32))
+    # gray = cv2.resize((cv2.cvtColor(image, cv2.COLOR_RGB2HSV))[:, :, 1], (40, 40))
+    # steering_angle = keras_predict(model, gray)
+    # return str(steering_angle)
+    return "1"
