@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 import json
 import base64
+import tensorflow as tf
 
 # load the model:
 model = Sequential()
@@ -16,6 +17,8 @@ with open('/container/autopilot_basic_model.json') as model_file:
 
 # load weights
 model.load_weights("/container/model_basic_weight.hdf5")
+
+graph = tf.get_default_graph()
 
 adam = Adam(lr=0.0001)
 
@@ -27,10 +30,12 @@ def read_image(i):
     return image
 
 def predict(i):
-    image = read_image(i)
-    resized = cv2.resize(image, (128,128))
-    preds = model.predict(resized.reshape(1,3,128,128))
-    print(preds)
-    steer_preds = (preds.reshape([-1])+1)/2.
-    return str(steer_preds[0])
+    global graph
+    with graph.as_default():
+        image = read_image(i)
+        resized = cv2.resize(image, (128,128))
+        preds = model.predict(resized.reshape(1,3,128,128))
+        print(preds)
+        steer_preds = (preds.reshape([-1])+1)/2.
+        return str(steer_preds[0])
 
