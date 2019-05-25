@@ -100,7 +100,8 @@ if __name__ == "__main__":
     cluster_name = "keras-{}".format(random.randint(0, 5000))
     try:
         model = create_simple_keras_model()
-        model.save('data/model.h5')
+        model_path = os.path.join(cur_dir, "data/model.h5")
+        model.save(model_path)
 
         clipper_conn = create_docker_connection(
             cleanup=False, start_clipper=True, new_name=cluster_name)
@@ -130,7 +131,7 @@ if __name__ == "__main__":
             # Deploy a Keras Model using a saved Keras Model ('.h5')
             version += 1
             deploy_and_test_model(
-                clipper_conn, "data/model.h5", version, "ints", link_model=False)
+                clipper_conn, model_path, version, "ints", link_model=False)
 
         except BenchmarkException:
             log_clipper_state(clipper_conn)
