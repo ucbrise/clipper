@@ -21,10 +21,12 @@ def keras_process_image(img):
 def read_image(i):
     image_path = "/container/dataset/" + i + ".jpg"
     image = cv2.imread(image_path)
+    print("original shape", image.shape)
     return image
 
 def predict(i):
     image = read_image(i)
     gray = cv2.resize((cv2.cvtColor(image, cv2.COLOR_RGB2HSV))[:, :, 1], (40, 40))
+    print("resized shape", gray.shape)
     steering_angle = keras_predict(model, gray)
     return str(steering_angle)
