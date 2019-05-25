@@ -1,4 +1,7 @@
 import en_core_web_md
+# from preprocess import preprocess
+# print(preprocess)
+print("predict.py Modules loaded successfully")
 
 # use spacy small model
 nlp = en_core_web_md.load()

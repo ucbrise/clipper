@@ -10,6 +10,7 @@ nlp = spacy.load('en_core_web_md')
 stopword_list = nltk.corpus.stopwords.words('english')
 stopword_list.remove('no')
 stopword_list.remove('not')
+print("preprocess.py modules loaded successfully")
 
 """
 This file provides the function for preprocessing text before NLP.
