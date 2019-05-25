@@ -6,8 +6,10 @@ model = load_model('/container/Autopilot.h5')
 
 def keras_predict(model, image):
     processed = keras_process_image(image)
+    print("processed shape", processed.shape)
     steering_angle = float(model.predict(processed, batch_size=1))
     steering_angle = steering_angle * 100
+    print(steering_angle)
     return steering_angle
 
 def keras_process_image(img):
