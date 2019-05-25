@@ -1,5 +1,4 @@
 import en_core_web_md
-from preprocess import preprocess
 
 # use spacy small model
 nlp = en_core_web_md.load()
@@ -286,7 +285,6 @@ def findSVOs(tokens):
     return svos
 
 def predict(input_str):
-    # input_str = preprocess(input_str)
     tokens = nlp(input_str)
     svos = findSVOs(tokens)
     combined_subject = "<"
