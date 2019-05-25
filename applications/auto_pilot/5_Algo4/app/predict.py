@@ -26,7 +26,7 @@ def read_image(i):
     image = cv2.imread(image_path)
     return image
 
-def predict(image_str):
+def predict(i):
     image = read_image(i)
     resized = cv2.resize(image, (128,128))
     preds = model.predict(resized.reshape(1,3,128,128))
