@@ -311,5 +311,5 @@ def predict(input_str):
     
     return combined_subject + "-" + combined_verb + "-" + combined_object
 
-# if __name__ == "__main__":
-#     print(predict("Chris Kraft neared the end of a tedious Friday afternoon as he monitored a seemingly interminable ground test of the Apollo 1 spacecraft."))
+if __name__ == "__main__":
+    print(predict("Chris Kraft neared the end of a tedious Friday afternoon as he monitored a seemingly interminable ground test of the Apollo 1 spacecraft."))

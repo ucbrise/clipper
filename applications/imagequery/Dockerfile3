@@ -8,7 +8,7 @@ RUN python3 -m spacy download en_core_web_md
 RUN pip3 install grpcio
 RUN pip3 install protobuf
 
-# container will have: preprocess.py, predict.py, server.py
+# container will have: preprocess.py, predict.py
 ADD imagequery/c3_nlpMappingGenerator/app /container/
 
 ADD grpc/app/container_entry.sh /container/
@@ -18,6 +18,7 @@ ADD grpc/app/model_pb2.py /container/
 ADD grpc/app/proxy_pb2_grpc.py /container/
 ADD grpc/app/proxy_pb2.py /container/
 
-CMD ["/container/container_entry.sh", "c3", "/container/server.py"]
+# CMD ["/container/container_entry.sh", "c3", "/container/server.py"]
+CMD ["python3","/container/predict.py"]
 
 EXPOSE 11000
