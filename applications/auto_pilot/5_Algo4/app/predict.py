@@ -30,6 +30,7 @@ def predict(image_str):
     image = read_image(i)
     resized = cv2.resize(image, (128,128))
     preds = model.predict(resized.reshape(1,3,128,128))
+    print(preds)
     steer_preds = (preds.reshape([-1])+1)/2.
     return str(steer_preds[0])
 
