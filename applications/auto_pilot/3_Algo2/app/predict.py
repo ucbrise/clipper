@@ -9,7 +9,7 @@ def keras_predict(model, image):
     print("processed shape", processed.shape)
     steering_angle = float(model.predict(processed, batch_size=1))
     steering_angle = steering_angle * 100
-    print(steering_angle)
+    print("result", steering_angle)
     return steering_angle
 
 def keras_process_image(img):
@@ -27,8 +27,11 @@ def read_image(i):
     return image
 
 def predict(i):
-    image = read_image(i)
-    gray = cv2.resize((cv2.cvtColor(image, cv2.COLOR_RGB2HSV))[:, :, 1], (40, 40))
-    print("resized shape", gray.shape)
-    steering_angle = keras_predict(model, gray)
-    return str(steering_angle)
+    try:
+        image = read_image(i)
+        gray = cv2.resize((cv2.cvtColor(image, cv2.COLOR_RGB2HSV))[:, :, 1], (40, 40))
+        print("resized shape", gray.shape)
+        steering_angle = keras_predict(model, gray)
+        return str(steering_angle)
+    except Exception as exc:
+        print('%s generated an exception: %s' % (str(inputt), exc))
