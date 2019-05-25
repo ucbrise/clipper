@@ -16,7 +16,7 @@ def read_image(i):
 
 def predict(i):
 	try:
-		myCmd = 'ls contianer'
+		myCmd = 'ls container'
 		os.system(myCmd)
 		image = read_image(i)
 		image = scipy.misc.imresize(image[-150:], [66, 200]) / 255.0
