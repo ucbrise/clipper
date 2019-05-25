@@ -1,7 +1,5 @@
-import json
 import numpy as np
 import cv2
-import base64
 from keras.models import load_model
 
 model = load_model('/container/Autopilot.h5')
@@ -20,11 +18,13 @@ def keras_process_image(img):
     img = np.reshape(img, (-1, image_x, image_y, 1))
     return img
 
-def predict(image_str):
-    fh = open("temp.jpg", "wb")
-    fh.write(base64.decodebytes(image_str))
-    fh.close()
-    image = scipy.misc.imread("temp.jpg", mode="RGB").tolist()
+def read_image(i):
+    image_path = "/container/dataset/" + i + ".jpg"
+    image = scipy.misc.imread(image_path, mode="RGB").tolist()
+    return image
+
+def predict(i):
+    image = read_image(i)
     image = np.asarray(image.astype(np.float32))
     gray = cv2.resize((cv2.cvtColor(image, cv2.COLOR_RGB2HSV))[:, :, 1], (40, 40))
     steering_angle = keras_predict(model, gray)
