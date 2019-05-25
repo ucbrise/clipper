@@ -8,7 +8,7 @@ def recognize(audio_file_index):
     if audio_file_index < 0 or audio_file_index > 1000:
         return "Invalid image index! Only index between 1 to 800 is allowed! Exiting..."
 
-    dataset_index = 2
+    dataset_index = 3
 
     if dataset_index == 1:
         # dataset1: CMU arctic
