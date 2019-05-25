@@ -286,7 +286,7 @@ def findSVOs(tokens):
     return svos
 
 def predict(input_str):
-    input_str = preprocess(input_str)
+    # input_str = preprocess(input_str)
     tokens = nlp(input_str)
     svos = findSVOs(tokens)
     combined_subject = "<"
