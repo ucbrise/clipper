@@ -67,11 +67,11 @@ def run_once_with_timeout(command_to_run, timeout):
         if return_code is not None:
             return return_code
         else:
-            logger.info(subprocess.check_output(['docker', 'ps']))
-            logger.info(subprocess.check_output(['docker', 'network', 'ls']))
-            logger.info(subprocess.check_output(['docker', 'volume', 'ls']))
             duration = time.time() - start
             if duration > timeout:
+                logger.info(subprocess.check_output(['docker', 'ps']))
+                logger.info(subprocess.check_output(['docker', 'network', 'ls']))
+                logger.info(subprocess.check_output(['docker', 'volume', 'ls']))
                 proc.kill()
                 return 1
 
