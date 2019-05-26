@@ -3,7 +3,6 @@
 import numpy as np
 import tensorflow as tf
 import re
-from xmlrpc.server import SimpleXMLRPCServer
 
 batchSize = 24
 lstmUnits = 64
@@ -18,7 +17,7 @@ def cleanSentences(string):
 
 wordVectors = np.load('container/wordVectors.npy')
 wordsList = np.load('container/wordsList.npy')
-print('Loaded the word list!')
+print('\n[INFO]Loaded the word list!')
 wordsList = wordsList.tolist() #Originally loaded as numpy array
 wordsList = [word.decode('UTF-8') for word in wordsList] #Encode words as UTF-8
 
@@ -68,7 +67,7 @@ def predict(paragraph):
           lb.append([1,0])
           inputdt[i]=ids[0]
       Prediction=sess.run(correctPred[0], {input_data: inputdt, labels: lb})
-      print("Prediction: ", Prediction)
+      print("\n[INFO] Prediction: ", Prediction)
       sess.close()
       if Prediction:
           return 1;
