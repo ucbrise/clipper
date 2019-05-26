@@ -11,10 +11,10 @@ def retrieveStockPrice(requestInfo):
 	starting_year = info[1]
 	starting_month = info[2]
 	starting_day = info[3]
-  	start = datetime.datetime(starting_year, starting_month, starting_day)
- 	end = datetime.date.today()
-  	stock_price_dataframe = quandl.get("WIKI/" + stockcode, start_date=start, end_date=end) # dateframe type
-  	return stock_price_dataframe.to_json()
+	start = datetime.datetime(starting_year, starting_month, starting_day)
+	end = datetime.date.today()
+	stock_price_dataframe = quandl.get("WIKI/" + stockcode, start_date=start, end_date=end) # dateframe type
+	return stock_price_dataframe.to_json()
 
 def predict(requestInfo): # serves as an api function
-  	return retrieveStockPrice(requestInfo)
+	return retrieveStockPrice(requestInfo)
