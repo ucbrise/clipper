@@ -69,7 +69,6 @@ generator = caption_generator.CaptionGenerator(model, vocab)
 
 
 def predict(image_file_index):
-    image_file_index = 1
 
     image_file_index = int(image_file_index)
     if image_file_index > 800:
