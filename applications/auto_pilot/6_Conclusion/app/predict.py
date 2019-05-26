@@ -1,9 +1,13 @@
 
-def predict(a1_str, a2_str, a3_str):
+def predict(a_str_s):
 
-    a1 = float(a1_str)
-    a2 = float(a2_str)
-    a3 = float(a3_str)
+    print(a_str_s)
+
+    a_str_ls = a_str_s.split("|")
+
+    a1 = float(a_str_ls[0])
+    a2 = float(a_str_ls[1])
+    a3 = float(a_str_ls[2])
 
     final = (a1 + a2 + a3) / 3
 
