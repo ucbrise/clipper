@@ -1,26 +1,36 @@
-import tensorflow as tf
-import model
-import scipy.misc
+import numpy as np
 import cv2
-import os
+from keras.models import load_model
 
-sess = tf.InteractiveSession()
-saver = tf.train.Saver()
-saver.restore(sess, "/container/model.ckpt")
+def keras_predict(model, image):
+    processed = keras_process_image(image)
+    print("processed shape", processed.shape)
+    steering_angle = float(model.predict(processed, batch_size=1))
+    steering_angle = steering_angle * 100
+    return steering_angle
+
+def keras_process_image(img):
+    image_x = 40
+    image_y = 40
+    img = cv2.resize(img, (image_x, image_y))
+    img = np.array(img, dtype=np.float32)
+    img = np.reshape(img, (-1, image_x, image_y, 1))
+    return img
 
 def read_image(i):
-	image_path = "/container/dataset/" + i + ".jpg"
-	print(image_path)
-	image = cv2.imread(image_path)
-	print("image shape", image.shape)
-	return image
+    image_path = "/container/dataset/" + i + ".jpg"
+    image = cv2.imread(image_path)
+    print("original shape", image.shape)
+    return image
 
 def predict(i):
-	try:
-		image = cv2.resize(image, (66, 200)) / 255.0
-		print("resized image shape is ", image.shape)
-		degrees = model.y.eval(feed_dict={model.x: [image], model.keep_prob: 1.0})[0][0] * 180.0 / 3.1415926
-		print(degrees)
-		return str(degrees)
-	except Exception as exc:
-		print('%s generated an exception: %s' % (str(inputt), exc))
+    try:
+        model = load_model('/container/Autopilot.h5')
+        image = read_image(i)
+        gray = cv2.resize((cv2.cvtColor(image, cv2.COLOR_RGB2HSV))[:, :, 1], (40, 40))
+        print("resized shape", gray.shape)
+        steering_angle = keras_predict(model, gray)
+        return str(steering_angle)
+    except Exception as exc:
+        print('%s generated an exception: %s' % (str(inputt), exc))
+

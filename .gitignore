@@ -21,3 +21,5 @@ dependency-reduced-pom.xml
 
 docker-compose.yml
 .ipynb_checkpoints
+
+applications/auto_pilot/4_Obstacle_Detection/app/weights/YOLO_small\.ckpt

@@ -2,19 +2,16 @@ import numpy as np
 import cv2
 from keras.models import load_model
 
-model = load_model('/container/Autopilot.h5')
-
 def keras_predict(model, image):
     processed = keras_process_image(image)
     print("processed shape", processed.shape)
     steering_angle = float(model.predict(processed, batch_size=1))
-    steering_angle = steering_angle * 100
-    print("result", steering_angle)
+    steering_angle = steering_angle * 60
     return steering_angle
 
 def keras_process_image(img):
-    image_x = 40
-    image_y = 40
+    image_x = 100
+    image_y = 100
     img = cv2.resize(img, (image_x, image_y))
     img = np.array(img, dtype=np.float32)
     img = np.reshape(img, (-1, image_x, image_y, 1))
@@ -28,9 +25,10 @@ def read_image(i):
 
 def predict(i):
     try:
+        model = load_model('/container/Autopilot_V2.h5')
         image = read_image(i)
-        gray = cv2.resize((cv2.cvtColor(image, cv2.COLOR_RGB2HSV))[:, :, 1], (40, 40))
-        print("resized shape", gray.shape)
+        gray = cv2.resize((cv2.cvtColor(image, cv2.COLOR_RGB2HSV))[:, :, 1], (100, 100))
+        print("resized shape", image.shape)
         steering_angle = keras_predict(model, gray)
         return str(steering_angle)
     except Exception as exc:
