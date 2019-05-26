@@ -58,7 +58,7 @@ except AssertionError:
 def run_once_with_timeout(command_to_run, timeout):
     # [TEMPORARY] for debugging
     logger.info('command_to_run: [{}]'.format(command_to_run))
-    if 'deploy_mxnet' in command_to_run:
+    if 'deploy_mxnet' in command_to_run[13]:
         logger.info('Check docker info.\n')
         logger.info(subprocess.check_output(['docker', 'info']))
         logger.info('Check docker disk usage.\n')
