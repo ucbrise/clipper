@@ -10,5 +10,9 @@ try_cleanup() {
     (docker image ls --all | grep "$@" | awk '{ print $3 }' | xargs docker image rm -f) || true
 }
 
+try_cleanup_docker_volume() {
+    (docker volume ls -f dangling=true | awk '{ print $2 }' | xargs docker volume rm -f) || true
+}
 try_cleanup CLIPPER_REGISTRY > /dev/null
 try_cleanup shipyard > /dev/null
+try_cleanup_docker_volume > /dev/null
