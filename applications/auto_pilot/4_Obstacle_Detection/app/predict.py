@@ -2,6 +2,9 @@ import numpy as np
 import tensorflow as tf
 import cv2
 
+
+previous = []
+
 class yolo_tf:
     w_img = 1280
     h_img = 720
@@ -147,14 +150,8 @@ def interpret_output(yolo,output):
 
     filter_iou = np.array(probs_filtered>0.0,dtype='bool')
     boxes_filtered = boxes_filtered[filter_iou]
-    probs_filtered = probs_filtered[filter_iou]
-    classes_num_filtered = classes_num_filtered[filter_iou]
 
-    result = []
-    for i in range(len(boxes_filtered)):
-        result.append([yolo.classes[classes_num_filtered[i]],boxes_filtered[i][0],boxes_filtered[i][1],boxes_filtered[i][2],boxes_filtered[i][3],probs_filtered[i]])
-
-    return result
+    return len(boxes_filtered)
 
 def iou(box1,box2):
     tb = min(box1[0]+0.5*box1[2],box2[0]+0.5*box2[2])-max(box1[0]-0.5*box1[2],box2[0]-0.5*box2[2])
@@ -169,19 +166,36 @@ def read_image(i):
     print("original shape", image.shape)
     return image
 
-previous = []
-
 def predict(i):
 
-    yolo = yolo_tf()
-    image = read_image(i)
-    detect_from_cvmat(yolo, image)
-    results = yolo.result_list
-    
-    obstacle_detected = len(results) != 0
+    global previous
 
-    to_return = results or (sum(previous) > 0)
+    try:
+        yolo = yolo_tf()
+        image = read_image(i)
+        detect_from_cvmat(yolo, image)
+        results = yolo.result_list
 
-    previous = previous[1:] + [obstacle_detected]
+        print("dectection result", results)
 
-    return str(to_return)
+        print("len", len(results))
+        
+        obstacle_detected = (results > 0)
+
+        print("obstacle detected?", obstacle_detected)
+
+        to_return = obstacle_detected or (sum(previous) > 0)
+
+        print("to return", to_return)
+
+        previous.append(obstacle_detected)
+
+        if len(previous) > 3:
+            previous = previous[1:]
+
+        return str(to_return)
+
+    except Exception as exc:
+        print('%s generated an exception: %s' % (str(inputt), exc))
+
+        
