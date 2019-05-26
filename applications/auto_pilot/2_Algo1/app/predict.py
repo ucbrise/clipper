@@ -11,7 +11,7 @@ saver.restore(sess, "/container/model.ckpt")
 def read_image(i):
 	image_path = "/container/dataset/" + i + ".jpg"
 	print(image_path)
-    image = cv2.imread(image_path)
+	image = cv2.imread(image_path)
 	print("image shape", image.shape)
 	return image
 
