@@ -59,7 +59,6 @@ def run_once_with_timeout(command_to_run, timeout):
     proc = subprocess.Popen(
         command_to_run, stdout=sys.stdout, stderr=sys.stderr
     )
-    logger.info("docker daemon response: {}".format(subprocess.check_output(["docker", "info"])))
     start = time.time()
     while True:
         proc.poll()
@@ -68,10 +67,16 @@ def run_once_with_timeout(command_to_run, timeout):
             return return_code
         else:
             duration = time.time() - start
-            if duration > timeout:
+            # Debug log. Please delete
+            if 'deploy_mxnet' in command_to_run:
+                logger.info('Check docker info.\n')
+                logger.info(subprocess.check_output(['docker', 'info']))
+                logger.info('Check docker disk usage.\n')
+                logger.info(subprocess.check_output(['docker', 'system', 'df', '-v']))
+                logger.info('Check if docker ps responds.\n')
                 logger.info(subprocess.check_output(['docker', 'ps']))
+                logger.info('Check network list.\n')
                 logger.info(subprocess.check_output(['docker', 'network', 'ls']))
-                logger.info(subprocess.check_output(['docker', 'volume', 'ls']))
                 proc.kill()
                 return 1
 
