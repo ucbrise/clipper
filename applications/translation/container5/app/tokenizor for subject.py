@@ -6,9 +6,6 @@ Created on Wed Mar 20 12:10:10 2019
 @author: davidzhou
 """
 
-import xmlrpc.client
-from xmlrpc.server import SimpleXMLRPCServer
-
 # Gensim
 import gensim
 from gensim.utils import simple_preprocess
@@ -17,6 +14,7 @@ import spacy
 import re
 import numpy as np
 from pprint import pprint
+import json
 
 # Enable logging for gensim - optional
 import logging
@@ -61,25 +59,11 @@ def text_clean(text):
     data_lemmatized = lemmatization(data_words_nostops, allowed_postags=['NOUN', 'ADJ', 'VERB', 'ADV'])
     final=[word for word in data_lemmatized if word!=[]]
     data=["".join(words) for words in final]
-    return data
+    data_string=json.dumps(data)
+    return data_string
 
-server = SimpleXMLRPCServer(("0.0.0.0", 11003))
 
-print("Listening on port 11003...")
-
-server.register_function(text_clean, "text_clean")
-
-server.serve_forever()
     
 
 
 
-
-#text=[['health','drug','play']]
-#id2word = corpora.Dictionary(text)
-#corpus=[id2word.doc2bow(text[0])]
-#
-#print(corpus)
-#vector=myLDA[corpus]
-#pprint(vector)
-#pprint(myLDA.print_topics(num_words=20))
