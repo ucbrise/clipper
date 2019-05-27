@@ -201,8 +201,8 @@ def predict(i):
             return str(to_return)
 
         else:
-
-        #     return previous[-1]
+            
+            return previous[-1]
 
     except Exception as exc:
         print('%s generated an exception: %s' % (str(inputt), exc))

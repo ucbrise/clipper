@@ -21,7 +21,7 @@ def predict(info):
         result += ", algo2 angle " + str(round(a2,2))
         result += ", final angle " + str(round(final,2))
 
-        if info[2] == "False":
+        if info_ls[2] == "False":
             result += "\nNo obstacle dedetected. Speed Up !!"
         else:
             result += "\nObstacle Detected. Slow Down !!"
