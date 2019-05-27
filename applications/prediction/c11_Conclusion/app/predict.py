@@ -1,6 +1,6 @@
 def predict(received):
     print("Received Output:%s"%(received))
-    return "Financial Analysis finished"
+    return received
     
 # def predict(price_pred_list, trend_pred, polarity_list):
 
