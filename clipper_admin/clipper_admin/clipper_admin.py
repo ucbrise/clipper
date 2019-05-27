@@ -1247,8 +1247,13 @@ class ClipperConnection(object):
             raise UnconnectedException()
         return self.cm.get_metric_addr()
 
-    def unregister_versioned_models(self, model_versions_dict):
+    def _unregister_versioned_models(self, model_versions_dict):
         """Unregister the specified versions of the specified models from Clipper internal.
+
+        This function does not be opened to public because it might cause critical operation.
+        Please use 'stop_models', 'stop_versioned_models', 'stop_inactive_model_versions',
+        and 'stop_all_model_containers' APIs according to your need.
+
         Parameters
         ----------
         model_versions_dict : dict(str, list(str))
@@ -1307,7 +1312,7 @@ class ClipperConnection(object):
                 else:
                     model_dict[m["model_name"]] = [m["model_version"]]
         self.cm.stop_models(model_dict)
-        self.unregister_versioned_models(model_dict)
+        self._unregister_versioned_models(model_dict)
         pp = pprint.PrettyPrinter(indent=4)
         self.logger.info(
             "Stopped all containers for these models and versions:\n{}".format(
@@ -1334,7 +1339,7 @@ class ClipperConnection(object):
         if not self.connected:
             raise UnconnectedException()
         self.cm.stop_models(model_versions_dict)
-        self.unregister_versioned_models(model_versions_dict)
+        self._unregister_versioned_models(model_versions_dict)
         pp = pprint.PrettyPrinter(indent=4)
         self.logger.info(
             "Stopped all containers for these models and versions:\n{}".format(
@@ -1371,7 +1376,7 @@ class ClipperConnection(object):
                 else:
                     model_dict[m["model_name"]] = [m["model_version"]]
         self.cm.stop_models(model_dict)
-        self.unregister_versioned_models(model_dict)
+        self._unregister_versioned_models(model_dict)
         pp = pprint.PrettyPrinter(indent=4)
         self.logger.info(
             "Stopped all containers for these models and versions:\n{}".format(
@@ -1399,7 +1404,7 @@ class ClipperConnection(object):
             else:
                 model_dict[m["model_name"]] = [m["model_version"]]
         self.cm.stop_all_model_containers()
-        self.unregister_versioned_models(model_dict)
+        self._unregister_versioned_models(model_dict)
         pp = pprint.PrettyPrinter(indent=4)
         self.logger.info("Stopped all Clipper model containers:\n{}".format(
             pp.pformat(model_dict)))
