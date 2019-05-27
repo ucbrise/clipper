@@ -172,6 +172,8 @@ def predict(i):
 
     try:
 
+        # return "False"
+
         if i%10 == 0 or len(previous) == 0:
 
             yolo = yolo_tf()
@@ -200,7 +202,7 @@ def predict(i):
 
         else:
 
-            return previous[-1]
+        #     return previous[-1]
 
     except Exception as exc:
         print('%s generated an exception: %s' % (str(inputt), exc))
