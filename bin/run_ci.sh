@@ -49,8 +49,8 @@ make -j -f CI_build.Makefile kubernetes_test_containers
 make -j -f CI_build.Makefile all
 
 # [TEMPORARY]
-make -j10 -f CI_test.Makefile integration_py2_mxnet
 make -j10 -f CI_test.Makefile integration_py3_mxnet
+make -j10 -f CI_test.Makefile integration_py2_mxnet
 
 # Run all test
 #make -j10 -f CI_test.Makefile unittest
