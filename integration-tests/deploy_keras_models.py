@@ -40,11 +40,12 @@ def deploy_and_test_model(clipper_conn,
                           input_type,
                           link_model=False,
                           predict_fn=predict):
-    keras_deployer.deploy_keras_model(clipper_conn=clipper_conn, name=model_name, version=version, input_type=input_type,
+    keras_deployer.deploy_keras_model(clipper_conn=clipper_conn,
+                                      name=model_name,
+                                      version=version,
+                                      input_type=input_type,
                                       func=predict_fn,
-                                      model_path_or_object=model,
-                                      base_image='keras-container')
-
+                                      model_path_or_object=model)
     time.sleep(5)
 
     if link_model:
