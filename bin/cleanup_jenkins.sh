@@ -7,7 +7,7 @@ CLIPPER_REGISTRY=clippertesting
 try_cleanup() {
     (docker ps --all | grep "$@" | awk '{ print $1 }' | xargs docker kill) || true
     (docker container ls --all | grep "$@" | awk '{ print $3 }' | xargs docker container rm) || true
-    (docker image ls --filter "label=maintainer=Dan Crankshaw <dscrankshaw@gmail.com>" | awk '{ print $3 }' | xargs docker image rm -f) || true
+    (docker image ls --all | grep "$@" | awk '{ print $3 }' | xargs docker image rm -f) || true
     docker image prune -f
 }
 
