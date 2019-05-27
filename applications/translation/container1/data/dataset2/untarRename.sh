@@ -1,1 +1,19 @@
-1
+#!/bin/bash
+
+cd /container/data/dataset2
+tar -zxf flickr_audio.tar.gz
+# tar -xzvf flickr_audio.tar.gz
+
+cd /container/data/dataset2/flickr_audio/wavs
+index=0;
+for name in *.wav
+do
+    mv "${name}" "${index}.wav"
+    index=$((index+1))
+    if [ $index -gt 1000 ]; then
+      break
+    fi
+done
+
+echo "$(ls *.wav | wc -l) wav files in this /container/data/dataset2/flickr_audio/wavs."
+# 40000 wav files
