@@ -189,14 +189,11 @@ def predict(i):
 
             print("obstacle detected?", obstacle_detected)
 
-            to_return = obstacle_detected or (sum(previous) > 0)
+            to_return = obstacle_detected or (sum(previous[-3:]) > 0)
 
             print("to return", to_return)
 
             previous.append(obstacle_detected)
-
-            if len(previous) > 3:
-                previous = previous[1:]
 
             return str(to_return)
 
