@@ -171,29 +171,36 @@ def predict(i):
     global previous
 
     try:
-        yolo = yolo_tf()
-        image = read_image(i)
-        detect_from_cvmat(yolo, image)
-        results = yolo.result_list
 
-        print("dectection result", results)
+        if i%10 == 0 or len(previous) == 0:
 
-        print("len", len(results))
-        
-        obstacle_detected = (results > 0)
+            yolo = yolo_tf()
+            image = read_image(i)
+            detect_from_cvmat(yolo, image)
+            results = yolo.result_list
 
-        print("obstacle detected?", obstacle_detected)
+            print("dectection result", results)
 
-        to_return = obstacle_detected or (sum(previous) > 0)
+            print("len", len(results))
+            
+            obstacle_detected = (results > 0)
 
-        print("to return", to_return)
+            print("obstacle detected?", obstacle_detected)
 
-        previous.append(obstacle_detected)
+            to_return = obstacle_detected or (sum(previous) > 0)
 
-        if len(previous) > 3:
-            previous = previous[1:]
+            print("to return", to_return)
 
-        return str(to_return)
+            previous.append(obstacle_detected)
+
+            if len(previous) > 3:
+                previous = previous[1:]
+
+            return str(to_return)
+
+        else:
+
+            return previous[-1]
 
     except Exception as exc:
         print('%s generated an exception: %s' % (str(inputt), exc))
