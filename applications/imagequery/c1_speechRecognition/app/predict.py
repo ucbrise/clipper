@@ -17,6 +17,8 @@ try:
 except ImportError:
     from pipes import quote
 
+print("Modules successfully imported!")
+
 # These constants control the beam search decoder
 
 # Beam width used in the CTC decoder when building candidate transcriptions
