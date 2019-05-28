@@ -158,7 +158,7 @@ N_CONTEXT = 9
 def convert_samplerate(audio_path):
     sox_cmd = 'sox {} --type raw --bits 16 --channels 1 --rate 16000 --encoding signed-integer --endian little --compression 0.0 --no-dither - '.format(quote(audio_path))
     try:
-        output = subprocess.check_output(shlex.split(sox_cmd), stderr=subprocess.PIPE)
+        output = subprocess.check_output(shlex.split(sox_cmd))
     except subprocess.CalledProcessError as e:
         raise RuntimeError('SoX returned non-zero status: {}'.format(e.stderr))
     except OSError as e:
@@ -202,7 +202,7 @@ def predict(audio_file_index):
     fs = fin.getframerate() # fs: sampling frequency
     if fs != 16000:
         print('Warning: original sample rate ({}) is different than 16kHz. Resampling might produce erratic speech recognition.'.format(fs), file=sys.stderr)
-        fs, audio = convert_samplerate(args.audio)
+        fs, audio = convert_samplerate(audio_file_path)
     else:
         audio = np.frombuffer(fin.readframes(fin.getnframes()), np.int16)
     audio_length = fin.getnframes() * (1/16000)
