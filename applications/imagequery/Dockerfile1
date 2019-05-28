@@ -141,7 +141,7 @@ COPY . /DeepSpeech/
 
 WORKDIR /DeepSpeech
 
-ADD imagequery/requirements_for_c1.txt .
+COPY imagequery/requirements_for_c1.txt .
 # The line above is added by YIN Yue
 RUN pip3 --no-cache-dir install -r requirements_for_c1.txt
 
