@@ -34,7 +34,7 @@ ADD grpc/app/proxy_pb2.py /container/
 # RUN apt-get install nvidia-cuda-dev -y
 # RUN python3 /container/predict.py --model /container/models/output_graph.pbmm --alphabet /container/models/alphabet.txt --lm /container/models/lm.binary --trie /container/models/trie --audio /container/data/dataset1/cmu_us_awb_arctic/wav/0001.wav
 # RUN python3 /container/predict.py --model /container/models/output_graph.pbmm --alphabet /container/models/alphabet.txt --audio /container/data/dataset1/cmu_us_awb_arctic/wav/0001.wav
-CMD ["deepspeech","--model","/container/models/output_graph.pbmm","--alphabet","/container/models/alphabet.txt","--audio","/container/data/dataset1/cmu_us_awb_arctic/wav/0001.wav"]
+# CMD ["deepspeech","--model","/container/models/output_graph.pbmm","--alphabet","/container/models/alphabet.txt","--audio","/container/data/dataset1/cmu_us_awb_arctic/wav/0001.wav"]
 
 # CMD ["/container/container_entry.sh", "c1", "/container/server.py"]
 
