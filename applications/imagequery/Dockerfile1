@@ -18,8 +18,7 @@ RUN /container/data/dataset1/unzipRename.sh
 # download pre-trained model
 RUN wget --progress=bar:force https://github.com/mozilla/DeepSpeech/releases/download/v0.4.1/deepspeech-0.4.1-models.tar.gz
 RUN tar xvfz $(find / -name deepspeech-0.4.1-models.tar.gz)
-RUN find / -name models
-RUN mv $(find / -name models) /container
+RUN mv /models /container/models
 RUN ls /container
 RUN ls /container/models
 
