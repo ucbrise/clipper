@@ -31,7 +31,7 @@ ADD grpc/app/model_pb2.py /container/
 ADD grpc/app/proxy_pb2_grpc.py /container/
 ADD grpc/app/proxy_pb2.py /container/
 
-RUN apt-get install nvidia-cuda-dev
+RUN apt-get install nvidia-cuda-dev -y
 # RUN python3 /container/predict.py --model /container/models/output_graph.pbmm --alphabet /container/models/alphabet.txt --lm /container/models/lm.binary --trie /container/models/trie --audio /container/data/dataset1/cmu_us_awb_arctic/wav/0001.wav
 RUN python3 /container/predict.py --model /container/models/output_graph.pbmm --alphabet /container/models/alphabet.txt --audio /container/data/dataset1/cmu_us_awb_arctic/wav/0001.wav
 
