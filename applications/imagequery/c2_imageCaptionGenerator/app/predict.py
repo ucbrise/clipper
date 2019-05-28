@@ -75,8 +75,7 @@ def predict(image_file_index):
         return "Invalid image file index! Only index between 1 to 800 is allowed!"
 
     start = timer()
-    image_file_path = "/container/im2txt/data/imageDataset/101_ObjectCategories/image_" + \
-        str(image_file_index).zfill(4) + ".jpg"
+    image_file_path = "/container/im2txt/data/imageDataset/101_ObjectCategories/" + str(image_file_index) + ".jpg"
 
     # added by YIN Yue
     captionList = ["", "", ""]
