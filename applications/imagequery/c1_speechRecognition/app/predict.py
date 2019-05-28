@@ -167,6 +167,8 @@ def convert_samplerate(audio_path):
     return 16000, np.frombuffer(output, np.int16)
 
 
+model_path = "/container/models/output_graph.pbmm"
+alphabet_path = "/container/models/alphabet.txt"
 print('Loading model from ' + model_path)
 ds = Model(model_path, N_FEATURES, N_CONTEXT, alphabet_path, BEAM_WIDTH)
 print("Model successfully loaded!")
@@ -174,8 +176,6 @@ print("Model successfully loaded!")
 
 def predict(audio_file_index):
     audio_file_path = "/container/data/dataset3/recordings/" + audio_file_index + ".wav"
-    model_path = "/container/models/output_graph.pbmm"
-    alphabet_path = "/container/models/alphabet.txt"
 
     # reading audio file
     fin = wave.open(audio_file_index, 'rb')
