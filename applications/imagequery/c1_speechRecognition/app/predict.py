@@ -211,9 +211,11 @@ def predict(audio_file_index):
     # run inference
     print('Running inference.')
     inference_start = timer()
-    print(ds.stt(audio, fs)) # stt means Speech To Text
+    generated_text = ds.stt(audio, fs)
+    print(generated_text) # stt means Speech To Text
     inference_end = timer() - inference_start
     print('Inference took %0.3fs for %0.3fs audio file.' % (inference_end, audio_length))  
+    return generated_text
 
 # if __name__ == "__main__":
 #     predict(1)
