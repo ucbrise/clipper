@@ -8,13 +8,15 @@ def predict(sent_list):
     # print(sent_list)
 
     nltk_sentiment = SentimentIntensityAnalyzer()
-    sent_list = sent_list.split("-")[1:]
+    sent_list = sent_list.split("|||")
 
     # print(sent_list[:5])
 
-    result_list = "result"
+    result_list = ""
 
     for sent in sent_list:
-        result_list = result_list + "-" + str(nltk_sentiment.polarity_scores(sent))
+        score = nltk_sentiment.polarity_scores(sent)
+        print(score)
+        result_list += "|||" + str(score)
 
     return result_list

@@ -6,13 +6,13 @@ def predict(text_data):
 
     doc = nlp(text_data)
 
-    result = "result"
+    result = ""
 
     print(doc.sents)
 
     for sent in doc.sents:
-        result= result + "-" + str(sent)
+        result += "|||" + str(sent)
 
-    print(len(result.split("-")[1:]))
+    print(len(result.split("|||")))
 
     return result
