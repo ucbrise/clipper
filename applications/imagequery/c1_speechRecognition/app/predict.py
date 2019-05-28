@@ -167,19 +167,6 @@ def convert_samplerate(audio_path):
     return 16000, np.frombuffer(output, np.int16)
 
 
-def metadata_to_string(metadata):
-    return ''.join(item.character for item in metadata.items)
-
-
-class VersionAction(argparse.Action):
-    def __init__(self, *args, **kwargs):
-        super(VersionAction, self).__init__(nargs=0, *args, **kwargs)
-
-    def __call__(self, *args, **kwargs):
-        printVersions()
-        exit(0)
-
-
 print('Loading model from ' + model_path)
 ds = Model(model_path, N_FEATURES, N_CONTEXT, alphabet_path, BEAM_WIDTH)
 print("Model successfully loaded!")
