@@ -6,7 +6,7 @@ cd /container/im2txt/data/imageDataset/101_ObjectCategories
 index=0;
 for imageFile in ./airplanes/*.jpg
 do
-    mv "./airplanes/${imageFile}" "${index}.wav"
+    mv "${imageFile}" "${index}.wav"
     index=$((index+1))
     if [ $index -gt 1000 ]; then
       break
