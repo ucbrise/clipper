@@ -1,4 +1,4 @@
-FROM ubuntu:bionic
+FROM nvidia/cuda:10.0-cudnn7-devel-ubuntu18.04
 RUN apt-get update
 RUN apt-get install wget python3 python3-pip -y
 RUN pip3 install grpcio
