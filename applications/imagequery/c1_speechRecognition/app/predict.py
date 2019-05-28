@@ -217,6 +217,8 @@ def predict(audio_file_index):
 
 if __name__ == "__main__":
     predict(1)
+    predict(2)
+    predict(3)
 
 """ 
 Usage: 
