@@ -5,11 +5,15 @@ FROM nvidia/cuda:9.0-cudnn7-devel-ubuntu16.04
 # would appear. This is essentially just a naming problem, but annoying.
 # In addition, when running this container, have to put --runtime=nvidia as parameter. As it also uses GPU.
 RUN apt-get update
+# for python
 RUN apt-get install wget unzip python3 python3-pip -y
+# for grpc client
 RUN pip3 install grpcio
 RUN pip3 install protobuf
+# for dataset 3
 RUN apt-get install curl -y
 RUN apt-get install ffmpeg -y
+# for DeepSpeech
 RUN pip3 install deepspeech-gpu
 
 ADD imagequery/c1_speechRecognition/app /container/
@@ -56,12 +60,12 @@ ADD grpc/app/model_pb2.py /container/
 ADD grpc/app/proxy_pb2_grpc.py /container/
 ADD grpc/app/proxy_pb2.py /container/
 
-# for predict.py
+# for DeepSpeech: predict.py
 RUN apt-get install sox -y 
-# for pydub
+# for pydub in truncate.py
 RUN pip3 install pydub
 RUN apt-get install libav-tools libavcodec-extra -y
-# for truncate.py
+# for listing files in truncate.py
 RUN pip3 install glob3
 RUN python3 /container/data/dataset3/truncate.py
 CMD ["python3", "/container/predict.py", "--model", "/container/models/output_graph.pbmm", "--alphabet", "/container/models/alphabet.txt", "--audio", "/container/data/dataset3/recordings/1.wav"]
