@@ -74,7 +74,6 @@ def predict(image_file_index):
     if image_file_index > 800:
         return "Invalid image file index! Only index between 1 to 800 is allowed!"
 
-    start = timer()
     image_file_path = "/container/im2txt/data/imageDataset/101_ObjectCategories/" + str(image_file_index) + ".jpg"
 
     # added by YIN Yue
@@ -82,20 +81,18 @@ def predict(image_file_index):
     with tf.gfile.GFile(image_file_path, "rb") as f:
         image = f.read()
         captions = generator.beam_search(sess, image)
-        #print("Captions for image %s:" % os.path.basename(filename))
         for i, caption in enumerate(captions):
             # Ignore begin and end words.
-            sentence = [vocab.id_to_word(w)
-                        for w in caption.sentence[1:-1]]
+            sentence = [vocab.id_to_word(w) for w in caption.sentence[1:-1]]
             sentence = " ".join(sentence)
             captionList[i] = sentence
-            print("  %d) %s (p=%f)" %
-                  (i, sentence, math.exp(caption.logprob)))
+            print("  %d) %s (p=%f)" % (i, sentence, math.exp(caption.logprob)))
             # the end of caption generation
 
-    generated_caption = ' '.join(captionList)
-    end = timer()
-    time_elapsed = end - start
+    # generated_caption = ' '.join(captionList)
+    # return only the one with the highest probability
+    generated_caption = captionList[0]
+
     return generated_caption
 
 
