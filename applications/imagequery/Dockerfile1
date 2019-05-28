@@ -1,51 +1,25 @@
-FROM tensorflow/tensorflow:1.4.0-devel-gpu
+# Initial Docker file was taken from : https://hub.docker.com/r/manujbhatia/deepspeech/
+FROM ubuntu:16.04
 
 ENV GIT_LFS_VER=2.1.1
-ENV CPU_COUNT=2
-WORKDIR /tmp
-RUN export CPU_COUNT=`grep -c ^processor /proc/cpuinfo`
 
-ENV LM_PATH=undefilned
-ENV LM_FILE=undefilned
+WORKDIR /tmp
 
 ## Install the basic things
 RUN apt-get update \
    && apt-get install -y --no-install-recommends \
       curl \
       git \
-      python-pip python-dev \
-      python3-pip python3-dev \
+      python-pip \
+      python-dev \
       python-numpy python-scipy python-matplotlib ipython ipython-notebook python-pandas python-sympy python-nose \
-      openjdk-8-jdk \
-      locales
-RUN echo 'ru_RU.UTF-8 UTF-8' >> /etc/locale.gen && locale-gen && update-locale
-ENV LANG=ru_RU.UTF-8
-ENV LANGUAGE=ru_RU.UTF-8
-ENV LC_ALL=ru_RU.UTF-8
-
-RUN echo "deb [arch=amd64] http://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list \
-    && curl https://bazel.build/bazel-release.pub.gpg | apt-key add -
-
-RUN apt-get update \
    && apt-get install -y \
       build-essential \
       libssl-dev \
       libffi-dev \
       wget \
-      pkg-config \
-      zip \
-      g++ \
-      zlib1g-dev \
-      unzip \
-      libsox-dev sox \
-      libcupti-dev \
-      bazel \
-      cmake \
-      libeigen3-dev \
-      libboost-all-dev
-#   && apt-get clean \
-#   && rm -rf /var/lib/apt/lists/*
-
+   && apt-get clean \
+   && rm -rf /var/lib/apt/lists/*
 
 ## Install git-lfs
 RUN curl -L https://github.com/git-lfs/git-lfs/releases/download/v$GIT_LFS_VER/git-lfs-linux-amd64-$GIT_LFS_VER.tar.gz \
@@ -56,48 +30,23 @@ RUN curl -L https://github.com/git-lfs/git-lfs/releases/download/v$GIT_LFS_VER/g
 ## Install all the python packages
 RUN pip install --upgrade pip \
    && pip install --upgrade \
-      setuptools 
-#   && pip install --upgrade \
-##	  https://index.taskcluster.net/v1/task/project.deepspeech.deepspeech.native_client.master.cpu/artifacts/public/deepspeech-0.0.2-cp27-cp27mu-linux_x86_64.whl \
-#      pyxdg \
-#      python_speech_features \
-#      sox \
-#      six \
-#      numpy \
-#      wheel \
-#      pandas \
-#      tensorflow#
+      setuptools \
+   && pip install --upgrade \
+#      tensorflow==1.3.0 \
+	https://index.taskcluster.net/v1/task/project.deepspeech.tensorflow.pip.master.cpu/artifacts/public/tensorflow_warpctc-1.3.0rc0-cp27-cp27mu-linux_x86_64.whl \
+      pyxdg \
+      python_speech_features \
+      sox \
+      pandas
 
-WORKDIR /
+WORKDIR /work/
+RUN git clone https://github.com/mozilla/DeepSpeech \
+   && cd DeepSpeech \
+   && pip install -r requirements.txt
 
-RUN git clone https://github.com/mozilla/DeepSpeech
-#   && cd DeepSpeech \
-#   && pip install -r requirements.txt
+RUN wget https://index.taskcluster.net/v1/task/project.deepspeech.deepspeech.native_client.master.cpu/artifacts/public/native_client.tar.xz -P /tmp \
+        && cd /tmp \
+        && tar -xJvf native_client.tar.xz \
+        && cp -r *.so /work/DeepSpeech/native_client/
 
-#RUN pip install deepspeech-gpu
-#RUN pip install --upgrade https://index.taskcluster.net/v1/task/project.deepspeech.deepspeech.native_client.master.cpu/artifacts/public/deepspeech-0.0.1-cp27-cp27mu-linux_x86_64.whl
-
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/DeepSpeech/native_client
-WORKDIR /DeepSpeech
-
-RUN python util/taskcluster.py --target /tmp --source tensorflow --arch gpu --artifact tensorflow_gpu_warpctc-1.4.0-cp27-cp27mu-linux_x86_64.whl
-RUN pip install /tmp/tensorflow_gpu_warpctc-1.4.0-cp27-cp27mu-linux_x86_64.whl
-RUN pip install -r requirements.txt
-
-RUN python /DeepSpeech/util/taskcluster.py --arch gpu --target /DeepSpeech/native_client
-
-# this version kenlm demanded from documentation
-RUN cd /DeepSpeech/native_client \
-    && rm -rf kenlm \
-    && git clone https://github.com/kpu/kenlm.git \
-    && cd kenlm \
-    && git checkout cdd794598ea15dc23a7daaf7a8cf89423c97f7e6 \
-    && mkdir build && cd build \
-    && cmake .. \
-    && make -j $CPU_COUNT
-
-RUN pip3 install --upgrade pip && pip3 install pydub
-
-
-
-WORKDIR /DeepSpeech
+WORKDIR DeepSpeech
