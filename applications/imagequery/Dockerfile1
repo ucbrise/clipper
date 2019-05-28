@@ -37,7 +37,7 @@ RUN mv $(find / -name speech-accent-archive.zip) /container/data/dataset3
 RUN ls /container/data/dataset3
 RUN unzip /container/data/dataset3/speech-accent-archive.zip -d /container/data/dataset3 
 # /container/data/dataset3 now contains:reading-passage.txt, recordings.zip, speakers_all.csv
-RUN unzip /container/data/dataset3/recordings.zip -d /container/data/dataset3/
+RUN unzip -qq /container/data/dataset3/recordings.zip -d /container/data/dataset3/
 RUN chmod 777 /container/data/dataset3/rename.sh
 RUN /container/data/dataset3/rename.sh
 
