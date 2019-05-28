@@ -8,7 +8,7 @@ def recognize(audio_file_index):
     if audio_file_index < 0 or audio_file_index > 1000:
         return "Invalid image index! Only index between 1 to 1000 is allowed! Exiting..."
 
-    dataset_index = 3
+    dataset_index = 1
 
     if dataset_index == 1:
         # dataset1: CMU arctic
@@ -16,9 +16,9 @@ def recognize(audio_file_index):
     elif dataset_index == 2:
         # dataset2: Flicker: different scripts but with overlapping
         audio_file_path = "/container/data/dataset2/flickr_audio/wavs/" + str(audio_file_index) + ".wav"
-    elif dataset_index == 3:
-        # dataset3: speech-accent-archive: different people reading the same script
-        audio_file_path = "/container/data/dataset3/recordings/" + str(audio_file_index) + ".wav"
+#     elif dataset_index == 3:
+#         # dataset3: speech-accent-archive: different people reading the same script
+#         audio_file_path = "/container/data/dataset3/recordings/" + str(audio_file_index) + ".wav"
     else:
         return "Invalid dataset index!"
 
