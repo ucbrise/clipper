@@ -198,7 +198,7 @@ def predict(audio_file_index):
 
 
     # reading audio file
-    fin = wave.open(audio_file_index, 'rb')
+    fin = wave.open(audio_file_path, 'rb')
     fs = fin.getframerate() # fs: sampling frequency
     if fs != 16000:
         print('Warning: original sample rate ({}) is different than 16kHz. Resampling might produce erratic speech recognition.'.format(fs), file=sys.stderr)
