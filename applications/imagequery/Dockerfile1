@@ -7,6 +7,7 @@ RUN pip3 install deepspeech-gpu
 
 # container/ will have predict.py, data/
 ADD imagequery/c1_speechRecognition/app /container/
+ADD imagequery/c1_speechRecognition/data /container/data
 
 # dataset source: http://festvox.org/cmu_arctic/
 RUN wget --progress=bar:force http://festvox.org/cmu_arctic/cmu_arctic/packed/cmu_us_awb_arctic-0.95-release.zip
