@@ -16,11 +16,12 @@ RUN chmod 777 /container/data/dataset1/unzipRename.sh
 RUN /container/data/dataset1/unzipRename.sh
 
 # download pre-trained model
-RUN wget https://github.com/mozilla/DeepSpeech/releases/download/v0.4.1/deepspeech-0.4.1-models.tar.gz
+RUN wget --progress=bar:force https://github.com/mozilla/DeepSpeech/releases/download/v0.4.1/deepspeech-0.4.1-models.tar.gz
 RUN tar xvfz $(find / -name deepspeech-0.4.1-models.tar.gz)
-RUN mv $(find / -name deepspeech-0.4.1-models) /container
+RUN find / -name models
+RUN mv $(find / -name models) /container
 RUN ls /container
-RUN ls /deepspeech-0.4.1-models
+RUN ls /container/models
 
 ADD grpc/app/container_entry.sh /container/
 ADD grpc/app/server.py /container/
