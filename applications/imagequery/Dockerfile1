@@ -59,12 +59,14 @@ ADD grpc/app/proxy_pb2.py /container/
 # for predict.py
 RUN apt-get install sox -y 
 # for pydub
-RUN pip3 install pydub -y 
+RUN pip3 install pydub
 RUN apt-get install libav-tools libavcodec-extra 
 # for truncate.py
-RUN pip3 install glob -y 
+RUN pip3 install glob
 RUN python3 /container/data/dataset3/truncate.py
 CMD ["python3", "/container/predict.py", "--model", "/container/models/output_graph.pbmm", "--alphabet", "/container/models/alphabet.txt", "--audio", "/container/data/dataset3/recordings/1.wav"]
+
+
 # CMD ["/container/container_entry.sh", "c1", "/container/server.py"]
 
 EXPOSE 8000

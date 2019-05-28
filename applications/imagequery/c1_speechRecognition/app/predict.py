@@ -71,19 +71,20 @@ def main():
     parser = argparse.ArgumentParser(description='Running DeepSpeech inference.')
     parser.add_argument('--model', required=True, help='Path to the model (protocol buffer binary file)')
     parser.add_argument('--alphabet', required=True, help='Path to the configuration file specifying the alphabet used by the network')
-    parser.add_argument('--lm', nargs='?', help='Path to the language model binary file')
-    parser.add_argument('--trie', nargs='?', help='Path to the language model trie file created with native_client/generate_trie')
+    parser.add_argument('--lm', nargs='?', help='Path to the language model binary file') # can be deleted
+    parser.add_argument('--trie', nargs='?', help='Path to the language model trie file created with native_client/generate_trie') # can be deleted
     parser.add_argument('--audio', required=True, help='Path to the audio file to run (WAV format)')
-    parser.add_argument('--version', action=VersionAction, help='Print version and exits')
-    parser.add_argument('--extended', required=False, action='store_true', help='Output string from extended metadata')
+    parser.add_argument('--version', action=VersionAction, help='Print version and exits') # can be deleted
+    parser.add_argument('--extended', required=False, action='store_true', help='Output string from extended metadata') # can be deleted
     args = parser.parse_args()
 
     print('Loading model from file {}'.format(args.model), file=sys.stderr)
     model_load_start = timer()
-    ds = Model(args.model, N_FEATURES, N_CONTEXT, args.alphabet, BEAM_WIDTH)
+    ds = Model(args.model, N_FEATURES, N_CONTEXT, args.alphabet, BEAM_WIDTH) # can be CHANGED
     model_load_end = timer() - model_load_start
     print('Loaded model in {:.3}s.'.format(model_load_end), file=sys.stderr)
 
+    # can be deleted
     if args.lm and args.trie:
         print('Loading language model from files {} {}'.format(args.lm, args.trie), file=sys.stderr)
         lm_load_start = timer()
