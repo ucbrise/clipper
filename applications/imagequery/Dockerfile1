@@ -5,7 +5,6 @@ RUN pip3 install grpcio
 RUN pip3 install protobuf
 RUN pip3 install deepspeech-gpu
 
-# container/ will have predict.py, data/
 ADD imagequery/c1_speechRecognition/app /container/
 ADD imagequery/c1_speechRecognition/data /container/data
 
@@ -19,8 +18,9 @@ RUN /container/data/dataset1/unzipRename.sh
 RUN wget --progress=bar:force https://github.com/mozilla/DeepSpeech/releases/download/v0.4.1/deepspeech-0.4.1-models.tar.gz
 RUN tar xvfz $(find / -name deepspeech-0.4.1-models.tar.gz)
 RUN mv /models /container/models
-RUN ls /container
-RUN ls /container/models
+
+# /container has: predict.py, data, models
+# /container/models has: alphabet.txt, lm.binary, output_graph.pb, output_graph.pbmm. output_graph.rounded.pb, output_graph.rounded.pbmm, trie
 
 ADD grpc/app/container_entry.sh /container/
 ADD grpc/app/server.py /container/

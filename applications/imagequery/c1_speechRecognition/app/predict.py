@@ -67,20 +67,13 @@ class VersionAction(argparse.Action):
 
 def main():
     parser = argparse.ArgumentParser(description='Running DeepSpeech inference.')
-    parser.add_argument('--model', required=True,
-                        help='Path to the model (protocol buffer binary file)')
-    parser.add_argument('--alphabet', required=True,
-                        help='Path to the configuration file specifying the alphabet used by the network')
-    parser.add_argument('--lm', nargs='?',
-                        help='Path to the language model binary file')
-    parser.add_argument('--trie', nargs='?',
-                        help='Path to the language model trie file created with native_client/generate_trie')
-    parser.add_argument('--audio', required=True,
-                        help='Path to the audio file to run (WAV format)')
-    parser.add_argument('--version', action=VersionAction,
-                        help='Print version and exits')
-    parser.add_argument('--extended', required=False, action='store_true',
-                        help='Output string from extended metadata')
+    parser.add_argument('--model', required=True, help='Path to the model (protocol buffer binary file)')
+    parser.add_argument('--alphabet', required=True, help='Path to the configuration file specifying the alphabet used by the network')
+    parser.add_argument('--lm', nargs='?', help='Path to the language model binary file')
+    parser.add_argument('--trie', nargs='?', help='Path to the language model trie file created with native_client/generate_trie')
+    parser.add_argument('--audio', required=True, help='Path to the audio file to run (WAV format)')
+    parser.add_argument('--version', action=VersionAction, help='Print version and exits')
+    parser.add_argument('--extended', required=False, action='store_true', help='Output string from extended metadata')
     args = parser.parse_args()
 
     print('Loading model from file {}'.format(args.model), file=sys.stderr)
