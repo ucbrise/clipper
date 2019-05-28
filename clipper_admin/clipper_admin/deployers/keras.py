@@ -200,8 +200,7 @@ def deploy_keras_model(clipper_conn,
             shutil.copy(model_path_or_object,
                         os.path.join(serialization_dir, "keras_model.h5"))
         except Exception as e:
-            logger.error(
-                "Error copying keras model: %s" % e)
+            logger.error("Error copying keras model: %s" % e)
             raise e
     else:
         raise ClipperException(

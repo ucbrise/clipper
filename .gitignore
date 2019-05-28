@@ -21,3 +21,6 @@ dependency-reduced-pom.xml
 
 docker-compose.yml
 .ipynb_checkpoints
+
+# model for testing
+model.h5
