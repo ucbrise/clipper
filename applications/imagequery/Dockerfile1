@@ -56,6 +56,7 @@ ADD grpc/app/model_pb2.py /container/
 ADD grpc/app/proxy_pb2_grpc.py /container/
 ADD grpc/app/proxy_pb2.py /container/
 
+RUN apt-get install sox -y
 CMD ["python3", "/container/predict.py", "--model", "/container/models/output_graph.pbmm", "--alphabet", "/container/models/alphabet.txt", "--audio", "/container/data/dataset3/recordings/1.wav"]
 # CMD ["/container/container_entry.sh", "c1", "/container/server.py"]
 
