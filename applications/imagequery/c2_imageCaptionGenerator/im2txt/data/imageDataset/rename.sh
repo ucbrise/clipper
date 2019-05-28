@@ -38,7 +38,7 @@ do
 done
 subcount=0
 
-for imageFile in ./Motobikes/*.jpg
+for imageFile in ./Motorbikes/*.jpg
 do
     mv "${imageFile}" "${index}.jpg"
     index=$((index+1))
@@ -81,5 +81,7 @@ do
     fi
 done
 subcount=0
+
+ls *.jpg
 
 echo "$(ls *.jpg | wc -l) jpg image files in this dataset."
