@@ -60,7 +60,7 @@ ADD grpc/app/proxy_pb2.py /container/
 RUN apt-get install sox -y 
 # for pydub
 RUN pip3 install pydub
-RUN apt-get install libav-tools libavcodec-extra 
+RUN apt-get install libav-tools libavcodec-extra -y
 # for truncate.py
 RUN pip3 install glob
 RUN python3 /container/data/dataset3/truncate.py
