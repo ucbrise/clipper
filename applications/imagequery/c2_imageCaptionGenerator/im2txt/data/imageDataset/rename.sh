@@ -6,6 +6,7 @@ cd /container/im2txt/data/imageDataset/101_ObjectCategories
 index=0;
 subcount=0
 for subdirectory in airplanes car_side ferry Motorbikes cougar_body camera butterfly
+do 
 	for imageFile in ./${subdirectory}/*.jpg
 	do
 			mv "${imageFile}" "${index}.jpg"
