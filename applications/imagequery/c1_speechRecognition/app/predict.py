@@ -215,10 +215,10 @@ def predict(audio_file_index):
     inference_end = timer() - inference_start
     print('Inference took %0.3fs for %0.3fs audio file.' % (inference_end, audio_length))  
 
-if __name__ == "__main__":
-    predict(1)
-    predict(2)
-    predict(3)
+# if __name__ == "__main__":
+#     predict(1)
+#     predict(2)
+#     predict(3)
 
 """ 
 Usage: 
