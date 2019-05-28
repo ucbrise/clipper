@@ -5,32 +5,32 @@ FROM nvidia/cuda:9.0-cudnn7-devel-ubuntu16.04
 ####### START Install base software
 
 ####### Get basic packages
-RUN apt-get update && apt-get install -y --no-install-recommends 
-build-essential 
-curl 
-wget 
-git 
-python 
-python-dev 
-python-pip 
-python-wheel 
-python-numpy 
-libcurl3-dev 
-ca-certificates 
-gcc 
-sox 
-libsox-fmt-mp3 
-htop 
-nano 
-swig 
-cmake 
-libboost-all-dev 
-zlib1g-dev 
-libbz2-dev 
-liblzma-dev 
-locales 
-pkg-config 
-libsox-dev
+RUN apt-get update && apt-get install -y --no-install-recommends \
+build-essential \
+curl \
+wget \
+git \
+python \ 
+python-dev \ 
+python-pip \
+python-wheel \
+python-numpy \
+libcurl3-dev \
+ca-certificates \
+gcc \
+sox \
+libsox-fmt-mp3 \ 
+htop \
+nano \
+swig \
+cmake \
+libboost-all-dev \
+zlib1g-dev \
+libbz2-dev \
+liblzma-dev \
+locales \
+pkg-config \
+libsox-dev \
 
 ####### Install Bazel
 RUN apt-get install -y openjdk-8-jdk
