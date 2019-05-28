@@ -146,6 +146,7 @@ COPY . /DeepSpeech/
 
 WORKDIR /DeepSpeech
 
+COPY imagequery/requirements.txt .
 RUN pip3 --no-cache-dir install -r requirements.txt
 
 # Link DeepSpeech native_client libs to tf folder
