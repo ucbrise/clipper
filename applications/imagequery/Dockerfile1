@@ -62,7 +62,7 @@ RUN apt-get install sox -y
 RUN pip3 install pydub
 RUN apt-get install libav-tools libavcodec-extra -y
 # for truncate.py
-RUN pip3 install glob
+RUN pip3 install glob3
 RUN python3 /container/data/dataset3/truncate.py
 CMD ["python3", "/container/predict.py", "--model", "/container/models/output_graph.pbmm", "--alphabet", "/container/models/alphabet.txt", "--audio", "/container/data/dataset3/recordings/1.wav"]
 
