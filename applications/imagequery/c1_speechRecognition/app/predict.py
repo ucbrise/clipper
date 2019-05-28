@@ -105,9 +105,16 @@ def main():
     if args.extended:
         print(metadata_to_string(ds.sttWithMetadata(audio, fs)))
     else:
-        print(ds.stt(audio, fs))
+        print(ds.stt(audio, fs)) # stt means Speech To Text
     inference_end = timer() - inference_start
     print('Inference took %0.3fs for %0.3fs audio file.' % (inference_end, audio_length), file=sys.stderr)
 
 if __name__ == '__main__':
     main()
+  
+""" 
+Usage: 
+python3 predict.py --model /container/models/output_graph.pbmm --alphabet /container/models/alphabet.txt --lm /container/models/lm.binary --trie /container/models/trie --audio /container/data/dataset1/cmu_us_awb_arctic/wav/0001.wav
+
+cmu_us_awb_arctic/wav/" + str(audio_file_index) + ".wav"
+"""
