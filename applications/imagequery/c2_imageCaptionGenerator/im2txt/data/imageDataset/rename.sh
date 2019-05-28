@@ -9,7 +9,7 @@ while read directory; do
 	cp $directory/* .
 done < $directories
 
-ls *.jpg
+ls *.jpg 
 echo "$(ls *.jpg | wc -l) jpg image files in this dataset."
 # No need to take care of index. Reindexed is performed automatically and neatly.
 
