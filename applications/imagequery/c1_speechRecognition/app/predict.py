@@ -40,9 +40,10 @@ def predict(audio_file_path):
     recognized_string = recognize(audio_file_path)
     end = timer()
     time_elapsed = end - start
+    print(time_elapsed)
     return recognized_string
 
 
 if __name__ == "__main__":
-    predict(1)
+    print(predict(1))
 
