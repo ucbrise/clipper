@@ -1175,7 +1175,7 @@ class RequestHandler {
     response_doc.SetObject();
 
     if (model_metadata.size() > 0) {
-      /* We assume that redis::get_model returns an empty map iff no model
+      /* We assume that redis::get_model returns an empty map if no model
        * exists */
       redis_model_metadata_to_json(response_doc, model_metadata);
       bool is_current_version =

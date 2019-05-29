@@ -993,4 +993,120 @@ TEST_F(ManagementFrontendTest, TestGetModelLinksMalformedJson) {
                json_parse_error);
 }
 
+TEST_F(ManagementFrontendTest, TestDeleteVersionedModelCorrect) {
+  std::string add_model_json = R"(
+  {
+    "model_name": "test_delete_versioned_model_correct",
+    "model_version": "1",
+    "labels": ["label1", "label2", "label3"],
+    "input_type": "integers",
+    "batch_size": -1,
+    "container_name": "clipper/sklearn_cifar",
+    "model_data_path": "/tmp/model/repo/m/1"
+  }
+  )";
+
+  ASSERT_NO_THROW(rh_.add_model(add_model_json));
+  std::string model_name = "test_delete_versioned_model_correct";
+  std::string model_version = "1";
+  auto result = get_model(*redis_, VersionedModelId(model_name, model_version));
+  // The model table has 9 fields, so we expect to get back a map with 9
+  // entries in it (see add_model() in redis.cpp for details on what the
+  // fields are).
+  ASSERT_EQ(result.size(), static_cast<size_t>(9));
+
+  // Make sure that the current model version has been updated
+  // appropriately.
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version)
+
+  std::string delete_versioned_model_json = R"(
+  {
+    "model_name": "test_delete_versioned_model_correct",
+    "model_version": "1"
+  }
+  )";
+
+  ASSERT_NO_THROW(rh_.delete_versioned_model(delete_versioned_model_json));
+
+  // Check that subsequent calls to model return empty JSON
+  std::string json_response = rh_.get_model(delete_versioned_model_json);
+  std::string expected_response = "{}";
+  ASSERT_EQ(json_response, expected_response);
+}
+
+TEST_F(ManagementFrontendTest, TestDeleteVersionedModelMissingField) {
+  std::string add_model_json = R"(
+  {
+    "model_name": "test_delete_versioned_model_missing_field",
+    "model_version": "1",
+    "labels": ["label1", "label2", "label3"],
+    "input_type": "integers",
+    "batch_size": -1,
+    "container_name": "clipper/sklearn_cifar",
+    "model_data_path": "/tmp/model/repo/m/1"
+  }
+  )";
+
+  ASSERT_NO_THROW(rh_.add_model(add_model_json));
+  std::string model_name = "test_delete_versioned_model_missing_field";
+  std::string model_version = "1";
+  auto result = get_model(*redis_, VersionedModelId(model_name, model_version));
+  // The model table has 9 fields, so we expect to get back a map with 9
+  // entries in it (see add_model() in redis.cpp for details on what the
+  // fields are).
+  ASSERT_EQ(result.size(), static_cast<size_t>(9));
+
+  // Make sure that the current model version has been updated
+  // appropriately.
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version)
+
+  // model_version is omitted.
+  std::string delete_versioned_model_json = R"(
+  {
+    "model_name": "test_delete_versioned_model_missing_field"
+  }
+  )";
+
+  ASSERT_THROW(rh_.delete_versioned_model(delete_versioned_model_json),
+               json_semantic_error);
+}
+
+TEST_F(ManagementFrontendTest, TestDeleteVersionedModelForNonexistentModel) {
+  std::string add_model_json = R"(
+  {
+    "model_name": "test_delete_versioned_model_for_nonexistent_model",
+    "model_version": "1",
+    "labels": ["label1", "label2", "label3"],
+    "input_type": "integers",
+    "batch_size": -1,
+    "container_name": "clipper/sklearn_cifar",
+    "model_data_path": "/tmp/model/repo/m/1"
+  }
+  )";
+
+  ASSERT_NO_THROW(rh_.add_model(add_model_json));
+  std::string model_name = "test_delete_versioned_model_for_nonexistent_model";
+  std::string model_version = "1";
+  auto result = get_model(*redis_, VersionedModelId(model_name, model_version));
+  // The model table has 9 fields, so we expect to get back a map with 9
+  // entries in it (see add_model() in redis.cpp for details on what the
+  // fields are).
+  ASSERT_EQ(result.size(), static_cast<size_t>(9));
+
+  // Make sure that the current model version has been updated
+  // appropriately.
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version)
+
+  // Try to delete wrong versioned model.
+  std::string delete_versioned_model_json = R"(
+  {
+    "model_name": "test_delete_versioned_model_for_nonexistent_model",
+    "model_version": "2"
+  }
+  )";
+
+  ASSERT_THROW(rh_.delete_versioned_model(delete_versioned_model_json),
+               clipper::ManagementOperationError);
+}
+
 }  // namespace
