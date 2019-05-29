@@ -101,4 +101,6 @@ def predict(image_file_index):
 if __name__ == "__main__":
     print(predict(1))
     print(predict(2))
+    print(predict(3))
+    print(predict(4))
 
