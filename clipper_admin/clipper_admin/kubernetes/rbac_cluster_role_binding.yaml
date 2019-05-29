@@ -8,5 +8,5 @@ roleRef:
   name: {{cluster_name}}-prometheus
 subjects:
 - kind: ServiceAccount
-  name: {{cluster_name}}-prometheus
+  name: default
   namespace: {{ namespace }}
