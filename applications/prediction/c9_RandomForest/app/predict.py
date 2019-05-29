@@ -6,11 +6,15 @@ Created on Mon Apr  8 11:00:32 2019
 @author: davidzhou
 """
 
+import time
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
     
 def predict(comstring):
+
+    start = time.time()
+
     data = pd.read_json(comstring)
     # feature extraction
     # Features construction 
@@ -44,7 +48,10 @@ def predict(comstring):
     # Create the model on train dataset
     model = clf.fit(X_train, y_train)
     preds = model.predict(X_test).tolist()
-
+    
+    end = time.time()
+    print("ELASPSED TIME", end - start)
+    
     return str(preds)
 
     

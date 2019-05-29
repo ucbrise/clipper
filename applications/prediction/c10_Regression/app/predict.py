@@ -7,8 +7,11 @@ Created on Sun Apr  7 22:49:46 2019
 """
 
 import pandas as pd
+
+import time
     
 def predict(compstring):
+    start = time.time()
     df = pd.read_json(compstring)
     #print the head
     df.head()
@@ -51,6 +54,9 @@ def predict(compstring):
     preds = model.predict(x_valid).tolist()
 #   print(preds)
 #   rms=np.sqrt(np.mean(np.power((np.array(y_valid)-np.array(preds)),2)))
+
+    end = time.time()
+    print("ELASPSED TIME", end - start)
 
     return str(preds)
     

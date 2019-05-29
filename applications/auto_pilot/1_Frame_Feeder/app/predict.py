@@ -7,7 +7,7 @@
 # 		string = base64.encodestring(imageFile.read())
 # 	return string
 
-def predict(i):
-	return i
+def predict(input):
+	return input.split("*")[0]
 
 

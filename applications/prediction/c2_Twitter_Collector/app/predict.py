@@ -1,6 +1,7 @@
 import io
 import sys
 import tweepy
+import time
 from tweepy import *
 
 def getData(keyword, limit):
@@ -24,10 +25,15 @@ def getData(keyword, limit):
   return tweets_string
 
 def predict(request): # serve as api function
-  print("This is Twitter Collector")
-  keyword = "AAPL"
-  limit = 100
-  return getData(keyword, limit)
+    start = time.time()
+    info = request.split(":")
+    stockcode = info[0]
+    print("This is Twitter Collector")
+    limit = 100
+    to_return = getData(stockcode, limit)
+    end = time.time()
+    print("ELASPSED TIME", end - start)
+    return to_return
 
 
 

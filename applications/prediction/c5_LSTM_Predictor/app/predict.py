@@ -1,58 +1,65 @@
 from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
 import numpy as np
+import time
 from keras.models import load_model
 
 def predict(comstring):
 
-  input_data = pd.read_json(comstring)
+    start = time.time()
 
-  testingDatasetSize = input_data.shape[0]
+    input_data = pd.read_json(comstring)
 
-  #clean data
-  input_data.isna().any()
+    testingDatasetSize = input_data.shape[0]
 
-  # scaling testing data
-  scaler=MinMaxScaler(feature_range=(0,1))
-  google_scaled=scaler.fit_transform(input_data) # size x 12
+    #clean data
+    input_data.isna().any()
 
-  # construct test data set
-  X_test=[]
-  for i in range(60,testingDatasetSize):
-    X_test.append(google_scaled[ i-60 : i , 0]) # 500 x 60 x 1
-  X_test = np.array(X_test)
-  # print("X_test.shape: " , X_test.shape) # 500 x 60
+    # scaling testing data
+    scaler=MinMaxScaler(feature_range=(0,1))
+    google_scaled=scaler.fit_transform(input_data) # size x 12
 
-  X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
-  # print(X_test.shape) # 500 x 60 x 1
+    # construct test data set
+    X_test=[]
+    for i in range(60,testingDatasetSize):
+      X_test.append(google_scaled[ i-60 : i , 0]) # 500 x 60 x 1
+    X_test = np.array(X_test)
+    # print("X_test.shape: " , X_test.shape) # 500 x 60
 
-  new_model = load_model("/container/c5_LSTM_Predictor/app/model.h5")
-  predicted_stock_price = new_model.predict(X_test)
-  # print(predicted_stock_price.shape) # 500 x 1
-  predicted_stock_price = predicted_stock_price.ravel()
+    X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
+    # print(X_test.shape) # 500 x 60 x 1
 
-  # transform the data back
-  highPriceData = input_data.loc[:,'High'].values
-  highPriceDataMax = np.amax(highPriceData)
-  highPriceDataMin = np.amin(highPriceData)
+    new_model = load_model("/container/c5_LSTM_Predictor/app/model.h5")
+    predicted_stock_price = new_model.predict(X_test)
+    # print(predicted_stock_price.shape) # 500 x 1
+    predicted_stock_price = predicted_stock_price.ravel()
 
-  lowPriceData = input_data.loc[:,'Low'].values
-  lowPriceDataMax = np.amax(lowPriceData)
-  lowPriceDataMin = np.amin(lowPriceData)
+    # transform the data back
+    highPriceData = input_data.loc[:,'High'].values
+    highPriceDataMax = np.amax(highPriceData)
+    highPriceDataMin = np.amin(highPriceData)
 
-  openPriceData = input_data.loc[:,'Open'].values
-  openPriceDataMax = np.amax(openPriceData)
-  openPriceDataMin = np.amin(openPriceData)
+    lowPriceData = input_data.loc[:,'Low'].values
+    lowPriceDataMax = np.amax(lowPriceData)
+    lowPriceDataMin = np.amin(lowPriceData)
 
-  closePriceData = input_data.loc[:,'Close'].values
-  closePriceDataMax = np.amax(closePriceData)
-  closePriceDataMin = np.amin(closePriceData)
+    openPriceData = input_data.loc[:,'Open'].values
+    openPriceDataMax = np.amax(openPriceData)
+    openPriceDataMin = np.amin(openPriceData)
 
-  predicted_stock_price_high = predicted_stock_price*(highPriceDataMax - highPriceDataMin) + highPriceDataMin
-  predicted_stock_price_low = predicted_stock_price*(lowPriceDataMax - lowPriceDataMin) + lowPriceDataMin
-  predicted_stock_price_open = predicted_stock_price*(openPriceDataMax - openPriceDataMin) + openPriceDataMin
-  predicted_stock_price_close = predicted_stock_price*(closePriceDataMax - closePriceDataMin) + closePriceDataMin
+    closePriceData = input_data.loc[:,'Close'].values
+    closePriceDataMax = np.amax(closePriceData)
+    closePriceDataMin = np.amin(closePriceData)
 
-  predicted_stock_price = 1/4 * (predicted_stock_price_close + predicted_stock_price_open + predicted_stock_price_high + predicted_stock_price_low)
+    predicted_stock_price_high = predicted_stock_price*(highPriceDataMax - highPriceDataMin) + highPriceDataMin
+    predicted_stock_price_low = predicted_stock_price*(lowPriceDataMax - lowPriceDataMin) + lowPriceDataMin
+    predicted_stock_price_open = predicted_stock_price*(openPriceDataMax - openPriceDataMin) + openPriceDataMin
+    predicted_stock_price_close = predicted_stock_price*(closePriceDataMax - closePriceDataMin) + closePriceDataMin
 
-  return str(predicted_stock_price.tolist()[-10:])
+    predicted_stock_price = 1/4 * (predicted_stock_price_close + predicted_stock_price_open + predicted_stock_price_high + predicted_stock_price_low)
+
+    end = time.time()
+    
+    print("ELASPSED TIME", end - start)
+
+    return str(predicted_stock_price.tolist()[-10:])

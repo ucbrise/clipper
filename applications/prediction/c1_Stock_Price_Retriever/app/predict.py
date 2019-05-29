@@ -2,6 +2,7 @@
 # this program loads stock price data and saves to file
 import quandl
 import datetime
+import time
 
 quandl.ApiConfig.api_key = "ZFtsDc5JcPvNXWwFVTSR"
 
@@ -17,4 +18,8 @@ def retrieveStockPrice(requestInfo):
 	return stock_price_dataframe.to_json()
 
 def predict(requestInfo): # serves as an api function
-	return retrieveStockPrice(requestInfo)
+    start = time.time()
+    to_return = retrieveStockPrice(requestInfo)
+    end = time.time()
+    print("ELASPSED TIME", end - start)
+	return to_return
