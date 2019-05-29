@@ -69,14 +69,13 @@ generator = caption_generator.CaptionGenerator(model, vocab)
 
 
 def predict(image_file_index):
-
     image_file_index = int(image_file_index)
     if image_file_index > 800:
         return "Invalid image file index! Only index between 1 to 800 is allowed!"
 
     image_file_path = "/container/im2txt/data/imageDataset/101_ObjectCategories/" + str(image_file_index) + ".jpg"
+    print(image_file_path)
 
-    # added by YIN Yue
     captionList = ["", "", ""]
     with tf.gfile.GFile(image_file_path, "rb") as f:
         image = f.read()

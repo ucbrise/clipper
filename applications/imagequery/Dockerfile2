@@ -18,7 +18,6 @@ RUN mv /notebooks/newmodel.ckpt-2000000.meta /container/im2txt/model
 RUN mv /notebooks/newmodel.ckpt-2000000.data-00000-of-00001 /container/im2txt/model
 
 # download datasets, untar and reindex images: 101_ObjectCategories
-# /container/im2txt/data/imageDataset will contains image1.jpg, image2.jpg, image3.jpg, ..., and other folders
 RUN wget --progress=bar:force http://www.vision.caltech.edu/Image_Datasets/Caltech101/101_ObjectCategories.tar.gz
 RUN mv /notebooks/101_ObjectCategories.tar.gz /container/im2txt/data/imageDataset
 RUN chmod 777 /container/im2txt/data/imageDataset/untar.sh 
@@ -33,7 +32,7 @@ ADD grpc/app/model_pb2.py /container/
 ADD grpc/app/proxy_pb2_grpc.py /container/
 ADD grpc/app/proxy_pb2.py /container/
 
-# CMD ["python3", "/container/predict.py"]
-CMD ["/container/container_entry.sh", "c2", "/container/server.py"]
+CMD ["python3", "/container/predict.py"]
+# CMD ["/container/container_entry.sh", "c2", "/container/server.py"]
 
 EXPOSE 9000
