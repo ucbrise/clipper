@@ -1,7 +1,6 @@
 import speech_recognition as sr
 from timeit import default_timer as timer
 # Reference: https://realpython.com/python-speech-recognition/
-# Text2Speech converter: https://www.text2speech.org/
 
 recognizer = sr.Recognizer()
 
