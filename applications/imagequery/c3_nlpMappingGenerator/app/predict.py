@@ -289,7 +289,9 @@ def findSVOs(tokens):
 def predict(input_str):
     start = timer()
 
-    tokens = nlp(input_str)
+    c1_output, c2_output = str(input_str).split("|")
+    reconstructed = str(c1_output) + str(c2_output)
+    tokens = nlp(reconstructed)
     svos = findSVOs(tokens)
     combined_subject = ""
     combined_verb = ""
