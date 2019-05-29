@@ -1,6 +1,7 @@
 import en_core_web_md
 from timeit import default_timer as timer
 print("predict.py modules loaded successfully")
+# Ref: https://github.com/peter3125/enhanced-subject-verb-object-extraction
 
 # use spacy small model
 nlp = en_core_web_md.load()
