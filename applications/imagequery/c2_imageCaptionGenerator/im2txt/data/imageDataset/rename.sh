@@ -5,7 +5,7 @@ cd /container/im2txt/data/imageDataset/101_ObjectCategories
 # copy images from subdirectories to current directory: imageDatasets
 index=0;
 subcount=0
-for subdirectory in airplanes car_side ferry Motorbikes cougar_body camera butterfly chair dollar_bill flamingo kangaroo
+for subdirectory in airplanes car_side ferry Motorbikes cougar_body camera butterfly chair dollar_bill flamingo kangaroo panda grand_piano
 do 
 	for imageFile in ./${subdirectory}/*.jpg
 	do
