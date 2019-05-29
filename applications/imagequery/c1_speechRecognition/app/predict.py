@@ -3,6 +3,7 @@ from timeit import default_timer as timer
 # Reference: https://realpython.com/python-speech-recognition/
 
 recognizer = sr.Recognizer()
+print("Finish preloading speech recognizer!")
 
 def recognize(audio_file_index):
     start = timer()
@@ -12,7 +13,6 @@ def recognize(audio_file_index):
         return "Invalid image index! Only index between 1 to 1000 is allowed! Exiting..."
 
     dataset_index = 3
-
     if dataset_index == 1:
         # dataset1: CMU arctic
         audio_file_path = "/container/data/dataset1/cmu_us_awb_arctic/wav/" + str(audio_file_index) + ".wav"
@@ -24,8 +24,6 @@ def recognize(audio_file_index):
         audio_file_path = "/container/data/dataset3/recordings/" + str(audio_file_index) + ".wav"
     else:
         return "Invalid dataset index!"
-
-    print(audio_file_path)
 
     audio_file = sr.AudioFile(audio_file_path)
 
@@ -42,12 +40,12 @@ def recognize(audio_file_index):
 
 
 def predict(audio_file_path):
-    
     recognized_string = recognize(audio_file_path)
-    
     return recognized_string
 
 
 if __name__ == "__main__":
     print(predict(1))
+    print(predict(2))
+    print(predict(3))
 
