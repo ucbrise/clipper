@@ -20,7 +20,7 @@ from pydub import AudioSegment
 for wav_file in wav_files:
     original = AudioSegment.from_wav(wav_file)
     start_time = 0
-    end_time = 3 * 1000
+    end_time = 1 * 1000
     truncated = original[start_time:end_time]
     truncated.export(wav_file, format="wav")
   
