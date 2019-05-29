@@ -93,7 +93,7 @@ def predict(image_file_index):
 
     end = timer()
     time_elapsed = end - start
-    print("The image file takes " + str(time_elapsed) + "seconds")
+    print("  The image file takes " + str(time_elapsed) + "seconds")
 
     return generated_caption
 
