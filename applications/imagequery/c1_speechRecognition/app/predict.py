@@ -36,7 +36,7 @@ def recognize(audio_file_index):
     time_elapsed = end - start
     print("The audio file takes " + str(time_elapsed) + "seconds")
 
-    return recognized_str
+    return " " + recognized_str + " "
 
 
 def predict(audio_file_index):
