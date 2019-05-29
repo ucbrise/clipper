@@ -50,5 +50,5 @@ make -j -f CI_build.Makefile all
 
 # Run all test
 make -j10 -f CI_test.Makefile unittest
-make -j10 -f CI_test.Makefile integration_py2
-make -j10 -f CI_test.Makefile integration_py3
+make -j15 -f CI_test.Makefile integration_py2
+make -j15 -f CI_test.Makefile integration_py3
