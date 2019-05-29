@@ -291,6 +291,7 @@ def predict(input_str):
 
     c1_output, c2_output = str(input_str).split("|")
     reconstructed = str(c1_output) + str(c2_output)
+    print("reconstructed: " + reconstructed)
     tokens = nlp(reconstructed)
     svos = findSVOs(tokens)
     combined_subject = ""
