@@ -3,10 +3,10 @@ import time
 def predict(received):
 	start = time.time()
 	end = time.time()
-    print("ELASPSED TIME", end - start)
-    print("Received Output:%s"%(received))
-    return received
-    
+	print("ELASPSED TIME", end - start)
+	print("Received Output:%s"%(received))
+	return received
+	
 # def predict(price_pred_list, trend_pred, polarity_list):
 
 #     result = []

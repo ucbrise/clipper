@@ -5,21 +5,21 @@ def predict(text_data):
 
 	start = time.time()
 
-    nlp = en_core_web_sm.load()
+	nlp = en_core_web_sm.load()
 
-    doc = nlp(text_data)
+	doc = nlp(text_data)
 
-    result = ""
+	result = ""
 
-    print(doc.sents)
+	print(doc.sents)
 
-    for sent in doc.sents:
-        result += "|||" + str(sent)
+	for sent in doc.sents:
+		result += "|||" + str(sent)
 
-    print(len(result.split("|||")))
+	print(len(result.split("|||")))
 
-    end = time.time()
-    
-    print("ELASPSED TIME", end - start)
+	end = time.time()
+	
+	print("ELASPSED TIME", end - start)
 
-    return result
+	return result
