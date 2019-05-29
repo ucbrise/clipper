@@ -5,15 +5,17 @@ RUN pip3 install SpeechRecognition
 RUN pip3 install grpcio
 RUN pip3 install protobuf
 
+# for downloading and renameing dataset3
+RUN apt-get install curl -y
+RUN apt-get install ffmpeg -y
+
 # for pydub in truncate.py
 RUN pip3 install pydub
-RUN apt-get install libav-tools libavcodec-extra -y
+RUN apt-get install ffmpeg libavcodec-extra -y
 
 # for listing files in truncate.py
 RUN pip3 install glob3
 
-RUN apt-get install curl -y
-RUN apt-get install ffmpeg -y
 
 # container/ will have predict.py, data/
 ADD imagequery/c1_speechRecognition/app /container/
