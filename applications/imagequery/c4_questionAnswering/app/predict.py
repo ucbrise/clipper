@@ -32,7 +32,7 @@ def predict(mapping):
 
     end = timer()
     time_elapsed = end - start
-    print("The question answering takes " + time_elapsed + "seconds")
+    print("The question answering takes " + str(time_elapsed) + "seconds")
     return answer
 
 

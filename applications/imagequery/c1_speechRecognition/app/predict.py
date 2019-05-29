@@ -34,7 +34,7 @@ def recognize(audio_file_index):
 
     end = timer()
     time_elapsed = end - start
-    print("The audio file takes " + time_elapsed + "seconds")
+    print("The audio file takes " + str(time_elapsed) + "seconds")
 
     return recognized_str
 

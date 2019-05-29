@@ -310,7 +310,7 @@ def predict(input_str):
 
     end = timer()
     time_elapsed = end - start
-    print("The mapping generation takes " + time_elapsed + "seconds")
+    print("The mapping generation takes " + str(time_elapsed) + "seconds")
     
     return combined_subject + "-" + combined_verb + "-" + combined_object
 
