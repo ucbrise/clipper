@@ -1017,7 +1017,7 @@ TEST_F(ManagementFrontendTest, TestDeleteVersionedModelCorrect) {
 
   // Make sure that the current model version has been updated
   // appropriately.
-  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version)
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version);
 
   std::string delete_versioned_model_json = R"(
   {
@@ -1058,7 +1058,7 @@ TEST_F(ManagementFrontendTest, TestDeleteVersionedModelMissingField) {
 
   // Make sure that the current model version has been updated
   // appropriately.
-  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version)
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version);
 
   // model_version is omitted.
   std::string delete_versioned_model_json = R"(
@@ -1095,7 +1095,7 @@ TEST_F(ManagementFrontendTest, TestDeleteVersionedModelForNonexistentModel) {
 
   // Make sure that the current model version has been updated
   // appropriately.
-  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version)
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version);
 
   // Try to delete wrong versioned model.
   std::string delete_versioned_model_json = R"(
