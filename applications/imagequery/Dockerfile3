@@ -2,8 +2,8 @@ FROM ubuntu:bionic
 RUN apt-get update
 RUN apt-get install python3 python3-pip -y
 
-RUN pip3 install nltk numpy textacy
-RUN python3 -m nltk.downloader all
+# RUN pip3 install nltk numpy textacy
+# RUN python3 -m nltk.downloader all
 
 RUN pip3 install spacy
 RUN python3 -m spacy download en_core_web_md
@@ -19,7 +19,7 @@ ADD grpc/app/model_pb2.py /container/
 ADD grpc/app/proxy_pb2_grpc.py /container/
 ADD grpc/app/proxy_pb2.py /container/
 
-CMD ["/container/container_entry.sh", "c3", "/container/server.py"]
-# CMD ["python3","/container/predict.py"]
+# CMD ["/container/container_entry.sh", "c3", "/container/server.py"]
+CMD ["python3","/container/predict.py"]
 
 EXPOSE 11000
