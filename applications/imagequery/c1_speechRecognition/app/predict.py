@@ -5,6 +5,8 @@ from timeit import default_timer as timer
 recognizer = sr.Recognizer()
 
 def recognize(audio_file_index):
+    start = timer()
+
     audio_file_index = int(audio_file_index)
     if audio_file_index < 0 or audio_file_index > 1000:
         return "Invalid image index! Only index between 1 to 1000 is allowed! Exiting..."
@@ -31,15 +33,18 @@ def recognize(audio_file_index):
         audio = recognizer.record(source)
 
     recognized_str = recognizer.recognize_google(audio)
+
+    end = timer()
+    time_elapsed = end - start
+    print(time_elapsed)
+
     return recognized_str
 
 
 def predict(audio_file_path):
-    start = timer()
+    
     recognized_string = recognize(audio_file_path)
-    end = timer()
-    time_elapsed = end - start
-    print(time_elapsed)
+    
     return recognized_string
 
 
