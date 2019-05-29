@@ -1,7 +1,6 @@
 import en_core_web_md
-# from preprocess import preprocess
-# print(preprocess)
-print("predict.py Modules loaded successfully")
+from timeit import default_timer as timer
+print("predict.py modules loaded successfully")
 
 # use spacy small model
 nlp = en_core_web_md.load()
@@ -288,6 +287,8 @@ def findSVOs(tokens):
     return svos
 
 def predict(input_str):
+    start = timer()
+
     tokens = nlp(input_str)
     svos = findSVOs(tokens)
     combined_subject = ""
@@ -306,6 +307,10 @@ def predict(input_str):
         i = i + 1
 
     print("Generated mapping: " + combined_subject + "-" + combined_verb + "-" + combined_object)
+
+    end = timer()
+    time_elapsed = end - start
+    print("The mapping generation takes " + time_elapsed + "seconds")
     
     return combined_subject + "-" + combined_verb + "-" + combined_object
 

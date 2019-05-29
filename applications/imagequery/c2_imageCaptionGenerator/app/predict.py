@@ -69,9 +69,11 @@ generator = caption_generator.CaptionGenerator(model, vocab)
 
 
 def predict(image_file_index):
+    start = timer()
+
     image_file_index = int(image_file_index)
-    if image_file_index > 800:
-        return "Invalid image file index! Only index between 1 to 800 is allowed!"
+    if image_file_index > 1000:
+        return "Invalid image file index! Only index between 1 to 1000 is allowed!"
 
     image_file_path = "/container/im2txt/data/imageDataset/101_ObjectCategories/" + str(image_file_index) + ".jpg"
     print(image_file_path)
@@ -91,6 +93,10 @@ def predict(image_file_index):
     # generated_caption = ' '.join(captionList)
     # return only the one with the highest probability
     generated_caption = captionList[0]
+
+    end = timer()
+    time_elapsed = end - start
+    print("The image file takes " + time_elapsed + "seconds")
 
     return generated_caption
 

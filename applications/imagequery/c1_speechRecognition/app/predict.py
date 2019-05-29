@@ -34,13 +34,13 @@ def recognize(audio_file_index):
 
     end = timer()
     time_elapsed = end - start
-    print(time_elapsed)
+    print("The audio file takes " + time_elapsed + "seconds")
 
     return recognized_str
 
 
-def predict(audio_file_path):
-    recognized_string = recognize(audio_file_path)
+def predict(audio_file_index):
+    recognized_string = recognize(audio_file_index)
     return recognized_string
 
 
