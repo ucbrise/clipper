@@ -19,7 +19,7 @@ def predict(mapping):
     question = question.lower()
     if question == "verb":
       answer = verb_str
-    elif question = "noun":
+    elif question == "noun":
       answer = noun_str
     else:
       answer = "Unable to analyze..."
