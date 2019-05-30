@@ -10,7 +10,7 @@ import os
 import json
 import tensorflow as tf
 
-print(os.chdir)
+print(os.getcwd())
 
 import configuration
 import inference_wrapper
