@@ -21,9 +21,8 @@ def run(input_index):
   # CONTAINER 0
   input_index = entry_container.predict(input_index)
 
+  elapsed_time_list = []
   # CONTAINER 1, 2: Multi Threading
-  # elapsed_time_list = []
-  # result_list = []
   # p = Pool(2)
   # returned_result1 = p.apply_async(run_speech_recognition, args=(input_index,))
   # returned_result2 = p.apply_async(generate_image_caption, args=(input_index,))
