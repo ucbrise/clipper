@@ -1347,7 +1347,7 @@ class RequestHandler {
          << " and version "
          << "'" << model_version << "'"
          << " is already marked as 'invalid'";
-      throw clipper::ManagementOperationError(ss.str())
+      throw clipper::ManagementOperationError(ss.str());
     }
 
     if (clipper::redis::mark_versioned_model_for_delete(redis_connection_, model_id)) {
