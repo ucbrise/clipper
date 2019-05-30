@@ -8,7 +8,7 @@ import numpy as np
 import nltk
 import re
 import string
-nlp = spacy.load('en_core_web_md')
+nlp = spacy.load('en_core_web_sm')
 stopword_list = nltk.corpus.stopwords.words('english')
 stopword_list.remove('no')
 stopword_list.remove('not')
