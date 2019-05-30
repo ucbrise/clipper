@@ -1233,12 +1233,10 @@ class ClipperConnection(object):
 
     def get_metric_addr(self):
         """Get the IP address of Prometheus metric server.
-
         Returns
         -------
         str
             The address as an IP address or hostname.
-
         Raises
         ------
         :py:exc:`clipper.UnconnectedException`
@@ -1248,6 +1246,43 @@ class ClipperConnection(object):
         if not self.connected:
             raise UnconnectedException()
         return self.cm.get_metric_addr()
+
+    def _unregister_versioned_models(self, model_versions_dict):
+        """Unregister the specified versions of the specified models from Clipper internal.
+
+        This function does not be opened to public because it might cause critical operation.
+        Please use 'stop_models', 'stop_versioned_models', 'stop_inactive_model_versions',
+        and 'stop_all_model_containers' APIs according to your need.
+
+        Parameters
+        ----------
+        model_versions_dict : dict(str, list(str))
+            For each entry in the dict, the key is a model name and the value is a list of model
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+            versions. All replicas for each version of each model will be stopped.
+        """
+        if not self.connected:
+            raise UnconnectedException()
+        url = "http://{host}/admin/delete_versioned_model".format(
+            host=self.cm.get_admin_addr())
+        headers = {"Content-type": "application/json"}
+        for model_name in model_versions_dict:
+            for model_version in model_versions_dict[model_name]:
+                req_json = json.dumps({"model_name": model_name,
+                                       "model_version": model_version})
+                r = requests.post(url, headers=headers, data=req_json)
+                logger.debug(r.text)
+                if r.status_code != requests.codes.ok:
+                    msg = "Received error status code: {code} and message: " \
+                          "{msg}".format(code=r.status_code, msg=r.text)
+                    logger.error(msg)
+                    raise ClipperException(msg)
+                else:
+                    logger.info(
+                        "Model {name}:{ver} was successfully deleted".format(
+                            name=model_name, ver=model_version))
 
     def stop_models(self, model_names):
         """Stops all versions of the specified models.
@@ -1277,6 +1312,7 @@ class ClipperConnection(object):
                 else:
                     model_dict[m["model_name"]] = [m["model_version"]]
         self.cm.stop_models(model_dict)
+        self._unregister_versioned_models(model_dict)
         pp = pprint.PrettyPrinter(indent=4)
         self.logger.info(
             "Stopped all containers for these models and versions:\n{}".format(
@@ -1303,6 +1339,7 @@ class ClipperConnection(object):
         if not self.connected:
             raise UnconnectedException()
         self.cm.stop_models(model_versions_dict)
+        self._unregister_versioned_models(model_versions_dict)
         pp = pprint.PrettyPrinter(indent=4)
         self.logger.info(
             "Stopped all containers for these models and versions:\n{}".format(
@@ -1339,6 +1376,7 @@ class ClipperConnection(object):
                 else:
                     model_dict[m["model_name"]] = [m["model_version"]]
         self.cm.stop_models(model_dict)
+        self._unregister_versioned_models(model_dict)
         pp = pprint.PrettyPrinter(indent=4)
         self.logger.info(
             "Stopped all containers for these models and versions:\n{}".format(
@@ -1350,9 +1388,26 @@ class ClipperConnection(object):
         This method can be used to clean up leftover Clipper model containers even if the
         Clipper management frontend or Redis has crashed. It can also be called without calling
         ``connect`` first.
+
+        Raises
+        ------
+        :py:exc:`clipper.UnconnectedException`
+            versions. All replicas for each version of each model will be stopped.
         """
+        if not self.connected:
+            raise UnconnectedException()
+        model_info = self.get_all_models(verbose=True)
+        model_dict = {}
+        for m in model_info:
+            if m["model_name"] in model_dict:
+                model_dict[m["model_name"]].append(m["model_version"])
+            else:
+                model_dict[m["model_name"]] = [m["model_version"]]
         self.cm.stop_all_model_containers()
-        self.logger.info("Stopped all Clipper model containers")
+        self._unregister_versioned_models(model_dict)
+        pp = pprint.PrettyPrinter(indent=4)
+        self.logger.info("Stopped all Clipper model containers:\n{}".format(
+            pp.pformat(model_dict)))
 
     def stop_all(self, graceful=True):
         """Stops all processes that were started via Clipper admin commands.

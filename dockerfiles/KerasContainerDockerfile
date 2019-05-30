@@ -1,0 +1,13 @@
+ARG REGISTRY
+ARG CODE_VERSION
+ARG RPC_VERSION
+FROM ${REGISTRY}/${RPC_VERSION}-rpc:${CODE_VERSION}
+
+RUN pip install -q keras==2.2.*
+RUN pip install -q tensorflow==1.6.*
+
+COPY containers/python/keras_container.py containers/python/container_entry.sh /container/
+
+CMD ["/container/container_entry.sh", "keras-container", "/container/keras_container.py"]
+
+# vim: set filetype=dockerfile:

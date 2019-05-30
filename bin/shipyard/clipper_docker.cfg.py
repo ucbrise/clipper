@@ -165,6 +165,7 @@ models = [
     ("tf{version}", "TensorFlow"),
     ("pyspark{version}", "PySparkContainer"),
     ("python{version}-closure", "PyClosureContainer"),
+    ("keras{version}", "KerasContainer")
 ]
 py_version = [("", "py"), ("35", "py35"), ("36", "py36")]
 
