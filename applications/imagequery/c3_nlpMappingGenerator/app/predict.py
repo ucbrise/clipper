@@ -1,4 +1,5 @@
 import spacy
+from preprocess import preprocess
 from timeit import default_timer as timer
 
 nlp = spacy.load("en_core_web_md")
@@ -8,8 +9,11 @@ def predict(input_str):
 
     c1_output, c2_output = str(input_str).split("|")
     reconstructed = str(c1_output) + str(c2_output)
+    print(reconstructed)
+    preprocessed = preprocess(reconstructed)
+    print(preprocessed)
 
-    doc = nlp(reconstructed)
+    doc = nlp(preprocessed)
     noun_list = [chunk.text for chunk in doc.noun_chunks]
     verb_list = [token.lemma_ for token in doc if token.pos_ == "VERB"]
 
