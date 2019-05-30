@@ -1,0 +1,38 @@
+FROM tensorflow/tensorflow:1.12.0-gpu-py3 
+RUN apt-get update
+RUN pip install numpy nltk
+RUN python -m nltk.downloader all
+RUN apt install wget
+RUN pip3 install grpcio
+RUN pip3 install protobuf
+
+ADD imagequery/c2_imageCaptionGenerator/app /container/
+ADD imagequery/c2_imageCaptionGenerator/captionData /container/captionData
+ADD imagequery/c2_imageCaptionGenerator/im2txt/ /container/im2txt/
+ADD imagequery/c2_imageCaptionGenerator/im2txt/ops/ /container/ops/
+
+# download pre-trained models 
+RUN chmod 777 /container/im2txt/model/downloadModels.sh
+RUN /container/im2txt/model/downloadModels.sh
+RUN mv /notebooks/newmodel.ckpt-2000000.meta /container/im2txt/model
+RUN mv /notebooks/newmodel.ckpt-2000000.data-00000-of-00001 /container/im2txt/model
+
+# download datasets, untar and reindex images: 101_ObjectCategories
+RUN wget --progress=bar:force http://www.vision.caltech.edu/Image_Datasets/Caltech101/101_ObjectCategories.tar.gz
+RUN mv /notebooks/101_ObjectCategories.tar.gz /container/im2txt/data/imageDataset
+RUN chmod 777 /container/im2txt/data/imageDataset/untar.sh 
+RUN /container/im2txt/data/imageDataset/untar.sh 
+RUN chmod 777 /container/im2txt/data/imageDataset/rename.sh 
+RUN /container/im2txt/data/imageDataset/rename.sh
+
+ADD grpc/app/container_entry.sh /container/
+ADD grpc/app/server.py /container/
+ADD grpc/app/model_pb2_grpc.py /container/
+ADD grpc/app/model_pb2.py /container/
+ADD grpc/app/proxy_pb2_grpc.py /container/
+ADD grpc/app/proxy_pb2.py /container/
+
+# CMD ["python3", "/container/predict.py"]
+CMD ["/container/container_entry.sh", "c2", "/container/server.py"]
+
+EXPOSE 9000
