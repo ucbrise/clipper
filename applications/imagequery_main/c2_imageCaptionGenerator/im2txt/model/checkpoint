@@ -1,0 +1,2 @@
+model_checkpoint_path: "C:/Users/musicman/Desktop/researchCode/imagequery/2_imageCaptionGeneratorForDocker/im2txt/model/newmodel.ckpt-2000000"
+all_model_checkpoint_paths: "C:/Users/musicman/Desktop/researchCode/imagequery/2_imageCaptionGeneratorForDocker/im2txt/model/newmodel.ckpt-2000000"

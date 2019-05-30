@@ -1,0 +1,77 @@
+FROM tensorflow/tensorflow:1.12.0-gpu-py3 
+RUN apt-get update
+
+# docker build -f ./imagequery_main/mainDockerfile -t imagequery_main:main .
+# docker run --runtime=nvidia -p 10000:10000 -it imagequery_main:main
+# docker run --runtime=nvidia -d -p 10000:10000 -it imagequery_main:main
+
+# /container would contains:
+# c0_entryContainer c1_speechRecognition/ c2_imageCaptionGenerator/ c3_nlpMappingGenerator/ c4_questionAnswering/ main.py
+ 
+### for c0
+ADD imagequery_main/c0_entryContainer/app /container/c0_entryContainer
+
+### for c1 
+RUN apt-get install wget zip unzip python3 python3-pip -y
+RUN pip3 install SpeechRecognition
+RUN apt-get install curl -y
+RUN apt-get install ffmpeg -y
+RUN pip3 install pydub
+RUN apt-get install ffmpeg libavcodec-extra -y
+RUN pip3 install glob3
+
+ADD imagequery_main/c1_speechRecognition/app /container/c1_speechRecognition
+ADD imagequery_main/c1_speechRecognition/data /container/c1_speechRecognition/data
+
+RUN curl 'https://storage.googleapis.com/kaggle-datasets/4114/6391/speech-accent-archive.zip?GoogleAccessId=web-data@kaggle-161607.iam.gserviceaccount.com&Expires=1559377724&Signature=bssX9KooUn3i4igK3nNpHiap3j%2BV3QFrzz84NhCwkJILXKi2plbZsABqblSI1YfoNvnbHJ35wMr2S%2Bpai2%2BxA%2BN42n5YV%2BllgL1Ae0oZdK0%2Bzzru%2FbegJMw%2Bo5Q3GPbiC4lpqsAwB9FbV64JwtO28jtC1PMdXWhObx5Qftz3fFiflQ1kmKyfhW233gbLeDaS%2BbEM3u1eilrHKCFnnULiamBbF%2BYTT7C5ityX7aayZbRVxYMSVVMBr8zFe%2F5OjdbHdLPPOfSE1G2fHeyu6H4tS2P2dNXZR98zc1%2FK2UrJbMX17jIMq%2B9%2F7C6IwvAtFODT9Wt63UPVFNCt8cp4tfGtQA%3D%3D' -H 'authority: storage.googleapis.com' -H 'pragma: no-cache' -H 'cache-control: no-cache' -H 'upgrade-insecure-requests: 1' -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36' -H 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3' -H 'referer: https://www.kaggle.com/' -H 'accept-encoding: gzip, deflate, br' -H 'accept-language: en,zh;q=0.9,zh-CN;q=0.8' -H 'cookie: _ga=GA1.3.1190370773.1559048531; _gid=GA1.3.632917932.1559048531' --compressed -o speech-accent-archive.zip
+RUN mv $(find / -name speech-accent-archive.zip) /container/c1_speechRecognition/data/dataset3
+RUN unzip /container/c1_speechRecognition/data/dataset3/speech-accent-archive.zip -d /container/c1_speechRecognition/data/dataset3
+RUN unzip /container/c1_speechRecognition/data/dataset3/recordings.zip -d /container/c1_speechRecognition/data/dataset3/
+RUN chmod 777 /container/c1_speechRecognition/data/dataset3/rename.sh
+RUN /container/c1_speechRecognition/data/dataset3/rename.sh
+RUN python3 /container/c1_speechRecognition/data/dataset3/truncate.py
+
+### for c2 
+RUN pip install numpy nltk
+RUN python -m nltk.downloader all
+RUN apt install wget
+
+# copy files into image
+ADD imagequery/c2_imageCaptionGenerator/app /container/c2_imageCaptionGenerator/
+ADD imagequery/c2_imageCaptionGenerator/captionData /container/c2_imageCaptionGenerator/captionData
+ADD imagequery/c2_imageCaptionGenerator/im2txt/ /container/c2_imageCaptionGenerator/im2txt/
+ADD imagequery/c2_imageCaptionGenerator/im2txt/ops/ /container/c2_imageCaptionGenerator/ops/
+ 
+# download pre-trained models 
+RUN chmod 777 /container/c2_imageCaptionGenerator/im2txt/model/downloadModels.sh
+RUN /container/c2_imageCaptionGenerator/im2txt/model/downloadModels.sh
+RUN mv /notebooks/newmodel.ckpt-2000000.meta /container/c2_imageCaptionGenerator/im2txt/model
+RUN mv /notebooks/newmodel.ckpt-2000000.data-00000-of-00001 /container/c2_imageCaptionGenerator/im2txt/model
+
+# download datasets, untar and reindex images.
+RUN wget --progress=bar:force http://www.vision.caltech.edu/Image_Datasets/Caltech101/101_ObjectCategories.tar.gz
+RUN mv /notebooks/101_ObjectCategories.tar.gz /container/c2_imageCaptionGenerator/im2txt/data/imageDataset
+RUN chmod 777 /container/c2_imageCaptionGenerator/im2txt/data/imageDataset/untar.sh 
+RUN /container/c2_imageCaptionGenerator/im2txt/data/imageDataset/untar.sh 
+RUN chmod 777 /container/c2_imageCaptionGenerator/im2txt/data/imageDataset/rename.sh 
+RUN /container/c2_imageCaptionGenerator/im2txt/data/imageDataset/rename.sh
+
+### for c3 
+RUN pip3 install nltk numpy textacy
+RUN python3 -m nltk.downloader all
+RUN pip3 install spacy
+RUN python3 -m spacy download en_core_web_sm
+
+ADD imagequery_main/c3_nlpMappingGenerator/app /container/c3_nlpMappingGenerator
+
+### for c4
+ADD imagequery_main/c4_questionAnswering/app /container/c4_questionAnswering
+
+# for main.py
+ADD imagequery_main/main.py /container
+
+# /container nows contains: 
+# c0_entryContainer c1_speechRecognition/ c2_imageCaptionGenerator/ c3_nlpMappingGenerator/ c4_questionAnswering/ main.py
+CMD ["python", "/container/main.py"]
+
+EXPOSE 10000
