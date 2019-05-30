@@ -1,6 +1,8 @@
 # Ref1: https://towardsdatascience.com/a-practitioners-guide-to-natural-language-processing-part-i-processing-understanding-text-9f4abfd13e72
 # Ref2: spacy official documentation
 from nltk.tokenize import sent_tokenize, word_tokenize
+from timeit import default_timer as timer
+s = timer()
 import spacy
 import numpy as np
 import nltk
@@ -10,7 +12,8 @@ nlp = spacy.load('en_core_web_md')
 stopword_list = nltk.corpus.stopwords.words('english')
 stopword_list.remove('no')
 stopword_list.remove('not')
-print("preprocess.py modules loaded successfully")
+e = timer()
+print("preprocess.py modules loaded successfully in " + str(e - s) + " seconds.")
 
 """
 This file provides the function for preprocessing text before NLP.
@@ -104,6 +107,8 @@ def construct_text_from_corpus(corpus):
 
 """ input: string; output: string. """
 def preprocess(text):
+    start = timer()
+
     # tokenzie the text into list of sentence
     corpus = generateCorpus(text)
 
@@ -112,6 +117,9 @@ def preprocess(text):
 
     # Concatenate the sentence to reconstruct the preprocessed text
     preprocessed_text = construct_text_from_corpus(normalized_corpus)
+
+    end = timer()
+    print("Preprocessing takes " + str(end - start) + " seconds")
 
     # Return the text
     return preprocessed_text
