@@ -29,4 +29,5 @@ def predict(input_str):
 
 if __name__ == '__main__':
     predict("please call Stella ask her to bring. |a small propeller plane sitting on top of a field .")
+    predict("please call Stella ask her to bring. |a small cat sitting on top of a house .")
     
