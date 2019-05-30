@@ -4,7 +4,7 @@ import os
 print(os.getcwd())
 from multiprocessing import Pool
 
-# import .container.c0_entryContainer.predict as entry_container
+import c0_entryContainer.predict as entry_container
 # import c1_speechRecognition.predict as speech_recognizer
 # import c2_imageCaptionGenerator.predict as caption_generator
 # import c3_nlpMappingGenerator.predict as mapping_generator
