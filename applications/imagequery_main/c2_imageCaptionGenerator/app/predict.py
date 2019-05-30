@@ -10,6 +10,8 @@ import os
 import json
 import tensorflow as tf
 
+print(os.chdir)
+
 import configuration
 import inference_wrapper
 import caption_generator
