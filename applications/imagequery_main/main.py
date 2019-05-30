@@ -3,8 +3,8 @@ from multiprocessing import Pool
 import c0_entryContainer.predict as entry_container
 import c1_speechRecognition.predict as speech_recognizer
 import c2_imageCaptionGenerator.predict as caption_generator
-# import c3_nlpMappingGenerator.predict as mapping_generator
-# import c4_questionAnswering.predict as question_answerer
+import c3_nlpMappingGenerator.predict as mapping_generator
+import c4_questionAnswering.predict as question_answerer
 print("Modules successfully imported!")
 
 # def run_speech_recognition(audio_file_index):
