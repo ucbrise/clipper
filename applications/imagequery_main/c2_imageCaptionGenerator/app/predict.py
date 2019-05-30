@@ -10,7 +10,7 @@ import os
 import json
 import tensorflow as tf
 
-print(os.getcwd())
+print("pwd for c2/predict.py: " + os.getcwd())
 
 import configuration
 import inference_wrapper
