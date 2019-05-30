@@ -1,24 +1,24 @@
-import sys
-sys.path.append("/container")
+# import sys
+# sys.path.append("/container")
 
 from multiprocessing import Pool
 
-import c0_entryContainer.predict as entry_container
-import c1_speechRecognition.predict as speech_recognizer
-import c2_imageCaptionGenerator.predict as caption_generator
-import c3_nlpMappingGenerator.predict as mapping_generator
-import c4_questionAnswering.predict as question_answerer
+import container.c0_entryContainer.predict as entry_container
+# import c1_speechRecognition.predict as speech_recognizer
+# import c2_imageCaptionGenerator.predict as caption_generator
+# import c3_nlpMappingGenerator.predict as mapping_generator
+# import c4_questionAnswering.predict as question_answerer
 print("Modules successfully imported!")
 
-def run_speech_recognition(audio_file_index):
-  speech_text, elapsed_time = speech_recognizer.predict(audio_file_index)
-  print("1:\tText: " + speech_text)
-  return speech_text, elapsed_time
+# def run_speech_recognition(audio_file_index):
+#   speech_text, elapsed_time = speech_recognizer.predict(audio_file_index)
+#   print("1:\tText: " + speech_text)
+#   return speech_text, elapsed_time
 
-def generate_image_caption(image_file_index):
-  captions, elapsed_time = caption_generator.predict(image_file_index)
-  print("2:\tGenerated captions: " + captions)
-  return captions, elapsed_time
+# def generate_image_caption(image_file_index):
+#   captions, elapsed_time = caption_generator.predict(image_file_index)
+#   print("2:\tGenerated captions: " + captions)
+#   return captions, elapsed_time
 		
 # def run(audio_file_index, image_file_index):
 #   elapsed_time_list = []
