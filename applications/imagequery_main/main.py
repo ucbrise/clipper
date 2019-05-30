@@ -5,7 +5,7 @@ import c1_speechRecognition.predict as speech_recognizer
 import c2_imageCaptionGenerator.predict as caption_generator
 import c3_nlpMappingGenerator.predict as mapping_generator
 import c4_questionAnswering.predict as question_answerer
-print("Modules successfully imported!")
+print("---Modules successfully imported---")
 
 def run_speech_recognition(input_index):
   speech_text, elapsed_time = speech_recognizer.predict(input_index)
@@ -37,7 +37,7 @@ def run(input_index):
   elapsed_time_list.append(time1)
   elapsed_time_list.append(time2)
 
-  # CONTAINER 3: image nlp analyzer
+  # CONTAINER 3
   text = result1 + "|" + result2
   mapping, elapsed_time = mapping_generator.predict(text)
   elapsed_time_list.append(elapsed_time)
@@ -48,7 +48,7 @@ def run(input_index):
   print("\t- Nouns: " + nouns)
   print("\t- Verb: " + verbs)
 
-  # Container 4: Question Answerings
+  # Container 4
   question = "Verb"
   answer, elapsed_time = question_answerer.predict(mapping)
   elapsed_time_list.append(elapsed_time)
@@ -62,5 +62,5 @@ def run(input_index):
   print("Question Answering:\t\t" , elapsed_time_list[3])
 
 if __name__ == "__main__":
-  run(600, 600)
-  run(700, 700)
+  run(600)
+  run(700)
