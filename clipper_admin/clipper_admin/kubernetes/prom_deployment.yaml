@@ -13,8 +13,6 @@ spec:
         ai.clipper.container.label: {{ cluster_name }}
         ai.clipper.name: metrics
     spec:
-#      serviceAccountName: {{ service_account_name }}
-#      automountServiceAccountToken: false
       containers:
       - image: prom/prometheus:{{ version }}
         args: 
