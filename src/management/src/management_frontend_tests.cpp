@@ -1009,11 +1009,11 @@ TEST_F(ManagementFrontendTest, TestDeleteVersionedModelCorrect) {
   ASSERT_NO_THROW(rh_.add_model(add_model_json));
   std::string model_name = "test_delete_versioned_model_correct";
   std::string model_version = "1";
-  auto result = get_model(*redis_, VersionedModelId(model_name, model_version));
+  auto res1 = get_model(*redis_, VersionedModelId(model_name, model_version));
   // The model table has 9 fields, so we expect to get back a map with 9
   // entries in it (see add_model() in redis.cpp for details on what the
   // fields are).
-  ASSERT_EQ(result.size(), static_cast<size_t>(9));
+  ASSERT_EQ(res1.size(), static_cast<size_t>(9));
 
   // Make sure that the current model version has been updated
   // appropriately.
@@ -1029,8 +1029,8 @@ TEST_F(ManagementFrontendTest, TestDeleteVersionedModelCorrect) {
   ASSERT_NO_THROW(rh_.delete_versioned_model(delete_versioned_model_json));
 
   // Check that the model is invalid or not.
-  auto result = get_model(*redis_, VersionedModelId(model_name, model_version));
-  ASSERT_EQ(result.find("valid"), result.end());
+  auto res2 = get_model(*redis_, VersionedModelId(model_name, model_version));
+  ASSERT_EQ(res2.find("valid"), res2.end());
 }
 
 TEST_F(ManagementFrontendTest, TestDeleteVersionedModelMissingField) {
