@@ -2,7 +2,7 @@ import spacy
 from preprocess import preprocess
 from timeit import default_timer as timer
 
-nlp = spacy.load("en_core_web_md")
+nlp = spacy.load("en_core_web_sm")
 
 def predict(input_str):
     start = timer()
