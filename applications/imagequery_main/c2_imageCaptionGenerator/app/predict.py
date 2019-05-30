@@ -23,11 +23,8 @@ def find(name, path):
         if name in files or name in dirs:
             return os.path.join(root, name)
 
-# model_dir_path = find("model", "/container/im2txt")
-# checkpoint_path = model_dir_path + "/newmodel.ckpt-2000000"
-# vocabulary_path = find("word_counts.txt", "/")
-checkpoint_path = "/container/im2txt/model/newmodel.ckpt-2000000"
-vocabulary_path = "/container/im2txt/data/word_counts.txt"
+checkpoint_path = "/container/c2_imageCaptionGenerator/im2txt/model/newmodel.ckpt-2000000"
+vocabulary_path = "/container/c2_imageCaptionGenerator/im2txt/data/word_counts.txt"
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -61,7 +58,7 @@ def predict(image_file_index):
     if image_file_index > 1000:
         return "Invalid image file index! Only index between 1 to 1000 is allowed!"
 
-    image_file_path = "/container/im2txt/data/imageDataset/101_ObjectCategories/" + str(image_file_index) + ".jpg"
+    image_file_path = "/container/c2_imageCaptionGenerator/im2txt/data/imageDataset/101_ObjectCategories/" + str(image_file_index) + ".jpg"
 
     captionList = ["", "", ""]
     with tf.gfile.GFile(image_file_path, "rb") as f:
