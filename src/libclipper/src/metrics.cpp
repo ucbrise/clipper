@@ -142,6 +142,17 @@ std::shared_ptr<Histogram> MetricsRegistry::create_histogram(
   return histogram;
 }
 
+void MetricsRegistry::delete_metric(std::shared_ptr<Metric> target) {
+  std::lock_guard<std::mutex> guard(*metrics_lock_);
+  for (auto it = metrics_->begin(); it != metrics_->end();) {
+    if (*it == target) {
+      it = metrics_->erase(it);
+    } else {
+      it++;
+    }
+  }
+}
+
 Counter::Counter(const std::string name) : Counter(name, 0) {}
 
 Counter::Counter(const std::string name, int initial_count)
@@ -194,6 +205,9 @@ double RatioCounter::get_ratio() {
   uint32_t num_value = numerator_.load(std::memory_order_seq_cst);
   uint32_t denom_value = denominator_.load(std::memory_order_seq_cst);
   if (denom_value == 0) {
+    if (num_value == 0) {
+      return 0;
+    }
     log_error_formatted(LOGGING_TAG_METRICS, "Ratio {} has denominator zero!",
                         name_);
     return std::nan("");

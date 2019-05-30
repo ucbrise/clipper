@@ -373,6 +373,8 @@ class MetricsRegistry {
                                               const std::string unit,
                                               const size_t sample_size);
 
+  void delete_metric(std::shared_ptr<Metric> target);
+
  private:
   MetricsRegistry();
   MetricsRegistry(MetricsRegistry &other) = delete;
