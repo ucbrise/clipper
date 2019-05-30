@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 from timeit import default_timer as timer
-
+load_start = timer()
 
 import math
 import os
@@ -62,7 +62,8 @@ restore_fn(sess)
 # Prepare the caption generator.
 generator = caption_generator.CaptionGenerator(model, vocab)
 
-print("Finished preloading TD modules...")
+load_end = timer()
+print("Finish preloading modules in " + str(load_end - load_start) + " seconds!")
    
 
 
