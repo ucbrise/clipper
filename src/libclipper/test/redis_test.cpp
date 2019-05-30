@@ -89,10 +89,10 @@ TEST_F(RedisTest, AddModel) {
   ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, labels, container_name,
                         model_path, DEFAULT_BATCH_SIZE));
   auto result = get_model(*redis_, model);
-  // The model table has 8 fields, so we expect
-  // to get back a map with 8 entries in it
+  // The model table has 9 fields, so we expect
+  // to get back a map with 9 entries in it
   // (see add_model() in redis.cpp for details on what the fields are).
-  EXPECT_EQ(result.size(), static_cast<size_t>(8));
+  EXPECT_EQ(result.size(), static_cast<size_t>(9));
   ASSERT_EQ(result["model_name"], model.get_name());
   ASSERT_EQ(result["model_version"], model.get_id());
   ASSERT_FLOAT_EQ(std::stof(result["load"]), 0.0);
@@ -264,8 +264,8 @@ TEST_F(RedisTest, DeleteModel) {
   ASSERT_TRUE(add_model(*redis_, model, InputType::Ints, labels, container_name,
                         model_path, DEFAULT_BATCH_SIZE));
   auto add_result = get_model(*redis_, model);
-  EXPECT_EQ(add_result.size(), static_cast<size_t>(8));
-  ASSERT_TRUE(delete_model(*redis_, model));
+  EXPECT_EQ(add_result.size(), static_cast<size_t>(9));
+  ASSERT_TRUE(delete_versioned_model(*redis_, model));
   auto delete_result = get_model(*redis_, model);
   EXPECT_EQ(delete_result.size(), static_cast<size_t>(0));
 }
@@ -452,7 +452,7 @@ TEST_F(RedisTest, SubscriptionDetectModelDelete) {
       });
   // give Redis some time to register the subscription
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
-  ASSERT_TRUE(delete_model(*redis_, model));
+  ASSERT_TRUE(delete_versioned_model(*redis_, model));
   std::unique_lock<std::mutex> l(notification_mutex);
   bool result = notification_recv.wait_for(l, std::chrono::milliseconds(1000),
                                            [&recv]() { return recv == true; });

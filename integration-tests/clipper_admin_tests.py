@@ -55,6 +55,17 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
                         val=self.clipper_conn.cm.cluster_name)
         })
 
+    def check_registered_models(self, pairs):
+        all_models = self.clipper_conn.get_all_models(verbose=True)
+        if len(all_models) > 0:
+            try:
+                for model_info in all_models:
+                    pairs.remove((model_info["model_name"],
+                                  model_info["model_version"]))
+            except ValueError:
+                self.assertTrue(False)
+        self.assertTrue(len(pairs) == 0)
+
     def test_register_model_correct(self):
         input_type = "doubles"
         model_name = "m"
@@ -264,6 +275,7 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             num_replicas=2)
         containers = self.get_containers(container_name)
         self.assertEqual(len(containers), 2)
+        self.check_registered_models(pairs=[(model_name, "1")])
 
         self.clipper_conn.build_and_deploy_model(
             model_name,
@@ -274,10 +286,13 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             num_replicas=3)
         containers = self.get_containers(container_name)
         self.assertEqual(len(containers), 5)
+        self.check_registered_models(pairs=[(model_name, "1"),
+                                            (model_name, "2")])
 
         self.clipper_conn.stop_inactive_model_versions([model_name])
         containers = self.get_containers(container_name)
         self.assertEqual(len(containers), 3)
+        self.check_registered_models(pairs=[(model_name, "2")])
 
     def test_stop_models(self):
         container_name = "{}/noop-container:{}".format(clipper_registry,
@@ -296,25 +311,32 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
 
         containers = self.get_containers(container_name)
         self.assertEqual(len(containers), len(mnames) * len(versions))
+        self.check_registered_models(
+            pairs=[(a, b) for a in mnames for b in versions])
 
         # stop all versions of jimmypage model
         self.clipper_conn.stop_models(mnames[:1])
-        containers = self.get_containers(container_name)
 
+        containers = self.get_containers(container_name)
         self.assertEqual(len(containers), len(mnames[1:]) * len(versions))
+        self.check_registered_models(
+            pairs=[(a, b) for a in mnames[1:] for b in versions])
 
         # After calling this method, the remaining model should be robertplant:i
         self.clipper_conn.stop_versioned_models({
             "robertplant": ["ii"],
         })
-        containers = self.get_containers(container_name)
 
+        containers = self.get_containers(container_name)
         self.assertEqual(len(containers), 1)
+        self.check_registered_models(pairs=[("robertplant", "i")])
 
+        # Stop all model containers
         self.clipper_conn.stop_all_model_containers()
-        containers = self.get_containers(container_name)
 
+        containers = self.get_containers(container_name)
         self.assertEqual(len(containers), 0)
+        self.check_registered_models(pairs=[])
 
     def test_python_closure_deploys_successfully(self):
         model_name = "m2"

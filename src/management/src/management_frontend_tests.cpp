@@ -465,10 +465,10 @@ TEST_F(ManagementFrontendTest, TestAddModelCorrect) {
   std::string model_name = "mymodelname";
   std::string model_version = "4";
   auto result = get_model(*redis_, VersionedModelId(model_name, model_version));
-  // The model table has 8 fields, so we expect to get back a map with 8
+  // The model table has 9 fields, so we expect to get back a map with 9
   // entries in it (see add_model() in redis.cpp for details on what the
   // fields are).
-  ASSERT_EQ(result.size(), static_cast<size_t>(8));
+  ASSERT_EQ(result.size(), static_cast<size_t>(9));
 
   // Make sure that the current model version has been updated
   // appropriately.
@@ -500,10 +500,10 @@ TEST_F(ManagementFrontendTest, TestAddLinkedModelCompatibleInputType) {
   std::string model_name = "mymodelname";
   std::string model_version = "4";
   auto result = get_model(*redis_, VersionedModelId(model_name, model_version));
-  // The model table has 8 fields, so we expect to get back a map with 8
+  // The model table has 9 fields, so we expect to get back a map with 9
   // entries in it (see add_model() in redis.cpp for details on what the
   // fields are).
-  ASSERT_EQ(result.size(), static_cast<size_t>(8));
+  ASSERT_EQ(result.size(), static_cast<size_t>(9));
 
   // Make sure that the current model version has been updated
   // appropriately.
@@ -546,10 +546,10 @@ TEST_F(ManagementFrontendTest, TestAddDuplicateModelVersion) {
   std::string model_name = "mymodelname";
   std::string model_version = "4";
   auto result = get_model(*redis_, VersionedModelId(model_name, model_version));
-  // The model table has 8 fields, so we expect to get back a map with 8
+  // The model table has 9 fields, so we expect to get back a map with 9
   // entries in it (see add_model() in redis.cpp for details on what the
   // fields are).
-  ASSERT_EQ(result.size(), static_cast<size_t>(8));
+  ASSERT_EQ(result.size(), static_cast<size_t>(9));
 
   // Make sure that the current model version has been updated
   // appropriately.
@@ -991,6 +991,162 @@ TEST_F(ManagementFrontendTest, TestGetModelLinksMalformedJson) {
   )";
   ASSERT_THROW(rh_.get_linked_models(malformed_get_linked_models_json),
                json_parse_error);
+}
+
+TEST_F(ManagementFrontendTest, TestDeleteVersionedModelCorrect) {
+  std::string add_model_json = R"(
+  {
+    "model_name": "test_delete_versioned_model_correct",
+    "model_version": "1",
+    "labels": ["label1", "label2", "label3"],
+    "input_type": "integers",
+    "batch_size": -1,
+    "container_name": "clipper/sklearn_cifar",
+    "model_data_path": "/tmp/model/repo/m/1"
+  }
+  )";
+
+  ASSERT_NO_THROW(rh_.add_model(add_model_json));
+  std::string model_name = "test_delete_versioned_model_correct";
+  std::string model_version = "1";
+  auto res1 = get_model(*redis_, VersionedModelId(model_name, model_version));
+  // The model table has 9 fields, so we expect to get back a map with 9
+  // entries in it (see add_model() in redis.cpp for details on what the
+  // fields are).
+  ASSERT_EQ(res1.size(), static_cast<size_t>(9));
+
+  // Make sure that the current model version has been updated
+  // appropriately.
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version);
+
+  std::string delete_versioned_model_json = R"(
+  {
+    "model_name": "test_delete_versioned_model_correct",
+    "model_version": "1"
+  }
+  )";
+
+  ASSERT_NO_THROW(rh_.delete_versioned_model(delete_versioned_model_json));
+
+  // Check that the model is invalid or not.
+  auto res2 = get_model(*redis_, VersionedModelId(model_name, model_version));
+  ASSERT_EQ(res2.find("valid"), res2.end());
+}
+
+TEST_F(ManagementFrontendTest, TestDeleteVersionedModelMissingField) {
+  std::string add_model_json = R"(
+  {
+    "model_name": "test_delete_versioned_model_missing_field",
+    "model_version": "1",
+    "labels": ["label1", "label2", "label3"],
+    "input_type": "integers",
+    "batch_size": -1,
+    "container_name": "clipper/sklearn_cifar",
+    "model_data_path": "/tmp/model/repo/m/1"
+  }
+  )";
+
+  ASSERT_NO_THROW(rh_.add_model(add_model_json));
+  std::string model_name = "test_delete_versioned_model_missing_field";
+  std::string model_version = "1";
+  auto result = get_model(*redis_, VersionedModelId(model_name, model_version));
+  // The model table has 9 fields, so we expect to get back a map with 9
+  // entries in it (see add_model() in redis.cpp for details on what the
+  // fields are).
+  ASSERT_EQ(result.size(), static_cast<size_t>(9));
+
+  // Make sure that the current model version has been updated
+  // appropriately.
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version);
+
+  // model_version is omitted.
+  std::string delete_versioned_model_json = R"(
+  {
+    "model_name": "test_delete_versioned_model_missing_field"
+  }
+  )";
+
+  ASSERT_THROW(rh_.delete_versioned_model(delete_versioned_model_json),
+               json_semantic_error);
+}
+
+TEST_F(ManagementFrontendTest, TestDeleteVersionedModelForNonexistentModel) {
+  std::string add_model_json = R"(
+  {
+    "model_name": "test_delete_versioned_model_for_nonexistent_model",
+    "model_version": "1",
+    "labels": ["label1", "label2", "label3"],
+    "input_type": "integers",
+    "batch_size": -1,
+    "container_name": "clipper/sklearn_cifar",
+    "model_data_path": "/tmp/model/repo/m/1"
+  }
+  )";
+
+  ASSERT_NO_THROW(rh_.add_model(add_model_json));
+  std::string model_name = "test_delete_versioned_model_for_nonexistent_model";
+  std::string model_version = "1";
+  auto result = get_model(*redis_, VersionedModelId(model_name, model_version));
+  // The model table has 9 fields, so we expect to get back a map with 9
+  // entries in it (see add_model() in redis.cpp for details on what the
+  // fields are).
+  ASSERT_EQ(result.size(), static_cast<size_t>(9));
+
+  // Make sure that the current model version has been updated
+  // appropriately.
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version);
+
+  // Try to delete wrong versioned model.
+  std::string delete_versioned_model_json = R"(
+  {
+    "model_name": "test_delete_versioned_model_for_nonexistent_model",
+    "model_version": "2"
+  }
+  )";
+
+  ASSERT_THROW(rh_.delete_versioned_model(delete_versioned_model_json),
+               clipper::ManagementOperationError);
+}
+
+TEST_F(ManagementFrontendTest, TestDeleteVersionedModelForInvalidModel) {
+  std::string add_model_json = R"(
+  {
+    "model_name": "test_delete_versioned_model_for_invalid_model",
+    "model_version": "1",
+    "labels": ["label1", "label2", "label3"],
+    "input_type": "integers",
+    "batch_size": -1,
+    "container_name": "clipper/sklearn_cifar",
+    "model_data_path": "/tmp/model/repo/m/1"
+  }
+  )";
+
+  ASSERT_NO_THROW(rh_.add_model(add_model_json));
+  std::string model_name = "test_delete_versioned_model_for_invalid_model";
+  std::string model_version = "1";
+  auto result = get_model(*redis_, VersionedModelId(model_name, model_version));
+  // The model table has 9 fields, so we expect to get back a map with 9
+  // entries in it (see add_model() in redis.cpp for details on what the
+  // fields are).
+  ASSERT_EQ(result.size(), static_cast<size_t>(9));
+
+  // Make sure that the current model version has been updated
+  // appropriately.
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version);
+
+  std::string delete_versioned_model_json = R"(
+  {
+    "model_name": "test_delete_versioned_model_for_invalid_model",
+    "model_version": "1"
+  }
+  )";
+
+  // Delete the versioned model.
+  ASSERT_NO_THROW(rh_.delete_versioned_model(delete_versioned_model_json));
+
+  // Try to delete the same model immediately.
+  ASSERT_THROW(rh_.delete_versioned_model(delete_versioned_model_json),
+               clipper::ManagementOperationError);
 }
 
 }  // namespace
