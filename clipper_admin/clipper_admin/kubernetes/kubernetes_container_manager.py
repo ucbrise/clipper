@@ -683,11 +683,11 @@ class KubernetesContainerManager(ContainerManager):
             self._k8s_v1.delete_collection_namespaced_config_map(
                 namespace=self.k8s_namespace, label_selector=cluster_selector)
 
-            self._k8s_rbac.delete_collection_namespaced_role(
-                namespace=self.k8s_namespace, label_selector=cluster_selector)
+            self._k8s_rbac.delete_collection_cluster_role(
+                label_selector=cluster_selector)
 
-            self._k8s_rbac.delete_collection_namespaced_role_binding(
-                namespace=self.k8s_namespace, label_selector=cluster_selector)
+            self._k8s_rbac.delete_collection_cluster_role_binding(
+                label_selector=cluster_selector)
         except ApiException as e:
             logging.warning(
                 "Exception deleting kubernetes resources: {}".format(e))

@@ -1,8 +1,10 @@
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
 metadata:
+  labels:
+    ai.clipper.container.label: {{ cluster_name }}
+    ai.clipper.name: prom-cluster-role
   name: {{cluster_name}}-prometheus
-  # ClusterRole are not namespaced. 
 rules:
 - apiGroups: [""]
   resources:
