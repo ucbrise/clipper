@@ -377,7 +377,6 @@ class KubernetesContainerManager(ContainerManager):
                 CONFIG_FILES['metric']['deployment'],
                 version=PROM_VERSION,
                 cluster_name=self.cluster_name,
-                service_account_name=self.cluster_name+"-prometheus"
             )
             self._k8s_beta.create_namespaced_deployment(
                 body=deployment_data, namespace=self.k8s_namespace)
