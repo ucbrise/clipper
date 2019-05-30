@@ -21,21 +21,11 @@ def find(name, path):
         if name in files or name in dirs:
             return os.path.join(root, name)
 
-
-# Run run_inference.py, here the image.jpg is just the testing image for setting up the tensorflow environment
-run_inference_path = find("run_inference.py", "/")
-model_dir_path = find("model", "/container/im2txt")
-checkpoint_path = model_dir_path + "/newmodel.ckpt-2000000"
-vocabulary_path = find("word_counts.txt", "/")
-image_path = find("image.jpg", "/")
-# setupTensorflowEnvironmentCmd = "python " + run_inference_path + " --checkpoint_path " + check_point_path + " --vocab_file " + vocabulary_path + " --input_files " + image_path
-# os.system(setupTensorflowEnvironmentCmd)
-
-
-FLAGS = tf.flags.FLAGS
-# tf.flags.DEFINE_string("checkpoint_path", "", "Model checkpoint file or directory containing a model checkpoint file.")
-# tf.flags.DEFINE_string("vocab_file", "", "Text file containing the vocabulary.")
-# tf.flags.DEFINE_string("input_files", "", "File pattern or comma-separated list of file patterns of image files.")
+# model_dir_path = find("model", "/container/im2txt")
+# checkpoint_path = model_dir_path + "/newmodel.ckpt-2000000"
+# vocabulary_path = find("word_counts.txt", "/")
+checkpoint_path = "/container/im2txt/model/newmodel.ckpt-2000000"
+vocabulary_path = "/container/im2txt/data/word_counts.txt"
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -49,11 +39,6 @@ g.finalize()
 
 # Create the vocabulary.
 vocab = vocabulary.Vocabulary(vocabulary_path)
-# filenames = []
-# for file_pattern in input_files.split(","):
-#     filenames.extend(tf.gfile.Glob(file_pattern))
-# tf.logging.info("Running caption generation on %d files matching %s", len(
-#     filenames), FLAGS.input_files)
 
 sess = tf.Session(graph=g) 
 # Load the model from checkpoint.
