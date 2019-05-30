@@ -1028,10 +1028,9 @@ TEST_F(ManagementFrontendTest, TestDeleteVersionedModelCorrect) {
 
   ASSERT_NO_THROW(rh_.delete_versioned_model(delete_versioned_model_json));
 
-  // Check that subsequent calls to model return empty JSON
-  std::string json_response = rh_.get_model(delete_versioned_model_json);
-  std::string expected_response = "{}";
-  ASSERT_EQ(json_response, expected_response);
+  // Check that the model is invalid or not.
+  auto result = get_model(*redis_, VersionedModelId(model_name, model_version));
+  ASSERT_EQ(result.find("valid"), result.end());
 }
 
 TEST_F(ManagementFrontendTest, TestDeleteVersionedModelMissingField) {
