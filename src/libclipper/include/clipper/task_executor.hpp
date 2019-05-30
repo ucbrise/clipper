@@ -638,6 +638,8 @@ class TaskExecutor {
          << "'" << model_id.get_name() << "'";
       log_info_formatted(LOGGING_TAG_TASK_EXECUTOR, "{}", ss.str());
 
+      active_containers_->unregister_batch_size(model_id);
+
       if (delete_model_queue_if_necessary(model_id)) {
         log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
                            "Deleted queue for model: {} : {}",
