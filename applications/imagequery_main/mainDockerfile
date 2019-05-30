@@ -56,7 +56,7 @@ RUN /container/c2_imageCaptionGenerator/im2txt/data/imageDataset/untar.sh
 RUN chmod 777 /container/c2_imageCaptionGenerator/im2txt/data/imageDataset/rename.sh 
 RUN /container/c2_imageCaptionGenerator/im2txt/data/imageDataset/rename.sh
 
-# ### for c3 
+### for c3 
 RUN pip3 install nltk numpy textacy
 RUN python3 -m nltk.downloader all
 RUN pip3 install spacy
@@ -64,8 +64,8 @@ RUN python3 -m spacy download en_core_web_sm
 
 ADD imagequery_main/c3_nlpMappingGenerator/app /container/c3_nlpMappingGenerator
 
-# ### for c4
-# ADD imagequery_main/c4_questionAnswering/app /container/c4_questionAnswering
+### for c4
+ADD imagequery_main/c4_questionAnswering/app /container/c4_questionAnswering
 
 # for main.py
 ADD imagequery_main/main.py /container

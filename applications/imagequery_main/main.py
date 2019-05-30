@@ -7,58 +7,60 @@ import c3_nlpMappingGenerator.predict as mapping_generator
 import c4_questionAnswering.predict as question_answerer
 print("Modules successfully imported!")
 
-# def run_speech_recognition(audio_file_index):
-#   speech_text, elapsed_time = speech_recognizer.predict(audio_file_index)
-#   print("1:\tText: " + speech_text)
-#   return speech_text, elapsed_time
+def run_speech_recognition(input_index):
+  speech_text, elapsed_time = speech_recognizer.predict(input_index)
+  print("1:\tText: " + speech_text)
+  return speech_text, elapsed_time
 
-# def generate_image_caption(image_file_index):
-#   captions, elapsed_time = caption_generator.predict(image_file_index)
-#   print("2:\tGenerated captions: " + captions)
-#   return captions, elapsed_time
+def generate_image_caption(input_index):
+  captions, elapsed_time = caption_generator.predict(input_index)
+  print("2:\tGenerated captions: " + captions)
+  return captions, elapsed_time
 		
-# def run(audio_file_index, image_file_index):
-#   elapsed_time_list = []
-#   result_list = []
-#   p = Pool(2)
-#   returned_result1 = p.apply_async(run_speech_recognition, args=(audio_file_index,))
-#   returned_result2 = p.apply_async(generate_image_caption, args=(image_file_index,))
-#   p.close()
-#   p.join() # p.join()方法会等待所有子进程执行完毕
+def run(input_index):
+  # CONTAINER 0
+  input_index = entry_container.predict(input_index)
 
-#   result1 = returned_result1.get()[0]
-#   time1 = returned_result1.get()[1]
-#   result2 = returned_result2.get()[0]
-#   time2 = returned_result2.get()[1]
-#   elapsed_time_list.append(time1)
-#   elapsed_time_list.append(time2)
+  # CONTAINER 1, 2
+  elapsed_time_list = []
+  result_list = []
+  p = Pool(2)
+  returned_result1 = p.apply_async(run_speech_recognition, args=(input_index,))
+  returned_result2 = p.apply_async(generate_image_caption, args=(input_index,))
+  p.close()
+  p.join() # p.join()方法会等待所有子进程执行完毕
 
-#   # CONTAINER 3: image nlp analyzer
-#   text = result1 + " . " + result2
-#   # print("Input to mapping generator: " + text)
-#   mapping, elapsed_time = mapping_generator.predict(text)
-#   elapsed_time_list.append(elapsed_time)
-#   print("3:\tGenerated mapping: ")
-#   items = mapping.split('-')
-#   subject = items[0]
-#   verb = items[1]
-#   time = items[2]
-#   print("\t- Subject: " + subject)
-#   print("\t- Verb: " + verb)
-#   print("\t- Time: " + time)
+  result1 = returned_result1.get()[0]
+  time1 = returned_result1.get()[1]
+  result2 = returned_result2.get()[0]
+  time2 = returned_result2.get()[1]
+  elapsed_time_list.append(time1)
+  elapsed_time_list.append(time2)
 
-#   # Container 4: Question Answerings
-#   question = "What is in the image?"
-#   answer, elapsed_time = question_answerer.predict(question, mapping)
-#   elapsed_time_list.append(elapsed_time)
-#   print("4:\tThe asked question is: " + question)
-#   print("\tGenerated answer: " + answer)
+  # CONTAINER 3: image nlp analyzer
+  text = result1 + "|" + result2
+  mapping, elapsed_time = mapping_generator.predict(text)
+  elapsed_time_list.append(elapsed_time)
+  print("3:\tGenerated mapping: ")
+  items = mapping.split('-')
+  nouns = items[0]
+  verbs = items[1]
+  print("\t- Nouns: " + nouns)
+  print("\t- Verb: " + verbs)
 
-#   print("Time elapsed for each container(second):")
-#   print("Speech Recognition:\t\t" , elapsed_time_list[0])
-#   print("Image Caption Generation:\t" , elapsed_time_list[1])
-#   print("NLP:\t\t\t\t" , elapsed_time_list[2])
-#   print("Question Answering:\t\t" , elapsed_time_list[3])
+  # Container 4: Question Answerings
+  question = "Verb"
+  answer, elapsed_time = question_answerer.predict(mapping)
+  elapsed_time_list.append(elapsed_time)
+  print("4:\tThe asked question is: " + question)
+  print("\tGenerated answer: " + answer)
 
-# if __name__ == "__main__":
-#   run(600, 600)
+  print("Time elapsed for each container(second):")
+  print("Speech Recognition:\t\t" , elapsed_time_list[0])
+  print("Image Caption Generation:\t" , elapsed_time_list[1])
+  print("NLP:\t\t\t\t" , elapsed_time_list[2])
+  print("Question Answering:\t\t" , elapsed_time_list[3])
+
+if __name__ == "__main__":
+  run(600, 600)
+  run(700, 700)

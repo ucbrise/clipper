@@ -29,7 +29,7 @@ def predict(input_str):
     print("The nlp analysis takes " + str(time_elapsed) + " seconds")
     
     print(noun_str + "-" + verb_str)
-    return noun_str + "-" + verb_str
+    return noun_str + "-" + verb_str, time_elapsed
 
 if __name__ == '__main__':
     predict("please call Stella ask her to bring. |a small propeller plane sitting on top of a field .")

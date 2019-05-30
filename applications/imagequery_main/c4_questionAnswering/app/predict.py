@@ -27,7 +27,7 @@ def predict(mapping):
     end = timer()
     time_elapsed = end - start
     print("The question answering takes " + str(time_elapsed) + "seconds")
-    return answer
+    return answer, time_elapsed
 
 if __name__ == "__main__":
     predict("Stella, her, A petting jet, top, an airport runway-call, ask, bring, pet, sit")
