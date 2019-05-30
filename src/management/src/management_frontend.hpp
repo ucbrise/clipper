@@ -1340,6 +1340,15 @@ class RequestHandler {
          << " does not exist";
       throw clipper::ManagementOperationError(ss.str());
     }
+    if (existing_model_data.find("valid") == existing_model_data.end()) {
+      std::stringstream ss;
+      ss << "model with name "
+         << "'" << model_name << "'"
+         << " and version "
+         << "'" << model_version << "'"
+         << " is already marked as 'invalid'";
+      throw clipper::ManagementOperationError(ss.str())
+    }
 
     if (clipper::redis::mark_versioned_model_for_delete(redis_connection_, model_id)) {
       std::stringstream ss;

@@ -1109,4 +1109,45 @@ TEST_F(ManagementFrontendTest, TestDeleteVersionedModelForNonexistentModel) {
                clipper::ManagementOperationError);
 }
 
+TEST_F(ManagementFrontendTest, TestDeleteVersionedModelForInvalidModel) {
+  std::string add_model_json = R"(
+  {
+    "model_name": "test_delete_versioned_model_for_invalid_model",
+    "model_version": "1",
+    "labels": ["label1", "label2", "label3"],
+    "input_type": "integers",
+    "batch_size": -1,
+    "container_name": "clipper/sklearn_cifar",
+    "model_data_path": "/tmp/model/repo/m/1"
+  }
+  )";
+
+  ASSERT_NO_THROW(rh_.add_model(add_model_json));
+  std::string model_name = "test_delete_versioned_model_for_invalid_model";
+  std::string model_version = "1";
+  auto result = get_model(*redis_, VersionedModelId(model_name, model_version));
+  // The model table has 9 fields, so we expect to get back a map with 9
+  // entries in it (see add_model() in redis.cpp for details on what the
+  // fields are).
+  ASSERT_EQ(result.size(), static_cast<size_t>(9));
+
+  // Make sure that the current model version has been updated
+  // appropriately.
+  ASSERT_EQ(*get_current_model_version(*redis_, model_name), model_version);
+
+  std::string delete_versioned_model_json = R"(
+  {
+    "model_name": "test_delete_versioned_model_for_invalid_model",
+    "model_version": "1"
+  }
+  )";
+
+  // Delete the versioned model.
+  ASSERT_NO_THROW(rh_.delete_versioned_model(delete_versioned_model_json));
+
+  // Try to delete the same model immediately.
+  ASSERT_THROW(rh_.delete_versioned_model(delete_versioned_model_json),
+               clipper::ManagementOperationError);
+}
+
 }  // namespace
