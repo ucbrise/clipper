@@ -25,8 +25,8 @@ from __future__ import print_function
 # from im2txt.inference_utils import inference_wrapper_base
 
 # the correct import statements:
-import show_and_tell_model
-import inference_wrapper_base
+import c2_imageCaptionGenerator.show_and_tell_model as show_and_tell_model
+import c2_imageCaptionGenerator.inference_wrapper_base as inference_wrapper_base
 
 
 class InferenceWrapper(inference_wrapper_base.InferenceWrapperBase):

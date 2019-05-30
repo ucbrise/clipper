@@ -21,7 +21,7 @@ import math
 import numpy as np
 import tensorflow as tf
 
-import caption_generator
+import c2_imageCaptionGenerator.caption_generator as caption_generator
 
 
 class FakeVocab(object):

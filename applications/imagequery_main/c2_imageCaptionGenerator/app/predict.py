@@ -12,10 +12,10 @@ import tensorflow as tf
 
 print("pwd for c2/predict.py: " + os.getcwd())
 
-import configuration
-import inference_wrapper
-import caption_generator
-import vocabulary
+import c2_imageCaptionGenerator.configuration as configuration
+import c2_imageCaptionGenerator.inference_wrapper as inference_wrapper
+import c2_imageCaptionGenerator.caption_generator as caption_generator
+import c2_imageCaptionGenerator.vocabulary as vocabulary
 
 
 def find(name, path):

@@ -28,8 +28,8 @@ import tensorflow as tf
 # from im2txt import show_and_tell_model
 
 # the correct import statements:
-import configuration
-import show_and_tell_model
+import c2_imageCaptionGenerator.configuration as configuration
+import c2_imageCaptionGenerator.show_and_tell_model as show_and_tell_model
 
 
 class ShowAndTellModel(show_and_tell_model.ShowAndTellModel):
