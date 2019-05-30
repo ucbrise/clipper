@@ -656,7 +656,7 @@ class TaskExecutor {
          << "'" << model_id.get_name() << "'";
       log_info_formatted(LOGGING_TAG_TASK_EXECUTOR, "{}", ss.str());
 
-      if (delete_model_metric_if_necessary(model_id) {
+      if (delete_model_metric_if_necessary(model_id)) {
         log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
                            "Deleted metric for model: {} : {}",
                            model_id.get_name(), model_id.get_id());
