@@ -23,26 +23,29 @@ def run(input_index):
 
   elapsed_time_list = []
   # CONTAINER 1, 2: Multi Threading
-  # p = Pool(2)
-  # returned_result1 = p.apply_async(run_speech_recognition, args=(input_index,))
+  p = Pool(1)
+  returned_result1 = p.apply_async(run_speech_recognition, args=(input_index,))
   # returned_result2 = p.apply_async(generate_image_caption, args=(input_index,))
-  # p.close()
-  # p.join() # p.join()方法会等待所有子进程执行完毕
+  result2, time2 = generate_image_caption
+  p.close()
+  p.join() # p.join()方法会等待所有子进程执行完毕
 
-  # result1 = returned_result1.get()[0]
-  # time1 = returned_result1.get()[1]
+
+
+  result1 = returned_result1.get()[0]
+  time1 = returned_result1.get()[1]
   # result2 = returned_result2.get()[0]
   # time2 = returned_result2.get()[1]
-  # elapsed_time_list.append(time1)
-  # elapsed_time_list.append(time2)
-
-  # CONTAINER 1, 2: Synchronous
-  result1, time1 = speech_recognizer.predict(input_index)
-  print("1:\tText: " + result1)
-  result2, time2 = caption_generator.predict(input_index)
-  print("2:\tGenerated captions: " + result2)
   elapsed_time_list.append(time1)
   elapsed_time_list.append(time2)
+
+  # CONTAINER 1, 2: Synchronous
+  # result1, time1 = speech_recognizer.predict(input_index)
+  # print("1:\tText: " + result1)
+  # result2, time2 = caption_generator.predict(input_index)
+  # print("2:\tGenerated captions: " + result2)
+  # elapsed_time_list.append(time1)
+  # elapsed_time_list.append(time2)
 
   # CONTAINER 3
   text = result1 + "|" + result2
