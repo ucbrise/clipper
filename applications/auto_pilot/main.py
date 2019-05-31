@@ -3,50 +3,37 @@ sys.path.append("/container")
 
 from multiprocessing import Pool
 
-import 1_Framce_Feeder.app.predict as frame_feeder
-import 2_Algo1.app.predict as algo1
-import 3_Algo2.app.predict as algo2
-import 4_Algo3.app.predict as algo3
-import 5_Algo4.app.predict as algo4
-import 6_Conclusion as conclusion
+import 0_Entry_Point.app.predict as entry
+import 1_Image_Preprocessing.app.predict as preprocessing
+import 2_Obstacle_Detection.app.predict as obstacle_detection
+import 3_Route_Planning.app.predict as route_planning
+import 4_Algo1.app.predict as algo1
+import 5_Algo2.app.predict as algo2
+import 6_Conclusion.app.predict as conclusion
 
 print("Modules successfully imported!")
-
 		
 def run():
 
-  smoothed_angle = 0
+    0_output = entry.predict("0***7***7")
 
-  img = cv2.imread('steering_wheel_image.jpg', 0)
-  rows, cols = img.shape
+    1_output = preprocessing.predict(0_output)
 
-  for i in range(1, 2000):
+    print("Image Preprocessing Finished")
 
-    image_str = frame_feeder.Predict(i)
+    2_output = obstacle_detection.predict(1_output)
 
-    angle1 = float(algo1.Predict(image_str))
-    print("The steering angle prediction result from the first algo is ", round(angle1, 4))
+    3_output = route_planning.predict(2_output)
 
-    angle2 = float(algo2.Predict(image_str))
-    print("The steering angle prediction result from the second algo is ", round(angle2, 4))
+    p = Pool(2)
+    c4 = xmlrpc.client.ServerProxy('http://0.0.0.0:8000')
+    c5 = xmlrpc.client.ServerProxy('http://0.0.0.0:9000')
+    returned_result_list.append(p.apply_async(c4.Predict, args=(3_output,))) 
+    returned_result_list.append(p.apply_async(c5.Predict, args=(3_output,)))
+    p.close()
+    p.join()
 
-    angle3 = float(algo3.Predict(image_str))
-    print("The steering angle prediction result from the third algo is ", round(angle3, 4))
-
-    angle4 = float(algo4.Predict(image_str))
-    print("The steering angle prediction result from the fourth algo is ", round(angle4, 4))
-
-    final_angle = float(conclusion.Predict(str(angle1), str(angle2), str(angle3), str(angle4)))
-    print("The FINAL steering angle prediction is ", round(final_angle, 4), "\n")
-
-    smoothed_angle += 0.2 * pow(abs((final_angle - smoothed_angle)), 2.0 / 3.0) * (final_angle - smoothed_angle) / \
-                      abs(final_angle - smoothed_angle)
-
-    M = cv2.getRotationMatrix2D((cols / 2, rows / 2), -smoothed_angle, 1)
-
-    dst = cv2.warpAffine(img, M, (cols, rows))
-
-    cv2.imshow("steering wheel", dst)
+    print(returned_result_list)
 
 
 if __name__ == "__main__":

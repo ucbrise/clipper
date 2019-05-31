@@ -9,13 +9,20 @@ RUN pip3 install pillow
 RUN pip3 install numpy
 RUN pip3 install keras
 RUN pip3 install tensorflow
-RUN pip3 install pencv-contrib-python
+RUN pip3 install opencv-contrib-python
 
-ADD auto_pilot/1_Frame_Feeder/app /container/
-ADD auto_pilot/2_Algo1/app /container/
-ADD auto_pilot/3_Algo2/app /container/
-ADD auto_pilot/4_Algo3/app /container/
-ADD auto_pilot/5_Algo4/app /container/
-ADD auto_pilot/6_Conclusion/app /container/
+ADD auto_pilot/0_Entry_Point /container/0_Entry_Point
+ADD auto_pilot/1_Image_Preprocessing /container/1_Image_Preprocessing
+ADD auto_pilot/2_Obstacle_Detection /container/2_Obstacle_Detection
+ADD auto_pilot/3_Route_Planning /container/3_Route_Planning
+ADD auto_pilot/4_Algo1 /container/4_Algo1
+ADD auto_pilot/5_Algo2 /container/5_Algo2
+ADD auto_pilot/6_Conclusion /container/6_Conclusion
+ADD auto_pilot/main.py /contianer
+
+RUN nohup python3 /contianer/4_Algo1/app/server.py 4 8000
+RUN nohup python3 /contianer/5_Algo2/app/server.py 5 9000
+
+CMD ["python3","/container/main.py"]
 
 EXPOSE 10000
