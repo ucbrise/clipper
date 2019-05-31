@@ -26,7 +26,7 @@ def run(input_index):
   p = Pool(1)
   returned_result1 = p.apply_async(run_speech_recognition, args=(input_index,))
   # returned_result2 = p.apply_async(generate_image_caption, args=(input_index,))
-  result2, time2 = generate_image_caption
+  result2, time2 = generate_image_caption(input_index)
   p.close()
   p.join() # p.join()方法会等待所有子进程执行完毕
 
