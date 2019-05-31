@@ -5,7 +5,7 @@ RUN apt-get install git-core -y
 COPY boat/requirements.txt /container/requirements.txt
 RUN pip3 install -r /container/requirements.txt
 
-RUN echo "To force update"
+RUN echo "To force update!"
 WORKDIR /container
 RUN git clone https://github.com/yinfredyue/boat.git
 WORKDIR /container/boat
