@@ -115,7 +115,7 @@ if __name__ == "__main__":
         clipper_conn.start_clipper()
         clipper_conn.register_application(name="default", input_type="string", default_output="", slo_micros=100000)
 
-        python_deployer.deploy_python_closure(clipper_conn, name="image-model", version=1, input_type="string", func=run)
+        python_deployer.deploy_python_closure(clipper_conn, name="image-model", version=1, input_type="string", func=run, base_image="imagequery_main:main")
       
         clipper_conn.link_model_to_app(app_name="default", model_name="echo-model")
     except:
