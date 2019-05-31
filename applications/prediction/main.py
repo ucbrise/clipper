@@ -55,7 +55,7 @@ def run():
     print("\nStock name: " + stock_name)
 
     # CONTAINER 1: stock price retriever
-    stock_data = pd.read_json(c1.predict(stock_name))
+    stock_data = pd.read_json(c1.predict("AAPL:2018:1:1"))
     print("\nStock price data Retrieval FINISHED")
     print("The retrieved data is in shape of ", stock_data.shape)
     print("Here are the first 5 lines of retrieved data:")
