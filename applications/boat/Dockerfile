@@ -11,7 +11,7 @@ RUN git clone https://github.com/jitaogithub/boat.git
 WORKDIR /container/boat
 RUN pip3 install git+https://github.com/ucbrise/clipper.git@develop#subdirectory=clipper_admin
 RUN mv $(find / -type d -name clipper_admin) /container/boat
-CMD ["python3", "/container/deploy.py"] 
+CMD ["python3", "/container/boat/deploy.py"] 
 # need to use absolute path even with WORKDIR
 
 EXPOSE 10000
