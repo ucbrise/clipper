@@ -142,6 +142,17 @@ std::shared_ptr<Histogram> MetricsRegistry::create_histogram(
   return histogram;
 }
 
+void MetricsRegistry::delete_metric(std::shared_ptr<Metric> target) {
+  std::lock_guard<std::mutex> guard(*metrics_lock_);
+  for (auto it = metrics_->begin(); it != metrics_->end();) {
+    if (*it == target) {
+      it = metrics_->erase(it);
+    } else {
+      it++;
+    }
+  }
+}
+
 Counter::Counter(const std::string name) : Counter(name, 0) {}
 
 Counter::Counter(const std::string name, int initial_count)
