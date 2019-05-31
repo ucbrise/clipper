@@ -11,6 +11,6 @@ RUN git clone https://github.com/jitaogithub/boat.git
 WORKDIR /container/boat
 RUN pip3 install git+https://github.com/ucbrise/clipper.git@develop#subdirectory=clipper_admin
 RUN mv $(find / -type d -name clipper_admin) /container/boat
-# CMD python3 deploy.py
+CMD ["python3", "deploy.py"]
 
 EXPOSE 10000
