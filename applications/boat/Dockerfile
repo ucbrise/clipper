@@ -1,12 +1,10 @@
-# docker run -it --name -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp boat_image
-FROM ubuntu:18.04
+# docker run -it  --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp boat_image:test
+FROM zsxhku/clipperpy35dev
 RUN apt-get update
 RUN apt-get install python3 python3-pip -y
 RUN apt-get install git-core -y
 COPY boat/requirements.txt /container/requirements.txt
 RUN pip3 install -r /container/requirements.txt
-
-# RUN git config --global user.email "yy0125@connect.hku.hk"
 
 
 WORKDIR /container
