@@ -14,7 +14,7 @@ import torch.nn.functional as F
 
 IMPORT_ERROR_RETURN_CODE = 3
 
-PYTORCH_WEIGHTS_RELATIVE_PATH = "pytorch_weights.pkl"
+# PYTORCH_WEIGHTS_RELATIVE_PATH = "pytorch_weights.pkl"
 PYTORCH_MODEL_RELATIVE_PATH = "pytorch_model.pkl"
 
 
@@ -27,15 +27,19 @@ def load_predict_func(file_path):
             return cloudpickle.load(serialized_func_file)
 
 
-def load_pytorch_model(model_path, weights_path):
+def load_pytorch_model(model_path):
+    model = None
     if sys.version_info < (3, 0):
         with open(model_path, 'r') as serialized_model_file:
-            model = cloudpickle.load(serialized_model_file)
+            model = torch.load(serialized_model_file)
     else:
         with open(model_path, 'rb') as serialized_model_file:
-            model = cloudpickle.load(serialized_model_file)
+            model = torch.load(serialized_model_file)
 
-    model.load_state_dict(torch.load(weights_path))
+    if model is None:
+        raise ValueError("Model is failed to load")
+
+    # model.load_state_dict(torch.load(weights_path))
     return model
 
 
@@ -50,8 +54,8 @@ class PyTorchContainer(rpc.ModelContainerBase):
         self.predict_func = load_predict_func(predict_path)
 
         torch_model_path = os.path.join(path, PYTORCH_MODEL_RELATIVE_PATH)
-        torch_weights_path = os.path.join(path, PYTORCH_WEIGHTS_RELATIVE_PATH)
-        self.model = load_pytorch_model(torch_model_path, torch_weights_path)
+        # torch_weights_path = os.path.join(path, PYTORCH_WEIGHTS_RELATIVE_PATH)
+        self.model = load_pytorch_model(torch_model_path)
 
     def predict_ints(self, inputs):
         preds = self.predict_func(self.model, inputs)

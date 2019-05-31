@@ -13,7 +13,7 @@ from .deployer_utils import save_python_function, serialize_object
 
 logger = logging.getLogger(__name__)
 
-PYTORCH_WEIGHTS_RELATIVE_PATH = "pytorch_weights.pkl"
+# PYTORCH_WEIGHTS_RELATIVE_PATH = "pytorch_weights.pkl"
 PYTORCH_MODEL_RELATIVE_PATH = "pytorch_model.pkl"
 
 
@@ -190,17 +190,17 @@ def deploy_pytorch_model(clipper_conn,
     serialization_dir = save_python_function(name, func)
 
     # save Torch model
-    torch_weights_save_loc = os.path.join(serialization_dir,
-                                          PYTORCH_WEIGHTS_RELATIVE_PATH)
+    # torch_weights_save_loc = os.path.join(serialization_dir,
+    #                                       PYTORCH_WEIGHTS_RELATIVE_PATH)
 
     torch_model_save_loc = os.path.join(serialization_dir,
                                         PYTORCH_MODEL_RELATIVE_PATH)
 
     try:
-        torch.save(pytorch_model.state_dict(), torch_weights_save_loc)
-        serialized_model = serialize_object(pytorch_model)
-        with open(torch_model_save_loc, "wb") as serialized_model_file:
-            serialized_model_file.write(serialized_model)
+        torch.save(pytorch_model, torch_model_save_loc)
+        # serialized_model = serialize_object(pytorch_model)
+        # with open(torch_model_save_loc, "wb") as serialized_model_file:
+        #     serialized_model_file.write(serialized_model)
         logger.info("Torch model saved")
 
         py_minor_version = (sys.version_info.major, sys.version_info.minor)
