@@ -74,6 +74,7 @@ def run(input_index):
 if __name__ == "__main__":
   start = timer()
   for i in range(100):
+    print("###" + str(i) + "###" )
     run(i)
   end = timer()
   time_elapsed = end - start 
