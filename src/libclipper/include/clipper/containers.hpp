@@ -157,6 +157,8 @@ class ActiveContainers {
 
   void register_batch_size(VersionedModelId model, int batch_size);
 
+  void unregister_batch_size(VersionedModelId model);
+
   /// This method returns the active container specified by the
   /// provided model id and replica id. This is threadsafe because each
   /// individual ModelContainer object is threadsafe, and this method returns

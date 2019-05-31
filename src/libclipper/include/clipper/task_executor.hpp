@@ -50,6 +50,14 @@ class ModelMetrics {
   ModelMetrics(ModelMetrics &&) = default;
   ModelMetrics &operator=(ModelMetrics &&) = default;
 
+  void invalidate() {
+    metrics::MetricsRegistry::get_metrics().delete_metric(latency_);
+    metrics::MetricsRegistry::get_metrics().delete_metric(throughput_);
+    metrics::MetricsRegistry::get_metrics().delete_metric(num_predictions_);
+    metrics::MetricsRegistry::get_metrics().delete_metric(cache_hit_ratio_);
+    metrics::MetricsRegistry::get_metrics().delete_metric(batch_size_);
+  }
+
   VersionedModelId model_;
   std::shared_ptr<metrics::Histogram> latency_;
   std::shared_ptr<metrics::Meter> throughput_;
@@ -567,15 +575,25 @@ class TaskExecutor {
     return false;
   }
 
+  bool delete_model_metric_if_necessary(const VersionedModelId &model_id) {
+    // Deletes an entry from the metric map, if one exists
+    boost::unique_lock<boost::shared_mutex> l(model_metrics_mutex_);
+    auto cur_model_metric_entry = model_metrics_.find(model_id);
+    if (cur_model_metric_entry != model_metrics_.end()) {
+      auto cur_model_metric = cur_model_metric_entry->second;
+      cur_model_metric.invalidate();
+      model_metrics_.erase(model_id);
+      return true;
+    }
+    return false;
+  }
+
   bool delete_model_queue_if_necessary(const VersionedModelId &model_id) {
     // Deletes an entry from the queues map, if one exists
     boost::unique_lock<boost::shared_mutex> l(model_queues_mutex_);
     if (model_queues_.count(model_id)) {
       model_queues_[model_id]->invalidate();
       model_queues_.erase(model_id);
-
-      boost::unique_lock<boost::shared_mutex> l(model_metrics_mutex_);
-      model_metrics_.erase(model_id);
       return true;
     }
     return false;
@@ -638,11 +656,20 @@ class TaskExecutor {
          << "'" << model_id.get_name() << "'";
       log_info_formatted(LOGGING_TAG_TASK_EXECUTOR, "{}", ss.str());
 
+      if (delete_model_metric_if_necessary(model_id)) {
+        log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
+                           "Deleted metric for model: {} : {}",
+                           model_id.get_name(), model_id.get_id());
+      }
+
       if (delete_model_queue_if_necessary(model_id)) {
         log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
                            "Deleted queue for model: {} : {}",
                            model_id.get_name(), model_id.get_id());
       }
+
+      active_containers_->unregister_batch_size(model_id);
+
     } else {
       std::stringstream ss;
       ss << "Error deleting versioned model with name "
