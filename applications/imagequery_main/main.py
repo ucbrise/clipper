@@ -72,10 +72,10 @@ def run(input_index):
   print("Question Answering:\t\t" , elapsed_time_list[3])
 
 if __name__ == "__main__":
+  run(1)
+
   start = timer()
-  for i in range(1):
-    print("###" + str(i) + "###" )
-    run(i)
+  run(0)
   end = timer()
   time_elapsed = end - start 
   print("Total time: " + str(time_elapsed) + " seconds.")
