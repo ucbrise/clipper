@@ -1,4 +1,5 @@
 from multiprocessing import Pool
+from timeit import default_timer as timer
 
 import c0_entryContainer.predict as entry_container
 import c1_speechRecognition.predict as speech_recognizer
@@ -71,5 +72,10 @@ def run(input_index):
   print("Question Answering:\t\t" , elapsed_time_list[3])
 
 if __name__ == "__main__":
-  run(600)
-  run(700)
+  start = timer()
+  for i in range(100):
+    run(i)
+  end = timer()
+  time_elapsed = end - start 
+  print("Total time: " + str(time_elapsed) + " seconds.")
+
