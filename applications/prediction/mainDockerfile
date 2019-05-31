@@ -7,20 +7,20 @@ RUN apt-get install python3 python3-pip -y
 # docker run --runtime=nvidia -d -p 10000:10000 -it prediction:main
 
 # for c1
-RUN pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple pandas quandl grpcio protobuf 
+RUN pip3 install pandas quandl grpcio protobuf 
 ADD prediction/c1_Stock_Price_Retriever /container/c1_Stock_Price_Retriever
 
 # for c2
-RUN pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple numpy tweepy
+RUN pip3 install numpy tweepy
 ADD prediction/c2_Twitter_Collector /container/c2_Twitter_Collector
 
 # for c3
-RUN pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple spacy
+RUN pip3 install spacy
 RUN python3 -m spacy download en_core_web_sm
 ADD prediction/c3_Tokenizer /container/c3_Tokenizer
 
 # for c4
-RUN pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple nltk
+RUN pip3 install nltk
 RUN python3 -m spacy download en
 ADD prediction/c4_Sentiment_Analysis /container/c4_Sentiment_Analysis
 
@@ -33,7 +33,7 @@ ADD prediction/c5_LSTM_Predictor /container/c5_LSTM_Predictor
 ADD prediction/c6_Mem /container/c6_Mem
 
 # for c8
-RUN pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple fastai
+RUN pip3 install fastai
 ADD prediction/c8_KNN /container/c8_KNN
 
 # for c9
