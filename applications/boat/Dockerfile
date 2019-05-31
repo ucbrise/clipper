@@ -11,11 +11,7 @@ RUN pip3 install -r /container/requirements.txt
 RUN git clone https://github.com/jitaogithub/boat.git
 WORKDIR /container/boat
 RUN pip3 install git+https://github.com/ucbrise/clipper.git@develop#subdirectory=clipper_admin
-RUN ls 
-
-
-
-
-WORKDIR /container/boat
+RUN pwd
+RUN ls
 
 EXPOSE 10000
