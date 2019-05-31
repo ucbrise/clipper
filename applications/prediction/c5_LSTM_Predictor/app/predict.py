@@ -24,7 +24,7 @@ def predict(comstring):
     for i in range(60,testingDatasetSize):
       X_test.append(google_scaled[ i-60 : i , 0]) # 500 x 60 x 1
     X_test = np.array(X_test)
-    # print("X_test.shape: " , X_test.shape) # 500 x 60
+    print("X_test.shape: " , X_test.shape) # 500 x 60
 
     X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
     # print(X_test.shape) # 500 x 60 x 1
