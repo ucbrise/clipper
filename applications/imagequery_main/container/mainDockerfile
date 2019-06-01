@@ -22,7 +22,7 @@ RUN pip3 install glob3
 ADD c1_speechRecognition/app /container/c1_speechRecognition
 ADD c1_speechRecognition/data /container/c1_speechRecognition/data
 
-RUN curl 'https://storage.googleapis.com/kaggle-datasets/4114/6391/speech-accent-archive.zip?GoogleAccessId=web-data@kaggle-161607.iam.gserviceaccount.com&Expires=1559377724&Signature=bssX9KooUn3i4igK3nNpHiap3j%2BV3QFrzz84NhCwkJILXKi2plbZsABqblSI1YfoNvnbHJ35wMr2S%2Bpai2%2BxA%2BN42n5YV%2BllgL1Ae0oZdK0%2Bzzru%2FbegJMw%2Bo5Q3GPbiC4lpqsAwB9FbV64JwtO28jtC1PMdXWhObx5Qftz3fFiflQ1kmKyfhW233gbLeDaS%2BbEM3u1eilrHKCFnnULiamBbF%2BYTT7C5ityX7aayZbRVxYMSVVMBr8zFe%2F5OjdbHdLPPOfSE1G2fHeyu6H4tS2P2dNXZR98zc1%2FK2UrJbMX17jIMq%2B9%2F7C6IwvAtFODT9Wt63UPVFNCt8cp4tfGtQA%3D%3D' -H 'authority: storage.googleapis.com' -H 'pragma: no-cache' -H 'cache-control: no-cache' -H 'upgrade-insecure-requests: 1' -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36' -H 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3' -H 'referer: https://www.kaggle.com/' -H 'accept-encoding: gzip, deflate, br' -H 'accept-language: en,zh;q=0.9,zh-CN;q=0.8' -H 'cookie: _ga=GA1.3.1190370773.1559048531; _gid=GA1.3.632917932.1559048531' --compressed -o speech-accent-archive.zip
+RUN /container/c1_speechRecognition/data/dataset3/downloadDataset.sh
 RUN mv $(find / -name speech-accent-archive.zip) /container/c1_speechRecognition/data/dataset3
 RUN unzip /container/c1_speechRecognition/data/dataset3/speech-accent-archive.zip -d /container/c1_speechRecognition/data/dataset3
 RUN unzip -qq /container/c1_speechRecognition/data/dataset3/recordings.zip -d /container/c1_speechRecognition/data/dataset3/
