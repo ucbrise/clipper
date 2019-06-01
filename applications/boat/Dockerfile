@@ -5,8 +5,9 @@ RUN apt-get install git-core -y
 COPY boat/requirements.txt /container/requirements.txt
 RUN pip3 install -r /container/requirements.txt
 
-RUN echo "To force update!!!!"
+RUN echo "To force update!!!!!"
 WORKDIR /container
+RUN touch __init__.py
 RUN git clone https://github.com/yinfredyue/boat.git
 WORKDIR /container/boat
 RUN pip3 install git+https://github.com/ucbrise/clipper.git@develop#subdirectory=clipper_admin
