@@ -1,7 +1,7 @@
 FROM tensorflow/tensorflow:1.12.0-gpu-py3 
 RUN apt-get update
 
-# docker build -f ./mainDockerfile -t main .
+# docker build -f ./mainDockerfile -t main:test .
 # docker run --runtime=nvidia -p 10000:10000 -it main
 
 # /container would contains:
@@ -76,7 +76,6 @@ ADD rpc.py /container
 # Crucial
 WORKDIR /container
 
-A
 CMD ["python", "/container/closure.py"]
 
 EXPOSE 10000
