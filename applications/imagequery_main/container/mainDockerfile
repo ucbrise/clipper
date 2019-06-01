@@ -22,6 +22,7 @@ RUN pip3 install glob3
 ADD c1_speechRecognition/app /container/c1_speechRecognition
 ADD c1_speechRecognition/data /container/c1_speechRecognition/data
 
+RUN chmod 777 /container/c1_speechRecognition/data/dataset3/downloadDataset.sh
 RUN /container/c1_speechRecognition/data/dataset3/downloadDataset.sh
 RUN mv $(find / -name speech-accent-archive.zip) /container/c1_speechRecognition/data/dataset3
 RUN unzip /container/c1_speechRecognition/data/dataset3/speech-accent-archive.zip -d /container/c1_speechRecognition/data/dataset3
