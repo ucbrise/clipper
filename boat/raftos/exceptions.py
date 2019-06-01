@@ -1,0 +1,3 @@
+
+class NotALeaderException(Exception):
+    pass
