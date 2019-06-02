@@ -1,0 +1,24 @@
+FROM ubuntu:bionic
+RUN apt-get update
+RUN apt-get install python3 python3-pip -y
+RUN apt-get install libsm6 libxrender1 libfontconfig1 libxext-dev -y
+RUN pip3 install numpy
+RUN pip3 install keras
+RUN pip3 install opencv-contrib-python
+RUN pip3 install tensorflow
+
+RUN pip3 install grpcio
+RUN pip3 install protobuf
+
+ADD auto_pilot/4_Algo1/app /container/
+
+ADD grpc/app/container_entry.sh /container/
+ADD grpc/app/server.py /container/
+ADD grpc/app/model_pb2_grpc.py /container/
+ADD grpc/app/model_pb2.py /container/
+ADD grpc/app/proxy_pb2_grpc.py /container/
+ADD grpc/app/proxy_pb2.py /container/
+
+EXPOSE 22222
+
+CMD ["/container/container_entry.sh", "tensorflow-container", "/container/server.py"]
