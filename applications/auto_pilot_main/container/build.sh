@@ -1,1 +1,1 @@
-docker build -f ./mainDockerfile -t auto_pilot_main_without_raft:main .
+docker build -f ./mainDockerfile -t auto_pilot_main:noraft .

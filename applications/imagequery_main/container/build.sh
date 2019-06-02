@@ -1,1 +1,1 @@
-docker build -f ./mainDockerfile -t imagequery_main:test .
+docker build -f ./mainDockerfile -t imagequery_main:raft .

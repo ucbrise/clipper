@@ -1,8 +1,8 @@
 FROM tensorflow/tensorflow:1.12.0-gpu-py3 
 RUN apt-get update
 
-# docker build -f ./imagequery_main_without_raft/mainDockerfile -t imagequery_main_without_raft:main .
-# docker run --runtime=nvidia -p 10000:10000 -it imagequery_main_without_raft:main
+# docker build -f ./imagequery_main_without_raft/mainDockerfile -t imagequery_main:noraft .
+# docker run --runtime=nvidia -p 10000:10000 -it imagequery_main:noraft
 
 # /container would contains:
 # c0_entryContainer c1_speechRecognition/ c2_imageCaptionGenerator/ c3_nlpMappingGenerator/ c4_questionAnswering/ main.py
