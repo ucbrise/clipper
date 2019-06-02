@@ -1,4 +1,5 @@
 import sys
+import time
 sys.path.append("/container")
 
 from multiprocessing import Pool
@@ -14,6 +15,8 @@ import c6_Conclusion.app.predict as conclusion
 print("Modules successfully imported!")
 		
 def run():
+
+    start = time.time()
 
     c0_output = entry.predict("0***7***7")
 
@@ -36,6 +39,8 @@ def run():
     returned_result_list.append(algo2.predict(c3_output))
 
     print(returned_result_list)
+
+    print("Total Time:", time.time()-start)
 
 
 if __name__ == "__main__":
