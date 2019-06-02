@@ -2,26 +2,21 @@
 
 cd /container/im2txt/data/imageDataset/101_ObjectCategories
 
-# copy all images from subdirectories to current directory: imageDatasets
-directories="directoryList.txt"
-ls -d */ > $directories
-while read directory; do
-	cp $directory/* .
-done < $directories
+# copy images from subdirectories to current directory: imageDatasets
+index=0;
+subcount=0
+for subdirectory in panda dollar_bill camera ferry cougar_body chair flamingo butterfly kangaroo sunflower airplanes grand_piano car_side Motorbikes
+do 
+	for imageFile in ./${subdirectory}/*.jpg
+	do
+			mv "${imageFile}" "${index}.jpg"
+			index=$((index+1))
+			subcount=$((subcount+1))
+			if [ $subcount -gt 100 ]; then
+				break
+			fi
+	done
+	subcount=0
+done
 
-ls *.jpg
 echo "$(ls *.jpg | wc -l) jpg image files in this dataset."
-# No need to take care of index. Reindexed is performed automatically and neatly.
-
-# Reindex all jpg files in the current directory
-# imageFiles="jpgFiles.txt"
-# ls *.jpg > $imageFiles
-# let i=1
-# while read imageFile; do
-# 	mv $imageFile "image$i.jpg"
-# 	let i=$i+1
-# done < $imageFiles
-
-# remove temp files
-# rm $directories
-# rm $imageFiles

@@ -1,94 +1,37 @@
-# Ref1: spacy official documenation for tagging, noun_chunk 
-# Ref2: textacy official documentation for matching pattern
-import spacy
-import textacy
-# from c3_nlpMappingGenerator.app.preprocess import preprocess
-from preprocess import preprocess
 from timeit import default_timer as timer
-
-# def print_document(doc):
-#   import pprint
-#   pp = pprint.PrettyPrinter()
-#   print('\n')
-#   for token in doc:
-#       pp.pprint((token.text, token.lemma_, token.pos_,
-#                   token.tag_, token.dep_, token.is_stop))
+load_start = timer()
+import spacy
+from preprocess import preprocess
+load_end = timer()
+print("Finished loading modules in " + str(load_end - load_start) + " seconds" )
 
 
-# def print_verb_tagging(doc):
-#     print("\nTokens with 'VERB' as POS tag: ")
-#     for token in doc:
-#         if (token.pos_ == 'VERB'):
-#             print((token.text, token.pos_))
+nlp = spacy.load("en_core_web_sm")
 
-
-def get_time_list(doc):
-    time_list = []
-    for time in doc.ents:
-        if time.label_ == 'TIME' or time.label_ == 'DATE':
-            time_list.append(time.text)
-    return time_list
-
-
-def get_noun_chunk_list(doc):
-    noun_chunk_list = []
-    for chunk in doc.noun_chunks:
-        noun_chunk_list.append(chunk.text)
-    return noun_chunk_list
-
-
-def get_verb_phrase_list(txt):
-    """
-    ? : 0 or 1
-    + : >= 1
-    * : >= 0
-    """
-    # Though you can create your own patter, they easily overshoot
-    pattern = r'<VERB>*<ADV>*<PART>*<VERB>+<PART>*'
-    doc = textacy.make_spacy_doc(txt, lang='en_core_web_md')
-    lists = textacy.extract.pos_regex_matches(doc, pattern)
-    verb_phrases = []
-    for list in lists:
-        verb_phrases.append(list.text)
-    return verb_phrases
-
-
-def generate_mapping(txt):
-    nlp = spacy.load('en_core_web_md')
-    txt = preprocess(txt)
-    document = nlp(txt)
-
-    noun_chunk_list = get_noun_chunk_list(document)
-    verb_phrase_list = get_verb_phrase_list(txt)
-    time_list = get_time_list(document)
-
-    subject = noun_chunk_list[0] if len(noun_chunk_list) > 0 else "<No subject>"
-    verb_phrase = verb_phrase_list[0] if len(verb_phrase_list) > 0 else "<No predicate>"
-    time = time_list[0] if len(time_list) > 0 else "<No time>"
-    mapping_string = subject + "-" + verb_phrase + "-" + time 
-    """ Format: <subject>-<verb>-<time> """
-    return mapping_string
-
-
-def testing():
-    txt1 = "A man is happily playing basketball at 3 o'clock."
-    txt2 = "A boy is crying silently at night."
-    txt3 = "An athelete is running very fast. It was April 1996"
-    txt4 = "A woman is running quickly in the morning."
-
-    txt_list = [txt1, txt2, txt3, txt4]
-    for index, txt in enumerate(txt_list, start=1):
-        """ the index here should is necessary!!! """
-        print(generate_mapping(txt))
-        print(generate_mapping(txt).split('-'))
-
-def predict(txt):
+def predict(input_str):
     start = timer()
-    generated_mapping = generate_mapping(txt)
+
+    c1_output, c2_output = str(input_str).split("|")
+    reconstructed = str(c1_output) + str(c2_output)
+    print(reconstructed)
+    preprocessed = preprocess(reconstructed)
+    print(preprocessed)
+
+    doc = nlp(preprocessed)
+    noun_list = [chunk.text for chunk in doc.noun_chunks]
+    verb_list = [token.lemma_ for token in doc if token.pos_ == "VERB"]
+
+    noun_str = ", ".join(noun_list)
+    verb_str = ", ".join(verb_list)
+
     end = timer()
     time_elapsed = end - start
-    return generated_mapping, time_elapsed
+    print("The nlp analysis takes " + str(time_elapsed) + " seconds")
+    
+    print(noun_str + "-" + verb_str)
+    return noun_str + "-" + verb_str
 
-# if __name__ == "__main__":
-#     txt = "a man riding a wave on top of a surfboard . a person riding a surf board on a wave a man on a surfboard riding a wave ."
-#     print(predict(txt)) # man-happily play-3 o'clock
+if __name__ == '__main__':
+    predict("please call Stella ask her to bring. |a small propeller plane sitting on top of a field .")
+    predict("please call Stella ask her to bring. |a small cat sitting on top of a house .")
+    

@@ -1,0 +1,1 @@
+docker run --rm -it --name boat_container --network=host -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp boat_image:test

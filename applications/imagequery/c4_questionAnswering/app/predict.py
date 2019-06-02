@@ -1,5 +1,3 @@
-import string
-import numpy as np
 from timeit import default_timer as timer
 
 """
@@ -10,33 +8,26 @@ short and simple and there are not too much information. Answering with
 logic already provides good enough result.
 """
 
-def predict(question, mapping):
+def predict(mapping):
     start = timer()
 
-    # print(mapping)
+    split = mapping.split('-')
+    noun_str = split[0]
+    verb_str = split[1]
+
+    question = "verb"
     question = question.lower()
-    words = question.split(' ')
-    counter = [0, 0, 0]  # subject, verb, time
-    for word in words:
-        if word == 'who' or word == 'what':
-          counter[0] = counter[0] + 1
-        if word == 'when':
-          counter[2] = counter[2] + 1
-        if word == 'doing':
-          counter[1] = counter[1] + 1
-          counter[0] = counter[0] - 1
-    index = np.argmax(counter)
-    items = mapping.split('-')
-    answer = items[index]
-    # print(counter)
+    if question == "verb":
+      answer = verb_str
+    elif question == "noun":
+      answer = noun_str
+    else:
+      answer = "Unable to analyze..."
 
     end = timer()
     time_elapsed = end - start
-    return answer, time_elapsed
-
-
+    print("The question answering takes " + str(time_elapsed) + "seconds")
+    return answer
 
 if __name__ == "__main__":
-    print(predict("Who is in the pic?", "Dog-eat-day"))
-    print(predict("What is in the pic?", "Dog-eat-day"))
-    print(predict("What is the boy doing?", "Boy-play-night"))
+    predict("Stella, her, A petting jet, top, an airport runway-call, ask, bring, pet, sit")

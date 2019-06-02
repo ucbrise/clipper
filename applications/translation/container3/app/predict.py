@@ -3,7 +3,6 @@
 import numpy as np
 import tensorflow as tf
 import re
-from xmlrpc.server import SimpleXMLRPCServer
 
 batchSize = 24
 lstmUnits = 64
@@ -16,9 +15,9 @@ def cleanSentences(string):
     string = string.lower().replace("<br />", " ")
     return re.sub(strip_special_chars, "", string.lower())
 
-wordVectors = np.load('container/wordVectors.npy')
-wordsList = np.load('container/wordsList.npy')
-print('Loaded the word list!')
+wordVectors = np.load('/container/wordVectors.npy')
+wordsList = np.load('/container/wordsList.npy')
+print('\n[INFO]Loaded the word list!')
 wordsList = wordsList.tolist() #Originally loaded as numpy array
 wordsList = [word.decode('UTF-8') for word in wordsList] #Encode words as UTF-8
 
@@ -61,14 +60,14 @@ def predict(paragraph):
       # Restore variables from disk.
       #saver = tf.train.import_meta_graph('models1/pretrained_lstm.ckpt-99.meta')
       saver=tf.train.Saver()
-      saver.restore(sess,tf.train.latest_checkpoint('container/models1/'))
+      saver.restore(sess,tf.train.latest_checkpoint('/container/models/'))
       inputdt=np.zeros([batchSize,maxSeqLength])
       lb=[]
       for i in range(batchSize):
           lb.append([1,0])
           inputdt[i]=ids[0]
       Prediction=sess.run(correctPred[0], {input_data: inputdt, labels: lb})
-      print("Prediction: ", Prediction)
+      print("\n[INFO] Prediction: ", Prediction)
       sess.close()
       if Prediction:
           return 1;

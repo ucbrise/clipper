@@ -1,31 +1,43 @@
-import os
-import numpy as np
 import speech_recognition as sr
-from os import path
-from scipy.io import wavfile
+from timeit import default_timer as timer
+# Reference: https://realpython.com/python-speech-recognition/
+# Text2Speech converter: https://www.text2speech.org/
+
+def recognize(audio_file_index):
+    audio_file_index = int(audio_file_index)
+    if audio_file_index < 0 or audio_file_index > 1000:
+        return "Invalid image index! Only index between 1 to 1000 is allowed! Exiting..."
+
+    dataset_index = 1
+
+    if dataset_index == 1:
+        # dataset1: CMU arctic
+        audio_file_path = "/container/data/dataset1/cmu_us_awb_arctic/wav/" + str(audio_file_index) + ".wav"
+    elif dataset_index == 2:
+        # dataset2: Flicker: different scripts but with overlapping
+        audio_file_path = "/container/data/dataset2/flickr_audio/wavs/" + str(audio_file_index) + ".wav"
+#     elif dataset_index == 3:
+#         # dataset3: speech-accent-archive: different people reading the same script
+#         audio_file_path = "/container/data/dataset3/recordings/" + str(audio_file_index) + ".wav"
+    else:
+        return "Invalid dataset index!"
+
+    print(audio_file_path)
+
+    recognizer = sr.Recognizer()
+    audio_file = sr.AudioFile(audio_file_path)
+
+    with audio_file as source:
+        audio = recognizer.record(source)
+
+    recognized_str = recognizer.recognize_google(audio)
+    return recognized_str
 
 
-def predict(data):
+def predict(audio_file_path):
+    start = timer()
+    recognized_string = recognize(audio_file_path)
+    end = timer()
+    time_elapsed = end - start
+    return recognized_string
 
-    #tup = data.split('-')
-    #fs = tup[0]
-    #audio_data = tup[1]
-
- 
-
-    local_audio_file_name = os.path.join(path.dirname(path.realpath(__file__)), "test.wav")
-
-    #wavfile.write(local_audio_file_name, fs, np.asarray(audio_data, dtype=np.int16))
-
-    r = sr.Recognizer()
-
-    with sr.AudioFile(local_audio_file_name) as source:
-        audio = r.record(source)
-
-    try:
-        text_data = r.recognize_sphinx(audio)
-        return text_data
-    except sr.UnknownValueError:
-        print("Sphinx could not understand audio")
-    except sr.RequestError as e:
-        print("Sphinx error; {0}".format(e))

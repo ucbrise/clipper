@@ -1,0 +1,16 @@
+FROM zsxhku/clipperpy35dev
+RUN apt-get update
+RUN apt-get install python3 python3-pip -y
+RUN apt-get install git-core -y
+COPY boat/requirements.txt /container/requirements.txt
+RUN pip3 install -r /container/requirements.txt
+
+COPY boat_image/boat /container/boat
+WORKDIR /container/boat
+RUN pip3 install git+https://github.com/ucbrise/clipper.git@develop#subdirectory=clipper_admin
+RUN mv $(find / -type d -name clipper_admin) /container/boat
+
+# CMD ["python3", "/container/boat/deploy.py"] 
+# need to use absolute path even with WORKDIR
+
+EXPOSE 10000
