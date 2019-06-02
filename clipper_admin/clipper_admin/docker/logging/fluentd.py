@@ -1,6 +1,7 @@
 import random
 import tempfile
 import os
+import logging
 
 from clipper_admin.container_manager import (
     CLIPPER_INTERNAL_FLUENTD_PORT, CLIPPER_FLUENTD_CONFIG_LABEL,
@@ -8,34 +9,36 @@ from clipper_admin.container_manager import (
 )
 
 
-FLUENTD_VERSION = 'v1.3-debian-1'  # TODO needs to be update to receive env variable like prometheus
+FLUENTD_VERSION             = 'v1.3-debian-1'  # TODO needs to be update to receive env variable like prometheus
 FLUENTD_CONF_PATH_IN_DOCKER = '/fluentd/etc/fluent.conf'
-FLUENTD_DEFAULT_CONF_PATH = '{current_dir}/clipper_fluentd.conf' \
-    .format(current_dir=os.path.dirname(os.path.abspath(__file__)))
-
+FLUENTD_DEFAULT_CONF_PATH   = '{current_dir}/clipper_fluentd.conf'.format(
+                                current_dir=os.path.dirname(os.path.abspath(__file__)))
 
 class Fluentd(object):
-    def __init__(self, logger, cluster_name, docker_client, port=24224, conf_path=None):
+    def __init__(self, cluster_name, docker_client, port=24224, conf_path=None):
         self.port = port
-        self.logger = logger
+        self.logger = logging.getLogger(__name__)
         self.docker_client = docker_client
         self.cluster_name = cluster_name
         self.conf_path = conf_path
+        self.fluentd_labels = None
 
     def start(self, clipper_common_labels, extra_container_kwargs):
-        self.logger.info("Starting Fluentd instance in Docker cluster {cluster_name}"
-                         .format(cluster_name=self.cluster_name))
+        self.logger.info("Starting Fluentd instance in Docker cluster {cluster_name}".format(
+                            cluster_name=self.cluster_name))
 
-        self.fluentd_conf_path = FluentdConfig().build(self.port)
-        fluentd_labels = self._get_labels(clipper_common_labels)
+        self.conf_path = FluentdConfig().build(self.port) if self.conf_path is None else \
+                                    self.conf_path
+        self.fluentd_labels = self._get_labels(clipper_common_labels)
 
         self.logger.info(
             "Fluentd Configuration Saved at {path}. "
-            "It will be mounted at {mounted_path} inside container"
-                .format(path=self.fluentd_conf_path, mounted_path=str(FluentdConfig.get_conf_path_within_docker())))
+            "It will be mounted at {mounted_path} inside container".format(
+                path=self.conf_path,
+                mounted_path=str(FluentdConfig.get_conf_path_within_docker())))
 
-        self._run_fluentd_image(self.docker_client, fluentd_labels,
-                                self.port, self.fluentd_conf_path, extra_container_kwargs)
+        self._run_fluentd_image(self.docker_client, self.fluentd_labels,
+                                self.port, self.conf_path, extra_container_kwargs)
 
     def get_logs(self, logging_dir):
         raise NotImplementedError("Not implemented yet.")
@@ -49,9 +52,9 @@ class Fluentd(object):
         return "Fluentd"
 
     def _run_fluentd_image(self, docker_client, fluentd_labels, fluend_port, fluentd_conf_path, extra_container_kwargs):
-        fluentd_cmd = []  # No cmd is required.
+        fluentd_cmd  = []  # No cmd is required.
         fluentd_name = "fluentd-{}".format(random.randint(0, 100000))
-        fluentd_img = 'fluent/fluentd:{version}'.format(version=FLUENTD_VERSION)
+        fluentd_img  = 'fluent/fluentd:{version}'.format(version=FLUENTD_VERSION)
 
         docker_client.containers.run(
             fluentd_img,
@@ -73,7 +76,7 @@ class Fluentd(object):
 
     def _get_labels(self, clipper_common_labels):
         fluentd_labels = clipper_common_labels.copy()
-        fluentd_labels[CLIPPER_FLUENTD_CONFIG_LABEL] = self.fluentd_conf_path
+        fluentd_labels[CLIPPER_FLUENTD_CONFIG_LABEL] = self.conf_path
         fluentd_labels[CLIPPER_DOCKER_PORT_LABELS['fluentd']] = str(self.port)
 
         return fluentd_labels

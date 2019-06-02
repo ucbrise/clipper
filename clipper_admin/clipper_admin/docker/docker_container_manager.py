@@ -130,7 +130,6 @@ class DockerContainerManager(ContainerManager):
 
         if self.centralize_log:
             self.logging_system_instance = self.logging_system(
-                self.logger,
                 self.cluster_name,
                 self.docker_client,
                 port=find_unbound_port(fluentd_port)
@@ -515,7 +514,6 @@ class DockerContainerManager(ContainerManager):
         self.centralize_log= True
         self.logging_system_instance = \
             self.logging_system(
-                self.logger,
                 self.cluster_name,
                 self.docker_client,
                 port=all_labels[CLIPPER_DOCKER_PORT_LABELS['fluentd']],
