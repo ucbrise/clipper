@@ -78,6 +78,7 @@ ADD main.py /container
 # Crucial
 WORKDIR /container
 
-CMD ["python", "/container/closure.py"]
+# CMD ["python", "/container/closure.py"]
+CMD ["python3", "/container/main.py"]
 
 EXPOSE 10000
