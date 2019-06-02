@@ -6,6 +6,7 @@ Created on Mon Apr  8 11:00:32 2019
 @author: davidzhou
 """
 
+import time
 import pandas as pd
 from sklearn import neighbors
 from sklearn.model_selection import GridSearchCV
@@ -15,6 +16,8 @@ from fastai.tabular import add_datepart
 scaler = MinMaxScaler(feature_range=(0, 1))
 
 def predict(comstring):
+
+    start = time.time()
     df = pd.read_json(comstring)
 
     df['Date'] = pd.to_datetime(df.index,format='%Y-%m-%d')
@@ -56,6 +59,9 @@ def predict(comstring):
     model.fit(x_train,y_train)
     preds = [x.item() for x in model.predict(x_valid).tolist()]
 
+    end = time.time()
+    print("ELASPSED TIME", end - start)
+    
     return str(preds)
 
 

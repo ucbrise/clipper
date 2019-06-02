@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #/bin/sh
 
+docker build -f ./prediction/Dockerfile0 -t zsxhku/stock:container0 .
 docker build -f ./prediction/Dockerfile1 -t zsxhku/stock:container1 .
 docker build -f ./prediction/Dockerfile2 -t zsxhku/stock:container2 .
 docker build -f ./prediction/Dockerfile3 -t zsxhku/stock:container3 .

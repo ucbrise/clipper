@@ -1,14 +1,25 @@
 import spacy,en_core_web_sm
+import time
 
 def predict(text_data):
 
-    nlp = en_core_web_sm.load()
+	start = time.time()
 
-    doc = nlp(text_data)
+	nlp = en_core_web_sm.load()
 
-    result = "result"
+	doc = nlp(text_data)
 
-    for sent in doc.sents:
-        result= result + "-" + str(sent)
+	result = ""
 
-    return result
+	print(doc.sents)
+
+	for sent in doc.sents:
+		result += "|||" + str(sent)
+
+	print(len(result.split("|||")))
+
+	end = time.time()
+	
+	print("ELASPSED TIME", end - start)
+
+	return result

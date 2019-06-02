@@ -1,7 +1,6 @@
 # NOT USED
 # A TEMPLATE FOR REFERENCE ONLY
 
-
 # http://adilmoujahid.com/posts/2014/07/twitter-analytics/
 # https://stackoverflow.com/questions/38297150/twitter-streaming-stop-collecting-data
 import tweepy

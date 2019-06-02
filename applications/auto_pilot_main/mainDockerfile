@@ -1,0 +1,30 @@
+FROM ubuntu:bionic
+RUN apt-get update
+RUN apt-get update
+RUN apt-get install python3 python3-pip -y
+RUN apt-get install libsm6 libxrender1 libfontconfig1 libxext-dev -y
+
+# docker build -f ./auto_pilot_main/mainDockerfile -t auto_pilot:main .
+# docker run -p 10000:10000 -it auto_pilot:main
+# docker run --runtime=nvidia -p 10000:10000 -it prediction:main
+
+RUN pip3 install scipy
+RUN pip3 install pillow
+RUN pip3 install numpy
+RUN pip3 install keras
+RUN pip3 install tensorflow
+RUN pip3 install opencv-contrib-python
+
+ADD auto_pilot_main/c0_Entry_Point /container/c0_Entry_Point
+ADD auto_pilot_main/c1_Image_Preprocessing /container/c1_Image_Preprocessing
+ADD auto_pilot_main/c2_Obstacle_Detection /container/c2_Obstacle_Detection
+ADD auto_pilot_main/c3_Route_Planning /container/c3_Route_Planning
+ADD auto_pilot_main/c4_Algo1 /container/c4_Algo1
+ADD auto_pilot_main/c5_Algo2 /container/c5_Algo2
+ADD auto_pilot_main/c6_Conclusion /container/c6_Conclusion
+ADD auto_pilot_main/dataset /container/dataset
+ADD auto_pilot_main/main.py /container
+
+CMD ["python3","/container/main.py"]
+
+EXPOSE 10000
