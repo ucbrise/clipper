@@ -203,7 +203,7 @@ def predict(info):
 			end = time.time()			
 			print("ELASPSED TIME", end - start)
 			
-			return previous[-1] + "***" + info
+			return str(previous[-1]) + "***" + info
 
 	except Exception as exc:
 		print('Generated an exception: %s' % (exc))
