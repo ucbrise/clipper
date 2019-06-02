@@ -1,1 +1,1 @@
-docker build -f ./mainDockerfile -t prediction_main:noraft .
+docker build -f ./mainDockerfile -t prediction_main:raft .

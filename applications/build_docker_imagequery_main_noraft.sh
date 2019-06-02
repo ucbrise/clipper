@@ -1,0 +1,1 @@
+docker build -f imagequery_main_no_raft/mainDockerfile -t imagequery_main:noraft .
