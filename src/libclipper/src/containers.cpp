@@ -325,6 +325,13 @@ void ActiveContainers::register_batch_size(VersionedModelId model,
   }
 }
 
+void ActiveContainers::unregister_batch_size(VersionedModelId model) {
+  auto batch_size_entry = batch_sizes_.find(model);
+  if (batch_size_entry != batch_sizes_.end()) {
+    batch_sizes_.erase(model);
+  }
+}
+
 std::shared_ptr<ModelContainer> ActiveContainers::get_model_replica(
     const VersionedModelId &model, const int replica_id) {
   boost::shared_lock<boost::shared_mutex> l{m_};

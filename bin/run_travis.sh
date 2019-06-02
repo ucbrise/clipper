@@ -71,7 +71,5 @@ retry_test() {
 retry_test python kubernetes_integration_test.py; sleep 30
 retry_test python kubernetes_multi_frontend.py; sleep 30
 retry_test python kubernetes_namespace.py; sleep 30
-retry_test python multi_tenancy_test.py --kubernetes
-
-# TODO: disabled for now, will re-enable after RBAC PR
-# time python clipper_metric_kube.py
+retry_test python multi_tenancy_test.py --kubernetes; sleep 30
+retry_test python clipper_metric_kube.py
