@@ -16,6 +16,7 @@ import c3_Tokenizer.app.predict as c3
 import c4_Sentiment_Analysis.app.predict as c4 
 import c5_LSTM_Predictor.app.predict as c5
 import c6_Mem.app.predict as c6 
+import c7_ARMIA.app.predict as c7 
 import c8_KNN.app.predict as c8 
 import c9_RandomForest.app.predict as c9 
 import c10_Regression.app.predict as c10 
@@ -46,6 +47,14 @@ def run_random_forest(stock_data):
   print("")
   return result_rf
 
+def run_arima(stock_data):
+  result_rf = c7.predict(stock_data.to_json())
+  print("Prediction using ARIMA FINISHED")
+  print("Here is the result:")
+  print(result_rf)
+  print("")
+  return result_rf
+
 def run_regression(stock_data):
   result_rg = c10.predict(stock_data.to_json())
   print("Prediction using Regrerssion FINISHED")
@@ -68,11 +77,12 @@ def run():
     print(stock_data.head())
 
     returned_result_list = []
-    p = Pool(4)
+    p = Pool(5)
     returned_result_list.append(p.apply_async(run_lstm, args=(stock_data,))) 
     returned_result_list.append(p.apply_async(run_knn, args=(stock_data,)))
     returned_result_list.append(p.apply_async(run_random_forest, args=(stock_data,)))
     returned_result_list.append(p.apply_async(run_regression, args=(stock_data,)))
+    returned_result_list.append(p.apply_async(run_arima, args=(stock_data,)))
     p.close()
     p.join() # p.join()方法会等待所有子进程执行完毕
 

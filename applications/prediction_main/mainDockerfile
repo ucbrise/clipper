@@ -25,6 +25,7 @@ ADD prediction_main/c3_Tokenizer /container/c3_Tokenizer
 ADD prediction_main/c4_Sentiment_Analysis /container/c4_Sentiment_Analysis
 ADD prediction_main/c5_LSTM_Predictor /container/c5_LSTM_Predictor
 ADD prediction_main/c6_Mem /container/c6_Mem
+ADD prediction_main/c7_ARIMA /container/c7_ARIMA
 ADD prediction_main/c8_KNN /container/c8_KNN
 ADD prediction_main/c9_RandomForest /container/c9_RandomForest
 ADD prediction_main/c10_Regression /container/c10_Regression
