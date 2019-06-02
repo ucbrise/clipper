@@ -1,0 +1,1 @@
+docker build -f ./mainDockerfile -t imagequery_main:test .
