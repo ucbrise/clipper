@@ -1,0 +1,1 @@
+docker build -f ./mainDockerfile -t prediction_main_without_raft:main .

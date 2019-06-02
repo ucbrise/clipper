@@ -1,0 +1,39 @@
+FROM ubuntu:bionic
+RUN apt-get update
+RUN apt-get install python3 python3-pip -y
+
+# docker build -f ./mainDockerfile -t prediction_main_without_raft:main .
+# docker run -p 10000:10000 -it prediction:main
+# docker run --runtime=nvidia -p 10000:10000 -it prediction:main
+# docker run --runtime=nvidia -d -p 10000:10000 -it prediction:main
+
+
+RUN pip3 install pandas quandl grpcio protobuf 
+RUN pip3 install numpy tweepy
+RUN pip3 install spacy
+RUN python3 -m spacy download en_core_web_sm
+RUN pip3 install nltk
+RUN python3 -m spacy download en
+RUN apt-get update
+RUN apt-get install python3-all-dev build-essential swig git libpulse-dev libasound2-dev -y
+RUN pip3 install sklearn keras tensorflow
+RUN pip3 install fastai
+
+ADD c1_Stock_Price_Retriever /container/c1_Stock_Price_Retriever
+ADD c2_Twitter_Collector /container/c2_Twitter_Collector
+ADD c3_Tokenizer /container/c3_Tokenizer
+ADD c4_Sentiment_Analysis /container/c4_Sentiment_Analysis
+ADD c5_LSTM_Predictor /container/c5_LSTM_Predictor
+ADD c6_Mem /container/c6_Mem
+ADD c8_KNN /container/c8_KNN
+ADD c9_RandomForest /container/c9_RandomForest
+ADD c10_Regression /container/c10_Regression
+ADD c11_Conclusion /container/c11_Conclusion
+
+ADD main.py /container
+
+RUN ls /container
+
+CMD ["python3","/container/main.py"]
+
+EXPOSE 10000
