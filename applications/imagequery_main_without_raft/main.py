@@ -73,7 +73,8 @@ def run(input_index):
 
 if __name__ == "__main__":
   start = timer()
-  run(i for i in range(50))
+  for i in range(50):
+    run(i)
   end = timer()
   time_elapsed = end - start 
   print("Total time: " + str(time_elapsed) + " seconds.")
