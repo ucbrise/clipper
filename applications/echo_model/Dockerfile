@@ -4,7 +4,7 @@ RUN apt-get install python3 python3-pip -y
 RUN pip3 install grpcio
 RUN pip3 install protobuf
 
-ADD imagequery_echo_model/predict.py /container/
+ADD echo_model/predict.py /container/
 
 ADD grpc/app/container_entry.sh /container/
 ADD grpc/app/server.py /container/
@@ -13,6 +13,6 @@ ADD grpc/app/model_pb2.py /container/
 ADD grpc/app/proxy_pb2_grpc.py /container/
 ADD grpc/app/proxy_pb2.py /container/
 
-CMD ["/container/container_entry.sh", "c0", "/container/server.py"]
+CMD ["/container/container_entry.sh", "echo_container", "/container/server.py"]
 
 EXPOSE 7000
