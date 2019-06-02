@@ -1,0 +1,1 @@
+docker build -f imagequery_main_without_raft/mainDockerfile -t imagequery_main_without_raft:main .
