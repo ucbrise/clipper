@@ -2,9 +2,9 @@ FROM ubuntu:bionic
 RUN apt-get update
 RUN apt-get install python3 python3-pip -y
 
-# docker build -f ./mainDockerfile -t prediction_main:noraft .
-# docker run --runtime=nvidia -p 10000:10000 -it prediction_main:noraft
-# docker run --runtime=nvidia -d -p 10000:10000 -it prediction_main:noraft
+# docker build -f ./mainDockerfile -t prediction_main:raft .
+# docker run --runtime=nvidia -p 10000:10000 -it prediction_main:raft
+# docker run --runtime=nvidia -d -p 10000:10000 -it prediction_main:raft
 
 
 RUN pip3 install pandas quandl grpcio protobuf 
