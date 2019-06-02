@@ -16,7 +16,7 @@ import c3_Tokenizer.app.predict as c3
 import c4_Sentiment_Analysis.app.predict as c4 
 import c5_LSTM_Predictor.app.predict as c5
 import c6_Mem.app.predict as c6 
-import c7_ARMIA.app.predict as c7 
+import c7_ARIMIA.app.predict as c7 
 import c8_KNN.app.predict as c8 
 import c9_RandomForest.app.predict as c9 
 import c10_Regression.app.predict as c10 
