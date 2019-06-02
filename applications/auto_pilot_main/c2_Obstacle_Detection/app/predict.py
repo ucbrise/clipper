@@ -9,7 +9,7 @@ class yolo_tf:
 	w_img = 1280
 	h_img = 720
 
-	weights_file = '/container/weights/YOLO_small.ckpt'
+	weights_file = '/container/c2_Obstacle_Detection/app/weights/YOLO_small.ckpt'
 	alpha = 0.1
 	threshold = 0.3
 	iou_threshold = 0.5

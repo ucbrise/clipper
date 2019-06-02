@@ -27,3 +27,9 @@ applications/auto_pilot_main/4_Obstacle_Detection/app/weights/YOLO_small\.ckpt
 
 applications/auto_pilot/2_Obstacle_Detection/app/weights/YOLO_small\.ckpt
 applications/auto_pilot_main/2_Obstacle_Detection/app/weights/YOLO_small\.ckpt
+
+applications/auto_pilot/4_Obstacle_Detection/app/weights/YOLO_small\.ckpt
+applications/auto_pilot_main/4_Obstacle_Detection/app/weights/YOLO_small\.ckpt
+
+applications/auto_pilot/c2_Obstacle_Detection/app/weights/YOLO_small\.ckpt
+applications/auto_pilot_main/c2_Obstacle_Detection/app/weights/YOLO_small\.ckpt

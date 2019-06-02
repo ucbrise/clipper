@@ -21,5 +21,5 @@ def predict(requestInfo): # serves as an api function
 	start = time.time()
 	to_return = retrieveStockPrice(requestInfo)
 	end = time.time()
-	print("ELASPSED TIME", end - start)
+	print("c1 ELASPSED TIME", end - start)
 	return to_return

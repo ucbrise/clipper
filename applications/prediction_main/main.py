@@ -22,37 +22,38 @@ print("Modules successfully loaded!")
 
 def run_lstm(stock_data):
   result_lstm = c5.predict(stock_data.to_json())
-  print("\nPrediction using LSTM FINISHED")
+  print("Prediction using LSTM FINISHED")
   print("Here is the result:")
   print(result_lstm)
+  print("")
   return str(result_lstm)
 
 def run_knn(stock_data):
   result_knn = c8.predict(stock_data.to_json())
-  print("\nPrediction using KNN FINISHED")
+  print("Prediction using KNN FINISHED")
   print("Here is the result:")
   print(result_knn)
+  print("")
   return result_knn
 
 def run_random_forest(stock_data):
   result_rf = c9.predict(stock_data.to_json())
-  print("\nPrediction using Random Forest FINISHED")
+  print("Prediction using Random Forest FINISHED")
   print("Here is the result:")
   print(result_rf)
+  print("")
   return result_rf
 
 def run_regression(stock_data):
   result_rg = c10.predict(stock_data.to_json())
-  print("\nPrediction using Regrerssion FINISHED")
+  print("Prediction using Regrerssion FINISHED")
   print("Here is the result:")
   print(result_rg)
+  print("")
   return result_rg
 
 def run():
     print("\nStart Prediciting: ")
-
-    stock_name = "AAPL"
-    print("\nStock name: " + stock_name)
 
     # CONTAINER 1: stock price retriever
     stock_data = pd.read_json(c1.predict("AAPL:2018:1:1"))
@@ -60,30 +61,6 @@ def run():
     print("The retrieved data is in shape of ", stock_data.shape)
     print("Here are the first 5 lines of retrieved data:")
     print(stock_data.head())
-
-    # CONTAINER 5: LSTM
-    # result_lstm = c5.predict(stock_data.to_json())
-    # print("\nPrediction using LSTM FINISHED")
-    # print("Here is the result:")
-    # print(result_lstm)
-
-    # CONTAINER 8: KNN
-    # result_knn = c8.predict(stock_data.to_json())
-    # print("\nPrediction using KNN FINISHED")
-    # print("Here is the result:")
-    # print(result_knn)
-
-    # CONTAINER 9: Random Forest
-    # result_rf = c9.predict(stock_data.to_json())
-    # print("\nPrediction using Random Forest FINISHED")
-    # print("Here is the result:")
-    # print(result_rf)
-
-    # CONTAINER 10: Regression
-    # result_rg = c10.predict(stock_data.to_json())
-    # print("\nPrediction using Regrerssion FINISHED")
-    # print("Here is the result:")
-    # print(result_rg)
 
     returned_result_list = []
     p = Pool(4)
@@ -94,40 +71,32 @@ def run():
     p.close()
     p.join() # p.join()方法会等待所有子进程执行完毕
 
-    result_lstm = returned_result_list[0].get()
-    result_knn = returned_result_list[1].get()
-    result_random_forest = returned_result_list[2].get()
-    result_regression = returned_result_list[3].get()
-    print(result_lstm)
-    print(result_knn)
-    print(result_random_forest)
-    print(result_regression)
-
     # CONTAINER 2: Twitter Collector
     tweet_number = 1000
-    twitter_data = c2.predict("placeholder")
-    print("\nTwitter data Retrieval FINISHED")
+    twitter_data = c2.predict("Apple")
+    print("Twitter data Retrieval FINISHED")
     print("Successfully retrieved", tweet_number, "number of tweets.")
     print("Here are the first 200 characters:")
     print(twitter_data[:200])
+    print("")
 
     # CONTAINER 3: Tokenizer
     tokenized_twitter_data = c3.predict(twitter_data)
-    print("\nTokenization FINISHED")
+    print("Tokenization FINISHED")
     print("Generated a list containing ", len(tokenized_twitter_data), " sentences")
     print("The first sentence is :\n", tokenized_twitter_data[0])
+    print("")
 
     # CONTAINER 4: sentimental Analysis
-    print("Start c4:")
     polarity_list = c4.predict(tokenized_twitter_data)
-    print("\nTwitter data Sentiment Analysis FINISHED")
+    print("Twitter data Sentiment Analysis FINISHED")
     print("Generated a list containing ", len(polarity_list), " results")
+    print("The first result is :\n", polarity_list[0])
+    print("")
 
     # CONTAINER 11: Weighting Algorithm
-    final_prediction = c11.predict([result_knn, result_lstm, result_random_forest, result_regression, polarity_list])
-    print("\n\nENTIRE PROCESS FINISHED")
-    print("HERE IS THE FINAL PREDICTION FOR THE STOCK PRICES OF THE NEXT FEW DAYS:")
-    print(final_prediction)
+    final_prediction = c11.predict(str(returned_result_list))
+    print("\n\nEntire Process FINISHED")
 
 
 if __name__ == "__main__":

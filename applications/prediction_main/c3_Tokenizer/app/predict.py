@@ -11,15 +11,11 @@ def predict(text_data):
 
 	result = ""
 
-	print(doc.sents)
-
 	for sent in doc.sents:
-		result += "|||" + str(sent)
-
-	print(len(result.split("|||")))
+		result += "|||" + str(sent) 
 
 	end = time.time()
 	
-	print("ELASPSED TIME", end - start)
+	print("c3 ELASPSED TIME", end - start)
 
 	return result

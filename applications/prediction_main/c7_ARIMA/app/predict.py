@@ -27,6 +27,6 @@ def predict(comstr):
     model.fit(training)
     forecast = model.predict(n_periods=10)
     end = time.time()
-    print("ELASPSED TIME", end - start)
+    print("c7 ELASPSED TIME", end - start)
     return str(forecast.tolist())
 #    forecast = pd.DataFrame(forecast,index = valid.index,columns=['Prediction'])

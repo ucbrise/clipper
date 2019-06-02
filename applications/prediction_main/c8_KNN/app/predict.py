@@ -60,7 +60,7 @@ def predict(comstring):
     preds = [x.item() for x in model.predict(x_valid).tolist()]
 
     end = time.time()
-    print("ELASPSED TIME", end - start)
+    print("c8 ELASPSED TIME", end - start)
     
     return str(preds)
 

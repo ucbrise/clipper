@@ -15,13 +15,14 @@ RUN pip3 install keras
 RUN pip3 install tensorflow
 RUN pip3 install opencv-contrib-python
 
-ADD auto_pilot_main/0_Entry_Point /container/0_Entry_Point
-ADD auto_pilot_main/1_Image_Preprocessing /container/1_Image_Preprocessing
-ADD auto_pilot_main/2_Obstacle_Detection /container/2_Obstacle_Detection
-ADD auto_pilot_main/3_Route_Planning /container/3_Route_Planning
-ADD auto_pilot_main/4_Algo1 /container/4_Algo1
-ADD auto_pilot_main/5_Algo2 /container/5_Algo2
-ADD auto_pilot_main/6_Conclusion /container/6_Conclusion
+ADD auto_pilot_main/c0_Entry_Point /container/c0_Entry_Point
+ADD auto_pilot_main/c1_Image_Preprocessing /container/c1_Image_Preprocessing
+ADD auto_pilot_main/c2_Obstacle_Detection /container/c2_Obstacle_Detection
+ADD auto_pilot_main/c3_Route_Planning /container/c3_Route_Planning
+ADD auto_pilot_main/c4_Algo1 /container/c4_Algo1
+ADD auto_pilot_main/c5_Algo2 /container/c5_Algo2
+ADD auto_pilot_main/c6_Conclusion /container/c6_Conclusion
+ADD auto_pilot_main/dataset /container/dataset
 ADD auto_pilot_main/main.py /container
 
 CMD ["python3","/container/main.py"]

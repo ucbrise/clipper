@@ -50,7 +50,7 @@ def predict(comstring):
     preds = model.predict(X_test).tolist()
     
     end = time.time()
-    print("ELASPSED TIME", end - start)
+    print("c9 ELASPSED TIME", end - start)
     
     return str(preds)
 

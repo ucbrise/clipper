@@ -56,7 +56,7 @@ def predict(compstring):
 #   rms=np.sqrt(np.mean(np.power((np.array(y_valid)-np.array(preds)),2)))
 
 	end = time.time()
-	print("ELASPSED TIME", end - start)
+	print("c10 ELASPSED TIME", end - start)
 
 	return str(preds)
 	

@@ -4,6 +4,5 @@ import time
 def predict(received):
 	start = time.time()
 	end = time.time()
-	print("ELASPSED TIME", end - start)
-	print("Received Output:%s"%(received))
+	print("c6 ELASPSED TIME", end - start)
 	return received

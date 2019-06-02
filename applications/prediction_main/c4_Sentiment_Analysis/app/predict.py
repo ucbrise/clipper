@@ -21,11 +21,10 @@ def predict(sent_list):
 
     for sent in sent_list:
         score = nltk_sentiment.polarity_scores(sent)
-        print(score)
         result_list += "|||" + str(score)
 
     end = time.time()
     
-    print("ELASPSED TIME", end - start)
+    print("c4 ELASPSED TIME", end - start)
 
     return result_list

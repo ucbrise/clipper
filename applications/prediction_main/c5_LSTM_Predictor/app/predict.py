@@ -12,6 +12,8 @@ def predict(comstring):
 
     testingDatasetSize = input_data.shape[0]
 
+    print("testingDatasetSize", testingDatasetSize)
+
     #clean data
     input_data.isna().any()
 
@@ -20,11 +22,7 @@ def predict(comstring):
     google_scaled=scaler.fit_transform(input_data) # size x 12
 
     # construct test data set
-    X_test=[]
-    for i in range(60,testingDatasetSize):
-      X_test.append(google_scaled[ i-60 : i , 0]) # 500 x 60 x 1
-    X_test = np.array(X_test)
-    print("X_test.shape: " , X_test.shape) # 500 x 60
+    X_test = np.concatenate([google_scaled] * 5, axis=1)
 
     X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
     # print(X_test.shape) # 500 x 60 x 1
@@ -60,6 +58,6 @@ def predict(comstring):
 
     end = time.time()
     
-    print("ELASPSED TIME", end - start)
+    print("c5 ELASPSED TIME", end - start)
 
     return str(predicted_stock_price.tolist()[-10:])
