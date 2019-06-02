@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import time
+
 
 import sys
 sys.path.append("/container")
@@ -53,6 +55,9 @@ def run_regression(stock_data):
   return result_rg
 
 def run():
+
+    start = time.time()
+
     print("\nStart Prediciting: ")
 
     # CONTAINER 1: stock price retriever
@@ -97,6 +102,8 @@ def run():
     # CONTAINER 11: Weighting Algorithm
     final_prediction = c11.predict(str(returned_result_list))
     print("\n\nEntire Process FINISHED")
+
+    print("Total Time:", time.time()-start)
 
 
 if __name__ == "__main__":
