@@ -4,8 +4,8 @@ RUN apt-get install python3 python3-pip -y
 
 # docker build -f ./mainDockerfile -t prediction_main_without_raft:main .
 # docker run -p 10000:10000 -it prediction:main
-# docker run --runtime=nvidia -p 10000:10000 -it prediction:main
-# docker run --runtime=nvidia -d -p 10000:10000 -it prediction:main
+# docker run --runtime=nvidia -p 10000:10000 -it prediction_main_without_raft:main
+# docker run --runtime=nvidia -d -p 10000:10000 -it prediction_main_without_raft:main
 
 
 RUN pip3 install pandas quandl grpcio protobuf 
