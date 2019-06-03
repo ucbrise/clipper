@@ -13,5 +13,3 @@ docker build -f ./prediction/Dockerfile8 -t zsxhku/stock:container8 .
 docker build -f ./prediction/Dockerfile9 -t zsxhku/stock:container9 .
 docker build -f ./prediction/Dockerfile10 -t zsxhku/stock:container10 .
 docker build -f ./prediction/Dockerfile11 -t zsxhku/stock:container11 .
-
-# C:/Users/musicman/Desktop/financial_prediction

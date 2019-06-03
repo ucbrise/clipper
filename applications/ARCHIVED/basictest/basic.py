@@ -1,7 +1,6 @@
 from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer
 
 def predict(*args):
-
 	res = []
 	for arg in args:
 		try:
