@@ -23,7 +23,7 @@ def predict(comstr):
     data = df.sort_index(ascending=True, axis=0)
     train=data[:]
     training=train['Close']
-    model = auto_arima(training, start_p=1, start_q=1,max_p=3, max_q=3, m=12,start_P=0, seasonal=True,d=1, D=1, trace=True,error_action='ignore',suppress_warnings=True)
+    model = auto_arima(training, start_p=1, start_q=1,max_p=1, max_q=1, m=12,start_P=0, seasonal=True,d=1, D=1, trace=True,error_action='ignore',suppress_warnings=True)
     model.fit(training)
     forecast = model.predict(n_periods=10)
     end = time.time()

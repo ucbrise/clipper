@@ -100,14 +100,14 @@ def run():
     tokenized_twitter_data = c3.predict(twitter_data)
     print("Tokenization FINISHED")
     print("Generated a list containing ", len(tokenized_twitter_data), " sentences")
-    print("The first sentence is :\n", tokenized_twitter_data[0])
+    print("The first five sentences are :\n", tokenized_twitter_data[:5])
     print("")
 
     # CONTAINER 4: sentimental Analysis
     polarity_list = c4.predict(tokenized_twitter_data)
     print("Twitter data Sentiment Analysis FINISHED")
     print("Generated a list containing ", len(polarity_list), " results")
-    print("The first result is :\n", polarity_list[0])
+    print("The first five results are :\n", polarity_list[:5])
     print("")
 
     # CONTAINER 11: Weighting Algorithm

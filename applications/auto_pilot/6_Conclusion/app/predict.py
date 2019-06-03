@@ -1,6 +1,5 @@
 
 def predict(info):
-    
     try:   
         print("Received", info)
         info0 = info.split("|")[0]

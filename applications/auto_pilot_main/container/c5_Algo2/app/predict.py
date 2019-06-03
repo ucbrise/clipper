@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 import time
+import tensorflow as tf
 from keras.models import load_model
 
 def keras_predict(model, image):
@@ -24,17 +25,23 @@ def read_image(i):
 	print("original shape", image.shape)
 	return image
 
+global graph, model
+
+graph = tf.get_default_graph()
+	
+model = load_model('/container/c5_Algo2/app/Autopilot_V2.h5')
+
 def predict(info):
 	try:
 		start = time.time()
 		image_index_str = info.split("***")[2]
-		model = load_model('/container/c5_Algo2/app/Autopilot_V2.h5')
 		image = read_image(image_index_str)
 		gray = cv2.resize((cv2.cvtColor(image, cv2.COLOR_RGB2HSV))[:, :, 1], (100, 100))
 		print("resized shape", image.shape)
-		steering_angle = keras_predict(model, gray)
+		with graph.as_default():
+			steering_angle = keras_predict(model, gray)
 		end = time.time()
 		print("ELASPSED TIME", end - start)
-		return str(steering_angle) + info
+		return str(steering_angle) + "***" + info
 	except Exception as exc:
 		print('Generated an exception: %s' % (exc))
