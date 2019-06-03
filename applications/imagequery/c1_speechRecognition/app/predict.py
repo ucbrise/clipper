@@ -1,51 +1,23 @@
-import speech_recognition as sr
-from timeit import default_timer as timer
-# Reference: https://realpython.com/python-speech-recognition/
+from __future__ import print_function
+import os
+from pocketsphinx import Pocketsphinx, get_model_path, get_data_path
 
-recognizer = sr.Recognizer()
-print("Finish preloading speech recognizer!")
+model_path = get_model_path()
+data_path = get_data_path()
 
-def recognize(audio_file_index):
-    start = timer()
+config = {
+    'hmm': os.path.join(model_path, 'en-us'),
+    'lm': os.path.join(model_path, 'en-us.lm.bin'),
+    'dict': os.path.join(model_path, 'cmudict-en-us.dict')
+}
 
-    audio_file_index = int(audio_file_index)
-    if audio_file_index < 0 or audio_file_index > 1000:
-        return "Invalid image index! Only index between 1 to 1000 is allowed! Exiting..."
+ps = Pocketsphinx(**config)
+ps.decode(
+    # add your audio file here
+    audio_file=os.path.join(data_path, '/container/c1_speechRecognition/data/dataset3/recordings/1.wav'),
+    buffer_size=2048,
+    no_search=False,
+    full_utt=False
+)
 
-    dataset_index = 3
-    if dataset_index == 1:
-        # dataset1: CMU arctic
-        audio_file_path = "/container/data/dataset1/cmu_us_awb_arctic/wav/" + str(audio_file_index) + ".wav"
-    elif dataset_index == 2:
-        # dataset2: Flicker: different scripts but with overlapping
-        audio_file_path = "/container/data/dataset2/flickr_audio/wavs/" + str(audio_file_index) + ".wav"
-    elif dataset_index == 3:
-        # dataset3: speech-accent-archive: different people reading the same script
-        audio_file_path = "/container/data/dataset3/recordings/" + str(audio_file_index) + ".wav"
-    else:
-        return "Invalid dataset index!"
-
-    audio_file = sr.AudioFile(audio_file_path)
-
-    with audio_file as source:
-        audio = recognizer.record(source)
-
-    recognized_str = recognizer.recognize_google(audio)
-
-    end = timer()
-    time_elapsed = end - start
-    print("The audio file takes " + str(time_elapsed) + " seconds")
-
-    return recognized_str + ". "
-
-
-def predict(audio_file_index):
-    recognized_string = recognize(audio_file_index)
-    return recognized_string
-
-
-if __name__ == "__main__":
-    print(predict(1))
-    print(predict(2))
-    print(predict(3))
-
+print(ps.hypothesis())

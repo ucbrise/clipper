@@ -1,7 +1,9 @@
 FROM ubuntu:bionic
 RUN apt-get update
 RUN apt-get install wget zip unzip python3 python3-pip -y
-RUN pip3 install SpeechRecognition
+RUN pip3 install pocketsphinx
+RUN python3 -m pip3 install --upgrade pip3 setuptools wheel
+RUN pip3 install --upgrade pocketsphinx
 RUN pip3 install grpcio
 RUN pip3 install protobuf
 
@@ -55,7 +57,7 @@ ADD grpc/app/model_pb2.py /container/
 ADD grpc/app/proxy_pb2_grpc.py /container/
 ADD grpc/app/proxy_pb2.py /container/
 
-# CMD ["python3", "/container/predict.py"]
-CMD ["/container/container_entry.sh", "c1", "/container/server.py"]
+CMD ["python3", "/container/predict.py"]
+# CMD ["/container/container_entry.sh", "c1", "/container/server.py"]
 
 EXPOSE 8000
