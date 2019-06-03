@@ -16,9 +16,10 @@ chmod 777 ./container3/app/dl.sh
 ./container3/app/dl.sh
 mv mask_rcnn_coco.h5 container3/app/
 chmod 777 ./container4/app/dl.sh
+./container4/app/dl.sh
 mv pose_iter_440000.caffemodel container4/app/
 fi
 
-docker build -f ./Dockerfile_main -t FatigueDetection_main:raft .
+docker build -f ./Dockerfile_main -t detection_main:raft .
 
 
