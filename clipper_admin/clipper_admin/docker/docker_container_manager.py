@@ -5,7 +5,6 @@ import socket
 import docker
 import logging
 import os
-import time
 import tempfile
 from ..container_manager import (
     create_model_container_label, parse_model_container_label,

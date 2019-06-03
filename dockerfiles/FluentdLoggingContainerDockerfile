@@ -1,1 +1,29 @@
-# Currently, we are using a default Fluentd image from Dockerhub. Needs to be customized by Clipper
+FROM fluent/fluentd:v1.5-debian-1
+
+LABEL maintainer="SangBin Cho <scho010@berkeley.edu>"
+
+# Use root account to use apt
+USER root
+
+# Download sqlite3 and create a db file. Run sql script to build a table
+RUN apt-get update && \
+	DEBIAN_FRONTEND=noninteractive apt-get -yq install sqlite3 libsqlite3-dev &&
+
+RUN mkdir /db
+RUN touch /db/logging.db
+RUN /usr/bin/sqlite3 /db/logging.db
+
+# Download sqlite3 plugins
+RUN buildDeps="sudo make gcc g++ libc-dev" \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends $buildDeps \
+ && sudo gem install fluent-plugin-sqlite3 -v 0.1.0 \
+ && sudo gem sources --clear-all \
+ && SUDO_FORCE_REMOVE=yes \
+    apt-get purge -y --auto-remove \
+                  -o APT::AutoRemove::RecommendsImportant=false \
+                  $buildDeps \
+ && rm -rf /var/lib/apt/lists/* \
+ && rm -rf /tmp/* /var/tmp/* /usr/lib/ruby/gems/*/cache/*.gem
+
+USER fluent
