@@ -4,9 +4,6 @@ import cv2
 import time
 from keras.models import load_model
 
-global graph, model
-graph = tf.get_default_graph()
-
 def keras_predict(model, image):
 	processed = keras_process_image(image)
 	print("processed shape", processed.shape)
@@ -31,6 +28,7 @@ def read_image(i):
 global graph, model
 
 graph = tf.get_default_graph()
+
 model = load_model('/container/Autopilot.h5')
 
 def predict(info):
