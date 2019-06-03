@@ -90,8 +90,7 @@ def run():
         imgstr=image_string(imag)
         p = Pool(1)
         pipe1_result.append(p.apply_async(pipe1, args=(imgstr,)).get())
-#         pipe2_result.append(pipe2(imgstr))
-        print("1")
+        pipe2_result.append(pipe2(imgstr))
         p.close()
         p.join() # p.join()方法会等待所有子进程执行完毕
     end=time.time()

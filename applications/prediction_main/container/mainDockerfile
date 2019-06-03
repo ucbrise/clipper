@@ -8,7 +8,7 @@ RUN apt-get install python3 python3-pip -y
 
 
 RUN pip3 install pandas quandl grpcio protobuf 
-RUN pip3 install numpy tweepy
+RUN pip3 install numpy tweepy pyramid.arima 
 RUN pip3 install spacy
 RUN python3 -m spacy download en_core_web_sm
 RUN pip3 install nltk
@@ -17,6 +17,7 @@ RUN apt-get update
 RUN apt-get install python3-all-dev build-essential swig git libpulse-dev libasound2-dev -y
 RUN pip3 install sklearn keras tensorflow
 RUN pip3 install fastai
+RUN pip3 install scipy==1.2 --upgrade
 
 ADD c1_Stock_Price_Retriever /container/c1_Stock_Price_Retriever
 ADD c2_Twitter_Collector /container/c2_Twitter_Collector
