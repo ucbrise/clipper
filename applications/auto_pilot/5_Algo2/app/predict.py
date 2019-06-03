@@ -23,6 +23,8 @@ def read_image(i):
 	image = cv2.imread(image_path)
 	print("original shape", image.shape)
 	return image
+	
+model = load_model('/container/Autopilot_V2.h5')
 
 def predict(info):
 	try:

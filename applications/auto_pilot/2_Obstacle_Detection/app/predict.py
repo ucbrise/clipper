@@ -164,6 +164,8 @@ def read_image(i):
 	print("original shape", image.shape)
 	return image
 
+yolo = yolo_tf()
+
 def predict(info):
 
 	global previous
@@ -176,7 +178,6 @@ def predict(info):
 
 		if int(image_index_str)%10 == 0 or len(previous) == 0:
 
-			yolo = yolo_tf()
 			image = read_image(image_index_str)
 			detect_from_cvmat(yolo, image)
 			results = yolo.result_list
