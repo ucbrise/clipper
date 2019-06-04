@@ -72,7 +72,7 @@ ADD c4_questionAnswering/app /container/c4_questionAnswering
 # for main.py
 ADD closure.py /container
 ADD rpc.py /container
-# ADD main.py /container
+ADD main.py /container
 
 # /container nows contains: 
 # c0_entryContainer c1_speechRecognition/ c2_imageCaptionGenerator/ c3_nlpMappingGenerator/ c4_questionAnswering/ main.py
