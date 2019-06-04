@@ -5,7 +5,7 @@ import os
 
 t1 = timer()
 
-language_directory = "container/models/wsj1"
+language_directory = "/container/models/wsj1"
 acoustic_parameters_directory = os.path.join(
     language_directory, "acoustic-model")
 language_model_file = os.path.join(language_directory, "language-model.lm.bin")
