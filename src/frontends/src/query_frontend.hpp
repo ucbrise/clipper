@@ -350,8 +350,8 @@ class RequestHandler {
             decode_and_handle_predict(request->content.string(), name, policy,
                                       latency_slo_micros, input_type);
 
-        predictions
-            .then([response,
+        std::move(predictions)
+            .thenValue([response,
                    app_metrics](std::vector<folly::Try<Response>> tries) {
               std::vector<std::string> all_content;
               for (auto t : tries) {
@@ -379,7 +379,7 @@ class RequestHandler {
                   get_batch_prediction_response_content(all_content);
               respond_http(final_content, "200 OK", response);
             })
-            .onError([response](const std::exception& e) {
+            .thenError(folly::tag_t<std::exception>{}, [response](const std::exception& e) {
               clipper::log_error_formatted(clipper::LOGGING_TAG_CLIPPER,
                                            "Unexpected error: {}", e.what());
               respond_http("An unexpected error occurred!",
@@ -437,7 +437,7 @@ class RequestHandler {
         folly::Future<FeedbackAck> update =
             decode_and_handle_update(request->content.string(), name,
                                      versioned_models, policy, input_type);
-        update.then([response](FeedbackAck ack) {
+        std::move(update).thenValue([response](FeedbackAck ack) {
           std::stringstream ss;
           ss << "Feedback received? " << ack;
           std::string content = ss.str();
