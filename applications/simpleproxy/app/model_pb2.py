@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='modeltest',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\x0bmodel.proto\x12\tmodeltest\"\x11\n\x02hi\x12\x0b\n\x03msg\x18\x01 \x01(\t\"/\n\x05input\x12\x11\n\tinputType\x18\x01 \x01(\t\x12\x13\n\x0binputStream\x18\x02 \x01(\t\"2\n\x06output\x12\x12\n\noutputType\x18\x01 \x01(\t\x12\x14\n\x0coutputStream\x18\x02 \x01(\t\"1\n\tproxyinfo\x12\x11\n\tproxyName\x18\x01 \x01(\t\x12\x11\n\tproxyPort\x18\x02 \x01(\t\"\x1a\n\x08response\x12\x0e\n\x06status\x18\x01 \x01(\t2\xa9\x01\n\x0ePredictService\x12\x30\n\x07Predict\x12\x10.modeltest.input\x1a\x11.modeltest.output\"\x00\x12\x37\n\x08SetProxy\x12\x14.modeltest.proxyinfo\x1a\x13.modeltest.response\"\x00\x12,\n\x04Ping\x12\r.modeltest.hi\x1a\x13.modeltest.response\"\x00\x62\x06proto3')
+  serialized_pb=_b('\n\x0bmodel.proto\x12\tmodeltest\"\x11\n\x02hi\x12\x0b\n\x03msg\x18\x01 \x01(\t\"/\n\x05input\x12\x11\n\tinputType\x18\x01 \x01(\t\x12\x13\n\x0binputStream\x18\x02 \x01(\t\"2\n\x06output\x12\x12\n\noutputType\x18\x01 \x01(\t\x12\x14\n\x0coutputStream\x18\x02 \x01(\t\"1\n\tproxyinfo\x12\x11\n\tproxyName\x18\x01 \x01(\t\x12\x11\n\tproxyPort\x18\x02 \x01(\t\"\x1a\n\x08response\x12\x0e\n\x06status\x18\x01 \x01(\t\"=\n\nBatchInput\x12 \n\x06inputs\x18\x01 \x03(\x0b\x32\x10.modeltest.input\x12\r\n\x05\x63ount\x18\x02 \x01(\r\"?\n\nBatchOuput\x12\"\n\x07outputs\x18\x01 \x03(\x0b\x32\x11.modeltest.output\x12\r\n\x05\x63ount\x18\x02 \x01(\r2\xe9\x01\n\x0ePredictService\x12\x30\n\x07Predict\x12\x10.modeltest.input\x1a\x11.modeltest.output\"\x00\x12>\n\x0c\x42\x61tchPredict\x12\x15.modeltest.BatchInput\x1a\x15.modeltest.BatchOuput\"\x00\x12\x37\n\x08SetProxy\x12\x14.modeltest.proxyinfo\x1a\x13.modeltest.response\"\x00\x12,\n\x04Ping\x12\r.modeltest.hi\x1a\x13.modeltest.response\"\x00\x62\x06proto3')
 )
 
 
@@ -201,11 +201,91 @@ _RESPONSE = _descriptor.Descriptor(
   serialized_end=223,
 )
 
+
+_BATCHINPUT = _descriptor.Descriptor(
+  name='BatchInput',
+  full_name='modeltest.BatchInput',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='inputs', full_name='modeltest.BatchInput.inputs', index=0,
+      number=1, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='count', full_name='modeltest.BatchInput.count', index=1,
+      number=2, type=13, cpp_type=3, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=225,
+  serialized_end=286,
+)
+
+
+_BATCHOUPUT = _descriptor.Descriptor(
+  name='BatchOuput',
+  full_name='modeltest.BatchOuput',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='outputs', full_name='modeltest.BatchOuput.outputs', index=0,
+      number=1, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='count', full_name='modeltest.BatchOuput.count', index=1,
+      number=2, type=13, cpp_type=3, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=288,
+  serialized_end=351,
+)
+
+_BATCHINPUT.fields_by_name['inputs'].message_type = _INPUT
+_BATCHOUPUT.fields_by_name['outputs'].message_type = _OUTPUT
 DESCRIPTOR.message_types_by_name['hi'] = _HI
 DESCRIPTOR.message_types_by_name['input'] = _INPUT
 DESCRIPTOR.message_types_by_name['output'] = _OUTPUT
 DESCRIPTOR.message_types_by_name['proxyinfo'] = _PROXYINFO
 DESCRIPTOR.message_types_by_name['response'] = _RESPONSE
+DESCRIPTOR.message_types_by_name['BatchInput'] = _BATCHINPUT
+DESCRIPTOR.message_types_by_name['BatchOuput'] = _BATCHOUPUT
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 hi = _reflection.GeneratedProtocolMessageType('hi', (_message.Message,), dict(
@@ -243,6 +323,20 @@ response = _reflection.GeneratedProtocolMessageType('response', (_message.Messag
   ))
 _sym_db.RegisterMessage(response)
 
+BatchInput = _reflection.GeneratedProtocolMessageType('BatchInput', (_message.Message,), dict(
+  DESCRIPTOR = _BATCHINPUT,
+  __module__ = 'model_pb2'
+  # @@protoc_insertion_point(class_scope:modeltest.BatchInput)
+  ))
+_sym_db.RegisterMessage(BatchInput)
+
+BatchOuput = _reflection.GeneratedProtocolMessageType('BatchOuput', (_message.Message,), dict(
+  DESCRIPTOR = _BATCHOUPUT,
+  __module__ = 'model_pb2'
+  # @@protoc_insertion_point(class_scope:modeltest.BatchOuput)
+  ))
+_sym_db.RegisterMessage(BatchOuput)
+
 
 
 _PREDICTSERVICE = _descriptor.ServiceDescriptor(
@@ -251,8 +345,8 @@ _PREDICTSERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=226,
-  serialized_end=395,
+  serialized_start=354,
+  serialized_end=587,
   methods=[
   _descriptor.MethodDescriptor(
     name='Predict',
@@ -264,9 +358,18 @@ _PREDICTSERVICE = _descriptor.ServiceDescriptor(
     serialized_options=None,
   ),
   _descriptor.MethodDescriptor(
+    name='BatchPredict',
+    full_name='modeltest.PredictService.BatchPredict',
+    index=1,
+    containing_service=None,
+    input_type=_BATCHINPUT,
+    output_type=_BATCHOUPUT,
+    serialized_options=None,
+  ),
+  _descriptor.MethodDescriptor(
     name='SetProxy',
     full_name='modeltest.PredictService.SetProxy',
-    index=1,
+    index=2,
     containing_service=None,
     input_type=_PROXYINFO,
     output_type=_RESPONSE,
@@ -275,7 +378,7 @@ _PREDICTSERVICE = _descriptor.ServiceDescriptor(
   _descriptor.MethodDescriptor(
     name='Ping',
     full_name='modeltest.PredictService.Ping',
-    index=2,
+    index=3,
     containing_service=None,
     input_type=_HI,
     output_type=_RESPONSE,
