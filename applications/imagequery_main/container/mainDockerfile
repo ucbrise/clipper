@@ -34,7 +34,7 @@ RUN /container/c1_speechRecognition/data/dataset3/rename.sh
 RUN python3 /container/c1_speechRecognition/data/dataset3/truncate.py
 
 ### for c2 
-RUN pip install numpy nltk
+RUN pip3 install numpy nltk
 RUN python -m nltk.downloader all
 RUN apt install wget
 
