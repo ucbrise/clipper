@@ -25,10 +25,10 @@ ADD imagequery/c1_speechRecognition/data /container/data
 
 # dataset1 
 # dataset source: http://festvox.org/cmu_arctic/
-# RUN wget --progress=bar:force http://festvox.org/cmu_arctic/cmu_arctic/packed/cmu_us_awb_arctic-0.95-release.zip
-# RUN mv $(find / -name cmu_us_awb_arctic-0.95-release.zip) /container/data/dataset1
-# RUN chmod 777 /container/data/dataset1/unzipRename.sh
-# RUN /container/data/dataset1/unzipRename.sh
+RUN wget --progress=bar:force http://festvox.org/cmu_arctic/cmu_arctic/packed/cmu_us_awb_arctic-0.95-release.zip
+RUN mv $(find / -name cmu_us_awb_arctic-0.95-release.zip) /container/data/dataset1
+RUN chmod 777 /container/data/dataset1/unzipRename.sh
+RUN /container/data/dataset1/unzipRename.sh
 
 # dataset2
 # reference: https://groups.csail.mit.edu/sls/downloads/flickraudio/index.cgi
@@ -40,15 +40,15 @@ ADD imagequery/c1_speechRecognition/data /container/data
 # dataset3
 # download reference: https://www.kaggle.com/general/6604
 # dataset refernce: https://www.kaggle.com/rtatman/speech-accent-archive/
-RUN chmod 777 /container/data/dataset3/downloadDataset.sh
-RUN /container/data/dataset3/downloadDataset.sh
-RUN mv $(find / -name speech-accent-archive.zip) /container/data/dataset3
-RUN unzip /container/data/dataset3/speech-accent-archive.zip -d /container/data/dataset3
+# RUN chmod 777 /container/data/dataset3/downloadDataset.sh
+# RUN /container/data/dataset3/downloadDataset.sh
+# RUN mv $(find / -name speech-accent-archive.zip) /container/data/dataset3
+# RUN unzip /container/data/dataset3/speech-accent-archive.zip -d /container/data/dataset3
 # /container/data/dataset3 now contains:reading-passage.txt, recordings.zip, speakers_all.csv
-RUN unzip -qq /container/data/dataset3/recordings.zip -d /container/data/dataset3/
-RUN chmod 777 /container/data/dataset3/rename.sh
-RUN /container/data/dataset3/rename.sh
-RUN python3 /container/data/dataset3/truncate.py
+# RUN unzip -qq /container/data/dataset3/recordings.zip -d /container/data/dataset3/
+# RUN chmod 777 /container/data/dataset3/rename.sh
+# RUN /container/data/dataset3/rename.sh
+# RUN python3 /container/data/dataset3/truncate.py
 
 ADD grpc/app/container_entry.sh /container/
 ADD grpc/app/server.py /container/

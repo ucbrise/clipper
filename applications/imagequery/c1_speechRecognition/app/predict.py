@@ -100,6 +100,9 @@ def predict(audio_file_path):
     return recognized_string
 
 
+if __name__ == "__main__":
+    predict(1)
+
 
     # lines = []
     # for i in range (0, 1000):
