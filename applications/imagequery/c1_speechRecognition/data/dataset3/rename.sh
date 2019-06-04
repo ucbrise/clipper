@@ -5,7 +5,7 @@ cd /container/data/dataset3/recordings
 index=0;
 for name in *.mp3
 do
-    ffmpeg -i "${name}" "${index}.wav"
+    ffmpeg -v quiet -stats -i "${name}" "${index}.wav"
     index=$((index+1))
     if [ $index -gt 1000 ]; then
       break
