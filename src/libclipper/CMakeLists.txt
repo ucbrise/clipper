@@ -48,6 +48,6 @@ add_executable(libclippertests EXCLUDE_FROM_ALL
     # be last in the list
     test/config_test.cpp)
 
-target_link_libraries(libclippertests clipper gtest gmock_main cxxopts)
+target_link_libraries(libclippertests clipper gtest gmock_main cxxopts glog)
 add_dependencies(unittests libclippertests)
 
