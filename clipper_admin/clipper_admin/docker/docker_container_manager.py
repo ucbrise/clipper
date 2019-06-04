@@ -309,7 +309,8 @@ class DockerContainerManager(ContainerManager):
         for container in containers:
             all_labels.update(container.labels)
 
-        self.redis_port = all_labels[CLIPPER_DOCKER_PORT_LABELS['redis']]
+        if CLIPPER_DOCKER_PORT_LABELS['redis'] in all_labels:
+            self.redis_port = all_labels[CLIPPER_DOCKER_PORT_LABELS['redis']]
         self.clipper_management_port = all_labels[CLIPPER_DOCKER_PORT_LABELS[
             'management']]
         self.clipper_query_port = all_labels[CLIPPER_DOCKER_PORT_LABELS[
