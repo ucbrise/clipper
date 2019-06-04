@@ -416,7 +416,7 @@ class RequestHandler {
         respond_http(json_error_response, "400 Bad Request", response);
       }
     };
-    std::string predict_endpoint = "^/" + name + "/predict$";
+    std::string predict_endpoint = "^/" + name + "/predict/?$";
     server_.add_endpoint(predict_endpoint, "POST", predict_fn);
 
     auto update_fn = [this, name, input_type, policy](
@@ -453,7 +453,7 @@ class RequestHandler {
         respond_http(e.what(), "400 Bad Request", response);
       }
     };
-    std::string update_endpoint = "^/" + name + "/update$";
+    std::string update_endpoint = "^/" + name + "/update/?$";
     server_.add_endpoint(update_endpoint, "POST", update_fn);
   }
 
@@ -465,9 +465,9 @@ class RequestHandler {
   }
 
   void delete_application(std::string name) {
-    std::string predict_endpoint = "^/" + name + "/predict$";
+    std::string predict_endpoint = "^/" + name + "/predict/?$";
     server_.delete_endpoint(predict_endpoint, "POST");
-    std::string update_endpoint = "^/" + name + "/update$";
+    std::string update_endpoint = "^/" + name + "/update/?$";
     server_.delete_endpoint(update_endpoint, "POST");
   }
 
