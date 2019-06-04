@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd /container/c1_speechRecognition/data/dataset3/recordings
+cd /container/data/dataset3/recordings
 
 index=0;
 for name in *.mp3
