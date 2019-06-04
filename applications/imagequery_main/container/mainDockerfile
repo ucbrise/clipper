@@ -35,7 +35,7 @@ RUN python3 /container/c1_speechRecognition/data/dataset3/truncate.py
 
 ### for c2 
 RUN pip3 install numpy nltk
-RUN python -m nltk.downloader all
+RUN python3 -m nltk.downloader all
 RUN apt install wget
 
 # copy files into image
