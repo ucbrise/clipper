@@ -1,13 +1,16 @@
 FROM linuxbrew/linuxbrew:latest
 
-RUN sudo apt-get update
-RUN sudo apt-get install python3 -y
-RUN sudo apt-get install python3-pip -y
-RUN sudo pip3 install grpcio
+RUN apt-get update
+RUN apt-get install python3 -y
+RUN apt-get install python3-pip -y
 RUN brew tap watsonbox/cmu-sphinx
 RUN brew install --HEAD watsonbox/cmu-sphinx/cmu-sphinxbase
 RUN brew install bison
 RUN brew install --HEAD watsonbox/cmu-sphinx/cmu-pocketsphinx
+
+# Dep
+RUN apt-get install -y swig libpulse-dev libasound2-dev
+RUN pip3 install pocketsphinx
 
 ###############################################################
 RUN pip3 install grpcio
