@@ -47,7 +47,7 @@ def recognize(audio_file_index, decoder):
 
     # recognized_str = recognizer.recognize_sphinx(audio)
     ty = timer()
-    print("predict time", ty-tx)
+    print("predict time", ty-tx, "\n\n")
 
 
     # print("google result: \n", recognizer.recognize_google(audio))
@@ -57,7 +57,7 @@ def recognize(audio_file_index, decoder):
 def init_decoder():
     t1 = timer()
 
-    language_directory = "./models/recog-default"
+    language_directory = "./models/wsj1"
     acoustic_parameters_directory = os.path.join(language_directory, "acoustic-model")
     language_model_file = os.path.join(language_directory, "language-model.lm.bin")
     phoneme_dictionary_file = os.path.join(language_directory, "pronounciation-dictionary.dict")
