@@ -2,8 +2,10 @@ import speech_recognition as sr
 from timeit import default_timer as timer
 # Reference: https://realpython.com/python-speech-recognition/
 # Text2Speech converter: https://www.text2speech.org/
+from pocketsphinx import pocketsphinx, Jsgf, FsgModel
+import os
 
-def recognize(audio_file_index):
+def recognize(audio_file_index, decoder):
     audio_file_index = int(audio_file_index)
     if audio_file_index < 0 or audio_file_index > 1000:
         return "Invalid image index! Only index between 1 to 1000 is allowed! Exiting..."
@@ -30,8 +32,49 @@ def recognize(audio_file_index):
     with audio_file as source:
         audio = recognizer.record(source)
 
-    recognized_str = recognizer.recognize_google(audio)
-    return recognized_str
+
+    tx = timer()
+
+    
+
+    raw_data = audio.get_raw_data(convert_rate=16000, convert_width=2)
+
+    decoder.start_utt()  # begin utterance processing
+    decoder.process_raw(raw_data, False, True)  # process audio data with recognition enabled (no_search = False), as a full utterance (full_utt = True)
+    decoder.end_utt()  # stop utterance processing
+    hypothesis = decoder.hyp()
+
+
+    # recognized_str = recognizer.recognize_sphinx(audio)
+    ty = timer()
+    print("predict time", ty-tx)
+
+
+    # print("google result: \n", recognizer.recognize_google(audio))
+
+    return hypothesis.hypstr
+
+def init_decoder():
+    t1 = timer()
+
+    language_directory = "./models/recog-default"
+    acoustic_parameters_directory = os.path.join(language_directory, "acoustic-model")
+    language_model_file = os.path.join(language_directory, "language-model.lm.bin")
+    phoneme_dictionary_file = os.path.join(language_directory, "pronounciation-dictionary.dict")
+
+    config = pocketsphinx.Decoder.default_config()
+    config.set_string("-hmm", acoustic_parameters_directory)  # set the path of the hidden Markov model (HMM) parameter files
+    config.set_string("-lm", language_model_file)
+    config.set_string("-dict", phoneme_dictionary_file)
+    config.set_string("-logfn", os.devnull)  # disable logging (logging causes unwanted output in terminal)
+    
+    decoder = pocketsphinx.Decoder(config)
+
+
+    t2 = timer()
+
+    print("init time:", t2-t1)
+    return decoder
 
 
 def predict(audio_file_path):
@@ -41,3 +84,9 @@ def predict(audio_file_path):
     time_elapsed = end - start
     return recognized_string
 
+
+if __name__ == "__main__":
+    d = init_decoder()
+    print(recognize(1, d))
+    print("\n\n")
+    print(recognize(2, d))
