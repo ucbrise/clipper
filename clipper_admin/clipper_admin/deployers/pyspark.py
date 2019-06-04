@@ -251,7 +251,7 @@ def deploy_pyspark_model(clipper_conn,
         elif py_minor_version == (3, 7):
             logger.info("Using Python 3.7 base image")
             base_image = "{}/pyspark37-container:{}".format(
-                __registry__, __version__
+                __registry__, __version__)
         else:
             msg = ("PySpark deployer only supports Python 2.7, 3.5, 3.6, and 3.7. "
                    "Detected {major}.{minor}").format(
