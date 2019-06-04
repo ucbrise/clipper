@@ -1,26 +1,28 @@
 FROM tensorflow/tensorflow:1.12.0-gpu-py3 
 RUN apt-get update
 
-# docker build -f ./imagequery_main_noraft/mainDockerfile -t imagequery_main:noraft .
-# docker run --runtime=nvidia -p 10000:10000 -it imagequery_main:noraft
+# docker build -f ./mainDockerfile -t imagequery_main:raft .
+# docker run --runtime=nvidia -p 10000:10000 -it imagequery_main:raft
 
 # /container would contains:
 # c0_entryContainer c1_speechRecognition/ c2_imageCaptionGenerator/ c3_nlpMappingGenerator/ c4_questionAnswering/ main.py
  
 ### for c0
-ADD imagequery_main_noraft/c0_entryContainer/app /container/c0_entryContainer
+ADD c0_entryContainer/app /container/c0_entryContainer
 
 ### for c1 
 RUN apt-get install wget zip unzip python3 python3-pip -y
 RUN pip3 install SpeechRecognition
+RUN apt-get install -y swig libpulse-dev libasound2-dev
+RUN pip3 install pocketsphinx
 RUN apt-get install curl -y
 RUN apt-get install ffmpeg -y
 RUN pip3 install pydub
 RUN apt-get install ffmpeg libavcodec-extra -y
 RUN pip3 install glob3
 
-ADD imagequery_main_noraft/c1_speechRecognition/app /container/c1_speechRecognition
-ADD imagequery_main_noraft/c1_speechRecognition/data /container/c1_speechRecognition/data
+ADD c1_speechRecognition/app /container/c1_speechRecognition
+ADD c1_speechRecognition/data /container/c1_speechRecognition/data
 
 RUN chmod 777 /container/c1_speechRecognition/data/dataset3/downloadDataset.sh
 RUN /container/c1_speechRecognition/data/dataset3/downloadDataset.sh
@@ -32,15 +34,15 @@ RUN /container/c1_speechRecognition/data/dataset3/rename.sh
 RUN python3 /container/c1_speechRecognition/data/dataset3/truncate.py
 
 ### for c2 
-RUN pip install numpy nltk
-RUN python -m nltk.downloader all
+RUN pip3 install numpy nltk
+RUN python3 -m nltk.downloader all
 RUN apt install wget
 
 # copy files into image
-ADD imagequery_main_noraft/c2_imageCaptionGenerator/app /container/c2_imageCaptionGenerator/
-ADD imagequery_main_noraft/c2_imageCaptionGenerator/captionData /container/c2_imageCaptionGenerator/captionData
-ADD imagequery_main_noraft/c2_imageCaptionGenerator/im2txt/ /container/c2_imageCaptionGenerator/im2txt/
-ADD imagequery_main_noraft/c2_imageCaptionGenerator/im2txt/ops/ /container/c2_imageCaptionGenerator/ops/
+ADD c2_imageCaptionGenerator/app /container/c2_imageCaptionGenerator/
+ADD c2_imageCaptionGenerator/captionData /container/c2_imageCaptionGenerator/captionData
+ADD c2_imageCaptionGenerator/im2txt/ /container/c2_imageCaptionGenerator/im2txt/
+ADD c2_imageCaptionGenerator/im2txt/ops/ /container/c2_imageCaptionGenerator/ops/
  
 # download pre-trained models 
 RUN chmod 777 /container/c2_imageCaptionGenerator/im2txt/model/downloadModels.sh
@@ -62,19 +64,23 @@ RUN python3 -m nltk.downloader all
 RUN pip3 install spacy
 RUN python3 -m spacy download en_core_web_sm
 
-ADD imagequery_main_noraft/c3_nlpMappingGenerator/app /container/c3_nlpMappingGenerator
+ADD c3_nlpMappingGenerator/app /container/c3_nlpMappingGenerator
 
 ### for c4
-ADD imagequery_main_noraft/c4_questionAnswering/app /container/c4_questionAnswering
+ADD c4_questionAnswering/app /container/c4_questionAnswering
 
 # for main.py
-ADD imagequery_main_noraft/main.py /container
+ADD closure.py /container
+ADD rpc.py /container
+ADD main.py /container
 
 # /container nows contains: 
 # c0_entryContainer c1_speechRecognition/ c2_imageCaptionGenerator/ c3_nlpMappingGenerator/ c4_questionAnswering/ main.py
 
 # Crucial
 WORKDIR /container
-CMD ["python", "/container/main.py"]
+
+# CMD ["python", "/container/closure.py"]
+CMD ["python3", "/container/main.py"]
 
 EXPOSE 10000
