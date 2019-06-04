@@ -8,6 +8,7 @@ import os
 
 
 t1 = timer()
+print(os.getcwd())
 
 language_directory = "./models/wsj1"
 acoustic_parameters_directory = os.path.join(language_directory, "acoustic-model")

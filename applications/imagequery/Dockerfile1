@@ -59,6 +59,8 @@ ADD grpc/app/model_pb2.py /container/
 ADD grpc/app/proxy_pb2_grpc.py /container/
 ADD grpc/app/proxy_pb2.py /container/
 
+RUN ls /container
+
 CMD ["python3", "/container/predict.py"]
 # CMD ["/container/container_entry.sh", "c1", "/container/server.py"]
 
