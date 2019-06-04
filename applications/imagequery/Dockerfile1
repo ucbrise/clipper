@@ -1,8 +1,8 @@
 FROM linuxbrew/linuxbrew:latest
 
-RUN apt-get update
-RUN apt-get install python3 -y
-RUN apt-get install python3-pip -y
+RUN sudo apt-get update
+RUN sudo apt-get install python3 -y
+RUN sudo apt-get install python3-pip -y
 RUN brew tap watsonbox/cmu-sphinx
 RUN brew install --HEAD watsonbox/cmu-sphinx/cmu-sphinxbase
 RUN brew install bison
