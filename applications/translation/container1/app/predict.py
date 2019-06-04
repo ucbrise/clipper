@@ -59,7 +59,9 @@ def init_decoder():
 
     language_directory = "./models/wsj1"
     acoustic_parameters_directory = os.path.join(language_directory, "acoustic-model")
+    #language_model_file = os.path.join(language_directory, "language-model.lm")
     language_model_file = os.path.join(language_directory, "language-model.lm.bin")
+
     phoneme_dictionary_file = os.path.join(language_directory, "pronounciation-dictionary.dict")
 
     config = pocketsphinx.Decoder.default_config()
@@ -87,6 +89,16 @@ def predict(audio_file_path):
 
 if __name__ == "__main__":
     d = init_decoder()
-    print(recognize(1, d))
-    print("\n\n")
-    print(recognize(2, d))
+    # print(recognize(1, d))
+    # print("\n\n")
+    # print(recognize(2, d))
+
+    lines = []
+    for i in range (0, 1000):
+        lines.append(recognize(i, d))
+    
+    f = open("output.txt", "w")
+
+    for line in lines:
+        f.write(line + '\n')
+    f.close()
