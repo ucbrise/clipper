@@ -1,0 +1,42 @@
+FROM tensorflow/tensorflow:1.12.0-gpu-py3
+
+#c1
+RUN apt-get update
+RUN apt-get install wget zip unzip python3 python3-pip -y
+RUN pip3 install SpeechRecognition
+RUN apt-get install curl -y
+RUN apt-get install ffmpeg -y
+RUN pip3 install pydub
+RUN apt-get install ffmpeg libavcodec-extra -y
+RUN pip3 install glob3
+
+ADD container1 /container/container1
+
+RUN chmod 777 /container/container1/data/dataset3/downloadDataset.sh
+RUN /container/container1/data/dataset3/downloadDataset.sh
+RUN mv $(find / -name speech-accent-archive.zip) /container/container1/data/dataset3
+RUN unzip /container/container1/data/dataset3/speech-accent-archive.zip -d /container/container1/data/dataset3
+RUN unzip -qq /container/container1/data/dataset3/recordings.zip -d /container/container1/data/dataset3/
+RUN chmod 777 /container/container1/data/dataset3/rename.sh
+RUN ./container/container1/data/dataset3/rename.sh
+RUN python3 /container/container1/data/dataset3/truncate.py
+
+#c2
+RUN pip3 install spacy 
+RUN python3 -m spacy download en_core_web_sm
+ADD container2 /container/container2
+
+#c3
+RUN pip3 install nltk
+RUN python3 -m spacy download en
+ADD container3 /container/container3
+
+#c4
+ADD container4 /container/container4
+
+ADD main.py /container/
+
+# CMD ["python3", "/container/main.py"]
+CMD ["/container/container_entry.sh", "c1", "/container/server.py"]
+
+EXPOSE 22222
