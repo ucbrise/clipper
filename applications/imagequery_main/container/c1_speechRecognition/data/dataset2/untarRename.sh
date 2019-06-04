@@ -1,10 +1,10 @@
 #!/bin/bash
 
-cd /container/data/dataset2
+cd /container/c1_speechRecognition/data/dataset2
 tar -zxf flickr_audio.tar.gz
 # tar -xzvf flickr_audio.tar.gz
 
-cd /container/data/dataset2/flickr_audio/wavs
+cd /container/c1_speechRecognition/data/dataset2/flickr_audio/wavs
 index=0;
 for name in *.wav
 do
