@@ -73,7 +73,7 @@ def run(input_index):
 
 if __name__ == "__main__":
   start = timer()
-  for i in range(50):
+  for i in range(10):
     run(i)
   end = timer()
   time_elapsed = end - start 
