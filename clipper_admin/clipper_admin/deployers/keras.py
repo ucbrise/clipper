@@ -223,7 +223,7 @@ def deploy_keras_model(clipper_conn,
                 __registry__, __version__)
         elif py_minor_version == (3, 7):
             logger.info("Using Python 3.7 base image")
-            base_image = "{}/keras36-container:{}".format(
+            base_image = "{}/keras37-container:{}".format(
                 __registry__, __version__)
         else:
             msg = (
