@@ -1,0 +1,11 @@
+diff -urN redox.org/src/client.cpp redox/src/client.cpp
+--- redox.org/src/client.cpp	2019-05-31 18:58:11.104997558 +0900
++++ redox/src/client.cpp	2019-05-31 20:34:21.826154449 +0900
+@@ -57,6 +57,7 @@
+ 
+   // Connect over TCP
+   ctx_ = redisAsyncConnect(host.c_str(), port);
++  redisEnableKeepAlive(&(ctx_->c));
+ 
+   if (!initHiredis())
+     return false;

@@ -5,21 +5,21 @@ FROM ${REGISTRY}/lib_base:${CODE_VERSION}
 LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
 # install docker and other apt-installable dependencies
-RUN DEBIAN_FRONTEND=noninteractive apt-get update -qq && apt-get install -y -qq --no-install-recommends \
-      wget apt-transport-https ca-certificates curl software-properties-common \
-      clang-format redis-server gnupg2 \
-      && curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add - \
-      && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable" \
-      && apt-get update -qq \
-      && apt-get install -y -qq docker-ce \
-      && apt-get install -y -qq python python-dev python-pip libsodium18 \
-      && rm -rf /var/lib/apt/lists/*
+RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends \
+    wget apt-transport-https ca-certificates curl gnupg-agent software-properties-common clang-format redis-server \
+    && curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
+    && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+    && apt-get update -qq \
+    && apt-get install -y -qq docker-ce \
+    && apt-get install -y -qq python python-dev python-pip \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get autoremove -y
 
 ENV PIP_DEFAULT_TIMEOUT=100
 RUN pip install --upgrade pip
 
 RUN pip install -q cloudpickle==0.5.* pyzmq==17.0.* requests==2.20.0 subprocess32==3.2.* scikit-learn==0.19.* \
-  numpy==1.14.* pyyaml>=4.2b1 docker==3.1.* kubernetes==6.0.* tensorflow==1.6.* mxnet==1.4.* pyspark==2.3.* \
+  numpy==1.14.* pyyaml>=4.2b1 docker==3.1.* kubernetes==6.0.* tensorflow==1.13.* mxnet==1.4.* pyspark==2.3.* \
   xgboost==0.7.* jsonschema==2.6.* psutil==5.4.* prometheus_client keras==2.2.*
 
 # Install PyTorch

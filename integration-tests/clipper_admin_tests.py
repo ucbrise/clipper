@@ -437,7 +437,9 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         time.sleep(60)
 
         addr = self.clipper_conn.get_query_addr()
-        url = "http://{addr}/hello-world/predict".format(
+
+        # Added a trailing slash on predict url for test
+        url = "http://{addr}/hello-world/predict/".format(
             addr=addr, app='hello-world')
 
         headers = {"Content-type": "application/json"}

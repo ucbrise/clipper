@@ -8,6 +8,8 @@ COPY ./ /clipper
 
 RUN cd /clipper/src/libs/spdlog \
     && git apply ../patches/make_spdlog_compile_linux.patch \
+    && cd /clipper/src/libs/redox \
+    && git apply ../patches/redis_keepalive.patch \
     && cd /clipper \
     && ./configure --cleanup-quiet \
     && ./configure --release \
