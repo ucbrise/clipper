@@ -20,7 +20,7 @@ setup(
         "clipper_admin", "clipper_admin.docker", "clipper_admin.kubernetes",
         "clipper_admin.deployers", "clipper_admin.metrics", "clipper_admin.docker.logging"
     ],
-    package_data={'clipper_admin': ['*.txt', '*/*.yaml']},
+    package_data={'clipper_admin': ['*.txt', '*/*.yaml', "*/*.conf"]},
     keywords=['clipper', 'prediction', 'model', 'management'],
     install_requires=[
         'requests>=2.20.0', 'numpy', 'subprocess32; python_version<"3"', 'pyyaml>=4.2b1',
