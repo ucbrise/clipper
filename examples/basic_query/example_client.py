@@ -34,13 +34,13 @@ def feature_sum(xs):
 def signal_handler(signal, frame):
     print("Stopping Clipper...")
     clipper_conn = ClipperConnection(DockerContainerManager())
-    clipper_conn.stop_all()
+    clipper_conn.stop_all(graceful=False)
     sys.exit(0)
 
 
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal_handler)
-    clipper_conn = ClipperConnection(DockerContainerManager(use_centralized_log=False))
+    clipper_conn = ClipperConnection(DockerContainerManager(use_centralized_log=True))
     clipper_conn.start_clipper()
     python_deployer.create_endpoint(clipper_conn, "simple-example", "doubles",
                                     feature_sum)
@@ -58,6 +58,6 @@ if __name__ == '__main__':
                     batch=True)
             else:
                 predict(clipper_conn.get_query_addr(), np.random.random(200))
-            time.sleep(0.2)
+            time.sleep(3)
     except Exception as e:
         clipper_conn.stop_all()

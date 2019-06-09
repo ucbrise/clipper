@@ -7,11 +7,10 @@ USER root
 
 # Download sqlite3 and create a db file. Run sql script to build a table
 RUN apt-get update && \
-	DEBIAN_FRONTEND=noninteractive apt-get -yq install sqlite3 libsqlite3-dev &&
+	DEBIAN_FRONTEND=noninteractive apt-get -yq install sqlite3 libsqlite3-dev
 
 RUN mkdir /db
 RUN touch /db/logging.db
-RUN /usr/bin/sqlite3 /db/logging.db
 
 # Download sqlite3 plugins
 RUN buildDeps="sudo make gcc g++ libc-dev" \

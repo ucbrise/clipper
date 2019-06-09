@@ -9,7 +9,8 @@ from clipper_admin.container_manager import (
 )
 
 
-FLUENTD_VERSION             = 'v1.3-debian-1'  # TODO needs to be update to receive env variable like prometheus
+FLUENTD_REGISTRY            = 'clipper/fluentd'
+FLUENTD_VERSION             = 'develop'
 FLUENTD_CONF_PATH_IN_DOCKER = '/fluentd/etc/fluent.conf'
 FLUENTD_DEFAULT_CONF_PATH   = '{current_dir}/clipper_fluentd.conf'.format(
                                 current_dir=os.path.dirname(os.path.abspath(__file__)))
@@ -54,7 +55,7 @@ class Fluentd(object):
     def _run_fluentd_image(self, docker_client, fluentd_labels, fluend_port, fluentd_conf_path, extra_container_kwargs):
         fluentd_cmd  = []  # No cmd is required.
         fluentd_name = "fluentd-{}".format(random.randint(0, 100000))
-        fluentd_img  = 'fluent/fluentd:{version}'.format(version=FLUENTD_VERSION)
+        fluentd_img  = '{registry}:{version}'.format(registry=FLUENTD_REGISTRY, version=FLUENTD_VERSION)
 
         docker_client.containers.run(
             fluentd_img,
