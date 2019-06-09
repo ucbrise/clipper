@@ -23,7 +23,7 @@ RUN pip install -q cloudpickle==0.5.* pyzmq==17.0.* requests==2.20.0 subprocess3
   xgboost==0.7.* jsonschema==2.6.* psutil==5.4.* prometheus_client keras==2.2.*
 
 # Install PyTorch
-RUN pip install -q torch==1.0.* torchvision==0.2.*
+RUN pip install -q torch==1.1.* torchvision==0.3.*
 
 # Install kubectl
 RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl \
