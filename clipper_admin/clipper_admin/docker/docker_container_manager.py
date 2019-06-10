@@ -17,7 +17,13 @@ from ..container_manager import (
     CLIPPER_INTERNAL_METRIC_PORT, CLIPPER_INTERNAL_REDIS_PORT,
     CLIPPER_DOCKER_PORT_LABELS, CLIPPER_METRIC_CONFIG_LABEL, ClusterAdapter,
     CLIPPER_FLUENTD_CONFIG_LABEL, CLIPPER_INTERNAL_FLUENTD_PORT)
-from .docker_metric_utils import *
+from .docker_metric_utils import (
+    run_query_frontend_metric_image,
+    setup_metric_config,
+    run_metric_image,
+    add_to_metric_config,
+    delete_from_metric_config
+)
 from .logging.docker_logging_utils import (
     get_logs_from_containers,
     get_default_log_config

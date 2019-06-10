@@ -7,7 +7,7 @@ from .docker_api_utils import run_container
 PROM_VERSION = "v2.9.2"
 
 
-def get_prometheus_base_config():
+def _get_prometheus_base_config():
     """
     Generate a basic configuration dictionary for prometheus
     :return: dictionary
@@ -56,7 +56,7 @@ def setup_metric_config(query_frontend_metric_name, prom_config_path,
     """
 
     with open(prom_config_path, 'w') as f:
-        prom_config = get_prometheus_base_config()
+        prom_config = _get_prometheus_base_config()
         prom_config_query_frontend = {
             'job_name':
             'query',
