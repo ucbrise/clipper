@@ -350,8 +350,8 @@ class RequestHandler {
             decode_and_handle_predict(request->content.string(), name, policy,
                                       latency_slo_micros, input_type);
 
-        predictions
-            .then([response,
+        std::move(predictions)
+            .thenValue([response,
                    app_metrics](std::vector<folly::Try<Response>> tries) {
               std::vector<std::string> all_content;
               for (auto t : tries) {
@@ -379,7 +379,7 @@ class RequestHandler {
                   get_batch_prediction_response_content(all_content);
               respond_http(final_content, "200 OK", response);
             })
-            .onError([response](const std::exception& e) {
+            .thenError(folly::tag_t<std::exception>{}, [response](const std::exception& e) {
               clipper::log_error_formatted(clipper::LOGGING_TAG_CLIPPER,
                                            "Unexpected error: {}", e.what());
               respond_http("An unexpected error occurred!",
@@ -416,7 +416,7 @@ class RequestHandler {
         respond_http(json_error_response, "400 Bad Request", response);
       }
     };
-    std::string predict_endpoint = "^/" + name + "/predict$";
+    std::string predict_endpoint = "^/" + name + "/predict/?$";
     server_.add_endpoint(predict_endpoint, "POST", predict_fn);
 
     auto update_fn = [this, name, input_type, policy](
@@ -437,7 +437,7 @@ class RequestHandler {
         folly::Future<FeedbackAck> update =
             decode_and_handle_update(request->content.string(), name,
                                      versioned_models, policy, input_type);
-        update.then([response](FeedbackAck ack) {
+        std::move(update).thenValue([response](FeedbackAck ack) {
           std::stringstream ss;
           ss << "Feedback received? " << ack;
           std::string content = ss.str();
@@ -453,7 +453,7 @@ class RequestHandler {
         respond_http(e.what(), "400 Bad Request", response);
       }
     };
-    std::string update_endpoint = "^/" + name + "/update$";
+    std::string update_endpoint = "^/" + name + "/update/?$";
     server_.add_endpoint(update_endpoint, "POST", update_fn);
   }
 
@@ -465,9 +465,9 @@ class RequestHandler {
   }
 
   void delete_application(std::string name) {
-    std::string predict_endpoint = "^/" + name + "/predict$";
+    std::string predict_endpoint = "^/" + name + "/predict/?$";
     server_.delete_endpoint(predict_endpoint, "POST");
-    std::string update_endpoint = "^/" + name + "/update$";
+    std::string update_endpoint = "^/" + name + "/update/?$";
     server_.delete_endpoint(update_endpoint, "POST");
   }
 

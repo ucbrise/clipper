@@ -97,10 +97,10 @@ folly::Future<Response> QueryProcessor::predict(Query query) {
   std::vector<folly::Future<folly::Unit>> wrapped_task_futures;
   for (auto it = task_futures.begin(); it < task_futures.end(); it++) {
     wrapped_task_futures.push_back(
-        it->then([outputs_mutex, outputs_ptr](Output output) {
+        std::move(*it).thenValue([outputs_mutex, outputs_ptr](Output output) {
             std::lock_guard<std::mutex> lock(*outputs_mutex);
             outputs_ptr->push_back(output);
-          }).onError([](const std::exception& e) {
+          }).thenError(folly::tag_t<std::exception>{}, [](const std::exception& e) {
           log_error_formatted(
               LOGGING_TAG_QUERY_PROCESSOR,
               "Unexpected error while executing prediction tasks: {}",
@@ -110,7 +110,7 @@ folly::Future<Response> QueryProcessor::predict(Query query) {
 
   folly::Future<folly::Unit> all_tasks_completed_future =
       folly::collect(wrapped_task_futures)
-          .then([](std::vector<folly::Unit> /* outputs */) {});
+          .thenValue([](std::vector<folly::Unit> /* outputs */) {});
 
   std::vector<folly::Future<folly::Unit>> when_either_futures;
   when_either_futures.push_back(std::move(all_tasks_completed_future));
@@ -122,7 +122,7 @@ folly::Future<Response> QueryProcessor::predict(Query query) {
   folly::Promise<Response> response_promise;
   folly::Future<Response> response_future = response_promise.getFuture();
 
-  response_ready_future.then([
+  std::move(response_ready_future).thenValue([
     outputs_ptr, outputs_mutex, num_tasks, query, query_id, selection_state,
     current_policy, response_promise = std::move(response_promise),
     default_explanation
@@ -220,7 +220,7 @@ folly::Future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
       select_policy_update_promise.getFuture();
   auto state_table = get_state_table();
 
-  all_preds_completed.then([
+  std::move(all_preds_completed).thenValue([
     moved_promise = std::move(select_policy_update_promise), selection_state,
     current_policy, state_table, feedback, query_id, state_key
   ](std::vector<Output> preds) mutable {
@@ -234,7 +234,7 @@ folly::Future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
       folly::collect(all_feedback_completed, select_policy_updated);
 
   folly::Future<FeedbackAck> final_feedback_future =
-      feedback_ack_ready_future.then(
+      std::move(feedback_ack_ready_future).thenValue(
           [](std::tuple<std::vector<FeedbackAck>, FeedbackAck> results) {
             bool select_policy_update_result = std::get<1>(results);
             if (!select_policy_update_result) {
