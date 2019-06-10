@@ -86,7 +86,8 @@ class Fluentd(object):
         return {
             'type': 'fluentd',
             'Config': {
-                'fluentd-address': '127.0.0.1:{port}'.format(port=self.port)
+                'fluentd-address': '127.0.0.1:{port}'.format(port=self.port),
+                'tag': 'sqlite3.logging'
             }
         }
 
