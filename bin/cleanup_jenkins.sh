@@ -1,5 +1,6 @@
 # This script will delete all testing containers and images
 # available on this machine. 
+set -x
 
 CLIPPER_REGISTRY=clippertesting
 
@@ -14,6 +15,14 @@ try_cleanup() {
 try_cleanup_docker_volume() {
     (docker volume ls -f dangling=true | awk '{ print $2 }' | xargs docker volume rm -f) || true
 }
-try_cleanup ${CLIPPER_REGISTRY} > /dev/null
-try_cleanup shipyard > /dev/null
-try_cleanup_docker_volume > /dev/null
+
+echo "Docker Status Before"
+docker ps
+
+try_cleanup ${CLIPPER_REGISTRY} 
+try_cleanup clipper 
+try_cleanup shipyard 
+try_cleanup_docker_volume 
+
+echo "Docker Status After"
+docker ps

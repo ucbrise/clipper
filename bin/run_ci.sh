@@ -34,12 +34,18 @@ sha_tag=$(git rev-parse --verify --short=10 HEAD)
 # sha to tag our image. 
 # https://stackoverflow.com/questions/3601515/how-to-check-if-a-variable-is-set-in-bash
 if [ -z ${ghprbActualCommit+x} ]
-    then echo "We are not in Jenkins"
+    then echo "We are not doing Jekins PRB"
     else 
         sha_tag=`echo $ghprbActualCommit | cut -c-10`;
         clean_up_jenkins
 fi
 echo $sha_tag > VERSION.txt
+
+if [ -z ${BUILD_TAG+x} ]
+    then echo "We are not doing Jekins Regular Build"
+    else 
+        clean_up_jenkins
+fi
 
 # Use shipyard to generate Makefile
 bash ./bin/shipyard.sh
