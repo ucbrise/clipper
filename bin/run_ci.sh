@@ -58,9 +58,9 @@ make -j -f CI_build.Makefile kubernetes_test_containers
 make -j -f CI_build.Makefile all
 
 # Run all test
-make -j10 -f CI_test.Makefile unittest
-make -j15 -f CI_test.Makefile integration_py2
-make -j15 -f CI_test.Makefile integration_py3
+make -j10 -f CI_test.Makefile unittest_py36
+make -j15 -f CI_test.Makefile integration_py36
+make -j15 -f CI_test.Makefile integration_py37
 
 if [ -z ${do_cleanup+x} ]
     then clean_up_jenkins
