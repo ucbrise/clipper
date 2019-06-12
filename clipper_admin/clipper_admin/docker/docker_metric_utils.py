@@ -1,13 +1,13 @@
 import yaml
 import requests
-import random
 from ..exceptions import ClipperException
 from ..container_manager import CLIPPER_INTERNAL_QUERY_PORT
+from .docker_api_utils import run_container
 
 PROM_VERSION = "v2.9.2"
 
 
-def get_prometheus_base_config():
+def _get_prometheus_base_config():
     """
     Generate a basic configuration dictionary for prometheus
     :return: dictionary
@@ -35,13 +35,14 @@ def run_query_frontend_metric_image(name, docker_client, query_name,
         query_name, CLIPPER_INTERNAL_QUERY_PORT)
     query_frontend_metric_labels = common_labels.copy()
 
-    docker_client.containers.run(
-        frontend_exporter_image,
-        query_frontend_metric_cmd,
+    run_container(
+        docker_client=docker_client,
+        image=frontend_exporter_image,
+        cmd=query_frontend_metric_cmd,
         log_config=log_config,
         name=name,
         labels=query_frontend_metric_labels,
-        **extra_container_kwargs)
+        extra_container_kwargs=extra_container_kwargs)
 
 
 def setup_metric_config(query_frontend_metric_name, prom_config_path,
@@ -55,7 +56,7 @@ def setup_metric_config(query_frontend_metric_name, prom_config_path,
     """
 
     with open(prom_config_path, 'w') as f:
-        prom_config = get_prometheus_base_config()
+        prom_config = _get_prometheus_base_config()
         prom_config_query_frontend = {
             'job_name':
             'query',
@@ -94,9 +95,11 @@ def run_metric_image(metric_frontend_name, docker_client, common_labels,
         "--web.enable-lifecycle"
     ]
     metric_labels = common_labels.copy()
-    docker_client.containers.run(
-        "prom/prometheus:{}".format(PROM_VERSION),
-        metric_cmd,
+
+    run_container(
+        docker_client=docker_client,
+        image="prom/prometheus:{}".format(PROM_VERSION),
+        cmd=metric_cmd,
         name=metric_frontend_name,
         ports={'9090/tcp': prometheus_port},
         log_config=log_config,
@@ -108,7 +111,7 @@ def run_metric_image(metric_frontend_name, docker_client, common_labels,
         },
         user='root',  # prom use nobody by default but it can't access config.
         labels=metric_labels,
-        **extra_container_kwargs)
+        extra_container_kwargs=extra_container_kwargs)
 
 
 def add_to_metric_config(model_container_name, prom_config_path,
