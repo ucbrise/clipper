@@ -9,7 +9,7 @@ try_cleanup() {
     (docker ps --all | grep "$@" | awk '{ print $1 }' | xargs docker kill) || true
 }
 
-KEYWORDS = (
+KEYWORDS=(
   ${CLIPPER_REGISTRY}
   clipper
   redis
