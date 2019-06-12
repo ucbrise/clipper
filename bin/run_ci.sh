@@ -27,6 +27,7 @@ tag=$(<VERSION.txt)
 clean_up_jenkins() {
     bash ./bin/cleanup_jenkins.sh
 }
+unset do_cleanup
 
 # Change the VERSION.txt to current sha_tag
 sha_tag=$(git rev-parse --verify --short=10 HEAD)
@@ -38,6 +39,7 @@ if [ -z ${ghprbActualCommit+x} ]
     else 
         sha_tag=`echo $ghprbActualCommit | cut -c-10`;
         clean_up_jenkins
+        do_cleanup="true"
 fi
 echo $sha_tag > VERSION.txt
 
@@ -45,6 +47,7 @@ if [ -z ${BUILD_TAG+x} ]
     then echo "We are not doing Jekins Regular Build"
     else 
         clean_up_jenkins
+        do_cleanup="true"
 fi
 
 # Use shipyard to generate Makefile
@@ -58,3 +61,7 @@ make -j -f CI_build.Makefile all
 make -j10 -f CI_test.Makefile unittest
 make -j15 -f CI_test.Makefile integration_py2
 make -j15 -f CI_test.Makefile integration_py3
+
+if [ -z ${do_cleanup+x} ]
+    then clean_up_jenkins
+fi

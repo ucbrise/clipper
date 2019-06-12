@@ -16,6 +16,7 @@ KEYWORDS=(
   model
   prometheus
   fluentd
+  metric
 )
 
 echo "Docker Status Before"
