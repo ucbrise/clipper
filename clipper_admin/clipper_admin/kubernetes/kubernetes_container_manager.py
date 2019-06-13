@@ -168,7 +168,7 @@ class KubernetesContainerManager(ContainerManager):
         self._k8s_v1 = client.CoreV1Api()
         self._k8s_beta = client.ExtensionsV1beta1Api()
         self._k8s_rbac = client.RbacAuthorizationV1beta1Api()
-        
+
 
         # Create the template engine
         # Config: Any variable missing -> Error
@@ -632,6 +632,16 @@ class KubernetesContainerManager(ContainerManager):
                             val=create_model_container_label(m, v),
                             cluster_label=CLIPPER_DOCKER_LABEL,
                             cluster_name=self.cluster_name))
+                #new stuff
+                    self._k8s_beta.delete_collection_namespaced_replica_set(
+                        namespace=self.k8s_namespace,
+                        label_selector=
+                        "{label}={val}, {cluster_label}={cluster_name}".format(
+                            label=CLIPPER_MODEL_CONTAINER_LABEL,
+                            val=create_model_container_label(m, v),
+                            cluster_label=CLIPPER_DOCKER_LABEL,
+                            cluster_name=self.cluster_name))
+
         except ApiException as e:
             self.logger.warning(
                 "Exception deleting kubernetes deployments: {}".format(e))
@@ -646,6 +656,15 @@ class KubernetesContainerManager(ContainerManager):
                     label=CLIPPER_MODEL_CONTAINER_LABEL,
                     cluster_label=CLIPPER_DOCKER_LABEL,
                     cluster_name=self.cluster_name))
+        #new stuff
+            self._k8s_beta.delete_collection_namespaced_replica_set(
+                namespace=self.k8s_namespace,
+                label_selector="{label}, {cluster_label}={cluster_name}".
+                format(
+                    label=CLIPPER_MODEL_CONTAINER_LABEL,
+                    cluster_label=CLIPPER_DOCKER_LABEL,
+                    cluster_name=self.cluster_name))
+
         except ApiException as e:
             self.logger.warning(
                 "Exception deleting kubernetes deployments: {}".format(e))
