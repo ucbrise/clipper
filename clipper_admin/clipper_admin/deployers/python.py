@@ -206,9 +206,13 @@ def deploy_python_closure(clipper_conn,
             logger.info("Using Python 3.6 base image")
             base_image = "{}/python36-closure-container:{}".format(
                 __registry__, __version__)
+        elif py_minor_version == (3, 7):
+            logger.info("Using Python 3.7 base image")
+            base_image = "{}/python37-closure-container:{}".format(
+                __registry__, __version__)
         else:
             msg = (
-                "Python closure deployer only supports Python 2.7, 3.5, and 3.6. "
+                "Python closure deployer only supports Python 2.7, 3.5, 3.6, and 3.7. "
                 "Detected {major}.{minor}").format(
                     major=sys.version_info.major, minor=sys.version_info.minor)
             logger.error(msg)
