@@ -97,32 +97,32 @@ management_frontend = create_and_push_with_ctx(
     ctx, "management_frontend", "ManagementFrontendDockerfile", push_version=True
 )
 
-# dev = create_and_push_with_ctx(ctx, "dev", "ClipperDevDockerfile ", push_version=True)
+dev = create_and_push_with_ctx(ctx, "dev", "ClipperDevDockerfile ", push_version=True)
 py36_dev = create_and_push_with_ctx(
     ctx, "py36-dev", "ClipperPy36DevDockerfile ", push_version=True
 )
-py37_dev = create_and_push_with_ctx(
-    ctx, "py37-dev", "ClipperPy37DevDockerfile ", push_version=True
-)
-
-# unittests = create_and_push_with_ctx(
-#     ctx, "unittests", "ClipperTestsDockerfile ", push_version=False
+# py37_dev = create_and_push_with_ctx(
+#     ctx, "py37-dev", "ClipperPy37DevDockerfile ", push_version=True
 # )
+
+unittests = create_and_push_with_ctx(
+    ctx, "unittests", "ClipperTestsDockerfile ", push_version=False
+)
 py36tests = create_and_push_with_ctx(
     ctx, "py36tests", "ClipperPy36TestsDockerfile ", push_version=False
 )
-py37tests = create_and_push_with_ctx(
-    ctx, "py37tests", "ClipperPy37TestsDockerfile ", push_version=False
-)
+# py37tests = create_and_push_with_ctx(
+#     ctx, "py37tests", "ClipperPy37TestsDockerfile ", push_version=False
+# )
 
 lib_base > query_frontend
 lib_base > management_frontend
-# lib_base > dev
+lib_base > dev
 lib_base > py36_dev
-lib_base > py37_dev
-# dev > unittests
+# lib_base > py37_dev
+dev > unittests
 py36_dev > py36tests
-py37_dev > py37tests
+# py37_dev > py37tests
 
 ######################
 # Misc Container DAG #

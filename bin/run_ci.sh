@@ -58,9 +58,16 @@ make -j -f CI_build.Makefile kubernetes_test_containers
 make -j -f CI_build.Makefile all
 
 # Run all test
-make -j10 -f CI_test.Makefile unittest_py36
+make -j10 -f CI_test.Makefile unittest_py2
+make -j15 -f CI_test.Makefile integration_py2
 make -j15 -f CI_test.Makefile integration_py36
-make -j15 -f CI_test.Makefile integration_py37
+
+# NOTE: We will use these tests after Jan. 1, 2020. (python 2.7 will be retired.)
+# We have to active 'py37_dev' and 'py37tests' codes in clipper_docker.cfg.py also.
+# make -j10 -f CI_test.Makefile unittest_py36
+# make -j15 -f CI_test.Makefile integration_py36
+# make -j15 -f CI_test.Makefile integration_py37
+
 
 if [ -z ${do_cleanup+x} ]
     then clean_up_jenkins
