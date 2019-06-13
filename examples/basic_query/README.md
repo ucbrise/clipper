@@ -13,7 +13,7 @@ to install Python packages.
 
 Run the example: `python example_client.py`
 ```
-This quickstart requires Docker and supports Python 2.7, 3.5, and 3.6.
+This quickstart requires Docker and supports Python 2.7, 3.5, 3.6 and 3.7.
 ```
 Note that in for the Clipper version 0.3, Python3.7 is not supported.
 

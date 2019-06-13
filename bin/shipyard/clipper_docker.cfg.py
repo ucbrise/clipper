@@ -98,23 +98,31 @@ management_frontend = create_and_push_with_ctx(
 )
 
 dev = create_and_push_with_ctx(ctx, "dev", "ClipperDevDockerfile ", push_version=True)
-py35_dev = create_and_push_with_ctx(
-    ctx, "py35-dev", "ClipperPy35DevDockerfile ", push_version=True
+py36_dev = create_and_push_with_ctx(
+    ctx, "py36-dev", "ClipperPy36DevDockerfile ", push_version=True
 )
+# py37_dev = create_and_push_with_ctx(
+#     ctx, "py37-dev", "ClipperPy37DevDockerfile ", push_version=True
+# )
 
 unittests = create_and_push_with_ctx(
     ctx, "unittests", "ClipperTestsDockerfile ", push_version=False
 )
-py35tests = create_and_push_with_ctx(
-    ctx, "py35tests", "ClipperPy35TestsDockerfile ", push_version=False
+py36tests = create_and_push_with_ctx(
+    ctx, "py36tests", "ClipperPy36TestsDockerfile ", push_version=False
 )
+# py37tests = create_and_push_with_ctx(
+#     ctx, "py37tests", "ClipperPy37TestsDockerfile ", push_version=False
+# )
 
 lib_base > query_frontend
 lib_base > management_frontend
 lib_base > dev
-lib_base > py35_dev
+lib_base > py36_dev
+# lib_base > py37_dev
 dev > unittests
-py35_dev > py35tests
+py36_dev > py36tests
+# py37_dev > py37tests
 
 ######################
 # Misc Container DAG #
@@ -144,9 +152,12 @@ py35_rpc = create_and_push_with_ctx(
 py36_rpc = create_and_push_with_ctx(
     ctx, "py36-rpc", "Py36RPCDockerfile", rpc_version="py36", push_version=True
 )
+py37_rpc = create_and_push_with_ctx(
+    ctx, "py37-rpc", "Py37RPCDockerfile", rpc_version="py37", push_version=True
+)
 
 # Will be used for model containers building
-rpc_containers = {"py": py_rpc, "py35": py35_rpc, "py36": py36_rpc}
+rpc_containers = {"py": py_rpc, "py35": py35_rpc, "py36": py36_rpc, "py37": py37_rpc}
 
 
 py_rpc > create_and_push_with_ctx(
@@ -167,7 +178,7 @@ models = [
     ("python{version}-closure", "PyClosureContainer"),
     ("keras{version}", "KerasContainer")
 ]
-py_version = [("", "py"), ("35", "py35"), ("36", "py36")]
+py_version = [("", "py"), ("35", "py35"), ("36", "py36"), ("37", "py37")]
 
 for (model_name, docker_file), (py_version_name, rpc_version) in product(
     models, py_version

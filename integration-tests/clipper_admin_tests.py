@@ -364,9 +364,14 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         elif py_minor_version == (3, 6):
             containers = self.get_containers("{}/python36-closure-container:{}".format(
                         clipper_registry, clipper_version))
+
+        elif py_minor_version == (3, 7):
+            containers = self.get_containers("{}/python37-closure-container:{}".format(
+                        clipper_registry, clipper_version))
+
         else:
             msg = (
-                "Python closure deployer only supports Python 2.7, 3.5, and 3.6. "
+                "Python closure deployer only supports Python 2.7, 3.5, 3.6, and 3.7. "
                 "Detected {major}.{minor}").format(
                     major=sys.version_info.major, minor=sys.version_info.minor)
             logger.error(msg)
@@ -408,9 +413,14 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
         elif py_minor_version == (3, 6):
             containers = self.get_containers("{}/python36-closure-container:{}".format(
                         clipper_registry, clipper_version))
+
+        elif py_minor_version == (3, 7):
+            containers = self.get_containers("{}/python37-closure-container:{}".format(
+                        clipper_registry, clipper_version))
+
         else:
             msg = (
-                "Python closure deployer only supports Python 2.7, 3.5, and 3.6. "
+                "Python closure deployer only supports Python 2.7, 3.5, 3.6, and 3.7. "
                 "Detected {major}.{minor}").format(
                     major=sys.version_info.major, minor=sys.version_info.minor)
             logger.error(msg)
@@ -579,7 +589,15 @@ class ClipperManagerTestCaseShort(unittest.TestCase):
             "buildmodeltest",
             "py36",
             fake_model_data,
-            "{}/python35-closure-container:{}".format(clipper_registry,
+            "{}/python36-closure-container:{}".format(clipper_registry,
+                                                      clipper_version),
+            None,
+            pkgs_to_install=["sympy==1.1.*"])
+        self.clipper_conn.build_model(
+            "buildmodeltest",
+            "py37",
+            fake_model_data,
+            "{}/python37-closure-container:{}".format(clipper_registry,
                                                       clipper_version),
             None,
             pkgs_to_install=["sympy==1.1.*"])
