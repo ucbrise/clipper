@@ -1,0 +1,27 @@
+ARG REGISTRY
+ARG CODE_VERSION
+FROM ${REGISTRY}/py37-dev:${CODE_VERSION}
+
+LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
+
+RUN pip3 install -q awscli==1.14.*
+
+COPY ./ /clipper
+
+# Set version as git hash
+RUN cd /clipper && echo ${CODE_VERSION} > VERSION
+
+RUN pip3 install -q -e /clipper/clipper_admin
+
+RUN cd /clipper/src/libs/spdlog \
+    && git apply ../patches/make_spdlog_compile_linux.patch \
+    && cd /clipper/src/libs/redox \
+    && git apply ../patches/redis_keepalive.patch \
+    && cd /clipper \
+    && ./configure \
+    && cd debug \
+    && make -j all unittests
+
+ENTRYPOINT ["/bin/bash", "-c"]
+
+# vim: set filetype=dockerfile:

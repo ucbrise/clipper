@@ -33,9 +33,14 @@ NUM_RETRIES_BASH = "{1.." + str(NUM_RETRIES) + "}"
 
 
 def generate_test_command(python_version, test_to_run):
-    assert python_version in [2, 3]
+    assert python_version in ["2.7", "3.6", "3.7"]
 
-    image = "unittests" if python_version == 2 else "py35tests"
+    if python_version == "2.7":
+        image = "unittests"
+    elif python_version == "3.6":
+        image = "py36tests"
+    else:
+        image = "py37tests"
 
     # CLIPPER_TESTING_DOCKERHUB_PASSWORD should be already in the environment
     command = f"""
@@ -55,22 +60,40 @@ def generate_test_command(python_version, test_to_run):
 # Create make targets for both
 for name, test_to_run in UNITTESTS.items():
     CIPrettyLogAction(
-        name=f"unittest_{name}",
-        command=generate_test_command(2, test_to_run),
-        tags="unittest",
+        name=f"unittest_py2_{name}",
+        command=generate_test_command("2.7", test_to_run),
+        tags="unittest_py2",
+    )
+
+    CIPrettyLogAction(
+        name=f"unittest_py36_{name}",
+        command=generate_test_command("3.6", test_to_run),
+        tags="unittest_py36",
+    )
+
+    CIPrettyLogAction(
+        name=f"unittest_py37_{name}",
+        command=generate_test_command("3.6", test_to_run),
+        tags="unittest_py37",
     )
 
 for name, test_to_run in DOCKER_INTEGRATION_TESTS.items():
     CIPrettyLogAction(
         name=f"integration_py2_{name}",
-        command=generate_test_command(2, test_to_run),
+        command=generate_test_command("2.7", test_to_run),
         tags="integration_py2",
     )
 
     CIPrettyLogAction(
-        name=f"integration_py3_{name}",
-        command=generate_test_command(3, test_to_run),
-        tags="integration_py3",
+        name=f"integration_py36_{name}",
+        command=generate_test_command("3.6", test_to_run),
+        tags="integration_py36",
+    )
+
+    CIPrettyLogAction(
+        name=f"integration_py37_{name}",
+        command=generate_test_command("3.7", test_to_run),
+        tags="integration_py37",
     )
 
 # Specify specific dependencies
