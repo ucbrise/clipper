@@ -7,9 +7,10 @@ from clipper_admin.container_manager import (
     CLIPPER_INTERNAL_FLUENTD_PORT, CLIPPER_FLUENTD_CONFIG_LABEL,
     CLIPPER_DOCKER_PORT_LABELS
 )
+from clipper_admin.version import __version__, __registry__
 
 
-FLUENTD_REGISTRY            = 'clipper/fluentd'
+FLUENTD_REGISTRY            = '{}/fluentd:{}'.format(__registry__, __version__)
 FLUENTD_VERSION             = 'develop'
 FLUENTD_CONF_PATH_IN_DOCKER = '/fluentd/etc/fluent.conf'
 FLUENTD_DEFAULT_CONF_PATH   = '{current_dir}/clipper_fluentd.conf'.format(

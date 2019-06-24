@@ -96,6 +96,9 @@ query_frontend = create_and_push_with_ctx(
 management_frontend = create_and_push_with_ctx(
     ctx, "management_frontend", "ManagementFrontendDockerfile", push_version=True
 )
+fluentd = create_and_push_with_ctx(
+    ctx, 'fluentd', 'FluentdLoggingContainerDockerfile', push_version=True
+)
 
 dev = create_and_push_with_ctx(ctx, "dev", "ClipperDevDockerfile ", push_version=True)
 py35_dev = create_and_push_with_ctx(
