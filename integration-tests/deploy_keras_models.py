@@ -56,7 +56,7 @@ def deploy_and_test_model(clipper_conn,
 
 
 def test_model(clipper_conn, app, version):
-    time.sleep(10)
+    time.sleep(25)
     num_preds = 25
     num_defaults = 0
     addr = clipper_conn.get_query_addr()

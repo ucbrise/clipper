@@ -185,7 +185,7 @@ TEST(PredictionCacheTests,
     cache.put(model_id, inputs[i], outputs[i]);
     auto output_future = cache.fetch(model_id, inputs[i]);
     ASSERT_TRUE(output_future.isReady());
-    ASSERT_TRUE(y_hats_equal(output_future.get().y_hat_, outputs[i].y_hat_));
+    ASSERT_TRUE(y_hats_equal(std::move(output_future).get().y_hat_, outputs[i].y_hat_));
   }
   UniquePoolPtr<int> last_input_data = memory::allocate_unique<int>(1);
   last_input_data.get()[0] = 5;
@@ -194,7 +194,7 @@ TEST(PredictionCacheTests,
   cache.put(model_id, last_input, outputs[0]);
   auto last_output_future = cache.fetch(model_id, last_input);
   ASSERT_TRUE(last_output_future.isReady());
-  ASSERT_TRUE(y_hats_equal(last_output_future.get().y_hat_, outputs[0].y_hat_));
+  ASSERT_TRUE(y_hats_equal(std::move(last_output_future).get().y_hat_, outputs[0].y_hat_));
   // Inserting a fifth entry should have brought the cache size above the
   // maximum
   // threshold. In accordance with the clock eviction policy, the output
@@ -208,7 +208,7 @@ TEST(PredictionCacheTests,
   for (int i = 1; i < 4; ++i) {
     auto output_future = cache.fetch(model_id, inputs[i]);
     ASSERT_TRUE(output_future.isReady());
-    ASSERT_TRUE(y_hats_equal(output_future.get().y_hat_, outputs[i].y_hat_));
+    ASSERT_TRUE(y_hats_equal(std::move(output_future).get().y_hat_, outputs[i].y_hat_));
   }
 }
 
@@ -255,11 +255,11 @@ TEST(PredictionCacheTests,
   // The cache should contain both large output entries
   auto first_large_output_future = cache.fetch(model_id, large_inputs[0]);
   ASSERT_TRUE(first_large_output_future.isReady());
-  ASSERT_TRUE(y_hats_equal(first_large_output_future.get().y_hat_,
+  ASSERT_TRUE(y_hats_equal(std::move(first_large_output_future).get().y_hat_,
                            large_outputs[0].y_hat_));
   auto second_large_output_future = cache.fetch(model_id, large_inputs[1]);
   ASSERT_TRUE(second_large_output_future.isReady());
-  ASSERT_TRUE(y_hats_equal(second_large_output_future.get().y_hat_,
+  ASSERT_TRUE(y_hats_equal(std::move(second_large_output_future).get().y_hat_,
                            large_outputs[1].y_hat_));
 
   // The cache should contain the three previously-inserted small output
@@ -268,7 +268,7 @@ TEST(PredictionCacheTests,
   for (int i = 0; i < 3; ++i) {
     auto small_output_future = cache.fetch(model_id, small_inputs[i]);
     ASSERT_TRUE(small_output_future.isReady());
-    ASSERT_TRUE(y_hats_equal(small_output_future.get().y_hat_,
+    ASSERT_TRUE(y_hats_equal(std::move(small_output_future).get().y_hat_,
                              small_outputs[i].y_hat_));
   }
   ASSERT_FALSE(cache.fetch(model_id, small_inputs[3]).isReady());
@@ -293,7 +293,7 @@ TEST(PredictionCacheTests,
   for (int i = 0; i < 5; ++i) {
     auto small_output_future = cache.fetch(model_id, small_inputs[i]);
     ASSERT_TRUE(small_output_future.isReady());
-    ASSERT_TRUE(y_hats_equal(small_output_future.get().y_hat_,
+    ASSERT_TRUE(y_hats_equal(std::move(small_output_future).get().y_hat_,
                              small_outputs[i].y_hat_));
   }
 
@@ -310,12 +310,12 @@ TEST(PredictionCacheTests,
   for (int i = 0; i < 5; ++i) {
     auto small_output_future = cache.fetch(model_id, small_inputs[i]);
     ASSERT_TRUE(small_output_future.isReady());
-    ASSERT_TRUE(y_hats_equal(small_output_future.get().y_hat_,
+    ASSERT_TRUE(y_hats_equal(std::move(small_output_future).get().y_hat_,
                              small_outputs[i].y_hat_));
   }
   auto last_small_output_future = cache.fetch(model_id, last_small_input);
   ASSERT_TRUE(last_small_output_future.isReady());
-  ASSERT_TRUE(y_hats_equal(last_small_output_future.get().y_hat_,
+  ASSERT_TRUE(y_hats_equal(std::move(last_small_output_future).get().y_hat_,
                            small_outputs[0].y_hat_));
 
   // Inserting an additional small large input should evict the entry containing
@@ -334,12 +334,12 @@ TEST(PredictionCacheTests,
   for (int i = 1; i < 5; ++i) {
     auto small_output_future = cache.fetch(model_id, small_inputs[i]);
     ASSERT_TRUE(small_output_future.isReady());
-    ASSERT_TRUE(y_hats_equal(small_output_future.get().y_hat_,
+    ASSERT_TRUE(y_hats_equal(std::move(small_output_future).get().y_hat_,
                              small_outputs[i].y_hat_));
   }
   auto last_large_output_future = cache.fetch(model_id, last_large_input);
   ASSERT_TRUE(last_large_output_future.isReady());
-  ASSERT_TRUE(y_hats_equal(last_large_output_future.get().y_hat_,
+  ASSERT_TRUE(y_hats_equal(std::move(last_large_output_future).get().y_hat_,
                            large_outputs[0].y_hat_));
 }
 
@@ -363,7 +363,7 @@ TEST(PredictionCacheTests, TestIncompleteFuturesAreCompletedOnPut) {
   for (int i = 0; i < 5; ++i) {
     output_future = cache1.fetch(model_id, input);
     ASSERT_TRUE(output_future.isReady());
-    auto output_future_y_hat = output_future.get().y_hat_;
+    auto output_future_y_hat = std::move(output_future).get().y_hat_;
     auto& output_y_hat = output.y_hat_;
     ASSERT_TRUE(y_hats_equal(output_future_y_hat, output_y_hat));
   }
@@ -378,7 +378,7 @@ TEST(PredictionCacheTests, TestIncompleteFuturesAreCompletedOnPut) {
   // subsequent lookups should fail
   cache2.put(model_id, input, output);
   ASSERT_TRUE(output_future.isReady());
-  ASSERT_TRUE(y_hats_equal(output_future.get().y_hat_, output.y_hat_));
+  ASSERT_TRUE(y_hats_equal(std::move(output_future).get().y_hat_, output.y_hat_));
   for (int i = 0; i < 5; ++i) {
     output_future = cache2.fetch(model_id, input);
     ASSERT_FALSE(output_future.isReady());
@@ -401,7 +401,7 @@ TEST(PredictionCacheTests, TestIncompleteFuturesAreCompletedOnPut) {
   // still complete the output future that we obtained prior to the additional
   // insertions
   ASSERT_TRUE(output_future.isReady());
-  ASSERT_TRUE(y_hats_equal(output_future.get().y_hat_, output.y_hat_));
+  ASSERT_TRUE(y_hats_equal(std::move(output_future).get().y_hat_, output.y_hat_));
 }
 
 TEST(PredictionCacheTests, TestEntryLargerThanCacheSizeIsEvicted) {

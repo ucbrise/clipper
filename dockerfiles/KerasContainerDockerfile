@@ -4,7 +4,7 @@ ARG RPC_VERSION
 FROM ${REGISTRY}/${RPC_VERSION}-rpc:${CODE_VERSION}
 
 RUN pip install -q keras==2.2.*
-RUN pip install -q tensorflow==1.6.*
+RUN pip install -q tensorflow==1.13.*
 
 COPY containers/python/keras_container.py containers/python/container_entry.sh /container/
 
