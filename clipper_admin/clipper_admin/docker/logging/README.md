@@ -1,10 +1,17 @@
 # Clipper Logging with Fluentd
 
 ## Log Centralization (Beta)
-Clipper uses Fluentd (https://www.fluentd.org/) for centralizing logs from Docker containers within Clipper cluster. 
-It is currently a beta version. It only supports centralizing logs into Fluentd instance for now, but we will add various functinoalities
-like monitoring and debugging on the top of it. Please create an issue if you want any functionality. 
-Also, please don't hesistate to contribute if you add any features.
+Clipper uses Fluentd (https://www.fluentd.org/) to centralize logs from its cluster. 
+Note that it is currently a beta version. It is only supported by `DockerContainerManager` which is for local development and testing.
+
+### Support
+- `docker logs [fluentd_container]` can show centralized logs.
+- Store logs into sqlite3 logging.db inside fluentd container, so that you can query logs.
+
+### Doesn't Support
+- It doesn't guarantee durability when containers are broken (It does when containers are shutdown by you). It currently uses memory buffer to store logs and flushes them every second. 
+- It does not support forwarding yet. In the future update, it will support logs forwarding so that you can receive logs from your own logging centralization tool.
+- It doesn't store db file in your file system, meaning once you stop containers, logs will disappear. It will be also handled in the future update. 
 
 ## How to guide
 Firstly, when you define `DockerContainerManager`, you should set `use_centralized_log` parameter to be `True`
@@ -34,8 +41,34 @@ You can see centralized logs from fluentd container's stdout. Type
 $docker logs <fluentd_container_id>
 ```
 
-Currently, it just prints out huge amount of logs centralized. It is because this feature is in the beggining phase. 
-We will add persistent storage for logs and query feature in the upcoming version. 
+You can also find centralized logs in sqlite3 database. You can easily query logs using the SQL language.
+Future update will support full-text search as well as better table schema.  
+
+Try
+```bash
+$docker exec -it <fluentd_container_id> bash
+# inside docker container
+$sqlite3 logging.db # It is in the ~ folder
+# Now it is sqlite3 shell. When you type the above command, it should show this.
+SQLite version 3.16.2 2017-01-06 16:32:41
+Enter ".help" for usage hints.
+# The db table is called logging. 
+$sqlite> .tables # will show logging table
+$sqlite> .schema logging # will show the schema of logging table 
+$sqlite> SELECT container_name, log FROM logging; # will show container name and logs.
+```
+
+### Table
+`logging` contains centralized logs
+### Schema
+```bash
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    container_id TEXT, 
+    container_name TEXT,
+    source TEXT,
+    log TEXT
+);
 
 ## How to customize
 Currently, we don't recommend customizing a logging feature or using it for production. It is immature and unstable. Some APIs can be drastically changed. 

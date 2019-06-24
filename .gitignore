@@ -24,3 +24,8 @@ docker-compose.yml
 
 # model for testing
 model.h5
+
+# IDE files
+.cproject
+.project
+.settings/
