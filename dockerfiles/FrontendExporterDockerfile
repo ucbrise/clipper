@@ -1,7 +1,7 @@
 # This ARG isn't used but prevents warnings in the build
 ARG REGISTRY
 ARG CODE_VERSION
-FROM python:3.6-slim-stretch
+FROM python:3.7-slim-stretch
 
 LABEL maintainer="Dan Crankshaw <dscrankshaw@gmail.com>"
 
