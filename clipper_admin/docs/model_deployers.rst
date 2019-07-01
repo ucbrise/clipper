@@ -14,6 +14,7 @@ Currently, Clipper provides the following deployer modules:
 4. Tensorflow Models
 5. MXNet Models
 6. PyTorch Models exported as ONNX file with Caffe2 Serving Backend (Experimental)
+7. Keras Models
 
 These deployers support function that can only be pickled using 
 `Cloudpickle <https://github.com/cloudpipe/cloudpickle>`_ and/or 
@@ -128,6 +129,17 @@ For MXNet, Clipper will serialize the model using ``mxnet_model.save_checkpoint(
 
 .. autofunction:: clipper_admin.deployers.mxnet.deploy_mxnet_model
 .. autofunction:: clipper_admin.deployers.mxnet.create_endpoint
+
+
+Keras Models
+------------
+Similar to PySpark deployer, the Keras deployer provides a small extension to the Python closure deployer
+to allow you to deploy Python functions that include Keras models.
+
+For Keras, Clipper will serialize the model using ``keras_model.save(keras_model.h5)``.
+
+.. autofunction:: clipper_admin.deployers.keras.deploy_keras_model
+.. autofunction:: clipper_admin.deployers.keras.create_endpoint
 
 
 Create Your Own Container
