@@ -11,7 +11,6 @@ from clipper_admin.version import __version__, __registry__
 
 
 FLUENTD_REGISTRY            = '{}/fluentd:{}'.format(__registry__, __version__)
-FLUENTD_VERSION             = 'develop'
 FLUENTD_CONF_PATH_IN_DOCKER = '/fluentd/etc/fluent.conf'
 FLUENTD_DEFAULT_CONF_PATH   = '{current_dir}/clipper_fluentd.conf'.format(
                                 current_dir=os.path.dirname(os.path.abspath(__file__)))
@@ -56,10 +55,9 @@ class Fluentd(object):
     def _run_fluentd_image(self, docker_client, fluentd_labels, fluend_port, fluentd_conf_path, extra_container_kwargs):
         fluentd_cmd  = []  # No cmd is required.
         fluentd_name = "fluentd-{}".format(random.randint(0, 100000))
-        fluentd_img  = '{registry}:{version}'.format(registry=FLUENTD_REGISTRY, version=FLUENTD_VERSION)
 
         docker_client.containers.run(
-            fluentd_img,
+            FLUENTD_REGISTRY,
             command=fluentd_cmd,
             name=fluentd_name,
             ports={
