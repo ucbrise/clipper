@@ -424,9 +424,10 @@ class KubernetesContainerManager(ContainerManager):
             if len(external_node_hosts) == 0 and self.useInternalIP:
                 msg = "No external node addresses found. Using Internal IP address"
                 self.logger.warning(msg)
-                for addr in node.status.addresses:
-                    if addr.type == "InternalIP":
-                        external_node_hosts.append(addr.address)
+                for node in nodes.items:
+                    for addr in node.status.addresses:
+                        if addr.type == "InternalIP":
+                            external_node_hosts.append(addr.address)
 
             if len(external_node_hosts) == 0:
                 msg = "Error connecting to Kubernetes cluster. No external node addresses found. You may pass in KubernetesContainerManager(useInternalIP=True) to connect to local Kubernetes cluster"
