@@ -35,7 +35,7 @@ RUN apt-get install -y -qq \
 #  1. To use both Folly and libev, we have to exclude files(event.*) from compilation.
 #     See https://github.com/facebook/folly/issues/601#issuecomment-347100410.
 #  2. Be careful that this step has to be after installing Folly to avoid collision.
-RUN wget http://dist.schmorp.de/libev/libev-4.25.tar.gz \
+RUN wget http://dist.schmorp.de/libev/Attic/libev-4.25.tar.gz \
     && tar -zxvf libev-4.25.tar.gz \
     && cd libev-4.25 \
     && sed -i 's/event\.[ch]//g' Makefile.am \
