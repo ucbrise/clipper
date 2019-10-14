@@ -10,3 +10,4 @@ redis
 # It should be removed once urllib3>=1.25 is compatible with requests library
 urllib3<1.25
 dnspython==1.16.0
+python-nomad==1.1.0
