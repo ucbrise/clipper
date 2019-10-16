@@ -1,4 +1,5 @@
-
+import abc
+from abc import abstractmethod
 class DNS(abc.ABC):
 
     @abstractmethod
