@@ -3,6 +3,6 @@ from abc import abstractmethod
 class DNS(abc.ABC):
 
     @abstractmethod
-    def resolveSRV(job_name):
+    def resolveSRV(self, job_name):
         pass
     
