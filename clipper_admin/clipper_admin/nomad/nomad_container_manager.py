@@ -13,7 +13,8 @@ from .redis_deployment import redis_deployment
 from .model_deployment import model_deployment, generate_model_job_name, model_job_prefix, model_check_name
 from .mgmt_deployment import mgmt_deployment
 from .query_frontend_deployment import query_frontend_deployment
-from .utils import nomad_job_prefix
+
+from .utils import nomad_job_prefix, query_frontend_job_prefix, query_frontend_service_check, query_frontend_rpc_check
 
 from dns.resolver import NXDOMAIN
 
@@ -46,6 +47,7 @@ class NomadContainerManager(ContainerManager):
     def __init__(self,
                  nomad_ip,
                  dns,
+                 load_balancer=None,
                  cluster_name="default-cluster",
                  datacenters=["dc1"],
                  redis_ip=None,
@@ -61,7 +63,8 @@ class NomadContainerManager(ContainerManager):
             The ip of Nomad
         dns: DNS
             The DNS service that you used with Nomad. Consul is the most popular option.
-            
+        load_balancer: str 
+            The Load Balancer used with Nomad. If you dont have one or dont want to use it, leave it None
         cluster_name: str
             A unique name for this Clipper cluster. This can be used to run multiple Clipper
             clusters on the same Kubernetes cluster without interfering with each other.
@@ -98,6 +101,7 @@ class NomadContainerManager(ContainerManager):
         self.cluster_name = cluster_name
 
         self.dns = dns
+        self.load_balancer = load_balancer
         self.datacenters = datacenters
 
         self.redis_ip = redis_ip
@@ -108,7 +112,6 @@ class NomadContainerManager(ContainerManager):
 
         # connect to nomad cluster
         self.nomad = nomad.Nomad(host=nomad_ip, timeout=5)
-        #namespaces = self.nomad.namespaces.get_namespaces()
         namespaces = []
 
         if namespace in namespaces:
@@ -233,6 +236,22 @@ class NomadContainerManager(ContainerManager):
         query_ip, query_port = self.dns.resolveSRV(check_name)
         return (query_ip, query_port)
 
+    """
+        This function queries the DNS server with a SRV request to get ip and port for the query frontend service (REST API)
+    """
+    def _resolve_query_frontend_service(self):
+        check_name = query_frontend_service_check(self.cluster_name)
+        query_ip, query_port = self.dns.resolveSRV(check_name)
+        return (query_ip, query_port)
+
+    """
+        This function queries the DNS server with a SRV request to get ip and port for the query frontend rpc
+    """
+    def _resolve_query_frontend_rpc(self):
+        check_name = query_frontend_rpc_check(self.cluster_name)
+        query_ip, query_port = self.dns.resolveSRV(check_name)
+        return (query_ip, query_port)
+
     def _start_prometheus(self):
         pass
 
@@ -242,9 +261,33 @@ class NomadContainerManager(ContainerManager):
     def deploy_model(self, name, version, input_type, image, num_replicas=1):
         check_name = model_check_name(self.cluster_name, name, version)
         job_id = '{}-{}-{}'.format(model_job_prefix(self.cluster_name), name, version)
+
+
+        if self.load_balancer != None:
+            query_frontend_ip = self.load_balancer.ip
+            query_frontend_port = self.load_balancer.port
+        else:
+            self.logger.warning('''
+                You did not set a load balancer, this is potentially dangerous because ip and ports may change over time 
+                and not be updated on the model sides, prefer using a load balancer like Fabio
+            ''')
+            query_frontend_ip, query_frontend_port = self._resolve_query_frontend_rpc()
+
         self.nomad.job.register_job(
             job_id, 
-            model_deployment(job_id, self.datacenters, self.cluster_name, name, version, input_type, image, num_replicas)
+            model_deployment(
+                job_id, 
+                self.datacenters, 
+                self.cluster_name, 
+                name, 
+                version, 
+                input_type, 
+                image, 
+                num_replicas,
+                query_frontend_ip,
+                query_frontend_port
+
+            )
         )
 
         # Wait for max 10 minutes
