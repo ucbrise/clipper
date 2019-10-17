@@ -15,6 +15,8 @@ from .mgmt_deployment import mgmt_deployment
 from .query_frontend_deployment import query_frontend_deployment
 
 from .utils import nomad_job_prefix, query_frontend_job_prefix, query_frontend_service_check, query_frontend_rpc_check
+from .utils import mgmt_job_prefix, mgmt_check
+from .utils import redis_job_prefix, redis_check
 
 from dns.resolver import NXDOMAIN
 
@@ -147,7 +149,7 @@ class NomadContainerManager(ContainerManager):
     def _start_redis(self, sleep_time=5):
         # If an existing Redis service isn't provided, start one
         if self.redis_ip is None:
-            job_id = 'redis'
+            job_id = redis_job_prefix(self.cluster_name)
             self.nomad.job.register_job(job_id, redis_deployment(job_id, self.datacenters, self.cluster_name))
 
 
@@ -155,7 +157,8 @@ class NomadContainerManager(ContainerManager):
             wait_count = 0
             redis_ip = None
             redis_port = None
-            check_name = '{}-redis'.format(nomad_job_prefix(self.cluster_name))
+            check_name = redis_check(self.cluster_name)
+
             while redis_ip is None:
                 time.sleep(3)
                 wait_count += 3
@@ -167,17 +170,32 @@ class NomadContainerManager(ContainerManager):
                     self.logger.info('Redis is at {}:{}'.format(redis_ip, redis_port))
                 except NXDOMAIN as err:
                     self.logger.warning('DNS query failed: {}'.format(err))
+
             self.redis_ip = redis_ip
             self.redis_port = redis_port
 
     def _start_mgmt(self, mgmt_image, num_replicas):
-        job_id = 'clipper-mgmt'
-        self.nomad.job.register_job(job_id, mgmt_deployment(job_id, self.datacenters, self.cluster_name, mgmt_image, self.redis_ip, self.redis_port, num_replicas))
+        job_id = mgmt_job_prefix(self.cluster_name),
+        self.nomad.job.register_job(
+            job_id, 
+            mgmt_deployment(
+                job_id, 
+                self.datacenters, 
+                self.cluster_name, 
+                mgmt_image, 
+                self.redis_ip, 
+                self.redis_port, 
+                num_replicas
+            )
+        )
 
         wait_count = 0
+
         mgmt_ip = None
         mgmt_port = None
-        check_name = '{}-mgmt'.format(nomad_job_prefix(self.cluster_name))
+
+        check_name = mgmt_check(self.cluster_name)
+
         while mgmt_ip is None:
             time.sleep(3)
             wait_count += 3
@@ -195,7 +213,7 @@ class NomadContainerManager(ContainerManager):
     def _start_query(self, query_image, frontend_exporter_image, cache_size,
                      qf_http_thread_pool_size, qf_http_timeout_request,
                      qf_http_timeout_content, num_replicas):
-        job_id = 'clipper-query-frontend'
+        job_id = query_frontend_job_prefix(self.cluster_name)
         self.nomad.job.register_job(
             job_id, 
             query_frontend_deployment(
@@ -217,6 +235,7 @@ class NomadContainerManager(ContainerManager):
         wait_count = 0
         query_ip = None
         query_port = None
+
         while query_ip is None:
             time.sleep(3)
             wait_count += 3
@@ -232,9 +251,7 @@ class NomadContainerManager(ContainerManager):
         self.query_port = query_port
 
     def _resolve_query_ip(self):
-        check_name = 'check-service-query-frontend'
-        query_ip, query_port = self.dns.resolveSRV(check_name)
-        return (query_ip, query_port)
+        return self._resolve_query_frontend_service()
 
     """
         This function queries the DNS server with a SRV request to get ip and port for the query frontend service (REST API)
@@ -259,9 +276,7 @@ class NomadContainerManager(ContainerManager):
        pass 
 
     def deploy_model(self, name, version, input_type, image, num_replicas=1):
-        check_name = model_check_name(self.cluster_name, name, version)
-        job_id = '{}-{}-{}'.format(model_job_prefix(self.cluster_name), name, version)
-
+        job_id = generate_model_job_name(self.cluster_name, name, version)
 
         if self.load_balancer != None:
             query_frontend_ip = self.load_balancer.ip
@@ -349,13 +364,12 @@ class NomadContainerManager(ContainerManager):
 
 
     def get_admin_addr(self):
-        check_name = '{}-mgmt'.format(nomad_job_prefix(self.cluster_name))
+        check_name = mgmt_check(self.cluster_name)
         mgmt_ip, mgmt_port = self.dns.resolveSRV(check_name)
         return '{}:{}'.format(mgmt_ip, mgmt_port)
 
     def get_query_addr(self):
-        
-        check_name = 'check-service-query-frontend'
+        check_name = query_frontend_service_check(self.cluster_name)
         try:
             query_ip, query_port= self.dns.resolveSRV(check_name)
             self.query_ip = query_ip

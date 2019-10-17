@@ -1,8 +1,6 @@
-from .utils import nomad_job_prefix
+from .utils import nomad_job_prefix, mgmt_job_prefix, mgmt_check
 import os
 
-def mgmt_job_prefix(cluster_name):
-    return '{}-mgmt'.format(nomad_job_prefix(cluster_name))
 
 """ Nomad payload to deploy a new mgmt """
 def mgmt_deployment(job_id, datacenters, cluster_name, image, redis_ip, redis_port, num_replicas):
@@ -41,7 +39,7 @@ def mgmt_deployment(job_id, datacenters, cluster_name, image, redis_ip, redis_po
                                     },
                                 'Services': [
                                     {
-                                        'Name': '{}-mgmt'.format(nomad_job_prefix(cluster_name)),
+                                        'Name': mgmt_check(cluster_name),
                                         'Tags': ['machine-learning', 'model', 'clipper', 'mgmt'],
                                         'PortLabel': 'http',
                                         'Checks': [

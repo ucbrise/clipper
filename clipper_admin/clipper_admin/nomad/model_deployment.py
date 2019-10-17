@@ -1,14 +1,4 @@
-
-from .utils import nomad_job_prefix
-
-def model_job_prefix(cluster_name):
-    return '{}-model'.format(nomad_job_prefix(cluster_name))
-
-def generate_model_job_name(cluster_name, model_name, model_version):
-    return '{}-{}-{}'.format(model_job_prefix(cluster_name), model_name, model_version)
-
-def model_check_name(cluster_name, name, version):
-    return '{}-model-{}-{}'.format(nomad_job_prefix(cluster_name), name, version)
+from .utils import nomad_job_prefix, model_job_prefix, generate_model_job_name, model_check_name
 
 """ Nomad payload to deploy a new model """
 def model_deployment(

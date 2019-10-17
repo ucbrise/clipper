@@ -1,4 +1,4 @@
-from .utils import nomad_job_prefix
+from .utils import nomad_job_prefix, redis_job_prefix, redis_check
 
 """ Nomad payload to deploy Redis """
 def redis_deployment(job_id, datacenters, cluster_name):
@@ -20,7 +20,7 @@ def redis_deployment(job_id, datacenters, cluster_name):
                     },
                 'Tasks': [
                     {
-                        'Name': '{}-redis'.format(nomad_job_prefix(cluster_name)),
+                        'Name': redis_job_prefix(cluster_name),
                         'Driver': 'docker',
                         'Config': {
                             'image': 'redis:alpine',
@@ -39,7 +39,7 @@ def redis_deployment(job_id, datacenters, cluster_name):
                         },
                         'Services': [
                             {
-                                'Name': '{}-redis'.format(nomad_job_prefix(cluster_name)),
+                                'Name': redis_check(cluster_name),
                                 'Tags': ['global', 'cache'],
                                 'PortLabel': 'db',
                                 'Checks': [

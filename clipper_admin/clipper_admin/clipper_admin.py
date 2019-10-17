@@ -525,7 +525,9 @@ class ClipperConnection(object):
             context_file.seek(0)
             image = "{cluster}-{name}:{version}".format(
                 cluster=self.cm.cluster_identifier, name=name, version=version)
-            
+            if container_registry is not None:
+                image = "{reg}/{image}".format(
+                    reg=container_registry, image=image)
             docker_client = docker.from_env()
             self.logger.info(
                 "Building model Docker image with model data from {}".format(
@@ -536,19 +538,12 @@ class ClipperConnection(object):
                 if 'stream' in b and b['stream'] != '\n':  #log build steps only
                     self.logger.info(b['stream'].rstrip())
 
-            tagged_image = image
-            if container_registry is not None:
-                tagged_image = "{reg}/{image}".format(reg=container_registry, image=image)
-            else:
-                self.logger.info('Container registry is not set')
-            docker_client.images.tag(image, tagged_image)
-
         self.logger.info("Pushing model Docker image to {}".format(image))
 
         @retry((docker.errors.APIError, TimeoutError, Timeout),
                tries=5, logger=self.logger)
         def _push_model():
-            for line in docker_client.images.push(repository=tagged_image, stream=True):
+            for line in docker_client.images.push(repository=image, stream=True):
                 self.logger.debug(line)
         _push_model()
 
