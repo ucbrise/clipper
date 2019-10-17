@@ -1,8 +1,6 @@
-from .utils import nomad_job_prefix
+from .utils import nomad_job_prefix, query_frontend_job_prefix, query_frontend_service_check, query_frontend_rpc_check
 import os
 
-def query_frontend_job_prefix(cluster_name):
-    return '{}-query-frontend'.format(nomad_job_prefix(cluster_name))
 
 """ Nomad payload to deploy a new query frontend"""
 def query_frontend_deployment(job_id, datacenters, cluster_name, image, redis_ip, redis_port, num_replicas, cache_size, thread_pool_size, timeout_request, timeout_content):
@@ -48,7 +46,7 @@ def query_frontend_deployment(job_id, datacenters, cluster_name, image, redis_ip
                                     },
                                 'Services': [
                                     {
-                                        'name': 'check-service-query-frontend',
+                                        'name': query_frontend_service_check(cluster_name),
                                         'tags': ['machine-learning', 'clipper', 'query-frontend', 'urlprefix-/clipper strip=/clipper'],
                                         'portlabel': 'service',
                                         'checks': [
@@ -61,7 +59,7 @@ def query_frontend_deployment(job_id, datacenters, cluster_name, image, redis_ip
                                             ]
                                         },
                                     {
-                                        'name': 'check-rpc-query-frontend',
+                                        'name': query_frontend_rpc_check(cluster_name),
                                         'tags': ['machine-learning', 'clipper', 'query-frontend', "urlprefix-:7000 proto=tcp"],
                                         'portlabel': 'rpc',
                                         'checks': [
