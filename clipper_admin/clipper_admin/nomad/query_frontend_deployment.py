@@ -3,7 +3,23 @@ import os
 
 
 """ Nomad payload to deploy a new query frontend"""
-def query_frontend_deployment(job_id, datacenters, cluster_name, image, redis_ip, redis_port, num_replicas, cache_size, thread_pool_size, timeout_request, timeout_content):
+def query_frontend_deployment(
+    job_id, 
+    datacenters, 
+    cluster_name, 
+    image, 
+    redis_ip, 
+    redis_port, 
+    num_replicas, 
+    cache_size, 
+    thread_pool_size, 
+    timeout_request, 
+    timeout_content,
+    cpu=500, 
+    memory=256,
+    health_check_interval=3000000000,
+    health_check_timeout=2000000000
+    ):
     job = {
             'Job': {
                 'ID': job_id,
@@ -33,8 +49,8 @@ def query_frontend_deployment(job_id, datacenters, cluster_name, image, redis_ip
                                         ]
                                     },
                                 'Resources': {
-                                    'CPU': 500,
-                                    'MemoryMB': 256,
+                                    'CPU': cpu,
+                                    'MemoryMB': memory,
                                     'Networks': [
                                         {
                                             'DynamicPorts': [
@@ -53,8 +69,8 @@ def query_frontend_deployment(job_id, datacenters, cluster_name, image, redis_ip
                                             {
                                                 'name': 'alive',
                                                 'type': 'tcp',
-                                                'interval': 3000000000,
-                                                'timeout':  2000000000
+                                                'interval': health_check_interval,
+                                                'timeout':health_check_timeout 
                                                 }
                                             ]
                                         },
@@ -66,8 +82,8 @@ def query_frontend_deployment(job_id, datacenters, cluster_name, image, redis_ip
                                             {
                                                 'name': 'alive',
                                                 'type': 'tcp',
-                                                'interval': 3000000000,
-                                                'timeout':  2000000000
+                                                'interval': health_check_interval,
+                                                'timeout': health_check_timeout 
                                                 }
                                             ]
                                         }

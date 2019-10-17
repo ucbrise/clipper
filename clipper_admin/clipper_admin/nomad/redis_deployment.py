@@ -1,7 +1,15 @@
 from .utils import nomad_job_prefix, redis_job_prefix, redis_check
 
 """ Nomad payload to deploy Redis """
-def redis_deployment(job_id, datacenters, cluster_name):
+def redis_deployment(
+    job_id, 
+    datacenters, 
+    cluster_name, 
+    cpu=500, 
+    memory=256,
+    health_check_interval=3000000000,
+    health_check_timeout=2000000000
+    ):
     job = { 'Job':  {
         'ID': job_id,
         'Datacenters': datacenters,
@@ -29,8 +37,8 @@ def redis_deployment(job_id, datacenters, cluster_name):
                                 ]
                             },
                         'Resources': {
-                            'CPU': 500,
-                            'MemoryMB': 256,
+                            'CPU': cpu,
+                            'MemoryMB': memory,
                             'Networks': [
                                 {
                                     'DynamicPorts': [{'Label': 'db', 'Value': 6379}],
@@ -46,8 +54,8 @@ def redis_deployment(job_id, datacenters, cluster_name):
                                     {
                                         'Name': 'alive',
                                         'Type': 'tcp',
-                                        'interval': 1000000000000,
-                                        'timeout': 20000000000
+                                        'interval': health_check_interval,
+                                        'timeout': health_check_timeout
                                         }
                                     ]
                                 }

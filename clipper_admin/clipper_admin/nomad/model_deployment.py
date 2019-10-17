@@ -12,6 +12,8 @@ def model_deployment(
     num_replicas,
     query_frontend_ip,
     query_frontend_port,
+    cpu=500, 
+    memory=256,
     health_check_interval=3000000000,
     health_check_timeout=2000000000
     ):
@@ -43,8 +45,8 @@ def model_deployment(
                         'dns_servers': ["${attr.unique.network.ip-address}"]
                     },
                     'Resources': {
-                        'CPU': 500,
-                        'MemoryMB': 256,
+                        'CPU': cpu,
+                        'MemoryMB': memory,
                         'Networks': [
                             {
                                 'DynamicPorts': [

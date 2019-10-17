@@ -3,7 +3,19 @@ import os
 
 
 """ Nomad payload to deploy a new mgmt """
-def mgmt_deployment(job_id, datacenters, cluster_name, image, redis_ip, redis_port, num_replicas):
+def mgmt_deployment(
+    job_id, 
+    datacenters, 
+    cluster_name, 
+    image, 
+    redis_ip, 
+    redis_port, 
+    num_replicas,
+    cpu=500, 
+    memory=256,
+    health_check_interval=3000000000,
+    health_check_timeout=2000000000
+    ):
     job = { 
             'Job': 
             {
@@ -29,8 +41,8 @@ def mgmt_deployment(job_id, datacenters, cluster_name, image, redis_ip, redis_po
                                         ]
                                     },
                                 'Resources': {
-                                    'CPU': 500,
-                                    'MemoryMB': 256,
+                                    'CPU': cpu,
+                                    'MemoryMB': memory,
                                     'Networks': [
                                         {
                                             'DynamicPorts': [{'Label': 'http', 'Value': 1338}]
@@ -46,8 +58,8 @@ def mgmt_deployment(job_id, datacenters, cluster_name, image, redis_ip, redis_po
                                             {
                                                 'Name': 'alive',
                                                 'Type': 'tcp',
-                                                'interval': 3000000000,
-                                                'timeout':  2000000000
+                                                'interval': health_check_interval,
+                                                'timeout': health_check_timeout 
                                                 }
                                             ]
                                         }
