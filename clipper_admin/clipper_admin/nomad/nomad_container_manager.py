@@ -55,7 +55,9 @@ class NomadContainerManager(ContainerManager):
                  redis_ip=None,
                  redis_port=6379,
                  namespace=None,
-                 create_namespace_if_not_exists=False
+                 create_namespace_if_not_exists=False,
+                 default_cpu=500,
+                 default_memory=256
                  ):
         """
 
@@ -91,7 +93,10 @@ class NomadContainerManager(ContainerManager):
             Create a Nomad namespace if the namespace doesnt already exist. This feature is only in Enterprise Edition.
             If this argument is provided and the Nomad namespace does not exist a new Nomad namespace will
             be created.
-
+        default_cpu: int
+            The frequency allocated to nomad jobs by default, in mhz
+        default_memory: int
+            The amount of memory allocated to nomad jobs by default, in mb
         Note
         ----
         Clipper stores all persistent configuration state (such as application and model
@@ -105,6 +110,8 @@ class NomadContainerManager(ContainerManager):
         self.dns = dns
         self.load_balancer = load_balancer
         self.datacenters = datacenters
+        self.default_cpu = default_cpu
+        self.default_memory = default_memory
 
         self.redis_ip = redis_ip
         self.redis_port = redis_port
@@ -150,7 +157,16 @@ class NomadContainerManager(ContainerManager):
         # If an existing Redis service isn't provided, start one
         if self.redis_ip is None:
             job_id = redis_job_prefix(self.cluster_name)
-            self.nomad.job.register_job(job_id, redis_deployment(job_id, self.datacenters, self.cluster_name))
+            self.nomad.job.register_job(
+                job_id, 
+                redis_deployment(
+                    job_id, 
+                    self.datacenters, 
+                    self.cluster_name,
+                    cpu=self.default_cpu,
+                    memory=self.default_memory
+                )
+            )
 
 
             # Wait for max 10 minutes
@@ -185,7 +201,9 @@ class NomadContainerManager(ContainerManager):
                 mgmt_image, 
                 self.redis_ip, 
                 self.redis_port, 
-                num_replicas
+                num_replicas,
+                cpu=self.default_cpu,
+                memory=self.default_memory
             )
         )
 
@@ -227,7 +245,9 @@ class NomadContainerManager(ContainerManager):
                 cache_size,
                 qf_http_thread_pool_size,
                 qf_http_timeout_request,
-                qf_http_timeout_content
+                qf_http_timeout_content,
+                cpu=self.default_cpu,
+                memory=self.default_memory
             )
         )
 
@@ -300,8 +320,9 @@ class NomadContainerManager(ContainerManager):
                 image, 
                 num_replicas,
                 query_frontend_ip,
-                query_frontend_port
-
+                query_frontend_port,
+                cpu=self.default_cpu,
+                memory=self.default_memory
             )
         )
 
