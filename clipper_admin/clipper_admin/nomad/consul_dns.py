@@ -13,6 +13,5 @@ class ConsulDNS(DNS):
             srvInfo['port']     = srv.port
         host = srvInfo['host']
         port = srvInfo['port']
-        print(host)
-        print(port)
-        return (socket.gethostbyname(addr), port)
+        return (socket.gethostbyname(host), port)
+        
