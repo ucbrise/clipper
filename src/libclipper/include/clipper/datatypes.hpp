@@ -76,7 +76,7 @@ class PredictionData {
 
   virtual DataType type() const = 0;
 
-  virtual PredictionDataHash hash() = 0;
+  virtual PredictionDataHash hash() const = 0;
 
   /**
    * The index marking the beginning of the input data
@@ -177,9 +177,9 @@ class DataVector : public PredictionData {
 
   DataType type() const override { return VectorDataType<D>::type; }
 
-  PredictionDataHash hash() override {
+  PredictionDataHash hash() const override {
     if (!hash_) {
-      hash_ = CityHash64(reinterpret_cast<char *>(data_.get() + start_),
+      hash_ = CityHash64(reinterpret_cast<const char *>(data_.get() + start_),
                          size_ * sizeof(D));
     }
     return hash_.get();
@@ -209,7 +209,7 @@ class DataVector : public PredictionData {
   SharedPoolPtr<D> data_;
   size_t start_;
   size_t size_;
-  boost::optional<PredictionDataHash> hash_;
+  mutable boost::optional<PredictionDataHash> hash_;
 };
 
 typedef DataVector<uint8_t> ByteVector;
@@ -225,7 +225,8 @@ class Query {
  public:
   ~Query() = default;
 
-  Query(std::string label, long user_id, std::shared_ptr<PredictionData> input,
+  Query(std::string label, long user_id,
+        std::vector<std::shared_ptr<PredictionData>> input_batch,
         long latency_budget_micros, std::string selection_policy,
         std::vector<VersionedModelId> candidate_models);
 
@@ -244,7 +245,7 @@ class Query {
   // REST endpoints.
   std::string label_;
   long user_id_;
-  std::shared_ptr<PredictionData> input_;
+  std::vector<std::shared_ptr<PredictionData>> input_batch_;
   // TODO change this to a deadline instead of a duration
   long latency_budget_micros_;
   std::string selection_policy_;
@@ -280,7 +281,7 @@ class Response {
  public:
   ~Response() = default;
 
-  Response(Query query, QueryId query_id, const long duration_micros,
+  Response(QueryId query_id, const long duration_micros,
            Output output, const bool is_default,
            const boost::optional<std::string> default_explanation);
 
@@ -294,7 +295,6 @@ class Response {
 
   std::string debug_string() const noexcept;
 
-  Query query_;
   QueryId query_id_;
   long duration_micros_;
   Output output_;
@@ -344,8 +344,8 @@ class PredictTask {
  public:
   ~PredictTask() = default;
 
-  PredictTask(std::shared_ptr<PredictionData> input, VersionedModelId model,
-              float utility, QueryId query_id, long latency_slo_micros,
+  PredictTask(std::shared_ptr<PredictionData> input,
+              QueryId query_id, long latency_slo_micros,
               bool artificial = false);
 
   PredictTask(const PredictTask &other) = default;
@@ -357,8 +357,6 @@ class PredictTask {
   PredictTask &operator=(PredictTask &&other) = default;
 
   std::shared_ptr<PredictionData> input_;
-  VersionedModelId model_;
-  float utility_;
   QueryId query_id_;
   long latency_slo_micros_;
   std::chrono::time_point<std::chrono::system_clock> recv_time_;
@@ -371,7 +369,7 @@ class FeedbackTask {
  public:
   ~FeedbackTask() = default;
 
-  FeedbackTask(Feedback feedback, VersionedModelId model, QueryId query_id,
+  FeedbackTask(Feedback feedback, QueryId query_id,
                long latency_slo_micros);
 
   FeedbackTask(const FeedbackTask &other) = default;
@@ -383,7 +381,6 @@ class FeedbackTask {
   FeedbackTask &operator=(FeedbackTask &&other) = default;
 
   Feedback feedback_;
-  VersionedModelId model_;
   QueryId query_id_;
   long latency_slo_micros_;
 };

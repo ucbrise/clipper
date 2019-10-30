@@ -42,8 +42,9 @@ std::shared_ptr<StateDB> QueryProcessor::get_state_table() const {
   return state_db_;
 }
 
-folly::Future<Response> QueryProcessor::predict(Query query) {
-  long query_id = query_counter_.fetch_add(1);
+folly::Future<std::vector<Response>> QueryProcessor::predict(
+    const Query &query) {
+  long first_subquery_id = query_counter_.fetch_add(query.input_batch_.size());
   auto current_policy_iter = selection_policies_.find(query.selection_policy_);
   if (current_policy_iter == selection_policies_.end()) {
     std::stringstream err_msg_builder;
@@ -68,38 +69,39 @@ folly::Future<Response> QueryProcessor::predict(Query query) {
       current_policy->deserialize(*state_opt);
 
   boost::optional<std::string> default_explanation;
-  std::vector<PredictTask> tasks =
-      current_policy->select_predict_tasks(selection_state, query, query_id);
+  std::vector<PredictTask> tasks;
+  std::vector<VersionedModelId> models;
+  std::tie(tasks, models) = current_policy->select_predict_tasks(
+      selection_state, query, first_subquery_id);
 
   log_info_formatted(LOGGING_TAG_QUERY_PROCESSOR, "Found {} tasks",
-                     tasks.size());
+                     models.size() * tasks.size());
 
-  vector<folly::Future<Output>> task_futures =
-      task_executor_.schedule_predictions(tasks);
+  std::vector<folly::Future<Output>> task_futures =
+      task_executor_.schedule_predictions(tasks, models);
   if (task_futures.empty()) {
     default_explanation = "No connected models found for query";
-    log_error_formatted(LOGGING_TAG_QUERY_PROCESSOR,
-                        "No connected models found for query with id: {}",
-                        query_id);
+    log_error_formatted(
+        LOGGING_TAG_QUERY_PROCESSOR,
+        "No connected models found for query with ids: {} to {}",
+        first_subquery_id, first_subquery_id + query.input_batch_.size() - 1);
   }
-
-  size_t num_tasks = task_futures.size();
 
   folly::Future<folly::Unit> timer_future =
       timer_system_.set_timer(query.latency_budget_micros_);
 
   std::shared_ptr<std::mutex> outputs_mutex = std::make_shared<std::mutex>();
-  std::vector<Output> outputs;
-  outputs.reserve(task_futures.size());
   std::shared_ptr<std::vector<Output>> outputs_ptr =
-      std::make_shared<std::vector<Output>>(std::move(outputs));
+      std::make_shared<std::vector<Output>>(task_futures.size());
 
   std::vector<folly::Future<folly::Unit>> wrapped_task_futures;
-  for (auto it = task_futures.begin(); it < task_futures.end(); it++) {
+  for (size_t i = 0; i < task_futures.size(); ++i) {
+    auto &t = task_futures[i];
     wrapped_task_futures.push_back(
-        std::move(*it).thenValue([outputs_mutex, outputs_ptr](Output output) {
+        std::move(t)
+            .thenValue([outputs_mutex, outputs_ptr, i](Output output) {
             std::lock_guard<std::mutex> lock(*outputs_mutex);
-            outputs_ptr->push_back(output);
+            (*outputs_ptr)[i] = output;
           }).thenError(folly::tag_t<std::exception>{}, [](const std::exception& e) {
           log_error_formatted(
               LOGGING_TAG_QUERY_PROCESSOR,
@@ -119,23 +121,20 @@ folly::Future<Response> QueryProcessor::predict(Query query) {
   folly::Future<std::pair<size_t, folly::Try<folly::Unit>>>
       response_ready_future = folly::collectAny(when_either_futures);
 
-  folly::Promise<Response> response_promise;
-  folly::Future<Response> response_future = response_promise.getFuture();
+  folly::Promise<std::vector<Response>> response_promise;
+  folly::Future<std::vector<Response>> response_future = response_promise.getFuture();
 
-  std::move(response_ready_future).thenValue([
-    outputs_ptr, outputs_mutex, num_tasks, query, query_id, selection_state,
-    current_policy, response_promise = std::move(response_promise),
-    default_explanation
+  std::move(response_ready_future)
+      .thenValue(
+          [outputs_ptr, outputs_mutex, query, first_subquery_id,
+                  selection_state, current_policy,
+                  response_promise = std::move(response_promise),
+                  default_explanation
   ](const std::pair<size_t,
                     folly::Try<folly::Unit>>& /* completed_future */) mutable {
     std::lock_guard<std::mutex> outputs_lock(*outputs_mutex);
-    if (outputs_ptr->empty() && num_tasks > 0 && !default_explanation) {
-      default_explanation =
-          "Failed to retrieve a prediction response within the specified "
-          "latency SLO";
-    }
 
-    std::pair<Output, bool> final_output = current_policy->combine_predictions(
+    std::vector<std::pair<Output, bool>> final_output = current_policy->combine_predictions(
         selection_state, query, *outputs_ptr);
 
     std::chrono::time_point<std::chrono::high_resolution_clock> end =
@@ -145,18 +144,26 @@ folly::Future<Response> QueryProcessor::predict(Query query) {
             end - query.create_time_)
             .count();
 
-    Response response{query,
-                      query_id,
-                      duration_micros,
-                      final_output.first,
-                      final_output.second,
-                      default_explanation};
-    response_promise.setValue(response);
+    std::vector<Response> responses;
+    responses.reserve(final_output.size());
+    long subquery_id = first_subquery_id;
+    for (const auto& f : final_output) {
+      responses.emplace_back(
+          subquery_id, duration_micros, f.first, f.second,
+          ((default_explanation || !f.second)
+               ? default_explanation
+               : boost::optional<std::string>("Failed to retrieve a prediction "
+                                              "response within the specified "
+                                              "latency SLO")));
+      ++subquery_id;
+    }
+
+    response_promise.setValue(responses);
   });
   return response_future;
 }
 
-folly::Future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
+folly::Future<FeedbackAck> QueryProcessor::update(const FeedbackQuery& feedback) {
   log_info(LOGGING_TAG_QUERY_PROCESSOR, "Received feedback for user {}",
            feedback.user_id_);
 
@@ -188,24 +195,26 @@ folly::Future<FeedbackAck> QueryProcessor::update(FeedbackQuery feedback) {
 
   std::vector<PredictTask> predict_tasks;
   std::vector<FeedbackTask> feedback_tasks;
-  std::tie(predict_tasks, feedback_tasks) =
+  std::vector<VersionedModelId> models;
+  std::tie(predict_tasks, feedback_tasks, models) =
       current_policy->select_feedback_tasks(selection_state, feedback,
                                             query_id);
 
   log_info_formatted(LOGGING_TAG_QUERY_PROCESSOR,
                      "Scheduling {} prediction tasks and {} feedback tasks",
-                     predict_tasks.size(), feedback_tasks.size());
+                     predict_tasks.size() * models.size(),
+                     feedback_tasks.size() * models.size());
 
   // 1) Wait for all prediction_tasks to complete
   // 2) Update selection policy
   // 3) Complete select_policy_update_promise
   // 4) Wait for all feedback_tasks to complete (feedback_processed future)
 
-  vector<folly::Future<Output>> predict_task_futures =
-      task_executor_.schedule_predictions({predict_tasks});
+  std::vector<folly::Future<Output>> predict_task_futures =
+      task_executor_.schedule_predictions(predict_tasks, models);
 
-  vector<folly::Future<FeedbackAck>> feedback_task_futures =
-      task_executor_.schedule_feedback(std::move(feedback_tasks));
+  std::vector<folly::Future<FeedbackAck>> feedback_task_futures =
+      task_executor_.schedule_feedback(feedback_tasks, models);
 
   folly::Future<std::vector<Output>> all_preds_completed =
       folly::collect(predict_task_futures);

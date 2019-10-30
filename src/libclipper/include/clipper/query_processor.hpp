@@ -5,6 +5,7 @@
 #include <string>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 #include <folly/futures/Future.h>
 
@@ -34,8 +35,8 @@ class QueryProcessor {
   QueryProcessor(QueryProcessor&& other) = default;
   QueryProcessor& operator=(QueryProcessor&& other) = default;
 
-  folly::Future<Response> predict(Query query);
-  folly::Future<FeedbackAck> update(FeedbackQuery feedback);
+  folly::Future<std::vector<Response>> predict(const Query& query);
+  folly::Future<FeedbackAck> update(const FeedbackQuery& feedback);
 
   std::shared_ptr<StateDB> get_state_table() const;
 

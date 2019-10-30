@@ -21,10 +21,9 @@ namespace {
 PredictTask create_predict_task(long query_id, long latency_slo_millis) {
   UniquePoolPtr<double> data = memory::allocate_unique<double>(1);
   data.get()[0] = 1.0;
-  VersionedModelId model_id = VersionedModelId("test", "1");
   std::shared_ptr<PredictionData> input =
       std::make_shared<DoubleVector>(std::move(data), 1);
-  PredictTask task(input, model_id, 1.0, query_id, latency_slo_millis);
+  PredictTask task(input, query_id, latency_slo_millis);
   return task;
 }
 

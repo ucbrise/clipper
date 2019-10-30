@@ -62,10 +62,11 @@ std::shared_ptr<SelectionState> DefaultOutputSelectionPolicy::init_state(
   return std::make_shared<DefaultOutputSelectionState>(default_output);
 }
 
-std::vector<PredictTask> DefaultOutputSelectionPolicy::select_predict_tasks(
-    std::shared_ptr<SelectionState> /*state*/, Query query,
-    long query_id) const {
-  std::vector<PredictTask> tasks;
+std::pair<std::vector<PredictTask>, std::vector<VersionedModelId>>
+DefaultOutputSelectionPolicy::select_predict_tasks(
+    const std::shared_ptr<SelectionState>& /*state*/, const Query& query,
+    long first_subquery_id) const {
+  std::vector<VersionedModelId> models;
   size_t num_candidate_models = query.candidate_models_.size();
   if (num_candidate_models == (size_t)0) {
     log_error_formatted(LOGGING_TAG_SELECTION_POLICY,
@@ -78,37 +79,61 @@ std::vector<PredictTask> DefaultOutputSelectionPolicy::select_predict_tasks(
                           "{}. Picking the first one.",
                           num_candidate_models, query.label_);
     }
-    tasks.emplace_back(query.input_, query.candidate_models_.front(), 1.0,
-                       query_id, query.latency_budget_micros_);
+    models.emplace_back(query.candidate_models_.front());
   }
-  return tasks;
+
+  std::vector<PredictTask> tasks;
+  tasks.reserve(query.input_batch_.size());
+  for (const auto& input : query.input_batch_) {
+    tasks.emplace_back(input, first_subquery_id++,
+                       query.latency_budget_micros_);
+  }
+  return std::make_pair(std::move(tasks), std::move(models));
 }
 
-const std::pair<Output, bool> DefaultOutputSelectionPolicy::combine_predictions(
-    const std::shared_ptr<SelectionState>& state, Query /*query*/,
+std::vector<std::pair<Output, bool>>
+DefaultOutputSelectionPolicy::combine_predictions(
+    const std::shared_ptr<SelectionState>& state, const Query& query,
     std::vector<Output> predictions) const {
-  if (predictions.size() == 1) {
-    return std::make_pair(std::move(predictions.front()), false);
-  } else if (predictions.empty()) {
+  std::vector<std::pair<Output, bool>> outputs;
+  outputs.reserve(query.input_batch_.size());
+  for (auto& p : predictions) {
+    if (outputs.size() >= query.input_batch_.size()) {
+      break;
+    }
+
+    if (p.y_hat_) {
+      outputs.emplace_back(std::move(p), false);
+    } else {
+      outputs.emplace_back(std::dynamic_pointer_cast<DefaultOutputSelectionState>(state)
+              ->default_output_, true);
+    }
+  }
+
+  if (outputs.size() < query.input_batch_.size()) {
     Output default_output =
         std::dynamic_pointer_cast<DefaultOutputSelectionState>(state)
             ->default_output_;
-    return std::make_pair(std::move(default_output), true);
-  } else {
+    outputs.resize(query.input_batch_.size(),
+                   std::make_pair(default_output, true));
+  } else if (predictions.size() > query.input_batch_.size()) {
     log_error_formatted(LOGGING_TAG_SELECTION_POLICY,
-                        "DefaultOutputSelectionPolicy only expecting 1 "
-                        "output but found {}. Returning the first one.",
-                        predictions.size());
-    return std::make_pair(std::move(predictions.front()), false);
+                        "DefaultOutputSelectionPolicy only expecting {} "
+                        "outputs but found {}. Returning the first {}.",
+                        query.input_batch_.size(), predictions.size(),
+                        query.input_batch_.size());
   }
+
+  return outputs;
 }
 
-std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
+std::tuple<std::vector<PredictTask>, std::vector<FeedbackTask>,
+           std::vector<VersionedModelId>>
 DefaultOutputSelectionPolicy::select_feedback_tasks(
-    const std::shared_ptr<SelectionState>& /*state*/, FeedbackQuery /*query*/,
-    long /*query_id*/) const {
-  return std::make_pair<std::vector<PredictTask>, std::vector<FeedbackTask>>(
-      {}, {});
+    const std::shared_ptr<SelectionState>& /*state*/,
+    const FeedbackQuery& /*query*/, long /*query_id*/) const {
+  return std::make_tuple<std::vector<PredictTask>, std::vector<FeedbackTask>,
+                         std::vector<VersionedModelId>>({}, {}, {});
 }
 
 std::shared_ptr<SelectionState> DefaultOutputSelectionPolicy::process_feedback(

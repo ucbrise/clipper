@@ -346,17 +346,16 @@ class RequestHandler {
         std::shared_ptr<HttpServer::Response> response,
         std::shared_ptr<HttpServer::Request> request) {
       try {
-        folly::Future<std::vector<folly::Try<Response>>> predictions =
+        folly::Future<std::vector<Response>> predictions =
             decode_and_handle_predict(request->content.string(), name, policy,
                                       latency_slo_micros, input_type);
 
         std::move(predictions)
             .thenValue([response,
-                   app_metrics](std::vector<folly::Try<Response>> tries) {
+                   app_metrics](std::vector<Response> responses) {
               std::vector<std::string> all_content;
-              for (auto t : tries) {
+              for (const auto& r : responses) {
                 try {
-                  Response r = t.value();
                   if (r.output_is_default_) {
                     app_metrics.default_pred_ratio_->increment(1, 1);
                   } else {
@@ -458,10 +457,10 @@ class RequestHandler {
   }
 
   static const std::string parse_output_y_hat(
-      std::shared_ptr<PredictionData>& y_hat) {
+      const std::shared_ptr<PredictionData>& y_hat) {
     SharedPoolPtr<char> str_content = clipper::get_data<char>(y_hat);
-    return std::string(str_content.get() + y_hat->start(),
-                       str_content.get() + y_hat->start() + y_hat->size());
+    return std::string(str_content.get() + y_hat->start_byte(),
+                       str_content.get() + y_hat->start_byte() + y_hat->byte_size());
   }
 
   void delete_application(std::string name) {
@@ -483,7 +482,7 @@ class RequestHandler {
    * }
    */
   static const std::string get_prediction_response_content(
-      Response& query_response) {
+      const Response& query_response) {
     rapidjson::Document json_response;
     json_response.SetObject();
     clipper::json::add_long(json_response, PREDICTION_RESPONSE_KEY_QUERY_ID,
@@ -570,7 +569,7 @@ class RequestHandler {
     return clipper::json::to_json_string(error_response);
   }
 
-  folly::Future<std::vector<folly::Try<Response>>> decode_and_handle_predict(
+  folly::Future<std::vector<Response>> decode_and_handle_predict(
       std::string content, std::string name, std::string policy,
       long latency_slo_micros, InputType input_type) {
     rapidjson::Document d;
@@ -626,13 +625,9 @@ class RequestHandler {
 
     std::vector<std::shared_ptr<PredictionData>> input_batch =
         clipper::json::parse_inputs(input_type, d);
-    std::vector<folly::Future<Response>> predictions;
-    for (auto input : input_batch) {
-      auto prediction = query_processor_.predict(Query{
-          name, uid, input, latency_slo_micros, policy, versioned_models});
-      predictions.push_back(std::move(prediction));
-    }
-    return folly::collectAll(predictions);
+    auto predictions = query_processor_.predict(Query{
+        name, uid, input_batch, latency_slo_micros, policy, versioned_models});
+    return predictions;
   }
 
   /*

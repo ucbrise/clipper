@@ -90,10 +90,10 @@ class PredictionCache {
  public:
   PredictionCache(size_t size_bytes);
   folly::Future<Output> fetch(const VersionedModelId &model,
-                              std::shared_ptr<PredictionData> &input);
+                              const std::shared_ptr<PredictionData> &input);
 
   void put(const VersionedModelId &model,
-           std::shared_ptr<PredictionData> &input, const Output &output);
+           const std::shared_ptr<PredictionData> &input, const Output &output);
 
  private:
   size_t hash(const VersionedModelId &model, size_t input_hash) const;
@@ -132,13 +132,23 @@ class ModelQueue {
 
   ~ModelQueue() = default;
 
+  void add_tasks(std::vector<PredictTask> tasks) {
+    if (!valid_ || tasks.empty()) return;
+    std::lock_guard<std::mutex> lock(queue_mutex_);
+    for (auto &task : tasks) {
+      Deadline deadline = std::chrono::system_clock::now() +
+                          std::chrono::microseconds(task.latency_slo_micros_);
+      queue_.emplace(deadline, std::move(task));
+    }
+    tasks.clear();
+    queue_not_empty_condition_.notify_one();
+  }
+
   void add_task(PredictTask task) {
     if (!valid_) return;
-    std::lock_guard<std::mutex> lock(queue_mutex_);
-    Deadline deadline = std::chrono::system_clock::now() +
-                        std::chrono::microseconds(task.latency_slo_micros_);
-    queue_.emplace(deadline, std::move(task));
-    queue_not_empty_condition_.notify_one();
+    std::vector<PredictTask> tasks;
+    tasks.push_back(std::move(task));
+    add_tasks(tasks);
   }
 
   int get_size() {
@@ -470,60 +480,65 @@ class TaskExecutor {
   TaskExecutor &operator=(TaskExecutor &&other) = default;
 
   std::vector<folly::Future<Output>> schedule_predictions(
-      std::vector<PredictTask> tasks) {
-    predictions_counter_->increment(tasks.size());
+      const std::vector<PredictTask> &tasks,
+      const std::vector<VersionedModelId> &models) {
+    predictions_counter_->increment(models.size() * tasks.size());
     std::vector<folly::Future<Output>> output_futures;
-    for (auto t : tasks) {
+    for (const auto &m : models) {
       // add each task to the queue corresponding to its associated model
       boost::shared_lock<boost::shared_mutex> lock(model_queues_mutex_);
-      auto model_queue_entry = model_queues_.find(t.model_);
+      auto model_queue_entry = model_queues_.find(m);
 
       if (model_queue_entry != model_queues_.end()) {
-        auto cache_result = cache_->fetch(t.model_, t.input_);
+        std::vector<PredictTask> model_tasks;
+        for (const auto &t : tasks) {
+          auto cache_result = cache_->fetch(m, t.input_);
 
-        if (cache_result.isReady()) {
-          output_futures.push_back(std::move(cache_result));
-          boost::shared_lock<boost::shared_mutex> model_metrics_lock(
-              model_metrics_mutex_);
-          auto cur_model_metric_entry = model_metrics_.find(t.model_);
-          if (cur_model_metric_entry != model_metrics_.end()) {
-            auto cur_model_metric = cur_model_metric_entry->second;
-            cur_model_metric.cache_hit_ratio_->increment(1, 1);
+          if (cache_result.isReady()) {
+            output_futures.push_back(std::move(cache_result));
+            boost::shared_lock<boost::shared_mutex> model_metrics_lock(
+                model_metrics_mutex_);
+            auto cur_model_metric_entry = model_metrics_.find(m);
+            if (cur_model_metric_entry != model_metrics_.end()) {
+              auto cur_model_metric = cur_model_metric_entry->second;
+              cur_model_metric.cache_hit_ratio_->increment(1, 1);
+            }
+          } else if (active_containers_->get_replicas_for_model(m).size() ==
+                   0) {
+            log_error_formatted(LOGGING_TAG_TASK_EXECUTOR,
+                                "No active model containers for model: {} : {}",
+                                m.get_name(), m.get_id());
+          } else {
+            output_futures.push_back(std::move(cache_result));
+            model_tasks.push_back(t);
+            model_tasks.back().recv_time_ = std::chrono::system_clock::now();
+            log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
+                               "Adding task to queue. QueryID: {}, model: {}",
+                               t.query_id_, m.serialize());
+            boost::shared_lock<boost::shared_mutex> model_metrics_lock(
+                model_metrics_mutex_);
+            auto cur_model_metric_entry = model_metrics_.find(m);
+            if (cur_model_metric_entry != model_metrics_.end()) {
+              auto cur_model_metric = cur_model_metric_entry->second;
+              cur_model_metric.cache_hit_ratio_->increment(0, 1);
+            }
           }
         }
-
-        else if (active_containers_->get_replicas_for_model(t.model_).size() ==
-                 0) {
-          log_error_formatted(LOGGING_TAG_TASK_EXECUTOR,
-                              "No active model containers for model: {} : {}",
-                              t.model_.get_name(), t.model_.get_id());
-        } else {
-          output_futures.push_back(std::move(cache_result));
-          t.recv_time_ = std::chrono::system_clock::now();
-          model_queue_entry->second->add_task(t);
-          log_info_formatted(LOGGING_TAG_TASK_EXECUTOR,
-                             "Adding task to queue. QueryID: {}, model: {}",
-                             t.query_id_, t.model_.serialize());
-          boost::shared_lock<boost::shared_mutex> model_metrics_lock(
-              model_metrics_mutex_);
-          auto cur_model_metric_entry = model_metrics_.find(t.model_);
-          if (cur_model_metric_entry != model_metrics_.end()) {
-            auto cur_model_metric = cur_model_metric_entry->second;
-            cur_model_metric.cache_hit_ratio_->increment(0, 1);
-          }
-        }
+        model_queue_entry->second->add_tasks(model_tasks);
       } else {
         log_error_formatted(LOGGING_TAG_TASK_EXECUTOR,
                             "Received task for unknown model: {} : {}",
-                            t.model_.get_name(), t.model_.get_id());
+                            m.get_name(), m.get_id());
       }
     }
     return output_futures;
   }
 
   std::vector<folly::Future<FeedbackAck>> schedule_feedback(
-      const std::vector<FeedbackTask> tasks) {
+      const std::vector<FeedbackTask> &tasks,
+      const std::vector<VersionedModelId> &models) {
     UNUSED(tasks);
+    UNUSED(models);
     // TODO Implement
     return {};
   }
@@ -717,10 +732,11 @@ class TaskExecutor {
       std::stringstream query_ids_in_batch;
       std::chrono::time_point<std::chrono::system_clock> current_time =
           std::chrono::system_clock::now();
-      for (auto b : batch) {
+      for (const auto &b : batch) {
         prediction_request.add_input(b.input_);
-        cur_batch.emplace_back(current_time, container->container_id_, b.model_,
-                               container->replica_id_, b.input_, b.artificial_);
+        cur_batch.emplace_back(current_time, container->container_id_,
+                               container->model_, container->replica_id_,
+                               b.input_, b.artificial_);
         query_ids_in_batch << b.query_id_ << " ";
       }
       int message_id = rpc_->send_message(prediction_request.serialize(),

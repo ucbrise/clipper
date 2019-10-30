@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 #include <unordered_map>
+#include <tuple>
 
 #include "datatypes.hpp"
 #include "task_executor.hpp"
@@ -53,17 +54,17 @@ class SelectionPolicy {
   virtual ~SelectionPolicy() = default;
 
   // Query Pre-processing: select models and generate tasks
-  virtual std::vector<PredictTask> select_predict_tasks(
-      std::shared_ptr<SelectionState> state, Query query,
-      long query_id) const = 0;
+  virtual std::pair<std::vector<PredictTask>, std::vector<VersionedModelId>>
+  select_predict_tasks(const std::shared_ptr<SelectionState>& state,
+                       const Query& query, long first_subquery_id) const = 0;
 
   /// Combines multiple prediction results to produce a single
-  /// output for a query.
+  /// output for each subquery.
   ///
-  /// @returns A pair containing the output and a boolean flag
-  /// indicating whether or not it is the default output
-  virtual const std::pair<Output, bool> combine_predictions(
-      const std::shared_ptr<SelectionState>& state, Query query,
+  /// @returns A vector of pairs containing the output and a boolean flag
+  /// indicating whether or not it is the default output for each subquery.
+  virtual std::vector<std::pair<Output, bool>> combine_predictions(
+      const std::shared_ptr<SelectionState>& state, const Query& query,
       std::vector<Output> predictions) const = 0;
 
   /// When feedback is received, the selection policy can choose
@@ -71,9 +72,10 @@ class SelectionPolicy {
   /// can be used to get y_hat for e.g. updating a bandit algorithm,
   /// while feedback tasks can be used to optionally propogate feedback
   /// into the model containers.
-  virtual std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
+  virtual std::tuple<std::vector<PredictTask>, std::vector<FeedbackTask>,
+                     std::vector<VersionedModelId>>
   select_feedback_tasks(const std::shared_ptr<SelectionState>& state,
-                        FeedbackQuery query, long query_id) const = 0;
+                        const FeedbackQuery& query, long query_id) const = 0;
 
   /// This method will be called if at least one PredictTask
   /// was scheduled for this piece of feedback. This method
@@ -128,17 +130,19 @@ class DefaultOutputSelectionPolicy : public SelectionPolicy {
 
   std::shared_ptr<SelectionState> init_state(Output default_output) const;
 
-  std::vector<PredictTask> select_predict_tasks(
-      std::shared_ptr<SelectionState> state, Query query,
-      long query_id) const override;
+  std::pair<std::vector<PredictTask>, std::vector<VersionedModelId>>
+  select_predict_tasks(const std::shared_ptr<SelectionState>& state,
+                       const Query& query,
+                       long first_subquery_id) const override;
 
-  const std::pair<Output, bool> combine_predictions(
-      const std::shared_ptr<SelectionState>& state, Query query,
+  std::vector<std::pair<Output, bool>> combine_predictions(
+      const std::shared_ptr<SelectionState>& state, const Query& query,
       std::vector<Output> predictions) const override;
 
-  std::pair<std::vector<PredictTask>, std::vector<FeedbackTask>>
+  std::tuple<std::vector<PredictTask>, std::vector<FeedbackTask>,
+             std::vector<VersionedModelId>>
   select_feedback_tasks(const std::shared_ptr<SelectionState>& state,
-                        FeedbackQuery query, long query_id) const override;
+                        const FeedbackQuery& query, long query_id) const override;
 
   std::shared_ptr<SelectionState> process_feedback(
       std::shared_ptr<SelectionState> state, Feedback feedback,
