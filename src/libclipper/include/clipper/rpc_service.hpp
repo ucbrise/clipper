@@ -145,11 +145,11 @@ class RPCService {
 
   void shutdown_service(socket_t &socket);
   std::thread rpc_thread_;
-  shared_ptr<moodycamel::ConcurrentQueue<RPCRequest>> request_queue_;
+  std::unique_ptr<moodycamel::ConcurrentQueue<RPCRequest>> request_queue_;
   // Flag indicating whether rpc service is active
   std::atomic_bool active_;
   // The next available message id
-  int message_id_ = 0;
+  std::atomic_int message_id_{0};
   std::chrono::system_clock::time_point last_activity_check_time_;
   std::unordered_map<VersionedModelId, int> replica_ids_;
   std::shared_ptr<metrics::Histogram> msg_queueing_hist_;

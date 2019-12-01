@@ -215,19 +215,31 @@ class ThreadPool {
     ss << thread_id;
 
     try {
-        while (!done_ && queues_[worker_id].is_valid()) {
+        while (!done_) {
           boost::this_thread::interruption_point();
           std::unique_ptr<IThreadTask> pTask{nullptr};
           bool work_to_do = false;
           {
             boost::shared_lock<boost::shared_mutex> l(queues_mutex_);
+            auto queue = queues_.find(worker_id);
+            if (queue == queues_.end()) {
+              log_error_formatted(LOGGING_TAG_THREADPOOL,
+                                  "Work queue does not exist for worker {}",
+                                  worker_id);
+              break;
+            }
+
+            if (!queue->second.is_valid()) {
+              break;
+            }
+
             if (is_block_worker) {
-              work_to_do = queues_[worker_id].wait_pop(pTask, l);
+              work_to_do = queue->second.wait_pop(pTask, l);
             } else {
               // NOTE: The use of try_pop here means the worker will spin instead of
               // block while waiting for work. This is intentional. We defer to the
               // submitted tasks to block when no work is available.
-              work_to_do = queues_[worker_id].try_pop(pTask);
+              work_to_do = queue->second.try_pop(pTask);
             }
           }
           if (work_to_do) {
@@ -237,11 +249,11 @@ class ThreadPool {
     } catch (boost::thread_interrupted&) {
       log_info_formatted(LOGGING_TAG_THREADPOOL,
                          "Worker {}, thread {} is interrupted",
-                         std::to_string(worker_id), ss.str());
+                         worker_id, ss.str());
     }
     log_info_formatted(LOGGING_TAG_THREADPOOL,
                        "Worker {}, thread {} is shutting down",
-                       std::to_string(worker_id), ss.str());
+                       worker_id, ss.str());
   }
 
   /**
@@ -280,22 +292,24 @@ class ModelQueueThreadPool : public ThreadPool {
     try {
       ThreadPool::submit(queue_id, func, args...);
     } catch (ThreadPoolError& e) {
-      log_error_formatted(LOGGING_TAG_THREADPOOL,
-                          "Failed to submit task for model {}, replica {}",
-                          vm.serialize(), replica_id);
+      log_error_formatted(
+          LOGGING_TAG_THREADPOOL,
+          "Failed to submit task for model {}, replica {}: queue id {}",
+          vm.serialize(), replica_id, queue_id);
       throw(e);
     }
   }
 
   bool create_queue(VersionedModelId vm, int replica_id, bool is_block_worker) {
-    boost::unique_lock<boost::shared_mutex> lock_q(queues_mutex_);
     boost::unique_lock<boost::shared_mutex> lock_t(threads_mutex_);
+    boost::unique_lock<boost::shared_mutex> lock_q(queues_mutex_);
     size_t queue_id = get_queue_id(vm, replica_id);
     auto queue = queues_.find(queue_id);
     if (queue != queues_.end()) {
-      log_error_formatted(LOGGING_TAG_THREADPOOL,
-                          "Work queue already exists for model {}, replica {}",
-                          vm.serialize(), std::to_string(replica_id));
+      log_error_formatted(
+          LOGGING_TAG_THREADPOOL,
+          "Work queue already exists for model {}, replica {}: queue id {}",
+          vm.serialize(), replica_id, queue_id);
       return false;
     } else {
       queues_.emplace(std::piecewise_construct, std::forward_as_tuple(queue_id),
@@ -304,9 +318,10 @@ class ModelQueueThreadPool : public ThreadPool {
                        std::forward_as_tuple(queue_id),
                        std::forward_as_tuple(&ModelQueueThreadPool::worker,
                                              this, queue_id, is_block_worker));
-      log_info_formatted(LOGGING_TAG_THREADPOOL,
-                         "Work queue created for model {}, replica {}",
-                         vm.serialize(), std::to_string(replica_id));
+      log_info_formatted(
+          LOGGING_TAG_THREADPOOL,
+          "Work queue created for model {}, replica {}: queue id {}",
+          vm.serialize(), replica_id, queue_id);
       return true;
     }
   }
@@ -316,28 +331,31 @@ class ModelQueueThreadPool : public ThreadPool {
     size_t queue_id = get_queue_id(vm, replica_id);
     auto thread = threads_.find(queue_id);
     if (thread == threads_.end()) {
-      log_error_formatted(LOGGING_TAG_THREADPOOL,
-                          "Thread does not exist for model {}, replica {}",
-                          vm.serialize(), replica_id);
+      log_error_formatted(
+          LOGGING_TAG_THREADPOOL,
+          "Thread does not exist for model {}, replica {}: queue id {}",
+          vm.serialize(), replica_id, queue_id);
       return false;
     } else {
       thread->second.interrupt();
-      log_info_formatted(LOGGING_TAG_THREADPOOL,
-                         "Thread is interrupted for model {}, replica {}",
-                         vm.serialize(), replica_id);
+      log_info_formatted(
+          LOGGING_TAG_THREADPOOL,
+          "Thread is interrupted for model {}, replica {}: queue id {}",
+          vm.serialize(), replica_id, queue_id);
       return true;
     }
   }
 
   bool delete_queue(VersionedModelId vm, const int replica_id) {
-    boost::unique_lock<boost::shared_mutex> lock_q(queues_mutex_);
     boost::unique_lock<boost::shared_mutex> lock_t(threads_mutex_);
+    boost::upgrade_lock<boost::shared_mutex> lock_q_upgrade(queues_mutex_);
     size_t queue_id = get_queue_id(vm, replica_id);
     auto queue = queues_.find(queue_id);
     if (queue == queues_.end() || !queue->second.is_valid()) {
-      log_error_formatted(LOGGING_TAG_THREADPOOL,
-                          "Work queue does not exist for model {}, replica {}",
-                          vm.serialize(), replica_id);
+      log_error_formatted(
+          LOGGING_TAG_THREADPOOL,
+          "Work queue does not exist for model {}, replica {}: queue id {}",
+          vm.serialize(), replica_id, queue_id);
       return false;
     }
 
@@ -348,12 +366,15 @@ class ModelQueueThreadPool : public ThreadPool {
       thread->second.join();
     }
 
+    boost::upgrade_to_unique_lock<boost::shared_mutex> lock_q_unique(
+        lock_q_upgrade);
     queues_.erase(queue);
     threads_.erase(thread);
 
-    log_info_formatted(LOGGING_TAG_THREADPOOL,
-                       "Work queue destroyed for model {}, replica {}",
-                       vm.serialize(), replica_id);
+    log_info_formatted(
+        LOGGING_TAG_THREADPOOL,
+        "Work queue destroyed for model {}, replica {}: queue_id {}",
+        vm.serialize(), replica_id, queue_id);
     return true;
   }
 
