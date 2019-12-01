@@ -484,13 +484,14 @@ class TaskExecutor {
       const std::vector<VersionedModelId> &models) {
     predictions_counter_->increment(models.size() * tasks.size());
     std::vector<folly::Future<Output>> output_futures;
+    boost::shared_lock<boost::shared_mutex> lock(model_queues_mutex_);
     for (const auto &m : models) {
       // add each task to the queue corresponding to its associated model
-      boost::shared_lock<boost::shared_mutex> lock(model_queues_mutex_);
       auto model_queue_entry = model_queues_.find(m);
 
       if (model_queue_entry != model_queues_.end()) {
         std::vector<PredictTask> model_tasks;
+        size_t initial_outputs_size = output_futures.size();
         for (const auto &t : tasks) {
           auto cache_result = cache_->fetch(m, t.input_);
 
@@ -503,11 +504,14 @@ class TaskExecutor {
               auto cur_model_metric = cur_model_metric_entry->second;
               cur_model_metric.cache_hit_ratio_->increment(1, 1);
             }
-          } else if (active_containers_->get_replicas_for_model(m).size() ==
-                   0) {
+          } else if (active_containers_->get_replicas_for_model(m).empty()) {
             log_error_formatted(LOGGING_TAG_TASK_EXECUTOR,
                                 "No active model containers for model: {} : {}",
                                 m.get_name(), m.get_id());
+            model_tasks.clear();
+            output_futures.erase(output_futures.begin() + initial_outputs_size,
+                                 output_futures.end());
+            break;
           } else {
             output_futures.push_back(std::move(cache_result));
             model_tasks.push_back(t);

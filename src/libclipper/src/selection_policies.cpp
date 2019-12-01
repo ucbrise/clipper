@@ -111,6 +111,10 @@ DefaultOutputSelectionPolicy::combine_predictions(
   }
 
   if (outputs.size() < query.input_batch_.size()) {
+    log_error_formatted(LOGGING_TAG_SELECTION_POLICY,
+                        "DefaultOutputSelectionPolicy expecting {} "
+                        "outputs but found {}. Filling with default.",
+                        query.input_batch_.size(), predictions.size());
     Output default_output =
         std::dynamic_pointer_cast<DefaultOutputSelectionState>(state)
             ->default_output_;
