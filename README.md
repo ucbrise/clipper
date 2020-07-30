@@ -5,6 +5,7 @@
 
 <img src="images/clipper-logo.png" width="200">
 
+## Note: Clipper is not actively maintained currently. It is available as a research artifact.
 
 ## What is Clipper?
 
