@@ -42,7 +42,7 @@ void RPCDataStore::remove_data(void *data) {
 }
 
 RPCService::RPCService()
-    : request_queue_(std::make_shared<moodycamel::ConcurrentQueue<RPCRequest>>(
+    : request_queue_(std::make_unique<moodycamel::ConcurrentQueue<RPCRequest>>(
           sizeof(RPCRequest) * 10000)),
       active_(false),
       last_activity_check_time_(std::chrono::system_clock::now()),
@@ -91,8 +91,7 @@ int RPCService::send_message(vector<ByteBuffer> msg,
               "Dropping Message");
     return -1;
   }
-  int id = message_id_;
-  message_id_ += 1;
+  int id = message_id_.fetch_add(1);
   long current_time_micros =
       std::chrono::duration_cast<std::chrono::microseconds>(
           std::chrono::system_clock::now().time_since_epoch())
@@ -117,8 +116,8 @@ void RPCService::manage_service(const string address) {
   std::unordered_map<std::vector<uint8_t>, ConnectedContainerInfo,
                      std::function<size_t(const std::vector<uint8_t> &vec)>>
       connections_containers_map(INITIAL_REPLICA_ID_SIZE, hash_vector<uint8_t>);
-  context_t context = context_t(1);
-  socket_t socket = socket_t(context, ZMQ_ROUTER);
+  context_t context(1);
+  socket_t socket(context, ZMQ_ROUTER);
   socket.bind(address);
   // Indicate that we will poll our zmq service socket for new inbound messages
   zmq::pollitem_t items[] = {{socket, 0, ZMQ_POLLIN, 0}};
@@ -371,7 +370,6 @@ void RPCService::receive_message(
             connection_id,
             std::make_tuple(model, cur_replica_id, connected_time));
 
-        TaskExecutionThreadPool::create_queue(model, cur_replica_id);
         zmq_connection_id += 1;
       }
     } break;
