@@ -223,22 +223,21 @@ rpc::PredictionResponse::deserialize_prediction_response(
 }
 
 Query::Query(std::string label, long user_id,
-             std::shared_ptr<PredictionData> input, long latency_budget_micros,
-             std::string selection_policy,
+             std::vector<std::shared_ptr<PredictionData>> input_batch,
+             long latency_budget_micros, std::string selection_policy,
              std::vector<VersionedModelId> candidate_models)
     : label_(std::move(label)),
       user_id_(user_id),
-      input_(std::move(input)),
+      input_batch_(std::move(input_batch)),
       latency_budget_micros_(latency_budget_micros),
       selection_policy_(std::move(selection_policy)),
       candidate_models_(std::move(candidate_models)),
       create_time_(std::chrono::high_resolution_clock::now()) {}
 
-Response::Response(Query query, QueryId query_id, const long duration_micros,
+Response::Response(QueryId query_id, const long duration_micros,
                    Output output, const bool output_is_default,
                    const boost::optional<std::string> default_explanation)
-    : query_(std::move(query)),
-      query_id_(query_id),
+    : query_id_(query_id),
       duration_micros_(duration_micros),
       output_(std::move(output)),
       output_is_default_(output_is_default),
@@ -266,20 +265,16 @@ FeedbackQuery::FeedbackQuery(std::string label, long user_id, Feedback feedback,
       candidate_models_(std::move(candidate_models)) {}
 
 PredictTask::PredictTask(std::shared_ptr<PredictionData> input,
-                         VersionedModelId model, float utility,
                          QueryId query_id, long latency_slo_micros,
                          bool artificial)
     : input_(std::move(input)),
-      model_(std::move(model)),
-      utility_(utility),
       query_id_(query_id),
       latency_slo_micros_(latency_slo_micros),
       artificial_(artificial) {}
 
-FeedbackTask::FeedbackTask(Feedback feedback, VersionedModelId model,
-                           QueryId query_id, long latency_slo_micros)
+FeedbackTask::FeedbackTask(Feedback feedback, QueryId query_id,
+                           long latency_slo_micros)
     : feedback_(feedback),
-      model_(model),
       query_id_(query_id),
       latency_slo_micros_(latency_slo_micros) {}
 

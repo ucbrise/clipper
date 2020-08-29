@@ -25,15 +25,17 @@ class DefaultOutputSelectionPolicyTest : public ::testing::Test {
 
 TEST_F(DefaultOutputSelectionPolicyTest,
        TestSelectPredictTasksZeroCandidateModels) {
-  Query zero_candidate_models_query{"label",
-                                    clipper::DEFAULT_USER_ID,
-                                    std::shared_ptr<DoubleVector>(),
-                                    1000,
-                                    DefaultOutputSelectionPolicy::get_name(),
-                                    {}};
+  Query zero_candidate_models_query{
+      "label",
+      clipper::DEFAULT_USER_ID,
+      std::vector<std::shared_ptr<PredictionData>>(
+          1, std::shared_ptr<DoubleVector>()),
+      1000,
+      DefaultOutputSelectionPolicy::get_name(),
+      {}};
   auto zero_models_tasks =
       policy_.select_predict_tasks(nullptr, zero_candidate_models_query, 0);
-  EXPECT_EQ(zero_models_tasks.size(), (size_t)0);
+  EXPECT_EQ(zero_models_tasks.second.size(), (size_t)0);
 }
 
 TEST_F(DefaultOutputSelectionPolicyTest,
@@ -43,14 +45,15 @@ TEST_F(DefaultOutputSelectionPolicyTest,
       VersionedModelId("simple_svm", "2")};
   Query two_candidate_models_query{"label",
                                    clipper::DEFAULT_USER_ID,
-                                   std::shared_ptr<DoubleVector>(),
+                                   std::vector<std::shared_ptr<PredictionData>>(
+                                       1, std::shared_ptr<DoubleVector>()),
                                    1000,
                                    DefaultOutputSelectionPolicy::get_name(),
                                    two_models};
   auto two_models_tasks =
       policy_.select_predict_tasks(nullptr, two_candidate_models_query, 0);
-  EXPECT_EQ(two_models_tasks.size(), (size_t)1);
-  EXPECT_EQ(two_models_tasks.front().model_, two_models.front());
+  ASSERT_EQ(two_models_tasks.second.size(), (size_t)1);
+  EXPECT_EQ(two_models_tasks.second.front(), two_models.front());
 }
 
 TEST_F(DefaultOutputSelectionPolicyTest,
@@ -59,14 +62,15 @@ TEST_F(DefaultOutputSelectionPolicyTest,
       VersionedModelId("music_random_features", "1")};
   Query one_candidate_model_query{"label",
                                   clipper::DEFAULT_USER_ID,
-                                  std::shared_ptr<DoubleVector>(),
+                                  std::vector<std::shared_ptr<PredictionData>>(
+                                      1, std::shared_ptr<DoubleVector>()),
                                   1000,
                                   DefaultOutputSelectionPolicy::get_name(),
                                   one_model};
   auto one_model_tasks =
       policy_.select_predict_tasks(nullptr, one_candidate_model_query, 0);
-  EXPECT_EQ(one_model_tasks.size(), (size_t)1);
-  EXPECT_EQ(one_model_tasks.front().model_, one_model.front());
+  ASSERT_EQ(one_model_tasks.second.size(), (size_t)1);
+  EXPECT_EQ(one_model_tasks.second.front(), one_model.front());
 }
 
 TEST_F(DefaultOutputSelectionPolicyTest,
@@ -74,20 +78,23 @@ TEST_F(DefaultOutputSelectionPolicyTest,
   VersionedModelId m1 = VersionedModelId("music_random_features", "1");
   Query one_candidate_model_query{"label",
                                   clipper::DEFAULT_USER_ID,
-                                  std::shared_ptr<DoubleVector>(),
+                                  std::vector<std::shared_ptr<PredictionData>>(
+                                      1, std::shared_ptr<DoubleVector>()),
                                   1000,
                                   DefaultOutputSelectionPolicy::get_name(),
                                   {m1}};
   auto zero_preds_output =
-      policy_.combine_predictions(state_, one_candidate_model_query, {}).first;
-  ASSERT_EQ(zero_preds_output, state_->default_output_);
+      policy_.combine_predictions(state_, one_candidate_model_query, {});
+  ASSERT_EQ(zero_preds_output.size(), (size_t)1);
+  EXPECT_EQ(zero_preds_output.front().first, state_->default_output_);
 }
 
 TEST_F(DefaultOutputSelectionPolicyTest, TestCombinePredictionsOnePrediction) {
   VersionedModelId m1 = VersionedModelId("music_random_features", "1");
   Query one_candidate_model_query{"label",
                                   clipper::DEFAULT_USER_ID,
-                                  std::shared_ptr<DoubleVector>(),
+                                  std::vector<std::shared_ptr<PredictionData>>(
+                                      1, std::shared_ptr<DoubleVector>()),
                                   1000,
                                   DefaultOutputSelectionPolicy::get_name(),
                                   {m1}};
@@ -96,10 +103,10 @@ TEST_F(DefaultOutputSelectionPolicyTest, TestCombinePredictionsOnePrediction) {
   auto one_pred_output =
       policy_
           .combine_predictions(state_, one_candidate_model_query,
-                               {first_output})
-          .first;
-  ASSERT_EQ(one_pred_output, first_output);
-  ASSERT_NE(one_pred_output, state_->default_output_);
+                               {first_output});
+  ASSERT_EQ(one_pred_output.size(), (size_t)1);
+  EXPECT_EQ(one_pred_output.front().first, first_output);
+  EXPECT_NE(one_pred_output.front().first, state_->default_output_);
 }
 
 TEST_F(DefaultOutputSelectionPolicyTest, TestCombinePredictionsTwoPredictions) {
@@ -107,7 +114,8 @@ TEST_F(DefaultOutputSelectionPolicyTest, TestCombinePredictionsTwoPredictions) {
   VersionedModelId m2 = VersionedModelId("simple_svm", "2");
   Query two_candidate_models_query{"label",
                                    clipper::DEFAULT_USER_ID,
-                                   std::shared_ptr<DoubleVector>(),
+                                   std::vector<std::shared_ptr<PredictionData>>(
+                                       1, std::shared_ptr<DoubleVector>()),
                                    1000,
                                    DefaultOutputSelectionPolicy::get_name(),
                                    {m1, m2}};
@@ -116,10 +124,10 @@ TEST_F(DefaultOutputSelectionPolicyTest, TestCombinePredictionsTwoPredictions) {
   auto two_preds_output =
       policy_
           .combine_predictions(state_, two_candidate_models_query,
-                               {first_output, second_output})
-          .first;
-  ASSERT_EQ(two_preds_output, first_output);
-  ASSERT_NE(two_preds_output, state_->default_output_);
+                               {first_output, second_output});
+  ASSERT_EQ(two_preds_output.size(), (size_t)1);
+  EXPECT_EQ(two_preds_output.front().first, first_output);
+  EXPECT_NE(two_preds_output.front().first, state_->default_output_);
 }
 
 TEST(DefaultOutputSelectionStateTest, Serialization) {

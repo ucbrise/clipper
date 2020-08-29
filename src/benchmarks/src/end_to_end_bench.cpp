@@ -80,28 +80,32 @@ void send_predictions(std::unordered_map<std::string, std::string> &config,
         query_data_raw[1] = thread_id;
       }
 
-      std::shared_ptr<PredictionData> input = std::make_shared<DoubleVector>(
-          std::move(query_data), query_vec.size());
+      std::vector<std::shared_ptr<PredictionData>> input_batch;
+      input_batch.push_back(std::make_shared<DoubleVector>(
+          std::move(query_data), query_vec.size()));
       Query q = {TEST_APPLICATION_LABEL,
                  UID,
-                 input,
+                 input_batch,
                  latency_objective,
                  clipper::DefaultOutputSelectionPolicy::get_name(),
                  {VersionedModelId(model_name, model_version)}};
 
-      folly::Future<Response> prediction = qp.predict(q);
+      folly::Future<std::vector<Response>> prediction = qp.predict(q);
       bench_metrics.request_throughput_->mark(1);
 
-      std::move(prediction).thenValue([bench_metrics](Response r) {
+      std::move(prediction)
+          .thenValue([bench_metrics](std::vector<Response> responses) {
         // Update metrics
-        if (r.output_is_default_) {
-          bench_metrics.default_pred_ratio_->increment(1, 1);
-        } else {
-          bench_metrics.default_pred_ratio_->increment(0, 1);
+        for (const auto &r : responses) {
+          if (r.output_is_default_) {
+            bench_metrics.default_pred_ratio_->increment(1, 1);
+          } else {
+            bench_metrics.default_pred_ratio_->increment(0, 1);
+          }
+          bench_metrics.latency_->insert(r.duration_micros_);
+          bench_metrics.num_predictions_->increment(1);
+          bench_metrics.throughput_->mark(1);
         }
-        bench_metrics.latency_->insert(r.duration_micros_);
-        bench_metrics.num_predictions_->increment(1);
-        bench_metrics.throughput_->mark(1);
       });
     }
 
