@@ -1,3 +1,8 @@
+This is a forked repository from the original clipper library. ucbrise/clipper <br>
+It enables clipper to output results from multiple models <br>
+You can check the details of this modification from below <br>
+https://github.com/ucbrise/clipper/issues/683#issue-439847004
+
 # Clipper
 
 [![Build Status](https://amplab.cs.berkeley.edu/jenkins/buildStatus/icon?job=Clipper)](https://amplab.cs.berkeley.edu/jenkins/job/Clipper/) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
